@@ -3,38 +3,53 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Comprehensive tests for Intellicrack core types module.
+"""Behavioural and integration tests for Intellicrack core types.
 
-Tests validate:
-- Dataclass field assignments and type correctness
-- BridgeAnalysisSummary aggregation type
-- DataTypeInfo for Ghidra integration
-- Session and state management types
+These tests do not merely construct dataclasses and read fields back; that
+proves nothing about the application. Instead they drive the real behaviour
+that the core types carry:
+
+* Computed properties and string renderings whose oracle is an external
+  specification (the PE/COFF section-characteristic bit layout) or a value
+  derived by hand, never the implementation's own output.
+* Round-tripping the types through the *real* SQLite-backed
+  :class:`~intellicrack.core.session.SessionStore` serialise/deserialise path,
+  using a real on-disk database, so a regression in any field mapping,
+  hex/byte encoding, enum coercion, or datetime handling fails the test.
+* A real Windows PE binary parsed by the real
+  :class:`~intellicrack.bridges.hex_editor.HexEditorBridge` into
+  :class:`SectionInfo`/:class:`ImportInfo`/:class:`ExportInfo` records, whose
+  decoded permission flags are checked against the PE/COFF specification.
+* The exception hierarchy's structured-context propagation through real
+  ``raise``/``except`` flows, including the ``KeyError`` error path of
+  :meth:`RegisterState.__getitem__`.
 """
 
 from __future__ import annotations
 
-from dataclasses import fields
-from pathlib import Path
+import asyncio
+import hashlib
+from typing import TYPE_CHECKING, Any
 
-from intellicrack.core.session import Session
+import pytest
+
+from intellicrack.bridges.hex_editor import HexEditorBridge
+from intellicrack.core.session import Session, SessionStore
 from intellicrack.core.types import (
     AttachError,
     AuthenticationError,
     BinaryInfo,
     BreakpointInfo,
     BridgeAnalysisSummary,
+    CrossReference,
     DataTypeInfo,
     ExportInfo,
     FunctionInfo,
-    HookInfo,
     ImportInfo,
     IntellicrackError,
     Message,
-    ModuleInfo,
     ParameterInfo,
     PatchInfo,
-    ProcessInfo,
     ProviderError,
     ProviderName,
     RateLimitError,
@@ -44,1159 +59,793 @@ from intellicrack.core.types import (
     StringInfo,
     ThreadInfo,
     ToolCall,
-    ToolDefinition,
-    ToolError,
     ToolFunction,
     ToolName,
     ToolParameter,
     ToolResult,
+    ToolState,
     VariableInfo,
 )
 
 
-# Test constants for memory addresses
-ADDR_BASE = 0x401000
-ADDR_SECONDARY = 0x402000
-ADDR_TERTIARY = 0x403000
-ADDR_POINTER = 0x402000
-ADDR_ARRAY = 0x403000
-ADDR_ENTRY_POINT = 0x401000
-ADDR_IMPORT = 0x402000
-ADDR_SECTION_VIRTUAL = 0x1000
-ADDR_SECTION_UPX_VIRTUAL = 0x1000
-ADDR_FUNCTION = 0x401000
-ADDR_FUNCTION_ALT = 0x402000
-ADDR_BREAKPOINT = 0x401000
-ADDR_BREAKPOINT_HW = 0x402000
-ADDR_THREAD_START = 0x401000
-ADDR_MODULE_BASE = 0x77000000
-ADDR_HOOK = 0x401000
-ADDR_PATCH = 0x401000
-ADDR_PATCH_NOP = 0x402000
-ADDR_STACK_POINTER = 0x7FFF00001000
-ADDR_BASE_POINTER = 0x7FFF00000000
-ADDR_REGISTER_RIP = 0x401000
-ADDR_REGISTER_RAX = 0x1234567890ABCDEF
+if TYPE_CHECKING:
+    from pathlib import Path
 
-# Test constants for sizes
-SIZE_DWORD = 4
-SIZE_POINTER_64 = 8
-SIZE_ARRAY_256 = 256
-SIZE_BINARY = 65536
-SIZE_FUNCTION = 256
-SIZE_FUNCTION_SMALL = 128
-SIZE_SECTION_VIRTUAL = 0x5000
-SIZE_SECTION_RAW = 0x4800
-SIZE_SECTION_UPX_VIRTUAL = 0x10000
-SIZE_SECTION_UPX_RAW = 0x200
-SIZE_MODULE = 0x1A0000
-SIZE_PATCH_BYTES = 5
-SIZE_DEFAULT_READ = 16
 
-# Test constants for PIDs and thread IDs
-TEST_PID = 1234
-TEST_PID_PROTECTED = 4567
-TEST_PARENT_PID = 4
-TEST_TID = 1234
-TEST_TID_INITIAL = 1
+# PE/COFF section characteristic bit flags (winnt.h IMAGE_SCN_* constants).
+# These are the independent oracle for SectionInfo's permission properties.
+IMAGE_SCN_CNT_CODE = 0x00000020
+IMAGE_SCN_MEM_EXECUTE = 0x20000000
+IMAGE_SCN_MEM_READ = 0x40000000
+IMAGE_SCN_MEM_WRITE = 0x80000000
 
-# Test constants for characteristics and flags
-SECTION_CHARACTERISTICS = 0x60000020
-SECTION_CHARACTERISTICS_UPX = 0xE0000020
+ADDR_TEXT = 0x401000
+ADDR_DATA = 0x402000
+ADDR_RDATA = 0x403000
+
 ENTROPY_NORMAL = 6.5
 ENTROPY_PACKED = 7.95
-ENTROPY_PACKED_THRESHOLD = 7.0
 
-# Test constants for register values
-REGISTER_ZERO = 0
-REGISTER_RCX = 0x100
-REGISTER_RDX = 0x200
-REGISTER_RSI = 0x300
-REGISTER_RDI = 0x400
-REGISTER_RFLAGS = 0x246
-REGISTER_CS = 0x33
-REGISTER_DS = 0x2B
-REGISTER_ES = 0x2B
-REGISTER_FS = 0x53
-REGISTER_GS = 0x2B
-REGISTER_SS = 0x2B
-
-DURATION_MS = 15.5
-DURATION_MS_SHORT = 5.0
-
-# Test constants for HTTP status codes
 HTTP_UNAUTHORIZED = 401
-HTTP_FORBIDDEN = 403
 HTTP_RATE_LIMITED = 429
-HTTP_INTERNAL_ERROR = 500
-
-# Test constants for error codes
+RETRY_AFTER_SECONDS = 30.5
 ERROR_CODE_BASE = 1001
-ERROR_CODE_CRITICAL = 9999
-ERROR_CODE_PROVIDER = 5001
-ERROR_CODE_TOOL = 2001
-ERROR_CODE_SANDBOX = 3001
 
-# Test constants for retry and exit codes
-RETRY_AFTER_SECONDS = 60.0
-RETRY_AFTER_SECONDS_SHORT = 30.5
-EXIT_CODE_CRASH = 139
-EXIT_CODE_ERROR = 1
-
-# Test constants for breakpoints and hooks
-BREAKPOINT_ID_1 = 1
-BREAKPOINT_ID_2 = 2
-BREAKPOINT_HIT_COUNT = 5
-BREAKPOINT_HIT_COUNT_ZERO = 0
-EXPORT_ORDINAL = 1
-VARIABLE_OFFSET = -0x10
-NO_ENTRY_POINT = 0
+RAX_VALUE = 0x1234567890ABCDEF
+RIP_VALUE = 0x401000
+RSP_VALUE = 0x7FFF00001000
 
 
-# DataTypeInfo dataclass tests
+def _build_section(name: str, *, va: int, characteristics: int, entropy: float) -> SectionInfo:
+    """Build a SectionInfo with concrete section-table values.
 
+    Args:
+        name: Section name.
+        va: Virtual address.
+        characteristics: PE/COFF characteristic flags.
+        entropy: Shannon entropy of the section.
 
-def test_datatype_info_creation() -> None:
-    """Verify DataTypeInfo can be instantiated with all fields."""
-    info = DataTypeInfo(
-        address=ADDR_BASE,
-        name="DWORD",
-        category="/PE/Types",
-        size=SIZE_DWORD,
-        is_pointer=False,
-        is_array=False,
-        array_length=None,
-        base_type=None,
-    )
-    assert info.address == ADDR_BASE
-    assert info.name == "DWORD"
-    assert info.category == "/PE/Types"
-    assert info.size == SIZE_DWORD
-    assert info.is_pointer is False
-    assert info.is_array is False
-
-
-def test_datatype_info_pointer() -> None:
-    """Verify pointer data type representation."""
-    info = DataTypeInfo(
-        address=ADDR_POINTER,
-        name="char *",
-        category="/C/Pointers",
-        size=SIZE_POINTER_64,
-        is_pointer=True,
-        is_array=False,
-        array_length=None,
-        base_type="char",
-    )
-    assert info.is_pointer is True
-    assert info.base_type == "char"
-    assert info.size == SIZE_POINTER_64
-
-
-def test_datatype_info_array() -> None:
-    """Verify array data type representation."""
-    info = DataTypeInfo(
-        address=ADDR_ARRAY,
-        name="byte[256]",
-        category="/Arrays",
-        size=SIZE_ARRAY_256,
-        is_pointer=False,
-        is_array=True,
-        array_length=SIZE_ARRAY_256,
-        base_type="byte",
-    )
-    assert info.is_array is True
-    assert info.array_length == SIZE_ARRAY_256
-    assert info.base_type == "byte"
-
-
-def test_datatype_info_has_required_fields() -> None:
-    """Verify all required fields are present."""
-    field_names = {f.name for f in fields(DataTypeInfo)}
-    required = {"address", "name", "category", "size", "is_pointer", "is_array"}
-    assert required.issubset(field_names)
-
-
-# BridgeAnalysisSummary dataclass tests
-
-
-def test_bridge_analysis_summary_creation() -> None:
-    """Verify BridgeAnalysisSummary can be constructed with all fields."""
-    string = StringInfo(
-        address=ADDR_BASE,
-        value="test string",
-        encoding="ascii",
-        section=".rdata",
-    )
-    imp = ImportInfo(
-        dll="kernel32.dll",
-        function="CreateFileA",
-        ordinal=None,
-        address=ADDR_SECONDARY,
-    )
-    exp = ExportInfo(
-        name="DllMain",
-        ordinal=1,
-        address=ADDR_BASE,
-    )
-    section = SectionInfo(
-        name=".text",
-        virtual_address=ADDR_SECTION_VIRTUAL,
-        virtual_size=SIZE_SECTION_VIRTUAL,
-        raw_size=SIZE_SECTION_RAW,
-        characteristics=SECTION_CHARACTERISTICS,
-        entropy=ENTROPY_NORMAL,
+    Returns:
+        SectionInfo: A populated section record.
+    """
+    return SectionInfo(
+        name=name,
+        virtual_address=va,
+        virtual_size=0x5000,
+        raw_size=0x4800,
+        characteristics=characteristics,
+        entropy=entropy,
     )
 
-    summary = BridgeAnalysisSummary(
-        binary_name="test.exe",
-        strings=[string],
-        imports=[imp],
-        exports=[exp],
-        sections=[section],
-        functions=[],
-        format_info="pe",
-        architecture="x86_64",
-        source_bridges=["binary", "ghidra"],
-        analysis_notes=["Analysis complete"],
-    )
-
-    assert summary.binary_name == "test.exe"
-    assert len(summary.strings) == 1
-    assert len(summary.imports) == 1
-    assert len(summary.exports) == 1
-    assert len(summary.sections) == 1
-    assert len(summary.functions) == 0
-    assert summary.format_info == "pe"
-    assert summary.architecture == "x86_64"
-    assert "binary" in summary.source_bridges
-    assert "ghidra" in summary.source_bridges
-    assert summary.analysis_notes == ["Analysis complete"]
-
-
-def test_bridge_analysis_summary_empty_lists() -> None:
-    """Verify BridgeAnalysisSummary works with all empty lists."""
-    summary = BridgeAnalysisSummary(
-        binary_name="empty.exe",
-        strings=[],
-        imports=[],
-        exports=[],
-        sections=[],
-        functions=[],
-        format_info="unknown",
-        architecture="unknown",
-        source_bridges=[],
-        analysis_notes=[],
-    )
-    assert summary.binary_name == "empty.exe"
-    assert len(summary.strings) == 0
-    assert len(summary.imports) == 0
-    assert len(summary.exports) == 0
-    assert len(summary.sections) == 0
-    assert len(summary.functions) == 0
-    assert len(summary.source_bridges) == 0
-    assert len(summary.analysis_notes) == 0
-
-
-def test_bridge_analysis_summary_has_all_fields() -> None:
-    """Verify all required fields exist in BridgeAnalysisSummary."""
-    field_names = {f.name for f in fields(BridgeAnalysisSummary)}
-    required = {
-        "binary_name",
-        "strings",
-        "imports",
-        "exports",
-        "sections",
-        "functions",
-        "format_info",
-        "architecture",
-        "source_bridges",
-        "analysis_notes",
-    }
-    assert required.issubset(field_names)
-
-
-def test_bridge_analysis_summary_str() -> None:
-    """Verify BridgeAnalysisSummary has a meaningful string representation."""
-    summary = BridgeAnalysisSummary(
-        binary_name="repr.exe",
-        strings=[],
-        imports=[],
-        exports=[],
-        sections=[],
-        functions=[],
-        format_info="pe",
-        architecture="x86",
-        source_bridges=["binary"],
-        analysis_notes=[],
-    )
-    text = str(summary)
-    assert "repr.exe" in text
-
-
-# StringInfo dataclass tests
-
-
-def test_string_info_ascii() -> None:
-    """Verify ASCII string representation."""
-    info = StringInfo(
-        address=ADDR_BASE,
-        value="Invalid License Key",
-        encoding="ascii",
-        section=".rdata",
-    )
-    assert info.address == ADDR_BASE
-    assert info.value == "Invalid License Key"
-    assert info.encoding == "ascii"
-    assert info.section == ".rdata"
-
-
-def test_string_info_unicode() -> None:
-    """Verify Unicode string representation."""
-    info = StringInfo(
-        address=ADDR_SECONDARY,
-        value="Registration Required",
-        encoding="utf-16le",
-        section=".data",
-    )
-    assert info.encoding == "utf-16le"
-
-
-# BinaryInfo dataclass tests
-
-
-def test_binary_info_pe() -> None:
-    """Verify PE binary info representation."""
-    section = SectionInfo(
-        name=".text",
-        virtual_address=ADDR_SECTION_VIRTUAL,
-        virtual_size=SIZE_SECTION_VIRTUAL,
-        raw_size=SIZE_SECTION_RAW,
-        characteristics=SECTION_CHARACTERISTICS,
-        entropy=ENTROPY_NORMAL,
-    )
-    import_info = ImportInfo(
-        dll="kernel32.dll",
-        function="GetProcAddress",
-        ordinal=None,
-        address=ADDR_IMPORT,
-    )
-    export_info = ExportInfo(
-        name="DllMain",
-        ordinal=EXPORT_ORDINAL,
-        address=ADDR_ENTRY_POINT,
-    )
-
-    info = BinaryInfo(
-        path=Path("/path/to/binary.dll"),
-        name="binary.dll",
-        size=SIZE_BINARY,
-        sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-        file_type="pe",
-        architecture="x86_64",
-        is_64bit=True,
-        entry_point=ADDR_ENTRY_POINT,
-        sections=[section],
-        imports=[import_info],
-        exports=[export_info],
-    )
-
-    assert info.file_type == "pe"
-    assert info.architecture == "x86_64"
-    assert info.is_64bit is True
-    assert info.entry_point == ADDR_ENTRY_POINT
-    assert len(info.sections) == 1
-    assert len(info.imports) == 1
-    assert len(info.exports) == 1
-    assert info.name == "binary.dll"
-    assert info.sha256 == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
-
-def test_section_info_has_entropy() -> None:
-    """Verify SectionInfo includes entropy field for packed detection."""
-    section = SectionInfo(
-        name=".upx0",
-        virtual_address=ADDR_SECTION_UPX_VIRTUAL,
-        virtual_size=SIZE_SECTION_UPX_VIRTUAL,
-        raw_size=SIZE_SECTION_UPX_RAW,
-        characteristics=SECTION_CHARACTERISTICS_UPX,
-        entropy=ENTROPY_PACKED,
-    )
-    assert section.entropy == ENTROPY_PACKED
-    assert section.entropy > ENTROPY_PACKED_THRESHOLD
-
-
-# FunctionInfo dataclass tests
-
-
-def test_function_info_creation() -> None:
-    """Verify FunctionInfo instantiation."""
-    param = ParameterInfo(
-        name="lpBuffer",
-        type="LPVOID",
-        size=SIZE_POINTER_64,
-        location="rcx",
-    )
-    var = VariableInfo(
-        name="result",
-        type="DWORD",
-        offset=VARIABLE_OFFSET,
-        size=SIZE_DWORD,
-    )
-
-    info = FunctionInfo(
-        name="CheckLicense",
-        address=ADDR_FUNCTION,
-        size=SIZE_FUNCTION,
-        calling_convention="fastcall",
-        return_type="BOOL",
-        parameters=[param],
-        local_variables=[var],
-    )
-
-    assert info.address == ADDR_FUNCTION
-    assert info.name == "CheckLicense"
-    assert info.return_type == "BOOL"
-    assert info.size == SIZE_FUNCTION
-    assert info.calling_convention == "fastcall"
-    assert len(info.parameters) == 1
-    assert len(info.local_variables) == 1
-
-
-def test_function_info_with_decompiled_code() -> None:
-    """Verify FunctionInfo with optional decompiled code."""
-    info = FunctionInfo(
-        name="ValidateKey",
-        address=ADDR_FUNCTION_ALT,
-        size=SIZE_FUNCTION_SMALL,
-        calling_convention="cdecl",
-        return_type="int",
-        parameters=[],
-        local_variables=[],
-        decompiled_code="int ValidateKey(void) { return 1; }",
-        disassembly="push ebp\nmov ebp, esp",
-    )
-    assert info.decompiled_code is not None
-    assert info.disassembly is not None
-
-
-# BreakpointInfo dataclass tests
-
-
-def test_breakpoint_info_software() -> None:
-    """Verify software breakpoint representation."""
-    bp = BreakpointInfo(
-        id=BREAKPOINT_ID_1,
-        address=ADDR_BREAKPOINT,
-        bp_type="software",
-        enabled=True,
-        hit_count=BREAKPOINT_HIT_COUNT_ZERO,
-        condition=None,
-    )
-    assert bp.id == BREAKPOINT_ID_1
-    assert bp.bp_type == "software"
-    assert bp.enabled is True
-
-
-def test_breakpoint_info_hardware() -> None:
-    """Verify hardware breakpoint representation."""
-    bp = BreakpointInfo(
-        id=BREAKPOINT_ID_2,
-        address=ADDR_BREAKPOINT_HW,
-        bp_type="hardware",
-        enabled=True,
-        hit_count=BREAKPOINT_HIT_COUNT,
-        condition="eax == 0",
-    )
-    assert bp.bp_type == "hardware"
-    assert bp.condition == "eax == 0"
-
-
-# RegisterState dataclass tests
-
-
-def test_register_state_x64() -> None:
-    """Verify x64 register state representation including segment registers."""
-    state = RegisterState(
-        rax=ADDR_REGISTER_RAX,
-        rbx=REGISTER_ZERO,
-        rcx=REGISTER_RCX,
-        rdx=REGISTER_RDX,
-        rsi=REGISTER_RSI,
-        rdi=REGISTER_RDI,
-        rbp=ADDR_BASE_POINTER,
-        rsp=ADDR_STACK_POINTER,
-        rip=ADDR_REGISTER_RIP,
-        r8=REGISTER_ZERO,
-        r9=REGISTER_ZERO,
-        r10=REGISTER_ZERO,
-        r11=REGISTER_ZERO,
-        r12=REGISTER_ZERO,
-        r13=REGISTER_ZERO,
-        r14=REGISTER_ZERO,
-        r15=REGISTER_ZERO,
-        rflags=REGISTER_RFLAGS,
-        cs=REGISTER_CS,
-        ds=REGISTER_DS,
-        es=REGISTER_ES,
-        fs=REGISTER_FS,
-        gs=REGISTER_GS,
-        ss=REGISTER_SS,
-    )
-    assert state.rax == ADDR_REGISTER_RAX
-    assert state.rip == ADDR_REGISTER_RIP
-    assert state.rflags == REGISTER_RFLAGS
-    assert state.cs == REGISTER_CS
-    assert state.fs == REGISTER_FS
-
-
-def test_register_state_has_segment_registers() -> None:
-    """Verify all segment registers are present."""
-    field_names = {f.name for f in fields(RegisterState)}
-    segment_regs = {"cs", "ds", "es", "fs", "gs", "ss"}
-    assert segment_regs.issubset(field_names)
-
-
-# ProcessInfo dataclass tests
-
-
-def test_process_info_creation() -> None:
-    """Verify ProcessInfo instantiation."""
-    thread = ThreadInfo(
-        tid=TEST_TID_INITIAL,
-        start_address=ADDR_THREAD_START,
-        current_pc=ADDR_THREAD_START,
-        state="running",
-    )
-    module = ModuleInfo(
-        name="ntdll.dll",
-        path=Path("C:/Windows/System32/ntdll.dll"),
-        base_address=ADDR_MODULE_BASE,
-        size=SIZE_MODULE,
-        entry_point=NO_ENTRY_POINT,
-    )
-
-    info = ProcessInfo(
-        pid=TEST_PID,
-        name="target.exe",
-        path=Path("C:/Program Files/App/target.exe"),
-        command_line="target.exe --option",
-        parent_pid=TEST_PARENT_PID,
-        threads=[thread],
-        modules=[module],
-    )
-
-    assert info.pid == TEST_PID
-    assert info.name == "target.exe"
-    assert info.parent_pid == TEST_PARENT_PID
-    assert len(info.threads) == 1
-    assert len(info.modules) == 1
-
-
-def test_thread_info_uses_tid() -> None:
-    """Verify ThreadInfo uses 'tid' field not 'id'."""
-    thread = ThreadInfo(
-        tid=TEST_TID,
-        start_address=ADDR_THREAD_START,
-        current_pc=ADDR_THREAD_START,
-        state="suspended",
-    )
-    assert thread.tid == TEST_TID
-
-
-# HookInfo dataclass tests
-
-
-def test_hook_info_creation() -> None:
-    """Verify HookInfo instantiation with correct fields."""
-    hook = HookInfo(
-        id="hook_001",
-        target="CheckLicense",
-        address=ADDR_HOOK,
-        script_id="script_001",
-        active=True,
-    )
-    assert hook.id == "hook_001"
-    assert hook.target == "CheckLicense"
-    assert hook.address == ADDR_HOOK
-    assert hook.script_id == "script_001"
-    assert hook.active is True
-
-
-def test_hook_info_without_address() -> None:
-    """Verify HookInfo with None address (unresolved)."""
-    hook = HookInfo(
-        id="hook_002",
-        target="kernel32.dll!CreateFileW",
-        address=None,
-        script_id="script_002",
-        active=False,
-    )
-    assert hook.address is None
-    assert hook.active is False
-
-
-# PatchInfo dataclass tests
-
-
-def test_patch_info_creation() -> None:
-    """Verify PatchInfo instantiation with correct field names."""
-    patch = PatchInfo(
-        address=ADDR_PATCH,
-        original_bytes=b"\x74\x10",
-        new_bytes=b"\xeb\x10",
-        description="JZ -> JMP",
-        applied=True,
-    )
-    assert patch.address == ADDR_PATCH
-    assert patch.original_bytes == b"\x74\x10"
-    assert patch.new_bytes == b"\xeb\x10"
-    assert patch.applied is True
-
-
-def test_patch_info_nop_sled() -> None:
-    """Verify PatchInfo for NOP sled patches."""
-    patch = PatchInfo(
-        address=ADDR_PATCH_NOP,
-        original_bytes=b"\xe8\x00\x10\x00\x00",
-        new_bytes=b"\x90\x90\x90\x90\x90",
-        description="NOP out license check call",
-        applied=False,
-    )
-    assert len(patch.original_bytes) == SIZE_PATCH_BYTES
-    assert len(patch.new_bytes) == SIZE_PATCH_BYTES
-
-
-# ToolDefinition dataclass tests
-
-
-def test_tool_definition_creation() -> None:
-    """Verify ToolDefinition instantiation with correct fields."""
-    param = ToolParameter(
-        name="address",
-        type="integer",
-        description="Memory address to read",
-        required=True,
-    )
+
+# --- SectionInfo permission decoding (oracle: PE/COFF bit spec) --------------
+
+
+class TestSectionInfoPermissionDecoding:
+    """SectionInfo decodes PE/COFF characteristic bits into r/w/x flags."""
+
+    @staticmethod
+    def test_text_section_is_read_execute_not_write() -> None:
+        """A real ``.text`` characteristic word decodes to r-x, not writable."""
+        chars = IMAGE_SCN_CNT_CODE | IMAGE_SCN_MEM_EXECUTE | IMAGE_SCN_MEM_READ
+        section = _build_section(".text", va=ADDR_TEXT, characteristics=chars, entropy=ENTROPY_NORMAL)
+
+        assert section.is_executable is True
+        assert section.is_readable is True
+        assert section.is_writable is False
+
+    @staticmethod
+    def test_data_section_is_read_write_not_execute() -> None:
+        """A real ``.data`` characteristic word decodes to rw-, not executable."""
+        chars = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE
+        section = _build_section(".data", va=ADDR_DATA, characteristics=chars, entropy=ENTROPY_NORMAL)
+
+        assert section.is_executable is False
+        assert section.is_readable is True
+        assert section.is_writable is True
+
+    @staticmethod
+    def test_rdata_section_is_read_only() -> None:
+        """A read-only ``.rdata`` characteristic word decodes to r--."""
+        section = _build_section(".rdata", va=ADDR_RDATA, characteristics=IMAGE_SCN_MEM_READ, entropy=ENTROPY_NORMAL)
+
+        assert section.is_readable is True
+        assert section.is_writable is False
+        assert section.is_executable is False
+
+    @staticmethod
+    def test_zero_characteristics_decode_to_no_permissions() -> None:
+        """A characteristic word of zero yields no decoded permissions."""
+        section = _build_section(".bss", va=ADDR_DATA, characteristics=0, entropy=0.0)
+
+        assert section.is_readable is False
+        assert section.is_writable is False
+        assert section.is_executable is False
+
+    @staticmethod
+    def test_all_permission_bits_set_decode_to_rwx() -> None:
+        """All three memory bits set decodes to a full rwx section."""
+        chars = IMAGE_SCN_MEM_READ | IMAGE_SCN_MEM_WRITE | IMAGE_SCN_MEM_EXECUTE
+        section = _build_section(".rwx", va=ADDR_TEXT, characteristics=chars, entropy=ENTROPY_PACKED)
+
+        assert section.is_readable is True
+        assert section.is_writable is True
+        assert section.is_executable is True
+
+
+# --- DataTypeInfo.display_type formatting (oracle: hand-derived string) ------
+
+
+class TestDataTypeInfoDisplay:
+    """DataTypeInfo.display_type formats pointer/array/scalar types."""
+
+    @staticmethod
+    def test_pointer_display_appends_star() -> None:
+        """A pointer renders as ``<base> *`` from its base type."""
+        info = DataTypeInfo(
+            address=ADDR_DATA,
+            name="char_ptr",
+            category="/C/Pointers",
+            size=8,
+            is_pointer=True,
+            is_array=False,
+            array_length=None,
+            base_type="char",
+        )
+        assert info.display_type == "char *"
+
+    @staticmethod
+    def test_array_display_includes_length() -> None:
+        """An array renders as ``<base>[<length>]``."""
+        info = DataTypeInfo(
+            address=ADDR_RDATA,
+            name="byte_array",
+            category="/Arrays",
+            size=256,
+            is_pointer=False,
+            is_array=True,
+            array_length=256,
+            base_type="byte",
+        )
+        assert info.display_type == "byte[256]"
+
+    @staticmethod
+    def test_scalar_display_uses_name() -> None:
+        """A plain scalar renders as its declared name."""
+        info = DataTypeInfo(
+            address=ADDR_TEXT,
+            name="DWORD",
+            category="/PE/Types",
+            size=4,
+            is_pointer=False,
+            is_array=False,
+            array_length=None,
+            base_type=None,
+        )
+        assert info.display_type == "DWORD"
+
+    @staticmethod
+    def test_array_without_base_type_falls_back_to_name() -> None:
+        """An array flagged without a base type falls back to the name."""
+        info = DataTypeInfo(
+            address=ADDR_TEXT,
+            name="opaque_blob",
+            category="/Arrays",
+            size=16,
+            is_pointer=False,
+            is_array=True,
+            array_length=None,
+            base_type=None,
+        )
+        assert info.display_type == "opaque_blob"
+
+
+# --- FunctionInfo computed properties (oracle: hand-derived) -----------------
+
+
+class TestFunctionInfoComputed:
+    """FunctionInfo.has_code and summary reflect populated content."""
+
+    @staticmethod
+    def test_summary_renders_name_address_convention_and_var_count() -> None:
+        """Summary embeds hex address, convention, and local-variable count."""
+        var = VariableInfo(name="result", type="DWORD", offset=-0x10, size=4)
+        func = FunctionInfo(
+            name="CheckLicense",
+            address=0x401000,
+            size=256,
+            calling_convention="fastcall",
+            return_type="BOOL",
+            parameters=[ParameterInfo(name="key", type="LPVOID", size=8, location="rcx")],
+            local_variables=[var],
+        )
+        assert func.summary == "CheckLicense@0x401000 (fastcall, 1 vars)"
+
+    @staticmethod
+    def test_has_code_false_without_decompiled_or_disassembly() -> None:
+        """has_code is False when neither code form is present."""
+        func = FunctionInfo(
+            name="stub",
+            address=0x402000,
+            size=0,
+            calling_convention="cdecl",
+            return_type="void",
+            parameters=[],
+            local_variables=[],
+        )
+        assert func.has_code is False
+
+    @staticmethod
+    def test_has_code_true_with_disassembly_only() -> None:
+        """has_code is True when only disassembly is present."""
+        func = FunctionInfo(
+            name="ValidateKey",
+            address=0x402000,
+            size=128,
+            calling_convention="cdecl",
+            return_type="int",
+            parameters=[],
+            local_variables=[],
+            disassembly="push ebp\nmov ebp, esp",
+        )
+        assert func.has_code is True
+        assert func.decompiled_code is None
+
+
+# --- ToolFunction.signature (oracle: hand-derived) --------------------------
+
+
+def test_tool_function_signature_lists_params_and_return() -> None:
+    """ToolFunction.signature renders name, typed params, and return type."""
     func = ToolFunction(
-        name="read_memory",
+        name="ghidra.read_memory",
         description="Read bytes from memory",
-        parameters=[param],
-        returns="Bytes at the specified address",
+        parameters=[
+            ToolParameter(name="address", type="integer", description="addr", required=True),
+            ToolParameter(name="size", type="integer", description="len", required=False),
+        ],
+        returns="bytes",
     )
-    tool = ToolDefinition(
-        tool_name=ToolName.GHIDRA,
-        description="Ghidra reverse engineering tool",
-        functions=[func],
-    )
-    assert tool.tool_name == ToolName.GHIDRA
-    assert tool.description == "Ghidra reverse engineering tool"
-    assert len(tool.functions) == 1
-    assert tool.functions[0].name == "read_memory"
-
-
-def test_tool_parameter_with_enum() -> None:
-    """Verify ToolParameter with enum constraint."""
-    param = ToolParameter(
-        name="bp_type",
-        type="string",
-        description="Breakpoint type",
-        required=True,
-        enum=["software", "hardware", "memory"],
-    )
-    assert param.enum is not None
-    assert "software" in param.enum
-
-
-def test_tool_parameter_with_default() -> None:
-    """Verify ToolParameter with default value."""
-    param = ToolParameter(
-        name="size",
-        type="integer",
-        description="Number of bytes to read",
-        required=False,
-        default=SIZE_DEFAULT_READ,
-    )
-    assert param.required is False
-    assert param.default == SIZE_DEFAULT_READ
-
-
-# IntellicrackError exception tests
-
-
-def test_intellicrack_error_is_base() -> None:
-    """Verify IntellicrackError is the base exception."""
-    error = IntellicrackError("Test error")
-    assert isinstance(error, Exception)
-
-
-def test_provider_error_inheritance() -> None:
-    """Verify ProviderError inherits from IntellicrackError."""
-    error = ProviderError("Provider failed")
-    assert isinstance(error, IntellicrackError)
-
-
-def test_authentication_error_inheritance() -> None:
-    """Verify AuthenticationError inherits from ProviderError."""
-    error = AuthenticationError("Auth failed")
-    assert isinstance(error, ProviderError)
-    assert isinstance(error, IntellicrackError)
-
-
-def test_rate_limit_error_inheritance() -> None:
-    """Verify RateLimitError inherits from ProviderError."""
-    error = RateLimitError("Rate limited")
-    assert isinstance(error, ProviderError)
-
-
-def test_tool_error_inheritance() -> None:
-    """Verify ToolError inherits from IntellicrackError."""
-    error = ToolError("Tool failed")
-    assert isinstance(error, IntellicrackError)
-
-
-def test_attach_error_inheritance() -> None:
-    """Verify AttachError inherits from IntellicrackError."""
-    error = AttachError("Attach failed")
-    assert isinstance(error, IntellicrackError)
-
-
-def test_sandbox_error_inheritance() -> None:
-    """Verify SandboxError inherits from IntellicrackError."""
-    error = SandboxError("Sandbox failed")
-    assert isinstance(error, IntellicrackError)
-
-
-# ToolName and ProviderName enum tests
-
-
-def test_tool_name_has_ghidra() -> None:
-    """Verify Ghidra tool is defined."""
-    assert ToolName.GHIDRA.value == "ghidra"
-
-
-def test_tool_name_has_cutter() -> None:
-    """Verify Cutter tool is defined."""
-    assert ToolName.CUTTER.value == "cutter"
-
-
-def test_tool_name_has_frida() -> None:
-    """Verify Frida tool is defined."""
-    assert ToolName.FRIDA.value == "frida"
-
-
-def test_tool_name_has_x64dbg() -> None:
-    """Verify x64dbg tool is defined."""
-    assert ToolName.X64DBG.value == "x64dbg"
-
-
-def test_provider_name_has_anthropic() -> None:
-    """Verify Anthropic provider is defined."""
-    assert ProviderName.ANTHROPIC.value == "anthropic"
-
-
-def test_provider_name_has_openai() -> None:
-    """Verify OpenAI provider is defined."""
-    assert ProviderName.OPENAI.value == "openai"
-
-
-# Session dataclass tests
-
-
-def test_session_has_id() -> None:
-    """Verify Session has id field."""
-    field_names = {f.name for f in fields(Session)}
-    assert "id" in field_names
-
-
-def test_session_has_messages() -> None:
-    """Verify Session has messages field."""
-    field_names = {f.name for f in fields(Session)}
-    assert "messages" in field_names
-
-
-def test_session_has_tool_states() -> None:
-    """Verify Session has tool_states field."""
-    field_names = {f.name for f in fields(Session)}
-    assert "tool_states" in field_names
-
-
-# ToolCall and ToolResult tests
-
-
-def test_tool_call_creation() -> None:
-    """Verify ToolCall instantiation with correct fields."""
-    call = ToolCall(
-        id="call_123",
-        tool_name="ghidra",
-        function_name="set_breakpoint",
-        arguments={"address": ADDR_BASE, "type": "software"},
-    )
-    assert call.id == "call_123"
-    assert call.tool_name == "ghidra"
-    assert call.function_name == "set_breakpoint"
-    assert call.arguments["address"] == ADDR_BASE
-
-
-def test_tool_result_success() -> None:
-    """Verify successful ToolResult."""
-    result = ToolResult(
-        call_id="call_123",
-        success=True,
-        result={"breakpoint_id": 1},
-        error=None,
-        duration_ms=DURATION_MS,
-    )
-    assert result.call_id == "call_123"
-    assert result.success is True
-    assert result.error is None
-    assert result.duration_ms == DURATION_MS
-
-
-def test_tool_result_error() -> None:
-    """Verify error ToolResult."""
-    result = ToolResult(
-        call_id="call_456",
-        success=False,
-        result=None,
-        error="Failed to set breakpoint: access denied",
-        duration_ms=DURATION_MS_SHORT,
-    )
-    assert result.success is False
-    assert result.error == "Failed to set breakpoint: access denied"
-
-
-# Message dataclass tests
-
-
-def test_message_user() -> None:
-    """Verify user message creation."""
-    msg = Message(
-        role="user",
-        content="Analyze this binary",
-    )
-    assert msg.role == "user"
-    assert msg.content == "Analyze this binary"
-
-
-def test_message_assistant() -> None:
-    """Verify assistant message creation."""
-    msg = Message(
-        role="assistant",
-        content="I'll analyze the binary now.",
-    )
-    assert msg.role == "assistant"
-
-
-def test_message_with_tool_calls() -> None:
-    """Verify message with tool calls."""
-    call = ToolCall(
-        id="call_001",
-        tool_name="ghidra",
-        function_name="read_memory",
-        arguments={"address": ADDR_BASE, "size": SIZE_DEFAULT_READ},
-    )
-    msg = Message(
-        role="assistant",
-        content="Reading memory...",
-        tool_calls=[call],
-    )
-    assert msg.tool_calls is not None
-    assert len(msg.tool_calls) == 1
-
-
-def test_message_has_timestamp() -> None:
-    """Verify Message has timestamp field with default factory."""
-    field_names = {f.name for f in fields(Message)}
-    assert "timestamp" in field_names
-
-
-# IntellicrackError structured context tests
-
-
-def test_base_error_message_only() -> None:
-    """Verify error with message only."""
-    error = IntellicrackError("Something went wrong")
-    assert str(error) == "Something went wrong"
-    assert error.error_code is None
-    assert error.details == {}
-
-
-def test_base_error_with_error_code() -> None:
-    """Verify error with error code."""
-    error = IntellicrackError("Failed operation", error_code=ERROR_CODE_BASE)
-    assert error.error_code == ERROR_CODE_BASE
-
-
-def test_base_error_with_details() -> None:
-    """Verify error with details dictionary."""
-    details = {"component": "analyzer", "phase": "initialization"}
-    error = IntellicrackError("Initialization failed", details=details)
-    assert error.details == details
-    assert error.details["component"] == "analyzer"
-
-
-def test_base_error_full_context() -> None:
-    """Verify error with all context fields."""
-    error = IntellicrackError(
-        "Critical failure",
-        error_code=ERROR_CODE_CRITICAL,
-        details={"severity": "critical", "recoverable": False},
-    )
-    assert error.error_code == ERROR_CODE_CRITICAL
-    assert error.details["severity"] == "critical"
-    assert error.details["recoverable"] is False
-
-
-# ProviderError structured context tests
-
-
-def test_provider_error_basic() -> None:
-    """Verify basic ProviderError."""
-    error = ProviderError("API call failed")
-    assert str(error) == "API call failed"
-    assert error.provider_name is None
-
-
-def test_provider_error_with_provider_name() -> None:
-    """Verify ProviderError with provider name."""
-    error = ProviderError("Rate limited", provider_name="anthropic")
-    assert error.provider_name == "anthropic"
-
-
-def test_provider_error_with_status_code() -> None:
-    """Verify ProviderError with HTTP status code."""
-    error = ProviderError("Unauthorized", status_code=HTTP_UNAUTHORIZED)
-    assert error.status_code == HTTP_UNAUTHORIZED
-
-
-def test_provider_error_with_response_body() -> None:
-    """Verify ProviderError with response body."""
-    body = '{"error": "invalid_api_key"}'
-    error = ProviderError("Authentication failed", response_body=body)
-    assert error.response_body == body
-
-
-def test_provider_error_full_context() -> None:
-    """Verify ProviderError with all context."""
-    error = ProviderError(
-        "Request failed",
-        provider_name="openai",
-        status_code=HTTP_INTERNAL_ERROR,
-        response_body='{"error": "internal"}',
-        error_code=ERROR_CODE_PROVIDER,
-        details={"endpoint": "/v1/chat/completions"},
-    )
-    assert error.provider_name == "openai"
-    assert error.status_code == HTTP_INTERNAL_ERROR
-    assert error.response_body == '{"error": "internal"}'
-    assert error.error_code == ERROR_CODE_PROVIDER
-    assert error.details["endpoint"] == "/v1/chat/completions"
-
-
-# AuthenticationError structured context tests
-
-
-def test_auth_error_inherits_provider_error() -> None:
-    """Verify AuthenticationError inherits from ProviderError."""
-    error = AuthenticationError("Invalid credentials")
-    assert isinstance(error, ProviderError)
-    assert isinstance(error, IntellicrackError)
-
-
-def test_auth_error_with_provider_context() -> None:
-    """Verify AuthenticationError with provider context."""
-    error = AuthenticationError(
-        "API key rejected",
-        provider_name="google",
-        status_code=HTTP_FORBIDDEN,
-    )
-    assert error.provider_name == "google"
-    assert error.status_code == HTTP_FORBIDDEN
-
-
-# RateLimitError structured context tests
-
-
-def test_rate_limit_basic() -> None:
-    """Verify basic RateLimitError."""
-    error = RateLimitError("Too many requests")
-    assert str(error) == "Too many requests"
-    assert error.retry_after is None
-
-
-def test_rate_limit_with_retry_after() -> None:
-    """Verify RateLimitError with retry_after."""
-    error = RateLimitError("Rate limited", retry_after=RETRY_AFTER_SECONDS)
-    assert error.retry_after == RETRY_AFTER_SECONDS
-
-
-def test_rate_limit_full_context() -> None:
-    """Verify RateLimitError with full context."""
-    error = RateLimitError(
-        "Rate limit exceeded",
-        retry_after=RETRY_AFTER_SECONDS_SHORT,
-        provider_name="anthropic",
-        status_code=HTTP_RATE_LIMITED,
-    )
-    assert error.retry_after == RETRY_AFTER_SECONDS_SHORT
-    assert error.provider_name == "anthropic"
-    assert error.status_code == HTTP_RATE_LIMITED
-
-
-# ToolError structured context tests
-
-
-def test_tool_error_basic_structured() -> None:
-    """Verify basic ToolError."""
-    error = ToolError("Tool failed")
-    assert str(error) == "Tool failed"
-    assert error.tool_name is None
-
-
-def test_tool_error_with_tool_name_structured() -> None:
-    """Verify ToolError with tool name."""
-    error = ToolError("Ghidra script failed", tool_name="ghidra")
-    assert error.tool_name == "ghidra"
-
-
-def test_tool_error_with_exit_code() -> None:
-    """Verify ToolError with process exit code."""
-    error = ToolError("Process crashed", exit_code=EXIT_CODE_CRASH)
-    assert error.exit_code == EXIT_CODE_CRASH
-
-
-def test_tool_error_with_stderr() -> None:
-    """Verify ToolError with stderr output."""
-    stderr = "Error: Invalid address 0xDEADBEEF"
-    error = ToolError("Memory read failed", stderr=stderr)
-    assert error.stderr == stderr
-
-
-TEST_PID_DETAILS = 12345
-
-
-def test_tool_error_full_context_structured() -> None:
-    """Verify ToolError with all context."""
-    error = ToolError(
-        "Frida injection failed",
-        tool_name="frida",
-        exit_code=EXIT_CODE_ERROR,
-        stderr="Failed to attach to process",
-        error_code=ERROR_CODE_TOOL,
-        details={"pid": TEST_PID_DETAILS, "target": "notepad.exe"},
-    )
-    assert error.tool_name == "frida"
-    assert error.exit_code == EXIT_CODE_ERROR
-    assert error.stderr == "Failed to attach to process"
-    assert error.error_code == ERROR_CODE_TOOL
-    assert error.details["pid"] == TEST_PID_DETAILS
-
-
-# AttachError structured context tests
-
-
-def test_attach_error_basic_structured() -> None:
-    """Verify basic AttachError."""
-    error = AttachError("Failed to attach")
-    assert isinstance(error, ToolError)
-
-
-def test_attach_error_with_pid_structured() -> None:
-    """Verify AttachError with process ID."""
-    error = AttachError("Access denied", pid=TEST_PID)
-    assert error.pid == TEST_PID
-
-
-def test_attach_error_with_process_name() -> None:
-    """Verify AttachError with process name."""
-    error = AttachError("Process not found", process_name="target.exe")
-    assert error.process_name == "target.exe"
-
-
-def test_attach_error_full_context_structured() -> None:
-    """Verify AttachError with all context."""
-    error = AttachError(
-        "Cannot attach to protected process",
-        pid=TEST_PID_PROTECTED,
-        process_name="protectedapp.exe",
-        tool_name="x64dbg",
-    )
-    assert error.pid == TEST_PID_PROTECTED
-    assert error.process_name == "protectedapp.exe"
-    assert error.tool_name == "x64dbg"
-
-
-# SandboxError structured context tests
-
-
-def test_sandbox_error_basic_structured() -> None:
-    """Verify basic SandboxError."""
-    error = SandboxError("VM failed to start")
-    assert isinstance(error, IntellicrackError)
-
-
-def test_sandbox_error_with_type() -> None:
-    """Verify SandboxError with sandbox type."""
-    error = SandboxError("Image not found", sandbox_type="qemu")
-    assert error.sandbox_type == "qemu"
-
-
-def test_sandbox_error_with_vm_state() -> None:
-    """Verify SandboxError with VM state."""
-    error = SandboxError("Snapshot failed", vm_state="running")
-    assert error.vm_state == "running"
-
-
-def test_sandbox_error_full_context() -> None:
-    """Verify SandboxError with all context."""
-    error = SandboxError(
-        "VM crashed during analysis",
-        sandbox_type="qemu",
-        vm_state="paused",
-        error_code=ERROR_CODE_SANDBOX,
-        details={"exit_reason": "triple_fault"},
-    )
-    assert error.sandbox_type == "qemu"
-    assert error.vm_state == "paused"
-    assert error.error_code == ERROR_CODE_SANDBOX
-    assert error.details["exit_reason"] == "triple_fault"
-
-
-# Exception inheritance chain tests
-
-
-def test_all_errors_inherit_from_base() -> None:
-    """Verify all custom errors inherit from IntellicrackError."""
-    errors = [
-        ProviderError("test"),
-        AuthenticationError("test"),
-        RateLimitError("test"),
-        ToolError("test"),
-        AttachError("test"),
-        SandboxError("test"),
-    ]
-    for error in errors:
+    assert func.signature == "ghidra.read_memory(address: integer, size: integer) -> bytes"
+
+
+# --- __str__ renderings (oracle: hand-derived) ------------------------------
+
+
+class TestStringRenderings:
+    """Dataclass __str__ implementations format their state precisely."""
+
+    @staticmethod
+    def test_cross_reference_prefers_function_names() -> None:
+        """CrossReference renders symbol names when available."""
+        xref = CrossReference(
+            from_address=0x401000,
+            to_address=0x402000,
+            ref_type="call",
+            from_function="main",
+            to_function="CheckLicense",
+        )
+        assert str(xref) == "[call] main -> CheckLicense"
+
+    @staticmethod
+    def test_cross_reference_falls_back_to_hex_addresses() -> None:
+        """CrossReference renders hex addresses when names are missing."""
+        xref = CrossReference(
+            from_address=0x401000,
+            to_address=0x402000,
+            ref_type="jump",
+            from_function=None,
+            to_function=None,
+        )
+        assert str(xref) == "[jump] 0x401000 -> 0x402000"
+
+    @staticmethod
+    def test_breakpoint_str_reports_status_and_hits() -> None:
+        """BreakpointInfo renders id, address, type, enabled state, and hits."""
+        bp = BreakpointInfo(
+            id=2,
+            address=0x401000,
+            bp_type="hardware",
+            enabled=False,
+            hit_count=5,
+            condition="eax == 0",
+        )
+        assert str(bp) == "BP#2 @ 0x401000 (hardware): disabled, hit 5 times"
+
+    @staticmethod
+    def test_thread_str_reports_current_pc() -> None:
+        """ThreadInfo renders tid, state, and hex current program counter."""
+        thread = ThreadInfo(tid=1234, start_address=0x401000, current_pc=0x401ABC, state="running")
+        assert str(thread) == "Thread 1234 (running) @ pc=0x401abc"
+
+
+# --- RegisterState access including the error path --------------------------
+
+
+class TestRegisterStateAccess:
+    """RegisterState exposes register access, grouping, and key validation."""
+
+    @staticmethod
+    def _state() -> RegisterState:
+        """Build a fully populated x64 register state.
+
+        Returns:
+            RegisterState: Register state with distinct sentinel values.
+        """
+        return RegisterState(
+            rax=RAX_VALUE,
+            rbx=0,
+            rcx=0x100,
+            rdx=0x200,
+            rsi=0x300,
+            rdi=0x400,
+            rbp=0x7FFF00000000,
+            rsp=RSP_VALUE,
+            rip=RIP_VALUE,
+            r8=0,
+            r9=0,
+            r10=0,
+            r11=0,
+            r12=0,
+            r13=0,
+            r14=0,
+            r15=0,
+            rflags=0x246,
+            cs=0x33,
+            ds=0x2B,
+            es=0x2B,
+            fs=0x53,
+            gs=0x2B,
+            ss=0x2B,
+        )
+
+    def test_getitem_returns_named_register_value(self) -> None:
+        """__getitem__ resolves a register by name to its integer value."""
+        state = self._state()
+        assert state["rax"] == RAX_VALUE
+        assert state["rip"] == RIP_VALUE
+        assert state["fs"] == 0x53
+
+    def test_getitem_unknown_register_raises_keyerror(self) -> None:
+        """__getitem__ raises KeyError for an unknown register name."""
+        state = self._state()
+        with pytest.raises(KeyError, match="r99"):
+            _ = state["r99"]
+
+    def test_gpr_dict_excludes_rip_and_segment_registers(self) -> None:
+        """get_gpr_dict returns only GPRs, omitting rip/rflags/segments."""
+        gprs = self._state().get_gpr_dict()
+        assert gprs["rax"] == RAX_VALUE
+        assert gprs["rsp"] == RSP_VALUE
+        assert set(gprs) == {
+            "rax",
+            "rbx",
+            "rcx",
+            "rdx",
+            "rsi",
+            "rdi",
+            "rbp",
+            "rsp",
+            "r8",
+            "r9",
+            "r10",
+            "r11",
+            "r12",
+            "r13",
+            "r14",
+            "r15",
+        }
+
+    def test_segment_registers_grouped_correctly(self) -> None:
+        """get_segment_registers returns exactly the six segment registers."""
+        segs = self._state().get_segment_registers()
+        assert segs == {"cs": 0x33, "ds": 0x2B, "es": 0x2B, "fs": 0x53, "gs": 0x2B, "ss": 0x2B}
+
+
+# --- Exception hierarchy structured-context propagation ----------------------
+
+
+class TestExceptionStructuredContext:
+    """Intellicrack exceptions carry structured context through real raises."""
+
+    @staticmethod
+    def test_base_error_str_and_default_context() -> None:
+        """IntellicrackError stringifies its message and defaults context."""
+        error = IntellicrackError("boom")
+        assert str(error) == "boom"
+        assert error.error_code is None
+        assert error.details == {}
+
+    @staticmethod
+    def test_provider_error_propagates_full_context_through_raise() -> None:
+        """A raised ProviderError preserves provider/status/body/details."""
+        original = ProviderError(
+            "Unauthorized",
+            provider_name="anthropic",
+            status_code=HTTP_UNAUTHORIZED,
+            response_body='{"error": "invalid_api_key"}',
+            error_code=ERROR_CODE_BASE,
+            details={"endpoint": "/v1/messages"},
+        )
+        with pytest.raises(ProviderError) as exc_info:
+            raise original
+        err = exc_info.value
+        assert isinstance(err, IntellicrackError)
+        assert err.provider_name == "anthropic"
+        assert err.status_code == HTTP_UNAUTHORIZED
+        assert err.response_body == '{"error": "invalid_api_key"}'
+        assert err.error_code == ERROR_CODE_BASE
+        assert err.details["endpoint"] == "/v1/messages"
+
+    @staticmethod
+    def test_rate_limit_error_is_caught_as_provider_error() -> None:
+        """RateLimitError carries retry_after and is catchable as ProviderError."""
+        original = RateLimitError(
+            "Rate limited",
+            retry_after=RETRY_AFTER_SECONDS,
+            provider_name="anthropic",
+            status_code=HTTP_RATE_LIMITED,
+        )
+        with pytest.raises(ProviderError) as exc_info:
+            raise original
+        err = exc_info.value
+        assert isinstance(err, RateLimitError)
+        assert err.retry_after == RETRY_AFTER_SECONDS
+        assert err.status_code == HTTP_RATE_LIMITED
+
+    @staticmethod
+    def test_authentication_error_inherits_provider_init() -> None:
+        """AuthenticationError reuses ProviderError's structured __init__."""
+        error = AuthenticationError("API key rejected", provider_name="google", status_code=403)
+        assert isinstance(error, ProviderError)
+        assert error.provider_name == "google"
+        assert error.status_code == 403
+
+    @staticmethod
+    def test_attach_error_is_tool_error_with_process_context() -> None:
+        """AttachError records pid/process_name and is catchable as ToolError."""
+        error = AttachError(
+            "Cannot attach to protected process",
+            pid=4567,
+            process_name="protectedapp.exe",
+            tool_name="x64dbg",
+        )
+        assert error.pid == 4567
+        assert error.process_name == "protectedapp.exe"
+        assert error.tool_name == "x64dbg"
+
+    @staticmethod
+    def test_sandbox_error_carries_vm_state_and_type() -> None:
+        """SandboxError records sandbox type and VM state plus base details."""
+        error = SandboxError(
+            "VM crashed during analysis",
+            sandbox_type="qemu",
+            vm_state="paused",
+            details={"exit_reason": "triple_fault"},
+        )
         assert isinstance(error, IntellicrackError)
-        assert isinstance(error, Exception)
+        assert error.sandbox_type == "qemu"
+        assert error.vm_state == "paused"
+        assert error.details["exit_reason"] == "triple_fault"
 
 
-def test_provider_errors_have_provider_attributes() -> None:
-    """Verify provider-related errors have provider_name attribute."""
-    errors = [
-        ProviderError("test"),
-        AuthenticationError("test"),
-        RateLimitError("test"),
-    ]
-    for error in errors:
-        assert hasattr(error, "provider_name")
+# --- Real SQLite round-trip through SessionStore ----------------------------
 
 
-def test_tool_errors_have_tool_attributes() -> None:
-    """Verify tool-related errors have tool_name attribute."""
-    errors = [
-        ToolError("test"),
-        AttachError("test"),
-    ]
-    for error in errors:
-        assert hasattr(error, "tool_name")
+def _make_store(tmp_path: Path) -> SessionStore:
+    """Create a SessionStore backed by a fresh on-disk SQLite database.
+
+    Args:
+        tmp_path: Pytest-provided temporary directory.
+
+    Returns:
+        SessionStore: A store ready for save/load round-trips.
+    """
+    return SessionStore(tmp_path / "sessions.db")
+
+
+class TestPatchInfoRoundTrip:
+    """PatchInfo survives the real hex-encoded serialise/deserialise path."""
+
+    @staticmethod
+    def test_patch_bytes_survive_database_round_trip(tmp_path: Path) -> None:
+        """A NOP-sled patch's exact bytes reconstruct after save/load.
+
+        The session serialiser hex-encodes the byte fields and the loader
+        decodes them; a regression in either direction would corrupt the
+        patch bytes when read back from the real SQLite database.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory.
+        """
+        store = _make_store(tmp_path)
+        session = _new_session()
+        original = PatchInfo(
+            address=0x402000,
+            original_bytes=b"\xe8\x00\x10\x00\x00",
+            new_bytes=b"\x90\x90\x90\x90\x90",
+            description="NOP out license check call",
+            applied=False,
+        )
+        session.add_patch(original)
+        store.save(session)
+
+        loaded = store.load(session.id)
+        assert loaded is not None
+        assert len(loaded.patches) == 1
+        restored = loaded.patches[0]
+        assert restored.address == 0x402000
+        assert restored.original_bytes == b"\xe8\x00\x10\x00\x00"
+        assert restored.new_bytes == b"\x90\x90\x90\x90\x90"
+        assert restored.description == "NOP out license check call"
+        assert restored.applied is False
+
+
+class TestMessageRoundTrip:
+    """Message with tool calls/results survives the real session DB."""
+
+    @staticmethod
+    def test_message_tool_call_round_trips_through_database(tmp_path: Path) -> None:
+        """An assistant Message with a ToolCall reconstructs from SQLite.
+
+        The whole Session is persisted to and loaded from a real SQLite
+        database; a break in Message/ToolCall serialisation, the datetime
+        encoding, or the JSON column handling would fail this test.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory.
+        """
+        store = _make_store(tmp_path)
+        session = _new_session()
+        call = ToolCall(
+            id="call_001",
+            tool_name="ghidra",
+            function_name="read_memory",
+            arguments={"address": 0x401000, "size": 16},
+        )
+        result = ToolResult(
+            call_id="call_001",
+            success=True,
+            result={"bytes": "909090"},
+            error=None,
+            duration_ms=15.5,
+        )
+        message = Message(
+            role="assistant",
+            content="Reading memory...",
+            tool_calls=[call],
+            tool_results=[result],
+        )
+        session.add_message(message)
+        store.save(session)
+
+        loaded = store.load(session.id)
+        assert loaded is not None
+        assert len(loaded.messages) == 1
+        restored = loaded.messages[0]
+        assert restored.role == "assistant"
+        assert restored.content == "Reading memory..."
+        assert restored.timestamp == message.timestamp
+        assert restored.tool_calls is not None
+        assert restored.tool_calls[0].id == "call_001"
+        assert restored.tool_calls[0].function_name == "read_memory"
+        assert restored.tool_calls[0].arguments == {"address": 0x401000, "size": 16}
+        assert restored.tool_results is not None
+        assert restored.tool_results[0].success is True
+        assert restored.tool_results[0].result == {"bytes": "909090"}
+        assert abs(restored.tool_results[0].duration_ms - 15.5) < 1e-9
+
+
+class TestToolStateRoundTrip:
+    """ToolState enum keys round-trip through the session DB."""
+
+    @staticmethod
+    def test_tool_state_enum_keys_reconstruct(tmp_path: Path) -> None:
+        """A ToolState keyed by ToolName.GHIDRA reconstructs by enum value.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory.
+        """
+        store = _make_store(tmp_path)
+        session = _new_session()
+        session.set_tool_state(
+            ToolState(
+                tool=ToolName.GHIDRA,
+                connected=True,
+                process_attached=False,
+                target_path=None,
+                last_error="decompiler busy",
+            ),
+        )
+        store.save(session)
+
+        loaded = store.load(session.id)
+        assert loaded is not None
+        assert ToolName.GHIDRA in loaded.tool_states
+        state = loaded.tool_states[ToolName.GHIDRA]
+        assert state.connected is True
+        assert state.process_attached is False
+        assert state.last_error == "decompiler busy"
+
+
+class TestBridgeAnalysisRoundTrip:
+    """BridgeAnalysisSummary survives the nested serialise/deserialise path."""
+
+    @staticmethod
+    def test_summary_with_nested_records_reconstructs(tmp_path: Path) -> None:
+        """A summary's strings/imports/sections survive a real DB round-trip.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory.
+        """
+        store = _make_store(tmp_path)
+        session = _new_session()
+        summary = BridgeAnalysisSummary(
+            binary_name="target.dll",
+            strings=[StringInfo(address=0x403000, value="Invalid License", encoding="ascii", section=".rdata")],
+            imports=[ImportInfo(dll="kernel32.dll", function="CreateFileA", ordinal=None, address=0x402000)],
+            exports=[ExportInfo(name="DllMain", ordinal=1, address=0x401000)],
+            sections=[_build_section(".text", va=ADDR_TEXT, characteristics=IMAGE_SCN_MEM_EXECUTE, entropy=ENTROPY_NORMAL)],
+            functions=[],
+            format_info="pe",
+            architecture="x86_64",
+            source_bridges=["hex_editor", "ghidra"],
+            analysis_notes=["aggregated"],
+        )
+        session.add_bridge_analysis("target.dll", summary)
+        store.save(session)
+
+        loaded = store.load(session.id)
+        assert loaded is not None
+        restored = loaded.get_bridge_analysis("target.dll")
+        assert restored is not None
+        assert restored.binary_name == "target.dll"
+        assert restored.strings[0].value == "Invalid License"
+        assert restored.strings[0].encoding == "ascii"
+        assert restored.imports[0].dll == "kernel32.dll"
+        assert restored.imports[0].function == "CreateFileA"
+        assert restored.exports[0].name == "DllMain"
+        assert restored.sections[0].name == ".text"
+        assert restored.sections[0].is_executable is True
+        assert restored.source_bridges == ["hex_editor", "ghidra"]
+
+
+# --- Real PE driven through the real bridge into core types ------------------
+
+
+def _new_session() -> Session:
+    """Create a fresh in-memory Session for round-trip tests.
+
+    Returns:
+        Session: A new session configured for the Anthropic provider.
+    """
+    return Session.create(provider=ProviderName.ANTHROPIC, model="claude-3")
+
+
+class TestRealPeIntoCoreTypes:
+    """A real PE parsed by the real bridge populates core types correctly."""
+
+    @staticmethod
+    def _open(path: Path) -> HexEditorBridge:
+        """Open a real PE on a fresh HexEditorBridge.
+
+        Args:
+            path: Path to a real PE binary.
+
+        Returns:
+            HexEditorBridge: Bridge with the document loaded.
+        """
+        bridge = HexEditorBridge()
+        asyncio.run(bridge.open_file(str(path)))
+        return bridge
+
+    def test_real_pe_sections_decode_executable_text_segment(self, real_pe_dll: Path) -> None:
+        """The real ``.text`` section of kernel32.dll decodes as executable.
+
+        The bridge parses the on-disk PE section table; the resulting
+        characteristic word is fed into SectionInfo, whose property decoding
+        is checked against the PE/COFF executable bit. A regression in the
+        section walk or the bit decoding fails this test.
+
+        Args:
+            real_pe_dll: Path to a real System32 DLL.
+        """
+        bridge = self._open(real_pe_dll)
+        raw_sections: list[dict[str, Any]] = asyncio.run(bridge.get_pe_sections())
+        sections = [
+            SectionInfo(
+                name=str(s["name"]),
+                virtual_address=int(s["virtual_address"]),
+                virtual_size=int(s["virtual_size"]),
+                raw_size=int(s["raw_size"]),
+                characteristics=int(s["characteristics"]),
+                entropy=0.0,
+            )
+            for s in raw_sections
+        ]
+        by_name = {s.name: s for s in sections}
+        assert ".text" in by_name, "kernel32.dll must expose a .text section"
+
+        text = by_name[".text"]
+        assert text.virtual_address > 0
+        assert text.is_executable is True
+        assert text.is_readable is True
+        assert text.is_writable is False
+        # Cross-check the property against the raw flag directly.
+        assert bool(text.characteristics & IMAGE_SCN_MEM_EXECUTE) is True
+
+    def test_real_pe_binaryinfo_round_trips_through_session_store(self, real_pe_dll: Path, tmp_path: Path) -> None:
+        """A BinaryInfo built from a real PE reconstructs from a real DB.
+
+        A real PE is parsed into sections/imports/exports, assembled into a
+        BinaryInfo with an independently computed SHA-256, persisted to a real
+        SQLite database, and loaded back. The reconstructed binary must match
+        the original field-by-field, including the executable .text section.
+
+        Args:
+            real_pe_dll: Path to a real System32 DLL.
+            tmp_path: Pytest-provided temporary directory.
+        """
+        bridge = self._open(real_pe_dll)
+        raw_sections: list[dict[str, Any]] = asyncio.run(bridge.get_pe_sections())
+        raw_imports: list[dict[str, Any]] = asyncio.run(bridge.get_pe_imports())
+        raw_exports: list[dict[str, Any]] = asyncio.run(bridge.get_pe_exports())
+
+        pe_bytes = real_pe_dll.read_bytes()
+        expected_sha = hashlib.sha256(pe_bytes).hexdigest()
+
+        sections = [
+            SectionInfo(
+                name=str(s["name"]),
+                virtual_address=int(s["virtual_address"]),
+                virtual_size=int(s["virtual_size"]),
+                raw_size=int(s["raw_size"]),
+                characteristics=int(s["characteristics"]),
+                entropy=0.0,
+            )
+            for s in raw_sections
+        ]
+        imports = [
+            ImportInfo(
+                dll=str(i["dll"]),
+                function=str(i["function"]),
+                ordinal=int(i["ordinal"]) or None,
+                address=int(i["address"]),
+            )
+            for i in raw_imports[:5]
+        ]
+        exports = [ExportInfo(name=str(e["name"]), ordinal=int(e["ordinal"]), address=int(e["address"])) for e in raw_exports[:5]]
+        binary = BinaryInfo(
+            path=real_pe_dll,
+            name=real_pe_dll.name,
+            size=len(pe_bytes),
+            sha256=expected_sha,
+            file_type="pe",
+            architecture="x86_64",
+            is_64bit=True,
+            entry_point=int(sections[0].virtual_address),
+            sections=sections,
+            imports=imports,
+            exports=exports,
+        )
+
+        store = _make_store(tmp_path)
+        session = _new_session()
+        session.add_binary(binary)
+        store.save(session)
+
+        loaded = store.load(session.id)
+        assert loaded is not None
+        assert len(loaded.binaries) == 1
+        restored = loaded.binaries[0]
+        assert restored.name == real_pe_dll.name
+        assert restored.size == len(pe_bytes)
+        assert restored.sha256 == expected_sha
+        assert restored.file_type == "pe"
+        assert {s.name for s in restored.sections} == {s.name for s in sections}
+        text = next((s for s in restored.sections if s.name == ".text"), None)
+        assert text is not None
+        assert text.is_executable is True
+        if imports:
+            assert restored.imports[0].dll == imports[0].dll
+            assert restored.imports[0].function == imports[0].function

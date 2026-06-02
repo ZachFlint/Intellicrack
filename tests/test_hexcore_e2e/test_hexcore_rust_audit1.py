@@ -86,6 +86,67 @@ class TestF0001MoveBlockUndo:
         assert doc.redo() is True
         assert doc.read(0, doc.length()) == b"\x00\x00\x00\x00BBBBCCCCAAAA"
 
+    def test_undo_redo_undo_round_trip_returns_to_original(self) -> None:
+        """Verify a full undo -> redo -> undo cycle restores the original buffer.
+
+        Exercises the history machinery in both directions twice over to
+        confirm the undo/redo stacks stay consistent across multiple
+        traversals, not merely a single undo. The post-move, post-redo, and
+        twice-undone states are each pinned to their exact expected bytes so a
+        history-corruption regression (e.g. a stale redo entry or a dropped
+        undo record) is caught at every transition.
+        """
+        original = b"AAAABBBBCCCCDDDD"
+        moved = b"\x00\x00\x00\x00BBBBCCCCAAAA"
+        doc = hexcore_mod.HexDocument.open_bytes(original)
+
+        doc.move_block(0, 4, 12)
+        assert doc.read(0, doc.length()) == moved
+
+        assert doc.undo() is True
+        assert doc.read(0, doc.length()) == original
+
+        assert doc.redo() is True
+        assert doc.read(0, doc.length()) == moved
+
+        assert doc.undo() is True
+        assert doc.read(0, doc.length()) == original
+
+        assert doc.undo() is False
+        assert doc.read(0, doc.length()) == original
+
+    def test_undo_with_no_history_returns_false_and_leaves_buffer(self) -> None:
+        """Verify undo/redo on a pristine document are no-ops returning False.
+
+        A freshly opened document has an empty undo stack and an empty redo
+        stack; both operations must report ``False`` and leave the buffer
+        byte-for-byte untouched rather than raising or silently mutating state.
+        """
+        doc = hexcore_mod.HexDocument.open_bytes(b"AAAABBBBCCCCDDDD")
+        assert doc.undo() is False
+        assert doc.redo() is False
+        assert doc.read(0, doc.length()) == b"AAAABBBBCCCCDDDD"
+
+    def test_new_operation_after_undo_clears_redo_stack(self) -> None:
+        """Verify a fresh edit after an undo discards the pending redo entry.
+
+        Standard undo-history semantics: undoing the move arms a redo, but
+        performing a *new* mutation (a single-byte overwrite) must drop that
+        redo so the move can no longer be replayed. The buffer is pinned to the
+        exact bytes produced by the new edit, and ``redo()`` must report
+        ``False`` and not resurrect the discarded move.
+        """
+        doc = hexcore_mod.HexDocument.open_bytes(b"AAAABBBBCCCCDDDD")
+        doc.move_block(0, 4, 12)
+        assert doc.undo() is True
+        assert doc.read(0, doc.length()) == b"AAAABBBBCCCCDDDD"
+
+        doc.write_bytes(0, b"Z")
+        assert doc.read(0, doc.length()) == b"ZAAABBBBCCCCDDDD"
+
+        assert doc.redo() is False
+        assert doc.read(0, doc.length()) == b"ZAAABBBBCCCCDDDD"
+
 
 class TestF0002SwapBlocksRequiresEqualLengths:
     """F-0002: ``swap_blocks`` must reject unequal-length operands."""

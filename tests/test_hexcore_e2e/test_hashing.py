@@ -98,59 +98,100 @@ class TestHashAlgorithms:
         result: str = sample_doc_from_bytes.compute_hash("crc32")
         assert result.lower() == expected.lower()
 
-    def test_sha3_256_matches_hashlib_if_supported(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
-        """Verify that compute_hash('sha3-256') matches hashlib when the algorithm is built in.
+    def test_sha3_256_matches_hashlib(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
+        """Verify that compute_hash('sha3-256') unconditionally matches hashlib.sha3_256.
+
+        SHA3-256 is an unconditional match arm in the hexcore Rust hash module, so it
+        must always be available; this test never skips and fails if the digest is wrong.
 
         Args:
             sample_doc_from_bytes: HexDocument created from sample_bytes.
             sample_bytes: 256-byte test payload (0x00-0xFF).
         """
         expected: str = hashlib.sha3_256(sample_bytes).hexdigest()
-        try:
-            result: str = sample_doc_from_bytes.compute_hash("sha3-256")
-        except (RuntimeError, ValueError):
-            pytest.skip("sha3-256 not supported by this build")
+        result: str = sample_doc_from_bytes.compute_hash("sha3-256")
         assert result.lower() == expected.lower()
 
-    def test_sha3_512_matches_hashlib_if_supported(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
-        """Verify that compute_hash('sha3-512') matches hashlib when the algorithm is built in.
+    def test_sha3_512_matches_hashlib(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
+        """Verify that compute_hash('sha3-512') unconditionally matches hashlib.sha3_512.
+
+        SHA3-512 is an unconditional match arm in the hexcore Rust hash module, so it
+        must always be available; this test never skips and fails if the digest is wrong.
 
         Args:
             sample_doc_from_bytes: HexDocument created from sample_bytes.
             sample_bytes: 256-byte test payload (0x00-0xFF).
         """
         expected: str = hashlib.sha3_512(sample_bytes).hexdigest()
-        try:
-            result: str = sample_doc_from_bytes.compute_hash("sha3-512")
-        except (RuntimeError, ValueError):
-            pytest.skip("sha3-512 not supported by this build")
+        result: str = sample_doc_from_bytes.compute_hash("sha3-512")
         assert result.lower() == expected.lower()
 
-    def test_blake2b_matches_hashlib_if_supported(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
-        """Verify that compute_hash('blake2b') matches hashlib when the algorithm is built in.
+    def test_sha3_256_empty_matches_nist_known_answer(self, empty_doc: HexDocument) -> None:
+        """Verify that compute_hash('sha3-256') over zero bytes equals the published NIST KAT.
 
-        The hexcore 'blake2b' algorithm is BLAKE2b with a 256-bit (32-byte) digest,
-        so the hashlib reference must use ``digest_size=32`` to match.
+        The expected digest is the NIST/FIPS 202 SHA3-256("") known-answer value, an
+        independent published constant, not derived from this implementation.
+
+        Args:
+            empty_doc: A zero-length HexDocument.
+        """
+        nist_sha3_256_empty: str = "a7ffc6f8bf1ed76651c14756a061d662f580ff4de43b49fa82d80a4b80f8434a"
+        result: str = empty_doc.compute_hash("sha3-256")
+        assert result.lower() == nist_sha3_256_empty
+
+    def test_sha3_underscore_alias_matches_hyphen(self, sample_doc_from_bytes: HexDocument) -> None:
+        """Verify the 'sha3_256' underscore alias yields the same digest as 'sha3-256'.
+
+        Args:
+            sample_doc_from_bytes: HexDocument created from sample_bytes.
+        """
+        hyphen: str = sample_doc_from_bytes.compute_hash("sha3-256")
+        underscore: str = sample_doc_from_bytes.compute_hash("sha3_256")
+        assert underscore.lower() == hyphen.lower()
+
+    def test_blake2b_matches_hashlib_256bit_digest(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
+        """Verify compute_hash('blake2b') unconditionally matches hashlib BLAKE2b-256.
+
+        The hexcore 'blake2b' algorithm is BLAKE2b with a 256-bit (32-byte) digest, so the
+        hashlib reference must use ``digest_size=32`` to match. BLAKE2b is an unconditional
+        match arm in the Rust hash module, so this test never skips.
 
         Args:
             sample_doc_from_bytes: HexDocument created from sample_bytes.
             sample_bytes: 256-byte test payload (0x00-0xFF).
         """
         expected: str = hashlib.blake2b(sample_bytes, digest_size=32).hexdigest()
-        try:
-            result: str = sample_doc_from_bytes.compute_hash("blake2b")
-        except (RuntimeError, ValueError):
-            pytest.skip("blake2b not supported by this build")
+        result: str = sample_doc_from_bytes.compute_hash("blake2b")
+        assert len(result) == 64
         assert result.lower() == expected.lower()
 
-    def test_unsupported_algorithm_raises(self, sample_doc_from_bytes: HexDocument) -> None:
-        """Verify that compute_hash raises for an unknown algorithm name.
+    def test_blake2b_differs_from_blake2s(self, sample_doc_from_bytes: HexDocument) -> None:
+        """Verify the distinct BLAKE2b and BLAKE2s algorithms produce different 256-bit digests.
+
+        Both yield 64 hex characters, so a length-only check could not tell them apart; this
+        asserts the two algorithm arms are wired to genuinely different primitives.
 
         Args:
             sample_doc_from_bytes: HexDocument created from sample_bytes.
         """
-        with pytest.raises((ValueError, RuntimeError)):
+        blake2b: str = sample_doc_from_bytes.compute_hash("blake2b")
+        blake2s: str = sample_doc_from_bytes.compute_hash("blake2s")
+        assert len(blake2b) == 64
+        assert len(blake2s) == 64
+        assert blake2b.lower() != blake2s.lower()
+
+    def test_unsupported_algorithm_raises_value_error(self, sample_doc_from_bytes: HexDocument) -> None:
+        """Verify that compute_hash raises ValueError with the offending name for an unknown algorithm.
+
+        The hexcore binding maps the Rust ``UnsupportedAlgorithm`` error onto a Python
+        ``ValueError`` whose message echoes the lowercased algorithm name.
+
+        Args:
+            sample_doc_from_bytes: HexDocument created from sample_bytes.
+        """
+        with pytest.raises(ValueError, match="not_a_real_hash_algo_xyz") as exc_info:
             sample_doc_from_bytes.compute_hash("not_a_real_hash_algo_xyz")
+        assert "unsupported algorithm" in str(exc_info.value).lower()
 
     def test_sha256_output_is_64_hex_chars(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that compute_hash('sha256') returns a 64-character hex string.

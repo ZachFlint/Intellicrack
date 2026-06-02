@@ -43,6 +43,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ToolError
 from intellicrack.ui.highlighter import (
     get_highlighter_for_language,
 )
@@ -376,6 +377,7 @@ _DEFAULT_SPLIT_LEFT: Final[int] = 600
 _DEFAULT_SPLIT_RIGHT: Final[int] = 200
 _CODE_SPLIT_LEFT: Final[int] = 400
 _CODE_SPLIT_RIGHT: Final[int] = 100
+_SPLITTER_PANE_COUNT: Final[int] = 2
 
 
 OutputType = Literal[
@@ -1143,7 +1145,7 @@ class _ToolOutputPanelBase(QFrame):
                         run_coro(method())
                     else:
                         method()
-                except (RuntimeError, OSError, AttributeError):
+                except (RuntimeError, OSError, AttributeError, ToolError):
                     _logger.warning(
                         "bridge_cleanup_error",
                         exc_info=True,
@@ -2618,7 +2620,7 @@ class _ToolOutputPanelWiringMixin(_ToolOutputPanelAccessorsMixin):
 
         sizes_val: object = state.get("splitter_sizes")
         stored_sizes = cast("list[int]", sizes_val) if isinstance(sizes_val, list) else []
-        if len(stored_sizes) == 2:
+        if len(stored_sizes) == _SPLITTER_PANE_COUNT:
             self.main_splitter.setSizes([int(stored_sizes[0]), int(stored_sizes[1])])
 
     def has_unsaved_changes(self) -> bool:

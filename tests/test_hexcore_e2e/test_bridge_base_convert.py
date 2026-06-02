@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -23,17 +23,14 @@ pytest.importorskip(
 )
 
 
-_T = TypeVar("_T")
-
-
-def _run[T](coro: Coroutine[object, object, _T]) -> _T:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        _T: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -104,13 +101,32 @@ class TestBaseConvertTypeRepresentations:
 class TestBaseConvertEdgeCases:
     """Tests for base_convert edge cases."""
 
-    def test_result_has_base_keys(self) -> None:
-        """Verify result always contains decimal, hex, octal, binary keys."""
+    def test_result_full_structure_for_42(self) -> None:
+        """Verify the full representation dict for 42 matches known constants.
+
+        The expected dict is built from independently-known IEEE-754 and
+        base-representation constants (hand-computed / Python repr of the
+        canonical bit patterns), not from the production function's own
+        output, so a regression in any representation breaks this gate.
+        """
         result = _run(HexEditorBridge.base_convert("42"))
-        assert "decimal" in result
-        assert "hex" in result
-        assert "octal" in result
-        assert "binary" in result
+        expected: dict[str, str] = {
+            "decimal": "42",
+            "hex": "0x2a",
+            "octal": "0o52",
+            "binary": "0b101010",
+            "uint8": "42",
+            "int8": "42",
+            "uint16_le": "42",
+            "int16_le": "42",
+            "uint32_le": "42",
+            "int32_le": "42",
+            "uint64_le": "42",
+            "int64_le": "42",
+            "float32_le": "5.885453550164232e-44",
+            "float64_le": "2.08e-322",
+        }
+        assert result == expected
 
     def test_zero_value(self) -> None:
         """Verify zero converts correctly across all representations."""

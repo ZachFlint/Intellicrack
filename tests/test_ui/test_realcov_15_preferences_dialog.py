@@ -25,7 +25,15 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from intellicrack.core.config import Config
+from intellicrack.core.config import (
+    Config,
+    LogConfig,
+    ProviderConfig,
+    SessionConfig,
+    ToolConfig,
+    UIConfig,
+)
+from intellicrack.core.types import ConfirmationLevel, ProviderName, ToolName
 from intellicrack.ui.preferences import PreferencesDialog
 
 
@@ -54,17 +62,82 @@ def _make_config(tmp_path: Path) -> Config:
     )
 
 
+def _make_rich_config(tmp_path: Path) -> Config:
+    """Build a fully non-default :class:`Config` for round-trip auditing.
+
+    Every scalar field is deliberately set to a value that differs from the
+    dataclass default so that an accidental reset of any field to its default
+    during an edit/accept cycle is detectable. The ``providers`` and ``tools``
+    mappings are seeded with non-default sub-configs as well.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+
+    Returns:
+        Config: A Config whose every field is distinct from the defaults.
+    """
+    return Config(
+        tools_directory=tmp_path / "orig_tools",
+        logs_directory=tmp_path / "orig_logs",
+        data_directory=tmp_path / "orig_data",
+        default_provider=ProviderName.OPENAI,
+        confirmation_level=ConfirmationLevel.ALL,
+        providers={
+            ProviderName.OPENAI: ProviderConfig(
+                enabled=False,
+                api_base="https://example.invalid/v1",
+                default_model="custom-model",
+                timeout_seconds=77,
+                max_retries=9,
+            ),
+        },
+        tools={
+            ToolName.GHIDRA: ToolConfig(
+                enabled=False,
+                path=tmp_path / "ghidra",
+                auto_install=False,
+                startup_timeout_seconds=314,
+                port=5959,
+            ),
+        },
+        ui=UIConfig(theme="dark", font_family="Courier New", font_size=15, show_tool_calls=False),
+        session=SessionConfig(auto_save=False, save_interval_seconds=120, retention_days=21),
+        log=LogConfig(
+            level="WARNING",
+            file_enabled=False,
+            console_enabled=False,
+            max_file_size_mb=42,
+            backup_count=9,
+            retention_days=99,
+            json_file=False,
+        ),
+    )
+
+
 def test_accept_emits_settings_changed_with_edited_config(
     qtbot: QtBot,
     tmp_path: Path,
 ) -> None:
-    """Editing the tools directory and accepting emits an updated Config.
+    """Editing only the tools directory preserves every other config field.
+
+    Drives a fully non-default :class:`Config` through the live dialog, edits a
+    single field (tools directory) in the real widget tree, accepts, and audits
+    the entire emitted ``Config`` field by field against an independently known
+    expected state. The expected state is derived from the dialog contract, not
+    from the implementation output: ``dataclasses.replace`` preserves untouched
+    top-level fields (``data_directory``, ``providers``, ``tools``,
+    ``sandbox``), the appearance/session widgets round-trip their loaded values,
+    and the logging widget rebuilds ``LogConfig`` without carrying
+    ``retention_days``/``json_file``, so those two reset to their defaults.
 
     Args:
         qtbot: pytest-qt bot fixture.
         tmp_path: Pytest temporary directory.
     """
-    config = _make_config(tmp_path)
+    config = _make_rich_config(tmp_path)
+    original_providers = config.providers
+    original_tools = config.tools
+    original_sandbox = config.sandbox
     dialog = PreferencesDialog(config)
     qtbot.addWidget(dialog)
 
@@ -79,8 +152,33 @@ def test_accept_emits_settings_changed_with_edited_config(
 
     emitted = blocker.args[0]
     assert isinstance(emitted, Config)
+
     assert emitted.tools_directory == new_tools_dir
-    assert dialog.get_config().tools_directory == new_tools_dir
+
+    assert emitted.data_directory == tmp_path / "orig_data"
+    assert emitted.default_provider is ProviderName.OPENAI
+    assert emitted.confirmation_level is ConfirmationLevel.ALL
+
+    assert emitted.providers == original_providers
+    assert emitted.tools == original_tools
+    assert emitted.sandbox == original_sandbox
+
+    assert emitted.logs_directory == tmp_path / "orig_logs"
+
+    assert emitted.ui == UIConfig(theme="dark", font_family="Courier New", font_size=15, show_tool_calls=False)
+    assert emitted.session == SessionConfig(auto_save=False, save_interval_seconds=120, retention_days=21)
+
+    assert emitted.log == LogConfig(
+        level="WARNING",
+        file_enabled=False,
+        console_enabled=False,
+        max_file_size_mb=42,
+        backup_count=9,
+        retention_days=14,
+        json_file=True,
+    )
+
+    assert dialog.get_config() == emitted
 
 
 def test_accept_edits_logging_level_round_trips(

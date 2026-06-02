@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 import pytest
 import pytest_asyncio
 
-from intellicrack.core.types import ProviderCredentials, ProviderName
+from intellicrack.core.types import ProviderCredentials, ProviderError, ProviderName
 from intellicrack.providers.anthropic import AnthropicProvider
 from intellicrack.providers.google import GoogleProvider
 from intellicrack.providers.grok import GrokProvider
@@ -28,9 +28,77 @@ from intellicrack.providers.openrouter import OpenRouterProvider
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Generator
 
     from intellicrack.credentials.env_loader import CredentialLoader
+
+
+_ACCOUNT_LIMIT_SIGNALS: tuple[str, ...] = (
+    "credit balance is too low",
+    "insufficient_quota",
+    "exceeded your current quota",
+    "quota or spending cap exhausted",
+    "insufficient credits",
+    "payment required",
+    "model not supported by provider",
+)
+
+
+def _account_limit_reason(exc: BaseException) -> str | None:
+    """Return the account-limit signal found in an exception chain, if any.
+
+    Walks the ``__cause__``/``__context__`` chain of a provider failure and
+    looks for a billing, quota, credit, or payment signal indicating the live
+    cloud account cannot fulfil the request - an unmet environment
+    precondition rather than a defect in the provider code.
+
+    Args:
+        exc: The exception raised by a provider call.
+
+    Returns:
+        str | None: The matched account-limit signal substring, or ``None``
+        when the failure is not attributable to account state.
+    """
+    seen: set[int] = set()
+    parts: list[str] = []
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        parts.append(str(current))
+        current = current.__cause__ or current.__context__
+    haystack = " ".join(parts).lower()
+    for signal in _ACCOUNT_LIMIT_SIGNALS:
+        if signal in haystack:
+            return signal
+    return None
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_call() -> Generator[None]:
+    """Skip live provider tests when the configured account cannot pay.
+
+    The opt-in live provider tests issue real, billable API calls. When the
+    configured account is out of credit or has an exhausted quota or spending
+    cap, the provider correctly raises :class:`~intellicrack.core.types.ProviderError`,
+    but that reflects account state rather than an Intellicrack defect.
+    Catching that specific signal and skipping keeps the unmet precondition
+    from registering as a false negative; every other failure propagates
+    unchanged.
+
+    Yields:
+        None: Control passed to the wrapped test-call implementation.
+
+    Raises:
+        ProviderError: Re-raised when the failure is not attributable to
+            live-account billing, quota, or credit state.
+    """
+    try:
+        yield
+    except ProviderError as exc:
+        reason = _account_limit_reason(exc)
+        if reason is None:
+            raise
+        pytest.skip(f"live provider account limit reached ({reason})")
 
 
 @pytest_asyncio.fixture

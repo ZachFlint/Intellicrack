@@ -1,0 +1,542 @@
+[
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "97",
+  "test": "test_symbol_info_full",
+  "severity": "Low",
+  "violations": "No-assertion / vacuous dataclass construction test",
+  "why": "Only constructs a SymbolInfo and asserts the fields immediately using getattr. This is equivalent to asserting the dataclass definition itself, not any behavior of the bridge.",
+  "fix": "If this is meant to test bridge symbol resolution, integrate with a real Frida attach and resolve an actual symbol; if it is a dataclass test, move it to a unit test for types.py and verify field defaults and validation."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "113",
+  "test": "test_symbol_info_none_optionals",
+  "severity": "Low",
+  "violations": "No-assertion / dataclass validation only",
+  "why": "Constructs a SymbolInfo with None for optional fields and asserts they are None. This tests the dataclass definition, not bridge behavior.",
+  "fix": "Move to a types unit test, or if this test is meant to validate bridge symbol resolution fallback, resolve a symbol without debug info and verify the fields are correctly set to None."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "127",
+  "test": "test_crash_info_construction",
+  "severity": "Low",
+  "violations": "No-assertion / dataclass smoke test",
+  "why": "Constructs a CrashInfo and asserts fields. Does not test bridge crash reporting; this is a pure dataclass construction test.",
+  "fix": "Move to a types unit test, or integrate with real Frida crash reporting to verify that an actual process crash produces correct CrashInfo fields."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "145",
+  "test": "test_child_process_info_full",
+  "severity": "Low",
+  "violations": "No-assertion / dataclass construction test",
+  "why": "Only constructs a ChildProcessInfo and verifies fields. Does not test bridge child-process tracking or Frida's child-gating features.",
+  "fix": "Move to a types unit test or integrate with bridge child-gating to verify that spawned child processes are correctly tracked and their info extracted."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "163",
+  "test": "test_child_process_info_none_optionals",
+  "severity": "Low",
+  "violations": "No-assertion / dataclass construction test",
+  "why": "Constructs with None optionals and asserts. Dataclass validation only.",
+  "fix": "Move to a types unit test."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "178",
+  "test": "test_stalker_event_call",
+  "severity": "Low",
+  "violations": "No-assertion / dataclass smoke test",
+  "why": "Constructs a StalkerEvent and asserts fields. Does not test bridge Stalker tracing or event collection.",
+  "fix": "Move to a types unit test or integrate with real bridge.stalker_follow() to verify that actual trace events are correctly structured."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "192",
+  "test": "test_stalker_event_exec_no_destination",
+  "severity": "Low",
+  "violations": "No-assertion / dataclass construction test",
+  "why": "Only constructs and asserts None field presence.",
+  "fix": "Move to a types unit test."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "203",
+  "test": "test_stalker_trace_with_events",
+  "severity": "Low",
+  "violations": "No-assertion / hand-built data structure",
+  "why": "Constructs a StalkerTrace with a hand-built events list and asserts the list is present. Does not test bridge trace collection or real Stalker output.",
+  "fix": "Move to a types unit test, or test against real bridge.stalker_follow() output to verify trace structure from actual execution data."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "221",
+  "test": "test_stalker_trace_empty",
+  "severity": "Low",
+  "violations": "No-assertion / dataclass construction test",
+  "why": "Constructs an empty trace and asserts it is empty. Dataclass validation only.",
+  "fix": "Move to a types unit test."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "228",
+  "test": "test_frida_device_info",
+  "severity": "Low",
+  "violations": "No-assertion / dataclass construction test",
+  "why": "Constructs a FridaDeviceInfo and asserts fields.",
+  "fix": "Move to a types unit test, or integrate with real Frida device enumeration to verify that actual devices produce correct FridaDeviceInfo structures."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "236",
+  "test": "test_api_resolver_match",
+  "severity": "Low",
+  "violations": "No-assertion / dataclass construction test",
+  "why": "Constructs an ApiResolverMatch and asserts fields.",
+  "fix": "Move to a types unit test, or integrate with bridge.resolve_api() to verify that real API resolution produces correct match structures."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "243",
+  "test": "test_tool_definition_returns_frida_tool",
+  "severity": "Low",
+  "violations": "Weak assertion / only checks tool_name",
+  "why": "Only checks that defn.tool_name == ToolName.FRIDA. Does not verify the tool has the expected functions, descriptions, or that the definition is complete.",
+  "fix": "Assert that the tool_definition includes all expected function signatures and parameters documented for Frida integration."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "250",
+  "test": "test_all_function_names_have_methods",
+  "severity": "Medium",
+  "violations": "Weak assertion / method existence only",
+  "why": "Checks only that hasattr(bridge, method_name) is True. Does not verify the method is callable, has the right signature, or actually implements the declared functionality.",
+  "fix": "For each function in tool_definition, verify not just existence but that: (1) the method is callable, (2) its signature matches the declared parameters, (3) it is not a stub or placeholder."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "262",
+  "test": "test_function_count_minimum",
+  "severity": "Medium",
+  "violations": "Weak assertion / only minimum count",
+  "why": "Checks that len(functions) >= 36. Does not verify: exact count, function names are correct, or that all documented functions are present.",
+  "fix": "Assert an exact count of expected functions (e.g., 36) and verify by name that all documented functions are present and none are duplicated or incorrectly named."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "269",
+  "test": "test_no_duplicate_function_names",
+  "severity": "Low",
+  "violations": "Weak assertion / only duplicate check",
+  "why": "Checks only that there are no duplicates. Does not verify: function names are correctly formatted, functions are in the right order, or that the names match the actual bridge methods.",
+  "fix": "Assert that each function name follows the \"frida.\" prefix convention, and that every function name corresponds to a real method on the bridge."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "278",
+  "test": "test_new_functions_present",
+  "severity": "Medium",
+  "violations": "Weak assertion / hard-coded expected set",
+  "why": "Checks that 18 specific functions are in the definition. But does not verify: (1) any of these functions actually work (implemented, not stubs), (2) the count is correct for the audit findings, (3) other \"new\" functions are not missing.",
+  "fix": "For each expected function in the list, verify it is implemented (not a stub returning NotImplementedError or None), and call it against a real notepad.exe attach to verify it actually works."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "308",
+  "test": "test_fixed_functions_present",
+  "severity": "Medium",
+  "violations": "Weak assertion / function presence only",
+  "why": "Checks only that function names are in the definition. Does not verify: the functions are correctly implemented (not old buggy versions), or that the fixes (e.g., enumerate_imports returning correct data) are actually applied.",
+  "fix": "For each \"fixed\" function, call it against a real notepad.exe attach and verify the fix is applied: enumerate_imports returns imports correctly, allocate_memory returns a valid address, get_memory_regions returns regions (not get_memory_ranges)."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "441",
+  "test": "test_enumerate_processes",
+  "severity": "Medium",
+  "violations": "Cannot-fail / broad exception handling / weak assertion",
+  "why": "Catches all exceptions silently and only asserts processes is not None. If the method crashes or returns empty list on every platform, test still passes.",
+  "fix": "Remove try/except or make it specific to known transient failures. Assert that processes contains at least one entry (current process) with valid pid and name fields."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "455",
+  "test": "test_enumerate_devices",
+  "severity": "Medium",
+  "violations": "Cannot-fail / broad exception handling / weak assertion",
+  "why": "Same pattern as test_enumerate_processes: catches all exceptions and only asserts devices is not None.",
+  "fix": "Assert that devices contains at least the \"local\" device with correct device_type, or that the list is not empty and all entries have valid id/name/device_type."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "473",
+  "test": "test_connect_device_local",
+  "severity": "Medium",
+  "violations": "Cannot-fail / broad exception handling",
+  "why": "Catches all exceptions silently. Does not assert the device was successfully connected or is available for subsequent operations.",
+  "fix": "Assert that connect_device_local() returns a truthy value or that subsequent operations (e.g., enumerate_processes) succeed after the connection."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "485",
+  "test": "test_enumerate_threads",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion on collection",
+  "why": "Catches all exceptions. Only asserts threads is not None and len >= 1. Does not verify thread structure (tid, name, state fields) or that threads are from the attached process.",
+  "fix": "Assert that threads contains valid ThreadInfo objects with tid, name, and state fields, and that at least one thread is from the attached notepad.exe process."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "502",
+  "test": "test_enumerate_imports_kernel32",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion on structure",
+  "why": "Catches all exceptions. Only asserts imports is not None and len >= _KERNEL32_MIN_IMPORTS. Does not verify the import entries have correct fields (name, address, module) or that they are actual kernel32 imports.",
+  "fix": "Assert that imports contains ImportInfo objects with name, address, and module fields, and that the names are actual kernel32 exports (e.g., CreateFileA, WriteFile, CloseHandle)."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "524",
+  "test": "test_find_base_address_ntdll",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion",
+  "why": "Catches all exceptions. Only asserts base is not None and > 0. Does not verify the address is actually ntdll's base, that it is page-aligned, or that it is consistent across calls.",
+  "fix": "Assert that find_base_address(\"ntdll.dll\") returns a valid address, call it multiple times and assert the result is deterministic, and verify the address points to valid PE headers (magic bytes 0x4D5A)."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "537",
+  "test": "test_find_base_address_kernel32",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion",
+  "why": "Same pattern as test_find_base_address_ntdll.",
+  "fix": "Assert kernel32 base address, verify determinism across multiple calls, and check that the address points to valid PE headers."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "552",
+  "test": "test_get_memory_regions",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion on collection",
+  "why": "Catches all exceptions. Only asserts regions is not None and len >= _NOTEPAD_MIN_REGIONS. Does not verify region structure (base, size, state, protect) or that regions are valid and non-overlapping.",
+  "fix": "Assert that regions contains MemoryRegion objects with base, size, state (e.g., \"MEM_COMMIT\"), and protect (e.g., \"PAGE_EXECUTE_READ\") fields. Verify regions are ordered and non-overlapping."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "576",
+  "test": "test_resolve_api_createfile",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion on single field",
+  "why": "Catches all exceptions. Only asserts address is not None and > 0. Does not verify the address is actually CreateFileW from kernel32, or that it is consistent with kernel32's base address.",
+  "fix": "Assert that resolve_api(\"kernel32.dll!CreateFileW\") returns a valid address, verify it is consistent with module base + export offset, and that the address points to valid code (not data)."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "593",
+  "test": "test_resolve_symbol",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion on single field",
+  "why": "Catches all exceptions. Only asserts sym is not None and isinstance(sym, SymbolInfo). Does not verify the symbol name matches, address is valid, or file/line info is present for a symbol with debug info.",
+  "fix": "Assert that resolve_symbol() returns a SymbolInfo with name matching the resolved symbol, address is in the expected range, and optional fields (file_name, line_number) are populated when debug info is available."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "613",
+  "test": "test_find_functions_named",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion on collection",
+  "why": "Catches all exceptions. Only asserts results is not None and len >= 1. Does not verify the returned addresses actually belong to functions with the searched name, or that the list is complete.",
+  "fix": "Assert that find_functions_named() returns at least one SymbolInfo with name matching the search, and verify each returned address points to valid code."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "627",
+  "test": "test_allocate_memory",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion on single field",
+  "why": "Catches all exceptions. Only asserts addr is not None and > 0. Does not verify the allocated memory is actually usable (readable/writable), persists, or is properly freed on shutdown.",
+  "fix": "Assert that allocate_memory() returns a valid address, write test data to it and read it back, verify the write succeeds, and verify the memory is released (no leak) on shutdown."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "642",
+  "test": "test_protect_memory",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion",
+  "why": "Catches all exceptions. Only asserts result is True. Does not verify the memory protection was actually applied (e.g., writing to a \"rx\" region should fail).",
+  "fix": "Allocate memory, call protect_memory() to set it to PAGE_NOACCESS, attempt to read/write it and assert it fails with an access violation, then protect to PAGE_READWRITE and verify read/write succeeds."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "654",
+  "test": "test_read_write_memory_roundtrip",
+  "severity": "Low",
+  "violations": "Cannot-fail / weak assertion",
+  "why": "Catches all exceptions. Only asserts written == read_back. Does not verify: the data was written to the correct address, survived across multiple read-back calls, or did not corrupt adjacent memory.",
+  "fix": "Write distinct test patterns (0xAA at offset 0, 0xBB at offset 1, etc.), read back and verify each byte, and verify adjacent memory was not corrupted."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "670",
+  "test": "test_hook_and_remove",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion on state",
+  "why": "Catches all exceptions. Only asserts hook_id is not None and is_active becomes False after remove. Does not verify: the hook was actually called, arguments were intercepted, or the interceptor can modify arguments.",
+  "fix": "Set a hook on a kernel32 function, call the function from the target process, verify the hook was called (e.g., via a counter), verify arguments were intercepted, and verify removal actually stops the hook from firing."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "685",
+  "test": "test_stalker_follow_and_unfollow",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion on state",
+  "why": "Catches all exceptions. Only asserts is_active becomes True/False around follow/unfollow. Does not verify: trace events were actually collected, event structure is correct, or traces contain realistic instruction patterns.",
+  "fix": "Follow a worker thread, collect trace events over a known execution, verify at least _TRACE_EVENT_COUNT events are collected, verify each event has correct structure (from_address, to_address, depth), and verify unfollow stops collection."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "716",
+  "test": "test_child_gating_not_supported_on_windows",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion / platform-specific skip masking failure",
+  "why": "Catches all exceptions and asserts only that result is False. On Windows this might not be called at all; on other platforms it might crash and be silently swallowed.",
+  "fix": "Remove try/except or make platform-specific. On Windows, assert that enable_child_gating() returns False and child-gating remains disabled. On other platforms, assert it returns True."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "727",
+  "test": "test_get_pending_children_empty",
+  "severity": "Low",
+  "violations": "Cannot-fail / weak assertion",
+  "why": "Catches all exceptions. Only asserts children is not None. Does not verify the list is empty or that pending_children accumulates correctly when child-gating is enabled.",
+  "fix": "Assert that get_pending_children() returns an empty list when no children have been spawned, and a list of ChildProcessInfo objects when children have been spawned."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "738",
+  "test": "test_crash_reporting_lifecycle",
+  "severity": "Medium",
+  "violations": "Cannot-fail / weak assertion / no crash generation",
+  "why": "Catches all exceptions. Only asserts enable_crash_reporting() returns True and get_crashes() returns a list. Does not verify: a real crash was captured, crash info contains correct fields, or crash reporting can be toggled on/off.",
+  "fix": "Enable crash reporting, trigger a real crash in the target process (e.g., dereference nullptr), verify get_crashes() returns a CrashInfo with correct fields (pid, summary, report, timestamp), and verify disable stops capturing new crashes."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "753",
+  "test": "test_enumerate_processes_contains_notepad",
+  "severity": "Low",
+  "violations": "Cannot-fail / weak assertion / no verification of expected process",
+  "why": "Catches all exceptions. Only asserts notepad.exe was found and is_running is True. Does not verify the returned process info matches the actual notepad PID, name, or exe path.",
+  "fix": "Assert that the found process has pid == notepad_process.pid, name == \"notepad.exe\", and exe path contains \"notepad.exe\"."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "97",
+  "test": "test_symbol_info_full",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate (only tests dataclass field assignments)",
+  "why": "This test merely constructs a SymbolInfo object and reads back fields. It does not verify that SymbolInfo is used correctly in any real operation, nor does it test falsifiability. If the SymbolInfo constructor were deleted or broken, the assertion still holds.",
+  "fix": "Replace with an end-to-end test that exercises SymbolInfo within an actual bridge operation (e.g., resolve_symbol) and verifies the returned symbol carries correct real data from a live process."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "113",
+  "test": "test_symbol_info_none_optionals",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate (tests only that optional fields accept None)",
+  "why": "Merely verifies that None can be assigned to optional fields. Does not test falsifiable behavior.",
+  "fix": "Remove or consolidate with an end-to-end test that validates optional field handling in context of actual use."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "127",
+  "test": "test_crash_info_construction",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate (only constructs dataclass and reads fields)",
+  "why": "Verifies field assignments on a dataclass, not any real gate behavior.",
+  "fix": "Test as part of a real crash-detection operation (e.g., enable_crash_reporting + triggering a crash)."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "145",
+  "test": "test_child_process_info_full",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate (only dataclass construction)",
+  "why": "Merely tests that fields can be set on a dataclass.",
+  "fix": "Test within enumerate_child_processes or similar real operation."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "163",
+  "test": "test_child_process_info_none_optionals",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate (tests optional fields)",
+  "why": "Only checks that None is assignable to optional fields.",
+  "fix": "Remove or test in context of real child enumeration."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "178",
+  "test": "test_stalker_event_call",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate",
+  "why": "Only constructs and validates StalkerEvent fields.",
+  "fix": "Test as part of an actual stalker trace collection from a live thread."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "192",
+  "test": "test_stalker_event_exec_no_destination",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate",
+  "why": "Only checks that to_address can be None.",
+  "fix": "Test in actual stalker trace context."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "203",
+  "test": "test_stalker_trace_with_events",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate",
+  "why": "Constructs a StalkerTrace with hand-built event list and validates field counts. Does not verify that real trace data from stalker_follow is correctly shaped.",
+  "fix": "Test the actual stalker trace returned from stalker_follow on a live worker thread."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "221",
+  "test": "test_stalker_trace_empty",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate",
+  "why": "Only checks that an empty trace can be constructed.",
+  "fix": "Remove."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "228",
+  "test": "test_frida_device_info",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate",
+  "why": "Only tests dataclass construction.",
+  "fix": "Consolidate with enumerate_devices test."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "236",
+  "test": "test_api_resolver_match",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate",
+  "why": "Only constructs a dataclass.",
+  "fix": "Test in context of resolve_api results."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "243",
+  "test": "test_tool_definition_returns_frida_tool",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate (only checks tool_name attribute)",
+  "why": "Only reads a static attribute. If tool_definition were deleted, this would still compile.",
+  "fix": "Test that the tool_definition is correctly used by ToolRegistry.execute_tool_call."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "250",
+  "test": "test_all_function_names_have_methods",
+  "severity": "Medium",
+  "violations": "Weak assertion on rich output (only checks method existence via hasattr)",
+  "why": "Verifies that methods exist but does not verify they are callable or functional. A method stub would pass.",
+  "fix": "Call each function with appropriate test inputs and verify correct return types and values, not just existence."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "262",
+  "test": "test_function_count_minimum",
+  "severity": "Low",
+  "violations": "No-assertion / vacuous-assertion (only checks len >= constant)",
+  "why": "Merely counts functions without validating that new functions actually work. A constant could be lowered to pass trivially.",
+  "fix": "Remove or test that specific new functions from the parity plan actually execute on a live process."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "269",
+  "test": "test_no_duplicate_function_names",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate (only validates a metadata property)",
+  "why": "Checks a static list property, not runtime behavior.",
+  "fix": "Remove; this is a one-time validation that does not need to be tested on every run."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "278",
+  "test": "test_new_functions_present",
+  "severity": "Medium",
+  "violations": "Smoke-test-as-gate (only checks name registration)",
+  "why": "Verifies function names are registered but does not verify they work.",
+  "fix": "Call each new function with realistic inputs on a live process and verify correct behavior."
+ },
+ {
+  "report": "agent-03.md",
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "line": "308",
+  "test": "test_fixed_functions_present",
+  "severity": "Low",
+  "violations": "Smoke-test-as-gate (only checks name registration)",
+  "why": "Verifies names but not function correctness.",
+  "fix": "Remove or test that the fixed functions work correctly (e.g., enumerate_imports actually enumerates)."
+ }
+]

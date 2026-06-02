@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 import pytest
@@ -77,9 +78,15 @@ def test_flush_inserts_immediately() -> None:
 
 
 def test_column_data_for_display_role() -> None:
-    """Verify column data covers all six visible columns."""
+    """Verify column data covers all six visible columns with exact values.
+
+    The Extras column must serialize the record's ``extras`` mapping as a
+    single-line JSON object. This drives several extras of distinct JSON
+    types (string, int, bool) so the assertion proves correct, lossless,
+    round-trippable serialization rather than mere substring presence.
+    """
     model = LogRecordTableModel(max_rows=100)
-    model.append_record(dict(_make("hello", level="WARNING", widget="x")))
+    model.append_record(dict(_make("hello", level="WARNING", widget="x", count=3, active=True)))
     model.flush()
 
     index = model.index(0, 0)
@@ -88,11 +95,18 @@ def test_column_data_for_display_role() -> None:
     assert model.data(model.index(0, 2), Qt.ItemDataRole.DisplayRole) == "intellicrack.tests"
     assert model.data(model.index(0, 3), Qt.ItemDataRole.DisplayRole) == "_make:42"
     assert model.data(model.index(0, 4), Qt.ItemDataRole.DisplayRole) == "hello"
+
     extras_text = model.data(model.index(0, 5), Qt.ItemDataRole.DisplayRole)
     assert isinstance(extras_text, str)
-    assert '"widget"' in extras_text
+    parsed = json.loads(extras_text)
+    assert parsed == {"widget": "x", "count": 3, "active": True}
+    assert isinstance(parsed["count"], int)
+    assert parsed["active"] is True
+    assert "\n" not in extras_text
+    assert "\t" not in extras_text
+
     raw = model.data(model.index(0, 0), Qt.ItemDataRole.UserRole)
-    assert raw == _make("hello", level="WARNING", widget="x")
+    assert raw == _make("hello", level="WARNING", widget="x", count=3, active=True)
 
 
 def test_clear_empties_model() -> None:
@@ -152,21 +166,41 @@ def test_foreground_role_per_level() -> None:
 
 
 def test_background_role_tints_warn_error_critical_only() -> None:
-    """Verify BackgroundRole tints WARNING / ERROR / CRITICAL only."""
+    """Verify BackgroundRole returns the exact tint per severity level.
+
+    DEBUG and INFO must carry no background tint (``None``) so routine
+    chatter stays visually flat, while WARNING / ERROR / CRITICAL must
+    each return their own distinct, exact QColor. The expected RGB values
+    are the published severity palette; a swapped, inverted, or dropped
+    mapping is caught here because each color is asserted by value.
+    """
+    expected_background: dict[str, QColor | None] = {
+        "DEBUG": None,
+        "INFO": None,
+        "WARNING": QColor(60, 48, 16),
+        "ERROR": QColor(70, 24, 24),
+        "CRITICAL": QColor(70, 16, 56),
+    }
+    levels = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
     model = LogRecordTableModel()
-    for level in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+    for level in levels:
         model.append_record(dict(_make(level=level)))
     model.flush()
-    debug_bg = model.data(model.index(0, 0), Qt.ItemDataRole.BackgroundRole)
-    info_bg = model.data(model.index(1, 0), Qt.ItemDataRole.BackgroundRole)
-    warning_bg = model.data(model.index(2, 0), Qt.ItemDataRole.BackgroundRole)
-    error_bg = model.data(model.index(3, 0), Qt.ItemDataRole.BackgroundRole)
-    critical_bg = model.data(model.index(4, 0), Qt.ItemDataRole.BackgroundRole)
-    assert debug_bg is None
-    assert info_bg is None
-    assert isinstance(warning_bg, QColor)
-    assert isinstance(error_bg, QColor)
-    assert isinstance(critical_bg, QColor)
+
+    seen_colors: list[QColor] = []
+    for row, level in enumerate(levels):
+        background = model.data(model.index(row, 0), Qt.ItemDataRole.BackgroundRole)
+        expected = expected_background[level]
+        if expected is None:
+            assert background is None, f"{level} must have no background tint, got {background!r}"
+        else:
+            assert isinstance(background, QColor), f"{level} must yield a QColor, got {background!r}"
+            assert background == expected, f"{level} background {background.getRgb()} != expected {expected.getRgb()}"
+            seen_colors.append(background)
+
+    rgb_triples = {color.getRgb() for color in seen_colors}
+    assert len(rgb_triples) == len(seen_colors), "each tinted level must use a distinct color"
 
 
 def test_header_data_horizontal_returns_titles() -> None:

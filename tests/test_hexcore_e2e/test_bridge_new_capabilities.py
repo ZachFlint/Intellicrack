@@ -352,19 +352,56 @@ class TestSearchTextEncodedPreference:
         assert results
         assert results[0]["offset"] == 32
 
-    def test_search_text_encoded_available_on_document(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify the HexDocument exposes search_text_encoded for wider encoding support.
+    def test_search_text_encoded_finds_all_utf16le_matches(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """search_text_encoded must locate every UTF-16LE occurrence at exact offsets.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
+
+        The needle ``Hello`` appears twice inside the UTF-16LE encoding of
+        ``Hello World Hello``. The expected offsets are fixed by the layout, not
+        by the implementation: a 16-byte zero pad precedes the encoded text, the
+        first match sits at offset 16, and the second ``Hello`` follows the
+        12-character ``Hello World `` prefix (12 chars * 2 bytes = 24) at offset
+        40. Each match length is 5 chars * 2 bytes = 10. This mirrors the Rust
+        ``test_search_text_utf16le`` oracle which expects exactly two hits.
         """
-        f = tmp_path / "check.bin"
-        f.write_bytes(b"\x00" * 64)
+        text = "Hello World Hello"
+        encoded = text.encode("utf-16le")
+        data = b"\x00" * 16 + encoded + b"\x00" * 16
+        f = tmp_path / "utf16_encoded.bin"
+        f.write_bytes(data)
         _run(bridge.open_file(str(f)))
 
-        doc = bridge.document
-        assert hasattr(doc, "search_text_encoded"), "HexDocument should expose search_text_encoded for multi-encoding support"
+        doc: Any = bridge.document
+        matches: list[tuple[int, int]] = doc.search_text_encoded("Hello", "utf-16le", case_sensitive=True, max_results=10)
+        assert matches == [(16, 10), (40, 10)]
+
+    def test_search_text_encoded_honours_case_sensitivity(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """search_text_encoded must respect the case_sensitive flag for UTF-16LE.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+
+        A case-sensitive search for the lowercase needle ``hello`` must find
+        nothing in ``Hello World Hello`` (capital H), while a case-insensitive
+        search must recover both matches at the same offsets as the exact-case
+        search. This proves the flag is wired through the native call rather than
+        ignored.
+        """
+        text = "Hello World Hello"
+        data = b"\x00" * 16 + text.encode("utf-16le") + b"\x00" * 16
+        f = tmp_path / "utf16_case.bin"
+        f.write_bytes(data)
+        _run(bridge.open_file(str(f)))
+
+        doc: Any = bridge.document
+        case_sensitive: list[tuple[int, int]] = doc.search_text_encoded("hello", "utf-16le", case_sensitive=True, max_results=10)
+        case_insensitive: list[tuple[int, int]] = doc.search_text_encoded("hello", "utf-16le", case_sensitive=False, max_results=10)
+        assert case_sensitive == []
+        assert case_insensitive == [(16, 10), (40, 10)]
 
 
 _HELPER_NAME = "_build_numeric" + "_format"
@@ -372,27 +409,61 @@ _build_fmt: Any = getattr(HexEditorBridge, _HELPER_NAME)
 
 
 class TestBuildNumericFormat:
-    """Tests for the _build_numeric_format static helper."""
+    """Verify _build_numeric_format produces struct strings with correct binary semantics.
 
-    def test_uint32_little_endian(self) -> None:
-        """_build_numeric_format must return '<I' for 4-byte unsigned little-endian."""
+    Rather than asserting the literal format string (which would merely mirror
+    the helper's own ``size_chars`` table), each test feeds the produced format
+    into :mod:`struct` and asserts the encoded bytes / decoded value against an
+    independently-known layout fixed by the binary representation itself.
+    """
+
+    def test_uint32_little_endian_packs_canonical_bytes(self) -> None:
+        """A 4-byte unsigned little-endian format must pack 0x12345678 as 78 56 34 12."""
         fmt: str = _build_fmt(4, "uint", big_endian=False)
-        assert fmt == "<I"
+        packed: bytes = struct.pack(fmt, 0x12345678)
+        assert packed == b"\x78\x56\x34\x12"
+        assert struct.calcsize(fmt) == 4
 
-    def test_int16_big_endian(self) -> None:
-        """_build_numeric_format must return '>h' for 2-byte signed big-endian."""
+    def test_uint32_little_endian_rejects_negative(self) -> None:
+        """The unsigned 4-byte format must refuse a negative value via struct.error."""
+        fmt: str = _build_fmt(4, "uint", big_endian=False)
+        with pytest.raises(struct.error):
+            struct.pack(fmt, -1)
+
+    def test_int16_big_endian_encodes_twos_complement(self) -> None:
+        """A signed 2-byte big-endian format must encode -2 as ff fe and round-trip."""
         fmt: str = _build_fmt(2, "int", big_endian=True)
-        assert fmt == ">h"
+        packed: bytes = struct.pack(fmt, -2)
+        assert packed == b"\xff\xfe"
+        decoded: int = struct.unpack(fmt, packed)[0]
+        assert decoded == -2
+        assert struct.calcsize(fmt) == 2
 
-    def test_uint8(self) -> None:
-        """_build_numeric_format must return '<B' for 1-byte unsigned little-endian."""
+    def test_uint8_packs_single_byte(self) -> None:
+        """A 1-byte unsigned format must pack 255 as a single 0xff byte."""
         fmt: str = _build_fmt(1, "uint", big_endian=False)
-        assert fmt == "<B"
+        packed: bytes = struct.pack(fmt, 255)
+        assert packed == b"\xff"
+        assert struct.calcsize(fmt) == 1
+        with pytest.raises(struct.error):
+            struct.pack(fmt, 256)
 
-    def test_int64_little_endian(self) -> None:
-        """_build_numeric_format must return '<q' for 8-byte signed little-endian."""
+    def test_int64_little_endian_min_value(self) -> None:
+        """A signed 8-byte little-endian format must encode INT64_MIN exactly."""
         fmt: str = _build_fmt(8, "int", big_endian=False)
-        assert fmt == "<q"
+        int64_min: int = -(2**63)
+        packed: bytes = struct.pack(fmt, int64_min)
+        assert packed == b"\x00\x00\x00\x00\x00\x00\x00\x80"
+        assert struct.unpack(fmt, packed)[0] == int64_min
+        assert struct.calcsize(fmt) == 8
+
+    def test_endianness_flag_flips_byte_order(self) -> None:
+        """The big_endian flag must reverse the byte order of the same value."""
+        little: str = _build_fmt(4, "uint", big_endian=False)
+        big: str = _build_fmt(4, "uint", big_endian=True)
+        value = 0x0A0B0C0D
+        assert struct.pack(little, value) == b"\x0d\x0c\x0b\x0a"
+        assert struct.pack(big, value) == b"\x0a\x0b\x0c\x0d"
 
     def test_invalid_size_raises(self) -> None:
         """_build_numeric_format must raise ValueError for unsupported sizes."""

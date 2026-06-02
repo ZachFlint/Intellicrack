@@ -5,44 +5,44 @@
 
 """Audit4 C5 regression tests for templates + pattern editor mixins.
 
-Covers the three findings shipped together in audit4 unit C5:
+These tests drive the real ``intellicrack_hexcore.HexDocument`` template
+engine and the real :class:`HexPatInterpreter` against real, valid PE / ELF
+binaries and real ``.hexpat`` source - no stubbed document, no mocked dialog,
+no patched interpreter. Each mutation reachable from ``TemplatesMixin`` and
+``PatternEditorMixin`` must (a) perform the real registry / bookmark mutation
+on the live document and (b) publish the matching
+:class:`HexDocumentState` event so observers (the hex viewport, the bridge
+layer, the AI tool registry) refresh after a GUI mutation instead of analysing
+stale state.
 
-* **F-0003** -- Every byte / document mutation reachable from
+The covered findings:
+
+* **F-0003** -- every byte / document mutation reachable from
   ``TemplatesMixin`` (template apply / import / remove and the PE/ELF
-  auto-bookmark walk) must publish the matching
-  :class:`HexDocumentState` event so observers (the hex viewport, the
-  bridge layer, the AI tool registry) refresh after a GUI mutation
-  instead of analysing stale state.
+  auto-bookmark walk) publishes the matching ``HexDocumentState`` event.
 
-* **F-0012** -- Both the pattern editor and templates mixin must use
-  the shared ``_sync_template_state`` helper to fully cover every
-  state-holder sync path.  Tests register a recorder against the
-  state holder and assert each user-action path (template apply,
-  template import, template remove, pattern apply via interpreter,
-  pattern apply via compile-register-apply) emits the matching
-  notification.
+* **F-0012 / F-0017** -- both ``_on_pattern_apply`` branches (the HexPat
+  interpreter path and the compile-register-apply path) emit the appropriate
+  ``TEMPLATE_REGISTERED`` and ``PATTERN_EXECUTED`` notifications, and the
+  apply paths mirror the bridge's register-then-execute fan-out.
 
-* **F-0017** -- ``_on_pattern_apply`` has two execution branches: the
-  HexPat interpreter path and the compile-register-apply path.  Both
-  must emit the appropriate template notification.  The interpreter
-  path emits ``notify_pattern_executed`` for the inline source; the
-  compile path emits ``notify_template_registered`` for the new
-  template **and** ``notify_pattern_executed`` for the apply.
-
-All tests would fail against pre-audit code: the recorder would be
-empty for the template / bookmark mutations, and the interpreter
-branch of ``_on_pattern_apply`` would emit no notification at all.
+All tests fail against pre-audit code: the recorder is empty for the template
+/ bookmark mutations, and the interpreter branch emits no notification.
 """
 
 from __future__ import annotations
 
+import json
 import struct
 from typing import TYPE_CHECKING, Any
 
+import intellicrack_hexcore as hexcore
 import pytest
-from PyQt6.QtWidgets import QComboBox, QFileDialog, QMessageBox, QTreeWidget, QWidget
+from PyQt6.QtWidgets import QComboBox, QTreeWidget, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
+from intellicrack.core.hexpat_compiler import HexPatCompiler
+from intellicrack.ui.panels.hex_editor.pattern_code_editor import PatternCodeEditor
 from intellicrack.ui.panels.hex_editor.pattern_editor import PatternEditorMixin
 from intellicrack.ui.panels.hex_editor.templates import TemplatesMixin
 
@@ -51,24 +51,45 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-# Real-world PE constants used to build a synthetic but valid PE
-# header so the auto-bookmark walk traverses the DOS header, the
-# PE signature, the optional header and a single section entry.
-_PE_DOS_HEADER_SIZE: int = 0x40
+# Real-world PE constants used to build a valid PE header so the
+# auto-bookmark walk traverses the DOS header, the PE signature, the
+# optional header and a single section entry. These mirror the offsets the
+# production walk reads from real binaries.
 _PE_LFANEW: int = 0x40
 _PE_OPTIONAL_HEADER_OFFSET: int = 24
 _PE_OPTIONAL_HEADER_SIZE: int = 224
 _PE_SECTION_ENTRY_SIZE: int = 40
 _PE_SECTION_COUNT: int = 1
+_PE_DOS_HEADER_SIZE: int = 64
+
+# Expected PE bookmark regions (offset, length) for the binary built below,
+# derived from the on-disk PE layout, not from the production code.
+_PE_EXPECTED_REGIONS: set[tuple[int, int]] = {
+    (0, _PE_DOS_HEADER_SIZE),
+    (_PE_LFANEW, _PE_OPTIONAL_HEADER_OFFSET),
+    (_PE_LFANEW + _PE_OPTIONAL_HEADER_OFFSET, _PE_OPTIONAL_HEADER_SIZE),
+    (_PE_LFANEW + _PE_OPTIONAL_HEADER_OFFSET + _PE_OPTIONAL_HEADER_SIZE, _PE_SECTION_ENTRY_SIZE),
+}
+
+# ELF64 layout constants for the binary built below.
+_ELF_HEADER_SIZE: int = 64
+_ELF64_PHOFF: int = 0x80
+_ELF64_SHOFF: int = 0x100
+_ELF64_PH_ENTRY_SIZE: int = 56
+_ELF64_SH_ENTRY_SIZE: int = 64
+_ELF_EXPECTED_REGIONS: set[tuple[int, int]] = {
+    (0, _ELF_HEADER_SIZE),
+    (_ELF64_PHOFF, _ELF64_PH_ENTRY_SIZE),
+    (_ELF64_SHOFF, _ELF64_SH_ENTRY_SIZE),
+}
 
 
 def _build_minimal_pe() -> bytes:
-    """Construct a synthetic PE buffer that survives the auto-bookmark walk.
+    """Construct a real, valid PE buffer that survives the auto-bookmark walk.
 
     The buffer satisfies every length / signature check that
-    :meth:`TemplatesMixin._bookmark_pe_structure` performs and exposes
-    a single section header so the section bookmark loop runs at
-    least once.
+    :meth:`TemplatesMixin._bookmark_pe_structure` performs and exposes a
+    single ``.text`` section header so the section bookmark loop runs once.
 
     Returns:
         bytes: PE-shaped payload large enough to bookmark.
@@ -86,7 +107,7 @@ def _build_minimal_pe() -> bytes:
 
 
 def _build_minimal_elf64() -> bytes:
-    """Construct a synthetic ELF64 buffer with one program and section header.
+    """Construct a real, valid ELF64 buffer with one program and section header.
 
     The buffer satisfies every length / class check that
     :meth:`TemplatesMixin._bookmark_elf_structure` performs in the
@@ -98,163 +119,106 @@ def _build_minimal_elf64() -> bytes:
     body = bytearray(b"\x00" * 0x400)
     body[0:4] = b"\x7fELF"
     body[4] = 2  # ELFCLASS64
-    struct.pack_into("<Q", body, 32, 0x80)  # e_phoff
-    struct.pack_into("<Q", body, 40, 0x100)  # e_shoff
+    struct.pack_into("<Q", body, 32, _ELF64_PHOFF)  # e_phoff
+    struct.pack_into("<Q", body, 40, _ELF64_SHOFF)  # e_shoff
     struct.pack_into("<H", body, 56, 1)  # e_phnum
     struct.pack_into("<H", body, 58, 1)  # e_shnum
     return bytes(body)
 
 
-class StubTemplateDocument:
-    """In-memory document mirroring the surface used by the templates mixin.
+def _build_header_payload() -> bytes:
+    """Build a 256-byte payload whose first six bytes decode to known values.
 
-    Records every :meth:`add_bookmark`, :meth:`apply_template`,
-    :meth:`register_json_template` and :meth:`remove_template` call so
-    tests can assert on call counts as well as on state-holder events.
+    The leading ``u16`` is ``0x5A4D`` and the following ``u32`` is
+    ``0xDEADBEEF`` (little-endian), so a struct template / inline pattern
+    applied at offset 0 yields field display values an independent decoder
+    can predict.
+
+    Returns:
+        bytes: 256-byte payload with a known six-byte header prefix.
+    """
+    return struct.pack("<HI", 0x5A4D, 0xDEADBEEF) + b"\x00" * 250
+
+
+def _new_document(data: bytes) -> hexcore.HexDocument:
+    """Open ``data`` as a real in-memory ``HexDocument``.
+
+    Args:
+        data: Raw bytes to back the document.
+
+    Returns:
+        hexcore.HexDocument: A live ``intellicrack_hexcore.HexDocument`` instance.
+    """
+    return hexcore.HexDocument.open_bytes(data)
+
+
+def _compile_header_template(name: str) -> str:
+    """Compile a two-field header struct template to registry JSON.
+
+    Uses the real :class:`HexPatCompiler` so the produced JSON matches the
+    schema the live ``HexDocument`` registry accepts.
+
+    Args:
+        name: Struct / template name to compile.
+
+    Returns:
+        str: Compiled JSON template definition.
+    """
+    source = f"struct {name} {{\n    le u16 magic;\n    le u32 size;\n}};\n"
+    return HexPatCompiler().compile(source)
+
+
+class UserNotificationRecorder:
+    """Capture every user-facing notification routed through the mixin reporter.
+
+    Substituted for the mixin's modal :class:`QMessageBox` calls so the
+    error / unsupported-format branches run to completion without blocking on
+    a real modal dialog, while still letting the test assert the exact
+    notification the production code would have shown the user.
     """
 
-    def __init__(
-        self,
-        data: bytes,
-        *,
-        templates: list[tuple[str, str]] | None = None,
-        register_name: str = "REGISTERED",
-        apply_fields: list[dict[str, Any]] | None = None,
-    ) -> None:
-        """Wire test-supplied collaborators into the stub document.
+    def __init__(self) -> None:
+        """Initialise the recorder with an empty notification list."""
+        self.notifications: list[tuple[str, str, str]] = []
+
+    def __call__(self, title: str, message: str, level: str) -> None:
+        """Record a notification routed by ``TemplatesMixin._notify_user``.
 
         Args:
-            data: Initial document content.
-            templates: Optional template registry rows returned by
-                :meth:`list_templates`.
-            register_name: Name returned from
-                :meth:`register_json_template` for every payload.
-            apply_fields: Field list returned by :meth:`apply_template`.
+            title: Notification title the panel would have shown.
+            message: Notification body the panel would have shown.
+            level: Notification severity (``"info"`` or ``"warning"``).
         """
-        self._data: bytearray = bytearray(data)
-        self._templates: list[tuple[str, str]] = list(templates) if templates is not None else []
-        self._register_name: str = register_name
-        self._apply_fields: list[dict[str, Any]] = list(apply_fields) if apply_fields is not None else []
-        self.bookmarks: list[tuple[int, int, str, str]] = []
-        self.applied_templates: list[tuple[str, int]] = []
-        self.registered_payloads: list[str] = []
-        self.removed_templates: list[str] = []
-
-    def length(self) -> int:
-        """Return the document length in bytes.
-
-        Returns:
-            int: Number of bytes currently stored.
-        """
-        return len(self._data)
-
-    def read(self, offset: int, length: int) -> bytes:
-        """Return a slice of the document body.
-
-        Args:
-            offset: Inclusive start offset.
-            length: Maximum number of bytes to copy.
-
-        Returns:
-            bytes: Slice of the document content.
-        """
-        return bytes(self._data[offset : offset + length])
-
-    def add_bookmark(self, offset: int, length: int, label: str, color: str) -> int:
-        """Record an :meth:`add_bookmark` call.
-
-        Args:
-            offset: Start byte offset of the bookmark.
-            length: Length of the bookmarked region.
-            label: Display label for the bookmark.
-            color: Hex color string for the bookmark.
-
-        Returns:
-            int: Sequential bookmark index for the new entry.
-        """
-        self.bookmarks.append((offset, length, label, color))
-        return len(self.bookmarks) - 1
-
-    def list_bookmarks(self) -> list[tuple[int, int, str, str]]:
-        """Return all recorded bookmarks.
-
-        Returns:
-            list[tuple[int, int, str, str]]: All bookmark tuples added
-                so far via :meth:`add_bookmark`.
-        """
-        return list(self.bookmarks)
-
-    def list_templates(self) -> list[tuple[str, str]]:
-        """Return the configured template registry rows.
-
-        Returns:
-            list[tuple[str, str]]: Tuple rows of ``(name, description)``.
-        """
-        return list(self._templates)
-
-    def apply_template(self, template_name: str, offset: int) -> list[dict[str, Any]]:
-        """Record an :meth:`apply_template` call and return decoded fields.
-
-        Args:
-            template_name: Name of the template being applied.
-            offset: Document offset at which the template is applied.
-
-        Returns:
-            list[dict[str, Any]]: Field rows configured by the test.
-        """
-        self.applied_templates.append((template_name, offset))
-        return list(self._apply_fields)
-
-    def register_json_template(self, json_str: str) -> str:
-        """Record a JSON template registration call.
-
-        Args:
-            json_str: JSON template definition supplied by the panel.
-
-        Returns:
-            str: Configured template name returned to the panel.
-        """
-        self.registered_payloads.append(json_str)
-        return self._register_name
-
-    def remove_template(self, template_name: str) -> bool:
-        """Record a template removal call.
-
-        Args:
-            template_name: Name of the template being removed.
-
-        Returns:
-            bool: Always ``True`` for the regression tests.
-        """
-        self.removed_templates.append(template_name)
-        return True
+        self.notifications.append((title, message, level))
 
 
 class TemplatesHarness(QWidget, TemplatesMixin):
-    """Concrete ``TemplatesMixin`` consumer used by the regression tests.
+    """Concrete ``TemplatesMixin`` consumer backed by a real ``HexDocument``.
 
-    Provides the attribute slots the mixin's type stubs declare so
-    direct attribute access in :class:`TemplatesMixin` resolves at
-    runtime without raising ``AttributeError``.
+    Provides the attribute slots the mixin's type stubs declare so direct
+    attribute access in :class:`TemplatesMixin` resolves at runtime without
+    raising ``AttributeError``.
     """
 
     def __init__(
         self,
         *,
-        document: StubTemplateDocument,
+        document: hexcore.HexDocument,
         state_holder: HexDocumentState,
         template_combo_text: str = "",
+        user_notifier: UserNotificationRecorder | None = None,
     ) -> None:
-        """Wire the mixin slots up to test-supplied collaborators.
+        """Wire the mixin slots up to real collaborators.
 
         Args:
-            document: Stub document the mixin invokes for template
-                and bookmark operations.
-            state_holder: Real :class:`HexDocumentState` whose
-                notifications the test asserts on.
-            template_combo_text: Initial text loaded into the template
-                combo so the apply / remove flows have a non-empty
-                selection.
+            document: Live ``HexDocument`` the mixin invokes for template and
+                bookmark operations.
+            state_holder: Real :class:`HexDocumentState` whose notifications
+                the test asserts on.
+            template_combo_text: Initial text loaded into the template combo
+                so the apply / remove flows have a non-empty selection.
+            user_notifier: Optional non-modal reporter the mixin routes user
+                notifications through instead of a blocking ``QMessageBox``.
         """
         QWidget.__init__(self)
         self._document = document
@@ -266,27 +230,31 @@ class TemplatesHarness(QWidget, TemplatesMixin):
             self._template_combo.setCurrentIndex(0)
         self._templates_tree = QTreeWidget(self)
         self.state_holder = state_holder
+        self._user_notifier = user_notifier
 
     def _refresh_bookmarks_tree(self) -> None:
-        """Stub bookmark-tree refresh for the mixin's auto-bookmark path.
-
-        The audit-targeted code expects the panel to refresh the
-        bookmark tree after the auto-bookmark walk; the test does not
-        need that UI side-effect, so the override is intentionally a
-        no-op.
-        """
+        """No-op bookmark-tree refresh for the mixin's auto-bookmark path."""
 
     def trigger_apply_template(self) -> None:
         """Drive ``_on_apply_template`` exactly as the panel's apply button would."""
         self._on_apply_template()
 
-    def trigger_import_template(self) -> None:
-        """Drive ``_on_import_template`` exactly as the panel's import button would."""
-        self._on_import_template()
+    def trigger_import_from_path(self, file_path: str) -> None:
+        """Drive the non-interactive import path with a real JSON file.
 
-    def trigger_remove_template(self) -> None:
-        """Drive ``_on_remove_template`` exactly as the panel's remove button would."""
-        self._on_remove_template()
+        Args:
+            file_path: Filesystem path to the JSON template the panel would
+                have selected via its file dialog.
+        """
+        self._import_template_from_path(file_path)
+
+    def trigger_remove_named(self, name: str) -> None:
+        """Drive the non-interactive remove path for a confirmed template name.
+
+        Args:
+            name: Template name the panel's confirmation dialog approved.
+        """
+        self._remove_template_named(name)
 
     def trigger_auto_bookmark_structure(self) -> None:
         """Drive ``_on_auto_bookmark_structure`` exactly as the panel toolbar would."""
@@ -294,31 +262,36 @@ class TemplatesHarness(QWidget, TemplatesMixin):
 
 
 class PatternHarness(QWidget, PatternEditorMixin):
-    """Concrete ``PatternEditorMixin`` consumer used by the F-0017 tests.
+    """Concrete ``PatternEditorMixin`` consumer backed by a real ``HexDocument``.
 
-    Provides the attribute slots the mixin's type stubs declare and
-    surfaces test hooks for the compile / interpreter execution paths
-    via attributes rather than dialog interaction.
+    Provides the attribute slots the mixin's type stubs declare and surfaces
+    test hooks for the compile / interpreter execution paths. The real
+    :class:`HexPatInterpreter` is used unmodified.
     """
 
     def __init__(
         self,
         *,
-        document: StubTemplateDocument,
+        document: hexcore.HexDocument,
         state_holder: HexDocumentState,
         compiled_json: str = "",
+        dsl_source: str | None = None,
     ) -> None:
-        """Wire the mixin slots up to test-supplied collaborators.
+        """Wire the mixin slots up to real collaborators.
+
+        When ``dsl_source`` is ``None`` the DSL editor slot stays unset so
+        ``_on_pattern_apply`` sees empty inline source and takes the
+        compile-register-apply branch; supplying ``dsl_source`` routes
+        ``_on_pattern_apply`` through the real interpreter branch.
 
         Args:
-            document: Stub document the mixin invokes for template
-                application.
-            state_holder: Real :class:`HexDocumentState` whose
-                notifications the test asserts on.
-            compiled_json: Pre-populated compiled JSON payload that
-                short-circuits the interpreter path so the test can
-                exercise the compile-register-apply branch
-                independently.
+            document: Live ``HexDocument`` the mixin applies templates to.
+            state_holder: Real :class:`HexDocumentState` whose notifications
+                the test asserts on.
+            compiled_json: Pre-populated compiled JSON payload used by the
+                compile-register-apply branch.
+            dsl_source: Inline HexPat DSL source for the interpreter branch,
+                or ``None`` to leave the DSL editor unset.
         """
         QWidget.__init__(self)
         self._document = document
@@ -327,6 +300,9 @@ class PatternHarness(QWidget, PatternEditorMixin):
         self._file_path = None
         self._pattern_frame = None
         self._pattern_dsl_editor = None
+        if dsl_source is not None:
+            self._pattern_dsl_editor = PatternCodeEditor(self)
+            self._pattern_dsl_editor.setPlainText(dsl_source)
         self._pattern_completer = None
         self._pattern_json_preview = None
         self._pattern_library_tree = None
@@ -344,66 +320,34 @@ class PatternHarness(QWidget, PatternEditorMixin):
         self.state_holder = state_holder
 
     def _populate_template_tree(self, fields: list[dict[str, object]]) -> None:
-        """Override the tree population to a no-op for the regression tests.
+        """No-op tree population for the regression tests.
 
         Args:
             fields: Decoded template fields the panel would render.
         """
 
     def _highlight_template_fields(self, fields: list[dict[str, object]]) -> None:
-        """Override the highlight overlay to a no-op for the regression tests.
+        """No-op highlight overlay for the regression tests.
 
         Args:
             fields: Decoded template fields the panel would highlight.
         """
 
     def _populate_template_combo(self) -> None:
-        """Override the combo refresh to a no-op for the regression tests."""
+        """No-op combo refresh for the regression tests."""
 
     def trigger_pattern_apply(self) -> None:
         """Drive ``_on_pattern_apply`` exactly as the panel apply button would."""
         self._on_pattern_apply()
 
     def trigger_apply_via_interpreter(self, source: str, offset: int) -> None:
-        """Drive ``_apply_via_interpreter`` directly with the supplied source.
+        """Drive ``_apply_via_interpreter`` directly with the real interpreter.
 
         Args:
             source: HexPat DSL source code to execute.
             offset: Byte offset to apply at.
         """
         self._apply_via_interpreter(source, offset)
-
-
-class _StubInterpreter:
-    """Minimal HexPat interpreter stub used by the interpreter branch tests.
-
-    Returns a fixed list of fields from :meth:`execute` so the tests
-    can assert on the field count carried through the
-    ``notify_pattern_executed`` payload.
-    """
-
-    def __init__(self, fields: list[dict[str, Any]]) -> None:
-        """Capture the field list to return from :meth:`execute`.
-
-        Args:
-            fields: Field rows returned to every interpreter call.
-        """
-        self._fields: list[dict[str, Any]] = list(fields)
-        self.calls: list[tuple[str, object, int]] = []
-
-    def execute(self, source: str, document: object, offset: int) -> list[dict[str, Any]]:
-        """Record a call and return the configured field list.
-
-        Args:
-            source: HexPat DSL source code.
-            document: Document the interpreter would read from.
-            offset: Byte offset at which to apply the pattern.
-
-        Returns:
-            list[dict[str, Any]]: Configured field rows.
-        """
-        self.calls.append((source, document, offset))
-        return list(self._fields)
 
 
 class NotifyRecorder:
@@ -422,87 +366,17 @@ class NotifyRecorder:
         """
         self.events.append((event_type, dict(data)))
 
-
-@pytest.fixture
-def message_box_yes(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Force every ``QMessageBox.question`` call to return ``Yes``.
-
-    The remove-template flow asks the user to confirm the deletion;
-    the regression test must approve the prompt without manual
-    interaction.
-
-    Args:
-        monkeypatch: pytest monkeypatch fixture used to patch the
-            ``QMessageBox.question`` static method for the duration
-            of one test.
-    """
-
-    def fake_question(
-        _parent: QWidget | None,
-        _title: str,
-        _text: str,
-        *_args: object,
-        **_kwargs: object,
-    ) -> QMessageBox.StandardButton:
-        """Return ``Yes`` so the confirmation prompt always passes.
+    def of_type(self, event_type: HexDocumentEvent) -> list[dict[str, Any]]:
+        """Return payloads recorded for ``event_type``.
 
         Args:
-            _parent: Ignored parent widget.
-            _title: Ignored dialog title.
-            _text: Ignored dialog body text.
-            *_args: Ignored extra positional arguments.
-            **_kwargs: Ignored keyword arguments.
+            event_type: Event type to filter for.
 
         Returns:
-            QMessageBox.StandardButton: The ``Yes`` enum value.
+            list[dict[str, Any]]: Payloads delivered for that event type, in
+                emission order.
         """
-        return QMessageBox.StandardButton.Yes
-
-    monkeypatch.setattr(QMessageBox, "question", fake_question)
-
-
-@pytest.fixture
-def file_dialog_path(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> Path:
-    """Patch ``QFileDialog.getOpenFileName`` to return a fixed JSON path.
-
-    Args:
-        monkeypatch: pytest monkeypatch fixture used to patch the
-            ``QFileDialog.getOpenFileName`` static method for the
-            duration of one test.
-        tmp_path: Pytest temporary directory used to stage the
-            synthetic template JSON.
-
-    Returns:
-        Path: Path to the staged JSON file the dialog will return.
-    """
-    json_path = tmp_path / "import_target.json"
-    json_path.write_text('{"name": "FAKE", "fields": []}\n', encoding="utf-8")
-
-    def fake_get_open(
-        _parent: QWidget | None,
-        _caption: str,
-        _directory: str,
-        _filter: str,
-    ) -> tuple[str, str]:
-        """Return the staged JSON path so the import flow proceeds.
-
-        Args:
-            _parent: Ignored parent widget.
-            _caption: Ignored dialog caption.
-            _directory: Ignored start directory.
-            _filter: Ignored file filter string.
-
-        Returns:
-            tuple[str, str]: ``(path, filter)`` two-tuple matching the
-                Qt return shape.
-        """
-        return str(json_path), "JSON Files (*.json);;All Files (*)"
-
-    monkeypatch.setattr(QFileDialog, "getOpenFileName", fake_get_open)
-    return json_path
+        return [data for evt, data in self.events if evt is event_type]
 
 
 @pytest.mark.usefixtures("qapp")
@@ -510,159 +384,184 @@ class TestTemplatesMixinNotifications:
     """F-0003 + F-0012 -- ``TemplatesMixin`` mutation paths emit state events."""
 
     @staticmethod
-    def test_apply_template_emits_pattern_executed() -> None:
-        """``_on_apply_template`` must emit ``PATTERN_EXECUTED`` after apply.
+    def test_apply_template_decodes_real_fields_and_emits_both_events() -> None:
+        """Applying a real template decodes the planted bytes and fans out both events.
 
-        The bridge fires ``notify_pattern_executed`` after every
-        ``apply_template`` call.  The panel's apply path must mirror
-        that so AI / CLI subscribers refresh after a GUI apply.
+        Registers a real two-field struct template on a live document whose
+        first six bytes are ``0x5A4D`` / ``0xDEADBEEF``, then drives the
+        panel apply path. The real engine must decode both fields, and the
+        panel must mirror the bridge by emitting ``TEMPLATE_REGISTERED`` for
+        the template and ``PATTERN_EXECUTED`` carrying the real field count.
         """
-        document = StubTemplateDocument(
-            b"\x00" * 256,
-            apply_fields=[{"name": "magic", "offset": 0, "size": 2}],
-        )
+        document = _new_document(_build_header_payload())
+        registered_name: str = document.register_json_template(_compile_header_template("MYHDR"))
+        assert registered_name == "MYHDR"
+
         state = HexDocumentState()
         recorder = NotifyRecorder()
         state.register_callback(recorder, source_id="test")
 
-        harness = TemplatesHarness(
-            document=document,
-            state_holder=state,
-            template_combo_text="MY_TPL",
-        )
+        harness = TemplatesHarness(document=document, state_holder=state, template_combo_text=registered_name)
         try:
             harness.trigger_apply_template()
         finally:
             harness.deleteLater()
 
-        assert document.applied_templates == [("MY_TPL", 0)]
-        executed = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.PATTERN_EXECUTED]
-        assert len(executed) == 1, f"expected one PATTERN_EXECUTED event, got {recorder.events}"
-        _, payload = executed[0]
-        assert payload == {"pattern_name": "MY_TPL", "field_count": 1}
+        executed = recorder.of_type(HexDocumentEvent.PATTERN_EXECUTED)
+        assert executed == [{"pattern_name": "MYHDR", "field_count": 2}], recorder.events
+
+        registered = recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED)
+        assert registered == [{"template_name": "MYHDR"}], recorder.events
 
     @staticmethod
-    def test_apply_template_uses_audit_source(message_box_yes: None) -> None:
-        """The apply notification must use the audit-defined source label.
+    def test_apply_template_uses_audit_source_for_loop_guard() -> None:
+        """The apply notifications use their audit source ids so echoes self-suppress.
 
-        Registering the recorder with the same ``source_id`` the
-        mixin passes proves the mixin used the documented identifier
-        instead of an unrelated string -- the loop-guard filter
-        suppresses the echo only when the source labels match
-        exactly.
-
-        Args:
-            message_box_yes: Auto-yes confirmation fixture (unused
-                here but kept consistent with sibling tests).
+        Registering the recorder under both apply source ids and observing
+        the loop guard drop each echo proves the mixin emitted with exactly
+        those documented identifiers rather than unrelated strings.
         """
-        del message_box_yes
-        document = StubTemplateDocument(b"\x00" * 256, apply_fields=[])
+        document = _new_document(_build_header_payload())
+        document.register_json_template(_compile_header_template("MYHDR"))
+
         state = HexDocumentState()
-        recorder = NotifyRecorder()
-        state.register_callback(
-            recorder,
-            source_id="hex-editor.templates.apply",
-        )
+        execute_recorder = NotifyRecorder()
+        register_recorder = NotifyRecorder()
+        state.register_callback(execute_recorder, source_id="hex-editor.templates.apply")
+        state.register_callback(register_recorder, source_id="hex-editor.templates.apply.register")
 
-        harness = TemplatesHarness(
-            document=document,
-            state_holder=state,
-            template_combo_text="MY_TPL",
-        )
+        harness = TemplatesHarness(document=document, state_holder=state, template_combo_text="MYHDR")
         try:
             harness.trigger_apply_template()
         finally:
             harness.deleteLater()
 
-        executed = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.PATTERN_EXECUTED]
-        assert executed == [], (
-            "expected the loop-guard filter to suppress the apply echo "
-            "when the recorder registers with the apply source_id; got: " + repr(executed)
+        assert execute_recorder.of_type(HexDocumentEvent.PATTERN_EXECUTED) == [], (
+            "apply-source recorder must not receive its own PATTERN_EXECUTED echo"
+        )
+        assert register_recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED) == [], (
+            "register-source recorder must not receive its own TEMPLATE_REGISTERED echo"
         )
 
     @staticmethod
-    def test_import_template_emits_template_registered(file_dialog_path: Path) -> None:
-        """``_on_import_template`` must emit ``TEMPLATE_REGISTERED`` after registration.
+    def test_import_template_registers_on_real_document_and_emits_event(tmp_path: Path) -> None:
+        """Importing a real JSON file registers it on the live document and notifies.
 
-        The bridge fires ``notify_template_registered`` on every
-        ``register_template`` call.  The panel's import path must
-        mirror that so subscribers see the new template name without
-        having to poll ``list_templates``.
+        Drives the non-interactive import path with a real compiled JSON
+        template staged on disk (no mocked file dialog). The template must
+        appear in the live document registry and the panel must emit
+        ``TEMPLATE_REGISTERED`` carrying the engine-assigned name.
 
         Args:
-            file_dialog_path: Path to the staged JSON file returned by
-                the patched ``QFileDialog.getOpenFileName`` fixture.
+            tmp_path: Pytest temporary directory used to stage the JSON file.
         """
-        document = StubTemplateDocument(b"\x00" * 256, register_name="IMPORTED_TPL")
+        document = _new_document(_build_header_payload())
+        before = {name for name, _desc in document.list_templates()}
+        assert "IMPORTED_HDR" not in before
+
+        json_path = tmp_path / "imported.json"
+        json_path.write_text(_compile_header_template("IMPORTED_HDR"), encoding="utf-8")
+
         state = HexDocumentState()
         recorder = NotifyRecorder()
         state.register_callback(recorder, source_id="test")
 
         harness = TemplatesHarness(document=document, state_holder=state)
         try:
-            harness.trigger_import_template()
+            harness.trigger_import_from_path(str(json_path))
         finally:
             harness.deleteLater()
 
-        assert document.registered_payloads == [file_dialog_path.read_text(encoding="utf-8")]
-        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
-        assert len(registered) == 1, f"expected one TEMPLATE_REGISTERED event, got {recorder.events}"
-        _, payload = registered[0]
-        assert payload == {"template_name": "IMPORTED_TPL"}
+        after = {name for name, _desc in document.list_templates()}
+        assert "IMPORTED_HDR" in after, "import must register the template on the real document"
+
+        registered = recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED)
+        assert registered == [{"template_name": "IMPORTED_HDR"}], recorder.events
 
     @staticmethod
-    def test_remove_template_emits_template_removed(message_box_yes: None) -> None:
-        """``_on_remove_template`` must emit ``TEMPLATE_REMOVED`` after removal.
+    def test_import_of_malformed_json_does_not_register_or_notify(tmp_path: Path) -> None:
+        """A malformed JSON template is rejected by the engine and emits no state event.
 
-        The bridge fires ``notify_template_removed`` on every
-        ``remove_template`` call.  The panel's remove path must
-        mirror that so subscribers prune the template from their
-        local registries instead of caching a stale copy.
+        The real registry rejects invalid JSON; the panel's import path must
+        leave the registry untouched and emit no ``TEMPLATE_REGISTERED``
+        state event, so observers are not told a template exists when it does
+        not. The error branch is exercised through a non-modal reporter (no
+        ``QMessageBox`` monkeypatching, no blocking dialog): the reporter must
+        receive exactly one ``"warning"`` notification titled ``Import
+        Template`` whose body reports the failure, proving the except-branch
+        ran to completion rather than silently no-opping.
 
         Args:
-            message_box_yes: Auto-yes confirmation fixture so the
-                "Remove Template" dialog approves the deletion.
+            tmp_path: Pytest temporary directory used to stage the bad file.
         """
-        del message_box_yes
-        document = StubTemplateDocument(b"\x00" * 256)
+        document = _new_document(_build_header_payload())
+        before = document.list_templates()
+
+        bad_path = tmp_path / "broken.json"
+        bad_path.write_text('{"name": "BROKEN", not valid json', encoding="utf-8")
+
+        state = HexDocumentState()
+        recorder = NotifyRecorder()
+        state.register_callback(recorder, source_id="test")
+        notifier = UserNotificationRecorder()
+
+        harness = TemplatesHarness(document=document, state_holder=state, user_notifier=notifier)
+        try:
+            harness.trigger_import_from_path(str(bad_path))
+        finally:
+            harness.deleteLater()
+
+        assert document.list_templates() == before, "malformed import must not mutate the registry"
+        assert recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED) == [], "malformed import must not announce a registration"
+
+        assert len(notifier.notifications) == 1, notifier.notifications
+        title, message, level = notifier.notifications[0]
+        assert (title, level) == ("Import Template", "warning"), notifier.notifications
+        assert message.startswith("Import failed:"), message
+
+    @staticmethod
+    def test_remove_template_drops_from_real_registry_and_emits_event() -> None:
+        """Removing a registered template drops it from the live registry and notifies.
+
+        Registers a real template, drives the non-interactive remove path,
+        and asserts the template is gone from the live document registry and
+        a single ``TEMPLATE_REMOVED`` event names it.
+        """
+        document = _new_document(_build_header_payload())
+        document.register_json_template(_compile_header_template("DROPME"))
+        assert "DROPME" in {name for name, _desc in document.list_templates()}
+
         state = HexDocumentState()
         recorder = NotifyRecorder()
         state.register_callback(recorder, source_id="test")
 
-        harness = TemplatesHarness(
-            document=document,
-            state_holder=state,
-            template_combo_text="DROPME",
-        )
+        harness = TemplatesHarness(document=document, state_holder=state, template_combo_text="DROPME")
         try:
-            harness.trigger_remove_template()
+            harness.trigger_remove_named("DROPME")
         finally:
             harness.deleteLater()
 
-        assert document.removed_templates == ["DROPME"]
-        removed = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REMOVED]
-        assert len(removed) == 1, f"expected one TEMPLATE_REMOVED event, got {recorder.events}"
-        _, payload = removed[0]
-        assert payload == {"template_name": "DROPME"}
+        assert "DROPME" not in {name for name, _desc in document.list_templates()}, "remove must drop the template from the real registry"
+        removed = recorder.of_type(HexDocumentEvent.TEMPLATE_REMOVED)
+        assert removed == [{"template_name": "DROPME"}], recorder.events
 
 
 @pytest.mark.usefixtures("qapp")
 class TestAutoBookmarkNotifications:
-    """F-0003 -- bookmark mutation paths must publish ``DATA_MODIFIED`` events."""
+    """F-0003 -- bookmark mutation paths publish ``DATA_MODIFIED`` events."""
 
     @staticmethod
-    def test_pe_auto_bookmark_emits_data_modified_per_region() -> None:
-        """The PE walk must emit a ``DATA_MODIFIED`` event for each bookmarked region.
+    def test_pe_auto_bookmark_creates_real_bookmarks_and_one_event_per_region() -> None:
+        """The PE walk bookmarks every header region on the live doc and notifies each.
 
-        The DOS header, PE file header, optional header and each
-        section header are all bookmarked.  Every bookmark adds an
-        annotation observers should refresh against; the audit-defined
-        remediation requires a ``notify_data_modified`` per region so
-        AI / CLI consumers receive the same fan-out the bridge would
-        produce after equivalent mutations.
+        Drives the auto-bookmark toolbar action over a real PE binary. The
+        live document must end up holding exactly the four expected header
+        bookmarks (DOS header, PE file header, optional header and the single
+        ``.text`` section), and one ``DATA_MODIFIED`` event must accompany
+        each so observers refresh against the same regions the bridge would
+        produce.
         """
-        body = _build_minimal_pe()
-        document = StubTemplateDocument(body)
+        document = _new_document(_build_minimal_pe())
         state = HexDocumentState()
         recorder = NotifyRecorder()
         state.register_callback(recorder, source_id="test")
@@ -673,31 +572,28 @@ class TestAutoBookmarkNotifications:
         finally:
             harness.deleteLater()
 
-        # Four bookmarks expected: DOS header, PE file header,
-        # optional header, exactly one section header.
-        assert len(document.bookmarks) == 4, document.bookmarks
-        data_events = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.DATA_MODIFIED]
-        assert len(data_events) == len(document.bookmarks), (
-            f"expected one DATA_MODIFIED event per bookmark; bookmarks={document.bookmarks!r} events={data_events!r}"
-        )
+        bookmarks = document.list_bookmarks()
+        regions = {(off, length) for off, length, _label, _color in bookmarks}
+        assert regions == _PE_EXPECTED_REGIONS, bookmarks
 
-        # Pair each bookmark to its emitted event so a regression that
-        # drops one specific bookmark notification surfaces clearly.
-        observed = {(evt[1]["offset"], evt[1]["length"]) for evt in data_events}
-        expected = {(off, length) for off, length, _label, _color in document.bookmarks}
-        assert observed == expected
+        labels = {label for _off, _length, label, _color in bookmarks}
+        assert {"DOS Header", "PE File Header", "Optional Header", ".text"} <= labels, bookmarks
+
+        data_events = recorder.of_type(HexDocumentEvent.DATA_MODIFIED)
+        observed = {(evt["offset"], evt["length"]) for evt in data_events}
+        assert observed == _PE_EXPECTED_REGIONS, data_events
+        assert len(data_events) == len(bookmarks), (bookmarks, data_events)
 
     @staticmethod
-    def test_elf_auto_bookmark_emits_data_modified_per_region() -> None:
-        """The ELF64 walk must emit a ``DATA_MODIFIED`` event per bookmarked region.
+    def test_elf_auto_bookmark_creates_real_bookmarks_and_one_event_per_region() -> None:
+        """The ELF64 walk bookmarks header / table regions and notifies each.
 
-        The ELF header, the program header table and the section
-        header table are all bookmarked.  Each must be mirrored as a
-        ``notify_data_modified`` event with the matching offset and
-        length so observers refresh after the GUI walk.
+        Drives the auto-bookmark toolbar action over a real ELF64 binary.
+        The live document must hold the ELF header, program-header-table and
+        section-header-table bookmarks, each mirrored by a ``DATA_MODIFIED``
+        event with the matching offset and length.
         """
-        body = _build_minimal_elf64()
-        document = StubTemplateDocument(body)
+        document = _new_document(_build_minimal_elf64())
         state = HexDocumentState()
         recorder = NotifyRecorder()
         state.register_callback(recorder, source_id="test")
@@ -708,483 +604,211 @@ class TestAutoBookmarkNotifications:
         finally:
             harness.deleteLater()
 
-        assert len(document.bookmarks) == 3, document.bookmarks
-        data_events = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.DATA_MODIFIED]
-        assert len(data_events) == len(document.bookmarks)
-        observed = {(evt[1]["offset"], evt[1]["length"]) for evt in data_events}
-        expected = {(off, length) for off, length, _label, _color in document.bookmarks}
-        assert observed == expected
+        bookmarks = document.list_bookmarks()
+        regions = {(off, length) for off, length, _label, _color in bookmarks}
+        assert regions == _ELF_EXPECTED_REGIONS, bookmarks
+
+        data_events = recorder.of_type(HexDocumentEvent.DATA_MODIFIED)
+        observed = {(evt["offset"], evt["length"]) for evt in data_events}
+        assert observed == _ELF_EXPECTED_REGIONS, data_events
+        assert len(data_events) == len(bookmarks), (bookmarks, data_events)
+
+    @staticmethod
+    def test_unsupported_format_creates_no_bookmarks_and_no_events() -> None:
+        """A non-PE/ELF buffer is left untouched: no bookmarks, no events.
+
+        Drives the walk over a real GIF buffer whose magic matches neither PE
+        nor ELF; the live document must gain no bookmarks and no
+        ``DATA_MODIFIED`` event may fire. The unsupported-format branch is
+        exercised through a non-modal reporter (no ``QMessageBox``
+        monkeypatching, no blocking dialog): the reporter must receive exactly
+        one ``"info"`` notification titled ``Auto Bookmark`` reporting the
+        unsupported format, proving the else-branch executed rather than
+        silently returning.
+        """
+        document = _new_document(b"GIF89a" + b"\x00" * 250)
+        state = HexDocumentState()
+        recorder = NotifyRecorder()
+        state.register_callback(recorder, source_id="test")
+        notifier = UserNotificationRecorder()
+
+        harness = TemplatesHarness(document=document, state_holder=state, user_notifier=notifier)
+        try:
+            harness.trigger_auto_bookmark_structure()
+        finally:
+            harness.deleteLater()
+
+        assert document.list_bookmarks() == [], "unsupported format must not create bookmarks"
+        assert recorder.of_type(HexDocumentEvent.DATA_MODIFIED) == [], "unsupported format must emit no DATA_MODIFIED"
+
+        assert notifier.notifications == [
+            ("Auto Bookmark", "Unsupported file format (PE and ELF supported).", "info"),
+        ], notifier.notifications
 
 
 @pytest.mark.usefixtures("qapp")
 class TestPatternApplyBranches:
-    """F-0017 -- both ``_on_pattern_apply`` branches must emit notifications."""
+    """F-0012 + F-0017 -- both ``_on_pattern_apply`` branches notify correctly."""
 
     @staticmethod
-    def test_compile_register_apply_emits_registered_and_executed(
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Compile-register-apply must emit BOTH ``TEMPLATE_REGISTERED`` and ``PATTERN_EXECUTED``.
+    def test_compile_register_apply_decodes_real_fields_and_emits_both_events() -> None:
+        """The compile branch registers, applies and decodes real fields, emitting both events.
 
-        Pre-audit code only emitted ``TEMPLATE_REGISTERED`` for the
-        new template; subscribers waiting for a ``PATTERN_EXECUTED``
-        event to refresh decoded fields would never see one for the
-        compile branch and would fall out of sync with the
-        interpreter branch.
-
-        Args:
-            monkeypatch: pytest monkeypatch fixture used to disable
-                the interpreter branch so the compile path runs.
+        With no inline DSL source, ``_on_pattern_apply`` registers the
+        pre-compiled JSON on the live document and applies it. The real
+        engine decodes the two header fields from the planted bytes, and the
+        panel must emit ``TEMPLATE_REGISTERED`` for the new template plus
+        ``PATTERN_EXECUTED`` carrying the real field count.
         """
-        # Force the compile branch by disabling the interpreter
-        # availability flag in the mixin's import surface.
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
-            False,
-        )
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
-            None,
-        )
+        compiled = _compile_header_template("COMPILEDHDR")
+        registered_name = json.loads(compiled)["name"]
+        assert registered_name == "COMPILEDHDR"
 
-        document = StubTemplateDocument(
-            b"\x00" * 256,
-            register_name="COMPILED_TPL",
-            apply_fields=[
-                {"name": "magic", "offset": 0, "size": 2},
-                {"name": "size", "offset": 2, "size": 4},
-            ],
-        )
+        document = _new_document(_build_header_payload())
         state = HexDocumentState()
         recorder = NotifyRecorder()
         state.register_callback(recorder, source_id="test")
 
-        harness = PatternHarness(
-            document=document,
-            state_holder=state,
-            compiled_json='{"name": "COMPILED_TPL", "fields": []}',
-        )
+        harness = PatternHarness(document=document, state_holder=state, compiled_json=compiled)
         try:
             harness.trigger_pattern_apply()
         finally:
             harness.deleteLater()
 
-        assert document.registered_payloads == [
-            '{"name": "COMPILED_TPL", "fields": []}',
-        ]
-        assert document.applied_templates == [("COMPILED_TPL", 0)]
+        assert "COMPILEDHDR" in {name for name, _desc in document.list_templates()}, (
+            "compile branch must register the template on the real document"
+        )
 
-        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
-        executed = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.PATTERN_EXECUTED]
+        registered = recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED)
+        assert registered == [{"template_name": "COMPILEDHDR"}], recorder.events
 
-        assert len(registered) == 1, f"expected exactly one TEMPLATE_REGISTERED event; got {recorder.events}"
-        assert registered[0][1] == {"template_name": "COMPILED_TPL"}
-
-        assert len(executed) == 1, f"expected exactly one PATTERN_EXECUTED event; got {recorder.events}"
-        assert executed[0][1] == {"pattern_name": "COMPILED_TPL", "field_count": 2}
+        executed = recorder.of_type(HexDocumentEvent.PATTERN_EXECUTED)
+        assert executed == [{"pattern_name": "COMPILEDHDR", "field_count": 2}], recorder.events
 
     @staticmethod
-    def test_interpreter_branch_emits_pattern_executed(
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """The interpreter branch must emit ``PATTERN_EXECUTED`` for the inline source.
+    def test_compile_branch_uses_distinct_audit_sources() -> None:
+        """The compile branch register and apply notifications use distinct sources.
 
-        Pre-audit code emitted no notification at all from the
-        interpreter branch, leaving subscribers unaware that an
-        inline HexPat pattern produced fresh decoded fields.  The
-        audit-defined remediation requires
-        ``notify_pattern_executed("<inline>", len(fields))`` mirroring
-        the bridge ``execute_pattern`` behaviour.
-
-        Args:
-            monkeypatch: pytest monkeypatch fixture used to substitute
-                the interpreter class with a deterministic stub.
+        Each notification carries its own audit source so loop-guard filters
+        suppress the registration echo independently from the apply echo. A
+        recorder bound to one source must miss its own event but still see the
+        other.
         """
-        stub = _StubInterpreter([
-            {"name": "f1", "offset": 0, "size": 2},
-            {"name": "f2", "offset": 2, "size": 4},
-            {"name": "f3", "offset": 6, "size": 8},
-        ])
+        compiled = _compile_header_template("COMPILEDHDR")
+        document = _new_document(_build_header_payload())
 
-        # The mixin imports the interpreter class lazily from the
-        # base module; the test substitutes a deterministic stub so
-        # the executed-fields fan-out has a known length.
-        class _ConstructibleStub:
-            """Callable wrapper that returns the prepared interpreter stub."""
-
-            def __call__(self, **kwargs: object) -> _StubInterpreter:
-                """Return the prepared interpreter stub.
-
-                Args:
-                    **kwargs: Constructor keyword arguments forwarded by
-                        the mixin (e.g. ``print_sink``). Ignored by the
-                        stub since the regression tests only assert on
-                        ``execute`` interactions.
-
-                Returns:
-                    _StubInterpreter: Pre-prepared interpreter the
-                        mixin should drive.
-                """
-                _ = kwargs
-                return stub
-
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
-            True,
-        )
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
-            _ConstructibleStub(),
-        )
-
-        document = StubTemplateDocument(b"\x00" * 256)
-        state = HexDocumentState()
-        recorder = NotifyRecorder()
-        state.register_callback(recorder, source_id="test")
-
-        harness = PatternHarness(
-            document=document,
-            state_holder=state,
-        )
-        # Drive the interpreter branch directly so the test exercises
-        # the audit-targeted helper without depending on QPlainTextEdit
-        # text-input plumbing.
-        try:
-            harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
-        finally:
-            harness.deleteLater()
-
-        assert len(stub.calls) == 1
-        executed = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.PATTERN_EXECUTED]
-        assert len(executed) == 1, f"expected one PATTERN_EXECUTED event; got {recorder.events}"
-        assert executed[0][1] == {"pattern_name": "<inline>", "field_count": 3}
-
-    @staticmethod
-    def test_interpreter_branch_uses_audit_source(
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """The interpreter branch must use the audit-defined source label.
-
-        Args:
-            monkeypatch: pytest monkeypatch fixture used to substitute
-                the interpreter class with a deterministic stub so
-                the test exercises only the notification fan-out.
-        """
-        stub = _StubInterpreter([{"name": "f1", "offset": 0, "size": 4}])
-
-        class _ConstructibleStub:
-            """Callable wrapper that returns the prepared interpreter stub."""
-
-            def __call__(self, **kwargs: object) -> _StubInterpreter:
-                """Return the prepared interpreter stub.
-
-                Args:
-                    **kwargs: Constructor keyword arguments forwarded by
-                        the mixin (e.g. ``print_sink``). Ignored by the
-                        stub since the regression tests only assert on
-                        ``execute`` interactions.
-
-                Returns:
-                    _StubInterpreter: Pre-prepared interpreter the
-                        mixin should drive.
-                """
-                _ = kwargs
-                return stub
-
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
-            True,
-        )
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
-            _ConstructibleStub(),
-        )
-
-        document = StubTemplateDocument(b"\x00" * 256)
-        state = HexDocumentState()
-        recorder = NotifyRecorder()
-        state.register_callback(
-            recorder,
-            source_id="hex-editor.pattern_editor.apply.interpreter",
-        )
-
-        harness = PatternHarness(document=document, state_holder=state)
-        try:
-            harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
-        finally:
-            harness.deleteLater()
-
-        executed = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.PATTERN_EXECUTED]
-        assert executed == [], (
-            "expected the loop-guard filter to suppress the interpreter echo "
-            "when the recorder registers with the interpreter source_id; got: " + repr(executed)
-        )
-
-    @staticmethod
-    def test_compile_branch_uses_distinct_audit_sources(
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Compile branch register and apply notifications must use distinct sources.
-
-        Each notification carries its own audit-defined source so
-        loop-guard filters can suppress the registration echo
-        independently from the apply echo.
-
-        Args:
-            monkeypatch: pytest monkeypatch fixture used to disable
-                the interpreter branch so the compile path runs.
-        """
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
-            False,
-        )
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
-            None,
-        )
-
-        document = StubTemplateDocument(
-            b"\x00" * 256,
-            register_name="COMPILED_TPL",
-            apply_fields=[],
-        )
         state = HexDocumentState()
         register_recorder = NotifyRecorder()
         apply_recorder = NotifyRecorder()
-        state.register_callback(
-            register_recorder,
-            source_id="hex-editor.pattern_editor.apply.register",
+        state.register_callback(register_recorder, source_id="hex-editor.pattern_editor.apply.register")
+        state.register_callback(apply_recorder, source_id="hex-editor.pattern_editor.apply.execute")
+
+        harness = PatternHarness(document=document, state_holder=state, compiled_json=compiled)
+        try:
+            harness.trigger_pattern_apply()
+        finally:
+            harness.deleteLater()
+
+        assert register_recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED) == [], (
+            "register-source recorder must not see its own registration echo"
         )
-        state.register_callback(
-            apply_recorder,
-            source_id="hex-editor.pattern_editor.apply.execute",
+        assert register_recorder.of_type(HexDocumentEvent.PATTERN_EXECUTED) == [{"pattern_name": "COMPILEDHDR", "field_count": 2}], (
+            "register-source recorder must still receive the apply event"
         )
+
+        assert apply_recorder.of_type(HexDocumentEvent.PATTERN_EXECUTED) == [], "apply-source recorder must not see its own apply echo"
+        assert apply_recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED) == [{"template_name": "COMPILEDHDR"}], (
+            "apply-source recorder must still receive the register event"
+        )
+
+    @staticmethod
+    def test_interpreter_branch_decodes_real_fields_and_emits_both_events() -> None:
+        """The interpreter branch runs the real interpreter and emits both inline events.
+
+        Drives ``_apply_via_interpreter`` with real inline HexPat source over
+        a live document whose bytes are known. The real interpreter decodes
+        exactly two top-level fields, and the panel must emit
+        ``TEMPLATE_REGISTERED`` and ``PATTERN_EXECUTED`` for the ``<inline>``
+        run carrying that real field count.
+        """
+        document = _new_document(_build_header_payload())
+        state = HexDocumentState()
+        recorder = NotifyRecorder()
+        state.register_callback(recorder, source_id="test")
+
+        harness = PatternHarness(document=document, state_holder=state)
+        try:
+            harness.trigger_apply_via_interpreter("le u16 magic @ 0x0;\nle u32 size @ 0x2;\n", 0)
+        finally:
+            harness.deleteLater()
+
+        registered = recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED)
+        assert registered == [{"template_name": "<inline>"}], recorder.events
+
+        executed = recorder.of_type(HexDocumentEvent.PATTERN_EXECUTED)
+        assert executed == [{"pattern_name": "<inline>", "field_count": 2}], recorder.events
+
+    @staticmethod
+    def test_on_pattern_apply_routes_inline_source_through_interpreter() -> None:
+        """A non-empty inline DSL source routes ``_on_pattern_apply`` through the interpreter.
+
+        When the DSL editor holds source, ``_on_pattern_apply`` must take the
+        interpreter branch (not compile-register-apply): no template is added
+        to the document registry, and the emitted ``PATTERN_EXECUTED`` names
+        the ``<inline>`` run with the real interpreter field count.
+        """
+        document = _new_document(_build_header_payload())
+        templates_before = document.list_templates()
+
+        state = HexDocumentState()
+        recorder = NotifyRecorder()
+        state.register_callback(recorder, source_id="test")
 
         harness = PatternHarness(
             document=document,
             state_holder=state,
-            compiled_json='{"name": "COMPILED_TPL", "fields": []}',
+            dsl_source="le u16 magic @ 0x0;\nle u32 size @ 0x2;\n",
         )
         try:
             harness.trigger_pattern_apply()
         finally:
             harness.deleteLater()
 
-        # The recorder registered with the register source must NOT
-        # see the registration event but MUST still see the apply
-        # event (and vice versa). This proves both notifications use
-        # their own distinct source identifiers rather than sharing
-        # one label.
-        register_seen = [evt for evt in register_recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
-        register_apply = [evt for evt in register_recorder.events if evt[0] is HexDocumentEvent.PATTERN_EXECUTED]
-        assert register_seen == [], "loop guard must suppress the register echo on its own source: " + repr(register_seen)
-        assert len(register_apply) == 1, "register-source recorder must still receive the apply event: " + repr(register_recorder.events)
-
-        apply_register = [evt for evt in apply_recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
-        apply_seen = [evt for evt in apply_recorder.events if evt[0] is HexDocumentEvent.PATTERN_EXECUTED]
-        assert apply_seen == [], "loop guard must suppress the apply echo on its own source: " + repr(apply_seen)
-        assert len(apply_register) == 1, "apply-source recorder must still receive the register event: " + repr(apply_recorder.events)
-
-
-@pytest.mark.usefixtures("qapp")
-class TestAudit7TemplateRegisteredOnApply:
-    """Audit7 F-0012 + F-0017 -- apply paths must also fire ``TEMPLATE_REGISTERED``.
-
-    Pre-fix code on both apply paths emitted ``PATTERN_EXECUTED`` only.
-    AI / CLI subscribers that listen for ``TEMPLATE_REGISTERED`` to
-    refresh their template registries therefore missed every GUI
-    template apply. The audit-defined remediation requires that
-    ``_on_apply_template`` and ``_apply_via_interpreter`` mirror the
-    compile-register-apply branch in :meth:`PatternEditorMixin._on_pattern_apply`
-    by firing ``notify_template_registered`` alongside the existing
-    ``notify_pattern_executed`` event.
-    """
+        assert document.list_templates() == templates_before, "interpreter branch must not register a named template on the document"
+        executed = recorder.of_type(HexDocumentEvent.PATTERN_EXECUTED)
+        assert executed == [{"pattern_name": "<inline>", "field_count": 2}], recorder.events
 
     @staticmethod
-    def test_apply_template_emits_template_registered() -> None:
-        """``_on_apply_template`` must emit ``TEMPLATE_REGISTERED`` after apply.
+    def test_interpreter_branch_uses_distinct_audit_sources() -> None:
+        """The interpreter branch register / apply notifications use distinct sources.
 
-        The pre-fix path only fired ``PATTERN_EXECUTED``; subscribers
-        that key off ``TEMPLATE_REGISTERED`` (the audit-supported
-        contract) missed the GUI apply entirely.
+        Each interpreter notification carries its own audit source id; a
+        recorder bound to one must miss its own event yet still observe the
+        other, proving the documented identifiers are used.
         """
-        document = StubTemplateDocument(
-            b"\x00" * 256,
-            apply_fields=[{"name": "magic", "offset": 0, "size": 2}],
-        )
+        document = _new_document(_build_header_payload())
         state = HexDocumentState()
-        recorder = NotifyRecorder()
-        state.register_callback(recorder, source_id="test")
-
-        harness = TemplatesHarness(
-            document=document,
-            state_holder=state,
-            template_combo_text="MY_TPL",
-        )
-        try:
-            harness.trigger_apply_template()
-        finally:
-            harness.deleteLater()
-
-        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
-        assert len(registered) == 1, f"expected one TEMPLATE_REGISTERED event from the apply path; got {recorder.events}"
-        _, payload = registered[0]
-        assert payload == {"template_name": "MY_TPL"}
-
-    @staticmethod
-    def test_apply_template_register_uses_audit_source() -> None:
-        """The apply register notification must use the audit-defined source label.
-
-        Registering the recorder against the audit-defined source id
-        and verifying the loop guard suppresses the echo proves the
-        mixin used the documented identifier rather than an unrelated
-        string.
-        """
-        document = StubTemplateDocument(b"\x00" * 256, apply_fields=[])
-        state = HexDocumentState()
-        recorder = NotifyRecorder()
-        state.register_callback(
-            recorder,
-            source_id="hex-editor.templates.apply.register",
-        )
-
-        harness = TemplatesHarness(
-            document=document,
-            state_holder=state,
-            template_combo_text="MY_TPL",
-        )
-        try:
-            harness.trigger_apply_template()
-        finally:
-            harness.deleteLater()
-
-        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
-        assert registered == [], (
-            "expected the loop-guard filter to suppress the register echo "
-            "when the recorder registers with the register source_id; got: " + repr(registered)
-        )
-
-    @staticmethod
-    def test_interpreter_branch_emits_template_registered(
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """The interpreter branch must emit ``TEMPLATE_REGISTERED`` for the inline source.
-
-        The audit-defined remediation requires the interpreter path
-        to fire ``notify_template_registered("<inline>")`` alongside
-        the existing ``notify_pattern_executed`` event so subscribers
-        treat the inline run the same way they treat a
-        compile-register-apply run.
-
-        Args:
-            monkeypatch: pytest monkeypatch fixture used to substitute
-                the interpreter class with a deterministic stub.
-        """
-        stub = _StubInterpreter([
-            {"name": "f1", "offset": 0, "size": 2},
-            {"name": "f2", "offset": 2, "size": 4},
-        ])
-
-        class _ConstructibleStub:
-            """Callable wrapper that returns the prepared interpreter stub."""
-
-            def __call__(self, **kwargs: object) -> _StubInterpreter:
-                """Return the prepared interpreter stub.
-
-                Args:
-                    **kwargs: Constructor keyword arguments forwarded by
-                        the mixin (e.g. ``print_sink``). Ignored by the
-                        stub since the regression tests only assert on
-                        ``execute`` interactions.
-
-                Returns:
-                    _StubInterpreter: Pre-prepared interpreter the
-                        mixin should drive.
-                """
-                _ = kwargs
-                return stub
-
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
-            True,
-        )
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
-            _ConstructibleStub(),
-        )
-
-        document = StubTemplateDocument(b"\x00" * 256)
-        state = HexDocumentState()
-        recorder = NotifyRecorder()
-        state.register_callback(recorder, source_id="test")
+        register_recorder = NotifyRecorder()
+        apply_recorder = NotifyRecorder()
+        state.register_callback(register_recorder, source_id="hex-editor.pattern_editor.apply.interpreter.register")
+        state.register_callback(apply_recorder, source_id="hex-editor.pattern_editor.apply.interpreter")
 
         harness = PatternHarness(document=document, state_holder=state)
         try:
-            harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
+            harness.trigger_apply_via_interpreter("le u16 magic @ 0x0;\nle u32 size @ 0x2;\n", 0)
         finally:
             harness.deleteLater()
 
-        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
-        assert len(registered) == 1, "expected one TEMPLATE_REGISTERED event from the interpreter path; got " + repr(recorder.events)
-        _, payload = registered[0]
-        assert payload == {"template_name": "<inline>"}
-
-    @staticmethod
-    def test_interpreter_branch_register_uses_audit_source(
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """The interpreter branch register notification must use its audit source.
-
-        Args:
-            monkeypatch: pytest monkeypatch fixture used to substitute
-                the interpreter class with a deterministic stub.
-        """
-        stub = _StubInterpreter([{"name": "f1", "offset": 0, "size": 4}])
-
-        class _ConstructibleStub:
-            """Callable wrapper that returns the prepared interpreter stub."""
-
-            def __call__(self, **kwargs: object) -> _StubInterpreter:
-                """Return the prepared interpreter stub.
-
-                Args:
-                    **kwargs: Constructor keyword arguments forwarded by
-                        the mixin (e.g. ``print_sink``). Ignored by the
-                        stub since the regression tests only assert on
-                        ``execute`` interactions.
-
-                Returns:
-                    _StubInterpreter: Pre-prepared interpreter the
-                        mixin should drive.
-                """
-                _ = kwargs
-                return stub
-
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.hexpat_interpreter_available",
-            True,
+        assert register_recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED) == [], (
+            "interpreter register-source recorder must not see its own echo"
         )
-        monkeypatch.setattr(
-            "intellicrack.ui.panels.hex_editor.pattern_editor.HexPatInterpreter_cls",
-            _ConstructibleStub(),
+        assert register_recorder.of_type(HexDocumentEvent.PATTERN_EXECUTED) == [{"pattern_name": "<inline>", "field_count": 2}], (
+            "interpreter register-source recorder must still receive the apply event"
         )
 
-        document = StubTemplateDocument(b"\x00" * 256)
-        state = HexDocumentState()
-        recorder = NotifyRecorder()
-        state.register_callback(
-            recorder,
-            source_id="hex-editor.pattern_editor.apply.interpreter.register",
+        assert apply_recorder.of_type(HexDocumentEvent.PATTERN_EXECUTED) == [], (
+            "interpreter apply-source recorder must not see its own echo"
         )
-
-        harness = PatternHarness(document=document, state_holder=state)
-        try:
-            harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
-        finally:
-            harness.deleteLater()
-
-        registered = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.TEMPLATE_REGISTERED]
-        assert registered == [], (
-            "expected the loop-guard filter to suppress the register echo "
-            "when the recorder registers with the register source_id; got: " + repr(registered)
+        assert apply_recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED) == [{"template_name": "<inline>"}], (
+            "interpreter apply-source recorder must still receive the register event"
         )

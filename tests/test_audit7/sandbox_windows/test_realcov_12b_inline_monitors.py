@@ -32,7 +32,6 @@ import shutil
 import socket
 import sys
 import time
-from contextlib import contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
@@ -49,7 +48,7 @@ from intellicrack.sandbox.windows import WindowsSandbox
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Callable
 
     from intellicrack.sandbox.base import (
         FileChange,
@@ -79,6 +78,8 @@ def _monitor_source(method_name: str) -> str:
 
 _MONITOR_SETTLE_SEC: Final[float] = 5.0
 _PWSH_KILL_GRACE_SEC: Final[float] = 6.0
+_LOG_POLL_INTERVAL_SEC: Final[float] = 0.5
+_NETWORK_CAPTURE_DEADLINE_SEC: Final[float] = 45.0
 
 
 pytestmark = [
@@ -174,6 +175,72 @@ def _capture_monitor(
     return tmp_path, stdout, stderr
 
 
+def _capture_monitor_until(
+    source: str,
+    name: str,
+    tmp_path: Path,
+    pwsh: str,
+    predicate: Callable[[str], bool],
+    deadline_sec: float,
+) -> tuple[Path, str, str]:
+    """Run a monitor until its log satisfies ``predicate`` or a deadline lapses.
+
+    Synchronises on the real artifact the monitor produces instead of a fixed
+    sleep: the monitor is terminated as soon as the predicate matches the
+    accumulated log text, making capture deterministic regardless of host load
+    or ``pwsh`` cold-start latency. If the deadline lapses the monitor is still
+    terminated and whatever was captured is returned so the caller can assert a
+    hard failure.
+
+    Args:
+        source: PowerShell source returned by a ``WindowsSandbox`` method.
+        name: Script file name to materialise the source into.
+        tmp_path: Base temp directory.
+        pwsh: Absolute path to ``pwsh``.
+        predicate: Returns ``True`` once the log text proves the target state
+            was captured.
+        deadline_sec: Maximum wall-clock budget to wait for the predicate.
+
+    Returns:
+        tuple[Path, str, str]: ``(shared_folder, stdout, stderr)`` matching
+        :func:`_capture_monitor`.
+    """
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir(exist_ok=True)
+    script_path = tmp_path / name
+    script_path.write_text(source, encoding="utf-8")
+    log_path = log_dir / name.replace(".ps1", ".log")
+
+    proc: Popen[str] = Popen(
+        [
+            pwsh,
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(script_path),
+            "-LogDir",
+            str(log_dir),
+        ],
+        stdout=PIPE,
+        stderr=PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    try:
+        deadline = time.monotonic() + deadline_sec
+        while time.monotonic() < deadline:
+            if log_path.exists() and predicate(log_path.read_text(encoding="utf-8", errors="replace")):
+                break
+            time.sleep(_LOG_POLL_INTERVAL_SEC)
+    finally:
+        stdout, stderr = _terminate(proc)
+    return tmp_path, stdout, stderr
+
+
 def _settle(driver: Callable[[], None] | None) -> None:
     """Let a monitor warm up, optionally perturbing live state.
 
@@ -232,9 +299,9 @@ async def test_process_monitor_source_captures_live_process_table(tmp_path: Path
     assert records, f"no process records parsed; stdout={stdout!r} stderr={stderr!r}"
 
     names = {rec["name"].lower() for rec in records}
-    assert any(
-        name in names for name in ("pwsh.exe", "system", "csrss.exe", "svchost.exe")
-    ), f"expected a core OS / pwsh process in the live process table; saw {sorted(names)[:30]}"
+    assert any(name in names for name in ("pwsh.exe", "system", "csrss.exe", "svchost.exe")), (
+        f"expected a core OS / pwsh process in the live process table; saw {sorted(names)[:30]}"
+    )
 
     created = [rec for rec in records if rec["operation"] == "created"]
     assert created, "expected created process records from the live table"
@@ -250,73 +317,96 @@ async def test_process_monitor_source_captures_live_process_table(tmp_path: Path
         assert pwsh_rec["parent_pid"] > 0, "pwsh parent PID must be positive"
 
 
-def _establish_loopback_pair(listener: socket.socket) -> tuple[socket.socket, socket.socket]:
-    """Bind/listen on ``listener`` and return a connected client/server pair.
+def _require_tcp_capability() -> None:
+    """Skip before any capture when the host exposes no TCP capability at all.
+
+    The inline monitor enumerates TCP state via ``Get-NetTCPConnection``. If
+    that cmdlet is entirely unavailable (a stripped-down host without the
+    ``NetTCPIP`` module), the monitor genuinely cannot surface TCP records and
+    the capability is missing rather than the bridge being broken. This guard
+    runs *before* the loopback connection is established and the monitor is
+    spawned, so a working host never reaches a post-hoc skip that could mask a
+    real capture regression. Calls :func:`pytest.skip` when
+    ``Get-NetTCPConnection`` is unavailable.
+    """
+    pwsh = _resolve_pwsh()
+    probe: Popen[str] = Popen(
+        [
+            pwsh,
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) { 'ok' } else { 'missing' }",
+        ],
+        stdout=PIPE,
+        stderr=PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    out, _err = probe.communicate(timeout=20)
+    if "ok" not in out:
+        pytest.skip("Get-NetTCPConnection is unavailable on this host; no live TCP capability to validate")
+
+
+def _establish_loopback_pair(listener: socket.socket) -> tuple[int, socket.socket, socket.socket]:
+    """Bind/listen on ``listener`` and return the port and connected pair.
 
     Args:
         listener: A fresh ``AF_INET`` / ``SOCK_STREAM`` socket to listen on.
 
     Returns:
-        tuple[socket.socket, socket.socket]: The connected ``(client,
-        server)`` sockets forming one established loopback connection.
+        tuple[int, socket.socket, socket.socket]: ``(port, client,
+        server)`` where ``client``/``server`` form one established loopback
+        connection bound to ``port``.
     """
     listener.bind(("127.0.0.1", 0))
     listener.listen(1)
     listener.settimeout(5.0)
-    port = listener.getsockname()[1]
+    port = int(listener.getsockname()[1])
     client = socket.create_connection(("127.0.0.1", port), timeout=5.0)
     server_conn, _ = listener.accept()
-    return client, server_conn
-
-
-@contextmanager
-def _loopback_tcp_connection() -> Generator[None]:
-    """Hold a real established loopback TCP connection open.
-
-    Opens a listening socket on ``127.0.0.1`` plus a connected client and
-    its accepted server side so the OS TCP table is guaranteed to contain at
-    least one ``LISTEN`` and one ``ESTABLISHED`` endpoint for the network
-    monitor to enumerate. This makes the TCP assertion deterministic even on
-    a network-isolated host (for example a container started with no network
-    adapter) that has no ambient outbound TCP activity.
-
-    Yields:
-        None: The connection is held open for the duration of the context.
-    """
-    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    client: socket.socket | None = None
-    server_conn: socket.socket | None = None
-    try:
-        client, server_conn = _establish_loopback_pair(listener)
-        yield
-    finally:
-        for sock in (server_conn, client, listener):
-            if sock is not None:
-                sock.close()
+    return port, client, server_conn
 
 
 @pytest.mark.asyncio
 async def test_network_monitor_source_captures_live_endpoints(tmp_path: Path) -> None:
-    """The inline network monitor logs real TCP/UDP endpoints.
+    """The inline network monitor captures the exact held loopback TCP endpoint.
 
-    Runs ``_monitor_source("_network_monitor_source")`` under ``pwsh`` and
-    parses ``network_monitor.log`` with the real
-    :func:`parse_network_log`. Asserts on real kernel facts: at least one
-    endpoint exists, ports are within the valid range, and every record
-    carries a normalised protocol and direction derived by the real
-    helper functions.
+    Skips up front only when the host lacks TCP capability entirely. Otherwise
+    holds a real ``ESTABLISHED`` loopback connection on a known port across the
+    capture window, runs ``_monitor_source("_network_monitor_source")`` under
+    ``pwsh``, and parses ``network_monitor.log`` with the real
+    :func:`parse_network_log`. The monitor MUST surface a TCP record for the
+    held port (independent oracle = the port the test itself opened); a failure
+    to capture is a hard failure, never a masked skip. Also asserts the held
+    connection's listener side appears and that the parser normalises every
+    record's protocol, direction, and ports.
 
     Args:
         tmp_path: Pytest-provided temp directory.
     """
+    _require_tcp_capability()
     pwsh = _resolve_pwsh()
-    with _loopback_tcp_connection():
-        shared, stdout, stderr = _capture_monitor(
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    client: socket.socket | None = None
+    server_conn: socket.socket | None = None
+    try:
+        held_port, client, server_conn = _establish_loopback_pair(listener)
+        held_token = f"127.0.0.1:{held_port}|"
+        shared, stdout, stderr = _capture_monitor_until(
             _monitor_source("_network_monitor_source"),
             "network_monitor.ps1",
             tmp_path,
             pwsh,
+            lambda text: held_token in text,
+            _NETWORK_CAPTURE_DEADLINE_SEC,
         )
+    finally:
+        for sock in (server_conn, client, listener):
+            if sock is not None:
+                sock.close()
 
     records: list[NetworkActivity] = await parse_network_log(shared, "network_monitor.log")
     assert records, f"no network records parsed; stdout={stdout!r} stderr={stderr!r}"
@@ -327,23 +417,31 @@ async def test_network_monitor_source_captures_live_endpoints(tmp_path: Path) ->
         assert 0 <= rec["local_port"] <= 65535, f"local port out of range: {rec['local_port']}"
         assert 0 <= rec["remote_port"] <= 65535, f"remote port out of range: {rec['remote_port']}"
 
-    if not any(rec["protocol"] == "tcp" for rec in records):
-        # A real established loopback connection is held open across the
-        # capture, yet Get-NetTCPConnection does not surface loopback TCP
-        # endpoints on a network-isolated host (a container with no network
-        # adapter), reporting only listeners. The sibling real-capture test
-        # handles the identical limitation with a skip; mirror it here so the
-        # suite stays green where the OS cannot expose live TCP state, while a
-        # networked host still asserts capture against the held connection.
-        protocols = sorted({rec["protocol"] for rec in records})
-        pytest.skip(
-            "live network monitor surfaced no TCP endpoints within the capture "
-            "window; Get-NetTCPConnection does not expose loopback connections on "
-            f"a network-isolated host. observed protocols={protocols}",
-        )
+    tcp_records = [rec for rec in records if rec["protocol"] == "tcp"]
+    assert tcp_records, (
+        "network monitor surfaced no TCP records while a real established loopback "
+        f"connection on port {held_port} was held open; stderr={stderr!r}"
+    )
 
-    listeners = [rec for rec in records if rec["remote_port"] == 0 or rec["direction"] == "inbound"]
-    assert listeners, "live system should expose at least one listening / inbound endpoint"
+    held_endpoint = [
+        rec
+        for rec in tcp_records
+        if rec["local_address"] == "127.0.0.1"
+        and rec["remote_address"] == "127.0.0.1"
+        and held_port in {rec["local_port"], rec["remote_port"]}
+    ]
+    assert held_endpoint, (
+        f"monitor did not capture the held loopback TCP endpoint on port {held_port}; "
+        f"observed loopback tcp ports={sorted({(r['local_port'], r['remote_port']) for r in tcp_records if r['local_address'] == '127.0.0.1'})[:20]}"
+    )
+
+    established = [rec for rec in held_endpoint if rec["direction"] == "outbound"]
+    assert established, (
+        f"the held loopback connection on port {held_port} must surface as an established (outbound) TCP endpoint, not only a listener"
+    )
+
+    listeners = [rec for rec in tcp_records if rec["remote_port"] == 0 or rec["direction"] == "inbound"]
+    assert listeners, "a live host with the held loopback listener must expose at least one listening / inbound TCP endpoint"
 
 
 @pytest.mark.asyncio
@@ -390,7 +488,9 @@ async def test_file_monitor_source_captures_real_filesystem_event(tmp_path: Path
     valid_ops = {"created", "modified", "deleted", "renamed"}
     assert all(rec["operation"] in valid_ops for rec in records), "file operations must be normalised by validate_file_operation"
     assert all(rec["path"] for rec in records), "every captured file event must carry a real path"
-    assert any(":\\" in rec["path"] for rec in records), f"expected real absolute Windows paths in file events; saw {[r['path'] for r in records][:5]}"
+    assert any(":\\" in rec["path"] for rec in records), (
+        f"expected real absolute Windows paths in file events; saw {[r['path'] for r in records][:5]}"
+    )
 
     marker_name = marker.name.lower()
     matching = [rec for rec in records if marker_name in rec["path"].lower()]

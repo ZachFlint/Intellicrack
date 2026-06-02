@@ -72,6 +72,25 @@ class _ProbeEditor(PatternCodeEditor):
                 results.append(str(value))
         return results
 
+    def model_rows(self) -> list[str]:
+        """Return the completer model's full string list in row order.
+
+        Returns:
+            list[str]: Every entry the backing ``QStringListModel`` holds,
+                read row by row in the model's own storage order (not in any
+                order imposed by the caller).
+        """
+        model = self._completer.model()
+        if model is None:
+            return []
+        rows: list[str] = []
+        for row in range(model.rowCount()):
+            index = model.index(row, 0)
+            value = index.data()
+            if value is not None:
+                rows.append(str(value))
+        return rows
+
     def accept_completion(self, typed: str, chosen: str) -> str:
         """Type ``typed``, accept ``chosen``, and return the resulting buffer.
 
@@ -99,16 +118,18 @@ class TestRealHexPatCompletions:
 
         Args:
             qapp: Qt application fixture.
+
+        The expected set is the fixed, independently-known HexPat unsigned
+        width family (``u8``/``u16``/``u32``/``u64``/``u128``), asserted as a
+        literal rather than re-filtered from the completer's own output.
         """
         _ = qapp
         type_names = HexPatCompleter().all_type_names()
         editor = _ProbeEditor()
         editor.update_type_names(type_names)
 
-        expected = sorted(n for n in type_names if n.startswith("u"))
-        assert expected, "real HexPat type set has no unsigned types"
         completions = sorted(editor.completions_for("u"))
-        assert completions == expected
+        assert completions == ["u128", "u16", "u32", "u64", "u8"]
 
     def test_signed_prefix_excludes_unsigned(self, qapp: QApplication) -> None:
         """Verify an ``s`` prefix offers signed types and not unsigned ones.
@@ -125,17 +146,45 @@ class TestRealHexPatCompletions:
         assert "s32" in completions
         assert all(not c.startswith("u") for c in completions)
 
-    def test_type_names_are_deduplicated_and_sorted(self, qapp: QApplication) -> None:
-        """Verify duplicate input names collapse to a single sorted entry.
+    def test_type_names_are_sorted_alphabetically(self, qapp: QApplication) -> None:
+        """Verify shuffled input is stored and offered in strict sorted order.
 
         Args:
             qapp: Qt application fixture.
+
+        The assertion reads the backing model's full string list directly in
+        row order (``model_rows``) and asserts it equals the alphabetical
+        expectation, so the ordering proven is the model's own, never an order
+        re-imposed by the test. Insertion order ``["uz","ua","um","ub","uq"]``
+        deliberately differs from sorted order, and a SINGLE ``u`` prefix
+        matches all five so ``completions_for`` returns them in the completer's
+        own order. If ``update_type_names`` stopped sorting (e.g. an
+        insertion-order-preserving dedup), both assertions would surface
+        ``["uz","ua","um","ub","uq"]`` and fail.
         """
         _ = qapp
         editor = _ProbeEditor()
-        editor.update_type_names(["u32", "u32", "u16", "u8", "u16"])
-        completions = editor.completions_for("u")
-        assert completions == ["u16", "u32", "u8"]
+        editor.update_type_names(["uz", "ua", "um", "ub", "uq"])
+        assert editor.model_rows() == ["ua", "ub", "um", "uq", "uz"]
+        assert editor.completions_for("u") == ["ua", "ub", "um", "uq", "uz"]
+
+    def test_type_names_are_deduplicated(self, qapp: QApplication) -> None:
+        """Verify duplicate input names collapse to exactly one entry each.
+
+        Args:
+            qapp: Qt application fixture.
+
+        Feeds five tokens containing two distinct values repeated; the
+        completer must offer each distinct value exactly once. Asserting the
+        exact count (not merely membership) is what catches a regression that
+        stopped de-duplicating via ``set(...)``.
+        """
+        _ = qapp
+        editor = _ProbeEditor()
+        editor.update_type_names(["u32", "u32", "u16", "u32", "u16"])
+        completions = sorted(editor.completions_for("u"))
+        assert completions == ["u16", "u32"]
+        assert len(completions) == 2
 
 
 class TestCompletionInsertion:

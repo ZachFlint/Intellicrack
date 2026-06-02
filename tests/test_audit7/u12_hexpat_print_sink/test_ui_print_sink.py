@@ -33,7 +33,19 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
 
+pytest.importorskip("intellicrack.core.hexpat", reason="hexpat interpreter module unavailable")
+
+
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+
+_REAL_PRINT_PATTERN: str = """
+fn __ping() {
+    builtin::std::io::print("hello-ui-print-sink");
+    return 0;
+};
+u8 __mark @ __ping();
+"""
 
 
 @pytest.fixture(scope="session")
@@ -51,18 +63,20 @@ def qapp() -> Iterator[QApplication]:
 
 
 class _StubDocument:
-    """Minimal document stub satisfying ``PatternEditorMixin._apply_via_interpreter``.
+    """Minimal HexDocument-compatible stub backed by an in-memory ``bytes`` buffer.
 
-    The interpreter stub used in this test never actually reads from the
-    document, so the stub only exposes the attribute slots the mixin checks
-    on the document handle.
+    Mirrors the PyO3 ``HexDocument`` contract the real HexPat interpreter
+    consumes via ``DataReader.from_document``: ``read(offset, length)``
+    returns a ``list[int]`` and ``length()`` returns the byte count. This
+    lets the real pattern engine evaluate against the harness without
+    depending on the optional ``intellicrack_hexcore`` native build.
     """
 
     def __init__(self, data: bytes) -> None:
-        """Capture the buffer the stub would return for reads.
+        """Capture the buffer the stub exposes via ``read`` / ``length``.
 
         Args:
-            data: Bytes the stub holds for length-related queries.
+            data: Bytes the stub holds for length and read queries.
         """
         self._data: bytes = bytes(data)
 
@@ -74,17 +88,17 @@ class _StubDocument:
         """
         return len(self._data)
 
-    def read(self, offset: int, length: int) -> bytes:
-        """Return a slice of the stub buffer.
+    def read(self, offset: int, length: int) -> list[int]:
+        """Return a slice of the stub buffer as a list of integers.
 
         Args:
             offset: Byte offset to start reading from.
             length: Number of bytes to return.
 
         Returns:
-            bytes: Slice of the stub buffer.
+            list[int]: The requested byte slice as a list of integers.
         """
-        return self._data[offset : offset + length]
+        return list(self._data[offset : offset + length])
 
 
 class _StubInterpreterWithPrintSink:
@@ -211,6 +225,22 @@ class _PatternHarness(QWidget, PatternEditorMixin):
         assert widget is not None, "harness must be initialised with a concrete print-output widget"
         return widget
 
+    def error_display_widget(self) -> QPlainTextEdit:
+        """Return the panel's interpreter error-display widget.
+
+        Wraps the private :attr:`_pattern_error_display` attribute so the
+        regression tests can assert a clean (empty) error channel after a
+        successful apply without tripping basedpyright's
+        ``reportPrivateUsage`` rule.
+
+        Returns:
+            QPlainTextEdit: The widget the mixin writes interpreter errors
+            to.
+        """
+        widget = self._pattern_error_display
+        assert widget is not None, "harness must be initialised with a concrete error-display widget"
+        return widget
+
 
 def _install_stub_interpreter(monkeypatch: pytest.MonkeyPatch, stubs: list[_StubInterpreterWithPrintSink]) -> None:
     """Install a constructible interpreter stub on the mixin's lazy import slot.
@@ -255,32 +285,67 @@ def _install_stub_interpreter(monkeypatch: pytest.MonkeyPatch, stubs: list[_Stub
     )
 
 
-class TestPrintSinkWiredAtConstruction:
-    """The first apply must construct the interpreter with a callable print sink."""
+class TestPrintSinkWiredToOutputWidgetEndToEnd:
+    """The first apply must route real ``std::print`` output into the panel widget."""
 
-    def test_constructor_receives_callable_print_sink(
+    def test_real_pattern_print_reaches_output_widget(
         self,
         qapp: QApplication,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """``HexPatInterpreter_cls`` must be called with a callable ``print_sink``.
+        """A real ``std::print`` pattern must surface its text in ``_pattern_print_output``.
+
+        This exercises the full production pipeline with **no** interpreter
+        double: the mixin constructs the real :class:`HexPatInterpreter`
+        with ``print_sink=self._append_pattern_print_line`` and evaluates a
+        pattern whose body calls ``builtin::std::io::print``. The assertion
+        is that the exact emitted line lands in the panel's print-output
+        widget, proving the constructor wired the sink to the UI append
+        routine and that the sink is invoked end to end. If the mixin
+        dropped the ``print_sink`` argument or routed it elsewhere, the
+        widget would stay empty and this test would fail.
 
         Args:
             qapp: Session-scoped QApplication fixture.
-            monkeypatch: pytest monkeypatch fixture.
         """
         _ = qapp
-        stubs: list[_StubInterpreterWithPrintSink] = []
-        _install_stub_interpreter(monkeypatch, stubs)
-
         harness = _PatternHarness(document=_StubDocument(b"\x00" * 64))
         try:
-            harness.trigger_apply_via_interpreter("struct S { u32 x; };", 0)
+            harness.trigger_apply_via_interpreter(_REAL_PRINT_PATTERN, 0)
+            widget_text = harness.print_output_widget().toPlainText()
+            error_text = harness.error_display_widget().toPlainText()
         finally:
             harness.deleteLater()
 
-        assert len(stubs) == 1, f"expected exactly one interpreter construction; got {len(stubs)}"
-        assert callable(stubs[0].print_sink), "interpreter must be constructed with a callable print_sink"
+        assert not error_text, f"real pattern must evaluate cleanly; interpreter error: {error_text!r}"
+        assert widget_text.splitlines() == ["hello-ui-print-sink"], (
+            f"expected the std::print payload routed to the panel widget; got {widget_text!r}"
+        )
+
+    def test_pattern_without_print_leaves_output_widget_empty(
+        self,
+        qapp: QApplication,
+    ) -> None:
+        """A real pattern that emits no ``std::print`` must leave the widget empty.
+
+        This is the negative companion to the end-to-end gate: it confirms
+        the widget content originates from ``std::print`` rather than from
+        the apply machinery unconditionally writing text, so the positive
+        test cannot pass for the wrong reason.
+
+        Args:
+            qapp: Session-scoped QApplication fixture.
+        """
+        _ = qapp
+        harness = _PatternHarness(document=_StubDocument(b"\x00" * 64))
+        try:
+            harness.trigger_apply_via_interpreter("u8 silent @ 0x00;", 0)
+            widget_text = harness.print_output_widget().toPlainText()
+            error_text = harness.error_display_widget().toPlainText()
+        finally:
+            harness.deleteLater()
+
+        assert not error_text, f"silent pattern must evaluate cleanly; interpreter error: {error_text!r}"
+        assert not widget_text, f"a print-free pattern must leave the output widget empty; got {widget_text!r}"
 
 
 class TestPrintSinkAppendsToOutputWidget:

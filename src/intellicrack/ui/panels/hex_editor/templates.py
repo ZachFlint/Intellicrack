@@ -6,8 +6,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Final, cast
+from typing import Any, Final, Literal, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -40,6 +41,9 @@ _MAGIC_MIN_LEN: Final[int] = 2
 _ELF_CLASS_64: Final[int] = 2
 _MAX_BOOKMARK_SECTIONS: Final[int] = 20
 
+NotificationLevel = Literal["info", "warning"]
+UserNotifier = Callable[[str, str, "NotificationLevel"], None]
+
 
 def _get_default_template_color() -> str:
     """Return a theme-appropriate default color for template field highlights.
@@ -61,6 +65,31 @@ class TemplatesMixin:
     _template_combo: QComboBox | None
     _templates_tree: QTreeWidget | None
     state_holder: Any | None
+    _user_notifier: UserNotifier | None
+
+    def _notify_user(self, title: str, message: str, level: NotificationLevel) -> None:
+        """Surface a user-facing notification through the injected reporter or a dialog.
+
+        When a non-modal ``_user_notifier`` reporter is attached (for headless
+        orchestration, the bridge layer, or tests), the notification is routed
+        to it so the registry / bookmark mutation logic can run to completion
+        without blocking on a modal dialog. Otherwise the panel falls back to
+        the standard modal :class:`QMessageBox`.
+
+        Args:
+            title: Dialog / notification title.
+            message: Human-readable notification body.
+            level: ``"info"`` or ``"warning"`` notification severity.
+        """
+        notifier = getattr(self, "_user_notifier", None)
+        if callable(notifier):
+            notifier(title, message, level)
+            return
+        parent = self if isinstance(self, QWidget) else None
+        if level == "warning":
+            QMessageBox.warning(parent, title, message)
+        else:
+            QMessageBox.information(parent, title, message)
 
     def _notify_state_template_registered(self, template_name: str, *, source: str) -> None:
         """Forward template-registration to the shared state holder if attached.
@@ -298,11 +327,26 @@ class TemplatesMixin:
         if not file_path:
             return
 
+        self._import_template_from_path(file_path)
+
+    def _import_template_from_path(self, file_path: str) -> None:
+        """Register a JSON template from ``file_path`` on the active document.
+
+        Holds the non-interactive half of :meth:`_on_import_template` so the
+        registration, combo refresh and ``TEMPLATE_REGISTERED`` notification
+        can be exercised independently of the file-selection dialog.
+
+        Args:
+            file_path: Filesystem path to the JSON template definition.
+        """
+        if self.document is None:
+            return
+
         try:
             json_str = Path(file_path).read_text(encoding="utf-8")
             name: str = self.document.register_json_template(json_str)
         except (OSError, ValueError, AttributeError) as exc:
-            QMessageBox.warning(parent, "Import Template", f"Import failed:\n{exc}")
+            self._notify_user("Import Template", f"Import failed:\n{exc}", "warning")
             _logger.exception("template_import_failed")
         else:
             self._populate_template_combo()
@@ -370,6 +414,20 @@ class TemplatesMixin:
         if reply != QMessageBox.StandardButton.Yes:
             return
 
+        self._remove_template_named(name)
+
+    def _remove_template_named(self, name: str) -> None:
+        """Remove ``name`` from the active document's template registry.
+
+        Holds the non-interactive half of :meth:`_on_remove_template` so the
+        deletion, combo refresh and ``TEMPLATE_REMOVED`` notification can be
+        exercised independently of the confirmation dialog.
+
+        Args:
+            name: Name of the template to remove from the registry.
+        """
+        if self.document is None:
+            return
         try:
             self.document.remove_template(name)
         except (AttributeError, ValueError):
@@ -411,11 +469,10 @@ class TemplatesMixin:
         elif magic[:4] == b"\x7fELF":
             self._bookmark_elf_structure()
         else:
-            parent = self if isinstance(self, QWidget) else None
-            QMessageBox.information(
-                parent,
+            self._notify_user(
                 "Auto Bookmark",
                 "Unsupported file format (PE and ELF supported).",
+                "info",
             )
 
     def _read_document_bytes(self, offset: int, length: int) -> bytes | None:

@@ -114,9 +114,6 @@ def _lief_parse(path: str) -> object:
     return parser(path)
 
 
-_MIN_ELF_IMPORTS: Final[int] = 3
-_MIN_MACHO_IMPORTS: Final[int] = 1
-_MIN_MACHO_EXPORTS: Final[int] = 1
 _ELF_HEADER_SIZE: Final[int] = 64
 _ELF_PHDR_SIZE: Final[int] = 56
 _ELF_PHDR_COUNT: Final[int] = 2
@@ -618,12 +615,19 @@ def _make_orchestrator(tmp_path: Path) -> Orchestrator:
     )
 
 
-def test_extract_imports_macho_returns_dyld_symbols(tmp_path: Path) -> None:
-    """Verify F-0003: Mach-O imports are no longer silently dropped.
+def test_extract_imports_macho_returns_exact_dyld_symbols(tmp_path: Path) -> None:
+    """Verify F-0003: Mach-O imports surface with the exact fixture metadata.
 
-    On clean ``main`` ``_extract_imports`` had no isinstance branch for
-    ``lief.MachO.Binary`` and returned ``[]`` for every Mach-O. The fix
-    walks ``binary.imported_symbols`` so dyld-resolved imports surface.
+    The fixture is hand-assembled in :func:`_build_macho_fixture_bytes`, so the
+    complete import set is independently known: exactly one undefined external
+    symbol ``_audit6_macho_import`` with ``n_value == 0`` and library ordinal
+    ``1`` (encoded as ``n_desc`` ``0x0100``). On clean ``main`` ``extract_imports``
+    had no ``lief.MachO.Binary`` branch and returned ``[]`` for every Mach-O.
+
+    This test asserts the entire :class:`ImportInfo` record field-by-field and
+    asserts the exported symbol ``_audit6_macho_export`` never leaks into the
+    import list, so a regression that returns the full symbol table, the wrong
+    ordinal, or the wrong address fails.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -634,13 +638,23 @@ def test_extract_imports_macho_returns_dyld_symbols(tmp_path: Path) -> None:
     assert isinstance(binary, lief.MachO.Binary), "Mach-O fixture failed to parse"
 
     imports = extract_imports(binary)
-    assert len(imports) >= _MIN_MACHO_IMPORTS, f"expected Mach-O imports, got {imports}"
+
+    assert [(imp.dll, imp.function, imp.ordinal, imp.address) for imp in imports] == [
+        ("", "_audit6_macho_import", 1, 0),
+    ]
     names = {imp.function for imp in imports}
-    assert "_audit6_macho_import" in names
+    assert "_audit6_macho_export" not in names, "exported symbol leaked into imports"
 
 
-def test_extract_exports_macho_returns_trie_entries(tmp_path: Path) -> None:
-    """Verify F-0003: Mach-O exports are no longer silently dropped.
+def test_extract_exports_macho_returns_exact_trie_entries(tmp_path: Path) -> None:
+    """Verify F-0003: Mach-O exports surface with the exact fixture metadata.
+
+    The export symbol ``_audit6_macho_export`` is emitted in the fixture as a
+    defined section symbol (``n_type`` ``0x0F``) with ``n_value == 0x1000``. The
+    expected ``(name, ordinal, address)`` triple is therefore independently known
+    from the bytes the test packed - ordinal ``0`` (Mach-O has no export
+    ordinals) and address ``4096`` (``0x1000``). The import symbol must not leak
+    into the export list.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -651,17 +665,36 @@ def test_extract_exports_macho_returns_trie_entries(tmp_path: Path) -> None:
     assert isinstance(binary, lief.MachO.Binary), "Mach-O fixture failed to parse"
 
     exports = extract_exports(binary)
-    assert len(exports) >= _MIN_MACHO_EXPORTS, f"expected Mach-O exports, got {exports}"
+
+    assert [(exp.name, exp.ordinal, exp.address) for exp in exports] == [
+        ("_audit6_macho_export", 0, 0x1000),
+    ]
     names = {exp.name for exp in exports}
-    assert "_audit6_macho_export" in names
+    assert "_audit6_macho_import" not in names, "imported symbol leaked into exports"
 
 
-def test_extract_imports_elf_includes_non_plt_dynamic_symbols(tmp_path: Path) -> None:
-    """Verify F-0015: ELF imports include all dynamic symbols, not just PLT.
+def test_extract_imports_elf_includes_exact_dynamic_symbols(tmp_path: Path) -> None:
+    """Verify F-0015: ELF imports cover every undefined dynamic symbol exactly.
 
-    The pre-fix code iterated ``binary.pltgot_relocations`` only, which
-    missed lazily-bound functions on ``BIND_NOW`` binaries and every
-    imported data symbol. The fix walks ``imported_symbols`` instead.
+    The pre-fix code iterated ``binary.pltgot_relocations`` only, which missed
+    lazily-bound functions on ``BIND_NOW`` binaries and every imported data
+    symbol. The fix walks ``imported_symbols`` instead.
+
+    The fixture's dynamic symbol table (packed in
+    :func:`_build_elf_dynstr_and_dynsym`) holds exactly three undefined symbols
+    and one defined export, so the expected import set is independently known:
+
+    * ``audit6_imported_func`` - strong ``FUNC``
+    * ``audit6_imported_data`` - strong ``OBJECT`` (the data symbol a PLT-only
+      scan drops)
+    * ``audit6_third_import`` - ``WEAK`` ``FUNC`` (the weak symbol a PLT-only
+      scan drops)
+
+    The exported symbol ``audit6_exported_symbol`` (``st_shndx == 1``) must not
+    appear. The binding/type classification is cross-checked against lief's own
+    per-symbol metadata, a separate oracle from ``extract_imports``, so a
+    regression that returns the wrong symbols, includes the export, or misses
+    the data/weak symbols fails.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -670,15 +703,31 @@ def test_extract_imports_elf_includes_non_plt_dynamic_symbols(tmp_path: Path) ->
     binary = _build_elf_fixture(elf_path)
 
     imports = extract_imports(binary)
+
+    assert [(imp.dll, imp.function, imp.ordinal, imp.address) for imp in imports] == [
+        ("", "audit6_imported_func", None, 0),
+        ("", "audit6_imported_data", None, 0),
+        ("", "audit6_third_import", None, 0),
+    ]
+
+    classification = {str(sym.name): (str(sym.binding), str(sym.type)) for sym in binary.imported_symbols}
+    assert classification["audit6_imported_func"] == ("BINDING.GLOBAL", "TYPE.FUNC")
+    assert classification["audit6_imported_data"] == ("BINDING.GLOBAL", "TYPE.OBJECT")
+    assert classification["audit6_third_import"] == ("BINDING.WEAK", "TYPE.FUNC")
+
     names = {imp.function for imp in imports}
-    assert "audit6_imported_func" in names
-    assert "audit6_imported_data" in names
-    assert "audit6_third_import" in names
-    assert len(imports) >= _MIN_ELF_IMPORTS
+    assert "audit6_exported_symbol" not in names, "exported symbol leaked into imports"
 
 
-def test_extract_exports_elf_uses_dynamic_symbols(tmp_path: Path) -> None:
-    """Verify ELF exports continue to be resolved via dynamic symbols.
+def test_extract_exports_elf_returns_exact_dynamic_symbols(tmp_path: Path) -> None:
+    """Verify ELF exports resolve to the exact defined dynamic symbol.
+
+    The fixture defines a single exported symbol ``audit6_exported_symbol`` with
+    ``st_value == 0x1000`` and ``st_shndx == 1``; the three undefined imports
+    must not appear. The expected ``(name, ordinal, address)`` triple is known
+    from the packed bytes - ordinal ``0`` (ELF has no export ordinals) and
+    address ``4096`` (``0x1000``). lief's own ``exported_symbols`` view is used
+    as an independent oracle for the binding/type of that symbol.
 
     Args:
         tmp_path: Pytest temporary directory fixture.
@@ -687,8 +736,17 @@ def test_extract_exports_elf_uses_dynamic_symbols(tmp_path: Path) -> None:
     binary = _build_elf_fixture(elf_path)
 
     exports = extract_exports(binary)
+
+    assert [(exp.name, exp.ordinal, exp.address) for exp in exports] == [
+        ("audit6_exported_symbol", 0, 0x1000),
+    ]
+
+    exported_meta = {str(sym.name): (str(sym.binding), str(sym.type)) for sym in binary.exported_symbols}
+    assert exported_meta["audit6_exported_symbol"] == ("BINDING.GLOBAL", "TYPE.FUNC")
+
     names = {exp.name for exp in exports}
-    assert "audit6_exported_symbol" in names
+    assert "audit6_imported_func" not in names, "imported symbol leaked into exports"
+    assert "audit6_imported_data" not in names, "imported symbol leaked into exports"
 
 
 def test_classify_tool_call_read_only_with_hook_substring() -> None:

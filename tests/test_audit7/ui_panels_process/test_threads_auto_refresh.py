@@ -19,6 +19,8 @@ by ``ProcessTab``. The tests confirm that:
 
 from __future__ import annotations
 
+import statistics
+import time
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -41,6 +43,17 @@ if TYPE_CHECKING:
 _ATTACHED_PID: int = 1234
 _AUTO_REFRESH_WAIT_MS: int = 7000
 _AUTO_REFRESH_INTERVAL_MS: int = 3000
+
+# Long enough for the 3000 ms timer to fire at least three times so the inter-
+# call gaps can be measured. With ~3 dispatches there are >=2 gaps to median.
+_INTERVAL_PROBE_WAIT_MS: int = 9800
+
+# Tolerance band around the nominal 3000 ms interval. Wide enough to absorb Qt
+# scheduling jitter and CI load, but far tighter than the failure modes the
+# audit cares about: a 1 ms interval would land near 0 ms and a stopped timer
+# would yield no gaps at all, so both fall outside this band.
+_INTERVAL_TOLERANCE_LOW_MS: float = 2400.0
+_INTERVAL_TOLERANCE_HIGH_MS: float = 3700.0
 
 
 class _TestThreadsTab(ThreadsTab):
@@ -134,6 +147,7 @@ class _RefreshCounter:
         """
         self._batches: list[list[ThreadInfo]] = batches
         self.calls: int = 0
+        self.timestamps: list[float] = []
 
     def __call__(
         self,
@@ -151,10 +165,19 @@ class _RefreshCounter:
             _parent: Owning QObject (unused).
         """
         coro.close()
+        self.timestamps.append(time.perf_counter())
         idx = min(self.calls, len(self._batches) - 1)
         self.calls += 1
         if on_success is not None:
             on_success(self._batches[idx])
+
+    def interval_gaps_ms(self) -> list[float]:
+        """Return the elapsed milliseconds between successive bridge dispatches.
+
+        Returns:
+            list[float]: One gap per adjacent pair of recorded timestamps.
+        """
+        return [(later - earlier) * 1000.0 for earlier, later in zip(self.timestamps, self.timestamps[1:], strict=False)]
 
 
 def _make_threads(tids: list[int]) -> list[ThreadInfo]:
@@ -214,15 +237,20 @@ class TestF0012ThreadsTabAutoRefresh:
         assert auto_btn.isCheckable(), "Auto-Refresh button must be checkable"
         assert "Auto-Refresh" in auto_btn.text(), "Auto-Refresh button text must label the control"
 
-    def test_toggling_on_starts_timer_and_increments_call_count(
+    def test_toggling_on_drives_timer_at_three_second_interval(
         self,
         qtbot: QtBot,
         threads_tab: _TestThreadsTab,
     ) -> None:
-        """Activating Auto-Refresh must start a QTimer that re-invokes ``_refresh_threads``.
+        """Auto-Refresh must drive the bridge at a real ~3000 ms wall-clock cadence.
 
-        After waiting past two polling intervals, the bridge dispatcher must
-        have been invoked more than once.
+        Toggling on starts the QTimer; over a window covering several intervals
+        the dispatcher records a ``perf_counter`` stamp on each invocation. The
+        test asserts the median inter-call gap sits in a tight band around the
+        nominal 3000 ms. This is the gate the audit demanded: a regression that
+        armed the timer at 1 ms (or any wrong interval) would fire far too often
+        and the median gap would fall outside the band, failing the test, even
+        though a naive ``calls > 1`` check would still pass.
 
         Args:
             qtbot: pytest-qt fixture for event loop advancement.
@@ -244,11 +272,18 @@ class TestF0012ThreadsTabAutoRefresh:
         ):
             threads_tab.invoke_auto_refresh_toggle(checked=True)
             assert threads_tab.get_auto_refresh_timer().isActive(), "QTimer must be active after toggle-on"
-            qtbot.wait(_AUTO_REFRESH_WAIT_MS)
+            qtbot.wait(_INTERVAL_PROBE_WAIT_MS)
             calls_after_on = counter.calls
+            gaps = counter.interval_gaps_ms()
 
-        assert calls_after_on > 1, (
-            f"Auto-refresh must invoke _refresh_threads more than once in {_AUTO_REFRESH_WAIT_MS} ms (got {calls_after_on} call(s))"
+        assert calls_after_on >= 3, (
+            f"Auto-refresh must invoke _refresh_threads at least three times in {_INTERVAL_PROBE_WAIT_MS} ms (got {calls_after_on} call(s))"
+        )
+        assert len(gaps) >= 2, f"Need at least two inter-call gaps to validate cadence (got {len(gaps)})"
+
+        median_gap = statistics.median(gaps)
+        assert _INTERVAL_TOLERANCE_LOW_MS <= median_gap <= _INTERVAL_TOLERANCE_HIGH_MS, (
+            f"Median auto-refresh interval must be ~{_AUTO_REFRESH_INTERVAL_MS} ms, got {median_gap:.1f} ms (all gaps: {gaps})"
         )
 
     def test_new_tids_propagate_to_combos_during_auto_refresh(

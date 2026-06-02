@@ -36,6 +36,8 @@ Validates the nine fixes applied to
 from __future__ import annotations
 
 import inspect
+import shutil
+import stat
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -43,11 +45,14 @@ from typing import TYPE_CHECKING, Any, Final
 from unittest import mock
 
 import pytest
+import structlog
 from structlog.testing import capture_logs
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
+
+    from structlog.types import EventDict, Processor, WrappedLogger
 
 from intellicrack.core.script_gen import (
     Script,
@@ -361,30 +366,151 @@ def test_script_save_failure_logs_failure_not_success(tmp_path: Path) -> None:
 # --- F-0010: validate_javascript temp file logs in correct order ---
 
 
-def test_validate_javascript_temp_logs_unlink_then_cleaned_only_on_success() -> None:
-    """temp_file_cleaned must follow temp_file_unlink_attempt only on success."""
+def _require_node() -> None:
+    """Skip the calling test when the real ``node`` runtime is unavailable.
+
+    ``validate_javascript`` shells out to ``node --check`` to perform genuine
+    syntax validation. The cleanup-ordering and verdict assertions below need
+    the real runtime so the verdict oracle is node's own parser, not a stub.
+    Calls :func:`pytest.skip` when ``node`` is not on ``PATH``.
+    """
+    if shutil.which("node") is None:
+        pytest.skip("node (Node.js) runtime is required to validate JavaScript syntax for real")
+
+
+def _recording_processor(events: list[str]) -> Processor:
+    """Build a structlog processor that appends each event name to ``events``.
+
+    Args:
+        events: Mutable list that receives the ordered ``event`` field of each
+            emitted log record.
+
+    Returns:
+        Processor: A processor suitable as the terminal entry in a temporary
+        ``structlog`` configuration.
+    """
+
+    def _proc(_logger: WrappedLogger, _method: str, event_dict: EventDict) -> str:
+        name = str(event_dict.get("event", ""))
+        events.append(name)
+        return name
+
+    return _proc
+
+
+def _install_recording_processors(processors: list[Processor]) -> tuple[list[str], Callable[[], None]]:
+    """Install ``processors`` plus a terminal recorder; return events and restore.
+
+    Unlike :func:`structlog.testing.capture_logs`, this lets a leading
+    processor observe the real ``event_dict`` (including the live temp-file
+    path emitted by production) and apply a deterministic, synchronous
+    filesystem side effect before the production ``finally`` block runs. The
+    caller must invoke the returned restore callable (in a ``finally``) to
+    reinstate the prior ``structlog`` configuration.
+
+    Args:
+        processors: Processor chain to install. A terminal recording processor
+            returning ``str`` is appended automatically.
+
+    Returns:
+        tuple[list[str], Callable[[], None]]: The list that accumulates the
+        ordered event names and a callable that restores the prior config.
+    """
+    events: list[str] = []
+    old_config = structlog.get_config()
+    structlog.configure(processors=[*processors, _recording_processor(events)])
+
+    def _restore() -> None:
+        structlog.configure(**old_config)
+
+    return events, _restore
+
+
+def test_validate_javascript_emits_cleanup_after_unlink_attempt_on_real_run() -> None:
+    """A real node validation cleans its temp file and logs cleanup in order.
+
+    Drives the genuine ``node --check`` path on valid JavaScript and asserts
+    the exact verdict ``(True, None)`` produced by node's own parser (the
+    independent oracle), then asserts unconditionally that the temp file was
+    unlinked and that ``temp_file_cleaned`` followed ``temp_file_unlink_attempt``.
+    Cleanup is independent of node's verdict, so there is no conditional and no
+    post-hoc skip masking a silent cleanup regression.
+    """
+    _require_node()
     with capture_logs() as records:
-        is_valid, error = ScriptValidator.validate_javascript("var x = 1;")
+        is_valid, error = ScriptValidator.validate_javascript("var x = 1; function f() { return 42; }\n")
+
+    assert (is_valid, error) == (True, None)
+
+    events = _event_names(records)
+    assert "temp_file_unlink_attempt" in events, events
+    assert "temp_file_cleaned" in events, events
+    assert "temp_file_unlink_failed" not in events, events
+    assert events.index("temp_file_cleaned") > events.index("temp_file_unlink_attempt")
+
+
+def test_validate_javascript_reports_node_syntax_error_and_still_cleans_up() -> None:
+    """Invalid JavaScript yields node's real error and still cleans its temp file.
+
+    The verdict's truth value and error text come from the real ``node``
+    parser, not from re-implementing JS parsing in the test. Cleanup must still
+    occur on the failure path.
+    """
+    _require_node()
+    with capture_logs() as records:
+        is_valid, error = ScriptValidator.validate_javascript("function (){")
+
+    assert is_valid is False
+    assert error is not None
+    assert error != "node not installed"
+    assert "SyntaxError" in error
+
     events = _event_names(records)
     assert "temp_file_unlink_attempt" in events
-    if "temp_file_cleaned" in events:
-        attempt_idx = events.index("temp_file_unlink_attempt")
-        cleaned_idx = events.index("temp_file_cleaned")
-        assert cleaned_idx > attempt_idx
-    if is_valid is False and error == "node not installed":
-        pytest.skip("node runtime not available; cleanup ordering already asserted")
+    assert "temp_file_cleaned" in events
+    assert "temp_file_unlink_failed" not in events
 
 
-def test_validate_javascript_unlink_failure_skips_cleaned_log() -> None:
-    """When unlink fails, temp_file_cleaned must NOT be emitted."""
-    with (
-        capture_logs() as records,
-        mock.patch.object(Path, "unlink", side_effect=OSError("denied")),
-    ):
+def test_validate_javascript_unlink_failure_suppresses_cleaned_log() -> None:
+    """A real read-only temp file makes unlink fail; cleanup log is suppressed.
+
+    Instead of mocking ``Path.unlink`` (the operation under test), this drives
+    the real production cleanup against a real read-only file. A leading
+    structlog processor observes the genuine ``temp_file_created`` event,
+    extracts the live temp path production chose, and marks that real file
+    read-only via :meth:`pathlib.Path.chmod`. On Windows, unlinking a read-only
+    file raises :class:`PermissionError`, so production's real
+    ``except OSError`` branch runs: ``temp_file_unlink_failed`` is emitted and
+    ``temp_file_cleaned`` is not. The side effect runs synchronously inside the
+    ``temp_file_created`` log call, deterministically before the ``finally``
+    unlink, with no sleeps or shared mutable global state. The exact temp path
+    is restored to writable and removed afterwards so nothing leaks.
+    """
+    _require_node()
+    captured_path: dict[str, str] = {}
+
+    def _mark_temp_readonly(_logger: WrappedLogger, _method: str, event_dict: EventDict) -> EventDict:
+        if event_dict.get("event") == "temp_file_created":
+            path = event_dict.get("path")
+            if isinstance(path, str):
+                Path(path).chmod(stat.S_IREAD)
+                captured_path["path"] = path
+        return event_dict
+
+    events, restore = _install_recording_processors([_mark_temp_readonly])
+    try:
         ScriptValidator.validate_javascript("var x = 1;")
-    events = _event_names(records)
-    assert "temp_file_cleaned" not in events
-    assert "temp_file_unlink_failed" in events
+    finally:
+        restore()
+        leaked = captured_path.get("path")
+        if leaked is not None and Path(leaked).exists():
+            Path(leaked).chmod(stat.S_IWRITE)
+            Path(leaked).unlink()
+
+    assert captured_path.get("path"), "production never created a temp file to fail unlink on"
+    assert "temp_file_unlink_attempt" in events, events
+    assert "temp_file_unlink_failed" in events, events
+    assert "temp_file_cleaned" not in events, events
 
 
 # --- F-0012: ScriptManager.execute runs Python scripts ---

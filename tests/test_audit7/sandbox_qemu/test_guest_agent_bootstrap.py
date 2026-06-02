@@ -13,6 +13,7 @@ and exposes the captured invocations to the test assertions.
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import cast
 
 import pytest
@@ -39,9 +40,15 @@ class _FakeQMPClient(QMPClient):
     Attributes:
         invocations: Recorded ``(command_dict, time_limit)`` tuples in
             call order.
+        outcomes: For each recorded invocation (same index as
+            ``invocations``), the ``QMPResponse`` actually returned to the
+            caller. This lets a test correlate every ``guest-ping`` attempt
+            with the precise success/failure reply that drove the retry
+            loop, rather than only counting attempts.
     """
 
     invocations: list[tuple[dict[str, object], float]]
+    outcomes: list[QMPResponse]
 
     def __init__(
         self,
@@ -53,7 +60,8 @@ class _FakeQMPClient(QMPClient):
 
         Args:
             ping_responses: Replies for successive ``guest-ping`` calls.
-                Must contain at least one entry.
+                Must contain at least one entry. The final entry is reused
+                for any ping beyond the supplied count.
             exec_response: Reply for the single ``guest-exec`` call.
 
         Raises:
@@ -65,7 +73,8 @@ class _FakeQMPClient(QMPClient):
             raise ValueError(msg)
         self._ping_responses: list[QMPResponse] = list(ping_responses)
         self._exec_response: QMPResponse = exec_response
-        self.invocations: list[tuple[dict[str, object], float]] = []
+        self.invocations = []
+        self.outcomes = []
 
     async def execute_command(
         self,
@@ -86,12 +95,13 @@ class _FakeQMPClient(QMPClient):
         self.invocations.append((command, time_limit))
         execute = command.get("execute")
         if execute == "guest-ping":
-            if len(self._ping_responses) > 1:
-                return self._ping_responses.pop(0)
-            return self._ping_responses[0]
-        if execute == "guest-exec":
-            return self._exec_response
-        return QMPResponse(success=False, error=f"unexpected command: {execute!r}")
+            response = self._ping_responses.pop(0) if len(self._ping_responses) > 1 else self._ping_responses[0]
+        elif execute == "guest-exec":
+            response = self._exec_response
+        else:
+            response = QMPResponse(success=False, error=f"unexpected command: {execute!r}")
+        self.outcomes.append(response)
+        return response
 
 
 class _BootstrapTestSandbox(QEMUSandbox):
@@ -278,31 +288,53 @@ def test_bootstrap_raises_sandbox_error_when_qemu_ga_never_responds() -> None:
     assert sandbox.get_agent_guest_pid() is None
 
 
-def test_bootstrap_retries_guest_ping_until_success() -> None:
-    """guest-ping retries until success, then guest-exec runs exactly once."""
+def test_wait_for_qemu_ga_retries_each_failure_then_succeeds() -> None:
+    """The wait loop re-pings on every failure and stops on the first success.
+
+    This is a real gate on the retry mechanism, not just a call count:
+
+    * Each of the first two ``guest-ping`` attempts is answered with a
+      *distinct* failure reply and must provoke another attempt. The fake
+      records the exact ``QMPResponse`` returned per invocation, so the test
+      correlates attempt 1 -> failure A, attempt 2 -> failure B, attempt 3 ->
+      success, rather than merely counting that >= 3 pings occurred.
+    * The loop must stop at the first success: exactly three pings, never a
+      fourth. A loop that ignored ``response.success`` and kept polling, or
+      one that returned before exhausting the failures, both fail here.
+    * The loop must actually sleep ``poll_interval`` between failed attempts.
+      With two intervening failures and a ``0.05`` s interval, real elapsed
+      time must be at least ``2 * 0.05`` s, confirming the backoff path ran
+      and success did not come from a tight non-sleeping spin.
+    """
+    fail_a = QMPResponse(success=False, error="guest-ping failure A: VQ closed")
+    fail_b = QMPResponse(success=False, error="guest-ping failure B: agent not ready")
+    ok = QMPResponse(success=True, data={"ts": 7})
+    poll_interval = 0.05
     fake_qmp = _FakeQMPClient(
-        ping_responses=[
-            QMPResponse(success=False, error="VQ closed"),
-            QMPResponse(success=False, error="VQ closed"),
-            QMPResponse(success=True, data={}),
-        ],
+        ping_responses=[fail_a, fail_b, ok],
         exec_response=QMPResponse(success=True, data={"pid": 99}),
     )
     sandbox = _make_sandbox(GuestOS.WINDOWS)
     sandbox.attach_qmp(fake_qmp)
 
-    async def _drive() -> None:
-        """Wait for qemu-ga with a short retry budget, then bootstrap."""
-        await sandbox.wait_for_qemu_ga_for_test(ping_timeout=5.0, poll_interval=0.01)
-        await sandbox.bootstrap_for_test()
+    start = time.monotonic()
+    asyncio.run(sandbox.wait_for_qemu_ga_for_test(ping_timeout=5.0, poll_interval=poll_interval))
+    elapsed = time.monotonic() - start
 
-    asyncio.run(_drive())
+    executes = [cmd.get("execute") for cmd, _ in fake_qmp.invocations]
+    assert executes == ["guest-ping", "guest-ping", "guest-ping"], (
+        f"wait loop must issue exactly three pings and stop at the first success; got {executes!r}"
+    )
 
-    ping_calls = [cmd for cmd, _ in fake_qmp.invocations if cmd.get("execute") == "guest-ping"]
-    exec_calls = [cmd for cmd, _ in fake_qmp.invocations if cmd.get("execute") == "guest-exec"]
-    assert len(ping_calls) >= 3
-    assert len(exec_calls) == 1
-    assert sandbox.get_agent_guest_pid() == 99
+    assert [o.success for o in fake_qmp.outcomes] == [False, False, True], "first two pings must fail and the third must succeed"
+    assert fake_qmp.outcomes[0].error == "guest-ping failure A: VQ closed"
+    assert fake_qmp.outcomes[1].error == "guest-ping failure B: agent not ready"
+    assert fake_qmp.outcomes[2].error is None
+    assert fake_qmp.outcomes[2].data == {"ts": 7}
+
+    assert elapsed >= 2 * poll_interval, f"retry loop must sleep between failed pings; elapsed={elapsed:.4f}s < {2 * poll_interval:.4f}s"
+
+    assert sandbox.get_agent_guest_pid() is None, "waiting for qemu-ga must not launch the agent on its own"
 
 
 def test_bootstrap_raises_when_guest_exec_returns_no_pid() -> None:

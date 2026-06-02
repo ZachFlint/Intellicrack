@@ -156,12 +156,23 @@ def test_resource_links_table_covers_all_cloud_providers() -> None:
 
 
 @pytest.mark.parametrize("provider_id", _PREVIOUSLY_UNWIRED_PROVIDERS)
-def test_resource_button_invokes_qdesktopservices(
+def test_resource_button_click_routes_exact_url_once_to_browser(
     qapp: QApplication,  # noqa: ARG001
     tmp_path: Path,
     provider_id: str,
 ) -> None:
-    """Clicking a Resources button routes the configured URL to ``QDesktopServices``.
+    """Each Resources button is wired 1:1 to its own URL via the system browser hook.
+
+    Clicking the *real* button (driving the genuine ``clicked`` signal/slot
+    connection) must invoke ``QDesktopServices.openUrl`` exactly once with a
+    ``QUrl`` whose text equals the configured link for that exact label. Asserting
+    the call count is exactly one proves the connection is neither missing (zero
+    calls) nor double-wired (two calls); asserting the URL string proves the
+    ``partial(self._open_resource_url, QUrl(url), label)`` binding carried the
+    correct per-button URL rather than, say, every button sharing the first link.
+    ``QDesktopServices.openUrl`` is the OS browser launcher, not the unit under
+    test, so patching it keeps the test from spawning a real browser while still
+    exercising the full button -> handler -> openUrl path.
 
     Args:
         qapp: Module-scoped Qt application.
@@ -173,6 +184,9 @@ def test_resource_button_invokes_qdesktopservices(
     assert buttons is not None, f"Provider '{provider_id}' did not register buttons"
 
     expected_links = {label: url for label, url, _ in _resource_links()[provider_id]}
+    assert set(buttons.keys()) == set(expected_links.keys()), (
+        f"Provider '{provider_id}' button labels must match the resource table exactly"
+    )
 
     with patch(
         "intellicrack.ui.provider_config.QDesktopServices.openUrl",
@@ -180,7 +194,7 @@ def test_resource_button_invokes_qdesktopservices(
     ) as mock_open:
         for label, btn in buttons.items():
             btn.click()
-            assert mock_open.called, f"openUrl not invoked for '{provider_id}' / '{label}'"
+            assert mock_open.call_count == 1, f"button '{label}' must trigger exactly one openUrl, got {mock_open.call_count}"
             (called_url,), _ = mock_open.call_args
             assert isinstance(called_url, QUrl)
             assert called_url.toString() == expected_links[label]
@@ -227,11 +241,20 @@ def test_openrouter_gets_both_cost_and_resources_groups(
     assert _find_group(widget, "Resources") is not None
 
 
-def test_open_resource_url_warns_when_qdesktopservices_fails(
+def test_open_resource_url_surfaces_exact_failure_dialog(
     qapp: QApplication,  # noqa: ARG001
     tmp_path: Path,
 ) -> None:
-    """A failed ``QDesktopServices.openUrl`` surfaces a warning dialog.
+    """A failed browser launch surfaces a warning naming the exact label and URL.
+
+    When ``QDesktopServices.openUrl`` returns ``False`` (the OS could not open the
+    browser), the handler must escalate to the user via ``show_warning`` with the
+    title "Open Link Failed" and a body that interpolates the failing link's label
+    and URL exactly as ``f"Could not open {label} ({url})."``. This proves the
+    real button is wired to a handler that genuinely inspects the return value and
+    surfaces failure rather than swallowing it. The expected message is built from
+    the resource table (an independent source of truth), not from the handler's
+    own output.
 
     Args:
         qapp: Module-scoped Qt application.
@@ -243,6 +266,9 @@ def test_open_resource_url_warns_when_qdesktopservices_fails(
     label, btn = next(iter(buttons.items()))
     assert label
 
+    expected_url = {link_label: url for link_label, url, _ in _resource_links()["anthropic"]}[label]
+    expected_message = f"Could not open {label} ({expected_url})."
+
     with (
         patch(
             "intellicrack.ui.provider_config.QDesktopServices.openUrl",
@@ -251,4 +277,9 @@ def test_open_resource_url_warns_when_qdesktopservices_fails(
         patch("intellicrack.ui.provider_config.show_warning") as mock_warn,
     ):
         btn.click()
-        assert mock_warn.called, "show_warning must run when openUrl returns False"
+
+    assert mock_warn.call_count == 1, "exactly one warning must be shown when the browser launch fails"
+    warn_args, _ = mock_warn.call_args
+    assert warn_args[0] is widget, "warning must be parented to the settings widget"
+    assert warn_args[1] == "Open Link Failed"
+    assert warn_args[2] == expected_message

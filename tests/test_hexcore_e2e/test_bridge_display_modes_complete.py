@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from intellicrack.bridges.hex_state import HexDocumentState
+
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -43,14 +45,41 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
 class TestDisplayModesExtended:
     """Tests for display mode set/get roundtrip for modes not covered previously."""
 
-    def test_set_hex16_be_returns_true(self, bridge: HexEditorBridge) -> None:
-        """Verify that set_display_mode('hex16_be') returns True.
+    def test_set_hex16_be_changes_mode_and_propagates_to_state(self, bridge: HexEditorBridge) -> None:
+        """Setting ``hex16_be`` returns True, changes the mode, and reaches the state holder.
+
+        The bare ``assert result`` was non-gating: it never proved the mode
+        actually changed. Here an independent :class:`HexDocumentState` oracle
+        (a different component than the bridge's private ``_display_mode``)
+        starts at the documented default ``hex8`` and must reflect the new mode
+        only after the set call, and a fresh ``get_display_mode`` read-back must
+        return the value that was set.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
+        state = HexDocumentState()
+        bridge.set_state_holder(state)
+
+        assert _run(bridge.get_display_mode()) != "hex16_be", "precondition: bridge must not already be in hex16_be"
+        assert state.get_display_mode() == "hex8", "state holder default display mode must be hex8 before any set"
+
         result: bool = _run(bridge.set_display_mode("hex16_be"))
-        assert result
+
+        assert result is True, "set_display_mode must report success for a valid mode"
+        assert _run(bridge.get_display_mode()) == "hex16_be", "bridge get_display_mode must return the mode that was set"
+        assert state.get_display_mode() == "hex16_be", "state holder (independent oracle) must reflect the new display mode"
+
+    def test_set_invalid_mode_raises_value_error_and_preserves_mode(self, bridge: HexEditorBridge) -> None:
+        """An unknown display mode raises ValueError and leaves the current mode intact.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+        """
+        _run(bridge.set_display_mode("hex32_le"))
+        with pytest.raises(ValueError, match="unknown display mode"):
+            _run(bridge.set_display_mode("not_a_real_mode"))
+        assert _run(bridge.get_display_mode()) == "hex32_le", "a rejected mode must not overwrite the previously set mode"
 
     def test_get_after_set_hex16_be(self, bridge: HexEditorBridge) -> None:
         """Verify that get_display_mode returns 'hex16_be' after setting it.

@@ -14,6 +14,8 @@ provider connection lifecycle, dtype selection, and error recovery.
 from __future__ import annotations
 
 import contextlib
+import itertools
+import re
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, cast
 
@@ -57,6 +59,176 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 _TEN_GB: int = 10 * 1024 * 1024 * 1024
 _FOURTEEN_GB: int = 14 * 1024 * 1024 * 1024
 _TWELVE_GB: int = 12 * 1024 * 1024 * 1024
+
+
+_COMMON_ENGLISH_WORDS: frozenset[str] = frozenset(
+    {
+        "the",
+        "a",
+        "an",
+        "is",
+        "are",
+        "was",
+        "to",
+        "of",
+        "and",
+        "in",
+        "it",
+        "that",
+        "this",
+        "for",
+        "as",
+        "with",
+        "on",
+        "be",
+        "by",
+        "or",
+        "you",
+        "i",
+        "we",
+        "they",
+        "he",
+        "she",
+        "not",
+        "have",
+        "has",
+        "can",
+        "will",
+        "would",
+        "do",
+        "does",
+        "what",
+        "which",
+        "when",
+        "color",
+        "file",
+        "system",
+        "program",
+        "data",
+        "code",
+        "header",
+        "binary",
+        "executable",
+        "windows",
+        "format",
+        "section",
+        "number",
+        "word",
+        "hello",
+        "blue",
+        "red",
+        "green",
+    },
+)
+
+_WORD_PATTERN: re.Pattern[str] = re.compile(r"[A-Za-z]+(?:'[A-Za-z]+)?")
+
+
+def _seed_all(seed: int) -> None:
+    """Seed every torch RNG that sampling may draw from for reproducibility.
+
+    Seeds the global CPU generator and, when present, the XPU and CUDA
+    generators so that a subsequent sampled generation is fully determined by
+    ``seed`` alone.
+
+    Args:
+        seed: The integer seed to apply across all available generators.
+
+    Raises:
+        TypeError: If ``torch.manual_seed`` is missing or not callable.
+    """
+    cpu_seed: object = getattr(torch, "manual_seed", None)
+    if not callable(cpu_seed):
+        msg = "torch.manual_seed is not callable"
+        raise TypeError(msg)
+    cpu_seed(seed)
+    xpu_backend: object = getattr(torch, "xpu", None)
+    xpu_seed: object = getattr(xpu_backend, "manual_seed_all", None)
+    if callable(xpu_seed):
+        xpu_seed(seed)
+    cuda_backend: object = getattr(torch, "cuda", None)
+    cuda_seed: object = getattr(cuda_backend, "manual_seed_all", None)
+    if callable(cuda_seed):
+        cuda_seed(seed)
+
+
+def _words(text: str) -> list[str]:
+    """Extract lowercase alphabetic word tokens from ``text``.
+
+    Args:
+        text: The raw text to tokenize.
+
+    Returns:
+        list[str]: Lowercased alphabetic word tokens in order of appearance.
+    """
+    return [match.group(0).lower() for match in _WORD_PATTERN.finditer(text)]
+
+
+def _max_char_run_ratio(text: str) -> float:
+    """Compute the fraction of ``text`` occupied by its longest single-char run.
+
+    A degenerate output such as ``"aaaaaaaaaa"`` yields ``1.0``; genuine prose
+    yields a small fraction. This provides an implementation-independent signal
+    for detecting repetition collapse without re-deriving model logic.
+
+    Args:
+        text: The text to inspect.
+
+    Returns:
+        float: Longest run length divided by total length, or ``0.0`` when
+        ``text`` is empty.
+    """
+    if not text:
+        return 0.0
+    longest = 1
+    current = 1
+    for previous, char in itertools.pairwise(text):
+        if char == previous:
+            current += 1
+            longest = max(longest, current)
+        else:
+            current = 1
+    return longest / len(text)
+
+
+def _assert_coherent_english(text: str, *, min_words: int = 3, min_dictionary_hits: int = 2) -> None:
+    """Assert that ``text`` is coherent natural-language English, not a degenerate string.
+
+    The checks are objective and independent of the model under test: they
+    measure word count, character diversity, repetition collapse, alphabetic
+    content, and overlap with a fixed common-English vocabulary. A single
+    repeated character, control-character noise, or markup would fail every one
+    of these gates.
+
+    Args:
+        text: The candidate model response text.
+        min_words: Minimum number of distinct word tokens required.
+        min_dictionary_hits: Minimum number of common-English words required.
+    """
+    cleaned = text.strip()
+    assert cleaned, "response was empty after stripping whitespace"
+    control_chars = [char for char in cleaned if not char.isprintable() and char not in "\t\n\r"]
+    assert not control_chars, f"response contained control characters {control_chars!r}: {cleaned!r}"
+
+    tokens = _words(cleaned)
+    assert len(tokens) >= min_words, f"expected >= {min_words} word tokens, got {len(tokens)}: {cleaned!r}"
+
+    distinct_tokens = set(tokens)
+    assert len(distinct_tokens) >= 3, f"expected >= 3 distinct word tokens, got {len(distinct_tokens)}: {cleaned!r}"
+
+    alpha_chars = [char for char in cleaned if char.isalpha()]
+    assert len(alpha_chars) >= 8, f"expected >= 8 alphabetic chars, got {len(alpha_chars)}: {cleaned!r}"
+
+    unique_alpha = {char.lower() for char in alpha_chars}
+    assert len(unique_alpha) >= 5, f"expected >= 5 unique letters, got {len(unique_alpha)}: {cleaned!r}"
+
+    run_ratio = _max_char_run_ratio(cleaned)
+    assert run_ratio < 0.5, f"response is dominated by a repeated character (run ratio {run_ratio:.2f}): {cleaned!r}"
+
+    dictionary_hits = distinct_tokens & _COMMON_ENGLISH_WORDS
+    assert len(dictionary_hits) >= min_dictionary_hits, (
+        f"expected >= {min_dictionary_hits} common English words, got {sorted(dictionary_hits)}: {cleaned!r}"
+    )
 
 
 def _make_messages(prompt: str) -> list[Message]:
@@ -692,60 +864,84 @@ class TestRealInference:
         loaded_xpu_provider: LocalTransformersProvider,
         tinyllama_model_id: str,
     ) -> None:
-        """Chat should return an assistant message with non-empty content.
+        """Chat should answer a closed-form arithmetic prompt with the correct value.
+
+        The expected answer (``4``) is an independent oracle: ``2 + 2`` equals
+        ``4`` regardless of the model. The response must additionally be coherent
+        natural-language text, not a degenerate or garbled string.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        messages = _make_messages("What is 2 + 2?")
+        messages = _make_messages("What is 2 + 2? Show the calculation and the answer.")
         response, _ = await loaded_xpu_provider.chat(
             messages=messages,
             model=tinyllama_model_id,
             max_tokens=64,
+            temperature=0.0,
         )
         assert response.role == "assistant"
-        assert len(response.content) > 0
+        content = response.content
+        assert "4" in content, f"expected the arithmetic answer '4' in response: {content!r}"
+        assert re.search(r"2\s*\+\s*2", content) is not None, f"expected the operands '2 + 2' echoed in response: {content!r}"
+        _assert_coherent_english(content, min_words=3, min_dictionary_hits=1)
 
     async def test_response_is_coherent_text(
         self,
         loaded_xpu_provider: LocalTransformersProvider,
         tinyllama_model_id: str,
     ) -> None:
-        """Response text should be printable and not garbled.
+        """Response should be coherent multi-word English, not a degenerate string.
+
+        The coherence oracle is independent of the model: a single repeated
+        character, control-character noise, or markup fails the distinct-token,
+        unique-letter, repetition-ratio, and common-vocabulary gates. A genuine
+        sentence passes all of them.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        messages = _make_messages("Say hello in one sentence.")
+        messages = _make_messages("What is the sky? Answer in one sentence.")
         response, _ = await loaded_xpu_provider.chat(
             messages=messages,
             model=tinyllama_model_id,
             max_tokens=64,
+            temperature=0.0,
         )
-        cleaned = response.content.strip()
-        assert len(cleaned) > 0
-        assert cleaned.isprintable()
+        _assert_coherent_english(response.content, min_words=6, min_dictionary_hits=3)
 
     async def test_domain_prompt(
         self,
         loaded_xpu_provider: LocalTransformersProvider,
         tinyllama_model_id: str,
     ) -> None:
-        """Domain-specific prompt should produce a substantive response.
+        """A binary-analysis prompt should produce an on-topic, coherent answer.
+
+        Run greedily (``temperature=0.0``) so the topical content is
+        deterministic. The response must be coherent English and must reference
+        the PE/executable domain it was asked about - an off-topic or garbled
+        answer fails both the coherence gate and the domain-term gate.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        messages = _make_messages("Explain what a PE header is")
+        messages = _make_messages("What is a PE header in a Windows executable? Explain briefly.")
         response, _ = await loaded_xpu_provider.chat(
             messages=messages,
             model=tinyllama_model_id,
-            max_tokens=128,
+            max_tokens=200,
+            temperature=0.0,
         )
-        assert len(response.content) > 10
+        _assert_coherent_english(response.content, min_words=8, min_dictionary_hits=3)
+
+        lowered = response.content.lower()
+        domain_terms = ("pe", "header", "executable", "binary", "windows", "file", "format", "section", "offset", "dos", "coff")
+        present = [term for term in domain_terms if term in lowered]
+        assert len(present) >= 3, f"expected >= 3 PE-domain terms, found {present} in: {response.content!r}"
+        assert "header" in lowered, f"expected the prompted topic 'header' in response: {response.content!r}"
 
 
 @pytest.mark.xpu
@@ -758,25 +954,41 @@ class TestStreamingInference:
         loaded_xpu_provider: LocalTransformersProvider,
         tinyllama_model_id: str,
     ) -> None:
-        """Streaming should yield at least one non-empty text chunk.
+        """Streaming should yield multiple non-empty string chunks of real words.
+
+        Every chunk must be a non-empty ``str``; together the letter-bearing
+        chunks must reconstruct several distinct, recognizable English words.
+        Empty strings, non-string objects, or a single repeated fragment fail.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        messages = _make_messages("Count to five.")
+        messages = _make_messages("List three primary colors in a sentence.")
         chunks: list[str] = [
             chunk
             async for chunk in loaded_xpu_provider.chat_stream(
                 messages=messages,
                 model=tinyllama_model_id,
-                max_tokens=32,
+                max_tokens=48,
+                temperature=0.0,
             )
         ]
 
-        assert len(chunks) >= 1
-        non_empty = [c for c in chunks if c.strip()]
-        assert len(non_empty) >= 1
+        assert len(chunks) >= 2, f"expected the stream to yield multiple chunks, got {len(chunks)}"
+        assert all(isinstance(chunk, str) for chunk in chunks), "every streamed chunk must be a str"
+        assert all(chunk for chunk in chunks), "the stream must not yield empty chunks"
+
+        chunks_with_letters = [chunk for chunk in chunks if any(char.isalpha() for char in chunk)]
+        assert len(chunks_with_letters) >= 4, f"expected >= 4 chunks containing letters, got {len(chunks_with_letters)}"
+
+        token_text = " ".join(chunks_with_letters)
+        word_tokens = _words(token_text)
+        distinct_words = set(word_tokens)
+        assert len(distinct_words) >= 4, f"expected >= 4 distinct streamed word tokens, got {sorted(distinct_words)}"
+
+        dictionary_hits = distinct_words & _COMMON_ENGLISH_WORDS
+        assert len(dictionary_hits) >= 2, f"expected >= 2 common English words across chunks, got {sorted(dictionary_hits)}"
 
     async def test_stream_assembles_to_complete_response(
         self,
@@ -808,35 +1020,50 @@ class TestStreamingInference:
         loaded_xpu_provider: LocalTransformersProvider,
         tinyllama_model_id: str,
     ) -> None:
-        """Both streaming and non-streaming paths should return valid text.
+        """Streaming and non-streaming greedy decode must yield the same content.
+
+        Both paths run greedy decoding (``temperature=0.0``) over the same model
+        and prompt, so they must emit the identical token sequence. The
+        non-streaming path preserves inter-word spaces while the streaming path
+        decodes per token (dropping leading spaces); with all whitespace removed
+        the two outputs must be byte-for-byte equal. This is an independent
+        functional-alignment oracle: any divergence in prompt formatting,
+        decoding, or sampling between the two code paths breaks the equality.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        prompt = "Name a color."
+        prompt = "Name a primary color in a short sentence."
         messages = _make_messages(prompt)
 
         response, _ = await loaded_xpu_provider.chat(
             messages=messages,
             model=tinyllama_model_id,
-            max_tokens=16,
+            max_tokens=24,
             temperature=0.0,
         )
-        assert len(response.content) > 0
+        _assert_coherent_english(response.content, min_words=4, min_dictionary_hits=2)
 
         chunks: list[str] = [
             chunk
             async for chunk in loaded_xpu_provider.chat_stream(
                 messages=messages,
                 model=tinyllama_model_id,
-                max_tokens=16,
+                max_tokens=24,
                 temperature=0.0,
             )
         ]
+        assert all(isinstance(chunk, str) for chunk in chunks), "every streamed chunk must be a str"
 
-        stream_text = "".join(chunks).strip()
-        assert len(stream_text) > 0
+        non_stream_collapsed = re.sub(r"\s+", "", response.content)
+        stream_collapsed = re.sub(r"\s+", "", "".join(chunks))
+        assert stream_collapsed, "stream produced no text"
+        assert stream_collapsed == non_stream_collapsed, (
+            f"streaming output diverged from non-streaming greedy decode:\n"
+            f"  non-stream: {non_stream_collapsed!r}\n"
+            f"  stream:     {stream_collapsed!r}"
+        )
 
 
 @pytest.mark.xpu
@@ -954,26 +1181,53 @@ class TestTemperatureAndSampling:
         loaded_xpu_provider: LocalTransformersProvider,
         tinyllama_model_id: str,
     ) -> None:
-        """Multiple calls with high temperature should produce some variation.
+        """Temperature must drive sampling: greedy is fixed, sampling diverges.
+
+        This is made deterministic by seeding every torch generator before each
+        call. The independent oracle is the production sampling contract: with
+        ``temperature=0.0`` decoding is greedy argmax, so the output is identical
+        regardless of the seed; with ``temperature=1.0`` decoding samples from
+        the softmax, so distinct seeds yield distinct outputs. If sampling were
+        broken (always greedy) the high-temperature outputs would collapse to a
+        single value and this test would fail. Seeding removes flakiness while
+        the greedy/sampled contrast keeps the gate falsifiable.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
         messages = _make_messages("Tell me a random word.")
-        outputs: set[str] = set()
+        seeds: tuple[int, ...] = (1, 2, 3, 4, 5, 6)
 
-        sample_count = 5
-        for _ in range(sample_count):
+        greedy_outputs: list[str] = []
+        for seed in seeds:
+            _seed_all(seed)
             response, _ = await loaded_xpu_provider.chat(
                 messages=messages,
                 model=tinyllama_model_id,
-                temperature=0.9,
-                max_tokens=16,
+                temperature=0.0,
+                max_tokens=12,
             )
-            outputs.add(response.content.strip())
+            greedy_outputs.append(response.content.strip())
 
-        assert len(outputs) >= 2
+        assert len(set(greedy_outputs)) == 1, f"greedy decoding must ignore the seed, got distinct outputs: {set(greedy_outputs)}"
+
+        sampled_outputs: list[str] = []
+        for seed in seeds:
+            _seed_all(seed)
+            response, _ = await loaded_xpu_provider.chat(
+                messages=messages,
+                model=tinyllama_model_id,
+                temperature=1.0,
+                max_tokens=12,
+            )
+            sampled_outputs.append(response.content.strip())
+
+        distinct_sampled = set(sampled_outputs)
+        assert len(distinct_sampled) >= len(seeds) - 1, (
+            f"temperature=1.0 sampling must vary across seeds, got {len(distinct_sampled)} distinct of {len(seeds)}: {distinct_sampled}"
+        )
+        assert distinct_sampled != set(greedy_outputs), "sampled outputs must differ from the fixed greedy output"
 
 
 @pytest.mark.xpu

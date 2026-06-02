@@ -389,7 +389,7 @@ class HighlightingMixin:
             remove_fn = getattr(self._hex_widget, "remove_highlight_rule", None)
             if callable(remove_fn):
                 try:
-                    remove_fn(row)
+                    remove_fn(rule_id)
                 except (IndexError, TypeError, AttributeError):
                     _logger.exception("highlight_widget_rule_remove_failed", row=row, rule_id=rule_id)
 

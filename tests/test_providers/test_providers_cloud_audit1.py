@@ -86,12 +86,14 @@ _CANCEL_REQUESTED_ATTR: str = "_cancel_requested"
 _CLIENT_ATTR: str = "_client"
 _STATS_ATTR: str = "_stats"
 _CONFIG_ATTR: str = "_config"
+_RUN_GOOGLE_CHAT_ATTR: str = "_run_google_chat"
 
 _convert_tool_choice: Any = getattr(LLMProviderBase, _CONVERT_TOOL_CHOICE_ATTR)
 _convert_tools_to_openai: Any = getattr(LLMProviderBase, _CONVERT_TOOLS_OPENAI_ATTR)
 _anthropic_build_api_kwargs: Any = getattr(AnthropicProvider, _BUILD_API_KWARGS_ATTR)
 _openrouter_apply_cache_control: Any = getattr(OpenRouterProvider, _APPLY_CACHE_CONTROL_ATTR)
 _openrouter_reasoning_effort: Any = getattr(OpenRouterProvider, _REASONING_EFFORT_ATTR)
+_run_google_chat: Any = getattr(GoogleProvider, _RUN_GOOGLE_CHAT_ATTR)
 
 
 _KABOOM_MESSAGE: str = "kaboom"
@@ -167,6 +169,59 @@ def test_f0007_specific_tool_choice_with_function_name_returns_dict() -> None:
     choice = ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="run_pipeline")
     result = _convert_tool_choice(choice)
     assert result == {"type": "function", "function": {"name": "run_pipeline"}}
+
+
+def test_f0007_all_tool_choice_modes_map_to_openai_spec_constants() -> None:
+    """Every ToolChoiceMode maps to the exact OpenAI ``tool_choice`` value.
+
+    The expected values are fixed by the public OpenAI Chat Completions
+    contract, independent of Intellicrack: ``AUTO`` -> ``"auto"``,
+    ``NONE`` -> ``"none"``, ``REQUIRED`` -> ``"required"``, and ``SPECIFIC``
+    -> the named-function dict. Pinning all four guards against any single
+    branch silently emitting the wrong literal (which the server would
+    reject), not just the SPECIFIC happy path.
+    """
+    assert _convert_tool_choice(ToolChoice(mode=ToolChoiceMode.AUTO)) == "auto"
+    assert _convert_tool_choice(ToolChoice(mode=ToolChoiceMode.NONE)) == "none"
+    assert _convert_tool_choice(ToolChoice(mode=ToolChoiceMode.REQUIRED)) == "required"
+    assert _convert_tool_choice(ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="ping")) == {
+        "type": "function",
+        "function": {"name": "ping"},
+    }
+
+
+@pytest.mark.skipif(
+    not os.environ.get("OPENAI_API_KEY"),
+    reason="OPENAI_API_KEY not set; live network test skipped",
+)
+@pytest.mark.asyncio
+async def test_f0007_specific_tool_choice_forces_named_tool_on_live_openai() -> None:
+    """Live: a SPECIFIC tool choice forces the OpenAI API to call that tool.
+
+    Drives the converted ``{"type": "function", "function": {"name": "ping"}}``
+    dict through a real OpenAI chat request and asserts the server actually
+    selects the named function. This closes the gap the audit flagged on the
+    unit test: the conversion is not merely the right shape, it is accepted by
+    and honoured by the real endpoint. Gated on ``OPENAI_API_KEY``.
+    """
+    api_key = os.environ.get("OPENAI_API_KEY")
+    assert api_key
+    provider = OpenAIProvider()
+    creds = ProviderCredentials(api_key=api_key)
+    await provider.connect(creds)
+    try:
+        _response, tool_calls = await provider.chat(
+            messages=_user_messages("Echo the word ready back to me."),
+            model="gpt-4o-mini",
+            max_tokens=64,
+            tools=[_build_text_tool()],
+            tool_choice=ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="ping"),
+        )
+        assert tool_calls is not None, "Forced tool choice produced no tool call"
+        assert len(tool_calls) == 1
+        assert tool_calls[0].function_name == "ping"
+    finally:
+        await provider.disconnect()
 
 
 # ---------------------------------------------------------------------------
@@ -847,7 +902,7 @@ def test_f0004_providers_use_retry_with_backoff_in_chat_path() -> None:
     sources: dict[str, str] = {
         "grok": inspect.getsource(GrokProvider.chat),
         "openrouter": inspect.getsource(OpenRouterProvider.chat),
-        "google": inspect.getsource(GoogleProvider._run_google_chat),
+        "google": inspect.getsource(_run_google_chat),
     }
     for name, src in sources.items():
         assert "_retry_with_backoff" in src, f"{name} chat path missing _retry_with_backoff"

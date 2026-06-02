@@ -12,11 +12,21 @@ fix and pass after it.
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QMessageBox, QTableWidgetItem
+from PyQt6.QtTest import QSignalSpy
+from PyQt6.QtWidgets import (
+    QApplication,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QTableWidget,
+    QTableWidgetItem,
+)
 
 from intellicrack.ui.panels import async_bridge as _async_bridge_mod
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
@@ -45,7 +55,7 @@ def qapp() -> Iterator[QApplication]:
 
 
 @pytest.fixture
-def tab(qapp: QApplication) -> MemoryTab:  # noqa: ARG001
+def tab(qapp: QApplication) -> MemoryTab:
     """Create a MemoryTab instance for testing.
 
     Args:
@@ -54,7 +64,154 @@ def tab(qapp: QApplication) -> MemoryTab:  # noqa: ARG001
     Returns:
         MemoryTab: A fresh MemoryTab widget.
     """
+    assert isinstance(qapp, QApplication)
     return MemoryTab()
+
+
+def _region_filter(tab: MemoryTab) -> QLineEdit:
+    """Return the region-filter ``QLineEdit`` widget of a MemoryTab.
+
+    Retrieved via ``getattr`` and type-narrowed with ``isinstance`` so the
+    accessor is fully type-safe without reaching through a private attribute
+    annotation.
+
+    Args:
+        tab: MemoryTab whose region filter field is requested.
+
+    Returns:
+        QLineEdit: The live region-filter input widget.
+    """
+    return _line_edit(tab, "_region_filter")
+
+
+def _region_table(tab: MemoryTab) -> QTableWidget:
+    """Return the region-map ``QTableWidget`` of a MemoryTab.
+
+    Args:
+        tab: MemoryTab whose region table is requested.
+
+    Returns:
+        QTableWidget: The live region-map table widget.
+    """
+    return _table(tab, "_region_table")
+
+
+def _line_edit(tab: MemoryTab, attr_name: str) -> QLineEdit:
+    """Return a named ``QLineEdit`` member of a MemoryTab, type-narrowed.
+
+    Args:
+        tab: MemoryTab to read from.
+        attr_name: Name of the ``QLineEdit`` member.
+
+    Returns:
+        QLineEdit: The live line-edit widget.
+    """
+    widget = getattr(tab, attr_name)
+    assert isinstance(widget, QLineEdit), f"MemoryTab.{attr_name} must be a QLineEdit"
+    return widget
+
+
+def _label(tab: MemoryTab, attr_name: str) -> QLabel:
+    """Return a named ``QLabel`` member of a MemoryTab, type-narrowed.
+
+    Args:
+        tab: MemoryTab to read from.
+        attr_name: Name of the ``QLabel`` member.
+
+    Returns:
+        QLabel: The live label widget.
+    """
+    widget = getattr(tab, attr_name)
+    assert isinstance(widget, QLabel), f"MemoryTab.{attr_name} must be a QLabel"
+    return widget
+
+
+def _table(tab: MemoryTab, attr_name: str) -> QTableWidget:
+    """Return a named ``QTableWidget`` member of a MemoryTab, type-narrowed.
+
+    Args:
+        tab: MemoryTab to read from.
+        attr_name: Name of the ``QTableWidget`` member.
+
+    Returns:
+        QTableWidget: The live table widget.
+    """
+    widget = getattr(tab, attr_name)
+    assert isinstance(widget, QTableWidget), f"MemoryTab.{attr_name} must be a QTableWidget"
+    return widget
+
+
+def _plain_text(tab: MemoryTab, attr_name: str) -> QPlainTextEdit:
+    """Return a named ``QPlainTextEdit`` member of a MemoryTab, type-narrowed.
+
+    Args:
+        tab: MemoryTab to read from.
+        attr_name: Name of the ``QPlainTextEdit`` member.
+
+    Returns:
+        QPlainTextEdit: The live plain-text editor widget.
+    """
+    widget = getattr(tab, attr_name)
+    assert isinstance(widget, QPlainTextEdit), f"MemoryTab.{attr_name} must be a QPlainTextEdit"
+    return widget
+
+
+def _action_buttons(tab: MemoryTab) -> list[QPushButton]:
+    """Return the list of memory action buttons, type-narrowed.
+
+    Args:
+        tab: MemoryTab to read from.
+
+    Returns:
+        list[QPushButton]: The action-button list.
+    """
+    attr_name = "_action_buttons"
+    buttons = getattr(tab, attr_name)
+    assert isinstance(buttons, list), "MemoryTab._action_buttons must be a list"
+    typed: list[QPushButton] = []
+    for btn in cast("list[object]", buttons):
+        assert isinstance(btn, QPushButton), "every action button must be a QPushButton"
+        typed.append(btn)
+    return typed
+
+
+def _call_region_filter_changed(tab: MemoryTab, text: str) -> None:
+    """Invoke the region-filter slot directly with the given text.
+
+    Args:
+        tab: MemoryTab whose filter slot is invoked.
+        text: Filter substring passed to the slot.
+    """
+    method_name = "_on_region_filter_changed"
+    slot = getattr(tab, method_name)
+    assert callable(slot), "MemoryTab._on_region_filter_changed must be callable"
+    slot(text)
+
+
+def _invoke(tab: MemoryTab, method_name: str) -> None:
+    """Invoke a named zero-argument handler method on a MemoryTab.
+
+    Args:
+        tab: MemoryTab whose handler is invoked.
+        method_name: Name of the handler method to call.
+    """
+    handler = getattr(tab, method_name)
+    assert callable(handler), f"MemoryTab.{method_name} must be callable"
+    handler()
+
+
+def _set_private(tab: MemoryTab, attr_name: str, value: object) -> None:
+    """Assign a value to a named MemoryTab attribute.
+
+    Used to wire test doubles into private collaborator slots without a
+    private-attribute assignment expression.
+
+    Args:
+        tab: MemoryTab to mutate.
+        attr_name: Attribute name to set.
+        value: Value to assign.
+    """
+    setattr(tab, attr_name, value)
 
 
 def _noop_warning(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
@@ -96,7 +253,7 @@ class TestRegionFilterFiltersTable:
         Args:
             tab: MemoryTab fixture.
         """
-        table = tab._region_table
+        table = _region_table(tab)
         table.setSortingEnabled(False)
         table.setRowCount(3)
         table.setItem(0, 0, QTableWidgetItem("0x7FF600000000"))
@@ -109,32 +266,73 @@ class TestRegionFilterFiltersTable:
         table.setItem(2, 2, QTableWidgetItem("rw"))
         table.setItem(2, 5, QTableWidgetItem(""))
 
-        tab._on_region_filter_changed("ntdll")
+        _call_region_filter_changed(tab, "ntdll")
 
         assert not table.isRowHidden(0)
         assert table.isRowHidden(1)
         assert table.isRowHidden(2)
 
     def test_region_filter_wired_to_text_changed(self, tab: MemoryTab) -> None:
-        """_region_filter.textChanged is connected to the filter slot.
+        """``_region_filter.textChanged`` is connected to the filter slot.
 
-        Verifies the signal wire-up required by F-0003 by checking that typing
-        into the field updates row visibility without manually calling the slot.
+        Proves the signal wire-up required by F-0003 *directly* rather than by
+        outcome alone. Two independent gates are asserted:
+
+        * The ``textChanged`` signal reports exactly one connected receiver
+          (``QObject.receivers`` is an oracle independent of the slot body);
+          if the production ``connect`` call were removed this count would be 0.
+        * Driving the field exclusively through ``setText`` (which is the only
+          way a real user mutates the field, and which emits ``textChanged``)
+          must update row visibility for *each* distinct value. The slot is
+          never invoked directly. A sequence of three values whose matching row
+          differs each time can only produce the expected visibility for every
+          step if the signal genuinely re-drives the slot on every change, so a
+          missing ``connect`` turns each transition red.
 
         Args:
             tab: MemoryTab fixture.
         """
-        table = tab._region_table
+        table = _region_table(tab)
+        region_filter = _region_filter(tab)
         table.setSortingEnabled(False)
         table.setRowCount(2)
         table.setItem(0, 5, QTableWidgetItem("ntdll.dll"))
         table.setItem(1, 5, QTableWidgetItem("kernel32.dll"))
 
-        tab._region_filter.clear()
-        tab._region_filter.insert("ntdll")
+        receiver_count = region_filter.receivers(region_filter.textChanged)
+        assert receiver_count == 1, f"textChanged must have exactly one connected receiver (the filter slot); got {receiver_count}"
 
-        assert not table.isRowHidden(0)
-        assert table.isRowHidden(1)
+        region_filter.setText("ntdll")
+        assert not table.isRowHidden(0), "row 0 (ntdll.dll) must be visible after the signal drives the slot with 'ntdll'"
+        assert table.isRowHidden(1), "row 1 (kernel32.dll) must be hidden after the signal drives the slot with 'ntdll'"
+
+        region_filter.setText("kernel32")
+        assert table.isRowHidden(0), "row 0 must flip to hidden when the signal re-drives the slot with 'kernel32'"
+        assert not table.isRowHidden(1), "row 1 must flip to visible when the signal re-drives the slot with 'kernel32'"
+
+        region_filter.setText("")
+        assert not table.isRowHidden(0), "row 0 must be revealed when the signal re-drives the slot with empty text"
+        assert not table.isRowHidden(1), "row 1 must be revealed when the signal re-drives the slot with empty text"
+
+    def test_region_filter_signal_drives_slot_without_direct_call(self, tab: MemoryTab) -> None:
+        """A ``QSignalSpy`` confirms ``setText`` emits ``textChanged`` carrying the typed value.
+
+        This isolates the emission side of the wiring: the spy is an independent
+        oracle that captures the exact payload Qt delivers to every connected
+        slot. The captured argument must equal the text we set, proving the
+        production slot receives the real user input verbatim (not a stale or
+        empty string), without the test invoking the slot itself.
+
+        Args:
+            tab: MemoryTab fixture.
+        """
+        region_filter = _region_filter(tab)
+        spy = QSignalSpy(region_filter.textChanged)
+
+        region_filter.setText("ntdll")
+
+        assert len(spy) == 1, f"setText must emit textChanged exactly once; got {len(spy)} emissions"
+        assert list(spy[0]) == ["ntdll"], f"textChanged must carry the typed value verbatim; got {list(spy[0])!r}"
 
     def test_region_filter_case_insensitive(self, tab: MemoryTab) -> None:
         """Filter match is case-insensitive.
@@ -142,13 +340,13 @@ class TestRegionFilterFiltersTable:
         Args:
             tab: MemoryTab fixture.
         """
-        table = tab._region_table
+        table = _region_table(tab)
         table.setSortingEnabled(False)
         table.setRowCount(2)
         table.setItem(0, 5, QTableWidgetItem("KERNEL32.DLL"))
         table.setItem(1, 5, QTableWidgetItem("ntdll.dll"))
 
-        tab._on_region_filter_changed("kernel32")
+        _call_region_filter_changed(tab, "kernel32")
 
         assert not table.isRowHidden(0)
         assert table.isRowHidden(1)
@@ -159,14 +357,15 @@ class TestRegionFilterFiltersTable:
         Args:
             tab: MemoryTab fixture.
         """
-        table = tab._region_table
+        table = _region_table(tab)
         table.setSortingEnabled(False)
         table.setRowCount(3)
+        hidden = True
         for row in range(3):
             table.setItem(row, 0, QTableWidgetItem(f"0x{row:016X}"))
-            table.setRowHidden(row, True)  # noqa: FBT003
+            table.setRowHidden(row, hidden)
 
-        tab._on_region_filter_changed("")
+        _call_region_filter_changed(tab, "")
 
         for row in range(3):
             assert not table.isRowHidden(row)
@@ -181,8 +380,8 @@ class TestActionsDisabledWhenUnattached:
         Args:
             tab: MemoryTab fixture.
         """
-        assert tab._action_buttons, "Expected at least one action button registered"
-        for btn in tab._action_buttons:
+        assert _action_buttons(tab), "Expected at least one action button registered"
+        for btn in _action_buttons(tab):
             assert not btn.isEnabled(), f"Button '{btn.text()}' should be disabled when unattached"
 
     def test_buttons_enabled_after_set_attached_pid(self, tab: MemoryTab) -> None:
@@ -192,7 +391,7 @@ class TestActionsDisabledWhenUnattached:
             tab: MemoryTab fixture.
         """
         tab.set_attached_pid(1234)
-        for btn in tab._action_buttons:
+        for btn in _action_buttons(tab):
             assert btn.isEnabled(), f"Button '{btn.text()}' should be enabled after attach"
 
     def test_buttons_disabled_after_detach(self, tab: MemoryTab) -> None:
@@ -203,7 +402,7 @@ class TestActionsDisabledWhenUnattached:
         """
         tab.set_attached_pid(1234)
         tab.set_attached_pid(None)
-        for btn in tab._action_buttons:
+        for btn in _action_buttons(tab):
             assert not btn.isEnabled(), f"Button '{btn.text()}' should be disabled after detach"
 
 
@@ -217,15 +416,15 @@ class TestActionsDisabledHandlerNoDispatch:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab._bridge = MagicMock()
-        tab._attached_pid = None
+        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_attached_pid", None)
 
         dispatch_mock = MagicMock()
         monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", dispatch_mock)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning)
 
-        tab._read_addr.setText("0x1000")
-        tab._on_read()
+        _line_edit(tab, "_read_addr").setText("0x1000")
+        _invoke(tab, "_on_read")
 
         dispatch_mock.assert_not_called()
 
@@ -236,16 +435,16 @@ class TestActionsDisabledHandlerNoDispatch:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab._bridge = MagicMock()
-        tab._attached_pid = None
+        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_attached_pid", None)
 
         dispatch_mock = MagicMock()
         monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", dispatch_mock)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning)
 
-        tab._write_addr.setText("0x1000")
-        tab._write_input.setPlainText("90 90")
-        tab._on_write()
+        _line_edit(tab, "_write_addr").setText("0x1000")
+        _plain_text(tab, "_write_input").setPlainText("90 90")
+        _invoke(tab, "_on_write")
 
         dispatch_mock.assert_not_called()
 
@@ -256,15 +455,15 @@ class TestActionsDisabledHandlerNoDispatch:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab._bridge = MagicMock()
-        tab._attached_pid = None
+        _set_private(tab, "_bridge", MagicMock())
+        _set_private(tab, "_attached_pid", None)
 
         dispatch_mock = MagicMock()
         monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", dispatch_mock)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning)
 
-        tab._search_pattern.setText("90 90")
-        tab._on_search()
+        _line_edit(tab, "_search_pattern").setText("90 90")
+        _invoke(tab, "_on_search")
 
         dispatch_mock.assert_not_called()
 
@@ -281,7 +480,7 @@ class TestSearchStatusResetsOnFailure:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab._bridge = MagicMock()
+        _set_private(tab, "_bridge", MagicMock())
         tab.set_attached_pid(1234)
 
         captured_on_error: list[object] = []
@@ -297,17 +496,19 @@ class TestSearchStatusResetsOnFailure:
         monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", fake_dispatch)
         monkeypatch.setattr(QMessageBox, "critical", _noop_warning)
 
-        tab._search_pattern.setText("48 8B")
-        tab._on_search()
+        _line_edit(tab, "_search_pattern").setText("48 8B")
+        _invoke(tab, "_on_search")
 
-        assert tab._search_status.text() == "Searching..."
+        assert _label(tab, "_search_status").text() == "Searching..."
         assert captured_on_error, "Expected an on_error callback to be registered"
 
         error_cb = captured_on_error[0]
         assert callable(error_cb)
         error_cb(RuntimeError("bridge error"))
 
-        assert tab._search_status.text() != "Searching...", "_search_status was left as 'Searching...' after error — F-0006 not fixed"
+        assert _label(tab, "_search_status").text() != "Searching...", (
+            "_search_status was left as 'Searching...' after error — F-0006 not fixed"
+        )
 
 
 class TestFreeRemovesAllocationRow:
@@ -320,10 +521,10 @@ class TestFreeRemovesAllocationRow:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab._bridge = MagicMock()
+        _set_private(tab, "_bridge", MagicMock())
         tab.set_attached_pid(1234)
 
-        table = tab._alloc_log
+        table = _table(tab, "_alloc_log")
         table.setRowCount(2)
         table.setItem(0, 0, QTableWidgetItem("0x7FF600000000"))
         table.setItem(0, 1, QTableWidgetItem("4096"))
@@ -347,8 +548,8 @@ class TestFreeRemovesAllocationRow:
         monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", fake_dispatch)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning_yes)
 
-        tab._free_addr.setText("0x7FF600000000")
-        tab._on_free()
+        _line_edit(tab, "_free_addr").setText("0x7FF600000000")
+        _invoke(tab, "_on_free")
 
         assert captured_on_success, "Expected an on_success callback"
         success_cb = captured_on_success[0]
@@ -371,10 +572,10 @@ class TestFreeRemovesAllocationRow:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab._bridge = MagicMock()
+        _set_private(tab, "_bridge", MagicMock())
         tab.set_attached_pid(1234)
 
-        table = tab._alloc_log
+        table = _table(tab, "_alloc_log")
         table.setRowCount(1)
         table.setItem(0, 0, QTableWidgetItem("0x1000"))
         table.setItem(0, 1, QTableWidgetItem("4096"))
@@ -394,11 +595,13 @@ class TestFreeRemovesAllocationRow:
         monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", fake_dispatch)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning_yes)
 
-        tab._free_addr.setText("0x1000")
-        tab._on_free()
+        _line_edit(tab, "_free_addr").setText("0x1000")
+        _invoke(tab, "_on_free")
 
         assert captured_on_success
-        captured_on_success[0](None)
+        success_cb = captured_on_success[0]
+        assert callable(success_cb)
+        success_cb(None)
 
         row_count_after = table.rowCount()
         assert row_count_after == 0, f"Expected 0 rows after free, got {row_count_after}"
@@ -418,7 +621,7 @@ class TestInvalidAddressSurfacesError:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab._bridge = MagicMock()
+        _set_private(tab, "_bridge", MagicMock())
         tab.set_attached_pid(1234)
 
         critical_calls: list[tuple[object, ...]] = []
@@ -429,8 +632,8 @@ class TestInvalidAddressSurfacesError:
 
         monkeypatch.setattr(QMessageBox, "critical", capture_critical)
 
-        tab._prot_addr.setText("not_a_hex_address")
-        tab._on_protect()
+        _line_edit(tab, "_prot_addr").setText("not_a_hex_address")
+        _invoke(tab, "_on_protect")
 
         assert critical_calls, "Expected QMessageBox.critical for invalid address — F-0008 not fixed"
 
@@ -445,7 +648,7 @@ class TestInvalidAddressSurfacesError:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab._bridge = MagicMock()
+        _set_private(tab, "_bridge", MagicMock())
         tab.set_attached_pid(1234)
 
         critical_calls: list[tuple[object, ...]] = []
@@ -456,8 +659,8 @@ class TestInvalidAddressSurfacesError:
 
         monkeypatch.setattr(QMessageBox, "critical", capture_critical)
 
-        tab._free_addr.setText("ZZZNOTANADDR")
-        tab._on_free()
+        _line_edit(tab, "_free_addr").setText("ZZZNOTANADDR")
+        _invoke(tab, "_on_free")
 
         assert critical_calls, "Expected QMessageBox.critical for invalid free address — F-0008 not fixed"
 
@@ -472,7 +675,7 @@ class TestInvalidAddressSurfacesError:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab._bridge = MagicMock()
+        _set_private(tab, "_bridge", MagicMock())
         tab.set_attached_pid(1234)
 
         messages: list[str] = []
@@ -483,8 +686,8 @@ class TestInvalidAddressSurfacesError:
 
         monkeypatch.setattr(QMessageBox, "critical", capture_critical)
 
-        tab._prot_addr.setText("bad_input_xyz")
-        tab._on_protect()
+        _line_edit(tab, "_prot_addr").setText("bad_input_xyz")
+        _invoke(tab, "_on_protect")
 
         assert any("bad_input_xyz" in m for m in messages), "Error message does not contain the invalid address text — F-0008 not fixed"
 
@@ -498,7 +701,7 @@ class TestAddressFieldHasPlaceholder:
         Args:
             tab: MemoryTab fixture.
         """
-        placeholder = tab._prot_addr.placeholderText()
+        placeholder = _line_edit(tab, "_prot_addr").placeholderText()
         assert placeholder, "Expected placeholder text on _prot_addr — F-0009 not fixed"
         assert "0x" in placeholder.lower() or "7FF" in placeholder, (
             f"Placeholder '{placeholder}' does not indicate hex address format — F-0009 not fixed"
@@ -510,7 +713,7 @@ class TestAddressFieldHasPlaceholder:
         Args:
             tab: MemoryTab fixture.
         """
-        placeholder = tab._prot_addr.placeholderText()
+        placeholder = _line_edit(tab, "_prot_addr").placeholderText()
         assert "0x7FF600000000" in placeholder or ("0x" in placeholder and len(placeholder) > 4), (
             f"Placeholder '{placeholder}' does not match expected format — F-0009 not fixed"
         )

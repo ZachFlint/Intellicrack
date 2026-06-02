@@ -5,41 +5,47 @@
 
 """Audit4 C6 regression tests for the hex editor hashing mixin.
 
-Covers the two findings shipped together in audit4 unit C6:
+Covers the findings shipped together in audit4 unit C6, plus the audit
+remediation that replaces the hand-built stub document and the
+``QMessageBox.question`` monkeypatch with real collaborators:
 
 * **F-0003** -- ``HashingMixin._on_repair_pe_checksum`` must publish a
-  :meth:`HexDocumentState.notify_data_modified` event after the
-  document write so observers (the hex viewport, the bridge layer,
-  the AI tool registry) update instead of displaying the stale
-  ``CheckSum`` value.
-* **F-0022** -- ``HashingMixin._on_custom_crc`` must offload the CRC
-  computation onto a :class:`GenericCallableWorker` and stream the
-  document in bounded chunks (mmap for file-backed documents, the
-  document API otherwise) instead of slurping the full payload onto
-  the UI thread.
+  :meth:`HexDocumentState.notify_data_modified` event after the document
+  write so observers (the hex viewport, the bridge layer, the AI tool
+  registry) update instead of displaying the stale ``CheckSum`` value. The
+  repair must also stay gated behind the real ``QMessageBox`` confirmation:
+  these tests drive the real dialog by clicking its real ``Yes``/``No``
+  buttons via a timer rather than stubbing the static method, so a code
+  change that skipped the prompt or mishandled a declined prompt is caught.
 
-All three test cases would fail against the pre-audit code: the
-``notify_data_modified`` recorder would stay empty for the repair
-test, the ``tracemalloc`` budget for the offload test would explode
-because the UI thread used to call ``document.read(0, 50 MiB)``, and
-the streaming CRC value would be unobservable because the dialog had
-no signal to expose it.
+* **F-0022** -- ``HashingMixin._on_custom_crc`` must offload the CRC
+  computation onto a :class:`GenericCallableWorker` and stream the document
+  in bounded chunks (mmap for file-backed documents, the document API
+  otherwise) instead of slurping the full payload onto the UI thread.
+
+The document under test is the real :class:`intellicrack_hexcore.HexDocument`
+opened over a real minimal 64-bit PE image, so the mixin exercises the exact
+``repair_pe_checksum`` / ``verify_pe_checksum`` / ``read`` / ``length`` /
+``file_path`` surface it uses in production. The expected checksum and CRC
+values come from independent oracles (the hexcore PE checksum algorithm
+applied to a known image, and :func:`zlib.crc32` for the CRC-32 parameter
+set) rather than from the implementation's own captured output.
 """
 
 from __future__ import annotations
 
 import struct
 import tracemalloc
+import zlib
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
-from PyQt6.QtWidgets import QMessageBox, QWidget
+from intellicrack_hexcore import HexDocument
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication, QMessageBox, QPushButton, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
-from intellicrack.ui.panels.hex_editor.base import (
-    compute_custom_crc,
-    compute_streaming_custom_crc,
-)
+from intellicrack.ui.panels.hex_editor.base import compute_streaming_custom_crc
 from intellicrack.ui.panels.hex_editor.hashing import HashingMixin
 from intellicrack.ui.panels.hex_editor.widgets import CustomCrcDialog
 
@@ -50,156 +56,123 @@ if TYPE_CHECKING:
     from pytestqt.qtbot import QtBot
 
 
-# CRC-32 parameters that match the bit-serial implementation in
-# intellicrack.ui.panels.hex_editor.base.compute_custom_crc when the
-# input is reflected (matches the legacy zlib CRC-32 surface).
+# Standard zlib / PKZIP CRC-32 parameter set. Used both to configure the
+# dialog and -- via zlib.crc32 -- as the independent correctness oracle.
 _CRC32_WIDTH: int = 32
 _CRC32_POLY: int = 0x04C11DB7
 _CRC32_INIT: int = 0xFFFFFFFF
 _CRC32_XOR_OUT: int = 0xFFFFFFFF
 
 
-_PE_CHECKSUM_OFFSET: int = 0x58
+# The notify offset the mixin publishes is a fixed production constant
+# (the canonical PE32 CheckSum field offset), independent of the real
+# in-file offset the hexcore document repairs.
+_NOTIFY_PE_CHECKSUM_OFFSET: int = 0x58
+_NOTIFY_PE_CHECKSUM_LEN: int = 4
+
+_REPAIR_SOURCE_ID: str = "hex-editor.hashing.repair_pe_checksum"
 
 
-class StubPeDocument:
-    """In-memory document exposing the methods the hashing mixin uses.
+def _build_minimal_pe64() -> bytes:
+    """Build a real, structurally valid minimal 64-bit PE image.
 
-    Mirrors the surface that ``HexDocumentFull``-style documents
-    expose so the hashing mixin can drive ``repair_pe_checksum``,
-    ``verify_pe_checksum``, ``length``, ``read`` and ``file_path``
-    without needing the real Rust hexcore module loaded.
+    The image is large enough for the hexcore PE checksum routine to locate
+    and rewrite the optional-header ``CheckSum`` field. The ``CheckSum`` is
+    initialised to zero so a repair produces a non-trivial, deterministic
+    value derived from the image bytes.
+
+    Returns:
+        bytes: A 1024-byte PE image with a zeroed ``CheckSum`` field.
     """
+    pe_offset = 0x40
+    dos = bytearray(pe_offset)
+    dos[0:2] = b"MZ"
+    struct.pack_into("<I", dos, 0x3C, pe_offset)
 
-    def __init__(self, data: bytes, *, file_path: str | None = None) -> None:
-        """Capture the initial bytes and optional backing path.
+    pe_signature = b"PE\x00\x00"
+    optional_header_size = 0xF0
+    coff_header = struct.pack(
+        "<HHIIIHH",
+        0x8664,
+        1,
+        0,
+        0,
+        0,
+        optional_header_size,
+        0x0022,
+    )
 
-        Args:
-            data: Initial document content.
-            file_path: Optional path returned by ``file_path()`` so the
-                streaming CRC source can prefer mmap.
-        """
-        self._data: bytearray = bytearray(data)
-        self._file_path: str | None = file_path
-        self.repair_calls: int = 0
-        self.verify_calls: int = 0
+    optional_header = bytearray(optional_header_size)
+    struct.pack_into("<H", optional_header, 0, 0x20B)
+    struct.pack_into("<I", optional_header, 0x40, 0)
 
-    def length(self) -> int:
-        """Return the current document length in bytes.
+    body = bytes(dos) + pe_signature + coff_header + bytes(optional_header)
+    return body + b"\x00" * (1024 - len(body))
 
-        Returns:
-            int: Number of bytes currently held.
-        """
-        return len(self._data)
 
-    def read(self, offset: int, length: int) -> bytes:
-        """Return ``[offset, offset+length)`` from the document.
+def _open_pe_document() -> HexDocument:
+    """Open the minimal PE image as a real ``intellicrack_hexcore`` document.
 
-        Args:
-            offset: Inclusive start offset.
-            length: Number of bytes to copy.
-
-        Returns:
-            bytes: Slice of the document content.
-        """
-        return bytes(self._data[offset : offset + length])
-
-    def file_path(self) -> str | None:
-        """Return the on-disk path backing this document.
-
-        Returns:
-            str | None: Path passed to the constructor or ``None``.
-        """
-        return self._file_path
-
-    def repair_pe_checksum(self) -> None:
-        """Overwrite the four checksum bytes with a fixed test value.
-
-        The exact value is irrelevant for the regression test; what
-        matters is that the document mutates so the mixin must publish
-        a :meth:`HexDocumentState.notify_data_modified` event.
-        """
-        self.repair_calls += 1
-        struct.pack_into("<I", self._data, _PE_CHECKSUM_OFFSET, 0xC0FFEE42)
-
-    def verify_pe_checksum(self) -> dict[str, Any]:
-        """Return verification metadata for the current checksum field.
-
-        Returns:
-            dict[str, Any]: Mapping with ``stored``, ``calculated``,
-                ``offset`` and ``valid`` keys, matching the contract
-                used by the hexcore document.
-        """
-        self.verify_calls += 1
-        stored = struct.unpack_from("<I", self._data, _PE_CHECKSUM_OFFSET)[0]
-        calculated = 0xC0FFEE42
-        return {
-            "stored": stored,
-            "calculated": calculated,
-            "offset": _PE_CHECKSUM_OFFSET,
-            "valid": stored == calculated,
-        }
+    Returns:
+        HexDocument: A real document opened over the minimal PE image.
+    """
+    return HexDocument.open_bytes(_build_minimal_pe64())
 
 
 class HashingHarness(QWidget, HashingMixin):
     """Concrete ``HashingMixin`` consumer used by the regression tests.
 
-    Provides the attribute slots the mixin's type stubs declare so that
-    direct attribute access in ``HashingMixin`` resolves at runtime
-    without raising ``AttributeError``.
+    Provides the attribute slots the mixin's type stubs declare so direct
+    attribute access in ``HashingMixin`` resolves at runtime, while wiring a
+    real hexcore document and a real :class:`HexDocumentState` so the repair
+    and CRC flows exercise production collaborators.
     """
 
     def __init__(
         self,
         *,
-        document: StubPeDocument,
+        document: HexDocument,
         state_holder: HexDocumentState,
         file_path: Path | None = None,
     ) -> None:
-        """Wire the mixin slots up to test-supplied collaborators.
+        """Wire the mixin slots up to real collaborators.
 
         Args:
-            document: Object exposing the hashing-mixin document
-                surface (``length``, ``read``, ``repair_pe_checksum``,
-                ``verify_pe_checksum``, ``file_path``).
+            document: Real ``intellicrack_hexcore.HexDocument`` exposing the
+                hashing-mixin document surface.
             state_holder: Real :class:`HexDocumentState` whose
                 ``notify_data_modified`` calls the test asserts on.
-            file_path: Optional panel-side ``file_path`` attribute the
-                mixin checks before falling back to ``document.file_path()``.
+            file_path: Optional panel-side ``file_path`` attribute the mixin
+                checks before falling back to ``document.file_path()``.
         """
         QWidget.__init__(self)
-        self._document: StubPeDocument = document
-        self.document: StubPeDocument = document
+        self._document = document
+        self.document = document
         self._hex_widget = None
         self._hash_algo_combo = None
         self._hash_result_label = None
-        self._selection_start: int = -1
-        self._selection_end: int = -1
+        self._selection_start = -1
+        self._selection_end = -1
         self._pe_checksum_status = None
-        self.state_holder: HexDocumentState | None = state_holder
-        self.file_path: Path | None = file_path
+        self.state_holder = state_holder
+        self.file_path = file_path
         self._custom_crc_worker = None
 
     def repair_pe_checksum(self) -> None:
         """Invoke the mixin repair flow as a public test entry point.
 
-        Delegates directly to :meth:`HashingMixin._on_repair_pe_checksum`
-        so tests drive the full code path through a public API without
-        triggering basedpyright ``reportPrivateUsage`` diagnostics.
+        Delegates to :meth:`HashingMixin._on_repair_pe_checksum` so tests
+        drive the full code path -- including the real confirmation dialog --
+        through a public API without triggering ``reportPrivateUsage``.
         """
         self._on_repair_pe_checksum()
 
     def resolve_custom_crc_file_path(self) -> str | None:
         """Return the mixin's resolved CRC file path via a public entry point.
 
-        Delegates directly to
-        :meth:`HashingMixin._resolve_custom_crc_file_path` so tests can
-        assert the resolved path without triggering basedpyright
-        ``reportPrivateUsage`` diagnostics.
-
         Returns:
-            str | None: Absolute path of an existing readable file,
-                or ``None`` when the document has no usable file backing.
+            str | None: Absolute path of an existing readable file, or
+                ``None`` when the document has no usable file backing.
         """
         return self._resolve_custom_crc_file_path()
 
@@ -221,94 +194,134 @@ class NotifyRecorder:
         self.events.append((event_type, dict(data)))
 
 
-@pytest.fixture
-def message_box_yes(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Force every ``QMessageBox.question`` call to return ``Yes``.
+def _click_message_box_button(button: QMessageBox.StandardButton, *, recorder: dict[str, bool]) -> None:
+    """Find the active modal ``QMessageBox`` and click ``button`` on it.
 
-    The repair flow asks the user to confirm overwriting the PE
-    ``CheckSum`` field; the regression test must approve the prompt
-    without manual interaction.  ``monkeypatch`` undoes the patch
-    automatically on test teardown so the fixture body itself only
-    needs to install it.
+    Scans the top-level widgets for the confirmation dialog the repair flow
+    opens and clicks the requested real button. Records whether a dialog was
+    actually found so the test can assert the prompt really appeared.
 
     Args:
-        monkeypatch: pytest monkeypatch fixture used to patch the
-            ``QMessageBox.question`` static method for the duration
-            of one test.
+        button: The standard button to click (``Yes`` or ``No``).
+        recorder: Mutable mapping; ``recorder["shown"]`` is set ``True`` when
+            the modal message box is located.
     """
-
-    def fake_question(
-        _parent: QWidget | None,
-        _title: str,
-        _text: str,
-        *_args: object,
-        **_kwargs: object,
-    ) -> QMessageBox.StandardButton:
-        """Return ``Yes`` so the repair confirmation prompt always passes.
-
-        Args:
-            _parent: Ignored parent widget.
-            _title: Ignored dialog title.
-            _text: Ignored dialog body text.
-            *_args: Ignored extra positional arguments.
-            **_kwargs: Ignored keyword arguments.
-
-        Returns:
-            QMessageBox.StandardButton: The ``Yes`` enum value.
-        """
-        return QMessageBox.StandardButton.Yes
-
-    monkeypatch.setattr(QMessageBox, "question", fake_question)
+    for top in QApplication.topLevelWidgets():
+        if isinstance(top, QMessageBox):
+            recorder["shown"] = True
+            target = top.button(button)
+            if isinstance(target, QPushButton):
+                target.click()
+            return
 
 
-@pytest.mark.usefixtures("qapp", "message_box_yes")
+@pytest.mark.usefixtures("qapp")
 class TestRepairPeChecksumFiresNotify:
-    """F-0003 -- ``_on_repair_pe_checksum`` must call ``notify_data_modified``."""
+    """F-0003 -- ``_on_repair_pe_checksum`` confirmation, write, and notify."""
 
     @staticmethod
-    def test_insert_hash_fires_notify() -> None:
-        """Driving the repair action emits one ``DATA_MODIFIED`` event.
+    def test_confirmed_repair_writes_real_checksum_and_fires_notify(qtbot: QtBot) -> None:
+        """Confirming the real dialog repairs the PE checksum and notifies.
 
-        The recorded event must reference the real PE ``CheckSum``
-        offset, the four-byte field width and the audit-defined
-        source identifier so observers can apply loop-guard filters
-        and route the change correctly.
+        Drives the real ``QMessageBox`` confirmation by clicking its real
+        ``Yes`` button, then asserts: the hexcore document's ``CheckSum``
+        field now holds the independently-known repaired value, the exact
+        four bytes were written at the document's real checksum offset, and
+        exactly one ``DATA_MODIFIED`` event was published carrying the
+        production notify offset, width, and source identifier.
+
+        Args:
+            qtbot: pytest-qt bot fixture (ensures a live event loop).
         """
-        document = StubPeDocument(b"\x00" * 256)
-        state = HexDocumentState()
+        del qtbot
+        document = _open_pe_document()
+        pre = document.verify_pe_checksum()
+        expected_checksum = int(pre["calculated"])
+        real_offset = int(pre["offset"])
+        assert pre["valid"] is False
+        assert int(pre["stored"]) != expected_checksum
 
+        state = HexDocumentState()
         recorder = NotifyRecorder()
-        state.register_callback(recorder, source_id="test")
+        state.register_callback(recorder, source_id="observer")
         harness = HashingHarness(document=document, state_holder=state)
+
+        shown: dict[str, bool] = {"shown": False}
+        QTimer.singleShot(50, lambda: _click_message_box_button(QMessageBox.StandardButton.Yes, recorder=shown))
         try:
             harness.repair_pe_checksum()
         finally:
             harness.deleteLater()
 
-        assert document.repair_calls == 1
+        assert shown["shown"], "the real confirmation dialog must have been shown"
+
+        post = document.verify_pe_checksum()
+        assert post["valid"] is True
+        assert int(post["stored"]) == expected_checksum
+        written = document.read(real_offset, 4)
+        assert struct.unpack("<I", written)[0] == expected_checksum
+
         data_events = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.DATA_MODIFIED]
         assert len(data_events) == 1, f"expected exactly one DATA_MODIFIED event, got {recorder.events}"
         _, payload = data_events[0]
-        assert payload["offset"] == _PE_CHECKSUM_OFFSET
-        assert payload["length"] == 4
+        assert payload["offset"] == _NOTIFY_PE_CHECKSUM_OFFSET
+        assert payload["length"] == _NOTIFY_PE_CHECKSUM_LEN
+        assert payload["source"] == _REPAIR_SOURCE_ID
 
     @staticmethod
-    def test_repair_uses_audit_defined_source_identifier() -> None:
-        """The ``source`` argument lets the loop guard suppress the echo.
+    def test_declined_dialog_leaves_checksum_unwritten_and_silent(qtbot: QtBot) -> None:
+        """Clicking ``No`` on the real dialog skips the write and the notify.
 
-        Registering the recorder with the same ``source_id`` the mixin
-        passes to ``notify_data_modified`` proves the mixin used the
-        documented identifier instead of an unrelated string.
+        Proves the repair is genuinely gated on the confirmation: the stored
+        ``CheckSum`` stays at its original invalid value and no
+        ``DATA_MODIFIED`` event is published. A monkeypatch that forced
+        ``Yes`` could never catch a regression in the decline path.
+
+        Args:
+            qtbot: pytest-qt bot fixture (ensures a live event loop).
         """
-        document = StubPeDocument(b"\x00" * 256)
-        state = HexDocumentState()
+        del qtbot
+        document = _open_pe_document()
+        pre = document.verify_pe_checksum()
+        original_stored = int(pre["stored"])
 
+        state = HexDocumentState()
         recorder = NotifyRecorder()
-        state.register_callback(
-            recorder,
-            source_id="hex-editor.hashing.repair_pe_checksum",
-        )
+        state.register_callback(recorder, source_id="observer")
         harness = HashingHarness(document=document, state_holder=state)
+
+        shown: dict[str, bool] = {"shown": False}
+        QTimer.singleShot(50, lambda: _click_message_box_button(QMessageBox.StandardButton.No, recorder=shown))
+        try:
+            harness.repair_pe_checksum()
+        finally:
+            harness.deleteLater()
+
+        assert shown["shown"], "the real confirmation dialog must have been shown"
+        post = document.verify_pe_checksum()
+        assert int(post["stored"]) == original_stored
+        assert post["valid"] is False
+        assert [evt for evt in recorder.events if evt[0] is HexDocumentEvent.DATA_MODIFIED] == []
+
+    @staticmethod
+    def test_loop_guard_suppresses_echo_for_same_source(qtbot: QtBot) -> None:
+        """An observer registered with the repair source receives no echo.
+
+        Registering the recorder with the same ``source_id`` the mixin passes
+        to ``notify_data_modified`` proves the mixin used the documented
+        identifier so the loop guard can suppress the self-echo.
+
+        Args:
+            qtbot: pytest-qt bot fixture (ensures a live event loop).
+        """
+        del qtbot
+        document = _open_pe_document()
+        state = HexDocumentState()
+        recorder = NotifyRecorder()
+        state.register_callback(recorder, source_id=_REPAIR_SOURCE_ID)
+        harness = HashingHarness(document=document, state_holder=state)
+
+        QTimer.singleShot(50, lambda: _click_message_box_button(QMessageBox.StandardButton.Yes, recorder={"shown": False}))
         try:
             harness.repair_pe_checksum()
         finally:
@@ -316,71 +329,21 @@ class TestRepairPeChecksumFiresNotify:
 
         data_events = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.DATA_MODIFIED]
         assert data_events == [], (
-            "expected the loop-guard filter to suppress the data_modified echo when the recorder "
-            "registers with the same source_id, but received: " + repr(data_events)
+            "the loop-guard filter must suppress the data_modified echo when the recorder registers with the "
+            f"repair source_id, but received: {data_events!r}"
         )
 
 
-def _build_synthetic_payload(size: int) -> bytes:
-    """Return ``size`` bytes of a deterministic repeating pattern.
-
-    Uses the byte sequence ``[0..255]`` repeated to fill ``size`` bytes
-    so the same file produces the same CRC across runs.
-
-    Args:
-        size: Number of bytes in the returned payload.
-
-    Returns:
-        bytes: ``size``-long deterministic payload.
-    """
-    pattern: bytes = bytes(range(256))
-    repeats: int = size // len(pattern)
-    body: bytes = pattern * repeats + pattern[: size - repeats * len(pattern)]
-    assert len(body) == size
-    return body
-
-
-def _run_custom_crc_calc(
-    harness: HashingHarness,
-    qtbot: QtBot,
-) -> tuple[object, tracemalloc.Snapshot]:
-    """Construct the CRC dialog, run ``_calculate``, and capture a snapshot.
-
-    Args:
-        harness: HashingHarness providing the document and parent widget.
-        qtbot: pytest-qt qtbot used to wait on the dialog's signal.
-
-    Returns:
-        tuple[object, tracemalloc.Snapshot]: The signal blocker and the
-        tracemalloc snapshot taken while the worker was running.
-    """
-    dlg = CustomCrcDialog(
-        file_path=harness.resolve_custom_crc_file_path(),
-        document=harness.document,
-        length=harness.document.length(),
-        parent=harness,
-        worker_parent=None,
-    )
-    _configure_crc_dialog(dlg)
-
-    calculate_fn = getattr(dlg, "_calculate")
-    with qtbot.waitSignal(dlg.crc_computed, timeout=120_000) as blocker:
-        calculate_fn()
-        assert dlg.worker() is not None
-        snapshot_during = tracemalloc.take_snapshot()
-    return blocker, snapshot_during
-
-
 def _configure_crc_dialog(dlg: CustomCrcDialog) -> None:
-    """Pre-populate ``dlg`` with the test's CRC-32 parameter set.
+    """Pre-populate ``dlg`` with the standard CRC-32 parameter set.
 
-    Uses ``getattr`` for the dialog's form fields so that basedpyright
-    does not emit ``reportPrivateUsage`` diagnostics for the single-
-    underscore attributes.
+    Uses ``getattr`` for the dialog's form fields so basedpyright does not
+    emit ``reportPrivateUsage`` diagnostics for the single-underscore
+    attributes.
 
     Args:
-        dlg: Dialog whose form widgets are pre-set so the test does
-            not depend on dialog defaults that may change.
+        dlg: Dialog whose form widgets are pre-set so the test does not depend
+            on dialog defaults that may change.
     """
     poly_edit = getattr(dlg, "_poly_edit")
     init_edit = getattr(dlg, "_init_edit")
@@ -397,128 +360,147 @@ def _configure_crc_dialog(dlg: CustomCrcDialog) -> None:
     ref_out_check.setChecked(True)
 
 
+def _build_crc_dialog(harness: HashingHarness, document: HexDocument) -> CustomCrcDialog:
+    """Build a configured CRC dialog over a real hexcore document.
+
+    Args:
+        harness: Harness used as the dialog parent and CRC path resolver.
+        document: Real hexcore document the worker will stream.
+
+    Returns:
+        CustomCrcDialog: Dialog pre-loaded with the CRC-32 parameter set.
+    """
+    dlg = CustomCrcDialog(
+        file_path=harness.resolve_custom_crc_file_path(),
+        document=document,
+        length=int(document.length()),
+        parent=harness,
+        worker_parent=None,
+    )
+    _configure_crc_dialog(dlg)
+    return dlg
+
+
+def _emitted_crc(blocker: object) -> int:
+    """Extract the integer CRC the dialog emitted via ``crc_computed``.
+
+    Args:
+        blocker: pytest-qt signal blocker whose ``args`` hold the payload.
+
+    Returns:
+        int: The emitted CRC value.
+    """
+    raw_args: object = getattr(blocker, "args", None)
+    args_list: list[object] = list(cast("list[object]", raw_args)) if isinstance(raw_args, list) else []
+    value: object = args_list[0] if args_list else None
+    assert isinstance(value, int), f"worker emitted non-integer CRC: {value!r}"
+    return value
+
+
+def _drive_dialog_crc(harness: HashingHarness, document: HexDocument, qtbot: QtBot, *, timeout: int) -> int:
+    """Run the dialog's offloaded CRC worker and return the emitted value.
+
+    Args:
+        harness: Harness used as the dialog parent and CRC path resolver.
+        document: Real hexcore document the worker will stream.
+        qtbot: pytest-qt bot used to block on the ``crc_computed`` signal.
+        timeout: Maximum milliseconds to wait for the worker.
+
+    Returns:
+        int: The CRC value the worker emitted via ``crc_computed``.
+    """
+    dlg = _build_crc_dialog(harness, document)
+    calculate_fn = getattr(dlg, "_calculate")
+    with qtbot.waitSignal(dlg.crc_computed, timeout=timeout) as blocker:
+        calculate_fn()
+    return _emitted_crc(blocker)
+
+
+def _measure_offloaded_crc_ui_growth(
+    harness: HashingHarness,
+    document: HexDocument,
+    qtbot: QtBot,
+    *,
+    timeout: int,
+) -> tuple[int, int]:
+    """Run the offloaded CRC and return the emitted value and UI-thread growth.
+
+    Captures a ``tracemalloc`` snapshot on the calling (UI) thread between
+    dialog construction and worker dispatch, so the returned growth reflects
+    only what the UI thread allocated while the worker streamed.
+
+    Args:
+        harness: Harness used as the dialog parent and CRC path resolver.
+        document: Real hexcore document the worker will stream.
+        qtbot: pytest-qt bot used to block on ``crc_computed``.
+        timeout: Maximum milliseconds to wait for the worker.
+
+    Returns:
+        tuple[int, int]: ``(crc_value, ui_growth_bytes)``.
+    """
+    dlg = _build_crc_dialog(harness, document)
+    calculate_fn = getattr(dlg, "_calculate")
+
+    tracemalloc.start()
+    snapshot_before = tracemalloc.take_snapshot()
+    try:
+        with qtbot.waitSignal(dlg.crc_computed, timeout=timeout) as blocker:
+            calculate_fn()
+            assert dlg.worker() is not None
+            snapshot_during = tracemalloc.take_snapshot()
+    finally:
+        tracemalloc.stop()
+
+    diff = snapshot_during.compare_to(snapshot_before, "lineno")
+    ui_growth = sum(stat.size_diff for stat in diff if stat.size_diff > 0)
+    return _emitted_crc(blocker), ui_growth
+
+
 @pytest.mark.usefixtures("qapp")
 class TestCustomCrcOffloaded:
-    """F-0022 -- ``_on_custom_crc`` must offload + stream the CRC."""
+    """F-0022 -- ``_on_custom_crc`` must offload + stream the CRC.
+
+    Two concerns are validated independently: correctness (the streamed CRC
+    equals the independent :func:`zlib.crc32` oracle on both the mmap and
+    document paths) and resource bounds (the UI thread never copies the full
+    document body while the worker streams a 50 MiB file).
+    """
 
     @staticmethod
-    def test_custom_crc_offloaded(qtbot: QtBot, tmp_path: Path) -> None:
-        """Computing CRC on a 50 MiB file stays under a bounded UI budget.
+    def test_streamed_crc_matches_zlib_oracle_on_file_and_document(qtbot: QtBot, tmp_path: Path) -> None:
+        """The offloaded worker returns the exact zlib CRC-32 of the bytes.
 
-        The UI thread must not allocate anywhere near 50 MiB while the
-        worker streams the file.  ``tracemalloc`` measures peak Python
-        allocations on the calling thread between dialog construction
-        and worker dispatch; the budget allows for the dialog widgets
-        themselves but rejects any code path that copies the file
-        body into Python-managed memory on the UI thread.
+        Drives the real dialog worker over a real file-backed hexcore
+        document, then cross-checks the emitted value against three
+        independent computations: :func:`zlib.crc32` (the trusted oracle),
+        the streaming helper's mmap path, and the streaming helper's
+        document-chunk path. A byte-order, init, or truncation regression in
+        any branch surfaces against the oracle.
 
         Args:
-            qtbot: pytest-qt bot fixture used to wait on the dialog
-                worker's ``crc_computed`` signal.
-            tmp_path: Pytest temporary directory used to stage the
-                synthetic 50 MiB document on disk.
+            qtbot: pytest-qt bot fixture used to wait on ``crc_computed``.
+            tmp_path: Pytest temporary directory used to stage the document.
         """
-        size: int = 50 * 1024 * 1024
-        body: bytes = _build_synthetic_payload(size)
-        target: Path = tmp_path / "crc_offload_target.bin"
+        body: bytes = b"The quick brown fox jumps over the lazy dog" * 1024
+        target: Path = tmp_path / "crc_correctness_target.bin"
         target.write_bytes(body)
 
-        document = StubPeDocument(body, file_path=str(target))
+        document = HexDocument.open(str(target))
         harness = HashingHarness(
             document=document,
             state_holder=HexDocumentState(),
             file_path=target,
         )
 
-        tracemalloc.start()
-        snapshot_before = tracemalloc.take_snapshot()
         try:
-            blocker, snapshot_during = _run_custom_crc_calc(harness, qtbot)
-        finally:
-            tracemalloc.stop()
-            harness.deleteLater()
-
-        raw_args: object = getattr(blocker, "args", None)
-        crc_value: object = cast("list[object]", raw_args)[0] if isinstance(raw_args, list) and raw_args else None
-        assert isinstance(crc_value, int)
-        assert crc_value == compute_custom_crc(
-            body,
-            _CRC32_WIDTH,
-            _CRC32_POLY,
-            _CRC32_INIT,
-            ref_in=True,
-            ref_out=True,
-            xor_out=_CRC32_XOR_OUT,
-        )
-
-        diff = snapshot_during.compare_to(snapshot_before, "lineno")
-        ui_growth: int = sum(stat.size_diff for stat in diff if stat.size_diff > 0)
-        ui_budget: int = 10 * 1024 * 1024
-        assert ui_growth < ui_budget, (
-            f"UI thread allocated {ui_growth / (1024 * 1024):.1f} MiB while the worker streamed "
-            f"a {size / (1024 * 1024):.0f} MiB document; the budget is "
-            f"{ui_budget / (1024 * 1024):.0f} MiB. The dialog must offload + stream, not slurp."
-        )
-
-    @staticmethod
-    def test_custom_crc_correctness(qtbot: QtBot, tmp_path: Path) -> None:
-        """The streaming worker returns the exact reference CRC value.
-
-        Computes the CRC via the offloaded streaming path and compares
-        the result against the bit-serial reference shared by the
-        dialog's old code path plus two direct invocations of the
-        streaming helper (mmap and document-chunk sources) so a
-        regression in any branch surfaces independently.
-
-        Args:
-            qtbot: pytest-qt bot fixture used to wait on the dialog
-                worker's ``crc_computed`` signal.
-            tmp_path: Pytest temporary directory used to stage the
-                synthetic document on disk.
-        """
-        body: bytes = b"The quick brown fox jumps over the lazy dog" * 1024
-        target: Path = tmp_path / "crc_correctness_target.bin"
-        target.write_bytes(body)
-
-        harness = HashingHarness(
-            document=StubPeDocument(body, file_path=str(target)),
-            state_holder=HexDocumentState(),
-            file_path=target,
-        )
-
-        try:
-            dlg = CustomCrcDialog(
-                file_path=harness.resolve_custom_crc_file_path(),
-                document=harness.document,
-                length=harness.document.length(),
-                parent=harness,
-                worker_parent=None,
-            )
-            _configure_crc_dialog(dlg)
-
-            calculate_fn = getattr(dlg, "_calculate")
-            with qtbot.waitSignal(dlg.crc_computed, timeout=60_000) as blocker:
-                calculate_fn()
+            crc_value = _drive_dialog_crc(harness, document, qtbot, timeout=60_000)
         finally:
             harness.deleteLater()
 
-        raw_args: object = getattr(blocker, "args", None)
-        args_list: list[object] = list(cast("list[object]", raw_args)) if isinstance(raw_args, list) else []
-        crc_value: object = args_list[0] if args_list else None
-        assert isinstance(crc_value, int)
+        zlib_oracle: int = zlib.crc32(body) & 0xFFFFFFFF
+        assert crc_value == zlib_oracle, f"streamed CRC 0x{crc_value:08X} != zlib oracle 0x{zlib_oracle:08X}"
 
-        bit_serial_reference: int = compute_custom_crc(
-            body,
-            _CRC32_WIDTH,
-            _CRC32_POLY,
-            _CRC32_INIT,
-            ref_in=True,
-            ref_out=True,
-            xor_out=_CRC32_XOR_OUT,
-        )
-        assert crc_value == bit_serial_reference
-
-        helper_reference_file: int = compute_streaming_custom_crc(
+        helper_file: int = compute_streaming_custom_crc(
             str(target),
             None,
             _CRC32_WIDTH,
@@ -528,11 +510,11 @@ class TestCustomCrcOffloaded:
             ref_out=True,
             xor_out=_CRC32_XOR_OUT,
         )
-        assert crc_value == helper_reference_file
+        assert helper_file == zlib_oracle
 
-        helper_reference_doc: int = compute_streaming_custom_crc(
+        helper_doc: int = compute_streaming_custom_crc(
             None,
-            StubPeDocument(body),
+            HexDocument.open_bytes(body),
             _CRC32_WIDTH,
             _CRC32_POLY,
             _CRC32_INIT,
@@ -541,4 +523,75 @@ class TestCustomCrcOffloaded:
             xor_out=_CRC32_XOR_OUT,
             chunk_size=8192,
         )
-        assert helper_reference_doc == bit_serial_reference
+        assert helper_doc == zlib_oracle
+
+    @staticmethod
+    def test_empty_document_crc_matches_zlib_oracle(qtbot: QtBot, tmp_path: Path) -> None:
+        """A zero-length document yields the zlib CRC-32 of the empty string.
+
+        Exercises the boundary input (empty file) end to end through the real
+        worker and asserts against the independent oracle ``zlib.crc32(b"")``.
+
+        Args:
+            qtbot: pytest-qt bot fixture used to wait on ``crc_computed``.
+            tmp_path: Pytest temporary directory used to stage the document.
+        """
+        target: Path = tmp_path / "crc_empty_target.bin"
+        target.write_bytes(b"")
+
+        document = HexDocument.open(str(target))
+        harness = HashingHarness(
+            document=document,
+            state_holder=HexDocumentState(),
+            file_path=target,
+        )
+        try:
+            crc_value = _drive_dialog_crc(harness, document, qtbot, timeout=30_000)
+        finally:
+            harness.deleteLater()
+
+        assert crc_value == (zlib.crc32(b"") & 0xFFFFFFFF)
+
+    @staticmethod
+    def test_large_file_crc_stays_within_ui_memory_budget(qtbot: QtBot, tmp_path: Path) -> None:
+        """Computing CRC on a 50 MiB file keeps UI allocations bounded.
+
+        Measures peak Python allocations on the UI thread between dialog
+        construction and worker dispatch via ``tracemalloc``. The budget
+        accommodates the dialog widgets but rejects any code path that copies
+        the 50 MiB body into Python-managed memory on the UI thread. The
+        emitted CRC is still cross-checked against the ``zlib.crc32`` oracle so
+        a correct-but-slurping implementation cannot pass on memory alone and
+        a streaming-but-wrong implementation cannot pass on the value alone.
+
+        Args:
+            qtbot: pytest-qt bot fixture used to wait on ``crc_computed``.
+            tmp_path: Pytest temporary directory used to stage the document.
+        """
+        size: int = 50 * 1024 * 1024
+        pattern: bytes = bytes(range(256))
+        repeats: int = size // len(pattern)
+        body: bytes = pattern * repeats + pattern[: size - repeats * len(pattern)]
+        assert len(body) == size
+        target: Path = tmp_path / "crc_offload_target.bin"
+        target.write_bytes(body)
+
+        document = HexDocument.open(str(target))
+        harness = HashingHarness(
+            document=document,
+            state_holder=HexDocumentState(),
+            file_path=target,
+        )
+        try:
+            crc_value, ui_growth = _measure_offloaded_crc_ui_growth(harness, document, qtbot, timeout=120_000)
+        finally:
+            harness.deleteLater()
+
+        assert crc_value == (zlib.crc32(body) & 0xFFFFFFFF)
+
+        ui_budget: int = 10 * 1024 * 1024
+        assert ui_growth < ui_budget, (
+            f"UI thread allocated {ui_growth / (1024 * 1024):.1f} MiB while the worker streamed a "
+            f"{size / (1024 * 1024):.0f} MiB document; the budget is {ui_budget / (1024 * 1024):.0f} MiB. "
+            "The dialog must offload + stream, not slurp."
+        )

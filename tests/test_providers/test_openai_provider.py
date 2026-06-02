@@ -13,8 +13,10 @@ All tests use LIVE API calls - NO hardcoded model names.
 
 from __future__ import annotations
 
+import socket
 from typing import TYPE_CHECKING
 
+import openai
 import pytest
 
 
@@ -29,6 +31,40 @@ from intellicrack.core.types import (
     ProviderName,
 )
 from intellicrack.providers.openai import OpenAIProvider
+
+
+# Known-correct production error strings. These mirror the user-visible
+# contract of OpenAIProvider; asserting against the literal text (rather than
+# importing the private module constant) keeps the test an independent oracle:
+# if the production message regresses, the assertion fails.
+_KEY_REQUIRED_MESSAGE = "OpenAI API key is required"
+_INVALID_KEY_PREFIX = "Invalid OpenAI API key:"
+_NOT_CONNECTED_MESSAGE = "Not connected to OpenAI API"
+
+# A syntactically plausible OpenAI secret key that is guaranteed to be rejected
+# by the live ``/models`` endpoint with HTTP 401. It is not a real key.
+_BOGUS_API_KEY = "sk-intellicrack-invalid-key-000000000000000000000000"
+
+_OPENAI_API_HOST = "api.openai.com"
+_OPENAI_API_PORT = 443
+
+
+def _openai_api_reachable() -> bool:
+    """Return whether ``api.openai.com:443`` accepts a TCP connection.
+
+    The invalid-key path can only be exercised against the live OpenAI
+    authentication endpoint. Network reachability is a genuine environment
+    precondition (not an Intellicrack defect), so the live test skips only when
+    the endpoint cannot be reached.
+
+    Returns:
+        bool: ``True`` when a TCP connection to the OpenAI API host succeeds.
+    """
+    try:
+        with socket.create_connection((_OPENAI_API_HOST, _OPENAI_API_PORT), timeout=5.0):
+            return True
+    except OSError:
+        return False
 
 
 @pytest.mark.integration
@@ -218,32 +254,98 @@ class TestOpenAIConnection:
 
     @pytest.mark.asyncio
     @staticmethod
-    async def test_connection_with_invalid_key_raises_error() -> None:
-        """Test connection with invalid API key raises AuthenticationError."""
-        provider = OpenAIProvider()
-        invalid_creds = ProviderCredentials(api_key="sk-invalid-key-12345")
+    async def test_connection_with_invalid_key_maps_live_401_to_authentication_error() -> None:
+        """Test a live invalid-key connection maps OpenAI's 401 to AuthenticationError.
 
-        with pytest.raises(AuthenticationError):
+        Drives the full real ``connect`` path against the live OpenAI
+        ``/models`` endpoint with a bogus key. The endpoint returns HTTP 401,
+        which the provider must surface as ``AuthenticationError`` carrying the
+        ``Invalid OpenAI API key:`` message and chaining the underlying
+        ``openai.AuthenticationError`` (whose ``status_code`` is 401). The
+        provider must also reset its connection state so no half-open client
+        leaks. Skips only when the OpenAI API host is unreachable - a genuine
+        environment precondition.
+        """
+        if not _openai_api_reachable():
+            pytest.skip(f"{_OPENAI_API_HOST} unreachable; live 401 path cannot be exercised")
+
+        provider = OpenAIProvider()
+        invalid_creds = ProviderCredentials(api_key=_BOGUS_API_KEY)
+
+        with pytest.raises(AuthenticationError) as exc_info:
             await provider.connect(invalid_creds)
+
+        message = str(exc_info.value)
+        assert message.startswith(_INVALID_KEY_PREFIX), f"unexpected AuthenticationError text: {message!r}"
+
+        cause = exc_info.value.__cause__
+        assert isinstance(cause, openai.AuthenticationError), f"expected chained openai.AuthenticationError, got {type(cause)!r}"
+        assert cause.status_code == 401, f"live invalid key must yield HTTP 401, got {cause.status_code}"
+
+        assert provider.is_connected is False, "failed auth must leave provider disconnected"
+        assert provider.client is None, "failed auth must clear the underlying OpenAI client"
 
     @pytest.mark.asyncio
     @staticmethod
-    async def test_connection_with_empty_key_raises_error() -> None:
-        """Test connection with empty API key raises AuthenticationError."""
+    async def test_connection_with_empty_key_rejected_before_any_network_call() -> None:
+        """Test an empty API key is rejected by local validation before connecting.
+
+        An empty key must fail fast with ``AuthenticationError`` carrying the
+        exact ``OpenAI API key is required`` message, and the provider must
+        never construct an OpenAI client or mark itself connected. This proves
+        the local pre-connection key guard runs (rather than deferring to a
+        network round-trip that would surface a different error).
+        """
         provider = OpenAIProvider()
         empty_creds = ProviderCredentials(api_key="")
 
-        with pytest.raises(AuthenticationError):
+        with pytest.raises(AuthenticationError) as exc_info:
             await provider.connect(empty_creds)
+
+        assert str(exc_info.value) == _KEY_REQUIRED_MESSAGE
+        assert provider.client is None, "empty key must not construct an OpenAI client"
+        assert provider.is_connected is False, "empty key must not mark the provider connected"
 
     @pytest.mark.asyncio
     @staticmethod
-    async def test_list_models_without_connection_raises_error() -> None:
-        """Test list_models raises error when not connected."""
+    async def test_connection_with_none_key_rejected_before_any_network_call() -> None:
+        """Test a ``None`` API key is rejected with the same fast-fail guard.
+
+        Boundary companion to the empty-string case: a ``None`` key (the
+        dataclass default) must also raise ``AuthenticationError`` with the
+        exact required-key message and leave no client behind.
+        """
+        provider = OpenAIProvider()
+        none_creds = ProviderCredentials(api_key=None)
+
+        with pytest.raises(AuthenticationError) as exc_info:
+            await provider.connect(none_creds)
+
+        assert str(exc_info.value) == _KEY_REQUIRED_MESSAGE
+        assert provider.client is None
+        assert provider.is_connected is False
+
+    @pytest.mark.asyncio
+    @staticmethod
+    async def test_list_models_without_connection_raises_specific_error() -> None:
+        """Test list_models on a fresh provider raises the not-connected error.
+
+        A newly constructed provider must report ``is_connected is False`` and
+        hold no client. Calling ``list_models`` in that state must raise
+        ``ProviderError`` with the exact ``Not connected to OpenAI API``
+        message - proving the not-connected guard fired rather than an
+        unrelated failure.
+        """
         provider = OpenAIProvider()
 
-        with pytest.raises(ProviderError):
+        assert provider.is_connected is False, "a fresh provider must start disconnected"
+        assert provider.client is None, "a fresh provider must hold no OpenAI client"
+
+        with pytest.raises(ProviderError) as exc_info:
             await provider.list_models()
+
+        assert str(exc_info.value) == _NOT_CONNECTED_MESSAGE
+        assert provider.is_connected is False, "a failed list_models must not flip the connection flag"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -252,7 +354,17 @@ class TestOpenAIConnection:
         *,
         has_openai_key: bool,
     ) -> None:
-        """Test disconnect properly clears connection state.
+        """Test disconnect releases the client, not just the connected flag.
+
+        After a real connect (which performs a live ``/models`` round-trip and
+        leaves ``provider.client`` populated), ``disconnect`` must tear down the
+        underlying OpenAI client, not merely toggle a boolean. The gate proves
+        real teardown two ways: ``provider.client`` becomes ``None``, and a
+        subsequent ``list_models`` raises ``ProviderError`` with the exact
+        ``Not connected to OpenAI API`` message - which can only happen if the
+        not-connected guard sees a genuinely torn-down client. A disconnect that
+        flipped only the flag would leave ``provider.client`` non-``None`` and
+        fail these assertions.
 
         Args:
             credential_loader: Credential loader fixture.
@@ -267,6 +379,13 @@ class TestOpenAIConnection:
 
         await provider.connect(credentials)
         assert provider.is_connected is True
+        assert provider.client is not None, "a live connect must construct the OpenAI client"
 
         await provider.disconnect()
+
         assert provider.is_connected is False
+        assert provider.client is None, "disconnect must release the underlying OpenAI client"
+
+        with pytest.raises(ProviderError) as exc_info:
+            await provider.list_models()
+        assert str(exc_info.value) == _NOT_CONNECTED_MESSAGE

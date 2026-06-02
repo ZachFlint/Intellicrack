@@ -377,13 +377,29 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             raise ProviderError(_ERR_LIST_MODELS_FAILED % exc) from exc
 
-        models = self._build_model_info_list(raw_models)
+        models = self.build_model_info_list(raw_models)
 
         self._logger.info(
             "huggingface_models_listed",
             count=len(models),
         )
         return models
+
+    @staticmethod
+    def build_model_info_list(raw_models: list[HfModelInfo]) -> list[ModelInfo]:
+        """Normalise raw ``HfApi`` model entries into ``ModelInfo`` instances.
+
+        Public entry point to the HuggingFace model-record normalisation used by
+        :meth:`list_models`. Exposing it lets callers and tests exercise the
+        bridge's record-to-``ModelInfo`` mapping directly without a live API call.
+
+        Args:
+            raw_models: Sequence of ``huggingface_hub.ModelInfo`` objects.
+
+        Returns:
+            list[ModelInfo]: De-duplicated list preserving input order.
+        """
+        return HuggingFaceProvider._build_model_info_list(raw_models)
 
     @staticmethod
     def _build_model_info_list(raw_models: list[HfModelInfo]) -> list[ModelInfo]:

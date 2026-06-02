@@ -74,11 +74,31 @@ class TestCheckSafetyBlockRealResponses:
 
     @staticmethod
     def test_candidate_safety_finish_reason_raises() -> None:
-        """A SAFETY finish reason on a candidate raises ProviderError."""
+        """A SAFETY candidate finish_reason raises with the exact reason name.
+
+        The exact message is asserted (not a permissive substring) so the
+        test pins that the classifier reports ``SAFETY`` taken from the
+        candidate's ``finish_reason`` field. A companion assertion places
+        the very same ``SAFETY`` enum in a non-``finish_reason`` location
+        (``prompt_feedback`` with no ``block_reason`` and a STOP candidate)
+        and proves no exception is raised - so the gate fails if the code
+        ever stops reading ``candidates[].finish_reason`` and instead keys
+        off the bare presence of a SAFETY enum anywhere on the response.
+        """
         candidate = types.Candidate(finish_reason=types.FinishReason.SAFETY)
         response = types.GenerateContentResponse(candidates=[candidate])
-        with pytest.raises(ProviderError, match="blocked by safety filters"):
+        with pytest.raises(ProviderError) as exc_info:
             _check_safety_block(response)
+        assert str(exc_info.value) == "Response blocked by safety filters: SAFETY"
+
+        # The SAFETY enum is real but lives nowhere the classifier inspects:
+        # an empty prompt_feedback plus a cleanly-stopped candidate. This must
+        # not raise, proving the decision is driven by candidate.finish_reason.
+        non_blocking = types.GenerateContentResponse(
+            prompt_feedback=types.GenerateContentResponsePromptFeedback(),
+            candidates=[types.Candidate(finish_reason=types.FinishReason.STOP)],
+        )
+        _check_safety_block(non_blocking)
 
     @staticmethod
     def test_candidate_prohibited_content_raises_specific_message() -> None:
@@ -156,4 +176,91 @@ class TestGoogleCancelRequestLive:
             _skip_if_account_unavailable(exc)
 
         assert received >= 1
+        assert getattr(google_provider, _CANCEL_FLAG_ATTR) is True
+
+    @pytest.mark.asyncio
+    @staticmethod
+    async def test_double_cancel_is_idempotent(
+        google_provider: GoogleProvider,
+    ) -> None:
+        """Cancelling twice mid-stream stays idempotent and raises nothing.
+
+        After the first chunk the request is cancelled twice in a row. The
+        second ``cancel_request`` must not raise (no double-cleanup error),
+        the cancel flag must remain ``True``, and iteration must terminate
+        without surfacing an exception. Cancelling again after the loop has
+        already exited must likewise be a no-op.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
+        models = await google_provider.list_models()
+        assert models, "Google returned no models"
+        model_id = models[0].id
+
+        stream = google_provider.chat_stream(
+            messages=[Message(role="user", content="Count slowly from 1 to 50, one number per line.")],
+            model=model_id,
+            max_tokens=512,
+        )
+
+        received = 0
+        try:
+            async for _chunk in stream:
+                received += 1
+                if received >= 1:
+                    await google_provider.cancel_request()
+                    await google_provider.cancel_request()
+                    break
+        except (ProviderError, RateLimitError) as exc:
+            _skip_if_account_unavailable(exc)
+
+        # A third cancel after the generator is closed must remain a no-op.
+        await google_provider.cancel_request()
+
+        assert received >= 1
+        assert getattr(google_provider, _CANCEL_FLAG_ATTR) is True
+
+    @pytest.mark.asyncio
+    @staticmethod
+    async def test_cancel_after_full_exhaustion_does_not_raise(
+        google_provider: GoogleProvider,
+    ) -> None:
+        """Consuming the whole stream then cancelling sets the flag cleanly.
+
+        A short prompt is streamed to natural completion so the
+        normal-completion bookkeeping path runs (pending usage is
+        populated and the cancel flag stays ``False`` throughout the
+        stream). Cancelling afterwards must flip the flag to ``True``
+        without raising, exercising cancellation when there is no
+        in-flight task to abort.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
+        models = await google_provider.list_models()
+        assert models, "Google returned no models"
+        model_id = models[0].id
+
+        stream = google_provider.chat_stream(
+            messages=[Message(role="user", content="Reply with exactly the single word: ready")],
+            model=model_id,
+            max_tokens=16,
+        )
+
+        chunks: list[str] = []
+        try:
+            chunks.extend([chunk async for chunk in stream])
+        except (ProviderError, RateLimitError) as exc:
+            _skip_if_account_unavailable(exc)
+
+        # The full stream completed without any cancellation in flight.
+        assert getattr(google_provider, _CANCEL_FLAG_ATTR) is False
+        completed_text = "".join(chunks)
+        assert "ready" in completed_text.lower()
+        usage = google_provider.get_pending_usage()
+        assert usage is not None, "natural completion must populate pending usage"
+        assert usage.total_tokens > 0
+
+        await google_provider.cancel_request()
         assert getattr(google_provider, _CANCEL_FLAG_ATTR) is True

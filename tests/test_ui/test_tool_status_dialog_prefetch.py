@@ -66,8 +66,23 @@ class _WorkerStartRecorder:
         self.calls += 1
 
 
+_EXPECTED_ROWS: tuple[str, ...] = (
+    "✓  Ghidra - Ghidra installed",
+    "✗  x64dbg - x64dbg.exe not found",
+    "✓  Frida - Frida 16.5 available",
+    "✗  Cutter - Cutter executable not found",
+    "✓  Process Control - Available (built-in)",
+    "✓  Binary Operations - Available (built-in)",
+)
+
+
 def _assert_prefetched_render(dialog: ToolStatusDialog, recorder: _WorkerStartRecorder) -> None:
-    """Assert a fully prefetched dialog renders all rows without spawning workers.
+    """Assert a fully prefetched dialog renders every row exactly without spawning workers.
+
+    Asserts the complete rendered text of all six rows in canonical tool
+    order against an independently constructed expectation, covering the
+    status indicator, display name, and message for each tool. A scrambled
+    order, a blanked row, or a wrong availability glyph would all fail.
 
     Args:
         dialog: ToolStatusDialog instance under test.
@@ -77,15 +92,10 @@ def _assert_prefetched_render(dialog: ToolStatusDialog, recorder: _WorkerStartRe
     assert dialog._refresh_btn.isEnabled()
     assert dialog._status_list.count() == _EXPECTED_TOOL_COUNT
 
-    ghidra_text = dialog._status_list.item(0).text()
-    assert "Ghidra" in ghidra_text
-    assert "Ghidra installed" in ghidra_text
-    assert "✓" in ghidra_text
+    rendered = [dialog._status_list.item(row).text() for row in range(dialog._status_list.count())]
+    assert rendered == list(_EXPECTED_ROWS)
 
-    x64dbg_text = dialog._status_list.item(1).text()
-    assert "x64dbg" in x64dbg_text
-    assert "x64dbg.exe not found" in x64dbg_text
-    assert "✗" in x64dbg_text
+    assert dialog._status_list.currentRow() == 0
 
 
 def _assert_partial_prefetched_render(dialog: ToolStatusDialog, recorder: _WorkerStartRecorder) -> None:
@@ -98,11 +108,15 @@ def _assert_partial_prefetched_render(dialog: ToolStatusDialog, recorder: _Worke
     assert recorder.calls == 0
     assert dialog._status_list.count() == _EXPECTED_TOOL_COUNT
 
-    ghidra_text = dialog._status_list.item(0).text()
-    assert "Ghidra installed" in ghidra_text
-
-    x64dbg_text = dialog._status_list.item(1).text()
-    assert "Status unknown" in x64dbg_text
+    rendered = [dialog._status_list.item(row).text() for row in range(dialog._status_list.count())]
+    assert rendered == [
+        "✓  Ghidra - Ghidra installed",
+        "... x64dbg - Status unknown",
+        "... Frida - Status unknown",
+        "... Cutter - Status unknown",
+        "... Process Control - Status unknown",
+        "... Binary Operations - Status unknown",
+    ]
 
 
 def _patch_worker_start(monkeypatch: pytest.MonkeyPatch, recorder: _WorkerStartRecorder) -> None:

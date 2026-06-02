@@ -204,12 +204,55 @@ class TestAutoDetectArchRealBinaries:
 
         Drives the real detector (no mock); ``detect_format_and_arch``
         classifies a random non-magic buffer as ``unknown``, which has no
-        capstone mapping and must raise rather than silently fall back.
+        capstone mapping and must raise rather than silently fall back. The
+        error must expose the offending ``arch`` and a descriptive message,
+        and remain a :class:`ValueError` subclass so existing
+        ``except ValueError`` handlers still catch it.
         """
         raw = bytes(range(64))
         with pytest.raises(UnsupportedArchitectureError) as exc_info:
             disasm.auto_detect_arch(raw)
+        error = exc_info.value
+        assert error.arch == "unknown"
+        assert str(error) == "unsupported architecture: 'unknown'"
+        assert isinstance(error, ValueError)
+
+    def test_auto_detect_empty_buffer_raises_unsupported(
+        self,
+        disasm: HexDisassembler,
+    ) -> None:
+        """An empty buffer has no magic bytes and must raise, not default.
+
+        Args:
+            disasm: Live disassembler.
+
+        A silent x86-64 fallback on zero-length input would be a dangerous
+        regression; the real detector classifies it as ``raw``/``unknown``
+        and the mapping lookup must raise.
+        """
+        with pytest.raises(UnsupportedArchitectureError) as exc_info:
+            disasm.auto_detect_arch(b"")
         assert exc_info.value.arch == "unknown"
+        assert "unknown" in str(exc_info.value)
+
+    def test_auto_detect_truncated_pe_header_raises_unsupported(
+        self,
+        disasm: HexDisassembler,
+    ) -> None:
+        """A bare ``MZ`` magic without a COFF header is unmappable.
+
+        Args:
+            disasm: Live disassembler.
+
+        The detector recognises the ``MZ`` magic as a PE format candidate
+        but cannot read the machine field from the truncated buffer, so the
+        architecture stays ``unknown`` and the call must raise rather than
+        return a fabricated ``(arch, mode)`` pair.
+        """
+        with pytest.raises(UnsupportedArchitectureError) as exc_info:
+            disasm.auto_detect_arch(b"MZ")
+        assert exc_info.value.arch == "unknown"
+        assert str(exc_info.value) == "unsupported architecture: 'unknown'"
 
 
 class TestDisassembleRealMachineCode:
