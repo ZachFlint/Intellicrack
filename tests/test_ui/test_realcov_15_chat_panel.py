@@ -62,29 +62,39 @@ def _bubble_texts(panel: ChatPanel) -> list[str]:
 
 
 def test_send_button_emits_typed_text(qtbot: QtBot) -> None:
-    """Clicking Send emits exactly one ``message_submitted`` carrying the text.
+    """Clicking Send relays the typed text through the full signal chain exactly once.
 
-    Drives the real Send button and captures every ``message_submitted``
-    payload to assert the full contract: exactly one emission with a single
-    ``str`` argument equal to the typed text, the input cleared afterwards,
-    no message bubble created by the submit path (re-emission only), and the
-    Send button left enabled.
+    Drives the real Send button and independently records every emission of
+    both the inner :attr:`ChatInput.message_submitted` signal and the outer
+    :attr:`ChatPanel.message_submitted` signal that the panel wires to it.
+    Asserts the complete contract: the inner signal fires exactly once with
+    the stripped typed text, the panel relays that single emission verbatim
+    (proving the ``_input.message_submitted -> self.message_submitted.emit``
+    wiring is intact, not merely that *some* signal carried the text), the
+    payload is exactly one ``str`` argument, the input clears via the real
+    ``_on_send`` path, the submit path creates no bubble or stored message,
+    and the Send button remains enabled. Breaking the relay wiring, emitting
+    a different payload, or failing to clear the input each turns this red.
 
     Args:
         qtbot: pytest-qt bot fixture.
     """
     panel = _make_panel(qtbot)
-    emitted: list[tuple[object, ...]] = []
-    panel.message_submitted.connect(lambda text: emitted.append((text,)))
+    inner_emissions: list[tuple[object, ...]] = []
+    panel._input.message_submitted.connect(lambda text: inner_emissions.append((text,)))
+    panel_emissions: list[tuple[object, ...]] = []
+    panel.message_submitted.connect(lambda text: panel_emissions.append((text,)))
 
     text_edit = panel._input._text_edit
-    text_edit.setPlainText("disassemble the entry point")
+    text_edit.setPlainText("  disassemble the entry point  ")
     assert panel._input._send_button.isEnabled()
 
     with qtbot.waitSignal(panel.message_submitted, timeout=2_000) as blocker:
         qtbot.mouseClick(panel._input._send_button, Qt.MouseButton.LeftButton)
 
-    assert emitted == [("disassemble the entry point",)]
+    assert inner_emissions == [("disassemble the entry point",)]
+    assert panel_emissions == [("disassemble the entry point",)]
+    assert len(panel_emissions) == 1
     assert blocker.args == ["disassemble the entry point"]
     assert len(blocker.args) == 1
     assert isinstance(blocker.args[0], str)

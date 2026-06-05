@@ -1,0 +1,23 @@
+{
+  "unitId": "U09-a17",
+  "findings": [
+    {
+      "ref": "tests/test_core/test_realcov_06_elevation_windows.py:149 - test_build_relaunch_command_targets_real_executable",
+      "severity": "Critical",
+      "status": "FIXED",
+      "oracle": "Real Win32 relaunch builder driven through frozen/pixi/plain/missing-pixi/empty launch modes via genuine sys.frozen + sys.executable + PIXI_* env state; each test now asserts the exact executable (== str(binary) for frozen, == str(pixi_exe) for pixi, == sys.executable otherwise) AND the full hand-verified literal ShellExecuteW parameter string including ELEVATED_FLAG and original-arg order (e.g. 'run --manifest-path <m> --environment default python -m intellicrack --gui --project demo --elevated'), replacing the prior weak Path(executable).is_file() check."
+    }
+  ],
+  "filesModified": [
+    "tests/test_core/test_realcov_06_elevation_windows.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "9 passed, 1 skipped in 1.28s"
+}

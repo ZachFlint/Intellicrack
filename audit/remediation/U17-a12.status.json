@@ -1,0 +1,47 @@
+{
+  "unitId": "U17-a12",
+  "findings": [
+    {
+      "ref": "tests/test_audit4/c16_hex_panel_selection_dispatch/test_selection_dispatch.py:543-589 - TestCopyAsClipboardError",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real 6-byte hexcore doc (DE AD BE EF 00 11) selected 0..3 driven through production HexEditorPanel._do_copy_as via the real QClipboard; success path asserts the dispatched clipboard text equals the documented hex 'DE AD BE EF' and base64 '3q2+7w==' (independent encoding oracle); failure paths isolate only the irreproducible OS boundaries (clipboard None / setText RuntimeError + the OS-modal QMessageBox.warning) and assert the real structlog records copy_as_no_clipboard / copy_as_clipboard_write_failed plus the exact production warning title+message. No mock of _do_copy_as itself; deleting the production show_warning calls makes warnings empty and the gate goes RED."
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_alignment_color.py:50-66 - test_snap_to_alignment_512",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real HexEditorBridge over a 4096-byte file, cursor at 1000, snap_to_alignment(512). The nearest boundary is hand-computed in-test (1000-512=488 vs 1024-1000=24, never copied from impl) and asserted to be 1024, then result, bridge.get_cursor_position(), and an independent HexDocumentState.cursor_offset oracle must all equal 1024. A floor-only or alignment-ignoring break yields 512 and goes RED. Companion parametrized test_snap_to_nearest_boundary_with_state_oracle covers floor/ceil/tie-up edges and test_snap_rejects_non_positive_alignment asserts ValueError('alignment_size must be positive') with the cursor left unchanged."
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_display_modes_complete.py:46-53 - test_set_hex16_be_returns_true",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Renamed/rewritten as test_set_hex16_be_changes_mode_and_propagates_to_state: real HexEditorBridge with a HexDocumentState attached; asserts the documented default 'hex8' precondition on the independent state oracle, that set_display_mode('hex16_be') returns True, that a fresh get_display_mode() read-back returns 'hex16_be', and that state.get_display_mode() (a different component than the bridge's private _display_mode) reflects 'hex16_be'. Companion test_set_invalid_mode_raises_value_error_and_preserves_mode asserts ValueError('unknown display mode') leaves the prior mode intact. A set that returns True without changing state goes RED."
+    },
+    {
+      "ref": "tests/test_ui/test_process_panel.py:352-355 - test_tool_definition_count",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Bare count replaced by test_every_function_is_fully_formed_and_unique (every advertised function has a unique 'process.'-scoped name, non-empty description and returns doc) plus test_dispatch_suffix_resolves_to_callable_signature_compatible_coroutine (each name resolves via the production ToolRegistry suffix rule to a callable async coroutine method whose signature accepts every required tool parameter) and test_list_function_executes_end_to_end_through_real_registry (process.list run through a real ToolRegistry returns ProcessInfo records that include the live os.getpid() python test process exactly once). A dummy stub added to inflate the count fails the empty-doc/coroutine/signature gates."
+    },
+    {
+      "ref": "tests/test_ui/test_process_panel.py:363-373 - test_function_names_map_to_methods",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "hasattr-only loop replaced by test_dispatch_suffix_resolves_to_callable_signature_compatible_coroutine (asserts callable + asyncio.iscoroutinefunction + required-parameter signature compatibility for every advertised function), test_list_detailed_filter_argument_flows_through_registry (filter_name='python' forwarded through the real registry; every returned record matches and the live python test process survives), and test_unknown_function_raises_tool_error_through_registry (an undeclared name raises ToolError via the real dispatcher, never a silent no-op). A method that is a non-callable attribute, a raising property, or signature-incompatible goes RED."
+    }
+  ],
+  "filesModified": [
+    "tests/test_hexcore_e2e/test_bridge_alignment_color.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "92 passed in 4.28s"
+}

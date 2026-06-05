@@ -1,0 +1,33 @@
+{
+  "unitId": "U31-a16",
+  "findings": [
+    {
+      "ref": "tests/test_audit3/core/test_script_gen.py:364-376 - test_validate_javascript_temp_logs_unlink_then_cleaned_only_on_success",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Rewritten as test_validate_javascript_emits_cleanup_after_unlink_attempt_on_real_run (+reports_node_syntax_error): drives real `node --check` on valid/invalid JS; oracle = node's own parser verdict (True,None) / SyntaxError; asserts UNCONDITIONALLY that temp_file_cleaned is in events, temp_file_unlink_failed is not, and index(temp_file_cleaned) > index(temp_file_unlink_attempt) - no conditional and no post-hoc skip masking a silent cleanup regression."
+    },
+    {
+      "ref": "tests/test_audit3/core/test_script_gen.py:378-388 - test_validate_javascript_unlink_failure_skips_cleaned_log",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Rewritten as test_validate_javascript_unlink_failure_suppresses_cleaned_log: no Path.unlink mock; a real structlog processor observes production's genuine temp_file_created event, extracts the live temp path, and chmod's that real file read-only so production's real `except OSError` unlink branch runs on Windows; asserts temp_file_unlink_attempt and temp_file_unlink_failed ARE in events and temp_file_cleaned is NOT - failure branch proven to execute, not vacuously skipped."
+    },
+    {
+      "ref": "tests/test_audit7/sandbox_windows/test_realcov_12b_inline_monitors.py:299-346 - test_network_monitor_source_captures_live_endpoints",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Skips ONLY up front via _require_tcp_capability() (probes Get-NetTCPConnection before any capture); then holds a real ESTABLISHED loopback pair on a known port, runs the real _network_monitor_source under pwsh, parses with real parse_network_log, and HARD-asserts tcp_records is non-empty plus the held_port endpoint (oracle = the port the test itself opened) appears as an outbound established record - missing TCP records now fail, never skip."
+    }
+  ],
+  "filesModified": [],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "40 passed in 28.25s"
+}

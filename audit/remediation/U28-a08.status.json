@@ -1,0 +1,39 @@
+{
+  "unitId": "U28-a08",
+  "findings": [
+    {
+      "ref": "tests/test_scripts/test_commit_message.py:173-184 - TestEstimateTokens (all 3 tests)",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real multi-file unified diff fed to _estimate_tokens; tiktoken cl100k_base (a different, independent BPE tokenizer) is the oracle; asserts estimate/reference ratio in [0.6,1.8] (real 1.3, while a corrupted len//10 gives 0.39 -> RED), plus empty-string==0 and strict monotonicity in input length."
+    },
+    {
+      "ref": "tests/test_scripts/test_commit_message.py:326-348 - TestCountTokensFallback (all 3 error fallback tests)",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real google.genai ServerError(503)/ClientError(400)/'too large'/stdlib ConnectionError instances raised by a concrete (non-MagicMock) Gemini-surface client through the real _count_tokens; asserts result == independent _estimate_tokens(text) for each exact text; adds success-path exact-API-total (4242) and an uncaught KeyError-propagates test proving the except set is specific, not blanket."
+    },
+    {
+      "ref": "tests/test_scripts/test_commit_message.py:350-370 - test_throttle_prevents_rapid_calls",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Deterministic virtual clock replaces time.monotonic/time.sleep (the OS timing primitives, not the function); with interval=0.5 and elapsed=0.1, asserts the function sleeps exactly 0.4s within 1e-9 and advances _last_count_time to 1000.4; second test asserts zero sleeps once the interval has fully elapsed. No wall-clock tolerance."
+    },
+    {
+      "ref": "tests/test_ui/test_realcov_13b_hex_sections.py:113-122 - test_min_length_is_enforced",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real Windows PE driven through execute_strings_extraction at floors 6 and 12; backend-reported 'length' field is the independent oracle; asserts min(low)>=6 and min(high)>=12 (real min==6 and ==12), that a record sits exactly on the low floor (binding constraint), and that 233 sub-12 strings present at floor 6 are all removed at floor 12. A no-op min_length filter would yield min<6 -> RED."
+    }
+  ],
+  "filesModified": [],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "28 passed in 3.10s"
+}

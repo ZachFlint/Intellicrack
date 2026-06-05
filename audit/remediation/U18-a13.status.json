@@ -1,0 +1,44 @@
+{
+  "unitId": "U18-a13",
+  "findings": [
+    {
+      "ref": "tests/test_bridges/test_ghidra_f11_audit.py:64-99 - test_f11_define_structure_logging & test_f11_create_function_logging",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Drive real GhidraBridge.define_structure/create_function with a failing RPC double through the actual _execute_remote path; replace the _logger mock with structlog.testing.capture_logs and assert the exact ToolError message ('Define structure failed: Remote execution failed: simulated_remote_error'), the chained __cause__ (ToolError -> RuntimeError 'simulated_remote_error'), and the captured warning record fields (event, log_level=='warning', struct_name/address, error); plus not-connected paths asserting the ghidra_not_connected error record."
+    },
+    {
+      "ref": "tests/test_core/test_script_gen.py:343 (file-level) - test_script_get_extension and ScriptContext.to_prompt assertions",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Added test_script_manager_save_uses_language_extension_on_disk: persist each language via the real ScriptManager.save_script path and assert the on-disk file's exact name/suffix/parent/content (oracle = conventional per-tool extension, independent of the production map). Added test_script_context_to_prompt_full_structure_exact_layout asserting the entire rendered prompt equals a hand-written expected multi-section string (section order, headers, 0xDEADBEEF formatting, strategy expansion, Frida API footer)."
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_bit_ops.py:53-93 - test_get_bit_returns_correct_values & similar bit ops",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Drive the real Rust-backed HexDocument via HexEditorBridge over an 8-byte pattern; assert every bit of every byte at every offset equals the independent LSB-0 oracle ((byte>>i)&1) to catch off-by-one/endianness/offset bugs; assert get_bit determinism across 5 repeats; build a full byte by setting bits 0..7 (0x01..0x80) and reading bytes back; verify clear/idempotent set; double-toggle restores the byte; and bit_index in {8,9,-1,-8,16,64} consistently raises ValueError plus no-document RuntimeError."
+    },
+    {
+      "ref": "tests/test_sandbox/test_log_parsers.py:127-177 - parse_file_log & parse_registry_log tests",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Added TestParseFileLogEdgeCases and TestParseRegistryLogEdgeCases driving real malformed on-disk logs: unescaped pipe in path/key shifts remainder into optional fields (asserted exactly), colon-bearing Windows paths preserved, non-numeric/negative size collapses to None, operation-alias normalization (move->renamed, write->modified, unknown->modified), non-ASCII UTF-8 key/value round-trip, extra trailing field ignored, empty middle field collapses to None, and interleaved valid/malformed lines yield only well-formed records in original order."
+    }
+  ],
+  "filesModified": [
+    "tests/test_bridges/test_ghidra_f11_audit.py",
+    "tests/test_core/test_script_gen.py",
+    "tests/test_hexcore_e2e/test_bridge_bit_ops.py",
+    "tests/test_sandbox/test_log_parsers.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "186 passed in 4.51s"
+}

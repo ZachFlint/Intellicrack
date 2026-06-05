@@ -322,6 +322,13 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Harden test suite and resolve core integration bugs (`f06ab76`)
+Refactored the test suite to replace fragile mocks with real integration tests utilizing loopback servers, real subprocesses, and on-disk file-system diffing. Also resolved several core integration bugs, including PowerShell string escaping in the Windows sandbox, incorrect highlight rule removal arguments, and import fallbacks for the native hexcore extension.
+- **Core**: Fixed PowerShell escaping in `WindowsSandbox` and added a fallback import for the native `intellicrack_hexcore` extension.
+- **Providers**: Exposed HuggingFace model normalization as a public static method to enable direct unit testing.
+- **UI**: Refactored template and highlight operations to support non-interactive testing via user-notifier callbacks.
+- **Tests**: Replaced mocks with real subprocesses, loopback HTTP/TCP servers, and a real `LocalProcessSandbox` backend.
+
 - Optimize kernel monitor sweeps and stabilize async bridge workers (`6715edf`)
 Optimize the PowerShell kernel object monitor by shifting handle-table deduplication to compiled C# code, preventing interop overhead on steady-state sweeps. Stabilize the UI async bridge by retaining strong references to in-flight worker threads to prevent premature garbage collection crashes in unparented contexts. Additionally, resolve launcher blocking by passing child PIDs through temporary files instead of inherited pipes.
 - **Sandbox**: Shifted handle table delta tracking to native C# in `kernel_object_monitor.ps1` and decoupled launcher pipes in `start_monitors.cmd`.
@@ -783,12 +790,12 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Harden test suite and resolve core integration bugs (``)
-Refactored the test suite to replace fragile mocks with real integration tests utilizing loopback servers, real subprocesses, and on-disk file-system diffing. Also resolved several core integration bugs, including PowerShell string escaping in the Windows sandbox, incorrect highlight rule removal arguments, and import fallbacks for the native hexcore extension.
-- **Core**: Fixed PowerShell escaping in `WindowsSandbox` and added a fallback import for the native `intellicrack_hexcore` extension.
-- **Providers**: Exposed HuggingFace model normalization as a public static method to enable direct unit testing.
-- **UI**: Refactored template and highlight operations to support non-interactive testing via user-notifier callbacks.
-- **Tests**: Replaced mocks with real subprocesses, loopback HTTP/TCP servers, and a real `LocalProcessSandbox` backend.
+- Harden test suite and integrate agent configurations (``)
+Harden the test suite by replacing dynamic oracles and mocks with deterministic, hand-written constants, exact-value assertions, and real async dispatch paths. This eliminates race conditions in memory map tests and ensures robust validation of signal propagation, undo/redo history states, and cryptographic digests.
+- **Agents & Hooks**: Introduce `.codex` agent configurations, skills, and lifecycle hooks.
+- **Test Suite**: Refactor tests across core, UI, and hexcore modules to use exact-value assertions and independent textbook oracles.
+- **Audit Remediation**: Update remediation markdown files and status JSONs to track compliance.
+- **Cleanup**: Remove obsolete extraction scripts and Frida findings.
 
 
 ### Documentation

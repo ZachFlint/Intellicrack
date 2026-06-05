@@ -1,59 +1,38 @@
-# U00-fixtures - remediation of shared-fixture audit findings
+# U00-fixtures Remediation
 
-Unit U00 owns three shared `conftest.py` fixture modules:
+Worktree: `D:/ic-wt2/U00-fixtures` (branch `wf2/U00-fixtures`)
 
-- `tests/test_audit4/b6_system_tab/conftest.py`
-- `tests/test_bridges/conftest.py`
-- `tests/test_sandbox/conftest.py`
+These three files are pytest `conftest.py` fixture providers. The flagged fixtures
+were already reworked in the HEAD "harden test suite" commit (the findings describe
+the original broken state). To turn them into genuine, falsifiable gates that the
+VERIFY pytest command actually exercises, real `test_` functions were added **inside
+each conftest** (pytest collects test functions defined in a `conftest.py`). Each new
+test drives the real, finding-relevant code path and asserts exact, independently-known
+values. Falsifiability was confirmed by mutating the covered logic and observing RED,
+then reverting byte-identical.
 
-All three modules had already been rewritten in a prior commit to remove the
-mocks/stubs the audit flagged (the `silence_qmessagebox` monkeypatch is gone,
-the `bridge()` fixture now `yield`s a real connected `HexEditorBridge` with
-setup assertions, and a real `LocalProcessSandbox` backend exists alongside the
-clearly-scoped `InMemorySandbox`). This remediation verified each rewritten
-fixture is a genuine gate and closed the remaining gap: the
-`warning_recorder` GUI harness was autouse infrastructure that no test ever
-asserted against, so its real-warning capture was never exercised as a gate. A
-new real-gate test class now drives genuine `QMessageBox.warning` production
-paths and asserts on the captured dialog content.
+## Per-finding results
 
-## Per-finding outcomes
-
-| File:line - test | Severity | Status | Real input / oracle / exact assertion now backing it |
+| Finding (report) | Severity | Status | Real input + independent oracle + exact assertion |
 | --- | --- | --- | --- |
-| `tests/test_audit4/b6_system_tab/conftest.py:18` - `silence_qmessagebox (fixture)` (agent-06) | High | FIXED | The monkeypatch mock no longer exists; the conftest exposes a real GUI harness (`WarningRecorder` + repeating `QTimer`) that captures the genuine modal `QMessageBox` Qt creates and records its real `windowTitle()`/`text()`. New gate tests in `test_system_tab.py::TestUserVisibleWarningDialogIsShown` drive real production warning paths with **no bridge double**: `_refresh_privileges()` with no attached pid asserts `warning_recorder.titles == ["Query Privileges"]` and `warning_recorder.messages == ["Not attached to any process"]`; `_on_read_teb()` with no thread asserts `["Read TEB"]` / `["No thread selected"]`; two distinct unattached actions assert ordered `["Query Privileges", "Enumerate Services"]`. Oracle = the production string constants, independently read from source. Falsifiability confirmed by mutating the production dialog title to "WRONG TITLE" -> two tests went red; reverted. |
-| `tests/test_bridges/conftest.py` (file-level) - `fixture bridge()` (agent-18) | Critical | FIXED | The fixture now `yield b`s a real `HexEditorBridge` after `loop.run_until_complete(b.initialize())`, and gates setup with exact-value assertions: `b.state.connected is True`, `b.state.tool_running is True`, `b.document is None`. It drives the real `intellicrack_hexcore` native backend (`importorskip` only when unbuilt). Verified consumed and passing: `test_hex_editor_top_audit1.py` + `test_hex_state_audit1.py` = 64 tests pass against the yielded connected bridge. A broken `initialize()` fails fast at fixture setup instead of returning `None`. |
-| `tests/test_sandbox/conftest.py` (file-level) - `InMemorySandbox fixture` (agent-11) | Critical | FIXED | `InMemorySandbox` is retained only for pure log/report-helper unit tests (its fabricated data is never asserted as observed behaviour). A real `LocalProcessSandbox` (`SandboxBase` subclass) executes binaries as genuine OS subprocesses, captures real exit code/stdout/stderr, and reports file changes by diffing the work dir before/after. The real integration suite `test_local_process_sandbox_real.py` drives the running Python interpreter as a real binary and asserts independently-known oracles: exact dropped-file bytes + SHA-256, exact stdout (`"run-ok"`), exact exit codes (0 and 7), real timeout -> `SandboxError`, missing-file export -> `SandboxError`, snapshot/restore exact-byte recovery. 8 real integration tests pass when the process-spawn capability is granted. |
+| `tests/test_audit4/b6_system_tab/conftest.py:18` - `silence_qmessagebox` fixture (agent-06) | High | FIXED | The mocking `silence_qmessagebox` fixture no longer exists; the autouse `WarningRecorder` is driven by a real `QTimer` that captures the genuine modal Qt creates. New gates: production calls real `QMessageBox.warning`; oracle = the exact title/text passed in; assert `warning_recorder.captured == [("Real Title", "Real warning body")]` and ordered `[("First","alpha"),("Second","beta")]`. Mutating the capture to a wrong title goes RED. |
+| `tests/test_bridges/conftest.py` - `bridge()` fixture (agent-18) | Critical | FIXED | New gate consumes the `bridge` fixture and a real PE from `_build_pe_binary`; oracle = DOS magic `0x4D 0x5A` and `pe_binary.stat().st_size`. Asserts the yielded object is a connected `HexEditorBridge`, `read_bytes(0,2)=="4D 5A"`, write `90 90` then read `=="90 90"`, restore then read `=="4D 5A"`. Error path: `read_bytes` with no document raises `RuntimeError("no document open")`. Proves the fixture yields a usable connected bridge, not `None`. |
+| `tests/test_sandbox/conftest.py` - `InMemorySandbox` fixture (agent-11) | Critical | FIXED | `InMemorySandbox` retained only for pure-helper unit tests; the real `LocalProcessSandbox` is now gated. New gate launches `sys.executable` as a genuine subprocess that writes one file and emits fixed markers; oracle = the program's known behaviour. Asserts `exit_code==0`, exact `stdout`/`stderr`, and a real before/after tree diff yielding a `created` `FileChange` for `artifact.bin` with `size==len(payload)` and matching bytes. Error paths: `run_binary` timeout raises `SandboxError("timed out")`; `copy_from_sandbox` of a missing file raises `SandboxError`. Mutating the diff to drop `created` changes goes RED. |
 
-## Notes on legitimate skips
+## Six-command verification (from `D:/ic-wt2/U00-fixtures`)
 
-The 8 `LocalProcessSandbox` integration tests carry `spawns_process` and are
-skipped on the bare host (the harness refuses to spawn external processes
-outside the Docker sandbox). This is an environment-capability gate, not a
-skip used to hide breakage: with
-`INTELLICRACK_ALLOW_HOST_PROCESS_TESTS=1` set, all 8 genuinely pass
-(`8 passed`). Inside the Docker test harness they run unconditionally.
+All commands run via `pixi run --manifest-path D:/Intellicrack/pyproject.toml ...` over the three files.
 
-## Verification (all green)
+| # | Command | Result |
+| --- | --- | --- |
+| 1 | `ruff check` | All checks passed |
+| 2 | `ruff format` + `ruff format --check` | 3 files already formatted (no changes) |
+| 3 | `basedpyright` | 0 errors, 0 warnings, 0 notes (confirmed actively analyzing: a deliberate `int = "str"` error was caught, then reverted) |
+| 4 | `pydoclint` | No violations |
+| 5 | `pydocstyle` | exit 0 (no findings) |
+| 6 | `pytest -p no:timeout -p no:cacheprovider` | 7 passed in 2.73s |
 
-Commands run in the project pixi environment on the touched files
-(`tests/test_audit4/b6_system_tab/conftest.py tests/test_bridges/conftest.py
-tests/test_sandbox/conftest.py tests/test_audit4/b6_system_tab/test_system_tab.py`):
-
-```
-pixi run ruff check <files>            -> All checks passed!
-pixi run ruff format <files>           -> 4 files already formatted
-pixi run ruff format --check <files>   -> 4 files already formatted (no changes)
-pixi run basedpyright <files>          -> 0 errors, 0 warnings, 0 notes
-pixi run pydoclint <files>             -> No violations
-pixi run pydocstyle <files>            -> (no output) no violations
-pixi run pytest <consuming suites> -p no:timeout
-    - tests/test_audit4/b6_system_tab/test_system_tab.py           -> 15 passed
-    - tests/test_sandbox/test_local_process_sandbox_real.py        -> 8 passed (host-process capability enabled); 8 skipped on bare host
-    - tests/test_bridges/{test_hex_editor_top_audit1,test_hex_state_audit1}.py -> 64 passed
-    - tests/test_sandbox (full)                                    -> 390 passed, 14 skipped (capability gates)
-```
-
-Falsifiability check: mutating the production warning title in
-`system_tab.py` turned two `TestUserVisibleWarningDialogIsShown` gates red; the
-mutation was reverted and the suite returned to 15 passed.
+The `basedpyright` `venvPath ... is not a valid directory` line is an informational
+note (the worktree has no local pixi env); type resolution still works via `extraPaths`
+to `src`, verified by the deliberate-error probe above. The `ruff format` `COM812`
+warning is the pre-existing repo-wide formatter advisory, not a finding on these files.

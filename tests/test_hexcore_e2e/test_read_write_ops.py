@@ -106,24 +106,31 @@ class TestReadOps:
         assert len(result) == 50
 
     def test_read_across_byte_boundaries(self, sample_doc: HexDocument) -> None:
-        """Verify reads that span the 0x7F/0x80 and 0xFE/0xFF boundaries.
+        """Verify reads spanning the 0x7F/0x80 sign boundary and the 0xFE/0xFF tail.
 
-        The expected bytes are derived from the identity-sequence oracle
-        (``value == offset``), not from ``sample_bytes``: a read starting at
-        offset ``start`` must return ``start, start + 1, ...``. This catches an
-        off-by-one or wrong-offset regression that magic-constant assertions or a
-        ``sample_bytes`` slice (same source as the document) would not.
+        The primary oracle is a hand-enumerated, human-verifiable constant
+        (``bytes([0x7E, 0x7F, 0x80, 0x81])``): on the identity sequence
+        ``value == offset``, the four bytes at offsets 126..129 are 0x7E, 0x7F,
+        0x80, 0x81 -- this is checked by hand, not derived from ``sample_bytes``
+        (the same source the document was loaded from). The cross-check against
+        ``bytes(range(126, 130))`` re-derives that same expectation from the
+        identity definition. Both must agree, so an off-by-one read, a
+        wrong-offset read, or a fixture that silently lost the high half all turn
+        the test red.
 
         Args:
             sample_doc: HexDocument loaded from disk fixture.
         """
         boundary_low = sample_doc.read(126, 4)
-        assert boundary_low == bytes(offset for offset in range(126, 130))
         assert boundary_low == bytes([0x7E, 0x7F, 0x80, 0x81])
+        assert boundary_low == bytes(offset for offset in range(126, 130))
 
         boundary_high = sample_doc.read(253, 3)
-        assert boundary_high == bytes(offset for offset in range(253, 256))
         assert boundary_high == bytes([0xFD, 0xFE, 0xFF])
+        assert boundary_high == bytes(offset for offset in range(253, 256))
+
+        single_high = sample_doc.read(0x80, 1)
+        assert single_high == bytes([0x80])
 
     def test_read_past_end_clamps_to_available_bytes(self, sample_doc: HexDocument) -> None:
         """Verify a read overlapping the end returns only the in-bounds suffix.
@@ -190,18 +197,23 @@ class TestWriteOps:
         assert result == payload
 
     def test_write_does_not_change_surrounding_bytes(self, sample_doc_from_bytes: HexDocument) -> None:
-        """Verify that write_bytes() only modifies the targeted range.
+        """Verify that write_bytes() mutates only the targeted range, not its neighbors.
 
-        The surrounding bytes are asserted against the identity-sequence oracle
-        (``value == offset``), independently of ``sample_bytes``. The write at
-        offsets 50-51 must leave offsets 48-49 and 52-53 holding their original
-        identity values, while offsets 50-51 must hold the new payload. Asserting
-        the payload landed and the neighbors are untouched makes the write's
-        boundary a real gate, not a tautology against the load source.
+        The payload ``0xAA 0xBB`` is chosen to differ from the original identity
+        values at offsets 50-51 (which are 0x32 and 0x33), so a write that
+        silently no-ops would leave 0x32/0x33 in place and fail the post-write
+        assertion. The surrounding bytes are checked against the identity-sequence
+        oracle (``value == offset``) at offsets 48-49 and 52-53, independently of
+        ``sample_bytes``. Pre-write assertions pin the neighbors at their identity
+        values so the test also fails if the fixture was corrupted or if the write
+        bled past its two-byte range into a neighbor.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
+        assert sample_doc_from_bytes.read(48, 6) == bytes([48, 49, 50, 51, 52, 53])
+        assert sample_doc_from_bytes.read(50, 2) == bytes([50, 51])
+
         sample_doc_from_bytes.write_bytes(50, b"\xaa\xbb")
 
         assert sample_doc_from_bytes.read(50, 2) == b"\xaa\xbb"

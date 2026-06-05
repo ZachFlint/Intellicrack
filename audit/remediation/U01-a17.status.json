@@ -1,0 +1,305 @@
+{
+ "unitId": "U01-a17",
+ "findings": [
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:287-303 - test_chat_returns_valid_assistant_message (TestAnthropicE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() against the provider with prompt \"Respond with one word: hello\"; independent oracle = the fixed greeting-token set (hello/hi/hey/greetings/...) plus a readable-character ratio; asserts role==assistant, a greeting token is present, and readable_ratio>=0.6 (gibberish fails)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:305-326 - test_chat_stream_yields_chunks_and_completes (TestAnthropicE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat_stream() with \"Say hello briefly.\"; oracle = greeting-token set + readable ratio over the reassembled text; asserts every chunk is str, reassembled text is non-empty, contains a greeting token, and readable_ratio>=0.6 (random chunks fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:328-352 - test_tool_calling_returns_valid_tool_call (TestAnthropicE2EChat)",
+   "severity": "Critical",
+   "status": "FIXED",
+   "oracle": "Real live chat() with tools and a prompt naming the Windows notepad.exe path; oracle = that exact requested path; asserts function_name==binary.get_file_size, tool_name==binary, and arguments[path] normalizes to end with notepad.exe and contain windows (empty/garbage args fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:353-370 - test_multi_turn_conversation_retains_context (TestAnthropicE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() over a 4-turn history (name=Archimedes, field=binary analysis) asking name+work; oracle = the seeded facts; asserts content contains \"archimedes\" AND (\"binary\" or \"analysis\") -- AND not OR, so ignoring context fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:371-388 - test_max_tokens_respected (TestAnthropicE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat() asking for a long essay with max_tokens=32; oracle = token-to-word ratio bound; asserts non-empty content and <=45 words, tight enough that ignoring max_tokens (dozens/hundreds of words) fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:389-410 - test_model_listing_fields_valid (TestAnthropicE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live list_models(); oracle = vendor naming convention + configured model constant + realistic context window; asserts every id contains the vendor substring, name non-empty, provider label matches, context_window>=4000, bool capability flags, and the configured model id is present (fabricated records fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:415-431 - test_chat_returns_valid_assistant_message (TestOpenAIE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() against the provider with prompt \"Respond with one word: hello\"; independent oracle = the fixed greeting-token set (hello/hi/hey/greetings/...) plus a readable-character ratio; asserts role==assistant, a greeting token is present, and readable_ratio>=0.6 (gibberish fails)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:433-454 - test_chat_stream_yields_chunks_and_completes (TestOpenAIE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat_stream() with \"Say hello briefly.\"; oracle = greeting-token set + readable ratio over the reassembled text; asserts every chunk is str, reassembled text is non-empty, contains a greeting token, and readable_ratio>=0.6 (random chunks fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:456-480 - test_tool_calling_returns_valid_tool_call (TestOpenAIE2EChat)",
+   "severity": "Critical",
+   "status": "FIXED",
+   "oracle": "Real live chat() with tools and a prompt naming the Windows notepad.exe path; oracle = that exact requested path; asserts function_name==binary.get_file_size, tool_name==binary, and arguments[path] normalizes to end with notepad.exe and contain windows (empty/garbage args fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:481-497 - test_multi_turn_conversation_retains_context (TestOpenAIE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() over a 4-turn history (name=Archimedes, field=binary analysis) asking name+work; oracle = the seeded facts; asserts content contains \"archimedes\" AND (\"binary\" or \"analysis\") -- AND not OR, so ignoring context fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:499-515 - test_max_tokens_respected (TestOpenAIE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat() asking for a long essay with max_tokens=32; oracle = token-to-word ratio bound; asserts non-empty content and <=45 words, tight enough that ignoring max_tokens (dozens/hundreds of words) fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:517-533 - test_model_listing_fields_valid (TestOpenAIE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live list_models(); oracle = vendor naming convention + configured model constant + realistic context window; asserts every id contains the vendor substring, name non-empty, provider label matches, context_window>=4000, bool capability flags, and the configured model id is present (fabricated records fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:538-554 - test_chat_returns_valid_assistant_message (TestGoogleE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() against the provider with prompt \"Respond with one word: hello\"; independent oracle = the fixed greeting-token set (hello/hi/hey/greetings/...) plus a readable-character ratio; asserts role==assistant, a greeting token is present, and readable_ratio>=0.6 (gibberish fails)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:556-577 - test_chat_stream_yields_chunks_and_completes (TestGoogleE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat_stream() with \"Say hello briefly.\"; oracle = greeting-token set + readable ratio over the reassembled text; asserts every chunk is str, reassembled text is non-empty, contains a greeting token, and readable_ratio>=0.6 (random chunks fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:579-602 - test_tool_calling_returns_valid_tool_call (TestGoogleE2EChat)",
+   "severity": "Critical",
+   "status": "FIXED",
+   "oracle": "Real live chat() with tools and a prompt naming the Windows notepad.exe path; oracle = that exact requested path; asserts function_name==binary.get_file_size, tool_name==binary, and arguments[path] normalizes to end with notepad.exe and contain windows (empty/garbage args fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:604-620 - test_multi_turn_conversation_retains_context (TestGoogleE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() over a 4-turn history (name=Archimedes, field=binary analysis) asking name+work; oracle = the seeded facts; asserts content contains \"archimedes\" AND (\"binary\" or \"analysis\") -- AND not OR, so ignoring context fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:622-638 - test_max_tokens_respected (TestGoogleE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat() asking for a long essay with max_tokens=32; oracle = token-to-word ratio bound; asserts non-empty content and <=45 words, tight enough that ignoring max_tokens (dozens/hundreds of words) fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:640-655 - test_model_listing_fields_valid (TestGoogleE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live list_models(); oracle = vendor naming convention + configured model constant + realistic context window; asserts every id contains the vendor substring, name non-empty, provider label matches, context_window>=4000, bool capability flags, and the configured model id is present (fabricated records fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:661-677 - test_chat_returns_valid_assistant_message (TestGrokE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() against the provider with prompt \"Respond with one word: hello\"; independent oracle = the fixed greeting-token set (hello/hi/hey/greetings/...) plus a readable-character ratio; asserts role==assistant, a greeting token is present, and readable_ratio>=0.6 (gibberish fails)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:679-700 - test_chat_stream_yields_chunks_and_completes (TestGrokE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat_stream() with \"Say hello briefly.\"; oracle = greeting-token set + readable ratio over the reassembled text; asserts every chunk is str, reassembled text is non-empty, contains a greeting token, and readable_ratio>=0.6 (random chunks fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:702-725 - test_tool_calling_returns_valid_tool_call (TestGrokE2EChat)",
+   "severity": "Critical",
+   "status": "FIXED",
+   "oracle": "Real live chat() with tools and a prompt naming the Windows notepad.exe path; oracle = that exact requested path; asserts function_name==binary.get_file_size, tool_name==binary, and arguments[path] normalizes to end with notepad.exe and contain windows (empty/garbage args fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:727-743 - test_multi_turn_conversation_retains_context (TestGrokE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() over a 4-turn history (name=Archimedes, field=binary analysis) asking name+work; oracle = the seeded facts; asserts content contains \"archimedes\" AND (\"binary\" or \"analysis\") -- AND not OR, so ignoring context fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:745-761 - test_max_tokens_respected (TestGrokE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat() asking for a long essay with max_tokens=32; oracle = token-to-word ratio bound; asserts non-empty content and <=45 words, tight enough that ignoring max_tokens (dozens/hundreds of words) fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:763-778 - test_model_listing_fields_valid (TestGrokE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live list_models(); oracle = vendor naming convention + configured model constant + realistic context window; asserts every id contains the vendor substring, name non-empty, provider label matches, context_window>=4000, bool capability flags, and the configured model id is present (fabricated records fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:784-800 - test_chat_returns_valid_assistant_message (TestOpenRouterE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() against the provider with prompt \"Respond with one word: hello\"; independent oracle = the fixed greeting-token set (hello/hi/hey/greetings/...) plus a readable-character ratio; asserts role==assistant, a greeting token is present, and readable_ratio>=0.6 (gibberish fails)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:802-823 - test_chat_stream_yields_chunks_and_completes (TestOpenRouterE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat_stream() with \"Say hello briefly.\"; oracle = greeting-token set + readable ratio over the reassembled text; asserts every chunk is str, reassembled text is non-empty, contains a greeting token, and readable_ratio>=0.6 (random chunks fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:825-848 - test_tool_calling_returns_valid_tool_call (TestOpenRouterE2EChat)",
+   "severity": "Critical",
+   "status": "FIXED",
+   "oracle": "Real live chat() with tools and a prompt naming the Windows notepad.exe path; oracle = that exact requested path; asserts function_name==binary.get_file_size, tool_name==binary, and arguments[path] normalizes to end with notepad.exe and contain windows (empty/garbage args fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:850-866 - test_multi_turn_conversation_retains_context (TestOpenRouterE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() over a 4-turn history (name=Archimedes, field=binary analysis) asking name+work; oracle = the seeded facts; asserts content contains \"archimedes\" AND (\"binary\" or \"analysis\") -- AND not OR, so ignoring context fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:868-884 - test_max_tokens_respected (TestOpenRouterE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat() asking for a long essay with max_tokens=32; oracle = token-to-word ratio bound; asserts non-empty content and <=45 words, tight enough that ignoring max_tokens (dozens/hundreds of words) fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:886-901 - test_model_listing_fields_valid (TestOpenRouterE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live list_models(); oracle = vendor naming convention + configured model constant + realistic context window; asserts every id contains the vendor substring, name non-empty, provider label matches, context_window>=4000, bool capability flags, and the configured model id is present (fabricated records fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:907-923 - test_chat_returns_valid_assistant_message (TestHuggingFaceE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() against the provider with prompt \"Respond with one word: hello\"; independent oracle = the fixed greeting-token set (hello/hi/hey/greetings/...) plus a readable-character ratio; asserts role==assistant, a greeting token is present, and readable_ratio>=0.6 (gibberish fails)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:925-946 - test_chat_stream_yields_chunks_and_completes (TestHuggingFaceE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat_stream() with \"Say hello briefly.\"; oracle = greeting-token set + readable ratio over the reassembled text; asserts every chunk is str, reassembled text is non-empty, contains a greeting token, and readable_ratio>=0.6 (random chunks fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:948-971 - test_tool_calling_returns_valid_tool_call (TestHuggingFaceE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() with tools and a prompt naming the Windows notepad.exe path; oracle = that exact requested path; asserts function_name==binary.get_file_size, tool_name==binary, and arguments[path] normalizes to end with notepad.exe and contain windows (empty/garbage args fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:973-989 - test_multi_turn_conversation_retains_context (TestHuggingFaceE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() over a 4-turn history (name=Archimedes, field=binary analysis) asking name+work; oracle = the seeded facts; asserts content contains \"archimedes\" AND (\"binary\" or \"analysis\") -- AND not OR, so ignoring context fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:991-1007 - test_max_tokens_respected (TestHuggingFaceE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat() asking for a long essay with max_tokens=32; oracle = token-to-word ratio bound; asserts non-empty content and <=45 words, tight enough that ignoring max_tokens (dozens/hundreds of words) fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1009-1024 - test_model_listing_fields_valid (TestHuggingFaceE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live list_models(); oracle = vendor naming convention + configured model constant + realistic context window; asserts every id contains the vendor substring, name non-empty, provider label matches, context_window>=4000, bool capability flags, and the configured model id is present (fabricated records fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1030-1048 - test_chat_returns_valid_assistant_message (TestOllamaE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() against the provider with prompt \"Respond with one word: hello\"; independent oracle = the fixed greeting-token set (hello/hi/hey/greetings/...) plus a readable-character ratio; asserts role==assistant, a greeting token is present, and readable_ratio>=0.6 (gibberish fails)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1050-1073 - test_chat_stream_yields_chunks_and_completes (TestOllamaE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat_stream() with \"Say hello briefly.\"; oracle = greeting-token set + readable ratio over the reassembled text; asserts every chunk is str, reassembled text is non-empty, contains a greeting token, and readable_ratio>=0.6 (random chunks fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1075-1100 - test_tool_calling_returns_valid_tool_call (TestOllamaE2EChat)",
+   "severity": "Critical",
+   "status": "FIXED",
+   "oracle": "Real live chat() with tools and a prompt naming the Windows notepad.exe path; oracle = that exact requested path; asserts function_name==binary.get_file_size, tool_name==binary, and arguments[path] normalizes to end with notepad.exe and contain windows (empty/garbage args fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1102-1120 - test_multi_turn_conversation_retains_context (TestOllamaE2EChat)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() over a 4-turn history (name=Archimedes, field=binary analysis) asking name+work; oracle = the seeded facts; asserts content contains \"archimedes\" AND (\"binary\" or \"analysis\") -- AND not OR, so ignoring context fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1122-1140 - test_max_tokens_respected (TestOllamaE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat() asking for a long essay with max_tokens=32; oracle = token-to-word ratio bound; asserts non-empty content and <=45 words, tight enough that ignoring max_tokens (dozens/hundreds of words) fails."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1142-1160 - test_model_listing_fields_valid (TestOllamaE2EChat)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live list_models(); oracle = vendor naming convention + configured model constant + realistic context window; asserts every id contains the vendor substring, name non-empty, provider label matches, context_window>=4000, bool capability flags, and the configured model id is present (fabricated records fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1246-1263 - test_same_prompt_all_providers_return_valid_messages (TestCrossProviderConsistency)",
+   "severity": "High",
+   "status": "FIXED",
+   "oracle": "Real live chat() of \"What is 2 + 2?\" across every credentialed provider; oracle = the known answer 4; asserts each response word-matches \b4\b or \bfour\b (wrong/junk answers fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1265-1282 - test_all_providers_handle_empty_tool_list (TestCrossProviderConsistency)",
+   "severity": "Low",
+   "status": "FIXED",
+   "oracle": "Adds a real error path: empty tools=[] must still yield an assistant turn, and a malformed ToolChoice(SPECIFIC, function_name=\"\") with real tools must raise ProviderError; asserts both the happy turn and the typed rejection (silent malformed send fails)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1284-1303 - test_streaming_all_providers_yield_at_least_one_chunk (TestCrossProviderConsistency)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat_stream() across providers; oracle = readable-character ratio; asserts >=1 chunk, reassembled text non-empty, and readable_ratio>=0.6 (binary/control-noise chunks fail)."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1309-1324 - test_anthropic_invalid_model_raises_provider_error (TestRateLimitAndErrorHandling)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat() with model \"claude-nonexistent-999\"; oracle = HTTP client-rejection status; asserts the ProviderError chain carries a 4xx status (400/401/402/403/404/422/429), distinguishing an API model rejection from a bare transport/auth fault."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1326-1341 - test_openai_invalid_model_raises_provider_error (TestRateLimitAndErrorHandling)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real live chat() with model \"gpt-nonexistent-999\"; oracle = 4xx status + error text; asserts the chain has a client-rejection status AND the message says \"model\" and \"does not exist\"/\"not found\"."
+  },
+  {
+   "ref": "tests/test_providers/test_e2e_chat.py:1343-1376 - test_timeout_with_very_short_timeout (TestRateLimitAndErrorHandling)",
+   "severity": "Medium",
+   "status": "FIXED",
+   "oracle": "Real connect() to a non-routable endpoint 10.255.255.1:9 with timeout=2.0; oracle = deterministic transport timeout; asserts a ProviderError whose chain names \"timeout\"/\"timed out\" and surfaces in <20s (no broad multi-type swallow)."
+  }
+ ],
+ "filesModified": [
+  "tests/test_providers/test_e2e_chat.py"
+ ],
+ "checks": {
+  "ruff": true,
+  "ruffFormat": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true,
+  "pytest": true
+ },
+ "pytestSummary": "10 passed, 38 skipped in 46.15s"
+}
