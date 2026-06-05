@@ -319,8 +319,18 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
 
+- **api:** Implement exponential backoff for rate-limited requests (``)
+Introduce an exponential backoff jitter algorithm when encountering HTTP 429 status codes. This prevents thundering herd problems on the upstream service and ensures transient rate limits are handled gracefully without failing the entire request pipeline.
+
 
 ### Changed
+
+- Harden test suite and integrate agent configurations (`122f2e5`)
+Harden the test suite by replacing dynamic oracles and mocks with deterministic, hand-written constants, exact-value assertions, and real async dispatch paths. This eliminates race conditions in memory map tests and ensures robust validation of signal propagation, undo/redo history states, and cryptographic digests.
+- **Agents & Hooks**: Introduce `.codex` agent configurations, skills, and lifecycle hooks.
+- **Test Suite**: Refactor tests across core, UI, and hexcore modules to use exact-value assertions and independent textbook oracles.
+- **Audit Remediation**: Update remediation markdown files and status JSONs to track compliance.
+- **Cleanup**: Remove obsolete extraction scripts and Frida findings.
 
 - Harden test suite and resolve core integration bugs (`f06ab76`)
 Refactored the test suite to replace fragile mocks with real integration tests utilizing loopback servers, real subprocesses, and on-disk file-system diffing. Also resolved several core integration bugs, including PowerShell string escaping in the Windows sandbox, incorrect highlight rule removal arguments, and import fallbacks for the native hexcore extension.
@@ -789,13 +799,6 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
-
-- Harden test suite and integrate agent configurations (``)
-Harden the test suite by replacing dynamic oracles and mocks with deterministic, hand-written constants, exact-value assertions, and real async dispatch paths. This eliminates race conditions in memory map tests and ensures robust validation of signal propagation, undo/redo history states, and cryptographic digests.
-- **Agents & Hooks**: Introduce `.codex` agent configurations, skills, and lifecycle hooks.
-- **Test Suite**: Refactor tests across core, UI, and hexcore modules to use exact-value assertions and independent textbook oracles.
-- **Audit Remediation**: Update remediation markdown files and status JSONs to track compliance.
-- **Cleanup**: Remove obsolete extraction scripts and Frida findings.
 
 
 ### Documentation
