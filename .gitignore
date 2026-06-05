@@ -499,3 +499,6 @@ reports/tests/
 
 # Manual ad-hoc git worktrees parked under the repo root (never tracked)
 /worktrees/
+
+# Codex configuration and workspace (never tracked)
+.codex/

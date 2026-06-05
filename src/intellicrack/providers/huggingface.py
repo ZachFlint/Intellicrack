@@ -415,7 +415,7 @@ class HuggingFaceProvider(LLMProviderBase):
         seen_ids: set[str] = set()
 
         for raw in raw_models:
-            model_id = str(getattr(raw, "id", "") or "")
+            model_id = str(getattr(raw, "id", "") or "").strip()
             if not model_id or model_id in seen_ids:
                 continue
 

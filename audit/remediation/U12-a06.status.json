@@ -1,0 +1,75 @@
+{
+  "unitId": "U12-a06",
+  "findings": [
+    {
+      "ref": "tests/test_bridges/test_cutter.py:202 - test_instantiation",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real CutterBridge(): asserts name==ToolName.CUTTER, r2 is None, the static/decompile/patching capability surface is True, and every one of the 95 declared tool functions resolves to a callable bound method (resolved list == declared names) - breaks if a function ships without a backing method or the identity/capability wiring regresses."
+    },
+    {
+      "ref": "tests/test_bridges/test_cutter.py:309 - test_expected_function_count",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real tool_definition: asserts len(functions)==95 AND len(set(names))==95 AND count of names resolving to callable bound methods==95, tying the bare count to uniqueness and real method backing - a phantom/duplicate name or dropped method now breaks the gate."
+    },
+    {
+      "ref": "tests/test_bridges/test_cutter.py:450 - test_raises_when_rizin_not_available",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No mock: PATH is genuinely scrubbed of every dir holding a rizin/radare2 binary and tool_path points at a real empty dir, so the real is_available() finds no backend; asserts initialize raises ToolError matching 'cutter not available'."
+    },
+    {
+      "ref": "tests/test_bridges/test_cutter.py:461 - test_stores_tool_path_modifies_env",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No mock: calls real initialize(tool_path=<real dir>); asserts os.environ['PATH'].split(pathsep)[0] == str(tool_dir), gating the genuine env-prepend branch."
+    },
+    {
+      "ref": "tests/test_bridges/test_cutter.py:482 - test_prepends_tool_dir_to_path",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No mock: seeds PATH with a sentinel dir then real-initializes; asserts tool_dir is entries[0] AND the prior sentinel survives in entries[1:], proving prepend (not overwrite) semantics."
+    },
+    {
+      "ref": "tests/test_bridges/test_cutter.py:503 - test_does_not_duplicate_path_entry",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No mock: pre-seeds PATH with tool_dir then real-initializes; asserts entries.count(tool_dir_str) == 1, gating the real 'if tool_dir not in current_path' dedup branch."
+    },
+    {
+      "ref": "tests/test_bridges/test_cutter.py:531 - test_string_path_coerced_to_path",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real rizin loads real System32 kernel32.dll via str path; asserts BinaryInfo field-by-field against independent PE facts: name, size (asyncio.to_thread stat, computed in test), file_type=='pe32+', is_64bit is True, architecture=='x86', path is Path, and '.text'/'.rdata' sections present. Replaces 64-byte zero fake + shutil.which patch."
+    },
+    {
+      "ref": "tests/test_bridges/test_cutter.py:547 - test_path_object_accepted",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real rizin loads kernel32.dll via str and via Path on two bridges; asserts name/size/file_type/is_64bit/architecture/path are equal across both input forms, proving Path coercion is indistinguishable from the string path. Replaces fake binary + patch."
+    },
+    {
+      "ref": "tests/test_bridges/test_cutter.py:587 - test_string_hex_pattern",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real rizin /x search over a test-planted blob (3 copies of DEADBEEF at fixed offsets, 1 of CAFE1234); asserts marker hit count == independent _count_occurrences(blob, marker)==3 and unique hit count == _count_occurrences==1. Drives real search end to end instead of recording the command string."
+    },
+    {
+      "ref": "tests/test_bridges/test_cutter.py:604 - test_bytes_pattern",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real rizin search with raw bytes input over the same planted blob; asserts hit count == independent _count_occurrences==3, bytes-input count == equivalent str-input count, and an absent 6-byte pattern returns []. Gates the bytes.hex() encoding path against real results."
+    }
+  ],
+  "filesModified": ["tests/test_bridges/test_cutter.py"],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "86 passed in 8.56s"
+}

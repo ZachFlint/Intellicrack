@@ -1,0 +1,41 @@
+{
+  "unitId": "U26-a16",
+  "findings": [
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_display.py:42-69 - TestBridgeDisplayMode class tests",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real HexEditorBridge + independent HexDocumentState oracle and registered observer: set_display_mode round-trips through get_display_mode AND the separate state holder's get_display_mode() AND the observer's recorded DISPLAY_MODE_CHANGED payload, asserting the exact mode string; sequential modes assert each persists until the next change; invalid/empty modes assert pytest.raises(ValueError, match='unknown display mode') and that prior state is unmutated."
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_display.py:94-177 - TestBridgeHighlights tests",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real bridge add/list/remove: retrieved rule asserted equal to full dict {id, condition_type, condition_params, color} for byte_value and byte_range rules; state holder get_highlight_rules() and observer HIGHLIGHT_RULE_ADDED/REMOVED payloads compared verbatim; distinct rules assert 36-char 4-dash UUID ids and independent persistence; remove of unknown id asserts False and no emitted event."
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py:86-141 - TestApplyPipelineSingleStep tests",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real HexEditorBridge over the native intellicrack_hexcore backend on real on-disk binaries: every transform asserts exact bytes computed by an independent oracle (closed-form XOR/ROT/byte-reverse arithmetic, plus stdlib base64/binascii), e.g. XOR 0x10203040 with 0xAA == 'ba8a9aea'; subrange in-place leaves other bytes untouched (read_bytes verified); error paths assert json.JSONDecodeError and RuntimeError('no document open') and ValueError('in-place application requires equal length')."
+    },
+    {
+      "ref": "tests/test_providers/test_google_chat_live.py:52-179 - Live integration tests",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Live GoogleProvider.chat()/chat_stream() against gemini-flash-latest (stable alias; retired gemini-2.0-flash removed so a 404->ProviderError no longer false-reds) with a temperature-0 'reply with ready' prompt: asserts the reply/streamed text contains exactly 'ready', tool_calls is None, >=1 chunk streamed; usage asserts prompt_tokens>0, completion_tokens>0, total_tokens>=prompt+completion (thinking tokens included in total), and single-shot get_pending_usage() clear; only transient RateLimitError skips - AuthenticationError/ProviderError propagate and fail."
+    }
+  ],
+  "filesModified": [
+    "tests/test_providers/test_google_chat_live.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "36 passed in 4.90s"
+}

@@ -1,0 +1,36 @@
+{
+  "unitId": "U22-a01",
+  "findings": [
+    {
+      "ref": "tests/test_audit4/b4_memory_tab/test_realcov_14a_memory_tab.py:195 - test_region_map_populated_from_real_memory_map",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "test_region_map_rows_round_trip_real_memory_regions: one real ProcessBridge.get_memory_map(resolve_names=True) enumeration of this live process is captured ONCE and replayed via a _FrozenMemoryMapBridge so the oracle and the production _refresh_regions render the identical capture (deterministic; no race between two live enumerations). Rendered row count must equal the snapshot length, and indexed by base every rendered row's 0x{size:X}, protection, state, type, and module_name must match the real MemoryRegion field exactly; a swapped base/size, halved size, dropped module name, or hex-format regression goes red (verified: halving size in production made it fail). The rendering closure under test is never mocked."
+    },
+    {
+      "ref": "tests/test_audit4/b4_memory_tab/test_realcov_14a_memory_tab.py:222 - test_region_map_contains_real_module_region",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "test_region_map_pins_real_module_header_region: real ntdll.dll and kernel32.dll bases from an independent get_modules enumeration; the test asserts each module base appears verbatim as a region base, region type=='image', readable, names the real module, size>0 and <= image span, and the full [base,base+size) span is covered by contiguous image regions containing at least one executable (r-x) image region; an off-by-page base, halved size, dropped image flag, or lost execute bit goes red."
+    },
+    {
+      "ref": "tests/test_audit7/sandbox_manager/test_realcov_12a_manager_real.py:131 - test_available_types_are_a_subset_of_real_probes",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Paired oracle over the real, unmodified QEMUSandbox.is_available: test_absent_real_qemu_binary_excludes_qemu_from_reported_types injects _find_qemu->None (genuine no-binary host) and asserts qemu is omitted, cached False, and an independent direct probe agrees; test_present_real_qemu_binary_includes_qemu_in_reported_types injects _find_qemu->a real existing file and asserts qemu is included, cached True, with the direct probe agreeing. Flipping only the controlling input flips the reported membership, so fabricated availability that ignores the real probe goes red."
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit4/b4_memory_tab/test_realcov_14a_memory_tab.py",
+    "tests/test_audit7/sandbox_manager/test_realcov_12a_manager_real.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "11 passed, 3 skipped in 12.98s"
+}

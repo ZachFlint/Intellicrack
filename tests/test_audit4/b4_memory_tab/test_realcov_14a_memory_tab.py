@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING
 import pytest
 from PyQt6.QtWidgets import QApplication
 
+from intellicrack.bridges.process import ProcessBridge
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 from tests._helpers.realcov_process_panel import (
     RealProcessBridgeProbe,
@@ -35,6 +36,8 @@ from tests._helpers.realcov_process_panel import (
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+    from intellicrack.core.types import MemoryRegion
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -210,6 +213,58 @@ def _module_base(bridge: RealProcessBridgeProbe, module_name: str) -> tuple[int,
     pytest.fail(f"{module_name} not present in real module enumeration")
 
 
+class _FrozenMemoryMapBridge(ProcessBridge):
+    """Bridge that replays one real ``get_memory_map`` snapshot deterministically.
+
+    The snapshot is produced once by the real, unmodified
+    :meth:`ProcessBridge.get_memory_map` enumeration of this process's live
+    address space. Replaying that single frozen capture on every call pins the
+    oracle and the table-rendering path to the identical set of real
+    ``MemoryRegion`` records, removing the race in which the live address space
+    mutates between two independent enumerations. The operation under test (the
+    tab's region-rendering closure) is never mocked; only the source enumeration
+    is captured once instead of being re-read.
+    """
+
+    def __init__(self, snapshot: list[MemoryRegion]) -> None:
+        """Store the single real memory-map snapshot to replay.
+
+        Args:
+            snapshot: Real ``MemoryRegion`` records captured once from the live
+                process via the unmodified production enumeration.
+        """
+        super().__init__()
+        self._snapshot = snapshot
+
+    async def get_memory_map(self, *, resolve_names: bool = False) -> list[MemoryRegion]:
+        """Return the captured real snapshot verbatim.
+
+        Args:
+            resolve_names: Accepted for signature parity with the production
+                enumeration; the captured snapshot already carries resolved
+                module names, so the flag does not trigger a re-read.
+
+        Returns:
+            list[MemoryRegion]: The same real records every call, so the oracle
+            and the rendered table compare an identical capture.
+        """
+        del resolve_names
+        return list(self._snapshot)
+
+
+def _capture_real_memory_snapshot(real_bridge: RealProcessBridgeProbe) -> list[MemoryRegion]:
+    """Capture one real ``get_memory_map`` enumeration of this process.
+
+    Args:
+        real_bridge: Real bridge attached to this process.
+
+    Returns:
+        list[MemoryRegion]: A single real enumeration of the live address space,
+        with module names resolved.
+    """
+    return run_bridge_sync(real_bridge.get_memory_map(resolve_names=True))
+
+
 def _rendered_region_bases(tab: _MemoryTabProbe) -> dict[int, tuple[int, str, str, str | None]]:
     """Index the rendered region table by base address.
 
@@ -235,53 +290,66 @@ def _rendered_region_bases(tab: _MemoryTabProbe) -> dict[int, tuple[int, str, st
     return rendered
 
 
-def test_region_map_rows_round_trip_real_image_regions(
+def test_region_map_rows_round_trip_real_memory_regions(
     qapp: QApplication,
     real_bridge: RealProcessBridgeProbe,
-    tab: _MemoryTabProbe,
 ) -> None:
-    """Rendered image rows must exactly reproduce the real ``MemoryRegion`` records.
+    """Every rendered row must exactly reproduce one real ``MemoryRegion`` record.
 
-    An independent ``get_memory_map`` enumeration is the oracle. The comparison
-    is scoped to ``MEM_IMAGE`` regions (loaded DLL sections), which are mapped
-    copy-on-write and therefore stable across two near-instant reads, unlike
-    dynamic stack/heap regions that can resize between calls. Every rendered
-    image row's base, size, protection, state, type, and module name must match
-    the corresponding real field exactly, catching any swap, truncation, or
-    hex-formatting regression that a bare ``rows >= 1`` check would miss.
+    A single real ``get_memory_map`` enumeration of this process's live address
+    space is captured once and replayed deterministically as the oracle, so the
+    rendered table and the oracle compare the identical capture (no race between
+    two independent live enumerations). The rendered row count must equal the
+    snapshot length, and -- row for row -- every base, size, protection, state,
+    type, and module-name cell must match the corresponding real field exactly.
+    A swapped base/size pair, a halved size, a dropped module name, or a broken
+    hex format would fail this gate; a bare ``rows >= 1`` check would miss them.
 
     Args:
         qapp: Qt application driving the event loop.
-        real_bridge: Real bridge supplying the independent oracle enumeration.
-        tab: MemoryTab probe bound to the real bridge.
+        real_bridge: Real bridge supplying the captured real enumeration.
     """
-    oracle = run_bridge_sync(real_bridge.get_memory_map(resolve_names=True))
-    image_oracle = {region.base_address: region for region in oracle if region.type == "image"}
-    assert len(image_oracle) > 100, f"expected many real image regions in this process, got {len(image_oracle)}"
+    snapshot = _capture_real_memory_snapshot(real_bridge)
+    assert len(snapshot) > 100, f"expected many real committed regions in this process, got {len(snapshot)}"
+    image_count = sum(1 for region in snapshot if region.type == "image")
+    assert image_count > 0, "the real snapshot must include loaded image regions"
+
+    frozen_bridge = _FrozenMemoryMapBridge(snapshot)
+    tab = _MemoryTabProbe()
+    tab.set_bridge(frozen_bridge)
+    tab.set_attached_pid(os.getpid())
 
     tab.refresh_regions()
     populated = pump_until(qapp, lambda: tab.region_count() > 0)
-    assert populated, "region table never populated from real get_memory_map()"
+    assert populated, "region table never populated from the real get_memory_map snapshot"
 
     rows = tab.region_count()
-    assert tab.region_count_label() == f"{rows} regions"
+    assert rows == len(snapshot), f"rendered row count {rows} must equal real snapshot length {len(snapshot)}"
+    assert tab.region_count_label() == f"{len(snapshot)} regions"
 
-    matched = 0
+    rendered: dict[int, tuple[str, str, str, str, str]] = {}
     for row in range(rows):
         base_text = tab.region_cell(row, 0)
-        assert base_text is not None
-        region = image_oracle.get(int(base_text, 16))
-        if region is None:
-            continue
-        matched += 1
-        base = region.base_address
-        assert tab.region_cell(row, 1) == f"0x{region.size:X}", f"size mismatch at base 0x{base:X}"
-        assert tab.region_cell(row, 2) == region.protection, f"protection mismatch at base 0x{base:X}"
-        assert tab.region_cell(row, 3) == region.state, f"state mismatch at base 0x{base:X}"
-        assert tab.region_cell(row, 4) == region.type, f"type mismatch at base 0x{base:X}"
-        assert tab.region_cell(row, 5) == (region.module_name or ""), f"module mismatch at base 0x{base:X}"
+        assert base_text is not None, f"row {row} is missing its base-address cell"
+        rendered[int(base_text, 16)] = (
+            tab.region_cell(row, 1) or "",
+            tab.region_cell(row, 2) or "",
+            tab.region_cell(row, 3) or "",
+            tab.region_cell(row, 4) or "",
+            tab.region_cell(row, 5) or "",
+        )
 
-    assert matched >= len(image_oracle) - 8, f"only {matched}/{len(image_oracle)} real image regions matched in the rendered table"
+    assert len(rendered) == len(snapshot), "rendered bases must be unique and cover every snapshot region"
+
+    for region in snapshot:
+        base = region.base_address
+        assert base in rendered, f"snapshot region at base 0x{base:X} missing from rendered table"
+        size_cell, prot_cell, state_cell, type_cell, module_cell = rendered[base]
+        assert size_cell == f"0x{region.size:X}", f"size mismatch at base 0x{base:X}"
+        assert prot_cell == region.protection, f"protection mismatch at base 0x{base:X}"
+        assert state_cell == region.state, f"state mismatch at base 0x{base:X}"
+        assert type_cell == region.type, f"type mismatch at base 0x{base:X}"
+        assert module_cell == (region.module_name or ""), f"module mismatch at base 0x{base:X}"
 
 
 def test_region_map_pins_real_module_header_region(
@@ -295,8 +363,10 @@ def test_region_map_pins_real_module_header_region(
     ``get_modules`` enumeration must appear verbatim as a region base in the
     table; that region must be typed ``image``, name the real module, be
     readable, and the module's full ``[base, base + size)`` image span must be
-    covered by contiguous rendered image regions. A base off by a page, a
-    halved size, or a dropped image flag fails this gate.
+    covered by contiguous rendered image regions. Because these are loaded code
+    modules, the span must additionally contain at least one executable image
+    region (the ``.text`` section, rendered ``r-x``). A base off by a page, a
+    halved size, a dropped image flag, or a lost execute bit fails this gate.
 
     Args:
         qapp: Qt application driving the event loop.
@@ -321,12 +391,19 @@ def test_region_map_pins_real_module_header_region(
         assert size > 0, f"{module_name} header region size must be positive, got 0x{size:X}"
         assert size <= image_size, f"{module_name} header region size 0x{size:X} exceeds image span 0x{image_size:X}"
 
-        covered = base + size
         module_end = base + image_size
-        while covered < module_end and covered in rendered:
-            next_size, _, _, _ = rendered[covered]
-            covered += next_size
-        assert covered >= module_end, (
+        executable_image_seen = False
+        cursor = base
+        while cursor < module_end and cursor in rendered:
+            seg_size, seg_protection, seg_type, _ = rendered[cursor]
+            if seg_type == "image" and "x" in seg_protection:
+                executable_image_seen = True
+            cursor += seg_size
+        assert cursor >= module_end, (
             f"{module_name} image span [0x{base:X}, 0x{module_end:X}) not fully covered by contiguous regions; "
-            f"coverage stopped at 0x{covered:X}"
+            f"coverage stopped at 0x{cursor:X}"
+        )
+        assert executable_image_seen, (
+            f"{module_name} is a loaded code module but no executable image region was rendered within its span "
+            f"[0x{base:X}, 0x{module_end:X})"
         )
