@@ -1,0 +1,47 @@
+{
+  "unitId": "U24-a09",
+  "findings": [
+    {
+      "ref": "tests/test_providers/test_agentic_capabilities.py:324 - TestContextWindowEnforcement.pytestmark (RUF012)",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Module-level pytestmark moved to per-class ClassVar[list[pytest.MarkDecorator]] annotations; TestContextWindowEnforcement carries only [pytest.mark.integration], all async classes carry [pytest.mark.integration, pytest.mark.asyncio]; ruff check passes with zero RUF012 findings"
+    },
+    {
+      "ref": "tests/test_providers/test_agentic_capabilities.py:206 - test_google_tool_choice_auto",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real Google Gemini API with AUTO tool_choice; asserts response.role=='assistant' AND (len(content)>0 OR tool_calls is not None and len(tool_calls)>0); test passes when provider returns a tool call with empty content field"
+    },
+    {
+      "ref": "tests/test_providers/test_agentic_capabilities.py:155,208 - test_grok_tool_choice_required / test_openrouter_tool_choice_required",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real Grok/OpenRouter API with REQUIRED tool_choice; asserts len==1, isinstance(ToolCall), function_name=='binary.get_file_size', tool_name=='binary', len(id)>0, 'path' in arguments, isinstance(path,str), len(path)>0 - exact structure mirroring test_anthropic_tool_choice_required_forces_tool_call"
+    },
+    {
+      "ref": "tests/test_providers/test_agentic_capabilities.py:235,260 - test_huggingface_stream_captures_tool_calls / test_ollama_stream_with_tools_returns_tool_calls",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real HuggingFace/Ollama provider; when pending tool calls are captured, asserts function_name=='binary.get_file_size', tool_name=='binary', non-empty id, 'path' argument typed str and non-empty; when no tool call, asserts stream chunks are non-empty; skips when model not available or tool support not advertised"
+    },
+    {
+      "ref": "tests/test_providers/test_agentic_capabilities.py (ASYNCIO MARK WARNING) - TestContextWindowEnforcement sync tests",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Module-level pytestmark changed to [pytest.mark.integration] only; async classes each carry explicit ClassVar pytestmark with asyncio; sync TestContextWindowEnforcement class carries only integration mark; pytest run shows zero PytestWarning entries for non-async functions marked with asyncio"
+    }
+  ],
+  "filesModified": [
+    "tests/test_providers/test_agentic_capabilities.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "36 passed, 10 skipped in 15.34s"
+}
