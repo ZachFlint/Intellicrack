@@ -1,0 +1,49 @@
+{
+  "unitId": "U46-a08",
+  "findings": [
+    {
+      "ref": "tests/test_audit3/bridges/test_realcov_04_installer.py:143-180 - test_missing_executable_reports_failure",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real Cutter-shaped ZIP served by a loopback ThreadingHTTPServer; only the registry download_url value is patched (data, not method); full install_tool pipeline runs end-to-end; exact error string asserted: result.error == 'no expected executable found after install: Cutter'"
+    },
+    {
+      "ref": "tests/test_audit3/bridges/test_realcov_04_installer.py:182-230 - test_present_executable_passes_exe_search",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Same real-HTTP approach with a Cutter-shaped ZIP containing cutter.exe; exact error string asserted: result.error == 'post-install version verification failed: Cutter'; result.path and the extracted .exe file presence independently verified"
+    },
+    {
+      "ref": "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py:531-568 - test_f0014_message_waiter_does_not_capture_loop_at_construction",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Waiter constructed on loop A (immediately closed), loop B awaits; threading.Event barrier synchronizes delivery only after event._loop is confirmed bound to loop B; wait_for(timeout=5.0) raises TimeoutError if loop A binding retained; asserts released==True and event.is_set()"
+    },
+    {
+      "ref": "tests/test_providers/test_realcov_10_google_safety.py:76-81 - test_candidate_safety_finish_reason_raises",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "str(exc_info.value) == 'Response blocked by safety filters: SAFETY' (exact equality, not regex); companion negative assertion with SAFETY enum in non-inspected location (prompt_feedback, STOP candidate) confirms decision keyed on candidates[].finish_reason"
+    },
+    {
+      "ref": "tests/test_providers/test_realcov_10_google_safety.py:125-160 - test_cancel_during_stream_stops_without_error",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Three cases: (1) cancel on first chunk asserts flag True; (2) double-cancel + post-loop third cancel all no-op, flag stays True; (3) full exhaustion then cancel: usage.total_tokens > 0 before cancel, flag flips to True after—each path asserts exact state"
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit3/bridges/test_realcov_04_installer.py",
+    "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py",
+    "tests/test_providers/test_realcov_10_google_safety.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "39 passed, 4 skipped in 8.82s"
+}
