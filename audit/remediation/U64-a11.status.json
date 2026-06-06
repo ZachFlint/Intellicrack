@@ -1,0 +1,59 @@
+{
+  "unitId": "U64-a11",
+  "findings": [
+    {
+      "ref": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py:144-151 - TestRuntimeDependenciesAreLean.test_dev_tools_absent_from_runtime_deps",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "pyproject.toml [project].dependencies reduced from 113 packages to 15 genuine runtime imports (anthropic, capstone, cryptography, frida, google-genai, httpx, huggingface-hub, keyring, lief, openai, psutil, pyyaml, r2pipe, structlog, yara-python). The 22 dev-only packages (bandit, basedpyright, black, bumpversion, commitizen, flake8, isort, mkdocs-material, monkeytype, mypy, nox, pre-commit, pyannotate, pydoclint, pydocstyle, pylint, pytest, ruff, safety, sphinx, tox, twine) are absent from runtime deps and remain only in [project.optional-dependencies] extras. Both assertions pass: leaked & DEV_ONLY_PACKAGES == empty set, len(runtime) == 15 <= 25."
+    },
+    {
+      "ref": "tests/test_bridges/test_x64dbg.py:72-95 - test_bridge_initial_state through test_bridge_has_capabilities",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "test_bridge_initial_state: real X64DbgBridge instance; after initial-state assertions, verifies that attached_pid, binary_path, and is_64bit accept mutations and the mutations persist — removing any setter or attribute would go red. test_bridge_has_capabilities: added assertions that supported_architectures is a non-empty list with at least 2 entries, supported_formats is a non-empty list, and supports_static_analysis is False; deleting any of those capability entries from the bridge definition goes red."
+    },
+    {
+      "ref": "tests/test_credentials/test_oauth_manager_live.py:149-167 - test_singleton_thread_safety",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real OAuthManager singleton via 32-thread ThreadPoolExecutor; after identity check adds generate_pkce_pair() invocation asserting code_verifier len > 40, code_challenge len > 30, verifier != challenge, verify_pkce_pair() returns True for fresh pair, returns False for mutated verifier. A singleton with corrupt internal PKCE state would fail the functional assertions even if identity is preserved."
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_copy_as.py:61-83 - TestBridgeCopyAs format tests",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Known input b'\\xde\\xad\\xbe\\xef' written to real temp file, opened in real HexEditorBridge, selected. c_array: parses comma-delimited hex tokens, decodes via int(t,16), asserts bytes == b'\\xde\\xad\\xbe\\xef'. rust_array: same decode. go_slice: same decode after stripping '[]byte{' prefix. python: asserts \\xde/\\xad/\\xbe/\\xef appear in inner escape sequence. markdown_table: asserts all four hex values DE/AD/BE/EF appear across data rows. Corrupting the encoding of any byte would go red."
+    },
+    {
+      "ref": "tests/test_providers/test_google_provider.py:44-59 - TestGoogleModelListing.test_list_models_returns_non_empty_list",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Live Google API; after len > 0 check, filters for models with 'gemini' in id.lower(), asserts at least one Gemini model exists, then asserts first_gemini.id is non-empty str, first_gemini.provider == GOOGLE, first_gemini.context_window > 0. An API regression returning zero Gemini models or wrong provider would go red."
+    },
+    {
+      "ref": "tests/test_providers/test_provider_bugfixes.py:45-49 - TestAsyncCacheDiscovery.test_init_model_discovery_is_coroutine",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real ProviderRegistry(credential_loader=None) + real Config(data_directory=tmp_path); asyncio.run() awaits init_model_discovery; asserts result is 2-tuple, result[0] is ModelDiscovery instance, result[1] is Path with parent==tmp_path and name=='model_discovery_cache.json'. A broken implementation raising on await, returning wrong types, or using wrong cache path would go red."
+    }
+  ],
+  "filesModified": [
+    "pyproject.toml",
+    "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py",
+    "tests/test_bridges/test_x64dbg.py",
+    "tests/test_credentials/test_oauth_manager_live.py",
+    "tests/test_hexcore_e2e/test_bridge_copy_as.py",
+    "tests/test_providers/test_google_provider.py",
+    "tests/test_providers/test_provider_bugfixes.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "80 passed in 13.98s"
+}

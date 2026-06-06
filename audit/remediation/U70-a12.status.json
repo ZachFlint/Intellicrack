@@ -1,0 +1,44 @@
+{
+  "unitId": "U70-a12",
+  "findings": [
+    {
+      "ref": "tests/test_bridges/test_win32_types.py:200-211 - test_value_matches_expected_bit_pattern",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "64-bit Windows: assert INVALID_HANDLE_VALUE == 0xFFFFFFFFFFFFFFFF using ctypes.sizeof(c_void_p)==8 as independent oracle; does NOT use wintypes.HANDLE(-1).value (the same mechanism as production)"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_yara_deep.py:303-312 - test_nonexistent_yar_file_raises_or_returns_error",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "yara.compile() raises yara.Error (errno 2) for missing file; test asserts isinstance(exc, _YARA_ERROR_CLASS) and '2' or 'No such file' in str(exc), rejecting silent-swallow or wrong exception type"
+    },
+    {
+      "ref": "tests/test_providers/test_http_status_helper.py:62-71 - test_returns_none_for_unmatched_status",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "parametrized over [0,200,301,302,400,404,500,502,504]; each asserts result is None exactly, so any future raise for unrecognised codes is caught immediately"
+    },
+    {
+      "ref": "tests/test_ui/test_realcov_15_resource_url_dispatch.py:119-143 - test_resource_button_click_routes_real_url_through_qt",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "for each button: assert btn.isEnabled() and btn.text()==label before click; assert len(buttons)==len(expected); assert routed_url==expected[label] after Qt dispatch; any button removal, label change, or disable detected"
+    }
+  ],
+  "filesModified": [
+    "tests/test_bridges/test_win32_types.py",
+    "tests/test_hexcore_e2e/test_bridge_yara_deep.py",
+    "tests/test_providers/test_http_status_helper.py",
+    "tests/test_ui/test_realcov_15_resource_url_dispatch.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "117 passed in 8.73s"
+}
