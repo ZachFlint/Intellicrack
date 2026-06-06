@@ -1,0 +1,44 @@
+{
+  "unitId": "U68-a08",
+  "findings": [
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_pe_checksum.py:92-99 - test_no_document_raises",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real HexEditorBridge with no document opened; bridge.document is None + bridge.state.binary_loaded is False + bridge.state.target_path is None asserted before the call, RuntimeError matching 'no document open' asserted on call, and same three state fields re-asserted after - proving the guard fired for the correct reason and left no partial state."
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_realcov_09b_stdlib_realbin.py:320-326 - test_parse_int_invalid_raises_runtime_error",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real BuiltinFunctions backed by DataReader.from_bytes(bytes(4)); pytest.raises(HexPatRuntimeError, match=r\"cannot parse 'not-an-int' as base-10 integer\") asserts the exact error text, and isinstance(exc_info.value.__cause__, ValueError) proves the original parse exception was chained rather than a different code path firing."
+    },
+    {
+      "ref": "tests/test_providers/test_openai_provider.py:250-272 - test_disconnect_clears_connection_state",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Live OpenAI connect (real /models round-trip); after disconnect: provider.client is None asserts client teardown beyond a flag toggle, and a subsequent list_models() call asserts ProviderError with exact 'Not connected to OpenAI API' message - proving the not-connected guard sees a genuinely torn-down client."
+    },
+    {
+      "ref": "tests/test_providers/test_safe_parse_stream_json.py:145-153 - test_parse_non_object_values_return_none",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real structlog BoundLogger with isolated stdlib handler; after all six non-object payloads (int, list, str, null, bool x2) each return None, _read_events(stream) == [] proves silence; a control call with '{not json' on the same logger then asserts exactly one warning event, making the empty-events assertion non-vacuous."
+    }
+  ],
+  "filesModified": [
+    "tests/test_hexcore_e2e/test_bridge_pe_checksum.py",
+    "tests/test_hexcore_e2e/test_realcov_09b_stdlib_realbin.py",
+    "tests/test_providers/test_openai_provider.py",
+    "tests/test_providers/test_safe_parse_stream_json.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "62 passed in 16.77s"
+}
