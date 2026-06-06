@@ -1,0 +1,44 @@
+{
+  "unitId": "U51-a19",
+  "findings": [
+    {
+      "ref": "file-level - tests/test_ui/log_viewer/test_handler.py (7 tests)",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real QtSignalingHandler driven with real structlog emissions; exact field-by-field assertions on record dict (event, level, logger, module, function, line_number, extras); reentrancy guard, cross-thread, pause, and emit-failure paths covered; qtbot.waitSignal synchronization eliminates race conditions"
+    },
+    {
+      "ref": "file-level - tests/test_ui/log_viewer/test_tail_reader.py (6 tests)",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real LogFileTailReader over real on-disk JSON-Lines files; flush()+os.fsync() before every read; qtbot.waitSignal/waitUntil synchronization; rotation (truncation), corrupt/blank lines, missing file, live-append, and max-bytes-cap cases all asserted with exact event sequences"
+    },
+    {
+      "ref": "file-level - tests/test_ui/test_app_embedded_tools.py (class-based tests)",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real MainWindow constructed; menu actions triggered via .trigger() and processEvents(); exact dialog text asserted (No Binary Loaded, action word, Ghidra Error); enabled/disabled state change verified before/after real _load_binary on a structurally valid PE; hex editor document.length() == stat().st_size (independent oracle)"
+    },
+    {
+      "ref": "57-112 - TestRunBridgeCoroutineBlocking (multiple tests)",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real persistent background event loop; thread identity oracle proves coroutine runs off caller; long-running sleep (0.4s) blocks caller for full duration; three-level exception chain propagates exact ValueError message; CancelledError from child task cancellation surfaces with cleaned_up event set; dict result asserted key-by-key"
+    }
+  ],
+  "filesModified": [
+    "tests/test_ui/log_viewer/test_handler.py",
+    "tests/test_ui/log_viewer/test_tail_reader.py",
+    "tests/test_ui/test_app_embedded_tools.py",
+    "tests/test_ui/test_async_bridge.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "39 passed in 87.93s"
+}

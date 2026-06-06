@@ -1,0 +1,48 @@
+{
+  "unitId": "U60-a07",
+  "findings": [
+    {
+      "ref": "tests/test_providers/test_huggingface_provider.py:48-63 - TestHuggingFaceModelListing.test_list_models_returns_non_empty_list",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Replaced with test_list_models_returns_fully_valid_model_records: iterates ALL returned ModelInfo records (not sampled), asserts each has non-whitespace id/name, provider==HUGGINGFACE, context_window>0, bool capability flags, supports_streaming==True, and that all ids are unique; a parser returning [None,None] or duplicates now fails."
+    },
+    {
+      "ref": "tests/test_providers/test_huggingface_provider.py:106-107 - TestHuggingFaceModelListing.test_model_info_has_valid_id",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced with test_all_model_ids_match_hub_naming_and_derive_name: iterates entire list (no 20-item prefix), asserts each id has no spaces, at most one '/', no surrounding whitespace, and that model.name equals the independently-derived tail of the id (rsplit('/',1)[-1]); a corrupted id or wrong name derivation in any record fails."
+    },
+    {
+      "ref": "tests/test_ui/test_splash_screen.py:313-319 - TestProgressSignal.test_progress_signal_emits",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced with test_progress_signal_delivers_args_to_connected_slot: connects a real recorder slot via Qt connect(), emits (50,'Loading tools...'), asserts received==[(50,'Loading tools...')] AND splash.progress==50 AND splash.status=='Loading tools...'; broken signal connection or broken _on_progress_updated slot both fail."
+    },
+    {
+      "ref": "tests/test_ui/test_splash_screen.py:378-388 - TestSplashPixmapLoading.test_load_splash_pixmap_returns_qpixmap",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced with test_load_splash_pixmap_loads_real_asset_at_expected_scaled_size: independently loads splash.png directly via QPixmap and applies KeepAspectRatio scaling to derive expected dimensions, then asserts the production method returns a non-null pixmap with matching width and height; fallback pixmap or mis-scaled output fails."
+    },
+    {
+      "ref": "tests/test_ui/test_splash_screen.py:506-516 - TestSplashScreenIntegration.test_splash_screen_no_exceptions_on_operations",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced with test_splash_operations_drive_correct_state_transitions: removes try/except entirely; after show() asserts isVisible()==True, after each set_progress asserts exact progress int, exact status string, and progress_animation.endValue() matches the set value, after hide() asserts isVisible()==False; silently broken operations now fail on state assertions."
+    }
+  ],
+  "filesModified": [
+    "tests/test_providers/test_huggingface_provider.py",
+    "tests/test_ui/test_splash_screen.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "96 passed, 13 skipped in 21.16s"
+}

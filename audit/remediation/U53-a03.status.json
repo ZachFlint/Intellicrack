@@ -1,0 +1,60 @@
+{
+  "unitId": "U53-a03",
+  "findings": [
+    {
+      "ref": "tests/test_bridges/test_x64dbg_audit6.py:474 - test_constant_not_exposed",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "On Windows, intercepts kernel32.OpenProcess via setattr spy, calls _get_cached_process_handle(WIN_PROCESS_VM_READ) on a bridge attached to os.getpid(), asserts every recorded bInheritHandle is exactly False; gates break if the inline is changed back to a truthy constant"
+    },
+    {
+      "ref": "tests/test_bridges/test_x64dbg_audit6.py:480 - test_source_inlines_false_for_inherit_handle",
+      "severity": "Low",
+      "status": "DELETED",
+      "oracle": "Source-text regex check provides no behavioral gate; the real gate is test_open_process_called_with_inherit_handle_false which verifies the runtime argument, not a string search"
+    },
+    {
+      "ref": "tests/test_bridges/test_x64dbg_audit6.py:592 - test_return_annotation_is_processinfo",
+      "severity": "Low",
+      "status": "DELETED",
+      "oracle": "Type annotation check via inspect.signature is tautological and does not gate runtime behavior; test_raises_when_not_attached already covers the behavioral contract"
+    },
+    {
+      "ref": "tests/test_bridges/test_x64dbg_audit6.py:808 - test_constant_has_expected_entries",
+      "severity": "Low",
+      "status": "DELETED",
+      "oracle": "Static constant membership check is already covered by test_unknown_check_recorded_as_error and test_mixed_known_and_unknown_partial_success which exercise the actual rejection dispatch logic"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_va_mapping.py:79 - test_set_va_base_returns_true",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "After set_va_base(0, 0x400000, 0x200) returns True, asserts list_va_mappings() contains exactly {file_offset:0, virtual_address:0x400000, length:0x200}; gates break if set_va_base returns True without persisting the mapping"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_va_mapping.py:162 - test_auto_detect_pe_va_mappings",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "PE fixture has PE_FULL_IMAGE_BASE=0x400000 with .text at VirtualAddress=0x1000 and .data at 0x2000; asserts exactly 3 mappings with VAs {0x400000, 0x401000, 0x402000} and file_offsets {0, 0x200, 0x400} independently derived from conftest constants"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_va_mapping.py:175 - test_auto_detect_elf_va_mappings",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "ELF fixture has PT_LOAD1 p_vaddr=0x400000/p_offset=0x1000/p_filesz=0x200 and PT_LOAD2 p_vaddr=0x401000/p_offset=0x2000/p_filesz=0x100; asserts both VA and offset values exactly, gates break if VA calculation is wrong or reversed"
+    }
+  ],
+  "filesModified": [
+    "tests/test_bridges/test_x64dbg_audit6.py",
+    "tests/test_hexcore_e2e/test_bridge_va_mapping.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "101 passed in 8.32s"
+}
