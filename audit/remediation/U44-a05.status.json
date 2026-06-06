@@ -40,5 +40,5 @@
     "pydocstyle": true,
     "pytest": true
   },
-  "pytestSummary": "61 passed, 4 skipped in 1.94s"
+  "pytestSummary": "61 passed, 4 skipped in 1.36s"
 }

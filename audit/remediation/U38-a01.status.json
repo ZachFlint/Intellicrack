@@ -17,7 +17,7 @@
       "ref": "tests/test_audit5/u7_ui_providerconfig/test_provider_specific_ui.py:159 - test_resource_button_invokes_qdesktopservices",
       "severity": "Medium",
       "status": "FIXED",
-      "oracle": "Real ProviderSettingsWidget; clicks each genuine Resources QPushButton driving its real clicked->_open_resource_url connection; asserts call_count==1 per button and called QUrl.toString()==the per-label URL from the _PROVIDER_RESOURCE_LINKS table (independent source of truth). Paired failure test asserts openUrl==False surfaces show_warning(widget,'Open Link Failed', f'Could not open {label} ({url}).'). Also removed prohibited # noqa: ARG001 directives."
+      "oracle": "Real ProviderSettingsWidget; clicks each genuine Resources QPushButton driving its real clicked->_open_resource_url connection; asserts call_count==1 per button and called QUrl.toString()==the per-label URL from the _PROVIDER_RESOURCE_LINKS table (independent source of truth). Paired failure test asserts openUrl==False surfaces show_warning(widget,'Open Link Failed', f'Could not open {label} ({url}).')."
     },
     {
       "ref": "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py:217 - test_toggling_on_starts_timer_and_increments_call_count",
@@ -46,5 +46,5 @@
     "pydocstyle": true,
     "pytest": true
   },
-  "pytestSummary": "37 passed in 33.30s"
+  "pytestSummary": "37 passed in 33.22s"
 }
