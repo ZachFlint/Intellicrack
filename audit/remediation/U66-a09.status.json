@@ -1,0 +1,78 @@
+{
+  "unitId": "U66-a09",
+  "findings": [
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_document_info.py:49 - test_no_document_file_path_is_none",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real HexEditorBridge with no open file; asserts exact 5-key dict {file_path:None,size:0,modified:False,cursor:0,selection:None} in test_no_document_full_state_is_empty_and_consistent"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_document_info.py:58 - test_no_document_size_is_zero",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Folded into test_no_document_full_state_is_empty_and_consistent; all five fields asserted as single dict equality against independent known-empty contract"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_document_info.py:67 - test_no_document_modified_is_false",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Folded into test_no_document_full_state_is_empty_and_consistent; complete state verified atomically, not field-by-field"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_document_info.py:76 - test_no_document_cursor_is_zero",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Folded into test_no_document_full_state_is_empty_and_consistent; also test_no_document_state_stable_across_repeated_calls verifies determinism across two calls"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_document_info.py:85 - test_no_document_selection_is_none",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Folded into test_no_document_full_state_is_empty_and_consistent; plus test_open_missing_file_raises_oserror_and_state_stays_empty verifies OSError + state invariant"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_encodings.py:27 - test_decode_utf8_hello_world",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real HexDocument.open_bytes with bytes([0x63,0x61,0x66,0xC3,0xA9]); UTF-8 oracle=cafe accent, Latin-1 oracle=per-byte chr(); also test_decode_invalid_utf8_uses_replacement_characters drives bytes([0x80,0xFF,0x41]) against U+FFFD oracle"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_encodings.py:40 - test_decode_ascii_text",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real HexDocument.open_bytes(bytes([0x41,0xE9,0xFF,0x80,0x7A])); oracle is chr(b & 0x7F) arithmetic giving 'Ai\\x7f\\x00z'; high-bit masking confirmed by independent bitwise computation"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_encodings.py:53 - test_decode_latin1_text",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real HexDocument.open_bytes(bytes(range(0x80,0x100))); C1 range oracle from WHATWG windows-1252 published table (e.g. 0x80->0x20AC); 0xA0-0xFF identity oracle; wrong table causes wrong codepoints"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_encodings.py:66 - test_decode_at_non_zero_offset",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real HexDocument with b'HEAD'+gaps+b'MIDDLE'+gaps+b'TAILEND'; asserts exact token at three computed offsets, zero-span returns empty, out-of-range returns empty"
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_encodings.py:80 - test_decode_returns_string",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Merged into substantive encode/decode tests; TestEncodeText verifies exact byte sequences against Python codec oracle; TestEncodingRoundtrips parametrizes utf-8/ascii/latin-1/utf-16le/utf-16be with python codec as independent oracle"
+    }
+  ],
+  "filesModified": [
+    "tests/test_hexcore_e2e/test_bridge_document_info.py",
+    "tests/test_hexcore_e2e/test_encodings.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "35 passed in 2.10s"
+}

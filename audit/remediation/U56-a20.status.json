@@ -1,0 +1,42 @@
+{
+  "unitId": "U56-a20",
+  "findings": [
+    {
+      "ref": "tests/test_audit7/sandbox_windows/test_launch_failure_detection.py:23 - _detect_returns_rpc",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "No-op: audit confirmed this is a helper function, not a test function; the tests consuming it make real assertions. No code change required."
+    },
+    {
+      "ref": "tests/test_bridges/test_hex_editor_top_audit1.py:192 - _PatchesOnlyDoc",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "No-op: audit confirmed this is a helper class, not a test class; tests using it (test_oversized_offset_for_ips_raises etc.) assert OverflowError with exact messages. No code change required."
+    },
+    {
+      "ref": "tests/test_ui/test_state_persistence.py:142 - test_restore_tab_state_tab_openers_keys",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Passes registered_keys=['Hex Editor','Frida','Ghidra','Cutter','Process','Sandbox','Analysis','Scripts','Stack'] in tab_names; asserts find_tab_by_title(key) >= 0 and tabText(idx) == key for each key; asserts tab_widget.count() >= 9. Removing any tab opener or changing a tab title causes the idx >= 0 or tabText equality assertion to fail."
+    },
+    {
+      "ref": "tests/test_ui/test_theme_manager.py:193 - test_apply_invalid_theme_uses_default",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Connects theme_changed signal before calling apply_theme('invalid_theme_name'); asserts result is True, current_theme == DEFAULT_THEME, received == [DEFAULT_THEME], and QApplication.instance().styleSheet() == get_stylesheet(DEFAULT_THEME). Breaking the fallback logic causes signal or stylesheet assertion to fail."
+    }
+  ],
+  "filesModified": [
+    "tests/test_ui/test_state_persistence.py",
+    "tests/test_ui/test_theme_manager.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "128 passed in 7.43s"
+}

@@ -1,0 +1,63 @@
+{
+  "unitId": "U45-a08",
+  "findings": [
+    {
+      "ref": "tests/test_openai_provider.py:221-227 - test_connection_with_invalid_key_raises_error",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real OpenAIProvider.connect against live api.openai.com/models with a bogus sk- key; oracle = OpenAI's HTTP 401; asserts message startswith 'Invalid OpenAI API key:', chained __cause__ is openai.AuthenticationError with status_code==401, and provider left is_connected False with client None."
+    },
+    {
+      "ref": "tests/test_openai_provider.py:231-237 - test_connection_with_empty_key_raises_error",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real OpenAIProvider.connect with ProviderCredentials(api_key=''); oracle = production constant 'OpenAI API key is required'; asserts exact message equality plus provider.client is None and is_connected False, proving the local guard ran before any network call (companion None-key boundary test added)."
+    },
+    {
+      "ref": "tests/test_openai_provider.py:241-246 - test_list_models_without_connection_raises_error",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Fresh OpenAIProvider; asserts is_connected False and client None first, then list_models raises ProviderError with exact 'Not connected to OpenAI API' message and the flag stays False, proving the not-connected guard fired."
+    },
+    {
+      "ref": "tests/test_providers/test_openai_provider.py:250-272 - test_disconnect_clears_connection_state",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real connect with configured key (live /models round-trip) then disconnect; asserts provider.client becomes None and a subsequent list_models raises ProviderError 'Not connected to OpenAI API', proving real teardown not just a flag flip."
+    },
+    {
+      "ref": "tests/test_core/test_session_audit6.py:89-130 - test_auto_save_loop_survives_exception_and_resumes",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No monkeypatch: a second sqlite3 connection holds BEGIN EXCLUSIVE so real store.save raises OperationalError 'database is locked'; after releasing the lock, condition-polls manager.get until the sentinel tag persists and asserts is_auto_saving stays True; deleting the loop's broad guard kills the task so sentinel never persists -> RED."
+    },
+    {
+      "ref": "tests/test_core/test_session_audit6.py:383-425 - test_concurrent_updates_serialise_and_complete",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Eight distinct sessions with unique tags+tool states updated concurrently via asyncio.gather against a real instrumented SessionStore; asserts max_concurrent_saves==1 AND reloads each from SQLite asserting id/name/tags/tool_state.connected/process_attached/target_path field-by-field, catching partial or corrupt writes."
+    },
+    {
+      "ref": "tests/test_core/test_session_audit6.py:142-145/205-209 - test_session_has_set_tool_state + test_session_has_add_tag",
+      "severity": "Low",
+      "status": "DELETED",
+      "oracle": "Both hasattr smoke tests deleted (consolidated): replaced by existing real round-trip gates test_set_tool_state_round_trips_through_store, test_set_tool_state_overwrites_previous_entry, test_add_tag_round_trip_through_store, and test_remove_tag_persists which call the writers and assert SQLite save/load values."
+    },
+    {
+      "ref": "tests/test_core/test_session_audit6.py:328-334 - test_hex_document_full_protocol_body_is_declarative",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "AST declarative-body check retained but paired with real runtime contract tests: a live intellicrack_hexcore.HexDocument-backed adapter must satisfy runtime_checkable HexDocumentFull, a read-only doc must NOT, and TemplateManager.bootstrap_builtins (typed HexDocumentFull) drives the real document end-to-end asserting exported JSON equals the document's own export_template_json."
+    }
+  ],
+  "filesModified": [],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "30 passed in 24.78s"
+}

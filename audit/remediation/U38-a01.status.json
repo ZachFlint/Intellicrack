@@ -1,0 +1,50 @@
+{
+  "unitId": "U38-a01",
+  "findings": [
+    {
+      "ref": "tests/test_audit4/b2_process_tab/test_process_tab.py:207 - test_inject_warns_when_no_process_attached",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real ProcessTab with bridge set, no _attached_pid; asserts exactly one QMessageBox.warning with title=='Not Attached' and message=='No process is currently attached. Attach to a process before injecting a DLL.' (verbatim from process_tab.py:609-611), and that run_bridge_coroutine_logged was never dispatched and getOpenFileName never opened, proving the early guard fired."
+    },
+    {
+      "ref": "tests/test_audit4/b2_process_tab/test_process_tab.py:228 - test_inject_does_not_warn_when_attached",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real ProcessTab with _attached_pid=1234; asserts getOpenFileName WAS invoked (guard fell through), 'Not Attached' never appears in warning titles, and an empty file selection aborts before any bridge dispatch."
+    },
+    {
+      "ref": "tests/test_audit5/u7_ui_providerconfig/test_provider_specific_ui.py:159 - test_resource_button_invokes_qdesktopservices",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real ProviderSettingsWidget; clicks each genuine Resources QPushButton driving its real clicked->_open_resource_url connection; asserts call_count==1 per button and called QUrl.toString()==the per-label URL from the _PROVIDER_RESOURCE_LINKS table (independent source of truth). Paired failure test asserts openUrl==False surfaces show_warning(widget,'Open Link Failed', f'Could not open {label} ({url}).'). Also removed prohibited # noqa: ARG001 directives."
+    },
+    {
+      "ref": "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py:217 - test_toggling_on_starts_timer_and_increments_call_count",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real ThreadsTab with QTimer; over a 9800 ms window records perf_counter stamps on each bridge dispatch and asserts the median inter-call gap is within [2400,3700] ms around the nominal 3000 ms (threads_tab.py:43,431). A 1 ms regression median lands near 0 ms and fails; companion test_uses_3000ms_interval asserts timer.interval()==3000 directly."
+    },
+    {
+      "ref": "tests/test_ui/log_viewer/test_realcov_15_tail_reader_real_logs.py:52 - test_reader_parses_real_structlog_records",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real structlog events emitted through production setup_logging; LogFileTailReader parses the on-disk JSON-Lines; asserts exact event names, level=='INFO'/'WARNING' upper-cased, logger=='intellicrack.intellicrack.tests.tail_real', module/function==this call site, strptime-parseable timestamp in documented '%Y-%m-%d %H:%M:%S' format with sane Y/M/D, line_number>0, and extras=={'widget':'hex','count':7} / {'origin':'worker'} exactly."
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit4/b2_process_tab/test_process_tab.py",
+    "tests/test_audit5/u7_ui_providerconfig/test_provider_specific_ui.py",
+    "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py",
+    "tests/test_ui/log_viewer/test_realcov_15_tail_reader_real_logs.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "37 passed in 33.30s"
+}

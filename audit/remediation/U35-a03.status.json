@@ -1,0 +1,339 @@
+{
+  "unitId": "U35-a03",
+  "findings": [
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:97 - test_symbol_info_full",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "dataclasses.fields(SymbolInfo) asserts exact field set {name,address,module_name,file_name,line_number}; construction + exact equality on each field + None optionals; would fail if any field renamed/removed"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:113 - test_symbol_info_none_optionals",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Constructs SymbolInfo with None for all three optional fields independently; cross-checks a second instance with module_name populated; TypeError if optional→required change"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:127 - test_crash_info_construction",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "dataclasses.fields(CrashInfo) asserts exact field set {pid,process_name,summary,report,parameters,timestamp}; exact equality on all six fields including dict value"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:145 - test_child_process_info_full",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "dataclasses.fields(ChildProcessInfo) asserts exact field set {pid,parent_pid,origin,identifier,path,argv}; exact equality on all fields including argv list"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:163 - test_child_process_info_none_optionals",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Constructs ChildProcessInfo with None for identifier and path; second instance with identifier set verifies independence; TypeError if field becomes non-optional"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:178 - test_stalker_event_call",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "dataclasses.fields(StalkerEvent) asserts exact field set {event_type,from_address,to_address,depth}; exact equality on all four fields; asserts to_address != from_address"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:192 - test_stalker_event_exec_no_destination",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Constructs exec event with to_address=None; second instance asserts to_address is not None; TypeError if to_address made non-optional"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:203 - test_stalker_trace_with_events",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Constructs StalkerTrace with two real StalkerEvent objects; asserts thread_id, len(events)==2, event_count==2, duration_ms==_DURATION; events[0].event_type=='call', events[1].event_type=='ret'"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:221 - test_stalker_trace_empty",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Constructs empty StalkerTrace; asserts events==[], event_count==0, not duration_ms, thread_id==0"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:228 - test_frida_device_info",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "dataclasses.fields(FridaDeviceInfo) asserts exact field set {id,name,device_type}; two instances with different device_type verify independence"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:236 - test_api_resolver_match",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "dataclasses.fields(ApiResolverMatch) asserts exact field set {name,address}; isinstance(address, int); two instances assert different name and address"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:243 - test_tool_definition_returns_frida_tool",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Asserts tool_name==ToolName.FRIDA, tool_name.value=='frida', description is truthy and contains 'frida'"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:250 - test_all_function_names_have_methods",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "For each tool function: hasattr, callable, inspect.iscoroutinefunction, required param count in signature matches required params in tool definition"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:262 - test_function_count_minimum",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "test_function_count_exact: asserts len(defn.functions)==94 exactly; adding or removing any function fails this test"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:269 - test_no_duplicate_function_names",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Asserts no duplicates (len==len(set)) AND every name starts with 'frida.' prefix"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:278 - test_new_functions_present",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "For each of 18 expected new functions: name in definition AND method is callable AND inspect.iscoroutinefunction"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:308 - test_fixed_functions_present",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "enumerate_imports/allocate_memory/get_memory_regions in names; get_memory_ranges not in names; each method callable and async"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:441 - test_enumerate_processes",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; asserts len>0, all pid>0, all name non-empty, no duplicate PIDs, current os.getpid() in results"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:455 - test_enumerate_devices",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; asserts len>=1, all id/name non-empty, device_type in known set, at least one 'local' device"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:473 - test_connect_device_local",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; isinstance(result, FridaDeviceInfo), device_type=='local', id and name non-empty"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:485 - test_enumerate_threads",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; len>=2, all tid>0, all state in known set, all TIDs unique"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:502 - test_enumerate_imports_kernel32",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; len>=10, all function non-empty, resolved_count>=10, NtCreateFile or RtlInitUnicodeString in seen_functions"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:524 - test_find_base_address_ntdll",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; result>=0x70000000, result%0x10000==0, two calls return same value (determinism)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:537 - test_find_base_address_kernel32",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; k32_base>=0x70000000, k32_base%0x10000==0, k32_base!=ntdll_base"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:552 - test_get_memory_regions",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; len>=20, all base_address>=0, all size>0, at least one region with 'x' in protection, at least one with 'r'"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:576 - test_resolve_api_createfile",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; len>=1, found a match with 'CreateFileW' in name, address>0, address>=0x70000000"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:593 - test_resolve_symbol",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; result.address==func_addr (independently known via resolve_api), 'NtCreateFile' in name, module_name contains 'ntdll'"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:613 - test_find_functions_named",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; len>=1, sym.address>=0x70000000, 'NtCreateFile' in sym.name"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:627 - test_allocate_memory",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; addr>0x10000; write probe bytes then read back; readback==probe proves memory is writable"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:642 - test_protect_memory",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "No try/except; result is True; write sentinel then read back; proves memory is usable after rwx protect"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:654 - test_read_write_memory_roundtrip",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "write [0x41,0x42,0x43,0x44], read back, assert readback==test_bytes and byte-by-byte equality via zip(strict=True)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:670 - test_hook_and_remove",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "hook.id non-empty, hook.active==True, hook.target=='kernel32.dll!GetTickCount', remove_hook returns True"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:685 - test_stalker_follow_and_unfollow",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "trace_id non-empty; trace.thread_id==worker_thread; event_count>0; len(events)==event_count; events[0].event_type=='call'; events[0].from_address>0"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:716 - test_child_gating_not_supported_on_windows",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "pytest.raises(ToolError) - no broad exception handler; if Frida adds Windows child-gating this would go red"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:727 - test_get_pending_children_empty",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "isinstance(children, list); not children - both would fail if method returned non-empty or non-list"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:738 - test_crash_reporting_lifecycle",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "enable_crash_reporting twice (idempotent); isinstance(crashes, list); not crashes - fails if crashes returned non-empty"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:753 - test_enumerate_processes_contains_notepad",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "notepad_process.pid in pids; finds entry with that pid and asserts 'notepad' in name.lower()"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:97 - test_symbol_info_full",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "dataclasses.fields(SymbolInfo) asserts exact field set; exact equality on all five fields (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:113 - test_symbol_info_none_optionals",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "None for all three optional fields; second instance with module_name set; cross-check independence (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:127 - test_crash_info_construction",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Exact field set check + all six field values exact equality (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:145 - test_child_process_info_full",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Exact field set check + all six field values exact equality (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:163 - test_child_process_info_none_optionals",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "None for identifier and path; second instance cross-check (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:178 - test_stalker_event_call",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Exact field set check + all four field values (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:192 - test_stalker_event_exec_no_destination",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "to_address=None + second instance with non-None to_address (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:203 - test_stalker_trace_with_events",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "events[0].event_type=='call', events[1].event_type=='ret', event_count==2 (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:221 - test_stalker_trace_empty",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "events==[], event_count==0, not duration_ms, thread_id==0 (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:228 - test_frida_device_info",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Exact field set check + two instances with different device_type (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:236 - test_api_resolver_match",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Exact field set check + isinstance(address, int) + two instances with different values (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:243 - test_tool_definition_returns_frida_tool",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "tool_name==FRIDA, .value=='frida', description non-empty and contains 'frida' (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:250 - test_all_function_names_have_methods",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "callable + inspect.iscoroutinefunction + required param count match (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:262 - test_function_count_minimum",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "len(defn.functions)==94 exactly (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:269 - test_no_duplicate_function_names",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "No duplicates + all names start with 'frida.' prefix (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:278 - test_new_functions_present",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "18 names present + callable + async (deduplicated finding)"
+    },
+    {
+      "ref": "tests/test_bridges/test_frida_bridge.py:308 - test_fixed_functions_present",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "3 fixed names present + get_memory_ranges absent + all callable and async (deduplicated finding)"
+    }
+  ],
+  "filesModified": ["tests/test_bridges/test_frida_bridge.py"],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "20 passed, 17 skipped in 2.17s"
+}

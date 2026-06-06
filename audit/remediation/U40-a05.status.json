@@ -1,0 +1,57 @@
+{
+  "unitId": "U40-a05",
+  "findings": [
+    {
+      "ref": "tests/test_bridges/test_x64dbg_events.py:104 - test_unregister_nonexistent_does_not_raise",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "X64DbgBridge() starts with empty event_callbacks list (precondition assert len==0); after unregister_event_callback of unregistered handler, postcondition assert len==0 confirms no silent corruption"
+    },
+    {
+      "ref": "tests/test_hexpat/test_lexer.py:144 - test_unterminated_string_raises",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "getattr(lexer, '_pos')==0 and getattr(lexer, '_line')==1 before tokenize() confirms error occurs during tokenization, not initialization; pytest.raises(HexPatParseError, match='Unterminated string') validates exact error"
+    },
+    {
+      "ref": "tests/test_providers/test_realcov_11_model_loader.py:130 - test_fp16_matches_two_bytes_per_param_with_overhead",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "_estimate_parameter_count('meta-llama/Llama-3.2-1B-Instruct') is asserted ==1_000_000_000 independently; expected=int(int(real_param_count*2.0)*1.3) ensures both the model-id mapping and the arithmetic are verified in one assertion"
+    },
+    {
+      "ref": "tests/test_ui/log_viewer/test_app_integration.py:46 - test_main_window_installs_qt_log_handler",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "handler in get_stdlib_root_logger().handlers asserts the handler is wired to root logger; _append_record slot receives '__test_handler_wiring_probe__' message confirming live signal delivery"
+    },
+    {
+      "ref": "tests/test_ui/log_viewer/test_app_integration.py:65 - test_log_viewer_lazy_construction",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "log_viewer_window is None before first call; first.isVisible() asserts viewer is shown immediately after open_log_viewer(); second call returns same object (identity check proves caching)"
+    },
+    {
+      "ref": "tests/test_ui/test_realcov_14b_script_manager.py:77 - test_save_persists_real_content",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Added 3 error-path tests: (1) disk_file.read_text()== _VALID_PYTHON after scripts.clear() proves real disk write; (2) empty name triggers QMessageBox.warning and backend.list_scripts()==[]; (3) read-only dir leaves in_memory.content==_VALID_PYTHON proving no rollback"
+    }
+  ],
+  "filesModified": [
+    "tests/test_bridges/test_x64dbg_events.py",
+    "tests/test_hexpat/test_lexer.py",
+    "tests/test_providers/test_realcov_11_model_loader.py",
+    "tests/test_ui/log_viewer/test_app_integration.py",
+    "tests/test_ui/test_realcov_14b_script_manager.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "69 passed, 1 skipped in 12.72s"
+}

@@ -1,0 +1,59 @@
+{
+  "unitId": "U57-a03",
+  "findings": [
+    {
+      "ref": "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py:383 - test_add_highlight_routes_through_bridge",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real HexEditorBridge.add_highlight_rule('byte_value', json.dumps({'value':0x41}), '#FF0000') returns rule_id; widget_rules()[0] asserts exact rule_id, condition_type='byte_value', condition_params={'value':0x41}, color='#FF0000'; list_labels() asserts exact '[rule_id[:8]] Byte == 0x41  (#FF0000)' format"
+    },
+    {
+      "ref": "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py:418 - test_remove_highlight_routes_through_bridge",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "After bridge.add_highlight_rule x2 then bridge.remove_highlight_rule(drop_id), asserts active_ids==[keep_id], widget_rules() contains only keep_id rule, bridge.list_highlight_rules() returns only keep_id, list_labels() shows only keep label"
+    },
+    {
+      "ref": "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py:450 - test_list_highlights_seeds_widget",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "seed_highlights_from_bridge(rules) asserts active_ids==[rule_a, rule_b]; by_id[rule_a].condition_type=='byte_value', condition_params=={'value':0x10}, color=='#AABBCC'; list_labels() asserts exact two-item label strings"
+    },
+    {
+      "ref": "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py:494 - test_refresh_pattern_highlights_calls_update_once",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "DEADBEEF in bytes at offsets 0 and 5 (buffer layout is independent oracle); after refresh_pattern_highlights(), update_call_count==1 and rule.condition_params['offsets']=={0, 5}; absent-pattern case yields empty set; no-document case yields update_call_count==0 and offsets unchanged"
+    },
+    {
+      "ref": "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py:538 - test_byte_value_label",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "build_rule_label with id='test-rule-id' and type='byte_value' asserts exact full string '[abcdef12] Byte == 0x41  (#FF0000)' not substring check"
+    },
+    {
+      "ref": "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py:544 - test_byte_range_label",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "build_rule_label with id='test-rule-id' and type='byte_range' asserts exact full string '[abcdef12] Byte 0x20-0x7E  (#00FF00)'"
+    },
+    {
+      "ref": "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py:551 - test_pattern_label",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "build_rule_label with pattern type asserts exact '[abcdef12] Pattern DEADBEEF  (3 hits, #0000FF)'; zero-hits asserts '[abcdef12] Pattern CAFE  (0 hits, #0000FF)'; unknown type asserts '[abcdef12] regex  (#123456)'"
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "15 passed in 3.15s"
+}
