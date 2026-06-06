@@ -1,0 +1,55 @@
+{
+  "unitId": "U49-a17",
+  "findings": [
+    {
+      "ref": "tests/test_audit3/sandbox/test_start_monitors.py:180 - test_start_script_exists",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Runs real start_monitors.cmd against a scratch dir with one inert sleeper monitor; oracle = live OS process table (Get-Process) + parsed monitors.pids; asserts exit 0, exactly one '<pid> sleeper_00.ps1' entry, pid>0 and the process is alive (test_start_script_runs_and_writes_valid_pid_file)."
+    },
+    {
+      "ref": "tests/test_audit3/sandbox/test_start_monitors.py:185 - test_stop_script_exists",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Starts a real monitor, confirms it alive via Get-Process, runs real stop_monitors.cmd; oracle = live OS process table; asserts stopper exits 0, the previously-live tracked PID is now dead, and monitors.pids is deleted (test_stop_script_terminates_a_started_monitor + missing-PID-file error path)."
+    },
+    {
+      "ref": "tests/test_audit3/sandbox/test_start_monitors.py:190 - test_start_script_default_logdir_uses_programdata",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Runs launcher with NO LogDir arg and %ProgramData% redirected to a scratch root; oracle = filesystem location of the written PID file; asserts the PID file is created at <ProgramData>\\Intellicrack\\Sandbox\\logs at runtime and the tracked monitor is live, plus a content guard that the legacy WDAGUtilityAccount default stays removed (test_start_script_default_logdir_resolves_to_programdata + test_start_script_legacy_wdag_default_removed)."
+    },
+    {
+      "ref": "tests/test_audit4/b5_modules_tab/test_modules_tab.py:108 - test_filter_hides_non_matching_rows",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Drives real QLineEdit.textChanged->_on_filter_modules on a populated ModulesTab; oracle = known module-name list; asserts exact visible_names() and hidden_count() across partial match, exact full-name, case-insensitive, no-match, clearing-restores-all, and whitespace-only-as-empty scenarios (TestFilterWiring, 6 tests)."
+    },
+    {
+      "ref": "tests/test_audit4/b5_modules_tab/test_modules_tab.py:179 - test_refresh_handles_provides_on_error",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Drives a real ProcessBridge coroutine forced into its library-unavailable state through the real run_bridge_coroutine_logged/worker path; oracle = bridge's documented ToolError constants; asserts the real QMessageBox.warning fired exactly once with exact (title,text) per refresh, no-op without attached PID, and that bridge.get_heaps raises typed ToolError 'kernel32 not available' (TestErrorCallbacks, 6 tests)."
+    },
+    {
+      "ref": "tests/test_audit7/sandbox_qemu/test_guest_agent_bootstrap.py:281 - test_bootstrap_retries_guest_ping_until_success",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Drives real _wait_for_qemu_ga with a recording fake QMP transport returning fail_a, fail_b, ok; oracle = per-invocation recorded outcomes + monotonic clock; asserts exactly three pings, outcomes [False,False,True] with exact error/data payloads, elapsed>=2*poll_interval (backoff ran), and no agent PID set (test_wait_for_qemu_ga_retries_each_failure_then_succeeds)."
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit3/sandbox/test_start_monitors.py",
+    "tests/test_audit4/b5_modules_tab/test_modules_tab.py",
+    "tests/test_audit7/sandbox_qemu/test_guest_agent_bootstrap.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "27 passed in 65.57s"
+}
