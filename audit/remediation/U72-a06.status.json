@@ -1,0 +1,48 @@
+{
+  "unitId": "U72-a06",
+  "findings": [
+    {
+      "ref": "tests/test_core/test_logging_audit6.py:60 - test_default_falls_back_to_cwd_when_no_config",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced with test_no_config_writes_logs_under_cwd_logs: drives real setup_logging, emits real structlog record, asserts intellicrack.log file exists under cwd/logs and contains JSON record with event==_UNIQUE_EVENT and probe==True."
+    },
+    {
+      "ref": "tests/test_core/test_logging_audit6.py:81 - test_default_uses_configured_logs_directory",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced with test_configured_logs_directory_receives_real_logs: saves real Config with logs_directory=target_logs, drives setup_logging, asserts log file appears in target_logs and NOT under cwd/logs, and the JSON record contains logger==intellicrack.audit6."
+    },
+    {
+      "ref": "tests/test_core/test_logging_audit6.py:115 - test_default_uses_state_after_setup_logging",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced with test_state_after_setup_logging_drives_real_log_files: first setup_logging records target dir in _logger_state; second setup_logging (no explicit log_dir) must write real log to same dir; asserts log file exists and probe record JSON contains probe==True."
+    },
+    {
+      "ref": "tests/test_core/test_logging_audit6.py:139 - test_setup_logging_records_resolved_dir",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced with test_explicit_log_dir_is_written_and_recorded: drives setup_logging with explicit target, asserts log file exists with JSON event record, and asserts _logger_state.configured_log_dir == target."
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_base_convert.py:107 - test_result_has_base_keys",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced with test_result_full_structure_for_42: asserts the entire result dict equals a hand-computed expected dict of all 14 keys with independently-known IEEE-754 and base-representation constants for value 42."
+    }
+  ],
+  "filesModified": [
+    "tests/test_core/test_logging_audit6.py",
+    "tests/test_hexcore_e2e/test_bridge_base_convert.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "15 passed in 3.23s"
+}
