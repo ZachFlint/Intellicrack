@@ -68,7 +68,7 @@ pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
 
 ANTHROPIC_MODEL = "claude-haiku-4-20250414"
 OPENAI_MODEL = "gpt-4o-mini"
-GOOGLE_MODEL = "gemini-2.0-flash-lite"
+GOOGLE_MODEL = "gemini-2.5-flash-lite"
 GROK_MODEL = "grok-3-mini"
 OPENROUTER_MODEL = "openai/gpt-4o-mini"
 HUGGINGFACE_MODEL = "katanemo/Arch-Router-1.5B"

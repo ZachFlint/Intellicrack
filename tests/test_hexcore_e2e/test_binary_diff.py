@@ -4,15 +4,23 @@
 """E2E tests for binary diff operations via diff_bytes and diff_files.
 
 The native ``diff_bytes`` / ``diff_files`` functions return a dict with exactly
-four keys: ``files_identical`` (bool), ``total_differences`` (int) and
+three keys: ``files_identical`` (bool), ``total_differences`` (int) and
 ``regions`` (a list of region dicts, each with ``offset_a``, ``offset_b``,
 ``length`` and ``diff_type``). ``diff_type`` is one of ``"match"``,
 ``"modified"``, ``"inserted_a"`` or ``"inserted_b"``.
 
+The native engine emits a Myers edit script (via the ``similar`` crate) where
+contiguous matched runs become ``match`` regions, equal-length replaced runs
+become ``modified`` regions (length = ``max(old_len, new_len)``), bytes present
+only in A become ``inserted_a`` regions and bytes present only in B become
+``inserted_b`` regions. ``total_differences`` is the summed length of every
+non-match region.
+
 Expected region layouts are cross-checked against Python's
 ``difflib.SequenceMatcher`` (the same Myers edit-script family the Rust engine
-uses) so the oracle is an independent reference implementation rather than the
-native engine's own output.
+uses) for the contiguous single-replace cases where the two implementations
+agree, and against the byte content directly for the remaining cases, so every
+oracle is independent of the native engine's own output.
 """
 
 from __future__ import annotations
@@ -28,23 +36,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _DIFF_TYPES: frozenset[str] = frozenset({"match", "modified", "inserted_a", "inserted_b"})
-_SIMILARITY_TOLERANCE = 1e-5
-
-
-def _similar_to(actual: float, expected: float) -> bool:
-    """Compare two similarity ratios within a fixed absolute tolerance.
-
-    The native engine rounds similarity to six decimal places, so an exact
-    float comparison is unreliable; this bounds the difference instead.
-
-    Args:
-        actual: The similarity value reported by the engine.
-        expected: The independently computed expected similarity.
-
-    Returns:
-        bool: ``True`` when the two values agree within tolerance.
-    """
-    return abs(actual - expected) <= _SIMILARITY_TOLERANCE
+_RESULT_KEYS: frozenset[str] = frozenset({"files_identical", "total_differences", "regions"})
+_NON_MATCH_TYPES: frozenset[str] = frozenset({"modified", "inserted_a", "inserted_b"})
 
 
 def _write_bin(directory: Path, name: str, data: bytes) -> Path:
@@ -64,11 +57,12 @@ def _write_bin(directory: Path, name: str, data: bytes) -> Path:
 
 
 def _assert_well_formed_regions(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[str, Any]]:
-    """Validate that every region in a diff result is structurally well formed.
+    """Validate that a diff result has the exact schema and well-formed regions.
 
-    Each region must carry exactly the four documented keys, a known
-    ``diff_type`` tag, integer offsets and length, and offsets/spans that stay
-    inside the respective input bounds.
+    The result must carry exactly the three documented top-level keys with the
+    correct value types. Each region must carry exactly the four documented
+    keys, a known ``diff_type`` tag, integer offsets and length, and
+    offsets/spans that stay inside the respective input bounds.
 
     Args:
         result: The dict returned by ``diff_bytes`` / ``diff_files``.
@@ -78,11 +72,10 @@ def _assert_well_formed_regions(result: dict[str, Any], len_a: int, len_b: int) 
     Returns:
         list[dict[str, Any]]: The validated ``regions`` list from the result.
     """
-    assert set(result.keys()) == {"files_identical", "total_differences", "regions", "similarity"}
+    assert set(result.keys()) == _RESULT_KEYS
     assert isinstance(result["files_identical"], bool)
     assert isinstance(result["total_differences"], int)
-    assert isinstance(result["similarity"], float)
-    assert 0.0 <= result["similarity"] <= 1.0
+    assert result["total_differences"] >= 0
     regions: list[dict[str, Any]] = result["regions"]
     assert isinstance(regions, list)
     for region in regions:
@@ -104,25 +97,20 @@ def _assert_well_formed_regions(result: dict[str, Any], len_a: int, len_b: int) 
     return regions
 
 
-def _expected_similarity(match_bytes: int, len_a: int, len_b: int) -> float:
-    """Compute the engine's similarity ratio from an independent formula.
+def _assert_total_differences_consistent(result: dict[str, Any]) -> None:
+    """Assert ``total_differences`` equals the summed length of non-match regions.
 
-    The native engine reports similarity as matched bytes divided by the larger
-    of the two buffer lengths, defaulting to ``1.0`` when both buffers are
-    empty. This mirrors the documented ratio without reusing the engine output.
+    This independently re-derives the differing-byte count from the region list
+    using the engine's documented contract (every non-match region's length
+    counts toward ``total_differences``) and confirms the reported scalar
+    matches that sum.
 
     Args:
-        match_bytes: Number of bytes reported as identical (sum of match spans).
-        len_a: Length of the first buffer.
-        len_b: Length of the second buffer.
-
-    Returns:
-        float: The expected similarity ratio in the inclusive range ``[0, 1]``.
+        result: The dict returned by ``diff_bytes`` / ``diff_files``.
     """
-    longest = max(len_a, len_b)
-    if longest == 0:
-        return 1.0
-    return match_bytes / longest
+    regions: list[dict[str, Any]] = result["regions"]
+    summed = sum(r["length"] for r in regions if r["diff_type"] in _NON_MATCH_TYPES)
+    assert summed == result["total_differences"]
 
 
 def _expected_replace_span(data_a: bytes, data_b: bytes) -> tuple[int, int]:
@@ -159,9 +147,9 @@ class TestDiffBytes:
         result: dict[str, Any] = hexcore.diff_bytes(data, data)
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
-        assert _similar_to(result["similarity"], 1.0)
         regions = _assert_well_formed_regions(result, len(data), len(data))
         assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "diff_type": "match"}]
+        _assert_total_differences_consistent(result)
 
     def test_completely_different_bytes_is_single_modified_region(self, hexcore: types.ModuleType) -> None:
         """Verify a fully disjoint pair yields one modified region spanning the buffer.
@@ -182,19 +170,17 @@ class TestDiffBytes:
         result: dict[str, Any] = hexcore.diff_bytes(data_a, data_b)
         assert result["files_identical"] is False
         assert result["total_differences"] == 64
-        expected_similarity = _expected_similarity(0, len(data_a), len(data_b))
-        assert _similar_to(expected_similarity, 0.0)
-        assert _similar_to(result["similarity"], expected_similarity)
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
         assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "diff_type": "modified"}]
+        _assert_total_differences_consistent(result)
 
     def test_diff_bytes_match_then_modified_region_layout(self, hexcore: types.ModuleType) -> None:
         """Verify diff_bytes produces a match prefix followed by the modified tail.
 
-        Replaces the same key recognized regions check, asserting the exact
-        two-region edit script: a 16-byte ``match`` prefix and an 8-byte
-        ``modified`` region, with ``total_differences`` equal to the modified
-        span length.
+        Asserts the exact two-region edit script: a 16-byte ``match`` prefix and
+        an 8-byte ``modified`` region, with ``total_differences`` equal to the
+        modified span length. The difflib oracle confirms the single replace
+        span begins at offset 16 with length 8.
 
         Args:
             hexcore: The native module fixture.
@@ -208,12 +194,12 @@ class TestDiffBytes:
         result: dict[str, Any] = hexcore.diff_bytes(data_a, data_b)
         assert result["files_identical"] is False
         assert result["total_differences"] == 8
-        assert _similar_to(result["similarity"], _expected_similarity(16, len(data_a), len(data_b)))
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
         assert regions == [
             {"offset_a": 0, "offset_b": 0, "length": 16, "diff_type": "match"},
             {"offset_a": 16, "offset_b": 16, "length": 8, "diff_type": "modified"},
         ]
+        _assert_total_differences_consistent(result)
 
     def test_diff_bytes_partial_difference_reports_modified_tail(self, hexcore: types.ModuleType) -> None:
         """Verify diff_bytes reports the modified tail for partially differing data.
@@ -235,14 +221,11 @@ class TestDiffBytes:
         assert result["files_identical"] is False
         assert result["total_differences"] == 50
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
-        modified = [r for r in regions if r["diff_type"] == "modified"]
-        assert len(modified) == 1
-        assert modified[0] == {"offset_a": 50, "offset_b": 50, "length": 50, "diff_type": "modified"}
-        match_total = sum(r["length"] for r in regions if r["diff_type"] == "match")
-        assert match_total == 50
-        expected_similarity = _expected_similarity(match_total, len(data_a), len(data_b))
-        assert _similar_to(expected_similarity, 0.5)
-        assert _similar_to(result["similarity"], expected_similarity)
+        assert regions == [
+            {"offset_a": 0, "offset_b": 0, "length": 50, "diff_type": "match"},
+            {"offset_a": 50, "offset_b": 50, "length": 50, "diff_type": "modified"},
+        ]
+        _assert_total_differences_consistent(result)
 
     def test_diff_empty_vs_empty_is_identical(self, hexcore: types.ModuleType) -> None:
         """Verify that diff_bytes on two empty byte strings reports exact equality.
@@ -253,7 +236,6 @@ class TestDiffBytes:
         result: dict[str, Any] = hexcore.diff_bytes(b"", b"")
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
-        assert _similar_to(result["similarity"], 1.0)
         assert _assert_well_formed_regions(result, 0, 0) == []
 
     def test_diff_bytes_one_empty_is_full_insertion(self, hexcore: types.ModuleType) -> None:
@@ -261,20 +243,22 @@ class TestDiffBytes:
 
         Diffing ``b"ABC"`` against ``b""`` must report the three A-only bytes as
         a single ``inserted_a`` region at offset 0 with length 3 and
-        ``total_differences == 3``.
+        ``total_differences == 3``. The difflib oracle confirms a single delete
+        opcode over the whole of A.
 
         Args:
             hexcore: The native module fixture.
         """
         data_a = b"ABC"
+        opcodes = difflib.SequenceMatcher(a=data_a, b=b"", autojunk=False).get_opcodes()
+        assert opcodes == [("delete", 0, 3, 0, 0)]
+
         result: dict[str, Any] = hexcore.diff_bytes(data_a, b"")
         assert result["files_identical"] is False
         assert result["total_differences"] == 3
-        expected_similarity = _expected_similarity(0, len(data_a), 0)
-        assert _similar_to(expected_similarity, 0.0)
-        assert _similar_to(result["similarity"], expected_similarity)
         regions = _assert_well_formed_regions(result, len(data_a), 0)
         assert regions == [{"offset_a": 0, "offset_b": 0, "length": 3, "diff_type": "inserted_a"}]
+        _assert_total_differences_consistent(result)
 
 
 class TestDiffFiles:
@@ -293,18 +277,18 @@ class TestDiffFiles:
         result: dict[str, Any] = hexcore.diff_files(str(f_a), str(f_b))
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
-        assert _similar_to(result["similarity"], 1.0)
         regions = _assert_well_formed_regions(result, len(data), len(data))
         assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "diff_type": "match"}]
+        _assert_total_differences_consistent(result)
 
     def test_diff_files_result_has_full_schema_with_valid_values(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify diff_files returns the complete schema with sensible values.
 
-        Asserts the result contains exactly the four documented keys, that
-        ``files_identical`` is a bool, ``total_differences`` is a non-negative
-        int, ``similarity`` is the matched-byte ratio, and that the byte count
-        summed across modified and inserted regions matches
-        ``total_differences``.
+        Asserts the result contains exactly the three documented keys, that
+        ``files_identical`` is the bool ``False`` for differing inputs,
+        ``total_differences`` is a non-negative int, and that the byte count
+        summed across modified and inserted regions equals ``total_differences``
+        and equals the 50 bytes that actually differ.
 
         Args:
             hexcore: The native module fixture.
@@ -316,7 +300,7 @@ class TestDiffFiles:
         f_b = _write_bin(tmp_path, "b.bin", data_b)
         result: dict[str, Any] = hexcore.diff_files(str(f_a), str(f_b))
 
-        assert set(result.keys()) == {"files_identical", "total_differences", "regions", "similarity"}
+        assert set(result.keys()) == _RESULT_KEYS
         assert isinstance(result["files_identical"], bool)
         assert result["files_identical"] is False
         total_differences: int = result["total_differences"]
@@ -324,20 +308,19 @@ class TestDiffFiles:
         assert total_differences >= 0
 
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
-        diff_bytes_in_regions = sum(r["length"] for r in regions if r["diff_type"] in {"modified", "inserted_a", "inserted_b"})
+        diff_bytes_in_regions = sum(r["length"] for r in regions if r["diff_type"] in _NON_MATCH_TYPES)
         assert diff_bytes_in_regions == total_differences == 50
         match_total = sum(r["length"] for r in regions if r["diff_type"] == "match")
-        expected_similarity = _expected_similarity(match_total, len(data_a), len(data_b))
-        assert _similar_to(expected_similarity, 0.5)
-        assert _similar_to(result["similarity"], expected_similarity)
+        assert match_total == 50
+        _assert_total_differences_consistent(result)
 
     def test_diff_files_detects_known_modification_region(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify diff_files pinpoints the exact modified region at offset 50-100.
 
         The difflib oracle establishes the replace span is offset 50 length 50.
-        The native result must contain a ``modified`` region that fully covers
-        that range (``offset_a == 50`` and ``offset_a + length == 100``), and
-        the preceding 50 bytes must be reported as a single ``match`` region.
+        The native result must be exactly a 50-byte ``match`` prefix followed by
+        a ``modified`` region that fully covers offsets 50 through 100 in both
+        buffers, with ``total_differences == 50``.
 
         Args:
             hexcore: The native module fixture.
@@ -355,20 +338,21 @@ class TestDiffFiles:
         assert result["total_differences"] == 50
 
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
-        assert regions[0] == {"offset_a": 0, "offset_b": 0, "length": 50, "diff_type": "match"}
+        assert regions == [
+            {"offset_a": 0, "offset_b": 0, "length": 50, "diff_type": "match"},
+            {"offset_a": 50, "offset_b": 50, "length": 50, "diff_type": "modified"},
+        ]
         covering = [r for r in regions if r["diff_type"] == "modified" and r["offset_a"] == 50 and r["offset_a"] + r["length"] == 100]
-        assert covering == [{"offset_a": 50, "offset_b": 50, "length": 50, "diff_type": "modified"}]
-        match_total = sum(r["length"] for r in regions if r["diff_type"] == "match")
-        expected_similarity = _expected_similarity(match_total, len(data_a), len(data_b))
-        assert _similar_to(expected_similarity, 0.5)
-        assert _similar_to(result["similarity"], expected_similarity)
+        assert len(covering) == 1
+        _assert_total_differences_consistent(result)
 
     def test_diff_files_truncated_tail_is_inserted_a(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify diff_files reports a truncated file's lost tail as inserted_a.
 
         ``0xaa*200`` against ``0xaa*100`` shares a 100-byte prefix; the extra
         100 bytes present only in A must be a single ``inserted_a`` region at
-        offset 100 with length 100, and ``total_differences == 100``.
+        offset 100 with length 100, and ``total_differences == 100``. The
+        difflib oracle confirms an equal prefix followed by a delete of A's tail.
 
         Args:
             hexcore: The native module fixture.
@@ -376,6 +360,9 @@ class TestDiffFiles:
         """
         data_a = b"\xaa" * 200
         data_b = b"\xaa" * 100
+        opcodes = difflib.SequenceMatcher(a=data_a, b=data_b, autojunk=False).get_opcodes()
+        assert opcodes == [("equal", 0, 100, 0, 100), ("delete", 100, 200, 100, 100)]
+
         f_a = _write_bin(tmp_path, "a.bin", data_a)
         f_b = _write_bin(tmp_path, "b.bin", data_b)
         result: dict[str, Any] = hexcore.diff_files(str(f_a), str(f_b))
@@ -387,9 +374,7 @@ class TestDiffFiles:
             {"offset_a": 0, "offset_b": 0, "length": 100, "diff_type": "match"},
             {"offset_a": 100, "offset_b": 100, "length": 100, "diff_type": "inserted_a"},
         ]
-        expected_similarity = _expected_similarity(100, len(data_a), len(data_b))
-        assert _similar_to(expected_similarity, 0.5)
-        assert _similar_to(result["similarity"], expected_similarity)
+        _assert_total_differences_consistent(result)
 
     def test_diff_empty_files(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify that diff_files on two empty files reports exact equality.
@@ -403,7 +388,6 @@ class TestDiffFiles:
         result: dict[str, Any] = hexcore.diff_files(str(f_a), str(f_b))
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
-        assert _similar_to(result["similarity"], 1.0)
         assert _assert_well_formed_regions(result, 0, 0) == []
 
     def test_diff_files_single_byte_change(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
@@ -412,6 +396,9 @@ class TestDiffFiles:
         A 64-byte zero buffer differing only at offset 32 must yield
         ``total_differences == 1`` with a one-byte ``modified`` region at
         offset 32, flanked by a 32-byte match prefix and a 31-byte match suffix.
+        Because both buffers have equal length and differ in exactly one byte,
+        the minimal edit script is unambiguously this match/modified/match
+        layout regardless of Myers tie-breaking.
 
         Args:
             hexcore: The native module fixture.
@@ -432,7 +419,7 @@ class TestDiffFiles:
             {"offset_a": 32, "offset_b": 32, "length": 1, "diff_type": "modified"},
             {"offset_a": 33, "offset_b": 33, "length": 31, "diff_type": "match"},
         ]
-        assert _similar_to(result["similarity"], _expected_similarity(63, 64, 64))
+        _assert_total_differences_consistent(result)
 
     def test_diff_files_missing_path_raises_io_error(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
         """Verify diff_files surfaces an OSError when an input file is missing.

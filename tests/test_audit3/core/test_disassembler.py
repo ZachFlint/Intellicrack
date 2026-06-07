@@ -19,6 +19,7 @@ Covers:
 
 from __future__ import annotations
 
+import struct
 from typing import TYPE_CHECKING
 from unittest.mock import patch
 
@@ -34,6 +35,42 @@ from intellicrack.core.disassembler import (
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+# Independent ISA constants, sourced from the System V ELF gABI / the Linux
+# ``elf.h`` header (NOT from Intellicrack's own pe_format module): these are the
+# canonical ``e_machine`` numbers every ELF toolchain agrees on.
+_ELF_EM_386_REF: int = 3
+"""``EM_386`` from the ELF gABI (Intel 80386)."""
+
+_ELF_EM_X86_64_REF: int = 62
+"""``EM_X86_64`` from the ELF gABI (AMD x86-64)."""
+
+
+def _make_elf64_header(*, e_machine: int, is_64bit: bool) -> bytes:
+    r"""Build a minimal but structurally valid ELF identification + header prefix.
+
+    The buffer carries a real ``\x7fELF`` magic, ``EI_CLASS`` / ``EI_DATA``
+    identification bytes, and a little-endian ``e_machine`` field at the
+    architecturally correct offset (0x12). This is a genuine ELF header prefix
+    that :func:`detect_format_and_arch` parses exactly as it would a real binary
+    on disk - no monkeypatching of the detector is involved.
+
+    Args:
+        e_machine: The ``e_machine`` value to encode at offset 0x12.
+        is_64bit: When ``True`` the ``EI_CLASS`` byte is set to ELFCLASS64,
+            otherwise ELFCLASS32.
+
+    Returns:
+        bytes: A 64-byte ELF header prefix encoding the requested machine.
+    """
+    header = bytearray(64)
+    header[0:4] = b"\x7fELF"
+    header[4] = 2 if is_64bit else 1
+    header[5] = 1
+    header[6] = 1
+    struct.pack_into("<H", header, 0x12, e_machine)
+    return bytes(header)
 
 
 # ---------------------------------------------------------------------------
@@ -83,40 +120,70 @@ def test_f0002_auto_detect_arch_unknown_logs_warning() -> None:
     assert warnings[0].get("log_level") == "warning"
 
 
-def test_f0002_auto_detect_arch_known_resolves_to_real_x86_64_decoding() -> None:
-    """A canonical ``x86_64`` arch must resolve to a genuinely 64-bit capstone pair.
+# Mode-sensitive x86 sequence: ``48 31 c0 48 89 e5 c3``. The ``0x48`` bytes are
+# REX.W prefixes in 64-bit mode (yielding 64-bit-register operations) but are the
+# single-byte ``dec eax`` opcode in 32-bit mode. The decoded mnemonics below are
+# fixed by the x86 / x86-64 ISA encoding (Intel SDM Vol. 2), an oracle entirely
+# independent of Intellicrack's ``_CAPSTONE_ARCH_MODE_MAP``.
+_MODE_SENSITIVE_SEQUENCE: bytes = b"\x48\x31\xc0\x48\x89\xe5\xc3"
+_EXPECTED_64BIT_DECODE: list[tuple[int, str, str]] = [
+    (0x1000, "xor", "rax, rax"),
+    (0x1003, "mov", "rbp, rsp"),
+    (0x1006, "ret", ""),
+]
+_EXPECTED_32BIT_DECODE: list[tuple[int, str, str]] = [
+    (0x1000, "dec", "eax"),
+    (0x1001, "xor", "eax, eax"),
+    (0x1003, "dec", "eax"),
+    (0x1004, "mov", "ebp, esp"),
+    (0x1006, "ret", ""),
+]
 
-    Independent oracle: rather than re-asserting the literal ``("x86", "64")``
-    pair stored in ``_CAPSTONE_ARCH_MODE_MAP`` (which would be tautological), the
-    ``(arch, mode)`` returned by :meth:`auto_detect_arch` is fed straight into a
-    live capstone disassembly of the byte sequence ``48 31 c0 48 89 e5 c3``.
 
-    That sequence is mode-sensitive by construction: in genuine 64-bit mode the
-    ``48`` REX.W prefix yields ``xor rax, rax`` / ``mov rbp, rsp`` / ``ret``,
-    whereas in 32-bit mode the very same bytes decode as ``dec eax`` / ``xor
-    eax, eax`` / ... The expected 64-bit mnemonics are fixed by the x86-64 ISA
-    encoding, not by Intellicrack's own mapping, so a corrupted map entry (for
-    example silently returning ``("x86", "32")``) changes the decoded mnemonics
-    and fails this test.
+def test_f0002_auto_detect_arch_x86_64_elf_resolves_to_64bit_capstone_mode() -> None:
+    """A real x86-64 ELF header must resolve to a genuinely 64-bit capstone pair.
+
+    A structurally valid ELF64 header (``e_machine = EM_X86_64 = 62`` from the
+    ELF gABI) is driven through the *real* :meth:`auto_detect_arch` pipeline -
+    ``detect_format_and_arch`` parses the magic and machine field exactly as it
+    would for an on-disk binary, with no patching. The resulting ``(arch, mode)``
+    is then fed into a live capstone disassembly of the mode-sensitive byte
+    sequence ``48 31 c0 48 89 e5 c3``.
+
+    The oracle is the x86-64 ISA itself: in genuine 64-bit mode the REX.W
+    prefixes yield ``xor rax, rax`` / ``mov rbp, rsp`` / ``ret``. If the map
+    entry were corrupted to ``("x86", "32")`` the same bytes would decode to the
+    32-bit form (asserted separately below) and this test would go red.
     """
-    fake_detection: tuple[str, str, bool] = ("ELF", "x86_64", True)
-    with patch(
-        "intellicrack.core.disassembler.detect_format_and_arch",
-        return_value=fake_detection,
-    ):
-        arch, mode = HexDisassembler.auto_detect_arch(b"\x7fELF" + b"\x00" * 16)
+    elf64 = _make_elf64_header(e_machine=_ELF_EM_X86_64_REF, is_64bit=True)
+    arch, mode = HexDisassembler.auto_detect_arch(elf64)
 
     disasm = get_disassembler()
     if not disasm.available:
         pytest.skip("capstone is not available in this environment")
-    rex_w_sequence = b"\x48\x31\xc0\x48\x89\xe5\xc3"
-    decoded = disasm.disassemble(rex_w_sequence, base_addr=0x1000, arch=arch, mode=mode, count=8)
+    decoded = disasm.disassemble(_MODE_SENSITIVE_SEQUENCE, base_addr=0x1000, arch=arch, mode=mode, count=8)
     rendered = [(insn.address, insn.mnemonic, insn.op_str) for insn in decoded]
-    assert rendered == [
-        (0x1000, "xor", "rax, rax"),
-        (0x1003, "mov", "rbp, rsp"),
-        (0x1006, "ret", ""),
-    ], f"expected 64-bit decoding, got {rendered}"
+    assert rendered == _EXPECTED_64BIT_DECODE, f"expected 64-bit decoding for {arch}/{mode}, got {rendered}"
+
+
+def test_f0002_auto_detect_arch_x86_elf_resolves_to_32bit_capstone_mode() -> None:
+    """A real 32-bit x86 ELF header must resolve to a genuinely 32-bit capstone pair.
+
+    Companion to the 64-bit case: an ELF32 header (``e_machine = EM_386 = 3``)
+    is driven through the real pipeline and the same mode-sensitive sequence is
+    decoded. The ISA-fixed 32-bit decoding (``dec eax`` / ``xor eax, eax`` / ...)
+    proves the mapping discriminates bitness rather than blindly returning a
+    single fixed pair, so an x86/x86_64 map mix-up cannot pass both tests.
+    """
+    elf32 = _make_elf64_header(e_machine=_ELF_EM_386_REF, is_64bit=False)
+    arch, mode = HexDisassembler.auto_detect_arch(elf32)
+
+    disasm = get_disassembler()
+    if not disasm.available:
+        pytest.skip("capstone is not available in this environment")
+    decoded = disasm.disassemble(_MODE_SENSITIVE_SEQUENCE, base_addr=0x1000, arch=arch, mode=mode, count=8)
+    rendered = [(insn.address, insn.mnemonic, insn.op_str) for insn in decoded]
+    assert rendered == _EXPECTED_32BIT_DECODE, f"expected 32-bit decoding for {arch}/{mode}, got {rendered}"
 
 
 def test_f0002_auto_detect_arch_no_silent_x86_64_fallback() -> None:

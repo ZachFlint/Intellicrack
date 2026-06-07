@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import pytest
 from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QApplication
 
 from intellicrack.ui.resources.resource_helper import get_assets_path
 from intellicrack.ui.resources.theme_manager import (
@@ -191,13 +192,35 @@ class TestApplyTheme:
     @staticmethod
     @pytest.mark.usefixtures("qapp")
     def test_apply_invalid_theme_uses_default(theme_manager: ThemeManager) -> None:
-        """Invalid theme name falls back to default.
+        """Invalid theme name falls back to default theme with stylesheet applied.
+
+        Asserts that:
+        - current_theme tracks DEFAULT_THEME (not the invalid name)
+        - theme_changed signal fires with DEFAULT_THEME (not the invalid name)
+        - QApplication stylesheet is set to the default-theme stylesheet content
 
         Args:
             theme_manager: Fresh ThemeManager fixture instance.
         """
-        theme_manager.apply_theme("invalid_theme_name")
+        received: list[str] = []
+        theme_manager.theme_changed.connect(received.append)
+
+        result = theme_manager.apply_theme("invalid_theme_name")
+
+        assert result is True
         assert theme_manager.current_theme == DEFAULT_THEME
+
+        assert len(received) == 1, f"theme_changed emitted {len(received)} times, expected 1"
+        assert received[0] == DEFAULT_THEME, f"theme_changed emitted {received[0]!r}, expected DEFAULT_THEME {DEFAULT_THEME!r}"
+
+        app = QApplication.instance()
+        assert isinstance(app, QApplication)
+        applied_sheet = app.styleSheet()
+        expected_sheet = theme_manager.get_stylesheet(DEFAULT_THEME)
+        assert applied_sheet == expected_sheet, (
+            f"QApplication.styleSheet() does not match DEFAULT_THEME stylesheet "
+            f"(got {len(applied_sheet)} chars, expected {len(expected_sheet)} chars)"
+        )
 
 
 class TestCurrentTheme:

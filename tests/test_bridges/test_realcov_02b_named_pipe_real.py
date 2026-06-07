@@ -240,12 +240,16 @@ def test_real_connect_and_close_against_kernel_pipe() -> None:
         _terminate_server(server)
 
 
+@pytest.mark.timeout(30)
 def test_real_send_command_round_trip() -> None:
     """A command round-trips over the real kernel pipe and matches by id.
 
     Proves the full real path: real ``WriteFile`` of the request frame, the
     server's real ``ReadFile`` decode, the server's real ``WriteFile`` reply,
-    and the client's real ``ReadFile`` plus future dispatch.
+    and the client's real ``ReadFile`` plus future dispatch. The
+    ``pytest.mark.timeout(30)`` guard ensures the test fails fast if the
+    server process hangs or the pipe never becomes ready, rather than blocking
+    indefinitely on ``_require_pipe`` or the async ``wait_for`` inner timeout.
     """
     pipe_name = _unique_pipe_name()
 
@@ -354,33 +358,54 @@ def test_real_large_payload_chunked_read() -> None:
     _run_with_server(pipe_name, srv.MODE_BLOB, scenario)
 
 
-async def _attempt_missing_pipe_connect(pipe_name: str) -> None:
-    """Connect to a missing endpoint and assert the real error surfaces.
+async def _attempt_missing_pipe_connect(
+    pipe_name: str,
+    connect_timeout_s: float,
+) -> None:
+    """Connect to a missing endpoint and assert the exact Win32 error code surfaces.
+
+    ``WaitNamedPipeW`` returns immediately (does not spin for the full timeout
+    period) when no pipe server exists, so the timeout only bounds the worst
+    case on a loaded machine. The test asserts on the **integer** error code
+    embedded in the message (``error 2``) and on the presence of the human-
+    readable hint text from :meth:`NamedPipeClient.format_error_hint`, not just
+    that some error occurred.
 
     Args:
         pipe_name: A pipe path with no server behind it.
+        connect_timeout_s: Seconds to pass as ``connect_timeout`` in
+            :class:`PipeConfig`, allowing callers to adjust for slow
+            machines without changing the assertion contract.
     """
-    config = PipeConfig(pipe_name=pipe_name, connect_timeout=2.0, io_timeout=2.0)
+    config = PipeConfig(pipe_name=pipe_name, connect_timeout=connect_timeout_s, io_timeout=connect_timeout_s)
     client = NamedPipeClient(config=config)
     with pytest.raises(ToolError) as excinfo:
         await client.connect()
 
     message = str(excinfo.value)
-    assert f"error {_ERROR_FILE_NOT_FOUND}" in message
+    error_tag = f"error {_ERROR_FILE_NOT_FOUND}"
+    assert error_tag in message, (
+        f"Expected real Win32 ERROR_FILE_NOT_FOUND code ({_ERROR_FILE_NOT_FOUND}) in ToolError message; got: {message!r}"
+    )
+
     hint = NamedPipeClient.format_error_hint(_ERROR_FILE_NOT_FOUND)
-    assert hint is not None
-    assert hint in message
-    assert client.is_connected is False
+    assert hint is not None, f"format_error_hint({_ERROR_FILE_NOT_FOUND}) must return a non-None hint string"
+    assert hint in message, f"Expected curated hint {hint!r} in ToolError message; got: {message!r}"
+
+    assert client.is_connected is False, "is_connected must remain False after a failed connect"
 
 
+@pytest.mark.timeout(15)
 def test_real_connect_missing_pipe_raises_with_error_code() -> None:
     """Connecting to a nonexistent endpoint surfaces the real ``GetLastError``.
 
     No server is created, so the production ``_open_handle`` path runs
     ``WaitNamedPipeW`` against a missing pipe and must raise ``ToolError``
     carrying the real ``ERROR_FILE_NOT_FOUND`` (2) code plus the curated hint.
+    The 15-second test-level timeout prevents indefinite hanging on pathological
+    system states while allowing a generous per-attempt budget.
     """
-    asyncio.run(_attempt_missing_pipe_connect(_unique_pipe_name()))
+    asyncio.run(_attempt_missing_pipe_connect(_unique_pipe_name(), connect_timeout_s=5.0))
 
 
 async def _drain_until_broken(client: NamedPipeClient) -> None:

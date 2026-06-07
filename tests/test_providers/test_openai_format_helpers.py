@@ -21,12 +21,14 @@ tests do not trip ``reportPrivateUsage``.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 import openai
 import pytest
+from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
 from intellicrack.core.types import (
     AuthenticationError,
@@ -535,3 +537,213 @@ def test_translate_openai_errors_unrelated_exception_propagates() -> None:
         ),
     ):
         raise unrelated
+
+
+_REAL_PROMPT_TOKENS: int = 10
+_REAL_COMPLETION_TOKENS: int = 2
+_REAL_TOTAL_TOKENS: int = 12
+
+
+def _make_real_chat_completion(
+    *,
+    prompt_tokens: int,
+    completion_tokens: int,
+    total_tokens: int,
+    model: str = "gpt-4",
+) -> ChatCompletion:
+    """Construct a real :class:`openai.types.chat.ChatCompletion` object.
+
+    Uses :meth:`ChatCompletion.model_validate` (the Pydantic v2 path the
+    OpenAI SDK always uses) so the returned object is byte-for-byte
+    identical to what the SDK produces from a real HTTP response.
+
+    Args:
+        prompt_tokens: Prompt token count to embed in ``usage``.
+        completion_tokens: Completion token count to embed in ``usage``.
+        total_tokens: Total token count to embed in ``usage``; pass
+            ``0`` to exercise the helper's fallback sum path.
+        model: Model name string embedded in the response.
+
+    Returns:
+        ChatCompletion: A fully-validated real SDK object.
+    """
+    data: dict[str, object] = {
+        "id": "chatcmpl-realtest",
+        "choices": [
+            {
+                "finish_reason": "stop",
+                "index": 0,
+                "message": {
+                    "content": "hello",
+                    "role": "assistant",
+                    "function_call": None,
+                    "tool_calls": None,
+                },
+            },
+        ],
+        "created": int(time.time()),
+        "model": model,
+        "object": "chat.completion",
+        "usage": {
+            "completion_tokens": completion_tokens,
+            "prompt_tokens": prompt_tokens,
+            "total_tokens": total_tokens,
+        },
+    }
+    return ChatCompletion.model_validate(data)
+
+
+def _make_real_chat_completion_no_usage(model: str = "gpt-3.5-turbo") -> ChatCompletion:
+    """Construct a real :class:`openai.types.chat.ChatCompletion` without a ``usage`` field.
+
+    Args:
+        model: Model name string embedded in the response.
+
+    Returns:
+        ChatCompletion: A fully-validated real SDK object with ``usage=None``.
+    """
+    data: dict[str, object] = {
+        "id": "chatcmpl-nousage",
+        "choices": [
+            {
+                "finish_reason": "stop",
+                "index": 0,
+                "message": {
+                    "content": "hi",
+                    "role": "assistant",
+                    "function_call": None,
+                    "tool_calls": None,
+                },
+            },
+        ],
+        "created": int(time.time()),
+        "model": model,
+        "object": "chat.completion",
+    }
+    return ChatCompletion.model_validate(data)
+
+
+def _make_real_chunk_with_usage(
+    *,
+    prompt_tokens: int,
+    completion_tokens: int,
+    total_tokens: int,
+) -> ChatCompletionChunk:
+    """Construct a real :class:`openai.types.chat.ChatCompletionChunk` carrying usage.
+
+    Args:
+        prompt_tokens: Prompt token count.
+        completion_tokens: Completion token count.
+        total_tokens: Total token count; ``0`` triggers the helper fallback.
+
+    Returns:
+        ChatCompletionChunk: A fully-validated real SDK chunk object.
+    """
+    data: dict[str, object] = {
+        "id": "chatcmpl-chunk",
+        "choices": [
+            {
+                "delta": {"content": "world", "role": "assistant"},
+                "finish_reason": "stop",
+                "index": 0,
+            },
+        ],
+        "created": int(time.time()),
+        "model": "gpt-3.5-turbo",
+        "object": "chat.completion.chunk",
+        "usage": {
+            "completion_tokens": completion_tokens,
+            "prompt_tokens": prompt_tokens,
+            "total_tokens": total_tokens,
+        },
+    }
+    return ChatCompletionChunk.model_validate(data)
+
+
+def test_build_usage_from_real_chat_completion_populated() -> None:
+    """Real ``ChatCompletion`` SDK object yields exact token counts in ``UsageInfo``.
+
+    Constructs a genuine ``openai.types.chat.ChatCompletion`` via
+    ``model_validate`` (the same path the SDK uses for live API responses)
+    and passes it directly to the helper. Validates that the exact field
+    values round-trip correctly through ``CompletionUsage`` and into
+    :class:`UsageInfo`.
+    """
+    cc = _make_real_chat_completion(
+        prompt_tokens=_REAL_PROMPT_TOKENS,
+        completion_tokens=_REAL_COMPLETION_TOKENS,
+        total_tokens=_REAL_TOTAL_TOKENS,
+    )
+    result = _build_usage_from_completion(cc)
+    assert isinstance(result, UsageInfo)
+    assert result.prompt_tokens == _REAL_PROMPT_TOKENS
+    assert result.completion_tokens == _REAL_COMPLETION_TOKENS
+    assert result.total_tokens == _REAL_TOTAL_TOKENS
+
+
+def test_build_usage_from_real_chat_completion_no_usage_returns_none() -> None:
+    """A real ``ChatCompletion`` without a ``usage`` field returns ``None``.
+
+    The OpenAI SDK can return responses without ``usage`` (e.g. when
+    ``stream_options.include_usage`` is not requested). The helper must
+    return ``None`` rather than raising.
+    """
+    cc = _make_real_chat_completion_no_usage()
+    assert cc.usage is None, "precondition: SDK object must have usage=None"
+    result = _build_usage_from_completion(cc)
+    assert result is None
+
+
+def test_build_usage_from_real_chat_completion_zero_total_fallback() -> None:
+    """Real ``ChatCompletion`` with ``total_tokens=0`` triggers the fallback sum.
+
+    Some providers return ``total_tokens=0`` on streaming responses; the
+    helper must fall back to ``prompt + completion`` rather than
+    reporting zero.
+    """
+    cc = _make_real_chat_completion(
+        prompt_tokens=_REAL_PROMPT_TOKENS,
+        completion_tokens=_REAL_COMPLETION_TOKENS,
+        total_tokens=0,
+    )
+    result = _build_usage_from_completion(cc)
+    assert isinstance(result, UsageInfo)
+    assert result.total_tokens == _REAL_PROMPT_TOKENS + _REAL_COMPLETION_TOKENS
+
+
+def test_build_usage_from_real_chunk_usage_populated() -> None:
+    """Real ``ChatCompletionChunk`` usage object yields exact token counts.
+
+    Constructs a real SDK chunk carrying ``usage`` and passes its
+    ``.usage`` attribute directly to the chunk helper. Validates that
+    all three fields are extracted correctly from the real
+    ``CompletionUsage`` Pydantic model.
+    """
+    chunk = _make_real_chunk_with_usage(
+        prompt_tokens=_REAL_PROMPT_TOKENS,
+        completion_tokens=_REAL_COMPLETION_TOKENS,
+        total_tokens=_REAL_TOTAL_TOKENS,
+    )
+    assert chunk.usage is not None, "precondition: chunk.usage must be populated"
+    result = _build_usage_from_chunk(chunk.usage)
+    assert isinstance(result, UsageInfo)
+    assert result.prompt_tokens == _REAL_PROMPT_TOKENS
+    assert result.completion_tokens == _REAL_COMPLETION_TOKENS
+    assert result.total_tokens == _REAL_TOTAL_TOKENS
+
+
+def test_build_usage_from_real_chunk_zero_total_fallback() -> None:
+    """Real chunk with ``total_tokens=0`` triggers the ``prompt+completion`` fallback.
+
+    Args for a real ``CompletionUsage`` with ``total_tokens=0`` exercise the
+    ``or (prompt + completion)`` branch in the helper.
+    """
+    chunk = _make_real_chunk_with_usage(
+        prompt_tokens=_REAL_PROMPT_TOKENS,
+        completion_tokens=_REAL_COMPLETION_TOKENS,
+        total_tokens=0,
+    )
+    assert chunk.usage is not None
+    result = _build_usage_from_chunk(chunk.usage)
+    assert isinstance(result, UsageInfo)
+    assert result.total_tokens == _REAL_PROMPT_TOKENS + _REAL_COMPLETION_TOKENS

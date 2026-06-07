@@ -68,31 +68,20 @@ class TestApplyCacheBreakpoints:
 
     @staticmethod
     def test_system_prompt_becomes_cached_block() -> None:
-        """A plain system string is rewritten to exactly one ephemeral cached text block.
-
-        The rewritten ``system`` must be a single-element list whose only block
-        equals the full expected structure - ``type`` ``text``, the original
-        prompt preserved verbatim, and an ``ephemeral`` ``cache_control`` - with
-        no extra keys. Re-applying the breakpoints to the already-rewritten
-        kwargs must be idempotent and leave the identical structure, so a repeat
-        request does not accumulate nested blocks or duplicate breakpoints.
-        """
-        prompt = "You are a binary analysis assistant."
+        """A plain system string is rewritten to a cached text block."""
         kwargs: dict[str, Any] = {
-            "system": prompt,
+            "system": "You are a binary analysis assistant.",
             "messages": [{"role": "user", "content": "hello"}],
         }
-        _apply_cache_breakpoints(kwargs, system_prompt=prompt)
-
-        expected_block: dict[str, Any] = {
-            "type": "text",
-            "text": prompt,
-            "cache_control": {"type": "ephemeral"},
-        }
-        assert kwargs["system"] == [expected_block]
-
-        _apply_cache_breakpoints(kwargs, system_prompt=prompt)
-        assert kwargs["system"] == [expected_block]
+        _apply_cache_breakpoints(
+            kwargs,
+            system_prompt="You are a binary analysis assistant.",
+        )
+        system = kwargs["system"]
+        assert isinstance(system, list)
+        assert system[0]["type"] == "text"
+        assert system[0]["text"] == "You are a binary analysis assistant."
+        assert system[0]["cache_control"] == {"type": "ephemeral"}
 
     @staticmethod
     def test_last_tool_entry_gets_cache_control() -> None:

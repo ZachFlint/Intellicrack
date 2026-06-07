@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Final
 
 import pytest
@@ -152,12 +153,16 @@ def test_normalize_type(input_type: str, expected: str) -> None:
 
 
 def test_build_schema_property_basic() -> None:
-    """Verify basic property has type and description."""
+    """Verify basic property has type and description and is JSON-serializable."""
     prop = build_schema_property(_param())
     assert prop.get("type") == "string"
     assert prop.get("description") == _PARAM_DESC
     assert "enum" not in prop
     assert "default" not in prop
+    serialized = json.dumps(prop)
+    parsed: dict[str, object] = json.loads(serialized)
+    assert parsed["type"] == "string"
+    assert parsed["description"] == _PARAM_DESC
 
 
 def test_build_schema_property_with_enum() -> None:
@@ -191,11 +196,16 @@ def test_build_schema_property_empty_enum_excluded() -> None:
 
 
 def test_build_schema_parameters_empty() -> None:
-    """Verify empty parameter list produces empty schema."""
+    """Verify empty parameter list produces a valid, JSON-serializable empty schema."""
     result = build_schema_parameters([])
     assert result["type"] == "object"
     assert result["properties"] == {}
     assert result["required"] == []
+    serialized = json.dumps(result)
+    parsed: dict[str, object] = json.loads(serialized)
+    assert parsed["type"] == "object"
+    assert parsed["properties"] == {}
+    assert parsed["required"] == []
 
 
 def test_build_schema_parameters_required_only() -> None:

@@ -17,6 +17,7 @@ Tests validate:
 
 from __future__ import annotations
 
+import binascii
 import ctypes
 import os
 import struct
@@ -27,8 +28,10 @@ from typing import TYPE_CHECKING, ClassVar, Final
 if TYPE_CHECKING:
     from pathlib import Path
 
+import pefile
 import pytest
 
+from intellicrack.bridges.base import MemorySearchResult
 from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.types import ToolError, ToolName
 
@@ -38,6 +41,12 @@ _ADDR_CODE: Final[int] = 0x401000
 _ADDR_RANGE_END: Final[int] = 0x402000
 _TRACE_CODE: Final[int] = 0xC0000005
 _TEST_MODULE: Final[str] = "ntdll.dll"
+_NTDLL_PATH: Final[str] = r"C:\Windows\System32\ntdll.dll"
+_TEXT_CHARACTERISTICS_EXPECTED: Final[str] = "0x60000020"
+_NTDLL_TEXT_MIN_VIRTUAL_SIZE: Final[int] = 0x100000
+_NTDLL_MIN_EXPORT_COUNT: Final[int] = 2000
+_NT_CREATE_FILE_ORDINAL: Final[int] = 297
+_RTL_ALLOC_HEAP_ORDINAL: Final[int] = 754
 _EXPECTED_NEW_TOOL_COUNT: Final[int] = 104
 
 
@@ -201,6 +210,11 @@ class TestFindPattern:
     async def test_find_exact_pattern_in_own_memory(self, attached_bridge: X64DbgBridge) -> None:
         """Test finding an exact hex pattern in current process.
 
+        The oracle is buf_addr from ctypes.addressof, which is the independently known
+        address where the marker bytes live in the current process.  find_pattern must
+        return at least one result whose 'offset' integer equals that address exactly.
+        The result dict must also carry an 'address' key whose hex string matches.
+
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
@@ -209,9 +223,16 @@ class TestFindPattern:
         buf_addr = ctypes.addressof(buf)
 
         results = await attached_bridge.find_pattern("48 89 5C 24 08 57 48 83 EC 20 48 8B D9 90 CC C3")
-        assert isinstance(results, list)
-        found = any(int(r["offset"]) == buf_addr for r in results)
-        assert found, f"Pattern not found at expected address {hex(buf_addr)}"
+
+        assert isinstance(results, list), "find_pattern must return a list"
+        assert len(results) > 0, "find_pattern returned empty list; marker was not found in process"
+
+        exact_matches = [r for r in results if r["offset"] == buf_addr]
+        assert len(exact_matches) >= 1, (
+            f"No result with offset == buf_addr {hex(buf_addr)}; offsets found: {[hex(r['offset']) for r in results]}"
+        )
+        match = exact_matches[0]
+        assert match["address"] == hex(buf_addr), f"address field {match['address']!r} does not match hex(buf_addr) {hex(buf_addr)!r}"
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
     async def test_find_compact_hex_pattern(self, attached_bridge: X64DbgBridge) -> None:
@@ -224,7 +245,7 @@ class TestFindPattern:
         buf = ctypes.create_string_buffer(marker)
         buf_addr = ctypes.addressof(buf)
 
-        results = await attached_bridge.find_pattern("FACEFEEDCAFEBABEDEADC0DE13374299")
+        results = await attached_bridge.find_pattern("FACEFEEDCAFEBABEDEADC0DE13374299")  # pragma: allowlist secret
         assert isinstance(results, list)
         found = any(int(r["offset"]) == buf_addr for r in results)
         assert found, f"Compact pattern not found at {hex(buf_addr)}"
@@ -252,18 +273,38 @@ class TestScanMemory:
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
     async def test_scan_with_bytes(self, attached_bridge: X64DbgBridge) -> None:
-        """Test scan_memory with bytes input.
+        """Test scan_memory with bytes input finds the exact allocated buffer address.
+
+        The oracle is buf_addr from ctypes.addressof, which is independently known.
+        scan_memory must return a MemorySearchResult whose .address equals buf_addr
+        and whose .matched_bytes hex-encodes the exact marker bytes (confirmed against
+        binascii.hexlify, a separate stdlib function, not the bridge itself).
 
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
         marker = b"SCAN_BYTES_TEST_XYZ"
         buf = ctypes.create_string_buffer(marker)
-        _buf_addr = ctypes.addressof(buf)
+        buf_addr = ctypes.addressof(buf)
+        expected_hex = binascii.hexlify(marker).decode()
 
         results = await attached_bridge.scan_memory(marker)
-        assert isinstance(results, list)
-        assert len(results) > 0
+
+        assert isinstance(results, list), "scan_memory must return a list"
+        assert len(results) > 0, "scan_memory returned empty list; marker was not found in process"
+
+        for result in results:
+            assert isinstance(result, MemorySearchResult), f"Each result must be a MemorySearchResult, got {type(result)}"
+            assert isinstance(result.address, int), "MemorySearchResult.address must be int"
+            assert isinstance(result.matched_bytes, str), "MemorySearchResult.matched_bytes must be str"
+
+        exact_matches = [r for r in results if r.address == buf_addr]
+        assert len(exact_matches) >= 1, (
+            f"No result with address == buf_addr {hex(buf_addr)}; addresses: {[hex(r.address) for r in results]}"
+        )
+        assert exact_matches[0].matched_bytes == expected_hex, (
+            f"matched_bytes {exact_matches[0].matched_bytes!r} != expected {expected_hex!r}"
+        )
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
     async def test_scan_with_hex_string(self, attached_bridge: X64DbgBridge) -> None:
@@ -276,7 +317,7 @@ class TestScanMemory:
         buf = ctypes.create_string_buffer(marker)
         _buf_addr = ctypes.addressof(buf)
 
-        results = await attached_bridge.scan_memory("CAFEBABEDEADBEEFFEEDFACE12345678")
+        results = await attached_bridge.scan_memory("CAFEBABEDEADBEEFFEEDFACE12345678")  # pragma: allowlist secret
         assert isinstance(results, list)
         assert len(results) > 0
 
@@ -410,21 +451,55 @@ class TestPEParsing:
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
     async def test_get_module_sections_real(self, attached_bridge: X64DbgBridge) -> None:
-        """Test parsing PE sections from a real loaded module.
+        """Test parsing PE sections from a real loaded module with field-level validation.
+
+        Oracle: pefile parses the same ntdll.dll on disk and produces the reference values.
+        The bridge parses the in-memory image; structural fields must match pefile's on-disk
+        values.  ntdll .text characteristics are 0x60000020 (IMAGE_SCN_MEM_EXECUTE |
+        IMAGE_SCN_MEM_READ | IMAGE_SCN_CNT_CODE), virtual_size >= 0x100000 (>1 MB), and
+        writable is False.  These invariants are stable across Windows 10/11 ntdll versions.
 
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
         sections = await attached_bridge.get_module_sections(_TEST_MODULE)
-        assert isinstance(sections, list)
-        assert len(sections) > 0
+        assert isinstance(sections, list), "get_module_sections must return a list"
+        assert len(sections) > 0, "No sections returned for ntdll.dll"
 
         section_names = [s["name"] for s in sections]
         assert ".text" in section_names, f"Missing .text section, got: {section_names}"
 
         text_section = next(s for s in sections if s["name"] == ".text")
-        assert text_section["executable"] is True
-        assert text_section["readable"] is True
+
+        assert text_section["executable"] is True, ".text must be executable"
+        assert text_section["readable"] is True, ".text must be readable"
+        assert text_section["writable"] is False, ".text must not be writable"
+
+        assert text_section["characteristics"] == _TEXT_CHARACTERISTICS_EXPECTED, (
+            f"ntdll .text characteristics {text_section['characteristics']!r} != expected {_TEXT_CHARACTERISTICS_EXPECTED!r}"
+        )
+
+        virtual_size: int = text_section["virtual_size"]
+        assert virtual_size >= _NTDLL_TEXT_MIN_VIRTUAL_SIZE, (
+            f"ntdll .text virtual_size {virtual_size:#010x} < expected minimum {_NTDLL_TEXT_MIN_VIRTUAL_SIZE:#010x}"
+        )
+
+        virtual_address: str = text_section["virtual_address"]
+        assert virtual_address.startswith("0x"), f"virtual_address {virtual_address!r} is not a hex string"
+        assert int(virtual_address, 16) > 0, f"virtual_address {virtual_address!r} must be non-zero"
+
+        pe = pefile.PE(_NTDLL_PATH)
+        try:
+            on_disk_text = next(
+                (s for s in pe.sections if s.Name.rstrip(b"\x00") == b".text"),
+                None,
+            )
+            assert on_disk_text is not None, "pefile did not find .text in ntdll.dll on disk"
+            assert virtual_size == on_disk_text.Misc_VirtualSize, (
+                f"Bridge virtual_size {virtual_size:#010x} != pefile Misc_VirtualSize {on_disk_text.Misc_VirtualSize:#010x}"
+            )
+        finally:
+            pe.close()
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
     async def test_section_has_required_fields(self, attached_bridge: X64DbgBridge) -> None:
@@ -451,18 +526,47 @@ class TestPEParsing:
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
     async def test_get_module_exports_real(self, attached_bridge: X64DbgBridge) -> None:
-        """Test parsing PE exports from ntdll.dll.
+        """Test parsing PE exports from ntdll.dll with count, structure, and specific-export validation.
+
+        Oracle: pefile parses ntdll.dll on disk.  The bridge reads the in-memory export table.
+        Invariants that hold for every Windows 10/11 ntdll build:
+        - At least 2000 named exports (typically 2516+).
+        - Export ordinal 297 is NtCreateFile.
+        - Export ordinal 754 is RtlAllocateHeap.
+        - No duplicate export names.
+        - Every record has 'name', 'ordinal', 'address', 'truncated' keys.
 
         Args:
             attached_bridge: X64DbgBridge with attached_pid.
         """
         exports = await attached_bridge.get_module_exports(_TEST_MODULE)
-        assert isinstance(exports, list)
-        assert len(exports) > 0
+
+        assert isinstance(exports, list), "get_module_exports must return a list"
+        assert len(exports) >= _NTDLL_MIN_EXPORT_COUNT, f"ntdll exports count {len(exports)} < minimum {_NTDLL_MIN_EXPORT_COUNT}"
+
+        required_keys: set[str] = {"name", "ordinal", "address", "truncated"}
+        for export in exports:
+            assert required_keys.issubset(export.keys()), f"Export record missing keys: {required_keys - export.keys()}; record={export!r}"
 
         export_names = [e["name"] for e in exports if e.get("name")]
-        assert any("Nt" in name or "Rtl" in name for name in export_names), (
-            f"Expected ntdll exports like NtXxx/RtlXxx, got: {export_names[:10]}"
+        unique_names: set[str] = set(export_names)
+        assert len(unique_names) == len(export_names), (
+            f"Duplicate export names found; duplicates: {[n for n in export_names if export_names.count(n) > 1][:10]}"
+        )
+
+        by_ordinal: dict[int, dict[str, object]] = {e["ordinal"]: e for e in exports}
+
+        nt_create = by_ordinal.get(_NT_CREATE_FILE_ORDINAL)
+        assert nt_create is not None, f"Ordinal {_NT_CREATE_FILE_ORDINAL} (NtCreateFile) not found in exports"
+        assert nt_create["name"] == "NtCreateFile", f"Ordinal {_NT_CREATE_FILE_ORDINAL} name={nt_create['name']!r}, expected 'NtCreateFile'"
+        assert isinstance(nt_create["address"], str), f"NtCreateFile address must be str, got {type(nt_create['address'])}"
+        assert str(nt_create["address"]).startswith("0x"), f"NtCreateFile address {nt_create['address']!r} must start with '0x'"
+        assert int(str(nt_create["address"]), 16) > 0, "NtCreateFile address must be non-zero"
+
+        rtl_alloc = by_ordinal.get(_RTL_ALLOC_HEAP_ORDINAL)
+        assert rtl_alloc is not None, f"Ordinal {_RTL_ALLOC_HEAP_ORDINAL} (RtlAllocateHeap) not found in exports"
+        assert rtl_alloc["name"] == "RtlAllocateHeap", (
+            f"Ordinal {_RTL_ALLOC_HEAP_ORDINAL} name={rtl_alloc['name']!r}, expected 'RtlAllocateHeap'"
         )
 
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")

@@ -9,6 +9,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 
 import pytest
+import yara
 
 
 if TYPE_CHECKING:
@@ -16,6 +17,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from intellicrack.bridges.hex_editor import HexEditorBridge
+
+_YARA_ERROR_CLS: type[Exception] = getattr(yara, "Error")
 
 
 pytest.importorskip("intellicrack_hexcore", reason="intellicrack_hexcore native module not built")
@@ -300,15 +303,25 @@ class TestYaraScanFiles:
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan_files(str(rule_file)))
         assert not results
 
-    def test_nonexistent_yar_file_raises_or_returns_error(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify yara_scan_files with a nonexistent path raises an exception.
+    def test_nonexistent_yar_file_raises_yara_error(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify yara_scan_files with a nonexistent path raises yara.Error with an OS error code.
+
+        When ``yara.compile(filepaths=...)`` is called with a path that does not exist,
+        yara-python raises ``yara.Error`` wrapping the underlying OS errno=2 (ENOENT).
+        The ``YaraScanner.compile_rules`` except clause only catches ``ValueError``,
+        ``OSError``, and ``RuntimeError``; ``yara.Error`` is a direct subclass of
+        ``Exception`` and propagates uncaught through ``compile_rules_async`` and into
+        ``yara_scan_files``. This test pins that specific propagation so that if the
+        production code silently swallows the error (returning an empty list) or raises
+        a different exception type, the test fails.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
             tmp_path: Pytest temporary directory.
         """
-        missing_path = str(tmp_path / "does_not_exist_xyz.yar")
-        with pytest.raises((FileNotFoundError, RuntimeError, Exception)):
+        missing_filename = "does_not_exist_xyz.yar"
+        missing_path = str(tmp_path / missing_filename)
+        with pytest.raises(_YARA_ERROR_CLS, match="No such file or directory"):
             _run(loaded_bridge.yara_scan_files(missing_path))
 
     def test_yar_file_match_strings_have_identifier_offset_data(self, loaded_bridge: HexEditorBridge, tmp_path: Path) -> None:

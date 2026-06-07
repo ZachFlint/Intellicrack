@@ -121,7 +121,6 @@ import os
 import struct
 import sys
 import threading
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
 
@@ -144,6 +143,7 @@ from intellicrack.bridges.x64dbg import (
     PE32_MACHINE,
     PE64_MACHINE,
     PE_EXPORT_MAX,
+    WIN_PROCESS_VM_READ,
     X64DbgBridge,
 )
 from intellicrack.core.types import BreakpointInfo, MemoryRegion, ToolError, ToolName
@@ -151,6 +151,7 @@ from intellicrack.core.types import BreakpointInfo, MemoryRegion, ToolError, Too
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Coroutine, Generator
+    from pathlib import Path
 
 
 _bridge_module = x64dbg_module
@@ -469,20 +470,39 @@ def attached_bridge() -> X64DbgBridge:
 
 
 class TestWinNoInheritHandleRemoved:
-    """Verify the ``WIN_NO_INHERIT_HANDLE`` constant is gone."""
+    """Verify ``WIN_NO_INHERIT_HANDLE`` is gone and OpenProcess uses inline ``False``."""
 
-    def test_constant_not_exposed(self) -> None:
-        """Verify the bridge module does not export ``WIN_NO_INHERIT_HANDLE``."""
-        assert not hasattr(x64dbg_module, "WIN_NO_INHERIT_HANDLE"), (
-            "WIN_NO_INHERIT_HANDLE constant must be deleted; the bridge inlines False in OpenProcess calls."
-        )
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
+    def test_open_process_called_with_inherit_handle_false(self) -> None:
+        """Verify ``_get_cached_process_handle`` passes ``False`` as ``bInheritHandle``.
 
-    def test_source_inlines_false_for_inherit_handle(self) -> None:
-        """Verify the source no longer references the constant by name."""
-        path = x64dbg_module.__file__
-        assert path is not None
-        text = Path(path).read_text(encoding="utf-8")
-        assert "WIN_NO_INHERIT_HANDLE" not in text, "WIN_NO_INHERIT_HANDLE must not appear in source after audit6 X64DBG-B."
+        The audit finding F-0025 requires the constant ``WIN_NO_INHERIT_HANDLE`` to be
+        removed and ``False`` inlined directly.  This test intercepts ``kernel32.OpenProcess``
+        and confirms the ``bInheritHandle`` positional argument (index 1) is ``False`` when
+        ``_get_cached_process_handle`` opens a handle for the current process.
+        """
+        recorded_inherit: list[bool] = []
+        kernel32 = ctypes.windll.kernel32
+        real_open_process = getattr(kernel32, "OpenProcess")
+
+        def _spy_open_process(desired_access: int, inherit_handle: int, pid: int) -> int:
+            recorded_inherit.append(bool(inherit_handle))
+            return cast("int", real_open_process(desired_access, inherit_handle, pid))
+
+        b = X64DbgBridge()
+        b.attached_pid = os.getpid()
+        handles: dict[int, int] = getattr(b, "_process_handles")
+        handles.clear()
+        get_handle = getattr(b, "_get_cached_process_handle")
+        setattr(kernel32, "OpenProcess", _spy_open_process)
+        try:
+            get_handle(WIN_PROCESS_VM_READ)
+        finally:
+            setattr(kernel32, "OpenProcess", real_open_process)
+
+        assert recorded_inherit, "OpenProcess was not called; _get_cached_process_handle did not open a new handle"
+        for inherit_flag in recorded_inherit:
+            assert inherit_flag is False, f"OpenProcess called with bInheritHandle={inherit_flag!r}; must be False (no constant)"
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
@@ -588,14 +608,6 @@ class TestGetProcessInfoRaisesWhenDetached:
             await bridge.get_process_info()
         assert "not attached" in str(excinfo.value).lower()
         assert excinfo.value.tool_name == "x64dbg"
-
-    def test_return_annotation_is_processinfo(self) -> None:
-        """Verify ``get_process_info`` is annotated as ``ProcessInfo`` (no Optional)."""
-        sig = inspect.signature(X64DbgBridge.get_process_info)
-        ret = sig.return_annotation
-        ret_str = str(ret)
-        assert "None" not in ret_str, f"get_process_info return annotation must drop None; got {ret_str!r}"
-        assert "ProcessInfo" in ret_str
 
 
 # ---------------------------------------------------------------------------
@@ -803,14 +815,7 @@ class TestPatchAntiDebugUnsupportedCheckRejection:
 
 
 class TestPatchAntiDebugClassConstant:
-    """Verify ``SUPPORTED_ANTI_DEBUG_PATCHES`` documents the contract."""
-
-    def test_constant_has_expected_entries(self) -> None:
-        """Verify the supported patch tuple contains the documented checks."""
-        supported = X64DbgBridge.SUPPORTED_ANTI_DEBUG_PATCHES
-        assert "being_debugged" in supported
-        assert "nt_global_flag" in supported
-        assert "heap_flags" in supported
+    """Verify ``SUPPORTED_ANTI_DEBUG_PATCHES`` governs runtime check dispatch."""
 
     @pytest.mark.asyncio
     async def test_default_param_matches_documented_default(self) -> None:

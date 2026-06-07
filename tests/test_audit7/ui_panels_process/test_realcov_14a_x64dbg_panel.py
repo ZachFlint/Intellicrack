@@ -182,6 +182,19 @@ class _X64DbgPanelProbe(X64DbgPanel):
         """
         return self._module_table.rowCount()
 
+    def detail_cell(self, row: int, column: int) -> str | None:
+        """Return the text of a specific cell in the module-detail table.
+
+        Args:
+            row: Zero-based row index.
+            column: Zero-based column index.
+
+        Returns:
+            str | None: The cell text, or ``None`` if the cell is absent.
+        """
+        item = self._mod_detail_table.item(row, column)
+        return None if item is None else item.text()
+
     def render_memory(self, address: int, data: bytes) -> str:
         """Render a real memory read and return the hex-dump text.
 
@@ -420,6 +433,40 @@ def test_apply_module_exports_renders_real_exports(panel: _X64DbgPanelProbe) -> 
 
     assert panel.detail_row_count() == len(exports)
     assert "LoadLibraryA" in panel.detail_names()
+
+
+def test_apply_module_exports_renders_exact_cell_values(panel: _X64DbgPanelProbe) -> None:
+    """Each export row must render name (col 0), ordinal (col 1), and address (col 2).
+
+    The test locates the ``LoadLibraryA`` row by scanning column 0, then
+    verifies that column 1 carries its ordinal as a non-empty string and
+    column 2 carries a hex address beginning with ``0x``.  This catches a
+    regression where only column 0 is populated (the existing test) but
+    columns 1 and 2 silently lose their values.
+
+    Args:
+        panel: The X64DbgPanel probe under test.
+    """
+    exports = _real_pe_exports()
+    panel.render_exports(exports)
+
+    load_library_row: int | None = None
+    for row in range(panel.detail_row_count()):
+        name_cell = panel.detail_cell(row, 0)
+        if name_cell == "LoadLibraryA":
+            load_library_row = row
+            break
+
+    assert load_library_row is not None, "LoadLibraryA row not found in rendered export table"
+
+    ordinal_cell = panel.detail_cell(load_library_row, 1)
+    assert ordinal_cell is not None, "LoadLibraryA ordinal cell (col 1) is None"
+    assert ordinal_cell.strip(), "LoadLibraryA ordinal cell is empty string"
+    int(ordinal_cell)
+
+    address_cell = panel.detail_cell(load_library_row, 2)
+    assert address_cell is not None, "LoadLibraryA address cell (col 2) is None"
+    assert address_cell.startswith("0x"), f"LoadLibraryA address cell expected hex string starting with '0x', got {address_cell!r}"
 
 
 def test_on_mem_read_success_renders_real_pe_header(panel: _X64DbgPanelProbe) -> None:

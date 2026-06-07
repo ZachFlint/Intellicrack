@@ -59,16 +59,45 @@ def _extract_503(_exc: Exception) -> str:
     return "model is loading"
 
 
-def test_returns_none_for_unmatched_status() -> None:
-    """Status codes outside 401/403/429/503 yield ``None`` and never raise."""
+@pytest.mark.parametrize(
+    "status_code",
+    [500, 502, 504, 400, 404],
+)
+def test_returns_none_for_unmatched_status(status_code: int) -> None:
+    """Status codes outside 401/403/429/503 yield ``None``, never raise, and have no side effects.
+
+    The helper is documented to return ``None`` for any code not in its known set so
+    the caller can apply a provider-specific fall-through raise. This test parametrizes
+    all boundary-adjacent unmatched codes to prevent silent regressions where a new
+    branch is added that handles previously-unhandled codes. The side-effect check
+    confirms the 503 extract callback is never invoked for non-503 codes.
+
+    Args:
+        status_code: An HTTP status code that is not 401, 403, 429, or 503.
+    """
+    side_effect_log: list[int] = []
+
+    def _probe_extract(_exc: Exception) -> str:
+        """Record that the extract callback was invoked (it must not be).
+
+        Args:
+            _exc: The originating exception (unused).
+
+        Returns:
+            str: A fixed string for the message template.
+        """
+        side_effect_log.append(status_code)
+        return "should not be reached"
+
     cause = RuntimeError("server error")
     result = _raise_typed_for_status(
-        500,
+        status_code,
         cause,
         messages=_HF_MESSAGES,
-        extract_503_message=_extract_503,
+        extract_503_message=_probe_extract,
     )
     assert result is None
+    assert side_effect_log == [], f"extract_503_message was unexpectedly invoked for status {status_code}"
 
 
 def test_returns_none_for_zero_sentinel_status() -> None:

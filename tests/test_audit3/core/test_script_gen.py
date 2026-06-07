@@ -42,7 +42,6 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
-from unittest import mock
 
 import pytest
 import structlog
@@ -338,7 +337,14 @@ def test_script_save_emits_success_log_only_after_write(tmp_path: Path) -> None:
 
 
 def test_script_save_failure_logs_failure_not_success(tmp_path: Path) -> None:
-    """When write_text raises, success log is NOT emitted; failure log is.
+    """When a real write_text fails, success log is NOT emitted; failure log is.
+
+    Drives a genuine :class:`OSError` from the filesystem rather than mocking
+    the write that ``save`` performs: the save target is an existing directory,
+    so ``Path.write_text`` raises a real :class:`PermissionError` (an
+    ``OSError`` subclass) on Windows. The production ``except OSError`` branch
+    must run, emitting ``script_file_write_failed`` (and never the success
+    ``script_file_written``) and leaving ``saved_path`` untouched.
 
     Args:
         tmp_path: Pytest-provided temporary directory.
@@ -350,15 +356,16 @@ def test_script_save_failure_logs_failure_not_success(tmp_path: Path) -> None:
         content="x = 1",
         description="d",
     )
-    target = tmp_path / "bad.py"
-    with (
-        capture_logs() as records,
-        mock.patch.object(Path, "write_text", side_effect=OSError("disk full")),
-        pytest.raises(OSError, match="disk full"),
-    ):
+    target = tmp_path / "occupied"
+    target.mkdir()
+
+    with capture_logs() as records, pytest.raises(OSError, match="occupied") as exc_info:
         script.save(target)
+
+    assert exc_info.type is PermissionError
     events = _event_names(records)
     assert "script_file_written" not in events
+    assert "script_saved" not in events
     assert "script_file_write_failed" in events
     assert script.saved_path is None
 
@@ -494,23 +501,30 @@ def test_validate_javascript_unlink_failure_suppresses_cleaned_log() -> None:
             path = event_dict.get("path")
             if isinstance(path, str):
                 Path(path).chmod(stat.S_IREAD)
-                captured_path["path"] = path
+                captured_path["created"] = path
+        elif event_dict.get("event") == "temp_file_unlink_failed":
+            failed = event_dict.get("path")
+            if isinstance(failed, str):
+                captured_path["failed"] = failed
         return event_dict
 
     events, restore = _install_recording_processors([_mark_temp_readonly])
     try:
-        ScriptValidator.validate_javascript("var x = 1;")
+        verdict = ScriptValidator.validate_javascript("var x = 1;")
     finally:
         restore()
-        leaked = captured_path.get("path")
+        leaked = captured_path.get("created")
         if leaked is not None and Path(leaked).exists():
             Path(leaked).chmod(stat.S_IWRITE)
             Path(leaked).unlink()
 
-    assert captured_path.get("path"), "production never created a temp file to fail unlink on"
+    created = captured_path.get("created")
+    assert created, "production never created a temp file to fail unlink on"
+    assert verdict == (True, None), verdict
     assert "temp_file_unlink_attempt" in events, events
     assert "temp_file_unlink_failed" in events, events
     assert "temp_file_cleaned" not in events, events
+    assert captured_path.get("failed") == created, captured_path
 
 
 # --- F-0012: ScriptManager.execute runs Python scripts ---

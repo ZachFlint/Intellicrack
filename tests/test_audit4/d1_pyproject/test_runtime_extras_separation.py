@@ -142,8 +142,21 @@ class TestRuntimeDependenciesAreLean:
 
     @staticmethod
     def test_dev_tools_absent_from_runtime_deps() -> None:
-        """No known dev/test/docs tool may appear in ``[project].dependencies``."""
+        """No known dev/test/docs tool may appear in ``[project].dependencies``.
+
+        Also asserts that the runtime dependency list is non-empty. A
+        pyproject.toml with an empty [project].dependencies would trivially
+        satisfy the dev-tools-absent check while hiding a broken configuration
+        where all dependencies were accidentally deleted; the non-empty assertion
+        prevents that false pass.
+        """
         runtime = _runtime_dependencies()
+
+        assert len(runtime) > 0, (
+            "[project].dependencies is empty — the pyproject.toml may be misconfigured; "
+            "at minimum the production runtime imports must be declared."
+        )
+
         leaked = runtime & _DEV_ONLY_PACKAGES
         assert not leaked, (
             f"dev/test/docs tools leaked into [project].dependencies: {sorted(leaked)}. "

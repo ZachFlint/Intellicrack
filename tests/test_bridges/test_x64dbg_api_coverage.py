@@ -23,6 +23,7 @@ from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.types import BreakpointInfo, ToolError
 
 
+_ERR_CODE_PLUGIN_UNAVAILABLE = "plugin_unavailable"
 _ADDR_BREAKPOINT = 0x1234
 _ADDR_WATCHPOINT = 0x5678
 _WATCHPOINT_SIZE = 4
@@ -42,31 +43,50 @@ def bridge() -> X64DbgBridge:
     return X64DbgBridge()
 
 
-async def test_debugger_control_methods_exist(bridge: X64DbgBridge) -> None:
-    """Verify debugger control methods exist and raise ToolError when not connected.
+@pytest.mark.parametrize(
+    ("method_name", "expected_command"),
+    [
+        ("step_into", "step_into"),
+        ("step_over", "step_over"),
+        ("step_out", "step_out"),
+        ("run", "run"),
+        ("pause", "pause"),
+        ("stop", "stop"),
+    ],
+)
+async def test_control_method_classifies_unavailable_plugin(
+    bridge: X64DbgBridge,
+    method_name: str,
+    expected_command: str,
+) -> None:
+    """Each control method must classify the missing-plugin fault structurally.
+
+    With no x64dbg installation configured, ``_plugin_deployed`` is False, so
+    every debugger-control method routes through ``_send_pipe_command`` and the
+    bridge raises a ``ToolError`` that the bridge itself classifies. The gate is
+    not "it raised something": it asserts the bridge attaches the exact
+    structured ``x64dbg_error_code`` (``"plugin_unavailable"``), tags the
+    raising ``command`` with the originating method name so callers can route
+    recovery, and stamps ``tool_name == "x64dbg"``. A bridge that swallowed the
+    fault, returned a value, raised a bare ``Exception``, or mislabelled the
+    command would fail this gate.
 
     Args:
         bridge: Fresh X64DbgBridge instance without an active plugin pipe.
+        method_name: Name of the control coroutine under test.
+        expected_command: Command string the bridge must tag the error with.
     """
-    # These methods should try to send pipe commands and fail
+    assert bridge.plugin_status["plugin_deployed"] is False
 
-    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
-        await bridge.step_into()
+    control = getattr(bridge, method_name)
+    with pytest.raises(ToolError) as exc_info:
+        await control()
 
-    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
-        await bridge.step_over()
-
-    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
-        await bridge.step_out()
-
-    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
-        await bridge.run()
-
-    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
-        await bridge.pause()
-
-    with pytest.raises(ToolError, match=r"pipe|bridge plugin"):
-        await bridge.stop()
+    error = exc_info.value
+    assert error.tool_name == "x64dbg"
+    assert error.details["x64dbg_error_code"] == _ERR_CODE_PLUGIN_UNAVAILABLE
+    assert error.details["command"] == expected_command
+    assert "bridge plugin not available" in str(error)
 
 
 async def test_breakpoint_management(bridge: X64DbgBridge) -> None:

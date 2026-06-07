@@ -26,6 +26,7 @@ from __future__ import annotations
 import inspect
 import re
 import sys
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final
 
 import pytest
@@ -138,12 +139,77 @@ def _disassemble_real_text(dll_path: Path) -> tuple[list[DisassemblyLine], int, 
         pe.close()
 
 
+@dataclass(frozen=True)
+class _OracleInstr:
+    """Typed snapshot of a capstone instruction used as the decode oracle.
+
+    Captures only the fields the test assertions need so that the return type
+    of :func:`_oracle_decode_first` is concrete rather than ``Any``.
+    """
+
+    mnemonic: str
+    raw_bytes: bytes
+    address: int
+
+
+def _oracle_decode_first(
+    dll_path: Path,
+    first_bytes_str: str,
+) -> _OracleInstr | None:
+    """Return the first capstone instruction decoded from the real ``.text`` section.
+
+    Opens the PE independently from the bridge pipeline and decodes only the
+    leading bytes (those already consumed by the bridge for the first
+    :class:`DisassemblyLine`).  Used as an independent ground-truth oracle.
+
+    Args:
+        dll_path: Path to the real PE DLL.
+        first_bytes_str: Space-separated hex bytes from the bridge's first
+            decoded line (e.g. ``"48 89 5c 24 08"``).
+
+    Returns:
+        _OracleInstr | None: Typed snapshot of the first decoded instruction,
+        or ``None`` if capstone produced no output.
+    """
+    first_raw = bytes.fromhex(first_bytes_str.replace(" ", ""))
+    pe = pefile.PE(str(dll_path), fast_load=True)
+    try:
+        image_base = int(pe.OPTIONAL_HEADER.ImageBase)
+        section = next(sec for sec in pe.sections if sec.Name.rstrip(b"\x00") == b".text")
+        raw = bytes(section.get_data())
+        sec_va = int(section.VirtualAddress)
+    finally:
+        pe.close()
+    raw_offset = 0
+    while raw_offset < len(raw) and raw[raw_offset] in {0x00, 0xCC}:
+        raw_offset += 1
+    start_va = image_base + sec_va + raw_offset
+    oracle_md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+    instrs: list[Any] = list(oracle_md.disasm(raw[raw_offset : raw_offset + len(first_raw)], start_va))
+    if not instrs:
+        return None
+    instr = instrs[0]
+    return _OracleInstr(
+        mnemonic=str(instr.mnemonic),
+        raw_bytes=bytes(instr.bytes),
+        address=int(instr.address),
+    )
+
+
 class TestDisassemblyLineFromRealBinary:
     """04-F001: DisassemblyLine carries genuine disassembly of a real PE."""
 
     @staticmethod
     def test_decodes_real_text_mnemonics(real_pe_dll: Path) -> None:
         """Disassembling the real kernel32 .text yields real x86 instructions.
+
+        The test verifies both the structural properties of the output *and*
+        the semantic correctness of the very first instruction by running
+        capstone independently on the same raw bytes and asserting that the
+        ``DisassemblyLine`` mnemonic and ``bytes_str`` match the reference
+        decode exactly.  If capstone returned garbage tokens, or if the bridge
+        pipeline silently mangled the mnemonic or dropped instruction bytes,
+        the per-field assertion would fail before the shape checks do.
 
         Args:
             real_pe_dll: Session fixture resolving the real
@@ -155,26 +221,29 @@ class TestDisassemblyLineFromRealBinary:
         first = lines[0]
         assert isinstance(first, DisassemblyLine)
 
+        # Independent oracle: re-decode the first instruction using a fresh
+        # capstone instance operating on the same raw PE bytes.
+        first_raw = bytes.fromhex(first.bytes_str.replace(" ", ""))
+        assert first_raw, "bytes_str must round-trip to non-empty instruction bytes"
+
+        oracle = _oracle_decode_first(real_pe_dll, first.bytes_str)
+        assert oracle is not None, "oracle capstone must decode the same bytes"
+
+        assert first.mnemonic == oracle.mnemonic, (
+            f"bridge mnemonic {first.mnemonic!r} != oracle {oracle.mnemonic!r} for bytes {first.bytes_str!r}"
+        )
+        assert first_raw == oracle.raw_bytes, f"bridge bytes {first.bytes_str!r} differ from oracle {oracle.raw_bytes.hex()!r}"
+        assert first.address == oracle.address, f"bridge address {first.address:#x} != oracle {oracle.address:#x}"
+
+        # Shape + monotonicity checks on all decoded lines.
         prev_address = -1
         for line in lines:
-            # Each line carries a genuine, non-empty x86 mnemonic. Real
-            # .text code legitimately contains the full instruction set
-            # (conditional jumps such as jno, SSE ops, etc.), so validate
-            # the shape of a real decoded mnemonic rather than membership
-            # in a narrow allowlist.
             assert line.mnemonic, "decoded line must carry a non-empty mnemonic"
-            assert _X86_MNEMONIC_RE.fullmatch(line.mnemonic), (
-                f"mnemonic {line.mnemonic!r} is not a valid x86 mnemonic token"
-            )
-            # Every decoded line must carry the raw instruction bytes as hex
-            # that round-trips to the real instruction bytes.
+            assert _X86_MNEMONIC_RE.fullmatch(line.mnemonic), f"mnemonic {line.mnemonic!r} is not a valid x86 mnemonic token"
             assert line.bytes_str
             decoded = bytes.fromhex(line.bytes_str.replace(" ", ""))
             assert decoded, "bytes_str must round-trip to real instruction bytes"
-            # Linear decode yields strictly increasing addresses.
-            assert line.address > prev_address, (
-                f"address {line.address:#x} did not increase past {prev_address:#x}"
-            )
+            assert line.address > prev_address, f"address {line.address:#x} did not increase past {prev_address:#x}"
             prev_address = line.address
 
     @staticmethod
@@ -189,9 +258,7 @@ class TestDisassemblyLineFromRealBinary:
 
         assert sec_lo < sec_hi
         for line in lines:
-            assert sec_lo <= line.address < sec_hi, (
-                f"address {line.address:#x} outside [{sec_lo:#x}, {sec_hi:#x})"
-            )
+            assert sec_lo <= line.address < sec_hi, f"address {line.address:#x} outside [{sec_lo:#x}, {sec_hi:#x})"
         # Addresses are strictly increasing across the linear decode.
         addresses = [line.address for line in lines]
         assert addresses == sorted(addresses)
@@ -286,7 +353,7 @@ class TestBridgeInterfaceCompliance:
         """BinaryOperationsBridge cannot be instantiated directly (abstract)."""
         assert issubclass(BinaryOperationsBridge, ToolBridgeBase)
         with pytest.raises(TypeError):
-            BinaryOperationsBridge()  # type: ignore[abstract]
+            BinaryOperationsBridge()
 
     @staticmethod
     def test_abstract_base_capability_blocks() -> None:

@@ -76,8 +76,14 @@ class TestManualVAMappings:
         found = any(m["file_offset"] == 0 and m["virtual_address"] == 0x400000 for m in mappings)
         assert found
 
+    @pytest.mark.skipif(not _has_native_va_mapping(), reason="native VA mapping not available")
     def test_set_va_base_returns_true(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify set_va_base returns True even without native support.
+        """Verify set_va_base returns True and the mapping is persisted in the list.
+
+        The return value alone is not a sufficient gate; this test also asserts
+        that ``list_va_mappings`` reflects the newly registered mapping so the
+        gate fails if ``set_va_base`` returns ``True`` without actually storing
+        anything.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -88,6 +94,10 @@ class TestManualVAMappings:
         _run(bridge.open_file(str(f)))
         result = _run(bridge.set_va_base(0, 0x400000, 0x200))
         assert result is True
+        mappings = _run(bridge.list_va_mappings())
+        assert any(m["file_offset"] == 0 and m["virtual_address"] == 0x400000 and m["length"] == 0x200 for m in mappings), (
+            f"mapping (offset=0, va=0x400000, len=0x200) missing from list after set_va_base; got {mappings!r}"
+        )
 
     @pytest.mark.skipif(not _has_native_va_mapping(), reason="native VA mapping not available")
     def test_remove_va_mapping(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -160,7 +170,14 @@ class TestAutoDetectVAMappings:
     """Tests for auto-detecting VA mappings from PE and ELF headers."""
 
     def test_auto_detect_pe_va_mappings(self, bridge: HexEditorBridge, pe_binary_full: Path) -> None:
-        """Verify auto-detection on PE produces mappings with ImageBase-based VAs.
+        """Verify auto-detection on PE produces mappings with exact ImageBase-based VAs.
+
+        The PE fixture (``pe_binary_full``) is built with ``PE_FULL_IMAGE_BASE = 0x00400000``,
+        a ``.text`` section at VirtualAddress 0x1000, and a ``.data`` section at 0x2000.
+        Auto-detection must produce:
+         - a header mapping at VA == 0x400000 (ImageBase),
+         - a ``.text`` mapping at VA == 0x401000 (ImageBase + 0x1000),
+         - a ``.data`` mapping at VA == 0x402000 (ImageBase + 0x2000).
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -168,12 +185,26 @@ class TestAutoDetectVAMappings:
         """
         _run(bridge.open_file(str(pe_binary_full)))
         mappings = _run(bridge.auto_detect_va_mappings())
-        assert len(mappings) >= 2
-        vas = [m["virtual_address"] for m in mappings]
-        assert any(va >= 0x400000 for va in vas)
+        assert len(mappings) == 3, f"expected 3 PE VA mappings (header + 2 sections); got {len(mappings)}: {mappings!r}"
+        vas = {m["virtual_address"] for m in mappings}
+        assert 0x400000 in vas, f"ImageBase mapping (VA=0x400000) missing; got {vas!r}"
+        assert 0x401000 in vas, f".text mapping (VA=0x401000) missing; got {vas!r}"
+        assert 0x402000 in vas, f".data mapping (VA=0x402000) missing; got {vas!r}"
+        header_map = next(m for m in mappings if m["virtual_address"] == 0x400000)
+        assert header_map["file_offset"] == 0, f"header mapping must have file_offset=0; got {header_map['file_offset']!r}"
+        text_map = next(m for m in mappings if m["virtual_address"] == 0x401000)
+        assert text_map["file_offset"] == 0x200, f".text mapping must have file_offset=0x200; got {text_map['file_offset']!r}"
+        data_map = next(m for m in mappings if m["virtual_address"] == 0x402000)
+        assert data_map["file_offset"] == 0x400, f".data mapping must have file_offset=0x400; got {data_map['file_offset']!r}"
 
     def test_auto_detect_elf_va_mappings(self, bridge: HexEditorBridge, elf_binary_with_loads: Path) -> None:
-        """Verify auto-detection on ELF produces PT_LOAD segment mappings.
+        """Verify auto-detection on ELF produces exact PT_LOAD segment VA mappings.
+
+        The ELF fixture (``elf_binary_with_loads``) is built with two PT_LOAD segments:
+         - segment 1: p_offset=0x1000, p_vaddr=0x400000, p_filesz=0x200,
+         - segment 2: p_offset=0x2000, p_vaddr=0x401000, p_filesz=0x100.
+        Both p_vaddr values must appear in the returned mappings; checking only offsets
+        does not catch a reversed or shifted VA calculation.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -181,10 +212,19 @@ class TestAutoDetectVAMappings:
         """
         _run(bridge.open_file(str(elf_binary_with_loads)))
         mappings = _run(bridge.auto_detect_va_mappings())
-        assert len(mappings) == 2
+        assert len(mappings) == 2, f"expected 2 ELF PT_LOAD mappings; got {len(mappings)}: {mappings!r}"
         offsets = {m["file_offset"] for m in mappings}
-        assert 0x1000 in offsets
-        assert 0x2000 in offsets
+        assert 0x1000 in offsets, f"PT_LOAD1 file_offset=0x1000 missing; got {offsets!r}"
+        assert 0x2000 in offsets, f"PT_LOAD2 file_offset=0x2000 missing; got {offsets!r}"
+        vas = {m["virtual_address"] for m in mappings}
+        assert 0x400000 in vas, f"PT_LOAD1 p_vaddr=0x400000 missing from VAs; got {vas!r}"
+        assert 0x401000 in vas, f"PT_LOAD2 p_vaddr=0x401000 missing from VAs; got {vas!r}"
+        seg1 = next(m for m in mappings if m["file_offset"] == 0x1000)
+        assert seg1["virtual_address"] == 0x400000, f"PT_LOAD1 virtual_address must be 0x400000; got 0x{seg1['virtual_address']:X}"
+        assert seg1["length"] == 0x200, f"PT_LOAD1 length must be 0x200; got 0x{seg1['length']:X}"
+        seg2 = next(m for m in mappings if m["file_offset"] == 0x2000)
+        assert seg2["virtual_address"] == 0x401000, f"PT_LOAD2 virtual_address must be 0x401000; got 0x{seg2['virtual_address']:X}"
+        assert seg2["length"] == 0x100, f"PT_LOAD2 length must be 0x100; got 0x{seg2['length']:X}"
 
     def test_auto_detect_non_pe_elf_returns_empty(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify auto-detection on a non-PE/ELF file returns an empty list.

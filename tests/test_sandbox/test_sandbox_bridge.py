@@ -24,14 +24,23 @@ Tests validate:
 
 from __future__ import annotations
 
+import hashlib
 import inspect
-from typing import Final
+import sys
+from pathlib import Path
+from typing import TYPE_CHECKING, Final, cast
 
 import pytest
 
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.types import ToolError, ToolName
 from intellicrack.sandbox.base import ExecutionReport
+from tests.test_sandbox.conftest import LocalProcessSandbox, StubInstance
+
+
+if TYPE_CHECKING:
+    from intellicrack.sandbox.base import SandboxConfig
+    from intellicrack.sandbox.manager import SandboxManager
 
 
 _EXPECTED_FUNC_COUNT: Final[int] = 27
@@ -42,6 +51,7 @@ _WIN_NOREPORT: Final[str] = "win-noreport-001"
 _QEMU_NOREPORT: Final[str] = "qemu-noreport-001"
 _MISSING_INSTANCE: Final[str] = "nonexistent-instance"
 _REPORT_DICT_KEY_COUNT: Final[int] = 17
+_REAL_INSTANCE: Final[str] = "real-localproc-001"
 
 
 class TestBridgeInstantiation:
@@ -905,3 +915,411 @@ class TestReportToDict:
             "clipboard_events",
         ]:
             assert isinstance(result[key], list)
+
+
+class _RealLocalManager:
+    """A real, non-mock manager that drives a genuine ``LocalProcessSandbox``.
+
+    Unlike the in-memory stub manager, this manager executes binaries as real
+    OS subprocesses through :class:`LocalProcessSandbox`, captures their real
+    exit code, stdout, stderr, and the file-system changes actually observed by
+    diffing the work directory. It exposes exactly the surface the
+    :class:`SandboxBridge` reaches for (``run_binary``, ``get``, ``instances``,
+    ``destroy``, ``get_status``, ``get_available_types``) so the bridge's own
+    code paths -- not a simulated double -- are the thing under test.
+    """
+
+    def __init__(self, sandbox: LocalProcessSandbox) -> None:
+        """Initialise the manager around a started real sandbox.
+
+        Args:
+            sandbox: A started :class:`LocalProcessSandbox`.
+        """
+        self._sandbox: LocalProcessSandbox = sandbox
+        inst = StubInstance(sandbox, "windows", instance_id=_REAL_INSTANCE)
+        self._instances: dict[str, StubInstance] = {_REAL_INSTANCE: inst}
+
+    @property
+    def instances(self) -> list[StubInstance]:
+        """Return all tracked instances.
+
+        Returns:
+            list[StubInstance]: The live instance list.
+        """
+        return list(self._instances.values())
+
+    @property
+    def active_count(self) -> int:
+        """Return the number of running instances.
+
+        Returns:
+            int: Count of instances whose status is ``running``.
+        """
+        return sum(inst.state.status == "running" for inst in self._instances.values())
+
+    async def get(self, instance_id: str) -> StubInstance | None:
+        """Return an instance by id.
+
+        Args:
+            instance_id: Instance identifier.
+
+        Returns:
+            StubInstance | None: The instance, or ``None`` when absent.
+        """
+        return self._instances.get(instance_id)
+
+    async def run_binary(
+        self,
+        binary_path: Path,
+        args: list[str] | None = None,
+        sandbox_type: str = "windows",
+        config: SandboxConfig | None = None,
+        time_limit: int | None = None,
+        qemu_config: object = None,
+        *,
+        monitor: bool = True,
+        reuse_instance: bool = False,
+    ) -> tuple[StubInstance, ExecutionReport]:
+        """Execute a binary for real through the wrapped sandbox.
+
+        Args:
+            binary_path: Path to the binary to execute.
+            args: Optional command-line arguments.
+            sandbox_type: Sandbox flavour (recorded on the instance).
+            config: Unused sandbox configuration.
+            time_limit: Optional timeout in seconds.
+            qemu_config: Unused QEMU configuration.
+            monitor: Whether to diff the work directory for file changes.
+            reuse_instance: Unused reuse flag.
+
+        Returns:
+            tuple[StubInstance, ExecutionReport]: The instance and the real report.
+        """
+        del config, qemu_config, reuse_instance, sandbox_type
+        report = await self._sandbox.run_binary(
+            binary_path=binary_path,
+            args=args,
+            time_limit=time_limit,
+            monitor=monitor,
+        )
+        inst = self._instances[_REAL_INSTANCE]
+        inst.binary_path = binary_path
+        inst.last_report = report
+        return (inst, report)
+
+    async def destroy(self, instance_id: str) -> None:
+        """Stop and remove an instance.
+
+        Args:
+            instance_id: Instance identifier.
+
+        Raises:
+            KeyError: If the instance is unknown.
+        """
+        if instance_id not in self._instances:
+            msg = f"unknown instance: {instance_id}"
+            raise KeyError(msg)
+        inst = self._instances.pop(instance_id)
+        await inst.sandbox.stop()
+
+    async def get_status(self) -> dict[str, object]:
+        """Return manager status.
+
+        Returns:
+            dict[str, object]: Status with available types and instance summaries.
+        """
+        return {
+            "available_types": await self.get_available_types(),
+            "max_instances": 1,
+            "active_count": self.active_count,
+            "total_count": len(self._instances),
+            "instances": [
+                {
+                    "id": inst.id,
+                    "type": inst.sandbox_type,
+                    "status": inst.state.status,
+                    "created_at": inst.created_at.isoformat(),
+                    "last_used": inst.last_used.isoformat(),
+                    "binary": str(inst.binary_path) if inst.binary_path else None,
+                }
+                for inst in self._instances.values()
+            ],
+        }
+
+    async def get_available_types(self) -> list[str]:
+        """Return the supported sandbox types.
+
+        Returns:
+            list[str]: The single real backend type.
+        """
+        return ["windows"]
+
+
+def _write_driver_script(directory: Path, *, artifact_name: str, payload: bytes, message: str, exit_code: int) -> Path:
+    """Write a deterministic Python driver whose every effect is known up front.
+
+    The driver writes ``payload`` to ``artifact_name`` in its current directory,
+    prints ``message`` to stdout, and exits with ``exit_code``. Because the test
+    chooses all of these independently, they serve as a trusted oracle for the
+    behaviour the bridge must faithfully surface.
+
+    Args:
+        directory: Directory the script file is written into.
+        artifact_name: Name of the artefact the script creates at run time.
+        payload: Exact bytes written to the artefact.
+        message: Exact text printed to stdout (no trailing newline).
+        exit_code: Process exit code the script returns.
+
+    Returns:
+        Path: Path to the generated driver script.
+    """
+    script = directory / "bridge_driver.py"
+    source = (
+        f"import sys\ndata = {payload!r}\nopen({artifact_name!r}, 'wb').write(data)\nsys.stdout.write({message!r})\nsys.exit({exit_code})\n"
+    )
+    script.write_text(source, encoding="utf-8")
+    return script
+
+
+@pytest.mark.integration
+@pytest.mark.spawns_process
+class TestBridgeRealSandboxLifecycle:
+    """Drive the bridge against a genuine subprocess-executing sandbox.
+
+    These tests replace the fixture-heavy in-memory paths with a real
+    ``LocalProcessSandbox`` so a regression in how the bridge starts execution,
+    surfaces process output, or relays observed artefacts is actually caught.
+    """
+
+    @staticmethod
+    def _bridge_with_real_manager(local_process_sandbox: LocalProcessSandbox) -> SandboxBridge:
+        """Build a bridge backed by a real local-process manager.
+
+        Args:
+            local_process_sandbox: Started real sandbox fixture.
+
+        Returns:
+            SandboxBridge: Bridge with a real manager attached.
+        """
+        bridge = SandboxBridge()
+        bridge.attach_manager(cast("SandboxManager", _RealLocalManager(local_process_sandbox)))
+        return bridge
+
+    @pytest.mark.asyncio
+    async def test_run_binary_surfaces_real_exit_stdout_and_artifact(
+        self,
+        local_process_sandbox: LocalProcessSandbox,
+        tmp_path: Path,
+    ) -> None:
+        """A real run through the bridge reports the exact exit code, stdout, and dropped file.
+
+        Args:
+            local_process_sandbox: Started real sandbox fixture.
+            tmp_path: Pytest temporary directory for the driver script.
+        """
+        payload = b"BRIDGE-REAL-SANDBOX-\x00\x01\x02\xfe\xff"
+        script = _write_driver_script(
+            tmp_path,
+            artifact_name="dropped.bin",
+            payload=payload,
+            message="bridge-run-ok",
+            exit_code=0,
+        )
+        bridge = self._bridge_with_real_manager(local_process_sandbox)
+
+        result = await bridge.run_binary(str(sys.executable), args=[str(script)], time_limit=60)
+
+        assert result["instance_id"] == _REAL_INSTANCE
+        assert result["result"] == "success"
+        assert result["exit_code"] == 0
+        assert result["stdout"] == "bridge-run-ok"
+        assert len(result["stderr"]) == 0
+        assert result["duration_seconds"] > 0.0
+
+        created = [c for c in result["file_changes"] if c["operation"] == "created"]
+        dropped = [c for c in created if c["path"] == "dropped.bin"]
+        assert len(dropped) == 1, f"bridge must surface the one genuinely created artefact, got {result['file_changes']}"
+        assert dropped[0]["size"] == len(payload)
+
+        on_disk = local_process_sandbox.workdir / "dropped.bin"
+        assert on_disk.read_bytes() == payload
+        assert hashlib.sha256(on_disk.read_bytes()).hexdigest() == hashlib.sha256(payload).hexdigest()
+        assert bridge.state.binary_loaded is True
+        assert bridge.state.target_path == Path(sys.executable)
+
+    @pytest.mark.asyncio
+    async def test_run_binary_surfaces_real_nonzero_exit(
+        self,
+        local_process_sandbox: LocalProcessSandbox,
+        tmp_path: Path,
+    ) -> None:
+        """A real non-zero exit is surfaced by the bridge with the exact code and ``error`` result.
+
+        Args:
+            local_process_sandbox: Started real sandbox fixture.
+            tmp_path: Pytest temporary directory for the driver script.
+        """
+        script = _write_driver_script(
+            tmp_path,
+            artifact_name="ignored.bin",
+            payload=b"z",
+            message="bridge-failed",
+            exit_code=9,
+        )
+        bridge = self._bridge_with_real_manager(local_process_sandbox)
+
+        result = await bridge.run_binary(str(sys.executable), args=[str(script)], time_limit=60)
+
+        assert result["result"] == "error"
+        assert result["exit_code"] == 9
+        assert result["stdout"] == "bridge-failed"
+
+    @pytest.mark.asyncio
+    async def test_run_binary_missing_path_raises_tool_error(
+        self,
+        local_process_sandbox: LocalProcessSandbox,
+        tmp_path: Path,
+    ) -> None:
+        """The bridge raises ``ToolError`` for a non-existent binary before any execution.
+
+        Args:
+            local_process_sandbox: Started real sandbox fixture.
+            tmp_path: Pytest temporary directory used to build a missing path.
+        """
+        bridge = self._bridge_with_real_manager(local_process_sandbox)
+        missing = tmp_path / "no_such_binary.exe"
+
+        with pytest.raises(ToolError, match="Binary not found"):
+            await bridge.run_binary(str(missing), time_limit=10)
+
+    @pytest.mark.asyncio
+    async def test_extract_iocs_from_genuinely_observed_artifact_path(
+        self,
+        local_process_sandbox: LocalProcessSandbox,
+        tmp_path: Path,
+    ) -> None:
+        """IOC extraction reflects an IPv4 embedded in a file the process really created.
+
+        The driver drops a file whose name embeds ``203.0.113.50``; the real
+        sandbox observes that artefact by diffing its work directory, the bridge
+        relays it, and the analysis module extracts the IPv4 from the observed
+        ``file_changes`` path. A regression that lost the file-change relay would
+        drop the IOC entirely.
+
+        Args:
+            local_process_sandbox: Started real sandbox fixture.
+            tmp_path: Pytest temporary directory for the driver script.
+        """
+        script = _write_driver_script(
+            tmp_path,
+            artifact_name="beacon-203.0.113.50.log",
+            payload=b"observed",
+            message="dropped",
+            exit_code=0,
+        )
+        bridge = self._bridge_with_real_manager(local_process_sandbox)
+
+        run_result = await bridge.run_binary(str(sys.executable), args=[str(script)], time_limit=60)
+        observed_paths = {c["path"] for c in run_result["file_changes"]}
+        assert "beacon-203.0.113.50.log" in observed_paths
+
+        ioc_result = await bridge.extract_iocs(_REAL_INSTANCE)
+
+        assert ioc_result["instance_id"] == _REAL_INSTANCE
+        ipv4_iocs = {ioc["value"] for ioc in ioc_result["iocs"] if ioc["ioc_type"] == "ipv4"}
+        assert "203.0.113.50" in ipv4_iocs
+        assert ioc_result["count"] == len(ioc_result["iocs"])
+
+    @pytest.mark.asyncio
+    async def test_copy_to_then_copy_from_roundtrips_real_bytes(
+        self,
+        local_process_sandbox: LocalProcessSandbox,
+        tmp_path: Path,
+    ) -> None:
+        """Copying a real file in and back out through the bridge preserves exact bytes.
+
+        Args:
+            local_process_sandbox: Started real sandbox fixture.
+            tmp_path: Pytest temporary directory for source and destination files.
+        """
+        payload = bytes(range(256)) + b"ROUNDTRIP"
+        source = tmp_path / "input.bin"
+        source.write_bytes(payload)
+        recovered = tmp_path / "recovered.bin"
+        bridge = self._bridge_with_real_manager(local_process_sandbox)
+
+        copy_in = await bridge.copy_to(_REAL_INSTANCE, str(source), "staged/input.bin")
+        assert copy_in["success"] is True
+        assert (local_process_sandbox.workdir / "staged" / "input.bin").read_bytes() == payload
+
+        copy_out = await bridge.copy_from(_REAL_INSTANCE, "staged/input.bin", str(recovered))
+        assert copy_out["success"] is True
+        assert recovered.read_bytes() == payload
+
+    @pytest.mark.asyncio
+    async def test_copy_from_missing_sandbox_file_raises_tool_error(
+        self,
+        local_process_sandbox: LocalProcessSandbox,
+        tmp_path: Path,
+    ) -> None:
+        """Extracting a file that the sandbox never produced raises ``ToolError``.
+
+        Args:
+            local_process_sandbox: Started real sandbox fixture.
+            tmp_path: Pytest temporary directory for the destination path.
+        """
+        bridge = self._bridge_with_real_manager(local_process_sandbox)
+        dest = tmp_path / "out.bin"
+
+        with pytest.raises(ToolError, match="Copy from sandbox failed"):
+            await bridge.copy_from(_REAL_INSTANCE, "never_created.bin", str(dest))
+
+    @pytest.mark.asyncio
+    async def test_status_and_list_reflect_the_real_instance(
+        self,
+        local_process_sandbox: LocalProcessSandbox,
+        tmp_path: Path,
+    ) -> None:
+        """After a real run the bridge's status and list report the live instance and binary.
+
+        Args:
+            local_process_sandbox: Started real sandbox fixture.
+            tmp_path: Pytest temporary directory for the driver script.
+        """
+        script = _write_driver_script(
+            tmp_path,
+            artifact_name="x.bin",
+            payload=b"x",
+            message="ok",
+            exit_code=0,
+        )
+        bridge = self._bridge_with_real_manager(local_process_sandbox)
+        await bridge.run_binary(str(sys.executable), args=[str(script)], time_limit=60)
+
+        status = await bridge.status()
+        assert status["available_types"] == ["windows"]
+        assert status["active_count"] == 1
+        assert status["total_count"] == 1
+
+        instances = await bridge.list()
+        assert len(instances) == 1
+        entry = instances[0]
+        assert entry["id"] == _REAL_INSTANCE
+        assert entry["type"] == "windows"
+        assert entry["status"] == "running"
+        assert entry["binary"] == str(sys.executable)
+
+    @pytest.mark.asyncio
+    async def test_extract_iocs_no_report_raises_before_run(
+        self,
+        local_process_sandbox: LocalProcessSandbox,
+    ) -> None:
+        """IOC extraction before any run raises ``ToolError`` because no report exists yet.
+
+        Args:
+            local_process_sandbox: Started real sandbox fixture.
+        """
+        bridge = self._bridge_with_real_manager(local_process_sandbox)
+
+        with pytest.raises(ToolError, match="No execution report"):
+            await bridge.extract_iocs(_REAL_INSTANCE)

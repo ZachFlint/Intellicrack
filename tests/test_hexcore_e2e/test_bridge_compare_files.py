@@ -4,12 +4,12 @@
 """E2E tests for HexEditorBridge compare_files operation.
 
 ``HexEditorBridge.compare_files`` wraps the native ``diff_files`` engine and
-returns a dict with exactly four keys: ``files_identical`` (bool),
-``total_differences`` (int), ``regions`` (list of ``offset_a``/``offset_b``/
-``length``/``diff_type`` dicts) and ``similarity`` (float). Expected region
-layouts and difference counts are cross-checked against Python's
-``difflib.SequenceMatcher`` (an independent reference for the same Myers
-edit-script family) so the oracle is never the engine's own output.
+returns a dict with exactly three keys: ``files_identical`` (bool),
+``total_differences`` (int), and ``regions`` (list of ``offset_a``/``offset_b``/
+``length``/``diff_type`` dicts). Expected region layouts and difference counts
+are cross-checked against Python's ``difflib.SequenceMatcher`` (an independent
+reference for the same Myers edit-script family) so the oracle is never the
+engine's own output.
 """
 
 from __future__ import annotations
@@ -31,7 +31,6 @@ if TYPE_CHECKING:
 pytest.importorskip("intellicrack_hexcore")
 
 _DIFF_TYPES: frozenset[str] = frozenset({"match", "modified", "inserted_a", "inserted_b"})
-_SIMILARITY_TOLERANCE = 1e-5
 
 
 def _run[T](coro: Coroutine[object, object, T]) -> T:
@@ -74,9 +73,8 @@ def _write_bin(directory: Path, name: str, data: bytes) -> Path:
 def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[str, Any]]:
     """Validate the compare_files result schema and return its regions list.
 
-    Asserts the result has exactly the four documented keys with correctly typed
-    values, a similarity in ``[0, 1]``, and well-formed regions bounded by the
-    input lengths.
+    Asserts the result has exactly the three documented keys with correctly typed
+    values and well-formed regions bounded by the input lengths.
 
     Args:
         result: The dict returned by ``compare_files``.
@@ -86,11 +84,9 @@ def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[
     Returns:
         list[dict[str, Any]]: The validated ``regions`` list.
     """
-    assert set(result.keys()) == {"files_identical", "total_differences", "regions", "similarity"}
+    assert set(result.keys()) == {"files_identical", "total_differences", "regions"}
     assert isinstance(result["files_identical"], bool)
     assert isinstance(result["total_differences"], int)
-    assert isinstance(result["similarity"], float)
-    assert 0.0 <= result["similarity"] <= 1.0
     regions: list[dict[str, Any]] = result["regions"]
     assert isinstance(regions, list)
     for region in regions:
@@ -103,26 +99,6 @@ def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[
         assert 0 <= region["offset_b"] <= len_b
         assert region["length"] >= 0
     return regions
-
-
-def _expected_similarity(match_bytes: int, len_a: int, len_b: int) -> float:
-    """Compute the engine's similarity ratio via an independent formula.
-
-    The engine reports matched bytes divided by the larger buffer length,
-    defaulting to ``1.0`` when both buffers are empty.
-
-    Args:
-        match_bytes: Number of bytes reported as identical.
-        len_a: Length of the first buffer.
-        len_b: Length of the second buffer.
-
-    Returns:
-        float: The expected similarity ratio in ``[0, 1]``.
-    """
-    longest = max(len_a, len_b)
-    if longest == 0:
-        return 1.0
-    return match_bytes / longest
 
 
 def _oracle_match_bytes(data_a: bytes, data_b: bytes) -> int:
@@ -139,24 +115,11 @@ def _oracle_match_bytes(data_a: bytes, data_b: bytes) -> int:
     return sum(size for _i, _j, size in matcher.get_matching_blocks())
 
 
-def _similar(actual: float, expected: float) -> bool:
-    """Compare two similarity ratios within a fixed absolute tolerance.
-
-    Args:
-        actual: The similarity reported by the engine.
-        expected: The independently computed similarity.
-
-    Returns:
-        bool: ``True`` when the values agree within tolerance.
-    """
-    return abs(actual - expected) <= _SIMILARITY_TOLERANCE
-
-
 class TestBridgeCompareFiles:
     """Tests covering HexEditorBridge.compare_files() byte-comparison logic."""
 
     def test_identical_files_reports_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify identical files report exact equality with similarity 1.0.
+        """Verify identical files report exact equality with zero differences and a match region.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -169,11 +132,10 @@ class TestBridgeCompareFiles:
         regions = _assert_schema(result, len(data), len(data))
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
-        assert _similar(result["similarity"], 1.0)
         assert regions == [{"offset_a": 0, "offset_b": 0, "length": 128, "diff_type": "match"}]
 
     def test_identical_files_have_zero_differences(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify identical files report exactly zero total_differences.
+        """Verify identical files report exactly zero total_differences with no non-match regions.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -217,7 +179,6 @@ class TestBridgeCompareFiles:
             {"offset_a": 32, "offset_b": 32, "length": 1, "diff_type": "modified"},
             {"offset_a": 33, "offset_b": 33, "length": 31, "diff_type": "match"},
         ]
-        assert _similar(result["similarity"], _expected_similarity(oracle_match, 64, 64))
 
     def test_modified_tail_region_pinpointed(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify the exact modified tail region for partially differing files.
@@ -246,7 +207,6 @@ class TestBridgeCompareFiles:
         assert modified == [{"offset_a": 50, "offset_b": 50, "length": 50, "diff_type": "modified"}]
         match_total = sum(r["length"] for r in regions if r["diff_type"] == "match")
         assert match_total == 50
-        assert _similar(result["similarity"], _expected_similarity(oracle_match, 100, 100))
 
     def test_different_size_truncation_is_inserted_region(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify a truncated file's lost tail is reported as an inserted region.
@@ -274,7 +234,6 @@ class TestBridgeCompareFiles:
             {"offset_a": 0, "offset_b": 0, "length": 128, "diff_type": "match"},
             {"offset_a": 128, "offset_b": 128, "length": 128, "diff_type": "inserted_a"},
         ]
-        assert _similar(result["similarity"], _expected_similarity(oracle_match, 256, 128))
 
     def test_empty_files_are_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify two empty files report exact equality with no regions.
@@ -289,7 +248,6 @@ class TestBridgeCompareFiles:
         regions = _assert_schema(result, 0, 0)
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
-        assert _similar(result["similarity"], 1.0)
         assert regions == []
 
     def test_same_path_twice_is_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -305,7 +263,6 @@ class TestBridgeCompareFiles:
         regions = _assert_schema(result, len(data), len(data))
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
-        assert _similar(result["similarity"], 1.0)
         assert regions == [{"offset_a": 0, "offset_b": 0, "length": 32, "diff_type": "match"}]
 
     def test_pe_vs_elf_not_identical(self, bridge: HexEditorBridge, pe_binary: Path, elf_binary: Path) -> None:
@@ -314,8 +271,8 @@ class TestBridgeCompareFiles:
         The two distinct executable formats differ at offset 0 (``MZ`` versus
         the ELF magic), so the bridge must report ``files_identical is False``,
         a non-empty modified/inserted region set whose byte total equals
-        ``total_differences``, and a similarity below 1.0 consistent with the
-        engine's own match accounting.
+        ``total_differences``, and a first region starting at offset 0 of a
+        non-match type.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -333,9 +290,6 @@ class TestBridgeCompareFiles:
         diff_total = sum(r["length"] for r in regions if r["diff_type"] in {"modified", "inserted_a", "inserted_b"})
         assert diff_total == result["total_differences"]
         assert diff_total > 0
-        match_total = sum(r["length"] for r in regions if r["diff_type"] == "match")
-        assert _similar(result["similarity"], _expected_similarity(match_total, len(data_a), len(data_b)))
-        assert result["similarity"] < 1.0
         first_region = regions[0]
         assert first_region["offset_a"] == 0
         assert first_region["offset_b"] == 0
@@ -370,14 +324,13 @@ class TestBridgeCompareFiles:
         assert result["total_differences"] == 1
         modified = [r for r in regions if r["diff_type"] == "modified"]
         assert modified == [{"offset_a": patch_offset, "offset_b": patch_offset, "length": 1, "diff_type": "modified"}]
-        assert _similar(result["similarity"], _expected_similarity(oracle_match, len(original), len(patched)))
 
     def test_completely_different_files_single_modified_region(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify two fully disjoint same-length files yield one modified region.
 
         ``0x00*64`` versus ``0xff*64`` share no bytes; the difflib oracle
         confirms zero matched bytes, and the bridge must report a single 64-byte
-        ``modified`` region with similarity 0.0.
+        ``modified`` region.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -395,7 +348,6 @@ class TestBridgeCompareFiles:
         assert result["files_identical"] is False
         assert result["total_differences"] == 64
         assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "diff_type": "modified"}]
-        assert _similar(result["similarity"], 0.0)
 
     def test_missing_file_raises_oserror(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify compare_files surfaces an OSError when an input file is missing.
@@ -409,7 +361,7 @@ class TestBridgeCompareFiles:
         existing = _write_bin(tmp_path, "present.bin", bytes(range(16)))
         missing = tmp_path / "does_not_exist.bin"
         assert not missing.exists()
-        with pytest.raises(OSError, match="read"):
+        with pytest.raises(OSError, match="Failed to read"):
             _run(bridge.compare_files(str(existing), str(missing)))
 
     def test_unavailable_hexcore_raises_runtime_error(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -428,7 +380,7 @@ class TestBridgeCompareFiles:
         original: bool = getattr(bridge, flag)
         setattr(bridge, flag, False)
         try:
-            with pytest.raises(RuntimeError, match="hexcore"):
+            with pytest.raises(RuntimeError, match="intellicrack_hexcore"):
                 _run(bridge.compare_files(str(f_a), str(f_b)))
         finally:
             setattr(bridge, flag, original)

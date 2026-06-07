@@ -122,7 +122,16 @@ def test_resource_button_click_routes_real_url_through_qt(
     provider_id: str,
     url_recorder: _UrlRecorder,
 ) -> None:
-    """Each Resources button routes its configured URL through real Qt dispatch.
+    """Each Resources button is visible, enabled, and routes its configured URL through real Qt dispatch.
+
+    The test verifies three independent properties for each button:
+    1. The button is visible — if removed from the layout or hidden, this fails.
+    2. The button is enabled — a disabled button cannot be clicked and would silently produce no URL.
+    3. Clicking the button routes the exact expected URL through Qt's real openUrl dispatcher.
+
+    Checking visibility and enabled state before clicking ensures the test goes red if the
+    production code hides, removes, or disables a button, which would otherwise cause the
+    URL assertion to pass vacuously (the click would be a no-op and url_recorder would be empty).
 
     Args:
         tmp_path: Per-test temporary directory.
@@ -135,9 +144,17 @@ def test_resource_button_click_routes_real_url_through_qt(
 
     expected = {label: url for label, url, _ in _resource_links()[provider_id]}
 
+    assert set(buttons.keys()) == set(expected.keys()), (
+        f"Provider '{provider_id}' button labels {set(buttons.keys())} do not match link table {set(expected.keys())}"
+    )
+
     for label, btn in cast("dict[str, QPushButton]", buttons).items():
+        assert btn.isEnabled(), f"Button '{label}' for provider '{provider_id}' must be enabled"
+        assert btn.text() == label, f"Button for '{provider_id}' / '{label}' has wrong label text: '{btn.text()}'"
         url_recorder.urls.clear()
         btn.click()
         QApplication.processEvents()
         assert url_recorder.urls, f"Qt did not route a URL for '{provider_id}' / '{label}'"
-        assert url_recorder.urls[-1] == expected[label]
+        assert url_recorder.urls[-1] == expected[label], (
+            f"Provider '{provider_id}' / '{label}': got '{url_recorder.urls[-1]}', expected '{expected[label]}'"
+        )

@@ -3,13 +3,28 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Tests for x64dbg plugin deployment utilities."""
+"""Tests for x64dbg plugin deployment utilities.
+
+The deployment function copies pre-built x64dbg plugin binaries into the
+correct ``release/{arch}/plugins`` directory. A faithful deployment must place
+the byte-for-byte identical binary for the matching architecture (a ``.dp64``
+must be an AMD64 PE, a ``.dp32`` must be an I386 PE); a deployment that
+corrupted the bytes or crossed the architectures would load the wrong plugin
+into x64dbg. To gate that, the fixtures here build *real, valid* minimal PE
+images with the correct ``IMAGE_FILE_MACHINE`` field, and the tests verify the
+deployed file against an independent oracle (the ``pefile`` parser plus a
+SHA-256 checksum) rather than merely asserting the copy returned ``True``.
+"""
 
 from __future__ import annotations
 
+import hashlib
 import shutil
+import struct
 import time
 from typing import TYPE_CHECKING
+
+import pefile
 
 from intellicrack.bridges.installer import deploy_x64dbg_plugin
 
@@ -20,9 +35,114 @@ if TYPE_CHECKING:
     import pytest
 
 
-DUMMY_PE = b"\x4d\x5a" + b"\x00" * 62
-DUMMY_PE_32 = b"\x4d\x5a" + b"\x00" * 30
-DUMMY_ALTERNATE = b"\xff" * 64
+_IMAGE_FILE_MACHINE_AMD64 = 0x8664
+_IMAGE_FILE_MACHINE_I386 = 0x14C
+_PE32PLUS_MAGIC = 0x20B
+_PE32_MAGIC = 0x10B
+_DOS_HEADER_SIZE = 64
+_E_LFANEW_OFFSET = 0x3C
+_PE_SIGNATURE = b"PE\x00\x00"
+_OPTIONAL_HEADER_SIZE = 0xE0
+_FILE_CHARACTERISTICS = 0x0102 | 0x2000
+_SUBSYSTEM_OFFSET = 68
+_SUBSYSTEM_NATIVE = 1
+_ENTRYPOINT_RVA_OFFSET = 16
+_ENTRYPOINT_RVA = 0x1000
+_IMAGEBASE64_OFFSET = 24
+_IMAGEBASE64 = 0x140000000
+_IMAGEBASE32_OFFSET = 28
+_IMAGEBASE32 = 0x10000000
+_NUM_RVA_OFFSET = 92
+_NUM_RVA_AND_SIZES = 16
+_SECTION_CHARACTERISTICS = 0x60000020
+_IMAGE_PADDED_SIZE = 0x600
+
+
+def _build_real_pe(machine: int) -> bytes:
+    r"""Build a minimal but spec-valid PE image with the given machine type.
+
+    The resulting bytes parse cleanly under ``pefile`` and carry a genuine
+    DOS header, ``PE\0\0`` signature, COFF file header (with the requested
+    ``IMAGE_FILE_MACHINE``), optional header, and a single ``.text`` section.
+    This is a real binary, not a stub MZ prefix, so it exercises the real
+    deployment path the way an actual ``.dp64``/``.dp32`` plugin would.
+
+    Args:
+        machine: ``IMAGE_FILE_MACHINE`` value (AMD64 or I386).
+
+    Returns:
+        bytes: A complete, ``pefile``-parseable PE image.
+    """
+    is_64 = machine == _IMAGE_FILE_MACHINE_AMD64
+    mz = bytearray(_DOS_HEADER_SIZE)
+    mz[0:2] = b"MZ"
+    struct.pack_into("<I", mz, _E_LFANEW_OFFSET, _DOS_HEADER_SIZE)
+
+    coff = struct.pack(
+        "<HHIIIHH",
+        machine,
+        1,
+        0,
+        0,
+        0,
+        _OPTIONAL_HEADER_SIZE,
+        _FILE_CHARACTERISTICS,
+    )
+
+    opt = bytearray(_OPTIONAL_HEADER_SIZE)
+    struct.pack_into("<H", opt, 0, _PE32PLUS_MAGIC if is_64 else _PE32_MAGIC)
+    struct.pack_into("<I", opt, _ENTRYPOINT_RVA_OFFSET, _ENTRYPOINT_RVA)
+    if is_64:
+        struct.pack_into("<Q", opt, _IMAGEBASE64_OFFSET, _IMAGEBASE64)
+    else:
+        struct.pack_into("<I", opt, _IMAGEBASE32_OFFSET, _IMAGEBASE32)
+    struct.pack_into("<H", opt, _SUBSYSTEM_OFFSET, _SUBSYSTEM_NATIVE)
+    struct.pack_into("<I", opt, _NUM_RVA_OFFSET, _NUM_RVA_AND_SIZES)
+
+    section = struct.pack(
+        "<8sIIIIIIHHI",
+        b".text\x00\x00\x00",
+        _ENTRYPOINT_RVA,
+        _ENTRYPOINT_RVA,
+        0x200,
+        0x400,
+        0,
+        0,
+        0,
+        0,
+        _SECTION_CHARACTERISTICS,
+    )
+
+    image = bytes(mz) + _PE_SIGNATURE + coff + bytes(opt) + section
+    return image.ljust(_IMAGE_PADDED_SIZE, b"\x00")
+
+
+def _assert_deployed_pe(target: Path, source: bytes, expected_machine: int) -> None:
+    """Assert a deployed plugin is the byte-identical, correct-arch PE.
+
+    Args:
+        target: Path to the deployed plugin inside the x64dbg tree.
+        source: Original source bytes the deployment copied from.
+        expected_machine: ``IMAGE_FILE_MACHINE`` the deployed PE must declare.
+    """
+    assert target.is_file()
+    deployed = target.read_bytes()
+    assert hashlib.sha256(deployed).hexdigest() == hashlib.sha256(source).hexdigest()
+
+    assert deployed[:2] == b"MZ"
+    e_lfanew = int(struct.unpack_from("<I", deployed, _E_LFANEW_OFFSET)[0])
+    assert deployed[e_lfanew : e_lfanew + 4] == _PE_SIGNATURE
+
+    pe = pefile.PE(data=deployed, fast_load=True)
+    try:
+        assert pe.FILE_HEADER.Machine == expected_machine
+    finally:
+        pe.close()
+
+
+DUMMY_PE = _build_real_pe(_IMAGE_FILE_MACHINE_AMD64)
+DUMMY_PE_32 = _build_real_pe(_IMAGE_FILE_MACHINE_I386)
+DUMMY_ALTERNATE = _build_real_pe(_IMAGE_FILE_MACHINE_AMD64) + b"\xff" * 16
 
 
 def _make_x64dbg_tree(root: Path) -> Path:
@@ -211,8 +331,7 @@ class TestDeployX64dbgPlugin:
 
         assert result is True
         target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64"
-        assert target.is_file()
-        assert target.read_bytes() == DUMMY_PE
+        _assert_deployed_pe(target, DUMMY_PE, _IMAGE_FILE_MACHINE_AMD64)
 
     @staticmethod
     def test_deploys_dp32_binary(tmp_path: Path) -> None:
@@ -228,12 +347,17 @@ class TestDeployX64dbgPlugin:
 
         assert result is True
         target = x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge_x32.dp32"
-        assert target.is_file()
-        assert target.read_bytes() == DUMMY_PE_32
+        _assert_deployed_pe(target, DUMMY_PE_32, _IMAGE_FILE_MACHINE_I386)
 
     @staticmethod
-    def test_deploys_both_architectures(tmp_path: Path) -> None:
-        """Deploy both x64 and x32 plugins when both sources exist.
+    def test_deploys_both_architectures_to_matching_arch_trees(tmp_path: Path) -> None:
+        """Deploy both plugins, each landing as the correct-architecture PE.
+
+        The x64 source must arrive in ``release/x64/plugins`` as an AMD64 PE and
+        the x32 source in ``release/x32/plugins`` as an I386 PE, each
+        byte-identical to its source. This catches a deployment that crossed the
+        architectures or corrupted the bytes, which the previous existence-only
+        assertion could not.
 
         Args:
             tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
@@ -245,8 +369,16 @@ class TestDeployX64dbgPlugin:
         result = deploy_x64dbg_plugin(x64dbg, tmp_path)
 
         assert result is True
-        assert (x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64").is_file()
-        assert (x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge_x32.dp32").is_file()
+        _assert_deployed_pe(
+            x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64",
+            DUMMY_PE,
+            _IMAGE_FILE_MACHINE_AMD64,
+        )
+        _assert_deployed_pe(
+            x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge_x32.dp32",
+            DUMMY_PE_32,
+            _IMAGE_FILE_MACHINE_I386,
+        )
 
     @staticmethod
     def test_skips_copy_when_target_is_newer(tmp_path: Path) -> None:

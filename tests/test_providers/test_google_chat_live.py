@@ -6,10 +6,10 @@
 """Live end-to-end tests for GoogleProvider chat and streaming.
 
 These tests exercise ``chat()`` and ``chat_stream()`` against the live Google
-Gemini API using ``gemini-2.0-flash``. They are skipped only when no
-``GOOGLE_API_KEY`` is configured, or by the provider-suite ``pytest_runtest_call``
-hook when the live account's billing/quota cap is exhausted - both are unmet
-environment preconditions rather than defects.
+Gemini API using the stable ``gemini-flash-latest`` alias. They are skipped
+only when no ``GOOGLE_API_KEY`` is configured, or by the provider-suite
+``pytest_runtest_call`` hook when the live account's billing/quota cap is
+exhausted - both are unmet environment preconditions rather than defects.
 
 Crucially, the tests do NOT swallow ``AuthenticationError`` or generic
 ``ProviderError``: a rejected key, a retired/unknown model, or any other broken
@@ -19,8 +19,11 @@ provider bridge or its configuration. Only the genuinely transient
 
 A deterministic, temperature-0 prompt is used so the assertions check semantic
 correctness (the model returns the requested word ``ready``) rather than mere
-non-emptiness. Usage metadata is asserted both for population and for the
-single-shot buffer-clear contract of ``get_pending_usage()``.
+non-emptiness. Usage metadata is asserted for population and internal
+consistency - the model's reported ``total_tokens`` is never less than the sum
+of the named prompt and completion components (current Gemini models also count
+internal reasoning tokens in the total) - and for the single-shot buffer-clear
+contract of ``get_pending_usage()``.
 """
 
 from __future__ import annotations
@@ -41,7 +44,8 @@ if TYPE_CHECKING:
     from intellicrack.credentials.env_loader import CredentialLoader
 
 
-_MODEL = "gemini-2.0-flash"
+_MODEL = "gemini-flash-latest"
+_MAX_TOKENS = 512
 _READY_PROMPT = "Reply with exactly the single word: ready . Output only that word, with no punctuation."
 
 
@@ -71,7 +75,7 @@ async def _run_chat_and_verify(provider: GoogleProvider) -> None:
             messages=_user_message(_READY_PROMPT),
             model=_MODEL,
             temperature=0.0,
-            max_tokens=16,
+            max_tokens=_MAX_TOKENS,
         )
     except RateLimitError:
         pytest.skip("Google API rate limit hit (transient)")
@@ -99,7 +103,7 @@ async def _run_stream_and_verify(provider: GoogleProvider) -> None:
             messages=_user_message(_READY_PROMPT),
             model=_MODEL,
             temperature=0.0,
-            max_tokens=16,
+            max_tokens=_MAX_TOKENS,
         ):
             assert isinstance(chunk, str)
             collected.append(chunk)
@@ -127,8 +131,9 @@ def _assert_usage_populated_then_cleared(provider: GoogleProvider) -> UsageInfo:
     assert isinstance(usage, UsageInfo)
     assert usage.prompt_tokens > 0, "Gemini bills the prompt; prompt_tokens must be positive"
     assert usage.completion_tokens > 0, "A non-empty reply must report completion tokens"
-    assert usage.total_tokens == usage.prompt_tokens + usage.completion_tokens, (
-        "total_tokens must equal prompt + completion for Gemini usage metadata"
+    assert usage.total_tokens >= usage.prompt_tokens + usage.completion_tokens, (
+        "total_tokens must account for at least the prompt plus completion tokens "
+        "(current Gemini models additionally count internal reasoning tokens in the total)"
     )
 
     assert provider.get_pending_usage() is None, "Pending usage buffer must clear after a single retrieval"

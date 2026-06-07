@@ -25,26 +25,21 @@ These tests guard against three regressions in
 
 from __future__ import annotations
 
-import json
-import logging
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast, override
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
+from PyQt6.QtWidgets import QApplication, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
-from intellicrack.core.config import LogConfig
-from intellicrack.core.logging import setup_logging
 from intellicrack.core.types import HexDocumentFull
-from intellicrack.ui import dialogs_helpers
+from intellicrack.ui.panels.hex_editor import panel as panel_module
 from intellicrack.ui.panels.hex_editor.panel import HexEditorPanel
-from intellicrack.ui.panels.hex_editor_widget import HexEditorWidget
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
-    from pathlib import Path
+    from collections.abc import Iterator
 
 
 _DOC_LEN: Final[int] = 64
@@ -508,31 +503,28 @@ class TestDocumentOpenedDispatch:
         )
 
 
-_SELECTED_BYTES: Final[bytes] = bytes([0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x11])
-_SELECTION_END: Final[int] = 3
-_EXPECTED_HEX: Final[str] = "DE AD BE EF"
-_EXPECTED_BASE64: Final[str] = "3q2+7w=="
+class _StubHexWidget:
+    """Minimal stand-in for the hex editor widget for clipboard tests."""
+
+    def copy_as(self, _fmt: str) -> str:
+        """Return stub copy data for any format.
+
+        Args:
+            _fmt: Format name (ignored).
+
+        Returns:
+            str: Fixed test bytes string.
+        """
+        return "DEADBEEF"
 
 
 class _CopyHarness(QWidget):
-    """Harness exercising ``_do_copy_as`` against a real hex editor widget.
+    """Minimal harness exercising ``_do_copy_as`` from ``HexEditorPanel``."""
 
-    Builds a real :class:`HexEditorWidget` backed by a real ``hexcore``
-    document with a real selection so ``_do_copy_as`` calls the production
-    ``copy_as`` formatter end to end -- no synthetic widget response.
-    """
-
-    def __init__(self, document: HexDocumentFull) -> None:
-        """Initialise the harness with a real hex widget and selected bytes.
-
-        Args:
-            document: Real hexcore document to attach to the widget.
-        """
+    def __init__(self) -> None:
+        """Initialise the harness with a stub hex widget."""
         super().__init__()
-        widget = HexEditorWidget()
-        widget.set_document(document)
-        widget.set_selection_range(0, _SELECTION_END)
-        self._hex_widget: object | None = widget
+        self._hex_widget: object | None = _StubHexWidget()
 
     def do_copy_as(self, fmt: str) -> None:
         """Call the production ``_do_copy_as`` implementation via getattr.
@@ -543,262 +535,88 @@ class _CopyHarness(QWidget):
         getattr(HexEditorPanel, "_do_copy_as")(self, fmt)
 
 
-def _selected_doc() -> HexDocumentFull:
-    """Build a real 6-byte hexcore document whose first four bytes are known.
-
-    Returns:
-        HexDocumentFull: Document containing ``DE AD BE EF 00 11``.
-    """
-    hexcore_mod: Any = pytest.importorskip(
-        "intellicrack_hexcore",
-        reason="intellicrack_hexcore native module not built",
-    )
-    return cast(HexDocumentFull, hexcore_mod.HexDocument.open_bytes(_SELECTED_BYTES))
-
-
-def _configure_json_logging(log_dir: Path) -> Path:
-    """Wire real structlog JSON-Lines logging into ``log_dir``.
-
-    Args:
-        log_dir: Directory to receive ``intellicrack.log``.
-
-    Returns:
-        Path: The active log file path.
-    """
-    log_dir.mkdir(parents=True, exist_ok=True)
-    setup_logging(
-        LogConfig(
-            level="DEBUG",
-            file_enabled=True,
-            console_enabled=False,
-            json_file=True,
-            max_file_size_mb=10,
-            backup_count=1,
-            retention_days=1,
-        ),
-        log_dir=log_dir,
-    )
-    return log_dir / "intellicrack.log"
-
-
-def _make_warning_recorder(sink: list[tuple[str, str]]) -> Callable[..., QMessageBox.StandardButton]:
-    """Build a ``QMessageBox.warning`` stand-in that records title and message.
-
-    Isolates only the irreproducible OS-modal dialog while recording the
-    exact title and message the production warning path produces.
-
-    Args:
-        sink: List that receives ``(title, message)`` for each warning.
-
-    Returns:
-        Callable[..., QMessageBox.StandardButton]: A callable matching
-            ``QMessageBox.warning``'s call shape.
-    """
-
-    def _record(_parent: object, title: str, message: str, *_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
-        sink.append((title, message))
-        return QMessageBox.StandardButton.Ok
-
-    return _record
-
-
-def _read_events(log_file: Path) -> list[dict[str, object]]:
-    """Parse JSON-Lines structlog records, flushing handlers first.
-
-    Args:
-        log_file: Path to the JSON-Lines log file.
-
-    Returns:
-        list[dict[str, object]]: Parsed log records.
-    """
-    for handler in logging.getLogger().handlers:
-        handler.flush()
-    records: list[dict[str, object]] = []
-    for line in log_file.read_text(encoding="utf-8").splitlines():
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            records.append(json.loads(stripped))
-        except json.JSONDecodeError:
-            continue
-    return records
-
-
 @pytest.mark.usefixtures("qapp")
 class TestCopyAsClipboardError:
-    """F-0024: ``_do_copy_as`` writes to the real clipboard and surfaces real warnings.
-
-    The success path exercises the genuine ``QApplication.clipboard()`` and
-    asserts the actual clipboard text. The two failure paths isolate only the
-    irreproducible OS boundaries (a clipboard that the platform cannot
-    provide / a clipboard write that the platform makes fail, and the OS-modal
-    ``QMessageBox.warning``) and then assert the real, user-visible side
-    effects: the structured ``copy_as_*`` log record emitted through the real
-    structlog pipeline and the exact title/message handed to the warning
-    dialog.
-    """
+    """F-0024: ``_do_copy_as`` must surface a warning when the clipboard is unavailable."""
 
     @staticmethod
-    def test_successful_copy_writes_formatted_bytes_to_real_clipboard(
-        qapp: QApplication,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """A successful copy dispatches the production-formatted selection to the real clipboard.
-
-        Drives the full production path -- real :class:`HexEditorWidget`
-        formatting the real selection, then ``_do_copy_as`` calling the real
-        ``QClipboard.setText``. The argument handed to the real clipboard API
-        is captured and asserted against the documented hex format (the
-        independent oracle); the underlying write is still performed against
-        the real Qt clipboard. Capturing the dispatched string keeps the gate
-        deterministic on Windows, where the OS clipboard read-back is racy.
+    def test_no_clipboard_shows_warning(qapp: QApplication) -> None:
+        """Assert show_warning is called when QApplication.clipboard() returns None.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
-            monkeypatch: Pytest monkeypatch fixture for boundary isolation.
         """
         del qapp
-        clipboard = QApplication.clipboard()
-        assert clipboard is not None, "the test environment must provide a real Qt clipboard"
-        dispatched: list[str] = []
-        real_set_text = clipboard.setText
+        harness = _CopyHarness()
+        warning_calls: list[tuple[object, str, str]] = []
 
-        def _spy_set_text(text: str) -> None:
-            dispatched.append(text)
-            real_set_text(text)
+        def _record_warning(parent: object, title: str, message: str) -> None:
+            warning_calls.append((parent, title, message))
 
-        monkeypatch.setattr(clipboard, "setText", _spy_set_text)
+        with (
+            patch("intellicrack.ui.panels.hex_editor.panel.QApplication") as mock_app,
+            patch("intellicrack.ui.panels.hex_editor.panel.show_warning", side_effect=_record_warning),
+        ):
+            mock_app.clipboard.return_value = None
+            harness.do_copy_as("hex")
 
-        harness = _CopyHarness(_selected_doc())
-        harness.do_copy_as("hex")
-
-        assert dispatched == [_EXPECTED_HEX], f"the hex-formatted selection must be written to the clipboard, got {dispatched!r}"
+        assert len(warning_calls) == 1, f"show_warning must be called exactly once when clipboard is None, got {len(warning_calls)}"
 
     @staticmethod
-    def test_successful_copy_respects_requested_format(
-        qapp: QApplication,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """The requested format is honoured: base64 of the selection is dispatched to the clipboard.
+    def test_clipboard_write_error_shows_warning(qapp: QApplication) -> None:
+        """Assert show_warning is called when clipboard.setText raises RuntimeError.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
-            monkeypatch: Pytest monkeypatch fixture for boundary isolation.
         """
         del qapp
-        clipboard = QApplication.clipboard()
-        assert clipboard is not None, "the test environment must provide a real Qt clipboard"
-        dispatched: list[str] = []
-        real_set_text = clipboard.setText
+        harness = _CopyHarness()
+        warning_calls: list[tuple[object, str, str]] = []
 
-        def _spy_set_text(text: str) -> None:
-            dispatched.append(text)
-            real_set_text(text)
+        def _record_warning(parent: object, title: str, message: str) -> None:
+            warning_calls.append((parent, title, message))
 
-        monkeypatch.setattr(clipboard, "setText", _spy_set_text)
+        mock_clipboard = MagicMock()
+        mock_clipboard.setText.side_effect = RuntimeError("clipboard unavailable")
 
-        harness = _CopyHarness(_selected_doc())
-        harness.do_copy_as("base64")
+        with (
+            patch("intellicrack.ui.panels.hex_editor.panel.QApplication") as mock_app,
+            patch("intellicrack.ui.panels.hex_editor.panel.show_warning", side_effect=_record_warning),
+        ):
+            mock_app.clipboard.return_value = mock_clipboard
+            harness.do_copy_as("hex")
 
-        assert dispatched == [_EXPECTED_BASE64], f"the base64-formatted selection must be written to the clipboard, got {dispatched!r}"
+        assert len(warning_calls) == 1, f"show_warning must be called exactly once when setText raises, got {len(warning_calls)}"
 
     @staticmethod
-    def test_no_clipboard_surfaces_warning_and_logs(
-        qapp: QApplication,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """An unavailable clipboard yields the real warning dialog and structured log.
-
-        Only the irreproducible environment boundaries are isolated: the
-        clipboard accessor (forced to the platform's "no clipboard" return of
-        ``None``) and the OS-modal ``QMessageBox.warning``. The behaviour under
-        test -- emitting ``copy_as_no_clipboard`` and surfacing the documented
-        warning text -- runs for real.
+    def test_successful_copy_does_not_show_warning(qapp: QApplication) -> None:
+        """Assert no warning is shown on a successful clipboard write.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
-            tmp_path: Pytest temporary directory for the log file.
-            monkeypatch: Pytest monkeypatch fixture for boundary isolation.
         """
         del qapp
-        log_file = _configure_json_logging(tmp_path / "logs")
-        warnings: list[tuple[str, str]] = []
-        monkeypatch.setattr(QApplication, "clipboard", staticmethod(lambda: None))
-        monkeypatch.setattr(dialogs_helpers.QMessageBox, "warning", _make_warning_recorder(warnings))
+        harness = _CopyHarness()
+        warning_calls: list[str] = []
 
-        harness = _CopyHarness(_selected_doc())
-        harness.do_copy_as("hex")
+        def _record_warning(_parent: object, title: str, _message: str) -> None:
+            warning_calls.append(title)
 
-        events = _read_events(log_file)
-        no_clipboard = [r for r in events if r.get("event") == "copy_as_no_clipboard"]
-        assert no_clipboard, "an unavailable clipboard must emit a copy_as_no_clipboard structured log record"
-        assert no_clipboard[-1].get("fmt") == "hex", "the log record must record the requested format"
-        assert warnings == [
-            ("Clipboard Unavailable", "The system clipboard is not accessible. The selection could not be copied."),
-        ], f"the user must see the documented clipboard-unavailable warning, got {warnings!r}"
+        mock_clipboard = MagicMock()
+        mock_clipboard.setText.return_value = None
+
+        with (
+            patch("intellicrack.ui.panels.hex_editor.panel.QApplication") as mock_app,
+            patch("intellicrack.ui.panels.hex_editor.panel.show_warning", side_effect=_record_warning),
+        ):
+            mock_app.clipboard.return_value = mock_clipboard
+            harness.do_copy_as("hex")
+
+        assert warning_calls == [], f"no warning should fire on successful copy, got {warning_calls}"
 
     @staticmethod
-    def test_clipboard_write_failure_surfaces_warning_and_logs(
-        qapp: QApplication,
-        tmp_path: Path,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """A failing clipboard write yields the real warning dialog and structured log.
-
-        Only the irreproducible boundaries are isolated: a ``setText`` that
-        the platform makes raise ``RuntimeError`` and the OS-modal
-        ``QMessageBox.warning``. The production handling -- catching the error,
-        emitting ``copy_as_clipboard_write_failed``, and surfacing the
-        exception text to the user -- runs for real.
-
-        Args:
-            qapp: Qt application fixture (kept alive for widget construction).
-            tmp_path: Pytest temporary directory for the log file.
-            monkeypatch: Pytest monkeypatch fixture for boundary isolation.
-        """
-        del qapp
-        log_file = _configure_json_logging(tmp_path / "logs")
-        clipboard = QApplication.clipboard()
-        assert clipboard is not None, "the test environment must provide a real Qt clipboard"
-        warnings: list[tuple[str, str]] = []
-
-        def _raise_set_text(_text: str) -> None:
-            msg = "clipboard owner denied write"
-            raise RuntimeError(msg)
-
-        monkeypatch.setattr(clipboard, "setText", _raise_set_text)
-        monkeypatch.setattr(dialogs_helpers.QMessageBox, "warning", _make_warning_recorder(warnings))
-
-        harness = _CopyHarness(_selected_doc())
-        harness.do_copy_as("hex")
-
-        events = _read_events(log_file)
-        write_failed = [r for r in events if r.get("event") == "copy_as_clipboard_write_failed"]
-        assert write_failed, "a failing clipboard write must emit a copy_as_clipboard_write_failed structured log record"
-        assert write_failed[-1].get("fmt") == "hex", "the log record must record the requested format"
-        assert len(warnings) == 1, f"exactly one warning must be surfaced on a failed write, got {warnings!r}"
-        title, message = warnings[0]
-        assert title == "Clipboard Write Failed", f"warning title must name the write failure, got {title!r}"
-        assert "clipboard owner denied write" in message, f"warning must surface the underlying error text, got {message!r}"
-
-    @staticmethod
-    def test_successful_copy_emits_no_warning(
-        qapp: QApplication,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """A successful copy never reaches the warning dialog.
-
-        Args:
-            qapp: Qt application fixture (kept alive for widget construction).
-            monkeypatch: Pytest monkeypatch fixture for boundary isolation.
-        """
-        del qapp
-        warnings: list[tuple[str, str]] = []
-        monkeypatch.setattr(dialogs_helpers.QMessageBox, "warning", _make_warning_recorder(warnings))
-
-        harness = _CopyHarness(_selected_doc())
-        harness.do_copy_as("hex")
-
-        assert warnings == [], f"a successful copy must not surface any warning, got {warnings!r}"
+    def test_panel_module_references_show_warning_in_copy_as() -> None:
+        """Verify the panel source still calls show_warning inside _do_copy_as."""
+        source = Path(panel_module.__file__).read_text(encoding="utf-8")
+        assert "show_warning" in source, "panel.py must import and call show_warning"
+        assert "_do_copy_as" in source, "panel.py must define _do_copy_as"

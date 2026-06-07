@@ -487,6 +487,21 @@ def _build_orchestrator(
 def _assert_real_pe_tool_result(tool_result: ToolResult) -> None:
     """Assert a tool result carries real PE metadata from the bridge.
 
+    Validates every field of the tool-result payload against independently
+    known properties of a real System32 PE DLL:
+
+    * ``file_type`` must be ``"pe"`` (lief recognised the format).
+    * ``imports`` must contain at least one name with ``"LoadLibrary"``
+      (kernel32.dll exports this; any working Windows PE imports it or it
+      is kernel32 itself, so this is always true for kernel32.dll).
+    * ``sections`` must contain ``".text"`` (all real PE DLLs have a .text
+      section; an empty list or a mangled section name fails here).
+    * ``sha256`` must be a 64-character lowercase hex string (lief computed
+      it from the real file, not from a stub).
+
+    A broken bridge that returns an empty imports list, omits sections, or
+    fabricates metadata will fail at least one of these assertions.
+
     Args:
         tool_result: The :class:`ToolResult` collected from the agent loop.
     """
@@ -495,11 +510,27 @@ def _assert_real_pe_tool_result(tool_result: ToolResult) -> None:
     payload = tool_result.result
     assert isinstance(payload, dict)
     payload_dict = cast("dict[str, object]", payload)
-    assert payload_dict["file_type"] == "pe"
+
+    assert payload_dict["file_type"] == "pe", f"expected file_type='pe', got {payload_dict.get('file_type')!r}"
+
     imports = payload_dict["imports"]
-    assert isinstance(imports, list)
+    assert isinstance(imports, list), f"imports must be list, got {type(imports)}"
     import_names = cast("list[str]", imports)
-    assert any("LoadLibrary" in name for name in import_names)
+    assert import_names, "imports list must not be empty for a real PE DLL"
+    assert any("LoadLibrary" in name for name in import_names), (
+        f"expected 'LoadLibrary' in at least one import name; got {import_names[:10]}"
+    )
+
+    sections = payload_dict["sections"]
+    assert isinstance(sections, list), f"sections must be list, got {type(sections)}"
+    section_names = cast("list[str]", sections)
+    assert section_names, "sections list must not be empty for a real PE DLL"
+    assert ".text" in section_names, f"expected '.text' in sections; got {section_names}"
+
+    sha256 = payload_dict["sha256"]
+    assert isinstance(sha256, str), f"sha256 must be str, got {type(sha256)}"
+    assert len(sha256) == 64, f"sha256 must be 64 characters, got len={len(sha256)} for {sha256!r}"
+    assert all(c in "0123456789abcdef" for c in sha256), f"sha256 must be lowercase hex digits only, got {sha256!r}"
 
 
 @pytest.mark.asyncio

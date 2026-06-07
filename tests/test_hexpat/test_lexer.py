@@ -142,9 +142,23 @@ class TestLexerTokenTypes:
         assert tokens[0].type == TokenType.ELLIPSIS
 
     def test_unterminated_string_raises(self) -> None:
-        """Verify unterminated string literal raises HexPatParseError."""
+        """Verify unterminated string literal raises HexPatParseError with correct context.
+
+        The lexer must raise on the opening quote character (column 1, line 1)
+        because the string ``'"hello'`` never receives a closing quote.  The
+        precondition verifies the lexer starts in a clean state (position 0,
+        line 1) to confirm the error occurs during tokenization itself rather
+        than during some prior initialisation step.  The exception message must
+        name the exact fault ("Unterminated string") rather than a generic
+        parse error.
+        """
+        lexer = HexPatLexer('"hello')
+        initial_pos: int = getattr(lexer, "_pos")
+        initial_line: int = getattr(lexer, "_line")
+        assert initial_pos == 0, "precondition: lexer must not have consumed any input before tokenize()"
+        assert initial_line == 1, "precondition: lexer must start on line 1"
         with pytest.raises(HexPatParseError, match="Unterminated string"):
-            HexPatLexer('"hello').tokenize()
+            lexer.tokenize()
 
     def test_unterminated_block_comment_raises(self) -> None:
         """Verify unterminated block comment raises HexPatParseError."""

@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import ctypes
-import ctypes.wintypes
 import sys
 
 import pytest
@@ -198,11 +197,17 @@ class TestInvalidHandleValue:
         assert isinstance(INVALID_HANDLE_VALUE, int)
 
     def test_value_matches_expected_bit_pattern(self) -> None:
-        """Verify INVALID_HANDLE_VALUE matches the platform pointer width."""
+        """Verify INVALID_HANDLE_VALUE equals the Windows-documented all-bits-set sentinel.
+
+        The Windows documentation states INVALID_HANDLE_VALUE is (HANDLE)(LONG_PTR)(-1),
+        which on a 64-bit process evaluates to 0xFFFFFFFFFFFFFFFF and on a 32-bit process
+        to 0xFFFFFFFF. The production code must produce this exact value without any
+        alteration. We independently compute the expected value from the documented
+        pointer width (not from the HANDLE type itself, which is the production code's
+        own mechanism) and assert equality.
+        """
+        void_ptr_size = ctypes.sizeof(ctypes.c_void_p)
         if sys.platform == "win32":
-            expected = ctypes.wintypes.HANDLE(-1).value
-            assert expected == INVALID_HANDLE_VALUE
-            void_ptr_size = ctypes.sizeof(ctypes.c_void_p)
             if void_ptr_size == 8:
                 assert INVALID_HANDLE_VALUE == 0xFFFFFFFFFFFFFFFF
             else:

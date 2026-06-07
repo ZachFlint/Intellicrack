@@ -111,7 +111,9 @@ class TestArithmeticValueOracle:
         source = "u8 v = 10 - 3;\nif (v == 7) { u8 correct @ 70; }\nif (v == 13) { u8 sum_bug @ 130; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["correct"]
-        assert _field(results, "correct")["offset"] == 70
+        correct = _field(results, "correct")
+        assert correct["offset"] == 70
+        assert correct["raw_bytes"] == [70]
 
     def test_subtraction_negative_result_is_signed(self, interp: HexPatInterpreter) -> None:
         """3 - 10 evaluates to the signed value -7, not 7 or a wrapped byte.
@@ -122,7 +124,9 @@ class TestArithmeticValueOracle:
         source = "u8 v = 3 - 10;\nif (v == -7) { u8 neg @ 7; }\nif (v == 7) { u8 abs_bug @ 8; }\nif (v == 249) { u8 wrap_bug @ 9; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["neg"]
-        assert _field(results, "neg")["offset"] == 7
+        neg = _field(results, "neg")
+        assert neg["offset"] == 7
+        assert neg["raw_bytes"] == [7]
 
     def test_multiplication_value(self, interp: HexPatInterpreter) -> None:
         """6 * 7 evaluates to exactly 42, distinct from the sum 13.
@@ -146,7 +150,9 @@ class TestArithmeticValueOracle:
         source = "u8 v = 15 / 4;\nif (v == 3) { u8 trunc @ 30; }\nif (v == 4) { u8 round_bug @ 40; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["trunc"]
-        assert _field(results, "trunc")["offset"] == 30
+        trunc = _field(results, "trunc")
+        assert trunc["offset"] == 30
+        assert trunc["raw_bytes"] == [30]
 
     def test_modulo_value(self, interp: HexPatInterpreter) -> None:
         """17 % 5 evaluates to the remainder 2, distinct from the quotient 3.
@@ -181,7 +187,9 @@ class TestArithmeticValueOracle:
         source = "u8 v = 2 + 3 * 4;\nif (v == 14) { u8 correct @ 14; }\nif (v == 20) { u8 leftassoc_bug @ 20; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["correct"]
-        assert _field(results, "correct")["offset"] == 14
+        correct = _field(results, "correct")
+        assert correct["offset"] == 14
+        assert correct["raw_bytes"] == [14]
 
 
 class TestArithmeticPlacementOracle:
@@ -245,7 +253,9 @@ class TestBitwiseValueOracle:
         source = "u8 v = 0xFF & 0x0F;\nif (v == 0x0F) { u8 correct @ 15; } else { u8 wrong @ 200; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["correct"]
-        assert _field(results, "correct")["offset"] == 15
+        correct = _field(results, "correct")
+        assert correct["offset"] == 15
+        assert correct["raw_bytes"] == [15]
 
     def test_bitwise_or_sets_all_bits(self, interp: HexPatInterpreter) -> None:
         """0xF0 | 0x0F sets every low byte bit, yielding 0xFF.
@@ -269,7 +279,9 @@ class TestBitwiseValueOracle:
         source = "u8 v = 0xFF ^ 0xF0;\nif (v == 0x0F) { u8 correct @ 15; }\nif (v == 0xFF) { u8 or_bug @ 100; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["correct"]
-        assert _field(results, "correct")["offset"] == 15
+        correct = _field(results, "correct")
+        assert correct["offset"] == 15
+        assert correct["raw_bytes"] == [15]
 
     def test_left_shift_value(self, interp: HexPatInterpreter) -> None:
         """0x01 << 4 produces 0x10, distinct from a right shift to 0.
@@ -280,7 +292,9 @@ class TestBitwiseValueOracle:
         source = "u8 v = 1 << 4;\nif (v == 16) { u8 correct @ 16; }\nif (v == 0) { u8 rshift_bug @ 99; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["correct"]
-        assert _field(results, "correct")["offset"] == 16
+        correct = _field(results, "correct")
+        assert correct["offset"] == 16
+        assert correct["raw_bytes"] == [16]
 
     def test_right_shift_value(self, interp: HexPatInterpreter) -> None:
         """0xF0 >> 4 produces 0x0F, distinct from a left shift overflow.
@@ -291,7 +305,9 @@ class TestBitwiseValueOracle:
         source = "u8 v = 0xF0 >> 4;\nif (v == 0x0F) { u8 correct @ 15; }\nif (v == 0xF00) { u8 lshift_bug @ 1; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["correct"]
-        assert _field(results, "correct")["offset"] == 15
+        correct = _field(results, "correct")
+        assert correct["offset"] == 15
+        assert correct["raw_bytes"] == [15]
 
     def test_bitwise_not_inverts_all_bits(self, interp: HexPatInterpreter) -> None:
         """~0 masked to 32 bits yields 0xFFFFFFFF; ~0xFF masked yields 0xFFFFFF00.
@@ -582,7 +598,9 @@ class TestFunctionDefinitions:
         source = "fn add(u8 a, u8 b) {\n    return a + b;\n}\nu8 v = add(20, 22);\nif (v == 42) { u8 ok @ 42; }\nif (v == 2) { u8 firstparam_bug @ 1; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["ok"]
-        assert _field(results, "ok")["offset"] == 42
+        ok = _field(results, "ok")
+        assert ok["offset"] == 42
+        assert ok["raw_bytes"] == [42]
 
     def test_function_side_effect_placement(self, interp: HexPatInterpreter) -> None:
         """A void function places a field at its argument offset.
@@ -635,7 +653,9 @@ class TestTypeCoercion:
         source = "u8 v = (u8)(3.9);\nif (v == 3) { u8 trunc @ 33; }\nif (v == 4) { u8 round_bug @ 44; }"
         results = interp.execute_bytes(source, _INDEXED_DATA)
         assert _names(results) == ["trunc"]
-        assert _field(results, "trunc")["offset"] == 33
+        trunc = _field(results, "trunc")
+        assert trunc["offset"] == 33
+        assert trunc["raw_bytes"] == [33]
 
     def test_cast_int_to_float_preserves_value(self, interp: HexPatInterpreter) -> None:
         """(float)(5) equals 5.0 and compares equal to the integer 5.

@@ -290,23 +290,16 @@ def test_build_relaunch_command_pixi_targets_pixi_executable(tmp_path: Path) -> 
     with _environment(overrides):
         executable, params = _build_relaunch_command(original_args)
 
-    expected_params = subprocess.list2cmdline(
-        [
-            "run",
-            "--manifest-path",
-            str(manifest),
-            "--environment",
-            "default",
-            "python",
-            "-m",
-            elevation.PACKAGE_NAME,
-            *original_args,
-            elevation.ELEVATED_FLAG,
-        ],
-    )
+    # Independent hand-built oracle: every token is asserted literally. The
+    # static prefix and suffix are full string literals; the only dynamic token
+    # is the manifest path, which is quoted exactly as Win32 requires.
+    quoted_manifest = f'"{manifest}"' if " " in str(manifest) else str(manifest)
+    expected_params = f"run --manifest-path {quoted_manifest} --environment default python -m intellicrack --gui --project demo --elevated"
     assert executable == str(pixi_exe)
     assert params == expected_params
-    assert params.split(" ")[-len(original_args) - 1 :] == [*original_args, elevation.ELEVATED_FLAG]
+    assert manifest.is_file()
+    assert params.startswith("run --manifest-path ")
+    assert params.endswith(" --environment default python -m intellicrack --gui --project demo --elevated")
 
 
 def test_build_relaunch_command_pixi_missing_executable_falls_back_to_interpreter(tmp_path: Path) -> None:

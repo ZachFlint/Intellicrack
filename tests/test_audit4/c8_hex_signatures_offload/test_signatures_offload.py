@@ -60,6 +60,7 @@ class _StubDocument:
         self._data: bytes = data
         self.read_call_count: int = 0
         self.read_thread_ids: list[int] = []
+        self.read_args: list[tuple[int, int]] = []
 
     def length(self) -> int:
         """Return the document byte length.
@@ -81,7 +82,51 @@ class _StubDocument:
         """
         self.read_call_count += 1
         self.read_thread_ids.append(threading.get_ident())
+        self.read_args.append((offset, length))
         return self._data[offset : offset + length]
+
+
+class _CappedReadDocument:
+    """Document whose ``read`` honours the requested offset but caps the length.
+
+    Used to prove that ``read_document_for_scan`` requests the full document
+    length: when the per-read length is capped below the document size, the
+    returned content is a strict prefix only if the function asked for the whole
+    length and the document refused to serve it all.
+    """
+
+    def __init__(self, data: bytes, cap: int) -> None:
+        """Initialise with content and a per-read length cap.
+
+        Args:
+            data: Full document content.
+            cap: Maximum number of bytes any single ``read`` may return.
+        """
+        self._data: bytes = data
+        self._cap: int = cap
+        self.requested_lengths: list[int] = []
+
+    def length(self) -> int:
+        """Return the document byte length.
+
+        Returns:
+            int: Number of bytes in the document.
+        """
+        return len(self._data)
+
+    def read(self, offset: int, length: int) -> bytes:
+        """Return a capped slice of the document data.
+
+        Args:
+            offset: Start offset.
+            length: Number of bytes requested (served up to the cap).
+
+        Returns:
+            bytes: At most ``cap`` bytes starting at ``offset``.
+        """
+        self.requested_lengths.append(length)
+        served = min(length, self._cap)
+        return self._data[offset : offset + served]
 
 
 class _MixinHarness(SignaturesMixin, QWidget):
@@ -171,11 +216,45 @@ class TestReadDocumentForScan:
     """Unit tests for ``read_document_for_scan``."""
 
     @staticmethod
-    def test_bytes_passthrough() -> None:
-        """Returns bytes unchanged when document.read returns bytes."""
-        doc = _StubDocument(b"hello world")
+    def test_reads_full_document_with_correct_offset_and_length() -> None:
+        """Reads the entire document via ``read(0, length())`` and returns its bytes.
+
+        The document content is non-trivial (the full 0..255 byte range twice)
+        and ``_StubDocument.read`` honours the requested ``offset``/``length``
+        rather than echoing a fixed answer.  This pins three behaviours that a
+        no-op or corrupted ``read_document_for_scan`` would violate: that
+        ``read`` is invoked exactly once, that it is invoked with offset ``0``
+        and the value returned by ``length()`` (the full size), and that the
+        complete byte sequence is returned unchanged.
+        """
+        content = bytes(range(256)) * 2
+        doc = _StubDocument(content)
+
         result = read_document_for_scan(doc)
-        assert result == b"hello world"
+
+        assert result == content
+        assert isinstance(result, bytes)
+        assert doc.read_call_count == 1
+        assert doc.read_args == [(0, 512)]
+
+    @staticmethod
+    def test_partial_read_would_not_satisfy_full_content() -> None:
+        """A document that under-reads yields fewer bytes, proving full length is requested.
+
+        ``read_document_for_scan`` must request ``length()`` bytes; if it
+        requested fewer, the returned content would be a truncated prefix.  This
+        document caps every read at 4 bytes, so the function can only return the
+        full content if it actually asks for the whole length and the document
+        honours it.  Here the cap makes the result a strict prefix, which the
+        assertion detects.
+        """
+        content = b"\xde\xad\xbe\xef\xca\xfe\xba\xbe"
+        doc = _CappedReadDocument(content, cap=4)
+
+        result = read_document_for_scan(doc)
+
+        assert result == content[:4]
+        assert doc.requested_lengths == [len(content)]
 
     @staticmethod
     def test_bytearray_converted() -> None:
@@ -391,12 +470,20 @@ class TestUIThreadAllocationBudget:
         snapshot_after = tracemalloc.take_snapshot()
         tracemalloc.stop()
 
-        if harness.worker() is not None:
-            harness.wait_for_worker()
+        assert harness.worker() is not None, (
+            "trigger_scan() must spawn a worker thread to offload the document read; "
+            "no worker means the read was either skipped or performed synchronously on the UI thread."
+        )
+        assert doc.read_call_count == 0, "document.read must not run on the UI thread during trigger_scan()"
+
+        finished = harness.wait_for_worker()
+        assert finished, "Worker did not finish within the timeout"
+        assert doc.read_call_count >= 1, "the worker thread must read the document after trigger_scan() returns"
 
         top_stats = snapshot_after.compare_to(snapshot_before, "lineno")
         peak_ui_alloc = sum(stat.size_diff for stat in top_stats if stat.size_diff > 0)
 
+        assert doc.read_thread_ids, "no document.read calls were recorded; the worker never read the document"
         for caller_thread_id in doc.read_thread_ids:
             assert caller_thread_id != main_thread_id, (
                 "_StubDocument.read was called from the main (UI) thread; "

@@ -106,7 +106,7 @@ def _find_group(widget: ProviderSettingsWidget, title: str) -> QGroupBox | None:
 
 @pytest.mark.parametrize("provider_id", _PREVIOUSLY_UNWIRED_PROVIDERS)
 def test_resources_group_present_for_previously_unwired_providers(
-    qapp: QApplication,  # noqa: ARG001
+    qapp: QApplication,
     tmp_path: Path,
     provider_id: str,
 ) -> None:
@@ -122,6 +122,7 @@ def test_resources_group_present_for_previously_unwired_providers(
         tmp_path: Per-test temporary directory.
         provider_id: Provider id under test.
     """
+    del qapp
     widget = _make_widget(tmp_path, provider_id)
     group = _find_group(widget, "Resources")
     assert group is not None, f"Resources group missing for provider '{provider_id}'"
@@ -157,7 +158,7 @@ def test_resource_links_table_covers_all_cloud_providers() -> None:
 
 @pytest.mark.parametrize("provider_id", _PREVIOUSLY_UNWIRED_PROVIDERS)
 def test_resource_button_click_routes_exact_url_once_to_browser(
-    qapp: QApplication,  # noqa: ARG001
+    qapp: QApplication,
     tmp_path: Path,
     provider_id: str,
 ) -> None:
@@ -179,6 +180,7 @@ def test_resource_button_click_routes_exact_url_once_to_browser(
         tmp_path: Per-test temporary directory.
         provider_id: Provider id under test.
     """
+    del qapp
     widget = _make_widget(tmp_path, provider_id)
     buttons = getattr(widget, "_resource_buttons", None)
     assert buttons is not None, f"Provider '{provider_id}' did not register buttons"
@@ -203,7 +205,7 @@ def test_resource_button_click_routes_exact_url_once_to_browser(
 
 @pytest.mark.parametrize("provider_id", _PREVIOUSLY_WIRED_PROVIDERS)
 def test_previously_wired_providers_retain_their_groups(
-    qapp: QApplication,  # noqa: ARG001
+    qapp: QApplication,
     tmp_path: Path,
     provider_id: str,
 ) -> None:
@@ -214,6 +216,7 @@ def test_previously_wired_providers_retain_their_groups(
         tmp_path: Per-test temporary directory.
         provider_id: Provider id under test.
     """
+    del qapp
     widget = _make_widget(tmp_path, provider_id)
 
     expected_titles = {
@@ -227,7 +230,7 @@ def test_previously_wired_providers_retain_their_groups(
 
 
 def test_openrouter_gets_both_cost_and_resources_groups(
-    qapp: QApplication,  # noqa: ARG001
+    qapp: QApplication,
     tmp_path: Path,
 ) -> None:
     """OpenRouter exposes both its bespoke cost-tracking group and a Resources group.
@@ -236,13 +239,14 @@ def test_openrouter_gets_both_cost_and_resources_groups(
         qapp: Module-scoped Qt application.
         tmp_path: Per-test temporary directory.
     """
+    del qapp
     widget = _make_widget(tmp_path, "openrouter")
     assert _find_group(widget, "Cost Tracking") is not None
     assert _find_group(widget, "Resources") is not None
 
 
 def test_open_resource_url_surfaces_exact_failure_dialog(
-    qapp: QApplication,  # noqa: ARG001
+    qapp: QApplication,
     tmp_path: Path,
 ) -> None:
     """A failed browser launch surfaces a warning naming the exact label and URL.
@@ -260,6 +264,7 @@ def test_open_resource_url_surfaces_exact_failure_dialog(
         qapp: Module-scoped Qt application.
         tmp_path: Per-test temporary directory.
     """
+    del qapp
     widget = _make_widget(tmp_path, "anthropic")
     buttons = getattr(widget, "_resource_buttons", None)
     assert buttons is not None

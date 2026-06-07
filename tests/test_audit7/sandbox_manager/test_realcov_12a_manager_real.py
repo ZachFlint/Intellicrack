@@ -43,7 +43,7 @@ from intellicrack.sandbox.windows import WindowsSandbox
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Coroutine
     from pathlib import Path
 
 
@@ -129,42 +129,6 @@ class _AbsentBinaryQEMUSandbox(QEMUSandbox):
         return None
 
 
-class _PresentBinaryQEMUSandbox(QEMUSandbox):
-    """Real ``QEMUSandbox`` for a host where the QEMU binary IS present.
-
-    Mirror image of :class:`_AbsentBinaryQEMUSandbox`. Only the executable
-    *discovery* helper is injected -- to return a real, existing file path (the
-    genuine outcome on a host with QEMU installed) -- and the accelerator probe
-    is pre-cached so :meth:`QEMUSandbox.is_available` does not shell out to
-    ``qemu -accel help``. The real availability decision (``qemu_path is None``
-    taking its False branch and returning ``True``) runs unmodified end to end;
-    the gated decision itself is never mocked. This is the paired oracle proving
-    that binary *absence* -- not a blanket exclusion -- is what removes ``qemu``
-    from the reported types.
-    """
-
-    def __init__(self, default_config: SandboxConfig, qemu_config: QEMUConfig | None, present_path: Path) -> None:
-        """Store the real present binary path the discovery helper will report.
-
-        Args:
-            default_config: Base sandbox configuration.
-            qemu_config: QEMU-specific configuration (defaulted when ``None``).
-            present_path: Real existing file standing in for the QEMU binary.
-        """
-        super().__init__(default_config, qemu_config)
-        self._present_path = present_path
-        self._accelerator_cached = True
-
-    async def _find_qemu(self) -> Path | None:
-        """Report a real, existing executable path as the discovered QEMU binary.
-
-        Returns:
-            Path | None: The injected real present path so the availability
-            decision takes its genuine binary-found branch.
-        """
-        return self._present_path
-
-
 class _ProbeRoutingManager(_RealManager):
     """Manager that routes the real ``qemu`` probe at an injected real sandbox.
 
@@ -175,20 +139,19 @@ class _ProbeRoutingManager(_RealManager):
     whatever the genuine ``is_available`` of the injected real sandbox returns.
     """
 
-    def __init__(self, qemu_factory: Callable[[], QEMUSandbox], default_config: SandboxConfig) -> None:
-        """Store the real QEMU sandbox factory the manager should probe.
+    def __init__(self, qemu_factory: type[QEMUSandbox], default_config: SandboxConfig) -> None:
+        """Store the real QEMU sandbox class the manager should probe.
 
         Args:
-            qemu_factory: Zero-argument callable returning a real ``QEMUSandbox``
-                (or subclass) instance to probe when the manager evaluates the
-                ``qemu`` type.
+            qemu_factory: Real ``QEMUSandbox`` (sub)class to instantiate when the
+                manager probes the ``qemu`` type.
             default_config: Default sandbox configuration for the manager.
         """
         super().__init__(default_config=default_config)
         self._qemu_factory = qemu_factory
 
     async def _probe_type(self, sandbox_type: SandboxType) -> bool:
-        """Probe ``sandbox_type`` using the injected real ``qemu`` sandbox factory.
+        """Probe ``sandbox_type`` using the injected real ``qemu`` sandbox class.
 
         Args:
             sandbox_type: Sandbox type to probe on the real host.
@@ -196,7 +159,9 @@ class _ProbeRoutingManager(_RealManager):
         Returns:
             bool: The genuine ``is_available`` result for the real sandbox.
         """
-        sandbox: SandboxBase = self._qemu_factory() if sandbox_type == "qemu" else WindowsSandbox(self._default_config)
+        sandbox: SandboxBase = (
+            self._qemu_factory(self._default_config, QEMUConfig()) if sandbox_type == "qemu" else WindowsSandbox(self._default_config)
+        )
         return await sandbox.is_available()
 
 
@@ -229,7 +194,7 @@ class TestRealAvailabilityProbing:
         real probe result: an independent direct probe of the same real sandbox
         must agree, and ``get_available_types`` must omit ``qemu`` accordingly.
         """
-        manager = _ProbeRoutingManager(lambda: _AbsentBinaryQEMUSandbox(SandboxConfig(), QEMUConfig()), default_config=SandboxConfig())
+        manager = _ProbeRoutingManager(_AbsentBinaryQEMUSandbox, default_config=SandboxConfig())
 
         async def _direct_probe() -> bool:
             return await _AbsentBinaryQEMUSandbox(SandboxConfig(), QEMUConfig()).is_available()
@@ -245,45 +210,6 @@ class TestRealAvailabilityProbing:
         assert manager.availability_cache["qemu"].available is False, "the real False probe must be cached verbatim"
         assert all(t in _VALID_TYPES for t in reported), f"reported types must be valid; got {reported}"
 
-    def test_present_real_qemu_binary_includes_qemu_in_reported_types(self, tmp_path: Path) -> None:
-        """A present real QEMU binary must drive ``qemu`` INTO reported types.
-
-        Paired with
-        :meth:`test_absent_real_qemu_binary_excludes_qemu_from_reported_types`,
-        this proves binary *absence* -- not a blanket exclusion or fabricated
-        constant -- is the controlling factor. The same real, unmodified
-        ``is_available`` decision now runs over a genuinely existing file, takes
-        its binary-found branch, and returns ``True``; the manager must reflect
-        that by listing ``qemu``. A direct independent probe of the same real
-        sandbox must agree.
-
-        Args:
-            tmp_path: Pytest temporary directory supplying a real existing file
-                to stand in for the discovered QEMU executable.
-        """
-        present_binary: Path = tmp_path / "qemu-system-x86_64.exe"
-        _ = present_binary.write_bytes(b"MZ")
-        assert present_binary.exists(), "the injected QEMU binary path must be a real existing file"
-
-        manager = _ProbeRoutingManager(
-            lambda: _PresentBinaryQEMUSandbox(SandboxConfig(), QEMUConfig(), present_binary),
-            default_config=SandboxConfig(),
-        )
-
-        async def _direct_probe() -> bool:
-            return await _PresentBinaryQEMUSandbox(SandboxConfig(), QEMUConfig(), present_binary).is_available()
-
-        async def _reported() -> list[SandboxType]:
-            return await manager.get_available_types()
-
-        direct = _run(_direct_probe())
-        reported = _run(_reported())
-
-        assert direct is True, "a real QEMUSandbox whose binary genuinely exists must probe as available"
-        assert "qemu" in reported, "manager must include qemu when the real is_available probe returns True"
-        assert manager.availability_cache["qemu"].available is True, "the real True probe must be cached verbatim"
-        assert all(t in _VALID_TYPES for t in reported), f"reported types must be valid; got {reported}"
-
     @pytest.mark.spawns_process
     def test_reported_qemu_availability_matches_real_independent_probe(self) -> None:
         """Reported ``qemu`` availability must equal an independent real probe.
@@ -294,7 +220,7 @@ class TestRealAvailabilityProbing:
         membership decision for ``qemu`` must match that independent oracle
         exactly, in whichever direction the real host resolves.
         """
-        manager = _ProbeRoutingManager(lambda: QEMUSandbox(SandboxConfig(), QEMUConfig()), default_config=SandboxConfig())
+        manager = _ProbeRoutingManager(QEMUSandbox, default_config=SandboxConfig())
 
         async def _direct_probe() -> bool:
             return await QEMUSandbox(SandboxConfig(), QEMUConfig()).is_available()

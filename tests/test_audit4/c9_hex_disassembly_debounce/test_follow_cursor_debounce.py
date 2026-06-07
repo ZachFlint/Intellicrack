@@ -29,14 +29,21 @@ hex widget does, and asserts that:
 - a duplicate offset never causes a second dispatch,
 - a cursor move arriving while a bridge call is in flight is held until
   the call completes and then dispatched once.
+
+The ``TestBridgeCallParameters`` class adds a genuine bridge-signature gate:
+it supplies a recording bridge with a real async ``disassemble`` coroutine
+and lets ``_on_disassemble`` run without override, asserting the exact offset,
+count, architecture, and mode args that reach ``bridge.disassemble()``.
 """
 
 from __future__ import annotations
 
+import threading
+import time
 from typing import TYPE_CHECKING, Any, Final
 
 import pytest
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QEventLoop, QTimer
 from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QSpinBox, QTableWidget, QWidget
 
 from intellicrack.ui.panels.hex_editor.disassembly import DisassemblyMixin
@@ -49,6 +56,7 @@ if TYPE_CHECKING:
 _DOC_LEN: Final[int] = 4096
 _INITIAL_OFFSET: Final[int] = 0
 _DEBOUNCE_MS: Final[int] = 150
+_BRIDGE_TIMEOUT_MS: Final[int] = 2000
 
 
 @pytest.fixture(scope="module")
@@ -210,6 +218,124 @@ class _DebouncingHarness(DisassemblyMixin, QWidget):
         self._stub_follow_cursor.setChecked(False)
 
 
+class _DisassembleCall:
+    """Record of one ``bridge.disassemble`` invocation.
+
+    Attributes:
+        offset: Byte offset passed to disassemble.
+        count: Instruction count requested.
+        arch: Architecture string.
+        mode: Mode string.
+    """
+
+    offset: int
+    count: int
+    arch: str
+    mode: str
+
+    def __init__(self, offset: int, count: int, arch: str, mode: str) -> None:
+        """Initialise the record.
+
+        Args:
+            offset: Byte offset passed to disassemble.
+            count: Instruction count requested.
+            arch: Architecture string.
+            mode: Mode string.
+        """
+        self.offset = offset
+        self.count = count
+        self.arch = arch
+        self.mode = mode
+
+
+class _RecordingBridge:
+    """Recording bridge with a real async disassemble coroutine.
+
+    Does NOT override ``_on_disassemble``; instead the production method runs
+    in full and its call to ``bridge.disassemble(offset, count, arch, mode)``
+    is intercepted here so the exact argument values can be asserted.
+    """
+
+    def __init__(self) -> None:
+        """Initialise an empty call record and a threading event for synchronisation."""
+        self.calls: list[_DisassembleCall] = []
+        self._called: threading.Event = threading.Event()
+
+    async def disassemble(self, offset: int, count: int, arch: str, mode: str) -> list[object]:
+        """Record the call arguments and return an empty instruction list.
+
+        Args:
+            offset: Byte offset to start disassembly.
+            count: Number of instructions to disassemble.
+            arch: Target architecture string.
+            mode: Target mode string.
+
+        Returns:
+            list[object]: Empty list (no real disassembly needed for signature tests).
+        """
+        self.calls.append(_DisassembleCall(offset=offset, count=count, arch=arch, mode=mode))
+        self._called.set()
+        return []
+
+    def wait_for_call(self, timeout_sec: float = 3.0) -> bool:
+        """Block until at least one ``disassemble`` call has been recorded.
+
+        Args:
+            timeout_sec: Maximum time to wait in seconds.
+
+        Returns:
+            bool: ``True`` if a call was recorded within the timeout.
+        """
+        return self._called.wait(timeout=timeout_sec)
+
+
+class _RealDispatchHarness(DisassemblyMixin, QWidget):
+    """Harness that lets ``_on_disassemble`` run without override.
+
+    Wires the same Qt widgets as :class:`_DebouncingHarness` but attaches
+    a :class:`_RecordingBridge` as ``_bridge`` so the production code path
+    through ``_on_disassemble`` → ``bridge.disassemble(offset, count, arch, mode)``
+    is exercised end-to-end and the exact arguments can be asserted.
+    """
+
+    def __init__(self, recording_bridge: _RecordingBridge) -> None:
+        """Initialise the harness with a recording bridge.
+
+        Args:
+            recording_bridge: Bridge whose ``disassemble`` coroutine records args.
+        """
+        super().__init__()
+        self._stub_document: _StubDocument = _StubDocument(_DOC_LEN)
+        self.document: Any | None = self._stub_document
+        self._document: Any | None = self._stub_document
+        self._stub_hex_widget: _StubHexWidget = _StubHexWidget()
+        self._hex_widget: Any | None = self._stub_hex_widget
+        self._disasm_arch_combo: QComboBox | None = QComboBox(self)
+        self._disasm_arch_combo.addItems(["Auto Detect", "x86", "ARM"])
+        self._disasm_mode_combo: QComboBox | None = QComboBox(self)
+        self._disasm_mode_combo.addItems(["64-bit", "32-bit"])
+        self._disasm_count_spin: QSpinBox | None = QSpinBox(self)
+        self._disasm_count_spin.setRange(1, 100)
+        self._disasm_count_spin.setValue(15)
+        self._stub_follow_cursor: QCheckBox = QCheckBox(self)
+        self._stub_follow_cursor.setChecked(True)
+        self._disasm_follow_cursor: QCheckBox | None = self._stub_follow_cursor
+        self._disasm_table: QTableWidget | None = QTableWidget(0, 4, self)
+        self._bridge: Any | None = recording_bridge
+        self._disasm_follow_timer: QTimer | None = None
+        self._disasm_pending_offset: int | None = None
+        self._disasm_last_dispatched_offset: int | None = None
+        self._disasm_in_flight: bool = False
+
+    def set_cursor(self, offset: int) -> None:
+        """Move the stub hex widget cursor to ``offset``.
+
+        Args:
+            offset: New cursor byte offset.
+        """
+        self._stub_hex_widget.set_cursor_offset(offset)
+
+
 @pytest.mark.usefixtures("qapp")
 class TestBurstCollapsesToSingleDispatch:
     """A burst of cursor moves must dispatch at most once after the debounce window."""
@@ -347,3 +473,133 @@ class TestFollowCursorDisabledSuppressesDispatch:
 
         assert harness.dispatched_offsets == []
         assert harness.pending_offset_for_test() is None
+
+
+@pytest.mark.usefixtures("qapp")
+class TestBridgeCallParameters:
+    """Verify the exact args that reach ``bridge.disassemble`` after debounce fires.
+
+    These tests let ``_on_disassemble`` execute in full (no override) so that
+    any change to the bridge call signature — extra parameters, renamed args,
+    wrong offset — causes the test to go red.
+    """
+
+    @staticmethod
+    def _run_loop_until(event: threading.Event, loop: QEventLoop, timeout_ms: int) -> bool:
+        """Run ``loop`` until ``event`` is set or ``timeout_ms`` elapses.
+
+        Args:
+            event: Threading event set by the bridge recording coroutine.
+            loop: Qt event loop to spin while waiting.
+            timeout_ms: Maximum wait in milliseconds.
+
+        Returns:
+            bool: ``True`` if the event was set before the timeout.
+        """
+        timer = QTimer()
+        timer.setSingleShot(True)
+        timer.timeout.connect(loop.quit)
+        timer.start(timeout_ms)
+
+        def _check() -> None:
+            if event.is_set():
+                loop.quit()
+
+        poll = QTimer()
+        poll.setInterval(10)
+        poll.timeout.connect(_check)
+        poll.start()
+
+        loop.exec()
+        poll.stop()
+        timer.stop()
+        return event.is_set()
+
+    @staticmethod
+    def test_on_disassemble_passes_cursor_offset_to_bridge(qapp: QApplication) -> None:
+        """Calling ``_on_disassemble`` routes the correct cursor offset to bridge.disassemble.
+
+        Uses a real async coroutine on the bridge; does NOT override
+        ``_on_disassemble``. The coroutine records its arguments synchronously
+        inside the bridge event loop so the assertion is on the real parameters
+        the production code passes.
+
+        Args:
+            qapp: Qt application fixture (kept alive for widget construction).
+        """
+        del qapp
+        recording = _RecordingBridge()
+        harness = _RealDispatchHarness(recording)
+
+        target_offset = 0x0DEA
+        harness.set_cursor(target_offset)
+
+        loop = QEventLoop()
+        getattr(harness, "_on_disassemble")()
+
+        called = TestBridgeCallParameters._run_loop_until(getattr(recording, "_called"), loop, _BRIDGE_TIMEOUT_MS)
+        assert called, "bridge.disassemble was never invoked; the production call path may be broken"
+
+        assert len(recording.calls) == 1
+        call = recording.calls[0]
+        assert call.offset == target_offset, f"bridge.disassemble received offset {call.offset:#x}, expected {target_offset:#x}"
+        assert call.count == 15, f"bridge.disassemble count={call.count}, expected 15 (from spin box)"
+        assert call.arch == "auto", f"bridge.disassemble arch={call.arch!r}, expected 'auto'"
+        assert call.mode == "64", f"bridge.disassemble mode={call.mode!r}, expected '64'"
+
+    @staticmethod
+    def test_on_disassemble_passes_arch_and_mode_from_combos(qapp: QApplication) -> None:
+        """Architecture and mode combos propagate correctly to bridge.disassemble.
+
+        Changes combo selections to x86/32-bit and verifies the bridge receives
+        the mapped arch and mode strings, not the raw combo text.
+
+        Args:
+            qapp: Qt application fixture (kept alive for widget construction).
+        """
+        del qapp
+        recording = _RecordingBridge()
+        harness = _RealDispatchHarness(recording)
+
+        assert getattr(harness, "_disasm_arch_combo") is not None
+        getattr(harness, "_disasm_arch_combo").setCurrentIndex(1)
+        assert getattr(harness, "_disasm_mode_combo") is not None
+        getattr(harness, "_disasm_mode_combo").setCurrentIndex(1)
+
+        harness.set_cursor(0x0800)
+
+        loop = QEventLoop()
+        getattr(harness, "_on_disassemble")()
+
+        called = TestBridgeCallParameters._run_loop_until(getattr(recording, "_called"), loop, _BRIDGE_TIMEOUT_MS)
+        assert called, "bridge.disassemble was never invoked"
+
+        assert len(recording.calls) == 1
+        call = recording.calls[0]
+        assert call.offset == 0x0800
+        assert call.arch == "x86", f"expected arch 'x86', got {call.arch!r}"
+        assert call.mode == "32", f"expected mode '32', got {call.mode!r}"
+
+    @staticmethod
+    def test_on_disassemble_skips_bridge_when_offset_at_end_of_document(qapp: QApplication) -> None:
+        """No bridge call is made when the cursor is beyond the document end.
+
+        The production code returns early when ``doc_len - cursor_offset <= 0``;
+        this test verifies that guard is exercised and the recording bridge
+        sees no call.
+
+        Args:
+            qapp: Qt application fixture (kept alive for widget construction).
+        """
+        del qapp
+        recording = _RecordingBridge()
+        harness = _RealDispatchHarness(recording)
+
+        harness.set_cursor(_DOC_LEN)
+
+        getattr(harness, "_on_disassemble")()
+
+        QApplication.processEvents()
+
+        time.sleep(0.05)
+        assert len(recording.calls) == 0, "bridge.disassemble must not be called when cursor is at or past document end"

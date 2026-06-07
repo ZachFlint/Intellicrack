@@ -31,7 +31,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, override
 
 import pytest
-from PyQt6.QtWidgets import QApplication, QLabel, QLineEdit, QPushButton, QWidget
+from PyQt6.QtWidgets import QApplication, QGroupBox, QLabel, QLineEdit, QPushButton, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
 from intellicrack.ui.panels.hex_editor.data_inspector import DataInspectorMixin
@@ -748,3 +748,137 @@ class TestUpdateBitButtonsContinuesPastError:
             btn = h.bit_buttons_list[i]
             assert btn.text() in {"0", "1"}, f"bit {bit_idx} must be updated even after error on bit 7; got {btn.text()!r}"
             assert btn.isEnabled(), f"bit {bit_idx} must be enabled"
+
+
+class _FullHarness(_DataInspectorHarness):
+    """Harness that wires all UI widgets via the real mixin constructors.
+
+    Calling ``_create_text_decode_group()`` is the only path that runs
+    ``encode_btn.clicked.connect(self._on_encode_text)``. Tests on this
+    subclass verify the *signal wire-up* itself, not just the slot body.
+
+    Public accessors expose the protected mixin members so tests avoid
+    accessing private names directly, satisfying type-checker access rules.
+    """
+
+    def __init__(self, document: _StubDocument | None = None) -> None:
+        """Initialise and create the text decode/encode group box.
+
+        Args:
+            document: Stub document to attach, or ``None`` for no-document tests.
+        """
+        super().__init__(document)
+        self._text_decode_group: QGroupBox = self._create_text_decode_group()
+
+    @property
+    def text_decode_group(self) -> QGroupBox:
+        """Return the text decode/encode group box created by the mixin constructor.
+
+        Returns:
+            QGroupBox: The real group box whose encode button carries the live signal connection.
+        """
+        return self._text_decode_group
+
+    @property
+    def encode_input_widget(self) -> QLineEdit | None:
+        """Return the encode input widget initialised by ``_create_text_decode_group``.
+
+        Returns:
+            QLineEdit | None: The mixin's ``_encode_input`` field.
+        """
+        return self._encode_input
+
+    @property
+    def encode_output_widget(self) -> QLabel | None:
+        """Return the encode output label initialised by ``_create_text_decode_group``.
+
+        Returns:
+            QLabel | None: The mixin's ``_encode_output`` field.
+        """
+        return self._encode_output
+
+
+@pytest.mark.usefixtures("qapp")
+class TestEncodeButtonSignalWiring:
+    """Signal-wiring gate for the encode button in ``DataInspectorMixin``.
+
+    ``_on_encode_text`` is only useful if the encode button's ``clicked``
+    signal is actually connected to it.  The existing encode-text tests
+    invoke ``_on_encode_text`` directly, bypassing the wiring entirely.
+    This class proves the wiring independently:
+
+    * ``receivers()`` is a Qt oracle that counts connected slots without
+      calling them.  If ``clicked.connect(self._on_encode_text)`` in
+      ``_create_text_decode_group`` is removed, the count drops to 0 and
+      the first assertion fails without ever running the slot.
+    * The second gate emits ``clicked`` exclusively via the signal
+      (never calling ``_on_encode_text`` directly) and checks that the
+      encode output label is updated.  A missing ``connect`` call leaves
+      the label empty, falsifying this gate independently of the count.
+    """
+
+    @staticmethod
+    def test_encode_button_has_exactly_one_receiver(qapp: QApplication) -> None:
+        """The encode button's ``clicked`` signal must have exactly one connected receiver.
+
+        Uses ``QObject.receivers()`` as an independent oracle: it returns the
+        count of live signal connections without invoking any connected slot.
+        If the ``clicked.connect`` call in ``_create_text_decode_group`` is
+        absent or removed, the receiver count is 0 and this assertion fails
+        regardless of whether the slot body works.
+
+        Args:
+            qapp: Qt application fixture used for widget construction.
+        """
+        del qapp
+        h = _FullHarness(None)
+        buttons: list[QPushButton] = h.text_decode_group.findChildren(QPushButton)
+        encode_btn = next((b for b in buttons if b.text() == "Encode"), None)
+        assert encode_btn is not None, "_create_text_decode_group must create a button labelled 'Encode'"
+        receiver_count: int = encode_btn.receivers(encode_btn.clicked)
+        assert receiver_count == 1, (
+            f"encode button clicked must have exactly one receiver (the _on_encode_text slot); "
+            f"got {receiver_count} - missing connect() call would give 0"
+        )
+
+    @staticmethod
+    def test_encode_button_click_drives_on_encode_text_via_signal(qapp: QApplication) -> None:
+        """Clicking the encode button via its ``clicked`` signal must update the output label.
+
+        The encode input and output widgets are set via the mixin's own
+        ``_create_text_decode_group`` constructor, then the button is triggered
+        by emitting the ``clicked`` signal.  The slot body is never called
+        directly.  A missing ``connect`` in ``_create_text_decode_group`` leaves
+        the output label in its initial state (empty string), falsifying this
+        assertion and proving the signal wire-up is the controlling factor.
+
+        The bridge is set to ``None`` so the path reaches the
+        ``"Error: hex editor bridge not available"`` branch rather than an
+        async coroutine; this lets the test run synchronously and assert the
+        exact output text without needing an event loop.
+
+        Args:
+            qapp: Qt application fixture used for widget construction.
+        """
+        del qapp
+        doc = _StubDocument()
+        h = _FullHarness(doc)
+        h.bridge = None
+        enc_in = h.encode_input_widget
+        enc_out = h.encode_output_widget
+        assert enc_in is not None, "_create_text_decode_group must initialise _encode_input"
+        assert enc_out is not None, "_create_text_decode_group must initialise _encode_output"
+        enc_in.setText("hello")
+        assert not enc_out.text(), "output label must be empty before the button is clicked"
+
+        buttons: list[QPushButton] = h.text_decode_group.findChildren(QPushButton)
+        encode_btn = next((b for b in buttons if b.text() == "Encode"), None)
+        assert encode_btn is not None, "_create_text_decode_group must create a button labelled 'Encode'"
+        not_checked: bool = False
+        encode_btn.clicked.emit(not_checked)
+
+        result = enc_out.text()
+        assert result == "Error: hex editor bridge not available", (
+            f"signal-driven click must invoke _on_encode_text and set the output label; "
+            f"got {result!r} - empty string means the clicked signal was not connected"
+        )

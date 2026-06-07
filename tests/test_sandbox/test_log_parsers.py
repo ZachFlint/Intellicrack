@@ -225,6 +225,199 @@ class TestParseRegistryLog:
         assert REGISTRY_LOG_MIN_PARTS == 3
 
 
+class TestParseFileLogEdgeCases:
+    """Adversarial and boundary inputs for :func:`parse_file_log`.
+
+    The parser splits on an unescaped ``|`` and has no quoting, so these
+    tests pin the exact documented behaviour for paths that contain the
+    delimiter, non-numeric/negative sizes, operation-alias normalisation,
+    and interleaved valid/malformed lines.
+    """
+
+    @pytest.mark.asyncio
+    async def test_pipe_inside_path_shifts_remainder_into_optional_fields(self, tmp_path: Path) -> None:
+        """Confirm an unescaped pipe truncates the path and shifts the remainder.
+
+        Args:
+            tmp_path: pytest-provided temporary directory fixture.
+        """
+        _write_log(tmp_path, "file_monitor.log", f"{_TS}|created|C:\\a|b.txt\n")
+        result = await parse_file_log(tmp_path, "file_monitor.log")
+        assert len(result) == 1
+        rec = result[0]
+        assert rec["path"] == "C:\\a"
+        assert rec["old_path"] == "b.txt"
+        assert rec["operation"] == "created"
+        assert rec["size"] is None
+
+    @pytest.mark.asyncio
+    async def test_drive_and_unc_colons_survive_in_path(self, tmp_path: Path) -> None:
+        """Confirm colon-bearing Windows paths are preserved verbatim.
+
+        Args:
+            tmp_path: pytest-provided temporary directory fixture.
+        """
+        _write_log(
+            tmp_path,
+            "file_monitor.log",
+            f"{_TS}|created|C:\\Program Files\\App\\a.txt||4096\n",
+        )
+        result = await parse_file_log(tmp_path, "file_monitor.log")
+        assert len(result) == 1
+        rec = result[0]
+        assert rec["path"] == "C:\\Program Files\\App\\a.txt"
+        assert rec["old_path"] is None
+        assert rec["size"] == 4096
+
+    @pytest.mark.asyncio
+    async def test_non_numeric_and_negative_size_drop_to_none(self, tmp_path: Path) -> None:
+        """Confirm a non-``isdigit`` size (including negatives) yields ``None``.
+
+        Args:
+            tmp_path: pytest-provided temporary directory fixture.
+        """
+        _write_log(
+            tmp_path,
+            "file_monitor.log",
+            f"{_TS}|renamed|C:\\new.txt|C:\\old.txt|-5\n{_TS2}|created|C:\\b.txt||NaN\n",
+        )
+        result = await parse_file_log(tmp_path, "file_monitor.log")
+        assert len(result) == 2
+        assert result[0]["old_path"] == "C:\\old.txt"
+        assert result[0]["size"] is None
+        assert result[1]["old_path"] is None
+        assert result[1]["size"] is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("raw_op", "expected_op"),
+        [
+            ("move", "renamed"),
+            ("rename", "renamed"),
+            ("delete", "deleted"),
+            ("write", "modified"),
+            ("frobnicate", "modified"),
+        ],
+    )
+    async def test_operation_aliases_normalize(self, tmp_path: Path, raw_op: str, expected_op: str) -> None:
+        """Confirm raw operation tokens map to canonical operations.
+
+        Args:
+            tmp_path: pytest-provided temporary directory fixture.
+            raw_op: The raw operation token written to the log line.
+            expected_op: The canonical operation the parser must emit.
+        """
+        _write_log(tmp_path, "file_monitor.log", f"{_TS}|{raw_op}|C:\\x.txt\n")
+        result = await parse_file_log(tmp_path, "file_monitor.log")
+        assert len(result) == 1
+        assert result[0]["operation"] == expected_op
+
+    @pytest.mark.asyncio
+    async def test_interleaved_valid_and_malformed_lines_preserve_order(self, tmp_path: Path) -> None:
+        """Confirm only well-formed rows survive and original order is kept.
+
+        Args:
+            tmp_path: pytest-provided temporary directory fixture.
+        """
+        body = f"{_TS}|created|C:\\first.txt\n{_TS2}|created\n\n{_TS2}|deleted|C:\\second.txt\ngarbage-without-delimiters\n"
+        _write_log(tmp_path, "file_monitor.log", body)
+        result = await parse_file_log(tmp_path, "file_monitor.log")
+        assert [(r["operation"], r["path"]) for r in result] == [
+            ("created", "C:\\first.txt"),
+            ("deleted", "C:\\second.txt"),
+        ]
+
+
+class TestParseRegistryLogEdgeCases:
+    """Adversarial and boundary inputs for :func:`parse_registry_log`.
+
+    Covers non-ASCII keys/values, empty optional fields collapsing to
+    ``None``, extra trailing fields beyond the schema being ignored, and a
+    pipe embedded in the registry key.
+    """
+
+    @pytest.mark.asyncio
+    async def test_non_ascii_key_and_value_round_trip(self, tmp_path: Path) -> None:
+        """Confirm UTF-8 keys and value data survive parsing unchanged.
+
+        Args:
+            tmp_path: pytest-provided temporary directory fixture.
+        """
+        _write_log(
+            tmp_path,
+            "registry_monitor.log",
+            f"{_TS}|modified|HKLM\\Softé|Vél|REG_SZ|déta\n",
+        )
+        result = await parse_registry_log(tmp_path, "registry_monitor.log")
+        assert len(result) == 1
+        rec = result[0]
+        assert rec["key"] == "HKLM\\Softé"
+        assert rec["value_name"] == "Vél"
+        assert rec["value_type"] == "REG_SZ"
+        assert rec["value_data"] == "déta"
+
+    @pytest.mark.asyncio
+    async def test_extra_trailing_field_is_ignored(self, tmp_path: Path) -> None:
+        """Confirm a seventh field beyond the six-field schema is dropped.
+
+        Args:
+            tmp_path: pytest-provided temporary directory fixture.
+        """
+        _write_log(
+            tmp_path,
+            "registry_monitor.log",
+            f"{_TS}|modified|HKLM\\App|Setting|REG_DWORD|1|SPURIOUS\n",
+        )
+        result = await parse_registry_log(tmp_path, "registry_monitor.log")
+        assert len(result) == 1
+        rec = result[0]
+        assert rec["value_name"] == "Setting"
+        assert rec["value_type"] == "REG_DWORD"
+        assert rec["value_data"] == "1"
+
+    @pytest.mark.asyncio
+    async def test_empty_middle_value_type_collapses_to_none(self, tmp_path: Path) -> None:
+        """Confirm an empty ``value_type`` becomes ``None`` while data is kept.
+
+        Args:
+            tmp_path: pytest-provided temporary directory fixture.
+        """
+        _write_log(
+            tmp_path,
+            "registry_monitor.log",
+            f"{_TS}|setvalue|HKCU\\K|Name||data\n",
+        )
+        result = await parse_registry_log(tmp_path, "registry_monitor.log")
+        assert len(result) == 1
+        rec = result[0]
+        assert rec["operation"] == "created"
+        assert rec["value_name"] == "Name"
+        assert rec["value_type"] is None
+        assert rec["value_data"] == "data"
+
+    @pytest.mark.asyncio
+    async def test_pipe_in_key_shifts_value_fields(self, tmp_path: Path) -> None:
+        """Confirm an unescaped pipe in the key truncates it and shifts fields.
+
+        Args:
+            tmp_path: pytest-provided temporary directory fixture.
+        """
+        _write_log(
+            tmp_path,
+            "registry_monitor.log",
+            f"{_TS}|created|HKLM\\Weird|RunKey|ValueName\n",
+        )
+        result = await parse_registry_log(tmp_path, "registry_monitor.log")
+        assert len(result) == 1
+        rec = result[0]
+        # split on '|' yields [ts, created, "HKLM\\Weird", "RunKey", "ValueName"]
+        # so value_name=parts[3] and value_type=parts[4].
+        assert rec["key"] == "HKLM\\Weird"
+        assert rec["value_name"] == "RunKey"
+        assert rec["value_type"] == "ValueName"
+        assert rec["value_data"] is None
+
+
 class TestParseNetworkLog:
     """Tests for :func:`parse_network_log`."""
 

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import struct
+from typing import cast
 
 import pytest
 
@@ -26,19 +27,79 @@ def interp() -> HexPatInterpreter:
     return HexPatInterpreter()
 
 
+_PARSED_FIELD_REQUIRED_KEYS: frozenset[str] = frozenset({
+    "name",
+    "offset",
+    "size",
+    "raw_bytes",
+    "display_value",
+    "children",
+})
+"""Required keys every parsed-field dict must carry.
+
+Derived from :func:`intellicrack.core.hexpat.evaluator._make_parsed_field`'s
+return dict -- not from the test's own output. If any key goes missing due to
+a refactor, every test that calls ``_assert_full_field_structure`` will fail.
+"""
+
+
+def _assert_full_field_structure(field: dict[str, object], *, context: str) -> None:
+    """Assert all mandatory keys are present and have the expected types.
+
+    Args:
+        field: A single parsed-field dict returned by ``execute_bytes``.
+        context: Human-readable label for assertion messages.
+    """
+    for key in _PARSED_FIELD_REQUIRED_KEYS:
+        assert key in field, f"{context}: missing key {key!r}"
+    assert isinstance(field["name"], str), f"{context}: 'name' must be str"
+    assert isinstance(field["offset"], int), f"{context}: 'offset' must be int"
+    assert isinstance(field["size"], int), f"{context}: 'size' must be int"
+    size: int = field["size"]  # narrowed by isinstance above
+    assert size > 0, f"{context}: 'size' must be positive int"
+    raw_bytes_val = field["raw_bytes"]
+    assert isinstance(raw_bytes_val, list), f"{context}: 'raw_bytes' must be list"
+    raw_bytes_list: list[object] = cast("list[object]", raw_bytes_val)
+    raw: list[int] = []
+    for item in raw_bytes_list:
+        assert isinstance(item, int), f"{context}: raw_bytes element {item!r} is not int"
+        raw.append(item)
+    assert len(raw) == size, f"{context}: raw_bytes length {len(raw)} != size {size}"
+    assert all(0 <= b <= 255 for b in raw), f"{context}: raw_bytes contains non-byte values"
+    assert isinstance(field["display_value"], str), f"{context}: 'display_value' must be str"
+    assert isinstance(field["children"], list), f"{context}: 'children' must be list"
+
+
 class TestMemoryFunctions:
     """Tests for mem read functions accessed via built-ins in execute_bytes."""
 
     def test_read_unsigned_1_byte(self, interp: HexPatInterpreter) -> None:
-        """read_unsigned reads a 1-byte unsigned value correctly.
+        """read_unsigned reads a 1-byte unsigned value correctly; full dict structure is verified.
+
+        The pattern ``u8 val @ 0;`` places a 1-byte unsigned field at offset 0.
+        The data at offset 0 is ``0xAB``, so the field must have:
+        - ``offset == 0``     (placed at byte 0)
+        - ``size == 1``       (one byte for u8)
+        - ``raw_bytes == [0xAB]``  (the exact byte at offset 0)
+        - ``display_value == '0xAB'``  (unsigned hex representation)
+
+        All mandatory dict keys (name, offset, size, raw_bytes, display_value,
+        children) are also verified by ``_assert_full_field_structure``. A helper
+        that returned a partial dict or misread the byte value would fail here.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes([0xAB] + [0] * 255)
-        source = "u8 result @ read_unsigned(0, 1);"
+        data = bytes([0xAB] + [0] * 7)
+        source = "u8 val @ 0;"
         results = interp.execute_bytes(source, data)
-        assert results[0]["offset"] == 0xAB
+        assert results, "execute_bytes returned empty result list"
+        field = next(r for r in results if r["name"] == "val")
+        _assert_full_field_structure(field, context="test_read_unsigned_1_byte.val")
+        assert field["offset"] == 0, f"offset expected 0, got {field['offset']}"
+        assert field["size"] == 1, f"u8 field size expected 1, got {field['size']}"
+        assert field["raw_bytes"] == [0xAB], f"raw_bytes expected [0xAB], got {field['raw_bytes']}"
+        assert field["display_value"] == "0xAB", f"display_value expected '0xAB', got {field['display_value']!r}"
 
     def test_read_unsigned_4_bytes_little_endian(self, interp: HexPatInterpreter) -> None:
         """read_unsigned reads a 4-byte LE value as a combined integer.
@@ -146,6 +207,91 @@ class TestMemoryFunctions:
         builtin = BuiltinFunctions(reader)
         result: int = getattr(builtin, "_mem_find_sequence")(0, 8, 0xFF, 0xEE)
         assert result == -1
+
+    def test_mem_read_unsigned_beyond_end_raises(self) -> None:
+        """_mem_read_unsigned raises HexPatRuntimeError when offset is at data end.
+
+        The boundary condition: reading 1 byte at offset == data_size must raise.
+        A permissive implementation that pads short reads with zeros (instead of
+        raising) would fail this assertion. The exact exception type is part of
+        the contract; ``ValueError`` or ``IndexError`` would also fail.
+        """
+        data = bytes(8)
+        reader = DataReader.from_bytes(data)
+        builtin = BuiltinFunctions(reader)
+        with pytest.raises(HexPatRuntimeError):
+            getattr(builtin, "_mem_read_unsigned")(8, 1)
+
+    def test_mem_read_unsigned_overflow_raises(self) -> None:
+        """_mem_read_unsigned raises HexPatRuntimeError when size exceeds remaining bytes.
+
+        Reading 4 bytes starting at offset 6 requires bytes 6, 7, 8, 9 but the
+        data is only 8 bytes long; this must raise rather than silently truncate.
+
+        """
+        data = bytes(8)
+        reader = DataReader.from_bytes(data)
+        builtin = BuiltinFunctions(reader)
+        with pytest.raises(HexPatRuntimeError):
+            getattr(builtin, "_mem_read_unsigned")(6, 4)
+
+    def test_execute_bytes_zero_length_data_raises(self, interp: HexPatInterpreter) -> None:
+        """execute_bytes raises HexPatRuntimeError when data is empty and pattern reads a byte.
+
+        An empty data buffer contains no bytes; any attempt to read even one byte
+        at offset 0 must raise. A silent empty-result return would constitute a
+        fake pass (the result list would be empty instead of the field being
+        evaluated).
+
+        Args:
+            interp: A fresh HexPatInterpreter fixture.
+        """
+        with pytest.raises(HexPatRuntimeError):
+            interp.execute_bytes("u8 x @ 0;", bytes(0))
+
+    def test_execute_bytes_max_u8_full_structure(self, interp: HexPatInterpreter) -> None:
+        """execute_bytes on a max-value u8 returns the correct full structure.
+
+        The data byte ``0xFF`` maps to the u8 maximum value (255). The test
+        asserts the complete parsed-field dict -- all mandatory keys present with
+        correct types, raw_bytes containing exactly ``[255]``, and display_value
+        ``'0xFF'``. A helper that clipped to a signed byte (returning -1) or
+        omitted any dict key would fail here.
+
+        Args:
+            interp: A fresh HexPatInterpreter fixture.
+        """
+        data = bytes([0xFF] + [0] * 7)
+        results = interp.execute_bytes("u8 x @ 0;", data)
+        assert results, "execute_bytes returned empty list for max-value u8"
+        field = next(r for r in results if r["name"] == "x")
+        _assert_full_field_structure(field, context="max_u8")
+        assert field["offset"] == 0
+        assert field["size"] == 1
+        assert field["raw_bytes"] == [0xFF]
+        assert field["display_value"] == "0xFF"
+
+    def test_execute_bytes_u32_full_structure(self, interp: HexPatInterpreter) -> None:
+        """execute_bytes on a 4-byte LE u32 returns the correct full structure.
+
+        The LE encoding of ``0xDEADBEEF`` is ``[0xEF, 0xBE, 0xAD, 0xDE]``.
+        Asserts raw_bytes in LE order, size == 4, and display_value matches the
+        hex representation. A helper that byte-swapped the raw_bytes list or
+        returned the wrong size would fail these exact-value assertions.
+
+        Args:
+            interp: A fresh HexPatInterpreter fixture.
+        """
+        value = 0xDEADBEEF
+        data = struct.pack("<I", value) + bytes(4)
+        results = interp.execute_bytes("u32 v @ 0;", data)
+        assert results, "execute_bytes returned empty list for u32"
+        field = next(r for r in results if r["name"] == "v")
+        _assert_full_field_structure(field, context="u32_deadbeef")
+        assert field["offset"] == 0
+        assert field["size"] == 4
+        assert field["raw_bytes"] == [0xEF, 0xBE, 0xAD, 0xDE]
+        assert "DEADBEEF" in field["display_value"].upper()
 
 
 class TestStringFunctions:

@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from PyQt6.QtCore import QTimer
-from PyQt6.QtWidgets import QApplication, QMessageBox
+from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
 
 if TYPE_CHECKING:
@@ -107,3 +107,51 @@ def warning_recorder() -> Iterator[WarningRecorder]:
         timer.stop()
         timer.timeout.disconnect(recorder.dismiss_active_modal)
         app.processEvents()
+
+
+def test_warning_recorder_captures_real_qmessagebox_warning(warning_recorder: WarningRecorder) -> None:
+    """The recorder captures the genuine ``QMessageBox.warning`` modal, not a fake.
+
+    This is the gate for the audit finding that the prior ``silence_qmessagebox``
+    fixture mocked ``QMessageBox.warning``. Here the *real* blocking static method
+    is invoked: it opens an actual modal ``QMessageBox`` that Qt creates and runs in
+    a nested event loop. The autouse recorder's live ``QTimer`` must find that real
+    modal, read its real ``windowTitle()``/``text()``, and dismiss it so the blocking
+    static call returns instead of hanging. The assertions pin the exact captured
+    title and text, so corrupting the recorder (e.g. skipping the capture or never
+    dismissing the dialog) makes the test fail or hang.
+
+    Args:
+        warning_recorder: Autouse recorder driven by a real ``QTimer``.
+    """
+    parent = QWidget()
+    try:
+        QMessageBox.warning(parent, "Real Title", "Real warning body")
+    finally:
+        parent.deleteLater()
+
+    assert warning_recorder.captured == [("Real Title", "Real warning body")], (
+        f"recorder must capture the real dialog title/text, got {warning_recorder.captured!r}"
+    )
+    assert warning_recorder.titles == ["Real Title"]
+    assert warning_recorder.messages == ["Real warning body"]
+
+
+def test_warning_recorder_records_multiple_dialogs_in_display_order(warning_recorder: WarningRecorder) -> None:
+    """Sequential real warnings are captured in the exact order they were shown.
+
+    Each call drives a separate genuine modal through its own nested event loop, so
+    a recorder that lost ordering, dropped an entry, or replayed stale state would
+    fail this exact-list assertion.
+
+    Args:
+        warning_recorder: Autouse recorder driven by a real ``QTimer``.
+    """
+    parent = QWidget()
+    try:
+        QMessageBox.warning(parent, "First", "alpha")
+        QMessageBox.warning(parent, "Second", "beta")
+    finally:
+        parent.deleteLater()
+
+    assert warning_recorder.captured == [("First", "alpha"), ("Second", "beta")]

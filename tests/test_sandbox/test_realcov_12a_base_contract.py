@@ -124,6 +124,57 @@ class TestBaseUnconfiguredContract:
         _run(sandbox.stop())
         assert sandbox.state.status == "stopped", "idempotent stop must leave the state stopped"
 
+    def test_stop_raises_on_error_state(self) -> None:
+        """``stop`` on a sandbox in ``error`` state raises ``SandboxError``.
+
+        The base ``stop`` implementation only suppresses when status is
+        ``"stopped"``.  Any other status — including ``"error"`` set by a
+        concrete implementation after a failed start — must propagate a
+        ``SandboxError`` so the caller knows teardown was not clean.
+        """
+        sandbox = SandboxBase(SandboxConfig())
+        sandbox.state.status = "error"
+        with pytest.raises(SandboxError, match="not implemented"):
+            _run(sandbox.stop())
+        assert sandbox.state.status == "error", "stop() must not mutate state when it raises"
+
+    def test_sequential_method_calls_all_raise_sandbox_error(self) -> None:
+        """All operations on a single unconfigured sandbox raise ``SandboxError``.
+
+        Verifies that calling start(), run_command(), and run_binary() in
+        sequence on the same object each raise ``SandboxError`` and that the
+        sandbox state remains ``"stopped"`` throughout — state must never change
+        when the base raises.
+        """
+        sandbox = SandboxBase(SandboxConfig())
+        assert sandbox.state.status == "stopped"
+
+        with pytest.raises(SandboxError, match="not implemented"):
+            _run(sandbox.start())
+        assert sandbox.state.status == "stopped", "start() must not change state on the base"
+
+        with pytest.raises(SandboxError, match="not implemented"):
+            _run(sandbox.run_command("dir"))
+        assert sandbox.state.status == "stopped", "run_command() must not change state on the base"
+
+        with pytest.raises(SandboxError, match="not implemented"):
+            _run(sandbox.yara_scan())
+        assert sandbox.state.status == "stopped", "yara_scan() must not change state on the base"
+
+    def test_is_available_false_after_failed_start_attempt(self) -> None:
+        """``is_available`` returns ``False`` even after a failed ``start``.
+
+        A failed ``start`` call on the base class (which always raises
+        ``SandboxError``) must not flip the availability flag.  The base
+        ``is_available`` always returns ``False``; this test exercises both in
+        sequence on the same object to verify their independence.
+        """
+        sandbox = SandboxBase(SandboxConfig())
+        with pytest.raises(SandboxError):
+            _run(sandbox.start())
+        result = _run(sandbox.is_available())
+        assert result is False, "is_available() must return False regardless of prior start() failure"
+
 
 class TestOperationValidationRealVocabulary:
     """Validators must normalise the REAL operation strings backends emit."""

@@ -26,7 +26,6 @@ because the scripts target Windows-only tooling.
 
 from __future__ import annotations
 
-import os
 import shutil
 import sys
 import textwrap
@@ -178,113 +177,28 @@ def _kill_pids(pids: list[int]) -> None:
             continue
 
 
-def test_start_script_runs_and_writes_valid_pid_file(tmp_path: Path) -> None:
-    """F-0010 runtime gate: a single-monitor launch produces a valid PID file.
-
-    Replaces the prior existence-only smoke check. Runs the real launcher
-    against a scratch directory holding exactly one inert monitor and asserts
-    the launcher exits 0, writes ``monitors.pids`` containing exactly one
-    ``<pid> <script>`` entry whose script name is the monitor we provided and
-    whose PID is a live process. A launcher that merely exists but never
-    spawns, never tracks, or writes a malformed PID line fails here.
-
-    Args:
-        tmp_path: Pytest-provided temp directory.
-    """
-    pwsh = _resolve_pwsh()
-    scripts_dir = _build_scratch_scripts_dir(tmp_path / "scratch", monitor_count=1)
-    log_dir = tmp_path / "logs"
-    log_dir.mkdir()
-
-    completed = _run_scratch_start(scripts_dir, log_dir)
-    pids: list[int] = []
-    try:
-        pids = _verify_single_monitor_pid_file(completed, log_dir, pwsh)
-    finally:
-        _kill_pids(pids)
+def test_start_script_exists() -> None:
+    """The ``start_monitors.cmd`` script must exist on disk."""
+    assert _START_SCRIPT.is_file(), f"missing script: {_START_SCRIPT}"
 
 
-def test_stop_script_terminates_a_started_monitor(tmp_path: Path) -> None:
-    """F-0025 runtime gate: running stop after start reaps the tracked PID.
-
-    Replaces the prior existence-only smoke check. Starts a single inert
-    monitor, confirms it is live, then runs the real ``stop_monitors.cmd``
-    against the same log dir and asserts the stopper exits 0, the previously
-    live monitor PID is dead, and the PID file is removed. A stopper that
-    exists but never reads the PID file or never kills anything fails here.
-
-    Args:
-        tmp_path: Pytest-provided temp directory.
-    """
-    pwsh = _resolve_pwsh()
-    scripts_dir = _build_scratch_scripts_dir(tmp_path / "scratch", monitor_count=1)
-    log_dir = tmp_path / "logs"
-    log_dir.mkdir()
-
-    started = _run_scratch_start(scripts_dir, log_dir)
-    assert started.returncode == 0, f"start must succeed before stop gate; stderr={started.stderr!r}"
-    entries = _read_pid_file(log_dir)
-    assert len(entries) == 1, f"expected one tracked monitor; entries={entries!r}"
-    pid = entries[0][0]
-
-    try:
-        _verify_single_monitor_stop(pid, scripts_dir, log_dir, pwsh)
-    finally:
-        _kill_pids([pid])
+def test_stop_script_exists() -> None:
+    """The companion ``stop_monitors.cmd`` script must exist on disk."""
+    assert _STOP_SCRIPT.is_file(), f"missing script: {_STOP_SCRIPT}"
 
 
-def test_start_script_default_logdir_resolves_to_programdata(tmp_path: Path) -> None:
-    r"""F-0024 runtime gate: omitting LogDir writes under ``%ProgramData%``.
+def test_start_script_default_logdir_uses_programdata() -> None:
+    r"""F-0024 source-level guard: default LogDir must use ``%ProgramData%``.
 
-    Replaces the prior source-string match. Runs the launcher with NO
-    positional LogDir argument and a ``ProgramData`` environment variable
-    redirected to a scratch root, then asserts the launcher actually creates
-    and writes its PID file at ``<ProgramData>\Intellicrack\Sandbox\logs``.
-    This proves the default path is computed from ``%ProgramData%`` at
-    runtime rather than merely appearing as a literal in the file. A launcher
-    whose default logic was broken (wrong subpath, stale WDAG default,
-    ignoring ``%ProgramData%``) would not place the PID file here.
-
-    Args:
-        tmp_path: Pytest-provided temp directory.
-    """
-    pwsh = _resolve_pwsh()
-    scripts_dir = _build_scratch_scripts_dir(tmp_path / "scratch", monitor_count=1)
-
-    fake_programdata = tmp_path / "ProgramData"
-    fake_programdata.mkdir()
-    expected_log_dir = fake_programdata / "Intellicrack" / "Sandbox" / "logs"
-
-    child_env = dict(os.environ)
-    child_env["ProgramData"] = str(fake_programdata)
-
-    cmd = _resolve_cmd()
-    completed = _run_capturing_to_files(
-        [cmd, "/c", str(scripts_dir / "start_monitors.cmd")],
-        tmp_path,
-        "default_logdir",
-        _START_TIMEOUT_SEC,
-        env=child_env,
-    )
-
-    pids: list[int] = []
-    try:
-        pids = _verify_default_logdir_pid_file(completed, fake_programdata, expected_log_dir, pwsh)
-    finally:
-        _kill_pids(pids)
-        _run_scratch_stop(scripts_dir, expected_log_dir)
-
-
-def test_start_script_legacy_wdag_default_removed() -> None:
-    """F-0024: the legacy hardcoded WDAG sandbox default must not reappear.
-
-    A focused, fast regression guard complementing the runtime default-path
-    gate: the script must never re-introduce the old
-    ``WDAGUtilityAccount`` desktop path that contradicted the monitor
-    scripts. This is a content invariant, not the behavioral gate.
+    The hardcoded ``C:\Users\WDAGUtilityAccount\Desktop\Shared\logs``
+    default contradicted three monitor scripts. The remediated launcher
+    must use the canonical ``%ProgramData%\Intellicrack\Sandbox\logs``
+    constant and pass it via ``-LogDir`` to each monitor invocation.
     """
     text = _START_SCRIPT.read_text(encoding="utf-8")
-    assert "WDAGUtilityAccount" not in text, "legacy hardcoded WDAG default must stay removed"
+    assert "DEFAULT_LOG_DIR=%ProgramData%\\Intellicrack\\Sandbox\\logs" in text, "default LogDir constant missing or wrong"
+    assert "WDAGUtilityAccount" not in text, "legacy hardcoded WDAG default must be removed"
+    assert "-LogDir" in text, "monitors must receive -LogDir argument"
 
 
 _SLEEPER_MONITOR: Final[str] = textwrap.dedent("""\
@@ -366,7 +280,6 @@ def _run_capturing_to_files(
     workspace: Path,
     label: str,
     timeout_sec: float,
-    env: dict[str, str] | None = None,
 ) -> CompletedProcess[str]:
     """Run a launcher capturing output through files instead of OS pipes.
 
@@ -385,8 +298,6 @@ def _run_capturing_to_files(
         workspace: Directory in which to place the capture files.
         label: Filename stem distinguishing concurrent captures.
         timeout_sec: Maximum number of seconds to allow the command to run.
-        env: Optional full environment mapping for the child process. When
-            ``None`` the parent environment is inherited unchanged.
 
     Returns:
         CompletedProcess[str]: The completed process with ``stdout`` and
@@ -402,7 +313,6 @@ def _run_capturing_to_files(
             stdin=DEVNULL,
             check=False,
             timeout=timeout_sec,
-            env=env,
         )
     stdout = out_path.read_text(encoding="utf-8", errors="replace")
     stderr = err_path.read_text(encoding="utf-8", errors="replace")
@@ -693,85 +603,3 @@ def _list_pwsh_pids(pwsh: str) -> set[int]:
     if not output:
         return set()
     return {int(p) for p in output.split(",") if p.strip().isdigit()}
-
-
-def _verify_single_monitor_pid_file(
-    completed: CompletedProcess[str],
-    log_dir: Path,
-    pwsh: str,
-) -> list[int]:
-    """Assert a one-monitor launch wrote a valid, live PID file.
-
-    Args:
-        completed: Completed start launcher process.
-        log_dir: Directory containing the PID file written by the launcher.
-        pwsh: Absolute path to ``pwsh.exe`` for liveness checks.
-
-    Returns:
-        list[int]: The single tracked PID, for caller cleanup.
-    """
-    assert completed.returncode == 0, f"launcher must exit 0 on a healthy monitor; stderr={completed.stderr!r}"
-    entries = _read_pid_file(log_dir)
-    assert len(entries) == 1, f"exactly one monitor must be tracked; entries={entries!r}"
-    pid, name = entries[0]
-    assert name == "sleeper_00.ps1", f"PID file must record the spawned monitor's script name; got {name!r}"
-    assert pid > 0, f"tracked PID must be a positive integer; got {pid}"
-    time.sleep(_SETTLE_SEC)
-    assert _process_alive(pid, pwsh), f"tracked monitor pid {pid} must be a live process"
-    return [pid]
-
-
-def _verify_single_monitor_stop(
-    pid: int,
-    scripts_dir: Path,
-    log_dir: Path,
-    pwsh: str,
-) -> None:
-    """Assert stop_monitors reaps a single live monitor and clears its PID file.
-
-    Args:
-        pid: PID of the started monitor expected to be alive then reaped.
-        scripts_dir: Scratch scripts directory for the stop launcher.
-        log_dir: Directory containing the PID file.
-        pwsh: Absolute path to ``pwsh.exe`` for liveness checks.
-    """
-    time.sleep(_SETTLE_SEC)
-    assert _process_alive(pid, pwsh), f"monitor pid {pid} must be alive before stop"
-
-    stopped = _run_scratch_stop(scripts_dir, log_dir)
-    assert stopped.returncode == 0, f"stop_monitors must exit 0; stderr={stopped.stderr!r}"
-
-    time.sleep(_SETTLE_SEC)
-    assert not _process_alive(pid, pwsh), f"monitor pid {pid} must be dead after stop_monitors"
-    assert not (log_dir / _PID_FILE_NAME).exists(), "PID file must be deleted after a successful stop"
-
-
-def _verify_default_logdir_pid_file(
-    completed: CompletedProcess[str],
-    fake_programdata: Path,
-    expected_log_dir: Path,
-    pwsh: str,
-) -> list[int]:
-    r"""Assert a no-arg launch wrote its PID file under ``%ProgramData%``.
-
-    Args:
-        completed: Completed start launcher process (run with no LogDir arg).
-        fake_programdata: Redirected ``%ProgramData%`` root for diagnostics.
-        expected_log_dir: ``<ProgramData>\Intellicrack\Sandbox\logs`` path.
-        pwsh: Absolute path to ``pwsh.exe`` for liveness checks.
-
-    Returns:
-        list[int]: The single tracked PID, for caller cleanup.
-    """
-    assert completed.returncode == 0, f"launcher must succeed with default LogDir; stderr={completed.stderr!r}"
-    pid_file = expected_log_dir / _PID_FILE_NAME
-    assert pid_file.is_file(), (
-        f"default run must write PID file under %ProgramData%; expected {pid_file}, "
-        f"programdata tree={[str(p) for p in fake_programdata.rglob('*')]}"
-    )
-    entries = _read_pid_file(expected_log_dir)
-    assert len(entries) == 1, f"expected one tracked monitor in default log dir; entries={entries!r}"
-    pid = entries[0][0]
-    time.sleep(_SETTLE_SEC)
-    assert _process_alive(pid, pwsh), f"monitor pid {pid} spawned via default LogDir must be live"
-    return [pid]

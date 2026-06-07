@@ -367,25 +367,40 @@ class TestXPUStatusDialogCache:
 
     @staticmethod
     def test_cache_usage_label_has_value(xpu_dialog: XPUStatusDialog) -> None:
-        """Cache usage label displays a value (MB or informational text).
+        """Cache usage label displays a MB value or an informational message.
+
+        The label is populated by ``_refresh_cache()`` which emits one of three
+        deterministic outcomes: ``"{N} MB"`` from the real cache, ``"Model cache
+        not available"`` when the optional dependency is missing, or
+        ``"Error reading cache"`` on an exception.  The default ``"--"``
+        placeholder must be replaced before the dialog is fully constructed.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
         """
         text = xpu_dialog.cache_usage_label.text()
-        assert text != "--"
-        assert len(text) > 0
+        valid_texts = {"Model cache not available", "Error reading cache"}
+        is_mb_value = text.endswith(" MB") and text[:-3].replace(".", "", 1).isdigit()
+        assert is_mb_value or text in valid_texts, (
+            f"cache_usage_label has unexpected text {text!r}; expected '<N> MB', 'Model cache not available', or 'Error reading cache'"
+        )
 
     @staticmethod
     def test_cache_limit_label_has_value(xpu_dialog: XPUStatusDialog) -> None:
-        """Cache limit label displays a value.
+        """Cache limit label displays a MB value or a recognised placeholder.
+
+        ``_refresh_cache()`` sets the label to ``"{N} MB"`` from the real cache
+        limit, ``"N/A"`` when the optional dependency is missing, or ``"Error"``
+        on an exception.  The initial ``"--"`` placeholder must not survive
+        dialog construction.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
         """
         text = xpu_dialog.cache_limit_label.text()
-        assert text != "--"
-        assert len(text) > 0
+        valid_short = {"N/A", "Error"}
+        is_mb_value = text.endswith(" MB") and text[:-3].replace(".", "", 1).isdigit()
+        assert is_mb_value or text in valid_short, f"cache_limit_label has unexpected text {text!r}; expected '<N> MB', 'N/A', or 'Error'"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -394,13 +409,24 @@ class TestXPUStatusDialogRequirements:
 
     @staticmethod
     def test_requirements_text_is_populated(xpu_dialog: XPUStatusDialog) -> None:
-        """Requirements text area contains check results after construction.
+        """Requirements text shows one of the known initial render states.
+
+        ``_refresh_requirements()`` sets the text to exactly one of:
+        ``"Requirements check not available."`` (when the optional dependency is
+        absent), ``"Checking system requirements..."`` (immediately after
+        construction while the background worker runs), or the rendered HTML
+        result.  The ``"--"`` placeholder or an empty string must never appear.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
         """
-        html = xpu_dialog.requirements_text.toPlainText()
-        assert len(html) > 0
+        text = xpu_dialog.requirements_text.toPlainText()
+        assert len(text) > 0, "requirements_text must not be empty after construction"
+        known_stubs = {"Requirements check not available.", "Checking system requirements..."}
+        has_real_content = "requirements met" in text.lower() or "warning" in text.lower() or "failed" in text.lower()
+        assert text in known_stubs or has_real_content, (
+            f"requirements_text has unexpected content {text[:80]!r}; expected a known stub or rendered requirement results"
+        )
 
     @staticmethod
     def test_requirements_text_contains_met_or_warnings(xpu_dialog: XPUStatusDialog) -> None:

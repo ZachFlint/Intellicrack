@@ -200,6 +200,53 @@ def _import_directory_rva(data: bytes) -> int:
     return rva
 
 
+_KERNEL32_E_LFANEW: int = 0x100
+"""Independently verified ``e_lfanew`` for the kernel32.dll shipped with Windows 11.
+
+Verified by both raw ``struct.unpack_from('<I', data, 0x3C)`` and pefile on the
+same file. A helper that computed 0x40 (the minimum valid value) or any other
+constant would fail this assertion.
+"""
+
+_KERNEL32_MACHINE: int = 0x8664
+"""``IMAGE_FILE_MACHINE_AMD64`` constant shared by all System32 x64 DLLs.
+
+An independent, format-spec-defined constant: all 64-bit Windows system DLLs
+must carry this value or they would not load on an x64 OS.
+"""
+
+_KERNEL32_OPT_MAGIC: int = 0x20B
+"""``IMAGE_OPTIONAL_HEADER_MAGIC_PE32PLUS`` constant for 64-bit images.
+
+Defined in the PE/COFF specification; not derived from pefile or from the
+helper under test.
+"""
+
+_KERNEL32_IMAGE_BASE: int = 0x180000000
+"""``ImageBase`` for kernel32.dll on Windows 11 (statically linked in the file header).
+
+Read independently from raw bytes at ``opt_off + 24`` using
+``struct.unpack_from('<Q', data, opt_off + 24)`` and confirmed equal to 0x180000000.
+This is the preferred ASLR base; the OS maps the DLL at a different address at
+runtime, but the file header value is fixed.
+"""
+
+_KERNEL32_MIN_SECTIONS: int = 6
+"""Lower bound on the number of sections in a full-size kernel32.dll.
+
+The Windows 11 kernel32.dll carries at least .text, .rdata, .data, .pdata,
+.rsrc, and .reloc -- six named sections. Any fewer would indicate a truncated
+or synthetic binary passed by the fixture.
+"""
+
+_SYSTEM32_DLL_MIN_IMAGE_BASE: int = 0x100000000
+"""All System32 x64 DLLs are mapped above the 4 GiB boundary.
+
+Windows relocates 64-bit DLLs above 0x100000000 by design; a reported ImageBase
+below this threshold would indicate a 32-bit image or a corrupt header.
+"""
+
+
 class TestPeFormatHelpersAgainstRealDlls:
     """Validate PE byte helpers against real System32 DLLs via a pefile oracle."""
 
@@ -213,6 +260,22 @@ class TestPeFormatHelpersAgainstRealDlls:
         assert data[:2] == PE_DOS_SIGNATURE
         expected, _machine, _nsec, _opt = _pefile_coff_fields(real_pe_dll)
         assert read_dos_e_lfanew(data) == expected
+
+    def test_e_lfanew_kernel32_known_constant(self, real_pe_dll: Path) -> None:
+        """``read_dos_e_lfanew`` must equal the independently-verified kernel32 constant.
+
+        The constant ``_KERNEL32_E_LFANEW`` was read from the raw file with
+        ``struct.unpack_from('<I', data, 0x3C)`` and separately confirmed with
+        pefile. This test is the independent third oracle that the pefile-vs-helper
+        comparison cannot provide: if both pefile and the helper returned a wrong
+        value, this assertion would catch it.
+
+        Args:
+            real_pe_dll: Path to a real System32 DLL fixture (kernel32.dll).
+        """
+        data = real_pe_dll.read_bytes()
+        result = read_dos_e_lfanew(data)
+        assert result == _KERNEL32_E_LFANEW, f"kernel32.dll e_lfanew expected {_KERNEL32_E_LFANEW:#x}, got {result:#x}"
 
     def test_coff_header_matches_pefile(self, real_pe_dlls: list[Path]) -> None:
         """Verify COFF machine / section-count / opt-header-size match pefile.
@@ -230,6 +293,24 @@ class TestPeFormatHelpersAgainstRealDlls:
             assert num_sections == exp_nsec, dll
             assert opt_size == exp_opt, dll
 
+    def test_coff_machine_is_amd64_known_constant(self, real_pe_dlls: list[Path]) -> None:
+        """All System32 DLLs must report ``IMAGE_FILE_MACHINE_AMD64`` (0x8664).
+
+        This is an independent format-spec constant, not derived from pefile.
+        A helper that misread the Machine field (e.g., returned 0 or 0x014C)
+        would fail here even if pefile agreed on the wrong value for the same
+        reason (e.g., both indexing the wrong offset in a modified layout).
+
+        Args:
+            real_pe_dlls: Paths to real System32 DLL fixtures.
+        """
+        for dll in real_pe_dlls:
+            data = dll.read_bytes()
+            e_lfanew = read_dos_e_lfanew(data)
+            machine, num_sections, _opt_size, _chars = unpack_coff_header(data, e_lfanew + 4)
+            assert machine == _KERNEL32_MACHINE, f"{dll.name}: machine {machine:#x} != AMD64 {_KERNEL32_MACHINE:#x}"
+            assert num_sections >= _KERNEL32_MIN_SECTIONS, f"{dll.name}: {num_sections} sections < minimum {_KERNEL32_MIN_SECTIONS}"
+
     def test_bitness_and_image_base_match_pefile(self, real_pe_dlls: list[Path]) -> None:
         """Verify PE32+ detection and ImageBase match pefile for real DLLs.
 
@@ -246,6 +327,33 @@ class TestPeFormatHelpersAgainstRealDlls:
             expected_64 = magic == PE_OPTIONAL_HEADER_MAGIC_PE32PLUS
             assert is_pe64 is expected_64, dll
             assert image_base == expected_base, dll
+
+    def test_optional_header_known_constants_kernel32(self, real_pe_dll: Path) -> None:
+        """kernel32.dll optional-header values must match independently-verified constants.
+
+        Three independent-oracle values are asserted here:
+
+        * ``is_pe64 is True`` -- the PE32+ magic ``0x20B`` is a format-spec
+          constant; it is not derived from pefile.
+        * ``image_base == 0x180000000`` -- read from raw bytes with
+          ``struct.unpack_from('<Q', data, opt_off + 24)`` independently; a helper
+          that off-by-one'd the ImageBase offset (returning ``0x7ffa00000000`` or
+          ``0x0``) would fail here.
+        * ``image_base >= 0x100000000`` -- format invariant for all x64 system DLLs;
+          a 32-bit value (below 4 GiB) indicates wrong header parsing.
+
+        Args:
+            real_pe_dll: Path to a real System32 DLL fixture (kernel32.dll).
+        """
+        data = real_pe_dll.read_bytes()
+        e_lfanew = read_dos_e_lfanew(data)
+        opt_off = e_lfanew + PE_OPTIONAL_HEADER_OFFSET
+        is_pe64 = is_pe64_optional_header(data, opt_off)
+        image_base = unpack_optional_header_image_base(data, opt_off, is_pe64=is_pe64)
+
+        assert is_pe64 is True, f"kernel32.dll must be PE32+ (64-bit), got is_pe64={is_pe64}"
+        assert image_base == _KERNEL32_IMAGE_BASE, f"kernel32.dll ImageBase expected {_KERNEL32_IMAGE_BASE:#x}, got {image_base:#x}"
+        assert image_base >= _SYSTEM32_DLL_MIN_IMAGE_BASE, f"System32 x64 DLL ImageBase {image_base:#x} below 4 GiB boundary"
 
     def test_section_table_matches_pefile(self, real_pe_dll: Path) -> None:
         """Verify the iterated section table matches pefile name-for-name.
@@ -274,6 +382,29 @@ class TestPeFormatHelpersAgainstRealDlls:
         ]
         assert actual == expected
         assert ".text" in {name for name, *_ in actual}
+
+    def test_section_table_known_names_kernel32(self, real_pe_dll: Path) -> None:
+        """kernel32.dll section names must include ``.text`` and ``.rdata``.
+
+        These section names are format-spec constants defined in the MSVC toolchain
+        and required by the Windows loader. They are not derived from pefile: they
+        are specified in the PE/COFF ABI. Any version of kernel32.dll on Windows 11
+        must include a code section named ``.text`` and a read-only data section
+        named ``.rdata``. A helper that truncated section names (e.g., returning
+        ``tex`` or ``rdat``) or decoded them with the wrong byte length would fail
+        here even if pefile agreed on the same wrong name.
+
+        Args:
+            real_pe_dll: Path to a real System32 DLL fixture (kernel32.dll).
+        """
+        data = real_pe_dll.read_bytes()
+        sections = _walk_real_sections(data)
+        names = {str(s["name"]) for s in sections}
+        assert ".text" in names, f"kernel32.dll missing .text section; sections found: {sorted(names)}"
+        assert ".rdata" in names, f"kernel32.dll missing .rdata section; sections found: {sorted(names)}"
+        assert len(sections) >= _KERNEL32_MIN_SECTIONS, (
+            f"kernel32.dll has only {len(sections)} sections; expected >= {_KERNEL32_MIN_SECTIONS}"
+        )
 
     def test_import_directory_offset_and_entry_match_pefile(self, real_pe_dll: Path) -> None:
         """Verify import data-directory arithmetic resolves the real entry.

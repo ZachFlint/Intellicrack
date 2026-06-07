@@ -102,13 +102,19 @@ class TestEventCallbackRegistration:
 
     @staticmethod
     def test_unregister_nonexistent_does_not_raise() -> None:
-        """Verify unregistering a non-registered callback is safe."""
+        """Verify unregistering a non-registered callback leaves the list unchanged.
+
+        The list must be empty both before and after the call; the operation must
+        be a safe no-op rather than silently corrupting the callback list.
+        """
         bridge = X64DbgBridge()
 
         def handler(event_type: str, message: dict[str, Any]) -> None:
             pass
 
+        assert len(bridge.event_callbacks) == 0, "precondition: list must start empty"
         bridge.unregister_event_callback(handler)
+        assert len(bridge.event_callbacks) == 0, "postcondition: unregistering unknown handler must not alter the list"
 
 
 class TestEventDispatch:

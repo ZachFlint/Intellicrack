@@ -1128,6 +1128,13 @@ def test_create_bridge_script_oserror_raises_toolerror(
 ) -> None:
     """F-0009: ``OSError`` during write must surface as ``ToolError``.
 
+    The patch intercepts only ``write_text`` calls on the bridge script
+    file (``start_bridge.py``) by checking ``self.name`` before raising,
+    so every other ``write_text`` call (e.g. for tmp dir creation) still
+    uses the real implementation. The error message in the raised
+    ``ToolError`` must contain both the fixed prefix and the original
+    ``OSError`` text so callers can diagnose the cause.
+
     Args:
         fresh_bridge: Bridge fixture.
         tmp_path: Pytest temp dir.
@@ -1143,9 +1150,16 @@ def test_create_bridge_script_oserror_raises_toolerror(
     with (
         patch("tempfile.gettempdir", return_value=str(tmp_path)),
         patch.object(Path, "write_text", _failing_write_text),
-        pytest.raises(ToolError, match="Failed to write ghidra bridge script"),
+        pytest.raises(ToolError) as exc_info,
     ):
         fresh_bridge.create_bridge_script()
+
+    raised_msg = str(exc_info.value)
+    assert "Failed to write ghidra bridge script" in raised_msg, (
+        f"Expected 'Failed to write ghidra bridge script' in error, got: {raised_msg!r}"
+    )
+    assert failure_msg in raised_msg, f"Expected original OSError text {failure_msg!r} in ToolError, got: {raised_msg!r}"
+    assert "start_bridge.py" in raised_msg, f"Expected script path 'start_bridge.py' in error message, got: {raised_msg!r}"
 
 
 def test_create_bridge_script_unique_tempdirs(fresh_bridge: GhidraBridge) -> None:

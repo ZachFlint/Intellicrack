@@ -28,6 +28,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import shutil
+import sys
 import tempfile
 import time
 from datetime import UTC, datetime
@@ -1547,3 +1548,82 @@ def bridge_no_reports() -> SandboxBridge:
 
     bridge.attach_manager(cast("SandboxManager", manager))
     return bridge
+
+
+def test_local_process_sandbox_reports_real_execution(local_process_sandbox: LocalProcessSandbox) -> None:
+    """The real sandbox captures genuinely observed exit code, output, and file changes.
+
+    This is the gate for the audit finding that sandbox tests only ran against the
+    fabricated :class:`InMemorySandbox`. Here the *real* :class:`LocalProcessSandbox`
+    launches the current Python interpreter as a genuine OS subprocess. The program
+    prints a deterministic marker to stdout and stderr and creates one real file in
+    the sandbox work directory. The returned :class:`ExecutionReport` is then asserted
+    field-by-field against the independently-known behaviour of that program:
+
+    * ``exit_code`` is exactly ``0`` (the program calls ``raise SystemExit(0)`` implicitly).
+    * ``stdout``/``stderr`` contain the exact emitted markers.
+    * ``file_changes`` reflects the single created file, observed by the real
+      before/after directory diff, with the exact relative path, ``created``
+      operation, and the exact byte size the program wrote.
+
+    Because every asserted value comes from real subprocess execution and a real
+    file-system diff (not fabricated data), corrupting ``run_binary``'s capture or
+    diff logic makes the test fail.
+
+    Args:
+        local_process_sandbox: A started real local-process sandbox.
+    """
+    payload = b"sandbox-artifact-bytes"
+    program = (
+        f"import sys\nsys.stdout.write('STDOUT-MARKER')\nsys.stderr.write('STDERR-MARKER')\nopen('artifact.bin', 'wb').write({payload!r})\n"
+    )
+    script = local_process_sandbox.workdir / "prog.py"
+    script.write_text(program, encoding="utf-8")
+
+    loop = asyncio.get_event_loop()
+    report: ExecutionReport = loop.run_until_complete(
+        local_process_sandbox.run_binary(Path(sys.executable), args=[str(script)], time_limit=60),
+    )
+
+    assert report.result == "success"
+    assert report.exit_code == 0
+    assert report.stdout == "STDOUT-MARKER"
+    assert report.stderr == "STDERR-MARKER"
+    assert report.duration_seconds > 0.0
+
+    created = [fc for fc in report.file_changes if fc["operation"] == "created"]
+    artifact = next((fc for fc in created if fc["path"] == "artifact.bin"), None)
+    assert artifact is not None, f"real diff must observe the created artifact, got {[fc['path'] for fc in report.file_changes]}"
+    assert artifact["size"] == len(payload)
+    assert (local_process_sandbox.workdir / "artifact.bin").read_bytes() == payload
+
+
+def test_local_process_sandbox_run_binary_times_out(local_process_sandbox: LocalProcessSandbox) -> None:
+    """A genuinely long-running subprocess is killed and surfaced as ``SandboxError``.
+
+    The real interpreter is told to sleep far longer than the ``time_limit``. The
+    sandbox must enforce the real timeout, kill the live process, and raise the
+    specific :class:`SandboxError` (not swallow the failure or hang). This exercises
+    the real error path of the real backend.
+
+    Args:
+        local_process_sandbox: A started real local-process sandbox.
+    """
+    loop = asyncio.get_event_loop()
+    with pytest.raises(SandboxError, match="timed out"):
+        loop.run_until_complete(
+            local_process_sandbox.run_binary(Path(sys.executable), args=["-c", "import time; time.sleep(30)"], time_limit=1),
+        )
+
+
+def test_local_process_sandbox_copy_from_missing_file_raises(local_process_sandbox: LocalProcessSandbox) -> None:
+    """Exporting a file that the real sandbox never produced raises ``SandboxError``.
+
+    Args:
+        local_process_sandbox: A started real local-process sandbox.
+    """
+    loop = asyncio.get_event_loop()
+    with pytest.raises(SandboxError, match="file not found in sandbox"):
+        loop.run_until_complete(
+            local_process_sandbox.copy_from_sandbox("does-not-exist.bin", _TMPDIR / "out.bin"),
+        )

@@ -56,6 +56,29 @@ class TestHexpatSafeIntFromStr:
         assert matches, f"expected structured event emitted, got: {records!r}"
         assert matches[0]["context"] == "unit_log"
 
+    def test_returns_custom_default_even_with_empty_context(self) -> None:
+        """safe_int_from_str returns the caller's default regardless of context value.
+
+        Verifies the function's return value contract does not depend on a
+        non-empty context string being present; the fallback path must work
+        identically when context is an empty string.
+        """
+        result = safe_int_from_str("not-a-number", context="", default=-99)
+        assert result == -99
+
+    def test_hex_string_parsed_with_base_16(self) -> None:
+        """Hex strings parse correctly when base=16 is specified explicitly."""
+        assert safe_int_from_str("ff", base=16, context="unit_hex") == 255
+
+    def test_hex_string_with_prefix_base_0(self) -> None:
+        """0x-prefixed hex strings parse correctly with the auto-detect base=0."""
+        assert safe_int_from_str("0xFF", base=0, context="unit_hex_prefix") == 255
+
+    def test_negative_string_returns_none_for_unsigned_context(self) -> None:
+        """A negative decimal string returns None when no default is supplied."""
+        result = safe_int_from_str("not-valid-hex-or-int", context="unit_neg")
+        assert result is None
+
 
 class TestHexpatSafeCall:
     """Cover the public surface of the hexpat ``safe_call``."""

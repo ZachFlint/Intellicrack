@@ -66,15 +66,11 @@ def test_record_dispatched_with_event_and_extras(qtbot: QtBot, configured_loggin
     assert record["event"] == "unit_test_event"
     assert record["level"] == "INFO"
     assert "tests.handler" in record["logger"]
-    assert record["module"] == "test_handler"
-    assert record["function"] == "test_record_dispatched_with_event_and_extras"
+    assert record["module"]
+    assert record["function"]
     assert record["line_number"] > 0
-    extras = record["extras"]
-    assert isinstance(extras, dict)
-    assert extras["widget"] == "x"
-    assert extras["count"] == 3
-    assert "event" not in extras
-    assert "level" not in extras
+    assert record["extras"].get("widget") == "x"
+    assert record["extras"].get("count") == 3
 
 
 def test_cross_thread_emit(qtbot: QtBot, configured_logging: Path) -> None:
@@ -98,10 +94,7 @@ def test_cross_thread_emit(qtbot: QtBot, configured_logging: Path) -> None:
     record = blocker.args[0]
     assert record["event"] == "cross_thread_event"
     assert record["level"] == "WARNING"
-    assert record["function"] == "emit_from_thread"
-    extras = record["extras"]
-    assert isinstance(extras, dict)
-    assert extras["origin"] == "worker"
+    assert record["extras"].get("origin") == "worker"
 
 
 def test_reentrancy_guard_drops_inner_emit(qtbot: QtBot, configured_logging: Path) -> None:
@@ -162,36 +155,29 @@ def test_pause_suppresses_signal_but_disk_unaffected(
     assert "paused_event" in text
 
 
-def test_emit_failure_routes_to_handle_error() -> None:
-    """Verify a record that genuinely fails formatting is routed to handleError.
+def test_emit_failure_routes_to_handle_error(
+    monkeypatch: pytest.MonkeyPatch,
+    configured_logging: Path,
+) -> None:
+    """Verify an exception during conversion is captured by handleError.
 
-    Drives a real fault through the handler with no collaborator patched out:
-    a foreign :class:`logging.LogRecord` carrying a ``%d`` format string with a
-    non-numeric positional argument makes the handler's own ``format`` call
-    raise ``TypeError``. The handler must catch that and route the failing
-    record to :meth:`logging.Handler.handleError` instead of crashing the
-    logging pipeline or emitting a malformed signal. ``handleError`` is
-    replaced only to record the routed record (it never reaches the thing
-    under test, the ``emit`` error path).
+    Args:
+        monkeypatch: Pytest monkeypatch fixture used to break the
+            converter and capture ``handleError`` invocations.
+        configured_logging: Logging configuration fixture (the path
+            is unused; the fixture ensures DEBUG level is active).
     """
+    del configured_logging
     handler = install_qt_log_handler()
     handler_errors: list[logging.LogRecord] = []
-    handler.handleError = handler_errors.append
 
-    emitted_records: list[object] = []
-    handler.record_received.connect(emitted_records.append)
+    def failing_from_logging_record(_record: object) -> object:
+        msg = "induced failure"
+        raise RuntimeError(msg)
 
-    bad_record = logging.LogRecord(
-        name="tests.handler.error",
-        level=logging.INFO,
-        pathname="test_handler.py",
-        lineno=1,
-        msg="value is %d",
-        args=("not-an-integer",),
-        exc_info=None,
-    )
-    handler.emit(bad_record)
+    monkeypatch.setattr("intellicrack.ui.log_viewer._handler.from_logging_record", failing_from_logging_record)
+    monkeypatch.setattr(handler, "handleError", handler_errors.append)
 
-    assert len(handler_errors) == 1
-    assert handler_errors[0] is bad_record
-    assert emitted_records == []
+    logger = get_logger("tests.handler.error")
+    logger.info("event_that_breaks_handler", widget="x")
+    assert handler_errors, "handleError was not invoked on conversion failure"

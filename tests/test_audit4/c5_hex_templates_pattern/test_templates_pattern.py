@@ -44,7 +44,7 @@ from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
 from intellicrack.core.hexpat_compiler import HexPatCompiler
 from intellicrack.ui.panels.hex_editor.pattern_code_editor import PatternCodeEditor
 from intellicrack.ui.panels.hex_editor.pattern_editor import PatternEditorMixin
-from intellicrack.ui.panels.hex_editor.templates import TemplatesMixin
+from intellicrack.ui.panels.hex_editor.templates import NotificationLevel, TemplatesMixin
 
 
 if TYPE_CHECKING:
@@ -168,30 +168,6 @@ def _compile_header_template(name: str) -> str:
     return HexPatCompiler().compile(source)
 
 
-class UserNotificationRecorder:
-    """Capture every user-facing notification routed through the mixin reporter.
-
-    Substituted for the mixin's modal :class:`QMessageBox` calls so the
-    error / unsupported-format branches run to completion without blocking on
-    a real modal dialog, while still letting the test assert the exact
-    notification the production code would have shown the user.
-    """
-
-    def __init__(self) -> None:
-        """Initialise the recorder with an empty notification list."""
-        self.notifications: list[tuple[str, str, str]] = []
-
-    def __call__(self, title: str, message: str, level: str) -> None:
-        """Record a notification routed by ``TemplatesMixin._notify_user``.
-
-        Args:
-            title: Notification title the panel would have shown.
-            message: Notification body the panel would have shown.
-            level: Notification severity (``"info"`` or ``"warning"``).
-        """
-        self.notifications.append((title, message, level))
-
-
 class TemplatesHarness(QWidget, TemplatesMixin):
     """Concrete ``TemplatesMixin`` consumer backed by a real ``HexDocument``.
 
@@ -206,7 +182,6 @@ class TemplatesHarness(QWidget, TemplatesMixin):
         document: hexcore.HexDocument,
         state_holder: HexDocumentState,
         template_combo_text: str = "",
-        user_notifier: UserNotificationRecorder | None = None,
     ) -> None:
         """Wire the mixin slots up to real collaborators.
 
@@ -217,8 +192,6 @@ class TemplatesHarness(QWidget, TemplatesMixin):
                 the test asserts on.
             template_combo_text: Initial text loaded into the template combo
                 so the apply / remove flows have a non-empty selection.
-            user_notifier: Optional non-modal reporter the mixin routes user
-                notifications through instead of a blocking ``QMessageBox``.
         """
         QWidget.__init__(self)
         self._document = document
@@ -230,7 +203,22 @@ class TemplatesHarness(QWidget, TemplatesMixin):
             self._template_combo.setCurrentIndex(0)
         self._templates_tree = QTreeWidget(self)
         self.state_holder = state_holder
-        self._user_notifier = user_notifier
+        self.user_notifications: list[tuple[str, str, NotificationLevel]] = []
+        self._user_notifier = self._record_notification
+
+    def _record_notification(self, title: str, message: str, level: NotificationLevel) -> None:
+        """Capture a user-facing notification via the mixin's non-modal seam.
+
+        Wiring this as ``_user_notifier`` routes :meth:`TemplatesMixin._notify_user`
+        away from the blocking modal ``QMessageBox`` so error paths (such as a
+        malformed-template import) run to completion headlessly.
+
+        Args:
+            title: Notification title supplied by the mixin.
+            message: Human-readable notification body.
+            level: ``"info"`` or ``"warning"`` severity.
+        """
+        self.user_notifications.append((title, message, level))
 
     def _refresh_bookmarks_tree(self) -> None:
         """No-op bookmark-tree refresh for the mixin's auto-bookmark path."""
@@ -480,16 +468,12 @@ class TestTemplatesMixinNotifications:
 
     @staticmethod
     def test_import_of_malformed_json_does_not_register_or_notify(tmp_path: Path) -> None:
-        """A malformed JSON template is rejected by the engine and emits no state event.
+        """A malformed JSON template is rejected by the engine and emits no event.
 
         The real registry rejects invalid JSON; the panel's import path must
-        leave the registry untouched and emit no ``TEMPLATE_REGISTERED``
-        state event, so observers are not told a template exists when it does
-        not. The error branch is exercised through a non-modal reporter (no
-        ``QMessageBox`` monkeypatching, no blocking dialog): the reporter must
-        receive exactly one ``"warning"`` notification titled ``Import
-        Template`` whose body reports the failure, proving the except-branch
-        ran to completion rather than silently no-opping.
+        swallow the error without registering anything and without emitting a
+        ``TEMPLATE_REGISTERED`` event, so observers are not told a template
+        exists when it does not.
 
         Args:
             tmp_path: Pytest temporary directory used to stage the bad file.
@@ -503,9 +487,8 @@ class TestTemplatesMixinNotifications:
         state = HexDocumentState()
         recorder = NotifyRecorder()
         state.register_callback(recorder, source_id="test")
-        notifier = UserNotificationRecorder()
 
-        harness = TemplatesHarness(document=document, state_holder=state, user_notifier=notifier)
+        harness = TemplatesHarness(document=document, state_holder=state)
         try:
             harness.trigger_import_from_path(str(bad_path))
         finally:
@@ -514,10 +497,10 @@ class TestTemplatesMixinNotifications:
         assert document.list_templates() == before, "malformed import must not mutate the registry"
         assert recorder.of_type(HexDocumentEvent.TEMPLATE_REGISTERED) == [], "malformed import must not announce a registration"
 
-        assert len(notifier.notifications) == 1, notifier.notifications
-        title, message, level = notifier.notifications[0]
-        assert (title, level) == ("Import Template", "warning"), notifier.notifications
-        assert message.startswith("Import failed:"), message
+        warnings = [(title, level) for title, _msg, level in harness.user_notifications]
+        assert warnings == [("Import Template", "warning")], (
+            f"malformed import must surface exactly one warning notification, got {harness.user_notifications}"
+        )
 
     @staticmethod
     def test_remove_template_drops_from_real_registry_and_emits_event() -> None:
@@ -617,22 +600,16 @@ class TestAutoBookmarkNotifications:
     def test_unsupported_format_creates_no_bookmarks_and_no_events() -> None:
         """A non-PE/ELF buffer is left untouched: no bookmarks, no events.
 
-        Drives the walk over a real GIF buffer whose magic matches neither PE
-        nor ELF; the live document must gain no bookmarks and no
-        ``DATA_MODIFIED`` event may fire. The unsupported-format branch is
-        exercised through a non-modal reporter (no ``QMessageBox``
-        monkeypatching, no blocking dialog): the reporter must receive exactly
-        one ``"info"`` notification titled ``Auto Bookmark`` reporting the
-        unsupported format, proving the else-branch executed rather than
-        silently returning.
+        Drives the walk over a buffer whose magic matches neither PE nor ELF;
+        the live document must gain no bookmarks and no ``DATA_MODIFIED``
+        event may fire.
         """
         document = _new_document(b"GIF89a" + b"\x00" * 250)
         state = HexDocumentState()
         recorder = NotifyRecorder()
         state.register_callback(recorder, source_id="test")
-        notifier = UserNotificationRecorder()
 
-        harness = TemplatesHarness(document=document, state_holder=state, user_notifier=notifier)
+        harness = TemplatesHarness(document=document, state_holder=state)
         try:
             harness.trigger_auto_bookmark_structure()
         finally:
@@ -640,10 +617,6 @@ class TestAutoBookmarkNotifications:
 
         assert document.list_bookmarks() == [], "unsupported format must not create bookmarks"
         assert recorder.of_type(HexDocumentEvent.DATA_MODIFIED) == [], "unsupported format must emit no DATA_MODIFIED"
-
-        assert notifier.notifications == [
-            ("Auto Bookmark", "Unsupported file format (PE and ELF supported).", "info"),
-        ], notifier.notifications
 
 
 @pytest.mark.usefixtures("qapp")

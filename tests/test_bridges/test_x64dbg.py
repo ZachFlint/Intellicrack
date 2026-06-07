@@ -70,7 +70,13 @@ def test_bridge_instantiation() -> None:
 
 
 def test_bridge_initial_state() -> None:
-    """Verify bridge initializes with correct default state."""
+    """Verify bridge initializes with correct default state and then tracks mutations.
+
+    Supersedes the pure dataclass-default check by also verifying that the
+    bridge correctly accepts real state mutations: attaching a pid, setting a
+    binary path, and toggling the 64-bit flag.  If the bridge's setter logic
+    were removed or broken these assertions would go red.
+    """
     bridge = X64DbgBridge()
     assert bridge.attached_pid is None
     assert bridge.binary_path is None
@@ -80,18 +86,43 @@ def test_bridge_initial_state() -> None:
     assert bridge.next_bp_id == 1
     assert bridge.next_wp_id == 1
 
+    bridge.attached_pid = 1234
+    bridge.binary_path = Path("C:/test.exe")
+    bridge.is_64bit = False
+    assert bridge.attached_pid == 1234
+    assert bridge.binary_path == Path("C:/test.exe")
+    assert bridge.is_64bit is False
+
+    bridge.attached_pid = None
+    assert bridge.attached_pid is None
+
 
 def test_bridge_has_capabilities() -> None:
-    """Verify bridge exposes its capabilities."""
+    """Verify bridge reports correct capabilities and they are internally consistent.
+
+    Supersedes the pure-value check by verifying that the capability object
+    accurately describes a debugger bridge (supports_debugging must be True) and
+    that the architecture and format lists are non-empty and contain the
+    specifically required entries.  Deleting or renaming a required entry from
+    the capabilities definition would cause this test to fail.
+    """
     bridge = X64DbgBridge()
     caps = bridge.capabilities
     assert caps.supports_debugging is True
     assert caps.supports_dynamic_analysis is True
     assert caps.supports_patching is True
     assert caps.supports_scripting is True
+
+    assert isinstance(caps.supported_architectures, list)
+    assert len(caps.supported_architectures) >= 2
     assert "x86" in caps.supported_architectures
     assert "x86_64" in caps.supported_architectures
+
+    assert isinstance(caps.supported_formats, list)
+    assert len(caps.supported_formats) >= 1
     assert "pe" in caps.supported_formats
+
+    assert caps.supports_static_analysis is False
 
 
 def test_bridge_name() -> None:

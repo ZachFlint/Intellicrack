@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
+import threading
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -154,11 +155,17 @@ class TestRunTracked:
     def test_run_tracked_captures_stdout(
         process_manager: ProcessManager,
     ) -> None:
-        """Verify run_tracked captures stdout from subprocess.
+        """Verify run_tracked captures stdout and process is unregistered after completion.
+
+        Asserts both the output content and the full tracking lifecycle:
+        the process count returns to the initial count after completion,
+        proving that ``register()`` was called during execution and
+        ``unregister()`` was called on completion.
 
         Args:
             process_manager: Fresh ProcessManager fixture supplied by the test harness.
         """
+        initial_count = process_manager.process_count
         result = process_manager.run_tracked(
             [sys.executable, "-c", "print('hello world')"],
             name="test-stdout",
@@ -166,6 +173,11 @@ class TestRunTracked:
 
         assert result.returncode == 0
         assert "hello world" in result.stdout
+        assert process_manager.process_count == initial_count, (
+            "run_tracked must unregister the process after completion; count did not return to initial"
+        )
+        tracked_names = [tp.name for tp in process_manager.get_all_tracked()]
+        assert "test-stdout" not in tracked_names, "completed process must not remain in tracked list"
 
     @staticmethod
     def test_run_tracked_captures_stderr(
@@ -318,6 +330,103 @@ class TestRunTracked:
 
         assert isinstance(result.stdout, bytes)
         assert b"bytes test" in result.stdout
+
+
+class TestRunTrackedLifecycle:
+    """Verify the full register → track → unregister lifecycle of run_tracked.
+
+    These tests drive run_tracked with a slow subprocess and inspect
+    ProcessManager state while the process is running, proving that
+    register() and unregister() are actually called - not just that
+    the subprocess output is captured.
+    """
+
+    @staticmethod
+    def test_run_tracked_registers_process_during_execution(
+        process_manager: ProcessManager,
+    ) -> None:
+        """Process appears in get_all_tracked() while run_tracked is executing.
+
+        Uses a thread to capture the manager state mid-execution, then
+        asserts both the mid-run registration and the post-run
+        unregistration.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
+        snapshot_during: list[str] = []
+        snapshot_ready = threading.Event()
+        run_done = threading.Event()
+
+        def _run() -> None:
+            process_manager.run_tracked(
+                [
+                    sys.executable,
+                    "-c",
+                    "import time; time.sleep(1); print('lifecycle')",
+                ],
+                name="lifecycle-probe",
+            )
+            run_done.set()
+
+        worker = threading.Thread(target=_run, daemon=True)
+        worker.start()
+
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            names = [tp.name for tp in process_manager.get_all_tracked()]
+            if "lifecycle-probe" in names:
+                snapshot_during.extend(names)
+                snapshot_ready.set()
+                break
+            time.sleep(0.02)
+
+        assert snapshot_ready.is_set(), "run_tracked never registered the process; get_all_tracked() never contained 'lifecycle-probe'"
+        assert "lifecycle-probe" in snapshot_during, "process was not visible in tracked list during execution"
+
+        run_done.wait(timeout=10.0)
+        assert run_done.is_set(), "run_tracked did not complete within the timeout"
+
+        names_after = [tp.name for tp in process_manager.get_all_tracked()]
+        assert "lifecycle-probe" not in names_after, "run_tracked failed to unregister the process after completion"
+
+    @staticmethod
+    def test_run_tracked_process_count_increases_then_returns(
+        process_manager: ProcessManager,
+    ) -> None:
+        """process_count goes up during execution and returns to baseline after.
+
+        Args:
+            process_manager: Fresh ProcessManager fixture supplied by the test harness.
+        """
+        baseline = process_manager.process_count
+        peak_counts: list[int] = []
+        run_done = threading.Event()
+
+        def _run() -> None:
+            process_manager.run_tracked(
+                [sys.executable, "-c", "import time; time.sleep(1)"],
+                name="count-probe",
+            )
+            run_done.set()
+
+        worker = threading.Thread(target=_run, daemon=True)
+        worker.start()
+
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            c = process_manager.process_count
+            if c > baseline:
+                peak_counts.append(c)
+                break
+            time.sleep(0.02)
+
+        assert peak_counts, f"process_count never exceeded baseline {baseline}; register() was not called"
+        assert peak_counts[0] == baseline + 1, f"expected process_count to be {baseline + 1} during execution, got {peak_counts[0]}"
+
+        run_done.wait(timeout=10.0)
+        assert run_done.is_set()
+        assert process_manager.process_count == baseline, f"process_count did not return to baseline {baseline} after completion"
 
 
 class TestRunTrackedAsync:

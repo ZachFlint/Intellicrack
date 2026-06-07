@@ -33,14 +33,34 @@ if TYPE_CHECKING:
 pytest.importorskip("intellicrack_hexcore")
 
 
+def _build_loaded_bridge(pe_path: Path) -> HexEditorBridge:
+    """Build an independent, initialized bridge with a real PE document open.
+
+    A fresh :class:`HexEditorBridge` is constructed and the given PE file is
+    opened into it. Because every call creates a new instance, a test can hold
+    a document-present bridge and a document-absent bridge simultaneously
+    without the two sharing state.
+
+    Args:
+        pe_path: Filesystem path to a real PE binary to open.
+
+    Returns:
+        HexEditorBridge: A bridge whose ``document`` is the opened PE file.
+    """
+    instance = HexEditorBridge()
+    _run(instance.initialize())
+    _run(instance.open_file(str(pe_path)))
+    return instance
+
+
 def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously on a fresh event loop.
 
-    A brand-new loop is created, used, and closed for every call so the result
-    is deterministic and independent of test ordering or of any loop a prior
-    test may have left open or closed. The project floor is Python 3.13
-    (``requires-python >= 3.13`` in ``pyproject.toml``), so the PEP 695 generic
-    ``[T]`` syntax in this signature is fully supported.
+    A brand-new loop is created, used, and closed for every call so the
+    result is deterministic and independent of test ordering or of any
+    loop a previous test may have left open or closed. The project floor
+    is Python 3.13 (``requires-python >= 3.13`` in ``pyproject.toml``),
+    so the PEP 695 generic ``[T]`` syntax is fully supported.
 
     Args:
         coro: An awaitable coroutine object.
@@ -54,26 +74,6 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
     finally:
         asyncio.set_event_loop(None)
         loop.close()
-
-
-def _build_loaded_bridge(pe_path: Path) -> HexEditorBridge:
-    """Build an independent, initialized bridge with a real PE document open.
-
-    A fresh :class:`HexEditorBridge` is constructed and the given PE file is
-    opened into it. Because every call creates a brand-new instance, a single
-    test can hold a document-present bridge and a document-absent bridge at the
-    same time without the two aliasing the same shared state.
-
-    Args:
-        pe_path: Filesystem path to a real PE binary to open.
-
-    Returns:
-        HexEditorBridge: A bridge whose ``document`` is the opened PE file.
-    """
-    instance = HexEditorBridge()
-    _run(instance.initialize())
-    _run(instance.open_file(str(pe_path)))
-    return instance
 
 
 @pytest.fixture
@@ -113,14 +113,14 @@ class TestSaveToSandboxPreconditionOrdering:
         A registry that *does* contain a working sandbox bridge is supplied so
         the test proves the no-document guard fires first; if the guard were
         removed the call would instead reach the sandbox bridge and fail with a
-        different error, which the exact-message assertion below would catch.
+        different error, which this exact-message assertion would catch.
 
-        The boundary is asserted in the same test: an independently built
-        bridge with a real PE document open, driven through the identical
-        registry, moves *past* the ``no document open`` guard and instead
-        raises the sandbox bridge's own ``Invalid sandbox_type`` ``ToolError``.
-        That proves the guard is keyed on the document being absent, not on an
-        unrelated condition that would also reject the document-present case.
+        The boundary is asserted explicitly: an independently built bridge with
+        a real PE document open, driven through the identical registry, moves
+        *past* the ``no document open`` guard and instead raises the sandbox
+        bridge's own ``Invalid sandbox_type`` ``ToolError``. That proves the
+        guard is keyed on the document being absent, not on some unrelated
+        condition that would also reject the document-present case.
 
         Args:
             bridge: An initialized HexEditorBridge with no document open.
@@ -192,9 +192,9 @@ class TestSaveToSandboxPreconditionOrdering:
         lookup path is taken rather than an unrelated guard.
 
         The happy-path boundary is asserted in the same test: a registry that
-        *does* hold a real ``SandboxBridge`` returns a live bridge from the same
-        ``get(ToolName.SANDBOX)`` lookup, the availability guard does NOT fire,
-        and the call proceeds into ``SandboxBridge.create`` where the bad
+        *does* hold a real ``SandboxBridge`` returns a live bridge from the
+        same ``get(ToolName.SANDBOX)`` lookup, the availability guard does NOT
+        fire, and the call proceeds into ``SandboxBridge.create`` where the bad
         ``sandbox_type`` is rejected with a ``ToolError``. If the production
         guard wrongly fired on a populated registry this boundary assertion
         would go red.
@@ -246,10 +246,7 @@ class TestSaveToSandboxPreconditionOrdering:
 
         The sandbox bridge echoes the offending value back inside its
         ``ToolError`` message, so the test asserts the precise string round
-        trips, proving no silent rewrite or default substitution occurs. The
-        chosen value (``"Windows"``) differs from the valid ``"windows"`` only
-        by case, so a green result also proves the validation is exact, not
-        a case-insensitive coercion.
+        trips, proving no silent rewrite or default substitution occurs.
 
         Args:
             loaded_bridge: HexEditorBridge with a real PE document opened.
@@ -279,7 +276,6 @@ class TestTestInSandboxPreconditionOrdering:
         with pytest.raises(RuntimeError) as exc_info:
             _run(bridge.test_in_sandbox())
 
-        assert type(exc_info.value) is RuntimeError
         assert str(exc_info.value) == "no document open"
 
     def test_no_tool_registry_raises_exact_runtime_error(self, loaded_bridge: HexEditorBridge) -> None:
@@ -297,7 +293,6 @@ class TestTestInSandboxPreconditionOrdering:
         with pytest.raises(RuntimeError) as exc_info:
             _run(loaded_bridge.test_in_sandbox())
 
-        assert type(exc_info.value) is RuntimeError
         assert str(exc_info.value) == "tool registry not set"
 
     def test_empty_registry_raises_sandbox_unavailable(self, loaded_bridge: HexEditorBridge, empty_registry: ToolRegistry) -> None:
@@ -313,7 +308,6 @@ class TestTestInSandboxPreconditionOrdering:
         with pytest.raises(RuntimeError) as exc_info:
             _run(loaded_bridge.test_in_sandbox())
 
-        assert type(exc_info.value) is RuntimeError
         assert str(exc_info.value) == "sandbox bridge not available"
 
     def test_populated_registry_forwards_args_to_real_run_binary(

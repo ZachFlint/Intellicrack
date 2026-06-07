@@ -56,7 +56,14 @@ class TestF0001ContBroadException:
     """F-0001: cont() catches broad Exception and wraps as ToolError."""
 
     def test_cont_wraps_general_exception(self) -> None:
-        """cont() raises ToolError when qmp.cont() throws an unexpected exception."""
+        """cont() raises ToolError with exact prefix when qmp.cont() throws RuntimeError.
+
+        The bridge constant ``_ERR_CONT_FAILED`` is "Failed to resume VM execution".
+        The error message must contain both that prefix and the original exception text
+        so callers can distinguish the failure type. ``bridge.state.last_error`` must
+        remain None because cont() does not use _StateTracker (the raise propagates
+        before the state-tracker exits).
+        """
         bridge = SandboxBridge()
 
         mock_qmp = MagicMock()
@@ -71,13 +78,21 @@ class TestF0001ContBroadException:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="Failed to resume VM execution"):
+                with pytest.raises(ToolError) as exc_info:
                     await bridge.cont("some-id")
+            err = str(exc_info.value)
+            assert "Failed to resume VM execution" in err, f"missing prefix: {err!r}"
+            assert "unexpected QMP failure" in err, f"missing original cause: {err!r}"
 
         asyncio.run(run())
 
     def test_cont_wraps_value_error(self) -> None:
-        """cont() raises ToolError when qmp.cont() throws a ValueError."""
+        """cont() raises ToolError that embeds ValueError text in the message.
+
+        The exact prefix is "Failed to resume VM execution" and the error message
+        must include the ValueError detail "bad value", ensuring the bridge faithfully
+        surfaces the underlying cause rather than swallowing it.
+        """
         bridge = SandboxBridge()
 
         mock_qmp = MagicMock()
@@ -92,13 +107,22 @@ class TestF0001ContBroadException:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
-                with pytest.raises(ToolError):
+                with pytest.raises(ToolError) as exc_info:
                     await bridge.cont("some-id")
+            err = str(exc_info.value)
+            assert "Failed to resume VM execution" in err, f"missing prefix: {err!r}"
+            assert "bad value" in err, f"missing ValueError detail: {err!r}"
 
         asyncio.run(run())
 
     def test_cont_raises_on_qmp_failure_response(self) -> None:
-        """cont() raises ToolError when QMP response indicates failure."""
+        """cont() raises ToolError whose message embeds the QMP error detail verbatim.
+
+        When the QMP response has ``success=False`` and ``error="VM not running"``,
+        the ToolError message must contain exactly "VM not running" so the caller
+        can surface the root cause. The prefix "Failed to resume VM execution" must
+        also be present.
+        """
         bridge = SandboxBridge()
 
         failed_response = MagicMock()
@@ -116,8 +140,11 @@ class TestF0001ContBroadException:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="VM not running"):
+                with pytest.raises(ToolError) as exc_info:
                     await bridge.cont("some-id")
+            err = str(exc_info.value)
+            assert "Failed to resume VM execution" in err, f"missing prefix: {err!r}"
+            assert "VM not running" in err, f"missing QMP error detail: {err!r}"
 
         asyncio.run(run())
 
@@ -149,77 +176,117 @@ class TestF0001ContBroadException:
 
 
 class TestF0002NarrowExceptionHandling:
-    """F-0002: Exception handling sites wrap unexpected exceptions as ToolError."""
+    """F-0002: Exception handling sites wrap unexpected exceptions as ToolError.
 
-    def test_extract_iocs_wraps_unexpected_exception(self) -> None:
-        """extract_iocs() wraps an unexpected OSError as ToolError."""
+    These tests use real ``ExecutionReport`` objects with malformed fields that
+    cause genuine ``KeyError`` or ``TypeError`` exceptions inside the real
+    analysis functions. No mocking of the analysis module is performed, so the
+    bridge error-wrapping path is exercised against real failure signals.
+    """
+
+    def test_extract_iocs_wraps_real_keyerror_from_bad_network_activity(self) -> None:
+        """extract_iocs() raises ToolError when the report has malformed network_activity.
+
+        A ``network_activity`` dict lacking the ``remote_address`` key causes
+        ``analysis.extract_iocs`` to raise ``KeyError``. The bridge must re-raise
+        that as ``ToolError`` with prefix "Failed to extract IOCs" and include the
+        key name in the message. ``bridge.state.last_error`` must be populated.
+        """
         bridge = SandboxBridge()
 
-        mock_report = MagicMock()
+        report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            network_activity=[cast("Any", {"wrong_key": "value"})],
+        )
         mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        mock_instance.last_report = report
 
-        with patch("intellicrack.bridges.sandbox_bridge._get_analysis_module") as mock_mod:
-            analysis = MagicMock()
-            analysis.extract_iocs = MagicMock(side_effect=OSError("disk error"))
-            mock_mod.return_value = analysis
+        async def run() -> None:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=mock_instance)
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError) as exc_info:
+                    await bridge.extract_iocs("some-id")
+            err = str(exc_info.value)
+            assert "Failed to extract IOCs" in err, f"missing prefix: {err!r}"
 
-            async def run() -> None:
-                with patch.object(bridge, "ensure_manager") as mock_mgr:
-                    manager = AsyncMock()
-                    manager.get = AsyncMock(return_value=mock_instance)
-                    mock_mgr.return_value = manager
-                    with pytest.raises(ToolError, match="Failed to extract IOCs"):
-                        await bridge.extract_iocs("some-id")
+        asyncio.run(run())
+        assert bridge.state.last_error is not None
+        assert "Failed to extract IOCs" in bridge.state.last_error or "remote_address" in bridge.state.last_error
 
-            asyncio.run(run())
+    def test_timeline_wraps_real_keyerror_from_bad_file_changes(self) -> None:
+        """timeline() raises ToolError when the report has malformed file_changes.
 
-    def test_timeline_wraps_unexpected_exception(self) -> None:
-        """timeline() wraps an unexpected AttributeError as ToolError."""
+        A ``file_changes`` dict lacking the ``operation`` key causes
+        ``analysis.generate_timeline`` to raise ``KeyError``. The bridge must
+        re-raise that as ``ToolError`` with prefix "Failed to generate timeline".
+        ``bridge.state.last_error`` must be populated.
+        """
         bridge = SandboxBridge()
 
-        mock_report = MagicMock()
+        report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            file_changes=[cast("Any", {"missing": "keys"})],
+        )
         mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        mock_instance.last_report = report
 
-        with patch("intellicrack.bridges.sandbox_bridge._get_analysis_module") as mock_mod:
-            analysis = MagicMock()
-            analysis.generate_timeline = MagicMock(side_effect=AttributeError("no attr"))
-            mock_mod.return_value = analysis
+        async def run() -> None:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=mock_instance)
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError) as exc_info:
+                    await bridge.timeline("some-id")
+            err = str(exc_info.value)
+            assert "Failed to generate timeline" in err, f"missing prefix: {err!r}"
 
-            async def run() -> None:
-                with patch.object(bridge, "ensure_manager") as mock_mgr:
-                    manager = AsyncMock()
-                    manager.get = AsyncMock(return_value=mock_instance)
-                    mock_mgr.return_value = manager
-                    with pytest.raises(ToolError, match="Failed to generate timeline"):
-                        await bridge.timeline("some-id")
+        asyncio.run(run())
+        assert bridge.state.last_error is not None
+        assert "Failed to generate timeline" in bridge.state.last_error or "operation" in bridge.state.last_error
 
-            asyncio.run(run())
+    def test_detect_c2_wraps_real_keyerror_from_bad_network_activity(self) -> None:
+        """detect_c2() raises ToolError when network_activity has malformed dicts.
 
-    def test_detect_c2_wraps_unexpected_exception(self) -> None:
-        """detect_c2() wraps an unexpected exception as ToolError."""
+        A ``network_activity`` dict lacking ``remote_address`` causes
+        ``analysis.detect_c2_patterns`` to raise ``KeyError``. The bridge must
+        re-raise it as ``ToolError`` with prefix "Failed to detect C2 patterns".
+        ``bridge.state.last_error`` must be populated.
+        """
         bridge = SandboxBridge()
 
-        mock_report = MagicMock()
-        mock_report.network_activity = []
+        report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            network_activity=[cast("Any", {"wrong_key": "value"})],
+        )
         mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        mock_instance.last_report = report
 
-        with patch("intellicrack.bridges.sandbox_bridge._get_analysis_module") as mock_mod:
-            analysis = MagicMock()
-            analysis.detect_c2_patterns = MagicMock(side_effect=RuntimeError("unexpected"))
-            mock_mod.return_value = analysis
+        async def run() -> None:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=mock_instance)
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError) as exc_info:
+                    await bridge.detect_c2("some-id")
+            err = str(exc_info.value)
+            assert "Failed to detect C2 patterns" in err, f"missing prefix: {err!r}"
 
-            async def run() -> None:
-                with patch.object(bridge, "ensure_manager") as mock_mgr:
-                    manager = AsyncMock()
-                    manager.get = AsyncMock(return_value=mock_instance)
-                    mock_mgr.return_value = manager
-                    with pytest.raises(ToolError, match="Failed to detect C2 patterns"):
-                        await bridge.detect_c2("some-id")
-
-            asyncio.run(run())
+        asyncio.run(run())
+        assert bridge.state.last_error is not None
 
     def test_diff_wraps_unexpected_exception(self) -> None:
         """diff() wraps an unexpected exception as ToolError."""
@@ -239,10 +306,16 @@ class TestF0002NarrowExceptionHandling:
                     manager = AsyncMock()
                     manager.get = AsyncMock(return_value=mock_instance)
                     mock_mgr.return_value = manager
-                    with pytest.raises(ToolError, match="Failed to diff reports"):
+                    with pytest.raises(ToolError) as exc_info:
                         await bridge.diff("id-a", "id-b")
+                err = str(exc_info.value)
+                assert "Failed to diff reports" in err, f"missing prefix: {err!r}"
+                assert "oom" in err, f"missing cause: {err!r}"
 
             asyncio.run(run())
+
+        assert bridge.state.last_error is not None
+        assert "oom" in bridge.state.last_error
 
     def test_detect_behaviors_wraps_unexpected_exception(self) -> None:
         """detect_behaviors() wraps an unexpected exception as ToolError."""
@@ -262,17 +335,29 @@ class TestF0002NarrowExceptionHandling:
                     manager = AsyncMock()
                     manager.get = AsyncMock(return_value=mock_instance)
                     mock_mgr.return_value = manager
-                    with pytest.raises(ToolError, match="Failed to detect behaviors"):
+                    with pytest.raises(ToolError) as exc_info:
                         await bridge.detect_behaviors("some-id")
+                err = str(exc_info.value)
+                assert "Failed to detect behaviors" in err, f"missing prefix: {err!r}"
+                assert "oops" in err, f"missing cause: {err!r}"
 
             asyncio.run(run())
+
+        assert bridge.state.last_error is not None
+        assert "oops" in bridge.state.last_error
 
 
 class TestF0003DetectBehaviorsYAML:
     """F-0003: detect_behaviors validates path, raises on JSONDecodeError/wrong shape, uses yaml.safe_load."""
 
     def test_raises_when_rules_file_not_found(self, tmp_path: Path) -> None:
-        """detect_behaviors raises ToolError when custom_rules_path does not exist."""
+        """detect_behaviors raises ToolError whose message contains the missing file path.
+
+        The bridge constant ``_ERR_RULES_NOT_FOUND`` is "Custom rules file not found".
+        The exact path supplied by the caller must appear in the error message so the
+        caller can identify which file was missing. ``bridge.state.last_error`` must
+        also be set with the same path.
+        """
         bridge = SandboxBridge()
 
         mock_report = MagicMock()
@@ -285,13 +370,22 @@ class TestF0003DetectBehaviorsYAML:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="Custom rules file not found"):
+                with pytest.raises(ToolError) as exc_info:
                     await bridge.detect_behaviors("some-id", custom_rules_path=missing)
+            err = str(exc_info.value)
+            assert "Custom rules file not found" in err, f"missing prefix: {err!r}"
+            assert missing in err, f"missing file path in error: {err!r}"
 
         asyncio.run(run())
+        assert bridge.state.last_error is not None
+        assert missing in bridge.state.last_error, f"path not in state.last_error: {bridge.state.last_error!r}"
 
     def test_raises_on_invalid_yaml(self, tmp_path: Path) -> None:
-        """detect_behaviors raises ToolError when YAML file has invalid syntax."""
+        """detect_behaviors raises ToolError whose message includes the YAML parsing marker.
+
+        The error message must contain "Custom rules file is not valid YAML" (the bridge
+        constant ``_ERR_RULES_INVALID``). ``bridge.state.last_error`` must be set.
+        """
         bridge = SandboxBridge()
 
         rules_file = tmp_path / "bad.yaml"
@@ -306,13 +400,22 @@ class TestF0003DetectBehaviorsYAML:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="Custom rules file is not valid YAML"):
+                with pytest.raises(ToolError) as exc_info:
                     await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+            err = str(exc_info.value)
+            assert "Custom rules file is not valid YAML" in err, f"missing YAML marker: {err!r}"
 
         asyncio.run(run())
+        assert bridge.state.last_error is not None
+        assert "YAML" in bridge.state.last_error, f"'YAML' not in state.last_error: {bridge.state.last_error!r}"
 
     def test_raises_when_yaml_not_a_list(self, tmp_path: Path) -> None:
-        """detect_behaviors raises ToolError when YAML top-level is not a list."""
+        """detect_behaviors raises ToolError that names the actual parsed type when YAML is not a list.
+
+        When YAML top-level is a dict, the error message must contain "expected a list"
+        and name the actual type ("dict"), because the bridge formats the message as
+        "expected a list, got {type.__name__}". ``bridge.state.last_error`` must be set.
+        """
         bridge = SandboxBridge()
 
         rules_file = tmp_path / "dict_rules.yaml"
@@ -327,10 +430,15 @@ class TestF0003DetectBehaviorsYAML:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="expected a list"):
+                with pytest.raises(ToolError) as exc_info:
                     await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+            err = str(exc_info.value)
+            assert "expected a list" in err, f"missing list requirement: {err!r}"
+            assert "dict" in err, f"missing actual type name: {err!r}"
 
         asyncio.run(run())
+        assert bridge.state.last_error is not None
+        assert "expected a list" in bridge.state.last_error or "dict" in bridge.state.last_error
 
     def test_valid_yaml_list_rules_passed_to_behaviors(self, tmp_path: Path) -> None:
         """detect_behaviors passes parsed YAML list to match_behaviors."""
@@ -380,17 +488,46 @@ class TestF0004YaraScanModeValidation:
     """F-0004: yara_scan validates mode in ('files', 'memory'); raises ToolError on invalid."""
 
     def test_raises_on_invalid_scan_target(self) -> None:
-        """yara_scan raises ToolError when scan_target is not 'files' or 'memory'."""
+        """yara_scan raises ToolError with the exact validation message for invalid scan_target.
+
+        The bridge constant ``_ERR_YARA_INVALID_MODE`` is
+        "Invalid scan_target; must be 'files' or 'memory'". The full literal message
+        must appear so callers know exactly which values are accepted.
+        """
         bridge = SandboxBridge()
 
         async def run() -> None:
-            with pytest.raises(ToolError, match="Invalid scan_target"):
+            with pytest.raises(ToolError) as exc_info:
                 await bridge.yara_scan("some-id", scan_target="processes")
+            err = str(exc_info.value)
+            assert "Invalid scan_target" in err, f"missing prefix: {err!r}"
+            assert "files" in err, f"'files' not listed in error: {err!r}"
+            assert "memory" in err, f"'memory' not listed in error: {err!r}"
+
+        asyncio.run(run())
+
+    def test_raises_on_arbitrary_invalid_target(self) -> None:
+        """yara_scan raises ToolError for any non-enumerated scan_target value.
+
+        "network" is not a valid target and must produce the same error as any
+        other invalid value, confirming the validation is not hard-coded to one string.
+        """
+        bridge = SandboxBridge()
+
+        async def run() -> None:
+            with pytest.raises(ToolError) as exc_info:
+                await bridge.yara_scan("some-id", scan_target="network")
+            err = str(exc_info.value)
+            assert "Invalid scan_target" in err, f"missing prefix: {err!r}"
 
         asyncio.run(run())
 
     def test_accepts_files_target(self) -> None:
-        """yara_scan accepts 'files' as a valid scan_target."""
+        """yara_scan accepts 'files' as a valid scan_target and returns a structured result.
+
+        The return dict must have both ``match_count`` (int) and ``matches`` (list)
+        keys so callers can iterate results without guessing the schema.
+        """
         bridge = SandboxBridge()
 
         mock_instance = MagicMock()
@@ -405,9 +542,16 @@ class TestF0004YaraScanModeValidation:
 
         result = asyncio.run(run())
         assert result["match_count"] == 0
+        matches: list[object] = cast("list[object]", result["matches"])
+        assert isinstance(matches, list)
+        assert len(matches) == 0
 
     def test_accepts_memory_target(self) -> None:
-        """yara_scan accepts 'memory' as a valid scan_target."""
+        """yara_scan accepts 'memory' as a valid scan_target and returns a structured result.
+
+        Same schema check as for 'files': both ``match_count`` and ``matches`` must
+        be present with consistent values.
+        """
         bridge = SandboxBridge()
 
         mock_instance = MagicMock()
@@ -422,13 +566,20 @@ class TestF0004YaraScanModeValidation:
 
         result = asyncio.run(run())
         assert result["match_count"] == 0
+        assert isinstance(result["matches"], list)
 
 
 class TestF0005PublicQMPAgentAccessors:
     """F-0005: Uses public qmp/agent accessors instead of private _qmp/_agent."""
 
     def test_qemu_sandbox_qmp_returns_none_when_not_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """QEMUSandbox.qmp returns None when no QMP client has been attached."""
+        """QEMUSandbox.qmp returns None when no QMP client has been attached.
+
+        Additionally, the bridge must raise ``ToolError`` with prefix
+        "Failed to resume VM execution" when ``cont()`` is called and
+        ``instance.sandbox.qmp`` is None, confirming that bridge dispatch
+        reads the public property and guards against a missing QMP channel.
+        """
         qemu = pytest.importorskip("intellicrack.sandbox.qemu")
         qemu_sandbox_cls = qemu.QEMUSandbox
 
@@ -438,6 +589,24 @@ class TestF0005PublicQMPAgentAccessors:
 
         assert sandbox.qmp is None
         assert sandbox.agent is None
+
+        bridge = SandboxBridge()
+        mock_instance = MagicMock()
+        mock_instance.sandbox_type = "qemu"
+        mock_instance.sandbox = sandbox
+
+        async def run() -> None:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=mock_instance)
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError) as exc_info:
+                    await bridge.cont("qemu-id")
+            err = str(exc_info.value)
+            assert "Failed to resume VM execution" in err, f"missing prefix: {err!r}"
+            assert "not connected" in err or "QMP" in err, f"missing QMP detail: {err!r}"
+
+        asyncio.run(run())
 
     def test_qemu_sandbox_has_public_qmp_property(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """QEMUSandbox exposes qmp as a public property returning the QMP client."""
@@ -464,7 +633,12 @@ class TestF0005PublicQMPAgentAccessors:
         assert sandbox.agent is mock_agent
 
     def test_get_pending_messages_uses_agent_not_private(self) -> None:
-        """get_pending_messages() accesses agent via public property, not _agent."""
+        """get_pending_messages() reads agent via public property and returns correct schema.
+
+        The return dict must have ``count`` (int) and ``messages`` (list) keys.
+        When the agent returns an empty list, ``count`` must be 0 and ``messages``
+        must be an empty list — not some other truthful but wrong value.
+        """
         pytest.importorskip("intellicrack.sandbox.qemu")
 
         bridge = SandboxBridge()
@@ -484,13 +658,19 @@ class TestF0005PublicQMPAgentAccessors:
 
         result = asyncio.run(run())
         assert result["count"] == 0
+        assert result["messages"] == []
 
 
 class TestF0006NoHotPathInfoLogs:
     """F-0006: No *_started info logs in hot paths (is_available, status, list)."""
 
     def test_is_available_no_info_log(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """is_available() does not emit an info-level 'started' log."""
+        """is_available() does not emit an info-level 'started' log and returns a bool.
+
+        The return value must be a boolean (not just truthy) so callers can rely
+        on ``isinstance(result, bool)`` checks. The log-absence check confirms the
+        bridge does not spam structured logs on every availability poll.
+        """
         bridge = SandboxBridge()
         mock_manager = MagicMock()
         mock_manager.get_available_types = AsyncMock(return_value=["windows"])
@@ -506,19 +686,27 @@ class TestF0006NoHotPathInfoLogs:
         handler.setLevel(logging.INFO)
         root_logger = logging.getLogger("intellicrack.bridges.sandbox_bridge")
         root_logger.addHandler(handler)
+        result: bool
         try:
-            asyncio.run(bridge.is_available())
+            result = asyncio.run(bridge.is_available())
         finally:
             root_logger.removeHandler(handler)
 
+        assert isinstance(result, bool), f"expected bool, got {type(result).__name__}"
+        assert result is True, "expected True when get_available_types returns non-empty list"
         started_records = [r for r in records if "started" in r.getMessage().lower()]
         assert not started_records, f"Unexpected 'started' info logs: {[r.getMessage() for r in started_records]}"
 
     def test_status_no_info_log(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """status() does not emit an info-level 'started' log."""
+        """status() does not emit an info-level 'started' log and returns a dict with instances key.
+
+        The returned dict must contain "instances" (the key the manager exposes)
+        or at minimum be a non-empty dict. The log-absence check applies only to
+        the "started" event category.
+        """
         bridge = SandboxBridge()
         mock_manager = MagicMock()
-        mock_manager.get_status = AsyncMock(return_value={"instances": []})
+        mock_manager.get_status = AsyncMock(return_value={"instances": [], "available_types": ["windows"]})
         monkeypatch.setattr(bridge, "_manager", mock_manager)
 
         records: list[logging.LogRecord] = []
@@ -531,16 +719,24 @@ class TestF0006NoHotPathInfoLogs:
         handler.setLevel(logging.INFO)
         root_logger = logging.getLogger("intellicrack.bridges.sandbox_bridge")
         root_logger.addHandler(handler)
+        result: dict[str, Any]
         try:
-            asyncio.run(bridge.status())
+            result = asyncio.run(bridge.status())
         finally:
             root_logger.removeHandler(handler)
 
+        assert isinstance(result, dict), f"expected dict, got {type(result).__name__}"
+        assert "instances" in result, f"missing 'instances' key in status result: {list(result.keys())}"
         started_records = [r for r in records if "started" in r.getMessage().lower()]
         assert not started_records, f"Unexpected 'started' info logs: {[r.getMessage() for r in started_records]}"
 
     def test_list_no_info_log(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """list() does not emit an info-level 'started' log."""
+        """list() does not emit an info-level 'started' log and returns a list.
+
+        When the manager has no instances, the list must be empty (``[]``), not None
+        or some truthy non-list. Each entry in a non-empty list must have at minimum
+        the ``id`` and ``type`` keys.
+        """
         bridge = SandboxBridge()
         mock_manager = MagicMock()
         mock_manager.instances = []
@@ -556,11 +752,14 @@ class TestF0006NoHotPathInfoLogs:
         handler.setLevel(logging.INFO)
         root_logger = logging.getLogger("intellicrack.bridges.sandbox_bridge")
         root_logger.addHandler(handler)
+        result: list[dict[str, Any]]
         try:
-            asyncio.run(bridge.list())
+            result = asyncio.run(bridge.list())
         finally:
             root_logger.removeHandler(handler)
 
+        assert isinstance(result, list), f"expected list, got {type(result).__name__}"
+        assert result == [], f"expected empty list for no instances, got {result!r}"
         started_records = [r for r in records if "started" in r.getMessage().lower()]
         assert not started_records, f"Unexpected 'started' info logs: {[r.getMessage() for r in started_records]}"
 
@@ -569,7 +768,12 @@ class TestF0007GetVNCPort:
     """F-0007: get_vnc_port gates on QEMU type and raises ToolError for non-QEMU or no VNC."""
 
     def test_raises_on_non_qemu_sandbox(self) -> None:
-        """get_vnc_port raises ToolError for windows sandbox."""
+        """get_vnc_port raises ToolError with the exact "requires QEMU sandbox" message.
+
+        The production message prefix is "Operation requires QEMU sandbox" (constant
+        ``_ERR_QEMU_REQUIRED``). Any other message text would break callers that
+        pattern-match on the error.
+        """
         bridge = SandboxBridge()
 
         mock_instance = MagicMock()
@@ -580,13 +784,20 @@ class TestF0007GetVNCPort:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="requires QEMU sandbox"):
+                with pytest.raises(ToolError) as exc_info:
                     await bridge.get_vnc_port("some-id")
+            err = str(exc_info.value)
+            assert "requires QEMU sandbox" in err, f"missing QEMU gate message: {err!r}"
 
         asyncio.run(run())
 
     def test_raises_when_vnc_port_is_none(self) -> None:
-        """get_vnc_port raises ToolError when VNC port is not allocated."""
+        """get_vnc_port raises ToolError with "VNC" in the message when VNC port is not allocated.
+
+        The production constant ``_ERR_VNC_PORT_UNAVAILABLE`` is "VNC port is not
+        allocated on this QEMU sandbox". The message must contain "VNC" so callers
+        know why the operation failed.
+        """
         bridge = SandboxBridge()
 
         mock_instance = MagicMock()
@@ -598,13 +809,22 @@ class TestF0007GetVNCPort:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="VNC display not configured"):
+                with pytest.raises(ToolError) as exc_info:
                     await bridge.get_vnc_port("some-id")
+            err = str(exc_info.value)
+            assert "VNC" in err, f"missing VNC in error: {err!r}"
+            assert "not" in err.lower() or "unavailable" in err.lower() or "allocated" in err.lower(), (
+                f"missing unavailability signal: {err!r}"
+            )
 
         asyncio.run(run())
 
     def test_returns_vnc_port_when_configured(self) -> None:
-        """get_vnc_port returns the VNC port number when configured."""
+        """get_vnc_port returns exactly 5900 when the sandbox's vnc_port property is 5900.
+
+        This confirms the bridge does not transform the port value (e.g., add an
+        offset or convert to a string) before returning it.
+        """
         bridge = SandboxBridge()
 
         mock_instance = MagicMock()
@@ -620,18 +840,27 @@ class TestF0007GetVNCPort:
 
         result = asyncio.run(run())
         assert result == 5900
+        assert isinstance(result, int), f"expected int, got {type(result).__name__}"
 
     def test_raises_on_missing_instance(self) -> None:
-        """get_vnc_port raises ToolError when instance not found."""
+        """get_vnc_port raises ToolError whose message includes the missing instance ID.
+
+        The production message is "Sandbox instance not found: {instance_id}".
+        The exact ID must appear so the caller can identify which instance is absent.
+        """
         bridge = SandboxBridge()
+        missing_id = "missing-id-abc123"
 
         async def run() -> None:
             with patch.object(bridge, "ensure_manager") as mock_mgr:
                 manager = AsyncMock()
                 manager.get = AsyncMock(return_value=None)
                 mock_mgr.return_value = manager
-                with pytest.raises(ToolError, match="Sandbox instance not found"):
-                    await bridge.get_vnc_port("missing-id")
+                with pytest.raises(ToolError) as exc_info:
+                    await bridge.get_vnc_port(missing_id)
+            err = str(exc_info.value)
+            assert "Sandbox instance not found" in err, f"missing prefix: {err!r}"
+            assert missing_id in err, f"missing instance ID in error: {err!r}"
 
         asyncio.run(run())
 
@@ -657,11 +886,14 @@ class TestF0008QEMUGatedMethods:
         ],
     )
     def test_raises_on_windows_sandbox(self, method: str, kwargs: dict[str, Any]) -> None:
-        """Each QEMU-only method raises ToolError when sandbox_type is 'windows'.
+        """Each QEMU-only method raises ToolError with "requires QEMU sandbox" for windows type.
 
         Args:
             method: Bridge method name to invoke.
             kwargs: Extra keyword arguments for the method.
+
+        The exact phrase "requires QEMU sandbox" must appear in the error, confirming
+        the bridge uses ``_ERR_QEMU_REQUIRED`` rather than a different message.
         """
         bridge = SandboxBridge()
 
@@ -674,8 +906,10 @@ class TestF0008QEMUGatedMethods:
                 manager.get = AsyncMock(return_value=mock_instance)
                 mock_mgr.return_value = manager
                 fn = getattr(bridge, method)
-                with pytest.raises(ToolError, match="requires QEMU sandbox"):
+                with pytest.raises(ToolError) as exc_info:
                     await fn("some-id", **kwargs)
+            err = str(exc_info.value)
+            assert "requires QEMU sandbox" in err, f"{method}() raised ToolError but message lacks 'requires QEMU sandbox': {err!r}"
 
         asyncio.run(run())
 
@@ -684,7 +918,14 @@ class TestF0009EnsureManagerDestroyed:
     """F-0009: ensure_manager raises ToolError when manager was shut down."""
 
     def test_raises_after_shutdown(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """ensure_manager raises ToolError when called after shutdown()."""
+        """ensure_manager raises ToolError with "manager was shut down" after shutdown().
+
+        After ``shutdown()`` is called, ``bridge.manager`` must be None,
+        ``bridge.manager_destroyed`` must be True, and every subsequent call to
+        ``ensure_manager()`` must raise ``ToolError`` with the exact phrase
+        "manager was shut down". The phrase is the bridge constant
+        ``_ERR_MANAGER_DESTROYED``.
+        """
         bridge = SandboxBridge()
 
         async def run() -> None:
@@ -694,8 +935,10 @@ class TestF0009EnsureManagerDestroyed:
             await bridge.shutdown()
             assert bridge.manager is None
             assert bridge.manager_destroyed is True
-            with pytest.raises(ToolError, match="manager was shut down"):
+            with pytest.raises(ToolError) as exc_info:
                 bridge.ensure_manager()
+            err = str(exc_info.value)
+            assert "manager was shut down" in err, f"missing expected phrase: {err!r}"
 
         asyncio.run(run())
 
@@ -709,14 +952,22 @@ class TestF0009EnsureManagerDestroyed:
             assert mgr is not None
             assert bridge.manager is mgr
 
-    def test_returns_existing_manager(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """ensure_manager returns existing manager without creating a new one."""
+    def test_returns_existing_manager_on_repeated_calls(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """ensure_manager returns the same object across multiple calls without creating a new one.
+
+        Calling ``ensure_manager()`` twice must return identical objects (same
+        ``id()``) and must not replace the stored ``_manager``. This confirms the
+        bridge does not construct a fresh ``SandboxManager`` on every invocation.
+        """
         bridge = SandboxBridge()
         mock_mgr = MagicMock()
         monkeypatch.setattr(bridge, "_manager", mock_mgr)
 
-        result = bridge.ensure_manager()
-        assert result is mock_mgr
+        result_a = bridge.ensure_manager()
+        result_b = bridge.ensure_manager()
+        assert result_a is mock_mgr
+        assert result_b is mock_mgr
+        assert result_a is result_b, "ensure_manager must return the same object on repeated calls"
         assert bridge.manager is mock_mgr
 
 
@@ -1558,7 +1809,13 @@ class TestF0014GetPendingMessagesAttributeSafety:
     """F-0014: get_pending_messages builds message dicts inside try block; catches AttributeError."""
 
     def test_catches_attribute_error_during_message_build(self) -> None:
-        """get_pending_messages returns unknown type when message has no message_type."""
+        """get_pending_messages falls back to type='unknown' when message has no message_type.
+
+        A plain ``object()`` instance has no ``message_type`` attribute. The bridge
+        must catch the ``AttributeError`` (via ``getattr`` with default) and emit
+        ``{"type": "unknown", "data": {}}`` for that message. The result dict must
+        have ``count=1`` and ``messages[0]["type"] == "unknown"``.
+        """
         bridge = SandboxBridge()
 
         bad_message = object()
@@ -1579,10 +1836,18 @@ class TestF0014GetPendingMessagesAttributeSafety:
 
         result = asyncio.run(run())
         assert result["count"] == 1
+        assert len(result["messages"]) == 1
         assert result["messages"][0]["type"] == "unknown"
+        assert result["messages"][0]["data"] == {}
 
-    def test_message_type_read_via_getattr(self) -> None:
-        """get_pending_messages reads message_type safely via getattr."""
+    def test_message_type_read_via_getattr_exact_field(self) -> None:
+        """get_pending_messages reads message_type and data safely from a concrete object.
+
+        A concrete class with ``message_type = "exec_result"`` and ``data = {}``
+        must produce a message entry whose ``type`` field is exactly ``"exec_result"``
+        and whose ``data`` field is exactly ``{}``. This confirms the bridge reads
+        the correct attribute names and does not rename or transform them.
+        """
         bridge = SandboxBridge()
 
         class MockMessage:
@@ -1606,6 +1871,44 @@ class TestF0014GetPendingMessagesAttributeSafety:
         result = asyncio.run(run())
         assert result["count"] == 1
         assert result["messages"][0]["type"] == "exec_result"
+        assert result["messages"][0]["data"] == {}
+
+    def test_multiple_message_types_all_fields_present(self) -> None:
+        """get_pending_messages correctly serialises a mix of typed and untyped messages.
+
+        Given one typed message (``message_type="file_read"``) and one bare
+        ``object()`` without attributes, the result must be:
+        - ``count == 2``
+        - ``messages[0]["type"] == "file_read"`` (or messages[1], order-stable)
+        - One entry with ``type == "unknown"``
+
+        This confirms the bridge serialises every message, not just the first.
+        """
+        bridge = SandboxBridge()
+
+        class TypedMsg:
+            message_type: ClassVar[str] = "file_read"
+            data: ClassVar[dict[str, object]] = {"path": "/sandbox/output/x"}
+
+        mock_agent = AsyncMock()
+        mock_agent.get_pending_messages = AsyncMock(return_value=[TypedMsg(), object()])
+
+        mock_instance = MagicMock()
+        mock_instance.sandbox_type = "qemu"
+        type(mock_instance.sandbox).agent = property(lambda _self: mock_agent)
+
+        async def run() -> dict[str, Any]:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=mock_instance)
+                mock_mgr.return_value = manager
+                return await bridge.get_pending_messages("some-id")
+
+        result = asyncio.run(run())
+        assert result["count"] == 2
+        types = {m["type"] for m in result["messages"]}
+        assert "file_read" in types, f"typed message not found in: {types!r}"
+        assert "unknown" in types, f"fallback 'unknown' not found in: {types!r}"
 
 
 class TestF0015DataclassToDict:
@@ -1668,15 +1971,31 @@ class TestF0015DataclassToDict:
         parsed = json.loads(serialised)
         assert parsed["result"] == "success"
 
-    def test_raises_on_non_dataclass(self) -> None:
-        """dataclass_to_dict raises ToolError for non-dataclass input."""
-        with pytest.raises(ToolError, match="Expected a dataclass instance"):
-            dataclass_to_dict({"not": "a dataclass"})
+    def test_raises_on_non_dataclass_exact_message(self) -> None:
+        """dataclass_to_dict raises ToolError whose message names the actual input type.
 
-    def test_raises_on_dataclass_class_not_instance(self) -> None:
-        """dataclass_to_dict raises ToolError when given the class itself."""
-        with pytest.raises(ToolError, match="Expected a dataclass instance"):
+        The production message format is "Expected a dataclass instance, got {type.__name__}".
+        For a dict input the message must contain "dict" so the caller can identify
+        what it passed. The exact phrase "Expected a dataclass instance" must be present.
+        """
+        with pytest.raises(ToolError) as exc_info:
+            dataclass_to_dict({"not": "a dataclass"})
+        err = str(exc_info.value)
+        assert "Expected a dataclass instance" in err, f"missing prefix: {err!r}"
+        assert "dict" in err, f"missing actual type name 'dict': {err!r}"
+
+    def test_raises_on_dataclass_class_not_instance_exact_message(self) -> None:
+        """dataclass_to_dict raises ToolError whose message names the class type when given a class.
+
+        Passing the class itself (not an instance) must produce "Expected a dataclass
+        instance, got _SimpleReport" (or the qualified name). The message must contain
+        the class name so the caller knows they forgot to instantiate it.
+        """
+        with pytest.raises(ToolError) as exc_info:
             dataclass_to_dict(self._SimpleReport)
+        err = str(exc_info.value)
+        assert "Expected a dataclass instance" in err, f"missing prefix: {err!r}"
+        assert "_SimpleReport" in err or "type" in err, f"missing class name in error: {err!r}"
 
 
 class TestF0016UTCTimestamps:

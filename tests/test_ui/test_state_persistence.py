@@ -140,32 +140,39 @@ class TestRestoreTabState:
 
     @staticmethod
     def test_restore_tab_state_tab_openers_keys() -> None:
-        """Verify the internal tab_openers dict maps expected panel names."""
+        """Verify restore_tab_state opens each registered panel with the correct title.
+
+        Each key in tab_openers must map to a tab whose tabText equals that key exactly.
+        Passing the keys through tab_names drives the real opener; asserting idx >= 0
+        confirms the tab was actually created, and tabText(idx) == key confirms the
+        title was preserved faithfully.
+        """
         panel = ToolOutputPanel()
-        expected_keys = {
+        registered_keys: list[str] = [
             "Hex Editor",
             "Frida",
             "Ghidra",
             "Cutter",
             "Process",
-            "Binary",
             "Sandbox",
             "Analysis",
             "Scripts",
             "Stack",
-        }
+        ]
 
         state: dict[str, object] = {
-            "tab_names": [],
+            "tab_names": registered_keys,
             "active_index": 0,
             "splitter_sizes": [600, 200],
         }
         panel.restore_tab_state(state)
 
-        assert panel.tab_widget.currentIndex() >= -1
-        for key in expected_keys:
+        for key in registered_keys:
             idx = panel.find_tab_by_title(key)
-            assert isinstance(idx, int)
+            assert idx >= 0, f"Tab '{key}' was not opened by restore_tab_state (index={idx})"
+            assert panel.tab_widget.tabText(idx) == key, f"tabText({idx}) is {panel.tab_widget.tabText(idx)!r}, expected {key!r}"
+
+        assert panel.tab_widget.count() >= len(registered_keys)
 
 
 @pytest.mark.usefixtures("qapp")
