@@ -25,7 +25,7 @@ import json
 import socket
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 from urllib.parse import parse_qs, urlencode
 
 import httpx
@@ -37,6 +37,8 @@ from intellicrack.credentials import oauth as oauth_module
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from types import ModuleType
+
+    from intellicrack.credentials.oauth import OAuthCallbackServer, OAuthManager, OAuthProvider, OAuthState, OAuthToken
 
 
 _UNAUTHORIZED = 401
@@ -147,7 +149,13 @@ def reloaded_oauth_module() -> Iterator[ModuleType]:
 
 
 def test_singleton_thread_safety(reloaded_oauth_module: ModuleType) -> None:
-    """Concurrent callers must receive exactly one OAuthManager instance.
+    """Concurrent callers must receive exactly one OAuthManager instance that is functional.
+
+    Verifies both singleton identity under concurrency (the construction-level
+    gate) and that the returned instance is actually usable after concurrent
+    construction (the post-construction functionality gate).  A singleton whose
+    internal state is corrupted by a race would fail the PKCE operation below
+    even if all 32 callers returned the same object.
 
     Args:
         reloaded_oauth_module: The freshly reloaded oauth module.
@@ -165,6 +173,23 @@ def test_singleton_thread_safety(reloaded_oauth_module: ModuleType) -> None:
     first = results[0]
     for instance in results[1:]:
         assert instance is first
+
+    singleton = reloaded_oauth_module.get_oauth_manager()
+    assert singleton is first
+
+    code_verifier, code_challenge = reloaded_oauth_module.generate_pkce_pair()
+    assert isinstance(code_verifier, str), "generate_pkce_pair must return a str code_verifier"
+    assert len(code_verifier) > 40, f"PKCE code_verifier is too short: {len(code_verifier)}"
+    assert isinstance(code_challenge, str), "generate_pkce_pair must return a str code_challenge"
+    assert len(code_challenge) > 30, f"PKCE code_challenge is too short: {len(code_challenge)}"
+    assert code_verifier != code_challenge, "code_verifier and code_challenge must differ"
+    assert reloaded_oauth_module.verify_pkce_pair(code_verifier, code_challenge), (
+        "verify_pkce_pair returned False for a freshly generated PKCE pair — "
+        "the singleton's PKCE implementation is broken or its module-level state is poisoned"
+    )
+    assert not reloaded_oauth_module.verify_pkce_pair(code_verifier + "x", code_challenge), (
+        "verify_pkce_pair must reject a mutated code_verifier"
+    )
 
 
 def test_pkce_roundtrip(reloaded_oauth_module: ModuleType) -> None:
@@ -215,19 +240,23 @@ def test_full_callback_path_with_mock_provider(
         callback_port=callback_port,
     )
 
-    async def drive() -> oauth_module.OAuthToken:
-        auth_url, oauth_state = await manager.start_authorization_flow(
+    async def drive() -> OAuthToken:
+        manager_typed = cast("OAuthManager", manager)
+        auth_url, oauth_state = await manager_typed.start_authorization_flow(
             config,
             open_browser=False,
         )
         assert auth_url.startswith(f"{base_url}/authorize?")
-        server = reloaded_oauth_module.OAuthCallbackServer(
-            port=callback_port,
-            expected_state=oauth_state.state,
+        server = cast(
+            "OAuthCallbackServer",
+            reloaded_oauth_module.OAuthCallbackServer(
+                port=callback_port,
+                expected_state=oauth_state.state,
+            ),
         )
         server.start()
         try:
-            return await _drive_oauth_callback(server, manager, oauth_state, callback_port)
+            return await _drive_oauth_callback(server, manager_typed, oauth_state, callback_port)
         finally:
             server.stop()
 
@@ -248,11 +277,11 @@ def test_full_callback_path_with_mock_provider(
 
 
 async def _drive_oauth_callback(
-    server: object,
-    manager: oauth_module.OAuthManager,
-    oauth_state: object,
+    server: OAuthCallbackServer,
+    manager: OAuthManager,
+    oauth_state: OAuthState,
     callback_port: int,
-) -> oauth_module.OAuthToken:
+) -> OAuthToken:
     """Fire the callback URL and resolve the resulting token via the manager.
 
     Args:
@@ -262,7 +291,7 @@ async def _drive_oauth_callback(
         callback_port: Port the callback server is listening on.
 
     Returns:
-        oauth_module.OAuthToken: Token returned by ``handle_callback``.
+        OAuthToken: Token returned by ``handle_callback``.
     """
 
     def fire_callback() -> None:
@@ -297,9 +326,12 @@ def test_state_mismatch_is_rejected(
     reloaded_oauth_module.OAuthCallbackHandler.callback_state = None
     reloaded_oauth_module.OAuthCallbackHandler.callback_error = None
 
-    server = reloaded_oauth_module.OAuthCallbackServer(
-        port=callback_port,
-        expected_state=expected_state,
+    server = cast(
+        "OAuthCallbackServer",
+        reloaded_oauth_module.OAuthCallbackServer(
+            port=callback_port,
+            expected_state=expected_state,
+        ),
     )
     server.start()
     try:
@@ -310,7 +342,7 @@ def test_state_mismatch_is_rejected(
 
 def _assert_state_mismatch_rejected(
     reloaded_oauth_module: ModuleType,
-    server: object,
+    server: OAuthCallbackServer,
     callback_port: int,
 ) -> None:
     """POST a callback with a wrong state and assert the server refuses it.
@@ -352,7 +384,8 @@ def _prime_cached_token(
         token_type=bearer_type,
         expires_at=None,
     )
-    cache = manager._token_cache
+    manager_any = cast("Any", manager)
+    cache: dict[OAuthProvider, OAuthToken] = manager_any._token_cache
     cache[provider] = token
 
 

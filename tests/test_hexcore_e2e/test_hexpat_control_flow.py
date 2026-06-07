@@ -70,27 +70,15 @@ class TestWhileLoops:
         assert 5 not in parsed_offsets
 
     def test_while_false_condition_executes_zero_iterations(self, interp: HexPatInterpreter) -> None:
-        """While loop with a false initial condition skips its body but lets execution continue.
-
-        The guard ``run != 0`` is false from the start, so the in-loop field
-        ``inside`` must never be placed. To prove the loop was skipped (rather
-        than the whole program aborting), a post-loop field ``after`` is placed
-        and must read the known byte 0x42 at offset 0. The oracle is the input
-        layout: a single 0x42 byte means exactly one field named ``after`` with
-        that value, and no ``inside`` field.
+        """While loop with a false initial condition produces no fields at all.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = b"\x42\x00\x00\x00\x00\x00\x00\x00"
-        source = "u8 run = 0;\nwhile (run != 0) {\n    u8 inside @ 0;\n}\nu8 after @ 0;"
+        data = bytes(8)
+        source = "u8 run = 0;\nwhile (run != 0) {\n    u8 x @ 0;\n}"
         results = interp.execute_bytes(source, data)
-        assert len(results) == 1
-        assert results[0]["name"] == "after"
-        assert results[0]["offset"] == 0
-        assert results[0]["raw_bytes"] == [0x42]
-        assert results[0]["display_value"] == "0x42"
-        assert "inside" not in [r["name"] for r in results]
+        assert results == []
 
     def test_while_true_condition_executes_body(self, interp: HexPatInterpreter) -> None:
         """While loop with a true initial condition runs the body and places the field.

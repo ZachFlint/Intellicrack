@@ -435,7 +435,7 @@ def _detect_exfiltration_patterns(
     for activity in network_activity:
         sent = activity["bytes_sent"]
         received = activity["bytes_received"]
-        if sent > 0 and received > 0 and sent > received * _EXFIL_RATIO_THRESHOLD:
+        if sent >= _EXFIL_THRESHOLD_BYTES and received > 0 and sent > received * _EXFIL_RATIO_THRESHOLD:
             addr = activity["remote_address"]
             confidence = min(1.0, _EXFIL_BASE_CONFIDENCE + (sent / (sent + received)))
             patterns.append({

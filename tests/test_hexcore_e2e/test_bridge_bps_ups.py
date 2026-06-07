@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -25,17 +25,14 @@ pytest.importorskip(
 )
 
 
-_T = TypeVar("_T")
-
-
-def _run[T](coro: Coroutine[object, object, _T]) -> _T:
+def _run[T](coro: Coroutine[object, object, T]) -> T:
     """Run an async coroutine synchronously.
 
     Args:
         coro: An awaitable coroutine object.
 
     Returns:
-        _T: The result of the coroutine.
+        T: The result of the coroutine.
     """
     try:
         loop = asyncio.get_event_loop()
@@ -70,27 +67,47 @@ class TestBPSExport:
         assert decoded[:4] == b"BPS1"
 
     def test_bps_import_invalid_patch_raises(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that importing garbage base64 as BPS raises ValueError.
+        """Verify that BPS validation rejects both bad-magic and bad-CRC payloads.
+
+        Tests two distinct failure modes to prove the parser is checking BPS
+        structure, not just failing on an unrelated reason:
+
+        1. A payload with a completely wrong header (not ``BPS1``) must raise
+           ``ValueError`` mentioning "BPS" or "invalid BPS patch".
+        2. A payload that has the correct ``BPS1`` magic but a corrupt body
+           (wrong CRC) must also raise ``ValueError``, proving the validator
+           checks past the 4-byte magic.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        f = tmp_path / "bps_target.bin"
-        f.write_bytes(b"\x00" * 64)
-        orig = tmp_path / "bps_orig2.bin"
-        orig.write_bytes(b"\x00" * 64)
-        _run(bridge.open_file(str(f)))
+        target_file = tmp_path / "bps_target.bin"
+        target_file.write_bytes(b"\x00" * 64)
+        orig_file = tmp_path / "bps_orig2.bin"
+        orig_file.write_bytes(b"\x00" * 64)
+        _run(bridge.open_file(str(target_file)))
+
         garbage_b64 = base64.b64encode(b"not a real patch").decode("ascii")
-        with pytest.raises(ValueError, match="BPS"):
-            _run(bridge.import_patches_bps(garbage_b64, str(orig)))
+        with pytest.raises(ValueError, match=r"(?i)BPS|invalid"):
+            _run(bridge.import_patches_bps(garbage_b64, str(orig_file)))
+
+        bps1_wrong_crc = b"BPS1" + b"\x00" * 20
+        bps1_b64 = base64.b64encode(bps1_wrong_crc).decode("ascii")
+        with pytest.raises(ValueError, match=r"(?i)BPS|CRC|invalid|mismatch"):
+            _run(bridge.import_patches_bps(bps1_b64, str(orig_file)))
 
     def test_no_document_raises(self, bridge: HexEditorBridge) -> None:
         """Verify export_patches_bps raises RuntimeError without a document.
 
+        Explicitly confirms the bridge has no document open before calling
+        ``export_patches_bps``, so the test proves the guard path fires
+        due to the absence of a document rather than for any other reason.
+
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
+        assert bridge.document is None, "bridge must have no document open before testing the no-document guard"
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.export_patches_bps("/nonexistent"))
 

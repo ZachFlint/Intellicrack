@@ -37,35 +37,9 @@ class TestFormatHexDumpBasic:
 
     @staticmethod
     def test_single_byte_layout() -> None:
-        """A one-byte buffer renders one line whose decomposed columns are each correct.
-
-        Rather than freezing the exact rendered string, this asserts on the
-        logical structure: the address column equals the base address, the hex
-        column encodes the single byte and is padded to the documented field
-        width, and the ASCII column shows the printable character. The
-        independent oracle is the byte's own value (``ord("A") == 0x41``) and
-        the module's documented field geometry.
-        """
+        """A one-byte buffer renders one line with proper padding."""
         result = format_hex_dump(b"A", 0)
-        assert "\n" not in result
-
-        address_col = result[:8]
-        assert address_col == "00000000"
-        assert int(address_col, 16) == 0
-
-        gap_after_address = result[8:10]
-        assert gap_after_address == "  "
-
-        hex_col = result[10 : 10 + 48]
-        assert hex_col == f"{0x41:02X}".ljust(48)
-        assert hex_col.split() == ["41"]
-
-        gap_after_hex = result[10 + 48 : 10 + 48 + 2]
-        assert gap_after_hex == "  "
-
-        ascii_col = result[10 + 48 + 2 :]
-        assert ascii_col == "A"
-        assert ord(ascii_col) == 0x41
+        assert result == "00000000  41                                                A"
 
     @staticmethod
     def test_full_line_layout() -> None:

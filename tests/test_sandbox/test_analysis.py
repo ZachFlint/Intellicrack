@@ -105,11 +105,20 @@ def _net(
 
 
 class TestHelperFunctions:
-    """Verify private helper functions."""
+    """Verify private helper functions with boundary and negative cases.
+
+    Each helper is tested at its exact boundary values (+1/-1 edge cases)
+    and with negative (expected-False) inputs alongside the positive cases,
+    so a regression in any range boundary is caught immediately.
+    """
 
     def test_private_ip_10(self) -> None:
         """10.x.x.x is private."""
         assert _is_private_ip("10.0.0.1") is True
+
+    def test_private_ip_10_max(self) -> None:
+        """10.255.255.255 (upper boundary of 10.x.x.x) is private."""
+        assert _is_private_ip("10.255.255.255") is True
 
     def test_private_ip_172_16(self) -> None:
         """172.16.x.x is private."""
@@ -119,13 +128,41 @@ class TestHelperFunctions:
         """172.31.x.x is private."""
         assert _is_private_ip("172.31.255.255") is True
 
+    def test_private_ip_172_16_lower_boundary(self) -> None:
+        """172.16.0.0 (exact lower boundary) is private."""
+        assert _is_private_ip("172.16.0.0") is True
+
+    def test_private_ip_172_31_upper_boundary(self) -> None:
+        """172.31.255.255 (exact upper boundary) is private."""
+        assert _is_private_ip("172.31.255.255") is True
+
+    def test_private_ip_172_15_just_below_range(self) -> None:
+        """172.15.x.x is just below the 172.16-31 private range: not private."""
+        assert _is_private_ip("172.15.255.255") is False
+
+    def test_private_ip_172_32_just_above_range(self) -> None:
+        """172.32.x.x is just above the 172.16-31 private range: not private."""
+        assert _is_private_ip("172.32.0.0") is False
+
     def test_private_ip_192_168(self) -> None:
         """192.168.x.x is private."""
         assert _is_private_ip("192.168.1.1") is True
 
+    def test_private_ip_192_167_not_private(self) -> None:
+        """192.167.x.x is not in the 192.168.x.x range."""
+        assert _is_private_ip("192.167.255.255") is False
+
+    def test_private_ip_192_169_not_private(self) -> None:
+        """192.169.x.x is not in the 192.168.x.x range."""
+        assert _is_private_ip("192.169.0.0") is False
+
     def test_private_ip_127(self) -> None:
         """127.x.x.x is private."""
         assert _is_private_ip("127.0.0.1") is True
+
+    def test_private_ip_127_max(self) -> None:
+        """127.255.255.255 is private (loopback range)."""
+        assert _is_private_ip("127.255.255.255") is True
 
     def test_private_ip_unspecified(self) -> None:
         """0.0.0.0 is private."""
@@ -134,6 +171,10 @@ class TestHelperFunctions:
     def test_public_ip(self) -> None:
         """203.0.113.1 is public."""
         assert _is_private_ip("203.0.113.1") is False
+
+    def test_public_ip_8_8_8_8(self) -> None:
+        """8.8.8.8 (Google DNS) is public."""
+        assert _is_private_ip("8.8.8.8") is False
 
     def test_172_15_not_private(self) -> None:
         """172.15.x.x is not private."""
@@ -147,25 +188,57 @@ class TestHelperFunctions:
         """Well-formed IPv4 is valid."""
         assert _is_valid_ipv4("192.168.1.1") is True
 
+    def test_valid_ipv4_all_zeros(self) -> None:
+        """0.0.0.0 is a valid IPv4 address."""
+        assert _is_valid_ipv4("0.0.0.0") is True  # noqa: S104
+
+    def test_valid_ipv4_all_255(self) -> None:
+        """255.255.255.255 is a valid IPv4 address (broadcast)."""
+        assert _is_valid_ipv4("255.255.255.255") is True
+
     def test_invalid_ipv4_too_few_octets(self) -> None:
         """Three octets is invalid."""
         assert _is_valid_ipv4("192.168.1") is False
+
+    def test_invalid_ipv4_too_many_octets(self) -> None:
+        """Five octets is invalid."""
+        assert _is_valid_ipv4("192.168.1.1.1") is False
 
     def test_invalid_ipv4_octet_over_255(self) -> None:
         """Octet > 255 is invalid."""
         assert _is_valid_ipv4("999.999.999.999") is False
 
+    def test_invalid_ipv4_octet_256(self) -> None:
+        """Octet exactly 256 is invalid (one beyond max)."""
+        assert _is_valid_ipv4("192.168.1.256") is False
+
+    def test_valid_ipv4_octet_255_boundary(self) -> None:
+        """Octet exactly 255 is valid (maximum allowed)."""
+        assert _is_valid_ipv4("192.168.1.255") is True
+
     def test_invalid_ipv4_non_numeric(self) -> None:
         """Non-numeric octet is invalid."""
         assert _is_valid_ipv4("abc.def.ghi.jkl") is False
+
+    def test_invalid_ipv4_empty_string(self) -> None:
+        """Empty string is an invalid IPv4 address."""
+        assert _is_valid_ipv4("") is False
 
     def test_looks_like_domain_valid(self) -> None:
         """'example.com' looks like a domain."""
         assert _looks_like_domain("example.com") is True
 
+    def test_looks_like_domain_subdomain(self) -> None:
+        """'sub.example.com' looks like a domain."""
+        assert _looks_like_domain("sub.example.com") is True
+
     def test_looks_like_domain_ip(self) -> None:
         """An IP address does not look like a domain."""
         assert _looks_like_domain("192.168.1.1") is False
+
+    def test_looks_like_domain_no_dot(self) -> None:
+        """A bare hostname without a dot does not look like a domain."""
+        assert _looks_like_domain("localhost") is False
 
     def test_shannon_entropy_uniform(self) -> None:
         """Uniform string (e.g., 'aaaa') has 0.0 entropy."""
@@ -175,9 +248,132 @@ class TestHelperFunctions:
         """High-randomness string has entropy > 3.0."""
         assert _shannon_entropy("xkqwzjrtmnpvls") > 3.0
 
+    def test_shannon_entropy_two_symbols(self) -> None:
+        """50/50 two-symbol string 'ababababab' has entropy exactly 1.0.
+
+        Shannon entropy of a 50/50 binary source = -0.5*log2(0.5) - 0.5*log2(0.5) = 1.0.
+        """
+        assert math.isclose(_shannon_entropy("ababababab"), 1.0, abs_tol=1e-9)
+
+    def test_shannon_entropy_single_char_string(self) -> None:
+        """Single-character string has entropy 0.0 (no uncertainty)."""
+        assert math.isclose(_shannon_entropy("z"), 0.0, abs_tol=1e-9)
+
     def test_shannon_entropy_empty(self) -> None:
         """Empty string has 0.0 entropy."""
         assert math.isclose(_shannon_entropy(""), 0.0, abs_tol=1e-9)
+
+    def test_shannon_entropy_maximum_for_256_symbols(self) -> None:
+        """String with all 256 distinct byte values (as chars) has entropy 8.0 (log2(256)).
+
+        The maximum possible Shannon entropy for byte-level data is exactly 8.0
+        bits per symbol when the distribution is uniform across all 256 values.
+        """
+        text = "".join(chr(i) for i in range(256))
+        assert math.isclose(_shannon_entropy(text), 8.0, abs_tol=1e-9)
+
+
+class TestDetectC2PatternsThresholds:
+    """Verify C2 detection heuristics at their exact threshold boundaries.
+
+    Uses routable public IP addresses and statistically realistic byte
+    transfer ratios to exercise the detection logic at the precise
+    values where its behaviour changes, not just well above or below.
+
+    All remote IPs here are from IANA-assigned public blocks (not TEST-NET),
+    and all traffic volumes use realistic byte counts observed in real-world
+    C2 traffic (small beacons, large exfil payloads).
+    """
+
+    _C2_IP: Final[str] = "185.220.101.45"
+    _CDN_IP: Final[str] = "151.101.1.140"
+
+    def test_beaconing_exactly_at_min_connections_boundary(self) -> None:
+        """Exactly 3 connections at consistent intervals triggers beaconing.
+
+        _BEACONING_MIN_CONNECTIONS == 3; this test sits at the exact lower
+        boundary. Fewer than 3 connections must NOT trigger (verified below).
+        """
+        activity = [_net(remote_address=self._C2_IP, remote_port=8080, ts_sec=i * 15, bytes_sent=128, bytes_received=48) for i in range(3)]
+        patterns = detect_c2_patterns(activity)
+        beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
+        assert len(beacon) >= 1, "Exactly 3 regular connections must trigger beaconing"
+        assert beacon[0]["confidence"] > 0.0
+
+    def test_beaconing_exactly_one_below_min_connections(self) -> None:
+        """Exactly 2 connections must NOT trigger beaconing (below minimum of 3)."""
+        activity = [_net(remote_address=self._C2_IP, remote_port=8080, ts_sec=i * 15, bytes_sent=128, bytes_received=48) for i in range(2)]
+        patterns = detect_c2_patterns(activity)
+        beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
+        assert len(beacon) == 0, "2 connections must not trigger beaconing (below threshold of 3)"
+
+    def test_exfil_exactly_at_byte_threshold(self) -> None:
+        """A connection with exactly _EXFIL_THRESHOLD_BYTES (1 MiB) sent triggers exfil detection.
+
+        _EXFIL_THRESHOLD_BYTES == 1048576 bytes sent; ratio must also exceed
+        _EXFIL_RATIO_THRESHOLD == 10x. Uses 1048576 sent vs 104 received
+        (ratio ~10076, well above 10x).
+        """
+        activity = [_net(remote_address=self._C2_IP, remote_port=443, ts_sec=0, bytes_sent=1_048_576, bytes_received=104)]
+        patterns = detect_c2_patterns(activity)
+        exfil = [p for p in patterns if p["pattern_type"] == "data_exfiltration"]
+        assert len(exfil) >= 1, "1 MiB sent with >10x ratio must trigger exfiltration detection"
+
+    def test_exfil_below_byte_threshold_not_detected(self) -> None:
+        """A connection with exactly 1 byte below threshold must NOT trigger exfil.
+
+        Uses 1048575 bytes (1 MiB - 1) with a 10:1 ratio that satisfies the
+        ratio threshold but falls below the byte threshold.
+        """
+        activity = [_net(remote_address=self._C2_IP, remote_port=443, ts_sec=0, bytes_sent=1_048_575, bytes_received=104)]
+        patterns = detect_c2_patterns(activity)
+        exfil = [p for p in patterns if p["pattern_type"] == "data_exfiltration"]
+        assert len(exfil) == 0, "1 MiB - 1 byte sent must not trigger exfiltration (below byte threshold)"
+
+    def test_high_freq_443_at_exact_threshold(self) -> None:
+        """Exactly _HIGH_FREQ_HTTPS_THRESHOLD == 10 connections on port 443 triggers detection.
+
+        _HIGH_FREQ_HTTPS_THRESHOLD == 10 and the detector fires on
+        ``len(addresses) >= _HIGH_FREQ_HTTPS_THRESHOLD``; 10 connections
+        sit at the exact lower boundary and must trigger.
+        """
+        activity_10 = [_net(remote_address=self._CDN_IP, remote_port=443, ts_sec=i, bytes_sent=512, bytes_received=4096) for i in range(10)]
+        patterns = detect_c2_patterns(activity_10)
+        hf = [p for p in patterns if p["pattern_type"] == "high_frequency_443"]
+        assert len(hf) >= 1, "Exactly 10 connections on port 443 must trigger high-frequency detection (threshold>=10)"
+
+    def test_high_freq_443_one_below_threshold_not_triggered(self) -> None:
+        """_HIGH_FREQ_HTTPS_THRESHOLD - 1 == 9 connections on port 443 must NOT trigger.
+
+        The detector fires on ``>= 10``; 9 connections sit one below the
+        boundary and must be suppressed.
+        """
+        activity_9 = [_net(remote_address=self._CDN_IP, remote_port=443, ts_sec=i, bytes_sent=512, bytes_received=4096) for i in range(9)]
+        patterns = detect_c2_patterns(activity_9)
+        hf = [p for p in patterns if p["pattern_type"] == "high_frequency_443"]
+        assert len(hf) == 0, "9 connections on port 443 must NOT trigger (threshold is >= 10)"
+
+    def test_dga_domain_at_entropy_boundary(self) -> None:
+        """Domain with entropy just above _DGA_ENTROPY_THRESHOLD (3.5) is flagged.
+
+        Independently computed: 'zyxwvutsrqponm.net' has 14 distinct lowercase
+        letters in the label 'zyxwvutsrqponm'; entropy = log2(14) ≈ 3.807 > 3.5.
+        """
+        high_entropy_domain = "zyxwvutsrqponm.net"
+        activity = [_net(remote_address=high_entropy_domain, remote_port=80, ts_sec=0)]
+        patterns = detect_c2_patterns(activity)
+        dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
+        assert len(dga) >= 1, f"Domain {high_entropy_domain!r} with entropy >3.5 must be flagged as DGA"
+
+    def test_dga_domain_below_entropy_threshold_not_flagged(self) -> None:
+        """Domain with entropy well below _DGA_ENTROPY_THRESHOLD (3.5) is not flagged.
+
+        'apple.com' has low entropy in its label; it must not trigger DGA detection.
+        """
+        activity = [_net(remote_address="apple.com", remote_port=80, ts_sec=0)]
+        patterns = detect_c2_patterns(activity)
+        dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
+        assert len(dga) == 0, "'apple.com' must not be flagged as DGA"
 
 
 class TestDetectC2Patterns:
@@ -633,7 +829,16 @@ class TestGenerateTimeline:
         """DLL loads produce dll-category events."""
         report = make_sample_report(
             dll_loads=[
-                DllLoadEvent(timestamp=ts_offset(1), pid=100, process_name="test.exe", dll_path="ntdll.dll", base_address="0x0", size=1024),
+                DllLoadEvent(
+                    timestamp=ts_offset(1),
+                    pid=100,
+                    process_name="test.exe",
+                    dll_path="ntdll.dll",
+                    base_address="0x0",
+                    size=1024,
+                    event_id=10,
+                    payload_schema="",
+                ),
             ],
         )
         events = generate_timeline(report)

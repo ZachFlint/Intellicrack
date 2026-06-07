@@ -44,10 +44,13 @@ class TestGoogleModelListing:
     async def test_list_models_returns_non_empty_list(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test list_models returns at least one model.
+        """Test list_models returns at least one Gemini model with a valid structure.
 
-        This validates that the API call works and returns actual data.
-        We don't hardcode model names - just verify we get models.
+        Validates that the API call works, returns actual data, and that the returned
+        models are Gemini generative models with non-empty string IDs.  The ``len > 0``
+        check alone cannot detect an API regression where an empty list is returned.
+        The Gemini model ID check ensures the bridge is actually filtering and mapping
+        Google API responses to the correct provider and model type.
 
         Args:
             google_provider: Connected Google provider fixture.
@@ -56,6 +59,20 @@ class TestGoogleModelListing:
 
         assert isinstance(models, list), f"Expected list, got {type(models)}"
         assert len(models) > 0, "Expected at least one model from Google AI API"
+
+        gemini_models = [m for m in models if "gemini" in m.id.lower()]
+        assert len(gemini_models) > 0, (
+            f"Expected at least one Gemini model in the response, "
+            f"but none of the {len(models)} returned models have 'gemini' in their id. "
+            f"IDs returned: {[m.id for m in models[:5]]}"
+        )
+
+        first_gemini = gemini_models[0]
+        assert isinstance(first_gemini.id, str)
+        assert len(first_gemini.id) > 0
+        assert first_gemini.provider == ProviderName.GOOGLE
+        assert isinstance(first_gemini.context_window, int)
+        assert first_gemini.context_window > 0
 
     @pytest.mark.asyncio
     @staticmethod

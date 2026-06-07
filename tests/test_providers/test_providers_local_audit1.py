@@ -216,31 +216,48 @@ def _format_prompt(
 
 
 def test_f0001_b580_device_ids_constant_drives_detection() -> None:
-    """``_is_b580_device`` must accept every ID alias and reject non-B580 IDs.
+    r"""``_is_b580_device`` device-ID path must be wired to ``_B580_DEVICE_IDS``.
 
     Before the fix, ``_is_b580_device`` matched against a hard-coded literal
-    set ``{"e20b", "0xe20b"}`` and ignored the constant. This is a falsifiable
-    gate over the device-ID code path: a deliberately non-B580 device name
-    (``"Generic GPU"``) forces the verdict to be driven solely by the
-    ``device_id`` comparison against ``_B580_DEVICE_IDS``.
+    set and ignored the module constant. This gate proves the constant
+    actually drives the verdict by routing a *realistic Windows PNP
+    enumeration string* through the independent ``_parse_device_id_from_pnp``
+    oracle to obtain the device ID, then feeding the parsed ID (never a value
+    copied from the constant) into ``_is_b580_device`` with a deliberately
+    non-B580 device name (``"Generic GPU"``) so only the ID comparison can
+    produce a match.
 
-    The positive oracle is the independently-known set of four documented
-    Intel Arc B580 device-ID spellings (the PCI device ID ``0xE20B`` in
-    bare/prefixed and upper/lower case). The negative oracle is a set of
-    real, non-B580 PCI device IDs - the adjacent Intel Battlemage SKU
-    ``0xE20C``, NVIDIA's ``0x2684`` (RTX 4090), AMD's ``0x73DF`` (RX 6700 XT),
-    and the empty/garbage cases - none of which may be classified as a B580
-    when the device name carries no ``b580`` substring.
+    Membership oracle: the constant must equal the four documented Intel Arc
+    B580 PCI device-ID spellings of device ``0xE20B`` (bare/prefixed,
+    upper/lower). Independently justified from Intel's PCI ID assignment for
+    the Battlemage G21 (B580) part, not copied from the implementation.
+
+    Falsifiability anchor (boundary): the adjacent Intel Battlemage SKU
+    ``0xE20C`` differs from B580 by a single hex digit. A regression that
+    broadened the set, ignored the constant, or matched on a prefix would
+    classify ``0xE20C`` as a B580; this test forbids that. NVIDIA's
+    ``0x2684`` (RTX 4090), AMD's ``0x73DF`` (RX 6700 XT), and empty/garbage
+    IDs round out the negative oracle.
     """
     expected_aliases: frozenset[str] = frozenset({"0xe20b", "e20b", "E20B", "0xE20B"})
     assert expected_aliases == _B580_DEVICE_IDS
 
-    for raw_id in expected_aliases:
-        assert _is_b580_device("Generic GPU", raw_id), f"id {raw_id!r} should match by device ID"
+    intel_b580_pnp = r"PCI\VEN_8086&DEV_E20B&SUBSYS_00000000&REV_00\3&11583659&0&10"
+    parsed_b580_id: str = _parse_device_id_from_pnp(intel_b580_pnp)
+    assert parsed_b580_id == "e20b"
+    assert _is_b580_device("Generic GPU", parsed_b580_id) is True
 
-    non_b580_ids: list[str] = ["0xE20C", "e20c", "0x2684", "73DF", "73df", "", "not-an-id", "e20"]
+    for raw_id in expected_aliases:
+        assert _is_b580_device("Generic GPU", raw_id) is True, f"alias {raw_id!r} must match via the constant"
+
+    intel_battlemage_sibling_pnp = r"PCI\VEN_8086&DEV_E20C&SUBSYS_00000000&REV_00\3&11583659&0&10"
+    parsed_sibling_id: str = _parse_device_id_from_pnp(intel_battlemage_sibling_pnp)
+    assert parsed_sibling_id == "e20c"
+    assert _is_b580_device("Generic GPU", parsed_sibling_id) is False
+
+    non_b580_ids: list[str] = ["0xE20C", "e20c", "0x2684", "73DF", "73df", "", "not-an-id", "e20", "e20ba"]
     for raw_id in non_b580_ids:
-        assert not _is_b580_device("Generic GPU", raw_id), f"id {raw_id!r} must not match as B580"
+        assert _is_b580_device("Generic GPU", raw_id) is False, f"id {raw_id!r} must not match as B580"
 
 
 def test_f0001_b580_device_name_path_is_independent_of_device_id() -> None:

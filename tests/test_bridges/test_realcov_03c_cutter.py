@@ -25,6 +25,7 @@ issue a precise :func:`pytest.skip` rather than fabricating a pass.
 from __future__ import annotations
 
 import asyncio
+import os
 import shutil
 from typing import TYPE_CHECKING
 
@@ -51,6 +52,32 @@ async def _make_bridge_or_skip() -> CutterBridge:
     if not await bridge.is_available():
         pytest.skip("rizin/radare2 backend not discoverable on PATH")
     return bridge
+
+
+async def test_backend_available_or_explicit_skip() -> None:
+    """Backend availability smoke test: fails loud in enforced-backend CI runs.
+
+    When the environment variable ``EXPECT_RIZIN_BACKEND`` is set to any
+    non-empty value, a missing rizin/radare2 binary is treated as a hard
+    failure rather than a skip. This distinguishes "backend genuinely
+    absent on this host" from "backend missing because the container was
+    mis-configured". Without the variable the test skips as normal.
+
+    The check also verifies that when the backend IS available, the bridge
+    reports ``is_available() == True`` rather than silently returning a
+    fabricated result.
+    """
+    bridge = CutterBridge()
+    available = await bridge.is_available()
+    if not available:
+        enforce = os.environ.get("EXPECT_RIZIN_BACKEND", "")
+        if enforce:
+            pytest.fail(
+                "rizin/radare2 backend not found on PATH but EXPECT_RIZIN_BACKEND is set; "
+                "the container or host environment must supply rizin or radare2.",
+            )
+        pytest.skip("rizin/radare2 backend not discoverable on PATH (set EXPECT_RIZIN_BACKEND to enforce)")
+    assert available is True, "is_available() must return exactly True when backend is present"
 
 
 @pytest_asyncio.fixture

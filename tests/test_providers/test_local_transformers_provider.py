@@ -31,6 +31,7 @@ from intellicrack.providers.model_loader import (
     ModelCache,
     ModelConfig,
     estimate_model_memory,
+    get_global_model_cache,
     select_dtype_for_memory,
 )
 from intellicrack.providers.xpu_utils import (
@@ -426,10 +427,20 @@ class TestLocalTransformersProviderConnection:
     @pytest.mark.asyncio
     @staticmethod
     async def test_connect_detects_xpu_availability() -> None:
-        """Connect should detect XPU availability."""
+        """Connect should detect XPU availability.
+
+        Verifies that connect() calls the real XPU runtime query and stores the
+        result faithfully: provider.xpu_available must equal the independent
+        oracle is_xpu_available() evaluated on the same machine.
+        """
+        expected: bool = is_xpu_available()
         provider = LocalTransformersProvider()
         await provider.connect(ProviderCredentials())
-        assert isinstance(provider.xpu_available, bool)
+        assert provider.xpu_available == expected, (
+            f"provider.xpu_available={provider.xpu_available!r} but "
+            f"is_xpu_available()={expected!r}: connect() did not faithfully "
+            "query the XPU runtime"
+        )
         await provider.disconnect()
 
 
@@ -646,18 +657,26 @@ class TestProviderListModels:
     @pytest.mark.asyncio
     @staticmethod
     async def test_list_models_model_info_complete() -> None:
-        """Model info should have all required fields."""
+        """Model info should have all required fields with correct values.
+
+        Asserts unconditionally that at least one model is returned and that
+        every required field on the first model carries an independently-known
+        correct value (provider enum) or a structurally correct non-empty value
+        (id, name, context_window > 0).  The ``if models:`` guard is forbidden
+        because an empty list must surface as a test failure, not a silent pass.
+        """
         provider = LocalTransformersProvider()
         await provider.connect(ProviderCredentials())
         models = await provider.list_models()
-        if models:
-            model = models[0]
-            assert model.id is not None
-            assert model.name is not None
-            assert model.provider == ProviderName.LOCAL_TRANSFORMERS
-            assert isinstance(model.context_window, int)
-            assert isinstance(model.supports_tools, bool)
-            assert isinstance(model.supports_streaming, bool)
+        assert len(models) > 0, "list_models() returned an empty list; expected at least one model"
+        model = models[0]
+        assert model.id, f"model.id is falsy: {model.id!r}"
+        assert model.name, f"model.name is falsy: {model.name!r}"
+        assert model.provider == ProviderName.LOCAL_TRANSFORMERS, f"model.provider={model.provider!r} != ProviderName.LOCAL_TRANSFORMERS"
+        assert isinstance(model.context_window, int), f"model.context_window={model.context_window!r} must be int"
+        assert model.context_window > 0, f"model.context_window={model.context_window!r} must be positive"
+        assert isinstance(model.supports_tools, bool), f"model.supports_tools={model.supports_tools!r} must be bool"
+        assert isinstance(model.supports_streaming, bool), f"model.supports_streaming={model.supports_streaming!r} must be bool"
         await provider.disconnect()
 
     @pytest.mark.asyncio
@@ -721,10 +740,20 @@ class TestCacheClear:
     @pytest.mark.asyncio
     @staticmethod
     async def test_clear_cache() -> None:
-        """Should clear cache without error."""
+        """Clear cache must set global model-cache memory usage to zero.
+
+        Calls clear_cache() and then reads the global cache's reported memory
+        usage via get_global_model_cache().get_memory_usage().  The oracle is
+        the ModelCache.clear() contract: after clearing, _current_memory_bytes
+        is reset to 0.  An implementation that merely logs or no-ops would
+        leave memory_usage > 0 (if any model had been registered) or would
+        fail to satisfy the zero postcondition checked here.
+        """
         provider = LocalTransformersProvider()
         await provider.connect(ProviderCredentials())
         provider.clear_cache()
+        cache: ModelCache = get_global_model_cache()
+        assert cache.get_memory_usage() == 0, f"After clear_cache(), global cache reports {cache.get_memory_usage()} bytes; expected 0"
         await provider.disconnect()
 
     @pytest.mark.asyncio

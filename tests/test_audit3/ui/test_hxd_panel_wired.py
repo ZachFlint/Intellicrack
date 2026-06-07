@@ -25,7 +25,6 @@ import os
 from typing import TYPE_CHECKING
 
 import pytest
-from PyQt6.QtCore import QSettings
 
 import intellicrack.ui.panels as panels_pkg
 from intellicrack.ui.app import MainWindow
@@ -62,11 +61,10 @@ def _host_has_registry_or_common_hxd() -> bool:
     ``find_hxd_executable`` checks Windows registry entries and hard-coded
     common install directories before falling back to ``PATH``. Those sources
     are absolute and cannot be redirected by the test environment, so the
-    available-branch tests must assert this precondition explicitly rather than
-    letting a genuine local install mask the synthetic ``PATH`` entry the test
-    prepends. Probing is done by running the real finder with ``PATH``
-    temporarily cleared: any non-``None`` result then originates from registry
-    or common-directory detection and cannot be controlled by the test.
+    unavailable-branch tests must assert this precondition explicitly rather
+    than masking a genuine local install with a silent skip. Probing is done by
+    running the real finder with ``PATH`` temporarily cleared: any non-``None``
+    result then originates from registry or common-directory detection.
 
     Returns:
         bool: ``True`` when the host has a registry-registered or common-dir
@@ -81,60 +79,6 @@ def _host_has_registry_or_common_hxd() -> bool:
             os.environ.pop("PATH", None)
         else:
             os.environ["PATH"] = saved_path
-
-
-def _host_has_any_hxd() -> bool:
-    """Report whether the real finder resolves any HxD on this host as-is.
-
-    Runs the production ``find_hxd_executable`` against the unmodified host
-    environment (registry, common directories, and the real ``PATH``). The
-    unavailable-branch tests require this to be ``False`` so they can drive the
-    real not-found path through ``MainWindow`` without destroying ``PATH`` (which
-    would break the unrelated bridges ``MainWindow`` wires at startup).
-
-    Returns:
-        bool: ``True`` when the finder locates an HxD executable on this host
-        using the unmodified environment.
-    """
-    return find_hxd_executable() is not None
-
-
-@pytest.fixture(autouse=True)
-def isolated_window_settings(tmp_path: Path) -> Generator[None]:
-    """Redirect ``MainWindow``'s ``QSettings`` to a private, empty INI store.
-
-    ``MainWindow`` persists its tab layout (including a default "Hex Editor"
-    tab) to the global ``("Intellicrack", "MainWindow")`` ``QSettings`` on close,
-    and restores it on construction. Without isolation, one test's saved tab
-    names leak into the next construction, where ``_restore_window_state``
-    re-creates the hex-editor tab through ``add_hex_editor_tab`` and raises
-    ``ToolError`` because these lightweight test windows wire no hex-editor
-    bridge. Pointing ``QSettings`` at a per-test INI file under ``tmp_path``
-    guarantees every ``MainWindow`` in this module starts from a clean,
-    deterministic persisted state regardless of test order, and prevents the
-    suite from mutating the real user's settings.
-
-    Args:
-        tmp_path: Pytest temporary directory fixture (the INI store lives here).
-
-    Yields:
-        None: Control returns to the test with isolated settings active.
-    """
-    previous_default = QSettings.defaultFormat()
-    settings_root = tmp_path / "qsettings"
-    settings_root.mkdir()
-    QSettings.setDefaultFormat(QSettings.Format.IniFormat)
-    QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.UserScope, str(settings_root))
-    QSettings.setPath(QSettings.Format.IniFormat, QSettings.Scope.SystemScope, str(settings_root))
-
-    fresh = QSettings("Intellicrack", "MainWindow")
-    fresh.clear()
-    fresh.sync()
-
-    try:
-        yield
-    finally:
-        QSettings.setDefaultFormat(previous_default)
 
 
 class TestPanelsPackageSurface:
@@ -254,16 +198,13 @@ def window_with_hxd_available(
 ) -> Generator[MainWindow]:
     """Provide a ``MainWindow`` whose real finder locates a genuine ``HxD.exe``.
 
-    A real ``HxD.exe`` file is written to disk and its directory is *prepended*
-    to the existing ``PATH`` via environment control (never replacing the whole
-    ``PATH``). The production ``find_hxd_executable`` runs unmodified during
-    ``MainWindow`` construction and genuinely resolves the executable from the
-    prepended directory, so the registration branch is driven by real
-    detection, not by stubbing the function under test. The rest of ``PATH`` is
-    preserved so the unrelated bridges ``MainWindow`` wires at startup (hex
-    editor bridge, system-status workers) keep functioning. The heavyweight
-    ``SandboxManager`` is replaced with a no-op stand-in purely to isolate the
-    unrelated sandbox subsystem; it is not the operation under test here.
+    A real ``HxD.exe`` file is written to disk and its directory is placed on
+    ``PATH`` via environment control. The production ``find_hxd_executable``
+    runs unmodified during ``MainWindow`` construction and genuinely resolves
+    the executable, so the registration branch is driven by real detection,
+    not by stubbing the function under test. The heavyweight ``SandboxManager``
+    is replaced with a no-op stand-in purely to isolate the unrelated sandbox
+    subsystem; it is not the operation under test here.
 
     Args:
         qapp: QApplication instance required by Qt widgets.
@@ -284,8 +225,7 @@ def window_with_hxd_available(
     exe = install_dir / _HXD_EXE_NAME
     exe.write_bytes(_MZ_STUB)
 
-    original_path = os.environ.get("PATH", "")
-    monkeypatch.setenv("PATH", str(install_dir) + os.pathsep + original_path)
+    monkeypatch.setenv("PATH", str(install_dir))
     monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
 
     window = MainWindow(real_config, real_orchestrator)
@@ -302,26 +242,26 @@ def window_without_hxd(
 ) -> Generator[MainWindow]:
     """Provide a ``MainWindow`` whose real finder locates no ``HxD.exe``.
 
-    The host is asserted up front to have no HxD resolvable by the unmodified
-    real finder (registry, common directories, and the real ``PATH``). ``PATH``
-    is deliberately left intact so the unrelated bridges ``MainWindow`` wires at
-    startup keep working; the production ``find_hxd_executable`` genuinely
-    returns ``None`` during construction on such a host. The finder itself is
-    never stubbed; only the unrelated sandbox subsystem is isolated.
+    ``PATH`` is emptied via environment control and the host is asserted to
+    have no registry/common-dir install, so the production
+    ``find_hxd_executable`` genuinely returns ``None`` during construction. The
+    finder itself is never stubbed; only the unrelated sandbox subsystem is
+    isolated.
 
     Args:
         qapp: QApplication instance required by Qt widgets.
         real_config: Real ``Config`` instance from the test fixtures.
         real_orchestrator: Real ``Orchestrator`` instance from the test fixtures.
-        monkeypatch: Pytest monkeypatch fixture used only for sandbox isolation.
+        monkeypatch: Pytest monkeypatch fixture used for ``PATH`` env control and sandbox isolation.
 
     Yields:
         Generator[MainWindow]: Window whose real finder found no HxD executable.
     """
     _ = qapp
-    if _host_has_any_hxd():
-        pytest.fail("Host has an HxD install resolvable by the real finder; cannot validate the unavailable branch on this host.")
+    if _host_has_registry_or_common_hxd():
+        pytest.fail("Host has a registry/common-dir HxD install; cannot validate the unavailable branch on this host.")
 
+    monkeypatch.setenv("PATH", "")
     monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
 
     window = MainWindow(real_config, real_orchestrator)
@@ -451,12 +391,13 @@ class TestHxDPanelRegistrationWhenUnavailable:
             qapp: QApplication instance required by Qt widgets.
             real_config: Real ``Config`` instance.
             real_orchestrator: Real ``Orchestrator`` instance.
-            monkeypatch: Pytest monkeypatch fixture used only for sandbox isolation.
+            monkeypatch: Pytest monkeypatch fixture used for ``PATH`` env control and sandbox isolation.
         """
         _ = qapp
-        if _host_has_any_hxd():
-            pytest.fail("Host has an HxD install resolvable by the real finder; cannot validate the unavailable branch on this host.")
+        if _host_has_registry_or_common_hxd():
+            pytest.fail("Host has a registry/common-dir HxD install; cannot validate the unavailable branch on this host.")
 
+        monkeypatch.setenv("PATH", "")
         monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
 
         window = MainWindow(real_config, real_orchestrator)
@@ -473,9 +414,7 @@ class TestHxDRegistrationTogglesWithRealDetection:
     """The same ``MainWindow`` code registers or skips purely on real detection.
 
     A single test drives both outcomes through the unmodified production finder
-    by toggling only the synthetic install directory on ``PATH`` between two
-    constructions, while always preserving the real host ``PATH`` so the other
-    bridges ``MainWindow`` wires at startup keep working. This proves the
+    by toggling only ``PATH`` between two constructions. This proves the
     registration decision is governed by real detection, not by any stub: the
     presence of the tab flips with the genuine on-disk/``PATH`` state.
     """
@@ -500,8 +439,6 @@ class TestHxDRegistrationTogglesWithRealDetection:
         _ = qapp
         if _host_has_registry_or_common_hxd():
             pytest.fail("Host has a registry/common-dir HxD install; cannot validate detection toggling on this host.")
-        if _host_has_any_hxd():
-            pytest.fail("Host has an HxD install resolvable by the real finder; cannot validate the absent branch on this host.")
 
         monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
 
@@ -510,8 +447,7 @@ class TestHxDRegistrationTogglesWithRealDetection:
         exe = install_dir / _HXD_EXE_NAME
         exe.write_bytes(_MZ_STUB)
 
-        original_path = os.environ.get("PATH", "")
-        monkeypatch.setenv("PATH", str(install_dir) + os.pathsep + original_path)
+        monkeypatch.setenv("PATH", str(install_dir))
         present_window = MainWindow(real_config, real_orchestrator)
         try:
             present_tabs = present_window.tool_panel.tab_widget
@@ -521,7 +457,7 @@ class TestHxDRegistrationTogglesWithRealDetection:
         finally:
             present_window.close()
 
-        monkeypatch.setenv("PATH", original_path)
+        monkeypatch.setenv("PATH", "")
         absent_window = MainWindow(real_config, real_orchestrator)
         try:
             absent_tabs = absent_window.tool_panel.tab_widget

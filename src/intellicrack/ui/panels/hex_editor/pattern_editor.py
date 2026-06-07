@@ -425,7 +425,7 @@ class PatternEditorMixin:
             self._pattern_print_output.clear()
 
         if self._interpreter is None:
-            self._interpreter = HexPatInterpreter_cls(print_sink=None)
+            self._interpreter = HexPatInterpreter_cls(print_sink=self._append_pattern_print_line)
         else:
             set_sink = getattr(self._interpreter, "set_print_sink", None)
             if callable(set_sink):

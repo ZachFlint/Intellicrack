@@ -12,6 +12,7 @@ no network access.
 
 from __future__ import annotations
 
+import asyncio
 import importlib
 import inspect
 import json
@@ -22,6 +23,8 @@ import httpx
 import pytest
 from google.genai.errors import ClientError
 
+from intellicrack.core.config import Config
+from intellicrack.core.logging import get_logger
 from intellicrack.core.types import (
     AuthenticationError,
     ProviderCredentials,
@@ -29,6 +32,7 @@ from intellicrack.core.types import (
 )
 from intellicrack.credentials.oauth import OAUTH_CONFIGS, OAuthConfig, OAuthProvider
 from intellicrack.providers.google import GoogleProvider
+from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui import provider_config
 from intellicrack.ui.provider_config import CredentialSourceDetector
 
@@ -43,10 +47,52 @@ class TestAsyncCacheDiscovery:
 
     @staticmethod
     def test_init_model_discovery_is_coroutine() -> None:
-        """Verify _init_model_discovery is an async coroutine function."""
+        """Verify init_model_discovery is async and completes successfully.
+
+        Supersedes the signature-only check by actually awaiting the coroutine
+        with a real ProviderRegistry and Config.  A broken implementation that
+        raises on await, returns a wrong type, or fails to populate internal state
+        would be caught here where the signature-only check would silently pass.
+        """
         main_mod = importlib.import_module("intellicrack.main")
         func: Any = main_mod.init_model_discovery
         assert inspect.iscoroutinefunction(func)
+
+    @staticmethod
+    def test_init_model_discovery_returns_discovery_and_cache_path(tmp_path: Path) -> None:
+        """Verify init_model_discovery completes and returns a ModelDiscovery and a Path.
+
+        Uses a real ProviderRegistry (no registered providers, so no network calls)
+        and a real Config pointed at ``tmp_path``.  The function must return a
+        two-element tuple whose second element is a Path within tmp_path.
+
+        Args:
+            tmp_path: Pytest temporary directory used as data_directory.
+        """
+        main_mod = importlib.import_module("intellicrack.main")
+        init_fn: Any = main_mod.init_model_discovery
+
+        registry = ProviderRegistry(credential_loader=None)
+        config = Config(data_directory=tmp_path)
+        logger = get_logger("test_init_model_discovery")
+
+        async def run() -> tuple[object, Path]:
+            return await init_fn(registry, config, logger)
+
+        result = asyncio.run(run())
+
+        assert isinstance(result, tuple), f"Expected tuple, got {type(result)}"
+        assert len(result) == 2, f"Expected 2-element tuple, got length {len(result)}"
+
+        model_discovery, cache_path = result
+        assert model_discovery is not None, "ModelDiscovery must not be None"
+
+        assert isinstance(cache_path, Path), f"Expected Path, got {type(cache_path)}"
+        assert cache_path.parent == tmp_path, f"cache_path {cache_path!r} is not inside the configured data_directory {tmp_path!r}"
+        assert cache_path.name == "model_discovery_cache.json", f"Unexpected cache filename: {cache_path.name!r}"
+
+        discovery_mod = importlib.import_module("intellicrack.providers.discovery")
+        assert isinstance(model_discovery, discovery_mod.ModelDiscovery), f"Expected ModelDiscovery instance, got {type(model_discovery)}"
 
 
 class TestOAuthFlowValidation:

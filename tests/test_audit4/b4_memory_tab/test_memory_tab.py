@@ -29,6 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.ui.panels import async_bridge as _async_bridge_mod
+from intellicrack.ui.panels.process_panel import memory_tab as _memory_tab_mod
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 
 
@@ -407,10 +408,23 @@ class TestActionsDisabledWhenUnattached:
 
 
 class TestActionsDisabledHandlerNoDispatch:
-    """F-0005: Handler preconditions block dispatch when not attached."""
+    """F-0005: Handler preconditions block dispatch when not attached.
+
+    Each unattached test is paired with an attached counterpart that confirms
+    the guard on ``_attached_pid`` is the sole controlling factor: when the PID
+    is set, ``run_bridge_coroutine_logged`` is reached; when it is None the
+    warning is shown and dispatch is skipped.
+    """
 
     def test_on_read_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_on_read does not call bridge when _attached_pid is None.
+        """_on_read shows the 'Not Attached' warning and skips dispatch when _attached_pid is None.
+
+        Patching the actual dispatch function the production code calls
+        (``run_bridge_coroutine_logged``) - not the unrelated
+        ``run_bridge_coroutine_async`` - guarantees the test goes red if the
+        guard is removed even when the bridge mock is present.  The exact
+        warning title and message are asserted so the test also fails if the
+        production code shows the wrong dialog text.
 
         Args:
             tab: MemoryTab fixture.
@@ -419,17 +433,65 @@ class TestActionsDisabledHandlerNoDispatch:
         _set_private(tab, "_bridge", MagicMock())
         _set_private(tab, "_attached_pid", None)
 
-        dispatch_mock = MagicMock()
-        monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", dispatch_mock)
-        monkeypatch.setattr(QMessageBox, "warning", _noop_warning)
+        warning_calls: list[tuple[object, ...]] = []
+
+        def _capture_warning(*args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+            warning_calls.append(args)
+            return QMessageBox.StandardButton.Ok
+
+        dispatch_calls: list[object] = []
+
+        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
+            dispatch_calls.append(args)
+
+        monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
 
         _line_edit(tab, "_read_addr").setText("0x1000")
         _invoke(tab, "_on_read")
 
-        dispatch_mock.assert_not_called()
+        assert dispatch_calls == [], (
+            f"run_bridge_coroutine_logged must not be called when _attached_pid is None; got {len(dispatch_calls)} call(s)"
+        )
+        assert warning_calls, "_on_read must show QMessageBox.warning when not attached"
+        title = str(warning_calls[0][1]) if len(warning_calls[0]) > 1 else ""
+        message = str(warning_calls[0][2]) if len(warning_calls[0]) > 2 else ""
+        assert title == "Not Attached", f"Expected warning title 'Not Attached', got {title!r}"
+        assert "Not attached to any process" in message, f"Expected 'Not attached to any process' in message, got {message!r}"
+
+    def test_on_read_dispatches_when_attached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+        """_on_read calls run_bridge_coroutine_logged when _attached_pid is set.
+
+        This paired test proves that the guard on ``_attached_pid`` is the
+        controlling factor: removing the unattached check would let this test
+        pass regardless, so the pair together proves the guard is specific.
+
+        Args:
+            tab: MemoryTab fixture.
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        _set_private(tab, "_bridge", MagicMock())
+        tab.set_attached_pid(1234)
+
+        dispatch_calls: list[object] = []
+
+        def _capture_dispatch(*args: object, **_kwargs: object) -> None:
+            dispatch_calls.append(args)
+
+        monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+
+        _line_edit(tab, "_read_addr").setText("0x1000")
+        _invoke(tab, "_on_read")
+
+        assert dispatch_calls, "run_bridge_coroutine_logged must be called when _attached_pid is set"
 
     def test_on_write_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_on_write does not call bridge when _attached_pid is None.
+        """_on_write shows the 'Not Attached' warning and skips dispatch when _attached_pid is None.
+
+        Patching the production dispatch function proves the guard on
+        ``_attached_pid`` — not an exception elsewhere — is what prevents the
+        call.  Exact title and message are asserted so a wrong-text regression
+        also fails.
 
         Args:
             tab: MemoryTab fixture.
@@ -438,18 +500,66 @@ class TestActionsDisabledHandlerNoDispatch:
         _set_private(tab, "_bridge", MagicMock())
         _set_private(tab, "_attached_pid", None)
 
-        dispatch_mock = MagicMock()
-        monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", dispatch_mock)
-        monkeypatch.setattr(QMessageBox, "warning", _noop_warning)
+        warning_calls: list[tuple[object, ...]] = []
+
+        def _capture_warning(*args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+            warning_calls.append(args)
+            return QMessageBox.StandardButton.Ok
+
+        dispatch_calls: list[object] = []
+
+        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
+            dispatch_calls.append(args)
+
+        monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
 
         _line_edit(tab, "_write_addr").setText("0x1000")
         _plain_text(tab, "_write_input").setPlainText("90 90")
         _invoke(tab, "_on_write")
 
-        dispatch_mock.assert_not_called()
+        assert dispatch_calls == [], (
+            f"run_bridge_coroutine_logged must not be called when _attached_pid is None; got {len(dispatch_calls)} call(s)"
+        )
+        assert warning_calls, "_on_write must show QMessageBox.warning when not attached"
+        title = str(warning_calls[0][1]) if len(warning_calls[0]) > 1 else ""
+        message = str(warning_calls[0][2]) if len(warning_calls[0]) > 2 else ""
+        assert title == "Not Attached", f"Expected warning title 'Not Attached', got {title!r}"
+        assert "Not attached to any process" in message, f"Expected 'Not attached to any process' in message, got {message!r}"
+
+    def test_on_write_dispatches_when_attached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+        """_on_write calls run_bridge_coroutine_logged when _attached_pid is set.
+
+        Paired counterpart confirming the guard is specifically the PID check,
+        not an address-parse exception or any other coincidental control flow.
+
+        Args:
+            tab: MemoryTab fixture.
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        _set_private(tab, "_bridge", MagicMock())
+        tab.set_attached_pid(1234)
+
+        dispatch_calls: list[object] = []
+
+        def _capture_dispatch(*args: object, **_kwargs: object) -> None:
+            dispatch_calls.append(args)
+
+        monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+        monkeypatch.setattr(QMessageBox, "warning", _noop_warning_yes)
+
+        _line_edit(tab, "_write_addr").setText("0x1000")
+        _plain_text(tab, "_write_input").setPlainText("90 90")
+        _invoke(tab, "_on_write")
+
+        assert dispatch_calls, "run_bridge_coroutine_logged must be called when _attached_pid is set"
 
     def test_on_search_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_on_search does not call bridge when _attached_pid is None.
+        """_on_search shows the 'Not Attached' warning and skips dispatch when _attached_pid is None.
+
+        The test patches the actual ``run_bridge_coroutine_logged`` function
+        (not ``run_bridge_coroutine_async``) so the assertion is a genuine gate
+        against guard removal.  Exact title and message are verified.
 
         Args:
             tab: MemoryTab fixture.
@@ -458,14 +568,56 @@ class TestActionsDisabledHandlerNoDispatch:
         _set_private(tab, "_bridge", MagicMock())
         _set_private(tab, "_attached_pid", None)
 
-        dispatch_mock = MagicMock()
-        monkeypatch.setattr(_async_bridge_mod, "run_bridge_coroutine_async", dispatch_mock)
-        monkeypatch.setattr(QMessageBox, "warning", _noop_warning)
+        warning_calls: list[tuple[object, ...]] = []
+
+        def _capture_warning(*args: object, **_kwargs: object) -> QMessageBox.StandardButton:
+            warning_calls.append(args)
+            return QMessageBox.StandardButton.Ok
+
+        dispatch_calls: list[object] = []
+
+        def _fail_if_dispatched(*args: object, **_kwargs: object) -> None:
+            dispatch_calls.append(args)
+
+        monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _fail_if_dispatched)
+        monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
 
         _line_edit(tab, "_search_pattern").setText("90 90")
         _invoke(tab, "_on_search")
 
-        dispatch_mock.assert_not_called()
+        assert dispatch_calls == [], (
+            f"run_bridge_coroutine_logged must not be called when _attached_pid is None; got {len(dispatch_calls)} call(s)"
+        )
+        assert warning_calls, "_on_search must show QMessageBox.warning when not attached"
+        title = str(warning_calls[0][1]) if len(warning_calls[0]) > 1 else ""
+        message = str(warning_calls[0][2]) if len(warning_calls[0]) > 2 else ""
+        assert title == "Not Attached", f"Expected warning title 'Not Attached', got {title!r}"
+        assert "Not attached to any process" in message, f"Expected 'Not attached to any process' in message, got {message!r}"
+
+    def test_on_search_dispatches_when_attached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
+        """_on_search calls run_bridge_coroutine_logged when _attached_pid is set.
+
+        Paired counterpart proving the guard is specifically the ``_attached_pid``
+        check, not an empty-pattern guard or any other coincidental exit.
+
+        Args:
+            tab: MemoryTab fixture.
+            monkeypatch: pytest monkeypatch fixture.
+        """
+        _set_private(tab, "_bridge", MagicMock())
+        tab.set_attached_pid(1234)
+
+        dispatch_calls: list[object] = []
+
+        def _capture_dispatch(*args: object, **_kwargs: object) -> None:
+            dispatch_calls.append(args)
+
+        monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
+
+        _line_edit(tab, "_search_pattern").setText("90 90")
+        _invoke(tab, "_on_search")
+
+        assert dispatch_calls, "run_bridge_coroutine_logged must be called when _attached_pid is set"
 
 
 class TestSearchStatusResetsOnFailure:

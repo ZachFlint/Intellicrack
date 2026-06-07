@@ -41,6 +41,9 @@ _ACCOUNT_LIMIT_SIGNALS: tuple[str, ...] = (
     "insufficient credits",
     "payment required",
     "model not supported by provider",
+    "organization has been disabled",
+    "organization has been deactivated",
+    "account has been disabled",
 )
 
 

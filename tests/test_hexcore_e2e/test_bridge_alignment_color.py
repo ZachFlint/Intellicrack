@@ -103,22 +103,36 @@ class TestSnapToAlignment:
         assert state.cursor_offset == expected, "state holder cursor (independent oracle) must reflect the snapped offset"
 
     def test_snap_to_alignment_512(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify snapping cursor at 1000 to 512-byte alignment returns 1024.
+        """Verify cursor 1000 snaps to the nearest 512-byte boundary 1024 and reaches the state.
 
         ``snap_to_alignment`` snaps to the nearest boundary. With the cursor at
-        1000 the boundaries are 512 (floor) and 1024 (ceil); 1000 is closer to
-        1024, so the result is the upper boundary 1024.
+        1000 the bracketing boundaries are 512 (floor) and 1024 (ceil); the
+        distances 1000-512=488 and 1024-1000=24 are computed by hand here (never
+        copied from the implementation), so 1024 is unambiguously the nearer
+        boundary. The result must equal 1024, the bridge cursor must move to it,
+        and the independent :class:`HexDocumentState` oracle must record it too.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
+        state = HexDocumentState()
+        bridge.set_state_holder(state)
         f = tmp_path / "align.bin"
         f.write_bytes(b"\x00" * 4096)
         _run(bridge.open_file(str(f)))
         _run(bridge.goto_offset(1000))
+
+        floor_boundary = 512
+        ceil_boundary = 1024
+        nearer = ceil_boundary if (1000 - floor_boundary) > (ceil_boundary - 1000) else floor_boundary
+        assert nearer == ceil_boundary, "hand-computed oracle: 1000 is nearer to 1024 than to 512"
+
         result = _run(bridge.snap_to_alignment(512))
-        assert result == 1024
+
+        assert result == ceil_boundary, f"cursor 1000 must snap up to {ceil_boundary}, got {result}"
+        assert _run(bridge.get_cursor_position()) == ceil_boundary, "bridge cursor must move to the snapped boundary"
+        assert state.cursor_offset == ceil_boundary, "state holder (independent oracle) must record the snapped boundary"
 
     def test_snap_rejects_non_positive_alignment(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify a non-positive alignment raises ValueError instead of corrupting the cursor.

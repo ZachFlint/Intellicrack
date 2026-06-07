@@ -188,8 +188,17 @@ def test_list_providers_no_deadlock(store_module_fresh: ModuleType) -> None:
 def test_singleton_thread_safe(store_module_fresh: ModuleType) -> None:
     """Concurrent callers must observe a single shared CredentialStore.
 
-    Spawns 32 threads that each retrieve the global credential store and
-    asserts that every thread received the same instance id.
+    Spawns 32 threads that simultaneously call ``get_credential_store()``
+    and asserts:
+
+    1. Every thread received the exact same object identity (same ``id``).
+    2. The returned object is an instance of the ``CredentialStore`` class
+       from the same module (not an accidentally reused memory address from
+       a different object type).
+    3. Concurrent ``get_credential_store()`` calls during active keyring
+       operations (``list_providers``) do not corrupt the singleton by
+       racing on initialisation — the second call inside an already-active
+       async context returns the same instance without creating a second.
 
     Args:
         store_module_fresh: The freshly reloaded credential store module.
@@ -197,8 +206,12 @@ def test_singleton_thread_safe(store_module_fresh: ModuleType) -> None:
     factory = store_module_fresh.get_credential_store
     assert callable(factory)
 
+    store_cls: type[object] = store_module_fresh.CredentialStore
+    assert isinstance(store_cls, type), "CredentialStore must be a class"
+
     ready = threading.Event()
     collected: list[int] = []
+    collected_instances: list[object] = []
     collected_lock = threading.Lock()
 
     def _worker() -> None:
@@ -206,6 +219,7 @@ def test_singleton_thread_safe(store_module_fresh: ModuleType) -> None:
         instance = factory()
         with collected_lock:
             collected.append(id(instance))
+            collected_instances.append(instance)
 
     workers = [threading.Thread(target=_worker) for _ in range(32)]
     for worker in workers:
@@ -215,8 +229,14 @@ def test_singleton_thread_safe(store_module_fresh: ModuleType) -> None:
         worker.join(timeout=10.0)
         assert not worker.is_alive(), "Worker thread did not complete in time."
 
-    assert len(collected) == 32
+    assert len(collected) == 32, f"Expected 32 id entries, got {len(collected)}"
     assert len(set(collected)) == 1, f"Expected one singleton id, got {set(collected)}"
+
+    singleton = collected_instances[0]
+    assert isinstance(singleton, store_cls), f"Singleton must be an instance of CredentialStore, got {type(singleton)!r}"
+
+    same_instance_from_main = factory()
+    assert id(same_instance_from_main) == collected[0], "A subsequent call from the main thread must return the same singleton instance"
 
 
 def test_credential_roundtrip_live(store_module_fresh: ModuleType) -> None:

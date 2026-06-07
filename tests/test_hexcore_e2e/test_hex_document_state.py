@@ -696,6 +696,108 @@ class TestReentrancyGuard:
         assert events[1][1]["offset"] == 2
 
 
+class TestCallbackErrorPaths:
+    """Tests for error handling in callback dispatch."""
+
+    def test_raising_callback_does_not_propagate_exception(self) -> None:
+        """A callback that raises ValueError is caught; the caller is unaffected.
+
+        The production _dispatch_one catches RuntimeError, TypeError,
+        ValueError, and OSError. This test confirms ValueError from a
+        callback never escapes set_cursor to the caller.
+        """
+        state = HexDocumentState()
+        good_events: list[HexDocumentEvent] = []
+        deliberate_failure = "deliberate failure"
+
+        def bad_cb(_event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            raise ValueError(deliberate_failure)
+
+        def good_cb(event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            good_events.append(event_type)
+
+        state.register_callback(bad_cb)
+        state.register_callback(good_cb)
+        state.set_cursor(42)
+
+        assert good_events == [HexDocumentEvent.CURSOR_MOVED]
+
+    def test_raising_callback_does_not_block_subsequent_callbacks(self) -> None:
+        """All callbacks after a raising one still receive the event.
+
+        Verifies that the try/except in _dispatch_one is per-callback, not
+        per-dispatch, so a single bad callback cannot silence the rest.
+        """
+        state = HexDocumentState()
+        received: list[str] = []
+        first_fail_msg = "first callback fails"
+
+        def cb_a(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+            raise RuntimeError(first_fail_msg)
+
+        def cb_b(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+            received.append("b")
+
+        def cb_c(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+            received.append("c")
+
+        state.register_callback(cb_a)
+        state.register_callback(cb_b)
+        state.register_callback(cb_c)
+        state.set_cursor(1)
+
+        assert received == ["b", "c"]
+
+    def test_raising_callback_cursor_offset_still_updated(self) -> None:
+        """State mutation completes even if a callback raises.
+
+        set_cursor updates _cursor_offset before dispatching. If dispatch
+        triggers a caught callback exception, the offset must already be
+        committed and visible through the property.
+        """
+        state = HexDocumentState()
+        io_failure_msg = "io failure"
+
+        def bad_cb(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+            raise OSError(io_failure_msg)
+
+        state.register_callback(bad_cb)
+        state.set_cursor(999)
+
+        assert state.cursor_offset == 999
+
+    def test_concurrent_set_document_does_not_deadlock(self) -> None:
+        """Concurrent set_document calls from multiple threads complete without deadlock.
+
+        Spawns threads each calling set_document alternately with a real
+        document and None. All threads must finish within the join timeout,
+        and no RuntimeError may propagate.
+        """
+        state = HexDocumentState()
+        errors: list[Exception] = []
+        lock = threading.Lock()
+
+        def do_set(i: int) -> None:
+            try:
+                if i % 2 == 0:
+                    state.set_document(_DummyDoc(), None)
+                else:
+                    state.set_document(None, None)
+            except RuntimeError as exc:
+                with lock:
+                    errors.append(exc)
+
+        threads = [threading.Thread(target=do_set, args=(i,)) for i in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=10.0)
+
+        still_alive = [t for t in threads if t.is_alive()]
+        assert not still_alive, f"{len(still_alive)} thread(s) did not finish — possible deadlock"
+        assert not errors
+
+
 class TestThreadSafety:
     """Tests for thread-safe callback registration and concurrent state operations."""
 

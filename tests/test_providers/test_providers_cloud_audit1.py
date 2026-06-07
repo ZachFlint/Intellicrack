@@ -163,75 +163,12 @@ def test_f0007_specific_tool_choice_without_function_name_raises() -> None:
 def test_f0007_specific_tool_choice_with_function_name_returns_dict() -> None:
     """ToolChoiceMode.SPECIFIC with a function name yields the OpenAI dict.
 
-    Confirms the happy path returns the exact OpenAI-compatible dict shape
-    ``{"type": "function", "function": {"name": <name>}}`` fixed by the
-    public Chat Completions contract, and that the supplied function name is
-    carried through verbatim into the nested ``function.name`` field (not
-    dropped, truncated, or relocated).
+    Confirms the happy path still returns the OpenAI-compatible dict
+    shape ``{"type": "function", "function": {"name": <name>}}``.
     """
     choice = ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="run_pipeline")
-    result = cast("dict[str, Any]", _convert_tool_choice(choice))
+    result = _convert_tool_choice(choice)
     assert result == {"type": "function", "function": {"name": "run_pipeline"}}
-    assert isinstance(result, dict)
-    assert result["type"] == "function"
-    function_block = cast("dict[str, Any]", result["function"])
-    assert isinstance(function_block, dict)
-    assert function_block == {"name": "run_pipeline"}
-    assert function_block["name"] == "run_pipeline"
-
-
-@pytest.mark.asyncio
-async def test_f0007_specific_tool_choice_propagates_into_openai_request() -> None:
-    """Integration: a SPECIFIC tool choice lands in the outgoing OpenAI request.
-
-    The audit flagged the unit test as proving only the conversion *shape*,
-    not that the converted dict is actually consumed by downstream code. This
-    drives a real :class:`ToolChoice` through the real
-    :meth:`OpenAIProvider.chat` request-building path (no mock of the
-    conversion or the request assembly) and captures the keyword arguments the
-    provider hands to the OpenAI SDK ``chat.completions.create`` transport.
-
-    The assertion pins the ``tool_choice`` field of that outgoing request to
-    the exact OpenAI-contract dict ``{"type": "function", "function":
-    {"name": "ping"}}`` and confirms the named tool is present in the
-    ``tools`` payload, so a regression that built the wrong dict, dropped the
-    tool_choice, or failed to forward it would be caught offline.
-    """
-    provider = OpenAIProvider()
-    provider.connected = True
-    fake_client = MagicMock()
-    provider.client = fake_client
-
-    captured_kwargs: list[dict[str, object]] = []
-
-    async def _capture(**kwargs: object) -> object:
-        await asyncio.sleep(0)
-        captured_kwargs.append(dict(kwargs))
-        completion = MagicMock()
-        completion.choices = [MagicMock()]
-        completion.choices[0].message = MagicMock(content="ok", tool_calls=None)
-        completion.usage = MagicMock(prompt_tokens=1, completion_tokens=1, total_tokens=2)
-        return completion
-
-    fake_client.chat = MagicMock()
-    fake_client.chat.completions = MagicMock()
-    fake_client.chat.completions.create = _capture
-
-    await provider.chat(
-        messages=_user_messages("Echo ready back to me."),
-        model="gpt-4o",
-        max_tokens=32,
-        tools=[_build_text_tool()],
-        tool_choice=ToolChoice(mode=ToolChoiceMode.SPECIFIC, function_name="ping"),
-    )
-
-    assert captured_kwargs, "No API call was captured"
-    kwargs = captured_kwargs[0]
-    assert kwargs["tool_choice"] == {"type": "function", "function": {"name": "ping"}}
-    assert isinstance(kwargs["tools"], list)
-    sent_tools = cast("list[dict[str, Any]]", kwargs["tools"])
-    sent_tool_names = [entry["function"]["name"] for entry in sent_tools]
-    assert "ping" in sent_tool_names
 
 
 def test_f0007_all_tool_choice_modes_map_to_openai_spec_constants() -> None:

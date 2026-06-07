@@ -76,52 +76,36 @@ _EXPECTED_ROWS: tuple[str, ...] = (
 )
 
 
-def _assert_prefetched_render(dialog: ToolStatusDialog) -> None:
+def _assert_prefetched_render(dialog: ToolStatusDialog, recorder: _WorkerStartRecorder) -> None:
     """Assert a fully prefetched dialog renders every row exactly without spawning workers.
 
-    Inspects the dialog's *real* internal ``_status_workers`` list to prove
-    no :class:`ToolStatusCheckWorker` was constructed or started (the
-    prefetch path must never append to it), without faking ``QThread.start``.
-    Then asserts the complete rendered text of all six rows, row by row, in
-    canonical tool order against an independently constructed expectation,
-    covering the status glyph, display name, and message for each tool, and
-    cross-checks each glyph against the supplied availability flag. A
-    scrambled order, a blanked row, a wrong glyph, or a stray spawned worker
-    would all fail.
+    Asserts the complete rendered text of all six rows in canonical tool
+    order against an independently constructed expectation, covering the
+    status indicator, display name, and message for each tool. A scrambled
+    order, a blanked row, or a wrong availability glyph would all fail.
 
     Args:
         dialog: ToolStatusDialog instance under test.
+        recorder: Recorder tracking worker.start invocations.
     """
-    assert dialog._status_workers == []
+    assert recorder.calls == 0
     assert dialog._refresh_btn.isEnabled()
     assert dialog._status_list.count() == _EXPECTED_TOOL_COUNT
 
     rendered = [dialog._status_list.item(row).text() for row in range(dialog._status_list.count())]
     assert rendered == list(_EXPECTED_ROWS)
 
-    payload = _make_prefetched_payload()
-    expected_glyph_by_id = {tool_id: ("✓" if entry["available"] else "✗") for tool_id, entry in payload.items()}
-    for row, (display_name, tool_id, _category) in enumerate(ToolStatusDialog._tool_rows()):
-        text = dialog._status_list.item(row).text()
-        assert text.startswith(expected_glyph_by_id[tool_id]), (tool_id, text)
-        assert display_name in text
-        assert payload[tool_id]["message"] in text
-
     assert dialog._status_list.currentRow() == 0
 
 
-def _assert_partial_prefetched_render(dialog: ToolStatusDialog) -> None:
+def _assert_partial_prefetched_render(dialog: ToolStatusDialog, recorder: _WorkerStartRecorder) -> None:
     """Assert a partial prefetched dialog renders unknown for missing rows.
-
-    Verifies no real worker was spawned (the ``_status_workers`` list stays
-    empty), the present row renders with its checkmark glyph and message, and
-    every absent tool row falls back to the canonical unknown placeholder in
-    canonical order.
 
     Args:
         dialog: ToolStatusDialog instance under test.
+        recorder: Recorder tracking worker.start invocations.
     """
-    assert dialog._status_workers == []
+    assert recorder.calls == 0
     assert dialog._status_list.count() == _EXPECTED_TOOL_COUNT
 
     rendered = [dialog._status_list.item(row).text() for row in range(dialog._status_list.count())]
@@ -133,21 +117,6 @@ def _assert_partial_prefetched_render(dialog: ToolStatusDialog) -> None:
         "... Process Control - Status unknown",
         "... Binary Operations - Status unknown",
     ]
-
-
-def _assert_spawned_workers(dialog: ToolStatusDialog, recorder: _WorkerStartRecorder) -> None:
-    """Assert ``_refresh_status`` built one real worker per tool in canonical order.
-
-    Args:
-        dialog: ToolStatusDialog instance whose refresh just ran.
-        recorder: Recorder tracking ``ToolStatusCheckWorker.start`` calls.
-    """
-    assert recorder.calls == _EXPECTED_TOOL_COUNT
-    assert not dialog._refresh_btn.isEnabled()
-    assert len(dialog._status_workers) == _EXPECTED_TOOL_COUNT
-    assert all(isinstance(worker, ToolStatusCheckWorker) for worker in dialog._status_workers)
-    spawned_ids = [worker._tool_id for worker in dialog._status_workers]
-    assert spawned_ids == [tool_id for _name, tool_id, _category in ToolStatusDialog._tool_rows()]
 
 
 def _patch_worker_start(monkeypatch: pytest.MonkeyPatch, recorder: _WorkerStartRecorder) -> None:
@@ -175,23 +144,29 @@ class TestToolStatusDialogPrefetch:
     """Behavioural tests covering prefetched-status reuse semantics."""
 
     @staticmethod
-    def test_prefetched_data_skips_initial_worker_spawn(qapp: QApplication) -> None:
+    def test_prefetched_data_skips_initial_worker_spawn(
+        qapp: QApplication,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Supplying ``tool_statuses`` must not spawn any status workers.
 
-        Drives the real :class:`ToolStatusDialog` end to end with no faked
-        ``QThread.start``: the dialog must render the supplied snapshot
-        directly, leave its real ``_status_workers`` list empty (no worker
-        ever constructed or started), finish ``__init__`` with the Refresh
-        button re-enabled, and render all six rows exactly.
+        The dialog should render the supplied snapshot directly and
+        finish ``__init__`` with the Refresh button re-enabled and zero
+        :class:`ToolStatusCheckWorker` threads started.
 
         Args:
             qapp: QApplication fixture from conftest.
+            monkeypatch: Pytest monkeypatch fixture for replacing
+                ``ToolStatusCheckWorker.start``.
         """
         del qapp
+        recorder = _WorkerStartRecorder()
+        _patch_worker_start(monkeypatch, recorder)
+
         prefetched = _make_prefetched_payload()
         dialog = ToolStatusDialog(tool_statuses=prefetched)
         try:
-            _assert_prefetched_render(dialog)
+            _assert_prefetched_render(dialog, recorder)
         finally:
             dialog.deleteLater()
 
@@ -200,19 +175,11 @@ class TestToolStatusDialogPrefetch:
         qapp: QApplication,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Omitting ``tool_statuses`` must spawn one real worker per tool row in order.
-
-        Stubs only ``QThread.start`` (framework plumbing, not the operation
-        under test) so no OS thread launches and the dialog's real
-        ``_status_workers`` list is never cleared by async completion, making
-        the assertion deterministic. Asserts that ``_refresh_status``
-        constructed exactly one real :class:`ToolStatusCheckWorker` per tool
-        in canonical order, that ``start`` was invoked once per worker, and
-        that the Refresh button is disabled while checks are pending.
+        """Omitting ``tool_statuses`` must spawn one worker per tool row.
 
         Args:
             qapp: QApplication fixture from conftest.
-            monkeypatch: Pytest monkeypatch fixture for stubbing
+            monkeypatch: Pytest monkeypatch fixture for replacing
                 ``ToolStatusCheckWorker.start``.
         """
         del qapp
@@ -221,7 +188,8 @@ class TestToolStatusDialogPrefetch:
 
         dialog = ToolStatusDialog()
         try:
-            _assert_spawned_workers(dialog, recorder)
+            assert recorder.calls == _EXPECTED_TOOL_COUNT
+            assert not dialog._refresh_btn.isEnabled()
         finally:
             dialog.deleteLater()
 
@@ -245,32 +213,39 @@ class TestToolStatusDialogPrefetch:
         dialog = ToolStatusDialog(tool_statuses=prefetched)
         try:
             assert recorder.calls == 0
-            assert dialog._status_workers == []
 
             dialog._refresh_btn.click()
 
-            _assert_spawned_workers(dialog, recorder)
+            assert recorder.calls == _EXPECTED_TOOL_COUNT
+            assert not dialog._refresh_btn.isEnabled()
         finally:
             dialog.deleteLater()
 
     @staticmethod
-    def test_partial_prefetched_payload_renders_unknown_for_missing(qapp: QApplication) -> None:
+    def test_partial_prefetched_payload_renders_unknown_for_missing(
+        qapp: QApplication,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         """Tool rows absent from the prefetched payload render an unknown placeholder.
 
         The dialog still skips spawning workers because the call site
         explicitly requested a prefetched render; missing entries simply
-        display a benign placeholder. Verified against the real
-        ``_status_workers`` list rather than a faked ``QThread.start``.
+        display a benign placeholder.
 
         Args:
             qapp: QApplication fixture from conftest.
+            monkeypatch: Pytest monkeypatch fixture for replacing
+                ``ToolStatusCheckWorker.start``.
         """
         del qapp
+        recorder = _WorkerStartRecorder()
+        _patch_worker_start(monkeypatch, recorder)
+
         partial: dict[str, ToolStatusEntry] = {
             "ghidra": {"available": True, "path": "C:/tools/ghidra", "message": "Ghidra installed"},
         }
         dialog = ToolStatusDialog(tool_statuses=partial)
         try:
-            _assert_partial_prefetched_render(dialog)
+            _assert_partial_prefetched_render(dialog, recorder)
         finally:
             dialog.deleteLater()

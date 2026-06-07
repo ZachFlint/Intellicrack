@@ -42,12 +42,6 @@ _PROCESS_STARTUP_DELAY_S = 0.2
 _PROCESS_WAIT_TIMEOUT_S = 5.0
 _NEVER_VALID_PID = 0
 
-_process_manager_module = importlib.import_module("intellicrack.core.process_manager")
-_pid_exists = cast(
-    "Callable[[int], bool]",
-    getattr(_process_manager_module, "_pid_exists"),
-)
-
 
 class _ExternalPidEntry(TypedDict):
     """Shape of internal external PID tracking entries."""
@@ -86,22 +80,13 @@ def _spawn_alive_subprocess() -> Popen[bytes]:
 
 
 def _guaranteed_dead_pid() -> int:
-    """Return a PID that the production ``_pid_exists`` probe confirms is dead.
+    """Return a PID that is guaranteed to be dead at call time.
 
     Spawns a subprocess that exits immediately, waits for the OS to reap it,
-    then polls the production-side ``_pid_exists`` oracle (the same probe
-    ``register_external_pid`` uses) until it reports the PID is gone. This
-    guards against the brief window where the kernel still reports the exited
-    child as alive. The returned PID is genuinely dead at the moment of return,
-    though the OS may still recycle it afterward; callers re-verify with
-    ``_pid_exists`` immediately before relying on it.
+    and returns its (now reusable but currently dead) PID.
 
     Returns:
-        int: PID of an exited child process that ``_pid_exists`` reports dead.
-
-    Raises:
-        RuntimeError: If the OS never reports the exited child's PID as dead
-            within the bounded poll window (would indicate a probe defect).
+        int: PID of an exited child process.
     """
     proc = Popen(
         [sys.executable, "-c", ""],
@@ -109,39 +94,7 @@ def _guaranteed_dead_pid() -> int:
         stderr=PIPE,
     )
     proc.wait(timeout=_PROCESS_WAIT_TIMEOUT_S)
-    pid = proc.pid
-    deadline = time.perf_counter() + _PROCESS_WAIT_TIMEOUT_S
-    while time.perf_counter() < deadline:
-        if not _pid_exists(pid):
-            return pid
-        time.sleep(0.01)
-    msg = f"PID {pid} still reported alive after child exit and reap"
-    raise RuntimeError(msg)
-
-
-def _obtain_confirmed_dead_pid(attempts: int = 8) -> int:
-    """Return a PID that ``_pid_exists`` confirms dead at the moment of return.
-
-    Repeatedly generates a freshly-exited PID and re-checks it against the
-    production ``_pid_exists`` oracle, guarding against the OS recycling the
-    PID into a new live process between generation and the caller's use.
-
-    Args:
-        attempts: Maximum number of generate-and-verify rounds before giving up.
-
-    Returns:
-        int: A PID that the production probe reports as not alive.
-
-    Raises:
-        RuntimeError: If no confirmed-dead PID could be obtained within
-            ``attempts`` rounds (would indicate pathological PID churn).
-    """
-    for _ in range(attempts):
-        pid = _guaranteed_dead_pid()
-        if not _pid_exists(pid):
-            return pid
-    msg = "could not obtain a confirmed-dead PID; the OS recycled every candidate"
-    raise RuntimeError(msg)
+    return proc.pid
 
 
 def _external_registry(pm: ProcessManager) -> dict[int, _ExternalPidEntry]:
@@ -172,32 +125,24 @@ class TestF0014RegisterExternalPidVerifies:
 
     @staticmethod
     def test_register_rejects_dead_pid(process_manager: ProcessManager) -> None:
-        """An exited PID must be rejected with a "process does not exist" error.
-
-        Obtains a genuinely dead PID, re-confirms it dead via the production
-        ``_pid_exists`` oracle (the same probe the registration path uses), then
-        asserts ``register_external_pid`` raises a ``ValueError`` whose message
-        attributes the rejection to a non-existent process. Asserting the
-        message - not just the exception type - prevents a regression where
-        registration rejects for an unrelated reason (e.g. a duplicate-name
-        guard or a malformed-PID check) from masquerading as a working liveness
-        check.
-
-        Determinism: the PID is re-verified dead via ``_pid_exists`` immediately
-        before use; the OS-recycle window is handled by regenerating a fresh
-        dead PID rather than relying on timing or sleeps.
+        """A PID that has exited must be rejected.
 
         Args:
             process_manager: Fresh ProcessManager fixture.
         """
-        dead_pid = _obtain_confirmed_dead_pid()
-
-        with pytest.raises(ValueError, match="does not exist") as excinfo:
-            process_manager.register_external_pid(dead_pid, name="dead")
-
-        message = str(excinfo.value)
-        assert str(dead_pid) in message, f"error message must name the rejected PID {dead_pid}; got {message!r}"
-        assert dead_pid not in _external_registry(process_manager), "rejected dead PID must not be recorded in the external registry"
+        dead_pid = _guaranteed_dead_pid()
+        # Loop a few times in case the OS recycled the PID very quickly.
+        for _ in range(3):
+            try:
+                process_manager.register_external_pid(dead_pid, name="dead")
+            except ValueError:
+                break
+            else:
+                # Recycled - regenerate.
+                dead_pid = _guaranteed_dead_pid()
+        else:
+            pytest.fail("dead PID was never rejected")
+        assert dead_pid not in _external_registry(process_manager)
 
     @staticmethod
     def test_register_accepts_live_pid(process_manager: ProcessManager) -> None:

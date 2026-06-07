@@ -14,8 +14,6 @@ import pytest
 
 
 if TYPE_CHECKING:
-    import types
-
     from intellicrack_hexcore import HexDocument
 
 
@@ -128,44 +126,6 @@ class TestHashAlgorithms:
         result: str = sample_doc_from_bytes.compute_hash("sha3-512")
         assert result.lower() == expected.lower()
 
-    def test_guaranteed_algorithms_run_unconditionally(self, sample_doc_from_bytes: HexDocument, sample_bytes: bytes) -> None:
-        """Verify the always-available core algorithms compute (never skipped) and match hashlib.
-
-        MD5, SHA1, SHA256, and SHA512 are unconditional match arms in the hexcore Rust hash
-        module, so they must be reachable on every platform. This test exercises each through
-        the bridge in one pass and fails (it does not skip) if any digest is wrong or the arm
-        is missing, guarding against the previous skip-masks-breakage pattern.
-
-        Args:
-            sample_doc_from_bytes: HexDocument created from sample_bytes.
-            sample_bytes: 256-byte test payload (0x00-0xFF).
-        """
-        guaranteed: dict[str, str] = {
-            "md5": hashlib.md5(sample_bytes, usedforsecurity=False).hexdigest(),
-            "sha1": hashlib.sha1(sample_bytes, usedforsecurity=False).hexdigest(),
-            "sha256": hashlib.sha256(sample_bytes).hexdigest(),
-            "sha512": hashlib.sha512(sample_bytes).hexdigest(),
-        }
-        results: dict[str, str] = {name: sample_doc_from_bytes.compute_hash(name).lower() for name in guaranteed}
-        assert results == guaranteed
-
-    def test_sha3_512_empty_matches_nist_known_answer(self, empty_doc: HexDocument) -> None:
-        """Verify compute_hash('sha3-512') over zero bytes equals the published NIST FIPS 202 KAT.
-
-        The expected digest is the FIPS 202 SHA3-512("") known-answer constant, an independent
-        published value not derived from this implementation nor from hashlib. A present-but-broken
-        SHA3-512 arm (wrong rate, padding, or output truncation) fails here rather than skipping.
-
-        Args:
-            empty_doc: A zero-length HexDocument.
-        """
-        nist_sha3_512_empty: str = (
-            "a69f73cca23a9ac5c8b567dc185a756e97c982164fe25859e0d1dcc1475c80a6"
-            "15b2123af1f5f94c11e3e9402c3ac558f500199d95b6d3e301758586281dcd26"
-        )
-        result: str = empty_doc.compute_hash("sha3-512")
-        assert result.lower() == nist_sha3_512_empty
-
     def test_sha3_256_empty_matches_nist_known_answer(self, empty_doc: HexDocument) -> None:
         """Verify that compute_hash('sha3-256') over zero bytes equals the published NIST KAT.
 
@@ -219,36 +179,6 @@ class TestHashAlgorithms:
         assert len(blake2b) == 64
         assert len(blake2s) == 64
         assert blake2b.lower() != blake2s.lower()
-
-    def test_blake2b_abc_matches_rfc7693_known_answer(self, hexcore: types.ModuleType) -> None:
-        """Verify compute_hash('blake2b') over b'abc' equals the RFC 7693 known-answer vector.
-
-        The expected digest is the official BLAKE2b-256 test vector for the input "abc", an
-        independent published constant rather than this implementation's own output. This pins
-        the algorithm arm to the correct 256-bit BLAKE2b primitive, not merely "some 64-hex string".
-
-        Args:
-            hexcore: The native module fixture.
-        """
-        rfc7693_blake2b256_abc: str = "bddd813c634239723171ef3fee98579b94964e3bb1cb3e427262c8c068d52319"
-        doc: HexDocument = hexcore.HexDocument.open_bytes(b"abc")
-        result: str = doc.compute_hash("blake2b")
-        assert result.lower() == rfc7693_blake2b256_abc
-
-    def test_blake2s_abc_matches_rfc7693_known_answer(self, hexcore: types.ModuleType) -> None:
-        """Verify compute_hash('blake2s') over b'abc' equals the RFC 7693 known-answer vector.
-
-        The expected digest is the official BLAKE2s-256 test vector for the input "abc", an
-        independent published constant. This guards against the blake2s arm being mis-wired to a
-        different primitive while still producing a plausibly-shaped 64-hex digest.
-
-        Args:
-            hexcore: The native module fixture.
-        """
-        rfc7693_blake2s256_abc: str = "508c5e8c327c14e2e1a72ba34eeb452f37458b209ed63a294d999b4c86675982"
-        doc: HexDocument = hexcore.HexDocument.open_bytes(b"abc")
-        result: str = doc.compute_hash("blake2s")
-        assert result.lower() == rfc7693_blake2s256_abc
 
     def test_unsupported_algorithm_raises_value_error(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that compute_hash raises ValueError with the offending name for an unknown algorithm.

@@ -19,7 +19,7 @@ from __future__ import annotations
 import importlib
 import json
 import sys
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import pytest
 
@@ -27,7 +27,12 @@ from intellicrack.bridges.ghidra import GhidraBridge
 from intellicrack.core.types import ToolError, ToolName
 
 
+if TYPE_CHECKING:
+    from types import ModuleType
+
+
 _EXPECTED_TOOL_COUNT: Final[int] = 81
+_GHIDRA_DEFAULT_PORT: Final[int] = 4768
 _TEST_ADDRESS: Final[int] = 0x401000
 _TEST_RADIUS: Final[int] = 0x100
 _MIN_DESCRIPTION_LEN: Final[int] = 5
@@ -43,10 +48,45 @@ def bridge() -> GhidraBridge:
     return GhidraBridge()
 
 
-def test_bridge_instantiation() -> None:
-    """Verify GhidraBridge can be instantiated."""
+def test_bridge_instantiation_initializes_real_state() -> None:
+    """Verify a fresh GhidraBridge is initialized with correct, usable state.
+
+    A constructor that became a no-op (or returned an object without its
+    declared capabilities, default RPC port, or unset connection state) must
+    fail this test. The expected values are independently fixed by the
+    documented Ghidra integration contract, not copied from the constructor.
+    """
     b = GhidraBridge()
-    assert b is not None
+
+    assert b.name is ToolName.GHIDRA
+
+    assert b.ghidra_path is None
+    assert b.project_path is None
+    assert b.DEFAULT_PORT == _GHIDRA_DEFAULT_PORT
+
+    caps = b.capabilities
+    assert caps.supports_static_analysis is True
+    assert caps.supports_decompilation is True
+    assert caps.supports_scripting is True
+    assert caps.supports_patching is False
+    assert caps.supported_formats == ["pe", "elf", "macho", "raw", "coff"]
+    assert caps.supported_architectures == [
+        "x86",
+        "x86_64",
+        "arm",
+        "arm64",
+        "mips",
+        "mips64",
+        "ppc",
+        "ppc64",
+        "sparc",
+        "riscv",
+        "riscv64",
+    ]
+
+    tool_def = b.tool_definition
+    assert tool_def.tool_name is ToolName.GHIDRA
+    assert len(tool_def.functions) == _EXPECTED_TOOL_COUNT
 
 
 def test_bridge_name(bridge: GhidraBridge) -> None:
@@ -421,7 +461,7 @@ class TestQueryMethodsRaiseWhenDisconnected:
         """Verify initialize raises ToolError when ghidra_bridge import fails."""
         bridge = GhidraBridge()
         saved = sys.modules.get("ghidra_bridge")
-        sys.modules["ghidra_bridge"] = None  # type: ignore[assignment]
+        sys.modules["ghidra_bridge"] = cast("ModuleType", None)
         try:
             with pytest.raises(ToolError, match="not installed"):
                 await bridge.initialize()

@@ -201,16 +201,17 @@ class TestCFGGraphScene:
 
     @staticmethod
     def test_load_graph_positions_blocks() -> None:
-        """Verify blocks receive non-origin positions after layout."""
+        """Verify blocks receive non-origin positions after layout.
+
+        At least two distinct block positions must exist: the entry block and
+        the return block must be on different Y levels because the layout
+        algorithm assigns layers top-to-bottom.
+        """
         scene = CFGGraphScene()
         scene.load_graph(SAMPLE_BLOCKS)
-        has_nonzero = False
-        for item in scene.block_items.values():
-            pos = item.pos()
-            if abs(pos.x()) > FLOAT_EPSILON or abs(pos.y()) > FLOAT_EPSILON:
-                has_nonzero = True
-                break
-        assert has_nonzero
+        entry_y = scene.block_items[BLOCK_ADDR_ENTRY].pos().y()
+        ret_y = scene.block_items[BLOCK_ADDR_RET].pos().y()
+        assert ret_y > entry_y, f"return block (y={ret_y}) must be below entry block (y={entry_y}) in layered layout"
 
     @staticmethod
     def test_load_graph_creates_edges() -> None:
@@ -329,8 +330,18 @@ class TestCFGGraphView:
 
     @staticmethod
     def test_load_and_display_full_graph() -> None:
-        """Verify loading sample blocks populates the scene with items."""
+        """Verify loading sample blocks populates the scene with the correct item mix.
+
+        SAMPLE_BLOCKS defines 4 basic blocks with 4 directed edges (entry->true,
+        entry->false, true->ret, false->ret).  The scene must contain exactly
+        4 ``BasicBlockItem`` instances and at least 4 ``EdgeItem`` instances.
+        """
         view = CFGGraphView()
         view.graph_scene().load_graph(SAMPLE_BLOCKS)
-        items = view.scene().items()
-        assert len(items) > 0
+        all_items = view.scene().items()
+        block_items = [i for i in all_items if isinstance(i, BasicBlockItem)]
+        edge_items = [i for i in all_items if isinstance(i, EdgeItem)]
+        assert len(block_items) == EXPECTED_SAMPLE_BLOCK_COUNT, (
+            f"expected {EXPECTED_SAMPLE_BLOCK_COUNT} BasicBlockItems, got {len(block_items)}"
+        )
+        assert len(edge_items) >= 4, f"expected at least 4 EdgeItems for 4 directed edges, got {len(edge_items)}"

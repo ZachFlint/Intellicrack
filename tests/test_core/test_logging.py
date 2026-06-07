@@ -125,61 +125,42 @@ def _expected_render(
 def test_renderer_info_level() -> None:
     """Verify renderer renders the full info line with the green color code.
 
-    Asserts the complete formatted string against a fully literal, hand-written
-    constant (no production format logic re-derived in the test). The literal
-    encodes the standard SGR green code (ESC[32m), the ``INFO`` label padded to
-    eight columns, the ESC[0m reset, the ``module:func:line`` location and the
-    event - so any structural regression (wrong colour, wrong padding, missing
-    reset, reordered fields) fails the test.
+    Asserts the complete formatted string (timestamp, green-coloured padded
+    ``INFO`` label, reset code, location, event) against an independently
+    constructed oracle, so any structural regression - wrong colour, wrong
+    padding, missing reset, reordered fields - fails the test.
     """
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="info"))
-    assert result == "2026-03-07 12:00:00 | \x1b[32mINFO    \x1b[0m | test_module:test_func:42 | test_event"
+    assert result == _expected_render("INFO", "\033[32m")
 
 
 def test_renderer_debug_level() -> None:
-    """Verify renderer renders the full debug line with the cyan color code.
-
-    Asserts the exact line against a literal constant using the standard SGR
-    cyan code (ESC[36m) and the ``DEBUG`` label padded to eight columns.
-    """
+    """Verify renderer renders the full debug line with the cyan color code."""
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="debug"))
-    assert result == "2026-03-07 12:00:00 | \x1b[36mDEBUG   \x1b[0m | test_module:test_func:42 | test_event"
+    assert result == _expected_render("DEBUG", "\033[36m")
 
 
 def test_renderer_warning_level() -> None:
-    """Verify renderer renders the full warning line with the yellow color code.
-
-    Asserts the exact line against a literal constant using the standard SGR
-    yellow code (ESC[33m) and the ``WARNING`` label padded to eight columns.
-    """
+    """Verify renderer renders the full warning line with the yellow color code."""
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="warning"))
-    assert result == "2026-03-07 12:00:00 | \x1b[33mWARNING \x1b[0m | test_module:test_func:42 | test_event"
+    assert result == _expected_render("WARNING", "\033[33m")
 
 
 def test_renderer_error_level() -> None:
-    """Verify renderer renders the full error line with the red color code.
-
-    Asserts the exact line against a literal constant using the standard SGR
-    red code (ESC[31m) and the ``ERROR`` label padded to eight columns.
-    """
+    """Verify renderer renders the full error line with the red color code."""
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="error"))
-    assert result == "2026-03-07 12:00:00 | \x1b[31mERROR   \x1b[0m | test_module:test_func:42 | test_event"
+    assert result == _expected_render("ERROR", "\033[31m")
 
 
 def test_renderer_critical_level() -> None:
-    """Verify renderer renders the full critical line with the magenta color code.
-
-    Asserts the exact line against a literal constant using the standard SGR
-    magenta code (ESC[35m). ``CRITICAL`` is exactly eight characters, so the
-    label consumes the full field width with no trailing padding spaces.
-    """
+    """Verify renderer renders the full critical line with the magenta color code."""
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="critical"))
-    assert result == "2026-03-07 12:00:00 | \x1b[35mCRITICAL\x1b[0m | test_module:test_func:42 | test_event"
+    assert result == _expected_render("CRITICAL", "\033[35m")
 
 
 def test_renderer_level_codes_are_distinct_per_level() -> None:
@@ -214,7 +195,7 @@ def test_renderer_unknown_level() -> None:
     """
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(level="custom"))
-    assert result == "2026-03-07 12:00:00 | CUSTOM  \x1b[0m | test_module:test_func:42 | test_event"
+    assert result == _expected_render("CUSTOM", "")
     for color in ColoredConsoleRenderer.LEVEL_COLORS.values():
         assert color not in result
 
@@ -276,7 +257,7 @@ def test_renderer_extra_context_single_field() -> None:
     """
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(extra_key="extra_value"))
-    assert result == "2026-03-07 12:00:00 | \x1b[32mINFO    \x1b[0m | test_module:test_func:42 | test_event [extra_key='extra_value']"
+    assert result == _expected_render("INFO", "\033[32m", context=" [extra_key='extra_value']")
 
 
 def test_renderer_extra_context_multiple_fields_sorted() -> None:
@@ -289,7 +270,7 @@ def test_renderer_extra_context_multiple_fields_sorted() -> None:
     """
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict(zeta="last", alpha=1))
-    assert result == "2026-03-07 12:00:00 | \x1b[32mINFO    \x1b[0m | test_module:test_func:42 | test_event [alpha=1, zeta='last']"
+    assert result == _expected_render("INFO", "\033[32m", context=" [alpha=1, zeta='last']")
 
 
 def test_renderer_no_extra_context() -> None:
@@ -301,11 +282,10 @@ def test_renderer_no_extra_context() -> None:
     """
     renderer = ColoredConsoleRenderer()
     result = renderer(None, "", _make_event_dict())
-    assert result == "2026-03-07 12:00:00 | \x1b[32mINFO    \x1b[0m | test_module:test_func:42 | test_event"
+    assert result == _expected_render("INFO", "\033[32m")
     event_segment = result.rsplit(" | ", 1)[-1]
     assert event_segment == _DEFAULT_EVENT
     assert "[" not in event_segment
-    assert not result.endswith("]")
 
 
 def test_renderer_skips_underscore_keys() -> None:

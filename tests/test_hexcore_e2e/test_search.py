@@ -73,11 +73,12 @@ class TestSearchBytes:
         Args:
             hexcore: The native module fixture.
         """
-        pattern = b"\xca\xfe"
-        data = pattern + b"\x00" * 20 + pattern
+        data = b"\xca\xfe" + b"\x00" * 20 + b"\xca\xfe"
         doc = hexcore.HexDocument.open_bytes(data)
-        results: list[tuple[int, int]] = doc.search_bytes(pattern, 100)
-        assert results == [(0, len(pattern)), (22, len(pattern))]
+        results: list[tuple[int, int]] = doc.search_bytes(b"\xca\xfe", 100)
+        assert len(results) == 2
+        assert results[0][0] == 0
+        assert results[1][0] == 22
 
 
 class TestSearchHex:

@@ -20,16 +20,18 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 from PyQt6.QtWidgets import QMessageBox
 
+from intellicrack.bridges.process import ProcessBridge
+from intellicrack.ui.panels.process_panel import system_tab as system_tab_module
 from intellicrack.ui.panels.process_panel.system_tab import SystemTab
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine
 
-    from intellicrack.bridges.process import ProcessBridge
-
 
 _BRIDGE_MODULE_PATH: str = "intellicrack.ui.panels.async_bridge.run_bridge_coroutine_async"
+
+_NOT_ATTACHED_MSG: str = "Not attached to any process"
 
 
 class _AsyncSuccess:
@@ -143,6 +145,56 @@ def _make_tab(*, pid: int | None) -> SystemTab:
     return tab
 
 
+def _make_real_bridge_tab(*, pid: int | None) -> SystemTab:
+    """Create a SystemTab wired to a genuine, unconnected ProcessBridge.
+
+    Unlike :func:`_make_tab`, this uses the real production ``ProcessBridge`` so
+    the unattached guard is exercised against a real bridge object rather than a
+    stub. The bridge is never initialised, so no Win32 handles are acquired.
+
+    Args:
+        pid: PID to attach (or None for the unattached scenario).
+
+    Returns:
+        SystemTab: A constructed SystemTab bound to a real ProcessBridge.
+    """
+    tab = SystemTab()
+    tab.set_bridge(ProcessBridge())
+    tab.set_attached_pid(pid)
+    return tab
+
+
+def _forbid_dispatch(monkeypatch: pytest.MonkeyPatch) -> list[object]:
+    """Replace the tab's coroutine-dispatch entry with a tripwire recorder.
+
+    ``SystemTab`` reaches the bridge exclusively through
+    ``run_bridge_coroutine_logged``. Patching that symbol in the tab's module
+    namespace lets the guard tests prove that no dispatch occurred when no PID
+    is attached, without faking the operation under test (the guard itself).
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture.
+
+    Returns:
+        list[object]: Receives one entry per dispatch attempt (must stay empty).
+    """
+    dispatched: list[object] = []
+
+    def _tripwire(coro: Coroutine[object, object, object], *_args: object, **_kwargs: object) -> None:
+        """Record an unexpected dispatch and close the coroutine.
+
+        Args:
+            coro: The coroutine that would have been dispatched.
+            *_args: Ignored positional arguments.
+            **_kwargs: Ignored keyword arguments.
+        """
+        coro.close()
+        dispatched.append(coro)
+
+    monkeypatch.setattr(system_tab_module, "run_bridge_coroutine_logged", _tripwire)
+    return dispatched
+
+
 def _capture_callbacks(
     monkeypatch: pytest.MonkeyPatch,
 ) -> list[tuple[object, Callable[[object], None] | None, Callable[[object], None] | None]]:
@@ -187,22 +239,39 @@ class TestUnattachedPidGuards:
         warning_calls: list[tuple[object, ...]],
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Clicking Query Mitigations with no PID shows a warning and skips dispatch.
+        """Query Mitigations with no PID, on a real bridge, warns and skips dispatch.
+
+        Drives the guard against a genuine, unconnected ``ProcessBridge`` (not a
+        stub) so the real ``set_bridge``/``set_attached_pid`` wiring and the real
+        early-guard path are exercised. Asserts the exact warning title and the
+        exact not-attached message the production code surfaces, that the
+        raw-output widget mirrors that message, and that the coroutine-dispatch
+        boundary is never reached. Corrupting the guard (dispatching anyway, or
+        emitting a different title/message) makes this test fail.
 
         Args:
             warning_calls: Recorder fixture for ``QMessageBox.warning`` invocations.
             monkeypatch: pytest monkeypatch fixture.
         """
-        tab = _make_tab(pid=None)
-        captured = _capture_callbacks(monkeypatch)
+        production_msg = getattr(system_tab_module, "_NOT_ATTACHED_MSG")
+        assert production_msg == _NOT_ATTACHED_MSG, "production not-attached message drifted from the asserted contract"
+
+        tab = _make_real_bridge_tab(pid=None)
+        dispatched = _forbid_dispatch(monkeypatch)
 
         getattr(tab, "_refresh_mitigations")()
 
-        assert captured == [], "no bridge call must occur when _attached_pid is None"
-        assert warning_calls, "QMessageBox.warning must be shown to the user"
-        title = warning_calls[0][1]
-        assert isinstance(title, str)
-        assert "Mitigations" in title
+        assert dispatched == [], "no bridge coroutine must be dispatched when no PID is attached"
+        assert len(warning_calls) == 1, "exactly one warning must be shown to the user"
+
+        warning_args = warning_calls[0]
+        title = warning_args[1]
+        message = warning_args[2]
+        assert title == "Query Mitigations"
+        assert message == _NOT_ATTACHED_MSG
+
+        raw_output = getattr(tab, "_raw_output")
+        assert raw_output.toPlainText() == _NOT_ATTACHED_MSG
 
     def test_on_gui_resources_unattached_shows_warning(
         self,

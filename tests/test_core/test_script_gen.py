@@ -330,25 +330,117 @@ def test_script_save_creates_parent_dirs(tmp_path: Path) -> None:
     assert deep_path.exists()
 
 
-@pytest.mark.parametrize(
-    ("language", "expected_ext"),
-    [
-        (ScriptLanguage.JAVASCRIPT, ".js"),
-        (ScriptLanguage.JAVA, ".java"),
-        (ScriptLanguage.PYTHON, ".py"),
-        (ScriptLanguage.R2_COMMANDS, ".r2"),
-        (ScriptLanguage.X64DBG_SCRIPT, ".txt"),
-    ],
-)
+_LANGUAGE_EXTENSIONS: Final[list[tuple[ScriptLanguage, str]]] = [
+    (ScriptLanguage.JAVASCRIPT, ".js"),
+    (ScriptLanguage.JAVA, ".java"),
+    (ScriptLanguage.PYTHON, ".py"),
+    (ScriptLanguage.R2_COMMANDS, ".r2"),
+    (ScriptLanguage.X64DBG_SCRIPT, ".txt"),
+]
+
+
+@pytest.mark.parametrize(("language", "expected_ext"), _LANGUAGE_EXTENSIONS)
 def test_script_get_extension(language: ScriptLanguage, expected_ext: str) -> None:
-    """Verify get_extension returns correct extension for each language.
+    """Verify get_extension returns the conventional extension for each language.
+
+    The expected extension is the well-known file-type convention for each
+    tool's scripts (Frida ``.js``, Ghidra ``.java``, Python ``.py``, Rizin/r2
+    ``.r2``, x64dbg ``.txt``) -- an oracle independent of the production map.
 
     Args:
         language: Script language.
-        expected_ext: Expected file extension.
+        expected_ext: Conventional file extension for that language.
     """
     script = _make_script(language=language)
     assert script.get_extension() == expected_ext
+
+
+@pytest.mark.parametrize(("language", "expected_ext"), _LANGUAGE_EXTENSIONS)
+def test_script_manager_save_uses_language_extension_on_disk(
+    language: ScriptLanguage,
+    expected_ext: str,
+    tmp_path: Path,
+) -> None:
+    """Verify ScriptManager.save_script writes a file named by the language enum.
+
+    This exercises the real persistence path: ``save_script`` derives the
+    on-disk filename from ``Script.get_extension()``. A regression in the
+    enum-to-extension mapping (or in the path-building logic that consumes
+    it) would produce a file with the wrong suffix and fail this test.
+
+    Args:
+        language: Script language driving the on-disk extension.
+        expected_ext: Conventional file extension for that language.
+        tmp_path: Pytest temporary directory.
+    """
+    mgr = ScriptManager(tmp_path)
+    body = f"// {language.value} payload"
+    mgr.add_script(_make_script(name="persisted", language=language, content=body), validate=False)
+
+    saved = mgr.save_script("persisted")
+
+    assert saved is not None
+    assert saved.exists()
+    assert saved.suffix == expected_ext
+    assert saved.name == f"persisted{expected_ext}"
+    assert saved.parent == tmp_path
+    assert saved.read_text(encoding="utf-8") == body
+
+
+def test_script_context_to_prompt_full_structure_exact_layout() -> None:
+    """Verify to_prompt_context emits the exact expected multi-section layout.
+
+    A fully populated context is rendered to its prompt form and compared
+    against a hand-written expected string. This pins the section order,
+    headers, address formatting, strategy-description expansion, and the
+    Frida API-reference footer -- any silent reordering, dropped section, or
+    formatting drift in the rich output is caught.
+    """
+    ctx = ScriptContext(
+        binary_name="app.exe",
+        architecture="x64",
+        platform="windows",
+        binary_path=Path("C:/bin/app.exe"),
+        module_base=_MODULE_BASE,
+        target_functions=[{"name": "checkLicense", "address": _FUNC_ADDR, "strategy": "return_true"}],
+        identified_protections=["VMProtect", "Themida"],
+        crypto_apis=["CryptDecrypt"],
+        string_references=["License expired"],
+        magic_constants=[_MAGIC_CONST],
+        additional_context={"compiler": "MSVC"},
+    )
+
+    result = ctx.to_prompt_context(language=ScriptLanguage.JAVASCRIPT)
+
+    strategy_desc = f"return_true ({BypassStrategy.RETURN_TRUE.description})"
+    frida_ref = get_frida_api_reference()
+    expected_lines = [
+        "Binary: app.exe",
+        "Architecture: x64",
+        "Platform: windows",
+        "Path: C:\\bin\\app.exe",
+        "Module Base: 0x400000",
+        "",
+        "Target Functions:",
+        f"  - checkLicense @ 0x401000 (strategy: {strategy_desc})",
+        "",
+        "Protections: VMProtect, Themida",
+        "",
+        "Crypto APIs: CryptDecrypt",
+        "",
+        "Relevant Strings:",
+        "  - 'License expired'",
+        "",
+        "Magic Constants:",
+        "  - 0xDEADBEEF (3735928559)",
+        "",
+        "Additional Analysis Context:",
+        "  - compiler: 'MSVC'",
+        "",
+        "JAVASCRIPT API Reference:",
+        *[f"  {category}: {usage}" for category, usage in frida_ref.items()],
+    ]
+    assert result == "\n".join(expected_lines)
 
 
 # --- ScriptValidator ---

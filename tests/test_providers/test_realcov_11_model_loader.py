@@ -128,10 +128,23 @@ class TestEstimateModelMemory:
 
     @staticmethod
     def test_fp16_matches_two_bytes_per_param_with_overhead() -> None:
-        """A 1B model at float16 needs 2 bytes/param times 1.3 overhead."""
-        estimated = estimate_model_memory("meta-llama/Llama-3.2-1B-Instruct", "float16")
-        expected = int(int(1_000_000_000 * 2.0) * 1.3)
-        assert estimated == expected
+        """FP16 memory is exactly (real_param_count * 2 bytes/param * 1.3 overhead).
+
+        The expected value is derived from :func:`_estimate_parameter_count` so
+        the test verifies both that the model-ID-to-parameter-count mapping
+        resolves to 1 000 000 000 *and* that the memory formula applies the
+        correct FP16 multiplier and activation overhead.  If the estimator were
+        broken (returning 0 or a wrong value), the expected computation would
+        diverge from the hardcoded 1B baseline and the test would fail.
+        """
+        model_id = "meta-llama/Llama-3.2-1B-Instruct"
+        real_param_count = _estimate_parameter_count(model_id)
+        assert real_param_count == 1_000_000_000, (
+            f"_estimate_parameter_count must map {model_id!r} to 1 000 000 000; got {real_param_count}"
+        )
+        estimated = estimate_model_memory(model_id, "float16")
+        expected = int(int(real_param_count * 2.0) * 1.3)
+        assert estimated == expected, f"FP16 memory for {real_param_count} params should be {expected}; got {estimated}"
 
     @staticmethod
     def test_int4_is_half_byte_per_param() -> None:

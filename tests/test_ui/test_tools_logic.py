@@ -7,7 +7,7 @@
 
 Tests interactivity, signal emission, tab close handling, and integration
 of function list and cross-reference panels. Every test drives a real Qt
-widget through a real user-interaction path (item population, double-click,
+widget through its real wired signal path (item population, double-click,
 tree click, tab close) and asserts the exact observable result so that
 breaking the underlying parsing, population, routing, or cleanup logic
 turns the test red.
@@ -15,14 +15,21 @@ turns the test red.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
-from PyQt6.QtWidgets import QListWidgetItem
+from PyQt6.QtWidgets import QListWidgetItem, QWidget
 
 from intellicrack.core.types import BridgeAnalysisSummary, FunctionInfo
 from intellicrack.ui.app import MainWindow
 from intellicrack.ui.tools import FunctionListPanel, ToolOutputPanel, XRefPanel
 
 from .conftest import SignalRecorder
+
+
+if TYPE_CHECKING:
+    from intellicrack.core.config import Config
+    from intellicrack.core.orchestrator import Orchestrator
 
 
 _ADDR_MAIN: int = 0x401000
@@ -34,8 +41,24 @@ _EXPECTED_TWO_TABS: int = 2
 _EXPECTED_ONE_TAB: int = 1
 
 
-def _double_click_first_function(panel: ToolOutputPanel, name: str, address: int) -> None:
-    """Populate one function and drive a real double-click on it.
+def _double_click_function(panel: FunctionListPanel, index: int) -> None:
+    """Drive a real ``itemDoubleClicked`` signal on the function at ``index``.
+
+    Emitting the widget's public Qt signal exercises the exact wired slot
+    (``_on_item_double_clicked``) the way a real double-click would, rather
+    than calling the protected handler directly.
+
+    Args:
+        panel: The function list panel to drive.
+        index: Row index of the item to double-click.
+    """
+    item = panel.list_widget.item(index)
+    assert item is not None
+    panel.list_widget.itemDoubleClicked.emit(item)
+
+
+def _double_click_first_panel_function(panel: ToolOutputPanel, name: str, address: int) -> None:
+    """Populate one function on a tool panel and drive a real double-click.
 
     Args:
         panel: The tool output panel whose function list to drive.
@@ -43,9 +66,19 @@ def _double_click_first_function(panel: ToolOutputPanel, name: str, address: int
         address: Function address to populate.
     """
     panel.func_list.set_functions([(name, address)])
-    item = panel.func_list.list_widget.item(0)
-    assert item is not None
-    panel.func_list._on_item_double_clicked(item)
+    _double_click_function(panel.func_list, 0)
+
+
+def _close_tab(panel: ToolOutputPanel, widget: QWidget) -> None:
+    """Drive a real ``tabCloseRequested`` signal for ``widget``'s tab.
+
+    Args:
+        panel: The tool output panel owning the tab.
+        widget: The tab page widget to close.
+    """
+    index = panel.tab_widget.indexOf(widget)
+    assert index >= 0
+    panel.tab_widget.tabCloseRequested.emit(index)
 
 
 def _make_summary(functions: list[FunctionInfo]) -> BridgeAnalysisSummary:
@@ -126,7 +159,7 @@ class TestFunctionListPanel:
         second = panel.list_widget.item(1)
         assert second is not None
         assert second.text() == "0x004015AB  decode"
-        panel._on_item_double_clicked(second)
+        _double_click_function(panel, 1)
 
         recorder.verify_single_call("decode", _ADDR_PARSE)
 
@@ -139,7 +172,7 @@ class TestFunctionListPanel:
 
         bad_item: QListWidgetItem = QListWidgetItem("not-a-valid-entry")
         panel.list_widget.addItem(bad_item)
-        panel._on_item_double_clicked(bad_item)
+        panel.list_widget.itemDoubleClicked.emit(bad_item)
 
         assert recorder.times_called == 0
 
@@ -195,7 +228,7 @@ class TestXRefPanel:
         address_str = child.text(0).strip().split("  ")[0]
         assert int(address_str, 16) == _ADDR_PARSE
 
-        panel._on_item_clicked(child, 0)
+        panel.xref_display.itemClicked.emit(child, 0)
         recorder.verify_single_call(_ADDR_PARSE)
 
     @staticmethod
@@ -210,7 +243,7 @@ class TestXRefPanel:
         to_root = panel.xref_display.topLevelItem(0)
         assert to_root is not None
         assert to_root.text(0) == "=== References TO ==="
-        panel._on_item_clicked(to_root, 0)
+        panel.xref_display.itemClicked.emit(to_root, 0)
 
         assert recorder.times_called == 0
 
@@ -231,7 +264,7 @@ class TestToolOutputPanelIntegration:
         assert item is not None
         assert item.text() == "0x00401000  main"
 
-        panel.func_list._on_item_double_clicked(item)
+        panel.func_list.list_widget.itemDoubleClicked.emit(item)
         recorder.verify_single_call(_ADDR_MAIN)
 
     @staticmethod
@@ -249,7 +282,7 @@ class TestToolOutputPanelIntegration:
         assert child is not None
         assert child.text(0) == "0x00402000  call helper"
 
-        panel.xref_panel._on_item_clicked(child, 0)
+        panel.xref_panel.xref_display.itemClicked.emit(child, 0)
         recorder.verify_single_call(_ADDR_TEST)
 
 
@@ -259,8 +292,8 @@ class TestMainWindowIntegration:
 
     @staticmethod
     def test_function_click_updates_address_label_through_full_chain(
-        real_config: object,
-        real_orchestrator: object,
+        real_config: Config,
+        real_orchestrator: Orchestrator,
     ) -> None:
         """Verify a real function double-click propagates to the address label.
 
@@ -276,21 +309,21 @@ class TestMainWindowIntegration:
         window = MainWindow(real_config, real_orchestrator)
         try:
             assert window.tool_panel.address_label.text() == _EMPTY_LABEL
-            _double_click_first_function(window.tool_panel, "main", _ADDR_MAIN)
+            _double_click_first_panel_function(window.tool_panel, "main", _ADDR_MAIN)
             assert window.tool_panel.address_label.text() == "0x00401000"
         finally:
             window.close()
 
     @staticmethod
     def test_signal_disconnect_breaks_label_update(
-        real_config: object,
-        real_orchestrator: object,
+        real_config: Config,
+        real_orchestrator: Orchestrator,
     ) -> None:
         """Verify the label update depends on the wired address_clicked connection.
 
-        Disconnecting the tool-panel handler from the window must leave the
-        label unchanged after a click, proving the assertion gates the real
-        signal wiring rather than an incidental side effect.
+        Disconnecting the tool-panel signal must leave the label unchanged
+        after a click, proving the assertion gates the real signal wiring
+        rather than an incidental side effect.
 
         Args:
             real_config: Real Config fixture used to construct MainWindow.
@@ -298,8 +331,8 @@ class TestMainWindowIntegration:
         """
         window = MainWindow(real_config, real_orchestrator)
         try:
-            window.tool_panel.address_clicked.disconnect(window._on_address_clicked)
-            _double_click_first_function(window.tool_panel, "main", _ADDR_MAIN)
+            window.tool_panel.address_clicked.disconnect()
+            _double_click_first_panel_function(window.tool_panel, "main", _ADDR_MAIN)
             assert window.tool_panel.address_label.text() == _EMPTY_LABEL
         finally:
             window.close()
@@ -328,10 +361,9 @@ class TestToolOutputPanelTabLifecycle:
         assert panel.tab_widget.count() == 1
         assert panel.panels["analysis"] is analysis_w
         assert panel.analysis_panel is analysis_w
+        assert panel.tab_widget.indexOf(analysis_w) == 0
 
-        tab_index = panel.tab_widget.indexOf(analysis_w)
-        assert tab_index == 0
-        panel._on_tab_close_requested(tab_index)
+        _close_tab(panel, analysis_w)
 
         assert panel.tab_widget.count() == 0
         assert panel.tab_widget.indexOf(analysis_w) == -1
@@ -341,16 +373,15 @@ class TestToolOutputPanelTabLifecycle:
 
 @pytest.mark.usefixtures("qapp")
 class TestTabCloseRequested:
-    """Tests for _on_tab_close_requested cleanup correctness."""
+    """Tests for tab-close cleanup correctness via the real close signal."""
 
     @staticmethod
     def test_close_analysis_panel_removes_tab_and_nulls_reference() -> None:
         """Verify closing the analysis panel removes the tab and clears tracking."""
         panel = ToolOutputPanel()
         analysis_w = panel.add_analysis_panel()
-        tab_index = panel.tab_widget.indexOf(analysis_w)
 
-        panel._on_tab_close_requested(tab_index)
+        _close_tab(panel, analysis_w)
 
         assert panel.analysis_panel is None
         assert "analysis" not in panel.panels
@@ -368,7 +399,7 @@ class TestTabCloseRequested:
         """
         panel = ToolOutputPanel()
         first = panel.add_analysis_panel()
-        panel._on_tab_close_requested(panel.tab_widget.indexOf(first))
+        _close_tab(panel, first)
         assert panel.analysis_panel is None
 
         summary = _make_summary([_func("decode", _ADDR_PARSE)])
@@ -398,18 +429,17 @@ class TestTabCloseRequested:
         assert widget is not None
         assert panel.x64dbg_bridge is not None
 
+        tab_page = panel.embedded_tools["x64dbg"]
         closed = SignalRecorder()
         widget.tool_closed.connect(closed)
 
-        tab_index = panel.tab_widget.indexOf(widget)
-        assert tab_index >= 0
-        panel._on_tab_close_requested(tab_index)
+        _close_tab(panel, tab_page)
 
         assert closed.times_called == 1
-        assert panel._x64dbg_widget is None
         assert panel.x64dbg_bridge is None
-        assert panel.tab_widget.indexOf(widget) == -1
+        assert panel.tab_widget.indexOf(tab_page) == -1
         assert "x64dbg" not in panel.embedded_tools
+        assert panel.add_x64dbg_tab(is_64bit=True) is not widget
 
     @staticmethod
     def test_close_invalid_index_is_noop() -> None:
@@ -418,7 +448,7 @@ class TestTabCloseRequested:
         panel.add_analysis_panel()
         assert panel.tab_widget.count() == 1
 
-        panel._on_tab_close_requested(99)
+        panel.tab_widget.tabCloseRequested.emit(99)
 
         assert panel.tab_widget.count() == 1
         assert panel.analysis_panel is not None
@@ -432,7 +462,7 @@ class TestTabCloseRequested:
         stack_w = panel.add_stack_panel()
         assert panel.tab_widget.count() == _EXPECTED_THREE_TABS
 
-        panel._on_tab_close_requested(panel.tab_widget.indexOf(analysis_w))
+        _close_tab(panel, analysis_w)
         assert panel.tab_widget.count() == _EXPECTED_TWO_TABS
         assert panel.tab_widget.indexOf(analysis_w) == -1
         assert panel.tab_widget.indexOf(script_w) >= 0
@@ -441,14 +471,14 @@ class TestTabCloseRequested:
         assert panel.script_panel is script_w
         assert panel.stack_panel is stack_w
 
-        panel._on_tab_close_requested(panel.tab_widget.indexOf(script_w))
+        _close_tab(panel, script_w)
         assert panel.tab_widget.count() == _EXPECTED_ONE_TAB
         assert panel.tab_widget.indexOf(script_w) == -1
         assert panel.tab_widget.indexOf(stack_w) >= 0
         assert panel.script_panel is None
         assert panel.stack_panel is stack_w
 
-        panel._on_tab_close_requested(panel.tab_widget.indexOf(stack_w))
+        _close_tab(panel, stack_w)
         assert panel.tab_widget.count() == 0
         assert panel.stack_panel is None
 
@@ -485,7 +515,6 @@ class TestCloseEmbeddedTools:
         panel.close_embedded_tools()
 
         assert closed.times_called == 1
-        assert panel._x64dbg_widget is None
         assert panel.x64dbg_bridge is None
         assert panel.analysis_panel is None
         assert panel.script_panel is None

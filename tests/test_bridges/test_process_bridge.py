@@ -514,13 +514,26 @@ class TestProcessListing:
     """Verify process listing and filtering."""
 
     async def test_list_processes_non_empty(self, process_bridge: ProcessBridge) -> None:
-        """Verify process list is non-empty.
+        """Verify process list is non-empty and every entry has a valid pid and name.
+
+        Asserts structural correctness on every returned ProcessInfo object and
+        cross-checks that the current Python process is present with the exact
+        ``os.getpid()`` value and a name containing "python", so a bug that
+        returns malformed objects or omits the self-process fails here.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         procs = await process_bridge.list_processes()
-        assert len(procs) > 0
+        assert len(procs) > 0, "list_processes must return at least one entry"
+        assert all(hasattr(p, "pid") and hasattr(p, "name") and isinstance(p.pid, int) and p.pid >= 0 for p in procs), (
+            "every ProcessInfo must have a non-negative integer pid and a name attribute (pid 0 = System Idle Process)"
+        )
+        self_proc = next((p for p in procs if p.pid == os.getpid()), None)
+        assert self_proc is not None, f"current Python process (pid={os.getpid()}) must appear in list_processes output"
+        assert isinstance(self_proc.name, str), "self ProcessInfo.name must be a str"
+        assert len(self_proc.name) > 0, "self ProcessInfo.name must be non-empty"
+        assert "python" in self_proc.name.lower(), f"current process name must contain 'python', got {self_proc.name!r}"
 
     async def test_list_processes_includes_self(self, process_bridge: ProcessBridge) -> None:
         """Verify process list contains current PID.
@@ -543,13 +556,22 @@ class TestProcessListing:
         assert "python" in self_proc.name.lower()
 
     async def test_list_processes_filter(self, process_bridge: ProcessBridge) -> None:
-        """Verify name filter returns at least one python process.
+        """Verify name filter returns only processes whose names contain the filter string.
+
+        ``len(procs) >= 1`` is necessary but not sufficient — the critical gate is
+        that ``filter_name`` actually constrains the result to matching names.  If
+        the filter is silently ignored and all processes are returned, at least one
+        non-Python process name would fail the ``all(...)`` assertion below.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         procs = await process_bridge.list_processes(filter_name="python")
-        assert len(procs) >= 1
+        assert len(procs) >= 1, "filter_name='python' must return at least one process (the current interpreter)"
+        assert all("python" in p.name.lower() for p in procs), (
+            "filter_name='python' must return ONLY processes with 'python' in their name; "
+            f"non-matching entries: {[p.name for p in procs if 'python' not in p.name.lower()]}"
+        )
 
     async def test_list_processes_detailed_has_fields(self, process_bridge: ProcessBridge) -> None:
         """Verify detailed listing includes expected keys.
@@ -564,17 +586,28 @@ class TestProcessListing:
             assert key in entry
 
     async def test_list_processes_detailed_self_arch(self, process_bridge: ProcessBridge) -> None:
-        """Verify our process architecture is x86_64 or x86.
+        """Verify our process architecture matches the canonical bitness of the running interpreter.
+
+        ``struct.calcsize("P") * 8`` is the independent oracle: 64 on a 64-bit
+        interpreter, 32 on a 32-bit one.  The bridge must return the matching
+        string ("x86_64" or "x86") for the current process, not merely any value
+        from an allowed set.  A bridge that always returns "x86_64" would still
+        pass the old check on a 64-bit host but fail here on a 32-bit host, and
+        a bridge that swaps the strings would fail immediately.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         procs = await process_bridge.list_processes_detailed(filter_name="python")
         self_proc = next((p for p in procs if p["pid"] == os.getpid()), None)
-        assert self_proc is not None
+        assert self_proc is not None, f"current process (pid={os.getpid()}) must appear in list_processes_detailed"
         arch = self_proc["architecture"]
-        assert isinstance(arch, str)
-        assert arch in {"x86_64", "x86"}
+        assert isinstance(arch, str), f"architecture must be str, got {type(arch).__name__}"
+        expected_arch = "x86_64" if struct.calcsize("P") * 8 == 64 else "x86"
+        assert arch == expected_arch, (
+            f"bridge reported architecture {arch!r} for the current process, "
+            f"but struct.calcsize('P')*8=={struct.calcsize('P') * 8} requires {expected_arch!r}"
+        )
 
     async def test_list_processes_detailed_self_memory(self, process_bridge: ProcessBridge) -> None:
         """Verify our process has positive memory usage.
@@ -728,16 +761,55 @@ class TestMemoryOperations:
         attached_bridge: ProcessBridge,
         known_buffer: tuple[int, ctypes.Array[ctypes.c_char], bytes],
     ) -> None:
-        """Verify pattern search finds known bytes in memory.
+        """Verify pattern search returns the exact address of known bytes.
+
+        Searches the full unique sentinel content of the known buffer (not a
+        short prefix that could collide with unrelated heap bytes) within a
+        128 KiB window around it. ``addr in results`` is the exact-addressing
+        gate: a bridge with an off-by-one error reports the match at
+        ``addr + 1`` rather than ``addr``, so exact membership would fail.
+        A dedicated guard additionally asserts the buffer is not reported at
+        ``addr ± 1``. The first-occurrence ordering of results is deliberately
+        not asserted because a live process can legitimately hold other copies
+        of the sentinel (the source ``bytes`` literal itself) at lower
+        addresses, which is memory-layout and test-order dependent.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
             known_buffer: Triple of (address, backing buffer, expected bytes) for a buffer with known content.
         """
         addr, _buf, data = known_buffer
-        pattern = " ".join(f"{b:02X}" for b in data[:8])
+        pattern = " ".join(f"{b:02X}" for b in data)
         results = await attached_bridge.search_pattern(pattern, start_address=addr - 0x10000, end_address=addr + 0x10000)
-        assert addr in results
+        assert addr in results, (
+            f"expected exact buffer address {hex(addr)} in search results {[hex(r) for r in results[:10]]}; "
+            "absence here indicates the bridge reports the wrong match offset"
+        )
+        nearby = [hex(r) for r in results if abs(r - addr) <= 2]
+        assert (addr - 1) not in results, f"off-by-one (addr-1) match indicates an addressing bug; results near the buffer: {nearby}"
+        assert (addr + 1) not in results, f"off-by-one (addr+1) match indicates an addressing bug; results near the buffer: {nearby}"
+
+    async def test_search_pattern_absent_returns_empty(
+        self,
+        attached_bridge: ProcessBridge,
+        known_buffer: tuple[int, ctypes.Array[ctypes.c_char], bytes],
+    ) -> None:
+        """Verify pattern search returns an empty list for bytes not present in the searched range.
+
+        Uses a sentinel pattern that cannot collide with the known_buffer content
+        or any plausible stack/heap data, and restricts the search to a 64 KiB
+        window around the buffer so the scan completes quickly.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            known_buffer: Triple of (address, backing buffer, expected bytes) for a buffer with known content.
+        """
+        addr, _buf, _data = known_buffer
+        absent_pattern = "FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF"
+        results = await attached_bridge.search_pattern(absent_pattern, start_address=addr, end_address=addr + 0x10000)
+        assert results == [], (
+            f"absent pattern must return empty list, got {len(results)} match(es) starting at {[hex(r) for r in results[:4]]}"
+        )
 
     async def test_get_memory_map_non_empty(self, attached_bridge: ProcessBridge) -> None:
         """Verify memory map returns non-empty list with required fields.
@@ -2969,6 +3041,37 @@ class TestF0012EnvOffsets:
             await proc.wait()
 
     @staticmethod
+    async def _read_env_until_populated(
+        process_bridge: ProcessBridge,
+        pid: int,
+        timeout_sec: float = 5.0,
+    ) -> dict[str, str]:
+        """Poll ``get_environment`` until the child's env block is readable.
+
+        ``create_subprocess_exec`` returns once the child has been created,
+        which can be before the Windows loader finishes populating
+        ``RTL_USER_PROCESS_PARAMETERS.Environment`` in the child PEB. Reading
+        immediately then races and yields zero variables under load. Polling
+        until the block is populated (or the deadline elapses) makes the read
+        deterministic regardless of system load or test ordering.
+
+        Args:
+            process_bridge: ProcessBridge already attached to the child.
+            pid: Child process id to inspect.
+            timeout_sec: Maximum time to wait for the env block to populate.
+
+        Returns:
+            dict[str, str]: The child's environment variables (possibly empty
+            if the deadline elapsed without a populated block).
+        """
+        deadline = time.monotonic() + timeout_sec
+        env_vars: dict[str, str] = await process_bridge.get_environment(pid)
+        while not env_vars and time.monotonic() < deadline:
+            await asyncio.sleep(0.1)
+            env_vars = await process_bridge.get_environment(pid)
+        return env_vars
+
+    @staticmethod
     async def _assert_known_env_vars(
         process_bridge: ProcessBridge,
         proc: asyncio.subprocess.Process,
@@ -2984,12 +3087,12 @@ class TestF0012EnvOffsets:
         assert proc.pid is not None
         await process_bridge.open_process(proc.pid, "all")
         try:
-            env_vars = await process_bridge.get_environment(proc.pid)
+            env_vars = await TestF0012EnvOffsets._read_env_until_populated(process_bridge, proc.pid)
         finally:
             await process_bridge.close()
 
         for key, expected_val in test_vars.items():
-            assert key in env_vars, f"Expected env var {key!r} missing"
+            assert key in env_vars, f"Expected env var {key!r} missing (read {len(env_vars)} vars from child)"
             assert env_vars[key] == expected_val, f"{key}: expected {expected_val!r}, got {env_vars[key]!r}"
 
     def test_extract_env_pointer_64bit_offsets(self) -> None:
@@ -3918,37 +4021,49 @@ class TestF0013JobHandleEnumeration:
 class TestF0044ShutdownReleasesResources:
     """F-0044: shutdown() unmaps sections and closes pipe/device handles."""
 
-    async def test_shutdown_unmaps_tracked_section_view(
-        self,
-        process_bridge: ProcessBridge,
-    ) -> None:
-        """Verify shutdown unmaps any view recorded in _section_views.
-
-        Creates a section, maps a view, asserts both tracking dicts
-        are populated, then re-initialises the bridge after shutdown
-        and asserts both dicts are empty.
+    @staticmethod
+    async def _assert_shutdown_clears_tracking(bridge: ProcessBridge) -> None:
+        """Create and map a section, then assert ``shutdown`` clears both tracking dicts.
 
         Args:
-            process_bridge: Module-scoped ProcessBridge fixture.
+            bridge: An initialized, signature-configured ProcessBridge.
         """
         section_name = f"IntellicrackProcessBridge_F0044_{os.getpid()}"
-        handle = await process_bridge.create_section(0x4000, section_name=section_name)
-        base = await process_bridge.map_section(handle, 0x4000)
+        handle = await bridge.create_section(0x4000, section_name=section_name)
+        base = await bridge.map_section(handle, 0x4000)
         assert base > 0
 
-        section_views = _get_section_views(process_bridge)
-        section_handles = _get_section_handles(process_bridge)
+        section_views = _get_section_views(bridge)
+        section_handles = _get_section_handles(bridge)
         assert base in section_views
         assert handle in section_handles
 
-        await process_bridge.shutdown()
+        await bridge.shutdown()
 
-        section_views_after = _get_section_views(process_bridge)
-        section_handles_after = _get_section_handles(process_bridge)
+        section_views_after = _get_section_views(bridge)
+        section_handles_after = _get_section_handles(bridge)
         assert len(section_views_after) == 0
         assert len(section_handles_after) == 0
 
-        await process_bridge.initialize()
+    async def test_shutdown_unmaps_tracked_section_view(self) -> None:
+        """Verify shutdown unmaps any view recorded in _section_views.
+
+        Uses a dedicated, function-local :class:`ProcessBridge` rather than
+        the shared module fixture so exercising the destructive
+        ``shutdown`` path cannot disturb other tests or leave
+        loop-bound Win32 resources alive past the test's event loop.
+        Creates a section, maps a view, asserts both tracking dicts are
+        populated, calls ``shutdown``, and asserts both dicts are empty.
+        """
+        bridge = ProcessBridge()
+        await bridge.initialize()
+        k32 = _get_attr_optional(bridge, _ATTR_KERNEL32, ctypes.WinDLL)
+        if k32 is not None:
+            _configure_kernel32_signatures(k32)
+        try:
+            await TestF0044ShutdownReleasesResources._assert_shutdown_clears_tracking(bridge)
+        finally:
+            await bridge.shutdown()
 
 
 class TestF0029NoStartedInfoLogs:

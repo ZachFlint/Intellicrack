@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import struct
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 import pytest
@@ -34,7 +35,8 @@ from intellicrack.bridges.pe_format import (
     PE_OPTIONAL_HEADER_MAGIC_PE32PLUS,
     PE_SIGNATURE,
 )
-from intellicrack.core.types import ToolName
+from intellicrack.core.tools import ToolRegistry
+from intellicrack.core.types import ToolError, ToolName
 
 
 if TYPE_CHECKING:
@@ -90,22 +92,52 @@ class TestToolDefinitionsRegistered:
 
     @pytest.mark.parametrize("tool_name", _NEW_TOOL_NAMES)
     def test_tool_function_exposed(self, bridge: HexEditorBridge, tool_name: str) -> None:
-        """Verify each new tool name is advertised by the bridge.
+        """Verify each advertised tool name dispatches successfully via ToolRegistry.
+
+        Registers the bridge directly into a ToolRegistry and calls
+        ``execute_tool_call`` with no document attached. The registry must
+        resolve the method and raise :class:`ToolError` wrapping the
+        ``RuntimeError`` from the no-document guard, proving that the
+        function name is present, callable, and reachable through the
+        production dispatch path.
 
         Args:
             bridge: HexEditorBridge fixture.
-            tool_name: Fully-qualified tool function name to look up.
+            tool_name: Fully-qualified tool function name to dispatch.
         """
         names = {fn.name for fn in bridge.tool_definition.functions}
         assert tool_name in names, f"{tool_name} missing from bridge.tool_definition"
 
+        registry = ToolRegistry(tools_dir=Path())
+        registry.register_bridge(ToolName.HEX_EDITOR, bridge)
+        bare_name = tool_name.split(".", maxsplit=1)[-1]
+        with pytest.raises(ToolError):
+            asyncio.run(registry.execute_tool_call("hex_editor", tool_name, {}))
+
+        method = getattr(bridge, bare_name)
+        assert inspect.iscoroutinefunction(method), f"{bare_name} must be async for the registry to await it"
+
     def test_tool_owner_is_hex_editor(self, bridge: HexEditorBridge) -> None:
-        """Verify the bridge advertises the ``hex_editor`` tool owner.
+        """Verify the bridge registers under :attr:`ToolName.HEX_EDITOR` and is reachable.
+
+        Registers the bridge in a ToolRegistry and confirms:
+        (1) ``tool_definition.tool_name`` is :attr:`ToolName.HEX_EDITOR`,
+        (2) the bridge is retrievable from the registry under that name,
+        (3) the registry's dispatch path is active for the HEX_EDITOR tool.
 
         Args:
             bridge: HexEditorBridge fixture.
         """
         assert bridge.tool_definition.tool_name is ToolName.HEX_EDITOR
+
+        registry = ToolRegistry(tools_dir=Path())
+        registry.register_bridge(ToolName.HEX_EDITOR, bridge)
+
+        registered: HexEditorBridge = registry.get_hex_editor_bridge()
+        assert registered is bridge, "get_hex_editor_bridge() must return the exact bridge instance registered for HEX_EDITOR"
+
+        with pytest.raises(ToolError):
+            asyncio.run(registry.execute_tool_call("hex_editor", "hex_editor.get_pe_sections", {}))
 
     @pytest.mark.parametrize("tool_name", _NEW_TOOL_NAMES)
     def test_tool_function_has_no_required_params(
@@ -184,14 +216,21 @@ class TestRuntimeContract:
         bridge: HexEditorBridge,
         method_name: str,
     ) -> None:
-        """Verify each method raises ``RuntimeError`` when no document is open.
+        """Verify each method raises ``RuntimeError`` with "no document" when unloaded.
+
+        The bridge's no-document guard message is the literal string
+        ``"no document open"``. A test that only checks the exception
+        type cannot distinguish a missing-document guard from a parse
+        error or any other ``RuntimeError``; the match pattern locks the
+        assertion to the specific guard contract.
 
         Args:
             bridge: HexEditorBridge fixture (initialized but unloaded).
             method_name: Bare method name under test.
         """
+        assert bridge.document is None, f"precondition: bridge.document must be None before calling {method_name}"
         method = getattr(bridge, method_name)
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match=r"no document"):
             _run(method())
 
 

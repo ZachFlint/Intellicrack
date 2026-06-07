@@ -18,6 +18,7 @@ from intellicrack.core.types import (
     Message,
     ModelInfo,
     ProviderCredentials,
+    ProviderError,
     ProviderName,
     ToolCall,
 )
@@ -27,6 +28,7 @@ from intellicrack.providers.discovery import (
     DiscoveryFilter,
     ModelDiscovery,
 )
+from intellicrack.providers.openai import OpenAIProvider
 from intellicrack.providers.registry import ProviderRegistry
 
 
@@ -520,6 +522,81 @@ class TestF0021DiscoverAllInvalidatesOnError:
         )
         await discovery.discover_all(force_refresh=True)
         assert discovery.cache.get(ProviderName.OPENAI) is None
+
+
+class TestRealProviderConnectionContract:
+    """Discovery against a real production provider, with no network.
+
+    The other tests in this module deliberately feed the real
+    :class:`ModelDiscovery` logic through a configurable provider source
+    (``_DiscoveryProvider``); the provider there is an input, not the thing
+    under test. These tests close the gap flagged in the audit by driving the
+    pipeline through the genuine production :class:`OpenAIProvider` in its real,
+    unconnected state. They exercise the real base-class connection-state
+    contract (``is_connected`` derived from ``connected``) and the real
+    provider's ``list_models`` guard, neither of which a stub that hardcodes
+    ``connected = True`` can verify. No credentials and no sockets are used: a
+    freshly constructed provider is unconnected by contract.
+    """
+
+    @pytest.mark.asyncio
+    @staticmethod
+    async def test_real_unconnected_provider_gates_discovery() -> None:
+        """A real unconnected OpenAIProvider yields no models and clears stale cache.
+
+        ``discover_provider`` must consult the provider's real ``is_connected``
+        property. A fresh provider is unconnected, so discovery returns an empty
+        list and any stale cache entry is invalidated. A regression making
+        ``is_connected`` always-true (or dropping the guard) would let stale
+        models leak through and fail this test.
+        """
+        provider = OpenAIProvider()
+        assert provider.is_connected is False
+
+        reg = ProviderRegistry()
+        reg.register(provider)
+        discovery = ModelDiscovery(reg)
+        await discovery.cache.aset(
+            ProviderName.OPENAI,
+            [_model(ProviderName.OPENAI, "gpt-stale")],
+        )
+
+        result = await discovery.discover_provider(ProviderName.OPENAI, use_cache=False)
+
+        assert result == []
+        assert discovery.cache.get(ProviderName.OPENAI) is None
+
+    @pytest.mark.asyncio
+    @staticmethod
+    async def test_real_provider_list_models_raises_when_unconnected() -> None:
+        """A real unconnected OpenAIProvider.list_models raises ProviderError.
+
+        This is the production guard the discovery layer relies on. If the guard
+        were removed the call would attempt to use a ``None`` client; the test
+        pins the exact contract (``ProviderError`` with the not-connected
+        message).
+        """
+        provider = OpenAIProvider()
+        with pytest.raises(ProviderError, match="Not connected to OpenAI API"):
+            await provider.list_models()
+
+    @pytest.mark.asyncio
+    @staticmethod
+    async def test_real_provider_connect_then_disconnect_round_trips_state() -> None:
+        """The real base-class connection flag flips through connect/disconnect.
+
+        ``discover_provider`` gates on ``is_connected``; that property must
+        reflect the real ``connected`` flag. Driving the genuine provider
+        through ``disconnect`` proves the flag is honoured rather than pinned.
+        """
+        provider = OpenAIProvider()
+        provider.connected = True
+        assert provider.is_connected is True
+
+        await provider.disconnect()
+
+        assert provider.connected is False
+        assert provider.is_connected is False
 
 
 class TestRoundTripPersistence:

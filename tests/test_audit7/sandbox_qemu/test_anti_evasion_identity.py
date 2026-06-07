@@ -319,19 +319,45 @@ def _make_qemu_binary(tmp_path: Path) -> Path:
 class TestF0022RegExeAllowlistSafe:
     """F-0022: every ``reg.exe`` invocation must satisfy ``Test-AllowedCommand``."""
 
-    def test_allowlist_oracle_rejects_bare_reg_exe_accepts_system32(self) -> None:
-        """Guard the allowlist oracle: bare ``reg.exe`` out, System32 path in.
+    def test_production_reg_exe_constant_equals_canonical_system32_path(self) -> None:
+        r"""Pin ``WINDOWS_REG_EXE_PATH`` to the canonical System32 ``reg.exe``.
 
-        Pins the boundary of the host-side ``Test-AllowedCommand`` emulation so
-        the end-to-end dispatch tests below have a trustworthy gate. The bare
-        pre-fix value must be rejected and the absolute System32 path (the
-        post-fix value) must be accepted; if either flips, the emulation would
-        no longer detect the F-0022 regression.
+        Independent oracle: the canonical absolute path to the Windows registry
+        editor is ``C:\Windows\System32\reg.exe``. This is a known-correct
+        constant from the Windows platform, not derived from the production
+        module. If the production constant drifts (for example back to the bare
+        pre-fix ``"reg.exe"``), this exact-value gate fails. Case-insensitive
+        comparison matches the in-guest ``Test-AllowedCommand`` semantics, which
+        lowercase before testing the root prefix.
         """
-        assert is_windows_allowlisted("reg.exe") is False, "bare 'reg.exe' must be rejected by the allowlist emulation"
-        assert is_windows_allowlisted(r"C:\Windows\System32\reg.exe") is True, (
-            "absolute System32 reg.exe path must be accepted by the allowlist emulation"
+        canonical_path = r"C:\Windows\System32\reg.exe"
+        assert WINDOWS_REG_EXE_PATH.lower() == canonical_path.lower(), (
+            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must equal canonical {canonical_path!r} (F-0022)"
         )
+        assert WINDOWS_REG_EXE_PATH.lower().endswith("\\system32\\reg.exe"), (
+            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must be an absolute System32 path, not a bare name (F-0022)"
+        )
+
+    def test_allowlist_oracle_boundary_decisions(self) -> None:
+        r"""Guard the host-side ``Test-AllowedCommand`` emulation at its boundaries.
+
+        Pins the decisions the end-to-end dispatch tests rely on so the oracle
+        itself is a trustworthy gate. Each assertion mirrors one branch of the
+        in-guest PowerShell helper: empty rejected, bare names rejected unless
+        explicitly allowlisted, ``.exe`` accepted only under the System32 /
+        SysWOW64 / ``Z:\`` roots, and non-``.exe`` files under a valid root
+        rejected. If any branch flips, the emulation would stop detecting an
+        F-0022 regression in :meth:`apply_anti_evasion`.
+        """
+        assert is_windows_allowlisted("") is False, "empty command must be rejected"
+        assert is_windows_allowlisted("reg.exe") is False, "bare 'reg.exe' must be rejected (F-0022 pre-fix value)"
+        assert is_windows_allowlisted("powershell.exe") is True, "allowlisted bare name 'powershell.exe' must be accepted"
+        assert is_windows_allowlisted("cmd") is True, "allowlisted bare name 'cmd' must be accepted"
+        assert is_windows_allowlisted(r"C:\Windows\System32\reg.exe") is True, "absolute System32 reg.exe must be accepted"
+        assert is_windows_allowlisted(r"C:\Windows\SysWOW64\reg.exe") is True, "absolute SysWOW64 reg.exe must be accepted"
+        assert is_windows_allowlisted(r"Z:\monitor\agent.exe") is True, "absolute Z:\\ .exe must be accepted"
+        assert is_windows_allowlisted(r"C:\Windows\System32\config.sys") is False, "non-.exe under System32 must be rejected"
+        assert is_windows_allowlisted(r"C:\Temp\reg.exe") is False, "reg.exe outside an allowed root must be rejected"
         assert is_windows_allowlisted(WINDOWS_REG_EXE_PATH) is True, (
             f"the production WINDOWS_REG_EXE_PATH constant {WINDOWS_REG_EXE_PATH!r} must be allowlist-safe"
         )
@@ -395,6 +421,12 @@ class TestF0022RegExeAllowlistSafe:
         assert techniques.count("mac_address_randomize") == 1, f"expected one mac_address_randomize entry; got {techniques!r}"
         assert len(techniques) == len(_EXPECTED_LAUNCH_TECHNIQUES) + 4 + 1, (
             f"unexpected total technique count for the fully-accepted path: {techniques!r}"
+        )
+
+        accepted_reg_dispatches = sum(1 for cmd, args in agent.sent_commands if args and args[0] == "add" and is_windows_allowlisted(cmd))
+        assert techniques.count("registry_patch") == accepted_reg_dispatches, (
+            "each registry_patch technique must correspond to a reg.exe dispatch the allowlist accepted: "
+            f"techniques={techniques!r} accepted_reg_dispatches={accepted_reg_dispatches}"
         )
 
     def test_registry_patch_omitted_when_agent_rejects_commands(self) -> None:

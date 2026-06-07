@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import psutil
 import pytest
 from PyQt6.QtWidgets import QApplication
 
@@ -40,6 +41,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 _COL_PID = 0
 _COL_NAME = 1
+_COL_THREADS = 5
 
 
 @pytest.fixture
@@ -131,6 +133,28 @@ class _ProcessTabProbe(ProcessTab):
                 names.append(item.text())
         return names
 
+    def row_for_pid(self, pid: int) -> tuple[str, int] | None:
+        """Return the rendered (name, thread_count) for a given PID, if present.
+
+        Args:
+            pid: The process ID to locate among the rendered rows.
+
+        Returns:
+            tuple[str, int] | None: The image name and thread count rendered
+            for ``pid``, or None when no row carries that PID.
+        """
+        for row in range(self._process_table.rowCount()):
+            pid_item = self._process_table.item(row, _COL_PID)
+            if pid_item is None or pid_item.data(0) != pid:
+                continue
+            name_item = self._process_table.item(row, _COL_NAME)
+            threads_item = self._process_table.item(row, _COL_THREADS)
+            name = name_item.text() if name_item is not None else ""
+            threads_raw = threads_item.data(0) if threads_item is not None else 0
+            threads = threads_raw if isinstance(threads_raw, int) else 0
+            return name, threads
+        return None
+
 
 @pytest.fixture
 def tab(qapp: QApplication, real_bridge: ProcessBridge) -> _ProcessTabProbe:
@@ -149,38 +173,72 @@ def tab(qapp: QApplication, real_bridge: ProcessBridge) -> _ProcessTabProbe:
     return widget
 
 
-def test_process_table_populated_from_real_enumeration(qapp: QApplication, tab: _ProcessTabProbe) -> None:
-    """Refresh must fill the table from real ``list_processes_detailed``.
+def test_process_table_renders_real_fields_for_running_interpreter(qapp: QApplication, tab: _ProcessTabProbe) -> None:
+    """The rendered row for this PID must match the real OS process fields.
 
-    The live system always has many running processes; the rendered table must
-    be non-empty and the running interpreter's own real PID must appear in it.
+    Beyond merely containing ``os.getpid()``, the row rendered for the running
+    interpreter must carry the genuine image name (the Python executable's own
+    file name, e.g. ``python.exe``) and a thread count that agrees with what an
+    independent oracle (``psutil``) reports for the same live process. If the
+    bridge returned a hardcoded or stale snapshot, the name or thread count
+    would diverge from ``psutil`` and this gate would fail.
 
     Args:
         qapp: Qt application driving the event loop.
         tab: ProcessTab probe bound to the real bridge.
     """
+    self_proc = psutil.Process(os.getpid())
+    expected_name = Path(sys.executable).name
+
     tab.refresh()
     populated = pump_until(qapp, lambda: tab.row_count() > 0)
     assert populated, "process table never populated from real enumeration"
 
-    pids = tab.rendered_pids()
-    assert len(pids) >= 2
-    assert all(pid >= 0 for pid in pids)
-    assert os.getpid() in pids, "running interpreter PID missing from real snapshot"
+    rendered = tab.row_for_pid(os.getpid())
+    assert rendered is not None, "running interpreter PID missing from real snapshot"
+    name, thread_count = rendered
+
+    assert name.lower() == expected_name.lower()
+    assert "python" in name.lower()
+
+    # Thread counts can change between the bridge snapshot and the psutil read,
+    # but both observe the same live process; require a positive, same-ballpark
+    # count rather than a brittle exact equality across two distinct sample times.
+    assert thread_count > 0
+    psutil_threads = self_proc.num_threads()
+    assert abs(thread_count - psutil_threads) <= psutil_threads
 
 
 def test_process_count_label_matches_real_rows(qapp: QApplication, tab: _ProcessTabProbe) -> None:
-    """The count label must equal the number of enumerated process rows.
+    """Row count must reflect a real enumeration and drive the count label.
+
+    Two independent properties are gated separately. First, the rendered row
+    count must be on the order of a real running system: a live Windows host (or
+    the Windows container) always runs many processes, and every PID that
+    ``psutil`` reports concurrently with the rendered snapshot for the
+    interpreter and its parent must be representable, so the table cannot be a
+    single hand-set row. Second, the count label text must be derived from that
+    real row count.
 
     Args:
         qapp: Qt application driving the event loop.
         tab: ProcessTab probe bound to the real bridge.
     """
+    psutil_pid_count = len(psutil.pids())
+
     tab.refresh()
     populated = pump_until(qapp, lambda: tab.row_count() > 0)
     assert populated
 
-    assert tab.count_label() == f"{tab.row_count()} processes"
+    rows = tab.row_count()
+    # A real OS always runs far more than a handful of processes; the rendered
+    # table must be the same order of magnitude as the live psutil enumeration,
+    # not a single test-injected row.
+    assert rows > 10
+    assert rows >= psutil_pid_count // 4
+    assert os.getpid() in tab.rendered_pids()
+
+    assert tab.count_label() == f"{rows} processes"
 
 
 def test_filter_restricts_to_real_named_process(qapp: QApplication, tab: _ProcessTabProbe) -> None:

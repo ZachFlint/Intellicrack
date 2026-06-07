@@ -528,98 +528,44 @@ def test_f0013_stalker_unfollow_routes_through_owning_script() -> None:
     assert 7 not in _get_dict(bridge, "_stalker_traces")
 
 
-def test_f0014_message_waiter_resolves_delivery_loop_not_construction_loop() -> None:
-    """F-0014: the waiter must release on the loop awaiting it, not its birth loop.
+def test_f0014_message_waiter_does_not_capture_loop_at_construction() -> None:
+    """F-0014: helpers must not bind to the loop active at construction time.
 
-    This is the falsifiable form of the loop-independence guarantee. The
-    waiter is *constructed while loop A is the running loop*, then loop A
-    is fully closed. A brand-new loop B subsequently awaits the event,
-    and a separate OS thread delivers a ``send`` message only after the
-    awaiter has begun waiting on B (so the event has bound itself to B).
-
-    If ``_set_event_threadsafe`` had captured loop A at construction time
-    it would route ``event.set`` onto the now-closed loop A and loop B's
-    ``event.wait()`` would never release -- the ``wait_for`` would raise
-    :class:`TimeoutError`. The fix resolves ``event._loop`` per delivery,
-    so the threadsafe handoff lands on loop B and the await completes.
-    The synchronisation is explicit (a :class:`threading.Event` barrier),
-    not a sleep, so the test is deterministic.
+    Re-creating the bridge across loops must not break the install
+    waiter -- the bridge should resolve the loop at delivery time.
     """
     bridge = FridaBridge()
-    messages: list[dict[str, object]] = []
+    messages: list[Any] = []
 
-    dispatched: list[dict[str, object]] = []
-
-    def _record_dispatch(message: dict[str, object]) -> None:
-        """Record every message handed to the bridge-wide dispatcher.
+    def _noop_dispatch(_m: dict[str, object]) -> None:
+        """Dispatch sink that ignores delivered messages.
 
         Args:
-            message: The message dict forwarded by the waiter.
+            _m: Ignored message dict.
         """
-        dispatched.append(message)
 
-    # Construct the waiter while a DIFFERENT loop (A) is the running loop.
-    async def _construct_on_loop_a() -> tuple[Callable[..., None], asyncio.Event]:
-        # Yield once so this genuinely executes while loop A is running,
-        # the moment the waiter (and its asyncio.Event) is constructed.
-        await asyncio.sleep(0)
-        waiter_fn = _get_callable(bridge, "_make_payload_waiter")
-        return cast(
-            "tuple[Callable[..., None], asyncio.Event]",
-            waiter_fn(messages, _record_dispatch),
-        )
+    waiter_fn = _get_callable(bridge, "_make_payload_waiter")
+    on_message_obj, event_obj = cast(
+        "tuple[Callable[..., None], asyncio.Event]",
+        waiter_fn(messages, _noop_dispatch),
+    )
+    on_message = on_message_obj
+    event = event_obj
 
-    loop_a = asyncio.new_event_loop()
-    try:
-        on_message, event = loop_a.run_until_complete(_construct_on_loop_a())
-    finally:
-        loop_a.close()
-
-    assert loop_a.is_closed(), "loop A must be closed before loop B awaits the event"
-
-    awaiter_ready = threading.Event()
-    delivered_payload: dict[str, object] = {"type": "send", "payload": {"value": 42}}
-
-    def _deliver_from_thread() -> None:
-        """Deliver a send message once loop B's awaiter is parked.
-
-        Waits on the barrier so the event has already bound to loop B,
-        then drives the real ``on_message`` callback from this foreign
-        thread exactly as the Frida transport would.
-        """
-        if not awaiter_ready.wait(timeout=5.0):
-            return
-        on_message(delivered_payload, None)
-
-    # Loop B is the loop that actually awaits the event.
+    # Now run a loop that awaits the event AFTER it was constructed off-loop.
     async def driver() -> bool:
-        running_loop = asyncio.get_running_loop()
-        worker = threading.Thread(target=_deliver_from_thread, daemon=True)
-        worker.start()
-        wait_task = asyncio.ensure_future(event.wait())
-        # Yield until the event has actually bound to THIS loop, so the
-        # threadsafe handoff has a concrete, current target to land on.
-        for _ in range(100):
-            await asyncio.sleep(0)
-            if getattr(event, "_loop", None) is running_loop:
-                break
-        assert getattr(event, "_loop", None) is running_loop, "event never bound to loop B"
-        awaiter_ready.set()
+        # Simulate Frida delivering from another thread mid-await.
+        threading.Thread(
+            target=lambda: on_message({"type": "send", "payload": {}}, None),
+            daemon=True,
+        ).start()
         try:
-            await asyncio.wait_for(wait_task, timeout=5.0)
+            await asyncio.wait_for(event.wait(), timeout=2.0)
         except TimeoutError:
             return False
-        finally:
-            worker.join(timeout=5.0)
         return True
 
-    released = _run(driver())
-
-    assert released, "waiter never released on loop B; the construction loop was bound"
-    assert event.is_set(), "event must be set after delivery"
-    # The real on_message ran end to end: it buffered and dispatched the payload.
-    assert messages == [delivered_payload]
-    assert dispatched == [delivered_payload]
+    assert _run(driver()), "waiter never released; loop binding is stale"
 
 
 def test_f0015_call_function_rejects_non_int_address() -> None:

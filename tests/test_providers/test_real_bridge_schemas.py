@@ -67,11 +67,7 @@ def _bridge_definitions() -> list[ToolDefinition]:
 _BRIDGE_DEFINITIONS: list[ToolDefinition] = _bridge_definitions()
 
 _EXPECTED_TOP_LEVEL_ARRAYS: int = sum(
-    1
-    for definition in _BRIDGE_DEFINITIONS
-    for function in definition.functions
-    for param in function.parameters
-    if param.type == "array"
+    1 for definition in _BRIDGE_DEFINITIONS for function in definition.functions for param in function.parameters if param.type == "array"
 )
 
 _SchemaBuilder = Callable[[ToolDefinition], list[Any]]
@@ -144,11 +140,137 @@ def test_real_bridge_schemas_emit_valid_array_items(
                 validated_arrays += _assert_array_items(prop, f"{label}:{definition.tool_name.value}:{name}")
 
     assert validated_arrays >= _EXPECTED_TOP_LEVEL_ARRAYS, (
-        f"{label}: validated {validated_arrays} arrays but the bridges declare "
-        f"{_EXPECTED_TOP_LEVEL_ARRAYS} top-level array parameters"
+        f"{label}: validated {validated_arrays} arrays but the bridges declare {_EXPECTED_TOP_LEVEL_ARRAYS} top-level array parameters"
     )
 
 
 def test_bridges_declare_array_parameters() -> None:
     """Guard against the suite becoming vacuous if arrays disappear."""
     assert _EXPECTED_TOP_LEVEL_ARRAYS > 0, "Expected at least one array parameter across the bridges"
+
+
+def test_non_array_parameters_carry_correct_type_in_schema() -> None:
+    """Every non-array parameter in the schema must carry a non-empty ``type`` field.
+
+    The ``test_real_bridge_schemas_emit_valid_array_items`` test validates the array
+    path. This test is the independent gate for non-array parameters (``string``,
+    ``integer``, ``boolean``, ``number``): it verifies each non-array parameter in
+    every bridge schema carries a ``type`` field with a non-empty string value.
+
+    A schema builder that silently dropped ``type`` from non-array parameters (e.g.,
+    during a serialisation refactor), or that emitted ``type: null``, would still
+    satisfy the array-items test but fail here.  The expected values are the four
+    non-composite JSON Schema primitive types; ``object`` and ``array`` are handled
+    by the other tests.
+    """
+    valid_primitive_types: frozenset[str] = frozenset({"string", "integer", "boolean", "number"})
+    missing: list[str] = []
+    invalid_type: list[str] = []
+
+    for label, builder, extract in _BUILDERS:
+        for definition in _BRIDGE_DEFINITIONS:
+            for declaration in builder(definition):
+                properties = extract(declaration)
+                for param_name, prop in properties.items():
+                    prop_type = str(prop.get("type", "")).lower()
+                    if prop_type in {"array", "object"}:
+                        continue
+                    path = f"{label}:{definition.tool_name.value}:{param_name}"
+                    if not prop_type:
+                        missing.append(path)
+                    elif prop_type not in valid_primitive_types:
+                        invalid_type.append(f"{path} (got {prop_type!r})")
+
+    assert not missing, "Parameters missing 'type' key in schema:\n" + "\n".join(missing)
+    assert not invalid_type, "Parameters with unexpected non-primitive type:\n" + "\n".join(invalid_type)
+
+
+_RequiredExtractor = Callable[[Any], list[str]]
+"""Type alias for a callable that extracts the ``required`` list from a single schema declaration."""
+
+_FnNameExtractor = Callable[[Any], str]
+"""Type alias for a callable that extracts the function name from a single schema declaration."""
+
+_RequiredExtractorSpec = tuple[str, _SchemaBuilder, _FnNameExtractor, _RequiredExtractor]
+"""Type alias for the 4-tuple used in ``test_required_parameters_in_schema_match_tool_definition``."""
+
+
+def test_required_parameters_in_schema_match_tool_definition() -> None:
+    """Required parameters declared in ``ToolDefinition`` must appear in all schema ``required`` lists.
+
+    The schema builders must faithfully forward the ``required=True`` flag from
+    ``ParameterDefinition`` to the JSON Schema ``required`` array. A builder that
+    silently dropped required-parameter declarations (or emitted an empty ``required``
+    list for functions that have mandatory parameters) would be caught here.
+
+    The test iterates every function in every bridge, collects the parameter names
+    marked ``required=True`` from the ``ToolDefinition``, and verifies each one
+    appears in the ``required`` array emitted by every schema builder.
+
+    Each schema format wraps the function name at a different path in the envelope.
+    The Anthropic/Google formats place it at the top-level ``name`` key; the OpenAI
+    format nests it under ``function.name``. ``fn_name_ext`` handles this difference
+    so the test can correctly correlate each schema declaration to its
+    ``FunctionDefinition``.
+    """
+    required_extractors: list[_RequiredExtractorSpec] = [
+        (
+            "base.anthropic",
+            create_anthropic_tool_schema,
+            lambda s: str(s.get("name", "")),
+            lambda s: s["input_schema"].get("required", []),
+        ),
+        (
+            "base.openai",
+            create_openai_tool_schema,
+            lambda s: str(s.get("function", {}).get("name", "")),
+            lambda s: s["function"]["parameters"].get("required", []),
+        ),
+        (
+            "base.google",
+            create_google_tool_schema,
+            lambda s: str(s.get("name", "")),
+            lambda s: s["parameters"].get("required", []),
+        ),
+        (
+            "schemas.anthropic",
+            to_anthropic_schema,
+            lambda s: str(s.get("name", "")),
+            lambda s: s["input_schema"].get("required", []),
+        ),
+        (
+            "schemas.openai",
+            to_openai_schema,
+            lambda s: str(s.get("function", {}).get("name", "")),
+            lambda s: s["function"]["parameters"].get("required", []),
+        ),
+        (
+            "schemas.google",
+            to_google_schema,
+            lambda s: str(s.get("name", "")),
+            lambda s: s["parameters"].get("required", []),
+        ),
+    ]
+
+    failures: list[str] = []
+
+    for label, builder, fn_name_ext, req_extractor in required_extractors:
+        for definition in _BRIDGE_DEFINITIONS:
+            declarations = builder(definition)
+            fn_map: dict[str, list[str]] = {}
+            for decl in declarations:
+                fn_name_key = fn_name_ext(decl)
+                fn_map[fn_name_key] = req_extractor(decl)
+
+            for fn in definition.functions:
+                declared_required = [p.name for p in fn.parameters if p.required]
+                if not declared_required:
+                    continue
+                schema_required = fn_map.get(fn.name, [])
+                failures.extend(
+                    f"{label}:{fn.name}: required param {param_name!r} absent from schema required list (schema has: {schema_required!r})"
+                    for param_name in declared_required
+                    if param_name not in schema_required
+                )
+
+    assert not failures, "Required-parameter mismatches in schemas:\n" + "\n".join(failures)

@@ -1822,7 +1822,7 @@ class QEMUSandbox(SandboxBase):
         """
         connect_error: BaseException | None = None
         try:
-            connected = True  # MUTATION: skip real connect
+            connected = await agent.connect(time_limit=time_limit)
         except (OSError, asyncio.CancelledError, TimeoutError) as agent_error:
             _logger.warning(
                 "guest_agent_connect_exception",

@@ -16,6 +16,7 @@ from intellicrack.core.hexpat.ast_nodes import (
     StructDecl,
     UnionDecl,
 )
+from intellicrack.core.hexpat.errors import HexPatTypeError
 from intellicrack.core.hexpat.type_system import (
     BuiltinTypes,
     EnumTypeInfo,
@@ -245,6 +246,103 @@ class TestTypeRegistry:
         registry.register_union(decl)
         result = registry.resolve("MyUnion")
         assert isinstance(result, UnionTypeInfo)
+
+
+class TestTypeRegistryEdgeCases:
+    """Tests for TypeRegistry error paths and edge cases."""
+
+    def test_register_struct_with_builtin_name_raises_hexpat_type_error(self) -> None:
+        """Registering a struct whose name shadows a built-in raises HexPatTypeError.
+
+        The production code explicitly checks BuiltinTypes.is_reserved_name and
+        raises HexPatTypeError. If that guard is removed, this test goes red.
+        """
+        registry = TypeRegistry()
+        decl = StructDecl(name="u32", parent=None, body=(), annotations=(), line=3, column=7)
+        with pytest.raises(HexPatTypeError, match="u32"):
+            registry.register_struct(decl)
+
+    def test_register_union_with_builtin_name_raises_hexpat_type_error(self) -> None:
+        """Registering a union whose name shadows a built-in raises HexPatTypeError."""
+        registry = TypeRegistry()
+        decl = UnionDecl(name="float", body=(), annotations=(), line=1, column=1)
+        with pytest.raises(HexPatTypeError, match="float"):
+            registry.register_union(decl)
+
+    def test_register_alias_with_builtin_name_raises_hexpat_type_error(self) -> None:
+        """Registering an alias whose name shadows a built-in raises HexPatTypeError."""
+        registry = TypeRegistry()
+        with pytest.raises(HexPatTypeError, match="bool"):
+            registry.register_alias("bool", "MyBool")
+
+    def test_resolve_unknown_name_returns_none(self) -> None:
+        """Resolving a name that was never registered returns None, not an exception."""
+        registry = TypeRegistry()
+        result = registry.resolve("AbsolutelyNotRegistered_XYZ_987")
+        assert result is None
+
+    def test_resolve_circular_alias_returns_none(self) -> None:
+        """Circular alias chains resolve to None without infinite looping.
+
+        A -> B -> A is a cycle. The production visited-set guard must break the
+        loop and return None.  If the guard is removed, this test hangs or
+        raises RecursionError rather than returning None.
+        """
+        registry = TypeRegistry()
+        registry.register_alias("CycleA", "CycleB")
+        registry.register_alias("CycleB", "CycleA")
+        result = registry.resolve("CycleA")
+        assert result is None
+
+    def test_registry_state_isolation(self) -> None:
+        """Types registered in one TypeRegistry do not appear in another.
+
+        Each TypeRegistry instance owns its own lookup tables.  A struct
+        registered in r1 must not be visible through r2.resolve.
+        """
+        r1 = TypeRegistry()
+        r2 = TypeRegistry()
+        decl = StructDecl(name="IsolatedStruct", parent=None, body=(), annotations=(), line=1, column=1)
+        r1.register_struct(decl)
+
+        assert r1.resolve("IsolatedStruct") is not None
+        assert r2.resolve("IsolatedStruct") is None
+
+    def test_overwrite_struct_registration_uses_latest(self) -> None:
+        """Re-registering the same struct name stores the most recent declaration.
+
+        The production code does not raise on collision for user-defined types;
+        it simply overwrites. The resolved StructTypeInfo must reflect the
+        most recently registered decl.
+        """
+        registry = TypeRegistry()
+        decl_v1 = StructDecl(name="Widget", parent=None, body=(), annotations=(), line=1, column=1)
+        decl_v2 = StructDecl(name="Widget", parent="Base", body=(), annotations=(), line=5, column=1)
+        registry.register_struct(decl_v1)
+        registry.register_struct(decl_v2)
+        result = registry.resolve("Widget")
+        assert isinstance(result, StructTypeInfo)
+        assert result.parent == "Base"
+
+    def test_resolve_primitive_unknown_returns_none(self) -> None:
+        """resolve_primitive on an unknown name returns None, not a HexPatType."""
+        registry = TypeRegistry()
+        result = registry.resolve_primitive("NotAPrimitive")
+        assert result is None
+
+    def test_user_type_names_excludes_builtins(self) -> None:
+        """user_type_names returns only user-registered names, not built-in primitives.
+
+        Built-in types like 'u32' must never appear in user_type_names even
+        though they are resolvable via resolve().
+        """
+        registry = TypeRegistry()
+        decl = StructDecl(name="UserDefined", parent=None, body=(), annotations=(), line=1, column=1)
+        registry.register_struct(decl)
+        user_names = registry.user_type_names()
+        assert "UserDefined" in user_names
+        assert "u32" not in user_names
+        assert "float" not in user_names
 
 
 def _make_primitive_type_node(name: str) -> PrimitiveType:

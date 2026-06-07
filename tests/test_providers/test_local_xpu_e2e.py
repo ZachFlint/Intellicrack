@@ -995,25 +995,53 @@ class TestStreamingInference:
         loaded_xpu_provider: LocalTransformersProvider,
         tinyllama_model_id: str,
     ) -> None:
-        """Joined stream chunks should form non-empty printable text.
+        """Joined greedy stream chunks should form a coherent, on-topic answer.
+
+        Greedy decoding (``temperature=0.0``) makes the stream deterministic, so
+        no seeding is required and the assertions never flake. The reassembled
+        text is validated with the model-independent coherence oracle and must
+        reference the color domain the prompt asked about - an empty stream, a
+        repeated-character collapse, or an off-topic answer fails the gate.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        messages = _make_messages("What color is the sky?")
+        messages = _make_messages("What color is the sky on a clear day? Answer in one sentence.")
         chunks: list[str] = [
             chunk
             async for chunk in loaded_xpu_provider.chat_stream(
                 messages=messages,
                 model=tinyllama_model_id,
-                max_tokens=32,
+                max_tokens=48,
+                temperature=0.0,
             )
         ]
+        assert all(isinstance(chunk, str) for chunk in chunks), "every streamed chunk must be a str"
+        assert all(chunk for chunk in chunks), "the stream must not yield empty chunks"
 
         full_text = "".join(chunks).strip()
-        assert len(full_text) > 0
-        assert full_text.isprintable()
+        assert full_text, "stream produced no text"
+        control_chars = [char for char in full_text if not char.isprintable() and char not in "\t\n\r"]
+        assert not control_chars, f"streamed text contained control characters {control_chars!r}: {full_text!r}"
+
+        alpha_chars = [char for char in full_text if char.isalpha()]
+        assert len(alpha_chars) >= 20, f"expected >= 20 alphabetic chars in the streamed answer, got {len(alpha_chars)}: {full_text!r}"
+        unique_alpha = {char.lower() for char in alpha_chars}
+        assert len(unique_alpha) >= 8, f"expected >= 8 unique letters, got {len(unique_alpha)}: {full_text!r}"
+
+        run_ratio = _max_char_run_ratio(full_text)
+        assert run_ratio < 0.5, f"streamed answer is dominated by a repeated character (run ratio {run_ratio:.2f}): {full_text!r}"
+
+        lowered = full_text.lower()
+        color_terms = ("sky", "blue", "color", "colour")
+        present = [term for term in color_terms if term in lowered]
+        assert present, f"expected a color-domain term {color_terms} in the streamed answer: {full_text!r}"
+
+        vocab_hits = [word for word in _COMMON_ENGLISH_WORDS if len(word) >= 3 and word in lowered]
+        assert len(vocab_hits) >= 2, (
+            f"expected >= 2 common English words embedded in the streamed answer, got {sorted(vocab_hits)}: {full_text!r}"
+        )
 
     async def test_stream_and_nonstream_both_produce_valid_output(
         self,

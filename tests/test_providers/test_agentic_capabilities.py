@@ -12,7 +12,7 @@ extended thinking, and prompt caching across all providers.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from intellicrack.providers.openrouter import OpenRouterProvider
 
 
-pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
+pytestmark = [pytest.mark.integration]
 
 
 def _make_test_tool() -> list[ToolDefinition]:
@@ -86,6 +86,8 @@ def _make_messages(prompt: str) -> list[Message]:
 
 class TestToolChoiceRequired:
     """Verify tool_choice=REQUIRED forces a tool call on capable providers."""
+
+    pytestmark: ClassVar[list[pytest.MarkDecorator]] = [pytest.mark.integration, pytest.mark.asyncio]
 
     async def test_anthropic_tool_choice_required_forces_tool_call(
         self,
@@ -156,13 +158,22 @@ class TestToolChoiceRequired:
         self,
         grok_provider: GrokProvider,
     ) -> None:
-        """Grok should return a tool call when tool_choice is REQUIRED.
+        """Grok REQUIRED must yield a structured call to the only offered tool.
+
+        Drives the real connected Grok provider with a single tool whose schema
+        declares one required ``path`` parameter and ``tool_choice=REQUIRED``.
+        Because exactly one tool is offered and a tool call is mandatory, the
+        provider's response translation must surface a :class:`ToolCall` naming
+        that exact function (``binary.get_file_size``) with a non-empty ``id``
+        and the required ``path`` argument present and typed as ``str``. A
+        regression in the REQUIRED-mode mapping, function-name translation, or
+        dropped-argument handling fails these assertions.
 
         Args:
             grok_provider: Connected Grok provider fixture.
         """
         tools = _make_test_tool()
-        messages = _make_messages("What is the size of notepad.exe?")
+        messages = _make_messages("What is the size of notepad.exe at C:\\Windows\\notepad.exe?")
         choice = ToolChoice(mode=ToolChoiceMode.REQUIRED)
 
         _, tool_calls = await grok_provider.chat(
@@ -173,13 +184,30 @@ class TestToolChoiceRequired:
             max_tokens=1024,
         )
         assert tool_calls is not None
-        assert len(tool_calls) > 0
+        assert len(tool_calls) == 1
+        call = tool_calls[0]
+        assert isinstance(call, ToolCall)
+        assert call.function_name == "binary.get_file_size"
+        assert call.tool_name == "binary"
+        assert len(call.id) > 0
+        assert "path" in call.arguments
+        path_arg = call.arguments["path"]
+        assert isinstance(path_arg, str)
+        assert len(path_arg) > 0
 
     async def test_google_tool_choice_auto(
         self,
         google_provider: GoogleProvider,
     ) -> None:
-        """Google should handle tool_choice=AUTO without error.
+        """Google AUTO mode must return an assistant-role response without raising.
+
+        Drives the real connected Google provider with a single tool and
+        ``tool_choice=AUTO``. The provider may or may not elect to call the
+        tool; what must hold is that the response carries role ``"assistant"``
+        and either the response content is non-empty (free-text reply) or
+        tool_calls is non-None (a tool call was made). Both outcomes are valid
+        under AUTO mode. A regression that crashes, drops the role, or
+        returns both empty content and no tool calls fails.
 
         Args:
             google_provider: Connected Google provider fixture.
@@ -188,26 +216,41 @@ class TestToolChoiceRequired:
         messages = _make_messages("What is the size of notepad.exe?")
         choice = ToolChoice(mode=ToolChoiceMode.AUTO)
 
-        response, _ = await google_provider.chat(
+        response, tool_calls = await google_provider.chat(
             messages=messages,
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             tools=tools,
             tool_choice=choice,
             max_tokens=1024,
         )
         assert response.role == "assistant"
+        has_content = len(response.content) > 0
+        has_tool_calls = tool_calls is not None and len(tool_calls) > 0
+        assert has_content or has_tool_calls, (
+            f"Expected non-empty content or at least one tool call under AUTO mode, "
+            f"got content={response.content!r}, tool_calls={tool_calls!r}"
+        )
 
     async def test_openrouter_tool_choice_required(
         self,
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """OpenRouter should return a tool call when tool_choice is REQUIRED.
+        """OpenRouter REQUIRED must yield a structured call to the only offered tool.
+
+        Drives the real connected OpenRouter provider routing to ``gpt-4o-mini``
+        with a single tool whose schema declares one required ``path`` parameter
+        and ``tool_choice=REQUIRED``. Because exactly one tool is offered and a
+        tool call is mandatory, the provider's response translation must surface
+        a :class:`ToolCall` naming that exact function (``binary.get_file_size``)
+        with a non-empty ``id`` and the required ``path`` argument present and
+        typed as ``str``. A regression in REQUIRED-mode mapping, function-name
+        translation, or dropped-argument handling fails these assertions.
 
         Args:
             openrouter_provider: Connected OpenRouter provider fixture.
         """
         tools = _make_test_tool()
-        messages = _make_messages("What is the size of notepad.exe?")
+        messages = _make_messages("What is the size of notepad.exe at C:\\Windows\\notepad.exe?")
         choice = ToolChoice(mode=ToolChoiceMode.REQUIRED)
 
         _, tool_calls = await openrouter_provider.chat(
@@ -218,65 +261,155 @@ class TestToolChoiceRequired:
             max_tokens=1024,
         )
         assert tool_calls is not None
-        assert len(tool_calls) > 0
+        assert len(tool_calls) == 1
+        call = tool_calls[0]
+        assert isinstance(call, ToolCall)
+        assert call.function_name == "binary.get_file_size"
+        assert call.tool_name == "binary"
+        assert len(call.id) > 0
+        assert "path" in call.arguments
+        path_arg = call.arguments["path"]
+        assert isinstance(path_arg, str)
+        assert len(path_arg) > 0
 
 
 class TestStreamingToolCalls:
     """Verify streaming captures tool calls on previously broken providers."""
 
+    pytestmark: ClassVar[list[pytest.MarkDecorator]] = [pytest.mark.integration, pytest.mark.asyncio]
+
     async def test_huggingface_stream_captures_tool_calls(
         self,
         huggingface_provider: HuggingFaceProvider,
     ) -> None:
-        """HuggingFace stream should capture tool calls via ToolCallBufferManager.
+        """HuggingFace stream must capture tool calls via ToolCallBufferManager.
+
+        Drives the real connected HuggingFace provider with a streaming call
+        that explicitly requests use of ``binary.get_file_size``. After the
+        stream completes, ``get_pending_tool_calls()`` must return either a
+        non-empty list of correctly-structured :class:`ToolCall` objects (when
+        the model elected to call the tool) or an empty list accompanied by
+        non-empty stream chunks (when the model answered in free text). The
+        branch that matters for the bug being guarded is the non-empty case:
+        if the bridge's ``ToolCallBufferManager`` is broken, tool calls will
+        be silently dropped and the list will be empty even though the model
+        made a call. An empty list with no stream content fails because that
+        indicates both the call and the text response were dropped.
 
         Args:
             huggingface_provider: Connected HuggingFace provider fixture.
         """
-        tools = _make_test_tool()
-        messages = _make_messages("Use the binary.get_file_size tool to check notepad.exe")
+        model_id = "meta-llama/Llama-3.1-8B-Instruct"
+        available_models = await huggingface_provider.list_models()
+        model_info = next((m for m in available_models if m.id == model_id), None)
+        if model_info is not None and not model_info.supports_tools:
+            pytest.skip(f"Model {model_id!r} does not advertise tool support in current environment")
 
-        _chunks = [
+        tools = _make_test_tool()
+        messages = _make_messages(
+            "Use the binary.get_file_size tool on C:\\Windows\\notepad.exe and tell me the size.",
+        )
+
+        chunks: list[str] = [
             chunk
             async for chunk in huggingface_provider.chat_stream(
                 messages=messages,
-                model="meta-llama/Llama-3.1-8B-Instruct",
+                model=model_id,
                 tools=tools,
                 max_tokens=1024,
             )
         ]
 
         pending = huggingface_provider.get_pending_tool_calls()
-        assert isinstance(pending, list)
+
+        if pending:
+            assert len(pending) >= 1
+            call = pending[0]
+            assert isinstance(call, ToolCall)
+            assert call.function_name == "binary.get_file_size", (
+                f"Expected function_name 'binary.get_file_size', got {call.function_name!r}"
+            )
+            assert call.tool_name == "binary", f"Expected tool_name 'binary', got {call.tool_name!r}"
+            assert len(call.id) > 0, "ToolCall id must be non-empty"
+            assert "path" in call.arguments, f"Expected 'path' argument in ToolCall.arguments, got {call.arguments!r}"
+            path_arg = call.arguments["path"]
+            assert isinstance(path_arg, str), f"Expected 'path' argument to be str, got {type(path_arg).__name__}"
+            assert len(path_arg) > 0, "ToolCall 'path' argument must be non-empty"
+        else:
+            total_content = "".join(chunks)
+            assert len(total_content) > 0, (
+                "Both pending tool calls and stream content are empty: the streaming bridge dropped the model's complete response"
+            )
 
     async def test_ollama_stream_with_tools_returns_tool_calls(
         self,
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Ollama stream should capture tool calls via non-streaming fallback.
+        """Ollama stream must capture tool calls via the non-streaming fallback path.
+
+        Drives the real connected Ollama provider with a streaming call that
+        explicitly requests use of ``binary.get_file_size``. Ollama's streaming
+        path falls back to a non-streaming round-trip when tools are present;
+        after that completes, ``get_pending_tool_calls()`` must return either a
+        non-empty list of correctly-structured :class:`ToolCall` objects (when
+        the model elected to call the tool) or an empty list accompanied by
+        non-empty stream chunks (when the model answered in free text instead).
+        When the locally installed ``llama3.2`` model does not advertise tool
+        support, the test skips rather than asserting a capability the model
+        cannot provide.
 
         Args:
             ollama_provider: Connected Ollama provider fixture.
         """
-        tools = _make_test_tool()
-        messages = _make_messages("Use binary.get_file_size to get the size of C:\\Windows\\notepad.exe")
+        model_id = "local/llama3.2"
+        available_models = await ollama_provider.list_models()
+        model_info = next((m for m in available_models if m.id == model_id), None)
+        if model_info is None:
+            pytest.skip(f"Model {model_id!r} not installed in local Ollama instance")
+        if not model_info.supports_tools:
+            pytest.skip(f"Model {model_id!r} does not advertise tool support; cannot verify tool-call capture")
 
-        _chunks = [
+        tools = _make_test_tool()
+        messages = _make_messages(
+            "Use binary.get_file_size to get the size of C:\\Windows\\notepad.exe",
+        )
+
+        chunks: list[str] = [
             chunk
             async for chunk in ollama_provider.chat_stream(
                 messages=messages,
-                model="local/llama3.2",
+                model=model_id,
                 tools=tools,
                 max_tokens=1024,
             )
         ]
 
         pending = ollama_provider.get_pending_tool_calls()
-        assert isinstance(pending, list)
+
+        if pending:
+            assert len(pending) >= 1
+            call = pending[0]
+            assert isinstance(call, ToolCall)
+            assert call.function_name == "binary.get_file_size", (
+                f"Expected function_name 'binary.get_file_size', got {call.function_name!r}"
+            )
+            assert call.tool_name == "binary", f"Expected tool_name 'binary', got {call.tool_name!r}"
+            assert len(call.id) > 0, "ToolCall id must be non-empty"
+            assert "path" in call.arguments, f"Expected 'path' argument in ToolCall.arguments, got {call.arguments!r}"
+            path_arg = call.arguments["path"]
+            assert isinstance(path_arg, str), f"Expected 'path' argument to be str, got {type(path_arg).__name__}"
+            assert len(path_arg) > 0, "ToolCall 'path' argument must be non-empty"
+        else:
+            total_content = "".join(chunks)
+            assert len(total_content) > 0, (
+                "Both pending tool calls and stream content are empty: the streaming bridge dropped the model's complete response"
+            )
 
 
 class TestAccurateToolSupport:
     """Verify models report accurate supports_tools metadata."""
+
+    pytestmark: ClassVar[list[pytest.MarkDecorator]] = [pytest.mark.integration, pytest.mark.asyncio]
 
     async def test_ollama_models_report_accurate_tool_support(
         self,
@@ -312,6 +445,8 @@ class TestAccurateToolSupport:
 
 class TestContextWindowEnforcement:
     """Verify orchestrator message trimming logic."""
+
+    pytestmark: ClassVar[list[pytest.MarkDecorator]] = [pytest.mark.integration]
 
     def test_message_trimming_removes_oldest_first(self) -> None:
         """Oldest non-system messages should be removed first."""
@@ -364,6 +499,8 @@ class TestContextWindowEnforcement:
 class TestExtendedThinking:
     """Verify extended thinking support on Anthropic."""
 
+    pytestmark: ClassVar[list[pytest.MarkDecorator]] = [pytest.mark.integration, pytest.mark.asyncio]
+
     async def test_anthropic_extended_thinking_returns_thinking_content(
         self,
         anthropic_provider: AnthropicProvider,
@@ -408,6 +545,8 @@ class TestExtendedThinking:
 
 class TestPromptCaching:
     """Verify prompt caching support."""
+
+    pytestmark: ClassVar[list[pytest.MarkDecorator]] = [pytest.mark.integration, pytest.mark.asyncio]
 
     async def test_anthropic_caching_succeeds(
         self,
