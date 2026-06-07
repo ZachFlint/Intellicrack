@@ -67,7 +67,7 @@ docstring-parser-fork==0.0.14
 docutils==0.22.4
 dparse==0.6.4
 dpcpp-cpp-rt==2025.3.1
-dulwich==1.2.4
+dulwich==1.2.5
 editor==1.8.0
 execnet==2.1.2
 executing==2.2.1
