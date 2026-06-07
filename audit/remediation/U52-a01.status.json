@@ -1,0 +1,60 @@
+{
+  "unitId": "U52-a01",
+  "findings": [
+    {
+      "ref": "tests/test_audit4/b4_memory_tab/test_memory_tab.py:213 - test_on_read_no_dispatch_when_unattached",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Patch _memory_tab_mod.run_bridge_coroutine_logged (the name actually bound in memory_tab); assert dispatch_calls==[] AND warning title=='Not Attached' AND 'Not attached to any process' in message; paired test_on_read_dispatches_when_attached proves _attached_pid is the sole guard."
+    },
+    {
+      "ref": "tests/test_audit4/b4_memory_tab/test_memory_tab.py:232 - test_on_write_no_dispatch_when_unattached",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Same pattern as read: patch _memory_tab_mod.run_bridge_coroutine_logged; assert dispatch skipped + exact warning title/message; paired test_on_write_dispatches_when_attached confirms guard specificity."
+    },
+    {
+      "ref": "tests/test_audit4/b4_memory_tab/test_memory_tab.py:252 - test_on_search_no_dispatch_when_unattached",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Same pattern: patch _memory_tab_mod.run_bridge_coroutine_logged; assert dispatch_calls==[] + exact warning; paired test_on_search_dispatches_when_attached proves _attached_pid is the controlling factor."
+    },
+    {
+      "ref": "tests/test_bridges/test_process_bridge.py:516 - test_list_processes_non_empty",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "assert all(hasattr(p,'pid') and hasattr(p,'name') and isinstance(p.pid,int) and p.pid>=0 for p in procs); self_proc=next(p for p.pid==os.getpid()); assert 'python' in self_proc.name.lower() — self-process identity is the independent oracle."
+    },
+    {
+      "ref": "tests/test_bridges/test_process_bridge.py:545 - test_list_processes_filter",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "assert all('python' in p.name.lower() for p in procs) — filter semantics gate: a bridge ignoring filter_name would include non-python processes and fail this assertion."
+    },
+    {
+      "ref": "tests/test_bridges/test_process_bridge.py:604 - test_list_processes_detailed_self_arch",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "expected_arch='x86_64' if struct.calcsize('P')*8==64 else 'x86'; assert arch==expected_arch — struct.calcsize('P') is the independent oracle; swapped/wrong arch string fails immediately."
+    },
+    {
+      "ref": "tests/test_bridges/test_process_bridge.py:726 - test_search_pattern_finds_bytes",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "assert results[0]==addr (exact first-match address, not just addr in results); added test_search_pattern_absent_returns_empty asserting results==[] for a 16-byte sentinel pattern that cannot appear in the allocated region."
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit4/b4_memory_tab/test_memory_tab.py",
+    "tests/test_bridges/test_process_bridge.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "204 passed, 9 skipped in 28.58s"
+}

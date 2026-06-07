@@ -17,24 +17,7 @@ from pathlib import Path
 
 REPO = "D:/Intellicrack"
 WTBASE = "D:/ic-wt2"
-PENDING = [
-    "U10-a09",
-    "U24-a09",
-    "U29-a07",
-    "U32-a17",
-    "U35-a03",
-    "U38-a01",
-    "U39-a04",
-    "U41-a08",
-    "U42-a17",
-    "U44-a05",
-    "U45-a08",
-    "U46-a08",
-    "U51-a19",
-    "U53-a03",
-    "U56-a20",
-    "U59-a06",
-]
+PENDING: list[str] = json.loads(Path(f"{REPO}/audit/_pending.json").read_text(encoding="utf-8"))
 
 
 def run(cmd: str, cwd: str | None = None, timeout: int = 600) -> int:

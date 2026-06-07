@@ -1,0 +1,55 @@
+stash@{0} 0b070a7c51584221ef200855753ce3d91e48f84c On worktree-agent-aed5552dc05248349: auto-stash before rebase
+stash@{1} 09c6bbeccb0cdf01dfb28b8ea0eb3e2068d665e2 WIP on audit7/u12-qemu-anti-evasion-identity: 947a3255 fix(qemu): F-0022/F-0029 anti-evasion reg.exe allowlist + identity consistency
+stash@{2} 5aad58101eeb133efb89d4eb0378e16ea072e3ff WIP on worktree-agent-af4a8404e820a04c5: 847750d6 fix(x64dbg): audit6 X64DBG-A — lifecycle/subprocess/platform (7 findings) (#362)
+stash@{3} 07833d783630077c7577472bbb47414e4568b542 On main: audit6-verification-pixi-lock
+stash@{4} 82d3afdd54057f13899d249dad721cdf292a6785 WIP on worktree-agent-aaacdf3c8d337ce68: 2840a70e fix(x64dbg): audit6 X64DBG-A pydoclint findings
+stash@{5} 2b0e050701011f21b03abc4fa8b367e6105050b2 WIP on worktree-agent-a437feeb929c63016: 0c2412bd fix(x64dbg): audit6 X64DBG-E - memory/PE/exports (F-0005/F-0019/F-0020/F-0021/F-0022)
+stash@{6} 96e6690b634a564947f834e0ae6413733307e1c9 WIP on (no branch): c6e26223 chore(repo): untrack personal CLI launcher (config.toml + .lnk + Launcher/Scripts)
+stash@{7} 43f07076100bcfa9ac7c69858ecf3c5cdc7a3396 WIP on fix/audit6-ghidra-d-v2: dce5573e fix(ghidra): audit6 GHIDRA-D — parsing/xrefs/security/capability (5 findings)
+stash@{8} 8885a6be64cd09b51e9f85065d22e1ec231f5906 WIP on worktree-agent-a1b52584e5da0a95e: ea49384e fix(x64dbg): audit6 X64DBG-D - concurrency/breakpoints (7 findings)
+stash@{9} 69a113b23bd3726e33b3b8627faacffae0dd1180 On worktree-agent-aef041c361d097121: stash pixi.lock before rebase
+stash@{10} 6e30705538fcd3abf9e55f2e666e48e350122d8c On main: audit-files-preserve
+stash@{11} 3cb8bafea756e412a077f420fe114154975089ec WIP on worktree-agent-aaffade4f5a2e127e: cda3f93b fix(ui-mainwindow): audit5 u5 - wire orphan signals + repair menu/handlers (F-0001/F-0002/F-0003/F-0004/F-0006/F-0007/F-0008/F-0009/F-0010/F-0011/F-0012/F-0013/F-0014/F-0015/F-0016/F-0017/F-0018/F-0019/F-0023/F-0025/F-0026) (#347)
+stash@{12} 395b066a89fe24f5745a0a11040629751549a93a WIP on worktree-agent-a014844a229e098d7: 76235954 fix(hexpat-core): audit5 u3 - wire stdlib/evaluator hooks and missing builtins (F-0001..F-0022, F-0025, F-0027)
+stash@{13} 13125431de77cd68b0103e7d884c7d59ff524c52 WIP on worktree-agent-a5b958c54e0c4abf9: e275e037 fix(bridges-cutter): audit5 u1 - 15 findings
+stash@{14} 3c764d966b5fa4b6a7ee12880ab7a7b9b7d96264 WIP on worktree-agent-a2a2e3b414f968afa: 4975cfcf test(u2): use monkeypatch fixture for frida.Compiler swap to drop type-ignore
+stash@{15} bbaa8efd4f2299161caa93192a4b39ab063d1ebc WIP on worktree-agent-a8f3a433553574aba: 18053ac4 test(u4): reword vendor pattern reference to drop literal name
+stash@{16} 22e45266f8d03f4e6725ca62573ebe79e8703c3f WIP on worktree-agent-a06e1743426d1a28c: 1276ddc3 fix(ui-tools): audit5 u6 - populate function/xref panels and wire sandbox backend (F-0005, F-0021)
+stash@{17} dbfbb3b70db7bbfddcb956220f9652e1f0483cc7 WIP on worktree-agent-a4ac4ced06e3999d9: c67ab40f fix(ui-confirmation): audit5 u9 - wire remember_similar through signal + cache (F-0020)
+stash@{18} dc3322f9bee5f74bc9648108192845927398158f WIP on audit5/u7-ui-providerconfig: 768b455c fix(ui-providerconfig): audit5 u7 - wire provider-specific resource links (F-0022)
+stash@{19} 14d3cae0cd3424afbb775dd3e6924de4513d4a75 On chore/precommit-hooks-unblock: U7-pixi-lock
+stash@{20} 3be9ee32008b2c7ec0cb2691c54624beddc1e35f On worktree-agent-a47d4586e7130c489: audit5-u5-pre-existing-state
+stash@{21} 461568f36eeaac621af8b4db8e2e5eb84e11d467 WIP on worktree-agent-a4ac4ced06e3999d9: 25643209 fix(process-panel): audit4 B3+B7 — threads tab + workers (F-0011+0019+0026) (#337)
+stash@{22} d3a8596a588d811f3c76fc3534c1634fdf4c427f On audit4/b5-modules-tab: merge-cleanup-b5
+stash@{23} 0130acb6b2f353ec2937e3f9e5e3c79a3eefb3c2 On audit4/b6-system-tab: merge-cleanup-b6
+stash@{24} d4bf5ecc4348e7c9c699525ae159147884ef1601 On audit4/a4-windows-sandbox: merge-skill-preflight-stash
+stash@{25} d4a0d4f2adb25f96898db8d507eca6b1224b78ee On main: pixi-lock-leftover
+stash@{26} 950414eb67b464a34243748c8b5a1ba8b9cf6923 On main: leftover-b1-uncommitted
+stash@{27} 637c23558f97d56b0a7489b45ee54dd0b56206c8 WIP on audit4/b3-b7-process-panel: 0ce22c13 fix(bridges): rework audit2 Units 1/4/10 (14 findings, F-0013/0027/0029/0030/0031/0035/0038/0043/0044/0045) (#313)
+stash@{28} e4584cb9d995b2ddf65cd6183329211ff78b2c4d WIP on audit4/b3-b7-process-panel: 0ce22c13 fix(bridges): rework audit2 Units 1/4/10 (14 findings, F-0013/0027/0029/0030/0031/0035/0038/0043/0044/0045) (#313)
+stash@{29} e4e09b29a9668f9a06237698f767c08df8dc273d On audit4/c15-hex-comparison-tempfile: leftover-from-batch-cleanup
+stash@{30} 8649f880f95e182c62da015add221a514d880b7b WIP on audit4/c2-hex-highlighting-route: 0ce22c13 fix(bridges): rework audit2 Units 1/4/10 (14 findings, F-0013/0027/0029/0030/0031/0035/0038/0043/0044/0045) (#313)
+stash@{31} a17856f859e9a093803041c8ce03c99e77a65ba1 WIP on main: 0ce22c13 fix(bridges): rework audit2 Units 1/4/10 (14 findings, F-0013/0027/0029/0030/0031/0035/0038/0043/0044/0045) (#313)
+stash@{32} 14797aba57afba57ea81654b42d3cca4d9d5c1ab WIP on main: 0ce22c13 fix(bridges): rework audit2 Units 1/4/10 (14 findings, F-0013/0027/0029/0030/0031/0035/0038/0043/0044/0045) (#313)
+stash@{33} 989b550bfc7f52328debce75bdee11a1d3c889c5 On audit2-unit7-fix: verification-cleanup-noise
+stash@{34} db71c4a0ef265cd176a34f30bd0e414ed48f96d1 On main: pre-merge dirty state
+stash@{35} b17c849c97f7185999291fccc3cbf8faf754b6a8 WIP on audit2/process-memory-sections-final: 7af4c219 fix(bridges): resolve audit2 process F-0010/F-0020/F-0047/F-0048 (modules/threads/inject)
+stash@{36} 6fceddaa15177aa5b12fe3464e3162f4144b3108 WIP on audit2/process-memory-and-sections: c0bfbdf9 test: add win32 process bridge extensions and IPS patch support
+stash@{37} e79b7ad957d7802d51b23195c691166a26ad0f02 On audit2/process-memory-and-sections: saving_concurrent_agent_changes
+stash@{38} 5ac08f52e0b85682197061a2d7249010690e459f WIP on audit2/process-modules-threads-inject: c0bfbdf9 test: add win32 process bridge extensions and IPS patch support
+stash@{39} 2210bbe1af6b5a37f4cfc7d2569cc920ea4d88e3 On main: pre-audit2-process-handles-unit-cleanup
+stash@{40} a534650f8446fd988f2a77dd50c3e034fba3cea5 WIP on audit1/hexcore-rust: c0bfbdf9 test: add win32 process bridge extensions and IPS patch support
+stash@{41} b20baeb0925f30ae36c42d55e457eea9b66024c2 WIP on main: 271f5a0a fix(semgrep-logging): bridges-process-rest (#262)
+stash@{42} c78a9ef2cf65c4704fe45ee9bcc58484e90668a0 WIP on main: 271f5a0a fix(semgrep-logging): bridges-process-rest (#262)
+stash@{43} 432c4b36097bc50e46367ce7efa6decde029823d On worktree-unit1-windows: foreign-workers-unstaged
+stash@{44} b0321598b6fa0f1e91490657e35db2eb49ab6d8e On worktree-unit1-windows: unit1-windows-backup
+stash@{45} 79b329f1412a43640af0455916269fa1d43331c6 On unit6-dll-monitor: unit4-switch-stash
+stash@{46} ea49f0deccc733c49c01040a3f35193cf73a8620 On worktree-unit1-windows: unit4-stash-other-units
+stash@{47} b32c4472f9f73a94ad6533664263a6d5ab4626ff On main: kg-untrack
+stash@{48} 3b46c2d057dec920ff50a181257b5b77ec9041c3 On unit-8-process-sandbox-a55-a68: unit-8-unrelated-changes
+stash@{49} db1bf637bb16a8eaef539b3eeb17f9eebd73b5a2 On fix/core-tools-capability-b2: unit19-and-autogen
+stash@{50} b7ba54b3bd9442dc710c99310246e441683f5b41 On worktree-agent-ac7e84a6: hook-generated
+stash@{51} abf69e1944ccf0caacfbb3edb419886c50beba80 On main: group-b-batch
+stash@{52} 0344259a259bb2d6cf707a6b82835c5d0ddeb118 On docs/require-init-and-nested-docstrings: pixi.lock from docs branch
+stash@{53} 5836755a647aa0a6266892863d1188d86206ef84 On docs/require-init-and-nested-docstrings: pyproject pre-tightening
+stash@{54} 7bd1102483652231708e1cd072b218bc43757ff2 On main: config tightening WIP
