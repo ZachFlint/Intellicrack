@@ -1,0 +1,93 @@
+{
+  "unitId": "U65-a06",
+  "findings": [
+    {
+      "ref": "tests/test_bridges/test_base.py:27 - test_disassembly_line_construction",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real DisassemblyLine instance; dataclasses.fields() independently yields ['address','bytes_str','mnemonic','operands','comment'] and asdict() returns exact dict with known values"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:42 - test_disassembly_line_with_comment",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real DisassemblyLine list; comment-filter expression [ln for ln in lines if ln.comment is not None] yields exactly the commented line with correct text, None-sentinel check verified"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:54 - test_memory_search_result_construction",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real MemorySearchResult list; sorted() by address key yields ascending order with exact matched_bytes values verified; asdict() round-trip compared against independently known dict"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:68 - test_stack_frame_construction",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real StackFrame instance; asdict() yields all 7 field values matching independently specified constants; None-symbol guard 'frame.function_name or <unknown>' verified to produce correct placeholder"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:85 - test_stack_frame_none_names",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real StackFrame with None symbols; asdict() preserves None (not '') so isinstance/None-check guard in display code works; 'or <unknown>' expression verified correct for both resolved and unresolved frames"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:100 - test_watchpoint_info_construction",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real WatchpointInfo; hit_count incremented twice then enabled set False; asdict() after mutation returns {id:1, hit_count:2, enabled:False} matching independently known post-mutation state"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:117 - test_bridge_capabilities_defaults",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Concrete _MinimalBridge with BridgeCapabilities(); ToolRegistry.execute_tool_call('cutter','disassemble',...) raises ToolError matching 'missing capability'; same bridge with supports_static_analysis=True succeeds and returns list[DisassemblyLine] with correct address/mnemonic"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:131 - test_bridge_capabilities_has_capability",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "BridgeCapabilities(supports_static_analysis=True, supports_scripting=True); has_capability returns True for each set flag and False for all 4 unset ones plus a nonexistent key; independently verified via attribute semantics"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:139 - test_bridge_capabilities_supports_arch",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "BridgeCapabilities(supported_architectures=['x86','x86_64'], supported_formats=['pe','elf']); supports_arch('x86')=True, supports_arch('pe')=False; supports_format('pe')=True, supports_format('x86')=False - lists verified disjoint by cross-checking against wrong list"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:146 - test_bridge_capabilities_supports_format",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Same BridgeCapabilities instance; execute_tool_call raises ToolError('missing capability') for decompile even with supports_static_analysis=True; only succeeds when supports_decompilation=True also set"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:153 - test_bridge_state_defaults",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real Session.create() + _MinimalBridge.set_session(); after state=BridgeState(connected=True,tool_running=True) assignment, session.tool_states[ToolName.CUTTER].connected is True - independently verified via Session.set_tool_state contract"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:165 - test_bridge_state_is_ready",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "BridgeState(); is_ready() False->True path exercised through all 4 flag combinations; connected=True alone still False, tool_running=True alone still False, both True is True, back to connected=False returns False"
+    },
+    {
+      "ref": "tests/test_bridges/test_base.py:175 - test_bridge_state_clear_error",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real Session + bridge; set_last_error('rizin crashed: exit code 139') publishes verbatim to session; clear_error() resets last_error to None; idempotent second call also returns None without raising"
+    }
+  ],
+  "filesModified": ["tests/test_bridges/test_base.py"],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "34 passed in 4.19s"
+}

@@ -29,28 +29,42 @@ process.stdin.on('end', () => {
 
         const gitStats = getGitStats(workingDir);
 
-        const totalTokens = calculateSessionTokens(sessionId, transcriptPath);
         const contextPercentage = calculateContextPercentage(
             transcriptPath,
             modelId,
             data.context_window
         );
 
-        const formattedTokens = formatTokenCount(totalTokens);
         const { text: contextText, color: contextColor } =
             formatContextPercentage(contextPercentage);
 
         const contextColored =
             contextColor === 'green' ? green : contextColor === 'yellow' ? yellow : brightRed;
 
+        const colorFor = (name) =>
+            name === 'green' ? green : name === 'yellow' ? yellow : brightRed;
+
+        const fiveHour = formatRateLimit(data.rate_limits?.five_hour);
+        const sevenDay = formatRateLimit(data.rate_limits?.seven_day);
+
+        let rateLimitSegment = '';
+        if (fiveHour) {
+            rateLimitSegment +=
+                ` ${brightRed}|${reset} 5h: ${colorFor(fiveHour.color)}${fiveHour.text}${reset}`;
+        }
+        if (sevenDay) {
+            rateLimitSegment +=
+                ` ${brightRed}|${reset} 7d: ${colorFor(sevenDay.color)}${sevenDay.text}${reset}`;
+        }
+
         console.log(
             `${brightMagenta}${projectName}${reset} ${brightRed}|${reset} ` +
                 `${cyan}[${model}]${reset} ${brightRed}|${reset} ` +
-                `Tokens: ${orangeGold}${formattedTokens}${reset} ${brightRed}|${reset} ` +
                 `Context: ${contextColored}${contextText}${reset} ${brightRed}|${reset} ` +
                 `+${brightGreen}${gitStats.added}${reset} ` +
                 `-${brightRed}${gitStats.removed}${reset} ${brightRed}|${reset} ` +
-                `Last commit: ${yellow}${gitStats.lastCommitAge}${reset}`
+                `Last commit: ${yellow}${gitStats.lastCommitAge}${reset}` +
+                rateLimitSegment
         );
     } catch (error) {
         console.log('[Claude] Intellicrack | Error');
@@ -336,6 +350,24 @@ function formatTokenCount(tokens) {
 
 function formatContextPercentage(percentage) {
     const formatted = percentage.toFixed(1) + '%';
+    let color = 'green';
+
+    if (percentage >= 80) {
+        color = 'red';
+    } else if (percentage >= 50) {
+        color = 'yellow';
+    }
+
+    return { text: formatted, color };
+}
+
+function formatRateLimit(window) {
+    if (!window || typeof window.used_percentage !== 'number') {
+        return null;
+    }
+
+    const percentage = Math.max(0, Math.min(window.used_percentage, 100));
+    const formatted = Math.round(percentage) + '%';
     let color = 'green';
 
     if (percentage >= 80) {
