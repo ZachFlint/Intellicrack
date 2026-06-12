@@ -82,67 +82,144 @@ def _restore_session_store_save(original: Callable[[SessionStore, Session], None
 
 
 class TestAutoSaveLoopSurvivesFailures:
-    """F-0006: an exception in save() must not kill the auto-save task."""
+    """F-0006: an exception in save() must not kill the auto-save task.
+
+    The loop must re-arm across multiple consecutive failures and eventually
+    complete a successful save.  ``save_attempts >= 2`` is not sufficient because
+    a loop that stops after the first success (without ever re-entering after
+    a failure) would satisfy that condition.  We inject exactly three failures
+    then let the fourth attempt succeed, and require that all three failures
+    were individually survived and that the fourth attempt wrote a loadable
+    session to disk.
+    """
 
     @staticmethod
     @pytest.mark.asyncio
     async def test_auto_save_loop_survives_exception_and_resumes(tmp_path: Path) -> None:
-        """Verify auto-save loop continues after a transient save() failure.
+        """Verify auto-save loop continues after three consecutive save() failures.
+
+        The flaky save function fails the first three calls and succeeds on
+        the fourth.  The test asserts that exactly three failures were
+        individually observed (i.e. the loop re-entered the except branch three
+        separate times) and that the fourth call persisted a loadable record.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+        """
+        db_path = tmp_path / "sessions.db"
+        store = SessionStore(db_path)
+        manager = SessionManager(store, save_interval=0)
+        session = await manager.create(provider=ProviderName.ANTHROPIC, model="claude", name="autosave")
+
+        save_attempts: int = 0
+        failure_serial_numbers: list[int] = []
+        save_completed: asyncio.Event = asyncio.Event()
+        original_save = SessionStore.save
+
+        def multi_flaky_save(self_store: SessionStore, sess: Session) -> None:
+            """Fail the first three attempts, then succeed on the fourth.
+
+            Args:
+                self_store: SessionStore instance.
+                sess: Session being saved.
+
+            Raises:
+                RuntimeError: Raised on the first three invocations so that the
+                    auto-save loop must survive and re-arm three separate times
+                    before a successful persistence path is exercised.
+            """
+            nonlocal save_attempts
+            save_attempts += 1
+            attempt = save_attempts
+            if attempt <= 3:
+                failure_serial_numbers.append(attempt)
+                msg = f"transient sqlite failure #{attempt}"
+                raise RuntimeError(msg)
+            original_save(self_store, sess)
+            if not save_completed.is_set():
+                save_completed.set()
+
+        previous = _swap_session_store_save(multi_flaky_save)
+        try:
+            await asyncio.wait_for(save_completed.wait(), timeout=10.0)
+        finally:
+            _restore_session_store_save(previous)
+            await manager.close()
+
+        assert failure_serial_numbers == [1, 2, 3], f"Expected exactly three numbered failures to be survived; got {failure_serial_numbers}"
+        assert save_attempts == 4, f"Expected exactly four save attempts (3 failures + 1 success); got {save_attempts}"
+        loaded = store.load(session.id)
+        assert loaded is not None, "Session must be readable from SQLite after the fourth save succeeds"
+        assert loaded.id == session.id, "Loaded session id must match"
+        assert loaded.name == "autosave", f"Loaded session name must be 'autosave', got {loaded.name!r}"
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_auto_save_loop_task_is_active_after_create(tmp_path: Path) -> None:
+        """Verify the auto-save background task is running after session creation.
 
         Args:
             tmp_path: Pytest temporary directory.
         """
         store = SessionStore(tmp_path / "sessions.db")
-        manager = SessionManager(store, save_interval=0)
-        await manager.create(provider=ProviderName.ANTHROPIC, model="claude", name="autosave")
-
-        save_attempts = 0
-        save_completed = asyncio.Event()
-        original_save = SessionStore.save
-
-        def flaky_save(self_store: SessionStore, session: Session) -> None:
-            """Fail the first attempt, then succeed.
-
-            Args:
-                self_store: SessionStore instance.
-                session: Session being saved.
-
-            Raises:
-                RuntimeError: Always raised on the very first invocation so
-                    the auto-save loop must recover; subsequent invocations
-                    delegate to the original ``SessionStore.save``.
-            """
-            nonlocal save_attempts
-            save_attempts += 1
-            if save_attempts == 1:
-                msg = "transient sqlite failure"
-                raise RuntimeError(msg)
-            original_save(self_store, session)
-            save_completed.set()
-
-        previous = _swap_session_store_save(flaky_save)
+        manager = SessionManager(store, save_interval=300)
+        await manager.create(provider=ProviderName.ANTHROPIC, model="claude", name="task-active")
         try:
-            await asyncio.wait_for(save_completed.wait(), timeout=5.0)
+            assert manager.is_auto_saving is True, "is_auto_saving must be True after create()"
         finally:
-            _restore_session_store_save(previous)
             await manager.close()
 
-        assert save_attempts >= 2, "auto-save loop must keep running after a save() failure"
+        assert manager.is_auto_saving is False, "is_auto_saving must be False after close()"
 
 
 # =====================================================================
-# F-0007 / F-0008 - Session writers for tool_states and tags
+# F-0007 - Session.tool_states writer: behavioral correctness
 # =====================================================================
 
 
 class TestSessionToolStatesWriters:
-    """F-0007: Session.tool_states must have a concrete writer that persists."""
+    """F-0007: Session.tool_states must have a concrete writer that persists.
+
+    The canonical writer is ``Session.set_tool_state``.  Verifying its
+    existence via ``hasattr`` is insufficient because a stub that merely
+    stores ``None`` at the key would also satisfy that check.  These tests
+    drive the writer with specific inputs and assert the exact structure
+    stored in ``tool_states``, the exact key used, identity of the stored
+    object, the return value, and the ``updated_at`` mutation.
+    """
 
     @staticmethod
-    def test_session_has_set_tool_state() -> None:
-        """Verify Session exposes a set_tool_state writer."""
+    def test_set_tool_state_stores_at_tool_key_with_exact_fields() -> None:
+        """Verify set_tool_state writes the state under state.tool and returns None.
+
+        The independence oracle: the expected key is ``ToolName.GHIDRA`` (a
+        known constant), the expected stored value is the exact object passed
+        in (identity check, not re-implementation), and the expected return
+        value is ``None`` as the docstring specifies.
+        """
         session = _make_session()
-        assert hasattr(session, "set_tool_state"), "Session must expose set_tool_state writer"
+        target = Path("C:/Windows/System32/notepad.exe")
+        state = ToolState(
+            tool=ToolName.GHIDRA,
+            connected=True,
+            process_attached=False,
+            target_path=target,
+            last_error=None,
+        )
+        before_updated_at = session.updated_at
+
+        result = session.set_tool_state(state)
+
+        assert result is None, "set_tool_state must return None"
+        assert ToolName.GHIDRA in session.tool_states, "state must be keyed by ToolName.GHIDRA"
+        stored = session.tool_states[ToolName.GHIDRA]
+        assert stored is state, "set_tool_state must store the exact ToolState object passed in"
+        assert stored.tool is ToolName.GHIDRA, f"stored.tool must be ToolName.GHIDRA, got {stored.tool!r}"
+        assert stored.connected is True, "stored.connected must be True"
+        assert stored.process_attached is False, "stored.process_attached must be False"
+        assert stored.target_path == target, f"stored.target_path must be {target}, got {stored.target_path!r}"
+        assert stored.last_error is None, "stored.last_error must be None"
+        assert session.updated_at > before_updated_at, "set_tool_state must update updated_at"
 
     @staticmethod
     def test_set_tool_state_round_trips_through_store(tmp_path: Path) -> None:
@@ -172,7 +249,9 @@ class TestSessionToolStatesWriters:
         round_tripped = loaded.tool_states[ToolName.GHIDRA]
         assert round_tripped.tool is ToolName.GHIDRA
         assert round_tripped.connected is True
+        assert round_tripped.process_attached is False
         assert round_tripped.target_path == target
+        assert round_tripped.last_error is None
 
     @staticmethod
     def test_set_tool_state_overwrites_previous_entry() -> None:
@@ -196,17 +275,141 @@ class TestSessionToolStatesWriters:
         session.set_tool_state(second)
 
         assert session.tool_states[ToolName.X64DBG] is second
+        assert len(session.tool_states) == 1, "Only one entry must exist for X64DBG"
+
+    @staticmethod
+    def test_set_tool_state_multiple_tools_are_independent() -> None:
+        """Verify separate tools each get their own entry without interfering.
+
+        The oracle: three different ToolName values each map to their own
+        ToolState.  Deleting or overwriting one must not affect the others.
+        """
+        session = _make_session()
+        states = {
+            ToolName.GHIDRA: ToolState(tool=ToolName.GHIDRA, connected=True, process_attached=False, target_path=None, last_error=None),
+            ToolName.FRIDA: ToolState(
+                tool=ToolName.FRIDA,
+                connected=False,
+                process_attached=True,
+                target_path=None,
+                last_error="frida crash",
+            ),
+            ToolName.X64DBG: ToolState(
+                tool=ToolName.X64DBG,
+                connected=True,
+                process_attached=True,
+                target_path=Path("C:/t.exe"),
+                last_error=None,
+            ),
+        }
+        for state in states.values():
+            session.set_tool_state(state)
+
+        assert len(session.tool_states) == 3
+        for tool_name, expected_state in states.items():
+            assert session.tool_states[tool_name] is expected_state, (
+                f"session.tool_states[{tool_name}] must be the exact object that was set"
+            )
+
+        removed = session.clear_tool_state(ToolName.FRIDA)
+        assert removed is True, "clear_tool_state must return True when a state was removed"
+        assert ToolName.FRIDA not in session.tool_states, "FRIDA state must be gone"
+        assert ToolName.GHIDRA in session.tool_states, "GHIDRA state must be unaffected"
+        assert ToolName.X64DBG in session.tool_states, "X64DBG state must be unaffected"
+
+    @staticmethod
+    def test_clear_tool_state_returns_false_when_not_present() -> None:
+        """Verify clear_tool_state returns False for a tool that was never set."""
+        session = _make_session()
+        result = session.clear_tool_state(ToolName.SANDBOX)
+        assert result is False, "clear_tool_state must return False when no state was present"
+        assert len(session.tool_states) == 0
+
+
+# =====================================================================
+# F-0008 - Session.tags writers: behavioral correctness
+# =====================================================================
 
 
 class TestSessionTagsWriters:
-    """F-0008: Session.tags must have concrete writer methods that persist."""
+    """F-0008: Session.tags must have concrete writer methods that persist.
+
+    ``hasattr`` checks cannot gate correctness: a stub that always returns
+    ``None`` would pass.  These tests assert exact return values (``True``/
+    ``False``), exact tag list contents, whitespace normalization, rejection
+    of empty strings, and that both writers update ``updated_at``.
+    """
 
     @staticmethod
-    def test_session_has_add_tag() -> None:
-        """Verify Session exposes add_tag and remove_tag writers."""
+    def test_add_tag_returns_true_on_first_add_and_false_on_duplicate() -> None:
+        """Verify add_tag returns True for a new tag and False for a duplicate.
+
+        The oracle: Python's built-in ``True``/``False`` values are the
+        specified contract; see Session.add_tag docstring.
+        """
         session = _make_session()
-        assert hasattr(session, "add_tag")
-        assert hasattr(session, "remove_tag")
+        first_result = session.add_tag("malware")
+        second_result = session.add_tag("malware")
+
+        assert first_result is True, "add_tag must return True when the tag is new"
+        assert second_result is False, "add_tag must return False for a duplicate tag"
+        assert session.tags == ["malware"], f"tags list must contain exactly ['malware'], got {session.tags}"
+
+    @staticmethod
+    def test_add_tag_strips_whitespace_and_deduplicates_normalised() -> None:
+        """Verify add_tag strips leading/trailing whitespace before storing.
+
+        The oracle: the stored tag must equal the stripped form and a
+        subsequent call with the same stripped value must be treated as a
+        duplicate.
+        """
+        session = _make_session()
+        first = session.add_tag("  priority  ")
+        second = session.add_tag("priority")
+
+        assert first is True, "add_tag must return True for the first normalised form"
+        assert second is False, "add_tag must return False when the normalised form is already present"
+        assert session.tags == ["priority"], f"tag must be stored in stripped form, got {session.tags}"
+
+    @staticmethod
+    def test_add_tag_raises_value_error_for_empty_and_whitespace_only() -> None:
+        """Verify add_tag raises ValueError for empty or whitespace-only inputs."""
+        session = _make_session()
+        with pytest.raises(ValueError, match="non-empty"):
+            session.add_tag("")
+        with pytest.raises(ValueError, match="non-empty"):
+            session.add_tag("   ")
+        with pytest.raises(ValueError, match="non-empty"):
+            session.add_tag("\t\n")
+        assert session.tags == [], "No tags must have been added when ValueError is raised"
+
+    @staticmethod
+    def test_add_tag_updates_updated_at() -> None:
+        """Verify add_tag mutates updated_at on a successful add."""
+        session = _make_session()
+        before = session.updated_at
+        session.add_tag("triage")
+        assert session.updated_at > before, "add_tag must update updated_at"
+
+    @staticmethod
+    def test_remove_tag_returns_true_when_found_false_when_absent() -> None:
+        """Verify remove_tag returns True for a present tag and False for an absent one.
+
+        The oracle: Python's built-in ``True``/``False`` values as specified
+        in Session.remove_tag docstring.
+        """
+        session = _make_session()
+        session.add_tag("critical")
+        session.add_tag("reviewed")
+
+        removed = session.remove_tag("critical")
+        absent = session.remove_tag("critical")
+        never_present = session.remove_tag("missing-tag")
+
+        assert removed is True, "remove_tag must return True when the tag was found"
+        assert absent is False, "remove_tag must return False when the tag is no longer present"
+        assert never_present is False, "remove_tag must return False for a tag that was never added"
+        assert session.tags == ["reviewed"], f"tags must be ['reviewed'] after removal, got {session.tags}"
 
     @staticmethod
     def test_add_tag_round_trip_through_store(tmp_path: Path) -> None:
@@ -280,6 +483,12 @@ class TestProtocolBodiesHaveNoConcreteImplementation:
     Anything else (assignments, returns, raises) is a violation of Protocol
     semantics because it would shadow the structural contract with a real
     implementation that could silently succeed when no provider is wired in.
+
+    The AST check is complemented by a runtime ``isinstance`` structural
+    typing check: objects that expose all required methods must pass
+    ``isinstance(..., Protocol)``, and objects missing methods must fail.
+    This runtime check catches cases where a Protocol's ``__abstractmethods__``
+    are stripped away by concrete implementations hiding in the body.
     """
 
     @staticmethod
@@ -332,6 +541,197 @@ class TestProtocolBodiesHaveNoConcreteImplementation:
     def test_hex_document_full_protocol_body_is_declarative(self) -> None:
         """Verify HexDocumentFull protocol method bodies have no concrete logic."""
         self._expect_protocol_body_is_declarative(HexDocumentFull)
+
+    @staticmethod
+    def test_hex_document_like_runtime_isinstance_accepts_compliant_class() -> None:
+        """Verify runtime isinstance accepts a fully compliant HexDocumentLike.
+
+        The oracle: a class that exposes exactly the two methods specified
+        in HexDocumentLike (``read`` and ``length``) must be accepted by the
+        runtime_checkable Protocol isinstance check.  This test would fail
+        if the Protocol body had concrete implementations that raised
+        unconditionally (preventing structural subtyping from working).
+        """
+
+        class MinimalHexDoc:
+            """Minimal class satisfying HexDocumentLike."""
+
+            def read(self, _offset: int, _length: int) -> list[int]:
+                """Read bytes.
+
+                Args:
+                    _offset: Byte offset.
+                    _length: Number of bytes.
+
+                Returns:
+                    list[int]: Empty list.
+                """
+                return []
+
+            def length(self) -> int:
+                """Return length.
+
+                Returns:
+                    int: Always zero.
+                """
+                return 0
+
+        instance = MinimalHexDoc()
+        assert isinstance(instance, HexDocumentLike), "A class with read() and length() must satisfy HexDocumentLike at runtime"
+
+    @staticmethod
+    def test_hex_document_like_runtime_isinstance_rejects_non_compliant_class() -> None:
+        """Verify runtime isinstance rejects a class missing required methods.
+
+        The oracle: an object without ``read`` and ``length`` must NOT be
+        accepted as HexDocumentLike.  This validates that the Protocol's
+        runtime_checkable structural typing is functioning (not vacuously
+        True for all objects).
+        """
+
+        class NoMethods:
+            """Class with no relevant methods."""
+
+        instance = NoMethods()
+        assert not isinstance(instance, HexDocumentLike), "A class missing read() and length() must be rejected by HexDocumentLike"
+
+    @staticmethod
+    def test_hex_document_full_runtime_isinstance_accepts_fully_compliant_class() -> None:
+        """Verify runtime isinstance accepts a class satisfying all HexDocumentFull methods.
+
+        The oracle: a class that exposes all nine methods specified by
+        HexDocumentFull (inherited read/length plus the seven new ones) must
+        be accepted.  If the Protocol body contained concrete logic that
+        raised or branched, the structural subtype check could fail even for
+        a correct implementation.
+        """
+
+        class FullHexDoc:
+            """Class satisfying HexDocumentFull."""
+
+            def read(self, _offset: int, _length: int) -> list[int]:
+                """Read bytes.
+
+                Args:
+                    _offset: Byte offset.
+                    _length: Number of bytes.
+
+                Returns:
+                    list[int]: Empty list.
+                """
+                return []
+
+            def length(self) -> int:
+                """Return length.
+
+                Returns:
+                    int: Zero.
+                """
+                return 0
+
+            def write(self, _offset: int, _data: bytes) -> None:
+                """Write bytes.
+
+                Args:
+                    _offset: Byte offset.
+                    _data: Bytes to write.
+                """
+
+            def list_templates(self) -> list[tuple[str, str]]:
+                """List templates.
+
+                Returns:
+                    list[tuple[str, str]]: Empty list.
+                """
+                return []
+
+            def list_templates_detailed(self) -> list[object]:
+                """List templates with detail.
+
+                Returns:
+                    list[object]: Empty list.
+                """
+                return []
+
+            def register_json_template(self, _name: str, _json_str: str) -> None:
+                """Register template.
+
+                Args:
+                    _name: Template name.
+                    _json_str: JSON string.
+                """
+
+            def remove_template(self, _name: str) -> None:
+                """Remove template.
+
+                Args:
+                    _name: Template name.
+                """
+
+            def export_template_json(self, _name: str) -> str:
+                """Export template as JSON.
+
+                Args:
+                    _name: Template name.
+
+                Returns:
+                    str: Empty string.
+                """
+                return ""
+
+            def inspect_at(self, _offset: int) -> dict[str, object]:
+                """Inspect at offset.
+
+                Args:
+                    _offset: Byte offset.
+
+                Returns:
+                    dict[str, object]: Empty dict.
+                """
+                return {}
+
+        instance = FullHexDoc()
+        assert isinstance(instance, HexDocumentFull), (
+            "A class implementing all HexDocumentFull methods must satisfy the Protocol at runtime"
+        )
+        assert isinstance(instance, HexDocumentLike), "HexDocumentFull implementors must also satisfy HexDocumentLike (inheritance)"
+
+    @staticmethod
+    def test_hex_document_full_runtime_isinstance_rejects_partial_implementation() -> None:
+        """Verify runtime isinstance rejects a class missing HexDocumentFull-only methods.
+
+        The oracle: a class that only implements the HexDocumentLike subset
+        (``read`` and ``length``) must NOT satisfy HexDocumentFull.
+        """
+
+        class OnlyLike:
+            """Class implementing only HexDocumentLike, not HexDocumentFull."""
+
+            def read(self, _offset: int, _length: int) -> list[int]:
+                """Read bytes.
+
+                Args:
+                    _offset: Byte offset.
+                    _length: Number of bytes.
+
+                Returns:
+                    list[int]: Empty list.
+                """
+                return []
+
+            def length(self) -> int:
+                """Return length.
+
+                Returns:
+                    int: Zero.
+                """
+                return 0
+
+        instance = OnlyLike()
+        assert isinstance(instance, HexDocumentLike), "OnlyLike must satisfy HexDocumentLike"
+        assert not isinstance(instance, HexDocumentFull), (
+            "OnlyLike must NOT satisfy HexDocumentFull because it is missing the full-document methods"
+        )
 
 
 # =====================================================================

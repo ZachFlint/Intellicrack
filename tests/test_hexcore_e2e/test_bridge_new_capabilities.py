@@ -352,19 +352,208 @@ class TestSearchTextEncodedPreference:
         assert results
         assert results[0]["offset"] == 32
 
-    def test_search_text_encoded_available_on_document(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify the HexDocument exposes search_text_encoded for wider encoding support.
+    def test_search_text_encoded_produces_exact_offsets_and_lengths(
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+    ) -> None:
+        """search_text_encoded must return exact (offset, length) for each match.
+
+        Places two known ASCII occurrences at deterministic offsets and
+        verifies that search_text_encoded (called directly on the native
+        document) returns both with the exact offset and byte-length values.
+        This test goes red if the method is removed, renamed, or returns
+        wrong coordinates.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        f = tmp_path / "check.bin"
-        f.write_bytes(b"\x00" * 64)
+        marker = b"NEEDLE"
+        data = bytearray(80)
+        data[10 : 10 + len(marker)] = marker
+        data[50 : 50 + len(marker)] = marker
+        f = tmp_path / "needles.bin"
+        f.write_bytes(bytes(data))
         _run(bridge.open_file(str(f)))
 
         doc = bridge.document
-        assert hasattr(doc, "search_text_encoded"), "HexDocument should expose search_text_encoded for multi-encoding support"
+        assert doc is not None
+        results: list[tuple[int, int]] = doc.search_text_encoded("NEEDLE", "ascii", case_sensitive=True, max_results=100)
+
+        assert len(results) == 2
+        assert results[0] == (10, 6)
+        assert results[1] == (50, 6)
+
+    def test_search_text_encoded_case_insensitive_finds_uppercase(
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+    ) -> None:
+        """search_text_encoded with case_sensitive=False must match opposite-case text.
+
+        Embeds 'FOUND' in the binary, searches with 'found' case-insensitively,
+        and verifies the exact offset and length. The case-sensitive search must
+        return empty, proving the flag is respected.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        data = b"\x00" * 15 + b"FOUND" + b"\x00" * 15
+        f = tmp_path / "case.bin"
+        f.write_bytes(data)
+        _run(bridge.open_file(str(f)))
+
+        doc = bridge.document
+        assert doc is not None
+        ci_results: list[tuple[int, int]] = doc.search_text_encoded("found", "ascii", case_sensitive=False, max_results=100)
+        cs_results: list[tuple[int, int]] = doc.search_text_encoded("found", "ascii", case_sensitive=True, max_results=100)
+
+        assert len(ci_results) == 1
+        assert ci_results[0] == (15, 5)
+        assert cs_results == []
+
+    def test_search_text_encoded_ebcdic_at_known_offset(
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+    ) -> None:
+        """search_text_encoded must decode and match EBCDIC-encoded bytes.
+
+        'HELLO' in IBM EBCDIC code page 037 is 0xC8 0xC5 0xD3 0xD3 0xD6.
+        This encoding is not valid UTF-8, so only search_text_encoded (the
+        encoding-aware path) can locate it. The result must be exactly at
+        offset 20 with length 5.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        ebcdic_hello = bytes([0xC8, 0xC5, 0xD3, 0xD3, 0xD6])
+        data = b"\x00" * 20 + ebcdic_hello + b"\x00" * 20
+        f = tmp_path / "ebcdic.bin"
+        f.write_bytes(data)
+        _run(bridge.open_file(str(f)))
+
+        doc = bridge.document
+        assert doc is not None
+        results: list[tuple[int, int]] = doc.search_text_encoded("HELLO", "ebcdic", case_sensitive=True, max_results=100)
+
+        assert len(results) == 1
+        assert results[0] == (20, 5)
+
+    def test_search_text_encoded_max_results_limits_output(
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+    ) -> None:
+        """search_text_encoded must stop after max_results matches.
+
+        Writes 10 occurrences of the marker and requests only 3. The result
+        list length must be exactly 3 and the first two offsets must be the
+        known first two positions.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        marker = b"MK"
+        data = marker * 10
+        f = tmp_path / "maxresults.bin"
+        f.write_bytes(data)
+        _run(bridge.open_file(str(f)))
+
+        doc = bridge.document
+        assert doc is not None
+        results: list[tuple[int, int]] = doc.search_text_encoded("MK", "ascii", case_sensitive=True, max_results=3)
+
+        assert len(results) == 3
+        assert results[0] == (0, 2)
+        assert results[1] == (2, 2)
+        assert results[2] == (4, 2)
+
+    def test_search_text_encoded_no_match_returns_empty(
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+    ) -> None:
+        """search_text_encoded must return an empty list when the text is absent.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        data = b"\x00" * 64
+        f = tmp_path / "nomatch.bin"
+        f.write_bytes(data)
+        _run(bridge.open_file(str(f)))
+
+        doc = bridge.document
+        assert doc is not None
+        results: list[tuple[int, int]] = doc.search_text_encoded("ABSENT_MARKER", "ascii", case_sensitive=True, max_results=100)
+
+        assert results == []
+
+    def test_bridge_search_text_dispatches_to_encoded(
+        self,
+        bridge: HexEditorBridge,
+        tmp_path: Path,
+    ) -> None:
+        """bridge.search_text must dispatch to search_text_encoded for EBCDIC.
+
+        Embeds EBCDIC 'HELLO' bytes at a known offset and calls the bridge's
+        search_text with encoding='ebcdic'. The bridge must route to
+        search_text_encoded (not the legacy search_text which cannot decode
+        EBCDIC). The returned dict must have 'offset' == 20 and 'length' == 5.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        ebcdic_hello = bytes([0xC8, 0xC5, 0xD3, 0xD3, 0xD6])
+        data = b"\x00" * 20 + ebcdic_hello + b"\x00" * 20
+        f = tmp_path / "bridge_ebcdic.bin"
+        f.write_bytes(data)
+        _run(bridge.open_file(str(f)))
+
+        results: list[dict[str, int]] = _run(bridge.search_text("HELLO", "ebcdic"))
+
+        assert len(results) == 1
+        assert results[0]["offset"] == 20
+        assert results[0]["length"] == 5
+
+    def test_bridge_search_text_raises_when_backend_missing_encoded(self) -> None:
+        """bridge.search_text must raise RuntimeError when backend lacks search_text_encoded.
+
+        Constructs a bridge with a document stub that has no search_text_encoded
+        attribute, then calls search_text and confirms the bridge raises
+        RuntimeError with a message naming the missing method.
+
+        The stub has only a legacy search_text method (no search_text_encoded),
+        simulating a native document built before encoding-aware search was added.
+        It is the input that exercises the guard branch in the bridge, not a mock
+        of the thing under test.
+        """
+
+        class _LegacyDocument:
+            def search_text(self, *_args: object) -> list[tuple[int, int]]:
+                """Stub legacy search_text without encoding-aware support.
+
+                Args:
+                    *_args: Ignored positional arguments.
+
+                Returns:
+                    list[tuple[int, int]]: Always empty.
+                """
+                return []
+
+        b = HexEditorBridge()
+        _run(b.initialize())
+        b.document = _LegacyDocument()
+
+        with pytest.raises(RuntimeError, match="search_text_encoded"):
+            _run(b.search_text("hello", "ascii"))
 
 
 _HELPER_NAME = "_build_numeric" + "_format"

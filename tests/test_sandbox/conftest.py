@@ -130,21 +130,21 @@ class AgentMessage:
     """Minimal guest agent message.
 
     Attributes:
-        msg_type: Message type identifier.
+        message_type: Message type identifier (matches ``GuestAgentMessage.message_type``).
         data: Message payload.
     """
 
-    msg_type: str
+    message_type: str
     data: dict[str, Any]
 
-    def __init__(self, msg_type: str, data: dict[str, Any] | None = None) -> None:
+    def __init__(self, message_type: str, data: dict[str, Any] | None = None) -> None:
         """Initialise an agent message.
 
         Args:
-            msg_type: Message type identifier.
+            message_type: Message type identifier.
             data: Message payload (defaults to empty dict).
         """
-        self.msg_type = msg_type
+        self.message_type = message_type
         self.data = data or {}
 
 
@@ -157,7 +157,7 @@ class StubAgent:
         Returns:
             list[AgentMessage]: List containing one sample message.
         """
-        return [AgentMessage("heartbeat", {"ts": ts_offset(0)})]
+        return [AgentMessage(message_type="heartbeat", data={"ts": ts_offset(0)})]
 
 
 class InMemorySandbox(SandboxBase):
@@ -264,7 +264,7 @@ class InMemorySandbox(SandboxBase):
                     direction="outbound",
                     local_address="192.168.1.100",
                     local_port=49152,
-                    remote_address="203.0.113.50",
+                    remote_address="185.220.101.45",
                     remote_port=443,
                     timestamp=ts_offset(2),
                     bytes_sent=256,
@@ -1038,6 +1038,15 @@ def local_process_sandbox() -> Iterator[LocalProcessSandbox]:
 def sample_network_activity() -> list[NetworkActivity]:
     """Provide network activity covering beaconing, DGA, C2 ports, exfiltration, DoH, and normal traffic.
 
+    All remote addresses are real, routable public IPs or realistic domains - no RFC-5737
+    documentation ranges (203.0.113.x, 198.51.100.x) or private addresses (10.x, 192.168.x):
+    - 185.220.101.45: Tor exit node (realistic C2 beaconing target)
+    - xkqwzjrtmnpv.evil.com: High-entropy DGA domain
+    - 62.102.148.69: Bulletproof hosting (realistic C2 port scenario)
+    - 51.15.192.49: Scaleway server (realistic exfiltration target)
+    - 1.1.1.1: Cloudflare DNS (DoH provider)
+    - 93.184.216.34: example.com (normal HTTP traffic)
+
     Returns:
         list[NetworkActivity]: List of 10+ network activity entries.
     """
@@ -1047,7 +1056,7 @@ def sample_network_activity() -> list[NetworkActivity]:
             direction="outbound",
             local_address="192.168.1.100",
             local_port=49152,
-            remote_address="10.0.0.1",
+            remote_address="185.220.101.45",
             remote_port=8443,
             timestamp=ts_offset(i * 60 % 100),
             bytes_sent=256,
@@ -1073,7 +1082,7 @@ def sample_network_activity() -> list[NetworkActivity]:
         direction="outbound",
         local_address="192.168.1.100",
         local_port=49154,
-        remote_address="203.0.113.50",
+        remote_address="62.102.148.69",
         remote_port=4444,
         timestamp=ts_offset(15),
         bytes_sent=64,
@@ -1085,7 +1094,7 @@ def sample_network_activity() -> list[NetworkActivity]:
         direction="outbound",
         local_address="192.168.1.100",
         local_port=49155,
-        remote_address="198.51.100.10",
+        remote_address="51.15.192.49",
         remote_port=443,
         timestamp=ts_offset(20),
         bytes_sent=5_242_880,
@@ -1495,7 +1504,7 @@ def sandbox_bridge() -> SandboxBridge:
                 direction="outbound",
                 local_address="192.168.1.100",
                 local_port=49152,
-                remote_address="203.0.113.50",
+                remote_address="185.220.101.45",
                 remote_port=443,
                 timestamp=ts_offset(2),
                 bytes_sent=256,
@@ -1550,6 +1559,8 @@ def bridge_no_reports() -> SandboxBridge:
     return bridge
 
 
+@pytest.mark.integration
+@pytest.mark.spawns_process
 def test_local_process_sandbox_reports_real_execution(local_process_sandbox: LocalProcessSandbox) -> None:
     """The real sandbox captures genuinely observed exit code, output, and file changes.
 
@@ -1598,6 +1609,8 @@ def test_local_process_sandbox_reports_real_execution(local_process_sandbox: Loc
     assert (local_process_sandbox.workdir / "artifact.bin").read_bytes() == payload
 
 
+@pytest.mark.integration
+@pytest.mark.spawns_process
 def test_local_process_sandbox_run_binary_times_out(local_process_sandbox: LocalProcessSandbox) -> None:
     """A genuinely long-running subprocess is killed and surfaced as ``SandboxError``.
 
@@ -1616,6 +1629,8 @@ def test_local_process_sandbox_run_binary_times_out(local_process_sandbox: Local
         )
 
 
+@pytest.mark.integration
+@pytest.mark.spawns_process
 def test_local_process_sandbox_copy_from_missing_file_raises(local_process_sandbox: LocalProcessSandbox) -> None:
     """Exporting a file that the real sandbox never produced raises ``SandboxError``.
 

@@ -27,6 +27,7 @@ from __future__ import annotations
 import hashlib
 import inspect
 import sys
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast
 
@@ -35,6 +36,7 @@ import pytest
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.types import ToolError, ToolName
 from intellicrack.sandbox.base import ExecutionReport
+from tests._helpers.process_cleanup import allow_host_process_tests, is_sandboxed
 from tests.test_sandbox.conftest import LocalProcessSandbox, StubInstance
 
 
@@ -52,6 +54,16 @@ _QEMU_NOREPORT: Final[str] = "qemu-noreport-001"
 _MISSING_INSTANCE: Final[str] = "nonexistent-instance"
 _REPORT_DICT_KEY_COUNT: Final[int] = 17
 _REAL_INSTANCE: Final[str] = "real-localproc-001"
+
+# True when running on host (not inside the Docker sandbox and not explicitly
+# opted in).  Used as the ``condition`` for ``@pytest.mark.skipif`` on the
+# integration test class so the decorator is visible in the source rather than
+# relying solely on the global conftest ``spawns_process`` hook.
+INTEGRATION_SANDBOX: Final[bool] = not is_sandboxed() and not allow_host_process_tests()
+
+# The remote address in the ``sandbox_bridge`` fixture's win instance report.
+# This is the Tor exit node IP used as a realistic public outbound address.
+_WIN_REMOTE_IP: Final[str] = "185.220.101.45"
 
 
 class TestBridgeInstantiation:
@@ -219,10 +231,12 @@ class TestCreateDestroy:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.create(sandbox_type="windows")
-        assert "instance_id" in result
-        assert "type" in result
-        assert "status" in result
-        assert "created_at" in result
+        assert isinstance(result["instance_id"], str)
+        assert len(result["instance_id"]) > 0
+        assert result["type"] == "windows"
+        assert result["status"] == "running"
+        assert isinstance(result["created_at"], str)
+        assert result["created_at"].endswith("+00:00")
 
     @pytest.mark.asyncio
     async def test_create_qemu(self, sandbox_bridge: SandboxBridge) -> None:
@@ -268,16 +282,18 @@ class TestExecuteCommand:
 
     @pytest.mark.asyncio
     async def test_execute_returns_output(self, sandbox_bridge: SandboxBridge) -> None:
-        """Execute returns dict with exit_code, stdout, stderr.
+        """Execute returns dict with exact exit_code, stdout, stderr from InMemorySandbox.
+
+        InMemorySandbox.run_command returns ``(0, f"ok: {command}", "")``, so the bridge
+        must surface exactly those values without transformation.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.execute(_WIN_INSTANCE, "dir")
-        assert "exit_code" in result
-        assert "stdout" in result
-        assert "stderr" in result
         assert result["exit_code"] == 0
+        assert result["stdout"] == "ok: dir"
+        assert not result["stderr"]
 
     @pytest.mark.asyncio
     async def test_execute_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
@@ -339,28 +355,38 @@ class TestStatusAndList:
 
     @pytest.mark.asyncio
     async def test_status_returns_dict(self, sandbox_bridge: SandboxBridge) -> None:
-        """Status returns dict with expected keys.
+        """Status returns dict with exact values from StubManager.
+
+        The StubManager advertises ``["windows", "qemu"]`` as available types,
+        both fixtures are started (status ``"running"``), so ``active_count`` is 2
+        and the instances list has exactly 2 entries with the known IDs.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.status()
-        assert "available_types" in result
-        assert "active_count" in result
-        assert "instances" in result
+        assert set(result["available_types"]) == {"windows", "qemu"}
+        assert result["active_count"] == 2
+        instance_ids = {inst["id"] for inst in result["instances"]}
+        assert instance_ids == {_WIN_INSTANCE, _QEMU_INSTANCE}
 
     @pytest.mark.asyncio
     async def test_list_returns_instances(self, sandbox_bridge: SandboxBridge) -> None:
-        """List returns instance dicts with expected keys.
+        """List returns exact instance records for both pre-populated instances.
+
+        The fixture creates one ``windows`` and one ``qemu`` instance, both
+        ``running``. The bridge must faithfully relay IDs, types, and statuses.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.list()
-        assert len(result) >= 2
-        assert "id" in result[0]
-        assert "type" in result[0]
-        assert "status" in result[0]
+        assert len(result) == 2
+        by_id = {entry["id"]: entry for entry in result}
+        assert by_id[_WIN_INSTANCE]["type"] == "windows"
+        assert by_id[_WIN_INSTANCE]["status"] == "running"
+        assert by_id[_QEMU_INSTANCE]["type"] == "qemu"
+        assert by_id[_QEMU_INSTANCE]["status"] == "running"
 
 
 class TestSnapshots:
@@ -368,13 +394,18 @@ class TestSnapshots:
 
     @pytest.mark.asyncio
     async def test_snapshot_create_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """Snapshot create on QEMU returns snapshot_id.
+        """Snapshot create on QEMU returns snapshot_id with expected name-based format.
+
+        ``InMemorySandbox.take_snapshot(name)`` returns ``f"snap-{name}"`` which the
+        bridge must surface without modification as ``snapshot_id``.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.snapshot_create(_QEMU_INSTANCE, "snap1")
-        assert "snapshot_id" in result
+        assert result["snapshot_id"] == "snap-snap1"
+        assert result["name"] == "snap1"
+        assert result["instance_id"] == _QEMU_INSTANCE
 
     @pytest.mark.asyncio
     async def test_snapshot_create_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
@@ -422,15 +453,19 @@ class TestSnapshots:
 
     @pytest.mark.asyncio
     async def test_snapshot_list_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """Snapshot list on QEMU returns snapshot list.
+        """Snapshot list surfaces the exact snapshot ID created by take_snapshot.
+
+        After creating ``"list_test"``, ``InMemorySandbox.list_snapshots()`` returns
+        ``["snap-list_test"]``. The bridge must relay that exact value.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         await sandbox_bridge.snapshot_create(_QEMU_INSTANCE, "list_test")
         result = await sandbox_bridge.snapshot_list(_QEMU_INSTANCE)
-        assert "snapshots" in result
-        assert len(result["snapshots"]) >= 1
+        assert result["instance_id"] == _QEMU_INSTANCE
+        assert result["count"] == len(result["snapshots"])
+        assert "snap-list_test" in result["snapshots"]
 
     @pytest.mark.asyncio
     async def test_snapshot_list_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
@@ -469,13 +504,19 @@ class TestQEMUSpecificMethods:
 
     @pytest.mark.asyncio
     async def test_cont_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """Cont on QEMU with QMP returns success.
+        """Cont on QEMU surfaces the exact QMP response from StubQMP.
+
+        ``StubQMP.cont()`` returns ``QMPResponse(success=True, data={"status": "running"})``.
+        The bridge must relay ``success=True``, the QMP response's ``data`` dict,
+        and the ``instance_id``.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.cont(_QEMU_INSTANCE)
         assert result["success"] is True
+        assert result["instance_id"] == _QEMU_INSTANCE
+        assert result["data"] == {"status": "running"}
 
     @pytest.mark.asyncio
     async def test_cont_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
@@ -499,14 +540,20 @@ class TestQEMUSpecificMethods:
 
     @pytest.mark.asyncio
     async def test_pending_messages_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """get_pending_messages returns messages from agent.
+        """get_pending_messages faithfully relays the StubAgent's single heartbeat message.
+
+        ``StubAgent.get_pending_messages()`` returns exactly one ``AgentMessage`` with
+        ``message_type="heartbeat"``. The bridge must serialise it without dropping or
+        renaming the type field; the result must have ``count == 1`` and
+        ``messages[0]["type"] == "heartbeat"``.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.get_pending_messages(_QEMU_INSTANCE)
-        assert "messages" in result
-        assert result["count"] >= 1
+        assert result["count"] == 1
+        assert len(result["messages"]) == 1
+        assert result["messages"][0]["type"] == "heartbeat"
 
     @pytest.mark.asyncio
     async def test_pending_messages_non_qemu_raises(self, sandbox_bridge: SandboxBridge) -> None:
@@ -534,13 +581,17 @@ class TestNewCapabilities:
 
     @pytest.mark.asyncio
     async def test_pcap_start(self, sandbox_bridge: SandboxBridge) -> None:
-        """Pcap_start returns capture_id.
+        """Pcap_start returns the exact capture_id from InMemorySandbox.
+
+        ``InMemorySandbox.start_pcap_capture()`` always returns ``"cap-001"`` and
+        the bridge must relay that value unchanged.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.pcap_start(_QEMU_INSTANCE)
-        assert "capture_id" in result
+        assert result["capture_id"] == "cap-001"
+        assert result["instance_id"] == _QEMU_INSTANCE
 
     @pytest.mark.asyncio
     async def test_pcap_start_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
@@ -554,24 +605,35 @@ class TestNewCapabilities:
 
     @pytest.mark.asyncio
     async def test_pcap_stop(self, sandbox_bridge: SandboxBridge) -> None:
-        """Pcap_stop returns pcap_path.
+        """Pcap_stop surfaces the exact PCAP path from InMemorySandbox.
+
+        ``InMemorySandbox.stop_pcap_capture()`` returns ``_TMPDIR / "capture.pcap"``
+        when no output path is supplied; the bridge must relay that exact string path.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         start = await sandbox_bridge.pcap_start(_QEMU_INSTANCE)
         result = await sandbox_bridge.pcap_stop(_QEMU_INSTANCE, start["capture_id"])
-        assert "pcap_path" in result
+        expected_path = str(Path(tempfile.gettempdir()) / "capture.pcap")
+        assert result["pcap_path"] == expected_path
+        assert result["capture_id"] == start["capture_id"]
+        assert result["instance_id"] == _QEMU_INSTANCE
 
     @pytest.mark.asyncio
     async def test_screenshot(self, sandbox_bridge: SandboxBridge) -> None:
-        """Screenshot returns screenshot_path.
+        """Screenshot surfaces the exact path from InMemorySandbox.
+
+        ``InMemorySandbox.capture_screenshot()`` returns ``_TMPDIR / "screenshot.png"``
+        when no output path is supplied; the bridge must relay that exact string path.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.screenshot(_QEMU_INSTANCE)
-        assert "screenshot_path" in result
+        expected_path = str(Path(tempfile.gettempdir()) / "screenshot.png")
+        assert result["screenshot_path"] == expected_path
+        assert result["instance_id"] == _QEMU_INSTANCE
 
     @pytest.mark.asyncio
     async def test_screenshot_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
@@ -585,48 +647,74 @@ class TestNewCapabilities:
 
     @pytest.mark.asyncio
     async def test_anti_evasion(self, sandbox_bridge: SandboxBridge) -> None:
-        """Anti_evasion returns techniques dict.
+        """Anti_evasion surfaces the exact techniques dict from InMemorySandbox.
+
+        ``InMemorySandbox.apply_anti_evasion("default")`` returns
+        ``{"profile": "default", "techniques_applied": 5}``; the bridge must relay
+        that dict unchanged inside the ``techniques`` field.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.anti_evasion(_QEMU_INSTANCE)
-        assert "techniques" in result
+        assert result["instance_id"] == _QEMU_INSTANCE
+        assert result["profile"] == "default"
+        assert result["techniques"] == {"profile": "default", "techniques_applied": 5}
 
     @pytest.mark.asyncio
     async def test_memory_dump(self, sandbox_bridge: SandboxBridge) -> None:
-        """Memory_dump returns dump_path.
+        """Memory_dump on a QEMU instance surfaces the exact path from InMemorySandbox.
+
+        ``InMemorySandbox.dump_memory()`` returns ``_TMPDIR / "memdump.raw"`` when no
+        output path is supplied; QEMU does not require ``target_pid``.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.memory_dump(_QEMU_INSTANCE)
-        assert "dump_path" in result
+        expected_path = str(Path(tempfile.gettempdir()) / "memdump.raw")
+        assert result["dump_path"] == expected_path
+        assert result["instance_id"] == _QEMU_INSTANCE
 
     @pytest.mark.asyncio
     async def test_extract_files(self, sandbox_bridge: SandboxBridge) -> None:
-        """Extract_dropped_files returns zip_path.
+        """Extract_dropped_files surfaces the exact ZIP path from InMemorySandbox.
+
+        ``InMemorySandbox.extract_dropped_files()`` returns ``_TMPDIR / "dropped.zip"``
+        when no output path is supplied; the bridge must relay that exact string path.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.extract_dropped_files(_QEMU_INSTANCE)
-        assert "zip_path" in result
+        expected_path = str(Path(tempfile.gettempdir()) / "dropped.zip")
+        assert result["zip_path"] == expected_path
+        assert result["instance_id"] == _QEMU_INSTANCE
 
     @pytest.mark.asyncio
     async def test_yara_scan(self, sandbox_bridge: SandboxBridge) -> None:
-        """yara_scan returns matches.
+        """yara_scan surfaces the exact match from InMemorySandbox.
+
+        ``InMemorySandbox.yara_scan()`` returns exactly one match with
+        ``rule="SuspiciousPE"``, ``target="files"``, ``rules_file="builtin"``
+        when no custom rules are supplied and ``scan_target`` defaults to ``"files"``.
+        The bridge must relay all fields without truncation.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.yara_scan(_WIN_INSTANCE)
-        assert "matches" in result
-        assert result["match_count"] >= 1
+        assert result["match_count"] == 1
+        assert result["matches"][0]["rule"] == "SuspiciousPE"
+        assert result["matches"][0]["target"] == "files"
+        assert result["matches"][0]["rules_file"] == "builtin"
 
     @pytest.mark.asyncio
     async def test_yara_scan_with_rules(self, sandbox_bridge: SandboxBridge) -> None:
-        """yara_scan with rules_path passes it through.
+        """yara_scan with rules_path passes the path through to InMemorySandbox.
+
+        When ``rules_path="/rules/custom.yar"`` is supplied, ``InMemorySandbox``
+        echoes that path as ``rules_file`` in the match. The bridge must preserve it.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -635,11 +723,15 @@ class TestNewCapabilities:
             _WIN_INSTANCE,
             rules_path="/rules/custom.yar",
         )
-        assert result["match_count"] >= 1
+        assert result["match_count"] == 1
+        assert result["matches"][0]["rules_file"] == "/rules/custom.yar"
 
     @pytest.mark.asyncio
     async def test_yara_scan_memory_target(self, sandbox_bridge: SandboxBridge) -> None:
-        """yara_scan with scan_target='memory' succeeds.
+        """yara_scan with scan_target='memory' surfaces the correct target field.
+
+        ``InMemorySandbox.yara_scan(scan_target="memory")`` echoes ``"memory"`` in
+        the match's ``target`` field; the bridge must relay that unchanged.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -648,7 +740,8 @@ class TestNewCapabilities:
             _WIN_INSTANCE,
             scan_target="memory",
         )
-        assert "matches" in result
+        assert result["match_count"] == 1
+        assert result["matches"][0]["target"] == "memory"
 
     @pytest.mark.asyncio
     async def test_yara_scan_missing_raises(self, sandbox_bridge: SandboxBridge) -> None:
@@ -666,14 +759,23 @@ class TestAnalysisWrappers:
 
     @pytest.mark.asyncio
     async def test_extract_iocs_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """extract_iocs returns IOC list from report.
+        """extract_iocs returns the exact IOC surfaced by the win instance's report.
+
+        The win instance's ``last_report`` contains one outbound TCP connection to
+        ``185.220.101.45:443`` (a real Tor exit node used as a realistic public address).
+        That public IPv4 address must appear as the sole ``ipv4`` IOC in the result.
+        A regression that silently dropped network-activity IOCs would make this test
+        go red.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.extract_iocs(_WIN_INSTANCE)
-        assert "iocs" in result
-        assert "count" in result
+        assert result["instance_id"] == _WIN_INSTANCE
+        assert result["count"] == len(result["iocs"])
+        ipv4_values = {ioc["value"] for ioc in result["iocs"] if ioc["ioc_type"] == "ipv4"}
+        assert _WIN_REMOTE_IP in ipv4_values
+        assert result["count"] >= 1
 
     @pytest.mark.asyncio
     async def test_extract_iocs_no_report_raises(self, bridge_no_reports: SandboxBridge) -> None:
@@ -697,24 +799,35 @@ class TestAnalysisWrappers:
 
     @pytest.mark.asyncio
     async def test_timeline_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """Timeline returns events list.
+        """Timeline returns the exact 2 events produced by the win instance's report.
+
+        The win instance's ``last_report`` has 1 file change and 1 network activity.
+        ``generate_timeline`` merges all monitoring streams, so the unfiltered timeline
+        must have exactly 2 events. The bridge must relay ``count`` == ``len(events)``.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.timeline(_WIN_INSTANCE)
-        assert "events" in result
-        assert "count" in result
+        assert result["instance_id"] == _WIN_INSTANCE
+        assert result["count"] == 2
+        assert len(result["events"]) == 2
+        categories = {ev["category"] for ev in result["events"]}
+        assert categories == {"file", "network"}
 
     @pytest.mark.asyncio
     async def test_timeline_with_categories(self, sandbox_bridge: SandboxBridge) -> None:
-        """Timeline with categories filter works.
+        """Timeline with categories=['file'] returns exactly the 1 file event.
+
+        Filtering to ``"file"`` must suppress the network event and surface only the
+        1 file-change entry from the win instance's report.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.timeline(_WIN_INSTANCE, categories=["file"])
-        assert "events" in result
+        assert result["count"] == 1
+        assert result["events"][0]["category"] == "file"
 
     @pytest.mark.asyncio
     async def test_timeline_no_report_raises(self, bridge_no_reports: SandboxBridge) -> None:
@@ -728,14 +841,19 @@ class TestAnalysisWrappers:
 
     @pytest.mark.asyncio
     async def test_detect_behaviors_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """detect_behaviors returns matches list.
+        """detect_behaviors returns the exact 0 matches from the win instance's clean report.
+
+        The win instance's report has no persistence, no injection events, no anti-debug
+        calls, no suspicious sleep, no beaconing network pattern. ``match_behaviors``
+        must return 0 matches; the bridge must surface ``count == 0`` and an empty list.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.detect_behaviors(_WIN_INSTANCE)
-        assert "matches" in result
-        assert "count" in result
+        assert result["instance_id"] == _WIN_INSTANCE
+        assert result["count"] == 0
+        assert result["matches"] == []
 
     @pytest.mark.asyncio
     async def test_detect_behaviors_no_report_raises(self, bridge_no_reports: SandboxBridge) -> None:
@@ -759,14 +877,20 @@ class TestAnalysisWrappers:
 
     @pytest.mark.asyncio
     async def test_detect_c2_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """detect_c2 returns pattern list.
+        """detect_c2 returns 0 patterns for the win instance's single non-C2 connection.
+
+        The win instance has one outbound TCP connection to ``185.220.101.45:443``. Port 443
+        is HTTPS (not in ``_C2_PORTS``), there is only a single connection (beaconing
+        requires 3+), no DGA domain, and 256 bytes sent (far below exfiltration threshold).
+        The bridge must surface ``count == 0`` and an empty patterns list.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.detect_c2(_WIN_INSTANCE)
-        assert "patterns" in result
-        assert "count" in result
+        assert result["instance_id"] == _WIN_INSTANCE
+        assert result["count"] == 0
+        assert result["patterns"] == []
 
     @pytest.mark.asyncio
     async def test_detect_c2_no_report_raises(self, bridge_no_reports: SandboxBridge) -> None:
@@ -780,15 +904,20 @@ class TestAnalysisWrappers:
 
     @pytest.mark.asyncio
     async def test_diff_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """Diff returns structured diff dict.
+        """Diff returns correct instance IDs and a non-empty diff structure.
+
+        The win and qemu instances have different reports; the bridge must relay
+        ``instance_id_a`` and ``instance_id_b`` exactly and include a ``diff`` dict
+        with the per-field comparison keys from ``diff_reports``.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
         """
         result = await sandbox_bridge.diff(_WIN_INSTANCE, _QEMU_INSTANCE)
-        assert "diff" in result
-        assert "instance_id_a" in result
-        assert "instance_id_b" in result
+        assert result["instance_id_a"] == _WIN_INSTANCE
+        assert result["instance_id_b"] == _QEMU_INSTANCE
+        diff_section: dict[str, object] = cast("dict[str, object]", result["diff"])
+        assert len(diff_section) > 0
 
     @pytest.mark.asyncio
     async def test_diff_missing_a_raises(self, sandbox_bridge: SandboxBridge) -> None:
@@ -1083,6 +1212,14 @@ def _write_driver_script(directory: Path, *, artifact_name: str, payload: bytes,
 
 @pytest.mark.integration
 @pytest.mark.spawns_process
+@pytest.mark.skipif(
+    INTEGRATION_SANDBOX,
+    reason=(
+        "Integration tests require real subprocess execution; run inside the "
+        "Docker sandbox ('just test') or set INTELLICRACK_ALLOW_HOST_PROCESS_TESTS=1 "
+        "to override."
+    ),
+)
 class TestBridgeRealSandboxLifecycle:
     """Drive the bridge against a genuine subprocess-executing sandbox.
 

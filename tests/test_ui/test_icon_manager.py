@@ -11,6 +11,9 @@ using real asset files.
 
 from __future__ import annotations
 
+import hashlib
+
+import defusedxml.ElementTree
 import pytest
 from PyQt6.QtGui import QIcon
 
@@ -50,6 +53,48 @@ _CRITICAL_SVG_ICONS: tuple[str, ...] = (
 # of them causes Qt teardown to crash (too many QIcon objects with render context
 # held in cache). Limit to a representative sample for batch-load tests.
 _MAX_SVG_BATCH: int = 20
+
+# SVG namespace URI required by the W3C SVG 1.1 specification.  Every
+# well-formed SVG file produced by Inkscape or a standards-compliant editor
+# must declare this namespace.  This is an independently-known constant, not
+# derived from the production code.
+_SVG_NAMESPACE: str = "http://www.w3.org/2000/svg"
+
+# All 71 Intellicrack SVG icons use a 24x24 viewBox.  This is the design
+# constraint documented at creation time and confirmed by direct XML inspection
+# of every file in assets/icons (run python3 over the tree to regenerate).
+_EXPECTED_VIEWBOX: str = "0 0 24 24"
+_EXPECTED_SVG_WIDTH: str = "24"
+_EXPECTED_SVG_HEIGHT: str = "24"
+
+# Minimum acceptable byte size for a non-corrupted SVG icon.  The smallest
+# valid icon in the set is action_stop.svg at 247 bytes.  A threshold of
+# 100 bytes catches truncation/corruption while tolerating minor edits.
+_MIN_SVG_BYTES: int = 100
+
+# SHA-256 digests computed offline from the canonical asset files.
+# If any icon file is replaced with a different image the digest will
+# change and the gate will go red, surfacing the regression.
+_CRITICAL_SVG_DIGESTS: dict[str, str] = {
+    "status_success": "dcaff657ea9b7cb9131d32d8494eba94e48c7f243964d2594c4c7956c18d4070",
+    "status_error": "3345d94132b16bd2b8b875d8e6f0ccdf3f169b68245f7e836c534e3ab55dd013",
+    "status_warning": "2baca1d933cdf73042b7d02e4e42bd98f4d487c169f4de5657f0ff26da6a605b",
+    "status_info": "7a6b716d35ada318b85897e6fe0be806bcd9e2ba9de39350997fd51c39959144",
+    "action_run": "767f0eec8b4f8f8c72802ef6573b4fa642fadb6e758484b5ef006cf6ec55ea9c",
+    "action_stop": "8ce9201d2b1091d0cfcf2559c08cf401b6fe3096c97673a3c20c775ace6cfa3e",
+}
+
+# Known exact file sizes (bytes) for the critical SVG icons, confirmed by
+# inspecting the files directly.  A size mismatch means the file was
+# modified or replaced without updating the digest table above.
+_CRITICAL_SVG_SIZES: dict[str, int] = {
+    "status_success": 1083,
+    "status_error": 1137,
+    "status_warning": 1121,
+    "status_info": 1192,
+    "action_run": 256,
+    "action_stop": 247,
+}
 
 
 @pytest.fixture
@@ -573,3 +618,214 @@ class TestIconIntegrity:
             icon_manager: Fresh IconManager fixture instance.
         """
         assert icon_manager.icons_available, "Icons should be available"
+
+
+class TestAllMappedIconsLoad:
+    """Genuine falsifiability gate for the full ICON_MAP asset corpus.
+
+    Each test in this class would go red if:
+    - An SVG file is deleted, truncated, or replaced with a corrupt file.
+    - An SVG file is replaced with a different image (digest mismatch).
+    - An SVG file deviates from the required 24x24 viewBox contract.
+    - The ICON_MAP points to a filename that does not exist on disk.
+    - The XML namespace or required root attributes are stripped.
+
+    Tests operate exclusively on the asset files via pathlib, hashlib, and
+    defusedxml.ElementTree - an independent oracle entirely separate from the
+    production IconManager code.  No QIcon or QPixmap calls are made, avoiding
+    the Qt teardown crash on Windows.
+    """
+
+    @staticmethod
+    def test_all_mapped_icons_load_svg_files_are_valid_xml() -> None:
+        """Every SVG file referenced by ICON_MAP parses as well-formed XML.
+
+        Uses defusedxml.ElementTree (independent of production code) to parse
+        each SVG file.  A parse failure means the file is corrupt or was
+        replaced with non-XML content.  This test would go red if any SVG
+        became malformed (e.g. truncated during a deploy, or accidentally
+        overwritten with binary data).
+        """
+        icons_dir = get_assets_path() / "icons"
+        parse_errors: list[str] = []
+
+        for icon_name, filename in ICON_MAP.items():
+            if not filename.endswith(".svg"):
+                continue
+            svg_path = icons_dir / filename
+            if not svg_path.exists():
+                parse_errors.append(f"{icon_name}: file missing at {svg_path}")
+                continue
+            try:
+                defusedxml.ElementTree.parse(svg_path)
+            except defusedxml.ElementTree.ParseError as exc:
+                parse_errors.append(f"{icon_name} ({filename}): XML parse error: {exc}")
+
+        assert not parse_errors, f"{len(parse_errors)} SVG file(s) failed XML parsing:\n" + "\n".join(parse_errors)
+
+    @staticmethod
+    def test_all_mapped_icons_load_svg_viewbox_is_24x24() -> None:
+        """Every SVG icon in ICON_MAP has the required viewBox='0 0 24 24' attribute.
+
+        All Intellicrack SVG icons are designed on a 24x24 grid.  A viewBox
+        mismatch means an icon was replaced with one from a different design
+        system and would render at the wrong size in the UI.  The expected
+        value '0 0 24 24' is independently known (confirmed by direct XML
+        inspection of all 71 files).
+        """
+        icons_dir = get_assets_path() / "icons"
+        bad_viewboxes: list[str] = []
+
+        for icon_name, filename in ICON_MAP.items():
+            if not filename.endswith(".svg"):
+                continue
+            svg_path = icons_dir / filename
+            if not svg_path.exists():
+                continue
+            try:
+                root = defusedxml.ElementTree.parse(svg_path).getroot()
+            except defusedxml.ElementTree.ParseError:
+                continue
+            vb = root.get("viewBox")
+            if vb != _EXPECTED_VIEWBOX:
+                bad_viewboxes.append(f"{icon_name} ({filename}): viewBox={vb!r}, expected {_EXPECTED_VIEWBOX!r}")
+
+        assert not bad_viewboxes, f"{len(bad_viewboxes)} SVG file(s) have wrong viewBox:\n" + "\n".join(bad_viewboxes)
+
+    @staticmethod
+    def test_all_mapped_icons_load_svg_has_correct_namespace() -> None:
+        """Every SVG icon uses the W3C SVG namespace URI.
+
+        The namespace 'http://www.w3.org/2000/svg' is required for a
+        standards-compliant SVG.  Qt's SVG renderer requires a properly
+        namespaced root element.  If the namespace is stripped (e.g. by a
+        minimiser that incorrectly removes it) the icon will fail to render.
+        The expected URI is the independently-known W3C constant.
+        """
+        icons_dir = get_assets_path() / "icons"
+        bad_ns: list[str] = []
+
+        for icon_name, filename in ICON_MAP.items():
+            if not filename.endswith(".svg"):
+                continue
+            svg_path = icons_dir / filename
+            if not svg_path.exists():
+                continue
+            try:
+                root = defusedxml.ElementTree.parse(svg_path).getroot()
+            except defusedxml.ElementTree.ParseError:
+                continue
+            tag = root.tag
+            ns = tag.split("}")[0].lstrip("{") if "}" in tag else ""
+            if ns != _SVG_NAMESPACE:
+                bad_ns.append(f"{icon_name} ({filename}): namespace={ns!r}, expected {_SVG_NAMESPACE!r}")
+
+        assert not bad_ns, f"{len(bad_ns)} SVG file(s) have wrong namespace:\n" + "\n".join(bad_ns)
+
+    @staticmethod
+    def test_all_mapped_icons_load_svg_files_not_truncated() -> None:
+        """Every SVG icon file is at least 100 bytes (not truncated or empty).
+
+        A file under 100 bytes cannot contain a valid SVG with any drawable
+        content.  This catches silent truncation during deployment (e.g. a
+        failed copy that created a zero-byte file) or accidental deletion
+        followed by creation of a stub placeholder.
+        """
+        icons_dir = get_assets_path() / "icons"
+        too_small: list[str] = []
+
+        for icon_name, filename in ICON_MAP.items():
+            if not filename.endswith(".svg"):
+                continue
+            svg_path = icons_dir / filename
+            if not svg_path.exists():
+                continue
+            size = svg_path.stat().st_size
+            if size < _MIN_SVG_BYTES:
+                too_small.append(f"{icon_name} ({filename}): {size} bytes (min {_MIN_SVG_BYTES})")
+
+        assert not too_small, f"{len(too_small)} SVG file(s) are suspiciously small:\n" + "\n".join(too_small)
+
+    @staticmethod
+    def test_all_mapped_icons_load_critical_svg_digests_match() -> None:
+        """The six critical status/action SVGs match their reference SHA-256 digests.
+
+        If any of these files is replaced (e.g. a wrong icon is committed, or
+        an automated tool modifies the file) the digest changes and this test
+        goes red.  The reference digests in _CRITICAL_SVG_DIGESTS are
+        independently known constants computed offline from the canonical files.
+
+        This is the strongest corruption gate: it fails for any bit-level
+        change in the file content, not just structural metadata differences.
+        """
+        icons_dir = get_assets_path() / "icons"
+        mismatches: list[str] = []
+
+        for icon_name, expected_digest in _CRITICAL_SVG_DIGESTS.items():
+            filename = ICON_MAP.get(icon_name, f"{icon_name}.svg")
+            svg_path = icons_dir / filename
+            assert svg_path.exists(), f"Critical icon file missing: {svg_path}"
+            actual_digest = hashlib.sha256(svg_path.read_bytes()).hexdigest()
+            if actual_digest != expected_digest:
+                mismatches.append(
+                    f"{icon_name} ({filename}):\n  expected: {expected_digest}\n  actual:   {actual_digest}",
+                )
+
+        assert not mismatches, f"{len(mismatches)} critical SVG file(s) have unexpected content:\n" + "\n".join(mismatches)
+
+    @staticmethod
+    def test_all_mapped_icons_load_critical_svg_exact_file_sizes() -> None:
+        """The six critical SVGs have the exact byte sizes confirmed at design time.
+
+        This test is a companion to the digest check: it fails fast on a
+        size mismatch before computing the full digest, and it gives a more
+        human-readable error message when the wrong file is committed.
+        Expected sizes are independently known constants from direct filesystem
+        inspection, not derived from production code.
+        """
+        icons_dir = get_assets_path() / "icons"
+        wrong_sizes: list[str] = []
+
+        for icon_name, expected_size in _CRITICAL_SVG_SIZES.items():
+            filename = ICON_MAP.get(icon_name, f"{icon_name}.svg")
+            svg_path = icons_dir / filename
+            assert svg_path.exists(), f"Critical icon file missing: {svg_path}"
+            actual_size = svg_path.stat().st_size
+            if actual_size != expected_size:
+                wrong_sizes.append(
+                    f"{icon_name} ({filename}): expected {expected_size} bytes, got {actual_size} bytes",
+                )
+
+        assert not wrong_sizes, f"{len(wrong_sizes)} critical SVG file(s) have unexpected file sizes:\n" + "\n".join(wrong_sizes)
+
+    @staticmethod
+    def test_all_mapped_icons_load_svg_root_width_and_height_attributes() -> None:
+        """Every SVG icon declares width='24' and height='24' root attributes.
+
+        Qt's SVG renderer uses the root width/height attributes to determine
+        the natural size of the icon when no size hint is provided.  Icons
+        without explicit dimensions may render at an unexpected size in the
+        application, especially in dense/high-DPI contexts.  The expected
+        values '24' and '24' are independently known from the design spec.
+        """
+        icons_dir = get_assets_path() / "icons"
+        wrong_dims: list[str] = []
+
+        for icon_name, filename in ICON_MAP.items():
+            if not filename.endswith(".svg"):
+                continue
+            svg_path = icons_dir / filename
+            if not svg_path.exists():
+                continue
+            try:
+                root = defusedxml.ElementTree.parse(svg_path).getroot()
+            except defusedxml.ElementTree.ParseError:
+                continue
+            w = root.get("width")
+            h = root.get("height")
+            if w != _EXPECTED_SVG_WIDTH or h != _EXPECTED_SVG_HEIGHT:
+                wrong_dims.append(
+                    f"{icon_name} ({filename}): width={w!r} height={h!r}, expected {_EXPECTED_SVG_WIDTH!r} x {_EXPECTED_SVG_HEIGHT!r}",
+                )
+
+        assert not wrong_dims, f"{len(wrong_dims)} SVG file(s) have wrong root dimensions:\n" + "\n".join(wrong_dims)

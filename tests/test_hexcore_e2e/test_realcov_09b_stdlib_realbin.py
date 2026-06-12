@@ -318,12 +318,64 @@ class TestStringParsingBuiltins:
         results = interp.execute_bytes(source, data)
         assert results[0]["offset"] == 0xFF
 
-    def test_parse_int_invalid_raises_runtime_error(self) -> None:
-        """parse_int rejects malformed input with HexPatRuntimeError."""
+    @pytest.mark.parametrize(
+        ("s", "base"),
+        [
+            ("not-an-int", 10),
+            ("XYZ", 10),
+            ("0x1G", 16),
+            ("", 10),
+        ],
+    )
+    def test_parse_int_invalid_raises_runtime_error(
+        self,
+        s: str,
+        base: int,
+    ) -> None:
+        """parse_int rejects malformed input with the full canonical error message.
+
+        The production code raises exactly:
+        ``"std::string::parse_int: cannot parse {s!r} as base-{base} integer"``
+
+        The test asserts this *complete* message string so that any refactor that
+        (a) silently succeeds, (b) raises for a different reason (bad base, missing
+        arg), or (c) omits the bad-input value from the message will go red.
+        Asserting the exact string pins the test to the malformed-input branch and
+        to no other ``HexPatRuntimeError`` path.
+
+        Args:
+            s: The malformed string that parse_int cannot interpret as an integer.
+            base: The numeric base passed to parse_int alongside the bad string.
+        """
+        expected_message = f"std::string::parse_int: cannot parse {s!r} as base-{base} integer"
         reader = DataReader.from_bytes(bytes(4))
         builtins = BuiltinFunctions(reader)
-        with pytest.raises(HexPatRuntimeError):
-            getattr(builtins, "_string_parse_int")("not-an-int", 10)
+        with pytest.raises(HexPatRuntimeError) as exc_info:
+            getattr(builtins, "_string_parse_int")(s, base)
+        assert str(exc_info.value) == expected_message
+
+    def test_parse_int_bad_base_raises_distinct_error(self) -> None:
+        """parse_int with a base outside [2,36] raises a 'unsupported base' error.
+
+        This explicitly distinguishes the base-validation error path from the
+        malformed-input error path, so that tests for each remain orthogonal
+        and independently falsifiable.
+        """
+        reader = DataReader.from_bytes(bytes(4))
+        builtins = BuiltinFunctions(reader)
+        with pytest.raises(HexPatRuntimeError, match="unsupported base 37"):
+            getattr(builtins, "_string_parse_int")("123", 37)
+
+    def test_parse_int_no_args_raises_distinct_error(self) -> None:
+        """parse_int with no arguments raises a 'requires a string argument' error.
+
+        The zero-argument code path must produce a message distinct from both
+        the bad-base and bad-input paths so each remains an independent gate.
+        """
+        reader = DataReader.from_bytes(bytes(4))
+        builtins = BuiltinFunctions(reader)
+        with pytest.raises(HexPatRuntimeError, match="requires a string argument"):
+            getattr(builtins, "_string_parse_int")()
 
     def test_parse_float_round_trips_value(self) -> None:
         """parse_float decodes a decimal literal to the matching float."""

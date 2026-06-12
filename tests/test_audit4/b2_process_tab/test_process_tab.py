@@ -205,25 +205,63 @@ class TestF0013InjectRequiresAttachment:
     """F-0013: _on_inject_dll must guard on _attached_pid and warn when unattached."""
 
     def test_inject_warns_when_no_process_attached(self, tab: _TestProcessTab) -> None:
-        """Calling inject without attachment must show a warning dialog.
+        """Calling inject without attachment must show a "Not Attached" warning dialog and never dispatch the bridge.
 
-        The old defect allowed the inject path to proceed with _attached_pid=None,
-        silently failing or passing None to the bridge.
+        Three properties are verified against independent known-correct constants:
+        1. Exactly one QMessageBox.warning call is made (the guard fires exactly once).
+        2. The warning title is exactly "Not Attached".
+        3. The warning message body mentions both "No process is currently attached" and
+           "Attach to a process before injecting a DLL" — the exact strings present in the
+           production guard at _on_inject_dll.
+        4. run_bridge_coroutine_logged is never called, confirming the bridge inject path
+           is not dispatched when the guard fires.
 
         Args:
             tab: _TestProcessTab fixture (bridge is set, no PID attached).
         """
         assert tab.get_attached_pid_state() is None
-        warning_calls: list[tuple[Any, ...]] = []
+
+        warning_calls: list[tuple[object, ...]] = []
+        bridge_dispatch_calls: list[object] = []
 
         def _capture_warning(*_args: object, **_kwargs: object) -> QMessageBox.StandardButton:
             warning_calls.append(_args)
             return QMessageBox.StandardButton.Ok
 
-        with patch.object(QMessageBox, "warning", side_effect=_capture_warning):
+        def _capture_bridge_dispatch(*_args: object, **_kwargs: object) -> None:
+            bridge_dispatch_calls.append(_args)
+
+        with (
+            patch.object(QMessageBox, "warning", side_effect=_capture_warning),
+            patch(
+                "intellicrack.ui.panels.process_panel.process_tab.run_bridge_coroutine_logged",
+                side_effect=_capture_bridge_dispatch,
+            ),
+        ):
             tab.invoke_on_inject_dll()
 
-        assert len(warning_calls) > 0, "_on_inject_dll must show a warning when no process is attached"
+        assert len(warning_calls) == 1, (
+            f"_on_inject_dll must show exactly one warning when no process is attached; got {len(warning_calls)}"
+        )
+
+        call_args = warning_calls[0]
+        assert len(call_args) >= 3, (
+            f"QMessageBox.warning must be called with at least 3 positional args (parent, title, message); got {len(call_args)}"
+        )
+        actual_title = str(call_args[1])
+        actual_message = str(call_args[2])
+
+        assert actual_title == "Not Attached", f"Warning title must be exactly 'Not Attached'; got {actual_title!r}"
+        assert "No process is currently attached" in actual_message, (
+            f"Warning message must contain 'No process is currently attached'; got {actual_message!r}"
+        )
+        assert "Attach to a process before injecting a DLL" in actual_message, (
+            f"Warning message must contain 'Attach to a process before injecting a DLL'; got {actual_message!r}"
+        )
+
+        assert len(bridge_dispatch_calls) == 0, (
+            "_on_inject_dll must not dispatch the bridge (run_bridge_coroutine_logged) when no process is attached"
+        )
 
     def test_inject_does_not_warn_when_attached(self, tab: _TestProcessTab) -> None:
         """When a process is attached, inject must not show the no-attachment warning.

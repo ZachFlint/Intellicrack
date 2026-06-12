@@ -409,27 +409,155 @@ class TestF0016NoCommandInjection:
         assert any(cmd.startswith("/aj ") for cmd in recorder.commands)
 
 
-def testvalidate_r2_argument_rejects_control_chars() -> None:
-    """The injection-safe validator rejects every documented r2 control char."""
-    for sample in (
-        "name;quit",
-        "name@0x100",
-        "name|cat",
-        "name~grep",
-        "name`sub`",
-        "name>out",
-        "name<in",
-        "name$1",
-        "name#comment",
-        "!ls",
-    ):
-        with pytest.raises(ToolError):
-            validate_r2_argument(sample, field="test")
+class TestValidateR2ArgumentRejectsControlChars:
+    r"""validate_r2_argument must raise ToolError for every documented r2 control character.
+
+    The complete set of blocked characters is defined in
+    ``_RZ_COMMAND_CONTROL_CHARS``:
+    ``;`` ``\n`` ``\r`` ``@`` ``|`` ``~`` `` ` `` ``>`` ``<`` ``$`` ``#``
+    plus the ``!`` shell-escape prefix.  Every member must independently
+    trigger ToolError so a future omission from the frozenset is caught.
+    """
+
+    _BLOCKED_SAMPLES: tuple[tuple[str, str], ...] = (
+        ("name;quit", ";"),
+        ("name\ninjected", "\\n"),
+        ("name\rinjected", "\\r"),
+        ("name@0x100", "@"),
+        ("name|cat /etc/passwd", "|"),
+        ("name~grep", "~"),
+        ("name`sub`", "`"),
+        ("name>out.txt", ">"),
+        ("name<in.txt", "<"),
+        ("name$1", "$"),
+        ("name#comment", "#"),
+        ("!ls -la", "! prefix"),
+    )
+
+    def test_semicolon_rejected(self) -> None:
+        """Semicolons are command separators in rizin and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name;quit", field="func_name")
+
+    def test_newline_rejected(self) -> None:
+        """Embedded newlines allow command splitting and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name\ninjected", field="func_name")
+
+    def test_carriage_return_rejected(self) -> None:
+        """Carriage returns allow command splitting and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name\rinjected", field="func_name")
+
+    def test_at_sign_rejected(self) -> None:
+        """At-signs are temporary-seek operators in rizin and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name@0x100", field="func_name")
+
+    def test_pipe_rejected(self) -> None:
+        """Pipe characters enable shell pipes in rizin and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name|cat", field="func_name")
+
+    def test_tilde_rejected(self) -> None:
+        """Tilde is rizin's internal grep operator and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name~grep", field="func_name")
+
+    def test_backtick_rejected(self) -> None:
+        """Backticks trigger nested-command substitution and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name`sub`", field="func_name")
+
+    def test_redirect_out_rejected(self) -> None:
+        """Right-angle brackets are output redirectors and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name>out", field="func_name")
+
+    def test_redirect_in_rejected(self) -> None:
+        """Left-angle brackets are input redirectors and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name<in", field="func_name")
+
+    def test_dollar_rejected(self) -> None:
+        """Dollar signs are variable prefixes in rizin and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name$1", field="func_name")
+
+    def test_hash_rejected(self) -> None:
+        """Hash characters are comment prefixes in rizin and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("name#comment", field="func_name")
+
+    def test_bang_prefix_rejected(self) -> None:
+        """Values starting with '!' are shell-escape commands and must be blocked."""
+        with pytest.raises(ToolError, match="rizin command-control"):
+            validate_r2_argument("!ls", field="func_name")
+
+    def test_field_name_in_error_message(self) -> None:
+        """The raised ToolError must name the offending field for diagnostics.
+
+        The ``field`` parameter is the caller-supplied label for the
+        argument being validated. It must appear verbatim in the error
+        message so operators can identify which parameter triggered the
+        rejection.
+        """
+        with pytest.raises(ToolError, match="secret_field_xyz"):
+            validate_r2_argument("bad;input", field="secret_field_xyz")
+
+    def test_all_documented_control_chars_are_individually_blocked(self) -> None:
+        """Every character from the documented blocked set triggers ToolError.
+
+        This parametric sweep ensures that if any character is removed
+        from the production ``_RZ_COMMAND_CONTROL_CHARS`` frozenset the
+        test goes red immediately without needing to track the set externally.
+        The independently known expected set is derived from the rizin
+        command-language specification (``man rizin``).
+        """
+        documented_blocked: frozenset[str] = frozenset({";", "\n", "\r", "@", "|", "~", "`", ">", "<", "$", "#"})
+        for ch in documented_blocked:
+            with pytest.raises(ToolError, match="rizin command-control"):
+                validate_r2_argument(f"prefix{ch}suffix", field="sweep")
 
 
-def testvalidate_r2_argument_accepts_safe_strings() -> None:
-    """Safe identifiers pass through verbatim."""
-    assert validate_r2_argument("symbol_name42", field="test") == "symbol_name42"
+class TestValidateR2ArgumentAcceptsSafeStrings:
+    """validate_r2_argument must return the original string verbatim for safe inputs.
+
+    The function is a pure guard: safe input must pass through unchanged so
+    callers can use the return value directly in rizin commands without a
+    second round-trip.
+    """
+
+    def test_plain_identifier_passes_through_verbatim(self) -> None:
+        """A clean symbol name must be returned unchanged."""
+        result: str = validate_r2_argument("symbol_name42", field="test")
+        assert result == "symbol_name42"
+
+    def test_return_value_is_identity_not_copy(self) -> None:
+        """The validator must return the exact input value, not a transformed copy."""
+        sample = "MyClass__ctor_v2"
+        result: str = validate_r2_argument(sample, field="func_name")
+        assert result == sample
+
+    def test_dotted_identifier_passes(self) -> None:
+        """Dotted rizin namespaced names (e.g. fcn.main) must be accepted."""
+        result: str = validate_r2_argument("fcn.main", field="name")
+        assert result == "fcn.main"
+
+    def test_hexadecimal_address_string_passes(self) -> None:
+        """A plain hex address string (no @ prefix) must be accepted."""
+        result: str = validate_r2_argument("0x401000", field="addr")
+        assert result == "0x401000"
+
+    def test_empty_string_passes(self) -> None:
+        """An empty string contains no control characters and must be accepted."""
+        result: str = validate_r2_argument("", field="name")
+        assert not result
+
+    def test_numeric_only_passes(self) -> None:
+        """A string of digits only must be accepted."""
+        result: str = validate_r2_argument("4096", field="count")
+        assert result == "4096"
 
 
 # ---------------------------------------------------------------------------

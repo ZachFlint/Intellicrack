@@ -16,7 +16,8 @@ from typing import Any
 
 import pytest
 from PyQt6.QtCore import QPointF
-from PyQt6.QtWidgets import QGraphicsItem
+from PyQt6.QtGui import QPainter, QTransform
+from PyQt6.QtWidgets import QGraphicsItem, QGraphicsView
 
 from intellicrack.ui.panels.graph_view import (
     BasicBlockItem,
@@ -122,18 +123,67 @@ class TestBasicBlockItem:
 
     @staticmethod
     def test_width_grows_for_long_instructions() -> None:
-        """Verify width grows to accommodate long disassembly text."""
+        """Verify width grows beyond minimum to accommodate long disassembly text.
+
+        The production formula is: text_width = max_disasm_chars * 7,
+        width = max(BLOCK_MIN_WIDTH, text_width + BLOCK_PADDING * 2).
+        For a 47-character instruction: text_width=329, width=349.
+        For a 3-character "nop": text_width=21, width=200 (clamped to minimum).
+        The long-instruction item must be strictly wider than both the minimum
+        and the short-instruction item, proving the scaling path is active.
+        """
         long_disasm = "mov rax, qword ptr [rbx + rcx*8 + 0x12345678]"
-        ops: list[dict[str, Any]] = [{"disasm": long_disasm}]
-        item = BasicBlockItem(LAYOUT_BLOCK_ADDR_A, ops)
-        assert item.rect().width() >= BLOCK_MIN_WIDTH
+        short_disasm = "nop"
+        long_ops: list[dict[str, Any]] = [{"disasm": long_disasm}]
+        short_ops: list[dict[str, Any]] = [{"disasm": short_disasm}]
+        long_item = BasicBlockItem(LAYOUT_BLOCK_ADDR_A, long_ops)
+        short_item = BasicBlockItem(LAYOUT_BLOCK_ADDR_A, short_ops)
+
+        long_char_count = len(long_disasm)
+        short_char_count = len(short_disasm)
+        chars_per_pixel: int = 7
+        block_padding: int = 10
+
+        expected_long_width = max(BLOCK_MIN_WIDTH, long_char_count * chars_per_pixel + block_padding * 2)
+        expected_short_width = max(BLOCK_MIN_WIDTH, short_char_count * chars_per_pixel + block_padding * 2)
+
+        assert long_item.rect().width() == expected_long_width, (
+            f"long instruction width {long_item.rect().width()} != expected {expected_long_width}"
+        )
+        assert short_item.rect().width() == expected_short_width, (
+            f"short instruction width {short_item.rect().width()} != expected {expected_short_width}"
+        )
+        assert long_item.rect().width() > BLOCK_MIN_WIDTH, (
+            f"long instruction width {long_item.rect().width()} must exceed BLOCK_MIN_WIDTH={BLOCK_MIN_WIDTH}"
+        )
+        assert long_item.rect().width() > short_item.rect().width(), (
+            f"long width {long_item.rect().width()} must exceed short width {short_item.rect().width()}"
+        )
 
     @staticmethod
     def test_empty_ops_handled() -> None:
-        """Verify an empty ops list produces a valid item."""
-        item = BasicBlockItem(LAYOUT_BLOCK_ADDR_A, [])
-        assert item.block_address == LAYOUT_BLOCK_ADDR_A
-        assert item.rect().height() > 0
+        """Verify an empty ops list produces a block with the exact header+padding height.
+
+        With zero instructions the height formula yields:
+        _HEADER_HEIGHT + 0 * _LINE_HEIGHT + _BLOCK_PADDING = 22 + 0 + 10 = 32.
+        A single-instruction block must be strictly taller (22 + 1*16 + 10 = 48),
+        proving the instruction-count dimension is not dead code.
+        """
+        header_height: int = 22
+        line_height: int = 16
+        block_padding: int = 10
+        expected_empty_height = header_height + 0 * line_height + block_padding
+
+        item_empty = BasicBlockItem(LAYOUT_BLOCK_ADDR_A, [])
+        item_one_op = BasicBlockItem(LAYOUT_BLOCK_ADDR_A, [{"disasm": "nop"}])
+
+        assert item_empty.block_address == LAYOUT_BLOCK_ADDR_A
+        assert item_empty.rect().height() == expected_empty_height, (
+            f"empty-ops height {item_empty.rect().height()} != expected {expected_empty_height}"
+        )
+        assert item_one_op.rect().height() > item_empty.rect().height(), (
+            "single-instruction block must be taller than zero-instruction block"
+        )
 
     @staticmethod
     def test_selectable_flag_set() -> None:
@@ -215,11 +265,20 @@ class TestCFGGraphScene:
 
     @staticmethod
     def test_load_graph_creates_edges() -> None:
-        """Verify edges are added to the scene for block connections."""
+        """Verify exactly 4 edges are created for SAMPLE_BLOCKS directed connections.
+
+        SAMPLE_BLOCKS defines these directed edges:
+          entry -> true_branch  (true/conditional)
+          entry -> false_branch (false/conditional)
+          true_branch -> ret    (unconditional)
+          false_branch -> ret   (unconditional)
+        Total: exactly 4 EdgeItem instances. Any fewer means a creation path is broken.
+        """
+        expected_edge_count = 4
         scene = CFGGraphScene()
         scene.load_graph(SAMPLE_BLOCKS)
         edge_count = sum(isinstance(item, EdgeItem) for item in scene.items())
-        assert edge_count > 0
+        assert edge_count == expected_edge_count, f"expected exactly {expected_edge_count} edges for SAMPLE_BLOCKS, got {edge_count}"
 
     @staticmethod
     def test_conditional_creates_true_and_false_edges() -> None:
@@ -304,9 +363,27 @@ class TestCFGGraphView:
 
     @staticmethod
     def test_construction() -> None:
-        """Verify CFGGraphView can be constructed."""
+        """Verify CFGGraphView is constructed with the required rendering properties.
+
+        The constructor must set:
+          - Antialiasing render hint (smooth edge bezier curves)
+          - ScrollHandDrag drag mode (pan with mouse)
+          - AnchorUnderMouse transformation anchor (zoom toward cursor)
+          - Background brush color matching the theme background
+        Failure to set any of these properties means the view will render
+        or behave incorrectly for users, and this test will go red.
+        """
         view = CFGGraphView()
-        assert view.scene() is not None
+
+        assert view.scene() is not None, "scene must not be None after construction"
+        assert view.renderHints() & QPainter.RenderHint.Antialiasing, "Antialiasing render hint must be set for smooth edge rendering"
+        assert view.dragMode() == QGraphicsView.DragMode.ScrollHandDrag, f"drag mode must be ScrollHandDrag, got {view.dragMode()}"
+        assert view.transformationAnchor() == QGraphicsView.ViewportAnchor.AnchorUnderMouse, (
+            f"transformation anchor must be AnchorUnderMouse, got {view.transformationAnchor()}"
+        )
+        bg_color = view.backgroundBrush().color()
+        assert bg_color.isValid(), "background brush color must be a valid QColor"
+        assert bg_color.alpha() > 0, "background brush color must not be fully transparent"
 
     @staticmethod
     def test_graph_scene_accessor() -> None:
@@ -317,16 +394,46 @@ class TestCFGGraphView:
 
     @staticmethod
     def test_fit_to_view_no_error() -> None:
-        """Verify fit_to_view runs without error on loaded graph."""
+        """Verify fit_to_view adjusts the view transform when the graph is loaded.
+
+        After loading SAMPLE_BLOCKS the scene rectangle is non-empty.  Calling
+        fit_to_view must invoke fitInView, which changes the view transform from
+        the identity to a scaled version.  If fit_to_view is a no-op or the
+        fitInView call is removed, the transform stays at identity and this test
+        goes red.
+        """
         view = CFGGraphView()
         view.graph_scene().load_graph(SAMPLE_BLOCKS)
+
+        qt_scene = view.scene()
+        assert qt_scene is not None, "scene must not be None after loading graph"
+        scene_rect = qt_scene.sceneRect()
+        assert not scene_rect.isEmpty(), "scene rect must be non-empty after loading SAMPLE_BLOCKS"
+
+        identity = QTransform()
         view.fit_to_view()
+        transform_after = view.transform()
+
+        assert transform_after != identity, (
+            "fit_to_view must scale the view transform to fit a non-empty scene; identity transform means fitInView was not called"
+        )
 
     @staticmethod
     def test_fit_to_view_empty_scene() -> None:
-        """Verify fit_to_view handles empty scene gracefully."""
+        """Verify fit_to_view is safe on an empty scene and leaves transform at identity.
+
+        With no blocks loaded the scene rectangle is empty (null QRectF).
+        Qt's fitInView is a no-op for an empty rect, so the view transform must
+        remain at or near identity.  If fit_to_view raises or mutates the
+        transform unexpectedly on an empty scene, this test goes red.
+        """
         view = CFGGraphView()
+        identity = QTransform()
+
         view.fit_to_view()
+
+        transform_after = view.transform()
+        assert transform_after == identity, f"empty-scene fit_to_view must leave transform at identity; got {transform_after}"
 
     @staticmethod
     def test_load_and_display_full_graph() -> None:

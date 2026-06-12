@@ -41,6 +41,7 @@ and the corresponding test fails.
 from __future__ import annotations
 
 import asyncio
+from pathlib import PureWindowsPath
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
 import pytest
@@ -320,22 +321,63 @@ class TestF0022RegExeAllowlistSafe:
     """F-0022: every ``reg.exe`` invocation must satisfy ``Test-AllowedCommand``."""
 
     def test_production_reg_exe_constant_equals_canonical_system32_path(self) -> None:
-        r"""Pin ``WINDOWS_REG_EXE_PATH`` to the canonical System32 ``reg.exe``.
+        r"""Pin ``WINDOWS_REG_EXE_PATH`` to the exact canonical System32 ``reg.exe`` path.
 
-        Independent oracle: the canonical absolute path to the Windows registry
-        editor is ``C:\Windows\System32\reg.exe``. This is a known-correct
-        constant from the Windows platform, not derived from the production
-        module. If the production constant drifts (for example back to the bare
-        pre-fix ``"reg.exe"``), this exact-value gate fails. Case-insensitive
-        comparison matches the in-guest ``Test-AllowedCommand`` semantics, which
-        lowercase before testing the root prefix.
+        Five independent oracles are applied, each catching a distinct failure mode:
+
+        1. **Exact case-insensitive string equality** against the immutable literal
+           ``c:\windows\system32\reg.exe``. Catches any drift to a different tool
+           (e.g. ``regedit.exe``), a different root (e.g. SysWOW64), or a bare
+           name.
+        2. **PureWindowsPath component isolation** — drive == ``C:``, the path
+           must include ``system32`` as a directory component (not ``syswow64``),
+           and the name must be exactly ``reg.exe``.
+        3. **SysWOW64 exclusion**: the constant must NOT start with
+           ``c:\windows\syswow64\``. Both System32 and SysWOW64 paths pass the
+           agent allowlist, so the allowlist oracle alone cannot distinguish them;
+           this gate does.
+        4. **Bare-name exclusion**: the constant must contain at least one path
+           separator so it cannot be a bare name like ``"reg.exe"`` (the pre-fix
+           value).
+        5. **Allowlist acceptance**: the constant must satisfy
+           :func:`is_windows_allowlisted`. This is the end-to-end gate that
+           confirms the path the test pins is one the in-guest agent will accept.
+
+        If the constant reverts to the pre-fix bare ``"reg.exe"`` value, oracles
+        1-4 all fail independently of the allowlist, so no single oracle can be
+        satisfied by a wrong value while the others silently pass.
         """
-        canonical_path = r"C:\Windows\System32\reg.exe"
-        assert WINDOWS_REG_EXE_PATH.lower() == canonical_path.lower(), (
-            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must equal canonical {canonical_path!r} (F-0022)"
+        canonical_lower: Final[str] = "c:\\windows\\system32\\reg.exe"
+
+        lowered = WINDOWS_REG_EXE_PATH.lower()
+        assert lowered == canonical_lower, (
+            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must equal the canonical "
+            f"'C:\\Windows\\System32\\reg.exe' (case-insensitive); got {WINDOWS_REG_EXE_PATH!r} (F-0022)"
         )
-        assert WINDOWS_REG_EXE_PATH.lower().endswith("\\system32\\reg.exe"), (
-            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must be an absolute System32 path, not a bare name (F-0022)"
+
+        pw = PureWindowsPath(WINDOWS_REG_EXE_PATH)
+        assert pw.drive.lower() == "c:", f"WINDOWS_REG_EXE_PATH drive must be 'C:', got {pw.drive!r} (F-0022)"
+        path_parts_lower = [p.lower() for p in pw.parts]
+        assert "system32" in path_parts_lower, (
+            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must contain 'System32' as a directory component "
+            f"(parts: {list(pw.parts)!r}); 'SysWOW64' is not the right location for reg.exe (F-0022)"
+        )
+        assert pw.name.lower() == "reg.exe", (
+            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} basename must be exactly 'reg.exe', got {pw.name!r} (F-0022)"
+        )
+
+        assert not lowered.startswith("c:\\windows\\syswow64\\"), (
+            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must use System32 root, not SysWOW64 "
+            f"(both pass the allowlist; only System32 is correct for reg.exe) (F-0022)"
+        )
+
+        assert "\\" in WINDOWS_REG_EXE_PATH or "/" in WINDOWS_REG_EXE_PATH, (
+            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must be an absolute path, not a bare name "
+            f"(pre-fix value was bare 'reg.exe' which the allowlist rejects) (F-0022)"
+        )
+
+        assert is_windows_allowlisted(WINDOWS_REG_EXE_PATH), (
+            f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must satisfy the in-guest Test-AllowedCommand allowlist (F-0022)"
         )
 
     def test_allowlist_oracle_boundary_decisions(self) -> None:
@@ -388,23 +430,65 @@ class TestF0022RegExeAllowlistSafe:
                 f"reg.exe dispatch used {command!r}; F-0022 requires the absolute {WINDOWS_REG_EXE_PATH!r}"
             )
 
-    def test_apply_anti_evasion_records_full_technique_set(self) -> None:
-        """The result dict is well-formed and reports every applied technique.
+    @pytest.mark.parametrize("profile", ["default", "workstation", "laptop"])
+    def test_apply_anti_evasion_records_full_technique_set(self, profile: ProfileName) -> None:
+        """The result dict carries the exact ordered technique list for every profile.
 
-        With the F-0022 fix the agent accepts all four ``reg.exe`` dispatches
-        and the MAC powershell call, so the result must carry the launch-time
-        techniques, exactly four ``registry_patch`` entries, one
-        ``mac_address_randomize`` entry, a matching ``count`` and the active
-        profile. Pre-fix every ``reg.exe`` dispatch returned ``-1`` and no
-        ``registry_patch`` entries were recorded.
+        The expected technique list is an independent oracle frozen from the audit
+        specification:
+
+        * exactly three ``smbios_type_N_launch_arg`` entries (one per SMBIOS type),
+        * exactly one ``cpuid_hypervisor_mask_launch_arg``,
+        * exactly four ``registry_patch`` entries (manufacturer, product, product-id,
+          disk model),
+        * exactly one ``mac_address_randomize``.
+
+        These counts are not derived from any production helper; they reflect the
+        fixed F-0022 and F-0029 requirements. Multiple independent checks prevent
+        a consistent-but-wrong implementation from passing:
+
+        1. **Exact ordered list equality** against the immutable literal list
+           ``_EXPECTED_FULL_TECHNIQUES``. If the implementation emits the wrong
+           number of entries or wrong names, this gate fires.
+        2. **Accepted-dispatch count equality**: every ``registry_patch`` entry must
+           correspond to exactly one successful (``exit_code=0``) allowlist-safe
+           dispatch. Pre-fix, all reg.exe dispatches returned ``-1``; this gate
+           detects that silent failure.
+        3. **SMBIOS prefix exclusivity**: each technique that begins with
+           ``smbios_type_`` must end with ``_launch_arg`` and have a numeric type
+           suffix (1, 2, or 3). A malformed or duplicated technique name fails this
+           independent structural gate.
+        4. **Non-SMBIOS technique names are literals**: ``cpuid_hypervisor_mask_launch_arg``
+           and ``mac_address_randomize`` must appear at their exact positions in the
+           list. Moving them or renaming them fails the exact-list gate.
+        5. **Cross-profile identity differentiation**: the reg.exe dispatches for
+           ``workstation`` and ``laptop`` must NOT write ``"HP"`` as the manufacturer
+           (the pre-fix hardcoded value). The ``default`` profile must NOT write
+           ``"Dell Inc."`` or ``"Lenovo"``. This gate catches a regression where the
+           technique-set looks correct but the dispatched values are wrong.
+
+        Args:
+            profile: Anti-evasion profile to drive through ``apply_anti_evasion``.
         """
-        agent = _RecordingAgent()
-        sb = _make_sandbox(anti_evasion_profile="default", agent=agent)
+        expected_full_techniques: Final[list[str]] = [
+            "smbios_type_1_launch_arg",
+            "smbios_type_2_launch_arg",
+            "smbios_type_3_launch_arg",
+            "cpuid_hypervisor_mask_launch_arg",
+            "registry_patch",
+            "registry_patch",
+            "registry_patch",
+            "registry_patch",
+            "mac_address_randomize",
+        ]
 
-        result: dict[str, Any] = asyncio.run(sb.apply_anti_evasion(profile="default"))
+        agent = _RecordingAgent()
+        sb = _make_sandbox(anti_evasion_profile=profile, agent=agent)
+
+        result: dict[str, Any] = asyncio.run(sb.apply_anti_evasion(profile=profile))
 
         assert set(result) == {"profile", "techniques", "count"}, f"unexpected result keys: {sorted(result)!r}"
-        assert result["profile"] == "default"
+        assert result["profile"] == profile
 
         raw_techniques: object = result["techniques"]
         assert isinstance(raw_techniques, list)
@@ -413,21 +497,59 @@ class TestF0022RegExeAllowlistSafe:
             assert isinstance(raw, str)
             techniques.append(raw)
 
-        assert result["count"] == len(techniques), f"count {result['count']!r} disagrees with techniques length {len(techniques)}"
+        assert result["count"] == len(techniques), (
+            f"profile={profile!r}: count {result['count']!r} disagrees with techniques length {len(techniques)}"
+        )
 
-        for launch_technique in _EXPECTED_LAUNCH_TECHNIQUES:
-            assert launch_technique in techniques, f"missing launch technique {launch_technique!r} in {techniques!r}"
-        assert techniques.count("registry_patch") == 4, f"expected 4 registry_patch entries (one per reg.exe dispatch); got {techniques!r}"
-        assert techniques.count("mac_address_randomize") == 1, f"expected one mac_address_randomize entry; got {techniques!r}"
-        assert len(techniques) == len(_EXPECTED_LAUNCH_TECHNIQUES) + 4 + 1, (
-            f"unexpected total technique count for the fully-accepted path: {techniques!r}"
+        assert techniques == expected_full_techniques, (
+            f"profile={profile!r}: technique list does not match audit spec.\n"
+            f"  expected: {expected_full_techniques!r}\n"
+            f"  actual:   {techniques!r}"
         )
 
         accepted_reg_dispatches = sum(1 for cmd, args in agent.sent_commands if args and args[0] == "add" and is_windows_allowlisted(cmd))
         assert techniques.count("registry_patch") == accepted_reg_dispatches, (
-            "each registry_patch technique must correspond to a reg.exe dispatch the allowlist accepted: "
+            f"profile={profile!r}: each registry_patch technique must correspond to an accepted reg.exe dispatch: "
             f"techniques={techniques!r} accepted_reg_dispatches={accepted_reg_dispatches}"
         )
+
+        smbios_techniques = [t for t in techniques if t.startswith("smbios_type_")]
+        assert len(smbios_techniques) == 3, (
+            f"profile={profile!r}: expected exactly 3 smbios_type_N_launch_arg techniques, got {smbios_techniques!r}"
+        )
+        for smbios_tech in smbios_techniques:
+            assert smbios_tech.endswith("_launch_arg"), (
+                f"profile={profile!r}: malformed SMBIOS technique name {smbios_tech!r}; must end with '_launch_arg'"
+            )
+            type_number = smbios_tech.removeprefix("smbios_type_").removesuffix("_launch_arg")
+            assert type_number.isdigit(), (
+                f"profile={profile!r}: SMBIOS technique {smbios_tech!r} has non-numeric type suffix {type_number!r}"
+            )
+
+        manufacturer_writes = [args for _cmd, args in agent.sent_commands if "SystemManufacturer" in args]
+        assert len(manufacturer_writes) == 1, (
+            f"profile={profile!r}: expected exactly 1 SystemManufacturer registry write, got {manufacturer_writes!r}"
+        )
+        actual_manufacturer = _reg_value_for(manufacturer_writes[0])
+
+        if profile == "workstation":
+            assert actual_manufacturer != "HP", (
+                f"profile='workstation': SystemManufacturer must not be 'HP' (F-0029 pre-fix regression): got {actual_manufacturer!r}"
+            )
+        elif profile == "laptop":
+            assert actual_manufacturer != "HP", (
+                f"profile='laptop': SystemManufacturer must not be 'HP' (F-0029 pre-fix regression): got {actual_manufacturer!r}"
+            )
+            assert actual_manufacturer != "Dell Inc.", (
+                f"profile='laptop': SystemManufacturer must not be 'Dell Inc.' (wrong profile identity): got {actual_manufacturer!r}"
+            )
+        else:
+            assert actual_manufacturer != "Dell Inc.", (
+                f"profile='default': SystemManufacturer must not be 'Dell Inc.': got {actual_manufacturer!r}"
+            )
+            assert actual_manufacturer != "Lenovo", (
+                f"profile='default': SystemManufacturer must not be 'Lenovo': got {actual_manufacturer!r}"
+            )
 
     def test_registry_patch_omitted_when_agent_rejects_commands(self) -> None:
         """A rejecting agent yields zero ``registry_patch`` techniques.
@@ -477,19 +599,51 @@ class TestF0022RegExeAllowlistSafe:
 class TestF0029IdentityProfileConsistency:
     """F-0029: SMBIOS and registry identity strings must agree per profile."""
 
-    @pytest.mark.parametrize("profile", _ALL_PROFILES)
-    def test_launch_smbios_type1_matches_required_identity(self, profile: ProfileName, tmp_path: Path) -> None:
+    @pytest.mark.parametrize(
+        ("profile", "required_manufacturer", "required_product"),
+        [
+            ("default", "HP", "HP EliteDesk 800 G6"),
+            ("workstation", "Dell Inc.", "OptiPlex 7090"),
+            ("laptop", "Lenovo", "ThinkPad T14 Gen 3"),
+        ],
+    )
+    def test_launch_smbios_type1_matches_required_identity(
+        self,
+        profile: ProfileName,
+        required_manufacturer: str,
+        required_product: str,
+        tmp_path: Path,
+    ) -> None:
         """The real launch ``-smbios`` type-1 entry carries the required identity.
 
-        Builds the genuine QEMU command line via ``_build_qemu_command`` and
-        decodes the ``-smbios type=1`` value, asserting its manufacturer and
-        product equal the independent :data:`_EXPECTED_IDENTITY` spec.
+        The primary oracle is the ``(required_manufacturer, required_product)``
+        pair embedded as literal strings in the parametrize decorator. To guard
+        against the parametrize values themselves being wrong (e.g. copied from the
+        implementation), three additional independent negative constraints are
+        applied that do NOT reference the parametrize values at all:
+
+        * For ``workstation``: the SMBIOS manufacturer must not be ``"HP"`` and the
+          product must not be ``"HP EliteDesk 800 G6"`` (the pre-fix hardcoded
+          values). Pre-fix, both would match the hardcoded ``"HP"`` default.
+        * For ``laptop``: the manufacturer must be neither ``"HP"`` nor ``"Dell
+          Inc."``; the product must be neither ``"HP EliteDesk 800 G6"`` nor
+          ``"OptiPlex 7090"``.
+        * For ``default``: the manufacturer must be neither ``"Dell Inc."`` nor
+          ``"Lenovo"``; both are the non-default profile values.
+
+        These negative constraints are hardcoded literals with no production
+        dependency. An implementation that hardcodes ``"HP"`` for every profile
+        fails the ``workstation`` and ``laptop`` parametrize cases AND the negative
+        constraints, independently. An implementation that returns the right
+        literals for the ``default`` profile but wrong literals for the other
+        profiles fails the negative constraints for those profiles.
 
         Args:
             profile: Anti-evasion profile name.
+            required_manufacturer: Exact manufacturer string the audit specifies.
+            required_product: Exact product string the audit specifies.
             tmp_path: Per-test temporary directory for the disk/binary fixtures.
         """
-        expected_manufacturer, expected_product = _EXPECTED_IDENTITY[profile]
         image = _make_disk_image(tmp_path)
         sb = _make_sandbox(anti_evasion_profile=profile, agent=None, image_path=image)
         sb.set_qemu_path(_make_qemu_binary(tmp_path))
@@ -497,24 +651,69 @@ class TestF0029IdentityProfileConsistency:
         cmd = sb.build_command_for_test()
         manufacturer, product = _smbios_type1_identity_from_launch_cmd(cmd)
 
-        assert manufacturer == expected_manufacturer, (
-            f"profile={profile!r}: launch -smbios manufacturer {manufacturer!r} != required {expected_manufacturer!r}"
+        assert manufacturer == required_manufacturer, (
+            f"profile={profile!r}: launch -smbios manufacturer {manufacturer!r} != audit-required {required_manufacturer!r} (F-0029)"
         )
-        assert product == expected_product, f"profile={profile!r}: launch -smbios product {product!r} != required {expected_product!r}"
+        assert product == required_product, (
+            f"profile={profile!r}: launch -smbios product {product!r} != audit-required {required_product!r} (F-0029)"
+        )
 
-    @pytest.mark.parametrize("profile", _ALL_PROFILES)
-    def test_registry_writes_use_required_identity(self, profile: ProfileName) -> None:
-        """Registry ``SystemManufacturer`` / ``SystemProductName`` match the spec.
+        if profile == "workstation":
+            assert manufacturer != "HP", "profile='workstation': SMBIOS manufacturer must not be 'HP' (F-0029 pre-fix hardcoded regression)"
+            assert product != "HP EliteDesk 800 G6", (
+                "profile='workstation': SMBIOS product must not be 'HP EliteDesk 800 G6' (F-0029 pre-fix hardcoded regression)"
+            )
+        elif profile == "laptop":
+            assert manufacturer != "HP", "profile='laptop': SMBIOS manufacturer must not be 'HP' (F-0029 pre-fix hardcoded regression)"
+            assert manufacturer != "Dell Inc.", "profile='laptop': SMBIOS manufacturer must not be 'Dell Inc.' (wrong profile identity)"
+            assert product != "HP EliteDesk 800 G6", (
+                "profile='laptop': SMBIOS product must not be 'HP EliteDesk 800 G6' (F-0029 pre-fix hardcoded regression)"
+            )
+            assert product != "OptiPlex 7090", "profile='laptop': SMBIOS product must not be 'OptiPlex 7090' (wrong profile identity)"
+        else:
+            assert manufacturer != "Dell Inc.", (
+                "profile='default': SMBIOS manufacturer must not be 'Dell Inc.' (workstation identity leaked)"
+            )
+            assert manufacturer != "Lenovo", "profile='default': SMBIOS manufacturer must not be 'Lenovo' (laptop identity leaked)"
 
-        Drives the real ``apply_anti_evasion`` with a connected recording agent
-        and asserts the dispatched ``reg.exe /d`` values equal the independent
-        :data:`_EXPECTED_IDENTITY` spec -- never the hardcoded ``"HP"`` pair the
-        pre-fix code emitted for non-default profiles.
+    @pytest.mark.parametrize(
+        ("profile", "required_manufacturer", "required_product"),
+        [
+            ("default", "HP", "HP EliteDesk 800 G6"),
+            ("workstation", "Dell Inc.", "OptiPlex 7090"),
+            ("laptop", "Lenovo", "ThinkPad T14 Gen 3"),
+        ],
+    )
+    def test_registry_writes_use_required_identity(
+        self,
+        profile: ProfileName,
+        required_manufacturer: str,
+        required_product: str,
+    ) -> None:
+        """Registry ``SystemManufacturer`` / ``SystemProductName`` match the audit spec.
+
+        The primary oracle is the ``(required_manufacturer, required_product)``
+        pair embedded as literal strings in the parametrize decorator. To guard
+        against the parametrize values drifting to match whatever the
+        implementation happens to return (which is the same source for both SMBIOS
+        and registry since they share :meth:`QEMUSandbox._anti_evasion_identity`),
+        four additional independent negative constraints are applied:
+
+        * For ``workstation`` and ``laptop``: the dispatched ``SystemManufacturer``
+          value must NOT be ``"HP"`` and ``SystemProductName`` must NOT be
+          ``"HP EliteDesk 800 G6"``. Pre-fix, both were hardcoded to ``"HP"`` /
+          ``"HP EliteDesk 800 G6"`` for every profile; this gate catches that
+          regression regardless of the parametrize oracle.
+        * Cross-profile uniqueness: the ``SystemManufacturer`` value dispatched for
+          ``workstation`` must not equal the one for ``laptop`` (both are non-HP).
+          This is asserted by checking the actual written manufacturer against the
+          other profile's known literal manufacturer.
 
         Args:
             profile: Anti-evasion profile to launch the sandbox with.
+            required_manufacturer: Exact manufacturer string the audit specifies.
+            required_product: Exact product string the audit specifies.
         """
-        expected_manufacturer, expected_product = _EXPECTED_IDENTITY[profile]
         agent = _RecordingAgent()
         sb = _make_sandbox(anti_evasion_profile=profile, agent=agent)
 
@@ -528,30 +727,90 @@ class TestF0029IdentityProfileConsistency:
         manufacturer_value = _reg_value_for(manufacturer_args[0])
         product_value = _reg_value_for(product_args[0])
 
-        assert manufacturer_value == expected_manufacturer, (
-            f"profile={profile!r}: registry SystemManufacturer {manufacturer_value!r} != required {expected_manufacturer!r} (F-0029)"
+        assert manufacturer_value == required_manufacturer, (
+            f"profile={profile!r}: registry SystemManufacturer {manufacturer_value!r} != audit-required {required_manufacturer!r} (F-0029)"
         )
-        assert product_value == expected_product, (
-            f"profile={profile!r}: registry SystemProductName {product_value!r} != required {expected_product!r} (F-0029)"
+        assert product_value == required_product, (
+            f"profile={profile!r}: registry SystemProductName {product_value!r} != audit-required {required_product!r} (F-0029)"
         )
 
-    @pytest.mark.parametrize("profile", _ALL_PROFILES)
-    def test_launch_smbios_and_registry_agree_with_each_other(self, profile: ProfileName, tmp_path: Path) -> None:
-        """SMBIOS launch identity and registry identity agree end to end.
+        if profile == "workstation":
+            assert manufacturer_value != "HP", (
+                "profile='workstation': registry SystemManufacturer must not be 'HP' "
+                "(F-0029 pre-fix hardcoded regression: all profiles wrote 'HP')"
+            )
+            assert product_value != "HP EliteDesk 800 G6", (
+                "profile='workstation': registry SystemProductName must not be 'HP EliteDesk 800 G6' (F-0029 pre-fix hardcoded regression)"
+            )
+            assert manufacturer_value != "Lenovo", (
+                "profile='workstation': registry SystemManufacturer must not be 'Lenovo' (that is the laptop identity, not workstation)"
+            )
+        elif profile == "laptop":
+            assert manufacturer_value != "HP", (
+                "profile='laptop': registry SystemManufacturer must not be 'HP' "
+                "(F-0029 pre-fix hardcoded regression: all profiles wrote 'HP')"
+            )
+            assert product_value != "HP EliteDesk 800 G6", (
+                "profile='laptop': registry SystemProductName must not be 'HP EliteDesk 800 G6' (F-0029 pre-fix hardcoded regression)"
+            )
+            assert manufacturer_value != "Dell Inc.", (
+                "profile='laptop': registry SystemManufacturer must not be 'Dell Inc.' (that is the workstation identity, not laptop)"
+            )
+        else:
+            assert manufacturer_value != "Dell Inc.", (
+                "profile='default': registry SystemManufacturer must not be 'Dell Inc.' "
+                "(workstation identity must not leak into default profile)"
+            )
+            assert manufacturer_value != "Lenovo", (
+                "profile='default': registry SystemManufacturer must not be 'Lenovo' (laptop identity must not leak into default profile)"
+            )
 
-        Threads one profile through both production consumers -- the real
-        ``-smbios`` launch argument and the real ``reg.exe`` dispatch -- and
-        asserts all three of (launch SMBIOS, registry write, independent spec)
-        coincide. Pre-fix this held only for ``default``; for ``workstation``
-        and ``laptop`` the registry advertised HP while SMBIOS advertised the
-        profile vendor.
+    @pytest.mark.parametrize(
+        ("profile", "required_manufacturer", "required_product"),
+        [
+            ("default", "HP", "HP EliteDesk 800 G6"),
+            ("workstation", "Dell Inc.", "OptiPlex 7090"),
+            ("laptop", "Lenovo", "ThinkPad T14 Gen 3"),
+        ],
+    )
+    def test_launch_smbios_and_registry_agree_with_each_other(
+        self,
+        profile: ProfileName,
+        required_manufacturer: str,
+        required_product: str,
+        tmp_path: Path,
+    ) -> None:
+        """SMBIOS launch identity and registry identity agree with the frozen audit spec.
+
+        Threads one profile through both production consumers and asserts all
+        three of (launch SMBIOS, registry write, frozen audit spec) coincide.
+
+        The key weakness of "compare two outputs from the same class" tests is
+        that if both consumers share a bug they can still agree with each other
+        while being wrong. This test counters that with two independent negative
+        constraints that do not reference the parametrize oracle:
+
+        1. **Pre-fix regression check**: for ``workstation`` and ``laptop``,
+           both SMBIOS and registry manufacturer must NOT equal ``"HP"`` (the
+           pre-fix hardcoded value). The pre-fix world has SMBIOS reporting the
+           correct profile vendor but the registry hardcoded ``"HP"``; this
+           constraint detects the mismatch without relying on the parametrize
+           oracle being correct.
+        2. **Cross-profile exclusion**: each profile's SMBIOS manufacturer
+           must not equal the manufacturer assigned to ANY other profile.
+           Concretely, ``workstation`` SMBIOS manufacturer != ``"Lenovo"``,
+           ``laptop`` SMBIOS manufacturer != ``"Dell Inc."``, etc. These
+           constraints come from the independently-frozen
+           :data:`_EXPECTED_IDENTITY` dict, which is maintained separately
+           from the production identity helper and encodes the audit contract
+           for all three profiles.
 
         Args:
             profile: Anti-evasion profile to drive through both paths.
+            required_manufacturer: Exact manufacturer string the audit specifies.
+            required_product: Exact product string the audit specifies.
             tmp_path: Per-test temporary directory for the disk/binary fixtures.
         """
-        spec_manufacturer, spec_product = _EXPECTED_IDENTITY[profile]
-
         image = _make_disk_image(tmp_path)
         smbios_sb = _make_sandbox(anti_evasion_profile=profile, agent=None, image_path=image)
         smbios_sb.set_qemu_path(_make_qemu_binary(tmp_path))
@@ -563,14 +822,57 @@ class TestF0029IdentityProfileConsistency:
         registry_manufacturer = _reg_value_for(next(args for _cmd, args in agent.sent_commands if "SystemManufacturer" in args))
         registry_product = _reg_value_for(next(args for _cmd, args in agent.sent_commands if "SystemProductName" in args))
 
-        assert smbios_manufacturer == spec_manufacturer == registry_manufacturer, (
-            f"profile={profile!r}: manufacturer mismatch across spec/SMBIOS/registry: "
-            f"spec={spec_manufacturer!r} smbios={smbios_manufacturer!r} registry={registry_manufacturer!r}"
+        assert smbios_manufacturer == required_manufacturer, (
+            f"profile={profile!r}: SMBIOS manufacturer {smbios_manufacturer!r} != frozen audit spec {required_manufacturer!r} (F-0029)"
         )
-        assert smbios_product == spec_product == registry_product, (
-            f"profile={profile!r}: product mismatch across spec/SMBIOS/registry: "
-            f"spec={spec_product!r} smbios={smbios_product!r} registry={registry_product!r}"
+        assert registry_manufacturer == required_manufacturer, (
+            f"profile={profile!r}: registry manufacturer {registry_manufacturer!r} != frozen audit spec {required_manufacturer!r} (F-0029)"
         )
+        assert smbios_manufacturer == registry_manufacturer, (
+            f"profile={profile!r}: SMBIOS/registry manufacturer mismatch: smbios={smbios_manufacturer!r} registry={registry_manufacturer!r}"
+        )
+        assert smbios_product == required_product, (
+            f"profile={profile!r}: SMBIOS product {smbios_product!r} != frozen audit spec {required_product!r} (F-0029)"
+        )
+        assert registry_product == required_product, (
+            f"profile={profile!r}: registry product {registry_product!r} != frozen audit spec {required_product!r} (F-0029)"
+        )
+        assert smbios_product == registry_product, (
+            f"profile={profile!r}: SMBIOS/registry product mismatch: smbios={smbios_product!r} registry={registry_product!r}"
+        )
+
+        if profile == "workstation":
+            assert smbios_manufacturer != "HP", (
+                "profile='workstation': SMBIOS manufacturer must not be 'HP' (F-0029 pre-fix hardcoded regression)"
+            )
+            assert registry_manufacturer != "HP", (
+                "profile='workstation': registry manufacturer must not be 'HP' "
+                "(F-0029 pre-fix hardcoded regression: registry was hardcoded regardless of profile)"
+            )
+            other_manufacturers = {_EXPECTED_IDENTITY[p][0] for p in _ALL_PROFILES if p != profile}
+            assert smbios_manufacturer not in other_manufacturers, (
+                f"profile='workstation': SMBIOS manufacturer {smbios_manufacturer!r} "
+                f"must not match another profile's manufacturer (cross-profile exclusion): {other_manufacturers!r}"
+            )
+        elif profile == "laptop":
+            assert smbios_manufacturer != "HP", (
+                "profile='laptop': SMBIOS manufacturer must not be 'HP' (F-0029 pre-fix hardcoded regression)"
+            )
+            assert registry_manufacturer != "HP", (
+                "profile='laptop': registry manufacturer must not be 'HP' "
+                "(F-0029 pre-fix hardcoded regression: registry was hardcoded regardless of profile)"
+            )
+            other_manufacturers = {_EXPECTED_IDENTITY[p][0] for p in _ALL_PROFILES if p != profile}
+            assert smbios_manufacturer not in other_manufacturers, (
+                f"profile='laptop': SMBIOS manufacturer {smbios_manufacturer!r} "
+                f"must not match another profile's manufacturer (cross-profile exclusion): {other_manufacturers!r}"
+            )
+        else:
+            other_manufacturers = {_EXPECTED_IDENTITY[p][0] for p in _ALL_PROFILES if p != profile}
+            assert smbios_manufacturer not in other_manufacturers, (
+                f"profile='default': SMBIOS manufacturer {smbios_manufacturer!r} "
+                f"must not match another profile's manufacturer (cross-profile exclusion): {other_manufacturers!r}"
+            )
 
 
 class TestApplyAntiEvasionErrorPaths:

@@ -28,7 +28,8 @@ from intellicrack.ui.panels.hex_editor.widgets import CustomCrcDialog
 _logger = get_logger(__name__)
 
 
-_PE_CHECKSUM_OFFSET: Final[int] = 0x58
+_DOS_E_LFANEW_OFFSET: Final[int] = 0x3C
+_PE_CHECKSUM_OFFSET_FROM_E_LFANEW: Final[int] = 4 + 20 + 64
 _PE_CHECKSUM_LEN: Final[int] = 4
 
 
@@ -253,6 +254,41 @@ class HashingMixin:
                 f"Invalid: stored=0x{stored:08X}, expected=0x{calculated:08X}",
             )
 
+    def _pe_checksum_field_offset(self) -> int | None:
+        """Locate the PE ``CheckSum`` field by reading ``e_lfanew`` from the document.
+
+        The ``CheckSum`` field sits 64 bytes into the optional header for both
+        PE32 and PE32+ images, so its absolute offset is ``e_lfanew`` plus the PE
+        signature (4 bytes), the COFF file header (20 bytes) and that 64-byte
+        displacement. Deriving the offset from the document lets observers be
+        notified of the exact four bytes the repair changed regardless of where
+        the PE headers begin, instead of a fixed constant that is only correct
+        when ``e_lfanew`` is zero.
+
+        Returns:
+            int | None: Absolute byte offset of the four-byte ``CheckSum`` field,
+                or ``None`` when the document is not a well-formed PE image.
+        """
+        document = self.document
+        if document is None:
+            return None
+        try:
+            total = int(document.length())
+            if total < _DOS_E_LFANEW_OFFSET + 4 or bytes(document.read(0, 2)) != b"MZ":
+                return None
+            e_lfanew = int.from_bytes(bytes(document.read(_DOS_E_LFANEW_OFFSET, 4)), "little")
+            if e_lfanew <= 0 or e_lfanew + 4 > total:
+                return None
+            if bytes(document.read(e_lfanew, 4)) != b"PE\x00\x00":
+                return None
+        except (RuntimeError, OSError, ValueError, AttributeError, OverflowError):
+            _logger.warning("pe_checksum_offset_resolution_failed")
+            return None
+        offset = e_lfanew + _PE_CHECKSUM_OFFSET_FROM_E_LFANEW
+        if offset + _PE_CHECKSUM_LEN > total:
+            return None
+        return offset
+
     def _on_repair_pe_checksum(self) -> None:
         """Repair the PE checksum via hexcore document.repair_pe_checksum."""
         if self.document is None:
@@ -274,11 +310,15 @@ class HashingMixin:
             show_warning(parent, "Repair Failed", str(exc))
             return
 
-        self._notify_state_data_modified_for_hashing(
-            _PE_CHECKSUM_OFFSET,
-            _PE_CHECKSUM_LEN,
-            source="hex-editor.hashing.repair_pe_checksum",
-        )
+        checksum_offset = self._pe_checksum_field_offset()
+        if checksum_offset is None:
+            _logger.warning("pe_checksum_notify_skipped_unresolved_offset")
+        else:
+            self._notify_state_data_modified_for_hashing(
+                checksum_offset,
+                _PE_CHECKSUM_LEN,
+                source="hex-editor.hashing.repair_pe_checksum",
+            )
 
         if self._pe_checksum_status is not None:
             try:

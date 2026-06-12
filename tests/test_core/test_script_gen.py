@@ -338,6 +338,28 @@ _LANGUAGE_EXTENSIONS: Final[list[tuple[ScriptLanguage, str]]] = [
     (ScriptLanguage.X64DBG_SCRIPT, ".txt"),
 ]
 
+_LANGUAGE_SCRIPT_TYPES: Final[dict[ScriptLanguage, str]] = {
+    ScriptLanguage.JAVASCRIPT: "frida",
+    ScriptLanguage.JAVA: "ghidra",
+    ScriptLanguage.PYTHON: "python",
+    ScriptLanguage.R2_COMMANDS: "cutter",
+    ScriptLanguage.X64DBG_SCRIPT: "x64dbg",
+}
+
+
+def test_script_get_extension_coverage_completeness() -> None:
+    """Verify _LANGUAGE_EXTENSIONS covers every ScriptLanguage enum member.
+
+    If a new ScriptLanguage variant is added without a corresponding entry in
+    _LANGUAGE_EXTENSIONS, this test fails immediately, preventing silent gaps
+    in the parametrized test_script_get_extension suite from hiding a missing
+    extension mapping.
+    """
+    covered_languages = {lang for lang, _ in _LANGUAGE_EXTENSIONS}
+    all_languages = set(ScriptLanguage)
+    missing = all_languages - covered_languages
+    assert missing == set(), f"ScriptLanguage members missing from _LANGUAGE_EXTENSIONS: {missing}"
+
 
 @pytest.mark.parametrize(("language", "expected_ext"), _LANGUAGE_EXTENSIONS)
 def test_script_get_extension(language: ScriptLanguage, expected_ext: str) -> None:
@@ -346,13 +368,57 @@ def test_script_get_extension(language: ScriptLanguage, expected_ext: str) -> No
     The expected extension is the well-known file-type convention for each
     tool's scripts (Frida ``.js``, Ghidra ``.java``, Python ``.py``, Rizin/r2
     ``.r2``, x64dbg ``.txt``) -- an oracle independent of the production map.
+    The extension is the actual suffix used by each tool's native format, not
+    a value derived from the implementation under test.
 
     Args:
         language: Script language.
         expected_ext: Conventional file extension for that language.
     """
     script = _make_script(language=language)
-    assert script.get_extension() == expected_ext
+    ext = script.get_extension()
+    assert ext == expected_ext, f"get_extension() returned {ext!r} for {language.name} but expected {expected_ext!r}"
+    assert ext.startswith("."), f"Extension {ext!r} must start with a dot"
+    assert ext == ext.lower(), f"Extension {ext!r} must be lowercase"
+
+
+@pytest.mark.parametrize(("language", "expected_ext"), _LANGUAGE_EXTENSIONS)
+def test_script_get_extension_roundtrip_through_load_script(
+    language: ScriptLanguage,
+    expected_ext: str,
+    tmp_path: Path,
+) -> None:
+    """Verify the extension returned by get_extension() is consistent with load_script().
+
+    This roundtrip test exercises both maps in the production code: the
+    get_extension() map (Script._extensions) and the load_script() extension-to-
+    language map. If either map regresses -- e.g. get_extension() returns ``.py``
+    for JAVASCRIPT, or load_script() maps ``.js`` to PYTHON -- the recovered
+    language will not match the original and this test fails.
+
+    Args:
+        language: Script language to roundtrip.
+        expected_ext: Conventional file extension for that language.
+        tmp_path: Pytest temporary directory.
+    """
+    script = _make_script(name="roundtrip", language=language, content=f"// body for {language.value}")
+    ext = script.get_extension()
+    assert ext == expected_ext
+
+    disk_path = tmp_path / f"roundtrip{ext}"
+    disk_path.write_text(script.content, encoding="utf-8")
+
+    mgr = ScriptManager(tmp_path)
+    loaded = mgr.load_script(disk_path)
+
+    assert loaded is not None, f"load_script returned None for {disk_path}"
+    assert loaded.language == language, (
+        f"load_script recovered language {loaded.language!r} but expected {language!r} after roundtrip via extension {ext!r}"
+    )
+    assert loaded.script_type == _LANGUAGE_SCRIPT_TYPES[language], (
+        f"load_script recovered script_type {loaded.script_type!r} but expected {_LANGUAGE_SCRIPT_TYPES[language]!r} for {language.name}"
+    )
+    assert loaded.content == script.content, f"Content mismatch after roundtrip: {loaded.content!r} != {script.content!r}"
 
 
 @pytest.mark.parametrize(("language", "expected_ext"), _LANGUAGE_EXTENSIONS)

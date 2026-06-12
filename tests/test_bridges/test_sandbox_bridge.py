@@ -440,48 +440,250 @@ class TestF0003DetectBehaviorsYAML:
         assert bridge.state.last_error is not None
         assert "expected a list" in bridge.state.last_error or "dict" in bridge.state.last_error
 
-    def test_valid_yaml_list_rules_passed_to_behaviors(self, tmp_path: Path) -> None:
-        """detect_behaviors passes parsed YAML list to match_behaviors."""
+    def test_valid_yaml_list_rules_applied_to_real_report(self, tmp_path: Path) -> None:
+        """detect_behaviors passes parsed YAML rules to real match_behaviors and returns exact field values.
+
+        This test drives the full path: YAML file -> parse -> real match_behaviors ->
+        _match_custom_rules.  No part of the analysis pipeline is mocked.  The custom
+        rule fires when ``process_activity`` contains an entry whose name matches
+        ``conditions.process_names``.
+
+        The bridge must return a ``matches`` list whose single custom entry has:
+
+        - ``signature_name`` exactly equal to the YAML ``name`` field
+        - ``category`` exactly equal to the YAML ``category`` field
+        - ``severity`` exactly equal to the YAML ``severity`` field
+        - ``mitre_attack_id`` exactly equal to the YAML ``mitre_id`` field
+        - ``evidence`` list containing the exact string produced by
+          ``_match_custom_rules``: ``"Process match: malicious.exe (PID 1234)"``
+        - ``result["count"]`` equal to the total number of matches
+
+        These assertions are derived from reading ``_match_custom_rules`` in
+        ``intellicrack/sandbox/analysis.py`` as the independent oracle, NOT from
+        re-running the production function and freezing its output.
+        """
         bridge = SandboxBridge()
 
         yaml_content = textwrap.dedent("""\
-            - name: TestRule
-              category: persistence
+            - name: TestCustomPersistenceRule
+              category: CustomPersistence
+              severity: high
+              description: Detects malicious.exe execution
+              mitre_id: T1547
+              conditions:
+                process_names:
+                  - malicious.exe
         """)
         rules_file = tmp_path / "rules.yaml"
         rules_file.write_text(yaml_content, encoding="utf-8")
 
-        mock_report = MagicMock()
+        report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=2.0,
+            process_activity=[
+                cast(
+                    "Any",
+                    {
+                        "pid": 1234,
+                        "name": "malicious.exe",
+                        "path": "C:\\Temp\\malicious.exe",
+                        "command_line": "malicious.exe --silent",
+                        "parent_pid": 4,
+                        "operation": "created",
+                        "exit_code": None,
+                        "timestamp": "2026-06-07T10:00:00",
+                    },
+                ),
+            ],
+        )
+
         mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        mock_instance.last_report = report
 
-        captured_rules: list[dict[str, Any]] = []
+        async def run() -> dict[str, Any]:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=mock_instance)
+                mock_mgr.return_value = manager
+                return await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
 
-        def capture_rules(_report: object, rules: object) -> list[dict[str, Any]]:
-            if not isinstance(rules, list):
-                return []
-            typed_rules: list[dict[str, Any]] = [
-                cast("dict[str, Any]", raw) for raw in cast("list[object]", rules) if isinstance(raw, dict)
-            ]
-            captured_rules.extend(typed_rules)
-            return []
+        result = asyncio.run(run())
 
-        with patch("intellicrack.bridges.sandbox_bridge._get_analysis_module") as mock_mod:
-            analysis = MagicMock()
-            analysis.match_behaviors = MagicMock(side_effect=capture_rules)
-            mock_mod.return_value = analysis
+        matches: list[dict[str, Any]] = cast("list[dict[str, Any]]", result["matches"])
+        custom_matches = [m for m in matches if m.get("signature_name") == "TestCustomPersistenceRule"]
+        assert len(custom_matches) == 1, (
+            f"Expected exactly one match for 'TestCustomPersistenceRule', got {len(custom_matches)}; "
+            f"all matches: {[m.get('signature_name') for m in matches]}"
+        )
+        matched = custom_matches[0]
+        assert matched["category"] == "CustomPersistence", f"wrong category: {matched['category']!r}"
+        assert matched["severity"] == "high", f"wrong severity: {matched['severity']!r}"
+        assert matched["mitre_attack_id"] == "T1547", (
+            f"mitre_attack_id not propagated from YAML mitre_id: {matched.get('mitre_attack_id')!r}"
+        )
+        expected_evidence_entry = "Process match: malicious.exe (PID 1234)"
+        assert expected_evidence_entry in matched["evidence"], (
+            f"Exact evidence string {expected_evidence_entry!r} not found in: {matched['evidence']!r}"
+        )
+        assert result["count"] == len(matches), f"count mismatch: {result['count']} != {len(matches)}"
 
-            async def run() -> None:
-                with patch.object(bridge, "ensure_manager") as mock_mgr:
-                    manager = AsyncMock()
-                    manager.get = AsyncMock(return_value=mock_instance)
-                    mock_mgr.return_value = manager
-                    await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+    def test_non_matching_process_name_produces_no_custom_match(self, tmp_path: Path) -> None:
+        """detect_behaviors returns zero custom rule matches when no process in the report matches.
 
-            asyncio.run(run())
+        A YAML rule whose ``conditions.process_names`` lists ``"benign.exe"`` must not
+        fire when the report's ``process_activity`` contains only ``"malicious.exe"``.
+        This confirms the rule engine does not produce false positives when the
+        condition predicate is false, and that the YAML was forwarded intact (a
+        silently-dropped rules list would also produce zero matches and would be
+        indistinguishable — so this test must be run together with the positive-match
+        test above to provide a real gate).
+        """
+        bridge = SandboxBridge()
 
-        assert len(captured_rules) == 1
-        assert captured_rules[0]["name"] == "TestRule"
+        yaml_content = textwrap.dedent("""\
+            - name: BenignRule
+              category: Custom
+              severity: low
+              description: Should never fire
+              mitre_id: T9999
+              conditions:
+                process_names:
+                  - benign.exe
+        """)
+        rules_file = tmp_path / "no_match_rules.yaml"
+        rules_file.write_text(yaml_content, encoding="utf-8")
+
+        report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            process_activity=[
+                cast(
+                    "Any",
+                    {
+                        "pid": 5678,
+                        "name": "malicious.exe",
+                        "path": "C:\\Temp\\malicious.exe",
+                        "command_line": "malicious.exe",
+                        "parent_pid": 4,
+                        "operation": "created",
+                        "exit_code": None,
+                        "timestamp": "2026-06-07T11:00:00",
+                    },
+                ),
+            ],
+        )
+
+        mock_instance = MagicMock()
+        mock_instance.last_report = report
+
+        async def run() -> dict[str, Any]:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=mock_instance)
+                mock_mgr.return_value = manager
+                return await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+
+        result = asyncio.run(run())
+
+        matches: list[dict[str, Any]] = cast("list[dict[str, Any]]", result["matches"])
+        benign_matches = [m for m in matches if m.get("signature_name") == "BenignRule"]
+        assert len(benign_matches) == 0, (
+            f"Rule 'BenignRule' must not fire when 'benign.exe' is not in process_activity; found: {benign_matches!r}"
+        )
+
+    def test_multi_rule_yaml_only_matching_rules_fire(self, tmp_path: Path) -> None:
+        """detect_behaviors fires exactly the rules whose conditions are satisfied.
+
+        A YAML file with two rules — one matching (``malicious.exe``) and one not
+        (``benign.exe``) — must produce exactly one custom match for the matching rule
+        and zero for the non-matching rule.  This verifies that:
+
+        1. Both rules are parsed and forwarded (the list is not truncated to the first rule).
+        2. The matching predicate is applied per-rule independently (not short-circuited).
+        3. No spurious cross-contamination between rule conditions occurs.
+        """
+        bridge = SandboxBridge()
+
+        yaml_content = textwrap.dedent("""\
+            - name: MatchingRule
+              category: MatchCat
+              severity: critical
+              description: Should fire
+              mitre_id: T1059
+              conditions:
+                process_names:
+                  - malicious.exe
+            - name: NonMatchingRule
+              category: NoMatchCat
+              severity: low
+              description: Should not fire
+              mitre_id: T9000
+              conditions:
+                process_names:
+                  - absent.exe
+        """)
+        rules_file = tmp_path / "multi_rules.yaml"
+        rules_file.write_text(yaml_content, encoding="utf-8")
+
+        report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.5,
+            process_activity=[
+                cast(
+                    "Any",
+                    {
+                        "pid": 9001,
+                        "name": "malicious.exe",
+                        "path": "C:\\evil\\malicious.exe",
+                        "command_line": "malicious.exe --flag",
+                        "parent_pid": 4,
+                        "operation": "created",
+                        "exit_code": None,
+                        "timestamp": "2026-06-07T12:00:00",
+                    },
+                ),
+            ],
+        )
+
+        mock_instance = MagicMock()
+        mock_instance.last_report = report
+
+        async def run() -> dict[str, Any]:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=mock_instance)
+                mock_mgr.return_value = manager
+                return await bridge.detect_behaviors("some-id", custom_rules_path=str(rules_file))
+
+        result = asyncio.run(run())
+
+        matches: list[dict[str, Any]] = cast("list[dict[str, Any]]", result["matches"])
+        signature_names = [m["signature_name"] for m in matches]
+
+        matching_hits = [m for m in matches if m["signature_name"] == "MatchingRule"]
+        assert len(matching_hits) == 1, (
+            f"Expected exactly one 'MatchingRule' hit; got {len(matching_hits)}; all signatures: {signature_names!r}"
+        )
+        assert matching_hits[0]["category"] == "MatchCat", f"wrong category: {matching_hits[0]['category']!r}"
+        assert matching_hits[0]["severity"] == "critical", f"wrong severity: {matching_hits[0]['severity']!r}"
+        assert matching_hits[0]["mitre_attack_id"] == "T1059", f"wrong mitre_attack_id: {matching_hits[0].get('mitre_attack_id')!r}"
+        assert "Process match: malicious.exe (PID 9001)" in matching_hits[0]["evidence"], (
+            f"exact evidence string missing; got: {matching_hits[0]['evidence']!r}"
+        )
+
+        non_matching_hits = [m for m in matches if m["signature_name"] == "NonMatchingRule"]
+        assert len(non_matching_hits) == 0, (
+            f"Rule 'NonMatchingRule' must not fire when 'absent.exe' not in process_activity; found: {non_matching_hits!r}"
+        )
 
 
 class TestF0004YaraScanModeValidation:
