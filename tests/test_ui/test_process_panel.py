@@ -6,12 +6,18 @@
 
 from __future__ import annotations
 
+import asyncio
+import inspect
+import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 from PyQt6.QtWidgets import QWidget
 
 from intellicrack.bridges.process import ProcessBridge
+from intellicrack.core.tools import ToolRegistry
+from intellicrack.core.types import ProcessInfo, ToolError, ToolName
 from intellicrack.ui.panels import ProcessPanel as ProcessPanelFromPanels
 from intellicrack.ui.panels.process_panel import ProcessPanel
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
@@ -19,9 +25,25 @@ from tests.test_ui.conftest import SignalRecorder
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Coroutine, Generator
 
     from PyQt6.QtWidgets import QApplication
+
+
+def _run[T](coro: Coroutine[object, object, T]) -> T:
+    """Drive an async bridge coroutine to completion on a private event loop.
+
+    Args:
+        coro: The awaitable coroutine to execute.
+
+    Returns:
+        T: The resolved result of the coroutine.
+    """
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
 
 
 @pytest.fixture
@@ -48,6 +70,23 @@ def bridge() -> ProcessBridge:
         ProcessBridge: Uninitialized ProcessBridge instance.
     """
     return ProcessBridge()
+
+
+@pytest.fixture
+def process_registry(tmp_path: object) -> ToolRegistry:
+    """Build a real ToolRegistry with a live, initialized ProcessBridge registered.
+
+    Args:
+        tmp_path: Pytest temporary directory used as the tools install root.
+
+    Returns:
+        ToolRegistry: Registry exposing the process bridge for end-to-end dispatch.
+    """
+    registry = ToolRegistry(Path(str(tmp_path)) / "tools")
+    pb = ProcessBridge()
+    _run(pb.initialize())
+    registry.register_bridge(ToolName.PROCESS, pb)
+    return registry
 
 
 class TestPanelConstruction:
@@ -346,13 +385,115 @@ class TestSignalEmission:
         assert recorder.times_called == 1
 
 
-class TestToolDefinition:
-    """Verify ProcessBridge tool definition structure."""
+_CANONICAL_PROCESS_FUNCTION_NAMES: frozenset[str] = frozenset({
+    "process.list",
+    "process.list_detailed",
+    "process.open",
+    "process.close",
+    "process.terminate",
+    "process.suspend",
+    "process.resume",
+    "process.read_memory",
+    "process.write_memory",
+    "process.allocate",
+    "process.free",
+    "process.protect",
+    "process.get_modules",
+    "process.get_threads",
+    "process.get_memory_map",
+    "process.search_pattern",
+    "process.inject_dll",
+    "process.get_process_info",
+    "process.get_process_memory_mb",
+    "process.detect_architecture",
+    "process.get_token_privileges",
+    "process.adjust_token_privilege",
+    "process.get_handles",
+    "process.get_windows",
+    "process.list_services",
+    "process.read_peb",
+    "process.read_teb",
+    "process.get_heaps",
+    "process.get_thread_context",
+    "process.set_thread_context",
+    "process.stack_walk",
+    "process.get_seh_chain",
+    "process.get_mitigation_policies",
+    "process.get_environment",
+    "process.pipe_connect",
+    "process.pipe_read",
+    "process.pipe_write",
+    "process.pipe_close",
+    "process.enumerate_com_servers",
+    "process.detect_dotnet",
+    "process.device_open",
+    "process.device_ioctl",
+    "process.device_close",
+    "process.get_job_info",
+    "process.get_gui_resources",
+    "process.reg_read_value",
+    "process.reg_enum_keys",
+    "process.reg_enum_values",
+    "process.create_section",
+    "process.map_section",
+    "process.unmap_section",
+    "process.get_tls_values",
+    "process.get_fiber_data",
+    "process.query_system_info",
+})
 
-    def test_tool_definition_count(self) -> None:
-        """Verify tool definition has 54 functions."""
+# Maps each tool function name to the bridge method attribute that ToolRegistry.execute_tool_call
+# resolves via the production dispatch rule in tools.py: the suffix after the first dot.
+# Three functions have shim methods whose suffix differs from the underlying implementation:
+#   "process.list"          -> bridge attribute "list"          (delegates to list_processes)
+#   "process.list_detailed" -> bridge attribute "list_detailed" (delegates to list_processes_detailed)
+#   "process.open"          -> bridge attribute "open"          (delegates to open_process)
+# All other functions resolve to a method whose name equals the suffix directly.
+_CANONICAL_FUNCTION_TO_DISPATCH_METHOD: dict[str, str] = {fn: fn.split(".", maxsplit=1)[-1] for fn in _CANONICAL_PROCESS_FUNCTION_NAMES}
+
+
+class TestToolDefinition:
+    """Verify ProcessBridge tool definition is fully wired to callable bridge methods.
+
+    The audit flagged a bare count assertion and a bare hasattr loop as non-gating:
+    neither proved the advertised functions are actually invokable through the
+    production orchestration dispatch path. These tests instead drive every
+    advertised function through the real ToolRegistry.execute_tool_call resolution
+    rule (suffix after the first dot) and confirm each resolves to a callable,
+    bound, parameter-compatible coroutine method, then invoke several end-to-end
+    against live OS processes.
+    """
+
+    def test_tool_definition_exact_function_set(self) -> None:
+        """Verify the tool definition exposes exactly the canonical set of 54 process functions.
+
+        Asserts the full set of declared function names matches the independently
+        enumerated canonical set. A stub that declares fewer, more, or differently-named
+        functions will fail; adding or removing a function from the bridge without
+        updating both the definition and this oracle causes a red test.
+        """
         b = ProcessBridge()
-        assert len(b.tool_definition.functions) == 54
+        td = b.tool_definition
+        assert td.tool_name is ToolName.PROCESS
+        actual_names: frozenset[str] = frozenset(f.name for f in td.functions)
+        missing = _CANONICAL_PROCESS_FUNCTION_NAMES - actual_names
+        extra = actual_names - _CANONICAL_PROCESS_FUNCTION_NAMES
+        assert not missing, f"Functions removed from definition: {sorted(missing)}"
+        assert not extra, f"Functions added to definition without canonical update: {sorted(extra)}"
+        assert len(td.functions) == len(_CANONICAL_PROCESS_FUNCTION_NAMES), (
+            f"Duplicate function names in definition: {[f.name for f in td.functions if [g.name for g in td.functions].count(f.name) > 1]}"
+        )
+
+    def test_tool_definition_all_descriptions_nonempty(self) -> None:
+        """Verify every function in the tool definition carries a non-empty description.
+
+        A bridge function missing a description cannot be used meaningfully by LLM
+        tool-calling: providers reject or silently drop tool schemas with empty
+        descriptions.
+        """
+        b = ProcessBridge()
+        for func in b.tool_definition.functions:
+            assert func.description, f"Function '{func.name}' has empty description"
 
     def test_all_names_start_with_process(self) -> None:
         """Verify all function names start with 'process.'."""
@@ -360,14 +501,110 @@ class TestToolDefinition:
         for func in b.tool_definition.functions:
             assert func.name.startswith("process.")
 
-    def test_function_names_map_to_methods(self) -> None:
-        """Verify function names map to actual bridge methods."""
+    def test_dispatch_suffix_resolves_to_callable_coroutine(self) -> None:
+        """Verify every tool function maps to a callable async coroutine via the production dispatch rule.
+
+        Mirrors the exact lookup ToolRegistry.execute_tool_call (tools.py:587) performs:
+
+            attr_name = function_name.split('.', maxsplit=1)[-1]
+
+        For every advertised function the derived attribute must exist on the bridge,
+        be callable, and be an async coroutine function. A property that raises,
+        a non-callable attribute, or a synchronous stub all produce a red test.
+
+        This correctly uses the dispatch suffix ('list', 'list_detailed', 'open')
+        rather than the internal implementation methods ('list_processes',
+        'list_processes_detailed', 'open_process'), so deleting or renaming the
+        shim methods breaks this test.
+        """
         b = ProcessBridge()
-        renamed = {
-            "process.list": "list_processes",
-            "process.list_detailed": "list_processes_detailed",
-            "process.open": "open_process",
-        }
         for func in b.tool_definition.functions:
-            method_name = renamed[func.name] if func.name in renamed else func.name.removeprefix("process.")
-            assert hasattr(b, method_name), f"Missing method: {method_name} for {func.name}"
+            dispatch_name = _CANONICAL_FUNCTION_TO_DISPATCH_METHOD[func.name]
+            method = getattr(b, dispatch_name, None)
+            assert method is not None, f"{func.name}: no bridge attribute '{dispatch_name}' (dispatch suffix rule)"
+            assert callable(method), f"{func.name}: bridge attribute '{dispatch_name}' is not callable"
+            assert asyncio.iscoroutinefunction(method), (
+                f"{func.name}: '{dispatch_name}' must be an async coroutine; the dispatch layer awaits every bridge call"
+            )
+
+    def test_function_parameter_names_match_dispatch_method_signatures(self) -> None:
+        """Verify each tool function's declared parameters align with the dispatch-level method signature.
+
+        The tool definition's parameter names are what the LLM sends as JSON keys.
+        If the dispatch-level method signature differs from the definition, every LLM
+        invocation of that function will produce a TypeError at dispatch time. This
+        test uses the production dispatch rule (split suffix) to locate the exact
+        method the orchestrator will call, then compares sorted parameter names from
+        the tool definition against sorted parameter names in that method's Python
+        signature for every one of the 54 functions.
+        """
+        b = ProcessBridge()
+        for func in b.tool_definition.functions:
+            dispatch_name = _CANONICAL_FUNCTION_TO_DISPATCH_METHOD[func.name]
+            method = getattr(b, dispatch_name)
+            sig = inspect.signature(method)
+            sig_params: list[str] = [
+                p for p in sig.parameters if sig.parameters[p].kind not in {inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD}
+            ]
+            definition_params: list[str] = [p.name for p in func.parameters]
+            assert sorted(sig_params) == sorted(definition_params), (
+                f"Parameter mismatch for '{func.name}' -> dispatch method '{dispatch_name}': "
+                f"definition={sorted(definition_params)}, "
+                f"signature={sorted(sig_params)}"
+            )
+
+    @staticmethod
+    def test_list_function_executes_end_to_end_through_real_registry(process_registry: ToolRegistry) -> None:
+        """The advertised process.list runs through the real registry against live PIDs.
+
+        Invokes the advertised function through a real ToolRegistry holding a live,
+        initialized ProcessBridge, exactly as the orchestrator would. The result must
+        enumerate the current Python test process itself (an independent oracle:
+        os.getpid() / 'python' are known to be running), proving the tool definition
+        is wired to working functionality rather than merely declared.
+
+        Args:
+            process_registry: Registry with a live process bridge registered.
+        """
+        result = _run(process_registry.execute_tool_call("process", "process.list", {}))
+        assert isinstance(result, list), f"process.list must return a list, got {type(result).__name__}"
+        assert result, "process.list returned no processes, but at least this test process must be running"
+        assert all(isinstance(p, ProcessInfo) for p in result), "every entry must be a ProcessInfo record"
+
+        current_pid = os.getpid()
+        matched = [p for p in result if p.pid == current_pid]
+        assert len(matched) == 1, f"the live test process (pid={current_pid}) must appear exactly once in process.list"
+        assert matched[0].name.lower().startswith("python"), f"the test process name must be a python image, got {matched[0].name!r}"
+
+    @staticmethod
+    def test_list_detailed_filter_argument_flows_through_registry(process_registry: ToolRegistry) -> None:
+        """A filter argument passes through the registry into the live enumeration.
+
+        Drives process.list_detailed with filter_name='python' end to end. The
+        independent oracle is the live OS: every returned record must match the
+        filter and the current Python process must be among them, confirming the
+        argument is forwarded (not silently dropped) by the production dispatch path.
+
+        Args:
+            process_registry: Registry with a live process bridge registered.
+        """
+        result = _run(process_registry.execute_tool_call("process", "process.list_detailed", {"filter_name": "python"}))
+        assert isinstance(result, list), f"process.list_detailed must return a list, got {type(result).__name__}"
+        assert result, "filtered list_detailed must include at least this python test process"
+        names = [str(entry["name"]).lower() for entry in result]
+        assert all("python" in name for name in names), f"filter 'python' leaked non-matching processes: {sorted(set(names))}"
+        assert any(int(entry["pid"]) == os.getpid() for entry in result), "the live python test process must survive the filter"
+
+    @staticmethod
+    def test_unknown_function_raises_tool_error_through_registry(process_registry: ToolRegistry) -> None:
+        """An undeclared function name surfaces a ToolError, never a silent no-op.
+
+        Confirms the error path: a name that is not backed by a bridge method must
+        raise ToolError, proving the dispatcher rejects bogus calls rather than
+        swallowing them.
+
+        Args:
+            process_registry: Registry with a live process bridge registered.
+        """
+        with pytest.raises(ToolError):
+            _run(process_registry.execute_tool_call("process", "process.this_function_does_not_exist", {}))

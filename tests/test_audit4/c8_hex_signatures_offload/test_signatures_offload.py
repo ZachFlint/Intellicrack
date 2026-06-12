@@ -212,6 +212,224 @@ class _MixinHarness(SignaturesMixin, QWidget):
         return self._sig_results_tree.topLevelItemCount()
 
 
+class TestBytesPassthrough:
+    """Verifies exact bytes fidelity through read_document_for_scan and the scan pipeline.
+
+    The ``bytes`` branch in ``read_document_for_scan`` (``isinstance(raw, bytes): return raw``)
+    must preserve every bit of the input without transformation, truncation, or padding.
+    These tests confirm that bytes from a document's ``read()`` method are identical to what
+    the caller receives - and that those bytes feed the signature scan engine unchanged.
+
+    Unlike TestReadDocumentForScan, this class focuses exclusively on the bytes-type return
+    path and verifies content integrity for adversarial inputs the other tests do not cover.
+    """
+
+    @staticmethod
+    def test_bytes_passthrough() -> None:
+        """``read_document_for_scan`` returns document bytes unchanged when read() yields bytes.
+
+        This is the primary gate for the ``isinstance(raw, bytes): return raw`` branch.
+        Three independently-computable properties are asserted:
+
+        1. The returned object is bit-for-bit identical to what ``document.read`` returned.
+        2. The type is exactly ``bytes`` (not a subtype or different container).
+        3. The length is exactly the value returned by ``document.length()``.
+
+        A regression in any one of these (truncation, type coercion, byte-level mutation)
+        causes this test to fail.  The expected values are independently computed from the
+        test's own payload, not derived from the implementation.
+
+        Falsifiability proof:
+
+        - If the function returned ``raw[:-1]`` (off-by-one), ``len(result) == 256`` fails.
+        - If the function returned ``bytearray(raw)``, ``type(result) is bytes`` fails.
+        - If the function applied any byte-level transform (XOR, mask, encode/decode),
+          ``result == content`` fails because the full 256-value cycle (0x00..0xFF) contains
+          every possible single-byte value; no transform can produce an identical output.
+        - If the function ignored the document and returned a default value, the specific
+          256-value sequence would not match.
+        """
+        content: bytes = bytes(range(256))
+        doc = _StubDocument(content)
+
+        result: bytes = read_document_for_scan(doc)
+
+        assert type(result) is bytes, (
+            f"Expected exactly bytes, got {type(result).__name__}; the bytes branch must not coerce to bytearray or any other type"
+        )
+        assert len(result) == 256, f"Expected 256 bytes (document.length()), got {len(result)}"
+        assert result == content, (
+            "Byte content was mutated; the bytes branch must return the bytes object unchanged. "
+            f"First differing index: "
+            f"{next((i for i in range(256) if result[i] != content[i]), 'none')}"
+        )
+        assert doc.read_call_count == 1, f"document.read must be called exactly once; called {doc.read_call_count} times"
+        assert doc.read_args == [(0, 256)], (
+            f"document.read must be called with offset=0, length=document.length()=256; got args={doc.read_args!r}"
+        )
+
+    @staticmethod
+    def test_bytes_passthrough_high_value_octets() -> None:
+        """Bytes with high-octet values (0x80-0xFF) are returned unchanged.
+
+        Tests the ``isinstance(raw, bytes): return raw`` branch in
+        ``read_document_for_scan`` with content where every byte value is
+        above 0x7F.  A function that incorrectly decoded the bytes through
+        a text codec (e.g. latin-1 round-trip) or masked the high bit would
+        produce output that differs from the input; this assertion would
+        catch it.
+        """
+        content: bytes = bytes(range(128, 256))
+        doc = _StubDocument(content)
+
+        result = read_document_for_scan(doc)
+
+        assert isinstance(result, bytes), f"Expected bytes, got {type(result).__name__}"
+        assert len(result) == 128, f"Expected 128 bytes, got {len(result)}"
+        assert result == content, (
+            "High-octet bytes were corrupted during passthrough; "
+            f"first differing position: {next((i for i in range(len(result)) if result[i] != content[i]), None)}"
+        )
+
+    @staticmethod
+    def test_bytes_passthrough_null_bytes_preserved() -> None:
+        """Null bytes (0x00) embedded in content are preserved exactly.
+
+        A function that treats null as a string terminator (C-style) would
+        truncate the result at the first 0x00; asserting the full 256-byte
+        result (0x00..0xFF) catches that corruption.
+        """
+        content: bytes = bytes(range(256))
+        doc = _StubDocument(content)
+
+        result = read_document_for_scan(doc)
+
+        assert result == content, "Null bytes were truncated or corrupted during passthrough"
+        assert result[0] == 0x00, "First byte (null) must be preserved"
+        assert result[255] == 0xFF, "Last byte (0xFF) must be preserved"
+
+    @staticmethod
+    def test_bytes_passthrough_single_byte() -> None:
+        """A single-byte document returns exactly one byte unchanged."""
+        for value in (0x00, 0x41, 0x7F, 0xFF):
+            content = bytes([value])
+            doc = _StubDocument(content)
+            result = read_document_for_scan(doc)
+            assert result == content, f"Single byte 0x{value:02X} was not preserved; got {result!r}"
+            assert len(result) == 1, f"Expected 1 byte for 0x{value:02X}, got {len(result)}"
+
+    @staticmethod
+    def test_bytes_passthrough_returns_bytes_not_bytearray() -> None:
+        """When document.read returns bytes, read_document_for_scan returns bytes, not bytearray.
+
+        The return type must be exactly ``bytes``, not ``bytearray`` or ``memoryview``,
+        because downstream callers (execute_signature_scan) use bytes-specific operations.
+        """
+        content: bytes = b"\x4d\x5a\x90\x00"
+        doc = _StubDocument(content)
+
+        result = read_document_for_scan(doc)
+
+        assert type(result) is bytes, f"Expected type bytes, got {type(result).__name__}"
+        assert result == content
+
+    @staticmethod
+    def test_bytes_passthrough_no_copy_mutation_possible() -> None:
+        """The returned bytes object is immutable and independent of the original document data.
+
+        Bytes are immutable in Python, but this test ensures that the returned
+        object has the correct value even when the logical source content contains
+        a repeating pattern that could be misread as a shorter object.  A function
+        that returned ``doc_data[:half]`` instead of ``doc_data`` would fail here.
+        """
+        half = b"\xab\xcd" * 64
+        content: bytes = half + half
+        doc = _StubDocument(content)
+
+        result = read_document_for_scan(doc)
+
+        assert len(result) == 256, f"Expected 256 bytes, got {len(result)}"
+        assert result == content, "Repeated-pattern bytes were truncated to the first half"
+        assert result[:128] == half
+        assert result[128:] == half
+
+    @staticmethod
+    def test_bytes_pipeline_integrity_into_scan_engine(tmp_path: Path) -> None:
+        """The exact bytes from a document flow unchanged into execute_signature_scan.
+
+        Places a known 4-byte pattern at a specific offset deep in the document
+        (offset 200) with a DIE database entry using ``"any"`` (full-scan) matching.
+        If the bytes are truncated, shifted, or padded before reaching the scan
+        engine, the pattern will not be found and the assertion fails.  The pattern
+        is unique within the document, so a false positive from partial content is
+        not possible.
+        """
+        marker: bytes = b"\xca\xfe\xba\xbe"
+        filler: bytes = bytes(range(256))
+        prefix: bytes = filler[:200]
+        suffix: bytes = filler[:56]
+        content: bytes = prefix + marker + suffix
+
+        assert len(content) == 260
+        assert content[200:204] == marker
+        assert content.count(marker) == 1, "marker must appear exactly once for a clean assertion"
+
+        doc = _StubDocument(content)
+        db: list[dict[str, Any]] = [
+            {"name": "CafeBabe", "type": "java", "version": "1.0", "patterns": [{"pattern": "cafebabe", "offset": "any"}]},
+        ]
+        db_path: Path = tmp_path / "scan.json"
+        db_path.write_text(json.dumps(db), encoding="utf-8")
+
+        results = execute_signature_scan_from_source(None, doc, "die", str(db_path))
+
+        assert len(results) == 1, f"Expected exactly 1 match, got {len(results)}: {results!r}"
+        match = results[0]
+        assert match["name"] == "CafeBabe", f"Unexpected match name: {match['name']!r}"
+        assert match["offset"] == 200, (
+            f"Pattern found at offset {match['offset']}, expected 200; "
+            "bytes may have been truncated or shifted before reaching the scan engine"
+        )
+
+    @staticmethod
+    def test_bytes_pipeline_integrity_all_zeros_no_false_match(tmp_path: Path) -> None:
+        """A document of all-zero bytes does not produce a match when no pattern is 0x00*.
+
+        Verifies that bytes of value 0x00 are not silently promoted to some
+        other value.  If read_document_for_scan inflated or corrupted zero bytes,
+        the all-zero document would match patterns it should not.
+        """
+        content: bytes = bytes(256)
+        doc = _StubDocument(content)
+        db: list[dict[str, Any]] = [
+            {"name": "NonZeroPattern", "type": "test", "version": "", "patterns": [{"pattern": "cafebabe", "offset": "any"}]},
+        ]
+        db_path: Path = tmp_path / "scan_zero.json"
+        db_path.write_text(json.dumps(db), encoding="utf-8")
+
+        results = execute_signature_scan_from_source(None, doc, "die", str(db_path))
+
+        assert results == [], (
+            f"Expected no matches on all-zero content, got: {results!r}; bytes may have been corrupted before reaching the scan engine"
+        )
+
+    @staticmethod
+    def test_bytes_passthrough_preserves_exact_byte_order() -> None:
+        """Byte order is preserved exactly, not reversed or shuffled.
+
+        Uses a sequence where reversing or swapping adjacent bytes would produce
+        a different scan match (MZ at offset 0 vs. ZM at offset 0).  The scan
+        must find the forward-order MZ signature at offset 0.
+        """
+        content: bytes = b"\x4d\x5a" + bytes(62)
+        doc = _StubDocument(content)
+
+        result = read_document_for_scan(doc)
+
+        assert result[:2] == b"\x4d\x5a", f"Byte order corrupted: expected MZ (4D 5A) at offset 0, got {result[:2].hex()!r}"
+        assert result[2:] == bytes(62), "Trailing bytes corrupted during passthrough"
+
+
 class TestReadDocumentForScan:
     """Unit tests for ``read_document_for_scan``."""
 

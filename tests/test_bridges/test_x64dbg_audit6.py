@@ -121,6 +121,7 @@ import os
 import struct
 import sys
 import threading
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
 
@@ -146,12 +147,11 @@ from intellicrack.bridges.x64dbg import (
     WIN_PROCESS_VM_READ,
     X64DbgBridge,
 )
-from intellicrack.core.types import BreakpointInfo, MemoryRegion, ToolError, ToolName
+from intellicrack.core.types import BreakpointInfo, MemoryRegion, ModuleInfo, ProcessInfo, ThreadInfo, ToolError, ToolName
 
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Coroutine, Generator
-    from pathlib import Path
 
 
 _bridge_module = x64dbg_module
@@ -521,6 +521,66 @@ class TestWinNoInheritHandleRemoved:
         result = await attached_bridge.read_memory(addr, len(marker))
         assert result == marker
 
+    def test_constant_absent_from_module_raises_attribute_error(self) -> None:
+        """Behavioral gate: accessing ``WIN_NO_INHERIT_HANDLE`` on the module raises ``AttributeError``.
+
+        The audit finding F-0025 demands that ``WIN_NO_INHERIT_HANDLE`` is removed so
+        callers cannot accidentally use the constant instead of the literal ``False``.
+        A static ``hasattr`` check only confirms the attribute is missing today; this
+        test also verifies the behavioral consequence — any code path that still relied
+        on the name would produce an ``AttributeError`` at runtime rather than silently
+        succeeding with a truthy integer that happens to equal ``False``.
+        """
+        attribute_present = hasattr(x64dbg_module, "WIN_NO_INHERIT_HANDLE")
+        assert not attribute_present, (
+            "WIN_NO_INHERIT_HANDLE must be absent from the bridge module; OpenProcess calls must inline False directly (audit6 F-0025)."
+        )
+        try:
+            _ = getattr(x64dbg_module, "WIN_NO_INHERIT_HANDLE")
+        except AttributeError:
+            pass
+        else:
+            pytest.fail("getattr on WIN_NO_INHERIT_HANDLE must raise AttributeError after the constant was removed")
+
+    @pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
+    def test_inherit_handle_false_is_not_truthy_integer(self) -> None:
+        """Behavioral gate: the bridge passes boolean ``False``, not an integer ``0``.
+
+        Before F-0025, ``WIN_NO_INHERIT_HANDLE = 0`` was used.  Passing the integer
+        ``0`` and passing boolean ``False`` are identical to the Win32 API but differ
+        in type, which matters when the caller inspects the exact Python value passed.
+        This test confirms that the spy-recorded ``bInheritHandle`` is the Python
+        singleton ``False`` (type ``bool``), not the integer ``0`` (type ``int`` but
+        not ``bool``).  If the old constant is reintroduced as ``0``, ``bool(0) is
+        False`` would still pass but ``isinstance(0, bool)`` would fail.
+        """
+        recorded: list[object] = []
+        kernel32 = ctypes.windll.kernel32
+        real_open_process = getattr(kernel32, "OpenProcess")
+
+        def _spy(desired_access: int, inherit_handle: int, pid: int) -> int:
+            recorded.append(inherit_handle)
+            return cast("int", real_open_process(desired_access, inherit_handle, pid))
+
+        b = X64DbgBridge()
+        b.attached_pid = os.getpid()
+        handles: dict[int, int] = getattr(b, "_process_handles")
+        handles.clear()
+        get_handle = getattr(b, "_get_cached_process_handle")
+        setattr(kernel32, "OpenProcess", _spy)
+        try:
+            get_handle(WIN_PROCESS_VM_READ)
+        finally:
+            setattr(kernel32, "OpenProcess", real_open_process)
+
+        assert recorded, "OpenProcess was not called; spy was not invoked"
+        for val in recorded:
+            assert isinstance(val, bool), (
+                f"bInheritHandle must be the Python bool False, not integer {val!r} (type {type(val).__name__}); "
+                "re-introduction of an integer constant would break this gate."
+            )
+            assert val is False, f"bInheritHandle must be False, got {val!r}"
+
 
 # ---------------------------------------------------------------------------
 # F-0024: UNICODE_STRING odd-length and bounds rejection
@@ -608,6 +668,95 @@ class TestGetProcessInfoRaisesWhenDetached:
             await bridge.get_process_info()
         assert "not attached" in str(excinfo.value).lower()
         assert excinfo.value.tool_name == "x64dbg"
+
+    @pytest.mark.asyncio
+    async def test_returns_processinfo_with_correct_pid_when_attached(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Behavioral gate: ``get_process_info`` returns a real ``ProcessInfo`` object.
+
+        The removed ``test_return_annotation_is_processinfo`` only inspected the
+        function's type annotation and would pass even if the implementation was
+        changed to return ``None`` at runtime.  This test drives the real method
+        with stubbed ``get_threads`` / ``get_modules`` co-routines and asserts
+        that the returned object is an actual ``ProcessInfo`` instance whose ``pid``
+        matches the bridge's ``attached_pid`` — a property that cannot be faked by
+        any return type whose value happens to be ``None``.
+
+        Args:
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        bridge = X64DbgBridge()
+        bridge.attached_pid = _TARGET_PID
+
+        async def stub_get_threads() -> list[ThreadInfo]:
+            await asyncio.sleep(0)
+            return [ThreadInfo(tid=1001, start_address=0x1000, current_pc=0x2000, state="running")]
+
+        async def stub_get_modules() -> list[ModuleInfo]:
+            await asyncio.sleep(0)
+            return [
+                ModuleInfo(
+                    name="target.exe",
+                    path=Path("C:/target.exe"),
+                    base_address=0x400000,
+                    size=0x10000,
+                    entry_point=0x401000,
+                ),
+            ]
+
+        monkeypatch.setattr(bridge, "get_threads", stub_get_threads)
+        monkeypatch.setattr(bridge, "get_modules", stub_get_modules)
+
+        result = await bridge.get_process_info()
+
+        assert isinstance(result, ProcessInfo), (
+            f"get_process_info must return a ProcessInfo instance, not {type(result).__name__!r}; "
+            "the annotation-only gate test_return_annotation_is_processinfo was removed because "
+            "type annotations do not verify runtime behaviour."
+        )
+        assert result.pid == _TARGET_PID, f"ProcessInfo.pid must equal the attached pid {_TARGET_PID}, got {result.pid}"
+        assert len(result.threads) == 1
+        assert result.threads[0].tid == 1001
+        assert len(result.modules) == 1
+        assert result.modules[0].name == "target.exe"
+        assert result.modules[0].base_address == 0x400000
+
+    @pytest.mark.asyncio
+    async def test_get_process_info_result_is_not_none(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Behavioral gate: the return value is never ``None`` when attached.
+
+        Directly asserts ``result is not None`` alongside the ``ProcessInfo``
+        isinstance check so any future change that wraps the result in
+        ``Optional[ProcessInfo]`` and silently returns ``None`` is caught
+        independently.
+
+        Args:
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        bridge = X64DbgBridge()
+        bridge.attached_pid = _TARGET_PID
+
+        async def stub_get_threads() -> list[ThreadInfo]:
+            await asyncio.sleep(0)
+            return []
+
+        async def stub_get_modules() -> list[ModuleInfo]:
+            await asyncio.sleep(0)
+            return []
+
+        monkeypatch.setattr(bridge, "get_threads", stub_get_threads)
+        monkeypatch.setattr(bridge, "get_modules", stub_get_modules)
+
+        result = await bridge.get_process_info()
+
+        assert result is not None, "get_process_info must never return None when a process is attached"
+        assert isinstance(result, ProcessInfo)
+        assert result.pid == _TARGET_PID
 
 
 # ---------------------------------------------------------------------------
@@ -828,6 +977,76 @@ class TestPatchAntiDebugClassConstant:
 
         result = await b.patch_anti_debug(None)
         assert set(result["status"].keys()) == {"being_debugged", "nt_global_flag", "heap_flags"}
+
+    @pytest.mark.asyncio
+    async def test_every_supported_check_is_accepted_at_runtime(self) -> None:
+        """Behavioral gate: each entry in ``SUPPORTED_ANTI_DEBUG_PATCHES`` is dispatched.
+
+        The removed ``test_constant_has_expected_entries`` only confirmed that
+        string literals appear inside the tuple — it would still pass if the
+        dispatch logic ignored the constant and hard-coded its own allowed set.
+        This test proves the contract end-to-end: every name in the constant is
+        accepted (no "unsupported" error), and a name absent from the constant is
+        rejected.  If the constant is trimmed or the dispatch diverges from it,
+        at least one parameterised call will produce an unexpected error entry.
+        """
+        supported = X64DbgBridge.SUPPORTED_ANTI_DEBUG_PATCHES
+        assert len(supported) >= 3, "SUPPORTED_ANTI_DEBUG_PATCHES must contain at least 3 entries"
+
+        for check_name in supported:
+            b = _StubBridgeBase()
+            b.attached_pid = _TARGET_PID
+            b.is_64bit = True
+            b.stub_peb = {"address": hex(_PEB_BASE)}
+            b.stub_reads[_PEB_BASE + 0x30] = _HEAP_BASE.to_bytes(8, "little")
+            b.stub_reads[_PEB_BASE + 0x18] = _HEAP_BASE.to_bytes(4, "little")
+
+            result = await b.patch_anti_debug([check_name])
+
+            errors = result.get("errors", {})
+            assert check_name not in errors, (
+                f"SUPPORTED_ANTI_DEBUG_PATCHES contains {check_name!r} but patch_anti_debug "
+                f"recorded an 'unsupported' error for it: {errors.get(check_name)!r}. "
+                "The constant and the dispatch logic must agree."
+            )
+
+    @pytest.mark.asyncio
+    async def test_unsupported_check_not_in_constant_is_rejected(self) -> None:
+        """Behavioral gate: a check name absent from the constant is rejected with an error.
+
+        This test drives the runtime rejection path directly: if ``process_debug_flags``
+        were silently added to the constant in the future, this gate would go green and
+        the ``test_every_supported_check_is_accepted_at_runtime`` test would expand its
+        coverage automatically.  The static tuple check is not needed because the runtime
+        behaviour is verified here.
+
+        The independent oracle is the contract documented in audit6: any name NOT in
+        ``SUPPORTED_ANTI_DEBUG_PATCHES`` must appear in ``errors`` with an "unsupported"
+        message.
+        """
+        unsupported_name = "process_debug_flags"
+        assert unsupported_name not in X64DbgBridge.SUPPORTED_ANTI_DEBUG_PATCHES, (
+            f"{unsupported_name!r} must not be in SUPPORTED_ANTI_DEBUG_PATCHES for this gate to be meaningful"
+        )
+
+        b = _StubBridgeBase()
+        b.attached_pid = _TARGET_PID
+        b.stub_peb = {"address": hex(_PEB_BASE)}
+
+        result = await b.patch_anti_debug([unsupported_name])
+
+        assert result["success"] is False, "An unsupported check must set success=False"
+        errors = result.get("errors", {})
+        assert unsupported_name in errors, (
+            f"An unsupported check {unsupported_name!r} must appear in the errors dict; got errors={errors!r}"
+        )
+        error_msg = errors[unsupported_name]
+        assert "unsupported" in error_msg.lower(), f"Error message for unsupported check must say 'unsupported', got {error_msg!r}"
+        assert "supported" in result, "Result must advertise the supported check names"
+        for supported_entry in X64DbgBridge.SUPPORTED_ANTI_DEBUG_PATCHES:
+            assert supported_entry in result["supported"], (
+                f"The 'supported' list must contain {supported_entry!r} from SUPPORTED_ANTI_DEBUG_PATCHES"
+            )
 
 
 # F-0008 - structured plugin error codes

@@ -18,12 +18,22 @@ Covers the two findings shipped together in audit4 unit C6:
   document API otherwise) instead of slurping the full payload onto
   the UI thread.
 
-All three test cases would fail against the pre-audit code: the
-``notify_data_modified`` recorder would stay empty for the repair
-test, the ``tracemalloc`` budget for the offload test would explode
-because the UI thread used to call ``document.read(0, 50 MiB)``, and
-the streaming CRC value would be unobservable because the dialog had
-no signal to expose it.
+**Repair-flow gate (04-F1 / 04-F2):** earlier revisions used a
+``StubPeDocument`` whose ``repair_pe_checksum`` wrote a hardcoded
+magic constant (``0xC0FFEE42``) and whose ``verify_pe_checksum``
+always reported ``calculated=0xC0FFEE42`` so ``valid`` was trivially
+``True``.  The stub is now replaced by a real MS PE checksum
+implementation cross-validated against :func:`pefile.generate_checksum`
+so that breaking the repair logic causes the checksum-value assertion
+to go red.
+
+**Production defect P-001 (FIXED):** ``HashingMixin._on_repair_pe_checksum``
+previously emitted ``notify_data_modified`` with a hard-coded offset ``0x58``
+regardless of where the ``CheckSum`` field actually lived.  It now derives the
+offset from ``e_lfanew`` (``_pe_checksum_field_offset``), so for a PE with
+``e_lfanew=0x40`` it correctly reports ``0x98``.  ``test_insert_hash_fires_notify``
+and ``test_repair_notifies_correct_bytes`` assert that derived offset and would
+go red if the constant-offset regression returned.
 """
 
 from __future__ import annotations
@@ -32,6 +42,7 @@ import struct
 import tracemalloc
 from typing import TYPE_CHECKING, Any, cast
 
+import pefile
 import pytest
 from PyQt6.QtWidgets import QMessageBox, QWidget
 
@@ -50,32 +61,160 @@ if TYPE_CHECKING:
     from pytestqt.qtbot import QtBot
 
 
-# CRC-32 parameters that match the bit-serial implementation in
-# intellicrack.ui.panels.hex_editor.base.compute_custom_crc when the
-# input is reflected (matches the legacy zlib CRC-32 surface).
+# ---------------------------------------------------------------------------
+# CRC-32 parameters used throughout (standard zlib / PKZIP CRC-32)
+# ---------------------------------------------------------------------------
+
 _CRC32_WIDTH: int = 32
 _CRC32_POLY: int = 0x04C11DB7
 _CRC32_INIT: int = 0xFFFFFFFF
 _CRC32_XOR_OUT: int = 0xFFFFFFFF
 
+# ---------------------------------------------------------------------------
+# Minimal valid PE32 construction helpers
+# ---------------------------------------------------------------------------
 
-_PE_CHECKSUM_OFFSET: int = 0x58
+#: ``e_lfanew`` value used by the synthetic PE created in these tests.
+_E_LFANEW: int = 0x40
+
+#: Byte offset of the ``CheckSum`` field for a PE with ``e_lfanew=0x40``.
+#: Formula: ``e_lfanew + 4 (PE sig) + 20 (COFF) + 64 (into optional header)``.
+_REAL_PE_CHECKSUM_OFFSET: int = _E_LFANEW + 4 + 20 + 64  # = 0x98 = 152
+
+
+def _build_minimal_pe32() -> bytes:
+    """Construct a minimal valid PE32 image with the checksum field zeroed.
+
+    The image satisfies :func:`pefile.PE` parsing without errors beyond
+    cosmetic warnings about null content.  The ``CheckSum`` field at
+    offset :data:`_REAL_PE_CHECKSUM_OFFSET` is intentionally zeroed so
+    tests can verify that ``repair_pe_checksum`` writes the correct value.
+
+    Returns:
+        bytes: Raw bytes of the minimal PE32 image.
+    """
+    dos_stub = bytearray(64)
+    dos_stub[0:2] = b"MZ"
+    struct.pack_into("<I", dos_stub, 0x3C, _E_LFANEW)
+
+    pe_sig = b"PE\x00\x00"
+
+    optional_header_size = 224  # 96 standard fields + 128 data directories
+    coff_header = struct.pack(
+        "<HHIIIHH",
+        0x014C,  # machine = IMAGE_FILE_MACHINE_I386
+        0,  # num_sections
+        0,  # timestamp
+        0,  # sym_table_ptr
+        0,  # num_symbols
+        optional_header_size,
+        0x0102,  # characteristics: executable + 32-bit
+    )
+
+    headers_size = _E_LFANEW + 4 + 20 + optional_header_size
+    image_size = 0x2000
+
+    opt: bytes = b""
+    opt += struct.pack("<H", 0x010B)  # Magic: PE32
+    opt += struct.pack("<BB", 14, 0)  # linker version
+    opt += struct.pack("<III", 0, 0, 0)  # code/initdata/uninitdata sizes
+    opt += struct.pack("<III", 0x1000, 0x1000, 0)  # EP, base_of_code, base_of_data
+    opt += struct.pack("<I", 0x00400000)  # ImageBase
+    opt += struct.pack("<II", 0x1000, 0x0200)  # SectionAlignment, FileAlignment
+    opt += struct.pack("<HHHHHH", 4, 0, 1, 0, 2, 0)  # OS/Image/Subsystem versions
+    opt += struct.pack("<I", 0)  # Win32VersionValue
+    opt += struct.pack("<II", image_size, headers_size)  # SizeOfImage, SizeOfHeaders
+    opt += struct.pack("<I", 0)  # CheckSum (zeroed intentionally)
+    opt += struct.pack("<H", 2)  # Subsystem: Windows GUI
+    opt += struct.pack("<H", 0)  # DllCharacteristics
+    opt += struct.pack("<IIII", 0x100000, 0x1000, 0x100000, 0x1000)  # stack/heap
+    opt += struct.pack("<II", 0, 16)  # LoaderFlags, NumberOfRvaAndSizes
+    opt += b"\x00" * 128  # 16 data directory entries
+
+    assert len(opt) == optional_header_size, f"opt header size: {len(opt)} != {optional_header_size}"
+
+    return bytes(dos_stub) + pe_sig + coff_header + opt
+
+
+def _pefile_expected_checksum(pe_bytes: bytes) -> int:
+    """Return the MS PE checksum for ``pe_bytes`` via :func:`pefile.generate_checksum`.
+
+    This is the independent oracle used to validate :meth:`StubPeDocument.repair_pe_checksum`.
+
+    Args:
+        pe_bytes: Raw bytes of the PE image.  The ``CheckSum`` field may hold any value;
+            :func:`pefile.generate_checksum` zeroes it internally before computing.
+
+    Returns:
+        int: The correct four-byte PE checksum value.
+    """
+    pe = pefile.PE(data=pe_bytes)
+    try:
+        return int(pe.generate_checksum())
+    finally:
+        pe.close()
+
+
+def _ms_pe_checksum(file_data: bytes, checksum_offset: int) -> int:
+    """Compute the Microsoft PE checksum per the documented algorithm.
+
+    The checksum field at ``checksum_offset`` is zeroed before summation
+    so the function is idempotent regardless of what is currently stored there.
+    The algorithm is: sum all 16-bit little-endian words with carry folding,
+    then add the file length.
+
+    Args:
+        file_data: Raw bytes of the PE image.
+        checksum_offset: Byte offset of the four-byte ``CheckSum`` field.
+
+    Returns:
+        int: The correct four-byte PE checksum value (fits in a 32-bit unsigned).
+    """
+    data = bytearray(file_data)
+    struct.pack_into("<I", data, checksum_offset, 0)
+    if len(data) % 2:
+        data += b"\x00"
+    acc = 0
+    for i in range(0, len(data), 2):
+        acc += struct.unpack_from("<H", data, i)[0]
+        if acc >= 0x100000000:
+            acc = (acc & 0xFFFFFFFF) + (acc >> 32)
+    acc = (acc & 0xFFFF) + (acc >> 16)
+    acc += acc >> 16
+    acc &= 0xFFFF
+    acc += len(file_data)
+    return acc
+
+
+# ---------------------------------------------------------------------------
+# StubPeDocument: in-memory document with REAL PE checksum logic
+# ---------------------------------------------------------------------------
 
 
 class StubPeDocument:
     """In-memory document exposing the methods the hashing mixin uses.
 
-    Mirrors the surface that ``HexDocumentFull``-style documents
-    expose so the hashing mixin can drive ``repair_pe_checksum``,
+    Mirrors the surface that ``HexDocumentFull``-style documents expose
+    so the hashing mixin can drive ``repair_pe_checksum``,
     ``verify_pe_checksum``, ``length``, ``read`` and ``file_path``
     without needing the real Rust hexcore module loaded.
+
+    Unlike the earlier stub, ``repair_pe_checksum`` computes the actual
+    Microsoft PE checksum using :func:`_ms_pe_checksum` and writes it to the
+    real checksum field offset derived from ``e_lfanew``.
+    ``verify_pe_checksum`` then independently re-computes and compares.
+    Both implementations are cross-validated against :func:`pefile.generate_checksum`
+    in the test suite.
     """
 
     def __init__(self, data: bytes, *, file_path: str | None = None) -> None:
         """Capture the initial bytes and optional backing path.
 
         Args:
-            data: Initial document content.
+            data: Initial document content.  Must be a valid PE image if
+                ``repair_pe_checksum`` or ``verify_pe_checksum`` will be called;
+                the stub reads ``e_lfanew`` from offset ``0x3C`` to locate the
+                checksum field.
             file_path: Optional path returned by ``file_path()`` so the
                 streaming CRC source can prefer mmap.
         """
@@ -83,6 +222,27 @@ class StubPeDocument:
         self._file_path: str | None = file_path
         self.repair_calls: int = 0
         self.verify_calls: int = 0
+
+    def _checksum_offset(self) -> int:
+        """Derive the checksum field offset from ``e_lfanew`` in the DOS header.
+
+        Returns:
+            int: Byte offset of the four-byte ``CheckSum`` field within the document.
+
+        Raises:
+            ValueError: When the document is too small to contain a valid DOS or
+                PE optional header.
+        """
+        if len(self._data) < 0x40:
+            msg = f"document too small to contain a DOS header: {len(self._data)} bytes"
+            raise ValueError(msg)
+        e_lfanew: int = struct.unpack_from("<I", self._data, 0x3C)[0]
+        # PE sig (4) + COFF (20) + 64 bytes into optional header = checksum
+        offset = e_lfanew + 4 + 20 + 64
+        if offset + 4 > len(self._data):
+            msg = f"document too small for PE checksum at offset {offset:#x}: {len(self._data)} bytes"
+            raise ValueError(msg)
+        return offset
 
     def length(self) -> int:
         """Return the current document length in bytes.
@@ -113,32 +273,58 @@ class StubPeDocument:
         return self._file_path
 
     def repair_pe_checksum(self) -> None:
-        """Overwrite the four checksum bytes with a fixed test value.
+        """Compute the real MS PE checksum and write it to the checksum field.
 
-        The exact value is irrelevant for the regression test; what
-        matters is that the document mutates so the mixin must publish
-        a :meth:`HexDocumentState.notify_data_modified` event.
+        Uses the documented Microsoft PE checksum algorithm
+        (:func:`_ms_pe_checksum`) to compute the correct four-byte
+        value and overwrites the ``CheckSum`` field at the offset
+        derived from ``e_lfanew``.  This matches the behaviour of the
+        real hexcore ``HexDocument.repair_pe_checksum()`` method as
+        confirmed by :func:`pefile.generate_checksum`.
         """
         self.repair_calls += 1
-        struct.pack_into("<I", self._data, _PE_CHECKSUM_OFFSET, 0xC0FFEE42)
+        chk_off = self._checksum_offset()
+        correct = _ms_pe_checksum(bytes(self._data), chk_off)
+        struct.pack_into("<I", self._data, chk_off, correct)
 
     def verify_pe_checksum(self) -> dict[str, Any]:
-        """Return verification metadata for the current checksum field.
+        """Return verification metadata comparing stored vs. computed checksum.
 
         Returns:
-            dict[str, Any]: Mapping with ``stored``, ``calculated``,
-                ``offset`` and ``valid`` keys, matching the contract
-                used by the hexcore document.
+            dict[str, Any]: Mapping with ``stored`` (the value currently in the
+                checksum field), ``calculated`` (the value the algorithm computes
+                for the current file content with the checksum field zeroed),
+                ``offset`` (byte offset of the field), and ``valid``
+                (``True`` iff ``stored == calculated``).
         """
         self.verify_calls += 1
-        stored = struct.unpack_from("<I", self._data, _PE_CHECKSUM_OFFSET)[0]
-        calculated = 0xC0FFEE42
+        chk_off = self._checksum_offset()
+        stored = struct.unpack_from("<I", self._data, chk_off)[0]
+        calculated = _ms_pe_checksum(bytes(self._data), chk_off)
         return {
             "stored": stored,
             "calculated": calculated,
-            "offset": _PE_CHECKSUM_OFFSET,
+            "offset": chk_off,
             "valid": stored == calculated,
         }
+
+    def write_bytes(self, offset: int, data: bytes) -> None:
+        """Overwrite bytes in the document at ``offset``.
+
+        Provided as a test helper so tests can inject corrupt data without
+        accessing the internal ``_data`` bytearray directly (which would
+        trigger basedpyright ``reportPrivateUsage``).
+
+        Args:
+            offset: Start offset of the region to overwrite.
+            data: Bytes to write; must fit within ``[offset, offset+len(data))``.
+        """
+        self._data[offset : offset + len(data)] = data
+
+
+# ---------------------------------------------------------------------------
+# HashingHarness: concrete HashingMixin consumer for tests
+# ---------------------------------------------------------------------------
 
 
 class HashingHarness(QWidget, HashingMixin):
@@ -204,6 +390,11 @@ class HashingHarness(QWidget, HashingMixin):
         return self._resolve_custom_crc_file_path()
 
 
+# ---------------------------------------------------------------------------
+# NotifyRecorder
+# ---------------------------------------------------------------------------
+
+
 class NotifyRecorder:
     """Capture every ``notify_*`` event emitted on a state holder."""
 
@@ -219,6 +410,11 @@ class NotifyRecorder:
             data: Payload dict supplied with the event.
         """
         self.events.append((event_type, dict(data)))
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -237,7 +433,7 @@ def message_box_yes(monkeypatch: pytest.MonkeyPatch) -> None:
             of one test.
     """
 
-    def fake_question(
+    def _fake_question(
         _parent: QWidget | None,
         _title: str,
         _text: str,
@@ -258,23 +454,136 @@ def message_box_yes(monkeypatch: pytest.MonkeyPatch) -> None:
         """
         return QMessageBox.StandardButton.Yes
 
-    monkeypatch.setattr(QMessageBox, "question", fake_question)
+    monkeypatch.setattr(QMessageBox, "question", _fake_question)
+
+
+# ---------------------------------------------------------------------------
+# TestStubPeDocumentChecksumLogic: verify the stub itself is a real oracle
+# ---------------------------------------------------------------------------
+
+
+class TestStubPeDocumentChecksumLogic:
+    """Verify that the stub's PE checksum implementation matches pefile.
+
+    These tests validate the oracle used by the repair-gate tests.
+    If the stub's checksum algorithm diverges from pefile the repair
+    tests would be checking against an incorrect expected value.
+    """
+
+    @staticmethod
+    def test_ms_pe_checksum_matches_pefile_oracle() -> None:
+        """``_ms_pe_checksum`` produces the identical value as ``pefile.generate_checksum``.
+
+        Uses a minimal but valid PE32 binary with the checksum field deliberately
+        zeroed.  The independent oracle (:func:`pefile.generate_checksum`) is
+        compared against our implementation to confirm they agree before either
+        is used as the expected value in repair-flow tests.
+        """
+        pe_bytes = _build_minimal_pe32()
+        our_value = _ms_pe_checksum(pe_bytes, _REAL_PE_CHECKSUM_OFFSET)
+        pefile_value = _pefile_expected_checksum(pe_bytes)
+
+        assert our_value == pefile_value, (
+            f"_ms_pe_checksum produced 0x{our_value:08X} but pefile.generate_checksum "
+            f"produced 0x{pefile_value:08X} for the same minimal PE32 image"
+        )
+        assert our_value != 0, "checksum of a non-empty file cannot be zero"
+
+    @staticmethod
+    def test_stub_repair_writes_correct_checksum() -> None:
+        """``StubPeDocument.repair_pe_checksum`` writes the pefile-correct checksum.
+
+        Before repair the checksum field is zero (intentionally).  After repair
+        the four bytes at :data:`_REAL_PE_CHECKSUM_OFFSET` must equal the value
+        that :func:`pefile.generate_checksum` computes for the same image.
+        """
+        pe_bytes = _build_minimal_pe32()
+        doc = StubPeDocument(pe_bytes)
+
+        stored_before = struct.unpack_from("<I", doc.read(0, len(pe_bytes)), _REAL_PE_CHECKSUM_OFFSET)[0]
+        assert stored_before == 0, "sanity: synthetic PE must start with a zeroed checksum"
+
+        doc.repair_pe_checksum()
+
+        stored_after = struct.unpack_from("<I", doc.read(0, len(pe_bytes)), _REAL_PE_CHECKSUM_OFFSET)[0]
+        expected = _pefile_expected_checksum(pe_bytes)
+
+        assert stored_after == expected, (
+            f"repair_pe_checksum wrote 0x{stored_after:08X} to offset "
+            f"0x{_REAL_PE_CHECKSUM_OFFSET:X} but pefile oracle says the correct value "
+            f"is 0x{expected:08X}"
+        )
+
+    @staticmethod
+    def test_stub_verify_detects_correct_checksum_after_repair() -> None:
+        """``StubPeDocument.verify_pe_checksum`` returns ``valid=True`` after repair.
+
+        Validates the full repair-then-verify cycle.  The ``stored`` value
+        returned by ``verify_pe_checksum`` must equal the pefile-computed checksum
+        and ``valid`` must be ``True``.
+        """
+        pe_bytes = _build_minimal_pe32()
+        doc = StubPeDocument(pe_bytes)
+        doc.repair_pe_checksum()
+
+        info = doc.verify_pe_checksum()
+        expected = _pefile_expected_checksum(pe_bytes)
+
+        assert info["valid"] is True, f"verify_pe_checksum reported invalid after repair: {info}"
+        assert info["stored"] == expected, f"stored checksum 0x{info['stored']:08X} != pefile oracle 0x{expected:08X}"
+        assert info["calculated"] == expected, f"calculated checksum 0x{info['calculated']:08X} != pefile oracle 0x{expected:08X}"
+        assert info["offset"] == _REAL_PE_CHECKSUM_OFFSET, (
+            f"verify_pe_checksum reported offset {info['offset']:#x} but expected {_REAL_PE_CHECKSUM_OFFSET:#x}"
+        )
+
+    @staticmethod
+    def test_stub_verify_detects_wrong_checksum() -> None:
+        """``StubPeDocument.verify_pe_checksum`` returns ``valid=False`` for a corrupt checksum.
+
+        Manually writes a wrong value to the checksum field and confirms that
+        ``verify_pe_checksum`` detects the mismatch.  This test proves the stub
+        cannot produce a false ``valid=True`` from a self-consistent magic constant.
+        """
+        pe_bytes = _build_minimal_pe32()
+        doc = StubPeDocument(pe_bytes)
+
+        corrupt_value = 0xDEADBEEF
+        doc.write_bytes(_REAL_PE_CHECKSUM_OFFSET, struct.pack("<I", corrupt_value))
+
+        info = doc.verify_pe_checksum()
+        expected = _pefile_expected_checksum(pe_bytes)
+
+        assert info["valid"] is False, "verify_pe_checksum must detect a deliberately corrupt checksum"
+        assert info["stored"] == corrupt_value
+        assert info["calculated"] == expected
+
+
+# ---------------------------------------------------------------------------
+# TestRepairPeChecksumFiresNotify: F-0003 gate
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.usefixtures("qapp", "message_box_yes")
 class TestRepairPeChecksumFiresNotify:
-    """F-0003 -- ``_on_repair_pe_checksum`` must call ``notify_data_modified``."""
+    """F-0003 -- ``_on_repair_pe_checksum`` must call ``notify_data_modified``.
+
+    These tests use a minimal but valid PE32 image so the stub's real checksum
+    algorithm runs on genuine PE structure rather than an arbitrary byte buffer.
+    """
 
     @staticmethod
     def test_insert_hash_fires_notify() -> None:
         """Driving the repair action emits one ``DATA_MODIFIED`` event.
 
-        The recorded event must reference the real PE ``CheckSum``
-        offset, the four-byte field width and the audit-defined
-        source identifier so observers can apply loop-guard filters
-        and route the change correctly.
+        The recorded event must reference the real ``CheckSum`` field offset
+        derived from ``e_lfanew`` (``_REAL_PE_CHECKSUM_OFFSET = 0x98`` for this
+        ``e_lfanew=0x40`` image) and a four-byte field width.  The actual PE
+        checksum bytes written by the document are asserted against the
+        independent :func:`pefile.generate_checksum` oracle to prove the repair
+        did real work, not just a write of a magic constant.
         """
-        document = StubPeDocument(b"\x00" * 256)
+        pe_bytes = _build_minimal_pe32()
+        document = StubPeDocument(pe_bytes)
         state = HexDocumentState()
 
         recorder = NotifyRecorder()
@@ -285,12 +594,25 @@ class TestRepairPeChecksumFiresNotify:
         finally:
             harness.deleteLater()
 
-        assert document.repair_calls == 1
+        assert document.repair_calls == 1, "repair_pe_checksum was not called exactly once"
+
         data_events = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.DATA_MODIFIED]
         assert len(data_events) == 1, f"expected exactly one DATA_MODIFIED event, got {recorder.events}"
         _, payload = data_events[0]
-        assert payload["offset"] == _PE_CHECKSUM_OFFSET
+
+        assert payload["offset"] == _REAL_PE_CHECKSUM_OFFSET, (
+            f"notify offset {payload['offset']:#x} != real checksum field offset {_REAL_PE_CHECKSUM_OFFSET:#x}"
+        )
         assert payload["length"] == 4
+
+        # Verify the BYTES actually written by the document match the pefile oracle.
+        repaired_raw = document.read(0, document.length())
+        written_checksum = struct.unpack_from("<I", repaired_raw, _REAL_PE_CHECKSUM_OFFSET)[0]
+        expected_checksum = _pefile_expected_checksum(pe_bytes)
+        assert written_checksum == expected_checksum, (
+            f"repair wrote 0x{written_checksum:08X} at offset {_REAL_PE_CHECKSUM_OFFSET:#x} "
+            f"but pefile oracle expects 0x{expected_checksum:08X}"
+        )
 
     @staticmethod
     def test_repair_uses_audit_defined_source_identifier() -> None:
@@ -300,7 +622,8 @@ class TestRepairPeChecksumFiresNotify:
         passes to ``notify_data_modified`` proves the mixin used the
         documented identifier instead of an unrelated string.
         """
-        document = StubPeDocument(b"\x00" * 256)
+        pe_bytes = _build_minimal_pe32()
+        document = StubPeDocument(pe_bytes)
         state = HexDocumentState()
 
         recorder = NotifyRecorder()
@@ -319,6 +642,48 @@ class TestRepairPeChecksumFiresNotify:
             "expected the loop-guard filter to suppress the data_modified echo when the recorder "
             "registers with the same source_id, but received: " + repr(data_events)
         )
+
+    @staticmethod
+    def test_repair_notifies_correct_bytes() -> None:
+        """The ``notify_data_modified`` offset must equal the actual PE checksum field offset.
+
+        ``HashingMixin._on_repair_pe_checksum`` reads ``e_lfanew`` from the
+        document (``_pe_checksum_field_offset``) to locate the ``CheckSum`` field
+        rather than assuming a fixed constant.  For the minimal PE32 used here
+        (``e_lfanew=0x40``) the correct offset is ``0x98``
+        (= :data:`_REAL_PE_CHECKSUM_OFFSET`).  This gate would go red if the code
+        regressed to a hard-coded offset (the original P-001 defect).
+        """
+        pe_bytes = _build_minimal_pe32()
+        document = StubPeDocument(pe_bytes)
+        state = HexDocumentState()
+
+        recorder = NotifyRecorder()
+        state.register_callback(recorder, source_id="test")
+        harness = HashingHarness(document=document, state_holder=state)
+        try:
+            harness.repair_pe_checksum()
+        finally:
+            harness.deleteLater()
+
+        data_events = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.DATA_MODIFIED]
+        assert len(data_events) == 1
+        _, payload = data_events[0]
+
+        # The notification offset must match the real checksum field location,
+        # derived from e_lfanew rather than a fixed constant.
+        assert payload["offset"] == _REAL_PE_CHECKSUM_OFFSET, (
+            f"notify_data_modified reported offset {payload['offset']:#x} but the "
+            f"actual PE checksum field for this image (e_lfanew=0x{_E_LFANEW:02X}) "
+            f"is at offset {_REAL_PE_CHECKSUM_OFFSET:#x}.  "
+            f"Production defect P-001: hashing.py uses a hardcoded 0x58 constant "
+            f"instead of deriving the offset from e_lfanew."
+        )
+
+
+# ---------------------------------------------------------------------------
+# TestCustomCrcOffloaded: F-0022 gate
+# ---------------------------------------------------------------------------
 
 
 def _build_synthetic_payload(size: int) -> bytes:

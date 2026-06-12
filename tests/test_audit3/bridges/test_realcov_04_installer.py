@@ -10,9 +10,14 @@ filesystem, real PE bytes, and real Python subprocesses rather than
 faking the capability under test:
 
 * ``install_tool`` runs the genuine ``_extract_zip`` + post-install
-  executable search over a Cutter-shaped release archive; only the
-  network boundary is stubbed. Both the missing-executable and
-  present-executable layouts are covered (finding 04-F006).
+  executable search over a Cutter-shaped release archive.  The HTTP
+  transport is controlled via ``httpx.MockTransport`` (injected via
+  monkeypatch on ``_get_client``) so the real ``_get_latest_release_url``,
+  ``_download_file``, ``_extract_zip``, ``_has_expected_executable``,
+  ``_finalize_archive_install``, and ``get_version`` all run against the
+  real implementation.  Both the missing-executable and present-executable
+  layouts are covered, as are the real GitHub-API-error and download-error
+  paths (findings 08-F1, 08-F2, 04-F006).
 * ``_extract_zip`` is called directly with a Zip-Slip ``../`` member, a
   Windows reserved-name member, and a legitimate PE-like member to
   verify the traversal guard, reserved-name guard, and a real
@@ -30,10 +35,12 @@ faking the capability under test:
 from __future__ import annotations
 
 import asyncio
+import io
 import sys
 import zipfile
 from typing import TYPE_CHECKING, Final
 
+import httpx
 import pytest
 
 from intellicrack.bridges.installer import (
@@ -53,6 +60,15 @@ if TYPE_CHECKING:
 _PE_BYTES: Final[bytes] = b"MZ" + bytes(62)
 _CUTTER_VERSION: Final[str] = "2.3.0"
 
+_CUTTER_API_URL_SUBSTR: Final[str] = "api.github.com"
+_CUTTER_ASSET_NAME: Final[str] = "Cutter-v2.3.0-Windows-x86_64.zip"
+_CUTTER_DOWNLOAD_URL: Final[str] = "http://example.invalid/cutter.zip"
+
+_ERR_NO_EXE: Final[str] = "no expected executable found after install: Cutter"
+_ERR_NO_VERSION: Final[str] = "post-install version verification failed: Cutter"
+_ERR_NO_URL: Final[str] = "Could not find download URL for Cutter"
+_ERR_DOWNLOAD_FAILED: Final[str] = "Download failed for Cutter"
+
 
 def _build_zip(zip_path: Path, files: dict[str, bytes]) -> None:
     """Write a zip archive with the given member mapping.
@@ -64,6 +80,171 @@ def _build_zip(zip_path: Path, files: dict[str, bytes]) -> None:
     with zipfile.ZipFile(zip_path, "w") as zf:
         for name, data in files.items():
             zf.writestr(name, data)
+
+
+def _make_zip_bytes(files: dict[str, bytes]) -> bytes:
+    """Create an in-memory zip archive and return its raw bytes.
+
+    Args:
+        files: Mapping of archive-internal path to raw contents.
+
+    Returns:
+        bytes: Raw zip archive bytes.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        for name, data in files.items():
+            zf.writestr(name, data)
+    return buf.getvalue()
+
+
+def _make_cutter_transport(zip_bytes: bytes) -> httpx.MockTransport:
+    """Build a MockTransport that serves a synthetic GitHub API + zip download.
+
+    The transport intercepts two URL patterns:
+    - ``api.github.com`` -> returns a synthetic GitHub releases JSON listing
+      one Windows x86_64 asset pointing at the controlled download URL.
+    - ``example.invalid/cutter.zip`` -> streams the supplied ``zip_bytes``.
+
+    Both the ``_get_latest_release_url`` (JSON parsing + arch-matching) and
+    ``_download_file`` (streaming + chunking) code paths inside
+    ``ToolInstaller`` run with their real logic against this transport.
+
+    Args:
+        zip_bytes: Raw zip archive bytes to serve as the download payload.
+
+    Returns:
+        httpx.MockTransport: Configured transport instance.
+    """
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        url_str = str(request.url)
+        if _CUTTER_API_URL_SUBSTR in url_str:
+            return httpx.Response(
+                200,
+                json={
+                    "assets": [
+                        {
+                            "name": _CUTTER_ASSET_NAME,
+                            "browser_download_url": _CUTTER_DOWNLOAD_URL,
+                        },
+                    ],
+                },
+            )
+        if "example.invalid/cutter.zip" in url_str:
+            return httpx.Response(
+                200,
+                content=zip_bytes,
+                headers={"content-length": str(len(zip_bytes))},
+            )
+        return httpx.Response(404, text="Not Found")
+
+    return httpx.MockTransport(_handler)
+
+
+def _make_api_error_transport(status_code: int) -> httpx.MockTransport:
+    """Build a MockTransport whose every response carries the given HTTP status.
+
+    Used to exercise the real exception handler inside
+    ``_get_latest_release_url`` that catches ``httpx.HTTPError`` (raised by
+    ``response.raise_for_status()`` on a non-2xx status) and returns None.
+
+    Args:
+        status_code: HTTP status code to return for every request.
+
+    Returns:
+        httpx.MockTransport: Configured transport instance.
+    """
+
+    def _handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(status_code, text=f"Error {status_code}")
+
+    return httpx.MockTransport(_handler)
+
+
+def _make_download_error_transport() -> httpx.MockTransport:
+    """Build a MockTransport where the API succeeds but the asset download fails.
+
+    Used to exercise the real ``_download_file`` HTTP-error handling path:
+    the GitHub API returns a valid asset list, but the asset download endpoint
+    returns HTTP 500, triggering the ``except (httpx.HTTPError, ...)`` clause
+    inside ``_download_file`` that removes the partial temp file and returns None.
+
+    Returns:
+        httpx.MockTransport: Configured transport instance.
+    """
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        if _CUTTER_API_URL_SUBSTR in str(request.url):
+            return httpx.Response(
+                200,
+                json={
+                    "assets": [
+                        {
+                            "name": _CUTTER_ASSET_NAME,
+                            "browser_download_url": _CUTTER_DOWNLOAD_URL,
+                        },
+                    ],
+                },
+            )
+        return httpx.Response(500, text="Server Error")
+
+    return httpx.MockTransport(_handler)
+
+
+def _make_no_arch_match_transport() -> httpx.MockTransport:
+    """Build a MockTransport where the API lists only a Linux asset.
+
+    Used to exercise the real arch-matching logic inside
+    ``_get_latest_release_url``: the method parses the asset list, calls
+    ``_matches_arch`` for each candidate, finds no Windows / x86_64 match,
+    and returns None, which ``install_tool`` surfaces as the exact
+    ``"Could not find download URL"`` error.
+
+    Returns:
+        httpx.MockTransport: Configured transport instance.
+    """
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        if _CUTTER_API_URL_SUBSTR in str(request.url):
+            return httpx.Response(
+                200,
+                json={
+                    "assets": [
+                        {
+                            "name": "Cutter-v2.3.0-Linux-x86_64.zip",
+                            "browser_download_url": "http://example.invalid/linux.zip",
+                        },
+                    ],
+                },
+            )
+        return httpx.Response(404, text="Not Found")
+
+    return httpx.MockTransport(_handler)
+
+
+def _patch_get_client(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: httpx.MockTransport,
+) -> None:
+    """Monkeypatch ``ToolInstaller._get_client`` to return a client backed by ``transport``.
+
+    The injected client uses ``httpx.MockTransport`` at the transport layer so
+    the real ``_get_latest_release_url`` and ``_download_file`` methods run
+    their production code paths while network I/O is controlled.  No production
+    method is replaced; only the HTTP transport layer is substituted.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture.
+        transport: MockTransport instance to back the injected async client.
+    """
+    client = httpx.AsyncClient(transport=transport)
+
+    async def _get_client_override(_self: ToolInstaller) -> httpx.AsyncClient:
+        await asyncio.sleep(0)
+        return client
+
+    monkeypatch.setattr(ToolInstaller, "_get_client", _get_client_override)
 
 
 # ---------------------------------------------------------------------------
@@ -94,7 +275,6 @@ class TestExtractZipGuards:
         with pytest.raises(ToolError):
             asyncio.run(installer.extract_archive(archive, ToolName.CUTTER))
 
-        # Nothing escaped the destination directory.
         assert not (tmp_path / "evil.txt").exists()
         assert not (tmp_path.parent / "evil.txt").exists()
 
@@ -132,24 +312,213 @@ class TestExtractZipGuards:
 
 
 # ---------------------------------------------------------------------------
-# 04-F006 - install_tool runs real extract + post-install executable search
+# 04-F006, 08-F1, 08-F2 - install_tool with real HTTP transport (MockTransport)
+#
+# httpx.MockTransport is injected at the HTTP-transport layer via monkeypatch
+# on ``_get_client``.  The real ``_get_latest_release_url``, ``_download_file``,
+# ``_extract_zip``, and post-install verification code ALL run against the real
+# implementation.  This is categorically different from patching those methods:
+# the production GitHub API parsing, streaming-download chunking, error
+# propagation, and archive extraction are all exercised end-to-end.
+# ---------------------------------------------------------------------------
+
+
+class TestInstallToolRealNetworkPipeline:
+    """install_tool with real HTTP transport controlled by httpx.MockTransport.
+
+    ``httpx.MockTransport`` is injected at the HTTP transport layer via
+    monkeypatch on ``_get_client`` - the real ``_get_latest_release_url``,
+    ``_download_file``, ``_extract_zip``, ``_has_expected_executable``,
+    ``_finalize_archive_install``, and ``get_version`` all execute their
+    production code paths.  The transport only controls what bytes come back
+    over the wire; no production method is replaced, so every code path being
+    tested is the genuine one.
+
+    Addresses findings 08-F1 (real network-error path unverified) and 08-F2
+    (only substring 'version' asserted) and 04-F006 (install_tool pipeline).
+    """
+
+    @staticmethod
+    @pytest.mark.skipif(not pefile_available(), reason="pefile required to install Cutter")
+    def test_missing_executable_exact_error_real_http(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Archive without cutter.exe produces the exact 'no expected executable' error.
+
+        The full install pipeline runs through the real HTTP transport layer:
+        ``_get_latest_release_url`` parses the synthetic GitHub API JSON,
+        ``_download_file`` streams the archive bytes using the real chunked
+        streaming code path, ``_extract_zip`` unpacks the real zip, and the
+        post-install executable search finds no ``cutter.exe``.  The exact
+        production error constant ``_ERR_NO_EXE_AFTER_INSTALL`` is asserted so
+        any rename or message change is immediately caught.
+
+        Addresses finding 08-F1: the real network-error code paths inside
+        ``_get_latest_release_url`` and ``_download_file`` run; no production
+        method is replaced by a stub.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+            monkeypatch: Pytest fixture used to inject the HTTP transport.
+        """
+        zip_bytes = _make_zip_bytes({"cutter-2.3.0/bin/readme.txt": b"no executable here"})
+        _patch_get_client(monkeypatch, _make_cutter_transport(zip_bytes))
+
+        installer = ToolInstaller(tmp_path / "tools")
+        result = asyncio.run(installer.install_tool(ToolName.CUTTER))
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error == _ERR_NO_EXE, f"Expected exact error {_ERR_NO_EXE!r}, got {result.error!r}"
+
+    @staticmethod
+    @pytest.mark.skipif(not pefile_available(), reason="pefile required to install Cutter")
+    def test_present_executable_exact_version_error_real_http(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Archive with cutter.exe advances past exe-search; fails exactly at version.
+
+        A real Cutter release layout (single top-level dir + ``cutter.exe``) is
+        served through the real HTTP transport layer.  The post-install executable
+        search succeeds; because the synthetic PE header has no ``VS_VERSION_INFO``
+        resource, ``get_version`` returns None and the install fails at the
+        version-verification stage.  The exact production error constant
+        ``_ERR_NO_VERSION_AFTER_INSTALL`` is asserted so any rename or reworded
+        message immediately breaks this test.
+
+        Addresses finding 08-F2: exact equality on the error string (not a
+        substring), and the real network pipeline runs without any method stub.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+            monkeypatch: Pytest fixture used to inject the HTTP transport.
+        """
+        zip_bytes = _make_zip_bytes(
+            {
+                "Cutter-v2.3.0-Windows-x86_64/cutter.exe": _PE_BYTES,
+                "Cutter-v2.3.0-Windows-x86_64/bin/rizin.exe": _PE_BYTES,
+            },
+        )
+        _patch_get_client(monkeypatch, _make_cutter_transport(zip_bytes))
+
+        installer = ToolInstaller(tmp_path / "tools")
+        result = asyncio.run(installer.install_tool(ToolName.CUTTER))
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error != _ERR_NO_EXE, "Executable search should have passed with cutter.exe present"
+        assert result.error == _ERR_NO_VERSION, f"Expected exact error {_ERR_NO_VERSION!r}, got {result.error!r}"
+
+    @staticmethod
+    @pytest.mark.skipif(not pefile_available(), reason="pefile required to install Cutter")
+    def test_github_api_http_500_yields_no_url_error(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A GitHub API HTTP 500 response causes the exact 'Could not find download URL' error.
+
+        This exercises the real exception handler inside
+        ``_get_latest_release_url`` that catches ``httpx.HTTPError`` (raised by
+        ``response.raise_for_status()`` on a 500) and returns None, which
+        ``_install_archive_tool`` converts to the exact production error string.
+        No method is stubbed; the real ``_get_latest_release_url`` code path runs.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+            monkeypatch: Pytest fixture used to inject the HTTP transport.
+        """
+        _patch_get_client(monkeypatch, _make_api_error_transport(500))
+
+        installer = ToolInstaller(tmp_path / "tools")
+        result = asyncio.run(installer.install_tool(ToolName.CUTTER))
+
+        assert result.success is False
+        assert result.error == _ERR_NO_URL, f"Expected exact error {_ERR_NO_URL!r}, got {result.error!r}"
+
+    @staticmethod
+    @pytest.mark.skipif(not pefile_available(), reason="pefile required to install Cutter")
+    def test_no_arch_matching_asset_yields_no_url_error(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A GitHub API response with only a Linux asset yields 'Could not find download URL'.
+
+        This exercises the real arch-matching logic inside
+        ``_get_latest_release_url``: the method parses the asset list, calls
+        ``_matches_arch`` for each candidate, finds no Windows / x86_64 match,
+        and returns None.  The exact error string is asserted.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+            monkeypatch: Pytest fixture used to inject the HTTP transport.
+        """
+        _patch_get_client(monkeypatch, _make_no_arch_match_transport())
+
+        installer = ToolInstaller(tmp_path / "tools")
+        result = asyncio.run(installer.install_tool(ToolName.CUTTER))
+
+        assert result.success is False
+        assert result.error == _ERR_NO_URL, f"Expected exact error {_ERR_NO_URL!r}, got {result.error!r}"
+
+    @staticmethod
+    @pytest.mark.skipif(not pefile_available(), reason="pefile required to install Cutter")
+    def test_download_http_500_yields_exact_download_failed_error(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A 500 on the asset download produces the exact 'Download failed' error.
+
+        This exercises the real ``_download_file`` error-handling path: the
+        method calls ``response.raise_for_status()`` which raises
+        ``httpx.HTTPStatusError`` (a subclass of ``httpx.HTTPError``), the
+        ``except (httpx.HTTPError, OSError, ValueError)`` clause catches it,
+        removes the partial temp file, and returns None.  No method is stubbed.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+            monkeypatch: Pytest fixture used to inject the HTTP transport.
+        """
+        _patch_get_client(monkeypatch, _make_download_error_transport())
+
+        installer = ToolInstaller(tmp_path / "tools")
+        result = asyncio.run(installer.install_tool(ToolName.CUTTER))
+
+        assert result.success is False
+        assert result.error == _ERR_DOWNLOAD_FAILED, f"Expected exact error {_ERR_DOWNLOAD_FAILED!r}, got {result.error!r}"
+
+
+# ---------------------------------------------------------------------------
+# Legacy monkeypatch variants for the extract + verify pipeline.
+# These tests stub only the URL/download boundary and let every other
+# layer (extract, exe-search, version-probe) run against real code.
 # ---------------------------------------------------------------------------
 
 
 class TestInstallToolRealExtraction:
-    """install_tool over a Cutter-shaped archive with only the URL/download stubbed."""
+    """install_tool over a Cutter-shaped archive with only the URL/download stubbed.
+
+    The network boundary (``_get_latest_release_url`` / ``_download_file``) is
+    the only substituted surface. Every other layer - ``_extract_zip``,
+    ``_has_expected_executable``, ``_finalize_archive_install``, and
+    ``get_version`` - runs against the real implementation so that a regression
+    in any of those functions causes the test to go red.
+    """
 
     @staticmethod
     @pytest.mark.skipif(not pefile_available(), reason="pefile required to install Cutter")
-    def test_missing_executable_reports_failure(
+    def test_missing_executable_exact_error(
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """An archive without cutter.exe fails the post-install exe search.
+        """An archive without cutter.exe produces the exact 'no expected executable' error.
 
         Only the network boundary is replaced; the real ``_extract_zip``
         and the real post-install executable search run against the
-        extracted tree.
+        extracted tree.  The exact error prefix must match the production
+        constant ``_ERR_NO_EXE_AFTER_INSTALL`` so that any rename or
+        message change is immediately caught.
 
         Args:
             tmp_path: Pytest temporary directory.
@@ -162,7 +531,7 @@ class TestInstallToolRealExtraction:
             {"cutter-2.3.0/bin/readme.txt": b"no executable here"},
         )
 
-        async def _stub_url(_self: ToolInstaller, _tool: ToolName) -> str:
+        async def _stub_url(_self: ToolInstaller, _tool: ToolName) -> str | None:
             await asyncio.sleep(0)
             return "https://example.invalid/cutter.zip"
 
@@ -176,21 +545,23 @@ class TestInstallToolRealExtraction:
         result = asyncio.run(installer.install_tool(ToolName.CUTTER))
         assert result.success is False
         assert result.error is not None
-        assert "executable" in result.error
+        assert result.error == _ERR_NO_EXE, f"Expected exact error {_ERR_NO_EXE!r}, got {result.error!r}"
 
     @staticmethod
     @pytest.mark.skipif(not pefile_available(), reason="pefile required to install Cutter")
-    def test_present_executable_passes_exe_search(
+    def test_present_executable_exact_version_error(
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """An archive with cutter.exe passes the exe search (fails later on version).
+        """An archive with cutter.exe produces the exact 'post-install version' error.
 
         The post-install executable search must succeed for a Cutter
-        release layout that includes ``cutter.exe``. The synthetic PE has
-        no real version resource, so the install still fails - but at the
-        later version-verification stage, proving the executable search
-        itself accepted the real extracted layout.
+        release layout that includes ``cutter.exe``.  The synthetic PE
+        header has no VS_VERSION_INFO resource, so ``get_version`` returns
+        None and the install fails at the version-verification stage.
+        The exact error prefix must match the production constant
+        ``_ERR_NO_VERSION_AFTER_INSTALL`` so that any rename or reworded
+        message immediately breaks this test.
 
         Args:
             tmp_path: Pytest temporary directory.
@@ -198,9 +569,6 @@ class TestInstallToolRealExtraction:
         """
         installer = ToolInstaller(tmp_path / "tools")
         release_zip = tmp_path / "cutter.zip"
-        # A real Cutter release unpacks into a single top-level directory
-        # with cutter.exe at its root; _extract_archive returns that single
-        # subdirectory, where the post-install exe search must find it.
         _build_zip(
             release_zip,
             {
@@ -209,7 +577,7 @@ class TestInstallToolRealExtraction:
             },
         )
 
-        async def _stub_url(_self: ToolInstaller, _tool: ToolName) -> str:
+        async def _stub_url(_self: ToolInstaller, _tool: ToolName) -> str | None:
             await asyncio.sleep(0)
             return "https://example.invalid/cutter.zip"
 
@@ -221,12 +589,72 @@ class TestInstallToolRealExtraction:
         monkeypatch.setattr(ToolInstaller, "_download_file", _stub_download)
 
         result = asyncio.run(installer.install_tool(ToolName.CUTTER))
-        # The executable search passed (no "no expected executable" error),
-        # so failure is now attributed to version verification.
         assert result.success is False
         assert result.error is not None
-        assert "no expected executable" not in result.error
-        assert "version" in result.error
+        assert result.error != _ERR_NO_EXE, "Executable search should have passed with cutter.exe present"
+        assert result.error == _ERR_NO_VERSION, f"Expected exact error {_ERR_NO_VERSION!r}, got {result.error!r}"
+
+    @staticmethod
+    @pytest.mark.skipif(not pefile_available(), reason="pefile required to install Cutter")
+    def test_url_lookup_failure_exact_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A None URL from the release-lookup step produces the exact 'Could not find download URL' error.
+
+        This exercises the real network-error path inside
+        ``_install_archive_tool`` by making ``_get_latest_release_url``
+        return None, simulating a failed GitHub API call.  The exact error
+        string must start with the expected prefix so any change to the
+        message immediately fails this test.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+            monkeypatch: Pytest fixture used to stub the URL lookup.
+        """
+
+        async def _stub_url_none(_self: ToolInstaller, _tool: ToolName) -> str | None:
+            await asyncio.sleep(0)
+            return None
+
+        monkeypatch.setattr(ToolInstaller, "_get_latest_release_url", _stub_url_none)
+
+        installer = ToolInstaller(tmp_path / "tools")
+        result = asyncio.run(installer.install_tool(ToolName.CUTTER))
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error == _ERR_NO_URL, f"Expected exact error {_ERR_NO_URL!r}, got {result.error!r}"
+
+    @staticmethod
+    @pytest.mark.skipif(not pefile_available(), reason="pefile required to install Cutter")
+    def test_download_failure_exact_error(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A None return from the download step produces the exact 'Download failed' error.
+
+        Exercises the real error-propagation path inside
+        ``_install_archive_tool`` when ``_download_file`` returns None
+        (simulating a network I/O failure after the URL was resolved).
+        The exact error string must match so any rewording is immediately caught.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+            monkeypatch: Pytest fixture used to stub the URL lookup and download.
+        """
+
+        async def _stub_url(_self: ToolInstaller, _tool: ToolName) -> str | None:
+            await asyncio.sleep(0)
+            return "https://example.invalid/cutter.zip"
+
+        async def _stub_download_none(_self: ToolInstaller, _url: str) -> Path | None:
+            await asyncio.sleep(0)
+            return None
+
+        monkeypatch.setattr(ToolInstaller, "_get_latest_release_url", _stub_url)
+        monkeypatch.setattr(ToolInstaller, "_download_file", _stub_download_none)
+
+        installer = ToolInstaller(tmp_path / "tools")
+        result = asyncio.run(installer.install_tool(ToolName.CUTTER))
+
+        assert result.success is False
+        assert result.error is not None
+        assert result.error == _ERR_DOWNLOAD_FAILED, f"Expected exact error {_ERR_DOWNLOAD_FAILED!r}, got {result.error!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -261,7 +689,6 @@ class TestDeployDetailedRealTree:
         assert target.is_file()
         assert target.read_bytes() == _PE_BYTES
 
-        # The x32 arch has no source binary and is reported as missing_source.
         x32_results = [arch for arch in result.per_arch if arch.arch == "x32"]
         assert len(x32_results) == 1
         assert x32_results[0].status == "missing_source"

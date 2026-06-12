@@ -9,6 +9,9 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **api:** Implement exponential backoff for rate-limited requests (`7e6a923`)
+Introduce an exponential backoff jitter algorithm when encountering HTTP 429 status codes. This prevents thundering herd problems on the upstream service and ensures transient rate limits are handled gracefully without failing the entire request pipeline.
+
 - Implement Windows self-elevation and system theme tracking (`7bdf420`)
 Introduce Windows UAC self-elevation to automatically request administrative privileges when required, enabling full process-bridge access to protected targets. Add support for tracking and dynamically responding to the operating system's light/dark color scheme.
 * Add self-elevation logic via Windows `runas` verb with pixi environment reactivation
@@ -318,9 +321,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
-
-- **api:** Implement exponential backoff for rate-limited requests (``)
-Introduce an exponential backoff jitter algorithm when encountering HTTP 429 status codes. This prevents thundering herd problems on the upstream service and ensures transient rate limits are handled gracefully without failing the entire request pipeline.
 
 
 ### Changed
@@ -871,6 +871,8 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **audit:** Update U24-a09 status.json and remediation report with re-fix attempt 2 results (`d23d4a5`)
 
 - **ui:** Remove invalid keyword argument from setMouseTracking (`6abd873`)
 Pass the boolean value positionally to prevent a TypeError. Qt's Python bindings typically do not accept keyword arguments for this method.
@@ -3363,5 +3365,12 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- Resolve PE checksum offset defect and harden test suite (``)
+Derive the PE checksum field offset dynamically from `e_lfanew` instead of using a hardcoded constant, ensuring correct notification coordinates during repairs. Additionally, integrate comprehensive audit documentation and significantly expand the test suite with robust, deterministic, and falsifiable test cases across all core components and tool bridges.
+- **Audit**: Add comprehensive review documents, production defects log, and remediation results.
+- **Hex Editor**: Update `hashing.py` to parse `e_lfanew` and dynamically locate the PE checksum field.
+- **Assets**: Add explicit width and height attributes to the `ai_brain.svg` icon.
+- **Tests**: Expand and harden test coverage across bridges, providers, sandbox, and UI components with strict, non-trivial assertions.
 
 

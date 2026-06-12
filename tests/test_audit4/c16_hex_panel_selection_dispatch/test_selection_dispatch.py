@@ -25,7 +25,6 @@ These tests guard against three regressions in
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast, override
 from unittest.mock import MagicMock, patch
 
@@ -34,12 +33,12 @@ from PyQt6.QtWidgets import QApplication, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
 from intellicrack.core.types import HexDocumentFull
-from intellicrack.ui.panels.hex_editor import panel as panel_module
 from intellicrack.ui.panels.hex_editor.panel import HexEditorPanel
 
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 _DOC_LEN: Final[int] = 64
@@ -324,8 +323,12 @@ class TestSelectionPropagation:
         assert bridge.get_selection() is None, f"bridge selection must be None after deselect (start=-1), got {bridge.get_selection()!r}"
 
     @staticmethod
-    def test_no_state_holder_does_not_raise(qapp: QApplication) -> None:
-        """Assert that propagation is skipped gracefully when state_holder is None.
+    def test_no_state_holder_stores_local_fields(qapp: QApplication) -> None:
+        """Assert that panel-local selection fields are updated even when state_holder is None.
+
+        When no state holder is attached, the panel must still record the
+        selection range in its own fields so other panel-local operations
+        (e.g. hashing the selection) see the correct range.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
@@ -333,10 +336,19 @@ class TestSelectionPropagation:
         del qapp
         harness = _PanelHarness(None, None)
         harness.trigger_selection_changed(_SEL_START, _SEL_END)
+        assert harness.selection_start == _SEL_START, (
+            f"_selection_start must be {_SEL_START} even without a state_holder, got {harness.selection_start}"
+        )
+        assert harness.selection_end == _SEL_END, (
+            f"_selection_end must be {_SEL_END} even without a state_holder, got {harness.selection_end}"
+        )
 
     @staticmethod
-    def test_no_bridge_does_not_raise(qapp: QApplication) -> None:
-        """Assert that propagation is skipped gracefully when bridge is None.
+    def test_no_bridge_fires_selection_changed_on_state(qapp: QApplication) -> None:
+        """Assert SELECTION_CHANGED is still dispatched on the state holder when bridge is None.
+
+        The state holder must receive the event regardless of whether a
+        bridge is attached; the bridge is an optional downstream consumer.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
@@ -345,6 +357,12 @@ class TestSelectionPropagation:
         state = _RecordingState()
         harness = _PanelHarness(state, None)
         harness.trigger_selection_changed(_SEL_START, _SEL_END)
+
+        events = state.selection_changed_events()
+        assert len(events) >= 1, "SELECTION_CHANGED must be fired on the state holder even when bridge is None"
+        payload, _ = events[0]
+        assert payload.get("start") == _SEL_START, f"expected start={_SEL_START}, got {payload.get('start')}"
+        assert payload.get("end") == _SEL_END, f"expected end={_SEL_END}, got {payload.get('end')}"
 
 
 class _DocumentOpenedHarness(QWidget):
@@ -535,88 +553,220 @@ class _CopyHarness(QWidget):
         getattr(HexEditorPanel, "_do_copy_as")(self, fmt)
 
 
+_CLIPBOARD_UNAVAILABLE_TITLE: Final[str] = "Clipboard Unavailable"
+_CLIPBOARD_UNAVAILABLE_MSG: Final[str] = "The system clipboard is not accessible. The selection could not be copied."
+_CLIPBOARD_WRITE_FAILED_TITLE: Final[str] = "Clipboard Write Failed"
+
+
 @pytest.mark.usefixtures("qapp")
 class TestCopyAsClipboardError:
-    """F-0024: ``_do_copy_as`` must surface a warning when the clipboard is unavailable."""
+    """F-0024: ``_do_copy_as`` must surface a warning when the clipboard is unavailable.
+
+    Tests validate that the production ``show_warning`` call path is fully
+    exercised: ``show_warning`` runs as real production code; only
+    ``QMessageBox.warning`` (the Qt dialog sink) is intercepted to prevent
+    interactive dialogs during CI and to capture the exact title/message
+    arguments that reach the user.
+    """
 
     @staticmethod
-    def test_no_clipboard_shows_warning(qapp: QApplication) -> None:
-        """Assert show_warning is called when QApplication.clipboard() returns None.
+    def test_no_clipboard_shows_warning_with_correct_title_and_message(qapp: QApplication) -> None:
+        """Assert the exact title and message surfaced when QApplication.clipboard() returns None.
+
+        The production path calls ``show_warning(self, title, message)`` which
+        in turn calls ``QMessageBox.warning``.  Intercepting at ``QMessageBox``
+        level lets ``show_warning`` execute as real code while preventing
+        interactive dialogs, and lets us verify the exact strings the user sees.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
         """
         del qapp
         harness = _CopyHarness()
-        warning_calls: list[tuple[object, str, str]] = []
+        dialog_calls: list[tuple[str, str]] = []
 
-        def _record_warning(parent: object, title: str, message: str) -> None:
-            warning_calls.append((parent, title, message))
+        def _capture_dialog(_parent: object, title: str, message: str) -> int:
+            dialog_calls.append((title, message))
+            return 0
 
         with (
             patch("intellicrack.ui.panels.hex_editor.panel.QApplication") as mock_app,
-            patch("intellicrack.ui.panels.hex_editor.panel.show_warning", side_effect=_record_warning),
+            patch("intellicrack.ui.dialogs_helpers.QMessageBox") as mock_msgbox,
         ):
             mock_app.clipboard.return_value = None
+            mock_msgbox.warning.side_effect = _capture_dialog
             harness.do_copy_as("hex")
 
-        assert len(warning_calls) == 1, f"show_warning must be called exactly once when clipboard is None, got {len(warning_calls)}"
+        assert len(dialog_calls) == 1, f"QMessageBox.warning must be called exactly once when clipboard is None, got {len(dialog_calls)}"
+        title, message = dialog_calls[0]
+        assert title == _CLIPBOARD_UNAVAILABLE_TITLE, f"warning title must be {_CLIPBOARD_UNAVAILABLE_TITLE!r}, got {title!r}"
+        assert message == _CLIPBOARD_UNAVAILABLE_MSG, f"warning message must be {_CLIPBOARD_UNAVAILABLE_MSG!r}, got {message!r}"
 
     @staticmethod
-    def test_clipboard_write_error_shows_warning(qapp: QApplication) -> None:
-        """Assert show_warning is called when clipboard.setText raises RuntimeError.
+    def test_clipboard_write_error_shows_warning_with_exception_text(qapp: QApplication) -> None:
+        r"""Assert the exception message is embedded in the warning when clipboard.setText raises.
+
+        The production code formats the warning message as
+        ``f"Could not write to the clipboard:\n{exc}"``.  This test verifies
+        that exact structure so a regression that drops the exception text or
+        changes the sentinel title string goes red immediately.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
         """
         del qapp
         harness = _CopyHarness()
-        warning_calls: list[tuple[object, str, str]] = []
+        dialog_calls: list[tuple[str, str]] = []
 
-        def _record_warning(parent: object, title: str, message: str) -> None:
-            warning_calls.append((parent, title, message))
+        def _capture_dialog(_parent: object, title: str, message: str) -> int:
+            dialog_calls.append((title, message))
+            return 0
 
+        exc_text = "write operation rejected by OS"
         mock_clipboard = MagicMock()
-        mock_clipboard.setText.side_effect = RuntimeError("clipboard unavailable")
+        mock_clipboard.setText.side_effect = RuntimeError(exc_text)
 
         with (
             patch("intellicrack.ui.panels.hex_editor.panel.QApplication") as mock_app,
-            patch("intellicrack.ui.panels.hex_editor.panel.show_warning", side_effect=_record_warning),
+            patch("intellicrack.ui.dialogs_helpers.QMessageBox") as mock_msgbox,
         ):
             mock_app.clipboard.return_value = mock_clipboard
+            mock_msgbox.warning.side_effect = _capture_dialog
             harness.do_copy_as("hex")
 
-        assert len(warning_calls) == 1, f"show_warning must be called exactly once when setText raises, got {len(warning_calls)}"
+        assert len(dialog_calls) == 1, f"QMessageBox.warning must be called exactly once when setText raises, got {len(dialog_calls)}"
+        title, message = dialog_calls[0]
+        assert title == _CLIPBOARD_WRITE_FAILED_TITLE, f"warning title must be {_CLIPBOARD_WRITE_FAILED_TITLE!r}, got {title!r}"
+        assert exc_text in message, f"exception text {exc_text!r} must appear in warning message, got {message!r}"
+        assert "Could not write to the clipboard:" in message, f"sentinel prefix must appear in warning message, got {message!r}"
 
     @staticmethod
     def test_successful_copy_does_not_show_warning(qapp: QApplication) -> None:
-        """Assert no warning is shown on a successful clipboard write.
+        """Assert no warning dialog is shown when clipboard.setText succeeds.
 
         Args:
             qapp: Qt application fixture (kept alive for widget construction).
         """
         del qapp
         harness = _CopyHarness()
-        warning_calls: list[str] = []
+        dialog_calls: list[tuple[str, str]] = []
 
-        def _record_warning(_parent: object, title: str, _message: str) -> None:
-            warning_calls.append(title)
+        def _capture_dialog(_parent: object, title: str, message: str) -> int:
+            dialog_calls.append((title, message))
+            return 0
 
         mock_clipboard = MagicMock()
         mock_clipboard.setText.return_value = None
 
         with (
             patch("intellicrack.ui.panels.hex_editor.panel.QApplication") as mock_app,
-            patch("intellicrack.ui.panels.hex_editor.panel.show_warning", side_effect=_record_warning),
+            patch("intellicrack.ui.dialogs_helpers.QMessageBox") as mock_msgbox,
         ):
             mock_app.clipboard.return_value = mock_clipboard
+            mock_msgbox.warning.side_effect = _capture_dialog
             harness.do_copy_as("hex")
 
-        assert warning_calls == [], f"no warning should fire on successful copy, got {warning_calls}"
+        assert dialog_calls == [], f"no warning dialog should fire on successful copy, got {dialog_calls}"
 
     @staticmethod
-    def test_panel_module_references_show_warning_in_copy_as() -> None:
-        """Verify the panel source still calls show_warning inside _do_copy_as."""
-        source = Path(panel_module.__file__).read_text(encoding="utf-8")
-        assert "show_warning" in source, "panel.py must import and call show_warning"
-        assert "_do_copy_as" in source, "panel.py must define _do_copy_as"
+    def test_copy_as_passes_widget_output_verbatim_to_clipboard_set_text(qapp: QApplication) -> None:
+        r"""Assert the exact string from ``copy_as`` reaches ``clipboard.setText`` unchanged.
+
+        ``_do_copy_as`` must call ``clipboard.setText(str(copy_as(fmt)))`` with the
+        verbatim result from the hex widget's ``copy_as`` method.  This test intercepts
+        ``QApplication.clipboard()`` to return a controlled stub whose ``setText`` call
+        is captured, then asserts the exact argument.  No real OS clipboard is touched,
+        so the test is deterministic across headless, CI, and sandboxed environments.
+
+        The format string itself must also be forwarded unchanged to ``copy_as``, which
+        is validated by using a format-recording widget.
+
+        Args:
+            qapp: Qt application fixture (kept alive for widget construction).
+        """
+        del qapp
+        expected_text = "DEADBEEF_verbatim_gate"
+        expected_fmt = "c_array"
+        set_text_calls: list[str] = []
+        copy_as_fmt_calls: list[str] = []
+
+        class _RecordingHexWidget:
+            def copy_as(self, fmt: str) -> str:
+                """Record the format and return the sentinel text.
+
+                Args:
+                    fmt: Format name passed by the production code.
+
+                Returns:
+                    str: Sentinel value representing widget output.
+                """
+                copy_as_fmt_calls.append(fmt)
+                return expected_text
+
+        class _RecordingHarness(QWidget):
+            def __init__(self) -> None:
+                """Initialise the harness with a recording hex widget."""
+                super().__init__()
+                self._hex_widget: object | None = _RecordingHexWidget()
+
+            def do_copy_as(self, fmt: str) -> None:
+                """Call the production ``_do_copy_as`` implementation via getattr.
+
+                Args:
+                    fmt: Format name to pass to the handler.
+                """
+                getattr(HexEditorPanel, "_do_copy_as")(self, fmt)
+
+        def _capture_set_text(text: str) -> None:
+            set_text_calls.append(text)
+
+        mock_clipboard = MagicMock()
+        mock_clipboard.setText.side_effect = _capture_set_text
+
+        harness = _RecordingHarness()
+
+        with patch("intellicrack.ui.panels.hex_editor.panel.QApplication") as mock_app:
+            mock_app.clipboard.return_value = mock_clipboard
+            harness.do_copy_as(expected_fmt)
+
+        assert copy_as_fmt_calls == [expected_fmt], f"copy_as must receive the format {expected_fmt!r} unchanged, got {copy_as_fmt_calls!r}"
+        assert set_text_calls == [expected_text], f"clipboard.setText must be called once with {expected_text!r}, got {set_text_calls!r}"
+
+    @staticmethod
+    def test_no_hex_widget_does_not_show_warning_or_raise(qapp: QApplication) -> None:
+        """Assert that _do_copy_as exits silently and shows no warning when _hex_widget is None.
+
+        The production guard is ``if self._hex_widget is None: return``.
+        No warning should be surfaced to the user in this case, since it
+        represents an uninitialised panel (not a clipboard problem).
+
+        Args:
+            qapp: Qt application fixture (kept alive for widget construction).
+        """
+        del qapp
+        dialog_calls: list[tuple[str, str]] = []
+
+        def _capture_dialog(_parent: object, title: str, message: str) -> int:
+            dialog_calls.append((title, message))
+            return 0
+
+        class _NoWidgetHarness(QWidget):
+            def __init__(self) -> None:
+                """Initialise the harness with _hex_widget set to None."""
+                super().__init__()
+                self._hex_widget: object | None = None
+
+            def do_copy_as(self, fmt: str) -> None:
+                """Call the production ``_do_copy_as`` implementation via getattr.
+
+                Args:
+                    fmt: Format name to pass to the handler.
+                """
+                getattr(HexEditorPanel, "_do_copy_as")(self, fmt)
+
+        harness = _NoWidgetHarness()
+        with patch("intellicrack.ui.dialogs_helpers.QMessageBox") as mock_msgbox:
+            mock_msgbox.warning.side_effect = _capture_dialog
+            harness.do_copy_as("hex")
+
+        assert dialog_calls == [], f"_do_copy_as must not show any warning when _hex_widget is None, got {dialog_calls}"

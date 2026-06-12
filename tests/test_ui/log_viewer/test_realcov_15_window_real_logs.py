@@ -115,8 +115,67 @@ def test_window_backfills_real_structlog_history(qtbot: QtBot, tmp_path: Path) -
     window.close()
 
 
+def _visible_events(window: LogViewerWindow) -> set[str]:
+    """Collect the event names of all proxy-visible rows.
+
+    Args:
+        window: The open :class:`LogViewerWindow` under test.
+
+    Returns:
+        set[str]: Set of ``event`` field values for every row that passes
+            the proxy filter.
+    """
+    all_records = list(window.model.all_records())
+    events: set[str] = set()
+    for row in range(window.proxy.rowCount()):
+        source_idx = window.proxy.mapToSource(window.proxy.index(row, 0))
+        source_row = source_idx.row()
+        if 0 <= source_row < len(all_records):
+            events.add(all_records[source_row]["event"])
+    return events
+
+
+def _visible_levels(window: LogViewerWindow) -> set[str]:
+    """Collect the level names of all proxy-visible rows.
+
+    Args:
+        window: The open :class:`LogViewerWindow` under test.
+
+    Returns:
+        set[str]: Set of ``level`` field values for every row that passes
+            the proxy filter.
+    """
+    all_records = list(window.model.all_records())
+    levels: set[str] = set()
+    for row in range(window.proxy.rowCount()):
+        source_idx = window.proxy.mapToSource(window.proxy.index(row, 0))
+        source_row = source_idx.row()
+        if 0 <= source_row < len(all_records):
+            levels.add(all_records[source_row]["level"])
+    return levels
+
+
 def test_window_level_filter_over_real_records(qtbot: QtBot, tmp_path: Path) -> None:
     """The level filter narrows real records parsed from the live log.
+
+    This test uses a fresh ``tmp_path`` so the log file contains only the two
+    events emitted here (plus internal DEBUG/INFO messages from construction).
+    After applying an ERROR-level filter the proxy must show exactly one level
+    value: ``"ERROR"``.  The assertion is strict equality against the
+    independent oracle ``{"ERROR"}`` — a subset check would pass on an empty
+    set and cannot detect a filter that silently hides all rows, while equality
+    would also catch a broken filter that lets sub-ERROR levels through.
+
+    Specifically:
+
+    * ``"real_error_only"`` (ERROR) must be visible — proves the filter keeps
+      matching records.
+    * ``"real_info_only"`` (INFO) must be absent — proves the filter removes
+      sub-ERROR records.
+    * ``vis_levels == {"ERROR"}`` — proves no other level survives; an empty
+      set, a set containing ``"INFO"`` / ``"WARNING"`` / ``"DEBUG"``, or a set
+      also containing ``"CRITICAL"`` (impossible since no CRITICAL was emitted)
+      all cause the assertion to fail.
 
     Args:
         qtbot: pytest-qt bot fixture.
@@ -142,12 +201,23 @@ def test_window_level_filter_over_real_records(qtbot: QtBot, tmp_path: Path) -> 
 
     window.set_min_level(logging.ERROR)
 
-    def _only_errors_visible() -> bool:
-        visible_levels = {
-            window.model.all_records()[window.proxy.mapToSource(window.proxy.index(row, 0)).row()]["level"]
-            for row in range(window.proxy.rowCount())
-        }
-        return visible_levels <= {"ERROR", "CRITICAL"}
+    def _filter_settled() -> bool:
+        vis_events = _visible_events(window)
+        return "real_error_only" in vis_events and "real_info_only" not in vis_events
 
-    qtbot.waitUntil(_only_errors_visible, timeout=_DEFAULT_TIMEOUT_MS)
+    qtbot.waitUntil(_filter_settled, timeout=_DEFAULT_TIMEOUT_MS)
+
+    vis_events = _visible_events(window)
+    vis_levels = _visible_levels(window)
+
+    assert "real_error_only" in vis_events, f"ERROR-level event must be visible after ERROR filter; visible events: {vis_events}"
+    assert "real_info_only" not in vis_events, f"INFO-level event must be hidden after ERROR filter; visible events: {vis_events}"
+    assert window.proxy.rowCount() >= 1, "At least the real_error_only row must remain visible after ERROR filter"
+    assert vis_levels == {"ERROR"}, (
+        f'Visible levels must be exactly {{"ERROR"}} after ERROR filter (no CRITICAL emitted, subset check insufficient); got: {vis_levels}'
+    )
+    assert "INFO" not in vis_levels, f"INFO must not appear in visible levels after ERROR filter; got: {vis_levels}"
+    assert "WARNING" not in vis_levels, f"WARNING must not appear in visible levels after ERROR filter; got: {vis_levels}"
+    assert "DEBUG" not in vis_levels, f"DEBUG must not appear in visible levels after ERROR filter; got: {vis_levels}"
+
     window.close()

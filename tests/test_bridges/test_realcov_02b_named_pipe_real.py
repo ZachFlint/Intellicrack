@@ -67,6 +67,24 @@ _ERROR_FILE_NOT_FOUND = 2
 _SERVER_MODULE = "tests._helpers.realcov_pipe_server"
 _PIPE_READY_TIMEOUT_S = 20.0
 
+# Independent oracle: the exact hint text the bridge must embed for error 2
+# (ERROR_FILE_NOT_FOUND). This constant is derived from the Win32 error
+# specification and the Intellicrack bridge contract — NOT copied from
+# _PIPE_ERROR_HINTS at import time. If the bridge changes the text without
+# updating this constant, the test goes red, proving it is a real gate.
+_EXPECTED_HINT_FOR_ERROR_2: str = "The x64dbg bridge plugin is not running. Ensure x64dbg is open and the Intellicrack plugin is loaded"
+
+# Exact message prefix the production _open_handle emits when WaitNamedPipeW
+# fails. Derived from reading the source contract, not from runtime output.
+_EXPECTED_MESSAGE_PREFIX_ERROR_2: str = f"Named pipe not available (error {_ERROR_FILE_NOT_FOUND})"
+
+# Exact full message the production _open_handle emits for error 2.
+# Assembled from the independently-known prefix and hint constants (not from
+# the implementation's runtime output) using the bridge's documented separator.
+# Any change to the format, separator, or hint body makes this constant
+# diverge from the implementation, turning the equality assertion red.
+_EXPECTED_FULL_MESSAGE_ERROR_2: str = f"{_EXPECTED_MESSAGE_PREFIX_ERROR_2}. {_EXPECTED_HINT_FOR_ERROR_2}"
+
 
 def _unique_pipe_name() -> str:
     r"""Return a fresh, collision-free local named-pipe path.
@@ -366,10 +384,16 @@ async def _attempt_missing_pipe_connect(
 
     ``WaitNamedPipeW`` returns immediately (does not spin for the full timeout
     period) when no pipe server exists, so the timeout only bounds the worst
-    case on a loaded machine. The test asserts on the **integer** error code
-    embedded in the message (``error 2``) and on the presence of the human-
-    readable hint text from :meth:`NamedPipeClient.format_error_hint`, not just
-    that some error occurred.
+    case on a loaded machine.
+
+    Assertions:
+    - ``format_error_hint(2)`` must return the independently-known oracle
+      constant ``_EXPECTED_HINT_FOR_ERROR_2``; exact equality is asserted so
+      any change in hint text goes red.
+    - The full ``ToolError`` message must equal ``_EXPECTED_FULL_MESSAGE_ERROR_2``
+      exactly, confirming the bridge emits ``"Named pipe not available (error 2).
+      <hint>"`` with the correct separator and no extra text.
+    - ``is_connected`` must be ``False`` after the failed attempt.
 
     Args:
         pipe_name: A pipe path with no server behind it.
@@ -383,14 +407,22 @@ async def _attempt_missing_pipe_connect(
         await client.connect()
 
     message = str(excinfo.value)
-    error_tag = f"error {_ERROR_FILE_NOT_FOUND}"
-    assert error_tag in message, (
-        f"Expected real Win32 ERROR_FILE_NOT_FOUND code ({_ERROR_FILE_NOT_FOUND}) in ToolError message; got: {message!r}"
+
+    # The human-readable hint must match the independently-known oracle constant.
+    # Equality is asserted — not just non-None — so any change in hint text is caught.
+    hint_or_none: str | None = NamedPipeClient.format_error_hint(_ERROR_FILE_NOT_FOUND)
+    assert hint_or_none == _EXPECTED_HINT_FOR_ERROR_2, (
+        f"format_error_hint({_ERROR_FILE_NOT_FOUND}) must return exactly {_EXPECTED_HINT_FOR_ERROR_2!r}; got: {hint_or_none!r}"
     )
 
-    hint = NamedPipeClient.format_error_hint(_ERROR_FILE_NOT_FOUND)
-    assert hint is not None, f"format_error_hint({_ERROR_FILE_NOT_FOUND}) must return a non-None hint string"
-    assert hint in message, f"Expected curated hint {hint!r} in ToolError message; got: {message!r}"
+    # The full message must equal the independently-assembled oracle exactly.
+    # This is the primary gate: startswith or substring checks would pass even
+    # if the separator, format string, or hint body diverged.  Exact equality
+    # fails on any regression: wrong error code, wrong separator (". " vs ":"),
+    # truncated hint, or extra trailing text.
+    assert message == _EXPECTED_FULL_MESSAGE_ERROR_2, (
+        f"ToolError message must be exactly {_EXPECTED_FULL_MESSAGE_ERROR_2!r}; got: {message!r}"
+    )
 
     assert client.is_connected is False, "is_connected must remain False after a failed connect"
 

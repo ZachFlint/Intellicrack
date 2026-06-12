@@ -51,6 +51,13 @@ def test_uninstall_removes_from_root() -> None:
 def test_record_dispatched_with_event_and_extras(qtbot: QtBot, configured_logging: Path) -> None:
     """Verify a structured log emission produces a fully formed record dict.
 
+    The ``module`` and ``function`` fields must identify the actual calling
+    frame (this test function in ``test_handler.py``), not an internal frame
+    from structlog or ``intellicrack.core.logging``.  If the
+    ``_add_call_info`` processor regresses by resolving to the wrong frame
+    (e.g., returning ``"logging"`` or ``"_handler"`` instead of
+    ``"test_handler"``), these exact-value assertions will fail.
+
     Args:
         qtbot: pytest-qt bot fixture.
         configured_logging: Logging configuration fixture (ensures structlog
@@ -66,8 +73,14 @@ def test_record_dispatched_with_event_and_extras(qtbot: QtBot, configured_loggin
     assert record["event"] == "unit_test_event"
     assert record["level"] == "INFO"
     assert "tests.handler" in record["logger"]
-    assert record["module"]
-    assert record["function"]
+    assert record["module"] == "test_handler", (
+        f"Expected module 'test_handler' (the test file), got {record['module']!r}. "
+        "This indicates _add_call_info resolved to the wrong frame."
+    )
+    assert record["function"] == "test_record_dispatched_with_event_and_extras", (
+        f"Expected function 'test_record_dispatched_with_event_and_extras', got {record['function']!r}. "
+        "This indicates _add_call_info resolved to the wrong frame."
+    )
     assert record["line_number"] > 0
     assert record["extras"].get("widget") == "x"
     assert record["extras"].get("count") == 3
@@ -161,6 +174,14 @@ def test_emit_failure_routes_to_handle_error(
 ) -> None:
     """Verify an exception during conversion is captured by handleError.
 
+    The gate must confirm:
+    1. Exactly one ``handleError`` invocation (not zero, not a spurious prior
+       one from handler initialisation or test-isolation gaps).
+    2. The captured argument is the specific ``logging.LogRecord`` that was
+       emitted for ``"event_that_breaks_handler"``—identified by level
+       ``INFO`` and logger name ``"intellicrack.tests.handler.error"``—not
+       some unrelated record that happened to arrive earlier.
+
     Args:
         monkeypatch: Pytest monkeypatch fixture used to break the
             converter and capture ``handleError`` invocations.
@@ -180,4 +201,13 @@ def test_emit_failure_routes_to_handle_error(
 
     logger = get_logger("tests.handler.error")
     logger.info("event_that_breaks_handler", widget="x")
-    assert handler_errors, "handleError was not invoked on conversion failure"
+
+    assert len(handler_errors) == 1, (
+        f"Expected exactly 1 handleError call, got {len(handler_errors)}. Either the error path did not fire or a spurious call occurred."
+    )
+    captured: logging.LogRecord = handler_errors[0]
+    assert isinstance(captured, logging.LogRecord), f"handleError received {type(captured)!r}, expected logging.LogRecord"
+    assert captured.levelname == "INFO", f"Record levelname is {captured.levelname!r}; expected 'INFO' matching the emitted call"
+    assert "tests.handler.error" in captured.name, (
+        f"Record name {captured.name!r} does not contain 'tests.handler.error'; the wrong LogRecord was passed to handleError"
+    )

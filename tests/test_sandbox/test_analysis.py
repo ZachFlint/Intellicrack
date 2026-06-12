@@ -54,6 +54,12 @@ _is_valid_ipv4 = cast("Callable[[str], bool]", getattr(_analysis_mod, "_is_valid
 _looks_like_domain = cast("Callable[[str], bool]", getattr(_analysis_mod, "_looks_like_domain"))
 _shannon_entropy = cast("Callable[[str], float]", getattr(_analysis_mod, "_shannon_entropy"))
 
+# Independently-known expected value for the base confidence constant.
+# Any change to _EXFIL_BASE_CONFIDENCE in the production module will be caught
+# by test_exfil_base_confidence_constant.
+_PROD_EXFIL_BASE_CONFIDENCE: Final[float] = cast("float", getattr(_analysis_mod, "_EXFIL_BASE_CONFIDENCE"))
+_EXPECTED_EXFIL_BASE_CONFIDENCE: Final[float] = 0.4
+
 
 _BEACONING_INTERVAL: Final[int] = 60
 _BEACONING_COUNT: Final[int] = 5
@@ -69,9 +75,16 @@ _SAMPLE_SIZE: Final[int] = 4096
 _SLEEP_MS: Final[int] = 120000
 _HIGH_FREQ_COUNT: Final[int] = 12
 
+_UNSPECIFIED_ADDR: Final[str] = ".".join(["0"] * 4)
+
+_REAL_C2_IP: Final[str] = "185.220.101.45"
+_REAL_EXFIL_IP: Final[str] = "51.15.192.49"
+_REAL_NORMAL_IP: Final[str] = "93.184.216.34"
+_REAL_CDN_IP: Final[str] = "104.21.0.1"
+
 
 def _net(
-    remote_address: str = "203.0.113.50",
+    remote_address: str = _REAL_C2_IP,
     remote_port: int = 443,
     ts_sec: int = 0,
     bytes_sent: int = 256,
@@ -79,6 +92,11 @@ def _net(
     direction: Literal["inbound", "outbound"] = "outbound",
 ) -> NetworkActivity:
     """Build a NetworkActivity entry with defaults.
+
+    Uses a real routable public IP (185.220.101.45, a Tor exit node commonly
+    observed in real C2 traffic) rather than RFC-5737 documentation ranges
+    or private addresses, so tests exercise the production path that real
+    analysts encounter.
 
     Args:
         remote_address: Remote IP or domain.
@@ -377,124 +395,231 @@ class TestDetectC2PatternsThresholds:
 
 
 class TestDetectC2Patterns:
-    """Verify C2 pattern detection logic."""
+    """Verify C2 pattern detection logic against real routable public IPs.
+
+    All remote addresses in this class are real, routable public IPs that
+    represent realistic malware C2 scenarios:
+    - 185.220.101.45: Tor exit node (commonly observed in real C2 traffic)
+    - 51.15.192.49: Scaleway-hosted server (realistic C2 hosting range)
+    - 104.21.0.1: Cloudflare CDN range (high-freq HTTPS scenario)
+    - 62.102.148.69: Bulletproof hosting range (C2 port scenario)
+    None of these are RFC-5737 documentation ranges (203.0.113.x, 198.51.100.x)
+    or private addresses (10.x, 172.16-31.x, 192.168.x), so IOC extraction
+    and real-traffic analysis produce meaningful results.
+    """
+
+    _BEACONING_C2_IP: Final[str] = _REAL_C2_IP
+    _IRREGULAR_C2_IP: Final[str] = "51.15.192.49"
+    _C2_PORT_IP: Final[str] = "62.102.148.69"
 
     def test_empty_input(self) -> None:
         """Empty activity list returns empty."""
         assert detect_c2_patterns([]) == []
 
-    def test_beaconing_detected(self) -> None:
-        """5 connections at 60s intervals triggers beaconing detection."""
+    def test_beaconing_detected_structure(self) -> None:
+        """5 connections at uniform 20s intervals to a real C2 IP triggers beaconing.
+
+        Timestamps sorted: [0, 20, 40, 60, 80] give intervals [20, 20, 20, 20]
+        => mean=20, std=0, CV=0. Since CV < 0.3, beaconing fires.
+        The detected pattern must carry the remote address, a confidence > 0.9,
+        and the exact endpoint in the description.
+        """
         activity = [
-            _net(remote_address="10.0.0.1", remote_port=8443, ts_sec=i * _BEACONING_INTERVAL % 100) for i in range(_BEACONING_COUNT)
+            _net(remote_address=self._BEACONING_C2_IP, remote_port=8443, ts_sec=i * _BEACONING_INTERVAL % 100)
+            for i in range(_BEACONING_COUNT)
         ]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
-        assert len(beacon) >= 1
-        assert beacon[0]["confidence"] > 0.9
+        assert len(beacon) == 1, f"Expected exactly 1 beaconing detection, got {len(beacon)}"
+        b = beacon[0]
+        assert b["confidence"] > 0.9, f"Expected confidence > 0.9, got {b['confidence']}"
+        assert self._BEACONING_C2_IP in b["description"], "Remote C2 IP must appear in description"
+        assert self._BEACONING_C2_IP in b["remote_addresses"], "Remote C2 IP must appear in remote_addresses"
+        assert any("Connection count: 5" in ind for ind in b["indicators"]), (
+            f"Indicator must record connection count 5, got: {b['indicators']}"
+        )
 
     def test_beaconing_irregular_not_detected(self) -> None:
-        """Irregular intervals don't trigger beaconing."""
-        activity = [_net(remote_address="10.0.0.1", remote_port=8443, ts_sec=s) for s in [0, 5, 47, 48, 99]]
+        """Irregular intervals to real C2 IP do not trigger beaconing.
+
+        Timestamps [0, 5, 47, 48, 99] give intervals [5, 42, 1, 51].
+        Mean = 24.75, std ≈ 20.9, CV ≈ 0.845. Since CV >= 0.3, no beacon.
+        """
+        activity = [_net(remote_address=self._IRREGULAR_C2_IP, remote_port=8443, ts_sec=s) for s in [0, 5, 47, 48, 99]]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
-        assert len(beacon) == 0
+        assert len(beacon) == 0, f"Irregular intervals must not trigger beaconing; got patterns: {patterns}"
 
     def test_beaconing_too_few_connections(self) -> None:
-        """Fewer than 3 connections don't trigger beaconing."""
-        activity = [_net(remote_address="10.0.0.1", remote_port=8443, ts_sec=i * 60) for i in range(2)]
+        """Fewer than 3 connections to a real C2 IP do not trigger beaconing."""
+        activity = [_net(remote_address=self._BEACONING_C2_IP, remote_port=8443, ts_sec=i * 60) for i in range(2)]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
-        assert len(beacon) == 0
+        assert len(beacon) == 0, f"2 connections must not trigger beaconing (threshold is 3); got: {patterns}"
 
-    def test_dga_high_entropy_detected(self) -> None:
-        """High-entropy domain triggers DGA detection."""
+    def test_dga_high_entropy_detected_structure(self) -> None:
+        """High-entropy DGA domain triggers detection with correct structural output.
+
+        'xkqwzjrtmnpv' has 12 unique chars from a 12-char string: entropy = log2(12) ≈ 3.585,
+        which is above the threshold of 3.5. The detector must report the domain,
+        the entropy value, and a positive confidence derived from the excess above 3.5.
+        """
         activity = [_net(remote_address=_DGA_FULL, remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
-        assert len(dga) == 1
+        assert len(dga) == 1, f"Expected 1 DGA detection for {_DGA_FULL!r}, got {len(dga)}"
+        d = dga[0]
+        assert d["confidence"] > 0.0, f"DGA confidence must be positive, got {d['confidence']}"
+        assert _DGA_FULL in d["remote_addresses"], "DGA domain must appear in remote_addresses"
+        assert any(_DGA_FULL in ind for ind in d["indicators"]), "DGA domain must appear in indicators"
+        entropy_indicators = [ind for ind in d["indicators"] if "entropy" in ind.lower()]
+        assert len(entropy_indicators) >= 1, "At least one entropy indicator must be present"
+        entropy_value = float(entropy_indicators[0].split(":")[-1].strip())
+        assert entropy_value > 3.5, f"Reported entropy {entropy_value} must exceed DGA threshold 3.5"
 
     def test_dga_normal_domain_not_detected(self) -> None:
-        """Normal domain doesn't trigger DGA detection."""
+        """Well-known low-entropy domain does not trigger DGA detection.
+
+        'google' has 5 unique chars from a 6-char string; entropy < 2.6,
+        well below the DGA threshold of 3.5.
+        """
         activity = [_net(remote_address="google.com", remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
-        assert len(dga) == 0
+        assert len(dga) == 0, "Low-entropy domain 'google.com' must not trigger DGA detection"
 
     def test_dga_ip_not_flagged(self) -> None:
-        """IP address is not flagged as DGA."""
-        activity = [_net(remote_address="203.0.113.1", remote_port=80, ts_sec=0)]
+        """A plain public IP address is not flagged as a DGA domain."""
+        activity = [_net(remote_address=_REAL_C2_IP, remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
-        assert len(dga) == 0
+        assert len(dga) == 0, f"IP address {_REAL_C2_IP!r} must never be flagged as DGA"
 
     def test_dga_duplicate_counted_once(self) -> None:
-        """Duplicate DGA domain produces only one detection."""
+        """Two connections to the same DGA domain produce exactly one DGA detection."""
         activity = [
             _net(remote_address=_DGA_FULL, remote_port=80, ts_sec=0),
             _net(remote_address=_DGA_FULL, remote_port=80, ts_sec=1),
         ]
         patterns = detect_c2_patterns(activity)
         dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
-        assert len(dga) == 1
+        assert len(dga) == 1, f"Duplicate DGA domain must produce exactly 1 detection, got {len(dga)}"
 
-    def test_c2_port_detected(self) -> None:
-        """Connection on port 4444 triggers C2 port detection."""
-        activity = [_net(remote_port=_C2_PORT, ts_sec=0)]
+    def test_c2_port_detected_structure(self) -> None:
+        """Connection on Metasploit default port 4444 to a real routable IP triggers C2 port detection.
+
+        The pattern must carry the correct port number and target address in its output.
+        Base confidence formula: 0.5 + 1 * 0.05 = 0.55 for a single connection.
+        """
+        activity = [_net(remote_address=self._C2_PORT_IP, remote_port=_C2_PORT, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         c2 = [p for p in patterns if p["pattern_type"] == "known_c2_port"]
-        assert len(c2) == 1
+        assert len(c2) == 1, f"Port 4444 to real IP must trigger exactly 1 C2 detection, got {len(c2)}"
+        c = c2[0]
+        assert math.isclose(c["confidence"], 0.55, abs_tol=1e-9), f"Expected base confidence 0.55 for 1 connection, got {c['confidence']}"
+        assert any("4444" in ind for ind in c["indicators"]), "Port 4444 must appear in indicators"
+        assert self._C2_PORT_IP in c["remote_addresses"], "Target IP must appear in remote_addresses"
 
     def test_c2_port_10_connections_higher_confidence(self) -> None:
-        """10 connections on C2 port produce higher confidence than 1."""
-        activity_1 = [_net(remote_port=_C2_PORT, ts_sec=0)]
-        activity_10 = [_net(remote_port=_C2_PORT, ts_sec=i) for i in range(10)]
+        """10 connections on C2 port produce strictly higher confidence than 1 connection."""
+        activity_1 = [_net(remote_address=self._C2_PORT_IP, remote_port=_C2_PORT, ts_sec=0)]
+        activity_10 = [_net(remote_address=self._C2_PORT_IP, remote_port=_C2_PORT, ts_sec=i) for i in range(10)]
         patterns_1 = detect_c2_patterns(activity_1)
         patterns_10 = detect_c2_patterns(activity_10)
         c2_1 = [p for p in patterns_1 if p["pattern_type"] == "known_c2_port"]
         c2_10 = [p for p in patterns_10 if p["pattern_type"] == "known_c2_port"]
-        assert c2_10[0]["confidence"] > c2_1[0]["confidence"]
+        assert len(c2_1) == 1
+        assert len(c2_10) == 1
+        assert c2_10[0]["confidence"] > c2_1[0]["confidence"], (
+            f"10 connections (conf={c2_10[0]['confidence']}) must have higher confidence than 1 connection (conf={c2_1[0]['confidence']})"
+        )
 
     def test_port_80_not_flagged(self) -> None:
-        """Port 80 is not a known C2 port."""
-        activity = [_net(remote_port=80, ts_sec=0)]
+        """Port 80 (HTTP) is not in the known C2 port set and must not trigger detection."""
+        activity = [_net(remote_address=_REAL_C2_IP, remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         c2 = [p for p in patterns if p["pattern_type"] == "known_c2_port"]
-        assert len(c2) == 0
+        assert len(c2) == 0, f"Port 80 must not trigger C2 port detection; got {patterns}"
 
-    def test_high_freq_443_detected(self) -> None:
-        """12 connections on port 443 triggers high-frequency detection."""
-        activity = [_net(remote_port=_HTTPS_PORT, ts_sec=i) for i in range(_HIGH_FREQ_COUNT)]
+    def test_high_freq_443_detected_structure(self) -> None:
+        """12 connections on port 443 to a real CDN IP triggers high-frequency HTTPS detection.
+
+        Confidence formula: min(1.0, 12 / 50.0) = 0.24. The pattern must record
+        the count and the actual remote address in its output.
+        """
+        activity = [_net(remote_address=_REAL_CDN_IP, remote_port=_HTTPS_PORT, ts_sec=i) for i in range(_HIGH_FREQ_COUNT)]
         patterns = detect_c2_patterns(activity)
         hf = [p for p in patterns if p["pattern_type"] == "high_frequency_443"]
-        assert len(hf) == 1
+        assert len(hf) == 1, f"12 connections on port 443 must yield exactly 1 detection, got {len(hf)}"
+        h = hf[0]
+        assert math.isclose(h["confidence"], 0.24, abs_tol=1e-3), f"Expected confidence 0.24 for 12 connections, got {h['confidence']}"
+        assert _REAL_CDN_IP in h["remote_addresses"], "CDN IP must appear in remote_addresses"
+        count_inds = [ind for ind in h["indicators"] if "Connection count" in ind]
+        assert len(count_inds) >= 1, f"Connection count indicator must be present; got {count_inds}"
+        assert "12" in count_inds[0], f"Connection count indicator must record 12; got {count_inds}"
 
     def test_high_freq_443_too_few(self) -> None:
-        """5 connections on port 443 don't trigger high-frequency detection."""
-        activity = [_net(remote_port=_HTTPS_PORT, ts_sec=i) for i in range(5)]
+        """5 connections on port 443 do not trigger high-frequency HTTPS detection (threshold is 10)."""
+        activity = [_net(remote_address=_REAL_CDN_IP, remote_port=_HTTPS_PORT, ts_sec=i) for i in range(5)]
         patterns = detect_c2_patterns(activity)
         hf = [p for p in patterns if p["pattern_type"] == "high_frequency_443"]
-        assert len(hf) == 0
+        assert len(hf) == 0, f"5 connections on port 443 must not trigger detection; got {patterns}"
 
-    def test_exfil_detected(self) -> None:
-        """Large outbound with small inbound triggers exfiltration."""
-        activity = [_net(bytes_sent=_EXFIL_SENT, bytes_received=_EXFIL_RECV, ts_sec=0)]
+    def test_exfil_detected_structure(self) -> None:
+        """5 MiB outbound with tiny inbound to a real routable IP triggers exfil detection.
+
+        Confidence formula: min(1.0, 0.4 + 5242880/(5242880+100)) = min(1.0, 1.3999...) = 1.0
+        (clamped). The pattern must record the remote address, byte counts, and ratio indicator.
+
+        The formula always clamps to 1.0 when the 10:1 ratio threshold is satisfied (because
+        sent/(sent+recv) > 0.9 when ratio > 10x, so 0.4 + 0.9 > 1.0). The structural output
+        assertions gate on the detection firing and recording correct field values. Gating on
+        _EXFIL_BASE_CONFIDENCE is done directly in test_exfil_base_confidence_constant.
+        """
+        activity = [_net(remote_address=_REAL_EXFIL_IP, bytes_sent=_EXFIL_SENT, bytes_received=_EXFIL_RECV, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         exfil = [p for p in patterns if p["pattern_type"] == "data_exfiltration"]
-        assert len(exfil) == 1
+        assert len(exfil) == 1, f"5 MiB exfil with >10x ratio must yield exactly 1 detection, got {len(exfil)}"
+        e = exfil[0]
+        assert math.isclose(e["confidence"], 1.0, abs_tol=1e-9), f"Expected clamped confidence 1.0, got {e['confidence']}"
+        assert _REAL_EXFIL_IP in e["remote_addresses"], "Exfil target IP must appear in remote_addresses"
+        assert any(str(_EXFIL_SENT) in ind for ind in e["indicators"]), "Bytes sent must appear in indicators"
+        assert any(str(_EXFIL_RECV) in ind for ind in e["indicators"]), "Bytes received must appear in indicators"
+        ratio_inds = [ind for ind in e["indicators"] if "Ratio" in ind]
+        assert len(ratio_inds) >= 1, "Ratio indicator must be present"
+        ratio_value = float(ratio_inds[0].split(":")[1].split(":")[0].strip())
+        assert ratio_value >= 10.0, f"Reported ratio must exceed 10x threshold; got {ratio_value}"
+
+    def test_exfil_base_confidence_constant(self) -> None:
+        """_EXFIL_BASE_CONFIDENCE is exactly 0.4.
+
+        The production confidence formula is:
+            min(1.0, _EXFIL_BASE_CONFIDENCE + sent / (sent + received))
+
+        When the 10:1 ratio threshold is met (sent > 10 * received), the ratio term
+        sent/(sent+received) exceeds 10/11 ≈ 0.909, so 0.4 + 0.909 > 1.0 and the
+        result always clamps to 1.0. This makes _EXFIL_BASE_CONFIDENCE undetectable
+        in `detect_c2_patterns` output alone. This test directly gates the constant
+        so that any change from 0.4 is immediately caught.
+        """
+        assert math.isclose(
+            _PROD_EXFIL_BASE_CONFIDENCE,
+            _EXPECTED_EXFIL_BASE_CONFIDENCE,
+            abs_tol=1e-12,
+        ), f"_EXFIL_BASE_CONFIDENCE must be {_EXPECTED_EXFIL_BASE_CONFIDENCE}, got {_PROD_EXFIL_BASE_CONFIDENCE}"
 
     def test_balanced_traffic_not_exfil(self) -> None:
-        """Balanced traffic doesn't trigger exfiltration."""
-        activity = [_net(bytes_sent=500, bytes_received=500, ts_sec=0)]
+        """Balanced 500/500-byte traffic to a real IP does not trigger exfiltration detection."""
+        activity = [_net(remote_address=_REAL_C2_IP, bytes_sent=500, bytes_received=500, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         exfil = [p for p in patterns if p["pattern_type"] == "data_exfiltration"]
-        assert len(exfil) == 0
+        assert len(exfil) == 0, f"Balanced traffic must not trigger exfil detection; got {patterns}"
 
     def test_normal_traffic_empty(self) -> None:
-        """Single normal connection produces no patterns."""
-        activity = [_net(remote_address="93.184.216.34", remote_port=80, ts_sec=0)]
+        """A single normal HTTP connection to example.com produces no C2 patterns."""
+        activity = [_net(remote_address=_REAL_NORMAL_IP, remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
-        assert len(patterns) == 0
+        assert patterns == [], f"Single low-volume HTTP connection to {_REAL_NORMAL_IP} must produce no patterns; got {patterns}"
 
     def test_multiple_patterns_simultaneously(
         self,
@@ -523,13 +648,22 @@ class TestExtractIOCs:
         assert iocs == []
 
     def test_public_ipv4_from_network(self) -> None:
-        """Public IPv4 from network_activity is extracted."""
+        """Real routable public IPv4 from network_activity is extracted as an IOC.
+
+        185.220.101.45 is a real Tor exit node - genuinely public, not filtered
+        by the private-IP check, and representative of real C2 traffic.
+        """
         report = make_sample_report(
-            network_activity=[_net(remote_address="203.0.113.50")],
+            network_activity=[_net(remote_address=_REAL_C2_IP)],
         )
         iocs = extract_iocs(report)
         ip_iocs = [i for i in iocs if i["ioc_type"] == "ipv4"]
-        assert any(i["value"] == "203.0.113.50" for i in ip_iocs)
+        assert any(i["value"] == _REAL_C2_IP for i in ip_iocs), (
+            f"Real C2 IP {_REAL_C2_IP!r} must be extracted as an IPv4 IOC; got {ip_iocs}"
+        )
+        matched = next(i for i in ip_iocs if i["value"] == _REAL_C2_IP)
+        assert matched["ioc_type"] == "ipv4"
+        assert matched["source"] == "network_activity"
 
     def test_domain_from_network(self) -> None:
         """Domain from network_activity is extracted."""
@@ -659,27 +793,37 @@ class TestExtractIOCs:
         assert len(ips) == 0
 
     def test_deduplication(self) -> None:
-        """Same IOC from multiple sources produces one entry."""
+        """Two connections to the same real public IP produce exactly one IOC entry.
+
+        185.220.101.45 appears twice in network_activity; the dedup key is
+        (ioc_type, value), so only one entry must survive regardless of connection count.
+        """
         report = make_sample_report(
             network_activity=[
-                _net(remote_address="203.0.113.1", ts_sec=0),
-                _net(remote_address="203.0.113.1", ts_sec=1),
+                _net(remote_address=_REAL_C2_IP, ts_sec=0),
+                _net(remote_address=_REAL_C2_IP, ts_sec=1),
             ],
         )
         iocs = extract_iocs(report)
-        ips = [i for i in iocs if i["ioc_type"] == "ipv4" and i["value"] == "203.0.113.1"]
-        assert len(ips) == 1
+        ips = [i for i in iocs if i["ioc_type"] == "ipv4" and i["value"] == _REAL_C2_IP]
+        assert len(ips) == 1, f"Duplicate IP {_REAL_C2_IP!r} in two connections must produce exactly 1 IOC; got {len(ips)}"
 
     def test_multiple_sources_merged(self) -> None:
-        """IOCs from different report fields are all collected."""
+        """IOCs from different report fields are all collected as separate entries.
+
+        Uses two distinct real public IPs from different IP blocks so dedup
+        does not suppress either entry:
+        - 185.220.101.45 from network_activity
+        - 51.15.192.49 from process command_line (ping target)
+        """
         report = make_sample_report(
-            network_activity=[_net(remote_address="203.0.113.1")],
+            network_activity=[_net(remote_address=_REAL_C2_IP)],
             process_activity=[
                 ProcessActivity(
                     pid=100,
                     name="cmd.exe",
                     path=None,
-                    command_line="ping 198.51.100.1",
+                    command_line=f"ping {_REAL_EXFIL_IP}",
                     parent_pid=1,
                     operation="created",
                     exit_code=0,
@@ -689,7 +833,10 @@ class TestExtractIOCs:
         )
         iocs = extract_iocs(report)
         ips = [i for i in iocs if i["ioc_type"] == "ipv4"]
-        assert len(ips) >= 2
+        assert len(ips) >= 2, f"Two distinct public IPs from different sources must produce >= 2 IOC entries; got {ips}"
+        ip_values = {i["value"] for i in ips}
+        assert _REAL_C2_IP in ip_values, f"{_REAL_C2_IP!r} from network_activity must be extracted"
+        assert _REAL_EXFIL_IP in ip_values, f"{_REAL_EXFIL_IP!r} from process command_line must be extracted"
 
     def test_full_sample_report(self, sample_report: ExecutionReport) -> None:
         """Full sample report produces multiple IOC types.

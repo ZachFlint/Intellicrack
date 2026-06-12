@@ -70,15 +70,28 @@ class TestWhileLoops:
         assert 5 not in parsed_offsets
 
     def test_while_false_condition_executes_zero_iterations(self, interp: HexPatInterpreter) -> None:
-        """While loop with a false initial condition produces no fields at all.
+        """While loop with a false initial condition skips its body but lets execution continue.
+
+        The guard ``run != 0`` is false from the start, so the in-loop field
+        ``inside`` must never be placed. To prove the loop was truly skipped
+        rather than execution aborting, a post-loop field ``after`` is placed
+        and must read the distinctive sentinel byte 0x42 at offset 0. The
+        oracle is the input layout: a single 0x42 byte means exactly one field
+        named ``after`` with that value, and no ``inside`` field at all.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = bytes(8)
-        source = "u8 run = 0;\nwhile (run != 0) {\n    u8 x @ 0;\n}"
+        data = b"\x42\x00\x00\x00\x00\x00\x00\x00"
+        source = "u8 run = 0;\nwhile (run != 0) {\n    u8 inside @ 0;\n}\nu8 after @ 0;"
         results = interp.execute_bytes(source, data)
-        assert results == []
+        assert len(results) == 1
+        assert results[0]["name"] == "after"
+        assert results[0]["offset"] == 0
+        assert results[0]["size"] == 1
+        assert results[0]["raw_bytes"] == [0x42]
+        assert results[0]["display_value"] == "0x42"
+        assert "inside" not in [r["name"] for r in results]
 
     def test_while_true_condition_executes_body(self, interp: HexPatInterpreter) -> None:
         """While loop with a true initial condition runs the body and places the field.
@@ -237,7 +250,14 @@ class TestBreakContinue:
     """Tests for break and continue control flow in loops."""
 
     def test_break_exits_while_loop_early(self, interp: HexPatInterpreter) -> None:
-        """Break in a while loop stops iteration before the limit.
+        """Break in a while loop stops iteration exactly at the break condition.
+
+        Loop runs ``while i < 10`` placing ``u8 val @ i`` then incrementing i,
+        but breaks when ``i == 3``. The break fires before the placement for
+        i == 3, so exactly three fields at offsets 0, 1, 2 are produced.
+        With ``data == bytes(range(16))`` each byte at offset k has value k.
+        The oracle is the arithmetic: offsets 0..2 read values 0,1,2 and no
+        field for offset 3 or beyond must appear.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
@@ -246,9 +266,23 @@ class TestBreakContinue:
         source = "u8 i = 0;\nwhile (i < 10) {\n    if (i == 3) {\n        break;\n    }\n    u8 val @ i;\n    i = i + 1;\n}"
         results = interp.execute_bytes(source, data)
         assert len(results) == 3
+        assert [r["name"] for r in results] == ["val", "val", "val"]
+        assert [r["offset"] for r in results] == [0, 1, 2]
+        assert [r["size"] for r in results] == [1, 1, 1]
+        assert [r["raw_bytes"] for r in results] == [[0], [1], [2]]
+        assert [r["display_value"] for r in results] == ["0x0", "0x1", "0x2"]
+        parsed_offsets = {r["offset"] for r in results}
+        assert 3 not in parsed_offsets
+        assert 4 not in parsed_offsets
 
     def test_continue_skips_iteration_body(self, interp: HexPatInterpreter) -> None:
-        """Continue in a for loop skips the field placement for that iteration.
+        """Continue in a for loop skips field placement for the continued iterations.
+
+        The loop runs i == 0..5. The ``continue`` fires for i == 2 and i == 4,
+        so those iterations skip the ``u8 val @ i`` placement. Fields are
+        placed only for i in {0, 1, 3, 5}. With ``data == bytes(range(8))``
+        each byte at offset k is k, giving values 0, 1, 3, 5 at those offsets.
+        The oracle is the set arithmetic: i in 0..5 minus {2, 4} == {0,1,3,5}.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
@@ -267,13 +301,29 @@ class TestBreakContinue:
         )
         results = interp.execute_bytes(source, data)
         assert len(results) == 4
+        assert [r["name"] for r in results] == ["val", "val", "val", "val"]
+        assert [r["offset"] for r in results] == [0, 1, 3, 5]
+        assert [r["size"] for r in results] == [1, 1, 1, 1]
+        assert [r["raw_bytes"] for r in results] == [[0], [1], [3], [5]]
+        assert [r["display_value"] for r in results] == ["0x0", "0x1", "0x3", "0x5"]
+        parsed_offsets = {r["offset"] for r in results}
+        assert 2 not in parsed_offsets
+        assert 4 not in parsed_offsets
 
 
 class TestNestedControl:
     """Tests for nested control flow structures."""
 
     def test_nested_for_inside_while(self, interp: HexPatInterpreter) -> None:
-        """Nested for inside while correctly iterates both levels.
+        """Nested for inside while iterates both levels with correct offsets and values.
+
+        The while runs outer == 0, 1 (two iterations). Inside each, the for
+        runs inner == 0, 1, 2, placing ``u8 v @ (outer * 8 + inner)``. The
+        six resulting offsets are 0,1,2 (outer=0) and 8,9,10 (outer=1).
+        With ``data == bytes(range(64))`` byte at offset k is k, so the
+        display values are "0x0","0x1","0x2","0x8","0x9","0xA". The oracle
+        is the explicit formula outer*8+inner evaluated for outer in {0,1}
+        and inner in {0,1,2}.
 
         Args:
             interp: A fresh HexPatInterpreter fixture.
@@ -290,6 +340,11 @@ class TestNestedControl:
         )
         results = interp.execute_bytes(source, data)
         assert len(results) == 6
+        assert [r["name"] for r in results] == ["v"] * 6
+        assert [r["offset"] for r in results] == [0, 1, 2, 8, 9, 10]
+        assert [r["size"] for r in results] == [1] * 6
+        assert [r["raw_bytes"] for r in results] == [[0], [1], [2], [8], [9], [10]]
+        assert [r["display_value"] for r in results] == ["0x0", "0x1", "0x2", "0x8", "0x9", "0xA"]
 
     def test_conditional_inside_for_loop(self, interp: HexPatInterpreter) -> None:
         """if/else inside a for loop selects different field placements per iteration.

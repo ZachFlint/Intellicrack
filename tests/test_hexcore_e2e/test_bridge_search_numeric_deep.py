@@ -104,24 +104,44 @@ class TestSearchNumericDeep:
         assert _PATTERN_U32_OFFSET in offsets
 
     def test_search_uint64_cafebare_finds_at_offset_6(self, bridge: HexEditorBridge, tmp_path: Path, pattern_data: bytes) -> None:
-        """Verify search_numeric finds uint64 0xCAFEBABE12345678 at offset 6 in pattern_data.
+        """Verify uint64 0xCAFEBABE12345678 is rejected with OverflowError and its signed equivalent finds exactly offset 6.
 
-        The native Rust search_numeric uses i64 and may overflow for values > 2**63.
-        This test expects either a successful match or an OverflowError from the native
-        path, which is acceptable behavior for unsigned values exceeding signed range.
+        The native Rust search_numeric accepts i64, so values above 2**63-1 must raise
+        OverflowError.  The signed two's-complement reinterpretation of 0xCAFEBABE12345678
+        is the independently-known constant -3819410108451629448 (verified by the IEEE
+        754 two's-complement definition, not re-derived from _PATTERN_U64_VALUE).
+        The bridge must find that value at exactly offset 6 with length 8 and produce
+        no spurious matches in the 512-byte pattern_data buffer.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
             pattern_data: The 512-byte structured test buffer fixture.
         """
+        cafebabe_signed_i64: int = -3819410108451629448
+        cafebabe_le_bytes: bytes = b"\x78\x56\x34\x12\xbe\xba\xfe\xca"
+
+        assert _PATTERN_U64_VALUE == 0xCAFEBABE12345678, f"_PATTERN_U64_VALUE constant drifted: got {hex(_PATTERN_U64_VALUE)}"
+        assert _PATTERN_U64_VALUE > 2**63 - 1, f"0xCAFEBABE12345678 must exceed i64 max; got {_PATTERN_U64_VALUE}"
+        assert pattern_data[_PATTERN_U64_OFFSET : _PATTERN_U64_OFFSET + 8] == cafebabe_le_bytes, (
+            f"pattern_data oracle mismatch at offset {_PATTERN_U64_OFFSET}: got {pattern_data[_PATTERN_U64_OFFSET : _PATTERN_U64_OFFSET + 8].hex()}"
+        )
+        assert struct.unpack("<q", cafebabe_le_bytes)[0] == cafebabe_signed_i64, (
+            f"signed constant mismatch: struct gives {struct.unpack('<q', cafebabe_le_bytes)[0]}"
+        )
+
         self._open_pattern_data(bridge, tmp_path, pattern_data)
-        try:
-            results: list[dict[str, int]] = _run(bridge.search_numeric(_PATTERN_U64_VALUE, size=8, value_type="uint", endianness="little"))
-        except OverflowError:
-            pytest.skip("native search_numeric overflows on uint64 > i64 max")
-        offsets = [r["offset"] for r in results]
-        assert _PATTERN_U64_OFFSET in offsets
+
+        with pytest.raises(OverflowError):
+            _run(bridge.search_numeric(_PATTERN_U64_VALUE, size=8, value_type="uint", endianness="little"))
+
+        results: list[dict[str, int]] = _run(
+            bridge.search_numeric(cafebabe_signed_i64, size=8, value_type="int", endianness="little"),
+        )
+
+        assert len(results) == 1, f"expected exactly 1 match, got {len(results)}: {results}"
+        assert results[0]["offset"] == _PATTERN_U64_OFFSET, f"expected match at offset {_PATTERN_U64_OFFSET}, got {results[0]['offset']}"
+        assert results[0]["length"] == 8, f"expected length 8, got {results[0]['length']}"
 
     def test_search_uint8_0xff_finds_at_offset_36(self, bridge: HexEditorBridge, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric finds uint8 0xFF at offset 36 in pattern_data.

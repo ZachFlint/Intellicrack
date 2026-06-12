@@ -31,6 +31,11 @@ from intellicrack.core.types import (
 from intellicrack.providers.openai import OpenAIProvider
 
 
+_ERR_KEY_REQUIRED = "OpenAI API key is required"
+_ERR_INVALID_KEY_PREFIX = "Invalid OpenAI API key:"
+_ERR_NOT_CONNECTED = "Not connected to OpenAI API"
+
+
 @pytest.mark.integration
 class TestOpenAIModelListing:
     """Tests for OpenAI model listing functionality.
@@ -219,31 +224,83 @@ class TestOpenAIConnection:
     @pytest.mark.asyncio
     @staticmethod
     async def test_connection_with_invalid_key_raises_error() -> None:
-        """Test connection with invalid API key raises AuthenticationError."""
+        """Test that connecting with a syntactically-valid but rejected key raises AuthenticationError.
+
+        The production code issues a real ``models.list()`` probe against the OpenAI
+        API after constructing the client. An invalid key triggers a 401 response,
+        which is translated to :class:`AuthenticationError` carrying the
+        ``"Invalid OpenAI API key:"`` prefix. After the failure the provider must
+        be fully reset: ``is_connected`` must be ``False`` and ``client`` must be
+        ``None`` so no stale state leaks to subsequent calls.
+        """
         provider = OpenAIProvider()
         invalid_creds = ProviderCredentials(api_key="sk-invalid-key-12345")
 
-        with pytest.raises(AuthenticationError):
+        assert provider.is_connected is False, "Provider must start disconnected"
+        assert provider.client is None, "Provider must start with no client"
+
+        with pytest.raises(AuthenticationError) as exc_info:
             await provider.connect(invalid_creds)
+
+        raised = exc_info.value
+        assert _ERR_INVALID_KEY_PREFIX in str(raised), (
+            f"AuthenticationError message must contain {_ERR_INVALID_KEY_PREFIX!r}; got: {raised!s}"
+        )
+        assert provider.is_connected is False, "Provider must not be connected after an invalid-key failure"
+        assert provider.client is None, (
+            "Provider.client must be None after an invalid-key failure; stale client would allow unauthenticated calls"
+        )
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_connection_with_empty_key_raises_error() -> None:
-        """Test connection with empty API key raises AuthenticationError."""
+        """Test that connecting with an empty API key raises AuthenticationError before any network call.
+
+        The production code guards with ``if not credentials.api_key`` and raises
+        :class:`AuthenticationError` with the exact message
+        ``"OpenAI API key is required"`` — no OpenAI SDK call is ever made.
+        This distinguishes the empty-key path from the invalid-key-rejected path
+        (which goes through the API and carries a different message prefix).
+        After the failure the provider must remain fully disconnected.
+        """
         provider = OpenAIProvider()
         empty_creds = ProviderCredentials(api_key="")
 
-        with pytest.raises(AuthenticationError):
+        assert provider.is_connected is False, "Provider must start disconnected"
+        assert provider.client is None, "Provider must start with no client"
+
+        with pytest.raises(AuthenticationError) as exc_info:
             await provider.connect(empty_creds)
+
+        raised = exc_info.value
+        assert str(raised) == _ERR_KEY_REQUIRED, f"Empty-key error must be exactly {_ERR_KEY_REQUIRED!r}; got: {raised!s}"
+        assert provider.is_connected is False, "Provider must not be connected after an empty-key failure"
+        assert provider.client is None, "Provider.client must be None after an empty-key failure"
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_list_models_without_connection_raises_error() -> None:
-        """Test list_models raises error when not connected."""
+        """Test list_models raises ProviderError when the provider has never connected.
+
+        The guard ``if not self.connected or self.client is None`` at the top of
+        ``list_models`` must fire *before* any network call is attempted.
+        This test independently confirms that ``is_connected`` starts ``False``
+        on a fresh instance, and that the resulting :class:`ProviderError` carries
+        the ``"Not connected"`` sentinel so callers can distinguish an unconnected
+        state from a network failure.
+        """
         provider = OpenAIProvider()
 
-        with pytest.raises(ProviderError):
+        assert provider.is_connected is False, "Fresh OpenAIProvider must report is_connected=False before connect() is called"
+        assert provider.client is None, "Fresh OpenAIProvider must have client=None before connect() is called"
+
+        with pytest.raises(ProviderError) as exc_info:
             await provider.list_models()
+
+        raised = exc_info.value
+        assert _ERR_NOT_CONNECTED in str(raised), (
+            f"ProviderError from unconnected list_models must contain {_ERR_NOT_CONNECTED!r}; got: {raised!s}"
+        )
 
     @pytest.mark.asyncio
     @staticmethod
@@ -252,7 +309,13 @@ class TestOpenAIConnection:
         *,
         has_openai_key: bool,
     ) -> None:
-        """Test disconnect properly clears connection state.
+        """Test disconnect properly clears all connection state and prevents further API calls.
+
+        Verifies the full teardown sequence: after ``disconnect()`` the boolean
+        flag is cleared, the underlying SDK client is set to ``None``, and a
+        subsequent ``list_models()`` call raises :class:`ProviderError` with the
+        ``"Not connected"`` sentinel — confirming that the provider's guard logic
+        is operating on the now-reset state, not on a stale client.
 
         Args:
             credential_loader: Credential loader fixture.
@@ -266,7 +329,20 @@ class TestOpenAIConnection:
         assert credentials is not None
 
         await provider.connect(credentials)
-        assert provider.is_connected is True
+        assert provider.is_connected is True, "Provider must be connected after connect()"
+        assert provider.client is not None, "Provider must have a live client after connect()"
 
         await provider.disconnect()
-        assert provider.is_connected is False
+
+        assert provider.is_connected is False, "Provider must report is_connected=False after disconnect()"
+        assert provider.client is None, (
+            "Provider.client must be None after disconnect(); a live client here would allow unauthenticated calls"
+        )
+
+        with pytest.raises(ProviderError) as exc_info:
+            await provider.list_models()
+
+        raised = exc_info.value
+        assert _ERR_NOT_CONNECTED in str(raised), (
+            f"list_models() after disconnect must raise ProviderError with {_ERR_NOT_CONNECTED!r}; got: {raised!s}"
+        )

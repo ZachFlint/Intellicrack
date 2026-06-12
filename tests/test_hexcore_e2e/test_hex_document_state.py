@@ -766,6 +766,118 @@ class TestCallbackErrorPaths:
 
         assert state.cursor_offset == 999
 
+    def test_raising_callback_that_also_mutates_state_still_drains_queue(self) -> None:
+        """A callback that raises AND queues a reentrant mutation is fully processed.
+
+        The callback calls set_selection (which is queued by the reentrancy
+        guard because dispatch is already active), then raises OSError. The
+        test verifies three independent properties:
+
+        1. The raising callback's exception does not escape to the caller.
+        2. The reentrant SELECTION_CHANGED event is still drained and delivered
+           to the observer after the outer CURSOR_MOVED dispatch finishes.
+        3. state.selection reflects the queued set_selection call, confirming
+           that the state mutation (which happens before _notify inside
+           set_selection) is committed even though the callback raised.
+        """
+        state = HexDocumentState()
+        received_events: list[tuple[HexDocumentEvent, dict[str, Any]]] = []
+
+        def mutate_and_raise(event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            if event_type == HexDocumentEvent.CURSOR_MOVED:
+                state.set_selection(100, 200)
+                deliberate_mid_dispatch_raise = "deliberate mid-dispatch raise"
+                raise TypeError(deliberate_mid_dispatch_raise)
+
+        def observer(event_type: HexDocumentEvent, data: dict[str, Any]) -> None:
+            received_events.append((event_type, dict(data)))
+
+        state.register_callback(mutate_and_raise)
+        state.register_callback(observer)
+
+        state.set_cursor(77)
+
+        assert received_events[0][0] == HexDocumentEvent.CURSOR_MOVED
+        assert received_events[0][1]["offset"] == 77
+        assert received_events[1][0] == HexDocumentEvent.SELECTION_CHANGED
+        assert received_events[1][1]["start"] == 100
+        assert received_events[1][1]["end"] == 200
+        assert state.cursor_offset == 77
+        assert state.selection == (100, 200)
+
+    def test_mid_dispatch_state_mutation_is_queued_and_delivered_in_causal_order(self) -> None:
+        """A callback that mutates state during dispatch queues the event causally.
+
+        When a CURSOR_MOVED callback calls set_selection, the reentrancy guard
+        queues the SELECTION_CHANGED emission. After the outer CURSOR_MOVED
+        dispatch completes, the guard drains the queue, delivering
+        SELECTION_CHANGED to all observers.
+
+        Assertions that would catch a real regression:
+        - Exactly two events reach the observer: CURSOR_MOVED then
+          SELECTION_CHANGED (causal order, not reversed).
+        - CURSOR_MOVED payload carries the exact offset passed to set_cursor.
+        - SELECTION_CHANGED payload carries the exact start/end passed inside
+          the callback to set_selection.
+        - state.selection is set to the value passed mid-dispatch; it does NOT
+          remain None (the mutation commits before _notify is called).
+        - state.cursor_offset equals the value from the outer set_cursor call.
+        """
+        state = HexDocumentState()
+        received_events: list[tuple[HexDocumentEvent, dict[str, Any]]] = []
+
+        def mutating_cb(event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            if event_type == HexDocumentEvent.CURSOR_MOVED:
+                state.set_selection(50, 150)
+
+        def observer(event_type: HexDocumentEvent, data: dict[str, Any]) -> None:
+            received_events.append((event_type, dict(data)))
+
+        state.register_callback(mutating_cb)
+        state.register_callback(observer)
+
+        state.set_cursor(256)
+
+        assert len(received_events) == 2
+        first_event, first_data = received_events[0]
+        second_event, second_data = received_events[1]
+        assert first_event == HexDocumentEvent.CURSOR_MOVED
+        assert first_data["offset"] == 256
+        assert second_event == HexDocumentEvent.SELECTION_CHANGED
+        assert second_data["start"] == 50
+        assert second_data["end"] == 150
+        assert state.cursor_offset == 256
+        assert state.selection == (50, 150)
+
+    def test_mid_dispatch_mutation_does_not_re_enter_mutating_callback_again(self) -> None:
+        """A mid-dispatch mutation does not cause the mutating callback to fire again.
+
+        When mutating_cb calls set_selection, the SELECTION_CHANGED event is
+        queued (reentrancy guard is active). When the queue is drained,
+        mutating_cb receives SELECTION_CHANGED. Because event_type is
+        SELECTION_CHANGED (not CURSOR_MOVED), it does not call set_selection
+        again. The test asserts the total call count of mutating_cb is exactly
+        two: one for CURSOR_MOVED, one for SELECTION_CHANGED. This falsifies
+        any regression where the guard fails to queue the reentrant event and
+        instead dispatches it immediately (which would allow unbounded
+        recursion through mutating_cb).
+        """
+        state = HexDocumentState()
+        call_log: list[HexDocumentEvent] = []
+
+        def mutating_cb(event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            call_log.append(event_type)
+            if event_type == HexDocumentEvent.CURSOR_MOVED:
+                state.set_selection(10, 20)
+
+        state.register_callback(mutating_cb)
+
+        state.set_cursor(1)
+
+        assert call_log == [HexDocumentEvent.CURSOR_MOVED, HexDocumentEvent.SELECTION_CHANGED]
+        assert state.cursor_offset == 1
+        assert state.selection == (10, 20)
+
     def test_concurrent_set_document_does_not_deadlock(self) -> None:
         """Concurrent set_document calls from multiple threads complete without deadlock.
 
@@ -796,6 +908,201 @@ class TestCallbackErrorPaths:
         still_alive = [t for t in threads if t.is_alive()]
         assert not still_alive, f"{len(still_alive)} thread(s) did not finish — possible deadlock"
         assert not errors
+
+    def test_uncaught_exception_type_propagates_from_dispatch(self) -> None:
+        """An exception type outside the guarded set escapes set_cursor to the caller.
+
+        _dispatch_one guards only RuntimeError, TypeError, ValueError, and
+        OSError. A ZeroDivisionError is not in that set and must propagate
+        through _notify / set_cursor to the caller. This test falsifies any
+        regression that widens the guard to catch all exceptions.
+        """
+        state = HexDocumentState()
+
+        def divzero_cb(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+            _ = 1 // 0
+
+        state.register_callback(divzero_cb)
+        with pytest.raises(ZeroDivisionError):
+            state.set_cursor(5)
+
+    def test_all_four_guarded_exception_types_are_caught(self) -> None:
+        """Each of the four guarded exception types is individually swallowed.
+
+        Exercises RuntimeError, TypeError, ValueError, and OSError in four
+        separate states. For each, an observer registered after the raising
+        callback must receive exactly one CURSOR_MOVED with the correct
+        offset. This falsifies any regression that removes one type from the
+        guard tuple.
+        """
+        guarded_msg = "guarded"
+
+        def make_raiser(cls: type[Exception]) -> StateCallbackFn:
+            def raiser(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+                raise cls(guarded_msg)
+
+            return raiser
+
+        exc_types: list[type[Exception]] = [RuntimeError, TypeError, ValueError, OSError]
+        for exc_cls in exc_types:
+            state = HexDocumentState()
+            received: list[dict[str, Any]] = []
+
+            def make_observer(buf: list[dict[str, Any]]) -> StateCallbackFn:
+                def observer(_et: HexDocumentEvent, d: dict[str, Any]) -> None:
+                    buf.append(dict(d))
+
+                return observer
+
+            state.register_callback(make_raiser(exc_cls))
+            state.register_callback(make_observer(received))
+            state.set_cursor(321)
+
+            assert len(received) == 1, f"{exc_cls.__name__} caused observer to be skipped"
+            assert received[0]["offset"] == 321, f"{exc_cls.__name__} payload wrong"
+
+    def test_multiple_raising_callbacks_all_precede_a_good_callback(self) -> None:
+        """Three consecutive raising callbacks do not suppress a fourth good one.
+
+        Registers cb_a (RuntimeError), cb_b (ValueError), cb_c (OSError), then
+        cb_d (records event). All three raising callbacks fire before cb_d.
+        cb_d must still receive exactly one CURSOR_MOVED with offset=88.
+        This falsifies any implementation that aborts the callback list on
+        first exception rather than continuing per-callback.
+        """
+        state = HexDocumentState()
+        received: list[dict[str, Any]] = []
+        msg_a = "a fails"
+        msg_b = "b fails"
+        msg_c = "c fails"
+
+        def cb_a(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+            raise RuntimeError(msg_a)
+
+        def cb_b(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+            raise ValueError(msg_b)
+
+        def cb_c(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+            raise OSError(msg_c)
+
+        def cb_d(_et: HexDocumentEvent, d: dict[str, Any]) -> None:
+            received.append(dict(d))
+
+        state.register_callback(cb_a)
+        state.register_callback(cb_b)
+        state.register_callback(cb_c)
+        state.register_callback(cb_d)
+        state.set_cursor(88)
+
+        assert len(received) == 1
+        assert received[0]["offset"] == 88
+
+    def test_raising_during_queue_drain_does_not_abort_remaining_drain(self) -> None:
+        """A callback that raises during queue-drain does not abort subsequent queue items.
+
+        Setup: mutator_cb responds to CURSOR_MOVED by queueing two state
+        mutations (set_selection then notify_template_registered), then raises
+        TypeError. Both queued events must still be delivered to the observer
+        even though the mutator raised during the first drained event.
+
+        Specifically:
+        - observer receives CURSOR_MOVED (outer dispatch).
+        - mutator_cb runs for CURSOR_MOVED, queues SELECTION_CHANGED and
+          TEMPLATE_REGISTERED via two calls, then raises.
+        - Queue drain runs: SELECTION_CHANGED dispatches (mutator_cb runs for
+          it without raising because event_type != CURSOR_MOVED; observer
+          records it), then TEMPLATE_REGISTERED dispatches (both callbacks
+          run; observer records it).
+        - Final observer log: [CURSOR_MOVED, SELECTION_CHANGED, TEMPLATE_REGISTERED].
+        - state.selection == (7, 14) and state.cursor_offset == 128.
+        """
+        state = HexDocumentState()
+        observer_log: list[HexDocumentEvent] = []
+
+        drain_raise_msg = "deliberate drain-phase raise"
+
+        def mutator_cb(event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            if event_type == HexDocumentEvent.CURSOR_MOVED:
+                state.set_selection(7, 14)
+                state.notify_template_registered("drain_test")
+                raise TypeError(drain_raise_msg)
+
+        def observer(event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            observer_log.append(event_type)
+
+        state.register_callback(mutator_cb)
+        state.register_callback(observer)
+        state.set_cursor(128)
+
+        assert observer_log == [
+            HexDocumentEvent.CURSOR_MOVED,
+            HexDocumentEvent.SELECTION_CHANGED,
+            HexDocumentEvent.TEMPLATE_REGISTERED,
+        ]
+        assert state.cursor_offset == 128
+        assert state.selection == (7, 14)
+
+    def test_raising_callback_event_data_is_exact_and_unmodified(self) -> None:
+        """Event data dict passed to a non-raising callback after a raising one is exact.
+
+        Verifies that catching an exception from an earlier callback does not
+        corrupt or replace the data dict delivered to subsequent callbacks.
+        The observer callback must receive the exact same offset=512 that was
+        passed to set_cursor, not a default or zero value.
+        """
+        state = HexDocumentState()
+        observed_data: list[dict[str, Any]] = []
+        corrupt_msg = "corrupt nothing"
+
+        def bad_cb(_et: HexDocumentEvent, _d: dict[str, Any]) -> None:
+            raise ValueError(corrupt_msg)
+
+        def good_cb(_et: HexDocumentEvent, d: dict[str, Any]) -> None:
+            observed_data.append(dict(d))
+
+        state.register_callback(bad_cb)
+        state.register_callback(good_cb)
+        state.set_cursor(512)
+
+        assert len(observed_data) == 1
+        assert observed_data[0] == {"offset": 512}
+
+    def test_mid_dispatch_mutation_via_multiple_events_all_reach_observer(self) -> None:
+        """A callback that queues three distinct mutations during dispatch delivers all.
+
+        When a CURSOR_MOVED callback calls set_selection, notify_data_modified,
+        and notify_display_mode_changed (in that order), the reentrancy guard
+        queues all three. After the outer CURSOR_MOVED completes, the guard
+        drains SELECTION_CHANGED, DATA_MODIFIED, then DISPLAY_MODE_CHANGED
+        in causal order. The observer must receive exactly four events in order
+        with correct payloads, falsifying any partial-drain or wrong-order
+        regression.
+        """
+        state = HexDocumentState()
+        log: list[tuple[HexDocumentEvent, dict[str, Any]]] = []
+
+        def trigger_three(event_type: HexDocumentEvent, _data: dict[str, Any]) -> None:
+            if event_type == HexDocumentEvent.CURSOR_MOVED:
+                state.set_selection(3, 9)
+                state.notify_data_modified(0, 4)
+                state.notify_display_mode_changed("hex16_le")
+
+        def observer(event_type: HexDocumentEvent, data: dict[str, Any]) -> None:
+            log.append((event_type, dict(data)))
+
+        state.register_callback(trigger_three)
+        state.register_callback(observer)
+        state.set_cursor(64)
+
+        assert len(log) == 4
+        assert log[0] == (HexDocumentEvent.CURSOR_MOVED, {"offset": 64})
+        assert log[1] == (HexDocumentEvent.SELECTION_CHANGED, {"start": 3, "end": 9})
+        assert log[2][0] == HexDocumentEvent.DATA_MODIFIED
+        assert log[2][1]["offset"] == 0
+        assert log[2][1]["length"] == 4
+        assert log[3] == (HexDocumentEvent.DISPLAY_MODE_CHANGED, {"mode": "hex16_le"})
+        assert state.cursor_offset == 64
+        assert state.selection == (3, 9)
 
 
 class TestThreadSafety:
@@ -890,6 +1197,282 @@ class TestThreadSafety:
         t2.join()
 
         assert not errors
+
+
+class TestClearAll:
+    """Tests for the clear_all batch-reset method."""
+
+    def test_clear_all_fires_highlight_rule_removed_for_each_stored_rule(self) -> None:
+        """clear_all emits HIGHLIGHT_RULE_REMOVED for every stored rule.
+
+        Two rules ("r-alpha", "r-beta") are stored via set_highlight_rule before
+        clear_all is called. The observer must receive exactly two
+        HIGHLIGHT_RULE_REMOVED events, one per rule id, before any
+        DOCUMENT_CLOSED. Falsifies any regression that skips the per-rule
+        removal notification.
+        """
+        state = HexDocumentState()
+        state.set_document(_DummyDoc(), None)
+        state.set_highlight_rule("r-alpha", {"id": "r-alpha", "color": "#FF0000"})
+        state.set_highlight_rule("r-beta", {"id": "r-beta", "color": "#00FF00"})
+
+        events, cb = _make_collector()
+        state.register_callback(cb)
+        state.clear_all()
+
+        rule_removed = [e for e in events if e[0] == HexDocumentEvent.HIGHLIGHT_RULE_REMOVED]
+        removed_ids = {e[1]["rule_id"] for e in rule_removed}
+
+        assert removed_ids == {"r-alpha", "r-beta"}
+
+    def test_clear_all_fires_document_closed_when_document_was_open(self) -> None:
+        """clear_all emits DOCUMENT_CLOSED exactly once when a document is open.
+
+        An open document followed by clear_all must produce exactly one
+        DOCUMENT_CLOSED event. Falsifies a regression that omits the
+        DOCUMENT_CLOSED notification from clear_all.
+        """
+        state = HexDocumentState()
+        state.set_document(_DummyDoc(), None)
+
+        events, cb = _make_collector()
+        state.register_callback(cb)
+        state.clear_all()
+
+        closed = [e for e in events if e[0] == HexDocumentEvent.DOCUMENT_CLOSED]
+        assert len(closed) == 1
+
+    def test_clear_all_does_not_fire_document_closed_when_no_document(self) -> None:
+        """clear_all emits no DOCUMENT_CLOSED when no document was attached.
+
+        Calling clear_all on a fresh state (no document) must not emit any
+        DOCUMENT_CLOSED event. Falsifies a regression that emits the event
+        unconditionally.
+        """
+        state = HexDocumentState()
+        events, cb = _make_collector()
+        state.register_callback(cb)
+
+        state.clear_all()
+
+        closed = [e for e in events if e[0] == HexDocumentEvent.DOCUMENT_CLOSED]
+        assert len(closed) == 0
+
+    def test_clear_all_resets_all_state_properties(self) -> None:
+        """clear_all resets document, file_path, cursor, and selection to defaults.
+
+        After setting all state fields, clear_all must leave:
+        - document == None
+        - file_path == None
+        - cursor_offset == 0
+        - selection == None
+        This falsifies any regression that forgets to reset one of the fields.
+        """
+        state = HexDocumentState()
+        p = Path("/nonexistent/clear_test.bin")
+        state.set_document(_DummyDoc(), p)
+        state.set_cursor(500)
+        state.set_selection(10, 20)
+
+        state.clear_all()
+
+        assert state.document is None
+        assert state.file_path is None
+        assert state.cursor_offset == 0
+        assert state.selection is None
+
+    def test_clear_all_clears_stored_highlight_rules(self) -> None:
+        """clear_all empties the highlight rules dict.
+
+        After adding two highlight rules and calling clear_all, get_highlight_rules
+        must return an empty dict. Falsifies any regression that leaves stale
+        entries in the rule map.
+        """
+        state = HexDocumentState()
+        state.set_highlight_rule("rule-1", {"id": "rule-1", "color": "#AABBCC"})
+        state.set_highlight_rule("rule-2", {"id": "rule-2", "color": "#112233"})
+
+        state.clear_all()
+
+        assert state.get_highlight_rules() == {}
+
+    def test_clear_all_rule_removed_precedes_document_closed_in_event_order(self) -> None:
+        """clear_all emits HIGHLIGHT_RULE_REMOVED events before DOCUMENT_CLOSED.
+
+        The production clear_all loop fires HIGHLIGHT_RULE_REMOVED for each
+        rule, then conditionally fires DOCUMENT_CLOSED. This test asserts that
+        the last event is DOCUMENT_CLOSED and all preceding events are
+        HIGHLIGHT_RULE_REMOVED. Falsifies any regression that changes the
+        ordering contract.
+        """
+        state = HexDocumentState()
+        state.set_document(_DummyDoc(), None)
+        state.set_highlight_rule("x", {"id": "x", "color": "#000000"})
+
+        events, cb = _make_collector()
+        state.register_callback(cb)
+        state.clear_all()
+
+        assert len(events) == 2
+        assert events[0][0] == HexDocumentEvent.HIGHLIGHT_RULE_REMOVED
+        assert events[0][1]["rule_id"] == "x"
+        assert events[1][0] == HexDocumentEvent.DOCUMENT_CLOSED
+
+
+class TestCurrentStateSnapshot:
+    """Tests for the get_current_state atomic snapshot method."""
+
+    def test_get_current_state_default_values(self) -> None:
+        """get_current_state on a fresh instance returns correct defaults.
+
+        The exact expected dict is known independently from the __init__
+        docstring and property contracts. Falsifies any regression that changes
+        a default field value or omits a key.
+        """
+        state = HexDocumentState()
+        snapshot = state.get_current_state()
+
+        assert snapshot["document"] is None
+        assert snapshot["file_path"] is None
+        assert snapshot["cursor_offset"] == 0
+        assert snapshot["selection"] is None
+        assert snapshot["highlight_rules"] == {}
+        assert snapshot["display_mode"] == "hex8"
+
+    def test_get_current_state_reflects_mutations(self) -> None:
+        """get_current_state returns values updated by state mutations.
+
+        After set_cursor(256), set_selection(10, 20), set_display_mode_state,
+        and set_highlight_rule, the snapshot must reflect each exact value.
+        Falsifies a regression where the snapshot returns stale pre-mutation
+        values.
+        """
+        state = HexDocumentState()
+        dummy = _DummyDoc()
+        p = Path("/nonexistent/snap.bin")
+        state.set_document(dummy, p)
+        state.set_cursor(256)
+        state.set_selection(10, 20)
+        state.set_display_mode_state("hex16_le")
+        state.set_highlight_rule("snap-rule", {"id": "snap-rule", "color": "#FACADE"})
+
+        snapshot = state.get_current_state()
+
+        assert snapshot["document"] is dummy
+        assert snapshot["file_path"] == str(p)
+        assert snapshot["cursor_offset"] == 256
+        assert snapshot["selection"] == (10, 20)
+        assert snapshot["display_mode"] == "hex16_le"
+        assert "snap-rule" in snapshot["highlight_rules"]
+        assert snapshot["highlight_rules"]["snap-rule"]["color"] == "#FACADE"
+
+    def test_get_current_state_returns_copy_of_highlight_rules(self) -> None:
+        """Mutating the snapshot dict does not affect the live state.
+
+        get_current_state documents that highlight_rules is a copy. Modifying
+        the returned dict must not change what a subsequent snapshot returns.
+        Falsifies any regression that returns a direct reference to the
+        internal dict.
+        """
+        state = HexDocumentState()
+        state.set_highlight_rule("live-rule", {"id": "live-rule", "color": "#ABCDEF"})
+
+        snapshot = state.get_current_state()
+        snapshot["highlight_rules"]["injected"] = {"id": "injected", "color": "#000000"}
+
+        second_snapshot = state.get_current_state()
+        assert "injected" not in second_snapshot["highlight_rules"]
+        assert "live-rule" in second_snapshot["highlight_rules"]
+
+
+class TestAdditionalEventTypes:
+    """Tests for the three event types not covered by test_all_12_event_types_delivered."""
+
+    def test_notify_va_mapping_changed_fires_event(self) -> None:
+        """notify_va_mapping_changed fires VA_MAPPING_CHANGED."""
+        state = HexDocumentState()
+        events, cb = _make_collector()
+        state.register_callback(cb)
+
+        state.notify_va_mapping_changed(3)
+
+        assert len(events) == 1
+        assert events[0][0] == HexDocumentEvent.VA_MAPPING_CHANGED
+
+    def test_notify_va_mapping_changed_event_data(self) -> None:
+        """VA_MAPPING_CHANGED event data contains the correct mapping_count."""
+        state = HexDocumentState()
+        events, cb = _make_collector()
+        state.register_callback(cb)
+
+        state.notify_va_mapping_changed(7)
+
+        assert events[0][1]["mapping_count"] == 7
+
+    def test_notify_alignment_grid_changed_fires_event(self) -> None:
+        """notify_alignment_grid_changed fires ALIGNMENT_GRID_CHANGED."""
+        state = HexDocumentState()
+        events, cb = _make_collector()
+        state.register_callback(cb)
+
+        state.notify_alignment_grid_changed(16)
+
+        assert len(events) == 1
+        assert events[0][0] == HexDocumentEvent.ALIGNMENT_GRID_CHANGED
+
+    def test_notify_alignment_grid_changed_event_data(self) -> None:
+        """ALIGNMENT_GRID_CHANGED event data contains the correct size."""
+        state = HexDocumentState()
+        events, cb = _make_collector()
+        state.register_callback(cb)
+
+        state.notify_alignment_grid_changed(16)
+
+        assert events[0][1]["size"] == 16
+
+    def test_notify_alignment_grid_changed_zero_disables_grid(self) -> None:
+        """ALIGNMENT_GRID_CHANGED with size=0 is delivered and records size=0."""
+        state = HexDocumentState()
+        events, cb = _make_collector()
+        state.register_callback(cb)
+
+        state.notify_alignment_grid_changed(0)
+
+        assert len(events) == 1
+        assert events[0][0] == HexDocumentEvent.ALIGNMENT_GRID_CHANGED
+        assert events[0][1]["size"] == 0
+
+    def test_notify_color_mode_changed_fires_event(self) -> None:
+        """notify_color_mode_changed fires COLOR_MODE_CHANGED."""
+        state = HexDocumentState()
+        events, cb = _make_collector()
+        state.register_callback(cb)
+
+        state.notify_color_mode_changed("entropy")
+
+        assert len(events) == 1
+        assert events[0][0] == HexDocumentEvent.COLOR_MODE_CHANGED
+
+    def test_notify_color_mode_changed_event_data(self) -> None:
+        """COLOR_MODE_CHANGED event data contains the correct mode string."""
+        state = HexDocumentState()
+        events, cb = _make_collector()
+        state.register_callback(cb)
+
+        state.notify_color_mode_changed("entropy")
+
+        assert events[0][1]["mode"] == "entropy"
+
+    def test_notify_color_mode_changed_none_mode(self) -> None:
+        """COLOR_MODE_CHANGED is delivered with mode='none' (color mapping disabled)."""
+        state = HexDocumentState()
+        events, cb = _make_collector()
+        state.register_callback(cb)
+
+        state.notify_color_mode_changed("none")
+
+        assert len(events) == 1
+        assert events[0][1]["mode"] == "none"
 
 
 def _trigger_document_opened(s: HexDocumentState) -> None:

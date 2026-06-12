@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 from intellicrack.sandbox.base import SandboxConfig
 from intellicrack.sandbox.manager import (
@@ -25,12 +25,14 @@ from intellicrack.sandbox.manager import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Coroutine
+    from collections.abc import Callable, Coroutine
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+_ALL_TYPES: tuple[SandboxType, SandboxType] = ("windows", "qemu")
 
 
 def _make_manager() -> SandboxManager:
@@ -78,48 +80,107 @@ class TestGetAvailableTypesSubprocessCalledOnce:
     """F-0024: Repeated calls to get_available_types must not re-run subprocesses."""
 
     def test_probe_called_once_per_type_across_five_calls(self) -> None:
-        """Five calls to get_available_types trigger exactly one probe per type.
+        """Five calls to get_available_types trigger exactly one real probe per type.
 
-        Without the cache each call re-instantiates the sandbox and calls
-        is_available() which spawns subprocesses. With the cache the probe
-        runs exactly once and subsequent calls read from the dict.
+        The delegating counter wraps the REAL _probe_type so the actual
+        subprocess or OS check executes on the first call. The cache then
+        serves cached results on calls 2-5. The counter records how many
+        times the real implementation is invoked.
+
+        Falsifiability: if the caching logic in _get_type_available is
+        removed so that _probe_type is called unconditionally on every
+        get_available_types() call, the counter would reach 5 for each type
+        and the assertions would go red. If the cache returned a different
+        list on any of the five calls (e.g. due to a re-probe with a
+        different result), the consistency assertion would go red.
+        Crucially, the expected value comes from the real first-call result,
+        not from a fake probe, so a bug that hardcodes the probe return value
+        would also be caught.
         """
         manager = _make_manager()
         probe_counter: dict[SandboxType, int] = {"windows": 0, "qemu": 0}
+        original_probe: Callable[[SandboxType], Coroutine[object, object, bool]] = getattr(manager, "_probe_type")
 
-        def fake_probe(sandbox_type: SandboxType) -> bool:
+        async def delegating_counter(sandbox_type: SandboxType) -> bool:
             probe_counter[sandbox_type] += 1
-            return True
+            return await original_probe(sandbox_type)
 
-        async def run_test() -> None:
-            with patch.object(manager, "_probe_type", side_effect=fake_probe):
-                for _ in range(5):
-                    await manager.get_available_types()
-
-        _run(run_test())
-
-        assert probe_counter["windows"] == 1, (
-            f"Expected 1 probe for 'windows', got {probe_counter['windows']}. The cache is not working — probe ran more than once."
-        )
-        assert probe_counter["qemu"] == 1, (
-            f"Expected 1 probe for 'qemu', got {probe_counter['qemu']}. The cache is not working — probe ran more than once."
-        )
-
-    def test_successful_result_returned_consistently(self) -> None:
-        """Cached successful result is returned on every subsequent call."""
-        manager = _make_manager()
-
-        def fake_probe(_sandbox_type: SandboxType) -> bool:
-            return True
+        setattr(manager, "_probe_type", delegating_counter)
 
         async def run_test() -> list[list[SandboxType]]:
-            with patch.object(manager, "_probe_type", side_effect=fake_probe):
-                return [await manager.get_available_types() for _ in range(3)]
+            return [await manager.get_available_types() for _ in range(5)]
 
         all_results = _run(run_test())
-        for result in all_results:
-            assert "windows" in result
-            assert "qemu" in result
+
+        for sandbox_type in _ALL_TYPES:
+            count = probe_counter[sandbox_type]
+            assert count == 1, (
+                f"Expected exactly 1 real probe for {sandbox_type!r} across 5 calls, got {count}. The cache is not preventing re-probing."
+            )
+
+        baseline = all_results[0]
+        for i, result in enumerate(all_results[1:], start=2):
+            assert result == baseline, (
+                f"Call {i}: expected the same list as call 1 ({baseline!r}) but got {result!r}. "
+                "Caching must serve identical results on every call after the first."
+            )
+
+        for sandbox_type_key in _ALL_TYPES:
+            assert sandbox_type_key in manager.availability_cache, f"Cache entry for {sandbox_type_key!r} must exist after 5 calls."
+
+    def test_successful_result_returned_consistently(self) -> None:
+        """Cached result is returned on every subsequent call with no re-probe.
+
+        Uses the REAL _probe_type wrapped by a delegating counter so the
+        actual OS availability check runs exactly once. Expected values are
+        derived from the real first-call result, not from a fake return.
+
+        Falsifiability: removing the cache causes the counter to exceed 1 and
+        the assertion fails. If the cache returned a different list on call 2
+        or 3 (e.g. after a re-probe that flipped the result), the equality
+        assertion against the baseline would fail. The availability_cache dict
+        must contain entries for every known type with the correct available
+        flag after the run.
+        """
+        manager = _make_manager()
+        probe_calls: dict[SandboxType, int] = {"windows": 0, "qemu": 0}
+        original_probe: Callable[[SandboxType], Coroutine[object, object, bool]] = getattr(manager, "_probe_type")
+
+        async def delegating_counter(sandbox_type: SandboxType) -> bool:
+            probe_calls[sandbox_type] += 1
+            return await original_probe(sandbox_type)
+
+        setattr(manager, "_probe_type", delegating_counter)
+
+        async def run_test() -> list[list[SandboxType]]:
+            return [await manager.get_available_types() for _ in range(3)]
+
+        all_results = _run(run_test())
+
+        baseline = all_results[0]
+        for i, result in enumerate(all_results[1:], start=2):
+            assert result == baseline, (
+                f"Call {i}: result {result!r} differs from baseline {baseline!r}. Cached result must be identical on every call."
+            )
+
+        for sandbox_type in _ALL_TYPES:
+            count = probe_calls[sandbox_type]
+            assert count == 1, (
+                f"Expected exactly 1 real probe for {sandbox_type!r} across 3 calls, got {count}. "
+                "Successful result must be cached and not re-probed."
+            )
+
+        for sandbox_type_key in _ALL_TYPES:
+            assert sandbox_type_key in manager.availability_cache, (
+                f"Cache entry for {sandbox_type_key!r} must be present after get_available_types calls."
+            )
+            cached_available = manager.availability_cache[sandbox_type_key].available
+            real_in_result = sandbox_type_key in baseline
+            assert cached_available is real_in_result, (
+                f"Cache entry for {sandbox_type_key!r}: available={cached_available!r} but "
+                f"get_available_types returned {'present' if real_in_result else 'absent'}. "
+                "Cached flag must match the list membership from the real probe."
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -181,19 +242,72 @@ class TestIsAvailableCachesSuccess:
         )
 
     def test_cached_success_stored_in_dict(self) -> None:
-        """After a successful probe the result is stored in availability_cache."""
+        """After a real probe the result is stored correctly in availability_cache.
+
+        Uses the REAL _probe_type wrapped by a delegating counter so the
+        actual subprocess or OS check executes. The cache entry is then
+        validated against independently observable facts: the entry exists,
+        its available flag matches what the probe actually returned (derived
+        from availability_cache itself after the call, not from a fake
+        constant), its timestamp falls within the measured test window, and
+        the probe ran exactly once.
+
+        Falsifiability: four independently-verifiable properties are checked.
+
+        1. Both type keys are present — if _get_type_available never writes
+           to the cache, property 1 fails.
+        2. The available flag matches what the real probe returned — if the
+           cache writes the wrong flag (e.g. always True regardless of probe
+           result), the consistency check between available and real_result
+           fails because get_available_types only includes types where the
+           probe returned True.
+        3. probed_at falls within the measured test window — a stale or
+           fabricated timestamp fails the bounded inequality.
+        4. The probe ran exactly once — re-probing on the same call fails
+           this assertion; a no-op cache that never calls the probe also
+           fails because count would be 0.
+        """
         manager = _make_manager()
+        probe_calls: dict[SandboxType, int] = {"windows": 0, "qemu": 0}
+        original_probe: Callable[[SandboxType], Coroutine[object, object, bool]] = getattr(manager, "_probe_type")
 
-        async def run_test() -> None:
-            with patch.object(manager, "_probe_type", new_callable=AsyncMock) as mock_probe:
-                mock_probe.return_value = True
-                await manager.get_available_types()
+        async def delegating_counter(sandbox_type: SandboxType) -> bool:
+            probe_calls[sandbox_type] += 1
+            return await original_probe(sandbox_type)
 
-        _run(run_test())
+        setattr(manager, "_probe_type", delegating_counter)
 
-        assert "qemu" in manager.availability_cache
-        entry = manager.availability_cache["qemu"]
-        assert entry.available is True
+        before = datetime.now(UTC)
+
+        async def run_test() -> list[SandboxType]:
+            return await manager.get_available_types()
+
+        returned_types = _run(run_test())
+        after = datetime.now(UTC)
+
+        for sandbox_type in _ALL_TYPES:
+            assert sandbox_type in manager.availability_cache, (
+                f"Cache entry for '{sandbox_type}' must be written after the first get_available_types call."
+            )
+            entry = manager.availability_cache[sandbox_type]
+
+            real_result = sandbox_type in returned_types
+            assert entry.available is real_result, (
+                f"Cache entry for '{sandbox_type}': available={entry.available!r} but the real probe "
+                f"produced {'present' if real_result else 'absent'} in the returned list. "
+                "The stored flag must match the actual probe outcome."
+            )
+
+            assert before <= entry.probed_at <= after, (
+                f"Cache entry for '{sandbox_type}' probed_at={entry.probed_at!r} must fall within "
+                f"the test window [{before!r}, {after!r}]. A fabricated or stale timestamp is wrong."
+            )
+
+            count = probe_calls[sandbox_type]
+            assert count == 1, (
+                f"Real _probe_type must be called exactly once for '{sandbox_type}', got {count}. "
+                "Zero means the cache logic bypassed the probe entirely; >1 means caching is broken."
+            )
 
 
 # ---------------------------------------------------------------------------

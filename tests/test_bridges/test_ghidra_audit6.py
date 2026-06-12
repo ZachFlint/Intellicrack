@@ -98,6 +98,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, cast
 from unittest.mock import patch
 
 import pytest
+import structlog
 
 import intellicrack.bridges.ghidra as ghidra_mod
 from intellicrack.bridges.ghidra import GhidraBridge, prepare_remote_script
@@ -1126,40 +1127,53 @@ def test_create_bridge_script_oserror_raises_toolerror(
     fresh_bridge: GhidraBridge,
     tmp_path: Path,
 ) -> None:
-    """F-0009: ``OSError`` during write must surface as ``ToolError``.
+    """F-0009: ``OSError`` during write must surface as a chained ``ToolError``.
 
-    The patch intercepts only ``write_text`` calls on the bridge script
-    file (``start_bridge.py``) by checking ``self.name`` before raising,
-    so every other ``write_text`` call (e.g. for tmp dir creation) still
-    uses the real implementation. The error message in the raised
-    ``ToolError`` must contain both the fixed prefix and the original
-    ``OSError`` text so callers can diagnose the cause.
+    Induces a real ``PermissionError`` (a concrete ``OSError`` subclass) by
+    pre-creating the bridge script target path as a directory before the bridge
+    attempts to write to it.  The OS rejects opening a directory for writing,
+    so no ``Path.write_text`` monkey-patching is required.
+
+    Only ``intellicrack.bridges.ghidra.tempfile.mkdtemp`` is redirected so the
+    bridge lands in the prepared directory; the actual write operation executes
+    the genuine ``Path.write_text`` implementation against the real filesystem,
+    which raises ``PermissionError`` from the OS.
+
+    The test validates three properties that would each independently regress if
+    the production catch-and-wrap block were removed or incorrectly rewritten:
+
+    1. A ``ToolError`` is raised (not the raw ``OSError``).
+    2. The message matches the canonical format
+       ``"Failed to write ghidra bridge script <path>: <os-error>"``.
+    3. The ``__cause__`` is a genuine ``PermissionError`` (i.e. the exception is
+       properly chained with ``raise ... from exc``).
 
     Args:
         fresh_bridge: Bridge fixture.
         tmp_path: Pytest temp dir.
     """
-    real_write_text = Path.write_text
-    failure_msg = "simulated disk full"
+    script_name: str = cast("str", getattr(ghidra_mod, "_BRIDGE_SCRIPT_NAME"))
 
-    def _failing_write_text(self: Path, data: str, *, encoding: str | None = None, errors: str | None = None) -> int:
-        if self.name == "start_bridge.py":
-            raise OSError(failure_msg)
-        return real_write_text(self, data, encoding=encoding, errors=errors)
+    prepared_dir = tmp_path / "intellicrack_ghidra_blocked"
+    prepared_dir.mkdir()
+    blocker: Path = prepared_dir / script_name
+    blocker.mkdir()
 
     with (
-        patch("tempfile.gettempdir", return_value=str(tmp_path)),
-        patch.object(Path, "write_text", _failing_write_text),
+        patch("intellicrack.bridges.ghidra.tempfile.mkdtemp", return_value=str(prepared_dir)),
         pytest.raises(ToolError) as exc_info,
     ):
         fresh_bridge.create_bridge_script()
 
-    raised_msg = str(exc_info.value)
-    assert "Failed to write ghidra bridge script" in raised_msg, (
-        f"Expected 'Failed to write ghidra bridge script' in error, got: {raised_msg!r}"
+    raised: ToolError = exc_info.value
+    raised_msg: str = str(raised)
+
+    assert "Failed to write ghidra bridge script" in raised_msg, f"Expected canonical prefix in ToolError message, got: {raised_msg!r}"
+    assert script_name in raised_msg, f"Expected script filename {script_name!r} in ToolError message, got: {raised_msg!r}"
+    assert "Permission denied" in raised_msg, f"Expected OS error text 'Permission denied' in ToolError message, got: {raised_msg!r}"
+    assert isinstance(raised.__cause__, PermissionError), (
+        f"Expected ToolError.__cause__ to be PermissionError, got: {type(raised.__cause__)!r}"
     )
-    assert failure_msg in raised_msg, f"Expected original OSError text {failure_msg!r} in ToolError, got: {raised_msg!r}"
-    assert "start_bridge.py" in raised_msg, f"Expected script path 'start_bridge.py' in error message, got: {raised_msg!r}"
 
 
 def test_create_bridge_script_unique_tempdirs(fresh_bridge: GhidraBridge) -> None:
@@ -1757,20 +1771,20 @@ async def test_analyze_blocks_on_wait_for_analysis(
 @pytest.mark.asyncio
 async def test_analyze_logs_distinguish_phases(
     bridge: GhidraBridge,
-    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """F-0027: analyze emits ``started`` and ``complete`` log records.
+    """F-0027: analyze emits ``started`` and ``complete`` structured log records.
 
     Args:
         bridge: Connected bridge fixture.
-        capsys: pytest stdout/stderr capture fixture.
     """
-    await bridge.analyze()
-    captured = capsys.readouterr()
-    output = captured.out + captured.err
-    assert "ghidra_analysis_started" in output
-    assert "ghidra_analysis_complete" in output
-    assert "wait_for_analysis_returned" in output
+    with structlog.testing.capture_logs() as captured:
+        await bridge.analyze()
+    events = [record["event"] for record in captured]
+    assert "ghidra_analysis_started" in events
+    assert "ghidra_analysis_complete" in events
+    complete = next(record for record in captured if record["event"] == "ghidra_analysis_complete")
+    assert complete["phase"] == "wait_for_analysis_returned"
+    assert complete["bridge"] == "ghidra"
 
 
 @pytest.mark.asyncio

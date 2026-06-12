@@ -84,6 +84,14 @@ def test_initial_load_emits_all_lines(qtbot: QtBot, tmp_path: Path) -> None:
 def test_initial_load_caps_at_max_bytes(qtbot: QtBot, tmp_path: Path) -> None:
     """Verify the initial load only reads the tail of large files.
 
+    Each padding line is 690 bytes.  With 50 padding entries the file
+    is 34 860 bytes total.  The 2 048-byte tail window starts at byte
+    32 812, which lands inside padding entry 48 (0-indexed).
+    ``skip_first_line=True`` drops that partial entry, leaving exactly
+    two full padding entries followed by ``recent_1`` and ``recent_2``.
+    Any bug that widens the cap (or disables the tail logic entirely)
+    must turn this test red.
+
     Args:
         qtbot: pytest-qt bot fixture.
         tmp_path: Pytest temporary directory.
@@ -105,8 +113,14 @@ def test_initial_load_caps_at_max_bytes(qtbot: QtBot, tmp_path: Path) -> None:
     reader.stop()
 
     events = [r["event"] for r in received]
-    assert "recent_2" in events
-    assert events.count("padding") < 50
+    # The 2 048-byte tail window fits exactly 2 full padding entries plus
+    # recent_1 and recent_2.  Both recent entries must appear (a regression
+    # that skips the first post-cap line would be invisible otherwise), and
+    # the tail must end with that exact suffix in the correct order.
+    assert events.count("padding") == 2, f"Expected exactly 2 padding entries in the tail, got {events.count('padding')}: {events}"
+    assert "recent_1" in events, f"recent_1 missing from tail events: {events}"
+    assert "recent_2" in events, f"recent_2 missing from tail events: {events}"
+    assert events[-4:] == ["padding", "padding", "recent_1", "recent_2"], f"Tail suffix mismatch: {events[-4:]}"
 
 
 def test_live_append_via_watcher(qtbot: QtBot, tmp_path: Path) -> None:
@@ -138,7 +152,14 @@ def test_live_append_via_watcher(qtbot: QtBot, tmp_path: Path) -> None:
 
 
 def test_rotation_emits_synthetic_notice(qtbot: QtBot, tmp_path: Path) -> None:
-    """Verify a truncation/rotation produces the synthetic notice + new rows.
+    """Verify truncation/rotation produces the synthetic notice before new rows.
+
+    The spec requires that the ``log_file_rotated`` synthetic record visually
+    brackets the restart: it must appear in the event stream *before* any
+    post-rotation records.  ``_read_chunk`` emits the notice synchronously
+    (before reading the new content), so a correct implementation always
+    delivers the notice first.  If a regression reorders or merges these
+    operations the ordering assertion turns this test red.
 
     Args:
         qtbot: pytest-qt bot fixture.
@@ -161,8 +182,13 @@ def test_rotation_emits_synthetic_notice(qtbot: QtBot, tmp_path: Path) -> None:
     reader.stop()
 
     events = [r["event"] for r in received]
-    assert "log_file_rotated" in events
-    assert "after_rotation" in events
+    assert "log_file_rotated" in events, f"Rotation notice absent from events: {events}"
+    assert "after_rotation" in events, f"Post-rotation record absent from events: {events}"
+    rotation_idx = events.index("log_file_rotated")
+    after_idx = events.index("after_rotation")
+    assert rotation_idx < after_idx, (
+        f"Rotation notice (index {rotation_idx}) must precede post-rotation record (index {after_idx}); full event list: {events}"
+    )
 
 
 def test_corrupt_lines_skipped(qtbot: QtBot, tmp_path: Path) -> None:

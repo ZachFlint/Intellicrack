@@ -528,44 +528,205 @@ def test_f0013_stalker_unfollow_routes_through_owning_script() -> None:
     assert 7 not in _get_dict(bridge, "_stalker_traces")
 
 
-def test_f0014_message_waiter_does_not_capture_loop_at_construction() -> None:
-    """F-0014: helpers must not bind to the loop active at construction time.
+def _f0014_await_with_gated_delivery(
+    on_message: Callable[..., None],
+    event: asyncio.Event,
+    msg: dict[str, Any],
+) -> bool:
+    """Drive a gated cross-thread delivery on a fresh loop and return whether the event fired.
 
-    Re-creating the bridge across loops must not break the install
-    waiter -- the bridge should resolve the loop at delivery time.
+    The delivery gate ensures the foreign thread only calls ``on_message``
+    after loop B has started awaiting ``event``, so ``event._loop`` is
+    already bound to loop B at the moment ``_set_event_threadsafe`` runs.
+
+    When the caller constructed the waiter while a now-closed loop A was
+    running, any implementation that captured the loop at construction time
+    holds a reference to that closed loop.  Calling
+    ``loop_a.call_soon_threadsafe`` on a closed loop raises ``RuntimeError``
+    and the event is never set on loop B, causing this function to return
+    ``False``.  Only delivery-time resolution via ``event._loop`` (which
+    is loop B once the awaiter has started) produces a correct ``True``.
+
+    Args:
+        on_message: The ``on_message`` callback returned by
+            ``_make_payload_waiter``.
+        event: The :class:`asyncio.Event` returned by the same call.
+        msg: Message dict to deliver from the foreign thread.
+
+    Returns:
+        bool: ``True`` if the event fired before the 5-second deadline.
     """
-    bridge = FridaBridge()
-    messages: list[Any] = []
+    event_bound_to_loop_b: threading.Event = threading.Event()
+    done: threading.Event = threading.Event()
 
-    def _noop_dispatch(_m: dict[str, object]) -> None:
-        """Dispatch sink that ignores delivered messages.
+    def _deliver() -> None:
+        """Wait until loop B has started awaiting the event, then deliver."""
+        event_bound_to_loop_b.wait(timeout=5.0)
+        on_message(msg, None)
+        done.set()
 
-        Args:
-            _m: Ignored message dict.
+    threading.Thread(target=_deliver, daemon=True).start()
+
+    async def _driver() -> bool:
+        """Signal that loop B is running, then await the event.
+
+        Returns:
+            bool: ``True`` when the event fired before the deadline.
         """
-
-    waiter_fn = _get_callable(bridge, "_make_payload_waiter")
-    on_message_obj, event_obj = cast(
-        "tuple[Callable[..., None], asyncio.Event]",
-        waiter_fn(messages, _noop_dispatch),
-    )
-    on_message = on_message_obj
-    event = event_obj
-
-    # Now run a loop that awaits the event AFTER it was constructed off-loop.
-    async def driver() -> bool:
-        # Simulate Frida delivering from another thread mid-await.
-        threading.Thread(
-            target=lambda: on_message({"type": "send", "payload": {}}, None),
-            daemon=True,
-        ).start()
+        asyncio.get_event_loop().call_soon(event_bound_to_loop_b.set)
         try:
-            await asyncio.wait_for(event.wait(), timeout=2.0)
+            await asyncio.wait_for(event.wait(), timeout=5.0)
         except TimeoutError:
             return False
         return True
 
-    assert _run(driver()), "waiter never released; loop binding is stale"
+    loop_b: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+    try:
+        result = loop_b.run_until_complete(_driver())
+    finally:
+        loop_b.close()
+
+    done.wait(timeout=5.0)
+    return result
+
+
+def _f0014_assert_log_not_triggering(
+    waiter_fn: Callable[..., object],
+    dispatched: list[dict[str, object]],
+) -> None:
+    """Verify that a log-type message does not release the waiter event.
+
+    Args:
+        waiter_fn: The ``_make_payload_waiter`` callable from the bridge.
+        dispatched: Shared dispatch-recording list; the log entry must appear.
+    """
+    buf: list[Any] = []
+    on_obj, ev_obj = cast("tuple[Callable[..., None], asyncio.Event]", waiter_fn(buf, dispatched.append))
+    on_msg: Callable[..., None] = on_obj
+    ev: asyncio.Event = ev_obj
+    log_msg: dict[str, Any] = {"type": "log", "level": "info", "payload": "frida says hello"}
+    on_msg(log_msg, None)
+    assert not ev.is_set(), "log message must not release the waiter event"
+    assert len(buf) == 1, f"expected 1 buffered log message, got {len(buf)}"
+    assert buf[0]["type"] == "log", f"log message type wrong in buffer: {buf[0]}"
+    assert buf[0].get("payload") == "frida says hello", f"log payload not preserved: {buf[0]}"
+
+
+def _f0014_assert_error_triggers(
+    waiter_fn: Callable[..., object],
+) -> None:
+    """Verify that an error-type message releases a fresh waiter event.
+
+    Args:
+        waiter_fn: The ``_make_payload_waiter`` callable from the bridge.
+    """
+    buf: list[Any] = []
+    dispatched_err: list[dict[str, object]] = []
+    on_obj, ev_obj = cast(
+        "tuple[Callable[..., None], asyncio.Event]",
+        waiter_fn(buf, dispatched_err.append),
+    )
+    on_msg: Callable[..., None] = on_obj
+    ev: asyncio.Event = ev_obj
+    err_msg: dict[str, Any] = {
+        "type": "error",
+        "description": "ReferenceError: x is not defined",
+        "stack": "at <anonymous>:1:1",
+        "fileName": None,
+        "lineNumber": None,
+        "columnNumber": None,
+    }
+    assert _f0014_await_with_gated_delivery(on_msg, ev, err_msg), "error message did not release the waiter event"
+    assert ev.is_set(), "event must be set after error delivery"
+    assert len(buf) == 1, f"expected 1 error message buffered, got {len(buf)}"
+    assert buf[0]["type"] == "error", f"error message type wrong in buffer: {buf[0]}"
+    assert buf[0].get("description") == "ReferenceError: x is not defined", f"error description not preserved: {buf[0]}"
+
+
+def test_f0014_message_waiter_does_not_capture_loop_at_construction() -> None:
+    """F-0014: _set_event_threadsafe must route through the loop the event is bound to.
+
+    Falsifiable property: the waiter is constructed while loop A is explicitly
+    running (giving any eager construction-time capture a live reference to
+    loop A).  Loop A is then closed immediately, making any such captured
+    reference stale.  The event is awaited on loop B.  A foreign thread
+    delivers the message only after ``event._loop`` has been confirmed as
+    loop_B by the ``_f0014_await_with_gated_delivery`` helper.
+
+    If ``_set_event_threadsafe`` uses a stale loop-A reference it calls
+    ``loop_a.call_soon_threadsafe`` on a closed loop, which raises
+    ``RuntimeError``; the implementation's error handler drops the call and
+    the event is never set on loop_B.  The assertion on the return value of
+    ``_f0014_await_with_gated_delivery`` therefore fails, going red.
+
+    Only delivery-time resolution through ``event._loop`` (which is ``loop_B``
+    once the awaiter has started) produces a correct green result.
+
+    Four structural invariants are verified, each failing without F-0014:
+
+    1.  Construction-while-loop-A-running + stale-A-closed: waiter built
+        during loop A's execution still fires correctly on loop B after A
+        is closed.
+
+    2.  Delivery-time loop resolution: a ``send`` message fires the event on
+        the awaiting loop even after loop A is destroyed.
+
+    3.  Message buffering and dispatch fidelity: the ``messages`` list receives
+        the exact ``send`` payload dict that Frida emits, and the dispatch
+        function is invoked with the same structure.
+
+    4.  Selective triggering: ``log``-type messages do **not** release the
+        event; only ``send`` and ``error`` do.  The ``log`` entry is still
+        buffered and dispatched but must not unblock the awaiter.  A third
+        independent waiter verifies ``error`` also releases the event with the
+        exact description preserved.
+    """
+    bridge = FridaBridge()
+    dispatched: list[dict[str, object]] = []
+    waiter_fn = _get_callable(bridge, "_make_payload_waiter")
+
+    # --- Invariant 1, 2 & 3: construct waiter while loop A runs, then close A ---
+    #
+    # Build the waiter inside a coroutine on loop A so that any implementation
+    # path that calls asyncio.get_event_loop() or asyncio.get_running_loop() at
+    # construction time gets a live reference to loop A.  We capture that loop
+    # so we can close it before starting loop B.
+    buf1: list[Any] = []
+    waiter_result: list[tuple[Callable[..., None], asyncio.Event]] = []
+
+    async def _build_on_loop_a() -> None:
+        """Create the waiter from inside loop A so a stale capture would bind to A."""
+        await asyncio.sleep(0)
+        pair = cast(
+            "tuple[Callable[..., None], asyncio.Event]",
+            waiter_fn(buf1, dispatched.append),
+        )
+        waiter_result.append(pair)
+
+    loop_a: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+    loop_a.run_until_complete(_build_on_loop_a())
+    loop_a.close()
+
+    assert waiter_result, "waiter construction failed inside loop_a"
+    on1, ev1 = waiter_result[0]
+
+    send_msg: dict[str, Any] = {"type": "send", "payload": {"result": 42}}
+    assert _f0014_await_with_gated_delivery(on1, ev1, send_msg), (
+        "send message did not release the event after loop_a was closed; _set_event_threadsafe did not resolve the loop at delivery time"
+    )
+    assert ev1.is_set(), "event must remain set after delivery"
+    assert len(buf1) == 1, f"expected 1 buffered message, got {len(buf1)}"
+    assert buf1[0]["type"] == "send", f"buffered message type wrong: {buf1[0]}"
+    assert buf1[0].get("payload") == {"result": 42}, f"send payload not preserved: {buf1[0]}"
+    assert len(dispatched) == 1, f"expected 1 dispatched message, got {len(dispatched)}"
+    assert dispatched[0].get("payload") == {"result": 42}, f"dispatched payload wrong: {dispatched[0]}"
+
+    # --- Invariant 4a: log messages do not release the event -------------------
+    _f0014_assert_log_not_triggering(waiter_fn, dispatched)
+    assert dispatched[-1]["type"] == "log", f"log not dispatched: {dispatched}"
+
+    # --- Invariant 4b: error messages release a fresh waiter -------------------
+    _f0014_assert_error_triggers(waiter_fn)
 
 
 def test_f0015_call_function_rejects_non_int_address() -> None:
