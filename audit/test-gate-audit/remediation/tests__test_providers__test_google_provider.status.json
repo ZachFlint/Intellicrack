@@ -1,0 +1,111 @@
+{
+ "file": "tests/test_providers/test_google_provider.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_returns_model_info_instances",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_valid_id",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_valid_name",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_correct_provider",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_positive_context_window",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_boolean_capabilities",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_models_are_gemini_models",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+   "severity": "MEDIUM",
+   "category": "N8 consolidation replacement \u2014 structural well-formedness across all model fields",
+   "action": "hardened",
+   "oracle": "Per-field type invariants (str, int, bool) and non-empty/positive constraints; bridge filter must exclude non-Gemini IDs (assert 'gemini' in model.id.lower()); provider tag must equal ProviderName.GOOGLE for all returned models.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/providers/google.py",
+    "mutation": "if \"gemini\" not in name_lower or \"embedding\" in name_lower: -> if \"embedding\" in name_lower:",
+    "covering_test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+    "expected_baseline": "green",
+    "green_status": "skip",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  },
+  {
+   "test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_includes_known_production_model_with_capabilities",
+   "severity": "MEDIUM",
+   "category": "N8 value-gate addition \u2014 capability profile of a documented production model",
+   "action": "hardened",
+   "oracle": "Google's publicly-documented capability profile for gemini-2.5-flash: supports generateContent (tools+vision) and streamGenerateContent (streaming), input_token_limit=1048576. The bridge derives supports_tools, supports_vision, supports_streaming from supported_generation_methods and context_window from input_token_limit in _fetch_and_sort_models (google.py lines 251-266); the test asserts the derived values match the documented profile, forming an independent oracle.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/providers/google.py",
+    "mutation": "supports_tools = \"generateContent\" in gen_methods -> supports_tools = False",
+    "covering_test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_includes_known_production_model_with_capabilities",
+    "expected_baseline": "green",
+    "green_status": "skip",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 2
+}

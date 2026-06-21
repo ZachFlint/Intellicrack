@@ -464,6 +464,14 @@ def test_f0012_compile_typescript_reuses_compiler_instance(
 ) -> None:
     """F-0012: ``frida.Compiler`` must be reused, not instantiated per call.
 
+    The instance-count assertion is the genuine gate for the F-0012 fix:
+    two successive ``compile_typescript`` calls must share one compiler
+    instance.  The build log asserts that each call drove the compiler
+    with a distinct entrypoint path (different temporary files for
+    different source strings), proving the bridge did not short-circuit
+    by returning a cached output rather than actually calling ``build``
+    twice.
+
     Args:
         monkeypatch: Pytest fixture used to swap ``frida.Compiler`` with a
             recording fake for the duration of the test.
@@ -480,29 +488,67 @@ def test_f0012_compile_typescript_reuses_compiler_instance(
             instance_counter[0] += 1
 
         def build(self, entrypoint: str, **_kw: object) -> str:
-            """Record the entrypoint and return a fixed JS payload.
+            """Record the entrypoint and return a payload derived from the entrypoint.
 
             Args:
                 entrypoint: TypeScript entrypoint path.
                 **_kw: Ignored options.
 
             Returns:
-                str: Fixed compiled JS.
+                str: JS payload embedding the entrypoint so callers can
+                    distinguish which source was compiled.
             """
             build_log.append(entrypoint)
-            return "compiled-js"
+            return f"// compiled from {entrypoint}\nconsole.log(1);"
 
     monkeypatch.setattr(frida, "Compiler", _FakeCompiler)
 
     async def driver() -> tuple[str, str]:
-        r1 = await bridge.compile_typescript("console.log(1);")
-        r2 = await bridge.compile_typescript("console.log(2);")
+        r1 = await bridge.compile_typescript("const a: number = 1; console.log(a);")
+        r2 = await bridge.compile_typescript("const b: number = 2; console.log(b);")
         return r1, r2
 
-    out = _run(driver())
-    assert out == ("compiled-js", "compiled-js")
+    r1, r2 = _run(driver())
+
     assert instance_counter[0] == 1, f"compiler instances created: {instance_counter[0]}"
-    assert len(build_log) == 2
+    assert len(build_log) == 2, f"expected 2 build calls, got {len(build_log)}"
+
+    assert build_log[0] != build_log[1], (
+        f"both compile calls used the same entrypoint path, "
+        f"suggesting the second call was short-circuited: {build_log}"
+    )
+
+    assert build_log[0] in r1, (
+        f"first result does not embed its own entrypoint path; "
+        f"entrypoint={build_log[0]!r}, result={r1!r}"
+    )
+    assert build_log[1] in r2, (
+        f"second result does not embed its own entrypoint path; "
+        f"entrypoint={build_log[1]!r}, result={r2!r}"
+    )
+
+
+def test_f0012_compile_typescript_real_output_is_js() -> None:
+    """F-0012: compile_typescript drives the real frida.Compiler and returns valid JS.
+
+    Uses the genuine ``frida.Compiler`` (no monkeypatching) to compile a
+    trivial TypeScript snippet and asserts the output is non-empty JavaScript
+    containing the ``console.log`` call present in the source.  This gates
+    that the bridge still performs real compilation, not just instance reuse
+    of a broken compiler.
+    """
+    bridge = FridaBridge()
+    ts_source = "const x: number = 42; console.log(x);"
+
+    async def driver() -> str:
+        return await bridge.compile_typescript(ts_source)
+
+    result = _run(driver())
+    assert isinstance(result, str), f"expected str output, got {type(result)}"
+    assert len(result) > 0, "compiled output must be non-empty"
+    assert "console.log" in result, (
+        f"compiled JS does not contain the expected console.log call; output={result!r}"
+    )
 
 
 def test_f0013_stalker_unfollow_routes_through_owning_script() -> None:

@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_hexcore_e2e/test_bridge_error_handling.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_hexcore_e2e/test_bridge_error_handling.py::TestWriteBytesErrors::test_write_bytes_beyond_length_on_loaded_doc",
+   "severity": "HIGH",
+   "category": "HIGH \u2014 accepts-both-outcomes (N7)",
+   "action": "hardened",
+   "oracle": "_build_pe_binary() in conftest.py is the independent oracle: it always writes b'MZ' at offset 0 of the PE fixture, so read_bytes(0, 2) must return '4D 5A' both before and after the out-of-range write attempt. The file size from pe_binary.stat().st_size provides a second independent oracle for the document-length assertion.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "        _logger.info(\"bytes_write_started\", offset=hex(offset), length=len(data))\n        self.document.write_bytes(offset, data) ->         _logger.info(\"bytes_write_started\", offset=hex(offset), length=len(data))\n        self.document.write_bytes(0, data)",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_error_handling.py::TestWriteBytesErrors::test_write_bytes_beyond_length_on_loaded_doc",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

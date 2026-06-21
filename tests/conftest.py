@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, cast
 
 import httpx
 import pytest
+import structlog
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials, ProviderName
@@ -176,6 +177,29 @@ def process_per_test_orphan_killer(request: pytest.FixtureRequest) -> Generator[
                 leaked_pids=leaked,
                 test_id=node.nodeid,
             )
+
+
+@pytest.fixture(autouse=True)
+def reset_structlog_configuration() -> Generator[None]:
+    """Reset structlog to its unconfigured defaults around every test.
+
+    ``intellicrack.core.logging`` configures structlog with
+    ``cache_logger_on_first_use=True``. Once any test triggers that
+    configuration, the cached bound loggers bypass
+    :func:`structlog.testing.capture_logs`, so a later test's log-capturing
+    assertions silently capture nothing and fail depending on execution order.
+    Resetting before and after each test clears both the configuration and the
+    first-use cache, keeping ``capture_logs`` deterministic regardless of the
+    order in which tests run.
+
+    Yields:
+        None: Yields control to the test.
+    """
+    structlog.reset_defaults()
+    try:
+        yield
+    finally:
+        structlog.reset_defaults()
 
 
 @pytest.fixture(scope="session")

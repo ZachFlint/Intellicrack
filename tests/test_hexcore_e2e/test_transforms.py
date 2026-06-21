@@ -18,46 +18,105 @@ if TYPE_CHECKING:
     from intellicrack_hexcore import HexDocument
 
 
+_EXPECTED_TRANSFORM_COUNT: int = 23
+
+_EXPECTED_TRANSFORMS: list[tuple[str, str, str]] = [
+    ("xor_single", "xor", "XOR with single byte key"),
+    ("xor_repeating", "xor", "XOR with repeating multi-byte key"),
+    ("xor_rolling", "xor", "XOR with incrementing key"),
+    ("rot_n", "cipher", "Caesar/ROT-N cipher on ASCII letters"),
+    ("aes_ecb_decrypt", "cipher", "AES ECB mode decryption"),
+    ("aes_ecb_encrypt", "cipher", "AES ECB mode encryption"),
+    ("base64_encode", "encoding", "Base64 encode"),
+    ("base64_decode", "encoding", "Base64 decode"),
+    ("zlib_inflate", "compression", "Decompress zlib/deflate data"),
+    ("zlib_deflate", "compression", "Compress with zlib/deflate"),
+    ("bit_shift_left", "bitops", "Shift each byte left by N bits"),
+    ("bit_shift_right", "bitops", "Shift each byte right by N bits"),
+    ("bit_rotate_left", "bitops", "Rotate each byte left by N bits"),
+    ("bit_rotate_right", "bitops", "Rotate each byte right by N bits"),
+    ("bit_invert", "bitops", "Bitwise NOT each byte"),
+    ("byte_reverse", "byteops", "Reverse byte order"),
+    ("byte_swap_16", "byteops", "Swap endianness of 16-bit words"),
+    ("byte_swap_32", "byteops", "Swap endianness of 32-bit words"),
+    ("byte_swap_64", "byteops", "Swap endianness of 64-bit words"),
+    ("remove_nulls", "byteops", "Remove all null bytes"),
+    ("mask_and", "mask", "AND each byte with repeating pattern"),
+    ("mask_or", "mask", "OR each byte with repeating pattern"),
+    ("mask_xor", "mask", "XOR each byte with repeating pattern"),
+]
+
+
 class TestListTransforms:
     """Tests covering the list_transforms() enumeration API."""
 
     def test_list_transforms_returns_nonempty_list(self, sample_doc_from_bytes: HexDocument) -> None:
-        """Verify that list_transforms() returns at least one entry.
+        """Verify that list_transforms() returns the exact expected number of entries.
+
+        The oracle is the static ``TRANSFORM_LIST`` array in the Rust source
+        (``src/intellicrack-hexcore/src/transforms.rs``), which defines 23 named
+        transforms across six categories.  Any addition or removal of a transform
+        in the native registry will change the count and fail this gate.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
         transforms: list[tuple[str, str, str]] = sample_doc_from_bytes.list_transforms()
         assert isinstance(transforms, list)
-        assert transforms
+        assert len(transforms) == _EXPECTED_TRANSFORM_COUNT, (
+            f"expected {_EXPECTED_TRANSFORM_COUNT} transforms, got {len(transforms)}: {transforms}"
+        )
+        names: list[str] = [entry[0] for entry in transforms]
+        for expected_name, _, _ in _EXPECTED_TRANSFORMS:
+            assert expected_name in names, (
+                f"expected transform {expected_name!r} is missing from the registry; got {names}"
+            )
 
     def test_list_transforms_each_entry_is_three_tuple(self, sample_doc_from_bytes: HexDocument) -> None:
-        """Verify that every entry returned by list_transforms() is a 3-tuple of strings.
+        """Verify that every entry has the exact name, category, and description from the oracle.
+
+        The oracle is ``_EXPECTED_TRANSFORMS`` which mirrors the ``TRANSFORM_LIST``
+        constant in ``transforms.rs``.  Any field mismatch—wrong category, wrong
+        description, or reordered entries—will fail this gate.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
         transforms: list[tuple[str, str, str]] = sample_doc_from_bytes.list_transforms()
-        for entry in transforms:
-            assert isinstance(entry, tuple)
-            assert len(entry) == 3
-            t_name: str
-            t_category: str
-            t_description: str
-            t_name, t_category, t_description = entry
-            assert isinstance(t_name, str)
-            assert isinstance(t_category, str)
-            assert isinstance(t_description, str)
+        by_name: dict[str, tuple[str, str, str]] = {entry[0]: entry for entry in transforms}
+        for expected_name, expected_category, expected_description in _EXPECTED_TRANSFORMS:
+            assert expected_name in by_name, (
+                f"transform {expected_name!r} missing from registry"
+            )
+            actual_name, actual_category, actual_description = by_name[expected_name]
+            assert actual_name == expected_name, (
+                f"name mismatch: {actual_name!r} != {expected_name!r}"
+            )
+            assert actual_category == expected_category, (
+                f"category for {expected_name!r}: {actual_category!r} != {expected_category!r}"
+            )
+            assert actual_description == expected_description, (
+                f"description for {expected_name!r}: {actual_description!r} != {expected_description!r}"
+            )
 
     def test_list_transforms_names_are_nonempty_strings(self, sample_doc_from_bytes: HexDocument) -> None:
-        """Verify that all transform names in the list are non-empty strings.
+        """Verify that the registry exposes the exact set of known transform names.
+
+        Rather than checking only that names are non-empty, this gate asserts the
+        complete set of names exactly matches the oracle derived from the Rust source.
+        A renamed, removed, or added transform will fail this gate.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
         transforms: list[tuple[str, str, str]] = sample_doc_from_bytes.list_transforms()
-        names = [entry[0] for entry in transforms]
-        assert all(isinstance(n, str) and len(n) > 0 for n in names)
+        actual_names: set[str] = {entry[0] for entry in transforms}
+        expected_names: set[str] = {name for name, _, _ in _EXPECTED_TRANSFORMS}
+        extra: set[str] = actual_names - expected_names
+        missing: set[str] = expected_names - actual_names
+        assert actual_names == expected_names, (
+            f"transform name set mismatch; extra={extra!r}, missing={missing!r}"
+        )
 
     def test_list_transforms_contains_base64_encode(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that the base64_encode transform is present in the list.

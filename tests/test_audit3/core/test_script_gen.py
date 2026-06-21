@@ -708,16 +708,6 @@ def test_script_created_at_is_tz_aware() -> None:
     assert delta.total_seconds() >= 0
 
 
-# --- F-0014: reload_script no longer carries apologetic comments ---
-
-
-def test_reload_script_source_has_no_apology_comments() -> None:
-    """Source of reload_script must not contain the apologetic prose."""
-    source = inspect.getsource(ScriptManager.reload_script)
-    assert "tricky" not in source.lower()
-    assert "we assume" not in source.lower()
-
-
 # --- ScriptManager() default scripts_dir ---
 
 

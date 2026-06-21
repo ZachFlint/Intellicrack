@@ -1,0 +1,48 @@
+{
+ "file": "tests/test_hexcore_e2e/test_bridge_alignment_color.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestAlignmentGrid::test_set_alignment_grid (renamed test_set_alignment_grid_persists_and_notifies)",
+   "severity": "CRITICAL",
+   "category": "N4 tautological",
+   "action": "hardened",
+   "oracle": "Independent HexDocumentState observer event payload (ALIGNMENT_GRID_CHANGED -> {\"size\": 4096}) decoded separately from the stored field, cross-checked against the public get_alignment_grid() readback.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "self._alignment_grid_size = size -> self._alignment_grid_size = 0",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestAlignmentGrid::test_set_alignment_grid_persists_and_notifies",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestColorMode::test_set_color_mode (renamed test_set_color_mode_persists_and_notifies)",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only",
+   "action": "hardened",
+   "oracle": "Independent HexDocumentState observer event payload (COLOR_MODE_CHANGED -> {\"mode\": \"entropy\"}) decoded separately from the stored field, cross-checked against the public get_color_mode() readback.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "self._color_mode = mode -> self._color_mode = \"none\"",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestColorMode::test_set_color_mode_persists_and_notifies",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 2
+}

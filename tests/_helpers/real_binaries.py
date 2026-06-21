@@ -149,10 +149,7 @@ def _ensure_windows(target_description: str) -> None:
         FixtureUnavailableError: If the current platform is not Windows.
     """
     if sys.platform != "win32":
-        message = (
-            f"{target_description} requires a Windows system "
-            f"(current platform: {sys.platform})"
-        )
+        message = f"{target_description} requires a Windows system (current platform: {sys.platform})"
         raise FixtureUnavailableError(message)
 
 
@@ -195,10 +192,7 @@ def resolve_real_pe_dlls() -> list[Path]:
         except FixtureUnavailableError:
             continue
     if not resolved:
-        message = (
-            "No real PE DLLs could be resolved from "
-            f"{_SYSTEM32} (tried {', '.join(_PE_DLL_NAMES)})"
-        )
+        message = f"No real PE DLLs could be resolved from {_SYSTEM32} (tried {', '.join(_PE_DLL_NAMES)})"
         raise FixtureUnavailableError(message)
     return resolved
 
@@ -224,10 +218,7 @@ def resolve_real_pe_exe() -> Path:
             return _require_pe(candidate)
         except FixtureUnavailableError:
             continue
-    message = (
-        "No real PE executable could be resolved from "
-        f"{_SYSTEM32} (tried {', '.join(_PE_EXE_NAMES)})"
-    )
+    message = f"No real PE executable could be resolved from {_SYSTEM32} (tried {', '.join(_PE_EXE_NAMES)})"
     raise FixtureUnavailableError(message)
 
 
@@ -251,10 +242,7 @@ def _load_corpus_binary(name: str, magics: tuple[bytes, ...], fmt: str) -> Path:
     max_len = max(len(magic) for magic in magics)
     header = _read_magic(path, max_len)
     if not any(header.startswith(magic) for magic in magics):
-        message = (
-            f"Committed {fmt} fixture {path} has unexpected magic {header!r}; "
-            "fixture may be corrupt"
-        )
+        message = f"Committed {fmt} fixture {path} has unexpected magic {header!r}; fixture may be corrupt"
         raise FixtureUnavailableError(message)
     return path
 

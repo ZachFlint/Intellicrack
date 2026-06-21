@@ -206,12 +206,7 @@ class TestDigramMatrix:
         dialog.render(pixmap)
 
         image = pixmap.toImage()
-        non_black = sum(
-            1
-            for y in range(0, height, 8)
-            for x in range(0, width, 8)
-            if QColor(image.pixel(x, y)) != QColor(0, 0, 0)
-        )
+        non_black = sum(1 for y in range(0, height, 8) for x in range(0, width, 8) if QColor(image.pixel(x, y)) != QColor(0, 0, 0))
         assert non_black > 0, "the real digram heatmap must produce colored cells"
 
 

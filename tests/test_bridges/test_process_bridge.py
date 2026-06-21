@@ -3309,25 +3309,50 @@ class TestF0010InjectDllUnicode:
 class TestF0010InjectDllExitCodeChecked:
     """F-0010: inject_dll must check GetExitCodeThread and raise on failure."""
 
-    async def test_inject_dll_kernel32_raises_on_failure(self, attached_bridge: ProcessBridge) -> None:
+    async def test_inject_dll_kernel32_raises_on_failure(self, process_bridge: ProcessBridge) -> None:
         """Verify injecting a path that LoadLibraryW cannot load raises ToolError.
 
-        Uses a path to a text file (not a valid DLL) so that LoadLibraryW
-        succeeds at the kernel level but returns NULL (exit_code == 0),
-        which should cause inject_dll to raise ToolError.
+        Injects into a dedicated spawned child process rather than the test
+        runner, so the loader state under test is isolated from every other test
+        in the run. The payload is a real file holding an invalid PE image, so
+        LoadLibraryW executes inside the target but returns NULL (remote thread
+        exit code 0), which inject_dll must surface as a ToolError.
 
         Args:
-            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as f:
-            f.write(b"NOT_A_REAL_DLL\x00")
-            bad_dll = f.name
+        with tempfile.NamedTemporaryFile(suffix=".dll", delete=False) as handle:
+            handle.write(b"NOT_A_REAL_DLL\x00")
+            bad_dll = handle.name
 
+        proc = await asyncio.create_subprocess_exec(sys.executable, "-c", "import time; time.sleep(30)")
+        try:
+            await self._assert_inject_dll_raises_in_target(process_bridge, proc, bad_dll)
+        finally:
+            proc.terminate()
+            await proc.wait()
+            await asyncio.to_thread(_unlink_suppress, bad_dll)
+
+    @staticmethod
+    async def _assert_inject_dll_raises_in_target(
+        process_bridge: ProcessBridge,
+        proc: asyncio.subprocess.Process,
+        bad_dll: str,
+    ) -> None:
+        """Open the spawned target and assert inject_dll raises ToolError for it.
+
+        Args:
+            process_bridge: ProcessBridge used to attach to and inject into the target.
+            proc: Subprocess representing the injection target.
+            bad_dll: Path to the invalid DLL payload.
+        """
+        await asyncio.sleep(0.5)
+        await process_bridge.open_process(proc.pid, "all")
         try:
             with pytest.raises(ToolError):
-                await attached_bridge.inject_dll(bad_dll)
+                await process_bridge.inject_dll(bad_dll)
         finally:
-            await asyncio.to_thread(_unlink_suppress, bad_dll)
+            await process_bridge.close()
 
 
 class TestF0009ContextWow64:

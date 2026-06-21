@@ -1,1 +1,48 @@
-{"unitId":"U21-a02","findings":[{"ref":"tests/test_ui/log_viewer/test_realcov_15_window_real_logs.py:118 - test_window_level_filter_over_real_records","severity":"High","status":"FIXED","oracle":"Emits four real structlog events (INFO/WARNING/ERROR/CRITICAL) through the real setup_logging pipeline, opens LogViewerWindow on the on-disk log, waits via qtbot.waitUntil until all four are backfilled (deterministic sync point), then calls set_min_level(logging.ERROR). Asserts exact equality visible_events == {'real_error_only','real_critical_only'} and visible_levels == {'ERROR','CRITICAL'}, explicit 'real_info_only'/'real_warning_only' NOT in visible_events, and exact proxy.rowCount() == 2. invalidateFilter() is synchronous so no timing race. Breaking the proxy filter (showing all rows) makes rowCount()==4 and the set/membership asserts fail."},{"ref":"tests/test_ui/test_hxd_panel.py:23-251 - TestFindHxdExecutable and TestHxDPanelConstruction","severity":"High","status":"FIXED","oracle":"Detection: plants a real HxD.exe (byte-copy of sys.executable) in a temp dir set as PATH; asserts find_hxd_executable() == planted, is_file(), and read_bytes() byte-identical; separate cases assert None when absent, None when a directory is named HxD.exe, and None off-win32. Construction: status_label asserted exactly 'HxD: not found' or f'HxD: {detected}' against an independent find_hxd_executable() call, and _update_status_label() renders exact planted path / not-found sentinel. Breaking the PATH probe or label formatter flips these exact-string/exact-path asserts red."},{"ref":"tests/test_ui/test_hxd_panel.py:119-154 - TestHxDPanelFileLoadingPreconditions","severity":"Medium","status":"FIXED","oracle":"Replaced no-op guarded tests with unconditional TestHxDPanelFileLoading driving a real QProcess (editor=sys.executable opening a real sleeper .py). load_file(None-editor) asserts False and process is None; load_file(missing file) asserts False, process None, current_file unchanged; load_file(real file) asserts True, process.state()==Running, processId()>0, current_file==target; str-path coerced to Path and launches identically. Breaking the precondition checks or QProcess launch flips True/False and process-state asserts red."},{"ref":"tests/test_ui/test_hxd_panel.py:157-213 - TestHxDPanelLifecycle","severity":"Medium","status":"FIXED","oracle":"Spawns a real child process then exercises teardown: terminate_existing() and stop_tool() assert process is None, embedded_container is None, and the real process.state()==NotRunning (genuine kill, not a state check on an idle panel). tool_closed/tool_started recorded into a list and asserted == [True] (emitted exactly once) combined with process-None state. double-terminate after a real load and cleanup() on a running process both assert NotRunning. Breaking _terminate_existing (skip terminate/kill) leaves state()==Running and fails the asserts."},{"ref":"tests/test_ui/test_hxd_panel.py:216-251 - TestHxDPanelToolbar","severity":"Low","status":"FIXED","oracle":"Drives real state transitions on embed_info_label: from initial 'HxD not launched', load_file(real file) asserts label == f'HxD: {target.name}', then stop_tool() asserts label back to 'HxD not launched'. Removed smoke/type-only checks. Breaking the label-update in _launch_hxd_with_file or stop_tool flips these exact-string asserts red."}],"filesModified":["tests/test_ui/log_viewer/test_realcov_15_window_real_logs.py","tests/test_ui/test_hxd_panel.py"],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"25 passed in 40.26s"}
+{
+  "unitId": "U21-a02",
+  "findings": [
+    {
+      "ref": "tests/test_ui/log_viewer/test_realcov_15_window_real_logs.py:118 - test_window_level_filter_over_real_records",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Emits four real structlog events (INFO/WARNING/ERROR/CRITICAL) through the real setup_logging pipeline, opens LogViewerWindow on the on-disk log, waits via qtbot.waitUntil until all four are backfilled (deterministic sync point), then calls set_min_level(logging.ERROR). Asserts exact equality visible_events == {'real_error_only','real_critical_only'} and visible_levels == {'ERROR','CRITICAL'}, explicit 'real_info_only'/'real_warning_only' NOT in visible_events, and exact proxy.rowCount() == 2. invalidateFilter() is synchronous so no timing race. Breaking the proxy filter (showing all rows) makes rowCount()==4 and the set/membership asserts fail."
+    },
+    {
+      "ref": "tests/test_ui/test_hxd_panel.py:23-251 - TestFindHxdExecutable and TestHxDPanelConstruction",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Detection: plants a real HxD.exe (byte-copy of sys.executable) in a temp dir set as PATH; asserts find_hxd_executable() == planted, is_file(), and read_bytes() byte-identical; separate cases assert None when absent, None when a directory is named HxD.exe, and None off-win32. Construction: status_label asserted exactly 'HxD: not found' or f'HxD: {detected}' against an independent find_hxd_executable() call, and _update_status_label() renders exact planted path / not-found sentinel. Breaking the PATH probe or label formatter flips these exact-string/exact-path asserts red."
+    },
+    {
+      "ref": "tests/test_ui/test_hxd_panel.py:119-154 - TestHxDPanelFileLoadingPreconditions",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Replaced no-op guarded tests with unconditional TestHxDPanelFileLoading driving a real QProcess (editor=sys.executable opening a real sleeper .py). load_file(None-editor) asserts False and process is None; load_file(missing file) asserts False, process None, current_file unchanged; load_file(real file) asserts True, process.state()==Running, processId()>0, current_file==target; str-path coerced to Path and launches identically. Breaking the precondition checks or QProcess launch flips True/False and process-state asserts red."
+    },
+    {
+      "ref": "tests/test_ui/test_hxd_panel.py:157-213 - TestHxDPanelLifecycle",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Spawns a real child process then exercises teardown: terminate_existing() and stop_tool() assert process is None, embedded_container is None, and the real process.state()==NotRunning (genuine kill, not a state check on an idle panel). tool_closed/tool_started recorded into a list and asserted == [True] (emitted exactly once) combined with process-None state. double-terminate after a real load and cleanup() on a running process both assert NotRunning. Breaking _terminate_existing (skip terminate/kill) leaves state()==Running and fails the asserts."
+    },
+    {
+      "ref": "tests/test_ui/test_hxd_panel.py:216-251 - TestHxDPanelToolbar",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Drives real state transitions on embed_info_label: from initial 'HxD not launched', load_file(real file) asserts label == f'HxD: {target.name}', then stop_tool() asserts label back to 'HxD not launched'. Removed smoke/type-only checks. Breaking the label-update in _launch_hxd_with_file or stop_tool flips these exact-string asserts red."
+    }
+  ],
+  "filesModified": [
+    "tests/test_ui/log_viewer/test_realcov_15_window_real_logs.py",
+    "tests/test_ui/test_hxd_panel.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "25 passed in 40.26s"
+}

@@ -15,7 +15,9 @@ Tests validate:
 
 from __future__ import annotations
 
+import ctypes
 import sys
+from ctypes import wintypes
 from typing import TYPE_CHECKING, cast
 
 from intellicrack.core import elevation
@@ -52,9 +54,25 @@ class TestPlatformHelpers:
         """``is_windows`` reflects ``sys.platform``."""
         assert elevation.is_windows() is (sys.platform == "win32")
 
-    def test_is_elevated_returns_bool(self) -> None:
-        """``is_elevated`` returns a concrete bool without raising."""
-        assert isinstance(elevation.is_elevated(), bool)
+    def test_is_elevated_matches_oracle(self) -> None:
+        """``is_elevated`` agrees with an independent system call.
+
+        On Windows the independent oracle queries ``shell32.IsUserAnAdmin``
+        directly through a fresh ``ctypes.WinDLL`` binding that is separate
+        from the one constructed inside :func:`intellicrack.core.elevation.is_elevated`.
+        On every other platform ``is_elevated`` must unconditionally return
+        ``False`` because the Windows API is absent.
+        """
+        result: bool = elevation.is_elevated()
+        if sys.platform == "win32":
+            shell32 = ctypes.WinDLL("shell32", use_last_error=True)
+            is_admin_fn = shell32.IsUserAnAdmin
+            is_admin_fn.restype = wintypes.BOOL
+            is_admin_fn.argtypes = []
+            expected: bool = bool(is_admin_fn())
+            assert result is expected
+        else:
+            assert result is False
 
 
 class TestBuildRelaunchCommand:

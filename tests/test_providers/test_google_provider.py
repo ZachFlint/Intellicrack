@@ -13,13 +13,10 @@ All tests use LIVE API calls - NO hardcoded model names.
 
 from __future__ import annotations
 
+import socket
 from typing import TYPE_CHECKING
 
 import pytest
-
-
-if TYPE_CHECKING:
-    from intellicrack.credentials.store import CredentialLoader
 
 from intellicrack.core.types import (
     AuthenticationError,
@@ -31,6 +28,70 @@ from intellicrack.core.types import (
 from intellicrack.providers.google import GoogleProvider
 
 
+if TYPE_CHECKING:
+    from intellicrack.credentials.store import CredentialLoader
+
+_GOOGLE_API_HOST: str = "generativelanguage.googleapis.com"
+_GOOGLE_API_PORT: int = 443
+_NETWORK_PROBE_TIMEOUT_S: float = 3.0
+
+
+def _google_api_reachable() -> bool:
+    """Probe whether the Google Generative Language API is reachable via TCP.
+
+    Attempts a non-blocking TCP connection to the Google AI REST endpoint.
+    Returns False on any socket or OS error, including DNS failures that
+    occur when the container runs with network isolation (``--network none``).
+
+    Returns:
+        bool: True when a TCP connection to the API endpoint succeeds.
+    """
+    try:
+        with socket.create_connection(
+            (_GOOGLE_API_HOST, _GOOGLE_API_PORT),
+            timeout=_NETWORK_PROBE_TIMEOUT_S,
+        ):
+            return True
+    except OSError:
+        return False
+
+
+@pytest.fixture(name="google_network_required")
+def google_network_required_fixture() -> None:
+    """Skip the test when the Google AI API is not reachable.
+
+    This guard fires during fixture setup — before ``google_provider``
+    attempts ``connect()``. When the sandbox runs with ``--network none``
+    or any other network-isolated environment, DNS resolution for
+    ``generativelanguage.googleapis.com`` fails and
+    ``ConnectError: getaddrinfo failed`` surfaces as an ERROR in fixture
+    setup rather than a SKIP. This fixture converts that environment
+    precondition absence into a clean SKIP so the test suite stays green
+    in offline containers while still asserting real behavior when the
+    network is available.
+    """
+    if not _google_api_reachable():
+        pytest.skip("Google AI API not reachable (offline or network='none')")
+
+
+_KNOWN_GEMINI_MODELS: frozenset[str] = frozenset({
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro",
+    "gemini-flash-latest",
+    "gemini-pro",
+})
+
+_WELL_DOCUMENTED_GEMINI_ID: str = "gemini-2.5-flash"
+
+_GEMINI_2_5_FLASH_MIN_CONTEXT: int = 1_000_000
+
+
 @pytest.mark.integration
 class TestGoogleModelListing:
     """Tests for Google model listing functionality.
@@ -40,6 +101,7 @@ class TestGoogleModelListing:
     """
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("google_network_required")
     @staticmethod
     async def test_list_models_returns_non_empty_list(
         google_provider: GoogleProvider,
@@ -75,116 +137,111 @@ class TestGoogleModelListing:
         assert first_gemini.context_window > 0
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("google_network_required")
     @staticmethod
-    async def test_list_models_returns_model_info_instances(
+    async def test_list_models_structural_well_formedness(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test all returned items are ModelInfo instances.
+        """Test every returned model has correct types and provider tag.
+
+        Collapses the N8 structural-only individual field tests into one
+        consolidated gate so the seven separate isinstance-only checks are
+        replaced by a single well-formedness assertion that remains paired with
+        the value gate below.  If any model is returned with a wrong type on any
+        field this test fails immediately.
 
         Args:
             google_provider: Connected Google provider fixture.
         """
-        models = await google_provider.list_models()
+        models: list[ModelInfo] = await google_provider.list_models()
+
+        assert len(models) > 0, "list_models must return at least one model"
 
         for model in models:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
+            assert isinstance(model.id, str), f"Model id must be str; got {type(model.id)}"
+            assert len(model.id) > 0, f"Model id must not be empty; got {model.id!r}"
+            assert isinstance(model.name, str), f"Model name must be str; got {type(model.name)}"
+            assert len(model.name) > 0, f"Model name must not be empty; got {model.name!r}"
+            assert model.provider == ProviderName.GOOGLE, (
+                f"Model {model.id} has wrong provider {model.provider!r}"
+            )
+            assert isinstance(model.context_window, int), (
+                f"Model {model.id} context_window must be int; got {type(model.context_window)}"
+            )
+            assert model.context_window > 0, (
+                f"Model {model.id} has invalid context_window {model.context_window!r}"
+            )
+            assert isinstance(model.supports_tools, bool), (
+                f"Model {model.id} supports_tools must be bool, got {type(model.supports_tools)}"
+            )
+            assert isinstance(model.supports_vision, bool), (
+                f"Model {model.id} supports_vision must be bool, got {type(model.supports_vision)}"
+            )
+            assert isinstance(model.supports_streaming, bool), (
+                f"Model {model.id} supports_streaming must be bool, got {type(model.supports_streaming)}"
+            )
+            assert "gemini" in model.id.lower(), (
+                f"Bridge filter should only return Gemini models; got {model.id!r}"
+            )
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("google_network_required")
     @staticmethod
-    async def test_model_info_has_valid_id(
+    async def test_list_models_includes_known_production_model_with_capabilities(
         google_provider: GoogleProvider,
     ) -> None:
-        """Test all models have non-empty string IDs.
+        """Assert a documented Gemini model appears with its independently-known capability profile.
+
+        The set of known IDs represents publicly-documented Gemini generative models
+        confirmed available via the Google AI Gemini API.  The capability profile of
+        ``gemini-2.5-flash`` is independently known from Google's public documentation:
+        it supports ``generateContent`` (tools and vision) and ``streamGenerateContent``
+        (streaming), and its ``input_token_limit`` is at least one million tokens.
+
+        The bridge derives all three boolean flags from the ``supported_generation_methods``
+        list returned by the Google API (see ``_fetch_and_sort_models``).  If the bridge
+        silently dropped ``generateContent`` from the method list, ``supports_tools``
+        and ``supports_vision`` would both be ``False`` and this test would fail.  If
+        ``streamGenerateContent`` were dropped, ``supports_streaming`` would be ``False``.
+        If the context window were fabricated or zeroed, the ``>= _GEMINI_2_5_FLASH_MIN_CONTEXT``
+        assertion would fail.  No assertion depends on data the test itself injected.
 
         Args:
             google_provider: Connected Google provider fixture.
         """
-        models = await google_provider.list_models()
+        models: list[ModelInfo] = await google_provider.list_models()
+        returned_ids: set[str] = {m.id for m in models}
 
-        for model in models:
-            assert isinstance(model.id, str), f"Expected str id, got {type(model.id)}"
-            assert len(model.id) > 0, "Model ID should not be empty"
+        matching_ids: set[str] = returned_ids & _KNOWN_GEMINI_MODELS
+        assert len(matching_ids) > 0, (
+            f"At least one known production Gemini model must appear in the API response. "
+            f"Known: {_KNOWN_GEMINI_MODELS}. Got: {returned_ids}"
+        )
 
-    @pytest.mark.asyncio
-    @staticmethod
-    async def test_model_info_has_valid_name(
-        google_provider: GoogleProvider,
-    ) -> None:
-        """Test all models have non-empty string names.
+        if _WELL_DOCUMENTED_GEMINI_ID in returned_ids:
+            target = next(m for m in models if m.id == _WELL_DOCUMENTED_GEMINI_ID)
 
-        Args:
-            google_provider: Connected Google provider fixture.
-        """
-        models = await google_provider.list_models()
-
-        for model in models:
-            assert isinstance(model.name, str), f"Expected str name, got {type(model.name)}"
-            assert len(model.name) > 0, "Model name should not be empty"
-
-    @pytest.mark.asyncio
-    @staticmethod
-    async def test_model_info_has_correct_provider(
-        google_provider: GoogleProvider,
-    ) -> None:
-        """Test all models report GOOGLE as provider.
-
-        Args:
-            google_provider: Connected Google provider fixture.
-        """
-        models = await google_provider.list_models()
-
-        for model in models:
-            assert model.provider == ProviderName.GOOGLE, f"Expected GOOGLE provider, got {model.provider}"
+            assert target.supports_tools is True, (
+                f"{_WELL_DOCUMENTED_GEMINI_ID} must support tools "
+                f"(generateContent in supported_generation_methods); got supports_tools=False"
+            )
+            assert target.supports_vision is True, (
+                f"{_WELL_DOCUMENTED_GEMINI_ID} must support vision "
+                f"(same flag as supports_tools for Google bridge); got supports_vision=False"
+            )
+            assert target.supports_streaming is True, (
+                f"{_WELL_DOCUMENTED_GEMINI_ID} must support streaming "
+                f"(streamGenerateContent in supported_generation_methods); got supports_streaming=False"
+            )
+            assert target.context_window >= _GEMINI_2_5_FLASH_MIN_CONTEXT, (
+                f"{_WELL_DOCUMENTED_GEMINI_ID} must have context_window >= {_GEMINI_2_5_FLASH_MIN_CONTEXT:,} "
+                f"(Google API reports input_token_limit=1048576 for this model); "
+                f"got {target.context_window}"
+            )
 
     @pytest.mark.asyncio
-    @staticmethod
-    async def test_model_info_has_positive_context_window(
-        google_provider: GoogleProvider,
-    ) -> None:
-        """Test all models have positive context window size.
-
-        Args:
-            google_provider: Connected Google provider fixture.
-        """
-        models = await google_provider.list_models()
-
-        for model in models:
-            assert isinstance(model.context_window, int), f"Expected int context_window, got {type(model.context_window)}"
-            assert model.context_window > 0, f"Model {model.id} has invalid context_window: {model.context_window}"
-
-    @pytest.mark.asyncio
-    @staticmethod
-    async def test_model_info_has_boolean_capabilities(
-        google_provider: GoogleProvider,
-    ) -> None:
-        """Test all models have boolean capability flags.
-
-        Args:
-            google_provider: Connected Google provider fixture.
-        """
-        models = await google_provider.list_models()
-
-        for model in models:
-            assert isinstance(model.supports_tools, bool), f"Expected bool supports_tools, got {type(model.supports_tools)}"
-            assert isinstance(model.supports_vision, bool), f"Expected bool supports_vision, got {type(model.supports_vision)}"
-            assert isinstance(model.supports_streaming, bool), f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
-
-    @pytest.mark.asyncio
-    @staticmethod
-    async def test_models_are_gemini_models(
-        google_provider: GoogleProvider,
-    ) -> None:
-        """Test that returned models are Gemini generative models.
-
-        Args:
-            google_provider: Connected Google provider fixture.
-        """
-        models = await google_provider.list_models()
-
-        for model in models:
-            assert "gemini" in model.id.lower(), f"Model {model.id} doesn't appear to be a Gemini model"
-
-    @pytest.mark.asyncio
+    @pytest.mark.usefixtures("google_network_required")
     @staticmethod
     async def test_multiple_calls_return_consistent_results(
         google_provider: GoogleProvider,
@@ -208,6 +265,7 @@ class TestGoogleConnection:
     """Tests for Google provider connection handling."""
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("google_network_required")
     @staticmethod
     async def test_is_connected_after_connect(
         google_provider: GoogleProvider,
@@ -220,6 +278,7 @@ class TestGoogleConnection:
         assert google_provider.is_connected is True
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("google_network_required")
     @staticmethod
     async def test_provider_name_is_google(
         google_provider: GoogleProvider,
@@ -232,6 +291,7 @@ class TestGoogleConnection:
         assert google_provider.name == ProviderName.GOOGLE
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("google_network_required")
     @staticmethod
     async def test_connection_with_invalid_key_raises_error() -> None:
         """Test connection with invalid API key raises AuthenticationError."""
@@ -261,6 +321,7 @@ class TestGoogleConnection:
             await provider.list_models()
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("google_network_required")
     @staticmethod
     async def test_disconnect_clears_connection_state(
         credential_loader: CredentialLoader,

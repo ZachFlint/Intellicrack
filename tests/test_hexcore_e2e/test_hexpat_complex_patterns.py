@@ -388,12 +388,21 @@ class TestTypeCasts:
     def test_cast_negative_to_signed(self, interp: HexPatInterpreter) -> None:
         """Casting a negative integer to s8 preserves the sign bit.
 
+        An s8 field reading byte 0xFF must decode as -1 (two's-complement),
+        report display_value "-1", and expose raw_bytes [0xFF].
+
         Args:
             interp: A fresh HexPatInterpreter fixture.
         """
-        data = struct.pack("b", -1) + bytes(3)
-        source = "s8 val @ 0;\n"
-        interp.execute_bytes(source, data)
+        raw_byte: int = struct.unpack("b", struct.pack("b", -1))[0]
+        data = struct.pack("b", raw_byte) + bytes(3)
+        source = "s8 val @ 0;"
+        results = interp.execute_bytes(source, data)
+        val = next(r for r in results if r["name"] == "val")
+        assert val["display_value"] == "-1"
+        assert val["raw_bytes"] == [0xFF]
+        assert val["size"] == 1
+        assert val["offset"] == 0
 
     def test_cast_int_to_bool_nonzero_is_true(self, interp: HexPatInterpreter) -> None:
         """Casting a non-zero integer to bool produces true.

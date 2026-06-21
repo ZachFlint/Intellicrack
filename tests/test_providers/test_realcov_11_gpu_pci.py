@@ -110,11 +110,7 @@ def _real_pci_gpu_pnp_ids() -> list[str]:
     """
     if not _IS_WINDOWS:
         return []
-    return [
-        gpu["pnp_device_id"]
-        for gpu in _get_windows_gpu_info()
-        if gpu.get("pnp_device_id", "").upper().startswith("PCI\\")
-    ]
+    return [gpu["pnp_device_id"] for gpu in _get_windows_gpu_info() if gpu.get("pnp_device_id", "").upper().startswith("PCI\\")]
 
 
 def _real_intel_arc_pnp_ids() -> list[str]:
@@ -128,9 +124,7 @@ def _real_intel_arc_pnp_ids() -> list[str]:
     return [
         gpu["pnp_device_id"]
         for gpu in _get_windows_gpu_info()
-        if "Intel" in gpu.get("name", "")
-        and "Arc" in gpu.get("name", "")
-        and gpu.get("pnp_device_id", "").upper().startswith("PCI\\")
+        if "Intel" in gpu.get("name", "") and "Arc" in gpu.get("name", "") and gpu.get("pnp_device_id", "").upper().startswith("PCI\\")
     ]
 
 

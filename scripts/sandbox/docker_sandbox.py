@@ -73,6 +73,7 @@ _DOCKER_DESKTOP_PATHS: tuple[Path, ...] = (
 )
 _DOCKER_DAEMON_TIMEOUT_SECONDS = 180
 _DOCKER_DAEMON_POLL_INTERVAL = 3.0
+_DOCKER_PROBE_TIMEOUT_SECONDS = 20.0
 
 _TIMESTAMP_FORMAT = "%m-%d-%Y_%H-%M"
 
@@ -192,29 +193,59 @@ def _docker_desktop_binary() -> Path | None:
     return None
 
 
-def _run_docker(args: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
+def _run_docker(
+    args: list[str],
+    *,
+    check: bool = True,
+    timeout: float | None = None,
+) -> subprocess.CompletedProcess[str]:
     """Invoke ``docker`` with a captured text result.
 
     Args:
         args: Argument list passed after the docker executable.
         check: When ``True`` raise :class:`SandboxError` on non-zero exit.
+        timeout: Optional wall-clock limit in seconds. When the CLI does not
+            return within this window the child is killed and the call is
+            treated as a failure. ``None`` waits indefinitely, which is
+            appropriate for long-running operations such as image builds.
 
     Returns:
-        subprocess.CompletedProcess[str]: The completed process object.
+        subprocess.CompletedProcess[str]: The completed process object. On
+            timeout a synthetic result with return code ``124`` and a
+            descriptive ``stderr`` is returned (when ``check`` is false).
 
     Raises:
-        SandboxError: When ``check`` is true and the process fails.
+        SandboxError: When the process fails and ``check`` is true, including
+            the timeout case.
     """
     docker = _docker_binary()
-    _LOGGER.debug("docker_cli_invoke", argv=args)
-    proc = subprocess.run(
-        [docker, *args],
-        capture_output=True,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        check=False,
-    )
+    _LOGGER.debug("docker_cli_invoke", argv=args, timeout=timeout)
+    try:
+        proc = subprocess.run(
+            [docker, *args],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        # subprocess.run already terminated the child before re-raising; we
+        # surface the timeout as a non-zero result so probes can retry instead
+        # of the caller blocking forever on a wedged daemon connection.
+        _LOGGER.warning("docker_cli_timeout", argv=args, timeout=timeout)
+        message = f"docker {' '.join(args)} timed out after {timeout:g}s"
+        if check:
+            raise SandboxError(message) from exc
+        captured = exc.stderr or exc.stdout or ""
+        stderr_text = captured.decode("utf-8", "replace") if isinstance(captured, bytes) else captured
+        return subprocess.CompletedProcess(
+            args=[docker, *args],
+            returncode=124,
+            stdout="",
+            stderr=stderr_text or message,
+        )
     if check and proc.returncode != 0:
         detail = proc.stderr.strip() or proc.stdout.strip()
         message = f"docker {' '.join(args)} failed (exit {proc.returncode}): {detail}"
@@ -229,7 +260,11 @@ def _daemon_ready() -> bool:
         bool: ``True`` when ``docker version`` exits 0, ``False`` otherwise.
     """
     try:
-        proc = _run_docker(["version", "--format", "{{.Server.Version}}"], check=False)
+        proc = _run_docker(
+            ["version", "--format", "{{.Server.Version}}"],
+            check=False,
+            timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+        )
     except SandboxError:
         return False
     return proc.returncode == 0 and bool(proc.stdout.strip())
@@ -292,7 +327,11 @@ def _ensure_windows_engine() -> None:
         SandboxError: When Docker is running the Linux engine; the sandbox
             image cannot run under the Linux engine.
     """
-    proc = _run_docker(["version", "--format", "{{.Server.Os}}"], check=False)
+    proc = _run_docker(
+        ["version", "--format", "{{.Server.Os}}"],
+        check=False,
+        timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+    )
     os_value = proc.stdout.strip().lower()
     if proc.returncode != 0:
         detail = proc.stderr.strip()
@@ -328,7 +367,11 @@ def _image_exists(tag: str) -> bool:
     Returns:
         bool: ``True`` when ``docker image inspect`` exits 0.
     """
-    proc = _run_docker(["image", "inspect", tag], check=False)
+    proc = _run_docker(
+        ["image", "inspect", tag],
+        check=False,
+        timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+    )
     return proc.returncode == 0
 
 
@@ -368,6 +411,7 @@ def build_image(tag: str, *, rebuild: bool = False) -> str:
         f"PIXI_VERSION={pixi_version}",
         "--isolation",
         "process",
+        "--force-rm",
         str(_PROJECT_ROOT),
     ]
     _LOGGER.info("sandbox_image_building", tag=tag, dockerfile=str(_DOCKERFILE), pixi_version=pixi_version)

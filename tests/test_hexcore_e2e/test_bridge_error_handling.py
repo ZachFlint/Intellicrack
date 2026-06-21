@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING
 
 import pytest
@@ -67,21 +68,29 @@ class TestWriteBytesErrors:
             _run(bridge.write_bytes(0, "AABB"))
 
     def test_write_bytes_beyond_length_on_loaded_doc(self, loaded_bridge: HexEditorBridge, pe_binary: Path) -> None:
-        """Verify write_bytes on a loaded document can attempt an out-of-range write.
+        """Verify an out-of-range write does not corrupt valid in-bounds data.
 
-        The bridge delegates to the Rust layer; this test confirms the call
-        either raises an exception or silently clips without crashing Python.
+        The bridge delegates bounds enforcement to the Rust layer, which may
+        raise or silently clip.  In either case the in-bounds MZ header bytes
+        at offset 0 must remain ``4D 5A`` and the document length must be
+        unchanged.
 
         Args:
             loaded_bridge: HexEditorBridge with a PE file already opened.
             pe_binary: Path to the PE binary fixture.
         """
-        size = pe_binary.stat().st_size
-        try:
-            result: bool = _run(loaded_bridge.write_bytes(size + 100, "FF"))
-            assert isinstance(result, bool)
-        except (RuntimeError, ValueError, OverflowError):
-            pass
+        size: int = pe_binary.stat().st_size
+        before_hex: str = _run(loaded_bridge.read_bytes(0, 2))
+        assert before_hex == "4D 5A", "fixture must start with MZ magic"
+
+        with contextlib.suppress(RuntimeError, ValueError, OverflowError):
+            _run(loaded_bridge.write_bytes(size + 100, "FF"))
+
+        after_hex: str = _run(loaded_bridge.read_bytes(0, 2))
+        assert after_hex == "4D 5A", "out-of-range write must not corrupt in-bounds bytes"
+
+        info: dict[str, object] = _run(loaded_bridge.get_document_info())
+        assert info["size"] == size, "document size must be unchanged after out-of-range write"
 
 
 class TestSearchErrors:

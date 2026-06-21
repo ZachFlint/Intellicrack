@@ -159,13 +159,22 @@ class TestExecutePatternForwardsPrintSink:
         )
 
     def test_omitting_print_sink_does_not_raise(self, loaded_bridge: HexEditorBridge) -> None:
-        """Omitting the print_sink argument must remain a valid call shape.
+        """Omitting print_sink must still return a non-empty decoded field list.
+
+        The pattern declares ``u8 __mark @ __ping()``; the no-sink path must
+        produce the same structural output as the sink path.  Asserting the
+        ``__mark`` anchor field is present gates the entire execute pipeline,
+        not merely the call shape.
 
         Args:
             loaded_bridge: Bridge fixture with a 256-byte zero document open.
         """
         fields: list[dict[str, Any]] = _run(loaded_bridge.execute_pattern(_PRINT_PATTERN))
-        assert isinstance(fields, list)
+        assert fields, "expected at least one decoded field from _PRINT_PATTERN without a sink"
+        field_names: list[str] = [str(f.get("name", "")) for f in fields]
+        assert any("__mark" in name for name in field_names), (
+            f"expected '__mark' anchor field in decoded output; got field names {field_names!r}"
+        )
 
 
 class TestExecutePatternWithOutputCapturesPrint:

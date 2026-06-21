@@ -26,7 +26,9 @@
       "oracle": "Finding cites a QFileDialog.getOpenFileName monkeypatch fixture that lives in test_templates_pattern.py, not in this file. No such fixture or test exists in test_hxd_panel_wired.py; line 465 here is the real unavailable-branch assertion (hxd_panel None, no HxD tab) driven by the unmodified finder. The flagged file-dialog-mock anti-pattern is absent here (covered under the separate test_templates_pattern.py unit)."
     }
   ],
-  "filesModified": ["tests/test_audit3/ui/test_hxd_panel_wired.py"],
+  "filesModified": [
+    "tests/test_audit3/ui/test_hxd_panel_wired.py"
+  ],
   "checks": {
     "ruff": true,
     "ruffFormat": true,

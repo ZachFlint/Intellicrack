@@ -1,0 +1,116 @@
+{
+ "file": "tests/test_audit3/core/test_xml_gen.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "test_f0011_no_importlib_import_module_for_xml_etree",
+   "severity": "MEDIUM",
+   "category": "N9",
+   "action": "hardened",
+   "oracle": "Directly-imported stdlib xml.etree.ElementTree (Element/SubElement + tostring) and a hand-computed known XML string; replaced by test_f0011_element_factory_matches_stdlib_element",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "mutation": "from xml.etree.ElementTree import Element, ElementTree, SubElement, indent, tostring -> from xml.etree.ElementTree import ElementTree as Element, ElementTree, SubElement, indent, tostring",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_element_factory_matches_stdlib_element",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "test_f0011_no_importlib_import_for_xml_etree_dotted_path",
+   "severity": "MEDIUM",
+   "category": "N9",
+   "action": "hardened",
+   "oracle": "Directly-imported stdlib SubElement on an equivalent tree; child link checked + byte-for-byte tostring equality; replaced by test_f0011_subelement_links_into_stdlib_tree",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "mutation": "from xml.etree.ElementTree import Element, ElementTree, SubElement, indent, tostring -> from xml.etree.ElementTree import Element, ElementTree, Element as SubElement, indent, tostring",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_subelement_links_into_stdlib_tree",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "test_f0011_no_dunder_import_obfuscation",
+   "severity": "MEDIUM",
+   "category": "N9",
+   "action": "hardened",
+   "oracle": "Directly-imported stdlib indent on an equivalent tree + hand-computed indented XML string; replaced by test_f0011_indent_matches_stdlib_indent",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "mutation": "from xml.etree.ElementTree import Element, ElementTree, SubElement, indent, tostring -> from xml.etree.ElementTree import Element, ElementTree, SubElement, tostring as indent, tostring",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_indent_matches_stdlib_indent",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "test_f0011_no_runtime_string_concatenation_of_xml_etree",
+   "severity": "MEDIUM",
+   "category": "N9",
+   "action": "hardened",
+   "oracle": "Directly-imported stdlib tostring for both unicode and default-bytes encodings + hand-computed known XML bytes/str; replaced by test_f0011_tostring_matches_stdlib_tostring",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "mutation": "Element, ElementTree, SubElement, indent, tostring\n -> Element, ElementTree, SubElement, indent\nfrom xml.etree.ElementTree import canonicalize as tostring\n",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_tostring_matches_stdlib_tostring",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "test_f0011_no_inline_suppression_directives",
+   "severity": "MEDIUM",
+   "category": "N9",
+   "action": "hardened",
+   "oracle": "Directly-imported stdlib ElementTree wrapper: getroot() identity + byte-for-byte tostring equality; replaced by test_f0011_elementtree_wraps_root_like_stdlib",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "mutation": "from xml.etree.ElementTree import Element, ElementTree, SubElement, indent, tostring -> from xml.etree.ElementTree import Element, Element as ElementTree, SubElement, indent, tostring",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_elementtree_wraps_root_like_stdlib",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "test_f0011_uses_direct_import_statement",
+   "severity": "MEDIUM",
+   "category": "N9",
+   "action": "hardened",
+   "oracle": "Covered behaviourally by the five stdlib-oracle gates above; the positive 'import resolved correctly' property is now proven by every byte-for-byte equality (test_f0011_element_factory_matches_stdlib_element is the primary covering gate)",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "mutation": "    \"Element\",\n    \"ElementTree\", ->     \"ElementTree\",",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_xml_gen_exports_match_dunder_all",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 6
+}

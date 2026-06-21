@@ -27,9 +27,9 @@ import contextlib
 import inspect
 import json
 import os
-import re
+import sys
 import threading
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Protocol, cast
 
 import pytest
 import pytest_asyncio
@@ -53,6 +53,26 @@ if TYPE_CHECKING:
 
 
 _FAKE_HANDLE = 0xABCDEF
+
+
+class _DwordLike(Protocol):
+    """Structural type for a ctypes ``DWORD`` exposing a mutable ``value``.
+
+    Attributes:
+        value: The integer payload of the underlying ``DWORD``.
+    """
+
+    value: int
+
+
+class _ByrefArg(Protocol):
+    """Structural type for the object returned by :func:`ctypes.byref`.
+
+    Exposes the referenced ctypes object through ``_obj`` so a fake Win32
+    callee can write the produced count back into the caller's ``DWORD``.
+    """
+
+    _obj: _DwordLike
 
 
 _default_pipe_name: Callable[[], str] = cast(
@@ -337,12 +357,76 @@ def test_share_constants_match_win32_values() -> None:
     assert FILE_SHARE_WRITE == 0x00000002
 
 
-def test_open_handle_uses_shared_read_write() -> None:
-    """``_open_handle`` passes ``FILE_SHARE_READ | FILE_SHARE_WRITE`` to ``CreateFileW`` (F-0024)."""
-    open_handle_fn: Callable[..., Any] = getattr(NamedPipeClient, "_open_handle")
-    src = inspect.getsource(open_handle_fn)
-    assert "FILE_SHARE_READ | FILE_SHARE_WRITE" in src
-    assert re.search(r"share_mode\s*=\s*0", src) is None
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="_open_handle drives the Win32 kernel32 CreateFileW entry point",
+)
+def test_open_handle_passes_shared_read_write_to_createfilew(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``_open_handle`` calls ``CreateFileW`` with ``FILE_SHARE_READ | FILE_SHARE_WRITE`` (F-0024).
+
+    Observes the real ``dwShareMode`` argument the production code passes to
+    the Win32 ``CreateFileW`` entry point rather than grepping the source. The
+    independent oracle is the Win32 ``CreateFile`` contract: the third
+    positional argument is ``dwShareMode`` and must equal ``0x3`` so concurrent
+    Intellicrack components can reconnect without an exclusive lock.
+
+    Args:
+        monkeypatch: Fixture used to swap the ``kernel32`` entry points.
+    """
+    kernel32: Any = getattr(npc_module, "kernel32")
+    captured_share_modes: list[int] = []
+
+    def fake_wait_named_pipe(_name: str, _timeout_ms: int) -> int:
+        """Report the pipe as immediately available.
+
+        Args:
+            _name: Pipe name (unused).
+            _timeout_ms: Wait timeout in milliseconds (unused).
+
+        Returns:
+            int: Non-zero to signal success.
+        """
+        return 1
+
+    def fake_create_file(
+        _name: str,
+        _access: int,
+        share_mode: int,
+        _security: object,
+        _disposition: int,
+        _flags: int,
+        _template: object,
+    ) -> int:
+        """Record ``dwShareMode`` and return the sentinel handle.
+
+        Args:
+            _name: Pipe path (unused).
+            _access: Desired access mask (unused).
+            share_mode: ``dwShareMode`` argument under test.
+            _security: Security attributes pointer (unused).
+            _disposition: Creation disposition (unused).
+            _flags: Flags and attributes (unused).
+            _template: Template handle (unused).
+
+        Returns:
+            int: Sentinel handle value.
+        """
+        captured_share_modes.append(share_mode)
+        return _FAKE_HANDLE
+
+    monkeypatch.setattr(kernel32, "WaitNamedPipeW", fake_wait_named_pipe, raising=False)
+    monkeypatch.setattr(kernel32, "CreateFileW", fake_create_file, raising=False)
+
+    config = PipeConfig(pipe_name=r"\\.\pipe\intellicrack_share_probe", connect_timeout=1.0)
+    client = NamedPipeClient(config=config)
+    open_handle: Callable[[], int] = getattr(client, "_open_handle")
+    handle = open_handle()
+
+    assert handle == _FAKE_HANDLE
+    assert captured_share_modes == [FILE_SHARE_READ | FILE_SHARE_WRITE]
+    assert captured_share_modes == [0x3]
 
 
 # ---------------------------------------------------------------------------
@@ -427,13 +511,6 @@ async def test_request_id_wraps_at_int31_max(connected_client: NamedPipeClient) 
     assert first == 0x7FFFFFFF
     assert second == 1
     assert third == 2
-
-
-def test_allocate_request_id_uses_dedicated_lock() -> None:
-    """``_allocate_request_id`` is guarded by ``_id_lock`` (F-0010)."""
-    allocate_fn: Callable[..., Any] = getattr(NamedPipeClient, "_allocate_request_id")
-    src = inspect.getsource(allocate_fn)
-    assert "self._id_lock" in src
 
 
 # ---------------------------------------------------------------------------
@@ -917,22 +994,56 @@ async def _run_timed_out_connect_reap(
 # ---------------------------------------------------------------------------
 
 
-def test_close_handle_checks_return_value() -> None:
-    """The pipe close path inspects ``CloseHandle`` and logs on failure (F-0017).
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="_close_handle drives the Win32 kernel32 CloseHandle entry point",
+)
+def test_close_handle_logs_when_closehandle_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failing ``CloseHandle`` emits ``pipe_close_handle_failed`` (F-0017).
 
-    The check accepts either an inline implementation in ``_close_handle``
-    or delegation to the shared ``_close_native_handle`` helper which
-    performs the same BOOL inspection and logs ``pipe_close_handle_failed``.
+    Drives the real close path with ``CloseHandle`` forced to return the Win32
+    failure sentinel (``BOOL`` zero) and asserts the production code inspects
+    the return value and logs ``pipe_close_handle_failed`` at warning level
+    with the offending handle. The independent oracle is the Win32 contract:
+    ``CloseHandle`` returns ``0`` on failure, and the bridge must surface that
+    rather than assuming success. A regression that ignored the BOOL return or
+    dropped the diagnostic would emit no such record and fail this test.
+
+    Args:
+        monkeypatch: Fixture used to swap the ``kernel32`` entry point.
     """
-    close_handle_fn: Callable[..., Any] = getattr(NamedPipeClient, "_close_handle")
-    native_close_fn: Callable[..., Any] = getattr(NamedPipeClient, "_close_native_handle")
-    close_handle_src = inspect.getsource(close_handle_fn)
-    native_close_src = inspect.getsource(native_close_fn)
-    combined = close_handle_src + native_close_src
-    assert "CloseHandle" in combined
-    assert re.search(r"\bok\s*=\s*kernel32\.CloseHandle", combined) is not None
-    assert "if not ok" in combined
-    assert "pipe_close_handle_failed" in combined
+    kernel32: Any = getattr(npc_module, "kernel32")
+    closed_handles: list[int] = []
+
+    def failing_close_handle(handle: int) -> int:
+        """Record the handle and report failure.
+
+        Args:
+            handle: Native handle value passed by the production code.
+
+        Returns:
+            int: Zero to signal the Win32 ``CloseHandle`` failure sentinel.
+        """
+        closed_handles.append(handle)
+        return 0
+
+    monkeypatch.setattr(kernel32, "CloseHandle", failing_close_handle, raising=False)
+
+    client = NamedPipeClient()
+    setattr(client, "_handle", _FAKE_HANDLE)
+    close_handle: Callable[[], None] = getattr(client, "_close_handle")
+
+    with capture_logs() as captured:
+        close_handle()
+
+    assert closed_handles == [_FAKE_HANDLE]
+    failures = [entry for entry in captured if str(entry.get("event", "")) == "pipe_close_handle_failed"]
+    assert len(failures) == 1, "CloseHandle failure must emit pipe_close_handle_failed"
+    record = failures[0]
+    assert record.get("log_level") == "warning"
+    assert record.get("handle") == _FAKE_HANDLE
 
 
 # ---------------------------------------------------------------------------
@@ -940,23 +1051,102 @@ def test_close_handle_checks_return_value() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_write_sync_does_not_use_info_for_routine_io() -> None:
-    """Source-level guarantee that routine I/O does not log at INFO (F-0029)."""
-    write_sync_fn: Callable[..., Any] = getattr(NamedPipeClient, "_write_sync")
-    src = inspect.getsource(write_sync_fn)
-    assert "_logger.info" not in src
-    assert "pipe_write_chunk" in src
-    assert "_logger.debug" in src
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="_write_sync drives the Win32 kernel32 WriteFile entry point",
+)
+def test_write_sync_logs_routine_chunk_at_debug_not_info(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Routine pipe writes log ``pipe_write_chunk`` at DEBUG, never INFO (F-0029).
+
+    Drives the real synchronous write loop with ``WriteFile`` forced to report
+    a full successful write, captures the structured log stream, and asserts
+    the per-chunk progress record is emitted at ``debug`` level. The oracle is
+    the F-0029 contract: high-frequency routine I/O must not pollute INFO. A
+    regression that promoted the chunk record to INFO would surface a
+    ``pipe_write_chunk`` entry with ``log_level == "info"`` and fail here.
+
+    Args:
+        monkeypatch: Fixture used to swap the ``kernel32`` entry point.
+    """
+    kernel32: Any = getattr(npc_module, "kernel32")
+    payload = b"intellicrack-routine-write"
+
+    def fake_write_file(
+        _handle: int,
+        _chunk: bytes,
+        length: int,
+        bytes_written_ref: _ByrefArg,
+        _overlapped: object,
+    ) -> int:
+        """Report a complete write of ``length`` bytes.
+
+        Args:
+            _handle: Native handle (unused).
+            _chunk: Chunk being written (unused).
+            length: Number of bytes the production code asked to write.
+            bytes_written_ref: ``byref`` target receiving the written count.
+            _overlapped: Overlapped pointer (unused).
+
+        Returns:
+            int: Non-zero to signal the Win32 ``WriteFile`` success sentinel.
+        """
+        dword_obj: _DwordLike = getattr(bytes_written_ref, "_obj")
+        dword_obj.value = length
+        return 1
+
+    monkeypatch.setattr(kernel32, "WriteFile", fake_write_file, raising=False)
+
+    client = NamedPipeClient()
+    setattr(client, "_handle", _FAKE_HANDLE)
+    write_sync: Callable[[bytes], None] = getattr(client, "_write_sync")
+
+    with capture_logs() as captured:
+        write_sync(payload)
+
+    chunk_records = [entry for entry in captured if str(entry.get("event", "")) == "pipe_write_chunk"]
+    assert chunk_records, "routine write must emit a pipe_write_chunk progress record"
+    assert all(entry.get("log_level") == "debug" for entry in chunk_records)
+    info_events = {str(entry.get("event", "")) for entry in captured if entry.get("log_level") == "info"}
+    assert info_events == set(), f"routine write must not log at INFO, saw {info_events}"
 
 
-def test_open_close_still_log_at_info() -> None:
-    """``connect``/``close`` lifecycle continues to log at INFO (F-0029)."""
-    connect_src = inspect.getsource(NamedPipeClient.connect)
-    close_src = inspect.getsource(NamedPipeClient.close)
-    assert '_logger.info("pipe_connecting"' in connect_src
-    assert '_logger.info("pipe_connected"' in connect_src
-    assert '_logger.info("pipe_disconnecting"' in close_src
-    assert '_logger.info("pipe_disconnected"' in close_src
+@pytest.mark.asyncio
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="connect() hard-requires Windows named-pipe support",
+)
+async def test_connect_close_lifecycle_logs_at_info(
+    fake_pipe: _FakePipe,
+) -> None:
+    """A real connect/close cycle logs the four lifecycle events at INFO (F-0029).
+
+    Captures the structured log stream across an actual ``connect`` followed by
+    ``close`` (driving the in-memory transport seam) and asserts the four
+    lifecycle records each appear at ``info`` level. The oracle is the F-0029
+    contract: lifecycle transitions are significant and must stay at INFO while
+    routine I/O drops to DEBUG. A regression that demoted any of these to debug
+    would leave its record missing from the INFO set and fail this test.
+
+    Args:
+        fake_pipe: Shared in-memory pipe transport.
+    """
+    config = PipeConfig(
+        pipe_name=r"\\.\pipe\intellicrack_lifecycle_probe",
+        connect_timeout=1.0,
+        io_timeout=1.0,
+    )
+    client = NamedPipeClient(config=config)
+    _bind_fake_pipe(client, fake_pipe)
+
+    with capture_logs() as captured:
+        await client.connect()
+        await client.close()
+
+    info_events = [str(entry.get("event", "")) for entry in captured if entry.get("log_level") == "info"]
+    for expected in ("pipe_connecting", "pipe_connected", "pipe_disconnecting", "pipe_disconnected"):
+        assert expected in info_events, f"{expected} must be logged at INFO"
 
 
 # ---------------------------------------------------------------------------

@@ -1,0 +1,82 @@
+{
+ "file": "tests/test_bridges/test_sandbox_bridge.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_diff_wraps_real_attribute_error_from_bad_process_activity",
+   "severity": "MEDIUM",
+   "category": "N5",
+   "action": "hardened",
+   "oracle": "Hand-decoded production control flow: analysis.diff_reports -> _extract_identity_key calls item.get(field) on each process_activity entry; a bare str has no .get, so CPython raises AttributeError with the spec-fixed message \"'str' object has no attribute 'get'\", which the bridge wraps under _ERR_DIFF_FAILED. Exception originates entirely in real src code, not a configured mock.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/analysis.py",
+    "mutation": "return \"|\".join(str(item.get(field_name, \"\")) for field_name in key_fields) -> return \"|\".join(str(item) for field_name in key_fields)",
+    "covering_test": "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_diff_wraps_real_attribute_error_from_bad_process_activity",
+    "expected_baseline": "green",
+    "green_status": "unknown",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  },
+  {
+   "test": "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_detect_behaviors_wraps_real_keyerror_from_bad_process_activity",
+   "severity": "MEDIUM",
+   "category": "N5",
+   "action": "hardened",
+   "oracle": "Hand-decoded production control flow: analysis.match_behaviors -> _match_persistence reads proc[\"name\"] for every process_activity entry; a dict lacking \"name\" raises KeyError('name') in real code, wrapped by the bridge under _ERR_BEHAVIOR_FAILED. No analysis module mocked.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/analysis.py",
+    "mutation": "proc_name = proc[\"name\"].lower() -> proc_name = proc.get(\"name\", \"\").lower()",
+    "covering_test": "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_detect_behaviors_wraps_real_keyerror_from_bad_process_activity",
+    "expected_baseline": "green",
+    "green_status": "unknown",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  },
+  {
+   "test": "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_files_target",
+   "severity": "MEDIUM",
+   "category": "N10",
+   "action": "hardened",
+   "oracle": "Independent expected value: a fixed two-record match list built by the test helper (the transport-boundary engine output). The bridge contract is verbatim passthrough with match_count = len(matches); asserted matches == expected list, ordered rule names, nested string offset 4096, and match_count == 2 > 0. The asserted data is NOT what the bridge injects -- it is the engine boundary output the bridge must forward without transformation; a drop/rename/reorder regression in the bridge's result-building trips the gate.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "mutation": "\"match_count\": len(matches), -> \"match_count\": 0,",
+    "covering_test": "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_files_target",
+    "expected_baseline": "green",
+    "green_status": "unknown",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  },
+  {
+   "test": "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_memory_target",
+   "severity": "MEDIUM",
+   "category": "N10",
+   "action": "hardened",
+   "oracle": "Same independent two-record engine-boundary oracle as test_accepts_files_target; additionally asserts the validated scan_target 'memory' is forwarded unchanged to instance.sandbox.yara_scan via assert_awaited_once_with(None, 'memory').",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "mutation": "matches = await instance.sandbox.yara_scan(rules_path, scan_target) -> matches = await instance.sandbox.yara_scan(rules_path, \"files\")",
+    "covering_test": "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_memory_target",
+    "expected_baseline": "green",
+    "green_status": "unknown",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 4
+}

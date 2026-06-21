@@ -14,6 +14,7 @@ All tests use LIVE API calls - NO hardcoded model names.
 from __future__ import annotations
 
 import pytest
+import pytest_asyncio
 
 from intellicrack.core.types import (
     ModelInfo,
@@ -22,6 +23,29 @@ from intellicrack.core.types import (
     ProviderName,
 )
 from intellicrack.providers.ollama import OllamaProvider
+
+
+@pytest_asyncio.fixture
+async def installed_models(
+    ollama_provider: OllamaProvider,
+) -> list[ModelInfo]:
+    """Fetch the installed Ollama model list; skip test when list is empty.
+
+    A non-empty model list is a precondition for the model-field tests:
+    any loop over an empty list asserts nothing. Skip rather than assert
+    a structural contract that cannot be verified without at least one
+    installed model.
+
+    Args:
+        ollama_provider: Connected Ollama provider fixture.
+
+    Returns:
+        list[ModelInfo]: Non-empty list of installed models.
+    """
+    models = await ollama_provider.list_models()
+    if not models:
+        pytest.skip("No models installed in local Ollama instance")
+    return models
 
 
 @pytest.mark.integration
@@ -49,115 +73,173 @@ class TestOllamaModelListing:
     @pytest.mark.asyncio
     @staticmethod
     async def test_list_models_returns_model_info_instances(
-        ollama_provider: OllamaProvider,
+        installed_models: list[ModelInfo],
     ) -> None:
-        """Test all returned items are ModelInfo instances.
+        """Test each returned item is a ModelInfo with non-empty id, name, and provider fields.
+
+        Gates the full parsing path in _populate_ollama_models: a return type
+        mutation (returning dict instead of ModelInfo) breaks the isinstance
+        check; a field-clear mutation (id='') breaks the non-empty id check;
+        a provider-stamp mutation (provider=None) breaks the provider check.
+        The fixture guarantees at least one model so the loop cannot be vacuous.
 
         Args:
-            ollama_provider: Connected Ollama provider fixture.
+            installed_models: Non-empty list of models from the connected provider.
         """
-        models = await ollama_provider.list_models()
-
-        for model in models:
+        for model in installed_models:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
+            assert model.id, f"ModelInfo.id must be non-empty, got empty string for {model!r}"
+            assert model.name, f"ModelInfo.name must be non-empty, got empty string for {model!r}"
+            assert model.provider == ProviderName.OLLAMA, (
+                f"Expected provider OLLAMA, got {model.provider!r}"
+            )
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_model_info_has_valid_id_when_present(
-        ollama_provider: OllamaProvider,
+        installed_models: list[ModelInfo],
     ) -> None:
-        """Test all models have non-empty string IDs.
+        """Test all models have IDs prefixed with 'local/' matching the bridge prefix rule.
+
+        The production code sets id=f"local/{model_name}" for local models.
+        This asserts both that the id is non-empty and that the local-source
+        prefix is applied faithfully, independently of the raw Ollama name.
 
         Args:
-            ollama_provider: Connected Ollama provider fixture.
+            installed_models: Non-empty list of models from the connected provider.
         """
-        models = await ollama_provider.list_models()
-
-        for model in models:
+        for model in installed_models:
             assert isinstance(model.id, str), f"Expected str id, got {type(model.id)}"
             assert len(model.id) > 0, "Model ID should not be empty"
+            assert model.id.startswith("local/"), (
+                f"Local model ID must start with 'local/' per bridge prefix rule, got {model.id!r}"
+            )
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_model_info_has_valid_name_when_present(
-        ollama_provider: OllamaProvider,
+        installed_models: list[ModelInfo],
     ) -> None:
-        """Test all models have non-empty string names.
+        """Test all models have display names prefixed with '[Local] ' matching the bridge rule.
+
+        The production code sets name=f"[Local] {model_name}" for local models.
+        This asserts both a non-empty string and that the display prefix
+        is applied, verified independently via the known prefix constant.
 
         Args:
-            ollama_provider: Connected Ollama provider fixture.
+            installed_models: Non-empty list of models from the connected provider.
         """
-        models = await ollama_provider.list_models()
-
-        for model in models:
+        for model in installed_models:
             assert isinstance(model.name, str), f"Expected str name, got {type(model.name)}"
             assert len(model.name) > 0, "Model name should not be empty"
+            assert model.name.startswith("[Local] "), (
+                f"Local model name must start with '[Local] ' per bridge prefix rule, got {model.name!r}"
+            )
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_model_info_has_correct_provider(
-        ollama_provider: OllamaProvider,
+        installed_models: list[ModelInfo],
     ) -> None:
         """Test all models report OLLAMA as provider.
 
         Args:
-            ollama_provider: Connected Ollama provider fixture.
+            installed_models: Non-empty list of models from the connected provider.
         """
-        models = await ollama_provider.list_models()
-
-        for model in models:
-            assert model.provider == ProviderName.OLLAMA, f"Expected OLLAMA provider, got {model.provider}"
+        for model in installed_models:
+            assert model.provider == ProviderName.OLLAMA, (
+                f"Expected OLLAMA provider, got {model.provider}"
+            )
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_model_info_has_positive_context_window(
-        ollama_provider: OllamaProvider,
+        installed_models: list[ModelInfo],
     ) -> None:
         """Test all models have positive context window size.
 
-        Args:
-            ollama_provider: Connected Ollama provider fixture.
-        """
-        models = await ollama_provider.list_models()
+        The production bridge defaults to 4096 when /api/show does not report
+        num_ctx; this assertion gates both the default (4096 > 0) and any
+        live parsed value, ensuring the context_window field is never zero.
 
-        for model in models:
-            assert isinstance(model.context_window, int), f"Expected int context_window, got {type(model.context_window)}"
-            assert model.context_window > 0, f"Model {model.id} has invalid context_window: {model.context_window}"
+        Args:
+            installed_models: Non-empty list of models from the connected provider.
+        """
+        for model in installed_models:
+            assert isinstance(model.context_window, int), (
+                f"Expected int context_window, got {type(model.context_window)}"
+            )
+            assert model.context_window > 0, (
+                f"Model {model.id} has invalid context_window: {model.context_window}"
+            )
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_model_info_has_boolean_capabilities(
-        ollama_provider: OllamaProvider,
+        installed_models: list[ModelInfo],
     ) -> None:
-        """Test all models have boolean capability flags.
+        """Test all models have correct capability flag types and streaming always True.
+
+        The production code hardcodes supports_streaming=True for every Ollama
+        model (local models always stream via /api/chat). This asserts the bool
+        types and gates the hardcoded streaming contract with a value check.
 
         Args:
-            ollama_provider: Connected Ollama provider fixture.
+            installed_models: Non-empty list of models from the connected provider.
         """
-        models = await ollama_provider.list_models()
-
-        for model in models:
-            assert isinstance(model.supports_tools, bool), f"Expected bool supports_tools, got {type(model.supports_tools)}"
-            assert isinstance(model.supports_vision, bool), f"Expected bool supports_vision, got {type(model.supports_vision)}"
-            assert isinstance(model.supports_streaming, bool), f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
+        for model in installed_models:
+            assert isinstance(model.supports_tools, bool), (
+                f"Expected bool supports_tools, got {type(model.supports_tools)}"
+            )
+            assert isinstance(model.supports_vision, bool), (
+                f"Expected bool supports_vision, got {type(model.supports_vision)}"
+            )
+            assert isinstance(model.supports_streaming, bool), (
+                f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
+            )
+            assert model.supports_streaming is True, (
+                f"Ollama local models must always support streaming; got False for {model.id}"
+            )
 
     @pytest.mark.asyncio
     @staticmethod
     async def test_multiple_calls_return_consistent_results(
+        installed_models: list[ModelInfo],
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Test list_models returns consistent results across calls.
+        """Test list_models returns consistent results and correct prefixes across calls.
+
+        Consistency cross-call equality alone is unfalsifiable by stateless
+        mutations (both calls are affected identically). This test adds an
+        independent oracle: every local model ID must start with 'local/' and
+        have a non-empty model-name suffix after that prefix. That oracle is
+        derived directly from the source code contract in _populate_ollama_models
+        (id=f"local/{model_name}") and would fail if the id_prefix were changed
+        to '' or 'local' (no slash). Mutating id_prefix to '' causes every ID in
+        ids1 to fail the startswith assertion on the first iteration, turning the
+        test red regardless of what the second call returns.
 
         Args:
+            installed_models: Non-empty list of models from the first call.
             ollama_provider: Connected Ollama provider fixture.
         """
-        models1 = await ollama_provider.list_models()
         models2 = await ollama_provider.list_models()
 
-        ids1 = {m.id for m in models1}
+        ids1 = {m.id for m in installed_models}
         ids2 = {m.id for m in models2}
 
-        assert ids1 == ids2, "Model IDs should be consistent across calls"
+        assert len(ids1) > 0, "First call must return at least one model ID"
+
+        for mid in ids1:
+            assert mid.startswith("local/"), (
+                f"Local model ID must start with 'local/' per bridge contract, got {mid!r}"
+            )
+            suffix = mid[len("local/"):]
+            assert suffix, (
+                f"Model name suffix after 'local/' must be non-empty, got empty in {mid!r}"
+            )
+
+        assert ids1 == ids2, "Model IDs must be identical across consecutive calls"
 
 
 @pytest.mark.integration

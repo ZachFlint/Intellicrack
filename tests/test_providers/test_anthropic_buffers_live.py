@@ -18,7 +18,6 @@ tests/test_providers/test_anthropic_buffers_live.py -x``.
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -158,10 +157,6 @@ async def test_anthropic_chat_and_stream_populate_usage_and_thinking() -> None:
     streaming ``chat_stream()`` call.  When a thinking-capable model is
     available, ``get_pending_thinking()`` is also asserted to be populated
     after a thinking-enabled request.
-
-    Raises:
-        Exception: Any non-credit-related error raised by the live API is
-            re-raised after the skip check so the test surfaces it.
     """
     credentials = await _resolve_anthropic_credentials()
     if credentials is None:
@@ -197,6 +192,10 @@ async def _run_chat_and_assert_usage(provider: AnthropicProvider, chat_model: st
     Args:
         provider: Connected AnthropicProvider instance.
         chat_model: Model identifier passed to ``chat``.
+
+    Raises:
+        Exception: Any non-credit-related error raised by the live API is
+            re-raised after the billing-skip check so the test surfaces it.
     """
     chat_messages: list[Message] = [Message(role="user", content="Reply with exactly one word: pong.")]
 
@@ -226,6 +225,10 @@ async def _run_stream_and_assert_usage(provider: AnthropicProvider, chat_model: 
     Args:
         provider: Connected AnthropicProvider instance.
         chat_model: Model identifier passed to ``chat_stream``.
+
+    Raises:
+        Exception: Any non-credit-related error raised by the live API is
+            re-raised after the billing-skip check so the test surfaces it.
     """
     stream_messages: list[Message] = [Message(role="user", content="Count aloud to three.")]
     collected_chunks: list[str] = []
@@ -261,6 +264,10 @@ async def _run_thinking_and_assert_blocks(provider: AnthropicProvider, thinking_
     Args:
         provider: Connected AnthropicProvider instance.
         thinking_model: Model identifier supporting the thinking feature.
+
+    Raises:
+        Exception: Any non-credit-related error raised by the live API is
+            re-raised after the billing-skip check so the test surfaces it.
     """
     thinking_messages: list[Message] = [
         Message(
@@ -289,15 +296,25 @@ async def _run_thinking_and_assert_blocks(provider: AnthropicProvider, thinking_
     assert provider.get_pending_thinking() == [], "get_pending_thinking() did not clear buffer"
 
 
-def test_live_module_importable() -> None:
-    """Smoke-check that the module imports and event loop can be created.
+def test_fresh_provider_buffers_start_empty() -> None:
+    """Verify buffer initial state on a freshly constructed AnthropicProvider.
 
-    Provides a non-skipped test so the file is still collected when
-    credentials are absent, preventing ``pytest`` from returning a
-    "no tests ran" failure at the module level.
+    A newly created provider has never issued a request, so both
+    ``get_pending_usage()`` and ``get_pending_thinking()`` must return
+    their empty sentinel values.  This gates the buffer-initialisation
+    contract in ``LLMProviderBase.__init__`` and the read-and-clear
+    semantics of both accessors without requiring API credentials.
     """
-    loop = asyncio.new_event_loop()
-    try:
-        assert loop is not None
-    finally:
-        loop.close()
+    provider = AnthropicProvider()
+
+    usage = provider.get_pending_usage()
+    assert usage is None, f"get_pending_usage() on a fresh provider must return None, got {usage!r}"
+
+    thinking = provider.get_pending_thinking()
+    assert thinking == [], f"get_pending_thinking() on a fresh provider must return [], got {thinking!r}"
+
+    usage_second_call = provider.get_pending_usage()
+    assert usage_second_call is None, "get_pending_usage() must return None on repeated calls with no intervening request"
+
+    thinking_second_call = provider.get_pending_thinking()
+    assert thinking_second_call == [], "get_pending_thinking() must return [] on repeated calls with no intervening request"

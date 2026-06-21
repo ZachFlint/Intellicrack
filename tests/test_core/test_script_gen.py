@@ -30,7 +30,6 @@ from intellicrack.core.script_gen import (
 _MODULE_BASE: Final[int] = 0x00400000
 _FUNC_ADDR: Final[int] = 0x00401000
 _MAGIC_CONST: Final[int] = 0xDEADBEEF
-_BYPASS_STRATEGY_COUNT: Final[int] = 11
 _LANGUAGE_COUNT: Final[int] = 5
 _FRIDA_API_KEYS: Final[int] = 6
 _GHIDRA_API_KEYS: Final[int] = 5
@@ -54,9 +53,29 @@ def test_script_language_values() -> None:
 # --- BypassStrategy enum ---
 
 
-def test_bypass_strategy_count() -> None:
-    """Verify BypassStrategy has all expected members."""
-    assert len(BypassStrategy) == _BYPASS_STRATEGY_COUNT
+def test_bypass_strategy_members_complete() -> None:
+    """Verify BypassStrategy exposes exactly the independently enumerated members.
+
+    The expected member-name-to-value mapping is enumerated here independently
+    of the production enum, so this gate fails if the production enum drops,
+    renames, or relabels any strategy -- not merely if a cardinality counter
+    drifts. Analogous to ``test_script_get_extension_coverage_completeness``.
+    """
+    expected: dict[str, str] = {
+        "RETURN_TRUE": "return_true",
+        "RETURN_FALSE": "return_false",
+        "RETURN_ZERO": "return_zero",
+        "RETURN_ONE": "return_one",
+        "NOP_FUNCTION": "nop_function",
+        "SKIP_CHECK": "skip_check",
+        "PATCH_JUMP": "patch_jump",
+        "HOOK_REPLACE": "hook_replace",
+        "MEMORY_PATCH": "memory_patch",
+        "INLINE_PATCH": "inline_patch",
+        "VIRTUALIZATION_DEFEAT": "virtualization_defeat",
+    }
+    actual: dict[str, str] = {member.name: member.value for member in BypassStrategy}
+    assert actual == expected, f"BypassStrategy members diverged from expected set: {actual}"
 
 
 @pytest.mark.parametrize(
@@ -943,38 +962,63 @@ def test_manager_record_execution_not_found(tmp_path: Path) -> None:
 
 
 def test_frida_api_reference_keys() -> None:
-    """Verify Frida API reference has expected categories."""
+    """Verify Frida API reference maps categories to the real Frida JS API surface.
+
+    Each asserted substring is an independent oracle: it is the actual Frida
+    JavaScript API symbol documented by the Frida project for that category
+    (``Interceptor.attach``, ``Memory.readByteArray``, ``Process.enumerateModules``,
+    ``Stalker.follow``). A regression that drops a category, blanks a value, or
+    pastes the wrong tool's syntax into a category fails this gate.
+    """
     ref = get_frida_api_reference()
     assert len(ref) == _FRIDA_API_KEYS
-    assert "process" in ref
-    assert "interceptor" in ref
-    assert "memory" in ref
-    assert "stalker" in ref
+    assert "Process.enumerateModules" in ref["process"]
+    assert "Interceptor.attach" in ref["interceptor"]
+    assert "Memory.readByteArray" in ref["memory"]
+    assert "Stalker.follow" in ref["stalker"]
 
 
 def test_ghidra_api_reference_keys() -> None:
-    """Verify Ghidra API reference has expected categories."""
+    """Verify Ghidra API reference maps categories to the real Ghidra script API.
+
+    Each asserted substring is an independent oracle drawn from Ghidra's
+    GhidraScript / FlatProgramAPI: ``currentProgram`` for the program category,
+    ``DecompInterface`` for the decompiler, and ``setBytes`` for patching. A
+    regression that empties a value or swaps in unrelated text fails this gate.
+    """
     ref = get_ghidra_api_reference()
     assert len(ref) == _GHIDRA_API_KEYS
-    assert "program" in ref
-    assert "decompiler" in ref
-    assert "patching" in ref
+    assert "currentProgram" in ref["program"]
+    assert "DecompInterface" in ref["decompiler"]
+    assert "setBytes" in ref["patching"]
 
 
 def test_cutter_reference_keys() -> None:
-    """Verify Cutter/Rizin reference has expected categories."""
+    """Verify Cutter/Rizin reference maps categories to the real r2/rizin commands.
+
+    Each asserted substring is an independent oracle: the actual radare2/rizin
+    command for that category (``aaa`` analyze-all under analysis, ``wx`` write-hex
+    under writing). A regression that blanks a value or substitutes a different
+    tool's command fails this gate.
+    """
     ref = get_cutter_reference()
     assert len(ref) == _CUTTER_REF_KEYS
-    assert "analysis" in ref
-    assert "writing" in ref
+    assert "aaa" in ref["analysis"]
+    assert "wx" in ref["writing"]
 
 
 def test_x64dbg_reference_keys() -> None:
-    """Verify x64dbg reference has expected categories."""
+    """Verify x64dbg reference maps categories to the real x64dbg script commands.
+
+    Each asserted substring is an independent oracle: the actual x64dbg command
+    for that category (``bp`` set-breakpoint under breakpoints, ``patch`` under
+    patching). A regression that blanks a value or substitutes an unrelated
+    command fails this gate.
+    """
     ref = get_x64dbg_reference()
     assert len(ref) == _X64DBG_REF_KEYS
-    assert "breakpoints" in ref
-    assert "patching" in ref
+    assert "bp " in ref["breakpoints"]
+    assert "patch " in ref["patching"]
 
 
 # --- ScriptGenerator ---

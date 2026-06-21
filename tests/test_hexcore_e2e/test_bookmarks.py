@@ -25,14 +25,19 @@ class TestBookmarks:
         assert bookmarks == []
 
     def test_add_bookmark_returns_index(self, sample_doc_from_bytes: HexDocument) -> None:
-        """Verify that add_bookmark() returns a non-negative integer index.
+        """Verify that add_bookmark() returns the correct insertion index and stores the bookmark.
+
+        The first add on an empty bookmark list must return index 0.  The stored
+        bookmark at that index must carry exactly the label that was passed in,
+        proving the native push completed successfully.
 
         Args:
             sample_doc_from_bytes: In-memory HexDocument from open_bytes.
         """
         idx = sample_doc_from_bytes.add_bookmark(0, 4, "header", "#FF0000")
-        assert isinstance(idx, int)
-        assert idx >= 0
+        assert idx == 0
+        bookmarks = sample_doc_from_bytes.list_bookmarks()
+        assert bookmarks[idx][2] == "header"
 
     def test_list_bookmarks_contains_added_bookmark(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that a freshly added bookmark appears in list_bookmarks().

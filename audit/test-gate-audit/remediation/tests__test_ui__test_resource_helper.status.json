@@ -1,0 +1,40 @@
+{
+ "file": "tests/test_ui/test_resource_helper.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_ui/test_resource_helper.py::TestResourceExists::test_returns_false_for_empty_path",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only",
+   "action": "red-prod-defect",
+   "oracle": "Path-join semantics / resource-existence spec: an empty resource path is not a real resource; pathlib `Path(assets_dir) / \"\"` equals `assets_dir` itself (verified via pathlib), so the empty path is NOT a distinct asset and resource_exists(\"\") must be False. The expected value (False) is derived independently from path semantics, not from data the test injected.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/ui/resources/resource_helper.py",
+    "mutation": "        exists = path.exists() ->         exists = bool(resource_path) and path.exists()",
+    "covering_test": "tests/test_ui/test_resource_helper.py::TestResourceExists::test_returns_false_for_empty_path",
+    "expected_baseline": "expected-red",
+    "green_status": "fail",
+    "mutation_result": null,
+    "proven_falsifiable": null
+   }
+  }
+ ],
+ "production_defects": [
+  {
+   "src_file": "src/intellicrack/ui/resources/resource_helper.py",
+   "line": 186,
+   "symbol": "resource_exists",
+   "expected": "resource_exists(\"\") returns False \u2014 an empty path is not an existing resource",
+   "actual": "resource_exists(\"\") returns True because get_resource_path(\"\") normalizes the empty string to \"\" and `assets_dir / \"\"` evaluates to the assets directory itself (which exists), so path.exists() is True",
+   "red_test": "tests/test_ui/test_resource_helper.py::TestResourceExists::test_returns_false_for_empty_path"
+  }
+ ],
+ "n_mutations": 1
+}

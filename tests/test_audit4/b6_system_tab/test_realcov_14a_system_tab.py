@@ -153,11 +153,7 @@ def test_rendered_privileges_match_real_bridge(
         tab: SystemTab probe bound to the real bridge.
     """
     real_privs = run_bridge_sync(real_bridge.get_token_privileges(os.getpid()))
-    expected = {
-        str(p["name"]): ("Yes" if p.get("enabled") else "No")
-        for p in real_privs
-        if "name" in p
-    }
+    expected = {str(p["name"]): ("Yes" if p.get("enabled") else "No") for p in real_privs if "name" in p}
 
     tab.refresh_privileges()
     populated = pump_until(qapp, lambda: tab.privilege_row_count() > 0)

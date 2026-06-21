@@ -339,7 +339,7 @@ class HashingHarness(QWidget, HashingMixin):
         self,
         *,
         document: StubPeDocument,
-        state_holder: HexDocumentState,
+        state_holder: HexDocumentState | None = None,
         file_path: Path | None = None,
     ) -> None:
         """Wire the mixin slots up to test-supplied collaborators.
@@ -350,6 +350,8 @@ class HashingHarness(QWidget, HashingMixin):
                 ``verify_pe_checksum``, ``file_path``).
             state_holder: Real :class:`HexDocumentState` whose
                 ``notify_data_modified`` calls the test asserts on.
+                Pass ``None`` when the test does not need to observe
+                state notifications.
             file_path: Optional panel-side ``file_path`` attribute the
                 mixin checks before falling back to ``document.file_path()``.
         """
@@ -417,6 +419,42 @@ class NotifyRecorder:
 # ---------------------------------------------------------------------------
 
 
+class _DialogCallSpy:
+    """Records how many times the patched ``QMessageBox.question`` was invoked."""
+
+    def __init__(self, answer: QMessageBox.StandardButton) -> None:
+        """Initialise with a fixed answer and zero call count.
+
+        Args:
+            answer: The ``StandardButton`` value returned on every call.
+        """
+        self.call_count: int = 0
+        self._answer: QMessageBox.StandardButton = answer
+
+    def __call__(
+        self,
+        _parent: QWidget | None,
+        _title: str,
+        _text: str,
+        *_args: object,
+        **_kwargs: object,
+    ) -> QMessageBox.StandardButton:
+        """Increment the call count and return the configured answer.
+
+        Args:
+            _parent: Ignored parent widget.
+            _title: Ignored dialog title.
+            _text: Ignored dialog body text.
+            *_args: Ignored extra positional arguments.
+            **_kwargs: Ignored keyword arguments.
+
+        Returns:
+            QMessageBox.StandardButton: The fixed answer supplied at construction.
+        """
+        self.call_count += 1
+        return self._answer
+
+
 @pytest.fixture
 def message_box_yes(monkeypatch: pytest.MonkeyPatch) -> None:
     """Force every ``QMessageBox.question`` call to return ``Yes``.
@@ -432,29 +470,53 @@ def message_box_yes(monkeypatch: pytest.MonkeyPatch) -> None:
             ``QMessageBox.question`` static method for the duration
             of one test.
     """
+    monkeypatch.setattr(QMessageBox, "question", _DialogCallSpy(QMessageBox.StandardButton.Yes))
 
-    def _fake_question(
-        _parent: QWidget | None,
-        _title: str,
-        _text: str,
-        *_args: object,
-        **_kwargs: object,
-    ) -> QMessageBox.StandardButton:
-        """Return ``Yes`` so the repair confirmation prompt always passes.
 
-        Args:
-            _parent: Ignored parent widget.
-            _title: Ignored dialog title.
-            _text: Ignored dialog body text.
-            *_args: Ignored extra positional arguments.
-            **_kwargs: Ignored keyword arguments.
+@pytest.fixture
+def message_box_yes_spy(monkeypatch: pytest.MonkeyPatch) -> _DialogCallSpy:
+    """Patch ``QMessageBox.question`` to return ``Yes`` and expose a call counter.
 
-        Returns:
-            QMessageBox.StandardButton: The ``Yes`` enum value.
-        """
-        return QMessageBox.StandardButton.Yes
+    Unlike :func:`message_box_yes` (used via ``usefixtures``), this fixture
+    returns the :class:`_DialogCallSpy` so tests can assert that the dialog
+    was actually invoked.  If ``_on_repair_pe_checksum`` were refactored to
+    skip the confirmation prompt, ``spy.call_count`` would remain ``0`` and
+    the assertion would fail.
 
-    monkeypatch.setattr(QMessageBox, "question", _fake_question)
+    Args:
+        monkeypatch: pytest monkeypatch fixture used to patch the
+            ``QMessageBox.question`` static method for the duration
+            of one test.
+
+    Returns:
+        _DialogCallSpy: Spy that counts dialog invocations and returns ``Yes``.
+    """
+    spy = _DialogCallSpy(QMessageBox.StandardButton.Yes)
+    monkeypatch.setattr(QMessageBox, "question", spy)
+    return spy
+
+
+@pytest.fixture
+def message_box_no(monkeypatch: pytest.MonkeyPatch) -> _DialogCallSpy:
+    """Patch ``QMessageBox.question`` to return ``No`` and expose a call counter.
+
+    Tests using this fixture verify that a ``No`` answer from the user
+    prevents ``_on_repair_pe_checksum`` from writing to the document.
+    If the production code were changed to skip the confirmation dialog,
+    ``repair_calls`` would become non-zero and the test using this fixture
+    would fail.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture used to patch the
+            ``QMessageBox.question`` static method for the duration
+            of one test.
+
+    Returns:
+        _DialogCallSpy: Spy that counts dialog invocations and returns ``No``.
+    """
+    spy = _DialogCallSpy(QMessageBox.StandardButton.No)
+    monkeypatch.setattr(QMessageBox, "question", spy)
+    return spy
 
 
 # ---------------------------------------------------------------------------
@@ -678,6 +740,77 @@ class TestRepairPeChecksumFiresNotify:
             f"is at offset {_REAL_PE_CHECKSUM_OFFSET:#x}.  "
             f"Production defect P-001: hashing.py uses a hardcoded 0x58 constant "
             f"instead of deriving the offset from e_lfanew."
+        )
+
+    @pytest.mark.usefixtures("qapp")
+    def test_repair_dialog_is_invoked_once(
+        self,
+        message_box_yes_spy: _DialogCallSpy,
+    ) -> None:
+        """``_on_repair_pe_checksum`` must call ``QMessageBox.question`` exactly once.
+
+        This test would go red if the production code were changed to skip the
+        confirmation dialog (e.g., by removing the ``QMessageBox.question`` call
+        or bypassing it with an early return).  The spy counts every invocation of
+        the patched static method; a ``call_count`` of zero means the dialog was
+        never shown, which would let the repair run without user confirmation.
+
+        Args:
+            message_box_yes_spy: Patched ``QMessageBox.question`` returning ``Yes``
+                while counting calls.
+        """
+        pe_bytes = _build_minimal_pe32()
+        document = StubPeDocument(pe_bytes)
+        harness = HashingHarness(document=document, state_holder=None)
+        try:
+            harness.repair_pe_checksum()
+        finally:
+            harness.deleteLater()
+
+        assert message_box_yes_spy.call_count == 1, (
+            f"QMessageBox.question must be called exactly once during repair, "
+            f"but spy recorded {message_box_yes_spy.call_count} call(s). "
+            f"Removing the confirmation dialog would allow silent checksum overwrites."
+        )
+        assert document.repair_calls == 1, (
+            "repair_pe_checksum must proceed after Yes is answered"
+        )
+
+    @pytest.mark.usefixtures("qapp")
+    def test_repair_no_answer_blocks_document_write(
+        self,
+        message_box_no: _DialogCallSpy,
+    ) -> None:
+        """A ``No`` answer to the confirmation dialog must prevent the document write.
+
+        This is the primary falsifiability gate for the ``message_box_yes``
+        monkeypatch.  If ``_on_repair_pe_checksum`` were refactored to remove the
+        ``QMessageBox.question`` call entirely, the repair would proceed regardless
+        of the user's answer.  This test catches that regression: ``message_box_no``
+        patches the dialog to return ``No``, and the assertion on
+        ``document.repair_calls == 0`` would fail the moment the dialog gate is
+        removed from the production code.
+
+        Args:
+            message_box_no: Patched ``QMessageBox.question`` returning ``No``
+                while counting calls.
+        """
+        pe_bytes = _build_minimal_pe32()
+        document = StubPeDocument(pe_bytes)
+        harness = HashingHarness(document=document, state_holder=None)
+        try:
+            harness.repair_pe_checksum()
+        finally:
+            harness.deleteLater()
+
+        assert message_box_no.call_count == 1, (
+            f"QMessageBox.question must be called exactly once even when the answer is No, "
+            f"but spy recorded {message_box_no.call_count} call(s)."
+        )
+        assert document.repair_calls == 0, (
+            f"repair_pe_checksum must NOT write to the document after a No answer, "
+            f"but repair_calls == {document.repair_calls}. "
+            f"Production code must gate the write on QMessageBox.question returning Yes."
         )
 
 

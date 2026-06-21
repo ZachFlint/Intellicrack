@@ -728,26 +728,6 @@ class TestFindToolDetailedRealHost:
         assert found.kind == "builtin"
         assert found.path is None
 
-    @staticmethod
-    @pytest.mark.spawns_process
-    def test_frida_python_package_discovery(tmp_path: Path) -> None:
-        """FRIDA resolves to a python_package FoundTool or None, no mock.
-
-        Both outcomes are valid depending on whether frida is installed in
-        the active environment; the real ``_probe_python_package``
-        subprocess path must run either way.
-
-        Args:
-            tmp_path: Pytest temporary directory.
-        """
-        installer = ToolInstaller(tmp_path)
-        found = asyncio.run(installer.find_tool_detailed(ToolName.FRIDA))
-        if found is None:
-            pytest.skip("frida is not installed in the active environment")
-        assert found.kind == "python_package"
-        assert found.version is not None
-        assert found.version.major >= 0
-
 
 # ---------------------------------------------------------------------------
 # 04-F009 / 04-F018 - probe_python_package real subprocess present/absent

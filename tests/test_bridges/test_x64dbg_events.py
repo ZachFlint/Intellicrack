@@ -181,9 +181,29 @@ class TestEventDispatch:
 
     @staticmethod
     def test_handle_event_with_no_callbacks() -> None:
-        """Verify _handle_event succeeds with no registered callbacks."""
+        """Verify the internal hit-count path runs with zero user callbacks.
+
+        With no registered callbacks the dispatcher must still execute its
+        internal breakpoint accounting: a breakpoint registered at the event
+        address has its ``hit_count`` incremented exactly once, while the
+        user callback list remains empty and uncorrupted.
+        """
         bridge = X64DbgBridge()
+        bridge.breakpoints[TEST_ADDR_BP] = BreakpointInfo(
+            id=BP_ID_TEST,
+            address=TEST_ADDR_BP,
+            bp_type="software",
+            enabled=True,
+            hit_count=0,
+            condition=None,
+        )
+
+        assert len(bridge.event_callbacks) == 0, "precondition: no user callbacks registered"
+
         _dispatch_event(bridge, {"event": "breakpoint", "address": TEST_ADDR_BP})
+
+        assert bridge.breakpoints[TEST_ADDR_BP].hit_count == 1, "internal hit-count path must run without user callbacks"
+        assert len(bridge.event_callbacks) == 0, "callback list must remain empty"
 
 
 class TestBreakpointHitCounting:
@@ -224,7 +244,43 @@ class TestBreakpointHitCounting:
         assert bridge.watchpoints[WP_ID_TEST].hit_count == 1
 
     @staticmethod
-    def test_unknown_event_does_not_crash() -> None:
-        """Verify unknown event types are handled gracefully."""
+    def test_unknown_event_is_forwarded_without_state_mutation() -> None:
+        """Verify an unknown event is forwarded verbatim and mutates no hit counts.
+
+        The dispatcher forwards every event to registered callbacks regardless
+        of type, so an ``unknown_event`` payload must reach the callback with
+        its exact event type and message object. Because the unknown type
+        matches none of the breakpoint/watchpoint/paused branches, no
+        registered breakpoint or watchpoint hit count may change.
+        """
         bridge = X64DbgBridge()
-        _dispatch_event(bridge, {"event": "unknown_event"})
+        bridge.breakpoints[TEST_ADDR_BP] = BreakpointInfo(
+            id=BP_ID_TEST,
+            address=TEST_ADDR_BP,
+            bp_type="software",
+            enabled=True,
+            hit_count=0,
+            condition=None,
+        )
+        bridge.watchpoints[WP_ID_TEST] = WatchpointInfo(
+            id=WP_ID_TEST,
+            address=TEST_ADDR_WP,
+            size=WATCHPOINT_SIZE,
+            watch_type="write",
+            enabled=True,
+            hit_count=0,
+        )
+        received: list[tuple[str, dict[str, Any]]] = []
+
+        def handler(event_type: str, message: dict[str, Any]) -> None:
+            received.append((event_type, message))
+
+        bridge.register_event_callback(handler)
+
+        payload: dict[str, Any] = {"event": "unknown_event", "address": TEST_ADDR_BP}
+        _dispatch_event(bridge, payload)
+
+        assert received == [("unknown_event", payload)], "unknown event must be forwarded verbatim to callbacks"
+        assert received[0][1] is payload, "callback must receive the exact message object"
+        assert bridge.breakpoints[TEST_ADDR_BP].hit_count == 0, "unknown event must not increment breakpoint hit count"
+        assert bridge.watchpoints[WP_ID_TEST].hit_count == 0, "unknown event must not increment watchpoint hit count"

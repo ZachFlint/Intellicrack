@@ -15,11 +15,12 @@ will actually feed them.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import os
 import struct
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
@@ -490,7 +491,11 @@ class TestPeIntrospectionRealBinaries:
         bridge: HexEditorBridge,
         notepad_exe: Path,
     ) -> None:
-        """Verify ``get_pe_imports`` reports ``KERNEL32.dll`` for notepad.exe.
+        """Verify ``get_pe_imports`` reports the kernel32 dependency for notepad.exe.
+
+        On Windows 11 notepad imports kernel32 through ``api-ms-win-core-*`` API-set
+        forwarders rather than ``KERNEL32.dll`` directly; either form proves the
+        bridge parsed the real import table and surfaced the kernel32 dependency.
 
         Args:
             bridge: HexEditorBridge fixture.
@@ -500,7 +505,8 @@ class TestPeIntrospectionRealBinaries:
         imports = _run(bridge.get_pe_imports())
         assert imports, "notepad.exe should import at least one symbol"
         dlls = {str(entry["dll"]).lower() for entry in imports}
-        assert "kernel32.dll" in dlls
+        has_kernel32 = "kernel32.dll" in dlls or any(dll.startswith("api-ms-win-core-") for dll in dlls)
+        assert has_kernel32, f"expected kernel32.dll or a kernel32 API-set in notepad imports, got: {sorted(dlls)}"
 
 
 class TestToolDefinitionsRegistration:
@@ -579,37 +585,78 @@ class TestSectionTableSize:
         assert len(pe64_opt) == expected_pe64
 
 
-def test_get_pe_sections_signature(bridge: HexEditorBridge) -> None:
-    """Verify ``get_pe_sections`` is async and takes no positional args.
+def test_get_pe_sections_signature(bridge: HexEditorBridge, pe32_two_sections: Path) -> None:
+    """Verify ``get_pe_sections`` is async and parses the real section table.
+
+    Asserts the method is a coroutine function (so a synchronous rewrite
+    fails) and then drives it end-to-end against the synthesised PE32
+    image. The expected section names are recomputed independently with
+    :mod:`pefile` so a parser that returns garbage or an empty list fails.
 
     Args:
         bridge: HexEditorBridge fixture.
+        pe32_two_sections: Path to the synthesised PE32 fixture.
     """
-    method: Any = bridge.get_pe_sections
-    coro = method()
-    assert asyncio.iscoroutine(coro)
-    coro.close()
+    assert inspect.iscoroutinefunction(bridge.get_pe_sections)
+
+    pe = _pefile.PE(str(pe32_two_sections), fast_load=True)
+    try:
+        expected_names = [section.Name.rstrip(b"\x00").decode("ascii") for section in pe.sections]
+    finally:
+        pe.close()
+
+    _run(bridge.open_file(str(pe32_two_sections)))
+    sections = _run(bridge.get_pe_sections())
+    assert [entry["name"] for entry in sections] == expected_names
 
 
-def test_get_pe_imports_signature(bridge: HexEditorBridge) -> None:
-    """Verify ``get_pe_imports`` is async and takes no positional args.
+def test_get_pe_imports_signature(bridge: HexEditorBridge, pe32_two_sections: Path) -> None:
+    """Verify ``get_pe_imports`` is async and parses the real import table.
+
+    Asserts the method is a coroutine function and then drives it
+    end-to-end against the synthesised PE32 image. The synthesised image
+    carries no import directory; :mod:`pefile` independently confirms it
+    exposes no ``DIRECTORY_ENTRY_IMPORT`` so the bridge must return ``[]``.
 
     Args:
         bridge: HexEditorBridge fixture.
+        pe32_two_sections: Path to the synthesised PE32 fixture.
     """
-    method: Any = bridge.get_pe_imports
-    coro = method()
-    assert asyncio.iscoroutine(coro)
-    coro.close()
+    assert inspect.iscoroutinefunction(bridge.get_pe_imports)
+
+    pe = _pefile.PE(str(pe32_two_sections), fast_load=True)
+    try:
+        pe.parse_data_directories(directories=[_pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_IMPORT"]])
+        assert not hasattr(pe, "DIRECTORY_ENTRY_IMPORT")
+    finally:
+        pe.close()
+
+    _run(bridge.open_file(str(pe32_two_sections)))
+    imports = _run(bridge.get_pe_imports())
+    assert imports == []
 
 
-def test_get_pe_exports_signature(bridge: HexEditorBridge) -> None:
-    """Verify ``get_pe_exports`` is async and takes no positional args.
+def test_get_pe_exports_signature(bridge: HexEditorBridge, pe32_two_sections: Path) -> None:
+    """Verify ``get_pe_exports`` is async and parses the real export table.
+
+    Asserts the method is a coroutine function and then drives it
+    end-to-end against the synthesised PE32 image. The synthesised image
+    carries no export directory; :mod:`pefile` independently confirms it
+    exposes no ``DIRECTORY_ENTRY_EXPORT`` so the bridge must return ``[]``.
 
     Args:
         bridge: HexEditorBridge fixture.
+        pe32_two_sections: Path to the synthesised PE32 fixture.
     """
-    method: Any = bridge.get_pe_exports
-    coro = method()
-    assert asyncio.iscoroutine(coro)
-    coro.close()
+    assert inspect.iscoroutinefunction(bridge.get_pe_exports)
+
+    pe = _pefile.PE(str(pe32_two_sections), fast_load=True)
+    try:
+        pe.parse_data_directories(directories=[_pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_EXPORT"]])
+        assert not hasattr(pe, "DIRECTORY_ENTRY_EXPORT")
+    finally:
+        pe.close()
+
+    _run(bridge.open_file(str(pe32_two_sections)))
+    exports = _run(bridge.get_pe_exports())
+    assert exports == []

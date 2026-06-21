@@ -1,0 +1,48 @@
+{
+ "file": "tests/test_hexcore_e2e/test_templates.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_pe_template_on_elf_data_parses_or_raises (renamed to test_pe_template_on_elf_data_parses_wrong_e_magic)",
+   "severity": "HIGH",
+   "category": "N2/N6",
+   "action": "hardened",
+   "oracle": "struct.unpack_from(\"<H\", elf_bytes, 0) recomputes the little-endian UInt16 e_magic (0x457F = 17791) from the ELF magic bytes 7F 45; cross-checked against the Rust UInt16 display format '{v} (0x{v:04X})' and the raw_bytes equal elf_bytes[:2]",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack-hexcore/src/templates/mod.rs",
+    "mutation": "format!(\"{v} (0x{v:04X})\") -> format!(\"0x{v:04X}\")",
+    "covering_test": "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_pe_template_on_elf_data_parses_wrong_e_magic",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "pass",
+    "proven_falsifiable": "no"
+   }
+  },
+  {
+   "test": "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_elf_template_on_pe_data_parses_or_raises (renamed to test_elf_template_on_pe_data_parses_wrong_e_ident)",
+   "severity": "HIGH",
+   "category": "N2/N6",
+   "action": "hardened",
+   "oracle": "Independently format pe_bytes[:16] as space-separated uppercase hex (' '.join(f'{b:02X}' ...)) matching the Rust Bytes(16) composite formatter; the PE fixture's first 16 bytes are 4D 5A 90 00 ... 00; also assert raw_bytes == pe_bytes[:16] and size==16 per the ELF e_ident spec",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack-hexcore/src/templates/mod.rs",
+    "mutation": "raw[..*n].iter().map(|b| format!(\"{b:02X}\")).collect(); -> raw[..*n].iter().map(|b| format!(\"{b:02x}\")).collect();",
+    "covering_test": "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_elf_template_on_pe_data_parses_wrong_e_ident",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "pass",
+    "proven_falsifiable": "no"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 2
+}

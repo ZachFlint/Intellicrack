@@ -41,9 +41,7 @@ pytestmark = pytest.mark.integration
 
 
 _DOS_STUB_PREFIX: str = "This program cannot be run"
-_RULE_SOURCE: str = (
-    'rule dos_stub { strings: $a = "This program cannot be run" condition: $a }'
-)
+_RULE_SOURCE: str = 'rule dos_stub { strings: $a = "This program cannot be run" condition: $a }'
 
 
 def _real_match_dicts(path: Path) -> list[dict[str, Any]]:

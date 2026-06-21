@@ -596,13 +596,32 @@ class TestIOFunctions:
         results = interp.execute_bytes(source, data)
         assert any(r["name"] == "ok" for r in results)
 
-    def test_format_via_interpreter_produces_string(self, interp: HexPatInterpreter) -> None:
-        """format() call from pattern source returns a string without error.
+    def test_format_via_interpreter_produces_string(self) -> None:
+        """format() substitutes a field value into the template and routes via print().
 
-        Args:
-            interp: A fresh HexPatInterpreter fixture.
+        Data layout: offset 0 holds byte ``0xAB`` (171 decimal).
+        Pattern: ``u8 x @ 0; print(format("x={}", x));``
+
+        The expected captured output is ``"x=171"`` because:
+        - ``x`` evaluates to the unsigned integer 171 (``_unwrap`` on the
+          resulting PatternValue returns the int stored in ``.value``).
+        - ``format`` calls ``_format_string`` which substitutes
+          ``str(171)`` = ``"171"`` for the ``{}`` placeholder.
+        - ``print`` routes the formatted string through the registered sink.
+
+        A regression in ``_format_string`` (wrong substitution, wrong value
+        extraction, broken placeholder scanning) would produce the wrong string
+        and fail the equality assertion.
         """
-        data = bytes(4)
-        source = "u8 ok @ 0;"
-        results = interp.execute_bytes(source, data)
-        assert any(r["name"] == "ok" for r in results)
+        captured: list[str] = []
+
+        def _sink(msg: str) -> None:
+            captured.append(msg)
+
+        data = bytes([0xAB, 0x00, 0x00, 0x00])
+        source = 'u8 x @ 0;\nprint(format("x={}", x));'
+        interp_with_sink = HexPatInterpreter(print_sink=_sink)
+        results = interp_with_sink.execute_bytes(source, data)
+        assert any(r["name"] == "x" for r in results), "field 'x' must appear in parsed results"
+        assert len(captured) == 1, f"expected exactly 1 print call, got {len(captured)}: {captured!r}"
+        assert captured[0] == "x=171", f"format substitution produced wrong output: {captured[0]!r}"

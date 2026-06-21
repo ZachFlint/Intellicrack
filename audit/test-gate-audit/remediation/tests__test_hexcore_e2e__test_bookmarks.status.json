@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_hexcore_e2e/test_bookmarks.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_hexcore_e2e/test_bookmarks.py::TestBookmarks::test_add_bookmark_returns_index",
+   "severity": "LOW",
+   "category": "N8 existence/type-only",
+   "action": "hardened",
+   "oracle": "Rust add_bookmark spec: bookmarks.len() before push is the insertion index, so the first add returns 0; list_bookmarks() must echo back the exact label string passed to add_bookmark (lib.rs:370 label.to_string()), verified by reading bookmarks[0][2].",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack-hexcore/src/lib.rs",
+    "mutation": "label: label.to_string(), -> label: String::new(),",
+    "covering_test": "tests/test_hexcore_e2e/test_bookmarks.py::TestBookmarks::test_add_bookmark_returns_index",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "pass",
+    "proven_falsifiable": "no"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

@@ -18,6 +18,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from structlog.testing import capture_logs
 
 from intellicrack.core.hexpat.lexer import HexPatLexer
 from intellicrack.core.hexpat.preprocessor import HexPatPreprocessor
@@ -169,22 +170,32 @@ class TestVendorIncludeFlattening:
         assert count == 1, f"std/io.pat content appears {count} times in output; pragma-once guard failed"
 
     def test_missing_include_does_not_raise(self) -> None:
-        """A missing include file is silently skipped, not an exception.
+        """A missing include file produces a warning event and drops only that line.
 
-        The preprocessor's contract for unavailable optional library files is to
-        log a warning and continue rather than abort -- verified by confirming
-        no exception propagates and the remainder of the source is intact.
-        This test does not require the vendor corpus to be present; it only
-        needs the preprocessor to handle an unresolvable include gracefully.
+        The preprocessor contract for an unresolvable include is:
+        (1) emit a structured ``include_not_found`` warning naming the missing
+            path, (2) drop only the unresolvable directive line, and (3) leave
+            all surrounding source intact.  The oracle for the exact output body
+            is independent of the preprocessor: only the placement statement
+            ``u8 x @ 42;`` was in the caller after the missing directive, so
+            after preprocessing it must be the sole non-empty line.  This test
+            does not require the vendor corpus to be present.
         """
         preprocessor = HexPatPreprocessor(include_paths=[_INCLUDES_DIR])
-        source = "#include <std/nonexistent_file_xyzzy.pat>\nu8 x @ 42;"
-        processed, _ = preprocessor.process(source)
+        missing_path: str = "std/nonexistent_file_xyzzy.pat"
+        source: str = f"#include <{missing_path}>\nu8 x @ 42;"
 
-        # The residual source after the missing include must be preserved.
-        assert "u8 x @ 42;" in processed
-        # No raw include directive may survive; the line is simply dropped.
-        assert "#include" not in processed
+        with capture_logs() as log_records:
+            processed, _ = preprocessor.process(source)
+
+        warning_events = [r for r in log_records if r.get("event") == "include_not_found"]
+        assert warning_events, f"expected structured 'include_not_found' warning, got records: {log_records!r}"
+        assert warning_events[0].get("include_path") == missing_path, f"warning did not name the missing path; got: {warning_events[0]!r}"
+
+        assert "#include" not in processed, "raw #include directive survived preprocessing"
+
+        non_empty: list[str] = [line for line in processed.splitlines() if line.strip()]
+        assert non_empty == ["u8 x @ 42;"], f"expected only the placement statement after missing include, got: {non_empty!r}"
 
     def test_std_core_pulls_transitive_content(self) -> None:
         """Including ``std/core.pat`` resolves its own nested includes."""

@@ -179,7 +179,11 @@ class TestFromProcessMemory:
             hexcore.HexDocument.from_process_memory(0x7FFFFFFF, 0x1000, 16)
 
     def test_from_process_memory_zero_size_handled(self, hexcore: types.ModuleType) -> None:
-        """Verify that from_process_memory with size=0 raises or returns an empty document.
+        """Verify that from_process_memory with size=0 always returns an empty document.
+
+        The native ProcessDataSource::read short-circuits on length==0 before
+        calling ReadProcessMemory, so no OS error is possible and the returned
+        HexDocument must have exactly zero bytes.
 
         Args:
             hexcore: The native module fixture.
@@ -187,23 +191,10 @@ class TestFromProcessMemory:
         pid = os.getpid()
         regions: list[tuple[int, int, int, int]] = hexcore.HexDocument.list_process_memory_regions(pid)
 
-        accessible: tuple[int, int, int, int] | None = None
-        for region in regions:
-            _address, size, protection, _region_type = region
-            if size > 0 and protection != 0:
-                accessible = region
-                break
+        readable_region = _find_readable_region(regions, 1)
+        if readable_region is None:
+            pytest.skip("No suitable readable memory region found in current process")
 
-        if accessible is None:
-            pytest.skip("No accessible region found for zero-size test")
-
-        addr, _sz, _pr, _rt = accessible
-        raised = False
-        doc = None
-        try:
-            doc = hexcore.HexDocument.from_process_memory(pid, addr, 0)
-        except OSError:
-            raised = True
-        if not raised:
-            assert doc is not None
-            assert doc.length() == 0
+        addr, _sz, _pr, _state = readable_region
+        doc = hexcore.HexDocument.from_process_memory(pid, addr, 0)
+        assert doc.length() == 0

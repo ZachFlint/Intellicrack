@@ -13,13 +13,12 @@ message construction using real RFB data structures.
 from __future__ import annotations
 
 import asyncio
-import struct
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import pytest
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QImage
+from PyQt6.QtCore import QEvent, QPointF, Qt
+from PyQt6.QtGui import QColor, QImage, QMouseEvent
 
 import intellicrack.ui.panels.vnc_widget as vnc_widget_mod
 from intellicrack.ui.panels.vnc_widget import (
@@ -74,6 +73,66 @@ POINTER_TEST_X = 100
 POINTER_TEST_Y = 200
 COLOR_FULL = 255
 
+POINTER_BUTTON_MASK = 1
+KEY_DOWN_FLAG = 1
+FB_REQ_INCREMENTAL = 1
+
+RFB_BUTTON_LEFT = 1
+RFB_BUTTON_MIDDLE = 2
+RFB_BUTTON_RIGHT = 4
+
+PARTIAL_PIXEL_COUNT = 2
+PARTIAL_BLUE = 128
+PARTIAL_GREEN = 64
+PARTIAL_RED = 32
+
+
+class _RecordingWriter:
+    """In-memory stand-in for :class:`asyncio.StreamWriter`.
+
+    Captures every byte the production RFB encoders push onto the wire so the
+    exact on-wire payload can be compared against an independent RFB-spec
+    oracle. Only the surface the client actually uses (``write`` and an awaitable
+    ``drain``) is implemented; this is the external transport boundary, not the
+    unit under test.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the recorder with an empty byte buffer."""
+        self.buffer = bytearray()
+
+    def write(self, data: bytes) -> None:
+        """Record bytes the client writes to the transport.
+
+        Args:
+            data: Bytes the client would send to the VNC server.
+        """
+        self.buffer.extend(data)
+
+    async def drain(self) -> None:
+        """Satisfy the awaited ``drain`` call without doing real I/O."""
+        return
+
+
+def _make_mouse_event(buttons: Qt.MouseButton) -> QMouseEvent:
+    """Build a real ``QMouseEvent`` carrying the given pressed-button state.
+
+    Args:
+        buttons: Combined Qt mouse-button flags reported by ``event.buttons()``.
+
+    Returns:
+        QMouseEvent: A move event whose button state is ``buttons``.
+    """
+    origin = QPointF(0.0, 0.0)
+    return QMouseEvent(
+        QEvent.Type.MouseMove,
+        origin,
+        origin,
+        Qt.MouseButton.NoButton,
+        buttons,
+        Qt.KeyboardModifier.NoModifier,
+    )
+
 
 class TestRFBClientState:
     """Tests for RFBClient initialization and state tracking."""
@@ -116,9 +175,13 @@ class TestRFBClientState:
 
     @staticmethod
     def test_request_framebuffer_update_when_disconnected() -> None:
-        """Verify request_framebuffer_update is no-op when disconnected."""
+        """Verify request_framebuffer_update writes nothing while disconnected."""
         client = RFBClient()
+        recorder = _RecordingWriter()
+        client._writer = cast("asyncio.StreamWriter", recorder)
+        assert not client.connected
         asyncio.run(client.request_framebuffer_update())
+        assert bytes(recorder.buffer) == b""
 
     @staticmethod
     def test_handle_server_message_when_disconnected() -> None:
@@ -133,56 +196,94 @@ class TestRFBClientProtocolStructures:
 
     @staticmethod
     def test_pointer_event_format() -> None:
-        """Verify pointer event is correctly packed per RFB spec."""
-        msg = struct.pack("!BBHH", POINTER_EVENT_MSG_TYPE, 1, POINTER_TEST_X, POINTER_TEST_Y)
-        assert len(msg) == POINTER_EVENT_LEN
-        msg_type, button_mask, x, y = struct.unpack("!BBHH", msg)
-        assert msg_type == POINTER_EVENT_MSG_TYPE
-        assert button_mask == 1
-        assert x == POINTER_TEST_X
-        assert y == POINTER_TEST_Y
+        """Verify the real send_pointer_event emits RFB-spec PointerEvent bytes."""
+        client = RFBClient()
+        recorder = _RecordingWriter()
+        client._writer = cast("asyncio.StreamWriter", recorder)
+        client.connected = True
+
+        asyncio.run(client.send_pointer_event(POINTER_TEST_X, POINTER_TEST_Y, POINTER_BUTTON_MASK))
+
+        wire = bytes(recorder.buffer)
+        expected = (
+            bytes([POINTER_EVENT_MSG_TYPE, POINTER_BUTTON_MASK])
+            + POINTER_TEST_X.to_bytes(2, "big")
+            + POINTER_TEST_Y.to_bytes(2, "big")
+        )
+        assert len(expected) == POINTER_EVENT_LEN
+        assert wire == expected
 
     @staticmethod
     def test_key_event_format() -> None:
-        """Verify key event is correctly packed per RFB spec."""
-        msg = struct.pack("!BBxxI", KEY_EVENT_MSG_TYPE, 1, KEYSYM_RETURN)
-        assert len(msg) == KEY_EVENT_LEN
-        msg_type, down_flag = struct.unpack_from("!BB", msg, 0)
-        keysym = struct.unpack_from("!I", msg, PIXEL_BYTES_PER_PIXEL)[0]
-        assert msg_type == KEY_EVENT_MSG_TYPE
-        assert down_flag == 1
-        assert keysym == KEYSYM_RETURN
+        """Verify the real send_key_event emits RFB-spec KeyEvent bytes."""
+        client = RFBClient()
+        recorder = _RecordingWriter()
+        client._writer = cast("asyncio.StreamWriter", recorder)
+        client.connected = True
+
+        asyncio.run(client.send_key_event(KEYSYM_RETURN, down=True))
+
+        wire = bytes(recorder.buffer)
+        expected = bytes([KEY_EVENT_MSG_TYPE, KEY_DOWN_FLAG, 0, 0]) + KEYSYM_RETURN.to_bytes(4, "big")
+        assert len(expected) == KEY_EVENT_LEN
+        assert wire == expected
+
+    @staticmethod
+    def test_key_event_release_clears_down_flag() -> None:
+        """Verify a key release sets the down flag byte to zero per RFB spec."""
+        client = RFBClient()
+        recorder = _RecordingWriter()
+        client._writer = cast("asyncio.StreamWriter", recorder)
+        client.connected = True
+
+        asyncio.run(client.send_key_event(KEYSYM_ESCAPE, down=False))
+
+        wire = bytes(recorder.buffer)
+        expected = bytes([KEY_EVENT_MSG_TYPE, 0, 0, 0]) + KEYSYM_ESCAPE.to_bytes(4, "big")
+        assert wire == expected
 
     @staticmethod
     def test_framebuffer_update_request_format() -> None:
-        """Verify framebuffer update request is correctly packed."""
-        msg = struct.pack(
-            "!BBHHHH",
-            FB_UPDATE_REQ_MSG_TYPE,
-            1,
-            0,
-            0,
-            FRAMEBUFFER_WIDTH,
-            FRAMEBUFFER_HEIGHT,
+        """Verify request_framebuffer_update emits RFB-spec request bytes."""
+        client = RFBClient()
+        recorder = _RecordingWriter()
+        client._writer = cast("asyncio.StreamWriter", recorder)
+        client.connected = True
+        client.width = FRAMEBUFFER_WIDTH
+        client.height = FRAMEBUFFER_HEIGHT
+
+        asyncio.run(client.request_framebuffer_update(incremental=True))
+
+        wire = bytes(recorder.buffer)
+        expected = (
+            bytes([FB_UPDATE_REQ_MSG_TYPE, FB_REQ_INCREMENTAL])
+            + (0).to_bytes(2, "big")
+            + (0).to_bytes(2, "big")
+            + FRAMEBUFFER_WIDTH.to_bytes(2, "big")
+            + FRAMEBUFFER_HEIGHT.to_bytes(2, "big")
         )
-        assert len(msg) == FB_UPDATE_REQ_LEN
-        msg_type, incremental, _x, _y, w, h = struct.unpack("!BBHHHH", msg)
-        assert msg_type == FB_UPDATE_REQ_MSG_TYPE
-        assert incremental == 1
-        assert w == FRAMEBUFFER_WIDTH
-        assert h == FRAMEBUFFER_HEIGHT
+        assert len(expected) == FB_UPDATE_REQ_LEN
+        assert wire == expected
 
     @staticmethod
     def test_send_pointer_when_disconnected() -> None:
-        """Verify send_pointer_event is no-op when not connected."""
+        """Verify send_pointer_event writes nothing while disconnected."""
         client = RFBClient()
-        asyncio.run(client.send_pointer_event(100, 200, 1))
+        recorder = _RecordingWriter()
+        client._writer = cast("asyncio.StreamWriter", recorder)
+        assert not client.connected
+        asyncio.run(client.send_pointer_event(POINTER_TEST_X, POINTER_TEST_Y, POINTER_BUTTON_MASK))
+        assert bytes(recorder.buffer) == b""
 
     @staticmethod
     def test_send_key_when_disconnected() -> None:
-        """Verify send_key_event is no-op when not connected."""
+        """Verify send_key_event writes nothing while disconnected."""
         client = RFBClient()
+        recorder = _RecordingWriter()
+        client._writer = cast("asyncio.StreamWriter", recorder)
+        assert not client.connected
         asyncio.run(client.send_key_event(KEYSYM_RETURN, down=True))
+        assert bytes(recorder.buffer) == b""
 
 
 class TestRFBClientFramebuffer:
@@ -205,19 +306,43 @@ class TestRFBClientFramebuffer:
 
     @staticmethod
     def test_apply_raw_rect_partial_data() -> None:
-        """Verify _apply_raw_rect handles truncated pixel data."""
+        """Verify apply_raw_rect writes only the pixels covered by truncated data.
+
+        Eight bytes of BGRX data describe exactly two pixels. With a row stride
+        of ``SMALL_FB_WIDTH * 4`` bytes the production scanline blit can only
+        fill the first two pixels of row 0; the remaining pixels of row 0 and
+        every later row must retain the original fill colour.
+        """
         client = RFBClient()
         client.framebuffer = QImage(SMALL_FB_WIDTH, SMALL_FB_HEIGHT, QImage.Format.Format_RGB32)
         client.framebuffer.fill(QColor(0, 0, 0))
 
-        pixel_data = bytes([128, 64, 32, 0]) * 2
+        pixel_data = bytes([PARTIAL_BLUE, PARTIAL_GREEN, PARTIAL_RED, 0]) * PARTIAL_PIXEL_COUNT
         client.apply_raw_rect(0, 0, SMALL_FB_WIDTH, SMALL_FB_HEIGHT, pixel_data)
+
+        for col in range(PARTIAL_PIXEL_COUNT):
+            written = client.framebuffer.pixelColor(col, 0)
+            assert written.red() == PARTIAL_RED
+            assert written.green() == PARTIAL_GREEN
+            assert written.blue() == PARTIAL_BLUE
+
+        remainder_of_first_row = client.framebuffer.pixelColor(PARTIAL_PIXEL_COUNT, 0)
+        assert remainder_of_first_row.red() == 0
+        assert remainder_of_first_row.green() == 0
+        assert remainder_of_first_row.blue() == 0
+
+        untouched_row = client.framebuffer.pixelColor(0, 1)
+        assert untouched_row.red() == 0
+        assert untouched_row.green() == 0
+        assert untouched_row.blue() == 0
 
     @staticmethod
     def test_apply_raw_rect_no_framebuffer() -> None:
-        """Verify _apply_raw_rect is no-op without framebuffer."""
+        """Verify apply_raw_rect allocates no framebuffer when none exists."""
         client = RFBClient()
+        assert client.framebuffer is None
         client.apply_raw_rect(0, 0, 1, 1, bytes(PIXEL_BYTES_PER_PIXEL))
+        assert client.framebuffer is None
 
     @staticmethod
     def test_apply_raw_rect_at_offset() -> None:
@@ -294,10 +419,13 @@ class TestVNCWidget:
 
     @staticmethod
     def test_construction() -> None:
-        """Verify VNCWidget can be constructed."""
+        """Verify VNCWidget constructs with its minimum size and a wired RFB client."""
         widget = VNCWidget()
         assert widget.minimumWidth() >= MIN_VNC_WIDTH
         assert widget.minimumHeight() >= MIN_VNC_HEIGHT
+        assert isinstance(widget.client, RFBClient)
+        assert not widget.client.connected
+        assert widget.client.framebuffer is None
 
     @staticmethod
     def test_initial_client_disconnected() -> None:
@@ -352,6 +480,21 @@ class TestVNCWidget:
         assert not widget.update_timer.isActive()
 
     @staticmethod
-    def test_button_mask_static_method_exists() -> None:
-        """Verify _button_mask is accessible as a static method."""
-        assert callable(VNCWidget.button_mask)
+    def test_button_mask_maps_qt_buttons_to_rfb_bits() -> None:
+        """Verify button_mask maps Qt mouse buttons to exact RFB bitmask values.
+
+        Per RFB the pointer button mask uses bit 0 for the left button, bit 1
+        for the middle button and bit 2 for the right button, OR-combined when
+        several buttons are held.
+        """
+        left = _make_mouse_event(Qt.MouseButton.LeftButton)
+        middle = _make_mouse_event(Qt.MouseButton.MiddleButton)
+        right = _make_mouse_event(Qt.MouseButton.RightButton)
+        none = _make_mouse_event(Qt.MouseButton.NoButton)
+        left_and_right = _make_mouse_event(Qt.MouseButton.LeftButton | Qt.MouseButton.RightButton)
+
+        assert VNCWidget.button_mask(left) == RFB_BUTTON_LEFT
+        assert VNCWidget.button_mask(middle) == RFB_BUTTON_MIDDLE
+        assert VNCWidget.button_mask(right) == RFB_BUTTON_RIGHT
+        assert VNCWidget.button_mask(none) == 0
+        assert VNCWidget.button_mask(left_and_right) == RFB_BUTTON_LEFT | RFB_BUTTON_RIGHT

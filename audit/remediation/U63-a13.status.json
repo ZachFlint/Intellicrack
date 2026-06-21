@@ -1,1 +1,23 @@
-{"unitId":"U63-a13","findings":[{"ref":"tests/test_hexcore_e2e/test_hashing.py:101-127 - test_sha3_256_matches_hashlib_if_supported & test_sha3_512_matches_hashlib_if_supported","severity":"Medium","status":"FIXED","oracle":"Real intellicrack_hexcore.HexDocument over zero bytes and 256-byte 0x00-0xFF payload; independent published NIST FIPS 202 KATs (SHA3-256(\"\")=a7ffc6f8..., SHA3-512(\"\")=a69f73cc...) plus hashlib.sha3_256/sha3_512 cross-check; pytest.skip removed and replaced by unconditional exact-digest equality asserts that go red if the SHA3 arm is present-but-broken."}],"filesModified":["tests/test_hexcore_e2e/test_hashing.py"],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"33 passed in 1.27s"}
+{
+  "unitId": "U63-a13",
+  "findings": [
+    {
+      "ref": "tests/test_hexcore_e2e/test_hashing.py:101-127 - test_sha3_256_matches_hashlib_if_supported & test_sha3_512_matches_hashlib_if_supported",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real intellicrack_hexcore.HexDocument over zero bytes and 256-byte 0x00-0xFF payload; independent published NIST FIPS 202 KATs (SHA3-256(\"\")=a7ffc6f8..., SHA3-512(\"\")=a69f73cc...) plus hashlib.sha3_256/sha3_512 cross-check; pytest.skip removed and replaced by unconditional exact-digest equality asserts that go red if the SHA3 arm is present-but-broken."
+    }
+  ],
+  "filesModified": [
+    "tests/test_hexcore_e2e/test_hashing.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "33 passed in 1.27s"
+}

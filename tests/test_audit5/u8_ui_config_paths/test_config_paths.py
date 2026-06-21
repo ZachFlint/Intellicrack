@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -25,6 +24,7 @@ from intellicrack.core.config import get_project_root
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+    from pathlib import Path
 
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -100,17 +100,27 @@ class TestToolConfigDialogPaths:
     def test_default_tools_directory_is_not_hardcoded_d_drive(
         self,
         qapp: QApplication,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Default tools_directory must never be the developer-specific D:/ path.
+        """Default tools_directory must track get_project_root(), not a frozen literal.
+
+        Patches the project-root resolver to a synthetic location and asserts the
+        resolved tools directory follows it. A path hardcoded to
+        ``D:/Intellicrack/tools`` would ignore the patched root and fail this gate
+        regardless of which drive the repository actually lives on.
 
         Args:
             qapp: Active Qt application fixture.
+            tmp_path: Pytest temp directory fixture.
+            monkeypatch: Pytest monkeypatch fixture.
         """
         del qapp
+        synthetic_root = tmp_path / "elsewhere"
+        monkeypatch.setattr("intellicrack.ui.tool_config.get_project_root", lambda: synthetic_root)
         dialog = _ProbeToolConfigDialog()
         try:
-            forbidden = Path("D:/Intellicrack/tools")
-            assert dialog.resolved_tools_directory() != forbidden
+            assert dialog.resolved_tools_directory() == synthetic_root / "tools"
         finally:
             dialog.deleteLater()
 
@@ -175,7 +185,12 @@ class TestSandboxConfigDialogPaths:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Default shared folder must never equal the developer-specific D:/ path.
+        """Default shared folder must track get_project_root(), not a frozen literal.
+
+        Patches the project-root resolver to a synthetic location and asserts the
+        displayed shared folder follows it. A path hardcoded to
+        ``D:/Intellicrack/sandbox_shared`` would ignore the patched root and fail
+        this gate regardless of which drive the repository actually lives on.
 
         Args:
             qapp: Active Qt application fixture.
@@ -185,12 +200,13 @@ class TestSandboxConfigDialogPaths:
         del qapp
         missing_config = tmp_path / "no_such_sandbox.json"
         monkeypatch.setattr(SandboxConfigDialog, "CONFIG_FILE", missing_config)
+        synthetic_root = tmp_path / "elsewhere"
+        monkeypatch.setattr("intellicrack.ui.sandbox_config.get_project_root", lambda: synthetic_root)
 
         dialog = _ProbeSandboxConfigDialog()
         try:
             displayed = dialog.displayed_shared_folder()
-            forbidden = str(Path("D:/Intellicrack/sandbox_shared"))
-            assert displayed != forbidden
+            assert displayed == str(synthetic_root / "sandbox_shared")
         finally:
             dialog.deleteLater()
 

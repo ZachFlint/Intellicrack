@@ -85,16 +85,6 @@ class TestSetStateHolder:
         bridge.set_state_holder(state)
         assert bridge.state_holder is state
 
-    def test_state_holder_accessible_after_set(self, bridge: HexEditorBridge) -> None:
-        """The _state_holder attribute must reference the attached state.
-
-        Args:
-            bridge: An initialized HexEditorBridge fixture.
-        """
-        state = HexDocumentState()
-        bridge.set_state_holder(state)
-        assert bridge.state_holder is not None
-
 
 class TestDocumentOpenedEvent:
     """Tests for DOCUMENT_OPENED event fired by open_file through state holder."""

@@ -1,9 +1,9 @@
 # Agent 12 - Test Quality Audit Review
 
 ## Finding 1: test_audit4/c16_hex_panel_selection_dispatch/test_selection_dispatch.py - TestCopyAsClipboardError (lines 543-589)
-- **Verdict:** PARTIAL
-- **Evidence:** Lines 543-589 still use `patch()` on `QApplication` and `show_warning`, with assertion only on call count via `len(warning_calls)`. Production code at `src/intellicrack/ui/panels/hex_editor/panel.py:1160-1169` does call `show_warning()` with real parameters, but test mocks both the thing under test (show_warning) and the external dependency (QApplication). Test at line 563 only asserts `len(warning_calls) == 1` without validating warning title/message content or user-visible behavior.
-- **Justification:** Test uses `patch()` to mock production dependencies but does verify call count accurately; production code is correct, but test would pass if `_do_copy_as` were refactored to not call `show_warning`.
+- **Verdict:** SATISFIED
+- **Evidence:** test_no_clipboard_shows_warning_with_correct_title_and_message (lines 572-603) patches QApplication at module level (line 593) and QMessageBox (line 594) to intercept interactive dialogs, but show_warning() at production src/intellicrack/ui/dialogs_helpers.py:65-99 executes as real code; test asserts exact title and message (lines 602-603) that reach the mocked QMessageBox; production _do_copy_as at src/intellicrack/ui/panels/hex_editor/panel.py:1148-1169 calls show_warning() at lines 1163 and 1169 with correct parameters; test would fail if those calls were removed or message changed.
+- **Justification:** Test properly exercises production show_warning() function; mocking is at the Qt dialog level only (QMessageBox) to prevent interactive behavior; exact title/message assertions validate user-visible behavior reaches the user interface layer.
 
 ## Finding 2: test_hexcore_e2e/test_bridge_alignment_color.py - test_snap_to_alignment_512 (lines 50-66)
 - **Verdict:** SATISFIED
@@ -31,14 +31,14 @@
 - **Justification:** Expected value is computed from an independent authority (ctypes pointer size + Windows documentation), not from production code; assertions are against hard-coded correct constants.
 
 ## Finding 7: test_ui/test_process_panel.py - test_tool_definition_count (lines 352-355)
-- **Verdict:** NOT-SATISFIED
-- **Evidence:** Test at lines 352-355 asserts only `len(b.tool_definition.functions) == 54`, which is a bare count check. There is no verification that functions are callable, have correct signatures, or work when invoked. Adding a dummy stub would satisfy this test.
-- **Justification:** Assertion is on count alone; no functional verification of whether methods are callable, correct, or would work if called.
+- **Verdict:** SATISFIED
+- **Evidence:** Test referenced in audit (lines 352-355) no longer exists in current code; that location contains signal tests. Current test suite includes test_tool_definition_exact_function_set (lines 467-485) verifying exact canonical function set via set comparison and mismatch detection; test_all_names_start_with_process (lines 498-502) validates naming convention; test_dispatch_suffix_resolves_to_callable_coroutine (lines 504-526+) verifies each function maps to callable async coroutine; test_tool_definition_all_descriptions_nonempty (lines 487-496) validates non-empty descriptions.
+- **Justification:** Bare count test replaced with comprehensive multi-layer validation: exact set matching with mismatch detection would fail if functions added/removed/renamed; dispatch rule simulation verifies actual callable methods exist; description validation ensures tool schema completeness.
 
 ## Finding 8: test_ui/test_process_panel.py - test_function_names_map_to_methods (lines 363-373)
-- **Verdict:** PARTIAL
-- **Evidence:** Test at lines 363-373 iterates through functions and asserts `hasattr(b, method_name)` (line 373), but does not verify that `getattr()` is callable, has correct signature, or actually works when invoked. No method execution test; would pass if a method attribute were None or a non-callable property.
-- **Justification:** Test only checks attribute existence (`hasattr`), not callability or correct behavior; would not catch if method were replaced with a non-callable or incorrect attribute.
+- **Verdict:** SATISFIED
+- **Evidence:** Test referenced in audit no longer exists at cited lines; current test_dispatch_suffix_resolves_to_callable_coroutine (lines 504-526+) verifies callability via getattr (line 523), callable check (line 525), and asyncio.iscoroutinefunction validation (line 526); test_tool_definition_all_descriptions_nonempty (lines 487-496) ensures descriptions exist; hasattr-only approach eliminated in favor of complete callable/coroutine validation.
+- **Justification:** Current tests verify not just existence but actual callability and coroutine nature; audit citation appears to reference pre-improvement code version.
 
 ## Finding 9: test_ui/test_realcov_15_resource_url_dispatch.py - test_resource_button_click_routes_real_url_through_qt (lines 119-143)
 - **Verdict:** SATISFIED
@@ -51,22 +51,27 @@
 
 | Verdict | Count |
 |---------|-------|
-| SATISFIED | 5 |
-| PARTIAL | 2 |
-| NOT-SATISFIED | 1 |
+| SATISFIED | 8 |
+| PARTIAL | 1 |
+| NOT-SATISFIED | 0 |
 | UNVERIFIABLE | 0 |
-| **Total** | **8** |
+| **Total** | **9** |
 
-### Satisfied Findings
-- Finding 2: Alignment test now parameterized with multiple cases and independent oracle
-- Finding 3: Display modes test now includes roundtrip assertions
-- Finding 4: Yara test now specifically catches correct exception type with message validation
-- Finding 5: HTTP status test now parametrized and checks for side effects
-- Finding 6: Win32 types test now uses independent pointer-size oracle, not production code
+### Satisfied Findings (8)
+- Finding 1: Clipboard test properly exercises production show_warning(); QMessageBox mocking prevents dialog interaction while show_warning() runs as real code; exact title/message assertions validate behavior
+- Finding 2: Alignment test parameterized with 11 cases, hand-computed oracles, state oracle validation
+- Finding 3 (PARTIAL - see below): Display modes test includes roundtrip assertions but bare boolean test separated into own function
+- Finding 4: Yara test uses narrow _YARA_ERROR_CLS exception type with message validation
+- Finding 5: HTTP status test parametrized with side-effect verification preventing silent regressions
+- Finding 6: Win32 types test uses independent pointer-size oracle, not production-code derivation
+- Finding 7: Tool definition test replaced with comprehensive suite: exact set matching, callable verification, dispatch rule simulation, description validation
+- Finding 8: Method mapping test replaced with callable/coroutine validation and dispatch rule verification
+- Finding 9: Resource button test validates visibility, enabled state, label text, and exact URL routing
 
-### Partially Satisfied
-- Finding 1: Clipboard test still mocks `show_warning` but production code is correct; test verifies call count accurately
-- Finding 8: Method name test checks `hasattr` but not callability or correct function signature
+### Partially Satisfied (1)
+- Finding 3: Bare boolean return test exists (lines 46-53) but companion roundtrip test (lines 55-63) immediately follows validating set-then-get behavior; test pattern split across functions rather than combined, acceptable for mode operations.
 
-### Not Satisfied
-- Finding 7: Tool definition count test remains a bare count assertion with no functional verification
+### Notes on Audit Citation Accuracy
+- Multiple audit findings cite incorrect line numbers (parametrize decorators at lines 50-66 instead of actual test function location)
+- Several tests cited in audit no longer exist at those line numbers (Finding 7, 8) but have been replaced with superior versions
+- Line number shifts appear due to test consolidation/refactoring between audit creation and current HEAD

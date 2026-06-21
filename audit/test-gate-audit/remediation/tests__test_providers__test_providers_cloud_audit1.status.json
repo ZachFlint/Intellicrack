@@ -1,0 +1,82 @@
+{
+ "file": "tests/test_providers/test_providers_cloud_audit1.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0001_chat_enable_cache_completes_full_call_path",
+   "severity": "MEDIUM",
+   "category": "N8 \u2014 existence-only/signature check for a behavior test",
+   "action": "hardened",
+   "oracle": "Independent invocation counter (list append) and exact response content string ('cache-ok', 'grok-cache-ok', 'google-cache-ok') returned by the fake transport boundary, compared against the actual Message.content produced by the production provider code.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/providers/grok.py",
+    "mutation": "content = response_message.content if response_message.content is not None else \"\" -> content = \"\"",
+    "covering_test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0001_chat_enable_cache_completes_full_call_path",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_grok_retries_on_transient_rate_limit",
+   "severity": "MEDIUM",
+   "category": "N9 \u2014 source-text/inspect.getsource substring proxy",
+   "action": "hardened",
+   "oracle": "Independent invocation counter: exactly 2 transport calls must occur (one failing with RateLimitError, one succeeding). The returned Message.content must equal 'grok-retried-ok'. If _retry_with_backoff is removed or bypassed, the first RateLimitError propagates uncaught and the test fails with that exception before reaching the counter assertion.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/providers/base.py",
+    "mutation": "for attempt in range(max_retries + 1): -> for attempt in range(1):",
+    "covering_test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_grok_retries_on_transient_rate_limit",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_openrouter_retries_on_transient_rate_limit",
+   "severity": "MEDIUM",
+   "category": "N9 \u2014 source-text/inspect.getsource substring proxy",
+   "action": "hardened",
+   "oracle": "Independent invocation counter: exactly 2 transport calls must occur (one failing with RateLimitError, one returning a valid JSON response). The returned Message.content must equal 'openrouter-retried-ok'. If _retry_with_backoff is removed or bypassed, the first RateLimitError propagates uncaught and the test fails before reaching the counter assertion.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/providers/base.py",
+    "mutation": "for attempt in range(max_retries + 1): -> for attempt in range(1):",
+    "covering_test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_openrouter_retries_on_transient_rate_limit",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_google_retries_on_transient_rate_limit",
+   "severity": "MEDIUM",
+   "category": "N9 \u2014 source-text/inspect.getsource substring proxy",
+   "action": "hardened",
+   "oracle": "Independent invocation counter: exactly 2 transport calls must occur (one failing with RateLimitError, one returning a valid mock response). The returned Message.content must equal 'google-retried-ok'. If _retry_with_backoff is removed from _run_google_chat, the first RateLimitError propagates uncaught.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/providers/base.py",
+    "mutation": "for attempt in range(max_retries + 1): -> for attempt in range(1):",
+    "covering_test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_google_retries_on_transient_rate_limit",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 4
+}

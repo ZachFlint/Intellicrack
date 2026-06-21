@@ -1,1 +1,35 @@
-{"unitId":"U30-a13","findings":[{"ref":"tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py:183-196 - test_cached_success_stored_in_dict","severity":"High","status":"FIXED","oracle":"Rewritten as test_cached_success_stored_in_dict_matches_real_probe: no AsyncMock; drives the real SandboxManager._probe_type (live where/CIM + qemu-system discovery) through get_available_types(); independent oracle is a fresh WindowsSandbox/QEMUSandbox is_available(); asserts every probed type is present in availability_cache and entry.available is exactly the oracle bool."},{"ref":"tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py:80-106 - test_probe_called_once_per_type_across_five_calls","severity":"High","status":"FIXED","oracle":"Rewritten as test_probe_called_once_per_available_type_across_five_calls: no patch/fake; _RecordingManager delegates to the real super()._probe_type and counts live probes; asserts each type is probed exactly once across five get_available_types() calls (verified RED at count 5 when cache write is removed) and each returned list equals the independent real-oracle availability."},{"ref":"tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py:108-122 - test_successful_result_returned_consistently","severity":"High","status":"FIXED","oracle":"Rewritten as test_successful_result_returned_consistently: no patch.object/fake_probe; three real get_available_types() calls via the live probe path; asserts the three lists are identical to each other and byte-for-byte equal to the independent oracle ([t for t in (windows,qemu) if WindowsSandbox/QEMUSandbox.is_available()])."}],"filesModified":["tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py"],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"14 passed in 56.84s"}
+{
+  "unitId": "U30-a13",
+  "findings": [
+    {
+      "ref": "tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py:183-196 - test_cached_success_stored_in_dict",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Rewritten as test_cached_success_stored_in_dict_matches_real_probe: no AsyncMock; drives the real SandboxManager._probe_type (live where/CIM + qemu-system discovery) through get_available_types(); independent oracle is a fresh WindowsSandbox/QEMUSandbox is_available(); asserts every probed type is present in availability_cache and entry.available is exactly the oracle bool."
+    },
+    {
+      "ref": "tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py:80-106 - test_probe_called_once_per_type_across_five_calls",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Rewritten as test_probe_called_once_per_available_type_across_five_calls: no patch/fake; _RecordingManager delegates to the real super()._probe_type and counts live probes; asserts each type is probed exactly once across five get_available_types() calls (verified RED at count 5 when cache write is removed) and each returned list equals the independent real-oracle availability."
+    },
+    {
+      "ref": "tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py:108-122 - test_successful_result_returned_consistently",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Rewritten as test_successful_result_returned_consistently: no patch.object/fake_probe; three real get_available_types() calls via the live probe path; asserts the three lists are identical to each other and byte-for-byte equal to the independent oracle ([t for t in (windows,qemu) if WindowsSandbox/QEMUSandbox.is_available()])."
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "14 passed in 56.84s"
+}

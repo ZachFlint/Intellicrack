@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py::TestVendorIncludeFlattening::test_missing_include_does_not_raise",
+   "severity": "MEDIUM",
+   "category": "N8/N2-adjacent (existence-only / no-raise only; no warning assertion; no exact-body check)",
+   "action": "hardened",
+   "oracle": "structlog.testing.capture_logs intercepts the real _logger.warning(\"include_not_found\", include_path=...) event emitted by HexPatPreprocessor._resolve_include(); the exact output body [\"u8 x @ 42;\"] is derived independently: the input contains exactly one placement statement after the missing include directive, so any correct implementation must produce exactly that one line and nothing else.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/core/hexpat/preprocessor.py",
+    "mutation": "\"include_not_found\", -> \"include_resolved\",",
+    "covering_test": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py::TestVendorIncludeFlattening::test_missing_include_does_not_raise",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

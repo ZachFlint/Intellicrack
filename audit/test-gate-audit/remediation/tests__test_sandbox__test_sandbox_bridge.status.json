@@ -1,0 +1,57 @@
+{
+ "file": "tests/test_sandbox/test_sandbox_bridge.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "test_definition_exists",
+   "severity": "LOW",
+   "category": "N4",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_sandbox/test_sandbox_bridge.py::TestToolDefinition::test_function_count",
+   "falsifiability": null
+  },
+  {
+   "test": "test_all_definition_functions_dispatch_to_real_behavior (was test_all_resolve_to_methods)",
+   "severity": "MEDIUM",
+   "category": "N8",
+   "action": "hardened",
+   "oracle": "Fixture-derived independent values: known instance IDs (_WIN_INSTANCE/_QEMU_INSTANCE), conftest InMemorySandbox constant returns (run_command -> 'ok: dir', capture_screenshot -> tempdir/screenshot.png, dump_memory -> tempdir/memdump.raw, extract_dropped_files -> tempdir/dropped.zip, start_pcap_capture -> 'cap-001', take_snapshot(name) -> 'snap-'+name, yara_scan -> 1 match), StubManager advertised types {'windows','qemu'} and active_count==2, StubQMP.cont -> {'status':'running'}, StubAgent single heartbeat (count==1), InMemoryQEMUSandbox.vnc_port==5900, and analysis-module results on the win report (timeline 2 events, 0 behaviors, 0 C2).",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "mutation": "\"data\": response.data, -> \"data\": {},",
+    "covering_test": "tests/test_sandbox/test_sandbox_bridge.py::TestToolDefinition::test_all_definition_functions_dispatch_to_real_behavior",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "test_create_translates_unavailable_type_to_typed_tool_error (was test_create_failure_raises)",
+   "severity": "MEDIUM",
+   "category": "N7",
+   "action": "hardened",
+   "oracle": "SandboxManager.create contract in src/intellicrack/sandbox/manager.py: an unavailable type raises SandboxError('Sandbox type not available: windows'); the bridge wraps it as ToolError prefixed with _ERR_CREATE_FAILED ('Failed to create sandbox') and records the unwrapped reason in state.last_error. On Linux/Docker WindowsSandbox.is_available() is False (where WindowsSandboxClient.exe fails), so the failure path is exercised deterministically.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "mutation": "_ERR_CREATE_FAILED = \"Failed to create sandbox\" -> _ERR_CREATE_FAILED = \"Sandbox creation problem\"",
+    "covering_test": "tests/test_sandbox/test_sandbox_bridge.py::TestCreateDestroy::test_create_translates_unavailable_type_to_typed_tool_error",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 2
+}

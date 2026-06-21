@@ -201,6 +201,15 @@ class _StubBridge:
         self.pipe_close_exc: Exception | None = None
         self.job_info_result: dict[str, object] = {}
         self.privileges_result: list[object] = []
+        self.method_calls: dict[str, int] = {}
+
+    def _record(self, name: str) -> None:
+        """Increment the call counter for *name*.
+
+        Args:
+            name: Name of the bridge method being tracked.
+        """
+        self.method_calls[name] = self.method_calls.get(name, 0) + 1
 
     def get_token_privileges(self, _pid: int | None) -> Coroutine[Any, Any, Any]:
         """Stub for get_token_privileges.
@@ -211,6 +220,7 @@ class _StubBridge:
         Returns:
             Coroutine[Any, Any, Any]: Coroutine yielding the configured privileges list.
         """
+        self._record("get_token_privileges")
         return _AsyncSuccess(self.privileges_result)()
 
     def adjust_token_privilege(self, _name: str, *, enable: bool, pid: int | None) -> Coroutine[Any, Any, Any]:
@@ -225,6 +235,7 @@ class _StubBridge:
             Coroutine[Any, Any, Any]: Coroutine yielding None.
         """
         del enable, pid
+        self._record("adjust_token_privilege")
         return _AsyncSuccess(None)()
 
     def list_services(self, _pid: int | None) -> Coroutine[Any, Any, Any]:
@@ -236,6 +247,7 @@ class _StubBridge:
         Returns:
             Coroutine[Any, Any, Any]: Coroutine yielding an empty list.
         """
+        self._record("list_services")
         return _AsyncSuccess([])()
 
     def read_peb(self, _pid: int | None) -> Coroutine[Any, Any, Any]:
@@ -247,6 +259,7 @@ class _StubBridge:
         Returns:
             Coroutine[Any, Any, Any]: Coroutine yielding an empty dict.
         """
+        self._record("read_peb")
         return _AsyncSuccess({})()
 
     def get_job_info(self, _pid: int | None) -> Coroutine[Any, Any, Any]:
@@ -258,6 +271,7 @@ class _StubBridge:
         Returns:
             Coroutine[Any, Any, Any]: Coroutine yielding the configured result dict.
         """
+        self._record("get_job_info")
         return _AsyncSuccess(self.job_info_result)()
 
     def get_gui_resources(self, _pid: int | None) -> Coroutine[Any, Any, Any]:
@@ -561,7 +575,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
 
     def test_unattached_does_not_dispatch_privileges(self) -> None:
         """Get Privileges with no attached pid must not invoke the bridge."""
-        tab, _bridge = _make_tab_with_bridge(pid=None)
+        tab, bridge = _make_tab_with_bridge(pid=None)
         assert _attached_pid(tab) is None
 
         calls: list[_CallRecord] = []
@@ -570,11 +584,14 @@ class TestUnattachedDoesNotDispatchPrivileges:
         with patch(_MOD, runner):
             getattr(tab, "_refresh_privileges")()
 
-        assert calls == [], "no bridge call must occur when _attached_pid is None"
+        assert calls == [], "no dispatcher call must occur when _attached_pid is None"
+        assert bridge.method_calls.get("get_token_privileges", 0) == 0, (
+            "get_token_privileges must not be called on the bridge when unattached"
+        )
 
     def test_unattached_does_not_dispatch_enable_debug(self) -> None:
         """Enable Debug Privilege with no attached pid must not invoke the bridge."""
-        tab, _bridge = _make_tab_with_bridge(pid=None)
+        tab, bridge = _make_tab_with_bridge(pid=None)
         assert _attached_pid(tab) is None
 
         calls: list[_CallRecord] = []
@@ -583,11 +600,14 @@ class TestUnattachedDoesNotDispatchPrivileges:
         with patch(_MOD, runner):
             getattr(tab, "_on_enable_debug")()
 
-        assert calls == [], "no bridge call must occur when _attached_pid is None"
+        assert calls == [], "no dispatcher call must occur when _attached_pid is None"
+        assert bridge.method_calls.get("adjust_token_privilege", 0) == 0, (
+            "adjust_token_privilege must not be called on the bridge when unattached"
+        )
 
     def test_unattached_does_not_dispatch_services(self) -> None:
         """Enumerate Services with no attached pid must not invoke the bridge."""
-        tab, _bridge = _make_tab_with_bridge(pid=None)
+        tab, bridge = _make_tab_with_bridge(pid=None)
         assert _attached_pid(tab) is None
 
         calls: list[_CallRecord] = []
@@ -596,11 +616,14 @@ class TestUnattachedDoesNotDispatchPrivileges:
         with patch(_MOD, runner):
             getattr(tab, "_refresh_services")()
 
-        assert calls == [], "no bridge call must occur when _attached_pid is None"
+        assert calls == [], "no dispatcher call must occur when _attached_pid is None"
+        assert bridge.method_calls.get("list_services", 0) == 0, (
+            "list_services must not be called on the bridge when unattached"
+        )
 
     def test_unattached_does_not_dispatch_read_peb(self) -> None:
         """Read PEB with no attached pid must not invoke the bridge."""
-        tab, _bridge = _make_tab_with_bridge(pid=None)
+        tab, bridge = _make_tab_with_bridge(pid=None)
         assert _attached_pid(tab) is None
 
         calls: list[_CallRecord] = []
@@ -609,7 +632,10 @@ class TestUnattachedDoesNotDispatchPrivileges:
         with patch(_MOD, runner):
             getattr(tab, "_on_read_peb")()
 
-        assert calls == [], "no bridge call must occur when _attached_pid is None"
+        assert calls == [], "no dispatcher call must occur when _attached_pid is None"
+        assert bridge.method_calls.get("read_peb", 0) == 0, (
+            "read_peb must not be called on the bridge when unattached"
+        )
 
     def test_set_attached_pid_none_surfaces_not_attached_status(self) -> None:
         """_refresh_privileges with no pid writes Not Attached into raw output."""

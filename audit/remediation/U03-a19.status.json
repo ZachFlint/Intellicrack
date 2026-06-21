@@ -1,1 +1,35 @@
-{"unitId":"U03-a19","findings":[{"ref":"tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py:378-422 - TestF0002AgentConnectCalled.test_agent_connect_invoked_during_start","severity":"Critical","status":"FIXED","oracle":"Real loopback asyncio server on an ephemeral port + a real GuestAgentClient driven through production QEMUSandbox._ensure_agent_connected (no patches). Oracle = the server's own accepted-peer counter and the agent's is_connected flag. Asserts agent.is_connected is True and the server accepted exactly one socket; a companion test reserves-then-releases a dead port and asserts pytest.raises(SandboxError). If production stopped awaiting connect, is_connected stays False and both go red."},{"ref":"tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py:439-494 - TestF0003PollForResult.test_poll_reads_exit_code_from_result_file","severity":"High","status":"FIXED","oracle":"Real _poll_for_result driven over real result files. Oracle = the documented contract (stripped all-digit body = decimal exit code, everything else = -1 sentinel), independently asserted: parametrized well-formed cases (0,1,42,255,'007'->7,'  13  '->13), parametrized malformed cases ('','abc','0x42','-1','1.5','exit: 0','42 43')->-1, and a multi-line 'garbage\\n7'->-1 pinning whole-file-strip. Asserts exact 3-tuple incl. empty stdout/stderr without sidecars. A regression to last-line/hex/default-0 parsing goes red."},{"ref":"tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py:591-630 - TestF0003PollForResult.test_generated_windows_script_redirects_stdout_and_stderr through ..._linux_...","severity":"Medium","status":"FIXED","oracle":"Production _generate_execution_script output is rewritten onto a real host output dir and actually executed by cmd.exe (Windows) and bash (Linux) with a command emitting known tokens HELLO_OUT/HELLO_ERR (3) and LINUX_OUT/LINUX_ERR (5). Oracle = the real OS streams. Asserts the stdout token lands only in the .stdout sidecar, the stderr token only in .stderr, and the result file records the exact exit code (3/5). Broken 1>/2> redirection or echo %ERRORLEVEL%/$? goes red."}],"filesModified":["tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py"],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"52 passed in 29.39s"}
+{
+  "unitId": "U03-a19",
+  "findings": [
+    {
+      "ref": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py:378-422 - TestF0002AgentConnectCalled.test_agent_connect_invoked_during_start",
+      "severity": "Critical",
+      "status": "FIXED",
+      "oracle": "Real loopback asyncio server on an ephemeral port + a real GuestAgentClient driven through production QEMUSandbox._ensure_agent_connected (no patches). Oracle = the server's own accepted-peer counter and the agent's is_connected flag. Asserts agent.is_connected is True and the server accepted exactly one socket; a companion test reserves-then-releases a dead port and asserts pytest.raises(SandboxError). If production stopped awaiting connect, is_connected stays False and both go red."
+    },
+    {
+      "ref": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py:439-494 - TestF0003PollForResult.test_poll_reads_exit_code_from_result_file",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real _poll_for_result driven over real result files. Oracle = the documented contract (stripped all-digit body = decimal exit code, everything else = -1 sentinel), independently asserted: parametrized well-formed cases (0,1,42,255,'007'->7,'  13  '->13), parametrized malformed cases ('','abc','0x42','-1','1.5','exit: 0','42 43')->-1, and a multi-line 'garbage\\n7'->-1 pinning whole-file-strip. Asserts exact 3-tuple incl. empty stdout/stderr without sidecars. A regression to last-line/hex/default-0 parsing goes red."
+    },
+    {
+      "ref": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py:591-630 - TestF0003PollForResult.test_generated_windows_script_redirects_stdout_and_stderr through ..._linux_...",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Production _generate_execution_script output is rewritten onto a real host output dir and actually executed by cmd.exe (Windows) and bash (Linux) with a command emitting known tokens HELLO_OUT/HELLO_ERR (3) and LINUX_OUT/LINUX_ERR (5). Oracle = the real OS streams. Asserts the stdout token lands only in the .stdout sidecar, the stderr token only in .stderr, and the result file records the exact exit code (3/5). Broken 1>/2> redirection or echo %ERRORLEVEL%/$? goes red."
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "52 passed in 29.39s"
+}

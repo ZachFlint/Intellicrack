@@ -887,7 +887,12 @@ class TestListHighlightsSeedsWidget:
         self,
         qapp: QApplication,
     ) -> None:
-        """Verify seed_highlights_from_bridge populates widget from 2 pre-existing rules.
+        """Verify seed_highlights_from_bridge populates widget with correct field values.
+
+        Asserts that each seeded rule has exactly the expected condition_type,
+        condition_params, color, and rule_id so that a regression in
+        _apply_bridge_highlight_rule_added field extraction would cause this test
+        to go red.
 
         Args:
             qapp: Qt application fixture.
@@ -923,12 +928,46 @@ class TestListHighlightsSeedsWidget:
 
         assert len(host.widget.rules) == 2, f"Expected 2 widget rules after seeding, got {len(host.widget.rules)}"
 
+        rules_by_id = {r.rule_id: r for r in host.widget.rules}
+
+        rule_a_obj = rules_by_id[rule_a]
+        assert rule_a_obj.condition_type == "byte_value", (
+            f"Rule A condition_type: expected 'byte_value', got {rule_a_obj.condition_type!r}"
+        )
+        assert rule_a_obj.condition_params == {"value": 0x10}, (
+            f"Rule A condition_params: expected {{'value': 0x10}}, got {rule_a_obj.condition_params!r}"
+        )
+        assert rule_a_obj.color == "#AABBCC", (
+            f"Rule A color: expected '#AABBCC', got {rule_a_obj.color!r}"
+        )
+
+        rule_b_obj = rules_by_id[rule_b]
+        assert rule_b_obj.condition_type == "byte_range", (
+            f"Rule B condition_type: expected 'byte_range', got {rule_b_obj.condition_type!r}"
+        )
+        assert rule_b_obj.condition_params == {"min": 0x20, "max": 0x30}, (
+            f"Rule B condition_params: expected {{'min': 0x20, 'max': 0x30}}, got {rule_b_obj.condition_params!r}"
+        )
+        assert rule_b_obj.color == "#DDEEFF", (
+            f"Rule B color: expected '#DDEEFF', got {rule_b_obj.color!r}"
+        )
+
+        label_a = build_rule_label(rule_a, "byte_value", {"value": 0x10}, "#AABBCC")
+        label_b = build_rule_label(rule_b, "byte_range", {"min": 0x20, "max": 0x30}, "#DDEEFF")
+        item_texts = {host.rules_list.item(i).text() for i in range(host.rules_list.count()) if host.rules_list.item(i) is not None}
+        assert label_a in item_texts, f"List widget must contain label for rule A.\n  expected: {label_a!r}\n  found: {item_texts!r}"
+        assert label_b in item_texts, f"List widget must contain label for rule B.\n  expected: {label_b!r}\n  found: {item_texts!r}"
+
 
 class TestRefreshPatternHighlightsCallsUpdateOnce:
     """F-0015: refresh_pattern_highlights must call _hex_widget.update() exactly once."""
 
     def test_refresh_pattern_highlights_calls_update_once(self, qapp: QApplication) -> None:
-        """Verify that refresh_pattern_highlights calls update() exactly once.
+        """Verify that refresh_pattern_highlights calls update() exactly once and applies offsets.
+
+        Asserts update_counter == 1 (not >= 1) and that the pattern rule's
+        condition_params["offsets"] is updated to the exact set {0, 4, 8} returned
+        by the document search.  A wrong offset set would cause this test to go red.
 
         Args:
             qapp: Qt application fixture.
@@ -967,31 +1006,72 @@ class TestRefreshPatternHighlightsCallsUpdateOnce:
             f"Expected update() called exactly once, got {host.widget.update_counter.call_count}"
         )
 
+        rules_in_widget = host.widget.rules
+        assert len(rules_in_widget) == 1, f"Expected 1 rule in widget, got {len(rules_in_widget)}"
+        refreshed_rule = rules_in_widget[0]
+        refreshed_offsets = refreshed_rule.condition_params.get("offsets")
+        assert refreshed_offsets == {0, 4, 8}, (
+            f"Expected offsets {{0, 4, 8}} after refresh, got {refreshed_offsets!r}"
+        )
+
 
 class TestBuildRuleLabel:
     """Unit tests for the build_rule_label helper function."""
 
     def test_byte_value_label(self) -> None:
-        """Verify build_rule_label formats byte_value rules correctly."""
+        """Verify build_rule_label produces the exact format for byte_value rules.
+
+        The production format is ``[{rule_id[:8]}] Byte == 0x{value:02X}  ({color})``.
+        A substring check would pass even if the separator or hex casing changed.
+        """
         label = build_rule_label("abcdef12", "byte_value", {"value": 0x41}, "#FF0000")
-        assert "0x41" in label.upper() or "0X41" in label.upper()
-        assert "#FF0000" in label
+        assert label == "[abcdef12] Byte == 0x41  (#FF0000)", (
+            f"Exact byte_value label mismatch: {label!r}"
+        )
 
     def test_byte_range_label(self) -> None:
-        """Verify build_rule_label formats byte_range rules correctly."""
+        """Verify build_rule_label produces the exact format for byte_range rules.
+
+        The production format is ``[{rule_id[:8]}] Byte 0x{min:02X}-0x{max:02X}  ({color})``.
+        """
         label = build_rule_label("abcdef12", "byte_range", {"min": 0x20, "max": 0x7E}, "#00FF00")
-        assert "0x20" in label.upper() or "0X20" in label.upper()
-        assert "0x7E" in label.upper() or "0X7E" in label.upper()
-        assert "#00FF00" in label
+        assert label == "[abcdef12] Byte 0x20-0x7E  (#00FF00)", (
+            f"Exact byte_range label mismatch: {label!r}"
+        )
 
     def test_pattern_label(self) -> None:
-        """Verify build_rule_label formats pattern rules with hit count."""
+        """Verify build_rule_label produces the exact format for pattern rules.
+
+        The production format is ``[{rule_id[:8]}] Pattern {pattern}  ({hit_count} hits, {color})``.
+        """
         label = build_rule_label(
             "abcdef12",
             "pattern",
             {"pattern": "DEADBEEF", "offsets": [0, 4, 8]},
             "#0000FF",
         )
-        assert "DEADBEEF" in label
-        assert "3 hits" in label
-        assert "#0000FF" in label
+        assert label == "[abcdef12] Pattern DEADBEEF  (3 hits, #0000FF)", (
+            f"Exact pattern label mismatch: {label!r}"
+        )
+
+    def test_byte_value_label_two_digit_hex(self) -> None:
+        """Verify byte_value label uses zero-padded two-digit hex for single-digit values."""
+        label = build_rule_label("12345678", "byte_value", {"value": 0x0A}, "#123456")
+        assert label == "[12345678] Byte == 0x0A  (#123456)", (
+            f"Zero-padded hex expected for 0x0A: {label!r}"
+        )
+
+    def test_pattern_label_zero_hits(self) -> None:
+        """Verify pattern label with empty offsets shows 0 hits."""
+        label = build_rule_label("aaaabbbb", "pattern", {"pattern": "CAFEBABE", "offsets": []}, "#FFFFFF")
+        assert label == "[aaaabbbb] Pattern CAFEBABE  (0 hits, #FFFFFF)", (
+            f"Zero-hits pattern label mismatch: {label!r}"
+        )
+
+    def test_rule_id_truncated_to_eight_chars(self) -> None:
+        """Verify that rule IDs longer than 8 chars are truncated to exactly 8."""
+        long_id = "abcdef1234567890"
+        label = build_rule_label(long_id, "byte_value", {"value": 0xFF}, "#000000")
+        assert label.startswith("[abcdef12]"), (
+            f"Rule ID prefix must be first 8 chars: {label!r}"
+        )

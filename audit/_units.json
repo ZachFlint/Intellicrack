@@ -1,1117 +1,1117 @@
 [
- {
-  "id": "U00-fixtures",
-  "kind": "fixtures",
-  "maxSeverity": "Critical",
-  "findingCount": 3,
-  "weight": 26,
-  "reports": [
-   "agent-06.md",
-   "agent-11.md",
-   "agent-18.md"
-  ],
-  "files": [
-   "tests/test_audit4/b6_system_tab/conftest.py",
-   "tests/test_bridges/conftest.py",
-   "tests/test_sandbox/conftest.py"
-  ]
- },
- {
-  "id": "U01-a17",
-  "kind": "a17",
-  "maxSeverity": "Critical",
-  "findingCount": 48,
-  "weight": 179,
-  "reports": [
-   "agent-17.md"
-  ],
-  "files": [
-   "tests/test_providers/test_e2e_chat.py"
-  ]
- },
- {
-  "id": "U02-a03",
-  "kind": "a03",
-  "maxSeverity": "Critical",
-  "findingCount": 8,
-  "weight": 23,
-  "reports": [
-   "agent-03.md"
-  ],
-  "files": [
-   "tests/test_audit7/sandbox_qemu/test_anti_evasion_identity.py"
-  ]
- },
- {
-  "id": "U03-a19",
-  "kind": "a19",
-  "maxSeverity": "Critical",
-  "findingCount": 3,
-  "weight": 16,
-  "reports": [
-   "agent-19.md"
-  ],
-  "files": [
-   "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py"
-  ]
- },
- {
-  "id": "U04-a11",
-  "kind": "a11",
-  "maxSeverity": "Critical",
-  "findingCount": 3,
-  "weight": 15,
-  "reports": [
-   "agent-11.md"
-  ],
-  "files": [
-   "tests/test_audit4/c8_hex_signatures_offload/test_signatures_offload.py",
-   "tests/test_sandbox/test_sandbox_bridge.py"
-  ]
- },
- {
-  "id": "U05-a02",
-  "kind": "a02",
-  "maxSeverity": "Critical",
-  "findingCount": 1,
-  "weight": 10,
-  "reports": [
-   "agent-02.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_hexpat_evaluator.py"
-  ]
- },
- {
-  "id": "U06-a03",
-  "kind": "a03",
-  "maxSeverity": "Critical",
-  "findingCount": 1,
-  "weight": 10,
-  "reports": [
-   "agent-03.md"
-  ],
-  "files": [
-   "tests/test_providers/test_providers_local_audit1.py"
-  ]
- },
- {
-  "id": "U07-a08",
-  "kind": "a08",
-  "maxSeverity": "Critical",
-  "findingCount": 1,
-  "weight": 10,
-  "reports": [
-   "agent-08.md"
-  ],
-  "files": [
-   "tests/test_core/test_realcov_07b_xml_gen.py"
-  ]
- },
- {
-  "id": "U08-a10",
-  "kind": "a10",
-  "maxSeverity": "Critical",
-  "findingCount": 1,
-  "weight": 10,
-  "reports": [
-   "agent-10.md"
-  ],
-  "files": [
-   "tests/test_core/test_types.py"
-  ]
- },
- {
-  "id": "U09-a17",
-  "kind": "a17",
-  "maxSeverity": "Critical",
-  "findingCount": 1,
-  "weight": 10,
-  "reports": [
-   "agent-17.md"
-  ],
-  "files": [
-   "tests/test_core/test_realcov_06_elevation_windows.py"
-  ]
- },
- {
-  "id": "U10-a09",
-  "kind": "a09",
-  "maxSeverity": "High",
-  "findingCount": 34,
-  "weight": 92,
-  "reports": [
-   "agent-09.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_sandbox_bridge.py"
-  ]
- },
- {
-  "id": "U11-a06",
-  "kind": "a06",
-  "maxSeverity": "High",
-  "findingCount": 12,
-  "weight": 48,
-  "reports": [
-   "agent-06.md"
-  ],
-  "files": [
-   "tests/test_audit4/b6_system_tab/test_system_tab.py"
-  ]
- },
- {
-  "id": "U12-a06",
-  "kind": "a06",
-  "maxSeverity": "High",
-  "findingCount": 10,
-  "weight": 25,
-  "reports": [
-   "agent-06.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_cutter.py"
-  ]
- },
- {
-  "id": "U13-a17",
-  "kind": "a17",
-  "maxSeverity": "High",
-  "findingCount": 6,
-  "weight": 20,
-  "reports": [
-   "agent-17.md"
-  ],
-  "files": [
-   "tests/test_providers/test_local_xpu_e2e.py"
-  ]
- },
- {
-  "id": "U14-a02",
-  "kind": "a02",
-  "maxSeverity": "High",
-  "findingCount": 7,
-  "weight": 19,
-  "reports": [
-   "agent-02.md"
-  ],
-  "files": [
-   "tests/test_ui/test_tools_logic.py"
-  ]
- },
- {
-  "id": "U15-a17",
-  "kind": "a17",
-  "maxSeverity": "High",
-  "findingCount": 7,
-  "weight": 19,
-  "reports": [
-   "agent-17.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_binary_diff.py"
-  ]
- },
- {
-  "id": "U16-a10",
-  "kind": "a10",
-  "maxSeverity": "High",
-  "findingCount": 4,
-  "weight": 18,
-  "reports": [
-   "agent-10.md"
-  ],
-  "files": [
-   "tests/test_audit3/ui/test_hxd_panel_wired.py"
-  ]
- },
- {
-  "id": "U17-a12",
-  "kind": "a12",
-  "maxSeverity": "High",
-  "findingCount": 5,
-  "weight": 18,
-  "reports": [
-   "agent-12.md"
-  ],
-  "files": [
-   "tests/test_audit4/c16_hex_panel_selection_dispatch/test_selection_dispatch.py",
-   "tests/test_hexcore_e2e/test_bridge_alignment_color.py",
-   "tests/test_hexcore_e2e/test_bridge_display_modes_complete.py",
-   "tests/test_ui/test_process_panel.py"
-  ]
- },
- {
-  "id": "U18-a13",
-  "kind": "a13",
-  "maxSeverity": "High",
-  "findingCount": 4,
-  "weight": 18,
-  "reports": [
-   "agent-13.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_ghidra_f11_audit.py",
-   "tests/test_core/test_script_gen.py",
-   "tests/test_hexcore_e2e/test_bridge_bit_ops.py",
-   "tests/test_sandbox/test_log_parsers.py"
-  ]
- },
- {
-  "id": "U19-a15",
-  "kind": "a15",
-  "maxSeverity": "High",
-  "findingCount": 4,
-  "weight": 18,
-  "reports": [
-   "agent-15.md"
-  ],
-  "files": [
-   "tests/test_audit3/core/test_disassembler.py",
-   "tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py",
-   "tests/test_hexcore_e2e/test_bridge_new_capabilities.py"
-  ]
- },
- {
-  "id": "U20-a19",
-  "kind": "a19",
-  "maxSeverity": "High",
-  "findingCount": 4,
-  "weight": 18,
-  "reports": [
-   "agent-19.md"
-  ],
-  "files": [
-   "tests/test_audit4/b2_process_tab/test_realcov_14a_process_tab.py",
-   "tests/test_bridges/test_plugin_deploy.py",
-   "tests/test_bridges/test_x64dbg_api_coverage.py"
-  ]
- },
- {
-  "id": "U21-a02",
-  "kind": "a02",
-  "maxSeverity": "High",
-  "findingCount": 5,
-  "weight": 17,
-  "reports": [
-   "agent-02.md"
-  ],
-  "files": [
-   "tests/test_ui/log_viewer/test_realcov_15_window_real_logs.py",
-   "tests/test_ui/test_hxd_panel.py"
-  ]
- },
- {
-  "id": "U22-a01",
-  "kind": "a01",
-  "maxSeverity": "High",
-  "findingCount": 3,
-  "weight": 16,
-  "reports": [
-   "agent-01.md"
-  ],
-  "files": [
-   "tests/test_audit4/b4_memory_tab/test_realcov_14a_memory_tab.py",
-   "tests/test_audit7/sandbox_manager/test_realcov_12a_manager_real.py"
-  ]
- },
- {
-  "id": "U23-a05",
-  "kind": "a05",
-  "maxSeverity": "High",
-  "findingCount": 3,
-  "weight": 16,
-  "reports": [
-   "agent-05.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_ghidra.py",
-   "tests/test_providers/test_discovery_unit.py",
-   "tests/ui/test_system_tab_warnings.py"
-  ]
- },
- {
-  "id": "U24-a09",
-  "kind": "a09",
-  "maxSeverity": "High",
-  "findingCount": 5,
-  "weight": 16,
-  "reports": [
-   "agent-09.md"
-  ],
-  "files": [
-   "tests/test_core/test_orchestrator_audit6.py",
-   "tests/test_providers/test_agentic_capabilities.py"
-  ]
- },
- {
-  "id": "U25-a10",
-  "kind": "a10",
-  "maxSeverity": "High",
-  "findingCount": 3,
-  "weight": 16,
-  "reports": [
-   "agent-10.md"
-  ],
-  "files": [
-   "tests/test_audit4/c5_hex_templates_pattern/test_templates_pattern.py",
-   "tests/test_providers/test_anthropic_provider.py"
-  ]
- },
- {
-  "id": "U26-a16",
-  "kind": "a16",
-  "maxSeverity": "High",
-  "findingCount": 4,
-  "weight": 16,
-  "reports": [
-   "agent-16.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_bridge_display.py",
-   "tests/test_hexcore_e2e/test_bridge_transforms_deep.py",
-   "tests/test_providers/test_google_chat_live.py"
-  ]
- },
- {
-  "id": "U27-a04",
-  "kind": "a04",
-  "maxSeverity": "High",
-  "findingCount": 4,
-  "weight": 15,
-  "reports": [
-   "agent-04.md"
-  ],
-  "files": [
-   "tests/test_audit4/c6_hex_hashing/test_hashing.py",
-   "tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py"
-  ]
- },
- {
-  "id": "U28-a08",
-  "kind": "a08",
-  "maxSeverity": "High",
-  "findingCount": 4,
-  "weight": 15,
-  "reports": [
-   "agent-08.md"
-  ],
-  "files": [
-   "tests/test_scripts/test_commit_message.py",
-   "tests/test_ui/test_realcov_13b_hex_sections.py"
-  ]
- },
- {
-  "id": "U29-a07",
-  "kind": "a07",
-  "maxSeverity": "High",
-  "findingCount": 4,
-  "weight": 14,
-  "reports": [
-   "agent-07.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_x64dbg_new_methods.py"
-  ]
- },
- {
-  "id": "U30-a13",
-  "kind": "a13",
-  "maxSeverity": "High",
-  "findingCount": 3,
-  "weight": 14,
-  "reports": [
-   "agent-13.md"
-  ],
-  "files": [
-   "tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py"
-  ]
- },
- {
-  "id": "U31-a16",
-  "kind": "a16",
-  "maxSeverity": "High",
-  "findingCount": 3,
-  "weight": 14,
-  "reports": [
-   "agent-16.md"
-  ],
-  "files": [
-   "tests/test_audit3/core/test_script_gen.py",
-   "tests/test_audit7/sandbox_windows/test_realcov_12b_inline_monitors.py"
-  ]
- },
- {
-  "id": "U32-a17",
-  "kind": "a17",
-  "maxSeverity": "High",
-  "findingCount": 3,
-  "weight": 14,
-  "reports": [
-   "agent-17.md"
-  ],
-  "files": [
-   "tests/test_audit7/u12_hexpat_print_sink/test_ui_print_sink.py",
-   "tests/test_ui/log_viewer/test_model.py"
-  ]
- },
- {
-  "id": "U33-a18",
-  "kind": "a18",
-  "maxSeverity": "High",
-  "findingCount": 3,
-  "weight": 14,
-  "reports": [
-   "agent-18.md"
-  ],
-  "files": [
-   "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py"
-  ]
- },
- {
-  "id": "U34-a17",
-  "kind": "a17",
-  "maxSeverity": "High",
-  "findingCount": 4,
-  "weight": 11,
-  "reports": [
-   "agent-17.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_bridge_sandbox.py"
-  ]
- },
- {
-  "id": "U35-a03",
-  "kind": "a03",
-  "maxSeverity": "Medium",
-  "findingCount": 54,
-  "weight": 79,
-  "reports": [
-   "agent-03.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_frida_bridge.py"
-  ]
- },
- {
-  "id": "U36-a03",
-  "kind": "a03",
-  "maxSeverity": "Medium",
-  "findingCount": 28,
-  "weight": 38,
-  "reports": [
-   "agent-03.md"
-  ],
-  "files": [
-   "tests/test_core/test_config.py"
-  ]
- },
- {
-  "id": "U37-a03",
-  "kind": "a03",
-  "maxSeverity": "Medium",
-  "findingCount": 24,
-  "weight": 31,
-  "reports": [
-   "agent-03.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_hexpat_compiler_e2e.py"
-  ]
- },
- {
-  "id": "U38-a01",
-  "kind": "a01",
-  "maxSeverity": "Medium",
-  "findingCount": 5,
-  "weight": 18,
-  "reports": [
-   "agent-01.md"
-  ],
-  "files": [
-   "tests/test_audit4/b2_process_tab/test_process_tab.py",
-   "tests/test_audit5/u7_ui_providerconfig/test_provider_specific_ui.py",
-   "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py",
-   "tests/test_ui/log_viewer/test_realcov_15_tail_reader_real_logs.py"
-  ]
- },
- {
-  "id": "U39-a04",
-  "kind": "a04",
-  "maxSeverity": "Medium",
-  "findingCount": 6,
-  "weight": 18,
-  "reports": [
-   "agent-04.md"
-  ],
-  "files": [
-   "tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py",
-   "tests/test_core/test_process_manager.py",
-   "tests/test_providers/test_credential_loading.py",
-   "tests/test_sandbox/test_analysis.py"
-  ]
- },
- {
-  "id": "U40-a05",
-  "kind": "a05",
-  "maxSeverity": "Medium",
-  "findingCount": 6,
-  "weight": 18,
-  "reports": [
-   "agent-05.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_x64dbg_events.py",
-   "tests/test_hexpat/test_lexer.py",
-   "tests/test_providers/test_realcov_11_model_loader.py",
-   "tests/test_ui/log_viewer/test_app_integration.py",
-   "tests/test_ui/test_realcov_14b_script_manager.py"
-  ]
- },
- {
-  "id": "U41-a08",
-  "kind": "a08",
-  "maxSeverity": "Medium",
-  "findingCount": 6,
-  "weight": 18,
-  "reports": [
-   "agent-08.md"
-  ],
-  "files": [
-   "tests/test_audit7/core_orchestration/test_tool_registry_session.py",
-   "tests/test_bridges/test_ghidra_audit6.py",
-   "tests/test_bridges/test_realcov_03c_cutter.py",
-   "tests/test_credentials/test_credential_store_live.py",
-   "tests/test_hexcore_e2e/test_bridge_bps_ups.py"
-  ]
- },
- {
-  "id": "U42-a17",
-  "kind": "a17",
-  "maxSeverity": "Medium",
-  "findingCount": 8,
-  "weight": 18,
-  "reports": [
-   "agent-17.md"
-  ],
-  "files": [
-   "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py",
-   "tests/test_hexcore_e2e/test_transforms.py"
-  ]
- },
- {
-  "id": "U43-a18",
-  "kind": "a18",
-  "maxSeverity": "Medium",
-  "findingCount": 6,
-  "weight": 18,
-  "reports": [
-   "agent-18.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_schemas.py",
-   "tests/test_hexcore_e2e/test_hex_document_state.py",
-   "tests/test_hexcore_e2e/test_hexpat_type_system_e2e.py",
-   "tests/test_hexpat/test_parse_helpers.py",
-   "tests/test_ui/test_icon_manager.py"
-  ]
- },
- {
-  "id": "U44-a05",
-  "kind": "a05",
-  "maxSeverity": "Medium",
-  "findingCount": 4,
-  "weight": 16,
-  "reports": [
-   "agent-05.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py",
-   "tests/test_hexcore_e2e/test_search.py",
-   "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py",
-   "tests/test_providers/test_realcov_10_anthropic_cache.py"
-  ]
- },
- {
-  "id": "U45-a08",
-  "kind": "a08",
-  "maxSeverity": "Medium",
-  "findingCount": 8,
-  "weight": 16,
-  "reports": [
-   "agent-08.md"
-  ],
-  "files": [
-   "tests/test_core/test_session_audit6.py",
-   "tests/test_openai_provider.py"
-  ]
- },
- {
-  "id": "U46-a08",
-  "kind": "a08",
-  "maxSeverity": "Medium",
-  "findingCount": 5,
-  "weight": 16,
-  "reports": [
-   "agent-08.md"
-  ],
-  "files": [
-   "tests/test_audit3/bridges/test_realcov_04_installer.py",
-   "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py",
-   "tests/test_providers/test_realcov_10_google_safety.py"
-  ]
- },
- {
-  "id": "U47-a11",
-  "kind": "a11",
-  "maxSeverity": "Medium",
-  "findingCount": 5,
-  "weight": 16,
-  "reports": [
-   "agent-11.md"
-  ],
-  "files": [
-   "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
-   "tests/test_bridges/test_realcov_04_base.py",
-   "tests/test_core/test_realcov_05a_orchestration.py",
-   "tests/test_hexcore_e2e/test_bridge_strings.py"
-  ]
- },
- {
-  "id": "U48-a14",
-  "kind": "a14",
-  "maxSeverity": "Medium",
-  "findingCount": 8,
-  "weight": 16,
-  "reports": [
-   "agent-14.md"
-  ],
-  "files": [
-   "tests/test_core/test_logging.py"
-  ]
- },
- {
-  "id": "U49-a17",
-  "kind": "a17",
-  "maxSeverity": "Medium",
-  "findingCount": 6,
-  "weight": 16,
-  "reports": [
-   "agent-17.md"
-  ],
-  "files": [
-   "tests/test_audit3/sandbox/test_start_monitors.py",
-   "tests/test_audit4/b5_modules_tab/test_modules_tab.py",
-   "tests/test_audit7/sandbox_qemu/test_guest_agent_bootstrap.py"
-  ]
- },
- {
-  "id": "U50-a19",
-  "kind": "a19",
-  "maxSeverity": "Medium",
-  "findingCount": 4,
-  "weight": 16,
-  "reports": [
-   "agent-19.md"
-  ],
-  "files": [
-   "tests/test_audit7/ui_panels_process/test_realcov_14a_x64dbg_panel.py",
-   "tests/test_bridges/test_realcov_01_pe_format_real_binaries.py",
-   "tests/test_hexcore_e2e/test_hexpat_stdlib.py",
-   "tests/test_providers/test_real_bridge_schemas.py"
-  ]
- },
- {
-  "id": "U51-a19",
-  "kind": "a19",
-  "maxSeverity": "Medium",
-  "findingCount": 4,
-  "weight": 16,
-  "reports": [
-   "agent-19.md"
-  ],
-  "files": [
-   "tests/test_ui/log_viewer/test_handler.py",
-   "tests/test_ui/log_viewer/test_tail_reader.py",
-   "tests/test_ui/test_app_embedded_tools.py",
-   "tests/test_ui/test_async_bridge.py"
-  ]
- },
- {
-  "id": "U52-a01",
-  "kind": "a01",
-  "maxSeverity": "Medium",
-  "findingCount": 7,
-  "weight": 15,
-  "reports": [
-   "agent-01.md"
-  ],
-  "files": [
-   "tests/test_audit4/b4_memory_tab/test_memory_tab.py",
-   "tests/test_bridges/test_process_bridge.py"
-  ]
- },
- {
-  "id": "U53-a03",
-  "kind": "a03",
-  "maxSeverity": "Medium",
-  "findingCount": 7,
-  "weight": 15,
-  "reports": [
-   "agent-03.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_x64dbg_audit6.py",
-   "tests/test_hexcore_e2e/test_bridge_va_mapping.py"
-  ]
- },
- {
-  "id": "U54-a18",
-  "kind": "a18",
-  "maxSeverity": "Medium",
-  "findingCount": 6,
-  "weight": 15,
-  "reports": [
-   "agent-18.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_hex_editor_pe_methods.py",
-   "tests/test_bridges/test_realcov_02b_named_pipe_real.py",
-   "tests/test_providers/test_openai_format_helpers.py"
-  ]
- },
- {
-  "id": "U55-a09",
-  "kind": "a09",
-  "maxSeverity": "Medium",
-  "findingCount": 5,
-  "weight": 14,
-  "reports": [
-   "agent-09.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_bridge_compare_files.py",
-   "tests/test_hexcore_e2e/test_bridge_patches.py"
-  ]
- },
- {
-  "id": "U56-a20",
-  "kind": "a20",
-  "maxSeverity": "Medium",
-  "findingCount": 4,
-  "weight": 14,
-  "reports": [
-   "agent-20.md"
-  ],
-  "files": [
-   "tests/test_audit7/sandbox_windows/test_launch_failure_detection.py",
-   "tests/test_bridges/test_hex_editor_top_audit1.py",
-   "tests/test_ui/test_state_persistence.py",
-   "tests/test_ui/test_theme_manager.py"
-  ]
- },
- {
-  "id": "U57-a03",
-  "kind": "a03",
-  "maxSeverity": "Medium",
-  "findingCount": 7,
-  "weight": 13,
-  "reports": [
-   "agent-03.md"
-  ],
-  "files": [
-   "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py"
-  ]
- },
- {
-  "id": "U58-a03",
-  "kind": "a03",
-  "maxSeverity": "Medium",
-  "findingCount": 6,
-  "weight": 12,
-  "reports": [
-   "agent-03.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_hexpat_control_flow.py"
-  ]
- },
- {
-  "id": "U59-a06",
-  "kind": "a06",
-  "maxSeverity": "Medium",
-  "findingCount": 4,
-  "weight": 10,
-  "reports": [
-   "agent-06.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_bridge_ai_context.py",
-   "tests/test_providers/test_registry_thread_safety_live.py"
-  ]
- },
- {
-  "id": "U60-a07",
-  "kind": "a07",
-  "maxSeverity": "Medium",
-  "findingCount": 5,
-  "weight": 10,
-  "reports": [
-   "agent-07.md"
-  ],
-  "files": [
-   "tests/test_providers/test_huggingface_provider.py",
-   "tests/test_ui/test_splash_screen.py"
-  ]
- },
- {
-  "id": "U61-a16",
-  "kind": "a16",
-  "maxSeverity": "Medium",
-  "findingCount": 3,
-  "weight": 10,
-  "reports": [
-   "agent-16.md"
-  ],
-  "files": [
-   "tests/test_core/test_realcov_07a_disassembler.py",
-   "tests/test_providers/test_local_transformers_provider.py",
-   "tests/test_ui/test_realcov_13b_hex_pattern_code_editor.py"
-  ]
- },
- {
-  "id": "U62-a02",
-  "kind": "a02",
-  "maxSeverity": "Medium",
-  "findingCount": 2,
-  "weight": 7,
-  "reports": [
-   "agent-02.md"
-  ],
-  "files": [
-   "tests/test_audit3/sandbox/test_clipboard_monitor.py",
-   "tests/test_audit4/b7_process_panel_workers/test_tracked_refresh_worker.py"
-  ]
- },
- {
-  "id": "U63-a13",
-  "kind": "a13",
-  "maxSeverity": "Medium",
-  "findingCount": 1,
-  "weight": 4,
-  "reports": [
-   "agent-13.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_hashing.py"
-  ]
- },
- {
-  "id": "U64-a11",
-  "kind": "a11",
-  "maxSeverity": "Low",
-  "findingCount": 6,
-  "weight": 18,
-  "reports": [
-   "agent-11.md"
-  ],
-  "files": [
-   "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py",
-   "tests/test_bridges/test_x64dbg.py",
-   "tests/test_credentials/test_oauth_manager_live.py",
-   "tests/test_hexcore_e2e/test_bridge_copy_as.py",
-   "tests/test_providers/test_google_provider.py",
-   "tests/test_providers/test_provider_bugfixes.py"
-  ]
- },
- {
-  "id": "U65-a06",
-  "kind": "a06",
-  "maxSeverity": "Low",
-  "findingCount": 13,
-  "weight": 15,
-  "reports": [
-   "agent-06.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_base.py"
-  ]
- },
- {
-  "id": "U66-a09",
-  "kind": "a09",
-  "maxSeverity": "Low",
-  "findingCount": 10,
-  "weight": 14,
-  "reports": [
-   "agent-09.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_bridge_document_info.py",
-   "tests/test_hexcore_e2e/test_encodings.py"
-  ]
- },
- {
-  "id": "U67-a01",
-  "kind": "a01",
-  "maxSeverity": "Low",
-  "findingCount": 5,
-  "weight": 13,
-  "reports": [
-   "agent-01.md"
-  ],
-  "files": [
-   "tests/test_audit4/c3_hex_data_inspector/test_data_inspector.py",
-   "tests/test_core/test_process_manager_audit6.py",
-   "tests/test_credentials/test_env_loader_roundtrip_live.py",
-   "tests/test_hexcore_e2e/test_bookmarks.py"
-  ]
- },
- {
-  "id": "U68-a08",
-  "kind": "a08",
-  "maxSeverity": "Low",
-  "findingCount": 4,
-  "weight": 12,
-  "reports": [
-   "agent-08.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_bridge_pe_checksum.py",
-   "tests/test_hexcore_e2e/test_realcov_09b_stdlib_realbin.py",
-   "tests/test_providers/test_openai_provider.py",
-   "tests/test_providers/test_safe_parse_stream_json.py"
-  ]
- },
- {
-  "id": "U69-a09",
-  "kind": "a09",
-  "maxSeverity": "Low",
-  "findingCount": 6,
-  "weight": 12,
-  "reports": [
-   "agent-09.md"
-  ],
-  "files": [
-   "tests/test_core/test_realcov_07a_transform_pipeline.py",
-   "tests/test_hexcore_e2e/test_bridge_transforms.py",
-   "tests/test_ui/test_app_toolbar_overflow.py"
-  ]
- },
- {
-  "id": "U70-a12",
-  "kind": "a12",
-  "maxSeverity": "Low",
-  "findingCount": 4,
-  "weight": 12,
-  "reports": [
-   "agent-12.md"
-  ],
-  "files": [
-   "tests/test_bridges/test_win32_types.py",
-   "tests/test_hexcore_e2e/test_bridge_yara_deep.py",
-   "tests/test_providers/test_http_status_helper.py",
-   "tests/test_ui/test_realcov_15_resource_url_dispatch.py"
-  ]
- },
- {
-  "id": "U71-a04",
-  "kind": "a04",
-  "maxSeverity": "Low",
-  "findingCount": 3,
-  "weight": 9,
-  "reports": [
-   "agent-04.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_entropy.py",
-   "tests/test_hexcore_e2e/test_hexcore_rust_audit1.py",
-   "tests/test_providers/test_providers_cloud_audit1.py"
-  ]
- },
- {
-  "id": "U72-a06",
-  "kind": "a06",
-  "maxSeverity": "Low",
-  "findingCount": 5,
-  "weight": 9,
-  "reports": [
-   "agent-06.md"
-  ],
-  "files": [
-   "tests/test_core/test_logging_audit6.py",
-   "tests/test_hexcore_e2e/test_bridge_base_convert.py"
-  ]
- },
- {
-  "id": "U73-a15",
-  "kind": "a15",
-  "maxSeverity": "Low",
-  "findingCount": 3,
-  "weight": 9,
-  "reports": [
-   "agent-15.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_bridge_arithmetic.py",
-   "tests/test_ui/log_viewer/test_proxy.py",
-   "tests/test_ui/test_hex_format.py"
-  ]
- },
- {
-  "id": "U74-a19",
-  "kind": "a19",
-  "maxSeverity": "Low",
-  "findingCount": 3,
-  "weight": 9,
-  "reports": [
-   "agent-19.md"
-  ],
-  "files": [
-   "tests/test_sandbox/test_realcov_12a_base_contract.py",
-   "tests/test_ui/test_graph_view.py",
-   "tests/test_ui/test_xpu_status.py"
-  ]
- },
- {
-  "id": "U75-a05",
-  "kind": "a05",
-  "maxSeverity": "Low",
-  "findingCount": 2,
-  "weight": 6,
-  "reports": [
-   "agent-05.md"
-  ],
-  "files": [
-   "tests/test_ui/test_realcov_15_chat_panel.py",
-   "tests/test_ui/test_tool_status_dialog_prefetch.py"
-  ]
- },
- {
-  "id": "U76-a17",
-  "kind": "a17",
-  "maxSeverity": "Low",
-  "findingCount": 2,
-  "weight": 4,
-  "reports": [
-   "agent-17.md"
-  ],
-  "files": [
-   "tests/test_hexcore_e2e/test_read_write_ops.py"
-  ]
- },
- {
-  "id": "U77-a11",
-  "kind": "a11",
-  "maxSeverity": "Low",
-  "findingCount": 1,
-  "weight": 3,
-  "reports": [
-   "agent-11.md"
-  ],
-  "files": [
-   "tests/test_ui/test_realcov_15_preferences_dialog.py"
-  ]
- }
+  {
+    "id": "U00-fixtures",
+    "kind": "fixtures",
+    "maxSeverity": "Critical",
+    "findingCount": 3,
+    "weight": 26,
+    "reports": [
+      "agent-06.md",
+      "agent-11.md",
+      "agent-18.md"
+    ],
+    "files": [
+      "tests/test_audit4/b6_system_tab/conftest.py",
+      "tests/test_bridges/conftest.py",
+      "tests/test_sandbox/conftest.py"
+    ]
+  },
+  {
+    "id": "U01-a17",
+    "kind": "a17",
+    "maxSeverity": "Critical",
+    "findingCount": 48,
+    "weight": 179,
+    "reports": [
+      "agent-17.md"
+    ],
+    "files": [
+      "tests/test_providers/test_e2e_chat.py"
+    ]
+  },
+  {
+    "id": "U02-a03",
+    "kind": "a03",
+    "maxSeverity": "Critical",
+    "findingCount": 8,
+    "weight": 23,
+    "reports": [
+      "agent-03.md"
+    ],
+    "files": [
+      "tests/test_audit7/sandbox_qemu/test_anti_evasion_identity.py"
+    ]
+  },
+  {
+    "id": "U03-a19",
+    "kind": "a19",
+    "maxSeverity": "Critical",
+    "findingCount": 3,
+    "weight": 16,
+    "reports": [
+      "agent-19.md"
+    ],
+    "files": [
+      "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py"
+    ]
+  },
+  {
+    "id": "U04-a11",
+    "kind": "a11",
+    "maxSeverity": "Critical",
+    "findingCount": 3,
+    "weight": 15,
+    "reports": [
+      "agent-11.md"
+    ],
+    "files": [
+      "tests/test_audit4/c8_hex_signatures_offload/test_signatures_offload.py",
+      "tests/test_sandbox/test_sandbox_bridge.py"
+    ]
+  },
+  {
+    "id": "U05-a02",
+    "kind": "a02",
+    "maxSeverity": "Critical",
+    "findingCount": 1,
+    "weight": 10,
+    "reports": [
+      "agent-02.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_hexpat_evaluator.py"
+    ]
+  },
+  {
+    "id": "U06-a03",
+    "kind": "a03",
+    "maxSeverity": "Critical",
+    "findingCount": 1,
+    "weight": 10,
+    "reports": [
+      "agent-03.md"
+    ],
+    "files": [
+      "tests/test_providers/test_providers_local_audit1.py"
+    ]
+  },
+  {
+    "id": "U07-a08",
+    "kind": "a08",
+    "maxSeverity": "Critical",
+    "findingCount": 1,
+    "weight": 10,
+    "reports": [
+      "agent-08.md"
+    ],
+    "files": [
+      "tests/test_core/test_realcov_07b_xml_gen.py"
+    ]
+  },
+  {
+    "id": "U08-a10",
+    "kind": "a10",
+    "maxSeverity": "Critical",
+    "findingCount": 1,
+    "weight": 10,
+    "reports": [
+      "agent-10.md"
+    ],
+    "files": [
+      "tests/test_core/test_types.py"
+    ]
+  },
+  {
+    "id": "U09-a17",
+    "kind": "a17",
+    "maxSeverity": "Critical",
+    "findingCount": 1,
+    "weight": 10,
+    "reports": [
+      "agent-17.md"
+    ],
+    "files": [
+      "tests/test_core/test_realcov_06_elevation_windows.py"
+    ]
+  },
+  {
+    "id": "U10-a09",
+    "kind": "a09",
+    "maxSeverity": "High",
+    "findingCount": 34,
+    "weight": 92,
+    "reports": [
+      "agent-09.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_sandbox_bridge.py"
+    ]
+  },
+  {
+    "id": "U11-a06",
+    "kind": "a06",
+    "maxSeverity": "High",
+    "findingCount": 12,
+    "weight": 48,
+    "reports": [
+      "agent-06.md"
+    ],
+    "files": [
+      "tests/test_audit4/b6_system_tab/test_system_tab.py"
+    ]
+  },
+  {
+    "id": "U12-a06",
+    "kind": "a06",
+    "maxSeverity": "High",
+    "findingCount": 10,
+    "weight": 25,
+    "reports": [
+      "agent-06.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_cutter.py"
+    ]
+  },
+  {
+    "id": "U13-a17",
+    "kind": "a17",
+    "maxSeverity": "High",
+    "findingCount": 6,
+    "weight": 20,
+    "reports": [
+      "agent-17.md"
+    ],
+    "files": [
+      "tests/test_providers/test_local_xpu_e2e.py"
+    ]
+  },
+  {
+    "id": "U14-a02",
+    "kind": "a02",
+    "maxSeverity": "High",
+    "findingCount": 7,
+    "weight": 19,
+    "reports": [
+      "agent-02.md"
+    ],
+    "files": [
+      "tests/test_ui/test_tools_logic.py"
+    ]
+  },
+  {
+    "id": "U15-a17",
+    "kind": "a17",
+    "maxSeverity": "High",
+    "findingCount": 7,
+    "weight": 19,
+    "reports": [
+      "agent-17.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_binary_diff.py"
+    ]
+  },
+  {
+    "id": "U16-a10",
+    "kind": "a10",
+    "maxSeverity": "High",
+    "findingCount": 4,
+    "weight": 18,
+    "reports": [
+      "agent-10.md"
+    ],
+    "files": [
+      "tests/test_audit3/ui/test_hxd_panel_wired.py"
+    ]
+  },
+  {
+    "id": "U17-a12",
+    "kind": "a12",
+    "maxSeverity": "High",
+    "findingCount": 5,
+    "weight": 18,
+    "reports": [
+      "agent-12.md"
+    ],
+    "files": [
+      "tests/test_audit4/c16_hex_panel_selection_dispatch/test_selection_dispatch.py",
+      "tests/test_hexcore_e2e/test_bridge_alignment_color.py",
+      "tests/test_hexcore_e2e/test_bridge_display_modes_complete.py",
+      "tests/test_ui/test_process_panel.py"
+    ]
+  },
+  {
+    "id": "U18-a13",
+    "kind": "a13",
+    "maxSeverity": "High",
+    "findingCount": 4,
+    "weight": 18,
+    "reports": [
+      "agent-13.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_ghidra_f11_audit.py",
+      "tests/test_core/test_script_gen.py",
+      "tests/test_hexcore_e2e/test_bridge_bit_ops.py",
+      "tests/test_sandbox/test_log_parsers.py"
+    ]
+  },
+  {
+    "id": "U19-a15",
+    "kind": "a15",
+    "maxSeverity": "High",
+    "findingCount": 4,
+    "weight": 18,
+    "reports": [
+      "agent-15.md"
+    ],
+    "files": [
+      "tests/test_audit3/core/test_disassembler.py",
+      "tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py",
+      "tests/test_hexcore_e2e/test_bridge_new_capabilities.py"
+    ]
+  },
+  {
+    "id": "U20-a19",
+    "kind": "a19",
+    "maxSeverity": "High",
+    "findingCount": 4,
+    "weight": 18,
+    "reports": [
+      "agent-19.md"
+    ],
+    "files": [
+      "tests/test_audit4/b2_process_tab/test_realcov_14a_process_tab.py",
+      "tests/test_bridges/test_plugin_deploy.py",
+      "tests/test_bridges/test_x64dbg_api_coverage.py"
+    ]
+  },
+  {
+    "id": "U21-a02",
+    "kind": "a02",
+    "maxSeverity": "High",
+    "findingCount": 5,
+    "weight": 17,
+    "reports": [
+      "agent-02.md"
+    ],
+    "files": [
+      "tests/test_ui/log_viewer/test_realcov_15_window_real_logs.py",
+      "tests/test_ui/test_hxd_panel.py"
+    ]
+  },
+  {
+    "id": "U22-a01",
+    "kind": "a01",
+    "maxSeverity": "High",
+    "findingCount": 3,
+    "weight": 16,
+    "reports": [
+      "agent-01.md"
+    ],
+    "files": [
+      "tests/test_audit4/b4_memory_tab/test_realcov_14a_memory_tab.py",
+      "tests/test_audit7/sandbox_manager/test_realcov_12a_manager_real.py"
+    ]
+  },
+  {
+    "id": "U23-a05",
+    "kind": "a05",
+    "maxSeverity": "High",
+    "findingCount": 3,
+    "weight": 16,
+    "reports": [
+      "agent-05.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_ghidra.py",
+      "tests/test_providers/test_discovery_unit.py",
+      "tests/ui/test_system_tab_warnings.py"
+    ]
+  },
+  {
+    "id": "U24-a09",
+    "kind": "a09",
+    "maxSeverity": "High",
+    "findingCount": 5,
+    "weight": 16,
+    "reports": [
+      "agent-09.md"
+    ],
+    "files": [
+      "tests/test_core/test_orchestrator_audit6.py",
+      "tests/test_providers/test_agentic_capabilities.py"
+    ]
+  },
+  {
+    "id": "U25-a10",
+    "kind": "a10",
+    "maxSeverity": "High",
+    "findingCount": 3,
+    "weight": 16,
+    "reports": [
+      "agent-10.md"
+    ],
+    "files": [
+      "tests/test_audit4/c5_hex_templates_pattern/test_templates_pattern.py",
+      "tests/test_providers/test_anthropic_provider.py"
+    ]
+  },
+  {
+    "id": "U26-a16",
+    "kind": "a16",
+    "maxSeverity": "High",
+    "findingCount": 4,
+    "weight": 16,
+    "reports": [
+      "agent-16.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_bridge_display.py",
+      "tests/test_hexcore_e2e/test_bridge_transforms_deep.py",
+      "tests/test_providers/test_google_chat_live.py"
+    ]
+  },
+  {
+    "id": "U27-a04",
+    "kind": "a04",
+    "maxSeverity": "High",
+    "findingCount": 4,
+    "weight": 15,
+    "reports": [
+      "agent-04.md"
+    ],
+    "files": [
+      "tests/test_audit4/c6_hex_hashing/test_hashing.py",
+      "tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py"
+    ]
+  },
+  {
+    "id": "U28-a08",
+    "kind": "a08",
+    "maxSeverity": "High",
+    "findingCount": 4,
+    "weight": 15,
+    "reports": [
+      "agent-08.md"
+    ],
+    "files": [
+      "tests/test_scripts/test_commit_message.py",
+      "tests/test_ui/test_realcov_13b_hex_sections.py"
+    ]
+  },
+  {
+    "id": "U29-a07",
+    "kind": "a07",
+    "maxSeverity": "High",
+    "findingCount": 4,
+    "weight": 14,
+    "reports": [
+      "agent-07.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_x64dbg_new_methods.py"
+    ]
+  },
+  {
+    "id": "U30-a13",
+    "kind": "a13",
+    "maxSeverity": "High",
+    "findingCount": 3,
+    "weight": 14,
+    "reports": [
+      "agent-13.md"
+    ],
+    "files": [
+      "tests/test_audit4/a1_sandbox_manager_caching/test_availability_caching.py"
+    ]
+  },
+  {
+    "id": "U31-a16",
+    "kind": "a16",
+    "maxSeverity": "High",
+    "findingCount": 3,
+    "weight": 14,
+    "reports": [
+      "agent-16.md"
+    ],
+    "files": [
+      "tests/test_audit3/core/test_script_gen.py",
+      "tests/test_audit7/sandbox_windows/test_realcov_12b_inline_monitors.py"
+    ]
+  },
+  {
+    "id": "U32-a17",
+    "kind": "a17",
+    "maxSeverity": "High",
+    "findingCount": 3,
+    "weight": 14,
+    "reports": [
+      "agent-17.md"
+    ],
+    "files": [
+      "tests/test_audit7/u12_hexpat_print_sink/test_ui_print_sink.py",
+      "tests/test_ui/log_viewer/test_model.py"
+    ]
+  },
+  {
+    "id": "U33-a18",
+    "kind": "a18",
+    "maxSeverity": "High",
+    "findingCount": 3,
+    "weight": 14,
+    "reports": [
+      "agent-18.md"
+    ],
+    "files": [
+      "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py"
+    ]
+  },
+  {
+    "id": "U34-a17",
+    "kind": "a17",
+    "maxSeverity": "High",
+    "findingCount": 4,
+    "weight": 11,
+    "reports": [
+      "agent-17.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_bridge_sandbox.py"
+    ]
+  },
+  {
+    "id": "U35-a03",
+    "kind": "a03",
+    "maxSeverity": "Medium",
+    "findingCount": 54,
+    "weight": 79,
+    "reports": [
+      "agent-03.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_frida_bridge.py"
+    ]
+  },
+  {
+    "id": "U36-a03",
+    "kind": "a03",
+    "maxSeverity": "Medium",
+    "findingCount": 28,
+    "weight": 38,
+    "reports": [
+      "agent-03.md"
+    ],
+    "files": [
+      "tests/test_core/test_config.py"
+    ]
+  },
+  {
+    "id": "U37-a03",
+    "kind": "a03",
+    "maxSeverity": "Medium",
+    "findingCount": 24,
+    "weight": 31,
+    "reports": [
+      "agent-03.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_hexpat_compiler_e2e.py"
+    ]
+  },
+  {
+    "id": "U38-a01",
+    "kind": "a01",
+    "maxSeverity": "Medium",
+    "findingCount": 5,
+    "weight": 18,
+    "reports": [
+      "agent-01.md"
+    ],
+    "files": [
+      "tests/test_audit4/b2_process_tab/test_process_tab.py",
+      "tests/test_audit5/u7_ui_providerconfig/test_provider_specific_ui.py",
+      "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py",
+      "tests/test_ui/log_viewer/test_realcov_15_tail_reader_real_logs.py"
+    ]
+  },
+  {
+    "id": "U39-a04",
+    "kind": "a04",
+    "maxSeverity": "Medium",
+    "findingCount": 6,
+    "weight": 18,
+    "reports": [
+      "agent-04.md"
+    ],
+    "files": [
+      "tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py",
+      "tests/test_core/test_process_manager.py",
+      "tests/test_providers/test_credential_loading.py",
+      "tests/test_sandbox/test_analysis.py"
+    ]
+  },
+  {
+    "id": "U40-a05",
+    "kind": "a05",
+    "maxSeverity": "Medium",
+    "findingCount": 6,
+    "weight": 18,
+    "reports": [
+      "agent-05.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_x64dbg_events.py",
+      "tests/test_hexpat/test_lexer.py",
+      "tests/test_providers/test_realcov_11_model_loader.py",
+      "tests/test_ui/log_viewer/test_app_integration.py",
+      "tests/test_ui/test_realcov_14b_script_manager.py"
+    ]
+  },
+  {
+    "id": "U41-a08",
+    "kind": "a08",
+    "maxSeverity": "Medium",
+    "findingCount": 6,
+    "weight": 18,
+    "reports": [
+      "agent-08.md"
+    ],
+    "files": [
+      "tests/test_audit7/core_orchestration/test_tool_registry_session.py",
+      "tests/test_bridges/test_ghidra_audit6.py",
+      "tests/test_bridges/test_realcov_03c_cutter.py",
+      "tests/test_credentials/test_credential_store_live.py",
+      "tests/test_hexcore_e2e/test_bridge_bps_ups.py"
+    ]
+  },
+  {
+    "id": "U42-a17",
+    "kind": "a17",
+    "maxSeverity": "Medium",
+    "findingCount": 8,
+    "weight": 18,
+    "reports": [
+      "agent-17.md"
+    ],
+    "files": [
+      "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py",
+      "tests/test_hexcore_e2e/test_transforms.py"
+    ]
+  },
+  {
+    "id": "U43-a18",
+    "kind": "a18",
+    "maxSeverity": "Medium",
+    "findingCount": 6,
+    "weight": 18,
+    "reports": [
+      "agent-18.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_schemas.py",
+      "tests/test_hexcore_e2e/test_hex_document_state.py",
+      "tests/test_hexcore_e2e/test_hexpat_type_system_e2e.py",
+      "tests/test_hexpat/test_parse_helpers.py",
+      "tests/test_ui/test_icon_manager.py"
+    ]
+  },
+  {
+    "id": "U44-a05",
+    "kind": "a05",
+    "maxSeverity": "Medium",
+    "findingCount": 4,
+    "weight": 16,
+    "reports": [
+      "agent-05.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py",
+      "tests/test_hexcore_e2e/test_search.py",
+      "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py",
+      "tests/test_providers/test_realcov_10_anthropic_cache.py"
+    ]
+  },
+  {
+    "id": "U45-a08",
+    "kind": "a08",
+    "maxSeverity": "Medium",
+    "findingCount": 8,
+    "weight": 16,
+    "reports": [
+      "agent-08.md"
+    ],
+    "files": [
+      "tests/test_core/test_session_audit6.py",
+      "tests/test_openai_provider.py"
+    ]
+  },
+  {
+    "id": "U46-a08",
+    "kind": "a08",
+    "maxSeverity": "Medium",
+    "findingCount": 5,
+    "weight": 16,
+    "reports": [
+      "agent-08.md"
+    ],
+    "files": [
+      "tests/test_audit3/bridges/test_realcov_04_installer.py",
+      "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py",
+      "tests/test_providers/test_realcov_10_google_safety.py"
+    ]
+  },
+  {
+    "id": "U47-a11",
+    "kind": "a11",
+    "maxSeverity": "Medium",
+    "findingCount": 5,
+    "weight": 16,
+    "reports": [
+      "agent-11.md"
+    ],
+    "files": [
+      "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+      "tests/test_bridges/test_realcov_04_base.py",
+      "tests/test_core/test_realcov_05a_orchestration.py",
+      "tests/test_hexcore_e2e/test_bridge_strings.py"
+    ]
+  },
+  {
+    "id": "U48-a14",
+    "kind": "a14",
+    "maxSeverity": "Medium",
+    "findingCount": 8,
+    "weight": 16,
+    "reports": [
+      "agent-14.md"
+    ],
+    "files": [
+      "tests/test_core/test_logging.py"
+    ]
+  },
+  {
+    "id": "U49-a17",
+    "kind": "a17",
+    "maxSeverity": "Medium",
+    "findingCount": 6,
+    "weight": 16,
+    "reports": [
+      "agent-17.md"
+    ],
+    "files": [
+      "tests/test_audit3/sandbox/test_start_monitors.py",
+      "tests/test_audit4/b5_modules_tab/test_modules_tab.py",
+      "tests/test_audit7/sandbox_qemu/test_guest_agent_bootstrap.py"
+    ]
+  },
+  {
+    "id": "U50-a19",
+    "kind": "a19",
+    "maxSeverity": "Medium",
+    "findingCount": 4,
+    "weight": 16,
+    "reports": [
+      "agent-19.md"
+    ],
+    "files": [
+      "tests/test_audit7/ui_panels_process/test_realcov_14a_x64dbg_panel.py",
+      "tests/test_bridges/test_realcov_01_pe_format_real_binaries.py",
+      "tests/test_hexcore_e2e/test_hexpat_stdlib.py",
+      "tests/test_providers/test_real_bridge_schemas.py"
+    ]
+  },
+  {
+    "id": "U51-a19",
+    "kind": "a19",
+    "maxSeverity": "Medium",
+    "findingCount": 4,
+    "weight": 16,
+    "reports": [
+      "agent-19.md"
+    ],
+    "files": [
+      "tests/test_ui/log_viewer/test_handler.py",
+      "tests/test_ui/log_viewer/test_tail_reader.py",
+      "tests/test_ui/test_app_embedded_tools.py",
+      "tests/test_ui/test_async_bridge.py"
+    ]
+  },
+  {
+    "id": "U52-a01",
+    "kind": "a01",
+    "maxSeverity": "Medium",
+    "findingCount": 7,
+    "weight": 15,
+    "reports": [
+      "agent-01.md"
+    ],
+    "files": [
+      "tests/test_audit4/b4_memory_tab/test_memory_tab.py",
+      "tests/test_bridges/test_process_bridge.py"
+    ]
+  },
+  {
+    "id": "U53-a03",
+    "kind": "a03",
+    "maxSeverity": "Medium",
+    "findingCount": 7,
+    "weight": 15,
+    "reports": [
+      "agent-03.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_x64dbg_audit6.py",
+      "tests/test_hexcore_e2e/test_bridge_va_mapping.py"
+    ]
+  },
+  {
+    "id": "U54-a18",
+    "kind": "a18",
+    "maxSeverity": "Medium",
+    "findingCount": 6,
+    "weight": 15,
+    "reports": [
+      "agent-18.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_hex_editor_pe_methods.py",
+      "tests/test_bridges/test_realcov_02b_named_pipe_real.py",
+      "tests/test_providers/test_openai_format_helpers.py"
+    ]
+  },
+  {
+    "id": "U55-a09",
+    "kind": "a09",
+    "maxSeverity": "Medium",
+    "findingCount": 5,
+    "weight": 14,
+    "reports": [
+      "agent-09.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_bridge_compare_files.py",
+      "tests/test_hexcore_e2e/test_bridge_patches.py"
+    ]
+  },
+  {
+    "id": "U56-a20",
+    "kind": "a20",
+    "maxSeverity": "Medium",
+    "findingCount": 4,
+    "weight": 14,
+    "reports": [
+      "agent-20.md"
+    ],
+    "files": [
+      "tests/test_audit7/sandbox_windows/test_launch_failure_detection.py",
+      "tests/test_bridges/test_hex_editor_top_audit1.py",
+      "tests/test_ui/test_state_persistence.py",
+      "tests/test_ui/test_theme_manager.py"
+    ]
+  },
+  {
+    "id": "U57-a03",
+    "kind": "a03",
+    "maxSeverity": "Medium",
+    "findingCount": 7,
+    "weight": 13,
+    "reports": [
+      "agent-03.md"
+    ],
+    "files": [
+      "tests/test_audit4/c2_hex_highlighting_route/test_highlighting_route.py"
+    ]
+  },
+  {
+    "id": "U58-a03",
+    "kind": "a03",
+    "maxSeverity": "Medium",
+    "findingCount": 6,
+    "weight": 12,
+    "reports": [
+      "agent-03.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_hexpat_control_flow.py"
+    ]
+  },
+  {
+    "id": "U59-a06",
+    "kind": "a06",
+    "maxSeverity": "Medium",
+    "findingCount": 4,
+    "weight": 10,
+    "reports": [
+      "agent-06.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_bridge_ai_context.py",
+      "tests/test_providers/test_registry_thread_safety_live.py"
+    ]
+  },
+  {
+    "id": "U60-a07",
+    "kind": "a07",
+    "maxSeverity": "Medium",
+    "findingCount": 5,
+    "weight": 10,
+    "reports": [
+      "agent-07.md"
+    ],
+    "files": [
+      "tests/test_providers/test_huggingface_provider.py",
+      "tests/test_ui/test_splash_screen.py"
+    ]
+  },
+  {
+    "id": "U61-a16",
+    "kind": "a16",
+    "maxSeverity": "Medium",
+    "findingCount": 3,
+    "weight": 10,
+    "reports": [
+      "agent-16.md"
+    ],
+    "files": [
+      "tests/test_core/test_realcov_07a_disassembler.py",
+      "tests/test_providers/test_local_transformers_provider.py",
+      "tests/test_ui/test_realcov_13b_hex_pattern_code_editor.py"
+    ]
+  },
+  {
+    "id": "U62-a02",
+    "kind": "a02",
+    "maxSeverity": "Medium",
+    "findingCount": 2,
+    "weight": 7,
+    "reports": [
+      "agent-02.md"
+    ],
+    "files": [
+      "tests/test_audit3/sandbox/test_clipboard_monitor.py",
+      "tests/test_audit4/b7_process_panel_workers/test_tracked_refresh_worker.py"
+    ]
+  },
+  {
+    "id": "U63-a13",
+    "kind": "a13",
+    "maxSeverity": "Medium",
+    "findingCount": 1,
+    "weight": 4,
+    "reports": [
+      "agent-13.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_hashing.py"
+    ]
+  },
+  {
+    "id": "U64-a11",
+    "kind": "a11",
+    "maxSeverity": "Low",
+    "findingCount": 6,
+    "weight": 18,
+    "reports": [
+      "agent-11.md"
+    ],
+    "files": [
+      "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py",
+      "tests/test_bridges/test_x64dbg.py",
+      "tests/test_credentials/test_oauth_manager_live.py",
+      "tests/test_hexcore_e2e/test_bridge_copy_as.py",
+      "tests/test_providers/test_google_provider.py",
+      "tests/test_providers/test_provider_bugfixes.py"
+    ]
+  },
+  {
+    "id": "U65-a06",
+    "kind": "a06",
+    "maxSeverity": "Low",
+    "findingCount": 13,
+    "weight": 15,
+    "reports": [
+      "agent-06.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_base.py"
+    ]
+  },
+  {
+    "id": "U66-a09",
+    "kind": "a09",
+    "maxSeverity": "Low",
+    "findingCount": 10,
+    "weight": 14,
+    "reports": [
+      "agent-09.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_bridge_document_info.py",
+      "tests/test_hexcore_e2e/test_encodings.py"
+    ]
+  },
+  {
+    "id": "U67-a01",
+    "kind": "a01",
+    "maxSeverity": "Low",
+    "findingCount": 5,
+    "weight": 13,
+    "reports": [
+      "agent-01.md"
+    ],
+    "files": [
+      "tests/test_audit4/c3_hex_data_inspector/test_data_inspector.py",
+      "tests/test_core/test_process_manager_audit6.py",
+      "tests/test_credentials/test_env_loader_roundtrip_live.py",
+      "tests/test_hexcore_e2e/test_bookmarks.py"
+    ]
+  },
+  {
+    "id": "U68-a08",
+    "kind": "a08",
+    "maxSeverity": "Low",
+    "findingCount": 4,
+    "weight": 12,
+    "reports": [
+      "agent-08.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_bridge_pe_checksum.py",
+      "tests/test_hexcore_e2e/test_realcov_09b_stdlib_realbin.py",
+      "tests/test_providers/test_openai_provider.py",
+      "tests/test_providers/test_safe_parse_stream_json.py"
+    ]
+  },
+  {
+    "id": "U69-a09",
+    "kind": "a09",
+    "maxSeverity": "Low",
+    "findingCount": 6,
+    "weight": 12,
+    "reports": [
+      "agent-09.md"
+    ],
+    "files": [
+      "tests/test_core/test_realcov_07a_transform_pipeline.py",
+      "tests/test_hexcore_e2e/test_bridge_transforms.py",
+      "tests/test_ui/test_app_toolbar_overflow.py"
+    ]
+  },
+  {
+    "id": "U70-a12",
+    "kind": "a12",
+    "maxSeverity": "Low",
+    "findingCount": 4,
+    "weight": 12,
+    "reports": [
+      "agent-12.md"
+    ],
+    "files": [
+      "tests/test_bridges/test_win32_types.py",
+      "tests/test_hexcore_e2e/test_bridge_yara_deep.py",
+      "tests/test_providers/test_http_status_helper.py",
+      "tests/test_ui/test_realcov_15_resource_url_dispatch.py"
+    ]
+  },
+  {
+    "id": "U71-a04",
+    "kind": "a04",
+    "maxSeverity": "Low",
+    "findingCount": 3,
+    "weight": 9,
+    "reports": [
+      "agent-04.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_entropy.py",
+      "tests/test_hexcore_e2e/test_hexcore_rust_audit1.py",
+      "tests/test_providers/test_providers_cloud_audit1.py"
+    ]
+  },
+  {
+    "id": "U72-a06",
+    "kind": "a06",
+    "maxSeverity": "Low",
+    "findingCount": 5,
+    "weight": 9,
+    "reports": [
+      "agent-06.md"
+    ],
+    "files": [
+      "tests/test_core/test_logging_audit6.py",
+      "tests/test_hexcore_e2e/test_bridge_base_convert.py"
+    ]
+  },
+  {
+    "id": "U73-a15",
+    "kind": "a15",
+    "maxSeverity": "Low",
+    "findingCount": 3,
+    "weight": 9,
+    "reports": [
+      "agent-15.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_bridge_arithmetic.py",
+      "tests/test_ui/log_viewer/test_proxy.py",
+      "tests/test_ui/test_hex_format.py"
+    ]
+  },
+  {
+    "id": "U74-a19",
+    "kind": "a19",
+    "maxSeverity": "Low",
+    "findingCount": 3,
+    "weight": 9,
+    "reports": [
+      "agent-19.md"
+    ],
+    "files": [
+      "tests/test_sandbox/test_realcov_12a_base_contract.py",
+      "tests/test_ui/test_graph_view.py",
+      "tests/test_ui/test_xpu_status.py"
+    ]
+  },
+  {
+    "id": "U75-a05",
+    "kind": "a05",
+    "maxSeverity": "Low",
+    "findingCount": 2,
+    "weight": 6,
+    "reports": [
+      "agent-05.md"
+    ],
+    "files": [
+      "tests/test_ui/test_realcov_15_chat_panel.py",
+      "tests/test_ui/test_tool_status_dialog_prefetch.py"
+    ]
+  },
+  {
+    "id": "U76-a17",
+    "kind": "a17",
+    "maxSeverity": "Low",
+    "findingCount": 2,
+    "weight": 4,
+    "reports": [
+      "agent-17.md"
+    ],
+    "files": [
+      "tests/test_hexcore_e2e/test_read_write_ops.py"
+    ]
+  },
+  {
+    "id": "U77-a11",
+    "kind": "a11",
+    "maxSeverity": "Low",
+    "findingCount": 1,
+    "weight": 3,
+    "reports": [
+      "agent-11.md"
+    ],
+    "files": [
+      "tests/test_ui/test_realcov_15_preferences_dialog.py"
+    ]
+  }
 ]

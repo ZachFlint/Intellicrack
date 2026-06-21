@@ -1,0 +1,20 @@
+{
+ "test_log_provider_response_minimal": {
+  "nodeid": "tests/test_core/test_logging.py::test_log_provider_response_minimal",
+  "src": "src/intellicrack/core/logging.py",
+  "search": "    if tokens_used is not None:\n        log_data[\"tokens_used\"] = tokens_used",
+  "replace": "    if tokens_used is None:\n        log_data[\"tokens_used\"] = tokens_used"
+ },
+ "test_html_503_body_falls_back_to_loading_message": {
+  "nodeid": "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_html_503_body_falls_back_to_loading_message",
+  "src": "src/intellicrack/providers/huggingface.py",
+  "search": "_logger.warning(\"hf_503_body_decode_failed\", error_type=type(decode_exc).__name__)\n            return \"Model is loading and not yet ready\"",
+  "replace": "_logger.warning(\"hf_503_body_decode_failed\", error_type=type(decode_exc).__name__)\n            return \"hf_503_decode_fallback_mutated\""
+ },
+ "test_memory_basic_information_layout": {
+  "nodeid": "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_memory_basic_information_layout",
+  "src": "src/intellicrack/bridges/win32_types.py",
+  "search": "(\"RegionSize\", ctypes.c_size_t),",
+  "replace": "(\"RegionSize\", wintypes.DWORD),"
+ }
+}

@@ -1,0 +1,41 @@
+{
+ "file": "tests/test_ui/test_process_panel.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_ui/test_process_panel.py::TestPanelConstruction::test_panel_creates",
+   "severity": "LOW",
+   "category": "N8",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_ui/test_process_panel.py::TestPanelConstruction::test_panel_has_five_tabs",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_ui/test_process_panel.py::TestImportCompatibility::test_import_from_package",
+   "severity": "LOW",
+   "category": "N8",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_ui/test_process_panel.py::TestImportCompatibility::test_both_imports_same_class",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_ui/test_process_panel.py::TestImportCompatibility::test_import_from_panels",
+   "severity": "LOW",
+   "category": "N8",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_ui/test_process_panel.py::TestImportCompatibility::test_both_imports_same_class",
+   "falsifiability": null
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 0
+}

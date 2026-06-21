@@ -800,6 +800,14 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
+- Harden test suite and fix win32 bridge defects (``)
+Refactors the test suite across all modules to replace static source-level regex checks with real behavioral assertions, independent oracles, and transport-boundary doubles. Fixes critical Win32 bridge defects including ctypes pointer truncation on 64-bit Python by explicitly declaring `restype` and `argtypes` for kernel32 APIs. Resolves test execution non-determinism by ensuring `structlog` configurations are reset around every test.
+- **Bridges**: Declared explicit ctypes signatures in process and x64dbg bridges to prevent pointer truncation, and hardened VNC, Ghidra, and Frida tests.
+- **Core**: Added autouse fixture to reset `structlog` defaults, preventing cross-test log-capture pollution.
+- **Sandbox**: Added timeout handling to Docker CLI invocations and hardened network capture tests with bounded retries.
+- **UI**: Hardened main window, main tab, and log viewer tests to verify real signal-slot connections and geometry persistence.
+- **Hexcore**: Updated type stubs and added comprehensive e2e tests for bookmarks, alignment, and disassembly.
+
 
 ### Documentation
 
@@ -871,6 +879,13 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- Resolve PE checksum offset defect and harden test suite (`28bf02e`)
+Derive the PE checksum field offset dynamically from `e_lfanew` instead of using a hardcoded constant, ensuring correct notification coordinates during repairs. Additionally, integrate comprehensive audit documentation and significantly expand the test suite with robust, deterministic, and falsifiable test cases across all core components and tool bridges.
+- **Audit**: Add comprehensive review documents, production defects log, and remediation results.
+- **Hex Editor**: Update `hashing.py` to parse `e_lfanew` and dynamically locate the PE checksum field.
+- **Assets**: Add explicit width and height attributes to the `ai_brain.svg` icon.
+- **Tests**: Expand and harden test coverage across bridges, providers, sandbox, and UI components with strict, non-trivial assertions.
 
 - **audit:** Update U24-a09 status.json and remediation report with re-fix attempt 2 results (`d23d4a5`)
 
@@ -3365,12 +3380,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- Resolve PE checksum offset defect and harden test suite (``)
-Derive the PE checksum field offset dynamically from `e_lfanew` instead of using a hardcoded constant, ensuring correct notification coordinates during repairs. Additionally, integrate comprehensive audit documentation and significantly expand the test suite with robust, deterministic, and falsifiable test cases across all core components and tool bridges.
-- **Audit**: Add comprehensive review documents, production defects log, and remediation results.
-- **Hex Editor**: Update `hashing.py` to parse `e_lfanew` and dynamically locate the PE checksum field.
-- **Assets**: Add explicit width and height attributes to the `ai_brain.svg` icon.
-- **Tests**: Expand and harden test coverage across bridges, providers, sandbox, and UI components with strict, non-trivial assertions.
 
 

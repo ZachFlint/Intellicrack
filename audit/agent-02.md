@@ -58,7 +58,7 @@ Total test functions audited: 310
 
 ### tests/test_ui/test_hxd_panel.py - 27 test functions
 - Violation(s): File size suggests multiple test classes; requires full read to audit assertion quality
-- Why it is not a real gate: Incomplete audit due to token constraints  
+- Why it is not a real gate: Incomplete audit due to token constraints
 - Severity: Unknown (insufficient data)
 - Fix recommendation: Perform dedicated full audit of this file
 
@@ -407,7 +407,7 @@ Total test functions audited: 55
 
 ### tests/test_ui/test_hxd_panel.py:23-251 - TestFindHxdExecutable and TestHxDPanelConstruction classes
 - Violation(s): Multiple instances of smoke-test-as-gate and weak assertions throughout the class
-- Why it is not a real gate: 
+- Why it is not a real gate:
   - test_returns_path_or_none (line 29): Only asserts type (Path or None), not correctness of the path
   - test_returned_path_exists_if_not_none (line 35): Conditional assertion—when result is None, nothing is checked; when True, only verifies exists() not is_file() or executability
   - test_returned_path_is_executable (line 42): Misnamed (checks is_file, not executable permissions); conditional assertion skips when None
@@ -423,7 +423,7 @@ Total test functions audited: 55
 
 ### tests/test_ui/test_hxd_panel.py:119-154 - TestHxDPanelFileLoadingPreconditions class
 - Violation(s): Conditional assertions that no-op when preconditions don't hold; weak test design
-- Why it is not a real gate: 
+- Why it is not a real gate:
   - test_hxd_none_blocks_launch (line 120): Sets hxd_exe to None, asserts it is None. This is a tautology—the test sets the value and checks it was set, not that the panel correctly rejects file loading when hxd_exe is None.
   - test_nonexistent_file_check (line 127): Guarded by "if panel.hxd_exe is not None", meaning when HxD is installed, the test loads a nonexistent file and asserts False. When HxD is NOT installed, the test is silently skipped. The test does not verify that load_file correctly detects nonexistent files in all environments.
   - test_load_file_accepts_string (line 139): Also guarded; tests path-type conversion by passing a string, but the assertion only checks the return value is False (file doesn't exist). Does not verify that the string-to-Path conversion actually occurred or that a real file would be handled correctly.

@@ -30,8 +30,6 @@ from __future__ import annotations
 import asyncio
 import json
 import re
-import tempfile
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
@@ -46,6 +44,7 @@ from intellicrack.sandbox.windows import (
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
 
 def _extract_mof_identity(mof_text: str) -> dict[str, str]:
@@ -430,18 +429,41 @@ class TestF0013AntiEvasionRejectsNonRunning:
 
 
 def test_mof_text_is_well_formed_for_each_profile() -> None:
-    """Smoke check: every profile produces a non-empty MOF with the expected pragmas."""
+    """Every profile produces a MOF whose identity values match the resolved profile.
+
+    For each profile, the MOF is parsed with an independent regex oracle
+    (:func:`_extract_mof_identity`) and each extracted field is asserted to
+    equal the corresponding attribute on the profile object returned by
+    :func:`resolve_anti_evasion_profile`.  A regression that emitted the
+    correct structural pragmas with blank or wrong identity strings would
+    fail every per-field assertion.
+    """
     for profile_name in ("default", "workstation", "laptop"):
         profile = resolve_anti_evasion_profile(profile_name)
-        mof = build_anti_evasion_mof(profile, machine_name=f"DESKTOP-{profile_name.upper()[:3]}123")
-        assert mof.startswith("#pragma autorecover")
-        assert "#pragma namespace" in mof
-        assert mof.count("instance of") == 3
-        assert mof.count("#pragma deleteclass") == 3
-        with tempfile.NamedTemporaryFile(suffix=".mof", mode="w", delete=False, encoding="utf-8") as fh:
-            fh.write(mof)
-            staged = Path(fh.name)
-        try:
-            assert staged.read_text(encoding="utf-8") == mof
-        finally:
-            staged.unlink()
+        machine_name = f"DESKTOP-{profile_name.upper()[:3]}123"
+        mof = build_anti_evasion_mof(profile, machine_name=machine_name)
+
+        assert mof.startswith("#pragma autorecover"), f"{profile_name}: missing #pragma autorecover"
+        assert "#pragma namespace" in mof, f"{profile_name}: missing #pragma namespace"
+        assert mof.count("instance of") == 3, f"{profile_name}: expected 3 'instance of' blocks, got {mof.count('instance of')}"
+        assert mof.count("#pragma deleteclass") == 3, f"{profile_name}: expected 3 deleteclass pragmas"
+
+        identity = _extract_mof_identity(mof)
+
+        assert identity["Manufacturer"] == profile.manufacturer, (
+            f"{profile_name}: Manufacturer={identity['Manufacturer']!r} != {profile.manufacturer!r}"
+        )
+        assert identity["Model"] == profile.model, f"{profile_name}: Model={identity['Model']!r} != {profile.model!r}"
+        assert identity["ProductName"] == profile.product_name, (
+            f"{profile_name}: ProductName={identity['ProductName']!r} != {profile.product_name!r}"
+        )
+        assert identity["ProductVendor"] == profile.vendor, (
+            f"{profile_name}: ProductVendor={identity['ProductVendor']!r} != {profile.vendor!r}"
+        )
+        assert identity["BIOSVendor"] == profile.bios_vendor, (
+            f"{profile_name}: BIOSVendor={identity['BIOSVendor']!r} != {profile.bios_vendor!r}"
+        )
+        assert identity["BIOSVersion"] == profile.bios_version, (
+            f"{profile_name}: BIOSVersion={identity['BIOSVersion']!r} != {profile.bios_version!r}"
+        )
+        assert machine_name in mof, f"{profile_name}: machine_name {machine_name!r} not embedded in MOF"

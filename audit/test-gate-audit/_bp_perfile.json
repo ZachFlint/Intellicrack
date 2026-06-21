@@ -1,0 +1,384 @@
+{
+ "tests/core/test_process_cleanup.py": [
+  {
+   "line": 181,
+   "rule": "reportCallIssue",
+   "msg": "No parameter named \"type\""
+  },
+  {
+   "line": 188,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_generate_wsb_config\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 349,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_pidfile_path\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 392,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 417,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 447,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 475,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 480,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_verify_qemu_pid\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 504,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_read_pidfile_once\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 514,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared"
+  }
+ ],
+ "tests/test_audit3/bridges/test_installer.py": [
+  {
+   "line": 111,
+   "rule": "reportUnknownVariableType",
+   "msg": "Type of \"file_info_raw\" is partially unknown"
+  },
+  {
+   "line": 113,
+   "rule": "reportUnknownVariableType",
+   "msg": "Type of \"entry\" is unknown"
+  },
+  {
+   "line": 113,
+   "rule": "reportUnknownArgumentType",
+   "msg": "Argument type is partially unknown"
+  },
+  {
+   "line": 115,
+   "rule": "reportUnknownArgumentType",
+   "msg": "Argument type is partially unknown"
+  },
+  {
+   "line": 117,
+   "rule": "reportUnknownArgumentType",
+   "msg": "Argument type is unknown"
+  },
+  {
+   "line": 120,
+   "rule": "reportUnknownVariableType",
+   "msg": "Type of \"string_table\" is partially unknown"
+  },
+  {
+   "line": 121,
+   "rule": "reportUnknownVariableType",
+   "msg": "Type of \"st\" is unknown"
+  },
+  {
+   "line": 121,
+   "rule": "reportUnknownArgumentType",
+   "msg": "Argument type is partially unknown"
+  },
+  {
+   "line": 122,
+   "rule": "reportUnknownVariableType",
+   "msg": "Type of \"raw_entries\" is partially unknown"
+  },
+  {
+   "line": 122,
+   "rule": "reportUnknownArgumentType",
+   "msg": "Argument type is unknown"
+  },
+  {
+   "line": 123,
+   "rule": "reportUnknownArgumentType",
+   "msg": "Argument type is partially unknown"
+  },
+  {
+   "line": 149,
+   "rule": "reportUnknownVariableType",
+   "msg": "Type of \"fixed_info\" is partially unknown"
+  },
+  {
+   "line": 150,
+   "rule": "reportUnknownVariableType",
+   "msg": "Type of \"ffi\" is unknown"
+  },
+  {
+   "line": 150,
+   "rule": "reportUnknownArgumentType",
+   "msg": "Argument type is partially unknown"
+  },
+  {
+   "line": 151,
+   "rule": "reportUnknownArgumentType",
+   "msg": "Argument type is unknown"
+  },
+  {
+   "line": 152,
+   "rule": "reportUnknownArgumentType",
+   "msg": "Argument type is unknown"
+  },
+  {
+   "line": 529,
+   "rule": "reportUnknownMemberType",
+   "msg": "Type of \"major\" is unknown"
+  },
+  {
+   "line": 529,
+   "rule": "reportAttributeAccessIssue",
+   "msg": "Cannot access attribute \"major\" for class \"object\""
+  },
+  {
+   "line": 529,
+   "rule": "reportUnknownMemberType",
+   "msg": "Type of \"minor\" is unknown"
+  },
+  {
+   "line": 529,
+   "rule": "reportAttributeAccessIssue",
+   "msg": "Cannot access attribute \"minor\" for class \"object\""
+  },
+  {
+   "line": 529,
+   "rule": "reportUnknownMemberType",
+   "msg": "Type of \"patch\" is unknown"
+  },
+  {
+   "line": 529,
+   "rule": "reportAttributeAccessIssue",
+   "msg": "Cannot access attribute \"patch\" for class \"object\""
+  },
+  {
+   "line": 530,
+   "rule": "reportUnknownMemberType",
+   "msg": "Type of \"major\" is unknown"
+  },
+  {
+   "line": 530,
+   "rule": "reportAttributeAccessIssue",
+   "msg": "Cannot access attribute \"major\" for class \"object\""
+  },
+  {
+   "line": 530,
+   "rule": "reportUnknownMemberType",
+   "msg": "Type of \"minor\" is unknown"
+  },
+  {
+   "line": 530,
+   "rule": "reportAttributeAccessIssue",
+   "msg": "Cannot access attribute \"minor\" for class \"object\""
+  },
+  {
+   "line": 530,
+   "rule": "reportUnknownMemberType",
+   "msg": "Type of \"patch\" is unknown"
+  },
+  {
+   "line": 530,
+   "rule": "reportAttributeAccessIssue",
+   "msg": "Cannot access attribute \"patch\" for class \"object\""
+  },
+  {
+   "line": 895,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_logger\" is private and used outside of the module in which it is declared"
+  },
+  {
+   "line": 904,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_logger\" is private and used outside of the module in which it is declared"
+  },
+  {
+   "line": 1029,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_logger\" is private and used outside of the module in which it is declared"
+  },
+  {
+   "line": 1035,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_logger\" is private and used outside of the module in which it is declared"
+  },
+  {
+   "line": 1077,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_logger\" is private and used outside of the module in which it is declared"
+  }
+ ],
+ "tests/test_audit3/bridges/test_named_pipe_client.py": [
+  {
+   "line": 1095,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_obj\" is protected and used outside of the class in which it is declared"
+  }
+ ],
+ "tests/test_audit3/core/test_xml_gen.py": [
+  {
+   "line": 145,
+   "rule": "reportCallIssue",
+   "msg": "No overloads for \"tostring\" match the provided arguments"
+  },
+  {
+   "line": 145,
+   "rule": "reportArgumentType",
+   "msg": "Argument of type \"Element[str] | None\" cannot be assigned to parameter \"element\" of type \"Element[Any]\" in function \"tostring\""
+  },
+  {
+   "line": 145,
+   "rule": "reportCallIssue",
+   "msg": "No overloads for \"tostring\" match the provided arguments"
+  },
+  {
+   "line": 145,
+   "rule": "reportArgumentType",
+   "msg": "Argument of type \"Element[str] | None\" cannot be assigned to parameter \"element\" of type \"Element[Any]\" in function \"tostring\""
+  }
+ ],
+ "tests/test_audit3/sandbox/test_injection_monitor.py": [
+  {
+   "line": 163,
+   "rule": "reportUnusedFunction",
+   "msg": "Function \"_spawn_thread_helper\" is not accessed"
+  }
+ ],
+ "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py": [
+  {
+   "line": 167,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 180,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 192,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 204,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 210,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 216,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 222,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 231,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 241,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 250,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 256,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  },
+  {
+   "line": 261,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+  }
+ ],
+ "tests/test_bridges/test_frida_bridge.py": [
+  {
+   "line": 478,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_child_gating_enabled\" is protected and used outside of the class in which it is declared"
+  }
+ ],
+ "tests/test_bridges/test_hex_editor_pe_methods.py": [
+  {
+   "line": 211,
+   "rule": "reportArgumentType",
+   "msg": "Argument of type \"object\" cannot be assigned to parameter \"x\" of type \"ConvertibleToInt\" in function \"__new__\""
+  },
+  {
+   "line": 211,
+   "rule": "reportArgumentType",
+   "msg": "Argument of type \"object\" cannot be assigned to parameter \"x\" of type \"ConvertibleToInt\" in function \"__new__\""
+  }
+ ],
+ "tests/test_core/test_logging.py": [
+  {
+   "line": 700,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_logger_state\" is private and used outside of the module in which it is declared"
+  },
+  {
+   "line": 729,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_logger_state\" is private and used outside of the module in which it is declared"
+  },
+  {
+   "line": 766,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_logger_state\" is private and used outside of the module in which it is declared"
+  },
+  {
+   "line": 771,
+   "rule": "reportPrivateUsage",
+   "msg": "\"_logger_state\" is private and used outside of the module in which it is declared"
+  }
+ ],
+ "tests/test_core/test_realcov_05b_tools.py": [
+  {
+   "line": 184,
+   "rule": "reportAssignmentType",
+   "msg": "Type \"list[BreakpointInfo]\" is not assignable to declared type \"list[object]\""
+  }
+ ],
+ "tests/test_sandbox/test_sandbox_bridge.py": [
+  {
+   "line": 172,
+   "rule": "reportUnnecessaryCast",
+   "msg": "Unnecessary \"cast\" call; type is already \"Any\""
+  },
+  {
+   "line": 180,
+   "rule": "reportUnnecessaryCast",
+   "msg": "Unnecessary \"cast\" call; type is already \"Any\""
+  },
+  {
+   "line": 184,
+   "rule": "reportUnnecessaryCast",
+   "msg": "Unnecessary \"cast\" call; type is already \"Any\""
+  }
+ ]
+}

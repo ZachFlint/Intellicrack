@@ -58,19 +58,6 @@ def _load_and_select(bridge: HexEditorBridge, tmp_path: Path) -> None:
 class TestBridgeCopyAs:
     """Tests covering all copy_as output formats."""
 
-    def test_copy_as_hex_contains_spaces(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that the hex format produces space-separated byte tokens.
-
-        Args:
-            bridge: An initialized HexEditorBridge fixture.
-            tmp_path: Pytest temporary directory.
-        """
-        _load_and_select(bridge, tmp_path)
-        result: str = _run(bridge.copy_as("hex"))
-        assert " " in result
-        tokens = result.split(" ")
-        assert all(len(t) == 2 for t in tokens)
-
     def test_copy_as_hex_expected_value(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that hex format output matches the known byte values.
 

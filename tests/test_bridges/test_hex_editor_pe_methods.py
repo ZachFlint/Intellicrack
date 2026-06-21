@@ -156,55 +156,71 @@ class TestToolDefinitionsRegistered:
         assert list(fn.parameters) == [], f"{tool_name} should have no parameters"
 
 
+_ZERO_ARG_EXPECTED: Final[dict[str, int]] = {
+    "get_pe_sections": 2,
+    "get_pe_imports": 0,
+    "get_pe_exports": 0,
+}
+
+
 class TestMethodDispatchSurface:
-    """Verify ``ToolRegistry.execute_tool_call`` can resolve each new method."""
+    """Verify the zero-argument contract and live return values of each PE method.
+
+    Combines the signature-shape contract (no parameters beyond ``self``)
+    with a real invocation against an in-memory PE32 document so that the
+    assertions are falsifiable: a required-parameter addition causes a
+    ``TypeError`` on the zero-arg call, and a method that returns wrong data
+    fails the length check.
+    """
 
     @pytest.mark.parametrize("method_name", _NEW_METHOD_NAMES)
-    def test_method_resolves_via_getattr(
+    def test_method_signature_and_return_value(
         self,
         bridge: HexEditorBridge,
         method_name: str,
     ) -> None:
-        """Verify the registry-style ``getattr`` lookup succeeds.
+        """Verify zero-parameter signature and correct return value for a known PE32 image.
+
+        Confirms two gating properties simultaneously:
+
+        1. ``inspect.signature`` exposes no parameters beyond ``self``,
+           so any addition of a required argument causes this test to fail
+           via ``TypeError`` on the bare call.
+        2. The method is invoked with zero arguments against an
+           :class:`_InMemoryDocument` backed by a deterministic PE32 image
+           built from :func:`_build_pe_buffer`.  The expected length is the
+           independent oracle derived directly from the PE structure:
+           ``get_pe_sections`` must return exactly 2 dicts (one per section
+           inserted by :func:`_build_pe_buffer`); ``get_pe_imports`` and
+           ``get_pe_exports`` must return ``[]`` because the image carries
+           no import or export data directory.
 
         Args:
-            bridge: HexEditorBridge fixture.
-            method_name: Bare method name (without the ``hex_editor.``
-                prefix) that the registry strips before lookup.
-        """
-        attr = getattr(bridge, method_name, None)
-        assert callable(attr), f"{method_name} must be callable on HexEditorBridge"
-
-    @pytest.mark.parametrize("method_name", _NEW_METHOD_NAMES)
-    def test_method_is_coroutine_function(
-        self,
-        bridge: HexEditorBridge,
-        method_name: str,
-    ) -> None:
-        """Verify each method is async so the registry awaits it directly.
-
-        Args:
-            bridge: HexEditorBridge fixture.
-            method_name: Bare method name to inspect.
-        """
-        method = getattr(bridge, method_name)
-        assert inspect.iscoroutinefunction(method), f"{method_name} must be async"
-
-    @pytest.mark.parametrize("method_name", _NEW_METHOD_NAMES)
-    def test_method_signature_takes_only_self(
-        self,
-        bridge: HexEditorBridge,
-        method_name: str,
-    ) -> None:
-        """Verify each method has no positional or keyword parameters beyond self.
-
-        Args:
-            bridge: HexEditorBridge fixture.
-            method_name: Bare method name to inspect.
+            bridge: HexEditorBridge fixture with no document attached initially.
+            method_name: Bare method name (``get_pe_sections``,
+                ``get_pe_imports``, or ``get_pe_exports``) to inspect and
+                invoke.
         """
         method = getattr(bridge, method_name)
         sig = inspect.signature(method)
-        assert list(sig.parameters) == [], f"{method_name} should accept no arguments"
+        assert list(sig.parameters) == [], f"{method_name} must accept no arguments beyond self"
+
+        bridge.document = _InMemoryDocument(_build_pe_buffer(is_pe64=False))
+        result: list[dict[str, Any]] = _run(method())
+
+        expected_len: int = int(_ZERO_ARG_EXPECTED[method_name])
+        assert len(result) == expected_len, (
+            f"{method_name}() returned {len(result)} entries against a two-section PE32 image "
+            f"with no import/export directory; expected {expected_len}"
+        )
+
+        if method_name == "get_pe_sections":
+            assert result[0]["name"] == ".text", (
+                "first section must be '.text' as packed by _build_pe_buffer"
+            )
+            assert result[1]["name"] == ".rdata", (
+                "second section must be '.rdata' as packed by _build_pe_buffer"
+            )
 
 
 class TestRuntimeContract:

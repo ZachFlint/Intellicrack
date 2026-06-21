@@ -13,7 +13,7 @@ import asyncio
 import base64
 import contextlib
 import importlib
-import inspect
+import struct
 import sys
 from typing import TYPE_CHECKING, Any
 
@@ -24,8 +24,10 @@ from intellicrack.bridges.hex_editor import HexEditorBridge
 
 if TYPE_CHECKING:
     import types
-    from collections.abc import Coroutine
+    from collections.abc import Callable, Coroutine
     from pathlib import Path
+
+_build_ips: Callable[..., bytes] = getattr(HexEditorBridge, "_build_ips_from_patches")
 
 
 hexcore_mod: Any = pytest.importorskip(
@@ -37,6 +39,38 @@ _IPS_MAGIC = b"PATCH"
 _IPS_FOOTER = b"EOF"
 _IPS32_MAGIC = b"IPS32"
 _IPS32_FOOTER = b"EEOF"
+
+
+def _expected_ips_record(offset: int, data: bytes) -> bytes:
+    """Encode one standard-IPS patch record per the IPS specification.
+
+    An IPS record is a 3-byte big-endian offset followed by a 2-byte
+    big-endian size and the literal patch bytes. This is recomputed
+    independently of the production code so it can serve as an oracle
+    for a single non-RLE record whose size fits the 16-bit field and
+    whose offset does not collide with the ``EOF`` terminator value.
+
+    Args:
+        offset: The byte offset the record patches (``0..0xFFFFFE``).
+        data: The replacement bytes (``1..0xFFFF`` bytes).
+
+    Returns:
+        bytes: The encoded offset, size, and data bytes of the record.
+    """
+    return struct.pack(">I", offset)[1:] + struct.pack(">H", len(data)) + data
+
+
+def _expected_ips_payload(offset: int, data: bytes) -> bytes:
+    """Build the full standard-IPS blob for a single patch record.
+
+    Args:
+        offset: The byte offset the record patches (``0..0xFFFFFE``).
+        data: The replacement bytes (``1..0xFFFF`` bytes).
+
+    Returns:
+        bytes: ``PATCH`` + the encoded record + ``EOF``.
+    """
+    return _IPS_MAGIC + _expected_ips_record(offset, data) + _IPS_FOOTER
 
 
 @pytest.fixture
@@ -120,45 +154,74 @@ class TestDeadModuleRemoved:
 
 
 class TestBridgeBuildIpsFromPatches:
-    """Tests for the live IPS path on HexEditorBridge._build_ips_from_patches."""
+    """Tests for the live IPS path on _build_ips."""
 
-    def test_method_exists_on_bridge(self) -> None:
-        """Verify that HexEditorBridge exposes _build_ips_from_patches as a callable."""
-        assert callable(getattr(HexEditorBridge, "_build_ips_from_patches", None))
+    def test_single_patch_encodes_exact_ips_bytes(self) -> None:
+        """Verify the builder emits the exact spec-encoded IPS blob for one patch.
 
-    def test_method_is_static(self) -> None:
-        """Verify that _build_ips_from_patches is a static method on HexEditorBridge."""
-        raw = inspect.getattr_static(HexEditorBridge, "_build_ips_from_patches")
-        assert isinstance(raw, staticmethod)
+        The expected bytes are recomputed independently from the IPS
+        specification (3-byte big-endian offset, 2-byte big-endian size,
+        literal data, wrapped in ``PATCH``/``EOF``) so a stub returning
+        ``b""`` or any other shape fails.
+        """
+        offset = 0x123456
+        data = b"\xaa\xbb\xcc"
+        result = _build_ips([(offset, data)])
+        assert result == _expected_ips_payload(offset, data)
 
-    def test_returns_bytes_type(self) -> None:
-        """Verify that _build_ips_from_patches returns a bytes object."""
-        patches: list[tuple[int, bytes]] = [(0x10, b"\xaa\xbb\xcc")]
-        result = HexEditorBridge._build_ips_from_patches(patches)
-        assert isinstance(result, bytes)
+    def test_static_call_form_emits_exact_bytes(self) -> None:
+        """Verify the builder is invocable off the class and yields the spec blob.
+
+        Exercises the documented call shape (no instance) and asserts
+        the resulting bytes equal the independently recomputed IPS blob,
+        so the call shape is gated through real output rather than the
+        descriptor type.
+        """
+        offset = 0x0042
+        data = b"\xde\xad\xbe\xef"
+        result = _build_ips([(offset, data)])
+        assert result == _expected_ips_payload(offset, data)
+
+    def test_offset_size_data_field_layout(self) -> None:
+        """Verify the offset, size, and data fields decode back to the inputs.
+
+        Decodes the produced record fields with ``struct`` (an oracle
+        independent of the builder) and asserts each field round-trips
+        to the original offset, length, and data bytes.
+        """
+        offset = 0x00ABCD
+        data = b"\x10\x20\x30\x40\x50"
+        result = _build_ips([(offset, data)])
+        body = result[len(_IPS_MAGIC) : -len(_IPS_FOOTER)]
+        decoded_offset = struct.unpack(">I", b"\x00" + body[0:3])[0]
+        decoded_size = struct.unpack(">H", body[3:5])[0]
+        decoded_data = body[5 : 5 + decoded_size]
+        assert decoded_offset == offset
+        assert decoded_size == len(data)
+        assert decoded_data == data
 
     def test_ips_header_is_patch_magic(self) -> None:
         """Verify that the IPS payload begins with the PATCH magic header."""
         patches: list[tuple[int, bytes]] = [(0x00, b"\xde\xad\xbe\xef")]
-        result = HexEditorBridge._build_ips_from_patches(patches)
+        result = _build_ips(patches)
         assert result[:5] == _IPS_MAGIC
 
     def test_ips_footer_is_eof_marker(self) -> None:
         """Verify that the IPS payload ends with the EOF marker."""
         patches: list[tuple[int, bytes]] = [(0x20, b"\x11\x22\x33")]
-        result = HexEditorBridge._build_ips_from_patches(patches)
+        result = _build_ips(patches)
         assert result[-3:] == _IPS_FOOTER
 
     def test_ips32_header_is_ips32_magic(self) -> None:
         """Verify that the IPS32 payload begins with the IPS32 magic header."""
         patches: list[tuple[int, bytes]] = [(0x100, b"\xca\xfe")]
-        result = HexEditorBridge._build_ips_from_patches(patches, ips32=True)
+        result = _build_ips(patches, ips32=True)
         assert result[:5] == _IPS32_MAGIC
 
     def test_ips32_footer_is_eeof_marker(self) -> None:
         """Verify that the IPS32 payload ends with the EEOF marker."""
         patches: list[tuple[int, bytes]] = [(0x200, b"\xba\xbe")]
-        result = HexEditorBridge._build_ips_from_patches(patches, ips32=True)
+        result = _build_ips(patches, ips32=True)
         assert result[-4:] == _IPS32_FOOTER
 
     def test_minimum_ips_payload_size(self) -> None:
@@ -167,7 +230,7 @@ class TestBridgeBuildIpsFromPatches:
         The minimum is: 5 (PATCH) + 3 (offset) + 2 (size) + 1 (data) + 3 (EOF) = 14.
         """
         patches: list[tuple[int, bytes]] = [(0x01, b"\xff")]
-        result = HexEditorBridge._build_ips_from_patches(patches)
+        result = _build_ips(patches)
         assert len(result) >= 14
 
     def test_multi_patch_ips_payload(self) -> None:
@@ -177,7 +240,7 @@ class TestBridgeBuildIpsFromPatches:
             (0x50, b"\xcc\xdd\xee"),
             (0xA0, b"\x11"),
         ]
-        result = HexEditorBridge._build_ips_from_patches(patches)
+        result = _build_ips(patches)
         assert result[:5] == _IPS_MAGIC
         assert result[-3:] == _IPS_FOOTER
 
@@ -186,30 +249,45 @@ class TestBridgeBuildIpsFromPatches:
 
         The expected result is exactly PATCH + EOF = 8 bytes.
         """
-        result = HexEditorBridge._build_ips_from_patches([])
+        result = _build_ips([])
         assert result == _IPS_MAGIC + _IPS_FOOTER
 
     def test_overflow_on_negative_offset(self) -> None:
         """Verify that a negative patch offset raises OverflowError."""
         with pytest.raises(OverflowError):
-            HexEditorBridge._build_ips_from_patches([(-1, b"\x00")])
+            _build_ips([(-1, b"\x00")])
 
     def test_overflow_on_offset_exceeding_ips_max(self) -> None:
         """Verify that an offset exceeding the 24-bit IPS maximum raises OverflowError."""
         with pytest.raises(OverflowError):
-            HexEditorBridge._build_ips_from_patches([(0x1000000, b"\x00")])
+            _build_ips([(0x1000000, b"\x00")])
 
 
 class TestDocumentExportPatchesIps:
     """Tests for the live IPS path on HexDocument.export_patches_ips."""
 
-    def test_export_patches_ips_callable_on_document(self, hexcore: types.ModuleType) -> None:
-        """Verify that HexDocument exposes export_patches_ips as a callable method.
+    def test_export_patches_ips_emits_exact_spec_blob(
+        self,
+        hexcore: types.ModuleType,
+        sample_bytes: bytes,
+    ) -> None:
+        """Verify export_patches_ips emits the exact spec-encoded IPS blob.
+
+        Opens a real document, performs one contiguous overwrite, and
+        asserts the produced bytes equal the independently recomputed
+        IPS blob for that single record. A binding returning empty or
+        malformed bytes fails.
 
         Args:
             hexcore: The native module fixture.
+            sample_bytes: The 256-byte payload fixture.
         """
-        assert callable(getattr(hexcore.HexDocument, "export_patches_ips", None))
+        offset = 10
+        data = b"\xaa\xbb\xcc"
+        doc = hexcore.HexDocument.open_bytes(sample_bytes)
+        doc.write_bytes(offset, data)
+        result = doc.export_patches_ips()
+        assert bytes(result) == _expected_ips_payload(offset, data)
 
     def test_export_patches_ips_returns_bytes(self, hexcore: types.ModuleType, sample_bytes: bytes) -> None:
         """Verify that export_patches_ips returns a bytes object.

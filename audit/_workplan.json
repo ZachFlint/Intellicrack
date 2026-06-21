@@ -17,7 +17,7 @@
         "test": "test_inject_warns_when_no_process_attached",
         "severity": "Medium",
         "violations": "Mock-the-thing-under-test / Weak-assertion-on-rich-output",
-        "why": "The test patches `QMessageBox.warning` to capture calls, but only asserts that `len(warning_calls) > 0` \u2014 it never verifies (1) that the dialog content contains the correct message, (2) what the title text is, or (3) that the bridge was NOT invoked (proving the early guard worked). A production bug where the code calls warning twice, or calls it with the wrong message, would still pass this test.",
+        "why": "The test patches `QMessageBox.warning` to capture calls, but only asserts that `len(warning_calls) > 0` — it never verifies (1) that the dialog content contains the correct message, (2) what the title text is, or (3) that the bridge was NOT invoked (proving the early guard worked). A production bug where the code calls warning twice, or calls it with the wrong message, would still pass this test.",
         "fix": "Capture the warning call arguments and assert the exact title contains \"Not Attached\" and the message describes the problem of no attachment. Also verify that the bridge method is never called by patching `run_bridge_coroutine_async` and asserting it was not invoked."
       },
       {
@@ -39,7 +39,7 @@
         "test": "test_on_read_no_dispatch_when_unattached",
         "severity": "Medium",
         "violations": "Mock-the-thing-under-test / Insufficient verification of precondition guard",
-        "why": "The test manually sets `_attached_pid = None` and patches `run_bridge_coroutine_async`, then calls `_on_read()` and asserts the mock was not called. However, the test never verifies that the code actually checks `_attached_pid` before dispatch \u2014 it only verifies the empirical outcome. If the guard is removed or commented out, the test still passes as long as something else prevents the call (e.g., an exception in the dialog path). A real gate would call `_on_read()` with a real bridge and verify it surfaced an error dialog and did not execute the underlying operation.",
+        "why": "The test manually sets `_attached_pid = None` and patches `run_bridge_coroutine_async`, then calls `_on_read()` and asserts the mock was not called. However, the test never verifies that the code actually checks `_attached_pid` before dispatch — it only verifies the empirical outcome. If the guard is removed or commented out, the test still passes as long as something else prevents the call (e.g., an exception in the dialog path). A real gate would call `_on_read()` with a real bridge and verify it surfaced an error dialog and did not execute the underlying operation.",
         "fix": "Patch both `run_bridge_coroutine_async` (to fail if called) and `QMessageBox.warning` (to capture the warning). Verify the warning is shown with a message about needing attachment. Verify the bridge dispatch is skipped entirely by a guard check, not by some other control flow."
       },
       {
@@ -49,7 +49,7 @@
         "test": "test_on_write_no_dispatch_when_unattached",
         "severity": "Medium",
         "violations": "Mock-the-thing-under-test / Insufficient verification of precondition guard",
-        "why": "Same as test_on_read_no_dispatch_when_unattached \u2014 the test checks that the bridge is not called, but does not verify that the guard is explicitly checking `_attached_pid`. A refactored implementation that skips the write for any reason (e.g., invalid address parsing) would still pass.",
+        "why": "Same as test_on_read_no_dispatch_when_unattached — the test checks that the bridge is not called, but does not verify that the guard is explicitly checking `_attached_pid`. A refactored implementation that skips the write for any reason (e.g., invalid address parsing) would still pass.",
         "fix": "Add a paired test where `_attached_pid` IS set, call `_on_write()`, and verify the dispatch proceeds. This demonstrates that the guard is specifically checking the attachment state and is not coincidentally skipped by other logic."
       },
       {
@@ -59,7 +59,7 @@
         "test": "test_on_search_no_dispatch_when_unattached",
         "severity": "Medium",
         "violations": "Mock-the-thing-under-test / Insufficient verification of precondition guard",
-        "why": "Same pattern as above \u2014 the test only verifies the bridge is not called, not that the code explicitly guards on `_attached_pid`. Production code that skips search for any reason would still pass.",
+        "why": "Same pattern as above — the test only verifies the bridge is not called, not that the code explicitly guards on `_attached_pid`. Production code that skips search for any reason would still pass.",
         "fix": "Verify the guard explicitly by testing that a real search with `_attached_pid` set DOES dispatch, then test that the same search with `_attached_pid = None` is blocked. This pair of tests demonstrates the guard is the controlling factor."
       }
     ],
@@ -71,7 +71,7 @@
         "test": "test_region_map_populated_from_real_memory_map",
         "severity": "High",
         "violations": "Weak-assertion-on-rich-output / Insufficient structure validation",
-        "why": "The test calls `pump_until(qapp, lambda: tab.region_count() > 0)` and then asserts `rows >= 1`, `first_base` is not None, and the count label matches. However, it never validates that the base address and size values are _correctly_ parsed from the real memory map \u2014 it only checks they are not None and parse as hex. A bug where addresses are swapped, or sizes are halved, would not be caught. The test also does not verify that the specific modules expected to be in this process (e.g., ntdll, kernel32) are actually present.",
+        "why": "The test calls `pump_until(qapp, lambda: tab.region_count() > 0)` and then asserts `rows >= 1`, `first_base` is not None, and the count label matches. However, it never validates that the base address and size values are _correctly_ parsed from the real memory map — it only checks they are not None and parse as hex. A bug where addresses are swapped, or sizes are halved, would not be caught. The test also does not verify that the specific modules expected to be in this process (e.g., ntdll, kernel32) are actually present.",
         "fix": "After populating the region table, enumerate specific known module ranges (e.g., kernel32.dll's reported base from `get_modules`), and verify that each module's address range falls within a region in the table. This proves the table was actually populated from the real host, not just filled with placeholder data."
       },
       {
@@ -81,7 +81,7 @@
         "test": "test_region_map_contains_real_module_region",
         "severity": "High",
         "violations": "Weak-assertion-on-rich-output / Insufficient validation of overlap semantics",
-        "why": "The test retrieves the ntdll base via `_ntdll_base()`, populates regions, and then checks `base <= ntdll_base < base + size`. However, it never verifies that the returned base and size are actually the REAL values \u2014 it only checks that ntdll falls within some region. A bug where region bases are off by a page, or sizes are wrong, would still pass as long as ntdll happens to fall within the range. The test also does not verify that the region it found is correctly marked with the expected protection flags or module name if the bridge provides that information.",
+        "why": "The test retrieves the ntdll base via `_ntdll_base()`, populates regions, and then checks `base <= ntdll_base < base + size`. However, it never verifies that the returned base and size are actually the REAL values — it only checks that ntdll falls within some region. A bug where region bases are off by a page, or sizes are wrong, would still pass as long as ntdll happens to fall within the range. The test also does not verify that the region it found is correctly marked with the expected protection flags or module name if the bridge provides that information.",
         "fix": "After finding the region containing ntdll, verify its properties against the real `get_modules` output: the base should match (or be close to) ntdll's reported base, and the size should be >= ntdll's reported size. Check that the protection field (if available) includes execute permission for a code module."
       }
     ],
@@ -93,7 +93,7 @@
         "test": "test_region_filter_wired_to_text_changed",
         "severity": "Low",
         "violations": "No-assertion / Vacuous assertion / Coverage-theater",
-        "why": "The test sets up a table with two rows, then calls `tab._region_filter.insert(\"ntdll\")` and checks that row 0 is not hidden and row 1 is hidden. However, the test does not explicitly verify that `textChanged` signal was connected and automatically triggered the filter callback \u2014 it only empirically checks the outcome. If the signal is not wired and the test manually calls the filter method elsewhere, the test still passes. A more direct test would verify that the signal is actually connected by checking the signal's receivers or by testing that changing text WITHOUT calling the filter method still hides the row.",
+        "why": "The test sets up a table with two rows, then calls `tab._region_filter.insert(\"ntdll\")` and checks that row 0 is not hidden and row 1 is hidden. However, the test does not explicitly verify that `textChanged` signal was connected and automatically triggered the filter callback — it only empirically checks the outcome. If the signal is not wired and the test manually calls the filter method elsewhere, the test still passes. A more direct test would verify that the signal is actually connected by checking the signal's receivers or by testing that changing text WITHOUT calling the filter method still hides the row.",
         "fix": "Use `qtbot.signalSpy` to capture `textChanged` emissions, or manually emit a signal and verify the filter is invoked. Alternatively, add a second assertion that if you change the filter text programmatically (via `setText` rather than `insert`) the row visibility still changes, proving the signal is wired."
       }
     ],
@@ -105,7 +105,7 @@
         "test": "test_resource_button_invokes_qdesktopservices",
         "severity": "Medium",
         "violations": "Mock-the-thing-under-test / Insufficient assertion on button behavior",
-        "why": "The test patches `QDesktopServices.openUrl` and clicks buttons, then asserts `mock_open.called` and compares the called URL to the expected link. However, it never verifies that the button's clicked signal is actually connected to the resource-open handler \u2014 it only checks the empirical outcome. If the button is wired to a no-op handler instead, or if the button click does not actually fire, the test would fail differently. A real gate would verify that clicking the button triggers the URL open by inspecting the button's connections or by testing that a failure (openUrl returns False) is surfaced to the user.",
+        "why": "The test patches `QDesktopServices.openUrl` and clicks buttons, then asserts `mock_open.called` and compares the called URL to the expected link. However, it never verifies that the button's clicked signal is actually connected to the resource-open handler — it only checks the empirical outcome. If the button is wired to a no-op handler instead, or if the button click does not actually fire, the test would fail differently. A real gate would verify that clicking the button triggers the URL open by inspecting the button's connections or by testing that a failure (openUrl returns False) is surfaced to the user.",
         "fix": "Verify the button click actually invokes the handler by adding a second test where `openUrl` returns False and a warning is shown. This demonstrates the handler is wired and responds to button clicks. Alternatively, use `qtbot.signalSpy` to capture the clicked signal and verify it fires when the button is pressed."
       }
     ],
@@ -117,7 +117,7 @@
         "test": "test_available_types_are_a_subset_of_real_probes",
         "severity": "High",
         "violations": "Weak-assertion-on-rich-output / Insufficient cross-validation",
-        "why": "The test calls `manager.get_available_types()` and then independently probes `WindowsSandbox` and `QEMUSandbox`. It asserts that reported types match the independent probes with `assert (\"windows\" in reported) == windows_real`. However, this assertion only checks the boolean equivalence, not that the implementation is actually calling the real probes \u2014 if the code fabricates availability and the host happens to have no sandboxes available, the test still passes. A more robust gate would verify the manager is making the real probe calls by injecting a failure (e.g., simulating a host without QEMU) and confirming the reported type changes accordingly.",
+        "why": "The test calls `manager.get_available_types()` and then independently probes `WindowsSandbox` and `QEMUSandbox`. It asserts that reported types match the independent probes with `assert (\"windows\" in reported) == windows_real`. However, this assertion only checks the boolean equivalence, not that the implementation is actually calling the real probes — if the code fabricates availability and the host happens to have no sandboxes available, the test still passes. A more robust gate would verify the manager is making the real probe calls by injecting a failure (e.g., simulating a host without QEMU) and confirming the reported type changes accordingly.",
         "fix": "Add a follow-up test that patches `QEMUSandbox.is_available` to raise an exception, call `get_available_types()`, and verify that \"qemu\" is NOT in the returned list (or that an error is surfaced). This proves the manager is calling the real is_available method and respecting its results."
       }
     ],
@@ -129,7 +129,7 @@
         "test": "test_toggling_on_starts_timer_and_increments_call_count",
         "severity": "Medium",
         "violations": "Weak-assertion-on-rich-output / Insufficient validation of polling interval",
-        "why": "The test turns on auto-refresh, waits 7000 ms, patches `run_bridge_coroutine_async` with a counter, and asserts `calls_after_on > 1`. However, this assertion only verifies that the callback was invoked more than once; it does not verify the interval is correct. If the interval is 1 ms instead of 3000 ms, the test would still pass (and pass even faster). The test also does not verify that the timer actually fired via Qt's event loop \u2014 it only checks the side effect of the mock being called.",
+        "why": "The test turns on auto-refresh, waits 7000 ms, patches `run_bridge_coroutine_async` with a counter, and asserts `calls_after_on > 1`. However, this assertion only verifies that the callback was invoked more than once; it does not verify the interval is correct. If the interval is 1 ms instead of 3000 ms, the test would still pass (and pass even faster). The test also does not verify that the timer actually fired via Qt's event loop — it only checks the side effect of the mock being called.",
         "fix": "Add a separate test (or extend this one) that measures the time between successive calls and verifies the interval is approximately 3000 ms (with some tolerance for Qt's scheduling granularity). Use `time.perf_counter()` or a clock mock to verify the interval is enforced by the timer."
       }
     ],
@@ -151,7 +151,7 @@
         "test": "test_list_processes_filter",
         "severity": "Low",
         "violations": "Weak-assertion-on-rich-output / Insufficient assertion on filter semantics",
-        "why": "The test calls `list_processes(filter_name=\"python\")` and asserts the result has at least 1 entry. However, it does not verify that the filter was actually applied \u2014 it only checks the result size. If the filter parameter is ignored and all processes are returned, the test still passes (as long as there is at least one Python process on the system, which is always true during testing). A real gate would verify that the filtered list contains ONLY processes matching the filter by checking that all process names contain \"python\".",
+        "why": "The test calls `list_processes(filter_name=\"python\")` and asserts the result has at least 1 entry. However, it does not verify that the filter was actually applied — it only checks the result size. If the filter parameter is ignored and all processes are returned, the test still passes (as long as there is at least one Python process on the system, which is always true during testing). A real gate would verify that the filtered list contains ONLY processes matching the filter by checking that all process names contain \"python\".",
         "fix": "Add an assertion that all returned processes have \"python\" in their name: `assert all(\"python\" in p.name.lower() for p in procs)`."
       },
       {
@@ -161,7 +161,7 @@
         "test": "test_list_processes_detailed_self_arch",
         "severity": "Low",
         "violations": "Weak-assertion-on-rich-output / Insufficient assertion on data correctness",
-        "why": "The test retrieves the current process's architecture and asserts it is in `{\"x86_64\", \"x86\"}`. However, it does not verify the returned architecture is CORRECT for the current process \u2014 it only checks it is one of the expected values. On a 64-bit system, both x86_64 and x86 are technically valid answers depending on whether the Python interpreter is 32-bit or 64-bit, but the test does not validate which one is actually running. A more rigorous test would compare the bridge's reported architecture to the actual running architecture (via `struct.calcsize(\"P\")`).",
+        "why": "The test retrieves the current process's architecture and asserts it is in `{\"x86_64\", \"x86\"}`. However, it does not verify the returned architecture is CORRECT for the current process — it only checks it is one of the expected values. On a 64-bit system, both x86_64 and x86 are technically valid answers depending on whether the Python interpreter is 32-bit or 64-bit, but the test does not validate which one is actually running. A more rigorous test would compare the bridge's reported architecture to the actual running architecture (via `struct.calcsize(\"P\")`).",
         "fix": "Compare the bridge's reported architecture to the canonical architecture of the running interpreter via `struct.calcsize(\"P\") * 8 == 64` to determine if it should be x86_64 or x86, then assert the bridge matches."
       },
       {
@@ -171,7 +171,7 @@
         "test": "test_search_pattern_finds_bytes",
         "severity": "Medium",
         "violations": "Weak-assertion-on-rich-output / Insufficient validation of search correctness",
-        "why": "The test searches for the first 8 bytes of known_buffer and asserts `addr in results`. However, it does not verify that the returned address is actually the start of the found pattern \u2014 it only checks that the expected address is somewhere in the results list. A bug where the bridge returns a nearby address (off by a page, for example) would not be caught. The test also does not verify that searching for a pattern that is NOT in memory returns an empty list.",
+        "why": "The test searches for the first 8 bytes of known_buffer and asserts `addr in results`. However, it does not verify that the returned address is actually the start of the found pattern — it only checks that the expected address is somewhere in the results list. A bug where the bridge returns a nearby address (off by a page, for example) would not be caught. The test also does not verify that searching for a pattern that is NOT in memory returns an empty list.",
         "fix": "Verify the pattern is found at exactly the right address by checking `results[0] == addr` (the first result). Add a second test that searches for a pattern known to NOT be in memory and asserts the results list is empty."
       }
     ],
@@ -183,7 +183,7 @@
         "test": "test_register_rejects_dead_pid",
         "severity": "Low",
         "violations": "Weak-assertion-on-rich-output / Fragile test due to OS behavior",
-        "why": "The test spawns a subprocess, waits for it to exit, and then tries to register its PID. However, the OS may reuse the PID very quickly for a new process. The test handles this by looping and regenerating the dead PID, but it uses a bare `else` clause with `pytest.fail`, which is confusing and fragile. More importantly, the test does not verify that the rejection is due to the PID not existing \u2014 it only catches a ValueError. A bug where the code rejects PIDs for any reason would still pass. The test also does not verify that the error message indicates a non-existent process.",
+        "why": "The test spawns a subprocess, waits for it to exit, and then tries to register its PID. However, the OS may reuse the PID very quickly for a new process. The test handles this by looping and regenerating the dead PID, but it uses a bare `else` clause with `pytest.fail`, which is confusing and fragile. More importantly, the test does not verify that the rejection is due to the PID not existing — it only catches a ValueError. A bug where the code rejects PIDs for any reason would still pass. The test also does not verify that the error message indicates a non-existent process.",
         "fix": "After catching the ValueError, verify the exception message contains language about the process not existing (e.g., \"does not exist\" or \"not found\"). Also use a more robust dead PID generation that retries with a longer wait if the OS recycled the PID."
       }
     ],
@@ -195,7 +195,7 @@
         "test": "test_quote_then_parse_round_trip",
         "severity": "Low",
         "violations": "Tautological / Re-implements logic in the test",
-        "why": "The test quotes a value and then parses it back, comparing to the original. However, the test is re-implementing the round-trip semantics \u2014 it quotes the value using the production `_quote_env_value`, then parses it using the production `_parse_env_text`. If both functions have the same bug (e.g., both double-escape backslashes), the test still passes. The test does not have an independent oracle of correct quoting/parsing behavior. However, this is partially mitigated by the fact that round-trip tests are common for serialization and have value even without an external oracle, as they at least detect internal inconsistencies. This is a borderline case but acceptable if the test covers diverse inputs (which it does via `_ROUND_TRIP_VALUES`).",
+        "why": "The test quotes a value and then parses it back, comparing to the original. However, the test is re-implementing the round-trip semantics — it quotes the value using the production `_quote_env_value`, then parses it using the production `_parse_env_text`. If both functions have the same bug (e.g., both double-escape backslashes), the test still passes. The test does not have an independent oracle of correct quoting/parsing behavior. However, this is partially mitigated by the fact that round-trip tests are common for serialization and have value even without an external oracle, as they at least detect internal inconsistencies. This is a borderline case but acceptable if the test covers diverse inputs (which it does via `_ROUND_TRIP_VALUES`).",
         "fix": "The test is defensible as-is because it covers a wide range of inputs and detects internal inconsistencies in the round-trip. To strengthen it, add a separate test that verifies the format of the quoted output against known-correct examples (e.g., empty string quotes as \"\", backslashes are doubled, etc.) to ensure the format itself is correct, not just that it round-trips."
       }
     ],
@@ -207,7 +207,7 @@
         "test": "test_list_bookmarks_empty_on_fresh_doc",
         "severity": "Low",
         "violations": "Weak-assertion-on-rich-output / Insufficient assertion on object type",
-        "why": "The test asserts `bookmarks == []`. However, it does not verify that `bookmarks` is actually the correct type (a list of tuples, not just any iterable equal to []). A bug where `list_bookmarks()` returns None instead of an empty list would fail, but a bug where it returns a generator or other iterable would not. The test is also very weak \u2014 it only checks the trivial case of a fresh document.",
+        "why": "The test asserts `bookmarks == []`. However, it does not verify that `bookmarks` is actually the correct type (a list of tuples, not just any iterable equal to []). A bug where `list_bookmarks()` returns None instead of an empty list would fail, but a bug where it returns a generator or other iterable would not. The test is also very weak — it only checks the trivial case of a fresh document.",
         "fix": "Verify the type: `assert isinstance(bookmarks, list)`. Add a test that adds a bookmark and verifies `list_bookmarks()` returns a list with the correct structure (tuples with 4 fields in the expected order)."
       },
       {
@@ -277,7 +277,7 @@
         "test": "test_window_level_filter_over_real_records",
         "severity": "High",
         "violations": "Weak assertion on rich output; non-deterministic",
-        "why": "The test filters by ERROR level and then checks that \"visible_levels <= {\"ERROR\", \"CRITICAL\"}\". This is a set membership check that allows any combination of ERROR and CRITICAL to pass, which is valid for filtering. However, the test relies on a Qt event loop (qtbot.waitUntil) with timing-dependent behavior. If the async filter operations fail or are slow, the assertion may time out rather than fail cleanly. The test does not verify that the INFO level from the first logger.info() call is actually filtered OUT\u2014it only checks what IS visible. If the filter implementation breaks and shows all levels, this test would still pass. The set subset check (visible_levels <= ...) allows unfiltered or partially-filtered results to pass.",
+        "why": "The test filters by ERROR level and then checks that \"visible_levels <= {\"ERROR\", \"CRITICAL\"}\". This is a set membership check that allows any combination of ERROR and CRITICAL to pass, which is valid for filtering. However, the test relies on a Qt event loop (qtbot.waitUntil) with timing-dependent behavior. If the async filter operations fail or are slow, the assertion may time out rather than fail cleanly. The test does not verify that the INFO level from the first logger.info() call is actually filtered OUT—it only checks what IS visible. If the filter implementation breaks and shows all levels, this test would still pass. The set subset check (visible_levels <= ...) allows unfiltered or partially-filtered results to pass.",
         "fix": "(1) Replace the membership-check assertion with an exact equality assertion: assert visible_levels == {\"ERROR\", \"CRITICAL\"} to verify the filter actually excluded INFO. (2) Add an explicit assertion that the INFO event \"real_info_only\" is NOT in the filtered results (check proxy.rowCount() before and after filter, or iterate all records and verify the event name). (3) Consider adding a deterministic synchronization point such as a QTimer or event processing loop to ensure filter changes propagate before the assertion."
       }
     ],
@@ -361,7 +361,7 @@
         "test": "TestMainWindowIntegration.test_on_address_clicked_updates_ui",
         "severity": "High",
         "violations": "Mocking of external dependency (SandboxManager); non-deterministic UI state check",
-        "why": "The test uses monkeypatch to replace SandboxManager with NoOpSandboxManager, then constructs MainWindow. This is a form of mocking the \"thing under test\"\u2014the MainWindow's integration with SandboxManager. The test directly emits address_clicked with _ADDR_MAIN and then asserts the address_label text contains \"0x00401000\". However, the test does not verify that real address clicks from the ToolOutputPanel would trigger this update. It only checks that emitting the signal changes the label. If the MainWindow's signal connection is broken, this test would still pass as long as the label-update slot is not called (directly). The assertion \"0x00401000\" in text is weak\u2014it checks substring presence, not exact equality, and does not verify the label is visible, styled, or updated at the right time.",
+        "why": "The test uses monkeypatch to replace SandboxManager with NoOpSandboxManager, then constructs MainWindow. This is a form of mocking the \"thing under test\"—the MainWindow's integration with SandboxManager. The test directly emits address_clicked with _ADDR_MAIN and then asserts the address_label text contains \"0x00401000\". However, the test does not verify that real address clicks from the ToolOutputPanel would trigger this update. It only checks that emitting the signal changes the label. If the MainWindow's signal connection is broken, this test would still pass as long as the label-update slot is not called (directly). The assertion \"0x00401000\" in text is weak—it checks substring presence, not exact equality, and does not verify the label is visible, styled, or updated at the right time.",
         "fix": "(1) Remove the SandboxManager mock. Instead, use a real SandboxManager if possible, or skip the test if SandboxManager is unavailable (don't replace it with a no-op). (2) Populate the ToolOutputPanel with data (functions, xrefs), simulate a user click on a function in the list, and verify the MainWindow's address_label is updated. This tests the full signal chain, not just the final slot. (3) Replace the substring assertion with an exact equality check: assert window.tool_panel.address_label.text() == \"0x00401000\". (4) Add a test that verifies the label text is empty or a default value before any address_clicked signal is emitted."
       },
       {
@@ -1370,7 +1370,7 @@
         "severity": "Medium",
         "violations": "Tautological assertions / comparing implementations within the same class",
         "why": "Asserts that SMBIOS and registry identity strings are consistent by comparing _anti_evasion_identity() and _anti_evasion_smbios_entries() results; both methods are on the same class and use the same profile dict.",
-        "fix": "Use an independent source for expected values. Verify consistency by checking: (1) SMBIOS type-1 manufacturer/product, (2) registry SystemManufacturer/SystemProductName, (3) the audit requirements for each profile\u2014all three should match, not just two implementation methods."
+        "fix": "Use an independent source for expected values. Verify consistency by checking: (1) SMBIOS type-1 manufacturer/product, (2) registry SystemManufacturer/SystemProductName, (3) the audit requirements for each profile—all three should match, not just two implementation methods."
       }
     ],
     "tests/test_bridges/test_x64dbg_audit6.py": [
@@ -1392,7 +1392,7 @@
         "severity": "Low",
         "violations": "Smoke-test-as-gate / No-assertion on actual behavior",
         "why": "The test reads the source file and checks `\"WIN_NO_INHERIT_HANDLE\" not in text`, confirming the string literal is absent. This is a string-match test on source code. If the production code renamed the constant to `_WIN_NO_INHERIT_HANDLE` or moved it elsewhere but still used it, this test would still pass. It does not verify that the inlining of `False` is actually correct or that the behavior still works.",
-        "fix": "Delete this test\u2014it provides only false comfort that text-search compliance is met. Instead, rely on the actual functional test (test_read_memory_still_opens_process) to be the real gate. Remove the source-code regex check."
+        "fix": "Delete this test—it provides only false comfort that text-search compliance is met. Instead, rely on the actual functional test (test_read_memory_still_opens_process) to be the real gate. Remove the source-code regex check."
       },
       {
         "report": "agent-03.md",
@@ -1862,7 +1862,7 @@
         "severity": "Medium",
         "violations": "No-assertion / vacuous-assertion; many tests only assert subprocess returns correct exit code or output, not that process tracking actually occurred",
         "why": "Tests like test_run_tracked_captures_stdout only assert the output content (assert \"hello world\" in result.stdout), not that the subprocess was registered with the ProcessManager or that the manager knows about it. If the register() call were deleted, or if tracking state were lost, the test would not catch it because it only checks the subprocess output, not the manager's internal state.",
-        "fix": "After each subprocess completes, add assertions on the ProcessManager state: assert the process was briefly in manager.get_all_tracked(), then assert it was unregistered (process_count == initial_count). Test the full lifecycle: creation \u2192 registration \u2192 tracking \u2192 unregistration."
+        "fix": "After each subprocess completes, add assertions on the ProcessManager state: assert the process was briefly in manager.get_all_tracked(), then assert it was unregistered (process_count == initial_count). Test the full lifecycle: creation → registration → tracking → unregistration."
       }
     ],
     "tests/test_sandbox/test_analysis.py": [
@@ -1908,7 +1908,7 @@
         "severity": "Low",
         "violations": "Weak-assertion-on-rich-output; test only asserts undo returns True and the data matches, not that the undo/redo history is correct",
         "why": "The test_undo_after_move_restores_source_zeroes_and_destination test asserts the final state matches the original, which validates the correctness of the undo operation for this one case. However, it does not verify that the undo/redo history is well-formed, or that multiple undo/redo cycles work, or that the history can be serialized/deserialized correctly. The test is a happy-path gate, not a comprehensive undo/redo gate.",
-        "fix": "Add tests for: (1) undo \u2192 redo \u2192 undo round-trip (should return to original state), (2) undo on an operation that has no undo history (should return False), (3) redo after a new operation clears the redo stack. These tests would form a more comprehensive gate."
+        "fix": "Add tests for: (1) undo → redo → undo round-trip (should return to original state), (2) undo on an operation that has no undo history (should return False), (3) redo after a new operation clears the redo stack. These tests would form a more comprehensive gate."
       }
     ],
     "tests/test_bridges/test_ghidra.py": [
@@ -1967,7 +1967,7 @@
         "test": "test_unterminated_string_raises",
         "severity": "Low",
         "violations": "Assertion quality (only checks exception type, not root cause)",
-        "why": "The test asserts that a HexPatParseError is raised with message matching \"Unterminated string\", but it does not verify that the lexer correctly continues to process tokens after the error or that the error occurs at the exact position in the source. If the lexer were to raise HexPatParseError(\"Invalid syntax\") instead, the test would correctly fail. However, if the lexer were modified to skip the unterminated string and return EOF or an empty token list, the test would fail, but only because no exception was raised\u2014not because the test observed correct recovery behavior. The fix would be to verify both that the error is raised AND what the lexer state is before the error occurs.",
+        "why": "The test asserts that a HexPatParseError is raised with message matching \"Unterminated string\", but it does not verify that the lexer correctly continues to process tokens after the error or that the error occurs at the exact position in the source. If the lexer were to raise HexPatParseError(\"Invalid syntax\") instead, the test would correctly fail. However, if the lexer were modified to skip the unterminated string and return EOF or an empty token list, the test would fail, but only because no exception was raised—not because the test observed correct recovery behavior. The fix would be to verify both that the error is raised AND what the lexer state is before the error occurs.",
         "fix": "Before calling tokenize(), verify the starting state. Assert that the error occurs during tokenization and document expected recovery behavior or stopping point."
       }
     ],
@@ -2073,7 +2073,7 @@
         "test": "test_prefetched_data_skips_initial_worker_spawn",
         "severity": "Low",
         "violations": "Weak assertion on rich output (checks only row count and one item text, not full structure)",
-        "why": "The test asserts that the dialog has 6 rows and that one row contains expected text. However, it does not verify that all rows are populated correctly, that the status indicators (\u2713/\u2717) are rendered for all tools, or that the tool order matches the expected order. If half the rows contained blank strings or if the order were scrambled, the test would only fail if one of the specific checked rows was affected.",
+        "why": "The test asserts that the dialog has 6 rows and that one row contains expected text. However, it does not verify that all rows are populated correctly, that the status indicators (✓/✗) are rendered for all tools, or that the tool order matches the expected order. If half the rows contained blank strings or if the order were scrambled, the test would only fail if one of the specific checked rows was affected.",
         "fix": "Loop through all 6 rows and assert on each one's content, status indicator, and tool name. Verify the order matches the expected tool enumeration."
       }
     ],
@@ -2085,7 +2085,7 @@
         "test": "test_refresh_mitigations_unattached_shows_warning",
         "severity": "High",
         "violations": "Mock-the-thing-under-test (uses _StubBridge and monkeypatched run_bridge_coroutine_async)",
-        "why": "The test uses a stub bridge and a monkeypatched async runner, so it is not verifying that the real SystemTab correctly guards against a real unattached ProcessBridge. If the real bridge's get_mitigation_policies() behavior changes, or if a real async runner fails to dispatch correctly, this test would not catch it. The test only verifies that the tab's boolean check for attached PID gates the dispatch\u2014which is a thin slice of logic that has high coupling with the mock setup.",
+        "why": "The test uses a stub bridge and a monkeypatched async runner, so it is not verifying that the real SystemTab correctly guards against a real unattached ProcessBridge. If the real bridge's get_mitigation_policies() behavior changes, or if a real async runner fails to dispatch correctly, this test would not catch it. The test only verifies that the tab's boolean check for attached PID gates the dispatch—which is a thin slice of logic that has high coupling with the mock setup.",
         "fix": "Use a real ProcessBridge (or a partially-real one with minimal mocking of the async dispatch layer only) and a real attached process (or a well-controlled test process spawned for the test). Verify the warning is shown and the guard works with real async execution."
       }
     ],
@@ -2241,7 +2241,7 @@
         "test": "test_disassembly_line_with_comment",
         "severity": "Low",
         "violations": "No-assertion / Vacuous-assertion",
-        "why": "Same tautology: constructor \u2192 assertion.",
+        "why": "Same tautology: constructor → assertion.",
         "fix": "Verify that the comment field is optional and that setting it does not break downstream code."
       },
       {
@@ -2741,7 +2741,7 @@
         "test": "test_connection_with_invalid_key_raises_error",
         "severity": "Medium",
         "violations": "Cannot-fail (broad exception swallowing via pytest.raises without specific error verification)",
-        "why": "The test asserts that *some* AuthenticationError is raised, but the actual connection logic is not exercised against the real OpenAI API\u2014it's testing that an invalid key format is rejected. However, `pytest.raises(AuthenticationError)` without inspecting the error message or state allows any AuthenticationError to pass, and the test provides no independently verified expected error condition. If the provider silently accepts invalid keys and only fails on actual API call, this test would still pass.",
+        "why": "The test asserts that *some* AuthenticationError is raised, but the actual connection logic is not exercised against the real OpenAI API—it's testing that an invalid key format is rejected. However, `pytest.raises(AuthenticationError)` without inspecting the error message or state allows any AuthenticationError to pass, and the test provides no independently verified expected error condition. If the provider silently accepts invalid keys and only fails on actual API call, this test would still pass.",
         "fix": "Replace with a live API test (gated on OPENAI_API_KEY environment variable) that attempts a real API call with invalid credentials and verifies the specific error chain (e.g., check `err.status == 401` or similar API-specific failure signal). Or mock at the HTTP layer to return a 401 response and verify the provider maps it to AuthenticationError with the correct message."
       },
       {
@@ -2795,7 +2795,7 @@
         "test": "TestCountTokensFallback (all 3 error fallback tests)",
         "severity": "High",
         "violations": "Mock-the-thing-under-test (monkeypatch replaces the Gemini API call entirely)",
-        "why": "These tests replace `client.models.count_tokens` with a mock that raises errors, but they don't exercise the real fallback logic\u2014they only verify that when the API fails, the function falls back to the estimator. If the estimator logic is wrong, or if the fallback path has a bug (e.g., it re-raises the error instead of catching it), the monkeypatch hides the truth.",
+        "why": "These tests replace `client.models.count_tokens` with a mock that raises errors, but they don't exercise the real fallback logic—they only verify that when the API fails, the function falls back to the estimator. If the estimator logic is wrong, or if the fallback path has a bug (e.g., it re-raises the error instead of catching it), the monkeypatch hides the truth.",
         "fix": "Create a real Gemini client mock that simulates specific HTTP errors (e.g., 503 ServiceUnavailable, 400 BadRequest, ConnectionError), and verify the provider handles each one correctly without monkeypatching. Or skip these tests in favor of integration tests that hit the real Gemini API and use actual throttling/error conditions."
       },
       {
@@ -2805,7 +2805,7 @@
         "test": "test_throttle_prevents_rapid_calls",
         "severity": "Low",
         "violations": "Weak assertion on rich output (only checks elapsed time with wide tolerance, not actual throttling behavior)",
-        "why": "The test sets `_COUNT_TOKENS_INTERVAL` to 0.15 and then verifies `elapsed >= interval * 0.8` (i.e., >= 0.12 seconds). A tolerance of \u00b120% is too wide to catch off-by-one errors in the throttling delay calculation. If the delay is set to 0.05 instead of 0.15, the test would still pass. The test measures wall-clock time, which is noisy on multi-threaded systems.",
+        "why": "The test sets `_COUNT_TOKENS_INTERVAL` to 0.15 and then verifies `elapsed >= interval * 0.8` (i.e., >= 0.12 seconds). A tolerance of ±20% is too wide to catch off-by-one errors in the throttling delay calculation. If the delay is set to 0.05 instead of 0.15, the test would still pass. The test measures wall-clock time, which is noisy on multi-threaded systems.",
         "fix": "Mock `time.monotonic` or use `unittest.mock.patch` to control the clock precisely, then verify the delay is exact (within 1ms). Or remove this test if the throttling is a performance detail, not a correctness requirement."
       }
     ],
@@ -2829,7 +2829,7 @@
         "test": "test_candidate_safety_finish_reason_raises",
         "severity": "Medium",
         "violations": "No assertion on exception message/details",
-        "why": "The test verifies that a SAFETY finish reason raises ProviderError with message matching \"blocked by safety filters\". However, the test does not verify that the response object is actually inspected correctly\u2014e.g., if the detection logic checks the wrong field (e.g., `prompt_feedback` instead of `candidates[0].finish_reason`), the test would still pass because pytest.raises only checks exception type and regex match.",
+        "why": "The test verifies that a SAFETY finish reason raises ProviderError with message matching \"blocked by safety filters\". However, the test does not verify that the response object is actually inspected correctly—e.g., if the detection logic checks the wrong field (e.g., `prompt_feedback` instead of `candidates[0].finish_reason`), the test would still pass because pytest.raises only checks exception type and regex match.",
         "fix": "After catching the ProviderError, assert additional properties: check that the exception's string representation contains the full message, that the response object's finish_reason is actually SAFETY, and that no unexpected modifications to the response occur. Or add a test that modifies the finish_reason to something else and verifies no exception is raised."
       },
       {
@@ -2862,7 +2862,7 @@
         "line": "88-95",
         "test": "test_no_document_raises",
         "severity": "Low",
-        "violations": "Same as above\u2014weak assertion on bridge state",
+        "violations": "Same as above—weak assertion on bridge state",
         "why": "The test checks that calling export_patches_bps without an open document raises RuntimeError. However, it doesn't verify the bridge is truly empty before the call.",
         "fix": "Add a state check: ensure `bridge` has no document open before calling export_patches_bps."
       },
@@ -2873,7 +2873,7 @@
         "test": "test_bps_import_invalid_patch_raises",
         "severity": "Low",
         "violations": "Weak assertion (only checks exception type and message substring, not the exact validation)",
-        "why": "The test imports garbage base64 and asserts ValueError with match=\"BPS\". However, it does not verify that the parser is actually checking the BPS magic bytes\u2014if the validation was removed and the error was raised for a different reason (e.g., base64 decode failure), the test would still pass.",
+        "why": "The test imports garbage base64 and asserts ValueError with match=\"BPS\". However, it does not verify that the parser is actually checking the BPS magic bytes—if the validation was removed and the error was raised for a different reason (e.g., base64 decode failure), the test would still pass.",
         "fix": "Construct test payloads that have the correct BPS1 header but invalid data in the rest of the patch, and verify those are also rejected. Or assert the error message is more specific (e.g., \"invalid BPS signature\" not just \"BPS\")."
       }
     ],
@@ -2885,7 +2885,7 @@
         "test": "test_min_length_is_enforced",
         "severity": "High",
         "violations": "Weak assertion (only checks that \"length >= 1\", not that the minimum configured length is actually enforced)",
-        "why": "The test extracts strings from a real PE using `_MIN_STRING_LEN=6`, then asserts `len(_text_of(rec).rstrip(\"\\x00\")) >= 1`. However, `>= 1` is much weaker than `>= 6`\u2014if the minimum length enforcement is broken, the test would still pass because 1-byte strings would pass the weak assertion.",
+        "why": "The test extracts strings from a real PE using `_MIN_STRING_LEN=6`, then asserts `len(_text_of(rec).rstrip(\"\\x00\")) >= 1`. However, `>= 1` is much weaker than `>= 6`—if the minimum length enforcement is broken, the test would still pass because 1-byte strings would pass the weak assertion.",
         "fix": "Change the assertion to `assert len(_text_of(rec).rstrip(\"\\x00\")) >= _MIN_STRING_LEN` and verify at least one returned string has length >= 6 to prove the enforcement works."
       }
     ],
@@ -2897,7 +2897,7 @@
         "test": "test_parse_int_invalid_raises_runtime_error",
         "severity": "Low",
         "violations": "Weak assertion (only checks that HexPatRuntimeError is raised, not the specific error message)",
-        "why": "The test passes \"not-an-int\" to parse_int with base 10 and asserts HexPatRuntimeError is raised. However, it doesn't verify the error message mentions \"invalid\" or \"not-an-int\"\u2014if the function raises HexPatRuntimeError for an unrelated reason (e.g., memory allocation failure), the test still passes.",
+        "why": "The test passes \"not-an-int\" to parse_int with base 10 and asserts HexPatRuntimeError is raised. However, it doesn't verify the error message mentions \"invalid\" or \"not-an-int\"—if the function raises HexPatRuntimeError for an unrelated reason (e.g., memory allocation failure), the test still passes.",
         "fix": "Add `match=\"invalid\"` or similar to the pytest.raises call to verify the error message."
       }
     ],
@@ -2909,7 +2909,7 @@
         "test": "test_auto_save_loop_survives_exception_and_resumes",
         "severity": "Medium",
         "violations": "Mock-the-thing-under-test (monkeypatch replaces SessionStore.save to inject a failure)",
-        "why": "The test replaces SessionStore.save with a wrapper that raises RuntimeError on the first call, then delegates to the real save. However, this doesn't test the real recovery path\u2014it only tests that the auto-save loop doesn't crash when save() raises. If the loop catches the exception but doesn't re-arm the timer (so the next attempt never happens), the test would still pass because the condition `save_attempts >= 2` only requires two attempts total, not guaranteed future retries.",
+        "why": "The test replaces SessionStore.save with a wrapper that raises RuntimeError on the first call, then delegates to the real save. However, this doesn't test the real recovery path—it only tests that the auto-save loop doesn't crash when save() raises. If the loop catches the exception but doesn't re-arm the timer (so the next attempt never happens), the test would still pass because the condition `save_attempts >= 2` only requires two attempts total, not guaranteed future retries.",
         "fix": "Extend the timeout and verify that multiple failures in a row eventually succeed (e.g., fail first 3 times, then succeed). Or remove the monkeypatch and test with a real transient failure (e.g., a locked database, then released)."
       },
       {
@@ -2919,7 +2919,7 @@
         "test": "test_concurrent_updates_serialise_and_complete",
         "severity": "Medium",
         "violations": "Weak assertion (only checks max_concurrent == 1, does not verify SQLite data integrity under concurrent load)",
-        "why": "The test spawns 8 concurrent `manager.update()` calls and asserts that `max_concurrent == 1` (i.e., updates are serialized via a lock). However, it doesn't verify that all updates actually succeeded or that the final database state is consistent\u2014e.g., if one update partially failed or corrupted data, `max_concurrent == 1` would still be true.",
+        "why": "The test spawns 8 concurrent `manager.update()` calls and asserts that `max_concurrent == 1` (i.e., updates are serialized via a lock). However, it doesn't verify that all updates actually succeeded or that the final database state is consistent—e.g., if one update partially failed or corrupted data, `max_concurrent == 1` would still be true.",
         "fix": "After the concurrent updates complete, verify each session's data was saved correctly by loading them from the store and asserting their IDs and properties match what was saved."
       },
       {
@@ -2939,7 +2939,7 @@
         "test": "test_session_has_add_tag",
         "severity": "Low",
         "violations": "Smoke-test-as-gate (only checks that methods exist)",
-        "why": "Same as above\u2014only verifies the methods exist, not that they work.",
+        "why": "Same as above—only verifies the methods exist, not that they work.",
         "fix": "Remove in favor of the existing round-trip tests that actually call the methods."
       },
       {
@@ -2961,7 +2961,7 @@
         "test": "test_singleton_thread_safe",
         "severity": "Medium",
         "violations": "Weak assertion on rich output (only checks all instances have same id, does not verify singleton is *actually* the right instance)",
-        "why": "The test spawns 32 threads, each calling `get_credential_store()`, and asserts they all get the same object (same id). However, it doesn't verify that the returned object is the *correct* singleton\u2014e.g., if every call created a new instance but reused the same memory address, the id check would pass. Also, it doesn't verify thread synchronization for initialization (e.g., does the module-level lock prevent race conditions during first creation?).",
+        "why": "The test spawns 32 threads, each calling `get_credential_store()`, and asserts they all get the same object (same id). However, it doesn't verify that the returned object is the *correct* singleton—e.g., if every call created a new instance but reused the same memory address, the id check would pass. Also, it doesn't verify thread synchronization for initialization (e.g., does the module-level lock prevent race conditions during first creation?).",
         "fix": "After verifying all instances have the same id, also verify the singleton is the expected type (CredentialStore), and add a stress test where threads immediately try to get/set credentials and verify no corruption occurs."
       }
     ],
@@ -3905,7 +3905,7 @@
         "test": "test_nonexistent_yar_file_raises_or_returns_error",
         "severity": "Low",
         "violations": "Cannot-fail, Weak-assertion-on-rich-output",
-        "why": "The test asserts `pytest.raises((FileNotFoundError, RuntimeError, Exception))` \u2014 a catch-all for any exception. This is so broad that it provides no guarantee of the specific error condition. If the bridge silently returns an empty list or crashes with an `IndexError`, the test still passes. The test does not verify that the error message mentions the missing file path, that the bridge logs the failure, or that the exception chain is informative.",
+        "why": "The test asserts `pytest.raises((FileNotFoundError, RuntimeError, Exception))` — a catch-all for any exception. This is so broad that it provides no guarantee of the specific error condition. If the bridge silently returns an empty list or crashes with an `IndexError`, the test still passes. The test does not verify that the error message mentions the missing file path, that the bridge logs the failure, or that the exception chain is informative.",
         "fix": "Narrow the exception tuple to the specific exceptions the production code is documented to raise (e.g., only `FileNotFoundError`). Assert on the exception message to confirm it references the nonexistent file path. Verify that the exception is not swallowed upstream and is propagated faithfully to the caller."
       }
     ],
@@ -3929,7 +3929,7 @@
         "test": "test_value_matches_expected_bit_pattern",
         "severity": "Low",
         "violations": "Tautological, Cannot-fail",
-        "why": "The test asserts `expected == INVALID_HANDLE_VALUE` where `expected = ctypes.wintypes.HANDLE(-1).value` \u2014 this is re-deriving the expected value using the same mechanism as the production code, making it a tautology. If the production code were broken, this test would fail only if the break affected both the test's derivation AND the constant identically. The assertion `assert INVALID_HANDLE_VALUE == 0xFFFFFFFFFFFFFFFF` hardcoded after is correct, but the initial `expected` derivation defeats the purpose.",
+        "why": "The test asserts `expected == INVALID_HANDLE_VALUE` where `expected = ctypes.wintypes.HANDLE(-1).value` — this is re-deriving the expected value using the same mechanism as the production code, making it a tautology. If the production code were broken, this test would fail only if the break affected both the test's derivation AND the constant identically. The assertion `assert INVALID_HANDLE_VALUE == 0xFFFFFFFFFFFFFFFF` hardcoded after is correct, but the initial `expected` derivation defeats the purpose.",
         "fix": "Use a known-correct constant (from Windows documentation: -1 cast to HANDLE on the target platform) or a trusted external oracle, not the production code's own mechanism. Assert against the platform-specific bit patterns (0xFFFFFFFFFFFFFFFF for 64-bit, 0xFFFFFFFF for 32-bit) directly without re-deriving."
       }
     ],
@@ -4055,7 +4055,7 @@
         "test": "test_sha3_256_matches_hashlib_if_supported & test_sha3_512_matches_hashlib_if_supported",
         "severity": "Medium",
         "violations": "Cannot-fail (pytest.skip hides failures; if the algorithm is present but broken, the test silently passes)",
-        "why": "When SHA3 is supported, the test runs and should pass. But if compute_hash returns wrong results, pytest.skip does not actually verify the output\u2014it just silently skips. If sha3-256 support exists but is buggy, this test won't catch it.",
+        "why": "When SHA3 is supported, the test runs and should pass. But if compute_hash returns wrong results, pytest.skip does not actually verify the output—it just silently skips. If sha3-256 support exists but is buggy, this test won't catch it.",
         "fix": "For platforms where SHA3 is supported, require the test to run (not skip). Add a separate test that explicitly lists which algorithms are guaranteed to be available (MD5, SHA1, SHA256, SHA512) and assert they pass unconditionally. For optional algorithms like SHA3, test them only if available, but assert failure messages clearly if they are claimed to exist but do not."
       }
     ],
@@ -4171,7 +4171,7 @@
         "test": "testvalidate_r2_argument_accepts_safe_strings",
         "severity": "High",
         "violations": "Function name capitalization (should be `test_` not `test`)",
-        "why": "Same issue as above\u2014the function name lacks the underscore after the `test` prefix. Pytest will not discover this test. The test logic verifies that safe identifiers pass through, but the broken name means the gate is never actually executed.",
+        "why": "Same issue as above—the function name lacks the underscore after the `test` prefix. Pytest will not discover this test. The test logic verifies that safe identifiers pass through, but the broken name means the gate is never actually executed.",
         "fix": "Rename to `test_validate_r2_argument_accepts_safe_strings`."
       }
     ],
@@ -4219,7 +4219,7 @@
         "test": "test_single_byte_layout",
         "severity": "Low",
         "violations": "Hardcoded expected string, brittle to formatting changes",
-        "why": "The test hardcodes the exact expected output `\"00000000  41                                                A\"` and compares via string equality. This is fragile because any change to padding, spacing, or alignment will break the test even if the logical output is correct. Additionally, the test does not verify the values themselves\u2014it just checks that format_hex_dump produces a specific string. If someone refactors to use different spacing (e.g., two spaces instead of one), the test fails even though the output is still readable and correct.",
+        "why": "The test hardcodes the exact expected output `\"00000000  41                                                A\"` and compares via string equality. This is fragile because any change to padding, spacing, or alignment will break the test even if the logical output is correct. Additionally, the test does not verify the values themselves—it just checks that format_hex_dump produces a specific string. If someone refactors to use different spacing (e.g., two spaces instead of one), the test fails even though the output is still readable and correct.",
         "fix": "Parse the result and assert on the logical components: address (matches expected), hex representation (correctly encodes the byte), ASCII column (correctly filtered), and spacing/padding (within reasonable tolerances). This makes the test resilient to cosmetic formatting changes while still catching real bugs."
       }
     ],
@@ -4839,7 +4839,7 @@
         "test": "test_response_is_coherent_text",
         "severity": "High",
         "violations": "Weak assertion - only checks `len(cleaned) > 0` and `isprintable()` without asserting actual coherence or linguistic validity",
-        "why": "A response that is a single repeated character (e.g., \"aaaaaaaaaa\") would pass `isprintable()` and length checks. The test name promises \"coherent text\" but does not validate coherence\u2014only basic printability.",
+        "why": "A response that is a single repeated character (e.g., \"aaaaaaaaaa\") would pass `isprintable()` and length checks. The test name promises \"coherent text\" but does not validate coherence—only basic printability.",
         "fix": "Add assertions on response word count, token variety, or presence of alphanumeric characters. Validate that the response is not pure repetition or control characters. Use a simple heuristic: unique characters > 5, word-like sequences detected, or at least 3 distinct tokens."
       },
       {
@@ -5223,7 +5223,7 @@
         "test": "test_start_awaits_agent_connect_with_configured_timeout",
         "severity": "High",
         "violations": "Mock-the-thing-under-test; Cannot-fail (uses mock.patch to stub out the very GuestAgentClient being tested)",
-        "why": "This test patches ``GuestAgentClient`` constructor itself with a mock factory; it never exercises the real client code. The test verifies that a recording stub's ``connect_calls`` list contains an entry, but it uses patches on ``asyncio.create_subprocess_exec``, ``_prepare_qemu_shared_folders``, ``_create_guest_agent_script``, ``_build_qemu_command``, ``_connect_and_verify_qmp``, ``_bootstrap_guest_agent``, ``_verify_qemu_pid``, and ``_cleanup``. While the agent connect orchestration is partially tested, the production ``GuestAgentClient.connect`` implementation is never invoked\u2014a mock side_effect factory returns the ``_RecordingAgent`` stub instead. If the real agent's connection logic broke, this test would not notice.",
+        "why": "This test patches ``GuestAgentClient`` constructor itself with a mock factory; it never exercises the real client code. The test verifies that a recording stub's ``connect_calls`` list contains an entry, but it uses patches on ``asyncio.create_subprocess_exec``, ``_prepare_qemu_shared_folders``, ``_create_guest_agent_script``, ``_build_qemu_command``, ``_connect_and_verify_qmp``, ``_bootstrap_guest_agent``, ``_verify_qemu_pid``, and ``_cleanup``. While the agent connect orchestration is partially tested, the production ``GuestAgentClient.connect`` implementation is never invoked—a mock side_effect factory returns the ``_RecordingAgent`` stub instead. If the real agent's connection logic broke, this test would not notice.",
         "fix": "Integrate real ``GuestAgentClient`` (not stubbed) by either: (1) running a minimal real guest-agent mock server (e.g., a socket listener on localhost that responds to the framed protocol), or (2) removing the patch on ``GuestAgentClient`` and letting the real client attempt to connect (it will fail with a network error, which is expected and testable as a ``SandboxError`` propagation). The test should assert that the timeout value passed to ``connect`` matches the configured value AND that a real connection attempt occurred (evidenced by real socket operations or network-level activity, not just a mock call record)."
       },
       {
@@ -5233,7 +5233,7 @@
         "test": "test_start_raises_when_agent_connect_returns_false",
         "severity": "High",
         "violations": "Mock-the-thing-under-test (mocks GuestAgentClient and entire QEMU boot path)",
-        "why": "Same as above\u2014the test patches ``GuestAgentClient`` with a mock factory that returns ``_RecordingAgent(result=False)``. The real ``GuestAgentClient.connect`` is never called. This test only verifies that a canned return value causes a ``SandboxError`` to be raised; it does not exercise real network timeouts, real socket failures, or real protocol mismatches that would actually cause a connect to fail in production.",
+        "why": "Same as above—the test patches ``GuestAgentClient`` with a mock factory that returns ``_RecordingAgent(result=False)``. The real ``GuestAgentClient.connect`` is never called. This test only verifies that a canned return value causes a ``SandboxError`` to be raised; it does not exercise real network timeouts, real socket failures, or real protocol mismatches that would actually cause a connect to fail in production.",
         "fix": "Use a real or semi-real guest-agent server that genuinely refuses or times out the connection. The test should then drive the unpatched real ``GuestAgentClient`` against it and assert that ``SandboxError`` is raised with the correct cause/traceback. If a mock is necessary, patch only the network layer (e.g., socket operations) and let the real client code run."
       },
       {
@@ -5243,7 +5243,7 @@
         "test": "test_start_raises_when_agent_connect_raises_oserror",
         "severity": "High",
         "violations": "Mock-the-thing-under-test",
-        "why": "The test patches ``GuestAgentClient`` constructor with a mock factory returning ``_RecordingAgent(exception=OSError(...))``. The real client code is never invoked. A real OSError in production would come from genuine socket failures, kernel errors, or protocol parsing failures\u2014none of which are exercised here. The test only verifies that a pre-configured exception in a recording stub causes ``SandboxError`` to be raised.",
+        "why": "The test patches ``GuestAgentClient`` constructor with a mock factory returning ``_RecordingAgent(exception=OSError(...))``. The real client code is never invoked. A real OSError in production would come from genuine socket failures, kernel errors, or protocol parsing failures—none of which are exercised here. The test only verifies that a pre-configured exception in a recording stub causes ``SandboxError`` to be raised.",
         "fix": "Use a real guest-agent server that genuinely raises OSError (e.g., by binding the socket then immediately closing it on accept, or by not accepting connections). Let the real ``GuestAgentClient.connect`` attempt a real connection against it. Assert that the real OSError is caught and wrapped in ``SandboxError`` with the correct message and context."
       }
     ],
@@ -5255,7 +5255,7 @@
         "test": "test_no_document_raises_runtime_error",
         "severity": "Medium",
         "violations": "Weak-assertion-on-rich-output (only checks that RuntimeError is raised, not the exact message or why)",
-        "why": "The test verifies that calling a method with no document open raises RuntimeError, but does not assert on the exception message, the specific error condition, or the contract of the error. If the method were changed to return empty list instead of raising, or to raise a different exception type, the test would fail\u2014but the test does not verify that the RIGHT error is raised for the RIGHT reason (missing document vs. broken document vs. parsing error).",
+        "why": "The test verifies that calling a method with no document open raises RuntimeError, but does not assert on the exception message, the specific error condition, or the contract of the error. If the method were changed to return empty list instead of raising, or to raise a different exception type, the test would fail—but the test does not verify that the RIGHT error is raised for the RIGHT reason (missing document vs. broken document vs. parsing error).",
         "fix": "Assert on the exception message to confirm it indicates \"no document open\" or similar, not a parse failure. Use ``pytest.raises(RuntimeError, match=r\"no document|not loaded\")`` to verify the specific error condition. Alternatively, if the bridge has a way to check document state, assert that state before calling the method so the test documents the precondition."
       },
       {
@@ -5287,7 +5287,7 @@
         "test": "fixture bridge()",
         "severity": "Critical",
         "violations": "Incomplete fixture setup; fixture closes and initializes loop but may leave state inconsistent across tests",
-        "why": "The fixture attempts to get or create an event loop and initializes the bridge, but it does not return the bridge instance to the test. This is a fixture setup bug\u2014tests depending on the fixture would receive None or encounter AttributeError when trying to use the bridge.",
+        "why": "The fixture attempts to get or create an event loop and initializes the bridge, but it does not return the bridge instance to the test. This is a fixture setup bug—tests depending on the fixture would receive None or encounter AttributeError when trying to use the bridge.",
         "fix": "Verify that the fixture yields or returns the bridge instance. The current code ends at `return b` which is correct, but if tests are failing to receive the bridge, the fixture signature or return path is broken. Check whether any test actually uses this fixture and confirm the bridge is yielded correctly."
       }
     ],
@@ -5403,7 +5403,7 @@
         "test": "TestF0002AgentConnectCalled.test_agent_connect_invoked_during_start",
         "severity": "Critical",
         "violations": "Mock-the-thing-under-test, Cannot-fail with try/except, Weak assertion on rich output",
-        "why": "The test patches `is_available`, `_build_qemu_command`, `_create_guest_agent_script`, `_connect_and_verify_qmp`, and `_cleanup` \u2014 the exact methods the test claims to verify. It then sets `sb.state.status = \"running\"` manually and calls `await fake_agent.connect()` separately outside `start()`. The test does not actually drive `start()` to completion with mocked dependencies; instead it mocks out all the subprocess launching code. The assertion `fake_agent.connect_called >= 1` only checks that connect() was called outside of start(), not during it.",
+        "why": "The test patches `is_available`, `_build_qemu_command`, `_create_guest_agent_script`, `_connect_and_verify_qmp`, and `_cleanup` — the exact methods the test claims to verify. It then sets `sb.state.status = \"running\"` manually and calls `await fake_agent.connect()` separately outside `start()`. The test does not actually drive `start()` to completion with mocked dependencies; instead it mocks out all the subprocess launching code. The assertion `fake_agent.connect_called >= 1` only checks that connect() was called outside of start(), not during it.",
         "fix": "Remove the patch decorators that stub out the entire start() path. Instead, create a minimal fake `_QEMUSandbox` that overrides only the subprocess-launching mechanics (via a real subprocess mock that completes instantly), then await the actual `start()` method and assert `fake_agent.connect_called > 0` afterward. This validates the real integration order."
       },
       {

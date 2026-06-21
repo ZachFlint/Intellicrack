@@ -1,1 +1,23 @@
-{"unitId":"U05-a02","findings":[{"ref":"tests/test_hexcore_e2e/test_hexpat_evaluator.py:file-level - All 33 test functions","severity":"Critical","status":"FIXED","oracle":"Real .hexpat source driven through the full interpreter (preprocessor/lexer/parser/evaluator) against bytes(range(256)); two independent oracles back every test: a value-oracle that branches `if (v == hand-computed-constant)` so a broken operator selects the wrong-named branch (asserted via exact `_names(results)` ordered equality), plus an offset-plus-byte oracle asserting exact `offset` AND `raw_bytes==[N]`/`display_value` read back from the computed address (byte@N==N), giving a second witness; e.g. 10-3 asserts names==['correct'] with offset 70 and raw_bytes [70], not the sum-branch; division-by-zero asserts the specific HexPatRuntimeError message; promotion/cast/precedence/wrap cases assert the exact computed value, not mere existence."}],"filesModified":["tests/test_hexcore_e2e/test_hexpat_evaluator.py"],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"43 passed in 1.45s"}
+{
+  "unitId": "U05-a02",
+  "findings": [
+    {
+      "ref": "tests/test_hexcore_e2e/test_hexpat_evaluator.py:file-level - All 33 test functions",
+      "severity": "Critical",
+      "status": "FIXED",
+      "oracle": "Real .hexpat source driven through the full interpreter (preprocessor/lexer/parser/evaluator) against bytes(range(256)); two independent oracles back every test: a value-oracle that branches `if (v == hand-computed-constant)` so a broken operator selects the wrong-named branch (asserted via exact `_names(results)` ordered equality), plus an offset-plus-byte oracle asserting exact `offset` AND `raw_bytes==[N]`/`display_value` read back from the computed address (byte@N==N), giving a second witness; e.g. 10-3 asserts names==['correct'] with offset 70 and raw_bytes [70], not the sum-branch; division-by-zero asserts the specific HexPatRuntimeError message; promotion/cast/precedence/wrap cases assert the exact computed value, not mere existence."
+    }
+  ],
+  "filesModified": [
+    "tests/test_hexcore_e2e/test_hexpat_evaluator.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "43 passed in 1.45s"
+}

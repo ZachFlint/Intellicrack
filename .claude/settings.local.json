@@ -69,6 +69,17 @@
   ],
   "disabledMcpjsonServers": [],
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|mcp__dev-tools__pytest_run|mcp__dev-tools__pytest_collect|mcp__dev-tools__coverage_run",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node D:/Intellicrack/.claude/hooks/enforce-container-tests.cjs"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",

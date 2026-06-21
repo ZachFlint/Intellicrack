@@ -217,11 +217,13 @@ class TestDocumentInfoWithFile:
         info: dict[str, Any] = _run(bridge.get_document_info())
         assert info["size"] == expected_size
 
-    def test_undo_after_write_may_clear_modified(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
-        """Verify undo after a single write may restore unmodified state.
+    def test_undo_after_write_restores_original_byte(self, bridge: HexEditorBridge, pe_binary: Path) -> None:
+        """Verify undo after a single write restores the original byte and clears modified.
 
-        After writing and then undoing, the document may report modified as
-        False if the hexcore undo stack tracks modification accurately.
+        After a single write_bytes call, exactly one operation is on the undo
+        stack.  The bridge must report undo() returning True, the overwritten
+        byte must be restored to its pre-write value, and the document must
+        revert to unmodified state.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -232,6 +234,7 @@ class TestDocumentInfoWithFile:
         _run(bridge.write_bytes(0, "AA"))
         assert _run(bridge.get_document_info())["modified"] is True
         undone: bool = _run(bridge.undo())
-        if undone:
-            after_undo_hex: str = _run(bridge.read_bytes(0, 1))
-            assert after_undo_hex == original_byte_hex
+        assert undone is True
+        after_undo_hex: str = _run(bridge.read_bytes(0, 1))
+        assert after_undo_hex == original_byte_hex
+        assert _run(bridge.get_document_info())["modified"] is False

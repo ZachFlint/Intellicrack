@@ -85,7 +85,11 @@ class TestBridgeAIContext:
         assert isinstance(ctx["bookmarks"], list)
 
     def test_get_context_for_ai_bookmarks_contain_expected_fields_when_present(self, loaded_bridge: HexEditorBridge) -> None:
-        """Verify that each bookmark in the AI context has offset, length, label.
+        """Verify that each bookmark in the AI context carries correct offset, length, label values.
+
+        Adds a single bookmark with known parameters and checks that the
+        AI context round-trips the exact values through the native store
+        and the bridge serialization path.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
@@ -93,11 +97,11 @@ class TestBridgeAIContext:
         _run(loaded_bridge.add_bookmark(0, 2, "MZ_magic", "#FF0000"))
         ctx: dict[str, Any] = _run(loaded_bridge.get_context_for_ai())
         bms: list[dict[str, Any]] = ctx["bookmarks"]
-        assert bms
-        for bm in bms:
-            assert "offset" in bm
-            assert "length" in bm
-            assert "label" in bm
+        assert bms, "expected at least one bookmark in AI context"
+        first: dict[str, Any] = bms[0]
+        assert first["offset"] == 0, f"expected offset 0, got {first['offset']!r}"
+        assert first["length"] == 2, f"expected length 2, got {first['length']!r}"
+        assert first["label"] == "MZ_magic", f"expected label 'MZ_magic', got {first['label']!r}"
 
     def test_get_context_for_ai_size_is_positive(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that the size field in the AI context is a positive integer.

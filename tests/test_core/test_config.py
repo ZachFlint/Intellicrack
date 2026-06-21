@@ -7,6 +7,7 @@
 
 from __future__ import annotations
 
+import tomllib
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Final, TypedDict, cast
@@ -224,6 +225,9 @@ def test_config_default() -> None:
 def test_config_ensure_directories(tmp_path: Path) -> None:
     """Verify ensure_directories creates all configured directories.
 
+    Covers the happy path (all three dirs created) and confirms the method is
+    idempotent (calling it twice does not raise).
+
     Args:
         tmp_path: Pytest temporary directory.
     """
@@ -236,6 +240,32 @@ def test_config_ensure_directories(tmp_path: Path) -> None:
     assert (tmp_path / "tools").is_dir()
     assert (tmp_path / "logs").is_dir()
     assert (tmp_path / "data").is_dir()
+
+    config.ensure_directories()
+    assert (tmp_path / "tools").is_dir()
+    assert (tmp_path / "logs").is_dir()
+    assert (tmp_path / "data").is_dir()
+
+
+def test_config_ensure_directories_nested(tmp_path: Path) -> None:
+    """Verify ensure_directories creates deeply nested directories.
+
+    The production implementation uses mkdir(parents=True, exist_ok=True) which
+    must create any missing parent directories.  A two-level deep path is used
+    to ensure the parents=True flag is exercised.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    config = Config(
+        tools_directory=tmp_path / "a" / "b" / "tools",
+        logs_directory=tmp_path / "a" / "b" / "logs",
+        data_directory=tmp_path / "a" / "b" / "data",
+    )
+    config.ensure_directories()
+    assert (tmp_path / "a" / "b" / "tools").is_dir()
+    assert (tmp_path / "a" / "b" / "logs").is_dir()
+    assert (tmp_path / "a" / "b" / "data").is_dir()
 
 
 def test_config_get_provider_config() -> None:
@@ -269,10 +299,28 @@ def test_config_get_provider_config() -> None:
 
 
 def test_config_get_provider_config_unknown() -> None:
-    """Verify get_provider_config returns default for unknown provider."""
+    """Verify get_provider_config returns a fresh default ProviderConfig for an absent provider.
+
+    The returned default must have enabled=True, api_base=None, default_model=None,
+    timeout_seconds==_DEFAULT_TIMEOUT, and max_retries==_DEFAULT_RETRIES — identical
+    to a plain ProviderConfig() construction. Calling the method twice must return
+    independent results with equal field values (determinism and independence).
+    """
     config = Config(providers={})
-    pc = config.get_provider_config(ProviderName.GROK)
-    assert pc.enabled is True
+    pc1 = config.get_provider_config(ProviderName.GROK)
+    pc2 = config.get_provider_config(ProviderName.GROK)
+
+    assert pc1.enabled is True
+    assert pc1.api_base is None
+    assert pc1.default_model is None
+    assert pc1.timeout_seconds == _DEFAULT_TIMEOUT
+    assert pc1.max_retries == _DEFAULT_RETRIES
+
+    assert pc2.enabled is True
+    assert pc2.api_base is None
+    assert pc2.default_model is None
+    assert pc2.timeout_seconds == _DEFAULT_TIMEOUT
+    assert pc2.max_retries == _DEFAULT_RETRIES
 
 
 def test_config_get_tool_config() -> None:
@@ -426,15 +474,66 @@ def test_config_to_dict_round_trip() -> None:
 
 
 def test_config_from_dict_empty() -> None:
-    """Verify _from_dict with empty dict uses all defaults."""
+    """Verify from_dict({}) produces a Config that equals Config.default() field-by-field.
+
+    An empty dict must produce exactly the same provider set, tool set, and
+    all sub-config values as Config.default().  This gates against any silent
+    divergence between the two construction paths.
+    """
     config = Config.from_dict({})
-    assert config.default_provider == ProviderName.ANTHROPIC
-    assert len(config.providers) > 0
-    assert len(config.tools) > 0
+    default = Config.default()
+
+    assert config.default_provider == default.default_provider
+    assert config.confirmation_level == default.confirmation_level
+    assert set(config.providers.keys()) == set(default.providers.keys())
+    assert set(config.tools.keys()) == set(default.tools.keys())
+
+    for pname in _EXPECTED_PROVIDERS:
+        cp = config.providers[pname]
+        dp = default.providers[pname]
+        assert cp.enabled == dp.enabled, f"providers[{pname}].enabled mismatch"
+        assert cp.api_base == dp.api_base, f"providers[{pname}].api_base mismatch"
+        assert cp.default_model == dp.default_model, f"providers[{pname}].default_model mismatch"
+        assert cp.timeout_seconds == dp.timeout_seconds, f"providers[{pname}].timeout_seconds mismatch"
+        assert cp.max_retries == dp.max_retries, f"providers[{pname}].max_retries mismatch"
+
+    for tname in _EXPECTED_TOOLS:
+        ct = config.tools[tname]
+        dt = default.tools[tname]
+        assert ct.enabled == dt.enabled, f"tools[{tname}].enabled mismatch"
+        assert ct.auto_install == dt.auto_install, f"tools[{tname}].auto_install mismatch"
+        assert ct.startup_timeout_seconds == dt.startup_timeout_seconds, f"tools[{tname}].startup_timeout_seconds mismatch"
+        assert ct.port == dt.port, f"tools[{tname}].port mismatch"
+
+    assert config.sandbox.enabled == default.sandbox.enabled
+    assert config.sandbox.timeout_seconds == default.sandbox.timeout_seconds
+    assert config.sandbox.memory_limit_mb == default.sandbox.memory_limit_mb
+    assert config.sandbox.network_enabled == default.sandbox.network_enabled
+
+    assert config.ui.theme == default.ui.theme
+    assert config.ui.font_family == default.ui.font_family
+    assert config.ui.font_size == default.ui.font_size
+    assert config.ui.show_tool_calls == default.ui.show_tool_calls
+
+    assert config.session.auto_save == default.session.auto_save
+    assert config.session.save_interval_seconds == default.session.save_interval_seconds
+    assert config.session.retention_days == default.session.retention_days
+
+    assert config.log.level == default.log.level
+    assert config.log.file_enabled == default.log.file_enabled
+    assert config.log.console_enabled == default.log.console_enabled
+    assert config.log.max_file_size_mb == default.log.max_file_size_mb
+    assert config.log.backup_count == default.log.backup_count
+    assert config.log.retention_days == default.log.retention_days
+    assert config.log.json_file == default.log.json_file
 
 
 def test_config_from_dict_custom_general() -> None:
-    """Verify _from_dict parses custom general section."""
+    """Verify from_dict with a custom general section parses that section while defaulting all others.
+
+    Only the general section is overridden; all other sections must equal Config.default().
+    This confirms that supplying a partial dict does not corrupt unrelated sections.
+    """
     data: dict[str, Any] = {
         "general": {
             "default_provider": "openai",
@@ -445,23 +544,53 @@ def test_config_from_dict_custom_general() -> None:
     assert config.default_provider == ProviderName.OPENAI
     assert config.confirmation_level == ConfirmationLevel.NONE
 
+    default = Config.default()
+    assert set(config.providers.keys()) == set(default.providers.keys()), "providers must be unchanged"
+    assert set(config.tools.keys()) == set(default.tools.keys()), "tools must be unchanged"
+    assert config.sandbox.enabled == default.sandbox.enabled
+    assert config.sandbox.timeout_seconds == default.sandbox.timeout_seconds
+    assert config.sandbox.memory_limit_mb == default.sandbox.memory_limit_mb
+    assert config.sandbox.network_enabled == default.sandbox.network_enabled
+    assert config.ui.theme == default.ui.theme
+    assert config.ui.font_family == default.ui.font_family
+    assert config.ui.font_size == default.ui.font_size
+    assert config.session.auto_save == default.session.auto_save
+    assert config.session.save_interval_seconds == default.session.save_interval_seconds
+    assert config.log.level == default.log.level
+    assert config.log.file_enabled == default.log.file_enabled
+
 
 def test_config_from_dict_invalid_provider_fallback() -> None:
-    """Verify _from_dict falls back for invalid provider name."""
+    """Verify from_dict falls back to ANTHROPIC for an unrecognised provider name.
+
+    The fallback must be exactly ProviderName.ANTHROPIC (not None or any other
+    provider).  Calling from_dict with the same bad value twice must produce
+    the same fallback both times (determinism).
+    """
     data: dict[str, Any] = {
-        "general": {"default_provider": "nonexistent"},
+        "general": {"default_provider": "nonexistent_provider_xyz"},
     }
-    config = Config.from_dict(data)
-    assert config.default_provider == ProviderName.ANTHROPIC
+    config1 = Config.from_dict(data)
+    config2 = Config.from_dict(data)
+    assert config1.default_provider == ProviderName.ANTHROPIC
+    assert config2.default_provider == ProviderName.ANTHROPIC
+    assert config1.default_provider is not None
 
 
 def test_config_from_dict_invalid_confirmation_fallback() -> None:
-    """Verify _from_dict falls back for invalid confirmation level."""
+    """Verify from_dict falls back to DESTRUCTIVE for an unrecognised confirmation level.
+
+    The fallback must be exactly ConfirmationLevel.DESTRUCTIVE.  Calling from_dict
+    with the same bad value twice must produce the same fallback both times (determinism).
+    """
     data: dict[str, Any] = {
-        "general": {"confirmation_level": "badvalue"},
+        "general": {"confirmation_level": "invalid_level_xyz"},
     }
-    config = Config.from_dict(data)
-    assert config.confirmation_level == ConfirmationLevel.DESTRUCTIVE
+    config1 = Config.from_dict(data)
+    config2 = Config.from_dict(data)
+    assert config1.confirmation_level == ConfirmationLevel.DESTRUCTIVE
+    assert config2.confirmation_level == ConfirmationLevel.DESTRUCTIVE
+    assert config1.confirmation_level is not None
 
 
 def test_config_parse_providers_unknown_skipped() -> None:
@@ -521,25 +650,61 @@ def test_config_parse_tools_unknown_skipped() -> None:
 
 
 def test_config_parse_tools_with_path() -> None:
-    """Verify _parse_tools handles path field."""
+    """Verify parse_tools handles path field and preserves all other tool fields at defaults.
+
+    The path field must be parsed to a Path object.  All other GHIDRA fields
+    (enabled, auto_install, startup_timeout_seconds, port) must retain their
+    documented default values from _default_tools(), confirming that specifying
+    one field does not silently zero out the others.
+    """
     tools_data: dict[str, Any] = {
         "ghidra": {"path": "/opt/ghidra"},
     }
     result = Config.parse_tools(tools_data)
     assert result[ToolName.GHIDRA].path == Path("/opt/ghidra")
+    assert result[ToolName.GHIDRA].enabled is True
+    assert result[ToolName.GHIDRA].auto_install is True
+    assert result[ToolName.GHIDRA].startup_timeout_seconds == 120
+    assert result[ToolName.GHIDRA].port == 4768
 
 
 def test_config_parse_sub_configs_defaults() -> None:
-    """Verify _parse_sub_configs returns defaults for empty data."""
+    """Verify parse_sub_configs returns complete defaults for empty data.
+
+    Every field of every sub-config must match the documented default value.
+    A one-field-per-sub-config check would miss regressions in the other fields.
+    """
     sandbox, ui, session, log = Config.parse_sub_configs({})
     assert sandbox.enabled is True
+    assert sandbox.timeout_seconds == _SANDBOX_TIMEOUT
+    assert sandbox.memory_limit_mb == _SANDBOX_MEM
+    assert sandbox.network_enabled is False
+
     assert ui.theme == "system"
+    assert ui.font_family == "JetBrains Mono"
+    assert ui.font_size == _DEFAULT_FONT_SIZE
+    assert ui.show_tool_calls is True
+
     assert session.auto_save is True
+    assert session.save_interval_seconds == _SESSION_INTERVAL
+    assert session.retention_days == _SESSION_RETENTION
+
     assert log.level == "INFO"
+    assert log.file_enabled is True
+    assert log.console_enabled is True
+    assert log.max_file_size_mb == _LOG_MAX_SIZE
+    assert log.backup_count == _LOG_BACKUP_COUNT
+    assert log.retention_days == _LOG_RETENTION
+    assert log.json_file is True
 
 
 def test_config_parse_sub_configs_custom() -> None:
-    """Verify _parse_sub_configs applies custom values."""
+    """Verify parse_sub_configs applies custom values while defaulting unspecified fields.
+
+    Each sub-config specifies one custom field; all other fields must still match
+    the documented defaults.  This confirms partial overrides do not corrupt
+    unspecified fields.
+    """
     data: dict[str, Any] = {
         "sandbox": {"network_enabled": True},
         "ui": {"theme": "light", "font_size": _CUSTOM_FONT_SIZE},
@@ -547,15 +712,35 @@ def test_config_parse_sub_configs_custom() -> None:
         "log": {"level": "DEBUG"},
     }
     sandbox, ui, session, log = Config.parse_sub_configs(data)
+
     assert sandbox.network_enabled is True
+    assert sandbox.enabled is True
+    assert sandbox.timeout_seconds == _SANDBOX_TIMEOUT
+    assert sandbox.memory_limit_mb == _SANDBOX_MEM
+
     assert ui.theme == "light"
     assert ui.font_size == _CUSTOM_FONT_SIZE
+    assert ui.font_family == "JetBrains Mono"
+    assert ui.show_tool_calls is True
+
     assert session.retention_days == _CUSTOM_RETENTION
+    assert session.auto_save is True
+    assert session.save_interval_seconds == _SESSION_INTERVAL
+
     assert log.level == "DEBUG"
+    assert log.file_enabled is True
+    assert log.console_enabled is True
+    assert log.max_file_size_mb == _LOG_MAX_SIZE
+    assert log.backup_count == _LOG_BACKUP_COUNT
+    assert log.retention_days == _LOG_RETENTION
+    assert log.json_file is True
 
 
 def test_config_load_from_toml(tmp_path: Path) -> None:
     """Verify Config.load reads and parses a TOML file.
+
+    Covers: valid TOML file (multi-section parse), missing file (FileNotFoundError),
+    and malformed TOML (tomllib.TOMLDecodeError).
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -577,10 +762,27 @@ theme = "light"
     assert config.default_provider == ProviderName.OPENAI
     assert config.sandbox.network_enabled is True
     assert config.ui.theme == "light"
+    assert config.sandbox.timeout_seconds == _SANDBOX_TIMEOUT
+    assert config.sandbox.memory_limit_mb == _SANDBOX_MEM
+    assert config.ui.font_family == "JetBrains Mono"
+
+    missing_path = tmp_path / "does_not_exist.toml"
+    with pytest.raises(FileNotFoundError):
+        Config.load(missing_path)
+
+    bad_toml_path = tmp_path / "bad.toml"
+    bad_toml_path.write_bytes(b"[general\ndefault_provider = 'openai'")
+    with pytest.raises(tomllib.TOMLDecodeError):
+        Config.load(bad_toml_path)
 
 
 def test_config_save_and_reload(tmp_path: Path) -> None:
-    """Verify save and reload produce equivalent configuration.
+    """Verify save and reload produce an equivalent configuration across all sections.
+
+    Covers: general (default_provider, confirmation_level, directories), providers
+    (ANTHROPIC timeout, OLLAMA api_base, LOCAL_TRANSFORMERS model), tools (GHIDRA
+    port/timeout, PROCESS auto_install=False), and all four sub-configs with
+    non-default values.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -592,6 +794,11 @@ def test_config_save_and_reload(tmp_path: Path) -> None:
         logs_directory=tmp_path / "logs",
         data_directory=tmp_path / "data",
         default_provider=ProviderName.OPENAI,
+        confirmation_level=ConfirmationLevel.NONE,
+        sandbox=SandboxConfig(network_enabled=True, timeout_seconds=60, memory_limit_mb=512),
+        ui=UIConfig(theme="dark", font_size=_CUSTOM_FONT_SIZE),
+        session=SessionConfig(retention_days=_CUSTOM_RETENTION),
+        log=LogConfig(level="DEBUG", backup_count=2),
     )
 
     save_path = tmp_path / "saved.toml"
@@ -599,26 +806,69 @@ def test_config_save_and_reload(tmp_path: Path) -> None:
     assert save_path.exists()
 
     reloaded = Config.load(save_path)
+
     assert reloaded.default_provider == ProviderName.OPENAI
+    assert reloaded.confirmation_level == ConfirmationLevel.NONE
     assert str(reloaded.tools_directory) == str(config.tools_directory)
+    assert str(reloaded.logs_directory) == str(config.logs_directory)
+    assert str(reloaded.data_directory) == str(config.data_directory)
+
+    assert reloaded.providers[ProviderName.ANTHROPIC].timeout_seconds == _DEFAULT_TIMEOUT
+    assert reloaded.providers[ProviderName.ANTHROPIC].max_retries == _DEFAULT_RETRIES
+    assert reloaded.providers[ProviderName.OLLAMA].api_base == "http://localhost:11434"
+    assert reloaded.providers[ProviderName.LOCAL_TRANSFORMERS].default_model == "microsoft/Phi-3-mini-4k-instruct"
+
+    assert reloaded.tools[ToolName.GHIDRA].port == 4768
+    assert reloaded.tools[ToolName.GHIDRA].startup_timeout_seconds == 120
+    assert reloaded.tools[ToolName.PROCESS].auto_install is False
+
+    assert reloaded.sandbox.network_enabled is True
+    assert reloaded.sandbox.timeout_seconds == 60
+    assert reloaded.sandbox.memory_limit_mb == 512
+
+    assert reloaded.ui.theme == "dark"
+    assert reloaded.ui.font_size == _CUSTOM_FONT_SIZE
+
+    assert reloaded.session.retention_days == _CUSTOM_RETENTION
+
+    assert reloaded.log.level == "DEBUG"
+    assert reloaded.log.backup_count == 2
 
 
 def test_get_project_root_returns_repo_root() -> None:
-    """Verify get_project_root returns a directory containing 'src'."""
+    """Verify get_project_root returns the repository root.
+
+    The root must exist, contain a ``src`` sub-directory, a ``pyproject.toml``
+    file at the top level (present in this repo), and either a ``.git``
+    directory or a ``pyproject.toml`` (both are reliable repo-root markers).
+    """
     root = get_project_root()
     assert root.is_dir()
+    assert root.is_absolute()
     assert (root / "src").is_dir()
+    assert (root / "pyproject.toml").is_file(), "pyproject.toml must be at project root"
 
 
 def test_get_config_dir_is_under_project_root() -> None:
-    """Verify get_config_dir returns <project_root>/.intellicrack."""
+    """Verify get_config_dir returns <project_root>/.intellicrack.
+
+    The returned path must be absolute, have the correct name,
+    and be a direct child of the project root.
+    """
     config_dir = get_config_dir()
+    assert config_dir.is_absolute()
     assert config_dir.name == ".intellicrack"
     assert config_dir.parent == get_project_root()
 
 
 def test_get_config_file_joins_filename() -> None:
-    """Verify get_config_file joins the filename under the config directory."""
+    """Verify get_config_file joins the filename under the config directory.
+
+    The returned path must be absolute, have the requested name as its final
+    component, and sit directly inside get_config_dir().
+    """
     path = get_config_file("providers.json")
+    assert path.is_absolute()
     assert path.name == "providers.json"
     assert path.parent == get_config_dir()
+    assert str(path.parent) == str(get_config_dir())

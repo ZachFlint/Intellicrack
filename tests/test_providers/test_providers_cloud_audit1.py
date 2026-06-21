@@ -34,10 +34,9 @@ level only — never source-level.
 from __future__ import annotations
 
 import asyncio
-import inspect
 import os
 from typing import TYPE_CHECKING, Any, cast
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -46,6 +45,7 @@ from intellicrack.core.types import (
     Message,
     ProviderCredentials,
     ProviderError,
+    RateLimitError,
     ThinkingConfig,
     ToolChoice,
     ToolChoiceMode,
@@ -86,14 +86,12 @@ _CANCEL_REQUESTED_ATTR: str = "_cancel_requested"
 _CLIENT_ATTR: str = "_client"
 _STATS_ATTR: str = "_stats"
 _CONFIG_ATTR: str = "_config"
-_RUN_GOOGLE_CHAT_ATTR: str = "_run_google_chat"
 
 _convert_tool_choice: Any = getattr(LLMProviderBase, _CONVERT_TOOL_CHOICE_ATTR)
 _convert_tools_to_openai: Any = getattr(LLMProviderBase, _CONVERT_TOOLS_OPENAI_ATTR)
 _anthropic_build_api_kwargs: Any = getattr(AnthropicProvider, _BUILD_API_KWARGS_ATTR)
 _openrouter_apply_cache_control: Any = getattr(OpenRouterProvider, _APPLY_CACHE_CONTROL_ATTR)
 _openrouter_reasoning_effort: Any = getattr(OpenRouterProvider, _REASONING_EFFORT_ATTR)
-_run_google_chat: Any = getattr(GoogleProvider, _RUN_GOOGLE_CHAT_ATTR)
 
 
 _KABOOM_MESSAGE: str = "kaboom"
@@ -375,19 +373,117 @@ async def test_f0010_fetch_all_models_forwards_limit() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_f0001_chat_signatures_accept_enable_cache_and_thinking() -> None:
-    """Every cloud provider's ``chat`` accepts ``enable_cache`` and ``thinking``.
+@pytest.mark.asyncio
+async def test_f0001_chat_enable_cache_completes_full_call_path() -> None:
+    """``enable_cache=True`` completes the full chat call path for every cloud provider.
 
-    The audit findings call out that callers were silently dropping
-    these knobs.  This is a regression guard at the signature level —
-    the parameters must continue to be present even after future
-    refactors.
+    The audit finding was that callers were silently dropping these knobs.
+    This behavioral gate drives ``chat(enable_cache=True)`` end-to-end
+    through each provider against a fake transport boundary and asserts
+    the API was actually invoked and returned a valid assistant
+    :class:`Message`.  An implementation that drops ``enable_cache``
+    before the API call or short-circuits the call path entirely would
+    leave the call counter at zero or fail to return a ``Message``, making
+    this test red.
+
+    OpenRouter and Anthropic are already gated by dedicated cache-control
+    mutation tests (``test_f0001_openrouter_enable_cache_attaches_cache_control``
+    and ``test_f0005_enable_cache_marks_system_tools_and_last_message``); this
+    test covers the remaining three providers (OpenAI, Grok, Google) where
+    caching is automatic server-side (no client-side mutation) and proves the
+    full call path runs when the flag is set.
     """
-    for provider_cls in (AnthropicProvider, OpenAIProvider, GrokProvider, OpenRouterProvider, GoogleProvider):
-        sig = inspect.signature(provider_cls.chat)
-        cls_name = provider_cls.__name__
-        assert "enable_cache" in sig.parameters, f"{cls_name}.chat lost enable_cache"
-        assert "thinking" in sig.parameters, f"{cls_name}.chat lost thinking"
+    openai_calls: list[dict[str, object]] = []
+
+    async def _openai_create(**kwargs: object) -> object:
+        await asyncio.sleep(0)
+        openai_calls.append(dict(kwargs))
+        completion = MagicMock()
+        completion.choices = [MagicMock()]
+        completion.choices[0].message = MagicMock(content="cache-ok", tool_calls=None)
+        completion.usage = MagicMock(prompt_tokens=3, completion_tokens=2, total_tokens=5)
+        return completion
+
+    openai_provider = OpenAIProvider()
+    openai_provider.connected = True
+    fake_openai_client = MagicMock()
+    fake_openai_client.chat = MagicMock()
+    fake_openai_client.chat.completions = MagicMock()
+    fake_openai_client.chat.completions.create = _openai_create
+    openai_provider.client = fake_openai_client
+
+    openai_response, _ = await openai_provider.chat(
+        messages=_user_messages("hello"),
+        model="gpt-4o",
+        max_tokens=64,
+        enable_cache=True,
+    )
+    assert len(openai_calls) == 1, "OpenAI API was not called with enable_cache=True"
+    assert isinstance(openai_response.content, str)
+    assert openai_response.content == "cache-ok"
+    assert openai_response.role == "assistant"
+
+    grok_calls: list[dict[str, object]] = []
+
+    async def _grok_create(**kwargs: object) -> object:
+        await asyncio.sleep(0)
+        grok_calls.append(dict(kwargs))
+        completion = MagicMock()
+        completion.choices = [MagicMock()]
+        completion.choices[0].message = MagicMock(content="grok-cache-ok", tool_calls=None)
+        completion.usage = MagicMock(prompt_tokens=3, completion_tokens=2, total_tokens=5)
+        return completion
+
+    grok_provider = GrokProvider()
+    grok_provider.connected = True
+    fake_grok_client = MagicMock()
+    fake_grok_client.chat = MagicMock()
+    fake_grok_client.chat.completions = MagicMock()
+    fake_grok_client.chat.completions.create = _grok_create
+    grok_provider.client = fake_grok_client
+
+    grok_response, _ = await grok_provider.chat(
+        messages=_user_messages("hello"),
+        model="grok-3",
+        max_tokens=64,
+        enable_cache=True,
+    )
+    assert len(grok_calls) == 1, "Grok API was not called with enable_cache=True"
+    assert isinstance(grok_response.content, str)
+    assert grok_response.content == "grok-cache-ok"
+    assert grok_response.role == "assistant"
+
+    google_calls: list[dict[str, object]] = []
+
+    async def _google_generate(**kwargs: object) -> object:
+        await asyncio.sleep(0)
+        google_calls.append(dict(kwargs))
+        response = MagicMock()
+        response.text = "google-cache-ok"
+        response.function_calls = None
+        response.candidates = []
+        response.prompt_feedback = None
+        response.usage_metadata = None
+        return response
+
+    google_provider = GoogleProvider()
+    google_provider.connected = True
+    fake_google_client = MagicMock()
+    fake_google_client.aio = MagicMock()
+    fake_google_client.aio.models = MagicMock()
+    fake_google_client.aio.models.generate_content = AsyncMock(side_effect=_google_generate)
+    google_provider.client = fake_google_client
+
+    google_response, _ = await google_provider.chat(
+        messages=_user_messages("hello"),
+        model="gemini-2.0-flash",
+        max_tokens=64,
+        enable_cache=True,
+    )
+    assert len(google_calls) == 1, "Google API was not called with enable_cache=True"
+    assert isinstance(google_response.content, str)
+    assert google_response.content == "google-cache-ok"
+    assert google_response.role == "assistant"
 
 
 def test_f0002_openai_thinking_maps_to_reasoning_effort() -> None:
@@ -887,25 +983,162 @@ async def test_f0002_openai_o_series_pins_temperature_without_thinking() -> None
 # ---------------------------------------------------------------------------
 
 
-def test_f0004_providers_use_retry_with_backoff_in_chat_path() -> None:
-    """Static check: each provider references _retry_with_backoff.
+@pytest.mark.asyncio
+async def test_f0004_grok_retries_on_transient_rate_limit() -> None:
+    """Grok ``chat`` retries once on a transient ``RateLimitError``.
 
-    Confirms the retry wrapper is present in each provider's
-    non-streaming chat path so transient rate-limit failures
-    actually back off instead of fast-failing.  Source-level inspection
-    avoids running live network code while still verifying wiring.
-    Grok and OpenRouter perform the retried request inside ``chat``
-    itself, whereas Google's ``chat`` is a thin wrapper that delegates
-    to the ``_run_google_chat`` implementation where the retry lives, so
-    that helper is the method inspected for Google.
+    Drives the real :meth:`GrokProvider.chat` against a fake transport
+    boundary that raises :class:`RateLimitError` on the first call and
+    returns a valid completion on the second.  The independent oracle is
+    the invocation counter: exactly two transport calls must occur and
+    the returned :class:`Message` must carry the expected content.  If
+    ``_retry_with_backoff`` were removed from ``GrokProvider.chat``, the
+    first ``RateLimitError`` would propagate uncaught and the test would
+    fail with that exception instead of reaching the assertion.
+
+    ``asyncio.sleep`` is patched to a no-op so backoff delays do not slow
+    the test suite.
     """
-    sources: dict[str, str] = {
-        "grok": inspect.getsource(GrokProvider.chat),
-        "openrouter": inspect.getsource(OpenRouterProvider.chat),
-        "google": inspect.getsource(_run_google_chat),
-    }
-    for name, src in sources.items():
-        assert "_retry_with_backoff" in src, f"{name} chat path missing _retry_with_backoff"
+    rate_limit_msg = "grok transient rate limit"
+    call_count = 0
+
+    async def _create_with_one_failure(**_kwargs: object) -> object:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise RateLimitError(rate_limit_msg)
+        await asyncio.sleep(0)
+        completion = MagicMock()
+        completion.choices = [MagicMock()]
+        completion.choices[0].message = MagicMock(content="grok-retried-ok", tool_calls=None)
+        completion.usage = MagicMock(prompt_tokens=5, completion_tokens=3, total_tokens=8)
+        return completion
+
+    provider = GrokProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    fake_client.chat = MagicMock()
+    fake_client.chat.completions = MagicMock()
+    fake_client.chat.completions.create = _create_with_one_failure
+    provider.client = fake_client
+
+    with patch("intellicrack.providers.base.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        mock_sleep.return_value = None
+        response, _ = await provider.chat(
+            messages=_user_messages("hello"),
+            model="grok-3",
+            max_tokens=64,
+        )
+
+    assert call_count == 2, f"Grok must retry once: expected 2 calls, got {call_count}"
+    assert response.content == "grok-retried-ok"
+    assert response.role == "assistant"
+
+
+@pytest.mark.asyncio
+async def test_f0004_openrouter_retries_on_transient_rate_limit() -> None:
+    """OpenRouter ``chat`` retries once on a transient ``RateLimitError``.
+
+    Drives the real :meth:`OpenRouterProvider.chat` against a fake httpx
+    transport boundary that raises :class:`RateLimitError` on the first
+    call and returns a valid JSON response on the second.  The independent
+    oracle is the invocation counter: exactly two transport calls must
+    occur and the returned :class:`Message` must carry the expected content.
+    If ``_retry_with_backoff`` were removed from ``OpenRouterProvider.chat``,
+    the first ``RateLimitError`` would propagate uncaught.
+
+    ``asyncio.sleep`` is patched to a no-op so backoff delays do not slow
+    the test suite.
+    """
+    rate_limit_msg = "openrouter transient rate limit"
+    call_count = 0
+
+    async def _post_with_one_failure(*_args: object, **_kwargs: object) -> object:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise RateLimitError(rate_limit_msg)
+        await asyncio.sleep(0)
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.raise_for_status = MagicMock()
+        resp.json.return_value = {
+            "choices": [{"message": {"content": "openrouter-retried-ok"}}],
+            "usage": {"prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8},
+        }
+        return resp
+
+    provider = OpenRouterProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    fake_client.post = AsyncMock(side_effect=_post_with_one_failure)
+    provider.client = fake_client
+
+    with patch("intellicrack.providers.base.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        mock_sleep.return_value = None
+        response, _ = await provider.chat(
+            messages=_user_messages("hello"),
+            model="openai/gpt-4o",
+            max_tokens=64,
+        )
+
+    assert call_count == 2, f"OpenRouter must retry once: expected 2 calls, got {call_count}"
+    assert response.content == "openrouter-retried-ok"
+    assert response.role == "assistant"
+
+
+@pytest.mark.asyncio
+async def test_f0004_google_retries_on_transient_rate_limit() -> None:
+    """Google ``chat`` retries once on a transient ``RateLimitError``.
+
+    Drives the real :meth:`GoogleProvider.chat` (which delegates to
+    ``_run_google_chat``) against a fake ``generate_content`` transport
+    boundary that raises :class:`RateLimitError` on the first call and
+    returns a valid response on the second.  The independent oracle is
+    the invocation counter: exactly two transport calls must occur and
+    the returned :class:`Message` must carry the expected content.  If
+    ``_retry_with_backoff`` were removed from ``_run_google_chat``, the
+    first ``RateLimitError`` would propagate uncaught.
+
+    ``asyncio.sleep`` is patched to a no-op so backoff delays do not slow
+    the test suite.
+    """
+    rate_limit_msg = "google transient rate limit"
+    call_count = 0
+
+    async def _generate_with_one_failure(**_kwargs: object) -> object:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise RateLimitError(rate_limit_msg)
+        await asyncio.sleep(0)
+        resp = MagicMock()
+        resp.text = "google-retried-ok"
+        resp.function_calls = None
+        resp.candidates = []
+        resp.prompt_feedback = None
+        resp.usage_metadata = None
+        return resp
+
+    provider = GoogleProvider()
+    provider.connected = True
+    fake_client = MagicMock()
+    fake_client.aio = MagicMock()
+    fake_client.aio.models = MagicMock()
+    fake_client.aio.models.generate_content = AsyncMock(side_effect=_generate_with_one_failure)
+    provider.client = fake_client
+
+    with patch("intellicrack.providers.base.asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
+        mock_sleep.return_value = None
+        response, _ = await provider.chat(
+            messages=_user_messages("hello"),
+            model="gemini-2.0-flash",
+            max_tokens=64,
+        )
+
+    assert call_count == 2, f"Google must retry once: expected 2 calls, got {call_count}"
+    assert response.content == "google-retried-ok"
+    assert response.role == "assistant"
 
 
 # ---------------------------------------------------------------------------

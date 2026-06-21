@@ -125,11 +125,7 @@ def _pefile_export_names(path: Path) -> set[str]:
         pe.parse_data_directories(directories=[_IMAGE_DIRECTORY_ENTRY_EXPORT])
         export_dir = getattr(pe, "DIRECTORY_ENTRY_EXPORT", None)
         if export_dir is not None:
-            names = {
-                sym.name.decode("ascii", errors="replace")
-                for sym in export_dir.symbols
-                if sym.name is not None
-            }
+            names = {sym.name.decode("ascii", errors="replace") for sym in export_dir.symbols if sym.name is not None}
     finally:
         pe.close()
     return names
@@ -239,11 +235,7 @@ class TestRealPeImports:
         assert imports, "kernel32.dll has a populated import directory"
 
         expected_pairs = await asyncio.to_thread(_pefile_import_pairs, real_pe_dll)
-        actual_pairs = {
-            (str(i["dll"]).lower(), str(i["function"]))
-            for i in imports
-            if not str(i["function"]).startswith("Ordinal ")
-        }
+        actual_pairs = {(str(i["dll"]).lower(), str(i["function"])) for i in imports if not str(i["function"]).startswith("Ordinal ")}
         assert expected_pairs
         assert expected_pairs <= actual_pairs
 

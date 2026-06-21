@@ -11,6 +11,7 @@ from the .env file and validate their format.
 
 from __future__ import annotations
 
+import os
 import tempfile
 from pathlib import Path
 
@@ -94,6 +95,35 @@ def _assert_valid_key(provider: ProviderName, env_var: str, valid_key: str) -> N
         assert msg is None, f"{provider}: error message must be None on success, got {msg!r}"
     finally:
         env_path.unlink()
+
+
+def _assert_get_credentials_value(env_path: Path, known_key: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Assert get_credentials returns the exact injected key and None for absent providers.
+
+    Clears the OPENAI provider env vars from os.environ before asserting that
+    the absent-provider lookup returns None, preventing the loader's os.environ
+    fallback from satisfying the lookup with real keys that the sandbox mounts.
+
+    Args:
+        env_path: Path to a controlled env file containing only ANTHROPIC_API_KEY.
+        known_key: The exact key value written to the env file.
+        monkeypatch: Pytest monkeypatch fixture used to isolate os.environ.
+    """
+    openai_mapping = CredentialLoader.PROVIDER_MAPPINGS[ProviderName.OPENAI]
+    monkeypatch.delenv(openai_mapping.api_key_var, raising=False)
+    for alias in openai_mapping.api_key_aliases:
+        monkeypatch.delenv(alias, raising=False)
+
+    loader = CredentialLoader(env_path=env_path)
+    creds = loader.get_credentials(ProviderName.ANTHROPIC)
+    assert creds is not None, "get_credentials must return ProviderCredentials when the key is present in the env file"
+    assert isinstance(creds, ProviderCredentials), f"Expected ProviderCredentials, got {type(creds)}"
+    assert creds.api_key == known_key, (
+        f"get_credentials must propagate the exact injected api_key value; "
+        f"expected {known_key!r}, got {creds.api_key!r}"
+    )
+    absent_creds = loader.get_credentials(ProviderName.OPENAI)
+    assert absent_creds is None, "get_credentials must return None for a provider not present in the controlled env file"
 
 
 class TestCredentialLoaderInitialization:
@@ -229,17 +259,32 @@ class TestCredentialValidation:
 
     @staticmethod
     def test_get_credentials_returns_credentials_or_none(
-        credential_loader: CredentialLoader,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Test get_credentials returns ProviderCredentials or None.
+        """get_credentials returns the injected api_key value unchanged for a configured provider.
+
+        Uses a controlled env file containing exactly one Anthropic key with a
+        known synthetic value. Asserts that get_credentials returns a
+        ProviderCredentials whose api_key matches the injected value exactly
+        (not merely that an object was returned). Also asserts that a provider
+        absent from the env file returns None, confirming the loader does not
+        invent credentials for unconfigured providers.
+
+        The oracle is the literal value written to the temp file; the production
+        code must faithfully read and propagate it through _parse_env_text and
+        get_credentials without alteration.
 
         Args:
-            credential_loader: Credential loader fixture.
+            monkeypatch: Pytest monkeypatch fixture used to isolate os.environ
+                so that the absent-provider assertion is not satisfied by real
+                API keys mounted in the sandbox .env file.
         """
-        for provider in ProviderName:
-            creds = credential_loader.get_credentials(provider)
-            if creds is not None:
-                assert isinstance(creds, ProviderCredentials), f"Expected ProviderCredentials for {provider}, got {type(creds)}"
+        known_key = "sk-ant-api03-" + "Z" * 95
+        env_path = _make_env_file(f"ANTHROPIC_API_KEY={known_key}\n")
+        try:
+            _assert_get_credentials_value(env_path, known_key, monkeypatch)
+        finally:
+            env_path.unlink()
 
 
 class TestProviderListing:
@@ -393,18 +438,38 @@ class TestEnvironmentVariableAccess:
     def test_set_env_var_updates_value(
         credential_loader: CredentialLoader,
     ) -> None:
-        """Test set_env_var updates the environment variable.
+        """set_env_var propagates the value to both the internal cache and os.environ.
+
+        Asserts two independent effects of set_env_var:
+        1. The internal cache (readable via get_env_var) returns the exact value.
+        2. os.environ is updated with the exact value, which is the documented
+           side-effect that makes the variable visible to external libraries.
+
+        Both assertions are required: a setter that only updates the internal dict
+        passes the cache check but not the os.environ check, and vice versa.
+        The expected value is independent of the loader (it is the literal string
+        we passed in), so neither assertion is self-fulfilling.
+
+        The test key is deleted from os.environ in the finally block so it does
+        not leak into subsequent tests.
 
         Args:
             credential_loader: Credential loader fixture.
         """
-        test_key = "TEST_INTELLICRACK_VAR"
-        test_value = "test_value_123"
-
-        credential_loader.set_env_var(test_key, test_value)
-        result = credential_loader.get_env_var(test_key)
-
-        assert result == test_value
+        test_key = "TEST_INTELLICRACK_SET_ENV_VAR"
+        test_value = "intellicrack_gate_value_7x9q"
+        try:
+            credential_loader.set_env_var(test_key, test_value)
+            cached_result = credential_loader.get_env_var(test_key)
+            assert cached_result == test_value, (
+                f"Internal cache must reflect the set value; expected {test_value!r}, got {cached_result!r}"
+            )
+            environ_result = os.environ.get(test_key)
+            assert environ_result == test_value, (
+                f"os.environ must be updated by set_env_var; expected {test_value!r}, got {environ_result!r}"
+            )
+        finally:
+            os.environ.pop(test_key, None)
 
 
 class TestReload:

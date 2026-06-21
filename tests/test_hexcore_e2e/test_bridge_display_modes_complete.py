@@ -43,22 +43,22 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
 class TestDisplayModesExtended:
     """Tests for display mode set/get roundtrip for modes not covered previously."""
 
-    def test_set_hex16_be_returns_true(self, bridge: HexEditorBridge) -> None:
-        """Verify that set_display_mode('hex16_be') returns True.
+    def test_set_hex16_be_returns_true_and_persists_state(
+        self,
+        bridge: HexEditorBridge,
+    ) -> None:
+        """Verify set_display_mode('hex16_be') returns exactly True and persists the mode.
+
+        The return value must be exactly True (not merely truthy), and a
+        subsequent get_display_mode call must return 'hex16_be'.  This
+        test would fail if set_display_mode returned a non-bool truthy
+        value, silently dropped the mode, or stored a different string.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
         result: bool = _run(bridge.set_display_mode("hex16_be"))
-        assert result
-
-    def test_get_after_set_hex16_be(self, bridge: HexEditorBridge) -> None:
-        """Verify that get_display_mode returns 'hex16_be' after setting it.
-
-        Args:
-            bridge: An initialized HexEditorBridge fixture.
-        """
-        _run(bridge.set_display_mode("hex16_be"))
+        assert result is True
         mode: str = _run(bridge.get_display_mode())
         assert mode == "hex16_be"
 

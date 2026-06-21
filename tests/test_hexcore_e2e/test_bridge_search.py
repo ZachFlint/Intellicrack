@@ -104,18 +104,25 @@ class TestBridgeSearchHex:
         assert not results
 
     def test_search_hex_max_results_respected(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that max_results caps the number of returned matches.
+        """Verify that max_results caps the number of returned matches to exactly the requested limit.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        data = b"\xaa\xbb" * 200
+        repeat_count = 200
+        data = b"\xaa\xbb" * repeat_count
         f = tmp_path / "repeated.bin"
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
-        results: list[dict[str, int]] = _run(bridge.search_hex("AA BB", max_results=5))
-        assert len(results) <= 5
+        uncapped: list[dict[str, int]] = _run(bridge.search_hex("AA BB", max_results=repeat_count))
+        assert len(uncapped) == repeat_count, (
+            f"Expected {repeat_count} uncapped matches, got {len(uncapped)}"
+        )
+        capped: list[dict[str, int]] = _run(bridge.search_hex("AA BB", max_results=5))
+        assert len(capped) == 5, (
+            f"Expected exactly 5 capped matches, got {len(capped)}"
+        )
 
 
 class TestBridgeSearchText:

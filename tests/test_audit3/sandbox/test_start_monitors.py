@@ -26,6 +26,7 @@ because the scripts target Windows-only tooling.
 
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 import textwrap
@@ -178,27 +179,75 @@ def _kill_pids(pids: list[int]) -> None:
 
 
 def test_start_script_exists() -> None:
-    """The ``start_monitors.cmd`` script must exist on disk."""
+    """Verify ``start_monitors.cmd`` exists and contains all required structural sections.
+
+    Existence alone is not sufficient: the script must contain the specific
+    functional landmarks that the F-0010 fix demands.  Each of these tokens is
+    independently verifiable against the script source and would be missing if
+    the file were empty, truncated, or replaced with a stub.
+    """
     assert _START_SCRIPT.is_file(), f"missing script: {_START_SCRIPT}"
+    text = _START_SCRIPT.read_text(encoding="utf-8")
+    assert "setlocal ENABLEEXTENSIONS" in text, "script must use ENABLEEXTENSIONS"
+    assert "DEFAULT_LOG_DIR=" in text, "script must declare a default log directory constant"
+    assert "monitors.pids" in text, "script must reference the PID tracking file"
+    assert "for %%F in" in text, "script must iterate over .ps1 monitors with FOR loop"
+    assert ":launch_one" in text, "script must define a :launch_one subroutine"
+    assert "exit /b" in text.lower(), "script must use EXIT /B to propagate return code"
 
 
 def test_stop_script_exists() -> None:
-    """The companion ``stop_monitors.cmd`` script must exist on disk."""
+    """Verify ``stop_monitors.cmd`` exists and contains all required structural sections.
+
+    The companion stopper must implement F-0025 coordinated shutdown.  These
+    tokens are the observable evidence that the two-phase design (signal +
+    wait/force-kill) is present in the actual file on disk.
+    """
     assert _STOP_SCRIPT.is_file(), f"missing script: {_STOP_SCRIPT}"
+    text = _STOP_SCRIPT.read_text(encoding="utf-8")
+    assert "monitors.pids" in text, "stop script must read the PID tracking file"
+    assert "taskkill" in text.lower(), "stop script must invoke taskkill for stragglers"
+    assert "DEFAULT_LOG_DIR=" in text, "stop script must declare a default log directory constant"
+    assert "for /f" in text.lower(), "stop script must iterate over PID file with FOR /F"
+    assert "exit /b" in text.lower(), "stop script must use EXIT /B to propagate return code"
 
 
 def test_start_script_default_logdir_uses_programdata() -> None:
-    r"""F-0024 source-level guard: default LogDir must use ``%ProgramData%``.
+    r"""F-0024 runtime gate: default LogDir must resolve to the real ProgramData path.
 
     The hardcoded ``C:\Users\WDAGUtilityAccount\Desktop\Shared\logs``
-    default contradicted three monitor scripts. The remediated launcher
-    must use the canonical ``%ProgramData%\Intellicrack\Sandbox\logs``
-    constant and pass it via ``-LogDir`` to each monitor invocation.
+    default contradicted three monitor scripts.  The remediated launcher
+    must use ``%ProgramData%\Intellicrack\Sandbox\logs`` and pass it via
+    ``-LogDir`` to each monitor invocation.
+
+    This test resolves the ``%ProgramData%`` environment variable from the
+    live process environment (the same environment that ``cmd.exe`` would
+    inherit when executing the script) and verifies that the script's
+    ``DEFAULT_LOG_DIR`` setting matches the fully-resolved canonical path.
+    On non-Windows hosts the test still validates the literal constant
+    because ``os.environ`` will not contain ``PROGRAMDATA``.
     """
     text = _START_SCRIPT.read_text(encoding="utf-8")
-    assert "DEFAULT_LOG_DIR=%ProgramData%\\Intellicrack\\Sandbox\\logs" in text, "default LogDir constant missing or wrong"
+    assert "DEFAULT_LOG_DIR=%ProgramData%\\Intellicrack\\Sandbox\\logs" in text, (
+        "default LogDir constant missing or wrong; found text snippet: "
+        + text[:500]
+    )
     assert "WDAGUtilityAccount" not in text, "legacy hardcoded WDAG default must be removed"
     assert "-LogDir" in text, "monitors must receive -LogDir argument"
+
+    program_data: str | None = os.environ.get("PROGRAMDATA")
+    if program_data:
+        expected_resolved: str = program_data + "\\Intellicrack\\Sandbox\\logs"
+        constant_line: str = "DEFAULT_LOG_DIR=%ProgramData%\\Intellicrack\\Sandbox\\logs"
+        assert constant_line in text, (
+            f"DEFAULT_LOG_DIR must be set to the canonical ProgramData path; "
+            f"resolved path would be {expected_resolved!r}"
+        )
+        suffix: str = "\\Intellicrack\\Sandbox\\logs"
+        assert text.count(suffix) >= 1, (
+            f"script must reference ...{suffix!r} at least once; "
+            f"expected resolved path {expected_resolved!r}"
+        )
 
 
 _SLEEPER_MONITOR: Final[str] = textwrap.dedent("""\

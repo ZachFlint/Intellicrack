@@ -1,0 +1,3770 @@
+[
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_alignment_color.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_alignment_color.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestAlignmentGrid::test_set_alignment_grid_persists_and_notifies",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "self._alignment_grid_size = size",
+    "replace": "self._alignment_grid_size = 0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestAlignmentGrid::test_set_alignment_grid_persists_and_notifies"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_alignment_color.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestColorMode::test_set_color_mode_persists_and_notifies",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "self._color_mode = mode",
+    "replace": "self._color_mode = \"none\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestColorMode::test_set_color_mode_persists_and_notifies"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_ui/test_resource_helper.py",
+  "review_overall": "pass",
+  "actions": {
+   "red-prod-defect": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_ui/test_resource_helper.py",
+    "covering_test": "tests/test_ui/test_resource_helper.py::TestResourceExists::test_returns_false_for_empty_path",
+    "src_file": "src/intellicrack/ui/resources/resource_helper.py",
+    "search": "        exists = path.exists()",
+    "replace": "        exists = bool(resource_path) and path.exists()",
+    "baseline": "expected-red",
+    "action": "red-prod-defect",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_resource_helper.py::TestResourceExists::test_returns_false_for_empty_path"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": [
+   "tests/test_ui/test_resource_helper.py::TestResourceExists::test_returns_false_for_empty_path"
+  ]
+ },
+ {
+  "file": "tests/test_ui/test_vnc_widget.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 11
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_pointer_event_format",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "struct.pack(\"!BBHH\", 5, button_mask, x, y)",
+    "replace": "struct.pack(\"!BBHH\", 6, button_mask, x, y)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_pointer_event_format"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_format",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "struct.pack(\"!BBxxI\", 4, 1 if down else 0, key)",
+    "replace": "struct.pack(\"!BBxxI\", 7, 1 if down else 0, key)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_format"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_release_clears_down_flag",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "struct.pack(\"!BBxxI\", 4, 1 if down else 0, key)",
+    "replace": "struct.pack(\"!BBxxI\", 4, 1, key)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_release_clears_down_flag"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_framebuffer_update_request_format",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "            1 if incremental else 0,",
+    "replace": "            0,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_framebuffer_update_request_format"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientState::test_request_framebuffer_update_when_disconnected",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "if self._writer is None or not self._connected:\n            return\n\n        msg = struct.pack(\n            \"!BBHHHH\",",
+    "replace": "if self._writer is None or False:\n            return\n\n        msg = struct.pack(\n            \"!BBHHHH\",",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestRFBClientState::test_request_framebuffer_update_when_disconnected"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_pointer_when_disconnected",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "not self._connected:\n            return\n\n        msg = struct.pack(\"!BBHH\", 5, button_mask, x, y)",
+    "replace": "False:\n            return\n\n        msg = struct.pack(\"!BBHH\", 5, button_mask, x, y)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_pointer_when_disconnected"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_key_when_disconnected",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "not self._connected:\n            return\n\n        msg = struct.pack(\"!BBxxI\", 4, 1 if down else 0, key)",
+    "replace": "False:\n            return\n\n        msg = struct.pack(\"!BBxxI\", 4, 1 if down else 0, key)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_key_when_disconnected"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_partial_data",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "scanline[byte_offset : byte_offset + byte_length] = pixel_data[src_offset : src_offset + byte_length]",
+    "replace": "scanline[byte_offset : byte_offset + byte_length] = pixel_data[src_offset : src_offset + byte_length][::-1]",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_partial_data"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_no_framebuffer",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "if self.framebuffer is None:",
+    "replace": "if self.framebuffer is not None:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_no_framebuffer"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_construction",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "self.setMinimumSize(320, 240)",
+    "replace": "self.setMinimumSize(0, 0)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_construction"
+   },
+   {
+    "test_file": "tests/test_ui/test_vnc_widget.py",
+    "covering_test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_button_mask_maps_qt_buttons_to_rfb_bits",
+    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+    "search": "            mask |= 2",
+    "replace": "            mask |= 8",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_button_mask_maps_qt_buttons_to_rfb_bits"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_core/test_logging.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 24
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_intellicrack_logger_get_logger_root",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "self.name if name is None else f\"{self.name}.{name}\"",
+    "replace": "f\"{self.name}.bad\" if name is None else f\"{self.name}.{name}\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_intellicrack_logger_get_logger_root"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_intellicrack_logger_get_logger_child",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "self.name if name is None else f\"{self.name}.{name}\"",
+    "replace": "self.name if name is None else self.name",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_intellicrack_logger_get_logger_child"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_intellicrack_logger_configure",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "if file_enabled and log_dir is not None",
+    "replace": "if file_enabled and log_dir is None",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_intellicrack_logger_configure"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_intellicrack_logger_configure_no_file",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "if file_enabled and log_dir is not None",
+    "replace": "if (file_enabled or True) and log_dir is not None",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_intellicrack_logger_configure_no_file"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_intellicrack_logger_configure_plain_text",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "structlog.dev.ConsoleRenderer(colors=False)",
+    "replace": "structlog.processors.JSONRenderer()",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_intellicrack_logger_configure_plain_text"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_get_logger_returns_bound_logger",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "logger_name = f\"intellicrack.{name}\" if name else \"intellicrack\"",
+    "replace": "logger_name = f\"wrongroot.{name}\" if name else \"intellicrack\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_get_logger_returns_bound_logger"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_get_logger_no_name",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "logger_name = f\"intellicrack.{name}\" if name else \"intellicrack\"",
+    "replace": "logger_name = f\"intellicrack.{name}\" if name else \"notintellicrack\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_get_logger_no_name"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_get_logger_with_name",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "return _logger_state.app_logger.get_logger(name)",
+    "replace": "return _logger_state.app_logger.get_logger(None)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_get_logger_with_name"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_tool_call_minimal",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "slog.info(\"tool_call\", **log_data)",
+    "replace": "slog.info(\"tool_called\", **log_data)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_tool_call_minimal"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_tool_call_with_duration_and_success",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "log_data[\"duration_ms\"] = round(duration_ms, 2)",
+    "replace": "log_data[\"duration_ms\"] = round(duration_ms, 0)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_tool_call_with_duration_and_success"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_tool_call_with_failure",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "log_data[\"success\"] = success",
+    "replace": "log_data[\"success\"] = not success",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_tool_call_with_failure"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_provider_request",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "\"llm_request_started\"",
+    "replace": "\"llm_request_wrong\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_provider_request"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_provider_response_minimal",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "log_data[\"tokens_used\"] = tokens_used",
+    "replace": "log_data[\"tokens_used\"] = tokens_used or 0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_provider_response_minimal"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_provider_response_with_tokens",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "log_data[\"tokens_used\"] = tokens_used",
+    "replace": "log_data[\"tokens_used\"] = 0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_provider_response_with_tokens"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_binary_operation",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "slog.info(\"binary_operation\", operation=operation, path=str(path), **kwargs)",
+    "replace": "slog.info(\"binary_operation\", operation=operation, path=str(path))",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_binary_operation"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_binary_operation_path_object",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "slog.info(\"binary_operation\", operation=operation, path=str(path), **kwargs)",
+    "replace": "slog.info(\"binary_operation\", operation=operation, path=path, **kwargs)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_binary_operation_path_object"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_sandbox_operation",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "slog.info(\"sandbox_operation\", operation=operation, sandbox_type=sandbox_type, **kwargs)",
+    "replace": "slog.info(\"sandbox_op\", operation=operation, sandbox_type=sandbox_type, **kwargs)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_sandbox_operation"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_session_operation_minimal",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "if session_id:",
+    "replace": "if session_id or True:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_session_operation_minimal"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_session_operation_with_id",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "if session_id:",
+    "replace": "if not session_id:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_session_operation_with_id"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_session_operation_with_kwargs",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "log_data: dict[str, object] = dict(kwargs)",
+    "replace": "log_data: dict[str, object] = {}",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_session_operation_with_kwargs"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_log_analysis_operation",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "slog.info(\"analysis_operation\", operation=operation, target=target, **kwargs)",
+    "replace": "slog.info(\"analysis_operation\", operation=operation, target=target)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_log_analysis_operation"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_operation_timer_success",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "\"operation_complete\"",
+    "replace": "\"operation_failed\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_operation_timer_success"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_operation_timer_with_context",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "operation=self.operation,\n                duration_ms=round(duration_ms, 2),\n                **self.context,\n            )",
+    "replace": "operation=self.operation,\n                duration_ms=round(duration_ms, 2),\n            )",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_operation_timer_with_context"
+   },
+   {
+    "test_file": "tests/test_core/test_logging.py",
+    "covering_test": "tests/test_core/test_logging.py::test_operation_timer_on_exception",
+    "src_file": "src/intellicrack/core/logging.py",
+    "search": "\"operation_failed\"",
+    "replace": "\"operation_complete\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_logging.py::test_operation_timer_on_exception"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_provider_bugfixes.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 2,
+   "hardened": 12
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestOAuthFlowValidation::test_build_authorization_url_emits_spec_compliant_pkce_request",
+    "src_file": "src/intellicrack/credentials/oauth.py",
+    "search": "params[\"code_challenge\"] = code_challenge",
+    "replace": "params[\"code_challenge\"] = code_challenge[:-1] if code_challenge else code_challenge",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestOAuthFlowValidation::test_build_authorization_url_emits_spec_compliant_pkce_request"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestOAuthFlowValidation::test_build_authorization_url_rejects_missing_client_id",
+    "src_file": "src/intellicrack/credentials/oauth.py",
+    "search": "if not config.client_id:",
+    "replace": "if config.client_id is None and False:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestOAuthFlowValidation::test_build_authorization_url_rejects_missing_client_id"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestCredentialSourceDetectorPath::test_detect_source_classifies_environment_credential",
+    "src_file": "src/intellicrack/ui/provider_config.py",
+    "search": "        if os.environ.get(env_var) == current_key:\n            return CredentialSource.ENVIRONMENT",
+    "replace": "        if os.environ.get(env_var) == current_key:\n            return CredentialSource.MANUAL",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestCredentialSourceDetectorPath::test_detect_source_classifies_environment_credential"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestCredentialSourceDetectorPath::test_detect_source_returns_not_configured_for_empty_key",
+    "src_file": "src/intellicrack/ui/provider_config.py",
+    "search": "        if not current_key:\n            return CredentialSource.NOT_CONFIGURED",
+    "replace": "        if not current_key:\n            return CredentialSource.MANUAL",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestCredentialSourceDetectorPath::test_detect_source_returns_not_configured_for_empty_key"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_malformed_503_body_falls_back_to_loading_message",
+    "src_file": "src/intellicrack/providers/huggingface.py",
+    "search": "            _logger.warning(\"hf_503_body_decode_failed\", error_type=type(decode_exc).__name__)\n            return \"Model is loading and not yet ready\"",
+    "replace": "            _logger.warning(\"hf_503_body_decode_failed\", error_type=type(decode_exc).__name__)\n            return \"\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_malformed_503_body_falls_back_to_loading_message"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_html_503_body_falls_back_to_loading_message",
+    "src_file": "src/intellicrack/providers/huggingface.py",
+    "search": "        except (json.JSONDecodeError, ValueError, TypeError, httpx.DecodingError) as decode_exc:",
+    "replace": "        except (ValueError, TypeError, httpx.DecodingError) as decode_exc:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_html_503_body_falls_back_to_loading_message"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_valid_503_json_body_is_parsed_by_provider",
+    "src_file": "src/intellicrack/providers/huggingface.py",
+    "search": "                    return f\"{error_msg} (estimated_time={estimated}s)\"",
+    "replace": "                    return f\"{error_msg} (eta={estimated}s)\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_valid_503_json_body_is_parsed_by_provider"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_missing_response_attribute_falls_back",
+    "src_file": "src/intellicrack/providers/huggingface.py",
+    "search": "        response = getattr(exc, \"response\", None)\n        if response is None:\n            return \"Model is loading and not yet ready\"",
+    "replace": "        response = getattr(exc, \"response\", None)\n        if response is None:\n            return \"unexpected\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_missing_response_attribute_falls_back"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_valid_pricing_converts_to_micro_dollars",
+    "src_file": "src/intellicrack/providers/openrouter.py",
+    "search": "                input_cost = float(input_cost) * 1000000",
+    "replace": "                input_cost = float(input_cost) * 1000",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_valid_pricing_converts_to_micro_dollars"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_non_numeric_pricing_is_nullified",
+    "src_file": "src/intellicrack/providers/openrouter.py",
+    "search": "                self._logger.debug(\"input_cost_parse_failed\", model=model_id)\n                input_cost = None",
+    "replace": "                self._logger.debug(\"input_cost_parse_failed\", model=model_id)\n                input_cost = 0.0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_non_numeric_pricing_is_nullified"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_non_numeric_pricing_is_nullified",
+    "src_file": "src/intellicrack/providers/openrouter.py",
+    "search": "                self._logger.debug(\"output_cost_parse_failed\", model=model_id)\n                output_cost = None",
+    "replace": "                self._logger.debug(\"output_cost_parse_failed\", model=model_id)\n                output_cost = 0.0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_non_numeric_pricing_is_nullified"
+   },
+   {
+    "test_file": "tests/test_providers/test_provider_bugfixes.py",
+    "covering_test": "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_zero_pricing_converts_to_zero",
+    "src_file": "src/intellicrack/providers/openrouter.py",
+    "search": "        if input_cost is not None:",
+    "replace": "        if input_cost is None:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_zero_pricing_converts_to_zero"
+   }
+  ],
+  "deleted_tests": [
+   "TestAsyncCacheDiscovery.test_init_model_discovery_is_coroutine",
+   "TestGoogleClientErrorDetection.test_client_error_class_is_importable"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 2,
+   "hardened": 9
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestToolDialogsReceiveRegistry::test_configure_tools_wires_status_changed",
+    "src_file": "src/intellicrack/ui/app.py",
+    "search": "status_changed.connect(_status_slot)",
+    "replace": "status_changed.connect(lambda *_a: None)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestToolDialogsReceiveRegistry::test_configure_tools_wires_status_changed"
+   },
+   {
+    "test_file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOpenSandboxAvoidsDialogProbe::test_open_sandbox_uses_bridge_is_available",
+    "src_file": "src/intellicrack/ui/app.py",
+    "search": "available = await bridge.is_available()",
+    "replace": "available = False",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOpenSandboxAvoidsDialogProbe::test_open_sandbox_uses_bridge_is_available"
+   },
+   {
+    "test_file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_preferences_settings_changed_reaches_slot",
+    "src_file": "src/intellicrack/ui/app.py",
+    "search": "dialog.settings_changed.connect(self._on_preferences_changed)",
+    "replace": "dialog.settings_changed.connect(lambda *_a: None)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_preferences_settings_changed_reaches_slot"
+   },
+   {
+    "test_file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_session_loaded_signal_reaches_slot",
+    "src_file": "src/intellicrack/ui/app.py",
+    "search": "dialog.session_loaded.connect(self._on_session_load_requested)",
+    "replace": "dialog.session_loaded.connect(lambda *_a: None)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_session_loaded_signal_reaches_slot"
+   },
+   {
+    "test_file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_provider_dialog_signals_reach_slots",
+    "src_file": "src/intellicrack/ui/app.py",
+    "search": "dialog.provider_updated.connect(self._on_provider_dialog_updated)",
+    "replace": "dialog.provider_updated.connect(lambda *_a: None)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_provider_dialog_signals_reach_slots"
+   },
+   {
+    "test_file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_model_selection_signal_reaches_slot",
+    "src_file": "src/intellicrack/ui/app.py",
+    "search": "dialog.model_selected.connect(self._on_model_selected_from_browse)",
+    "replace": "dialog.model_selected.connect(lambda *_a: None)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_model_selection_signal_reaches_slot"
+   },
+   {
+    "test_file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_settings_updated_reaches_slot",
+    "src_file": "src/intellicrack/ui/app.py",
+    "search": "dialog.settings_updated.connect(self._on_sandbox_settings_updated)",
+    "replace": "dialog.settings_updated.connect(lambda *_a: None)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_settings_updated_reaches_slot"
+   },
+   {
+    "test_file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_monitor_stopped_reaches_slot",
+    "src_file": "src/intellicrack/ui/app.py",
+    "search": "monitor.sandbox_stopped.connect(self._on_sandbox_monitor_stopped)",
+    "replace": "monitor.sandbox_stopped.connect(lambda *_a: None)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_monitor_stopped_reaches_slot"
+   },
+   {
+    "test_file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_embedded_tool_panel_signals_reach_slots",
+    "src_file": "src/intellicrack/ui/app.py",
+    "search": "self.tool_panel.embedded_tool_started.connect(self._on_embedded_tool_started)",
+    "replace": "self.tool_panel.embedded_tool_started.connect(lambda *_a: None)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_embedded_tool_panel_signals_reach_slots"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestXPUStatusMenuWiring::test_help_menu_source_references_xpu_status",
+   "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestApplyProviderSettingsHandlesDisabled::test_source_collects_providers_to_disconnect"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/core/test_process_cleanup.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 6
+  },
+  "mutations": [
+   {
+    "test_file": "tests/core/test_process_cleanup.py",
+    "covering_test": "tests/core/test_process_cleanup.py::test_sandbox_temp_wsb_file_cleaned_up",
+    "src_file": "src/intellicrack/ui/sandbox_config.py",
+    "search": "self._wsb_file.unlink()",
+    "replace": "pass",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/core/test_process_cleanup.py::test_sandbox_temp_wsb_file_cleaned_up"
+   },
+   {
+    "test_file": "tests/core/test_process_cleanup.py",
+    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_resolve_pid_uses_real_retry_constants",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "return int(pid_content.strip())",
+    "replace": "return int(pid_content.strip()) + 1",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/core/test_process_cleanup.py::test_qemu_resolve_pid_uses_real_retry_constants"
+   },
+   {
+    "test_file": "tests/core/test_process_cleanup.py",
+    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_immediate_file",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "return int(pid_content.strip())",
+    "replace": "return int(pid_content.strip()) + 1",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_immediate_file"
+   },
+   {
+    "test_file": "tests/core/test_process_cleanup.py",
+    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_delayed_file",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "return int(pid_content.strip())",
+    "replace": "return int(pid_content.strip()) + 1",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_delayed_file"
+   },
+   {
+    "test_file": "tests/core/test_process_cleanup.py",
+    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_exhausted_raises_sandbox_error",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "raise SandboxError(_ERR_PIDFILE_UNREADABLE)",
+    "replace": "return",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_exhausted_raises_sandbox_error"
+   },
+   {
+    "test_file": "tests/core/test_process_cleanup.py",
+    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_handles_corrupt_content",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "return int(pid_content.strip())",
+    "replace": "return int(pid_content.strip()) + 1",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_handles_corrupt_content"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit3/core/test_xml_gen.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 6
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit3/core/test_xml_gen.py",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_element_factory_matches_stdlib_element",
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "search": "from xml.etree.ElementTree import Element, ElementTree, SubElement, indent, tostring",
+    "replace": "from xml.etree.ElementTree import ElementTree as Element, ElementTree, SubElement, indent, tostring",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/core/test_xml_gen.py::test_f0011_element_factory_matches_stdlib_element"
+   },
+   {
+    "test_file": "tests/test_audit3/core/test_xml_gen.py",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_subelement_links_into_stdlib_tree",
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "search": "from xml.etree.ElementTree import Element, ElementTree, SubElement, indent, tostring",
+    "replace": "from xml.etree.ElementTree import Element, ElementTree, Element as SubElement, indent, tostring",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/core/test_xml_gen.py::test_f0011_subelement_links_into_stdlib_tree"
+   },
+   {
+    "test_file": "tests/test_audit3/core/test_xml_gen.py",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_indent_matches_stdlib_indent",
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "search": "from xml.etree.ElementTree import Element, ElementTree, SubElement, indent, tostring",
+    "replace": "from xml.etree.ElementTree import Element, ElementTree, SubElement, tostring as indent, tostring",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/core/test_xml_gen.py::test_f0011_indent_matches_stdlib_indent"
+   },
+   {
+    "test_file": "tests/test_audit3/core/test_xml_gen.py",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_tostring_matches_stdlib_tostring",
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "search": "Element, ElementTree, SubElement, indent, tostring\n",
+    "replace": "Element, ElementTree, SubElement, indent\nfrom xml.etree.ElementTree import canonicalize as tostring\n",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/core/test_xml_gen.py::test_f0011_tostring_matches_stdlib_tostring"
+   },
+   {
+    "test_file": "tests/test_audit3/core/test_xml_gen.py",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_f0011_elementtree_wraps_root_like_stdlib",
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "search": "from xml.etree.ElementTree import Element, ElementTree, SubElement, indent, tostring",
+    "replace": "from xml.etree.ElementTree import Element, Element as ElementTree, SubElement, indent, tostring",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/core/test_xml_gen.py::test_f0011_elementtree_wraps_root_like_stdlib"
+   },
+   {
+    "test_file": "tests/test_audit3/core/test_xml_gen.py",
+    "covering_test": "tests/test_audit3/core/test_xml_gen.py::test_xml_gen_exports_match_dunder_all",
+    "src_file": "src/intellicrack/core/xml_gen.py",
+    "search": "    \"Element\",\n    \"ElementTree\",",
+    "replace": "    \"ElementTree\",",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/core/test_xml_gen.py::test_xml_gen_exports_match_dunder_all"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 6
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_anti_evasion_profile_drives_real_smbios_argv",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "return (\"Dell Inc.\", \"OptiPlex 7090\")",
+    "replace": "return (\"HP\", \"OptiPlex 7090\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_anti_evasion_profile_drives_real_smbios_argv"
+   },
+   {
+    "test_file": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_laptop_profile_emits_laptop_specific_smbios_argv",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "return (\"Lenovo\", \"ThinkPad T14 Gen 3\")",
+    "replace": "return (\"HP\", \"HP EliteDesk 800 G6\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_laptop_profile_emits_laptop_specific_smbios_argv"
+   },
+   {
+    "test_file": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0028YaraScanFallback::test_yara_scan_scans_zip_artifacts_when_present",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "output_dir.glob(\"dropped_files_*.zip\")",
+    "replace": "output_dir.glob(\"no_such_dropped_files_*.zip\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0028YaraScanFallback::test_yara_scan_scans_zip_artifacts_when_present"
+   },
+   {
+    "test_file": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_windows_startup_script_wires_agent",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "-File \"Z:\\\\monitor\\\\agent.ps1\"",
+    "replace": "-File \"Z:\\\\monitor\\\\unwired.ps1\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_windows_startup_script_wires_agent"
+   },
+   {
+    "test_file": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_linux_startup_script_wires_agent",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "python3 /mnt/shared/monitor/agent.py &",
+    "replace": "python3 /mnt/shared/monitor/unwired.py &",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_linux_startup_script_wires_agent"
+   },
+   {
+    "test_file": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0009AgentScriptNoPsUsing::test_windows_agent_script_binds_and_reads_log_path_via_messagedata",
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "search": "Register-ObjectEvent $watcher 'Created' -MessageData $fileLog -Action {",
+    "replace": "Register-ObjectEvent $watcher 'Created' -Action {",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0009AgentScriptNoPsUsing::test_windows_agent_script_binds_and_reads_log_path_via_messagedata"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_ui/test_font_manager.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 1,
+   "hardened": 5
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_ui/test_font_manager.py",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestCodeFont::test_get_code_font_uses_resolved_code_family",
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "search": "font = QFont(self._code_font_family, size)",
+    "replace": "font = QFont(\"\", size)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_font_manager.py::TestCodeFont::test_get_code_font_uses_resolved_code_family"
+   },
+   {
+    "test_file": "tests/test_ui/test_font_manager.py",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestUIFont::test_get_ui_font_uses_resolved_ui_family",
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "search": "font = QFont(self._ui_font_family, size)",
+    "replace": "font = QFont(\"\", size)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_font_manager.py::TestUIFont::test_get_ui_font_uses_resolved_ui_family"
+   },
+   {
+    "test_file": "tests/test_ui/test_font_manager.py",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestHeadingFont::test_get_heading_font_uses_resolved_ui_family",
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "search": "font = self.get_ui_font(size)\n        font.setBold(True)\n        return font\n\n    @property",
+    "replace": "font = self.get_code_font(size)\n        font.setBold(True)\n        return font\n\n    @property",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_font_manager.py::TestHeadingFont::test_get_heading_font_uses_resolved_ui_family"
+   },
+   {
+    "test_file": "tests/test_ui/test_font_manager.py",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestFontLoading::test_load_fonts_idempotent",
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "search": "if self.fonts_loaded:\n            _logger.debug(\"fonts_already_loaded\", families_count=len(self._loaded_families))\n            return bool(self._loaded_families)",
+    "replace": "if False:\n            _logger.debug(\"fonts_already_loaded\", families_count=len(self._loaded_families))\n            return bool(self._loaded_families)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_font_manager.py::TestFontLoading::test_load_fonts_idempotent"
+   },
+   {
+    "test_file": "tests/test_ui/test_font_manager.py",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestFontAssets::test_font_config_declares_expected_families_and_assets",
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "search": "DEFAULT_UI_FONT: Final[str] = \"Segoe UI\"",
+    "replace": "DEFAULT_UI_FONT: Final[str] = \"NotARealUiFont\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_font_manager.py::TestFontAssets::test_font_config_declares_expected_families_and_assets"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_ui/test_font_manager.py::TestFontLoading::test_load_fonts_returns_bool"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_ui/test_splash_screen.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 6
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_ui/test_splash_screen.py",
+    "covering_test": "tests/test_ui/test_splash_screen.py::TestSplashScreenCreation::test_creates_splash_screen",
+    "src_file": "src/intellicrack/ui/dialogs/splash_screen.py",
+    "search": "self._status_message: str = \"Initializing...\"",
+    "replace": "self._status_message: str = \"Booting...\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_splash_screen.py::TestSplashScreenCreation::test_creates_splash_screen"
+   },
+   {
+    "test_file": "tests/test_ui/test_splash_screen.py",
+    "covering_test": "tests/test_ui/test_splash_screen.py::TestProgressAnimation::test_rapid_progress_calls_track_final_state",
+    "src_file": "src/intellicrack/ui/dialogs/splash_screen.py",
+    "search": "self.progress_value = max(0, min(100, value))",
+    "replace": "self.progress_value = max(0, min(99, value))",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_splash_screen.py::TestProgressAnimation::test_rapid_progress_calls_track_final_state"
+   },
+   {
+    "test_file": "tests/test_ui/test_splash_screen.py",
+    "covering_test": "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_event_draws_pixels",
+    "src_file": "src/intellicrack/ui/dialogs/splash_screen.py",
+    "search": "painter.fillRect(rect, QBrush(gradient))",
+    "replace": "pass",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_event_draws_pixels"
+   },
+   {
+    "test_file": "tests/test_ui/test_splash_screen.py",
+    "covering_test": "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_with_progress_reflects_state",
+    "src_file": "src/intellicrack/ui/dialogs/splash_screen.py",
+    "search": "painter.fillRect(rect, QBrush(gradient))",
+    "replace": "pass",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_with_progress_reflects_state"
+   },
+   {
+    "test_file": "tests/test_ui/test_splash_screen.py",
+    "covering_test": "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_full_pipeline_all_complete",
+    "src_file": "src/intellicrack/ui/dialogs/splash_screen.py",
+    "search": "if threshold_end <= progress:",
+    "replace": "if threshold_end < progress:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_full_pipeline_all_complete"
+   },
+   {
+    "test_file": "tests/test_ui/test_splash_screen.py",
+    "covering_test": "tests/test_ui/test_splash_screen.py::TestSplashImageCompositing::test_splash_image_mutual_exclusion_with_brain_icon",
+    "src_file": "src/intellicrack/ui/dialogs/splash_screen.py",
+    "search": "if self._brain_icon is None else None",
+    "replace": "if self._brain_icon is not None else None",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_splash_screen.py::TestSplashImageCompositing::test_splash_image_mutual_exclusion_with_brain_icon"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit3/bridges/test_named_pipe_client.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 4,
+   "deleted": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit3/bridges/test_named_pipe_client.py",
+    "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_open_handle_passes_shared_read_write_to_createfilew",
+    "src_file": "src/intellicrack/bridges/named_pipe_client.py",
+    "search": "            FILE_SHARE_READ | FILE_SHARE_WRITE,\n            None,",
+    "replace": "            FILE_SHARE_READ,\n            None,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/bridges/test_named_pipe_client.py::test_open_handle_passes_shared_read_write_to_createfilew"
+   },
+   {
+    "test_file": "tests/test_audit3/bridges/test_named_pipe_client.py",
+    "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_close_handle_logs_when_closehandle_fails",
+    "src_file": "src/intellicrack/bridges/named_pipe_client.py",
+    "search": "        if not ok:",
+    "replace": "        if ok:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/bridges/test_named_pipe_client.py::test_close_handle_logs_when_closehandle_fails"
+   },
+   {
+    "test_file": "tests/test_audit3/bridges/test_named_pipe_client.py",
+    "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_write_sync_logs_routine_chunk_at_debug_not_info",
+    "src_file": "src/intellicrack/bridges/named_pipe_client.py",
+    "search": "            _logger.debug(\n                \"pipe_write_chunk\",",
+    "replace": "            _logger.info(\n                \"pipe_write_chunk\",",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/bridges/test_named_pipe_client.py::test_write_sync_logs_routine_chunk_at_debug_not_info"
+   },
+   {
+    "test_file": "tests/test_audit3/bridges/test_named_pipe_client.py",
+    "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_connect_close_lifecycle_logs_at_info",
+    "src_file": "src/intellicrack/bridges/named_pipe_client.py",
+    "search": "_logger.info(\"pipe_connecting\"",
+    "replace": "_logger.debug(\"pipe_connecting\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/bridges/test_named_pipe_client.py::test_connect_close_lifecycle_logs_at_info"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_audit3/bridges/test_named_pipe_client.py::test_allocate_request_id_uses_dedicated_lock"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 5
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py",
+    "covering_test": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_publishes_data_modified",
+    "src_file": "src/intellicrack/ui/panels/hex_editor/bookmarks.py",
+    "search": "self._notify_state_data_modified(cursor_offset, 1, source=\"hex-editor.bookmarks.add\")",
+    "replace": "pass",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_publishes_data_modified"
+   },
+   {
+    "test_file": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py",
+    "covering_test": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_offset_and_length_match_bookmark",
+    "src_file": "src/intellicrack/ui/panels/hex_editor/bookmarks.py",
+    "search": "cursor_offset = getattr(self._hex_widget, \"_cursor_offset\", 0)",
+    "replace": "cursor_offset = getattr(self._hex_widget, \"_cursor_offset\", 0) + 1",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_offset_and_length_match_bookmark"
+   },
+   {
+    "test_file": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py",
+    "covering_test": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_source_literal_uses_bookmarks_namespace",
+    "src_file": "src/intellicrack/ui/panels/hex_editor/bookmarks.py",
+    "search": "source=\"hex-editor.bookmarks.add\"",
+    "replace": "source=\"panel\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_source_literal_uses_bookmarks_namespace"
+   },
+   {
+    "test_file": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py",
+    "covering_test": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_panel_loop_guarded_subscriber_receives_add_event",
+    "src_file": "src/intellicrack/ui/panels/hex_editor/bookmarks.py",
+    "search": "self._notify_state_data_modified(cursor_offset, 1, source=\"hex-editor.bookmarks.add\")",
+    "replace": "self._notify_state_data_modified(cursor_offset, 1, source=\"panel\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_panel_loop_guarded_subscriber_receives_add_event"
+   },
+   {
+    "test_file": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py",
+    "covering_test": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_no_dispatch_when_state_holder_absent",
+    "src_file": "src/intellicrack/ui/panels/hex_editor/bookmarks.py",
+    "search": "self.document.add_bookmark(cursor_offset, 1, name, color.name())",
+    "replace": "self.document.add_bookmark(cursor_offset, 0, name, color.name())",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_no_dispatch_when_state_holder_absent"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_ghidra.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 4,
+   "deleted": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_ghidra.py",
+    "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_quote_payload_is_escaped_not_executed",
+    "src_file": "src/intellicrack/bridges/ghidra.py",
+    "search": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED)",
+    "replace": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_quote_payload_is_escaped_not_executed"
+   },
+   {
+    "test_file": "tests/test_bridges/test_ghidra.py",
+    "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_backslash_path_round_trips_verbatim",
+    "src_file": "src/intellicrack/bridges/ghidra.py",
+    "search": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED)",
+    "replace": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_backslash_path_round_trips_verbatim"
+   },
+   {
+    "test_file": "tests/test_bridges/test_ghidra.py",
+    "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_newline_payload_round_trips_verbatim",
+    "src_file": "src/intellicrack/bridges/ghidra.py",
+    "search": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED)",
+    "replace": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_newline_payload_round_trips_verbatim"
+   },
+   {
+    "test_file": "tests/test_bridges/test_ghidra.py",
+    "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_control_characters_round_trip_verbatim",
+    "src_file": "src/intellicrack/bridges/ghidra.py",
+    "search": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED)",
+    "replace": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_control_characters_round_trip_verbatim"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_bridges/test_ghidra.py::test_tool_definition_function_count"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_process_win32.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 6
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_process_win32.py",
+    "covering_test": "tests/test_bridges/test_process_win32.py::test_get_mitigation_policy_matches_win32_oracle",
+    "src_file": "src/intellicrack/bridges/process.py",
+    "search": "\"dep\": dep_flags.get(\"enabled\", False),",
+    "replace": "\"dep\": not dep_flags.get(\"enabled\", False),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_process_win32.py::test_get_mitigation_policy_matches_win32_oracle"
+   },
+   {
+    "test_file": "tests/test_bridges/test_process_win32.py",
+    "covering_test": "tests/test_bridges/test_process_win32.py::test_get_extension_policy_matches_win32_oracle",
+    "src_file": "src/intellicrack/bridges/process.py",
+    "search": "return bool(policy_buf.value & 1)",
+    "replace": "return not bool(policy_buf.value & 1)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_process_win32.py::test_get_extension_policy_matches_win32_oracle"
+   },
+   {
+    "test_file": "tests/test_bridges/test_process_win32.py",
+    "covering_test": "tests/test_bridges/test_process_win32.py::test_enumerate_handles_surfaces_planted_handle",
+    "src_file": "src/intellicrack/bridges/process.py",
+    "search": "\"handle_value\": entry.HandleValue or 0,\n                \"object_type_index\": entry.ObjectTypeIndex,",
+    "replace": "\"handle_value\": 0,\n                \"object_type_index\": entry.ObjectTypeIndex,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_process_win32.py::test_enumerate_handles_surfaces_planted_handle"
+   },
+   {
+    "test_file": "tests/test_bridges/test_process_win32.py",
+    "covering_test": "tests/test_bridges/test_process_win32.py::test_time_thread_wait_running_thread_times_out",
+    "src_file": "src/intellicrack/bridges/process.py",
+    "search": "result_str = \"timeout\"",
+    "replace": "result_str = \"failed\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_process_win32.py::test_time_thread_wait_running_thread_times_out"
+   },
+   {
+    "test_file": "tests/test_bridges/test_process_win32.py",
+    "covering_test": "tests/test_bridges/test_process_win32.py::test_time_thread_wait_exited_thread_signals",
+    "src_file": "src/intellicrack/bridges/process.py",
+    "search": "result_str = \"signaled\"",
+    "replace": "result_str = \"timeout\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_process_win32.py::test_time_thread_wait_exited_thread_signals"
+   },
+   {
+    "test_file": "tests/test_bridges/test_process_win32.py",
+    "covering_test": "tests/test_bridges/test_process_win32.py::test_enumerate_heaps_includes_process_default_heap",
+    "src_file": "src/intellicrack/bridges/process.py",
+    "search": "\"id\": hl.th32HeapID,",
+    "replace": "\"id\": hl.th32HeapID + 1,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_process_win32.py::test_enumerate_heaps_includes_process_default_heap"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_core/test_script_gen.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 5
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_core/test_script_gen.py",
+    "covering_test": "tests/test_core/test_script_gen.py::test_frida_api_reference_keys",
+    "src_file": "src/intellicrack/core/script_gen.py",
+    "search": "\"interceptor\": \"Interceptor.attach(target, {onEnter, onLeave}), Interceptor.replace(target, replacement), Interceptor.revert(target)\"",
+    "replace": "\"interceptor\": \"\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_script_gen.py::test_frida_api_reference_keys"
+   },
+   {
+    "test_file": "tests/test_core/test_script_gen.py",
+    "covering_test": "tests/test_core/test_script_gen.py::test_ghidra_api_reference_keys",
+    "src_file": "src/intellicrack/core/script_gen.py",
+    "search": "\"decompiler\": (\"DecompInterface(), decompInterface.decompileFunction(func, timeout, monitor)\"),",
+    "replace": "\"decompiler\": (\"\"),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_script_gen.py::test_ghidra_api_reference_keys"
+   },
+   {
+    "test_file": "tests/test_core/test_script_gen.py",
+    "covering_test": "tests/test_core/test_script_gen.py::test_cutter_reference_keys",
+    "src_file": "src/intellicrack/core/script_gen.py",
+    "search": "\"analysis\": \"aaa (analyze all), af (analyze function), afl (list functions)\",",
+    "replace": "\"analysis\": \"nope\",",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_script_gen.py::test_cutter_reference_keys"
+   },
+   {
+    "test_file": "tests/test_core/test_script_gen.py",
+    "covering_test": "tests/test_core/test_script_gen.py::test_x64dbg_reference_keys",
+    "src_file": "src/intellicrack/core/script_gen.py",
+    "search": "\"breakpoints\": (\"bp addr (set bp), bc addr (clear bp), bph addr (hardware bp)\"),",
+    "replace": "\"breakpoints\": (\"set addr\"),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_script_gen.py::test_x64dbg_reference_keys"
+   },
+   {
+    "test_file": "tests/test_core/test_script_gen.py",
+    "covering_test": "tests/test_core/test_script_gen.py::test_bypass_strategy_members_complete",
+    "src_file": "src/intellicrack/core/script_gen.py",
+    "search": "    PATCH_JUMP = \"patch_jump\"",
+    "replace": "    PATCH_JUMP = \"jump_patch\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_script_gen.py::test_bypass_strategy_members_complete"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_ui/test_win32_embed.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 5
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_ui/test_win32_embed.py",
+    "covering_test": "tests/test_ui/test_win32_embed.py::TestFindWindowByPid::test_finds_real_visible_window_for_current_pid",
+    "src_file": "src/intellicrack/ui/win32_embed.py",
+    "search": "if window_pid.value != pid:",
+    "replace": "if window_pid.value == pid:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_win32_embed.py::TestFindWindowByPid::test_finds_real_visible_window_for_current_pid"
+   },
+   {
+    "test_file": "tests/test_ui/test_win32_embed.py",
+    "covering_test": "tests/test_ui/test_win32_embed.py::TestFindWindowByPid::test_embeds_real_window_into_qt_parent",
+    "src_file": "src/intellicrack/ui/win32_embed.py",
+    "search": "container.setMinimumSize(_EMBED_MIN_WIDTH, _EMBED_MIN_HEIGHT)",
+    "replace": "container.setMinimumSize(0, 0)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_win32_embed.py::TestFindWindowByPid::test_embeds_real_window_into_qt_parent"
+   },
+   {
+    "test_file": "tests/test_ui/test_win32_embed.py",
+    "covering_test": "tests/test_ui/test_win32_embed.py::TestEmbedWindow::test_returns_none_for_zero_hwnd",
+    "src_file": "src/intellicrack/ui/win32_embed.py",
+    "search": "_logger.warning(\"win32_embed_invalid_hwnd\", hwnd=hex(hwnd) if hwnd else \"0\")\n        return None",
+    "replace": "_logger.warning(\"win32_embed_invalid_hwnd\", hwnd=hex(hwnd) if hwnd else \"0\")\n        return parent",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_win32_embed.py::TestEmbedWindow::test_returns_none_for_zero_hwnd"
+   },
+   {
+    "test_file": "tests/test_ui/test_win32_embed.py",
+    "covering_test": "tests/test_ui/test_win32_embed.py::TestEmbedWindow::test_returns_none_for_garbage_hwnd",
+    "src_file": "src/intellicrack/ui/win32_embed.py",
+    "search": "_logger.warning(\"win32_embed_unsupported_platform\")\n        return None",
+    "replace": "_logger.warning(\"win32_embed_unsupported_platform\")\n        return parent",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_win32_embed.py::TestEmbedWindow::test_returns_none_for_garbage_hwnd"
+   },
+   {
+    "test_file": "tests/test_ui/test_win32_embed.py",
+    "covering_test": "tests/test_ui/test_win32_embed.py::TestPollAndEmbed::test_polling_embeds_and_invokes_callback",
+    "src_file": "src/intellicrack/ui/win32_embed.py",
+    "search": "if container is not None:",
+    "replace": "if container is None:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_win32_embed.py::TestPollAndEmbed::test_polling_embeds_and_invokes_callback"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 4
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "parts.append(struct.pack(\">I\", offset)[1:])",
+    "replace": "parts.append(struct.pack(\">I\", offset)[2:])",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes"
+   },
+   {
+    "test_file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "parts.extend((struct.pack(\">H\", size), data))",
+    "replace": "parts.extend((struct.pack(\">H\", size + 1), data))",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes"
+   },
+   {
+    "test_file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "parts.extend((struct.pack(\">H\", size), data))",
+    "replace": "parts.extend((struct.pack(\">H\", size + 1), data))",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout"
+   },
+   {
+    "test_file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob",
+    "src_file": "src/intellicrack-hexcore/src/patch_export.rs",
+    "search": "    output.extend_from_slice(b\"PATCH\");",
+    "replace": "    output.extend_from_slice(b\"PATCX\");",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 3,
+   "deleted": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassemblePeTextSection::test_disassemble_pe_text_with_auto_arch",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "arch, mode = disassembler.auto_detect_arch(header)",
+    "replace": "arch, mode = \"x86\", \"32\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassemblePeTextSection::test_disassemble_pe_text_with_auto_arch"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassembleMzHeader::test_disassemble_at_mz_header_produces_coherent_first_instruction",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "\"address\": insn.address",
+    "replace": "\"address\": insn.address + 1",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassembleMzHeader::test_disassemble_at_mz_header_produces_coherent_first_instruction"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassembleEdgeCases::test_disassemble_last_byte_decodes_single_trailing_instruction",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "\"size\": insn.size",
+    "replace": "\"size\": insn.size + 1",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassembleEdgeCases::test_disassemble_last_byte_decodes_single_trailing_instruction"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassembleMzHeader::test_disassemble_mz_header_address_starts_at_zero"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_agentic_capabilities.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 5
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_agentic_capabilities.py",
+    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestAccurateToolSupport::test_ollama_models_report_accurate_tool_support",
+    "src_file": "src/intellicrack/providers/ollama.py",
+    "search": "re.search(r\"\\{\\{-?\\s*\\.Tools\\s*-?\\}\\}\", template)",
+    "replace": "re.search(r\"\", template)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_agentic_capabilities.py::TestAccurateToolSupport::test_ollama_models_report_accurate_tool_support"
+   },
+   {
+    "test_file": "tests/test_providers/test_agentic_capabilities.py",
+    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_required_forces_tool_call",
+    "src_file": "src/intellicrack/providers/google.py",
+    "search": "            elif tool_choice.mode == ToolChoiceMode.REQUIRED:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.ANY))",
+    "replace": "            elif tool_choice.mode == ToolChoiceMode.REQUIRED:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.NONE))",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_required_forces_tool_call"
+   },
+   {
+    "test_file": "tests/test_providers/test_agentic_capabilities.py",
+    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_none_prevents_tool_call",
+    "src_file": "src/intellicrack/providers/google.py",
+    "search": "            elif tool_choice.mode == ToolChoiceMode.NONE:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.NONE))",
+    "replace": "            elif tool_choice.mode == ToolChoiceMode.NONE:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.ANY))",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_none_prevents_tool_call"
+   },
+   {
+    "test_file": "tests/test_providers/test_agentic_capabilities.py",
+    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_huggingface_buffer_manager_assembles_fragmented_tool_call",
+    "src_file": "src/intellicrack/providers/base.py",
+    "search": "            buf[\"arguments\"] += arguments",
+    "replace": "            buf[\"arguments\"] = arguments",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_huggingface_buffer_manager_assembles_fragmented_tool_call"
+   },
+   {
+    "test_file": "tests/test_providers/test_agentic_capabilities.py",
+    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_ollama_native_stream_assembler_reconstructs_tool_call",
+    "src_file": "src/intellicrack/providers/ollama.py",
+    "search": "                entry_func[\"arguments\"] = cast(\"str\", entry_func[\"arguments\"]) + args_val",
+    "replace": "                entry_func[\"arguments\"] = args_val",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_ollama_native_stream_assembler_reconstructs_tool_call"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_ui/test_icon_manager.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 1,
+   "hardened": 4
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_ui/test_icon_manager.py",
+    "covering_test": "tests/test_ui/test_icon_manager.py::TestFallbackIcons::test_missing_icon_with_no_fallback_loads_null_via_full_pipeline",
+    "src_file": "src/intellicrack/ui/resources/icon_manager.py",
+    "search": "if fallback_char := UNICODE_FALLBACK.get(name, \"\"):",
+    "replace": "if fallback_char := UNICODE_FALLBACK.get(name, \"X\"):",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_icon_manager.py::TestFallbackIcons::test_missing_icon_with_no_fallback_loads_null_via_full_pipeline"
+   },
+   {
+    "test_file": "tests/test_ui/test_icon_manager.py",
+    "covering_test": "tests/test_ui/test_icon_manager.py::TestListAvailableIcons::test_list_equals_full_icon_map_key_set",
+    "src_file": "src/intellicrack/ui/resources/icon_manager.py",
+    "search": "        return list(ICON_MAP.keys())",
+    "replace": "        return list(ICON_MAP.keys())[1:]",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_icon_manager.py::TestListAvailableIcons::test_list_equals_full_icon_map_key_set"
+   },
+   {
+    "test_file": "tests/test_ui/test_icon_manager.py",
+    "covering_test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_svg_icons_load_non_null",
+    "src_file": "src/intellicrack/ui/resources/icon_manager.py",
+    "search": "                icon = QIcon(str(icon_path))",
+    "replace": "                icon = QIcon()",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_svg_icons_load_non_null"
+   },
+   {
+    "test_file": "tests/test_ui/test_icon_manager.py",
+    "covering_test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_icons_availability_detection_flips_with_assets_presence",
+    "src_file": "src/intellicrack/ui/resources/icon_manager.py",
+    "search": "            available = any(icons_dir.iterdir()) if icons_dir.exists() else False",
+    "replace": "            available = True if icons_dir.exists() else False",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_icons_availability_detection_flips_with_assets_presence"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_ui/test_icon_manager.py::TestIconLoading::test_get_icon_returns_qicon"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 3
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestSourceContainsConnectCall::test_qemu_source_awaits_agent_connect",
+   "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestSourceContainsConnectCall::test_attach_qemu_agents_forwards_agent_connect_timeout_not_hardcoded",
+   "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestSourceContainsConnectCall::test_attach_qemu_agents_creates_guest_agent_client"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_x64dbg.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 3
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "test_bridge_instantiation",
+   "test_breakpoint_info_fields",
+   "test_disassemble_requires_capstone"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 3
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_set_chunk_size",
+    "src_file": "src/intellicrack-hexcore/src/lib.rs",
+    "search": "self.chunk_size_hint = size;",
+    "replace": "self.chunk_size_hint = self.chunk_size_hint;",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_set_chunk_size"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_set_memory_budget",
+    "src_file": "src/intellicrack-hexcore/src/lib.rs",
+    "search": "self.memory_budget_hint = budget;",
+    "replace": "self.memory_budget_hint = self.memory_budget_hint;",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_set_memory_budget"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_get_memory_usage",
+    "src_file": "src/intellicrack-hexcore/src/lib.rs",
+    "search": "fn get_document_memory_usage(&self) -> usize {\n        self.inner.document_size()",
+    "replace": "fn get_document_memory_usage(&self) -> usize {\n        let _ = self.inner.document_size(); 0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_get_memory_usage"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 3
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_sections_signature",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "\"name\": section[\"name\"],",
+    "replace": "\"name\": \"MUTATED\",",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_sections_signature"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_imports_signature",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "        results: list[dict[str, Any]] = []\n        try:\n            dir_entry: dict[str, int] = getattr(_pefile_mod, \"DIRECTORY_ENTRY\", {})\n            pe.parse_data_directories(directories=[dir_entry.get(\"IMAGE_DIRECTORY_ENTRY_IMPORT\", 1)])",
+    "replace": "        results: list[dict[str, Any]] = [{\"dll\": \"MUTATED\"}]\n        try:\n            dir_entry: dict[str, int] = getattr(_pefile_mod, \"DIRECTORY_ENTRY\", {})\n            pe.parse_data_directories(directories=[dir_entry.get(\"IMAGE_DIRECTORY_ENTRY_IMPORT\", 1)])",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_imports_signature"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_exports_signature",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "        results: list[dict[str, Any]] = []\n        dir_entry: dict[str, int] = getattr(_pefile_mod, \"DIRECTORY_ENTRY\", {})\n        pe.parse_data_directories(directories=[dir_entry.get(\"IMAGE_DIRECTORY_ENTRY_EXPORT\", 0)])",
+    "replace": "        results: list[dict[str, Any]] = [{\"name\": \"MUTATED\", \"address\": 0, \"ordinal\": 0}]\n        dir_entry: dict[str, int] = getattr(_pefile_mod, \"DIRECTORY_ENTRY\", {})\n        pe.parse_data_directories(directories=[dir_entry.get(\"IMAGE_DIRECTORY_ENTRY_EXPORT\", 0)])",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_exports_signature"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 3
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_with_alignment_4_returns_only_aligned_offsets",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "big_endian, alignment, max_results)",
+    "replace": "big_endian, 1, max_results)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_with_alignment_4_returns_only_aligned_offsets"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_max_results_caps_returned_matches",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "search_numeric(value, size, value_type == \"int\", big_endian, alignment, max_results)",
+    "replace": "search_numeric(value, size, value_type == \"int\", big_endian, alignment, 10000)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_max_results_caps_returned_matches"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_on_minimal_data_does_not_crash",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "self.document.search_numeric(value, size,",
+    "replace": "self.document.search_numeric(value + 1, size,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_on_minimal_data_does_not_crash"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_sandbox/test_sandbox_bridge.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 1,
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_sandbox/test_sandbox_bridge.py",
+    "covering_test": "tests/test_sandbox/test_sandbox_bridge.py::TestToolDefinition::test_all_definition_functions_dispatch_to_real_behavior",
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "search": "\"data\": response.data,",
+    "replace": "\"data\": {},",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_sandbox/test_sandbox_bridge.py::TestToolDefinition::test_all_definition_functions_dispatch_to_real_behavior"
+   },
+   {
+    "test_file": "tests/test_sandbox/test_sandbox_bridge.py",
+    "covering_test": "tests/test_sandbox/test_sandbox_bridge.py::TestCreateDestroy::test_create_translates_unavailable_type_to_typed_tool_error",
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "search": "_ERR_CREATE_FAILED = \"Failed to create sandbox\"",
+    "replace": "_ERR_CREATE_FAILED = \"Sandbox creation problem\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_sandbox/test_sandbox_bridge.py::TestCreateDestroy::test_create_translates_unavailable_type_to_typed_tool_error"
+   }
+  ],
+  "deleted_tests": [
+   "test_definition_exists"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_ui/test_process_panel.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 3
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "tests/test_ui/test_process_panel.py::TestPanelConstruction::test_panel_creates",
+   "tests/test_ui/test_process_panel.py::TestImportCompatibility::test_import_from_package",
+   "tests/test_ui/test_process_panel.py::TestImportCompatibility::test_import_from_panels"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py",
+    "covering_test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestRuntimeDependenciesAreLean::test_runtime_and_extras_tables_are_declared",
+    "src_file": "pyproject.toml",
+    "search": "optional-dependencies.dev = [",
+    "replace": "optional-dependencies.development = [",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestRuntimeDependenciesAreLean::test_runtime_and_extras_tables_are_declared"
+   },
+   {
+    "test_file": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py",
+    "covering_test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestPyprojectIsValid::test_runtime_deps_disjoint_from_moved_extras",
+    "src_file": "pyproject.toml",
+    "search": "  \"xxhash>=3.7.0,<4\",",
+    "replace": "  \"xxhash>=3.7.0,<4\",\n  \"pytest\",",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestPyprojectIsValid::test_runtime_deps_disjoint_from_moved_extras"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py",
+    "covering_test": "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py::test_vendor_mem_base_address_smoke",
+    "src_file": "src/intellicrack/core/hexpat/stdlib.py",
+    "search": "return int(self._pragma.base_address)",
+    "replace": "return 0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py::test_vendor_mem_base_address_smoke"
+   },
+   {
+    "test_file": "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py",
+    "covering_test": "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py::test_vendor_string_parse_int_smoke",
+    "src_file": "src/intellicrack/core/hexpat/stdlib.py",
+    "search": "        result = int(s, base)",
+    "replace": "        result = int(s, base) + 1",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py::test_vendor_string_parse_int_smoke"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_cutter.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 1,
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_cutter.py",
+    "covering_test": "tests/test_bridges/test_cutter.py::TestToolDefinition::test_all_function_parameters_have_recognized_types",
+    "src_file": "src/intellicrack/bridges/schemas.py",
+    "search": "return param_type_lower in PYTHON_TO_JSON_TYPES or param_type_lower in VALID_JSON_SCHEMA_TYPES",
+    "replace": "return param_type_lower in PYTHON_TO_JSON_TYPES and param_type_lower in VALID_JSON_SCHEMA_TYPES",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_cutter.py::TestToolDefinition::test_all_function_parameters_have_recognized_types"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_bridges/test_cutter.py::TestToolDefinition::test_all_functions_resolve_to_methods"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_sandbox_bridge.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 4
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_sandbox_bridge.py",
+    "covering_test": "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_diff_wraps_real_attribute_error_from_bad_process_activity",
+    "src_file": "src/intellicrack/sandbox/analysis.py",
+    "search": "return \"|\".join(str(item.get(field_name, \"\")) for field_name in key_fields)",
+    "replace": "return \"|\".join(str(item) for field_name in key_fields)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_diff_wraps_real_attribute_error_from_bad_process_activity"
+   },
+   {
+    "test_file": "tests/test_bridges/test_sandbox_bridge.py",
+    "covering_test": "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_detect_behaviors_wraps_real_keyerror_from_bad_process_activity",
+    "src_file": "src/intellicrack/sandbox/analysis.py",
+    "search": "proc_name = proc[\"name\"].lower()",
+    "replace": "proc_name = proc.get(\"name\", \"\").lower()",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_detect_behaviors_wraps_real_keyerror_from_bad_process_activity"
+   },
+   {
+    "test_file": "tests/test_bridges/test_sandbox_bridge.py",
+    "covering_test": "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_files_target",
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "search": "\"match_count\": len(matches),",
+    "replace": "\"match_count\": 0,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_files_target"
+   },
+   {
+    "test_file": "tests/test_bridges/test_sandbox_bridge.py",
+    "covering_test": "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_memory_target",
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "search": "matches = await instance.sandbox.yara_scan(rules_path, scan_target)",
+    "replace": "matches = await instance.sandbox.yara_scan(rules_path, \"files\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_memory_target"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_x64dbg_events.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_x64dbg_events.py",
+    "covering_test": "tests/test_bridges/test_x64dbg_events.py::TestEventDispatch::test_handle_event_with_no_callbacks",
+    "src_file": "src/intellicrack/bridges/x64dbg.py",
+    "search": "bp.hit_count += 1",
+    "replace": "bp.hit_count += 0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_x64dbg_events.py::TestEventDispatch::test_handle_event_with_no_callbacks"
+   },
+   {
+    "test_file": "tests/test_bridges/test_x64dbg_events.py",
+    "covering_test": "tests/test_bridges/test_x64dbg_events.py::TestBreakpointHitCounting::test_unknown_event_is_forwarded_without_state_mutation",
+    "src_file": "src/intellicrack/bridges/x64dbg.py",
+    "search": "cb(event_type, message)",
+    "replace": "cb(\"breakpoint\", message)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_x64dbg_events.py::TestBreakpointHitCounting::test_unknown_event_is_forwarded_without_state_mutation"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py::TestCopyAsCsharpArray::test_csharp_array_full_string_matches_payload",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "return f\"new byte[] {{{inner}}}\"",
+    "replace": "return f\"new byte[] {{0x00, 0x00, 0x00}}\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py::TestCopyAsCsharpArray::test_csharp_array_full_string_matches_payload"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py::TestCopyAsJavascriptArray::test_javascript_array_full_string_matches_payload",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "return f\"new Uint8Array([{inner}])\"",
+    "replace": "return f\"new Uint8Array([{inner[::-1]}])\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py::TestCopyAsJavascriptArray::test_javascript_array_full_string_matches_payload"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_disassembly.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_disassembly.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_matches_independent_capstone_decode",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "\"bytes\": insn.raw_bytes.hex(),",
+    "replace": "\"bytes\": insn.raw_bytes.hex() + \"00\",",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_matches_independent_capstone_decode"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_disassembly.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_pe_section_code_with_auto_arch",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "arch, mode = disassembler.auto_detect_arch(header)",
+    "replace": "arch, mode = (\"x86\", \"16\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_pe_section_code_with_auto_arch"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestDecodeText::test_decode_text_unknown_encoding_raises_value_error",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "if hasattr(self.document, \"decode_text\"):",
+    "replace": "if False and hasattr(self.document, \"decode_text\"):",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestDecodeText::test_decode_text_unknown_encoding_raises_value_error"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestListEncodings::test_list_encodings_with_open_document_is_content_independent",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "return [{\"name\": str(e[0]), \"label\": str(e[1])} for e in raw]",
+    "replace": "return [{\"name\": str(e[0]), \"label\": str(e[0])} for e in raw]",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestListEncodings::test_list_encodings_with_open_document_is_content_independent"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_templates.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_templates.py",
+    "covering_test": "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_pe_template_on_elf_data_parses_wrong_e_magic",
+    "src_file": "src/intellicrack-hexcore/src/templates/mod.rs",
+    "search": "format!(\"{v} (0x{v:04X})\")",
+    "replace": "format!(\"0x{v:04X}\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_pe_template_on_elf_data_parses_wrong_e_magic"
+   },
+   {
+    "test_file": "tests/test_hexcore_e2e/test_templates.py",
+    "covering_test": "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_elf_template_on_pe_data_parses_wrong_e_ident",
+    "src_file": "src/intellicrack-hexcore/src/templates/mod.rs",
+    "search": "raw[..*n].iter().map(|b| format!(\"{b:02X}\")).collect();",
+    "replace": "raw[..*n].iter().map(|b| format!(\"{b:02x}\")).collect();",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_elf_template_on_pe_data_parses_wrong_e_ident"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit3/core/test_script_gen.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 1
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "test_reload_script_source_has_no_apology_comments"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py",
+    "covering_test": "TestNetworkMonitorSource::test_uses_owner_pid_variable",
+    "src_file": "src/intellicrack/sandbox/windows.py",
+    "search": "udp|0|0|$ownerPid|$name",
+    "replace": "udp|0|0|$pid|$name",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py::TestNetworkMonitorSource::test_uses_owner_pid_variable"
+   },
+   {
+    "test_file": "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py",
+    "covering_test": "TestRegistryMonitorSource::test_type_included_in_log_entry",
+    "src_file": "src/intellicrack/sandbox/windows.py",
+    "search": "\"                $rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }\\n\"",
+    "replace": "\"                $rtype = 'Unknown'\\n\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py::TestRegistryMonitorSource::test_type_included_in_log_entry"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_hex_editor_pe_methods.py",
+  "review_overall": "pass",
+  "actions": {
+   "deleted": 2,
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_hex_editor_pe_methods.py",
+    "covering_test": "tests/test_bridges/test_hex_editor_pe_methods.py::TestMethodDispatchSurface::test_method_signature_and_return_value[get_pe_sections]",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "count = min(num_sections, _MAX_PE_SECTIONS)",
+    "replace": "count = 0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_hex_editor_pe_methods.py::TestMethodDispatchSurface::test_method_signature_and_return_value"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_bridges/test_hex_editor_pe_methods.py::TestMethodDispatchSurface::test_method_resolves_via_getattr",
+   "tests/test_bridges/test_hex_editor_pe_methods.py::TestMethodDispatchSurface::test_method_is_coroutine_function"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit3/bridges/test_installer.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit3/bridges/test_installer.py",
+    "covering_test": "tests/test_audit3/bridges/test_installer.py::TestPEVersionForGUITools::test_get_version_x64dbg_uses_pe_when_available",
+    "src_file": "src/intellicrack/bridges/installer.py",
+    "search": "if raw := _read_pe_version_info(exe_path):",
+    "replace": "if raw := None:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/bridges/test_installer.py::TestPEVersionForGUITools::test_get_version_x64dbg_uses_pe_when_available"
+   },
+   {
+    "test_file": "tests/test_audit3/bridges/test_installer.py",
+    "covering_test": "tests/test_audit3/bridges/test_installer.py::TestProgressLoggingPerMB::test_progress_threshold_is_per_megabyte",
+    "src_file": "src/intellicrack/bridges/installer.py",
+    "search": "if total > 0 and bytes_since_last_log >= _ONE_MB:",
+    "replace": "if total > 0 and bytes_since_last_log >= _ONE_MB // 2:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/bridges/test_installer.py::TestProgressLoggingPerMB::test_progress_threshold_is_per_megabyte"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit3/sandbox/test_injection_monitor.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit3/sandbox/test_injection_monitor.py",
+    "covering_test": "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_does_not_label_normal_thread_starts_as_shellcode_injection",
+    "src_file": "src/intellicrack/sandbox/scripts/injection_monitor.ps1",
+    "search": "$injType = 'remote_thread_outside_modules'",
+    "replace": "$injType = 'shellcode_injection'",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_does_not_label_normal_thread_starts_as_shellcode_injection"
+   },
+   {
+    "test_file": "tests/test_audit3/sandbox/test_injection_monitor.py",
+    "covering_test": "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_emits_threat_intel_unavailable_warning_when_not_admin",
+    "src_file": "src/intellicrack/sandbox/scripts/injection_monitor.ps1",
+    "search": "    Write-InjectionDiagnostic -Timestamp $ts -Category 'trace_session_failed' -Detail $_.Exception.Message\n    throw",
+    "replace": "    Write-InjectionDiagnostic -Timestamp $ts -Category 'trace_session_failed' -Detail $_.Exception.Message",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_emits_threat_intel_unavailable_warning_when_not_admin"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_credential_loading.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_credential_loading.py",
+    "covering_test": "tests/test_providers/test_credential_loading.py::TestCredentialValidation::test_get_credentials_returns_credentials_or_none",
+    "src_file": "src/intellicrack/credentials/env_loader.py",
+    "search": "        return ProviderCredentials(\n            api_key=api_key,",
+    "replace": "        return ProviderCredentials(\n            api_key=None,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_credential_loading.py::TestCredentialValidation::test_get_credentials_returns_credentials_or_none"
+   },
+   {
+    "test_file": "tests/test_providers/test_credential_loading.py",
+    "covering_test": "tests/test_providers/test_credential_loading.py::TestEnvironmentVariableAccess::test_set_env_var_updates_value",
+    "src_file": "src/intellicrack/credentials/env_loader.py",
+    "search": "        self._env_vars[name] = value\n        os.environ[name] = value",
+    "replace": "        self._env_vars[name] = value\n        os.environ[name] = \"\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_credential_loading.py::TestEnvironmentVariableAccess::test_set_env_var_updates_value"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_local_xpu_e2e.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_local_xpu_e2e.py",
+    "covering_test": "TestVRAMManagement::test_memory_decreases_after_unload",
+    "src_file": "src/intellicrack/providers/local_transformers.py",
+    "search": "self._model_cache.remove(model_id, dtype, device_type)",
+    "replace": "pass  # self._model_cache.remove(model_id, dtype, device_type)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_local_xpu_e2e.py::TestVRAMManagement::test_memory_decreases_after_unload"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_model_discovery.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_model_discovery.py",
+    "covering_test": "tests/test_providers/test_model_discovery.py::TestAllProvidersModelCount::test_summary_all_providers",
+    "src_file": "src/intellicrack/providers/ollama.py",
+    "search": "models.append(",
+    "replace": "_ = (",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_model_discovery.py::TestAllProvidersModelCount::test_summary_all_providers"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_ollama_provider.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_ollama_provider.py",
+    "covering_test": "TestOllamaModelListing::test_list_models_returns_model_info_instances",
+    "src_file": "src/intellicrack/providers/ollama.py",
+    "search": "id=f\"{id_prefix}{model_name}\"",
+    "replace": "id=\"\"",
+    "baseline": "expected-red",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_ollama_provider.py::TestOllamaModelListing::test_list_models_returns_model_info_instances"
+   },
+   {
+    "test_file": "tests/test_providers/test_ollama_provider.py",
+    "covering_test": "TestOllamaModelListing::test_multiple_calls_return_consistent_results",
+    "src_file": "src/intellicrack/providers/ollama.py",
+    "search": "id_prefix=\"local/\"",
+    "replace": "id_prefix=\"\"",
+    "baseline": "expected-red",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_ollama_provider.py::TestOllamaModelListing::test_multiple_calls_return_consistent_results"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_providers_cloud_audit1.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 4
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_providers_cloud_audit1.py",
+    "covering_test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0001_chat_enable_cache_completes_full_call_path",
+    "src_file": "src/intellicrack/providers/grok.py",
+    "search": "content = response_message.content if response_message.content is not None else \"\"",
+    "replace": "content = \"\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_providers_cloud_audit1.py::test_f0001_chat_enable_cache_completes_full_call_path"
+   },
+   {
+    "test_file": "tests/test_providers/test_providers_cloud_audit1.py",
+    "covering_test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_grok_retries_on_transient_rate_limit",
+    "src_file": "src/intellicrack/providers/base.py",
+    "search": "for attempt in range(max_retries + 1):",
+    "replace": "for attempt in range(1):",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_grok_retries_on_transient_rate_limit"
+   },
+   {
+    "test_file": "tests/test_providers/test_providers_cloud_audit1.py",
+    "covering_test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_openrouter_retries_on_transient_rate_limit",
+    "src_file": "src/intellicrack/providers/base.py",
+    "search": "for attempt in range(max_retries + 1):",
+    "replace": "for attempt in range(1):",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_openrouter_retries_on_transient_rate_limit"
+   },
+   {
+    "test_file": "tests/test_providers/test_providers_cloud_audit1.py",
+    "covering_test": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_google_retries_on_transient_rate_limit",
+    "src_file": "src/intellicrack/providers/base.py",
+    "search": "for attempt in range(max_retries + 1):",
+    "replace": "for attempt in range(1):",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_google_retries_on_transient_rate_limit"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_sandbox/test_realcov_12b_analysis_real.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_sandbox/test_realcov_12b_analysis_real.py",
+    "covering_test": "test_match_behaviors_on_real_capture_is_consistent",
+    "src_file": "src/intellicrack/sandbox/analysis.py",
+    "search": "if activity[\"remote_port\"] == port_int",
+    "replace": "if activity[\"remote_port\"] != port_int",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_sandbox/test_realcov_12b_analysis_real.py::test_match_behaviors_on_real_capture_is_consistent"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit3/bridges/test_realcov_04_installer.py",
+  "review_overall": "pass",
+  "actions": {
+   "deleted": 1
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "test_frida_python_package_discovery"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit3/ui/test_script_manager.py",
+  "review_overall": "pass",
+  "actions": {
+   "deleted": 1
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "tests/test_audit3/ui/test_script_manager.py::TestX64dbgTemplateParse::test_template_is_non_empty"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py",
+    "covering_test": "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py::test_f0012_compile_typescript_reuses_compiler_instance",
+    "src_file": "src/intellicrack/bridges/frida_bridge.py",
+    "search": "            if compiler is None:\n                compiler = frida.Compiler()\n                self._typescript_compiler = compiler\n            return compiler",
+    "replace": "            if True:\n                compiler = frida.Compiler()\n                self._typescript_compiler = compiler\n            return compiler",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py::test_f0012_compile_typescript_reuses_compiler_instance"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit7/sandbox_monitors/test_stop_event.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit7/sandbox_monitors/test_stop_event.py",
+    "covering_test": "tests/test_audit7/sandbox_monitors/test_stop_event.py::test_start_monitors_skips_underscore_prefixed_scripts",
+    "src_file": "src/intellicrack/sandbox/scripts/start_monitors.cmd",
+    "search": "if \"%SCRIPT_NAME:~0,1%\"==\"_\" goto :eof",
+    "replace": "rem if \"%SCRIPT_NAME:~0,1%\"==\"_\" goto :eof",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit7/sandbox_monitors/test_stop_event.py::test_start_monitors_skips_underscore_prefixed_scripts"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit7/sandbox_windows/test_anti_evasion_wmi_hijack.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit7/sandbox_windows/test_anti_evasion_wmi_hijack.py",
+    "covering_test": "tests/test_audit7/sandbox_windows/test_anti_evasion_wmi_hijack.py::test_mof_text_is_well_formed_for_each_profile",
+    "src_file": "src/intellicrack/sandbox/windows.py",
+    "search": "f'    Manufacturer = \"{profile.manufacturer}\";\\n'",
+    "replace": "'    Manufacturer = \"MUTATED_WRONG\";\\n'",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit7/sandbox_windows/test_anti_evasion_wmi_hijack.py::test_mof_text_is_well_formed_for_each_profile"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py",
+    "covering_test": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py::TestExecutePatternForwardsPrintSink::test_omitting_print_sink_does_not_raise",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "fields: list[dict[str, Any]] = interpreter.execute(source, self.document, offset)",
+    "replace": "fields: list[dict[str, Any]] = []",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py::TestExecutePatternForwardsPrintSink::test_omitting_print_sink_does_not_raise"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py",
+    "covering_test": "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py::TestF0012ThreadsTabAutoRefresh::test_button_text_reflects_state",
+    "src_file": "src/intellicrack/ui/panels/process_panel/threads_tab.py",
+    "search": "self._auto_refresh_timer.start(_AUTO_REFRESH_INTERVAL_MS)",
+    "replace": "self._auto_refresh_timer.stop()",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py::TestF0012ThreadsTabAutoRefresh::test_button_text_reflects_state"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py",
+    "covering_test": "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py::TestMainWindowWireSandboxBackend::test_call_count_matches_forwarded_invocation",
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "search": "        instances_map[instance.id] = instance",
+    "replace": "        _ = instance",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py::TestMainWindowWireSandboxBackend::test_call_count_matches_forwarded_invocation"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 5
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_frida_bridge.py",
+    "covering_test": "tests/test_bridges/test_frida_bridge.py::test_crash_info_bridge_internal_accumulation",
+    "src_file": "src/intellicrack/bridges/frida_bridge.py",
+    "search": "process_name=str(getattr(crash, \"process_name\", \"\")),",
+    "replace": "process_name=str(getattr(crash, \"pname\", \"\")),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_frida_bridge.py::test_crash_info_bridge_internal_accumulation"
+   },
+   {
+    "test_file": "tests/test_bridges/test_frida_bridge.py",
+    "covering_test": "tests/test_bridges/test_frida_bridge.py::test_child_process_info_bridge_accumulation_full_fields",
+    "src_file": "src/intellicrack/bridges/frida_bridge.py",
+    "search": "child_parent_pid = int(getattr(child, \"parent_pid\", 0))",
+    "replace": "child_parent_pid = int(getattr(child, \"ppid\", 0))",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_frida_bridge.py::test_child_process_info_bridge_accumulation_full_fields"
+   },
+   {
+    "test_file": "tests/test_bridges/test_frida_bridge.py",
+    "covering_test": "tests/test_bridges/test_frida_bridge.py::test_child_process_info_bridge_accumulation_none_fields",
+    "src_file": "src/intellicrack/bridges/frida_bridge.py",
+    "search": "identifier=getattr(child, \"identifier\", None),",
+    "replace": "identifier=str(getattr(child, \"identifier\", None)),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_frida_bridge.py::test_child_process_info_bridge_accumulation_none_fields"
+   },
+   {
+    "test_file": "tests/test_bridges/test_frida_bridge.py",
+    "covering_test": "tests/test_bridges/test_frida_bridge.py::test_get_pending_children_empty",
+    "src_file": "src/intellicrack/bridges/frida_bridge.py",
+    "search": "result = list(self._gated_children)",
+    "replace": "result = list()",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_frida_bridge.py::test_get_pending_children_empty"
+   },
+   {
+    "test_file": "tests/test_bridges/test_frida_bridge.py",
+    "covering_test": "tests/test_bridges/test_frida_bridge.py::test_crash_reporting_lifecycle",
+    "src_file": "src/intellicrack/bridges/frida_bridge.py",
+    "search": "result = list(self._crashes)",
+    "replace": "result = list()",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_frida_bridge.py::test_crash_reporting_lifecycle"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_realcov_03c_cutter.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_realcov_03c_cutter.py",
+    "covering_test": "tests/test_bridges/test_realcov_03c_cutter.py::TestRealMetadata::test_relocations_real",
+    "src_file": "src/intellicrack/bridges/cutter.py",
+    "search": "vaddr=_get_int(r, \"vaddr\"),",
+    "replace": "vaddr=0,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_realcov_03c_cutter.py::TestRealMetadata::test_relocations_real"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_win32_types.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 9
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_win32_types.py",
+    "covering_test": "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_context64_layout",
+    "src_file": "src/intellicrack/bridges/win32_types.py",
+    "search": "        (\"FltSave\", ctypes.c_byte * 512),",
+    "replace": "        (\"FltSave\", ctypes.c_byte * 256),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_context64_layout"
+   },
+   {
+    "test_file": "tests/test_bridges/test_win32_types.py",
+    "covering_test": "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_context32_layout",
+    "src_file": "src/intellicrack/bridges/win32_types.py",
+    "search": "        (\"FloatSave\", FLOATING_SAVE_AREA),\n        (\"SegGs\", wintypes.DWORD),\n        (\"SegFs\", wintypes.DWORD),",
+    "replace": "        (\"FloatSave\", FLOATING_SAVE_AREA),\n        (\"SegGs\", wintypes.DWORD),\n        (\"SegFs\", wintypes.DWORD),\n        (\"_padding\", wintypes.DWORD),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_context32_layout"
+   },
+   {
+    "test_file": "tests/test_bridges/test_win32_types.py",
+    "covering_test": "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_memory_basic_information_layout",
+    "src_file": "src/intellicrack/bridges/win32_types.py",
+    "search": "        (\"AllocationProtect\", wintypes.DWORD),\n        (\"RegionSize\", ctypes.c_size_t),",
+    "replace": "        (\"AllocationProtect\", wintypes.DWORD),\n        (\"_unused\", wintypes.DWORD),\n        (\"RegionSize\", ctypes.c_size_t),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_memory_basic_information_layout"
+   },
+   {
+    "test_file": "tests/test_bridges/test_win32_types.py",
+    "covering_test": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_kernel32_resolves_getcurrentprocessid",
+    "src_file": "src/intellicrack/bridges/win32_types.py",
+    "search": "            _kernel32_cache = ctypes.windll.kernel32",
+    "replace": "            _kernel32_cache = ctypes.WinDLL(\"ntdll\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_kernel32_resolves_getcurrentprocessid"
+   },
+   {
+    "test_file": "tests/test_bridges/test_win32_types.py",
+    "covering_test": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_ntdll_resolves_rtlgetversion",
+    "src_file": "src/intellicrack/bridges/win32_types.py",
+    "search": "            _ntdll_cache = ctypes.WinDLL(\"ntdll\")",
+    "replace": "            _ntdll_cache = ctypes.WinDLL(\"kernel32\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_ntdll_resolves_rtlgetversion"
+   },
+   {
+    "test_file": "tests/test_bridges/test_win32_types.py",
+    "covering_test": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_advapi32_resolves_lookupprivilegevaluew",
+    "src_file": "src/intellicrack/bridges/win32_types.py",
+    "search": "            _advapi32_cache = ctypes.WinDLL(\"advapi32\")",
+    "replace": "            _advapi32_cache = ctypes.WinDLL(\"ntdll\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_advapi32_resolves_lookupprivilegevaluew"
+   },
+   {
+    "test_file": "tests/test_bridges/test_win32_types.py",
+    "covering_test": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_user32_resolves_getdesktopwindow",
+    "src_file": "src/intellicrack/bridges/win32_types.py",
+    "search": "            _user32_cache = ctypes.WinDLL(\"user32\")",
+    "replace": "            _user32_cache = ctypes.WinDLL(\"ntdll\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_user32_resolves_getdesktopwindow"
+   },
+   {
+    "test_file": "tests/test_bridges/test_win32_types.py",
+    "covering_test": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_dbghelp_resolves_symgetoptions",
+    "src_file": "src/intellicrack/bridges/win32_types.py",
+    "search": "            _dbghelp_cache = ctypes.WinDLL(\"dbghelp\")",
+    "replace": "            _dbghelp_cache = ctypes.WinDLL(\"ntdll\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_dbghelp_resolves_symgetoptions"
+   },
+   {
+    "test_file": "tests/test_bridges/test_win32_types.py",
+    "covering_test": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_psapi_resolves_getprocessmemoryinfo",
+    "src_file": "src/intellicrack/bridges/win32_types.py",
+    "search": "            _psapi_cache = ctypes.windll.psapi",
+    "replace": "            _psapi_cache = ctypes.WinDLL(\"ntdll\")",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_psapi_resolves_getprocessmemoryinfo"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_bridges/test_x64dbg_audit6.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_bridges/test_x64dbg_audit6.py",
+    "covering_test": "tests/test_bridges/test_x64dbg_audit6.py::TestStepEventSync::test_all_step_methods_resolve_via_paused_event",
+    "src_file": "src/intellicrack/bridges/x64dbg.py",
+    "search": "return await self._await_step_complete(\"step_out\")",
+    "replace": "return 0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_bridges/test_x64dbg_audit6.py::TestStepEventSync::test_all_step_methods_resolve_via_paused_event"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_core/test_elevation.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_core/test_elevation.py",
+    "covering_test": "tests/test_core/test_elevation.py::TestPlatformHelpers::test_is_elevated_matches_oracle",
+    "src_file": "src/intellicrack/core/elevation.py",
+    "search": "return bool(is_user_an_admin())",
+    "replace": "return not bool(is_user_an_admin())",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_elevation.py::TestPlatformHelpers::test_is_elevated_matches_oracle"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_core/test_orchestrator.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_core/test_orchestrator.py",
+    "covering_test": "tests/test_core/test_orchestrator.py::test_stats_to_dict",
+    "src_file": "src/intellicrack/core/orchestrator.py",
+    "search": "self.average_response_time_ms = sum(self._response_times) / len(self._response_times)",
+    "replace": "self.average_response_time_ms = 0.0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_orchestrator.py::test_stats_to_dict"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_core/test_realcov_05b_tools.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_core/test_realcov_05b_tools.py",
+    "covering_test": "tests/test_core/test_realcov_05b_tools.py::TestExecuteToolCallRealDispatch::test_tool_name_is_case_insensitive",
+    "src_file": "src/intellicrack/core/tools.py",
+    "search": "tool_enum = ToolName(tool_name.lower())",
+    "replace": "tool_enum = ToolName(tool_name)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_core/test_realcov_05b_tools.py::TestExecuteToolCallRealDispatch::test_tool_name_is_case_insensitive"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_core/test_tools_audit6.py",
+  "review_overall": "pass",
+  "actions": {
+   "deleted": 1
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "tests/test_core/test_tools_audit6.py::TestF0017CutterAutoInit::test_cutter_in_initialize_targets_set"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bookmarks.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bookmarks.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bookmarks.py::TestBookmarks::test_add_bookmark_returns_index",
+    "src_file": "src/intellicrack-hexcore/src/lib.rs",
+    "search": "label: label.to_string(),",
+    "replace": "label: String::new(),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bookmarks.py::TestBookmarks::test_add_bookmark_returns_index"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_ai_context.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_ai_context.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_ai_context.py::TestBridgeAIContext::test_get_context_for_ai_bookmarks_contain_expected_fields_when_present",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "{\"offset\": b[0], \"length\": b[1], \"label\": b[2]}",
+    "replace": "{\"offset\": b[0], \"length\": b[0], \"label\": b[2]}",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_ai_context.py::TestBridgeAIContext::test_get_context_for_ai_bookmarks_contain_expected_fields_when_present"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_base_convert.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_base_convert.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_base_convert.py::TestBaseConvertEdgeCases::test_result_has_base_keys",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "\"hex\": hex(parsed),",
+    "replace": "\"hex\": str(parsed),",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_base_convert.py::TestBaseConvertEdgeCases::test_result_has_base_keys"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_block_ops.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_block_ops.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_block_ops.py::TestCopyBlock::test_copy_block_overlapping_forward",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "self.document.copy_block(src_offset, length, dst_offset)",
+    "replace": "self.document.copy_block(src_offset, length, src_offset)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_block_ops.py::TestCopyBlock::test_copy_block_overlapping_forward"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_copy_as.py",
+  "review_overall": "pass",
+  "actions": {
+   "deleted": 1
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "tests/test_hexcore_e2e/test_bridge_copy_as.py::TestBridgeCopyAs::test_copy_as_hex_contains_spaces"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_document_info.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_document_info.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_document_info.py::TestDocumentInfoWithFile::test_undo_after_write_restores_original_byte",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "result: bool = self.document.undo()",
+    "replace": "result: bool = False",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_document_info.py::TestDocumentInfoWithFile::test_undo_after_write_restores_original_byte"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_error_handling.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_error_handling.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_error_handling.py::TestWriteBytesErrors::test_write_bytes_beyond_length_on_loaded_doc",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "        _logger.info(\"bytes_write_started\", offset=hex(offset), length=len(data))\n        self.document.write_bytes(offset, data)",
+    "replace": "        _logger.info(\"bytes_write_started\", offset=hex(offset), length=len(data))\n        self.document.write_bytes(0, data)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_error_handling.py::TestWriteBytesErrors::test_write_bytes_beyond_length_on_loaded_doc"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py::TestProcessMemoryBridge::test_list_process_regions_raises_without_hexcore",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "msg = \"hexcore native module not available\"\n            raise RuntimeError(msg)\n\n        regions: list[tuple[int, int, int, int]] = _hexcore_mod.HexDocument.list_process_memory_regions(pid)",
+    "replace": "msg = \"hexcore native module is ready\"\n            raise RuntimeError(msg)\n\n        regions: list[tuple[int, int, int, int]] = _hexcore_mod.HexDocument.list_process_memory_regions(pid)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py::TestProcessMemoryBridge::test_list_process_regions_raises_without_hexcore"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_patches.py",
+  "review_overall": "fail",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_patches.py",
+    "covering_test": "TestBridgeImportPatches::test_import_patches_returns_integer_count",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "count = self.document.import_patches_ips(raw)",
+    "replace": "count = 0",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_patches.py::TestBridgeImportPatches::test_import_patches_returns_integer_count"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_pattern_engine.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_pattern_engine.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_pattern_engine.py::TestListAndAutoDetect::test_list_hexpat_patterns_items_have_required_keys",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "        patterns = registry.list_patterns()",
+    "replace": "        patterns = []",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_pattern_engine.py::TestListAndAutoDetect::test_list_hexpat_patterns_items_have_required_keys"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_search.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_search.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_search.py::TestBridgeSearchHex::test_search_hex_max_results_respected",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "results = self.document.search_hex(pattern, max_results)",
+    "replace": "results = self.document.search_hex(pattern, max_results * 1000)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_search.py::TestBridgeSearchHex::test_search_hex_max_results_respected"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_state_integration.py",
+  "review_overall": "pass",
+  "actions": {
+   "deleted": 1
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "tests/test_hexcore_e2e/test_bridge_state_integration.py::TestSetStateHolder::test_state_holder_accessible_after_set"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_transforms.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_transforms.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_transforms.py::TestBridgeApplyTransform::test_apply_transform_returns_length_matching_input",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "        return data.hex()",
+    "replace": "        return bytes(len(data)).hex()",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_transforms.py::TestBridgeApplyTransform::test_apply_transform_returns_length_matching_input"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py::TestApplyPipelineInvalidStep::test_pipeline_with_invalid_step_name_completes",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "if step_name in node_map:",
+    "replace": "if step_name not in node_map:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py::TestApplyPipelineInvalidStep::test_pipeline_with_invalid_step_name_completes"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_yara.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_bridge_yara.py",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_yara.py::TestBridgeYaraScan::test_yara_scan_returns_list",
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "search": "_logger.debug(\"yara_scan_completed\", matches=len(raw_matches))\n        return [\n            {\n                \"rule\": m.rule_name,\n                \"tags\": m.tags,\n                \"meta\": m.meta,\n                \"namespace\": m.namespace,\n                \"strings\": [{\"identifier\": s.identifier, \"offset\": s.offset, \"data\": s.data.hex()} for s in m.strings],\n            }\n            for m in raw_matches\n        ]",
+    "replace": "_logger.debug(\"yara_scan_completed\", matches=len(raw_matches))\n        return [\n            {\n                \"rule\": m.rule_name,\n                \"tags\": m.tags,\n                \"meta\": m.meta,\n                \"namespace\": m.namespace,\n                \"strings\": [{\"identifier\": s.identifier, \"offset\": s.offset + 1, \"data\": s.data.hex()} for s in m.strings],\n            }\n            for m in raw_matches\n        ]",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_bridge_yara.py::TestBridgeYaraScan::test_yara_scan_returns_list"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_encodings.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_encodings.py",
+    "covering_test": "tests/test_hexcore_e2e/test_encodings.py::TestDecodeTextEdgeCases::test_decode_invalid_utf8_uses_replacement_characters",
+    "src_file": "src/intellicrack-hexcore/src/encodings.rs",
+    "search": "let (cow, _enc_used, had_errors) = enc.decode(data);\n            Ok((cow.into_owned(), had_errors))",
+    "replace": "let (_cow, _enc_used, had_errors) = enc.decode(data);\n            Ok((String::new(), had_errors))",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_encodings.py::TestDecodeTextEdgeCases::test_decode_invalid_utf8_uses_replacement_characters"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py",
+    "covering_test": "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py::TestTypeCasts::test_cast_negative_to_signed",
+    "src_file": "src/intellicrack/core/hexpat/evaluator.py",
+    "search": "            if type_info is not None and type_info.signed:\n                return str(value)",
+    "replace": "            if type_info is not None and type_info.signed:\n                return f\"0x{value:X}\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py::TestTypeCasts::test_cast_negative_to_signed"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_hexpat_stdlib.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_hexpat_stdlib.py",
+    "covering_test": "tests/test_hexcore_e2e/test_hexpat_stdlib.py::TestIOFunctions::test_format_via_interpreter_produces_string",
+    "src_file": "src/intellicrack/core/hexpat/stdlib.py",
+    "search": "            if not format_spec:\n                return str(value)",
+    "replace": "            if not format_spec:\n                return \"MUTATED\"",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_hexpat_stdlib.py::TestIOFunctions::test_format_via_interpreter_produces_string"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_process_memory.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_process_memory.py",
+    "covering_test": "tests/test_hexcore_e2e/test_process_memory.py::TestFromProcessMemory::test_from_process_memory_zero_size_handled",
+    "src_file": "src/intellicrack-hexcore/src/data_source.rs",
+    "search": "        if length == 0 {\n            return Ok(Vec::new());\n        }",
+    "replace": "        if length == 0 {\n            return Ok(vec![0u8]);\n        }",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_process_memory.py::TestFromProcessMemory::test_from_process_memory_zero_size_handled"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_search.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexcore_e2e/test_search.py",
+    "covering_test": "tests/test_hexcore_e2e/test_search.py::TestSearchHex::test_wildcard_byte_matches_pe_header_sequence",
+    "src_file": "src/intellicrack-hexcore/src/search.rs",
+    "search": "(data[i + j] & mask) != (*value & mask)",
+    "replace": "data[i + j] != *value",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexcore_e2e/test_search.py::TestSearchHex::test_wildcard_byte_matches_pe_header_sequence"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexpat/test_realcov_07b_compiler_pragmas.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexpat/test_realcov_07b_compiler_pragmas.py",
+    "covering_test": "tests/test_hexpat/test_realcov_07b_compiler_pragmas.py::TestVendorPatternCompilation::test_known_static_cda_pattern_compiles_to_exact_schema",
+    "src_file": "src/intellicrack/core/hexpat_compiler.py",
+    "search": "\"u32\": {\"type\": \"UInt32\"},",
+    "replace": "\"u32\": {\"type\": \"UInt8\"},",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexpat/test_realcov_07b_compiler_pragmas.py::TestVendorPatternCompilation::test_known_static_cda_pattern_compiles_to_exact_schema"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py",
+    "covering_test": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py::TestVendorIncludeFlattening::test_missing_include_does_not_raise",
+    "src_file": "src/intellicrack/core/hexpat/preprocessor.py",
+    "search": "\"include_not_found\",",
+    "replace": "\"include_resolved\",",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py::TestVendorIncludeFlattening::test_missing_include_does_not_raise"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_anthropic_buffers_live.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_anthropic_buffers_live.py",
+    "covering_test": "tests/test_providers/test_anthropic_buffers_live.py::test_fresh_provider_buffers_start_empty",
+    "src_file": "src/intellicrack/providers/base.py",
+    "search": "self._pending_usage: UsageInfo | None = None",
+    "replace": "self._pending_usage: UsageInfo | None = UsageInfo()",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_anthropic_buffers_live.py::test_fresh_provider_buffers_start_empty"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_google_provider.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 7,
+   "hardened": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_google_provider.py",
+    "covering_test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness",
+    "src_file": "src/intellicrack/providers/google.py",
+    "search": "if \"gemini\" not in name_lower or \"embedding\" in name_lower:",
+    "replace": "if \"embedding\" in name_lower:",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness"
+   },
+   {
+    "test_file": "tests/test_providers/test_google_provider.py",
+    "covering_test": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_includes_known_production_model_with_capabilities",
+    "src_file": "src/intellicrack/providers/google.py",
+    "search": "supports_tools = \"generateContent\" in gen_methods",
+    "replace": "supports_tools = False",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_includes_known_production_model_with_capabilities"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_returns_model_info_instances",
+   "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_valid_id",
+   "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_valid_name",
+   "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_correct_provider",
+   "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_positive_context_window",
+   "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_model_info_has_boolean_capabilities",
+   "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_models_are_gemini_models"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_grok_provider.py",
+  "review_overall": "pass",
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_grok_provider.py",
+    "covering_test": "tests/test_providers/test_grok_provider.py::TestGrokModelListing::test_model_capability_values_match_published_profile",
+    "src_file": "src/intellicrack/providers/grok.py",
+    "search": "        if \"grok-4\" in model_id:\n            return _GROK_4_CONTEXT_WINDOW\n        if \"grok-3\" in model_id:\n            return _GROK_3_CONTEXT_WINDOW",
+    "replace": "        if \"grok-4\" in model_id:\n            return _GROK_4_CONTEXT_WINDOW\n        if \"grok-3\" in model_id:\n            return _GROK_4_CONTEXT_WINDOW",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_grok_provider.py::TestGrokModelListing::test_model_capability_values_match_published_profile"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_huggingface_provider.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1,
+   "deleted": 4
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_huggingface_provider.py",
+    "covering_test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_list_models_returns_model_info_instances",
+    "src_file": "src/intellicrack/providers/huggingface.py",
+    "search": "                    supports_streaming=True,",
+    "replace": "                    supports_streaming=False,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_list_models_returns_model_info_instances"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_valid_name",
+   "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_correct_provider",
+   "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_positive_context_window",
+   "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_boolean_capabilities"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_local_transformers_provider.py",
+  "review_overall": "pass",
+  "actions": {
+   "deleted": 1
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "tests/test_providers/test_local_transformers_provider.py::TestProviderListModels::test_list_models_returns_list"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_openai_provider.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_openai_provider.py",
+    "covering_test": "tests/test_providers/test_openai_provider.py::TestOpenAIModelListing::test_known_model_gpt4o_mini_has_documented_capabilities",
+    "src_file": "src/intellicrack/providers/openai.py",
+    "search": "        if model_id.startswith((\"gpt-4o\", \"gpt-4-turbo\", \"gpt-4.1\", \"gpt-4.5\")):\n            return 128000",
+    "replace": "        if model_id.startswith((\"gpt-4o\", \"gpt-4-turbo\", \"gpt-4.1\", \"gpt-4.5\")):\n            return 4096",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_openai_provider.py::TestOpenAIModelListing::test_known_model_gpt4o_mini_has_documented_capabilities"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_openrouter_provider.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1,
+   "deleted": 2
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_openrouter_provider.py",
+    "covering_test": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields",
+    "src_file": "src/intellicrack/providers/openrouter.py",
+    "search": "supports_streaming=True,",
+    "replace": "supports_streaming=False,",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields"
+   }
+  ],
+  "deleted_tests": [
+   "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_model_info_has_correct_provider",
+   "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_model_info_has_boolean_capabilities"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_providers/test_registry.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_providers/test_registry.py",
+    "covering_test": "tests/test_providers/test_registry.py::TestF0005NameToClassMapping::test_register_class_recorded_alongside_instance",
+    "src_file": "src/intellicrack/providers/registry.py",
+    "search": "self._provider_classes[name] = type(provider)",
+    "replace": "self._provider_classes[name] = type(self)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_providers/test_registry.py::TestF0005NameToClassMapping::test_register_class_recorded_alongside_instance"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_sandbox/test_base_types.py",
+  "review_overall": "pass",
+  "actions": {
+   "deleted": 1
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "tests/test_sandbox/test_base_types.py::TestExecutionReport::test_new_fields_present"
+  ],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_sandbox/test_manager.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_sandbox/test_manager.py",
+    "covering_test": "tests/test_sandbox/test_manager.py::TestSandboxInstance::test_timestamps_are_set",
+    "src_file": "src/intellicrack/sandbox/manager.py",
+    "search": "self.created_at = datetime.now(UTC)",
+    "replace": "self.created_at = datetime(2000, 1, 1, tzinfo=UTC)",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_sandbox/test_manager.py::TestSandboxInstance::test_timestamps_are_set"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py",
+    "covering_test": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py::TestRealManagerIntegration::test_create_windows_sandbox_success_path",
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "search": "\"status\": instance.state.status,",
+    "replace": "\"status\": \"stopped\",",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py::TestRealManagerIntegration::test_create_windows_sandbox_success_path"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/test_ui/test_xpu_status.py",
+  "review_overall": null,
+  "actions": {
+   "hardened": 1
+  },
+  "mutations": [
+   {
+    "test_file": "tests/test_ui/test_xpu_status.py",
+    "covering_test": "tests/test_ui/test_xpu_status.py::TestXPUStatusDialogMemory::test_memory_text_shows_gb_values",
+    "src_file": "src/intellicrack/ui/xpu_status.py",
+    "search": "alloc_gb = allocated / _BYTES_PER_GB",
+    "replace": "alloc_gb = total / _BYTES_PER_GB",
+    "baseline": "green",
+    "action": "hardened",
+    "search_status": "ok",
+    "_resolved": "tests/test_ui/test_xpu_status.py::TestXPUStatusDialogMemory::test_memory_text_shows_gb_values"
+   }
+  ],
+  "deleted_tests": [],
+  "red_prod_defect_tests": []
+ },
+ {
+  "file": "tests/ui/test_system_tab_warnings.py",
+  "review_overall": null,
+  "actions": {
+   "deleted": 1
+  },
+  "mutations": [],
+  "deleted_tests": [
+   "tests/ui/test_system_tab_warnings.py::TestUnattachedPidGuards::test_unattached_handlers_do_not_raise"
+  ],
+  "red_prod_defect_tests": []
+ }
+]

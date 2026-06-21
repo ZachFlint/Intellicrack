@@ -1,1 +1,39 @@
-{"unitId":"U19-a15","findings":[{"ref":"tests/test_audit3/core/test_disassembler.py:86 - test_f0002_auto_detect_arch_known_returns_capstone_pair","severity":"Medium","status":"FIXED","oracle":"Real input b'\\x48\\x31\\xc0\\x48\\x89\\xe5\\xc3' fed through live capstone using the (arch,mode) returned by auto_detect_arch for 'x86_64'; independent oracle is the x86-64 ISA itself (verified mode-sensitive: 64-bit decodes xor rax,rax/mov rbp,rsp/ret vs 32-bit dec eax/xor eax,eax/...); assertion is exact-equality on [(0x1000,'xor','rax, rax'),(0x1003,'mov','rbp, rsp'),(0x1006,'ret','')], so a corrupted _CAPSTONE_ARCH_MODE_MAP['x86_64'] entry changes the mnemonics and fails."},{"ref":"tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py:94 - testvalidate_r2_argument_rejects_control_chars","severity":"High","status":"FIXED","oracle":"Renamed to test_validate_r2_argument_rejects_control_chars so pytest discovers and runs it; drives 11 rizin command-control metacharacters (; \\n \\r @ | ~ ` > < $ #) each embedded in a safe identifier through the real validate_r2_argument, asserting ToolError is raised and the field name 'symbol' surfaces in the message, plus a leading '!' shell-escape case."},{"ref":"tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py:430 - testvalidate_r2_argument_accepts_safe_strings","severity":"High","status":"FIXED","oracle":"Renamed to test_validate_r2_argument_accepts_safe_strings so pytest discovers and runs it; drives real safe identifiers ('symbol_name42','main','0x401000','sub.text-1','_GLOBAL__sub_I_main',''  and 'name!bang') through validate_r2_argument and asserts byte-for-byte identity (return == input) to guard against silent stripping/rewriting on the accept path."},{"ref":"tests/test_hexcore_e2e/test_bridge_new_capabilities.py:350-399 - test_search_text_encoded_available_on_document and _build_numeric_format tests","severity":"Medium","status":"FIXED","oracle":"hasattr smoke test replaced by two real gates that call doc.search_text_encoded on a real UTF-16LE buffer 'Hello World Hello' (16-byte pad): asserts exact offsets/lengths [(16,10),(40,10)] and case-sensitivity ([] for 'hello' sensitive vs [(16,10),(40,10)] insensitive). TestBuildNumericFormat now feeds each produced format string into struct.pack/unpack/calcsize and asserts canonical bytes against the binary-representation oracle (e.g. 0x12345678 LE -> 78 56 34 12, INT64_MIN, two's-complement -2 BE -> ff fe, struct.error on overflow/negative, ValueError on size 3)."}],"filesModified":[],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"76 passed in 2.30s"}
+{
+  "unitId": "U19-a15",
+  "findings": [
+    {
+      "ref": "tests/test_audit3/core/test_disassembler.py:86 - test_f0002_auto_detect_arch_known_returns_capstone_pair",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real input b'\\x48\\x31\\xc0\\x48\\x89\\xe5\\xc3' fed through live capstone using the (arch,mode) returned by auto_detect_arch for 'x86_64'; independent oracle is the x86-64 ISA itself (verified mode-sensitive: 64-bit decodes xor rax,rax/mov rbp,rsp/ret vs 32-bit dec eax/xor eax,eax/...); assertion is exact-equality on [(0x1000,'xor','rax, rax'),(0x1003,'mov','rbp, rsp'),(0x1006,'ret','')], so a corrupted _CAPSTONE_ARCH_MODE_MAP['x86_64'] entry changes the mnemonics and fails."
+    },
+    {
+      "ref": "tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py:94 - testvalidate_r2_argument_rejects_control_chars",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Renamed to test_validate_r2_argument_rejects_control_chars so pytest discovers and runs it; drives 11 rizin command-control metacharacters (; \\n \\r @ | ~ ` > < $ #) each embedded in a safe identifier through the real validate_r2_argument, asserting ToolError is raised and the field name 'symbol' surfaces in the message, plus a leading '!' shell-escape case."
+    },
+    {
+      "ref": "tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py:430 - testvalidate_r2_argument_accepts_safe_strings",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Renamed to test_validate_r2_argument_accepts_safe_strings so pytest discovers and runs it; drives real safe identifiers ('symbol_name42','main','0x401000','sub.text-1','_GLOBAL__sub_I_main',''  and 'name!bang') through validate_r2_argument and asserts byte-for-byte identity (return == input) to guard against silent stripping/rewriting on the accept path."
+    },
+    {
+      "ref": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py:350-399 - test_search_text_encoded_available_on_document and _build_numeric_format tests",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "hasattr smoke test replaced by two real gates that call doc.search_text_encoded on a real UTF-16LE buffer 'Hello World Hello' (16-byte pad): asserts exact offsets/lengths [(16,10),(40,10)] and case-sensitivity ([] for 'hello' sensitive vs [(16,10),(40,10)] insensitive). TestBuildNumericFormat now feeds each produced format string into struct.pack/unpack/calcsize and asserts canonical bytes against the binary-representation oracle (e.g. 0x12345678 LE -> 78 56 34 12, INT64_MIN, two's-complement -2 BE -> ff fe, struct.error on overflow/negative, ValueError on size 3)."
+    }
+  ],
+  "filesModified": [],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "76 passed in 2.30s"
+}

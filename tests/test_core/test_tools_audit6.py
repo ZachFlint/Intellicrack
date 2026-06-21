@@ -15,6 +15,7 @@ Exercises:
 from __future__ import annotations
 
 import asyncio
+import importlib
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
@@ -127,31 +128,6 @@ class TestF0017CutterAutoInit:
 
     @staticmethod
     @pytest.mark.asyncio
-    async def test_cutter_in_initialize_targets_set(
-        tmp_path: Path,
-    ) -> None:
-        """The CUTTER bridge must be in the auto-init target set.
-
-        Asserts the registry exposes a ``_LOCAL_INIT_TOOLS`` membership that
-        includes ``ToolName.CUTTER``. Registry initialisation drives Cutter
-        through the same auto-init path used by PROCESS, FRIDA, SANDBOX, and
-        HEX_EDITOR.
-
-        Args:
-            tmp_path: pytest temporary directory.
-        """
-        del tmp_path
-        import importlib  # noqa: PLC0415
-
-        tools_module = importlib.import_module("intellicrack.core.tools")
-        local_init_tools = cast(
-            "frozenset[ToolName]",
-            getattr(tools_module, "_LOCAL_INIT_TOOLS"),
-        )
-        assert ToolName.CUTTER in local_init_tools, f"_LOCAL_INIT_TOOLS must contain Cutter; got {local_init_tools!r}"
-
-    @staticmethod
-    @pytest.mark.asyncio
     async def test_cutter_initialize_invoked_on_registry_initialize(
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
@@ -185,8 +161,6 @@ class TestF0017CutterAutoInit:
         x64dbg_bridge_cls = _make_bridge_class(ToolName.X64DBG)
         sandbox_bridge_cls = _make_bridge_class(ToolName.SANDBOX)
         hex_bridge_cls = _make_bridge_class(ToolName.HEX_EDITOR)
-
-        import importlib  # noqa: PLC0415
 
         real_import_module = importlib.import_module
         replacement_classes: dict[tuple[str, str], type[_ShutdownableBridge]] = {
@@ -239,8 +213,6 @@ class TestF0018ToolStatusLogging:
             tmp_path: pytest temporary directory.
             monkeypatch: pytest monkeypatch fixture.
         """
-        import importlib  # noqa: PLC0415
-
         tools_module = importlib.import_module("intellicrack.core.tools")
         captured: list[tuple[str, dict[str, object]]] = []
 
@@ -302,8 +274,6 @@ class TestF0018ToolStatusLogging:
             tmp_path: pytest temporary directory.
             monkeypatch: pytest monkeypatch fixture.
         """
-        import importlib  # noqa: PLC0415
-
         tools_module = importlib.import_module("intellicrack.core.tools")
         captured: list[tuple[str, dict[str, object]]] = []
 

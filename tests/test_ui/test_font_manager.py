@@ -15,7 +15,6 @@ import json
 from typing import TYPE_CHECKING
 
 import pytest
-from PyQt6.QtGui import QFont
 
 from intellicrack.ui.resources.font_manager import (
     DEFAULT_CODE_FONT,
@@ -90,16 +89,6 @@ class TestFontLoading:
     """Tests for font loading functionality."""
 
     @staticmethod
-    def test_load_fonts_returns_bool(font_manager: FontManager) -> None:
-        """load_fonts returns a boolean.
-
-        Args:
-            font_manager: Fresh FontManager fixture instance.
-        """
-        result = font_manager.load_fonts()
-        assert isinstance(result, bool)
-
-    @staticmethod
     def test_load_fonts_succeeds(font_manager: FontManager) -> None:
         """Font loading succeeds with available fonts.
 
@@ -144,28 +133,47 @@ class TestFontLoading:
 
     @staticmethod
     def test_load_fonts_idempotent(font_manager: FontManager) -> None:
-        """Calling load_fonts multiple times is safe.
+        """Calling load_fonts twice succeeds without re-registering families.
+
+        The first call loads the bundled fonts and returns True; the second
+        call must short-circuit on the ``fonts_loaded`` guard, again return
+        True, and leave ``loaded_families`` byte-for-byte identical (no
+        duplicate registration of the same families).
 
         Args:
             font_manager: Fresh FontManager fixture instance.
         """
         result1 = font_manager.load_fonts()
+        families_after_first = font_manager.loaded_families
         result2 = font_manager.load_fonts()
-        assert result1 == result2
+        families_after_second = font_manager.loaded_families
+
+        assert result1 is True, "First load_fonts call must succeed with bundled assets"
+        assert result2 is True, "Second load_fonts call must remain successful"
+        assert families_after_second == families_after_first, "Second load_fonts call duplicated or mutated loaded families"
 
 
 class TestCodeFont:
     """Tests for code font retrieval."""
 
     @staticmethod
-    def test_get_code_font_returns_qfont(font_manager: FontManager) -> None:
-        """get_code_font returns a QFont instance.
+    def test_get_code_font_uses_resolved_code_family(font_manager: FontManager) -> None:
+        """get_code_font builds a font with the resolved code font family.
+
+        The returned QFont must carry the exact family string the manager
+        resolved into ``code_font_family`` (which is non-empty after loading),
+        proving the getter wires the resolved family into the QFont rather than
+        producing an unrelated or empty-family font.
 
         Args:
             font_manager: Fresh FontManager fixture instance.
         """
+        font_manager.load_fonts()
+        expected_family = font_manager.code_font_family
+        assert expected_family, "Resolved code font family must not be empty"
+
         font = font_manager.get_code_font()
-        assert isinstance(font, QFont)
+        assert font.family() == expected_family
 
     @staticmethod
     def test_code_font_is_monospace(font_manager: FontManager) -> None:
@@ -223,14 +231,23 @@ class TestUIFont:
     """Tests for UI font retrieval."""
 
     @staticmethod
-    def test_get_ui_font_returns_qfont(font_manager: FontManager) -> None:
-        """get_ui_font returns a QFont instance.
+    def test_get_ui_font_uses_resolved_ui_family(font_manager: FontManager) -> None:
+        """get_ui_font builds a font with the resolved UI font family.
+
+        The returned QFont must carry the exact family string the manager
+        resolved into ``ui_font_family`` (non-empty after loading), proving the
+        getter wires the resolved UI family into the QFont rather than
+        returning an unrelated or empty-family font.
 
         Args:
             font_manager: Fresh FontManager fixture instance.
         """
+        font_manager.load_fonts()
+        expected_family = font_manager.ui_font_family
+        assert expected_family, "Resolved UI font family must not be empty"
+
         font = font_manager.get_ui_font()
-        assert isinstance(font, QFont)
+        assert font.family() == expected_family
 
     @staticmethod
     def test_ui_font_is_sans_serif(font_manager: FontManager) -> None:
@@ -278,14 +295,24 @@ class TestHeadingFont:
     """Tests for heading font retrieval."""
 
     @staticmethod
-    def test_get_heading_font_returns_qfont(font_manager: FontManager) -> None:
-        """get_heading_font returns a QFont instance.
+    def test_get_heading_font_uses_resolved_ui_family(font_manager: FontManager) -> None:
+        """get_heading_font derives a bold font from the resolved UI family.
+
+        Headings are UI text, so the heading font must reuse the resolved
+        ``ui_font_family`` (matching ``get_ui_font``) and apply bold weight,
+        proving the heading getter is built on the UI font branch rather than
+        the code-font branch or an unrelated family.
 
         Args:
             font_manager: Fresh FontManager fixture instance.
         """
+        font_manager.load_fonts()
+        expected_family = font_manager.ui_font_family
+        assert expected_family, "Resolved UI font family must not be empty"
+
         font = font_manager.get_heading_font()
-        assert isinstance(font, QFont)
+        assert font.family() == expected_family
+        assert font.bold()
 
     @staticmethod
     def test_heading_font_is_bold(font_manager: FontManager) -> None:
@@ -492,12 +519,40 @@ class TestFontAssets:
         assert config_path.exists(), "font_config.json missing"
 
     @staticmethod
-    def test_font_config_valid_json() -> None:
-        """Font config is valid JSON."""
+    def test_font_config_declares_expected_families_and_assets() -> None:
+        """Font config declares the families and TTF assets the loader needs.
+
+        Independent oracle: the module-level ``DEFAULT_CODE_FONT`` and
+        ``DEFAULT_UI_FONT`` constants name the primary code/UI families, so the
+        config's ``monospace_fonts.primary`` and ``ui_fonts.primary`` lists must
+        contain them. Every file named in ``available_fonts`` must exist on disk
+        in the fonts directory. A config that parses but is missing these keys
+        or advertises a non-existent font file fails this gate.
+        """
         assets = get_assets_path()
-        config_path = assets / "fonts" / "font_config.json"
+        fonts_dir = assets / "fonts"
+        config_path = fonts_dir / "font_config.json"
 
         with config_path.open(encoding="utf-8") as f:
             config = json.load(f)
 
         assert isinstance(config, dict), "Font config should be a dict"
+
+        monospace_fonts = config["monospace_fonts"]
+        ui_fonts = config["ui_fonts"]
+        assert isinstance(monospace_fonts, dict), "monospace_fonts must be an object"
+        assert isinstance(ui_fonts, dict), "ui_fonts must be an object"
+
+        code_primary = monospace_fonts["primary"]
+        ui_primary = ui_fonts["primary"]
+        assert isinstance(code_primary, list), "monospace_fonts.primary must be a list"
+        assert isinstance(ui_primary, list), "ui_fonts.primary must be a list"
+        assert DEFAULT_CODE_FONT in code_primary, f"{DEFAULT_CODE_FONT} missing from monospace_fonts.primary"
+        assert DEFAULT_UI_FONT in ui_primary, f"{DEFAULT_UI_FONT} missing from ui_fonts.primary"
+
+        available_fonts = config["available_fonts"]
+        assert isinstance(available_fonts, list), "available_fonts must be a list"
+        assert available_fonts, "available_fonts must not be empty"
+        for font_file_name in available_fonts:
+            assert isinstance(font_file_name, str), "available_fonts entries must be strings"
+            assert (fonts_dir / font_file_name).exists(), f"Declared font asset is missing on disk: {font_file_name}"

@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_sandbox/test_realcov_12b_analysis_real.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "test_match_behaviors_on_real_capture_is_consistent",
+   "severity": null,
+   "category": null,
+   "action": "hardened",
+   "oracle": "Two independent oracles: (1) count oracle \u2014 len(evidence) must equal len([act for act in network_activity if act['remote_port'] == _C2_PORT]) computed before match_behaviors is called; (2) loopback oracle \u2014 all evidence strings must contain 'to 127.0.0.1' because every self-generated connection targets the loopback interface. Both fail under the mutation activity['remote_port'] == port_int \u2192 !=.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/analysis.py",
+    "mutation": "if activity[\"remote_port\"] == port_int -> if activity[\"remote_port\"] != port_int",
+    "covering_test": "test_match_behaviors_on_real_capture_is_consistent",
+    "expected_baseline": "green",
+    "green_status": "skip",
+    "mutation_result": null,
+    "proven_falsifiable": null
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

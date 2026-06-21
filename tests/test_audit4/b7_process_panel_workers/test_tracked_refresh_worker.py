@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from PyQt6.QtCore import QCoreApplication, QEventLoop, QTimer
+from PyQt6.QtCore import QCoreApplication, QEventLoop, QTimer, pyqtBoundSignal
 from PyQt6.QtWidgets import QApplication
 
 import intellicrack.ui.panels.process_panel.workers as _workers_module
@@ -177,12 +177,35 @@ class TestTrackedRefreshWorkerError:
         )
         worker.deleteLater()
 
-    def test_refresh_error_signal_exists(self) -> None:
-        """TrackedRefreshWorker exposes a ``refresh_error`` signal.
+    def test_refresh_error_signal_is_string_typed_and_connectable(
+        self,
+        qapp: QCoreApplication,
+    ) -> None:
+        """``refresh_error`` is a string-typed pyqtBoundSignal that delivers payloads intact.
 
-        Before the fix the class only had ``refresh_finished``.  This test
-        fails on the unfixed class with AttributeError.
+        This replaces the former ``hasattr`` smoke test.  It would fail if:
+
+        - ``refresh_error`` were removed from the class
+        - its type signature were changed away from a single ``str`` argument
+        - the signal were replaced with a plain attribute
+
+        Args:
+            qapp: Qt application fixture (ensures a QCoreApplication exists).
         """
         worker = TrackedRefreshWorker()
-        assert hasattr(worker, "refresh_error"), "TrackedRefreshWorker does not expose refresh_error signal"
+        sig = worker.refresh_error
+        assert isinstance(sig, pyqtBoundSignal), (
+            f"refresh_error must be a pyqtBoundSignal, got {type(sig).__name__}"
+        )
+        assert "QString" in sig.signal, (
+            f"refresh_error must carry a single str argument; signal descriptor: {sig.signal!r}"
+        )
+        received: list[str] = []
+        sig.connect(received.append)
+        sentinel = "Refresh failed: synthetic-sentinel-abc123"
+        sig.emit(sentinel)
+        qapp.processEvents()
         worker.deleteLater()
+        assert received == [sentinel], (
+            f"emit/receive round-trip failed: expected [{sentinel!r}], got {received}"
+        )

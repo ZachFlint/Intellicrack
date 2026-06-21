@@ -27,8 +27,9 @@ from __future__ import annotations
 import asyncio
 import os
 import shutil
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
+import pefile
 import pytest
 import pytest_asyncio
 
@@ -487,14 +488,40 @@ class TestRealMetadata:
         assert headers
         assert any(header.name for header in headers)
 
-    async def test_relocations_real(self, pe_bridge: CutterBridge) -> None:
-        """``get_relocations`` returns a list parsed from the real reloc table.
+    async def test_relocations_real(self, pe_bridge: CutterBridge, real_pe_dll: Path) -> None:
+        """``get_relocations`` returns non-empty relocation records inside the real PE image.
+
+        The cutter/rizin ``iRj`` command surfaces the analyzer's relocation
+        records, a distinct concept from pefile's ``DIRECTORY_ENTRY_BASERELOC``
+        page blocks, so the two cannot be compared by count. The independent
+        oracle is instead the PE's own mapped address range, computed from
+        ``pefile``'s ``ImageBase`` and ``SizeOfImage``: every relocation the
+        bridge reports must carry a decoded non-empty ``type`` and a ``vaddr``
+        that lands inside the real loaded image. A bridge that returned ``[]``,
+        fabricated ``type=""`` records, or out-of-image ``vaddr`` values would
+        fail these assertions.
 
         Args:
             pe_bridge: Analyzed kernel32.dll bridge.
+            real_pe_dll: On-disk path used to build the independent pefile oracle.
         """
+        pe_obj = cast("Any", pefile.PE(str(real_pe_dll), fast_load=False))
+        image_base = int(pe_obj.OPTIONAL_HEADER.ImageBase)
+        image_end = image_base + int(pe_obj.OPTIONAL_HEADER.SizeOfImage)
+
         relocations = await pe_bridge.get_relocations()
-        assert isinstance(relocations, list)
+
+        assert len(relocations) > 0, (
+            "get_relocations() returned an empty list for kernel32.dll, which always has a populated .reloc section"
+        )
+        assert all(reloc.type for reloc in relocations), (
+            "every RelocationInfo.type must be a non-empty string decoded from the reloc record"
+        )
+        out_of_image = [hex(reloc.vaddr) for reloc in relocations if not image_base <= reloc.vaddr < image_end]
+        assert not out_of_image, (
+            f"every relocation vaddr must fall inside the mapped image [{image_base:#x}, {image_end:#x}); "
+            f"out-of-image vaddrs: {out_of_image}"
+        )
 
 
 class TestRealXrefs:

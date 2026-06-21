@@ -62,7 +62,9 @@
       "oracle": "Real rizin search with raw bytes input over the same planted blob; asserts hit count == independent _count_occurrences==3, bytes-input count == equivalent str-input count, and an absent 6-byte pattern returns []. Gates the bytes.hex() encoding path against real results."
     }
   ],
-  "filesModified": ["tests/test_bridges/test_cutter.py"],
+  "filesModified": [
+    "tests/test_bridges/test_cutter.py"
+  ],
   "checks": {
     "ruff": true,
     "ruffFormat": true,

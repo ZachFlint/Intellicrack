@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "test_call_count_matches_forwarded_invocation",
+   "severity": "MEDIUM",
+   "category": "N8 existence/forwarding-only \u2014 asserted call count and argument identity but not the resulting wired bridge state",
+   "action": "hardened",
+   "oracle": "Independent verification via `SandboxBridge.manager.instances`: after `MainWindow.wire_sandbox_backend(sandbox)` the bridge obtained from `tool_panel.get_sandbox_bridge()` must own a manager whose `instances` list contains a `SandboxInstance` whose `.sandbox` attribute is identity-equal (`is`) to the injected `_InProcessSandbox`. The manager's `instances` property reads directly from the internal `_instances` dict populated by `register_existing_sandbox`; a regression that skips registration produces an empty list and the `any(...)` assertion fails.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "mutation": "        instances_map[instance.id] = instance ->         _ = instance",
+    "covering_test": "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py::TestMainWindowWireSandboxBackend::test_call_count_matches_forwarded_invocation",
+    "expected_baseline": "green",
+    "green_status": "unknown",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

@@ -188,10 +188,7 @@ class TestSymbolsTabRealData:
         tab._apply_data(symbols)
 
         assert tab._table.rowCount() == len(symbols)
-        rendered_names = {
-            (item.text() if (item := tab._table.item(row, 0)) is not None else "")
-            for row in range(tab._table.rowCount())
-        }
+        rendered_names = {(item.text() if (item := tab._table.item(row, 0)) is not None else "") for row in range(tab._table.rowCount())}
         assert rendered_names == {s.name for s in symbols}
 
         first = symbols[0]
@@ -220,9 +217,7 @@ class TestHeadersTabRealData:
 
         assert tab._table.rowCount() == len(headers)
         magic_row = next(
-            row
-            for row in range(tab._table.rowCount())
-            if (cell := tab._table.item(row, 0)) is not None and cell.text() == "Magic"
+            row for row in range(tab._table.rowCount()) if (cell := tab._table.item(row, 0)) is not None and cell.text() == "Magic"
         )
         value_item = tab._table.item(magic_row, 1)
         assert value_item is not None
@@ -262,16 +257,11 @@ class TestAllStringsTabRealData:
         tab._apply_data(strings)
 
         assert tab._table.rowCount() == len(strings)
-        section_names = {
-            (item.text() if (item := tab._table.item(row, 2)) is not None else "")
-            for row in range(tab._table.rowCount())
-        }
+        section_names = {(item.text() if (item := tab._table.item(row, 2)) is not None else "") for row in range(tab._table.rowCount())}
         assert ".text" in section_names
 
         text_row = next(
-            row
-            for row in range(tab._table.rowCount())
-            if (cell := tab._table.item(row, 2)) is not None and cell.text() == ".text"
+            row for row in range(tab._table.rowCount()) if (cell := tab._table.item(row, 2)) is not None and cell.text() == ".text"
         )
         addr_item = tab._table.item(text_row, 0)
         text_string = next(s for s in strings if s.section == ".text")

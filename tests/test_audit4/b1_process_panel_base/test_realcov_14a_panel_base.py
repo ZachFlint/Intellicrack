@@ -180,10 +180,7 @@ def test_privilege_label_reflects_real_token(
         panel: ProcessPanel probe bound to the real bridge.
     """
     real_privs = run_bridge_sync(real_bridge.get_token_privileges(os.getpid()))
-    has_debug = any(
-        str(p.get("name", "")) == "SeDebugPrivilege" and bool(p.get("enabled", False))
-        for p in real_privs
-    )
+    has_debug = any(str(p.get("name", "")) == "SeDebugPrivilege" and bool(p.get("enabled", False)) for p in real_privs)
     expected = "Privilege: Debug" if has_debug else "Privilege: Standard"
 
     panel.attach(os.getpid())

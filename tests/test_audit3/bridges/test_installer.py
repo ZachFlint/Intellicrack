@@ -24,10 +24,22 @@ import tempfile
 import zipfile
 from collections.abc import Callable, Coroutine
 from pathlib import Path
-from typing import TYPE_CHECKING, get_args
+from typing import TYPE_CHECKING, cast, get_args
 
 import httpx
 import pytest
+
+
+try:
+    import pefile as _pefile_oracle_mod
+except ImportError:
+    _pefile_oracle_mod = None
+
+if TYPE_CHECKING:
+    import types
+    from collections.abc import AsyncIterator
+
+    import structlog.stdlib
 
 from intellicrack.bridges import installer as installer_mod
 from intellicrack.bridges.installer import (
@@ -55,10 +67,6 @@ from intellicrack.core import (
     subprocess_compat as sp_mod,
 )
 from intellicrack.core.types import ToolError, ToolName
-
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
 
 
 _NETWORK_DOWN_MSG = "network down"
@@ -90,6 +98,111 @@ def _system_pe_for_version_probe() -> Path | None:
         if candidate.is_file():
             return candidate
     return None
+
+
+def _pe_string_table_version(pe: object) -> tuple[int, int, int] | None:
+    """Extract a version triple from StringFileInfo in a parsed PE.
+
+    Args:
+        pe: A parsed ``pefile.PE`` instance with resources loaded.
+
+    Returns:
+        tuple[int, int, int] | None: (major, minor, patch) from the first
+        usable ``FileVersion`` or ``ProductVersion`` string, or None.
+    """
+    preferred_keys = (b"FileVersion", b"ProductVersion")
+    file_info_raw: list[object] = list(getattr(pe, "FileInfo", None) or [])
+    flat: list[object] = []
+    for entry in file_info_raw:
+        if isinstance(entry, list):
+            flat.extend(cast("list[object]", entry))
+        else:
+            flat.append(entry)
+
+    for fi in flat:
+        string_table: list[object] = list(getattr(fi, "StringTable", None) or [])
+        for st in string_table:
+            raw_entries_obj: object = getattr(st, "entries", None) or {}
+            entries: dict[bytes, bytes] = (
+                {k: v for k, v in cast("dict[object, object]", raw_entries_obj).items() if isinstance(k, bytes) and isinstance(v, bytes)}
+                if isinstance(raw_entries_obj, dict)
+                else {}
+            )
+            for key_name in preferred_keys:
+                raw_val: bytes | None = entries.get(key_name)
+                if not raw_val:
+                    continue
+                try:
+                    ver_str = raw_val.decode("utf-8", errors="replace").strip()
+                except (AttributeError, UnicodeError):
+                    continue
+                if ver_str:
+                    parsed = ToolInstallerVersion.parse(ver_str)
+                    if parsed is not None:
+                        return (parsed.major, parsed.minor, parsed.patch)
+    return None
+
+
+def _pe_fixed_file_info_version(pe: object) -> tuple[int, int, int] | None:
+    """Extract a version triple from VS_FIXEDFILEINFO in a parsed PE.
+
+    Args:
+        pe: A parsed ``pefile.PE`` instance with resources loaded.
+
+    Returns:
+        tuple[int, int, int] | None: (major, minor, patch) derived from the
+        FileVersionMS/LS fields, or None when both are zero or unreadable.
+    """
+    fixed_info: list[object] = list(getattr(pe, "VS_FIXEDFILEINFO", None) or [])
+    for ffi in fixed_info:
+        ms = int(getattr(ffi, "FileVersionMS", 0))
+        ls = int(getattr(ffi, "FileVersionLS", 0))
+        if ms or ls:
+            ver_str = f"{ms >> 16}.{ms & 0xFFFF}.{ls >> 16}.{ls & 0xFFFF}"
+            parsed = ToolInstallerVersion.parse(ver_str)
+            if parsed is not None:
+                return (parsed.major, parsed.minor, parsed.patch)
+    return None
+
+
+def _pe_version_oracle(pefile_mod: types.ModuleType, exe_path: Path) -> tuple[int, int, int] | None:
+    """Read the FileVersion triple from a PE using pefile as an independent oracle.
+
+    Walks the StringFileInfo table for ``FileVersion`` or ``ProductVersion``,
+    then falls back to ``VS_FIXEDFILEINFO`` binary fields when no string table
+    entry is present.  The returned triple is (major, minor, patch) after
+    parsing the first usable version string with :class:`ToolInstallerVersion`.
+
+    Args:
+        pefile_mod: Already-imported ``pefile`` module.
+        exe_path: Path to the PE binary.
+
+    Returns:
+        tuple[int, int, int] | None: (major, minor, patch) when a usable
+        version string is present; None when no version information can be
+        resolved or parsed.
+    """
+    pe: object
+    try:
+        pe = pefile_mod.PE(str(exe_path), fast_load=True)
+    except (OSError, ValueError):
+        return None
+    except pefile_mod.PEFormatError:
+        return None
+
+    resource_id = pefile_mod.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]
+    parse_dirs = getattr(pe, "parse_data_directories", None)
+    if parse_dirs is not None:
+        cast(Callable[..., object], parse_dirs)(directories=[resource_id])
+    try:
+        result = _pe_string_table_version(pe)
+        if result is not None:
+            return result
+        return _pe_fixed_file_info_version(pe)
+    finally:
+        close_fn = getattr(pe, "close", None)
+        if close_fn is not None:
+            cast(Callable[[], object], close_fn)()
 
 
 def _make_x64dbg_tree(root: Path) -> Path:
@@ -393,21 +506,37 @@ class TestPEVersionForGUITools:
 
     @staticmethod
     def test_get_version_x64dbg_uses_pe_when_available(tmp_path: Path) -> None:
-        """get_version(X64DBG) reads the PE VERSIONINFO when pefile is available (F-0034)."""
+        """get_version(X64DBG) returns the exact version read from the PE VERSIONINFO (F-0034).
+
+        An independent pefile oracle reads the same binary and resolves the
+        expected version triple.  The assertion is falsifiable: a regression
+        that makes _get_pe_version return None or a different version fails.
+        """
         sys_exe = _system_pe_for_version_probe()
         if sys_exe is None:
             pytest.skip("requires Windows system PE")
         if not installer_mod.pefile_available():
             pytest.skip("pefile not available")
+        if _pefile_oracle_mod is None:
+            pytest.skip("pefile not importable for oracle")
 
         x64dbg_dir = tmp_path / "x64dbg"
         x64dbg_dir.mkdir()
         target = x64dbg_dir / "x64dbg.exe"
         shutil.copy2(sys_exe, target)
 
+        oracle_version = _pe_version_oracle(_pefile_oracle_mod, target)
+        if oracle_version is None:
+            pytest.skip("system PE has no parseable VS_VERSION_INFO")
+
         ti = ToolInstaller(tmp_path)
-        version = _run(ti.get_version(ToolName.X64DBG, x64dbg_dir))
-        assert version is None or isinstance(version, ToolVersion)
+        version_raw = _run(ti.get_version(ToolName.X64DBG, x64dbg_dir))
+
+        assert isinstance(version_raw, ToolVersion), "get_version returned None for a PE with known VS_VERSION_INFO"
+        version: ToolVersion = version_raw
+        assert (version.major, version.minor, version.patch) == oracle_version, (
+            f"get_version returned {version.major}.{version.minor}.{version.patch} but pefile oracle says {oracle_version}"
+        )
 
 
 # --------------------------------------------------------------------------
@@ -659,25 +788,35 @@ class _FixedResp:
 
         Args:
             total_bytes: Total response length in bytes.
-            chunk_size: Chunk size yielded by ``aiter_bytes``.
+            chunk_size: Default chunk size when the caller does not specify one.
         """
         self.headers = {"content-length": str(total_bytes)}
-        self._chunks = [b"a" * chunk_size for _ in range(total_bytes // chunk_size)]
+        self._total_bytes = total_bytes
+        self._default_chunk_size = chunk_size
 
     def raise_for_status(self) -> None:
         """Mirror httpx.Response.raise_for_status (no-op)."""
 
-    async def aiter_bytes(self, chunk_size: int = 8192) -> AsyncIterator[bytes]:  # noqa: ARG002
-        """Yield the pre-built chunks.
+    async def aiter_bytes(self, chunk_size: int | None = None) -> AsyncIterator[bytes]:
+        """Yield the payload in chunks of the caller-requested size.
+
+        Mirrors ``httpx.Response.aiter_bytes`` which honours the ``chunk_size``
+        keyword the production downloader passes.
 
         Args:
-            chunk_size: Caller-requested chunk size (unused; we use the constructor value).
+            chunk_size: Caller-requested chunk size; falls back to the
+                constructor default when ``None``.
 
         Yields:
-            bytes: Successive payload chunks.
+            bytes: Successive payload chunks of ``chunk_size`` bytes (the final
+                chunk may be shorter).
         """
-        for chunk in self._chunks:
-            yield chunk
+        size = chunk_size if chunk_size is not None else self._default_chunk_size
+        remaining = self._total_bytes
+        while remaining > 0:
+            emit = min(size, remaining)
+            remaining -= emit
+            yield b"a" * emit
 
 
 class _FixedStreamCtx:
@@ -745,10 +884,25 @@ class TestProgressLoggingPerMB:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """Progress logging fires roughly once per MB, regardless of chunk size (F-0022)."""
+        """Progress logging fires exactly once per full MB crossed (F-0022).
+
+        With 300 chunks of 8192 bytes (= 2,457,600 bytes total) and a 1 MiB
+        (1,048,576-byte) threshold, the counter crosses 1 MiB after chunk 128
+        and crosses 2 MiB after chunk 256.  No third crossing occurs because
+        the remaining 44 chunks add only 360,448 bytes.  The test asserts the
+        exact count (2) and that the logged percent values are strictly
+        monotonically increasing and bounded within (0, 100].
+        """
+        chunk_size = 8192
+        num_chunks = 300
+        one_mb_bytes = 1024 * 1024
+
         ti = ToolInstaller(tmp_path)
-        total = 8192 * 300  # ~2.4 MB
+        total = chunk_size * num_chunks
         log_events: list[float] = []
+
+        chunks_per_mb = one_mb_bytes // chunk_size
+        expected_event_count = num_chunks // chunks_per_mb
 
         async def _stub_get_client(_self: ToolInstaller) -> _FixedClient:
             await asyncio.sleep(0)
@@ -756,7 +910,8 @@ class TestProgressLoggingPerMB:
 
         monkeypatch.setattr(ToolInstaller, "_get_client", _stub_get_client)
 
-        original_debug = installer_mod._logger.debug
+        mod_logger: structlog.stdlib.BoundLogger = getattr(installer_mod, "_logger")
+        original_debug = mod_logger.debug
 
         def capture(event: str, *args: object, **kw: object) -> object:
             if event == "download_progress":
@@ -765,12 +920,20 @@ class TestProgressLoggingPerMB:
                     log_events.append(float(pct))
             return original_debug(event, *args, **kw)
 
-        monkeypatch.setattr(installer_mod._logger, "debug", capture)
+        monkeypatch.setattr(mod_logger, "debug", capture)
 
         path = _run(ti.download_file("https://example.invalid/a.zip"))
         assert path is not None
-        # ~2.4 MB -> expect 1 to 4 events.
-        assert 1 <= len(log_events) <= 4
+
+        assert len(log_events) == expected_event_count, (
+            f"expected exactly {expected_event_count} download_progress events for {total} bytes at 1-MiB threshold, got {len(log_events)}"
+        )
+
+        for i in range(1, len(log_events)):
+            assert log_events[i] > log_events[i - 1], (
+                f"percent values must be strictly increasing; log_events[{i - 1}]={log_events[i - 1]} >= log_events[{i}]={log_events[i]}"
+            )
+        assert all(0.0 < p <= 100.0 for p in log_events), f"all percent values must be in (0, 100]; got {log_events}"
 
 
 # --------------------------------------------------------------------------
@@ -882,13 +1045,14 @@ class TestBuildSubprocessHandling:
 
         monkeypatch.setattr(installer_mod, "_subprocess_run", stub_run)
 
-        original_warning = installer_mod._logger.warning
+        mod_logger: structlog.stdlib.BoundLogger = getattr(installer_mod, "_logger")
+        original_warning = mod_logger.warning
 
         def capture(event: str, **kw: object) -> object:
             warnings.append({"event": event, **kw})
             return original_warning(event, **kw)
 
-        monkeypatch.setattr(installer_mod._logger, "warning", capture)
+        monkeypatch.setattr(mod_logger, "warning", capture)
 
         ok = installer_mod.run_cmake_step(
             ["cmake", "-G", "X"],
@@ -930,7 +1094,8 @@ class TestBuildSubprocessHandling:
         def _capture_warn(event: str, **_kw: object) -> None:
             warnings.append(event)
 
-        monkeypatch.setattr(installer_mod._logger, "warning", _capture_warn)
+        mod_logger: structlog.stdlib.BoundLogger = getattr(installer_mod, "_logger")
+        monkeypatch.setattr(mod_logger, "warning", _capture_warn)
 
         result = installer_mod.find_cmake()
         assert result is None

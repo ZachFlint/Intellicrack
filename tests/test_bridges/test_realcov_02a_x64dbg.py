@@ -179,9 +179,7 @@ async def test_get_module_exports_match_live_proc_addresses(attached_bridge: X64
     for export in _WELL_KNOWN_EXPORTS:
         if export not in by_name:
             continue
-        assert by_name[export] == _live_proc_address(_KERNEL32, export), (
-            f"Parsed VA for {export} disagrees with live GetProcAddress"
-        )
+        assert by_name[export] == _live_proc_address(_KERNEL32, export), f"Parsed VA for {export} disagrees with live GetProcAddress"
         matched += 1
     assert matched > 0, f"None of {_WELL_KNOWN_EXPORTS} found in parsed kernel32 exports"
 

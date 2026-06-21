@@ -307,63 +307,89 @@ def test_script_uses_verified_provider_events_not_fabricated_apis() -> None:
 def test_script_does_not_label_normal_thread_starts_as_shellcode_injection(
     tmp_path: Path,
 ) -> None:
-    """F-0017 runtime check: ordinary thread starts must not be ``shellcode_injection``.
+    """F-0017 runtime check: no captured thread-start event may be labelled ``shellcode_injection``.
 
-    Spawn a helper that creates managed in-module threads, run the
-    monitor against the helper's PID, and assert that no log line is
-    written labelled ``shellcode_injection`` for that helper.
+    Run the monitor with no PID filter so it observes kernel thread-start
+    events from all processes.  On admin the kernel ETW provider succeeds and
+    events whose start addresses fall outside loaded modules or inside a
+    Temp-directory module are written to the main log.  Assert that the log is
+    non-empty (at least one event was observed, so the assertion cannot be
+    vacuous) and that every captured record carries one of the narrowed labels
+    (``remote_thread_start``, ``remote_thread_in_temp_module``,
+    ``remote_thread_outside_modules``, ``remote_thread_create``,
+    ``remote_memory_alloc``, ``remote_memory_write``, ``remote_section_map``,
+    ``threat_intel_event``, ``ERROR``) but never ``shellcode_injection``.
 
-    On non-elevated runs the monitor cannot enable kernel ETW providers
-    and never writes to the main log; in that case the assertion still
-    holds vacuously and the test passes.
+    This test requires administrator rights to enable kernel ETW providers.
+    Without elevation the monitor cannot subscribe to thread-start events
+    and no main log is written, making any label assertion vacuous.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
     """
+    if not _is_admin():
+        pytest.skip("kernel ETW thread-start subscription requires administrator rights")
+
     pwsh = _resolve_pwsh()
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
 
+    proc = _start_script(log_dir, pwsh, target_pid=0)
     helper = _spawn_thread_helper(pwsh)
-    proc: Popen[str] | None = None
     try:
-        time.sleep(0.3)
-        proc = _start_script(log_dir, pwsh, target_pid=helper.pid)
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC + 2.0)
+        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC + 4.0)
     finally:
-        if proc is not None:
-            _terminate(proc)
         _terminate(helper)
+        _terminate(proc)
 
     log_path = log_dir / _LOG_NAME
-    if log_path.exists():
-        contents = log_path.read_text(encoding="utf-8", errors="replace")
-        for raw_line in contents.splitlines():
-            line = raw_line.strip()
-            if not line or line.startswith("#"):
-                continue
-            fields = line.split("|")
-            if len(fields) >= 6 and int(fields[3] or "0") == helper.pid:
-                assert fields[5] != "shellcode_injection", (
-                    f"F-0017 regression: ordinary thread starts labelled shellcode_injection; line={line!r}"
-                )
+    assert log_path.exists(), (
+        f"F-0017: admin run with pid=0 must produce main log capturing thread-start events; "
+        f"log_dir={list(log_dir.iterdir())!r}"
+    )
+
+    contents = log_path.read_text(encoding="utf-8", errors="replace")
+    all_records: list[str] = []
+    for raw_line in contents.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        fields = line.split("|")
+        if len(fields) >= 6:
+            all_records.append(line)
+
+    assert all_records, (
+        f"F-0017: at least one injection-monitor record expected in the main log; "
+        f"log contents={contents!r}"
+    )
+    for rec in all_records:
+        fields = rec.split("|")
+        inj_type = fields[5] if len(fields) >= 6 else ""
+        assert inj_type != "shellcode_injection", (
+            f"F-0017 regression: thread-start event labelled shellcode_injection; "
+            f"record={rec!r}"
+        )
 
 
 def test_script_emits_threat_intel_unavailable_warning_when_not_admin(
     tmp_path: Path,
 ) -> None:
-    """F-0017 runtime check: ThreatIntel unavailability must be reported.
+    """F-0017 runtime check: ThreatIntel unavailability must be reported, not silently ignored.
 
-    Without administrator rights the
-    ``Microsoft-Windows-Threat-Intelligence`` provider cannot be
-    enabled and the script must log a structured diagnostic plus a
-    ``Write-Warning`` line, not silently degrade.
+    Without administrator rights the script cannot enable kernel ETW
+    providers and must exit with a non-zero code (F-0016) and write a
+    structured diagnostic to the diag log rather than silently
+    degrading.  If the kernel provider phase succeeds but
+    ``Microsoft-Windows-Threat-Intelligence`` specifically fails, the
+    diag log must additionally contain a
+    ``threat_intel_provider_unavailable`` entry and the script must
+    emit a ``Write-Warning`` line to stderr.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
     """
     if _is_admin():
-        pytest.skip("test requires non-elevated context to force ThreatIntel failure")
+        pytest.skip("test requires non-elevated context to force provider-enable failure")
 
     pwsh = _resolve_pwsh()
     log_dir = tmp_path / "logs"
@@ -373,15 +399,35 @@ def test_script_emits_threat_intel_unavailable_warning_when_not_admin(
     try:
         time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
     finally:
-        _, stderr, _ = _terminate(proc)
+        _, stderr, returncode = _terminate(proc)
+
+    assert returncode != 0, (
+        f"F-0016/F-0017 regression: non-admin run must exit non-zero (throw), not silently return; "
+        f"returncode={returncode!r} stderr={stderr!r}"
+    )
 
     diag_path = log_dir / _DIAG_NAME
-    if diag_path.exists():
-        diag_text = diag_path.read_text(encoding="utf-8", errors="replace")
-        if "threat_intel_provider_unavailable" in diag_text:
-            assert "WARNING:" in stderr or "Threat-Intelligence" in stderr, (
-                f"expected Write-Warning on stderr when ThreatIntel unavailable; stderr={stderr!r}"
-            )
+    assert diag_path.exists(), (
+        f"F-0017 regression: diag log must be written on failure, not silently dropped; "
+        f"log_dir contents={list(log_dir.iterdir())!r}"
+    )
+
+    diag_text = diag_path.read_text(encoding="utf-8", errors="replace")
+    structured_lines = [
+        ln.strip()
+        for ln in diag_text.splitlines()
+        if ln.strip() and ln.count("|") >= 2
+    ]
+    assert structured_lines, (
+        f"F-0017 regression: diag log must contain at least one structured pipe-delimited "
+        f"diagnostic entry; diag={diag_text!r}"
+    )
+
+    if "threat_intel_provider_unavailable" in diag_text:
+        assert "WARNING:" in stderr or "Threat-Intelligence" in stderr, (
+            f"F-0017 regression: Write-Warning must reach stderr when ThreatIntel provider "
+            f"unavailable; stderr={stderr!r}"
+        )
 
 
 def test_smoke_script_runs_without_crash(tmp_path: Path) -> None:

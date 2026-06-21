@@ -326,7 +326,12 @@ class TestF0012ThreadsTabAutoRefresh:
         )
 
     def test_button_text_reflects_state(self, counting_tab: _CountingThreadsTab) -> None:
-        """The Auto-Refresh button label must reflect the on/off state.
+        """The Auto-Refresh button label and timer active-state must agree.
+
+        The toggle handler must both update the visible label AND start or stop
+        the QTimer. Asserting only the label string would allow a regression
+        where the label changes but the timer is never started; asserting both
+        together ensures the string and the functional behaviour cannot diverge.
 
         Args:
             counting_tab: ``_CountingThreadsTab`` fixture.
@@ -335,10 +340,16 @@ class TestF0012ThreadsTabAutoRefresh:
         assert counting_tab.get_auto_refresh_button().text() == "Auto-Refresh: ON", (
             "Button text must be 'Auto-Refresh: ON' when auto-refresh is enabled"
         )
+        assert counting_tab.get_auto_refresh_timer().isActive(), (
+            "QTimer must be active when label shows 'Auto-Refresh: ON'"
+        )
 
         counting_tab.invoke_auto_refresh_toggle(checked=False)
         assert counting_tab.get_auto_refresh_button().text() == "Auto-Refresh: OFF", (
             "Button text must be 'Auto-Refresh: OFF' when auto-refresh is disabled"
+        )
+        assert not counting_tab.get_auto_refresh_timer().isActive(), (
+            "QTimer must be inactive when label shows 'Auto-Refresh: OFF'"
         )
 
     def test_cleanup_stops_timer(self, qtbot: QtBot, counting_tab: _CountingThreadsTab) -> None:

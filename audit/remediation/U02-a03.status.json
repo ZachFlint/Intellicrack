@@ -50,7 +50,9 @@
       "oracle": "test_launch_smbios_and_registry_agree_with_each_other threads each profile through both real consumers (the -smbios launch arg and the reg.exe dispatch) and asserts spec==SMBIOS==registry triple-equality against the independent _EXPECTED_IDENTITY, not method-to-method equality."
     }
   ],
-  "filesModified": ["tests/test_audit7/sandbox_qemu/test_anti_evasion_identity.py"],
+  "filesModified": [
+    "tests/test_audit7/sandbox_qemu/test_anti_evasion_identity.py"
+  ],
   "checks": {
     "ruff": true,
     "ruffFormat": true,

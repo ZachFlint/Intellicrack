@@ -107,11 +107,7 @@ def test_show_error_with_exception_logs_error_type(
     assert result == QMessageBox.StandardButton.Ok
 
     records = _read_records(log_file)
-    matching = [
-        r
-        for r in records
-        if r.get("event") == "dialog_error" and r.get("error_type") == "ValueError"
-    ]
+    matching = [r for r in records if r.get("event") == "dialog_error" and r.get("error_type") == "ValueError"]
     assert matching, "show_error did not emit a dialog_error record carrying the exception type"
     record = matching[-1]
     assert str(record["level"]).upper() == "ERROR"
@@ -140,10 +136,6 @@ def test_show_warning_with_exception_logs_warning_record(
     show_warning(None, "Save Warning", "Could not write file.", exc=exc)
 
     records = _read_records(log_file)
-    matching = [
-        r
-        for r in records
-        if r.get("event") == "dialog_warning" and r.get("error_type") == "OSError"
-    ]
+    matching = [r for r in records if r.get("event") == "dialog_warning" and r.get("error_type") == "OSError"]
     assert matching, "show_warning did not emit a dialog_warning record carrying the exception type"
     assert "disk full" in str(matching[-1].get("error"))

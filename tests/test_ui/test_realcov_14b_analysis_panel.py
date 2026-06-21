@@ -246,18 +246,11 @@ class TestAnalysisPanelRendersRealSections:
         panel.set_analysis(dll_summary)
         table = panel._sections_table
 
-        names = {
-            (item.text() if (item := table.item(row, 0)) is not None else "")
-            for row in range(table.rowCount())
-        }
+        names = {(item.text() if (item := table.item(row, 0)) is not None else "") for row in range(table.rowCount())}
         assert ".text" in names, f"expected a real .text section, got {sorted(names)}"
 
         text_section = next(s for s in dll_summary.sections if s.name == ".text")
-        text_row = next(
-            row
-            for row in range(table.rowCount())
-            if (cell := table.item(row, 0)) is not None and cell.text() == ".text"
-        )
+        text_row = next(row for row in range(table.rowCount()) if (cell := table.item(row, 0)) is not None and cell.text() == ".text")
         va_cell = table.item(text_row, 1)
         entropy_cell = table.item(text_row, 5)
         assert va_cell is not None
@@ -301,10 +294,7 @@ class TestAnalysisPanelRendersRealImportsExports:
         table = panel._imports_table
         assert table.rowCount() == len(exe_summary.imports)
 
-        rendered = {
-            (item.text() if (item := table.item(row, 1)) is not None else "")
-            for row in range(table.rowCount())
-        }
+        rendered = {(item.text() if (item := table.item(row, 1)) is not None else "") for row in range(table.rowCount())}
         expected = {imp.function for imp in exe_summary.imports}
         assert rendered == expected
         assert all(name for name in rendered), "real imports must have non-empty names"
@@ -326,10 +316,7 @@ class TestAnalysisPanelRendersRealImportsExports:
         table = panel._exports_table
         assert table.rowCount() == len(dll_summary.exports)
 
-        rendered = {
-            (item.text() if (item := table.item(row, 0)) is not None else "")
-            for row in range(table.rowCount())
-        }
+        rendered = {(item.text() if (item := table.item(row, 0)) is not None else "") for row in range(table.rowCount())}
         expected = {exp.name for exp in dll_summary.exports}
         assert rendered == expected
         assert all(name for name in rendered)
