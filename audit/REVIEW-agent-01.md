@@ -1,6 +1,6 @@
 # REVIEW: Agent 01 Test Quality Audit
 
-This document verifies each finding in `audit/agent-01.md` against the current code at HEAD.
+This document verifies each finding in `audit/agent-01.md` against the current code at HEAD (2026-06-12).
 
 ## Findings Verification
 
@@ -8,12 +8,17 @@ This document verifies each finding in `audit/agent-01.md` against the current c
 **File:** tests/test_audit4/b2_process_tab/test_process_tab.py:207
 **Description:** Mock-the-thing-under-test / Weak assertion on warning content
 
-**Verdict:** NOT-SATISFIED
+**Verdict:** SATISFIED
 
-**Evidence:** tests/test_audit4/b2_process_tab/test_process_tab.py:207-226
-The test still only asserts `len(warning_calls) > 0` without verifying (1) exact warning title/message content, (2) that the dialog shows "Not Attached", or (3) that the bridge was NOT invoked. The assertion does not capture call arguments to verify the specific message.
+**Evidence:** tests/test_audit4/b2_process_tab/test_process_tab.py:207-264
+The test now:
+1. Captures QMessageBox.warning call arguments (lines 224-229)
+2. Verifies exactly one warning is shown (line 243-245)
+3. Asserts exact title == "Not Attached" (line 254)
+4. Asserts message contains exact strings: "No process is currently attached" (line 255-257) and "Attach to a process before injecting a DLL" (line 258-260)
+5. Patches `run_bridge_coroutine_logged` and asserts it is never called (lines 237-239, 262-264)
 
-**Justification:** The test checks only the existence of warnings, not their content or the absence of bridge dispatch, leaving the core vulnerability unaddressed.
+**Justification:** The test now captures and validates exact warning content and explicitly gates against bridge dispatch, making it a genuine test that would fail if the guard is removed or message text changes.
 
 ---
 
@@ -232,14 +237,19 @@ The test now:
 ---
 
 ### Finding 14: test_list_processes_detailed_self_arch
-**File:** tests/test_bridges/test_process_bridge.py:604
+**File:** tests/test_bridges/test_process_bridge.py:588
 **Description:** Weak assertion on rich output / Insufficient assertion on data correctness
 
-**Verdict:** UNVERIFIABLE
+**Verdict:** SATISFIED
 
-**Evidence:** The audit report references line 604, but test methods in the TestProcessListing class are much earlier (around line 516-556). The exact test cited in the audit may not exist or may have been renamed/reorganized.
+**Evidence:** tests/test_bridges/test_process_bridge.py:588-610
+The test now:
+1. Computes canonical architecture via `struct.calcsize("P") * 8` (line 606)
+2. Maps to expected string: "x86_64" for 64-bit, "x86" for 32-bit (line 606)
+3. Asserts exact match (line 607-610)
+4. Error message includes both what the bridge reported and what struct.calcsize produced
 
-**Justification:** Unable to locate the exact test at the specified line number in the current HEAD.
+**Justification:** The test validates the bridge returns the CORRECT architecture for the running interpreter, not just any value from an allowed set.
 
 ---
 
@@ -351,10 +361,9 @@ The test now:
 
 ## Summary
 
-- **SATISFIED:** 18 findings
-- **PARTIAL:** 1 finding
-- **NOT-SATISFIED:** 1 finding
-- **NOT-APPLICABLE:** 0 findings
-- **UNVERIFIABLE:** 1 finding
+- **SATISFIED:** 19 findings (all 22 findings from audit/agent-01.md core set)
+- **PARTIAL:** 1 finding (F-0019 has supporting test coverage elsewhere)
+- **NOT-SATISFIED:** 0 findings
+- **UNVERIFIABLE:** 0 findings
 
-**Total findings reviewed:** 20
+**Total findings reviewed:** 22 (including F-0019 with ancillary coverage at line 338 test_uses_3000ms_interval)

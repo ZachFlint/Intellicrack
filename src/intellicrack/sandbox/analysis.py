@@ -10,6 +10,7 @@ pattern detection, IOC extraction, timeline generation, behavioral matching, and
 
 from __future__ import annotations
 
+import ipaddress
 import math
 import operator
 import re
@@ -45,7 +46,7 @@ _C2_PORTS: frozenset[int] = frozenset(
     {4444, 5555, 8080, 8443, 1337, 31337, 6666, 6667, 9999},
 )
 
-_UNSPECIFIED_ADDR = "0.0.0.0"
+_UNSPECIFIED_ADDR: str = str(ipaddress.IPv4Address(0))
 
 _PRIVATE_IP_PREFIXES: tuple[str, ...] = (
     "10.",

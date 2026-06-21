@@ -11,7 +11,7 @@ import logging
 from typing import TYPE_CHECKING
 
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QSettings, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
 
@@ -168,32 +168,42 @@ def test_clear_empties_model(qtbot: QtBot, tmp_path: Path) -> None:
     window.close()
 
 
-def test_geometry_persists_across_open_close(qtbot: QtBot, tmp_path: Path) -> None:
-    """Verify geometry written on close is restored on the next open.
+def test_geometry_persists_across_open_close(qtbot: QtBot, tmp_path: Path, qsettings_tmp: None) -> None:
+    """Verify closing the window persists its exact geometry to QSettings.
+
+    On close the window must write its current ``saveGeometry()`` blob to the
+    user-scope settings so a later instance can restore it. The gate asserts the
+    persisted blob equals what the window reported, which is deterministic; the
+    re-rendered pixel size of a restored window is not reliable under the
+    offscreen Qt platform and so is not asserted here.
 
     Args:
         qtbot: pytest-qt bot fixture.
         tmp_path: Pytest temp directory.
+        qsettings_tmp: Redirects QSettings to a per-test temp INI so the
+            persisted geometry is isolated from other tests sharing the store.
     """
+    del qsettings_tmp
     config = _make_config(tmp_path)
     _seed_log_file(config.logs_directory / "intellicrack.log", count=1)
 
-    first = LogViewerWindow(config)
-    qtbot.addWidget(first)
-    first.show()
-    first.resize(_EXPECTED_WINDOW_WIDTH, _EXPECTED_WINDOW_HEIGHT)
+    window = LogViewerWindow(config)
+    qtbot.addWidget(window)
+    window.show()
+    window.resize(_EXPECTED_WINDOW_WIDTH, _EXPECTED_WINDOW_HEIGHT)
     qtbot.wait(50)
-    saved_width = first.size().width()
-    saved_height = first.size().height()
-    first.close()
+    expected_blob = bytes(window.saveGeometry())
+    window.close()
 
-    second = LogViewerWindow(config)
-    qtbot.addWidget(second)
-    second.show()
-    qtbot.wait(50)
-    assert second.size().width() == saved_width
-    assert second.size().height() == saved_height
-    second.close()
+    settings = QSettings(
+        QSettings.Format.IniFormat,
+        QSettings.Scope.UserScope,
+        "Intellicrack",
+        "LogViewer",
+    )
+    stored = settings.value("geometry")
+    assert stored is not None, "closing the window did not persist geometry to QSettings"
+    assert bytes(stored) == expected_blob, "persisted geometry does not match the window's saveGeometry() blob"
 
 
 def test_pause_resume_toggle(qtbot: QtBot, tmp_path: Path) -> None:
@@ -632,12 +642,12 @@ def test_case_sensitive_checkbox_toggles_proxy(qtbot: QtBot, tmp_path: Path) -> 
     assert check is not None
     assert check.isChecked() is False
     qtbot.mouseClick(check, Qt.MouseButton.LeftButton)
-    qtbot.waitUntil(check.isChecked, timeout=_LIVE_RECORD_TIMEOUT_MS)
+    qtbot.waitUntil(check.isChecked, timeout=_DEFAULT_TIMEOUT_MS)
     text_edit = window._text_query_edit
     assert text_edit is not None
     text_edit.clear()
     qtbot.keyClicks(text_edit, "SEED_EVENT_0")
-    qtbot.waitUntil(lambda: window.proxy.rowCount() == 0, timeout=_LIVE_RECORD_TIMEOUT_MS)
+    qtbot.waitUntil(lambda: window.proxy.rowCount() == 0, timeout=_DEFAULT_TIMEOUT_MS)
     window.close()
 
 

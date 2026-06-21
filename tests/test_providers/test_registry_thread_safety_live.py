@@ -7,12 +7,17 @@
 
 from __future__ import annotations
 
-import importlib
 import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+
+from intellicrack.providers.registry import (
+    ProviderRegistry,
+    get_provider_registry,
+    reset_provider_registry,
+)
 
 
 @pytest.mark.skipif(
@@ -22,28 +27,28 @@ import pytest
 def test_get_provider_registry_thread_safe_singleton() -> None:
     """Verify concurrent calls to get_provider_registry return the same instance.
 
-    Uses importlib.reload to reset the module-level singleton holder without
-    accessing private attributes directly. Spawns 32 threads that simultaneously
-    call get_provider_registry() behind a barrier and asserts every thread
-    receives the exact same ProviderRegistry instance via id() equality. This
-    validates the double-checked locking pattern prevents race conditions during
-    lazy singleton initialization.
+    Uses the module-provided reset_provider_registry() to clear the singleton
+    holder without the side effects of importlib.reload (which can invalidate
+    isinstance checks, disrupt module-level state shared across imports, and
+    produce hard-to-diagnose test interactions). Spawns 32 threads that
+    simultaneously call get_provider_registry() behind a barrier and asserts
+    every thread receives the exact same ProviderRegistry instance via id()
+    equality. This validates the double-checked locking pattern prevents race
+    conditions during lazy singleton initialization. The test is fully
+    deterministic across runs because reset_provider_registry() and the
+    re-creation race are isolated from all other module state.
     """
-    registry_module = importlib.import_module("intellicrack.providers.registry")
-    registry_module = importlib.reload(registry_module)
-
-    get_provider_registry = registry_module.get_provider_registry
-    provider_registry_type = registry_module.ProviderRegistry
+    reset_provider_registry()
 
     barrier = threading.Barrier(32)
-    results: list[object] = []
+    results: list[ProviderRegistry] = []
     results_lock = threading.Lock()
 
-    def worker() -> object:
+    def worker() -> ProviderRegistry:
         """Wait on the barrier then fetch the registry.
 
         Returns:
-            object: The singleton instance returned by this thread.
+            ProviderRegistry: The singleton instance returned by this thread.
         """
         barrier.wait()
         instance = get_provider_registry()
@@ -59,5 +64,10 @@ def test_get_provider_registry_thread_safe_singleton() -> None:
     assert len(results) == 32
     first_id = id(results[0])
     for instance in results:
-        assert id(instance) == first_id
-        assert isinstance(instance, provider_registry_type)
+        assert id(instance) == first_id, (
+            f"all 32 threads must receive the same singleton instance; "
+            f"expected id {first_id}, got id {id(instance)}"
+        )
+        assert isinstance(instance, ProviderRegistry), (
+            f"every returned instance must be a ProviderRegistry, got {type(instance)}"
+        )

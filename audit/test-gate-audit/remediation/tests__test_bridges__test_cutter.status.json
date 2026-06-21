@@ -1,0 +1,40 @@
+{
+ "file": "tests/test_bridges/test_cutter.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_bridges/test_cutter.py::TestToolDefinition::test_all_functions_resolve_to_methods",
+   "severity": "LOW",
+   "category": "N8 existence-only",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_bridges/test_cutter.py::TestToolDefinition::test_expected_function_count",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_bridges/test_cutter.py::TestToolDefinition::test_all_function_parameters_have_recognized_types",
+   "severity": "LOW",
+   "category": "N8 existence-only",
+   "action": "hardened",
+   "oracle": "intellicrack.bridges.schemas.is_recognized_type (recomputes type-string validity against PYTHON_TO_JSON_TYPES + VALID_JSON_SCHEMA_TYPES, the same predicate the schema builder uses)",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/schemas.py",
+    "mutation": "return param_type_lower in PYTHON_TO_JSON_TYPES or param_type_lower in VALID_JSON_SCHEMA_TYPES -> return param_type_lower in PYTHON_TO_JSON_TYPES and param_type_lower in VALID_JSON_SCHEMA_TYPES",
+    "covering_test": "tests/test_bridges/test_cutter.py::TestToolDefinition::test_all_function_parameters_have_recognized_types",
+    "expected_baseline": "green",
+    "green_status": "unknown",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

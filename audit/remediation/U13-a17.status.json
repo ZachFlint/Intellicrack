@@ -1,1 +1,51 @@
-{"unitId":"U13-a17","findings":[{"ref":"tests/test_providers/test_local_xpu_e2e.py:690 - test_simple_chat_returns_response","severity":"High","status":"FIXED","oracle":"Real TinyLlama XPU greedy chat on 'What is 2 + 2?'; independent oracle 2+2=4 plus operand echo; asserts '4' in content, re.search(r'2\\s*\\+\\s*2') matches, and _assert_coherent_english (distinct tokens, unique letters, repetition-ratio<0.5, dictionary hits)."},{"ref":"tests/test_providers/test_local_xpu_e2e.py:710 - test_response_is_coherent_text","severity":"High","status":"FIXED","oracle":"Real TinyLlama XPU chat on 'What is the sky?'; model-independent coherence oracle via _assert_coherent_english(min_words=6,min_dictionary_hits=3) rejecting single-char runs, control chars, markup and short noise (demonstrated RED on 'aaaa', '<html>'); accepts genuine prose."},{"ref":"tests/test_providers/test_local_xpu_e2e.py:731 - test_domain_prompt","severity":"High","status":"FIXED","oracle":"Real TinyLlama XPU greedy chat on PE-header prompt; asserts coherent English plus >=3 distinct PE-domain terms from a fixed vocabulary and the prompted topic 'header' present in the lowered response."},{"ref":"tests/test_providers/test_local_xpu_e2e.py:756 - test_stream_yields_chunks","severity":"Medium","status":"FIXED","oracle":"Real TinyLlama XPU chat_stream on 'List three primary colors'; asserts every chunk isinstance str and non-empty, >=4 letter-bearing chunks, >=4 distinct reconstructed word tokens, and >=2 common-English dictionary hits across chunks."},{"ref":"tests/test_providers/test_local_xpu_e2e.py:806 - test_stream_and_nonstream_both_produce_valid_output","severity":"Medium","status":"FIXED","oracle":"Same prompt+model under temperature=0.0 greedy decode through both paths; independent functional-alignment oracle: whitespace-collapsed streaming output must be byte-for-byte equal to whitespace-collapsed non-streaming output; non-stream also passes coherence gate."},{"ref":"tests/test_providers/test_local_xpu_e2e.py:952 - test_temperature_positive_produces_variation","severity":"Medium","status":"FIXED","oracle":"Determinized by seeding every torch RNG per call across 6 seeds; oracle is the sampling contract: temperature=0.0 greedy is seed-invariant (exactly 1 distinct output) while temperature=1.0 sampling diverges (>= len(seeds)-1 distinct) and the sampled set differs from the greedy output."}],"filesModified":[],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"53 passed in 87.86s"}
+{
+  "unitId": "U13-a17",
+  "findings": [
+    {
+      "ref": "tests/test_providers/test_local_xpu_e2e.py:690 - test_simple_chat_returns_response",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real TinyLlama XPU greedy chat on 'What is 2 + 2?'; independent oracle 2+2=4 plus operand echo; asserts '4' in content, re.search(r'2\\s*\\+\\s*2') matches, and _assert_coherent_english (distinct tokens, unique letters, repetition-ratio<0.5, dictionary hits)."
+    },
+    {
+      "ref": "tests/test_providers/test_local_xpu_e2e.py:710 - test_response_is_coherent_text",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real TinyLlama XPU chat on 'What is the sky?'; model-independent coherence oracle via _assert_coherent_english(min_words=6,min_dictionary_hits=3) rejecting single-char runs, control chars, markup and short noise (demonstrated RED on 'aaaa', '<html>'); accepts genuine prose."
+    },
+    {
+      "ref": "tests/test_providers/test_local_xpu_e2e.py:731 - test_domain_prompt",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real TinyLlama XPU greedy chat on PE-header prompt; asserts coherent English plus >=3 distinct PE-domain terms from a fixed vocabulary and the prompted topic 'header' present in the lowered response."
+    },
+    {
+      "ref": "tests/test_providers/test_local_xpu_e2e.py:756 - test_stream_yields_chunks",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real TinyLlama XPU chat_stream on 'List three primary colors'; asserts every chunk isinstance str and non-empty, >=4 letter-bearing chunks, >=4 distinct reconstructed word tokens, and >=2 common-English dictionary hits across chunks."
+    },
+    {
+      "ref": "tests/test_providers/test_local_xpu_e2e.py:806 - test_stream_and_nonstream_both_produce_valid_output",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Same prompt+model under temperature=0.0 greedy decode through both paths; independent functional-alignment oracle: whitespace-collapsed streaming output must be byte-for-byte equal to whitespace-collapsed non-streaming output; non-stream also passes coherence gate."
+    },
+    {
+      "ref": "tests/test_providers/test_local_xpu_e2e.py:952 - test_temperature_positive_produces_variation",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Determinized by seeding every torch RNG per call across 6 seeds; oracle is the sampling contract: temperature=0.0 greedy is seed-invariant (exactly 1 distinct output) while temperature=1.0 sampling diverges (>= len(seeds)-1 distinct) and the sampled set differs from the greedy output."
+    }
+  ],
+  "filesModified": [],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "53 passed in 87.86s"
+}

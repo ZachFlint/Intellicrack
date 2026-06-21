@@ -1,0 +1,108 @@
+{
+ "file": "tests/test_ui/test_font_manager.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_ui/test_font_manager.py::TestFontLoading::test_load_fonts_returns_bool",
+   "severity": "LOW",
+   "category": "N8",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_ui/test_font_manager.py::TestFontLoading::test_load_fonts_succeeds",
+   "falsifiability": null
+  },
+  {
+   "test": "tests/test_ui/test_font_manager.py::TestCodeFont::test_get_code_font_uses_resolved_code_family",
+   "severity": "LOW",
+   "category": "N4/N8",
+   "action": "hardened",
+   "oracle": "FontManager.code_font_family property (independently resolved family string) compared against QFont.family() of the getter output",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "mutation": "font = QFont(self._code_font_family, size) -> font = QFont(\"\", size)",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestCodeFont::test_get_code_font_uses_resolved_code_family",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_ui/test_font_manager.py::TestUIFont::test_get_ui_font_uses_resolved_ui_family",
+   "severity": "LOW",
+   "category": "N4/N8",
+   "action": "hardened",
+   "oracle": "FontManager.ui_font_family property compared against QFont.family() of the getter output",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "mutation": "font = QFont(self._ui_font_family, size) -> font = QFont(\"\", size)",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestUIFont::test_get_ui_font_uses_resolved_ui_family",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_ui/test_font_manager.py::TestHeadingFont::test_get_heading_font_uses_resolved_ui_family",
+   "severity": "LOW",
+   "category": "N4/N8",
+   "action": "hardened",
+   "oracle": "FontManager.ui_font_family property (headings are UI text) compared against QFont.family() of the heading getter, plus bold weight",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "mutation": "font = self.get_ui_font(size)\n        font.setBold(True)\n        return font\n\n    @property -> font = self.get_code_font(size)\n        font.setBold(True)\n        return font\n\n    @property",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestHeadingFont::test_get_heading_font_uses_resolved_ui_family",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_ui/test_font_manager.py::TestFontLoading::test_load_fonts_idempotent",
+   "severity": "LOW",
+   "category": "N4",
+   "action": "hardened",
+   "oracle": "Second call must hit the fonts_loaded short-circuit guard: assert both returns are True and loaded_families snapshot is unchanged across the two calls (no duplicate registration)",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "mutation": "if self.fonts_loaded:\n            _logger.debug(\"fonts_already_loaded\", families_count=len(self._loaded_families))\n            return bool(self._loaded_families) -> if False:\n            _logger.debug(\"fonts_already_loaded\", families_count=len(self._loaded_families))\n            return bool(self._loaded_families)",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestFontLoading::test_load_fonts_idempotent",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_ui/test_font_manager.py::TestFontAssets::test_font_config_declares_expected_families_and_assets",
+   "severity": "LOW",
+   "category": "N8",
+   "action": "hardened",
+   "oracle": "Module constants DEFAULT_CODE_FONT/DEFAULT_UI_FONT as the independent source of the expected primary family names, plus on-disk existence of each available_fonts entry",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/ui/resources/font_manager.py",
+    "mutation": "DEFAULT_UI_FONT: Final[str] = \"Segoe UI\" -> DEFAULT_UI_FONT: Final[str] = \"NotARealUiFont\"",
+    "covering_test": "tests/test_ui/test_font_manager.py::TestFontAssets::test_font_config_declares_expected_families_and_assets",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 5
+}

@@ -102,17 +102,29 @@ class TestDisassemblePeTextSection:
             assert _EXPECTED_INSN_KEYS.issubset(insn.keys())
 
     def test_disassemble_pe_text_with_auto_arch(self, loaded_bridge: HexEditorBridge) -> None:
-        """Verify that arch='auto' from the PE header produces a result list.
+        """Verify arch='auto' on the AMD64 PE header decodes like explicit x86-64.
 
-        Architecture auto-detection inspects the byte window passed to
-        ``disassemble``; the magic and machine fields it needs are at offset 0,
-        so ``arch='auto'`` is driven from offset 0 where the PE header lives.
+        Architecture auto-detection reads the magic and machine fields at the
+        start of the disassembled window; the fixture PE carries the AMD64
+        machine field (0x8664), so ``arch='auto'`` from offset 0 must resolve
+        to x86-64. The auto run is checked against an explicit ``x86``/``64``
+        run as the independent oracle: identical mnemonic, operands, byte
+        encoding, and size for the same first instruction. A broken detector
+        that picked the wrong arch/mode, or a disassembler that returned an
+        empty list, would diverge from the explicit run and fail.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
         """
-        results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="auto"))
-        assert isinstance(results, list)
+        auto_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="auto"))
+        explicit_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="x86", mode="64"))
+        assert explicit_results
+        assert auto_results
+        assert len(auto_results) == len(explicit_results)
+        assert auto_results[0]["mnemonic"] == explicit_results[0]["mnemonic"]
+        assert auto_results[0]["operands"] == explicit_results[0]["operands"]
+        assert auto_results[0]["bytes"] == explicit_results[0]["bytes"]
+        assert auto_results[0]["size"] == explicit_results[0]["size"]
 
     def test_disassemble_pe_text_explicit_x86_64_matches_auto(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify auto-detected arch matches explicit x86-64 for the PE header.
@@ -139,23 +151,34 @@ class TestDisassemblePeTextSection:
 class TestDisassembleMzHeader:
     """Tests disassembling from offset 0 (MZ header) of the PE binary."""
 
-    def test_disassemble_at_mz_header_does_not_crash(self, loaded_bridge: HexEditorBridge) -> None:
-        """Verify that disassembling at offset 0 (MZ header) does not raise.
+    def test_disassemble_at_mz_header_produces_coherent_first_instruction(self, loaded_bridge: HexEditorBridge) -> None:
+        """Verify disassembling at offset 0 yields a coherent first instruction.
+
+        The bridge uses the read offset as the instruction base address, so the
+        first instruction decoded from offset 0 must report ``address == 0``.
+        Each instruction's ``bytes`` field is a hex encoding of the raw opcode
+        bytes and ``size`` is the byte length; the independent oracle is that
+        the decoded ``bytes`` length must equal ``size`` (capstone's own
+        invariant). A disassembler that returned an empty list, mis-set the
+        base address, or produced an inconsistent size/bytes pair would fail.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="x86", mode="64"))
-        assert isinstance(results, list)
-
-    def test_disassemble_mz_header_address_starts_at_zero(self, loaded_bridge: HexEditorBridge) -> None:
-        """Verify that the first instruction address is 0 when disassembling from offset 0.
-
-        Args:
-            loaded_bridge: Bridge with a PE file already loaded.
-        """
-        if results := _run(loaded_bridge.disassemble(0, count=1, arch="x86", mode="64")):
-            assert results[0]["address"] == 0
+        assert results
+        first: dict[str, Any] = results[0]
+        assert first["address"] == 0
+        first_size: int = first["size"]
+        assert first_size > 0
+        first_bytes: bytes = bytes.fromhex(first["bytes"])
+        assert len(first_bytes) == first_size
+        running_address: int = 0
+        for insn in results:
+            assert insn["address"] == running_address
+            insn_size: int = insn["size"]
+            assert len(bytes.fromhex(insn["bytes"])) == insn_size
+            running_address += insn_size
 
 
 class TestDisassembleX86Mode32:
@@ -251,15 +274,34 @@ class TestDisassembleKnownX86Sequence:
 class TestDisassembleEdgeCases:
     """Tests for boundary and edge-case behavior in disassembly."""
 
-    def test_disassemble_at_end_of_file_returns_empty_or_partial(self, loaded_bridge: HexEditorBridge, pe_bytes: bytes) -> None:
-        """Verify disassembling near end of document returns empty list or fewer instructions.
+    def test_disassemble_last_byte_decodes_single_trailing_instruction(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify the trailing byte at end-of-file decodes to exactly one instruction.
+
+        A controlled buffer of three INT3 bytes followed by a single NOP is
+        written to disk; the final byte (``0x90``) is a complete one-byte x86
+        instruction. Disassembling at ``doc_len - 1`` with a generous count
+        must read only the one remaining byte and decode it without reading
+        past the end. The independent oracle is the x86 encoding: ``0x90`` is
+        ``nop`` with ``size == 1``, and the bridge uses the read offset as the
+        base address, so the single result must report ``mnemonic == "nop"``,
+        ``size == 1``, ``bytes == "90"``, and ``address == near_end``. A
+        disassembler that returned an empty list (broken boundary read) or
+        over-read the file would fail.
 
         Args:
-            loaded_bridge: Bridge with a PE file already loaded.
-            pe_bytes: PE binary content as bytes.
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
         """
-        doc_len: int = len(pe_bytes)
+        payload = _INT3_OPCODE * 3 + _NOP_OPCODE
+        f = tmp_path / "trailing_nop.bin"
+        f.write_bytes(payload)
+        _run(bridge.open_file(str(f)))
+        doc_len: int = len(payload)
         near_end: int = doc_len - 1
-        results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(near_end, count=10, arch="x86", mode="64"))
-        assert isinstance(results, list)
-        assert len(results) <= 1
+        results: list[dict[str, Any]] = _run(bridge.disassemble(near_end, count=10, arch="x86", mode="64"))
+        assert len(results) == 1
+        only: dict[str, Any] = results[0]
+        assert only["address"] == near_end
+        assert only["mnemonic"] == "nop"
+        assert only["size"] == 1
+        assert only["bytes"].lower() == "90"

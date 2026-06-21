@@ -624,53 +624,59 @@ class TestApplyInvalidTemplate:
 class TestTemplateOnWrongData:
     """Tests for template behavior when applied to binary data of the wrong format."""
 
-    def test_pe_template_on_elf_data_parses_or_raises(self, hexcore: types.ModuleType, elf_bytes: bytes) -> None:
-        """Verify IMAGE_DOS_HEADER on ELF data either parses with wrong values or raises.
+    def test_pe_template_on_elf_data_parses_wrong_e_magic(self, hexcore: types.ModuleType, elf_bytes: bytes) -> None:
+        """Verify IMAGE_DOS_HEADER on ELF data parses e_magic from the ELF bytes.
 
-        If it parses, the e_magic field must NOT contain the MZ magic string.
+        The ELF fixture is 256 bytes, well past the 64-byte DOS header, so the
+        parse always succeeds. The e_magic field is a little-endian UInt16 read
+        at offset 0; on ELF data that is bytes 0x7F 0x45, i.e. 0x457F (17791),
+        independently recomputed here with struct. The decoded value must be the
+        ELF-derived number and must NOT contain the PE MZ magic.
 
         Args:
             hexcore: The native module fixture.
             elf_bytes: Minimal ELF64 binary bytes.
         """
+        expected_e_magic: int = struct.unpack_from("<H", elf_bytes, 0)[0]
         doc = hexcore.HexDocument.open_bytes(elf_bytes)
-        parsed_successfully = False
-        wrong_data_fields: list[dict[str, Any]] = []
-        try:
-            wrong_data_fields = doc.apply_template("IMAGE_DOS_HEADER", 0)
-            parsed_successfully = True
-        except (RuntimeError, ValueError) as _exc:
-            parsed_successfully = False
-        if parsed_successfully:
-            assert len(wrong_data_fields) > 0
-            e_magic_fields = [f for f in wrong_data_fields if f["name"] == "e_magic"]
-            assert len(e_magic_fields) == 1
-            display: str = e_magic_fields[0]["display_value"]
-            assert str(PE_E_MAGIC_DECIMAL) not in display
+        fields: list[dict[str, Any]] = doc.apply_template("IMAGE_DOS_HEADER", 0)
+        e_magic_fields = [f for f in fields if f["name"] == "e_magic"]
+        assert len(e_magic_fields) == 1
+        e_magic = e_magic_fields[0]
+        assert e_magic["offset"] == 0
+        assert e_magic["size"] == 2
+        assert list(e_magic["raw_bytes"]) == list(elf_bytes[:2])
+        display: str = e_magic["display_value"]
+        assert str(expected_e_magic) in display
+        assert f"{expected_e_magic:04X}" in display
+        assert str(PE_E_MAGIC_DECIMAL) not in display
+        assert PE_E_MAGIC_HEX not in display
 
-    def test_elf_template_on_pe_data_parses_or_raises(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
-        """Verify Elf64_Ehdr on PE data either parses with wrong values or raises.
+    def test_elf_template_on_pe_data_parses_wrong_e_ident(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
+        """Verify Elf64_Ehdr on PE data parses e_ident from the PE bytes.
 
-        If it parses, the e_ident field must NOT contain 7F 45 4C 46.
+        The PE fixture is 1024 bytes, well past the 64-byte ELF header, so the
+        parse always succeeds. The e_ident field is a 16-byte block rendered as
+        space-separated uppercase hex; on PE data it is the first 16 bytes of
+        the MZ header, independently recomputed here. It must equal those PE
+        bytes and must NOT contain the ELF magic 7F 45 4C 46.
 
         Args:
             hexcore: The native module fixture.
             pe_bytes: Minimal PE binary bytes.
         """
+        expected_e_ident = " ".join(f"{b:02X}" for b in pe_bytes[:16])
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
-        parsed_successfully = False
-        wrong_data_fields: list[dict[str, Any]] = []
-        try:
-            wrong_data_fields = doc.apply_template("Elf64_Ehdr", 0)
-            parsed_successfully = True
-        except (RuntimeError, ValueError) as _exc:
-            parsed_successfully = False
-        if parsed_successfully:
-            assert len(wrong_data_fields) > 0
-            e_ident_fields = [f for f in wrong_data_fields if f["name"] == "e_ident"]
-            assert len(e_ident_fields) == 1
-            display: str = e_ident_fields[0]["display_value"]
-            assert "7F 45 4C 46" not in display
+        fields: list[dict[str, Any]] = doc.apply_template("Elf64_Ehdr", 0)
+        e_ident_fields = [f for f in fields if f["name"] == "e_ident"]
+        assert len(e_ident_fields) == 1
+        e_ident = e_ident_fields[0]
+        assert e_ident["offset"] == 0
+        assert e_ident["size"] == 16
+        assert list(e_ident["raw_bytes"]) == list(pe_bytes[:16])
+        display: str = e_ident["display_value"]
+        assert display == expected_e_ident
+        assert "7F 45 4C 46" not in display
 
     def test_dos_header_on_too_short_data_raises(self, hexcore: types.ModuleType) -> None:
         """Verify IMAGE_DOS_HEADER raises when data is shorter than the 64-byte structure.

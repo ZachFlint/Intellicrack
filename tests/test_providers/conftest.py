@@ -12,6 +12,7 @@ skip conditions, and cleanup automatically.
 
 from __future__ import annotations
 
+import os
 from typing import TYPE_CHECKING
 
 import pytest
@@ -45,6 +46,43 @@ _ACCOUNT_LIMIT_SIGNALS: tuple[str, ...] = (
     "organization has been deactivated",
     "account has been disabled",
 )
+
+
+_PROVIDER_KEY_ENV_VARS: tuple[str, ...] = (
+    "ANTHROPIC_API_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "HUGGINGFACE_API_TOKEN",
+    "OLLAMA_API_KEY",
+    "OPENAI_API_KEY",
+    "OPENROUTER_API_KEY",
+    "XAI_API_KEY",
+)
+
+
+@pytest.fixture(autouse=True)
+def restore_provider_key_env() -> Generator[None]:
+    """Snapshot and restore provider API-key env vars around every test.
+
+    ``CredentialLoader`` copies the values of any loaded ``.env`` file into
+    ``os.environ``. Tests that load synthetic env files with deliberately wrong
+    keys (for format-validation coverage) would otherwise leak those keys into
+    the process environment, where a later live-provider test reads them and
+    fails with a 401. Restoring the snapshot confines each test's environment
+    mutations to that test.
+
+    Yields:
+        None: Yields control to the test.
+    """
+    saved: dict[str, str | None] = {name: os.environ.get(name) for name in _PROVIDER_KEY_ENV_VARS}
+    try:
+        yield
+    finally:
+        for name, value in saved.items():
+            if value is None:
+                os.environ.pop(name, None)
+            else:
+                os.environ[name] = value
 
 
 def _account_limit_reason(exc: BaseException) -> str | None:

@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+import intellicrack.bridges.hex_editor as _hex_editor_mod
 from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
@@ -751,15 +752,29 @@ class TestProcessMemoryBridge:
         clean_hex = hex_data.replace(" ", "")
         assert len(clean_hex) == 32
 
-    def test_list_process_regions_raises_without_hexcore(self) -> None:
-        """list_process_regions must raise RuntimeError if hexcore is unavailable.
+    def test_list_process_regions_raises_without_hexcore(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """list_process_regions must raise RuntimeError when hexcore is unavailable.
 
-        Uses a bridge with hexcore explicitly unavailable by checking the
-        module-level guard behavior.
+        On non-Windows the Windows-only guard fires first.  On Windows the
+        hexcore-availability guard is exercised by temporarily patching the
+        module-level sentinel variables to simulate a missing native module.
+        Either branch must raise RuntimeError; the message must name the
+        unavailable resource.
+
+        Args:
+            monkeypatch: Pytest monkeypatch fixture for temporary attribute overrides.
         """
         bridge = HexEditorBridge()
         _run(bridge.initialize())
-        assert hasattr(bridge, "list_process_regions")
+
+        if os.name != "nt":
+            with pytest.raises(RuntimeError, match="Windows-only"):
+                _run(bridge.list_process_regions(os.getpid()))
+        else:
+            monkeypatch.setattr(_hex_editor_mod, "_hexcore_available", False)
+            monkeypatch.setattr(_hex_editor_mod, "_hexcore_mod", None)
+            with pytest.raises(RuntimeError, match="hexcore native module not available"):
+                _run(bridge.list_process_regions(os.getpid()))
 
 
 class TestToolDefinitionCompleteness:

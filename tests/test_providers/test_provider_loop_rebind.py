@@ -385,7 +385,5 @@ class TestDiscoveryProviderErrorHandling:
 
                 assert results.get(provider.name) == []
                 events = discovery.get_discovery_events()
-                assert any(
-                    event.provider == provider.name and not event.success for event in events
-                )
+                assert any(event.provider == provider.name and not event.success for event in events)
                 loop.run_until_complete(provider.disconnect())

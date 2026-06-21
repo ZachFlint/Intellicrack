@@ -1,0 +1,41 @@
+{
+ "file": "tests/test_bridges/test_x64dbg.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "test_bridge_instantiation",
+   "severity": "CRITICAL",
+   "category": "N4",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_bridges/test_x64dbg.py::test_bridge_initial_state",
+   "falsifiability": null
+  },
+  {
+   "test": "test_breakpoint_info_fields",
+   "severity": "MEDIUM",
+   "category": "N8",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_bridges/test_x64dbg.py::test_breakpoint_retrieved_via_get_breakpoints",
+   "falsifiability": null
+  },
+  {
+   "test": "test_disassemble_requires_capstone",
+   "severity": "CRITICAL",
+   "category": "N1/N6",
+   "action": "deleted",
+   "oracle": "n/a",
+   "deletion_sibling": "tests/test_bridges/test_x64dbg.py::test_disassemble_real_exported_function",
+   "falsifiability": null
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 0
+}

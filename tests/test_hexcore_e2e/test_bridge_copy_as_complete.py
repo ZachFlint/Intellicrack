@@ -76,8 +76,8 @@ def _open_and_select(
 class TestCopyAsCsharpArray:
     """Tests for copy_as('csharp_array') formatting."""
 
-    def test_csharp_array_starts_with_new_byte_array(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that csharp_array output starts with 'new byte[] {'.
+    def test_csharp_array_full_string_matches_payload(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify csharp_array emits the exact wrapper and byte literals for the payload.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -85,7 +85,9 @@ class TestCopyAsCsharpArray:
         """
         _open_and_select(bridge, tmp_path, _PAYLOAD_ALL_LOW, "cs_low.bin", _SEL_END_ALL_LOW)
         result: str = _run(bridge.copy_as("csharp_array"))
-        assert result.startswith("new byte[] {")
+        expected = "new byte[] {" + ", ".join(f"0x{b:02X}" for b in _PAYLOAD_ALL_LOW) + "}"
+        assert result == expected
+        assert result == "new byte[] {0x01, 0x02, 0x7F}"
 
     def test_csharp_array_ends_with_closing_brace(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that csharp_array output ends with '}'.
@@ -171,8 +173,8 @@ class TestCopyAsJavaArray:
 class TestCopyAsJavascriptArray:
     """Tests for copy_as('javascript_array') formatting."""
 
-    def test_javascript_array_starts_with_new_uint8array(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that javascript_array output starts with 'new Uint8Array(['.
+    def test_javascript_array_full_string_matches_payload(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify javascript_array emits the exact wrapper and byte literals for the payload.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -180,7 +182,9 @@ class TestCopyAsJavascriptArray:
         """
         _open_and_select(bridge, tmp_path, _PAYLOAD_ALL_LOW, "js_low.bin", _SEL_END_ALL_LOW)
         result: str = _run(bridge.copy_as("javascript_array"))
-        assert result.startswith("new Uint8Array([")
+        expected = "new Uint8Array([" + ", ".join(f"0x{b:02X}" for b in _PAYLOAD_ALL_LOW) + "])"
+        assert result == expected
+        assert result == "new Uint8Array([0x01, 0x02, 0x7F])"
 
     def test_javascript_array_ends_with_closing_bracket_paren(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that javascript_array output ends with '])'.

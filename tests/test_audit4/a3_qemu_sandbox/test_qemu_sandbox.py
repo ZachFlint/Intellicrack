@@ -945,12 +945,28 @@ class TestF0009AgentScriptNoPsUsing:
         script = _TestQEMUSandbox.windows_agent_script_content_for_test()
         assert "$using:" not in script, "Windows agent script contains '$using:' which is invalid in Register-ObjectEvent -Action"
 
-    def test_windows_agent_script_uses_message_data_or_global(self) -> None:
-        """Log path must be stored via -MessageData or $Global: in agent script."""
+    def test_windows_agent_script_binds_and_reads_log_path_via_messagedata(self) -> None:
+        """The log path must be bound via ``-MessageData`` and read via ``$Event.MessageData``.
+
+        The earlier form accepted either ``-MessageData`` or ``$Global:``
+        appearing anywhere, which does not prove the log path is actually
+        carried into the ``-Action`` block. PowerShell's
+        ``Register-ObjectEvent ... -MessageData <value> -Action { ... }`` exposes
+        the bound value only as ``$Event.MessageData`` inside the action block;
+        if the registration binds the path but the action never reads
+        ``$Event.MessageData`` (or vice versa), the file-change log is never
+        written. This gate requires both halves of that contract: at least one
+        ``Register-ObjectEvent`` registration binds the file log via
+        ``-MessageData $fileLog`` and the corresponding action reads it through
+        ``$Event.MessageData``.
+        """
         script = _TestQEMUSandbox.windows_agent_script_content_for_test()
-        has_message_data = "-MessageData" in script
-        has_global = "$Global:" in script or "$global:" in script
-        assert has_message_data or has_global, "Agent script must pass the log path via -MessageData or $Global: variable, not $using:"
+        assert "$using:" not in script, "Register-ObjectEvent action blocks must not use $using: (invalid scope)"
+        assert "Register-ObjectEvent $watcher 'Created' -MessageData $fileLog -Action {" in script, (
+            "The file-creation watcher must bind the log path into the event via '-MessageData $fileLog'"
+        )
+        assert "$Event.MessageData" in script, "Agent action block must read the bound log path via '$Event.MessageData'"
+        assert "Out-File -Append $Event.MessageData" in script, "Agent action block must append the file-change record to the log path carried by $Event.MessageData"
 
 
 # ---------------------------------------------------------------------------
@@ -1007,21 +1023,49 @@ class TestF0016WhpxRequiresHyperV:
 class TestF0022F0029AntiEvasion:
     """F-0022 / F-0029: apply_anti_evasion uses profile param and agent allowlist-safe commands."""
 
-    def test_anti_evasion_profile_recorded_in_result(self) -> None:
-        """apply_anti_evasion returns a dict whose 'profile' key matches the launch profile.
+    def test_anti_evasion_profile_drives_real_smbios_argv(self, tmp_path: Path) -> None:
+        """The launch profile drives the actual ``-smbios`` manufacturer in the QEMU argv.
 
-        The original bug always hardcoded 'default' regardless of the argument.
-        F-0029 further requires that the argument match the launch-time profile,
-        so this test launches the sandbox with ``workstation`` and asserts the
-        returned profile reflects the active launch-time profile.
+        The earlier weak form only checked that ``apply_anti_evasion`` echoed
+        its own ``profile`` argument back into the result dict. This gate
+        instead drives the real ``_build_qemu_command`` with a ``workstation``
+        launch config and verifies the observable side effect: the SMBIOS
+        ``-smbios`` arguments carry the workstation vendor identity
+        (``Dell Inc.``), and never the default vendor (``HP``). The expected
+        vendor strings are the documented identity values
+        (``_anti_evasion_identity``: workstation -> ``Dell Inc.``/``OptiPlex
+        7090``; default -> ``HP``), used here as an independent oracle. A
+        regression that ignored the profile and always emitted the default
+        identity would leave ``Dell Inc.`` out of the argv and trip this gate.
+
+        Args:
+            tmp_path: Pytest temp directory.
         """
-        sb = _make_sandbox()
+        image = tmp_path / "disk.qcow2"
+        image.write_bytes(b"\x00" * 512)
+        sb = _make_sandbox(accelerator=AcceleratorType.TCG)
         sb.set_qemu_config(
             QEMUConfig(
                 guest_os=GuestOS.WINDOWS,
+                image_path=image,
+                monitor_port=4444,
+                ssh_port=2222,
+                agent_port=4445,
                 anti_evasion_profile="workstation",
             ),
         )
+        sb.set_qemu_path(Path("qemu-system-x86_64"))
+        sb.set_temp_dir(tmp_path)
+
+        cmd = asyncio.run(sb.build_qemu_command_for_test())
+        smbios_values = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-smbios"]
+        assert smbios_values, "build must emit at least one -smbios argument"
+        joined = "\n".join(smbios_values)
+
+        assert "manufacturer=Dell Inc." in joined, f"workstation profile must drive Dell Inc. SMBIOS vendor; argv smbios entries were {smbios_values!r}"
+        assert "product=OptiPlex 7090" in joined, f"workstation profile must drive the OptiPlex 7090 product; argv smbios entries were {smbios_values!r}"
+        assert "manufacturer=HP" not in joined, f"default HP vendor must not appear when launched as workstation; argv smbios entries were {smbios_values!r}"
+
         sb.state.status = "running"
         sb.set_agent(_ConnectableAgent(connected=False))
 
@@ -1030,7 +1074,7 @@ class TestF0022F0029AntiEvasion:
             return await sb.apply_anti_evasion(profile="workstation")
 
         result = asyncio.run(_run())
-        assert result["profile"] == "workstation", f"apply_anti_evasion did not use the profile argument; got {result['profile']}"
+        assert result["profile"] == "workstation", f"apply_anti_evasion did not use the launch profile; got {result['profile']}"
 
     def test_anti_evasion_different_profiles_produce_different_smbios(self) -> None:
         """Different profiles produce distinguishably different SMBIOS entries.
@@ -1050,17 +1094,55 @@ class TestF0022F0029AntiEvasion:
         assert default_mfrs != laptop_mfrs, "laptop profile must differ from default"
         assert ws_mfrs != laptop_mfrs, "laptop profile must differ from workstation"
 
-    def test_anti_evasion_techniques_reflect_profile_applied(self) -> None:
-        """Techniques list contains profile-specific SMBIOS entries."""
-        sb = _make_sandbox()
-        sb.state.status = "running"
-        sb.set_agent(_ConnectableAgent(connected=False))
+    def test_laptop_profile_emits_laptop_specific_smbios_argv(self, tmp_path: Path) -> None:
+        """The ``laptop`` profile produces laptop-specific SMBIOS argv distinct from default.
+
+        ``apply_anti_evasion`` reports launch-time SMBIOS techniques as one
+        ``smbios_type_N_launch_arg`` per entry, and the count must equal the
+        number of SMBIOS entries the laptop profile defines (three). To pin the
+        profile-to-guest-mutation flow itself - not just the count - this test
+        also drives the real ``_build_qemu_command`` with a laptop launch config
+        and asserts the laptop identity strings appear in the ``-smbios`` argv:
+        manufacturer ``Lenovo``, product ``ThinkPad T14 Gen 3``, the type-2
+        board product ``21AHS00000`` and the type-3 ``chassis-type=10`` (laptop
+        chassis per the SMBIOS spec). The default chassis-type ``3`` and HP
+        vendor must be absent. These literals are the documented laptop identity
+        (independent oracle), so confusing laptop with default/workstation trips
+        the gate.
+
+        Args:
+            tmp_path: Pytest temp directory.
+        """
+        image = tmp_path / "disk.qcow2"
+        image.write_bytes(b"\x00" * 512)
+        sb = _make_sandbox(accelerator=AcceleratorType.TCG)
         sb.set_qemu_config(
             QEMUConfig(
                 guest_os=GuestOS.WINDOWS,
+                image_path=image,
+                monitor_port=4444,
+                ssh_port=2222,
+                agent_port=4445,
                 anti_evasion_profile="laptop",
             ),
         )
+        sb.set_qemu_path(Path("qemu-system-x86_64"))
+        sb.set_temp_dir(tmp_path)
+
+        cmd = asyncio.run(sb.build_qemu_command_for_test())
+        smbios_values = [cmd[i + 1] for i, v in enumerate(cmd) if v == "-smbios"]
+        assert len(smbios_values) == 3, f"laptop profile defines exactly three SMBIOS entries; got {smbios_values!r}"
+        joined = "\n".join(smbios_values)
+
+        assert "manufacturer=Lenovo" in joined, f"laptop profile must emit the Lenovo vendor; argv smbios entries were {smbios_values!r}"
+        assert "product=ThinkPad T14 Gen 3" in joined, f"laptop profile must emit the ThinkPad product; argv smbios entries were {smbios_values!r}"
+        assert "product=21AHS00000" in joined, f"laptop profile must emit the laptop board product 21AHS00000; argv smbios entries were {smbios_values!r}"
+        assert "chassis-type=10" in joined, f"laptop profile must emit laptop chassis-type=10; argv smbios entries were {smbios_values!r}"
+        assert "chassis-type=3" not in joined, f"laptop profile must not emit the desktop chassis-type=3; argv smbios entries were {smbios_values!r}"
+        assert "manufacturer=HP" not in joined, f"default HP vendor must not appear for laptop profile; argv smbios entries were {smbios_values!r}"
+
+        sb.state.status = "running"
+        sb.set_agent(_ConnectableAgent(connected=False))
 
         async def _run() -> dict[str, Any]:
             sb.set_qmp(MagicMock())
@@ -1068,7 +1150,8 @@ class TestF0022F0029AntiEvasion:
 
         result = asyncio.run(_run())
         assert result["profile"] == "laptop"
-        assert any("smbios" in t for t in result["techniques"]), "Techniques must include SMBIOS entries when profile is applied"
+        smbios_techniques = [t for t in result["techniques"] if t.startswith("smbios_type_")]
+        assert len(smbios_techniques) == 3, f"apply_anti_evasion must report one technique per laptop SMBIOS entry; got {result['techniques']!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -1328,7 +1411,12 @@ class TestF0028YaraScanFallback:
 
         asyncio.run(_run())
 
-        assert len(scanned_paths) > 0, "yara_scan did not scan any files from the zip"
+        assert scanned_paths, "yara_scan did not scan any files from the zip"
+        normalized = [Path(p) for p in scanned_paths]
+        assert any(p.name == "artifact.bin" for p in normalized), f"yara_scan must scan the artifact extracted from the dropped-files zip; scanned {scanned_paths!r}"
+        input_dir_resolved = input_dir.resolve()
+        for p in normalized:
+            assert input_dir_resolved not in p.resolve().parents, f"yara_scan must not scan anything under shared/input; found '{p}'"
 
 
 # ---------------------------------------------------------------------------
@@ -1451,8 +1539,16 @@ class TestF0035RunBinarySuccessMatchesExitCode:
 class TestF0006AgentScriptStartupWired:
     """F-0006: The guest agent startup script must be present and reference the agent."""
 
-    def test_windows_startup_script_created(self, tmp_path: Path) -> None:
-        """_create_guest_agent_script must produce start_agent.cmd for Windows.
+    def test_windows_startup_script_wires_agent(self, tmp_path: Path) -> None:
+        """``start_agent.cmd`` must exist and actually launch the Windows agent script.
+
+        F-0006 is "startup entry point wired in", so existence of *some* file is
+        not enough: the startup wrapper itself must be present and must reference
+        and launch the agent it is meant to start. This gate requires the
+        specific ``start_agent.cmd`` file and asserts (a) it invokes
+        ``powershell.exe`` and (b) it targets the guest agent script
+        ``agent.ps1`` that ``_create_guest_agent_script`` also wrote into the
+        same directory. Both the agent and the wiring must be present.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -1468,13 +1564,23 @@ class TestF0006AgentScriptStartupWired:
 
         asyncio.run(_run())
 
-        startup_scripts = list(monitor_dir.glob("start_agent.*"))
-        agent_scripts = list(monitor_dir.glob("agent.*"))
+        startup_script = monitor_dir / "start_agent.cmd"
+        agent_script = monitor_dir / "agent.ps1"
+        assert startup_script.is_file(), "Windows startup wrapper start_agent.cmd was not created"
+        assert agent_script.is_file(), "Windows agent.ps1 was not created"
 
-        assert startup_scripts or agent_scripts, "No startup or agent script created in monitor dir"
+        startup_text = startup_script.read_text(encoding="utf-8")
+        assert "powershell.exe" in startup_text.lower(), f"start_agent.cmd must launch powershell.exe; got {startup_text!r}"
+        assert "agent.ps1" in startup_text, f"start_agent.cmd must reference the agent script agent.ps1; got {startup_text!r}"
 
-    def test_linux_startup_script_created(self, tmp_path: Path) -> None:
-        """_create_guest_agent_script must produce start_agent.sh for Linux.
+    def test_linux_startup_script_wires_agent(self, tmp_path: Path) -> None:
+        """``start_agent.sh`` must exist and actually launch the Linux agent script.
+
+        Mirrors the Windows gate: the specific ``start_agent.sh`` wrapper must be
+        created and must invoke the Python agent it starts
+        (``python3 .../agent.py``), and the ``agent.py`` itself must also be
+        written. Existence of an ``agent.*`` file alone is insufficient because
+        the F-0006 fix is the startup wiring.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -1490,9 +1596,14 @@ class TestF0006AgentScriptStartupWired:
 
         asyncio.run(_run())
 
-        sh_scripts = list(monitor_dir.glob("*.sh"))
-        agent_scripts = list(monitor_dir.glob("agent.*"))
-        assert sh_scripts or agent_scripts, "No .sh startup or agent script created for Linux guest"
+        startup_script = monitor_dir / "start_agent.sh"
+        agent_script = monitor_dir / "agent.py"
+        assert startup_script.is_file(), "Linux startup wrapper start_agent.sh was not created"
+        assert agent_script.is_file(), "Linux agent.py was not created"
+
+        startup_text = startup_script.read_text(encoding="utf-8")
+        assert "python3" in startup_text, f"start_agent.sh must invoke python3; got {startup_text!r}"
+        assert "agent.py" in startup_text, f"start_agent.sh must reference the agent script agent.py; got {startup_text!r}"
 
 
 # ---------------------------------------------------------------------------

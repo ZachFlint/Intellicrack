@@ -218,7 +218,7 @@ Total test functions audited: 293
 - Findings by severity:
   - Critical: 1 (test_types.py - 80 tests are vacuous construction-only tests)
   - High: 7 findings covering monkeypatch of core functions (find_hxd_executable, dialogs, interpreters), plus Anthropic integration test issues
-  
+
 - Total tests audited: 293
 - Total tests clean: 206 (conftest fixtures + real-data tests with proper assertions)
 - Total test functions with violations: 87 (80 in test_types.py + 7 findings affecting multiple test functions across template/panel tests)
@@ -230,4 +230,3 @@ Total test functions audited: 293
 **Monkeypatch Pattern (High):** The pattern of monkeypatching the very functions/dialogs under test appears across 7 distinct fixtures and fixture usages. This violates the core principle that tests must verify production code behavior, not mock behavior. All instances require refactoring to use real or properly-stubbed behavior.
 
 **Anthropic Provider (High):** While the tests make real API calls when credentials are available, they lack specificity about what constitutes a valid response and silently skip when credentials are absent. This allows regressions in the API integration to go undetected.
-

@@ -1,0 +1,65 @@
+{
+ "file": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_sections_signature",
+   "severity": "MEDIUM",
+   "category": "N8 type/existence-only",
+   "action": "hardened",
+   "oracle": "pefile (pefile.PE(...).sections, names recomputed via Name.rstrip(b'\\x00').decode('ascii')) compared against the bridge's get_pe_sections output",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "\"name\": section[\"name\"], -> \"name\": \"MUTATED\",",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_sections_signature",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_imports_signature",
+   "severity": "MEDIUM",
+   "category": "N8 type/existence-only",
+   "action": "hardened",
+   "oracle": "pefile (parse_data_directories on IMAGE_DIRECTORY_ENTRY_IMPORT confirms no DIRECTORY_ENTRY_IMPORT attribute -> the no-imports contract requires []) compared against the bridge's get_pe_imports output",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "        results: list[dict[str, Any]] = []\n        try:\n            dir_entry: dict[str, int] = getattr(_pefile_mod, \"DIRECTORY_ENTRY\", {})\n            pe.parse_data_directories(directories=[dir_entry.get(\"IMAGE_DIRECTORY_ENTRY_IMPORT\", 1)]) ->         results: list[dict[str, Any]] = [{\"dll\": \"MUTATED\"}]\n        try:\n            dir_entry: dict[str, int] = getattr(_pefile_mod, \"DIRECTORY_ENTRY\", {})\n            pe.parse_data_directories(directories=[dir_entry.get(\"IMAGE_DIRECTORY_ENTRY_IMPORT\", 1)])",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_imports_signature",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_exports_signature",
+   "severity": "MEDIUM",
+   "category": "N8 type/existence-only",
+   "action": "hardened",
+   "oracle": "pefile (parse_data_directories on IMAGE_DIRECTORY_ENTRY_EXPORT confirms no DIRECTORY_ENTRY_EXPORT attribute -> the no-exports contract requires []) compared against the bridge's get_pe_exports output",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "        results: list[dict[str, Any]] = []\n        dir_entry: dict[str, int] = getattr(_pefile_mod, \"DIRECTORY_ENTRY\", {})\n        pe.parse_data_directories(directories=[dir_entry.get(\"IMAGE_DIRECTORY_ENTRY_EXPORT\", 0)]) ->         results: list[dict[str, Any]] = [{\"name\": \"MUTATED\", \"address\": 0, \"ordinal\": 0}]\n        dir_entry: dict[str, int] = getattr(_pefile_mod, \"DIRECTORY_ENTRY\", {})\n        pe.parse_data_directories(directories=[dir_entry.get(\"IMAGE_DIRECTORY_ENTRY_EXPORT\", 0)])",
+    "covering_test": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_exports_signature",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 3
+}

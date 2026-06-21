@@ -1,0 +1,2411 @@
+[
+ {
+  "file": "tests/test_core/test_logging.py",
+  "reports": [
+   "test_core_part1.md"
+  ],
+  "n": 24,
+  "findings": [
+   {
+    "test": "test_intellicrack_logger_get_logger_root",
+    "severity": "LOW",
+    "category": "existence-only (N8)",
+    "line": 496
+   },
+   {
+    "test": "test_intellicrack_logger_get_logger_child",
+    "severity": "LOW",
+    "category": "existence-only (N8)",
+    "line": 504
+   },
+   {
+    "test": "test_intellicrack_logger_configure",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 511
+   },
+   {
+    "test": "test_intellicrack_logger_configure_no_file",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 529
+   },
+   {
+    "test": "test_intellicrack_logger_configure_plain_text",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 539
+   },
+   {
+    "test": "test_get_logger_returns_bound_logger",
+    "severity": "LOW",
+    "category": "existence-only (N8)",
+    "line": 557
+   },
+   {
+    "test": "test_get_logger_no_name",
+    "severity": "LOW",
+    "category": "existence-only (N8)",
+    "line": 564
+   },
+   {
+    "test": "test_get_logger_with_name",
+    "severity": "LOW",
+    "category": "existence-only (N8)",
+    "line": 570
+   },
+   {
+    "test": "test_log_tool_call_minimal",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 579
+   },
+   {
+    "test": "test_log_tool_call_with_duration_and_success",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 584
+   },
+   {
+    "test": "test_log_tool_call_with_failure",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 595
+   },
+   {
+    "test": "test_log_provider_request",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 600
+   },
+   {
+    "test": "test_log_provider_response_minimal",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 605
+   },
+   {
+    "test": "test_log_provider_response_with_tokens",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 610
+   },
+   {
+    "test": "test_log_binary_operation",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 621
+   },
+   {
+    "test": "test_log_binary_operation_path_object",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 626
+   },
+   {
+    "test": "test_log_sandbox_operation",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 631
+   },
+   {
+    "test": "test_log_session_operation_minimal",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 636
+   },
+   {
+    "test": "test_log_session_operation_with_id",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 641
+   },
+   {
+    "test": "test_log_session_operation_with_kwargs",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 646
+   },
+   {
+    "test": "test_log_analysis_operation",
+    "severity": "LOW",
+    "category": "no-assert (N1)",
+    "line": 651
+   },
+   {
+    "test": "test_operation_timer_success",
+    "severity": "LOW",
+    "category": "weak (asserts only the echoed input)",
+    "line": 659
+   },
+   {
+    "test": "test_operation_timer_with_context",
+    "severity": "LOW",
+    "category": "weak (asserts only the echoed input)",
+    "line": 665
+   },
+   {
+    "test": "test_operation_timer_on_exception",
+    "severity": "LOW",
+    "category": "log/side-effect not asserted (N9-adjacent)",
+    "line": 671
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_provider_bugfixes.py",
+  "reports": [
+   "test_providers_part2.md"
+  ],
+  "n": 12,
+  "findings": [
+   {
+    "test": "TestAsyncCacheDiscovery.test_init_model_discovery_is_coroutine",
+    "severity": "MEDIUM",
+    "category": "N8",
+    "line": 49
+   },
+   {
+    "test": "TestOAuthFlowValidation.test_oauth_configs_returns_none_for_missing_provider",
+    "severity": "CRITICAL",
+    "category": "N4",
+    "line": 120
+   },
+   {
+    "test": "TestCredentialSourceDetectorPath.test_env_path_resolves_relative_to_module",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 131
+   },
+   {
+    "test": "TestCredentialSourceDetectorPath.test_credential_source_detector_instantiation",
+    "severity": "CRITICAL",
+    "category": "N8",
+    "line": 137
+   },
+   {
+    "test": "TestHuggingFaceJsonDecode.test_malformed_json_raises_decode_error",
+    "severity": "CRITICAL",
+    "category": "N4",
+    "line": 151
+   },
+   {
+    "test": "TestHuggingFaceJsonDecode.test_html_response_raises_decode_error",
+    "severity": "CRITICAL",
+    "category": "N4",
+    "line": 157
+   },
+   {
+    "test": "TestHuggingFaceJsonDecode.test_valid_json_parses_correctly",
+    "severity": "MEDIUM",
+    "category": "N4",
+    "line": 165
+   },
+   {
+    "test": "TestHuggingFaceJsonDecode.test_provider_error_wraps_decode_error",
+    "severity": "MEDIUM",
+    "category": "N4/N10",
+    "line": 172
+   },
+   {
+    "test": "TestGoogleClientErrorDetection.test_client_error_class_is_importable",
+    "severity": "CRITICAL",
+    "category": "N8",
+    "line": 206
+   },
+   {
+    "test": "TestOpenRouterPricingConversion.test_valid_numeric_string_converts",
+    "severity": "MEDIUM",
+    "category": "N4",
+    "line": 215
+   },
+   {
+    "test": "TestOpenRouterPricingConversion.test_na_string_raises_value_error",
+    "severity": "MEDIUM",
+    "category": "N4",
+    "line": 222
+   },
+   {
+    "test": "TestOpenRouterPricingConversion.test_empty_string_raises_value_error",
+    "severity": "MEDIUM",
+    "category": "N4",
+    "line": 228
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+  "reports": [
+   "test_audit5.md"
+  ],
+  "n": 11,
+  "findings": [
+   {
+    "test": "TestXPUStatusMenuWiring.test_help_menu_source_references_xpu_status",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 727
+   },
+   {
+    "test": "TestToolDialogsReceiveRegistry.test_configure_tools_wires_status_changed",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1022
+   },
+   {
+    "test": "TestOpenSandboxAvoidsDialogProbe.test_open_sandbox_uses_bridge_is_available",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1041
+   },
+   {
+    "test": "TestApplyProviderSettingsHandlesDisabled.test_source_collects_providers_to_disconnect",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1194
+   },
+   {
+    "test": "TestOrphanSignalWiringSourceLevel.test_preferences_settings_changed_wired",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1217
+   },
+   {
+    "test": "TestOrphanSignalWiringSourceLevel.test_session_dialog_signals_wired",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1223
+   },
+   {
+    "test": "TestOrphanSignalWiringSourceLevel.test_provider_dialog_signals_wired",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1230
+   },
+   {
+    "test": "TestOrphanSignalWiringSourceLevel.test_model_selection_dialog_signal_wired",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1237
+   },
+   {
+    "test": "TestOrphanSignalWiringSourceLevel.test_sandbox_dialog_settings_updated_wired",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1243
+   },
+   {
+    "test": "TestOrphanSignalWiringSourceLevel.test_sandbox_monitor_wiring_helper_present",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1249
+   },
+   {
+    "test": "TestOrphanSignalWiringSourceLevel.test_tool_output_panel_signals_wired",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 1255
+   }
+  ]
+ },
+ {
+  "file": "tests/test_ui/test_vnc_widget.py",
+  "reports": [
+   "test_ui_part2.md"
+  ],
+  "n": 10,
+  "findings": [
+   {
+    "test": "test_request_framebuffer_update_when_disconnected",
+    "severity": "CRITICAL",
+    "category": "no-assert (N1)",
+    "line": 118
+   },
+   {
+    "test": "test_pointer_event_format",
+    "severity": "CRITICAL",
+    "category": "tautological (N4/N10)",
+    "line": 135
+   },
+   {
+    "test": "test_key_event_format",
+    "severity": "CRITICAL",
+    "category": "tautological (N4/N10)",
+    "line": 146
+   },
+   {
+    "test": "test_framebuffer_update_request_format",
+    "severity": "CRITICAL",
+    "category": "tautological (N4/N10)",
+    "line": 157
+   },
+   {
+    "test": "test_send_pointer_when_disconnected",
+    "severity": "CRITICAL",
+    "category": "no-assert (N1)",
+    "line": 176
+   },
+   {
+    "test": "test_send_key_when_disconnected",
+    "severity": "CRITICAL",
+    "category": "no-assert (N1)",
+    "line": 181
+   },
+   {
+    "test": "test_apply_raw_rect_partial_data",
+    "severity": "CRITICAL",
+    "category": "no-assert (N1)",
+    "line": 206
+   },
+   {
+    "test": "test_apply_raw_rect_no_framebuffer",
+    "severity": "CRITICAL",
+    "category": "no-assert (N1)",
+    "line": 217
+   },
+   {
+    "test": "test_construction",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 296
+   },
+   {
+    "test": "test_button_mask_static_method_exists",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 355
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py",
+  "reports": [
+   "test_audit4_group1.md"
+  ],
+  "n": 7,
+  "findings": [
+   {
+    "test": "test_action_reads_event_message_data",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 71
+   },
+   {
+    "test": "test_action_uses_local_log_path_var",
+    "severity": "LOW",
+    "category": "N9",
+    "line": 76
+   },
+   {
+    "test": "test_uses_proc_id_variable",
+    "severity": "LOW",
+    "category": "N9 (redundant)",
+    "line": 112
+   },
+   {
+    "test": "test_uses_owner_pid_variable",
+    "severity": "LOW",
+    "category": "N9 (redundant)",
+    "line": 152
+   },
+   {
+    "test": "test_no_hardcoded_reg_sz",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 162
+   },
+   {
+    "test": "test_dynamic_type_in_snapshot",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 172
+   },
+   {
+    "test": "test_type_included_in_log_entry",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 178
+   }
+  ]
+ },
+ {
+  "file": "tests/core/test_process_cleanup.py",
+  "reports": [
+   "misc_credentials_root_scripts.md"
+  ],
+  "n": 6,
+  "findings": [
+   {
+    "test": "test_sandbox_temp_wsb_file_cleaned_up",
+    "severity": "CRITICAL",
+    "category": "N4/N10 (tautological / self-fulfilling)",
+    "line": 147
+   },
+   {
+    "test": "test_qemu_pidfile_retry_constants_are_reasonable",
+    "severity": "MEDIUM",
+    "category": "N8 (existence-only / asserts config constants)",
+    "line": 309
+   },
+   {
+    "test": "test_qemu_pidfile_retry_reads_immediate_file",
+    "severity": "CRITICAL",
+    "category": "N4 (tautological: re-implements logic under test)",
+    "line": 320
+   },
+   {
+    "test": "test_qemu_pidfile_retry_reads_delayed_file",
+    "severity": "CRITICAL",
+    "category": "N4 (tautological: re-implements logic under test)",
+    "line": 346
+   },
+   {
+    "test": "test_qemu_pidfile_retry_exhausted_returns_none",
+    "severity": "CRITICAL",
+    "category": "N4 (tautological: re-implements logic under test)",
+    "line": 380
+   },
+   {
+    "test": "test_qemu_pidfile_retry_handles_corrupt_content",
+    "severity": "CRITICAL",
+    "category": "N4 (tautological: re-implements logic under test)",
+    "line": 409
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit3/core/test_xml_gen.py",
+  "reports": [
+   "test_audit3.md"
+  ],
+  "n": 6,
+  "findings": [
+   {
+    "test": "test_f0011_no_importlib_import_module_for_xml_etree",
+    "severity": "MEDIUM",
+    "category": "N9 (string-presence proxy)",
+    "line": 58
+   },
+   {
+    "test": "test_f0011_no_importlib_import_for_xml_etree_dotted_path",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 72
+   },
+   {
+    "test": "test_f0011_no_dunder_import_obfuscation",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 83
+   },
+   {
+    "test": "test_f0011_no_runtime_string_concatenation_of_xml_etree",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 95
+   },
+   {
+    "test": "test_f0011_uses_direct_import_statement",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 107
+   },
+   {
+    "test": "test_f0011_no_inline_suppression_directives",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 123
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py",
+  "reports": [
+   "test_audit4_group1.md"
+  ],
+  "n": 6,
+  "findings": [
+   {
+    "test": "test_windows_agent_script_uses_message_data_or_global",
+    "severity": "LOW",
+    "category": "N7-adjacent",
+    "line": 948
+   },
+   {
+    "test": "test_anti_evasion_profile_recorded_in_result",
+    "severity": "MEDIUM",
+    "category": "N6/N10",
+    "line": 1010
+   },
+   {
+    "test": "test_anti_evasion_techniques_reflect_profile_applied",
+    "severity": "MEDIUM",
+    "category": "N10",
+    "line": 1053
+   },
+   {
+    "test": "test_yara_scan_scans_zip_artifacts_when_present",
+    "severity": "MEDIUM",
+    "category": "N6",
+    "line": 1275
+   },
+   {
+    "test": "test_windows_startup_script_created",
+    "severity": "MEDIUM",
+    "category": "N8",
+    "line": 1454
+   },
+   {
+    "test": "test_linux_startup_script_created",
+    "severity": "MEDIUM",
+    "category": "N8",
+    "line": 1476
+   }
+  ]
+ },
+ {
+  "file": "tests/test_ui/test_font_manager.py",
+  "reports": [
+   "test_ui_part1.md"
+  ],
+  "n": 6,
+  "findings": [
+   {
+    "test": "test_load_fonts_returns_bool",
+    "severity": "LOW",
+    "category": "N8 (existence/type-only)",
+    "line": 93
+   },
+   {
+    "test": "test_load_fonts_idempotent",
+    "severity": "LOW",
+    "category": "N4 (weak self-comparison)",
+    "line": 146
+   },
+   {
+    "test": "test_get_code_font_returns_qfont",
+    "severity": "LOW",
+    "category": "N4/N8 (type-only on non-None return)",
+    "line": 161
+   },
+   {
+    "test": "test_get_ui_font_returns_qfont",
+    "severity": "LOW",
+    "category": "N4/N8 (type-only on non-None return)",
+    "line": 226
+   },
+   {
+    "test": "test_get_heading_font_returns_qfont",
+    "severity": "LOW",
+    "category": "N4/N8 (type-only on non-None return)",
+    "line": 281
+   },
+   {
+    "test": "test_font_config_valid_json",
+    "severity": "LOW",
+    "category": "N8 (type-only after parse)",
+    "line": 495
+   }
+  ]
+ },
+ {
+  "file": "tests/test_ui/test_splash_screen.py",
+  "reports": [
+   "test_ui_part2.md"
+  ],
+  "n": 6,
+  "findings": [
+   {
+    "test": "test_creates_splash_screen",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 104
+   },
+   {
+    "test": "test_rapid_progress_calls_no_error",
+    "severity": "MEDIUM",
+    "category": "no-assert (N1)",
+    "line": 709
+   },
+   {
+    "test": "test_paint_event_no_crash",
+    "severity": "MEDIUM",
+    "category": "no-assert (N1)",
+    "line": 937
+   },
+   {
+    "test": "test_paint_with_progress",
+    "severity": "MEDIUM",
+    "category": "no-assert (N1)",
+    "line": 950
+   },
+   {
+    "test": "test_paint_full_pipeline",
+    "severity": "MEDIUM",
+    "category": "no-assert (N1)",
+    "line": 963
+   },
+   {
+    "test": "test_splash_image_loaded",
+    "severity": "MEDIUM",
+    "category": "vacuously-satisfiable conditional (N6)",
+    "line": 1005
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit3/bridges/test_named_pipe_client.py",
+  "reports": [
+   "test_audit3.md"
+  ],
+  "n": 5,
+  "findings": [
+   {
+    "test": "test_open_handle_uses_shared_read_write",
+    "severity": "MEDIUM",
+    "category": "N9 (source-presence proxy)",
+    "line": 340
+   },
+   {
+    "test": "test_allocate_request_id_uses_dedicated_lock",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 432
+   },
+   {
+    "test": "test_close_handle_checks_return_value",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 920
+   },
+   {
+    "test": "test_write_sync_does_not_use_info_for_routine_io",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 943
+   },
+   {
+    "test": "test_open_close_still_log_at_info",
+    "severity": "LOW",
+    "category": "N9",
+    "line": 952
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py",
+  "reports": [
+   "test_audit4_group2.md"
+  ],
+  "n": 5,
+  "findings": [
+   {
+    "test": "test_add_bookmark_publishes_data_modified",
+    "severity": "MEDIUM",
+    "category": "N10",
+    "line": 213
+   },
+   {
+    "test": "test_add_bookmark_offset_and_length_match_bookmark",
+    "severity": "MEDIUM",
+    "category": "N10",
+    "line": 230
+   },
+   {
+    "test": "test_add_bookmark_source_literal_uses_bookmarks_namespace",
+    "severity": "MEDIUM",
+    "category": "N10",
+    "line": 250
+   },
+   {
+    "test": "test_panel_loop_guarded_subscriber_receives_add_event",
+    "severity": "MEDIUM",
+    "category": "N10",
+    "line": 270
+   },
+   {
+    "test": "test_add_bookmark_no_notify_when_state_holder_absent",
+    "severity": "CRITICAL",
+    "category": "N1",
+    "line": 296
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_ghidra.py",
+  "reports": [
+   "test_bridges_part1.md"
+  ],
+  "n": 5,
+  "findings": [
+   {
+    "test": "test_tool_definition_function_count",
+    "severity": "LOW",
+    "category": "weaker-than-it-should-be",
+    "line": 124
+   },
+   {
+    "test": "TestStringInjectionPrevention::test_json_dumps_handles_quotes",
+    "severity": "MEDIUM",
+    "category": "N8/coverage-theater",
+    "line": 282
+   },
+   {
+    "test": "TestStringInjectionPrevention::test_json_dumps_handles_backslashes",
+    "severity": "MEDIUM",
+    "category": "N8/coverage-theater",
+    "line": 290
+   },
+   {
+    "test": "TestStringInjectionPrevention::test_json_dumps_handles_newlines",
+    "severity": "MEDIUM",
+    "category": "N8/coverage-theater",
+    "line": 296
+   },
+   {
+    "test": "TestStringInjectionPrevention::test_json_dumps_handles_unicode",
+    "severity": "MEDIUM",
+    "category": "N8/coverage-theater",
+    "line": 303
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_process_win32.py",
+  "reports": [
+   "test_bridges_part2.md"
+  ],
+  "n": 5,
+  "findings": [
+   {
+    "test": "test_get_mitigation_policy_returns_keys",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 77
+   },
+   {
+    "test": "test_get_extension_policy_returns_dict",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 91
+   },
+   {
+    "test": "test_enumerate_handles_for_self_nonempty",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 115
+   },
+   {
+    "test": "test_time_thread_wait_returns_result_dict",
+    "severity": "MEDIUM",
+    "category": "accepts-both / existence-only (N7/N8)",
+    "line": 143
+   },
+   {
+    "test": "test_enumerate_heaps_for_self",
+    "severity": "MEDIUM",
+    "category": "vacuously-satisfiable conditional (N6)",
+    "line": 188
+   }
+  ]
+ },
+ {
+  "file": "tests/test_core/test_script_gen.py",
+  "reports": [
+   "test_core_part2.md"
+  ],
+  "n": 5,
+  "findings": [
+   {
+    "test": "test_bypass_strategy_count",
+    "severity": "LOW",
+    "category": "count-only mirrors implementation (N8/N4)",
+    "line": 57
+   },
+   {
+    "test": "test_frida_api_reference_keys",
+    "severity": "LOW",
+    "category": "existence/count-only (N8)",
+    "line": 945
+   },
+   {
+    "test": "test_ghidra_api_reference_keys",
+    "severity": "LOW",
+    "category": "existence/count-only (N8)",
+    "line": 955
+   },
+   {
+    "test": "test_cutter_reference_keys",
+    "severity": "LOW",
+    "category": "existence/count-only (N8)",
+    "line": 964
+   },
+   {
+    "test": "test_x64dbg_reference_keys",
+    "severity": "LOW",
+    "category": "existence/count-only (N8)",
+    "line": 972
+   }
+  ]
+ },
+ {
+  "file": "tests/test_ui/test_win32_embed.py",
+  "reports": [
+   "test_ui_part2.md"
+  ],
+  "n": 5,
+  "findings": [
+   {
+    "test": "test_returns_int_or_none_for_current_pid",
+    "severity": "HIGH",
+    "category": "accepts-both-outcomes (N7)",
+    "line": 58
+   },
+   {
+    "test": "test_ctypes_windll_available",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 65
+   },
+   {
+    "test": "test_returns_widget_or_none_for_zero_hwnd",
+    "severity": "MEDIUM",
+    "category": "accepts-both-outcomes (N7)",
+    "line": 81
+   },
+   {
+    "test": "test_returns_widget_or_none_for_garbage_hwnd",
+    "severity": "MEDIUM",
+    "category": "accepts-both-outcomes (N7)",
+    "line": 88
+   },
+   {
+    "test": "test_accepts_callable_callback",
+    "severity": "MEDIUM",
+    "category": "no-assert (N1)",
+    "line": 150
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+  "reports": [
+   "test_audit4_group3.md"
+  ],
+  "n": 4,
+  "findings": [
+   {
+    "test": "test_method_exists_on_bridge",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 125
+   },
+   {
+    "test": "test_method_is_static",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 129
+   },
+   {
+    "test": "test_returns_bytes_type",
+    "severity": "MEDIUM",
+    "category": "existence-only / type-only (N8)",
+    "line": 134
+   },
+   {
+    "test": "test_export_patches_ips_callable_on_document",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 206
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 4,
+  "findings": [
+   {
+    "test": "test_disassemble_pe_text_with_auto_arch",
+    "severity": "HIGH",
+    "category": "existence-only for behavior(N8)",
+    "line": 104
+   },
+   {
+    "test": "test_disassemble_at_mz_header_does_not_crash",
+    "severity": "MEDIUM",
+    "category": "type-only(N8)",
+    "line": 142
+   },
+   {
+    "test": "test_disassemble_mz_header_address_starts_at_zero",
+    "severity": "HIGH",
+    "category": "vacuously-satisfiable conditional(N6)",
+    "line": 151
+   },
+   {
+    "test": "test_disassemble_at_end_of_file_returns_empty_or_partial",
+    "severity": "MEDIUM",
+    "category": "weak upper bound(N8)",
+    "line": 254
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_agentic_capabilities.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 4,
+  "findings": [
+   {
+    "test": "TestToolChoiceRequired.test_google_tool_choice_auto",
+    "severity": "HIGH",
+    "category": "N7 accepts-both-outcomes",
+    "line": 198
+   },
+   {
+    "test": "TestStreamingToolCalls.test_huggingface_stream_captures_tool_calls",
+    "severity": "HIGH",
+    "category": "N6/N7 vacuously-satisfiable",
+    "line": 281
+   },
+   {
+    "test": "TestStreamingToolCalls.test_ollama_stream_with_tools_returns_tool_calls",
+    "severity": "HIGH",
+    "category": "N6/N7 vacuously-satisfiable",
+    "line": 344
+   },
+   {
+    "test": "TestAccurateToolSupport.test_ollama_models_report_accurate_tool_support",
+    "severity": "CRITICAL",
+    "category": "N4 vacuous",
+    "line": 414
+   }
+  ]
+ },
+ {
+  "file": "tests/test_ui/test_icon_manager.py",
+  "reports": [
+   "test_ui_part1.md"
+  ],
+  "n": 4,
+  "findings": [
+   {
+    "test": "test_get_icon_returns_qicon",
+    "severity": "LOW",
+    "category": "N8 (type-only)",
+    "line": 136
+   },
+   {
+    "test": "test_missing_icon_returns_icon_object",
+    "severity": "MEDIUM",
+    "category": "N8 (type-only on fallback path)",
+    "line": 446
+   },
+   {
+    "test": "test_svg_icons_load_without_errors",
+    "severity": "MEDIUM",
+    "category": "N8 (type-only inside try/except)",
+    "line": 594
+   },
+   {
+    "test": "test_icon_manager_available_flag",
+    "severity": "LOW",
+    "category": "N8 (boolean attribute snapshot)",
+    "line": 614
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py",
+  "reports": [
+   "test_audit7_group1.md"
+  ],
+  "n": 3,
+  "findings": [
+   {
+    "test": "test_qemu_source_awaits_agent_connect",
+    "severity": "MEDIUM",
+    "category": "Log/string-presence proxy (N9)",
+    "line": 560
+   },
+   {
+    "test": "test_attach_qemu_agents_forwards_agent_connect_timeout_not_hardcoded",
+    "severity": "MEDIUM",
+    "category": "Log/string-presence proxy (N9)",
+    "line": 580
+   },
+   {
+    "test": "test_attach_qemu_agents_creates_guest_agent_client",
+    "severity": "MEDIUM",
+    "category": "Log/string-presence proxy (N9)",
+    "line": 595
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_hex_editor_pe_methods.py",
+  "reports": [
+   "test_bridges_part1.md"
+  ],
+  "n": 3,
+  "findings": [
+   {
+    "test": "TestMethodDispatchSurface::test_method_resolves_via_getattr",
+    "severity": "MEDIUM",
+    "category": "N8 existence-only",
+    "line": 162
+   },
+   {
+    "test": "TestMethodDispatchSurface::test_method_is_coroutine_function",
+    "severity": "MEDIUM",
+    "category": "N8 existence-only",
+    "line": 178
+   },
+   {
+    "test": "TestMethodDispatchSurface::test_method_signature_takes_only_self",
+    "severity": "MEDIUM",
+    "category": "N8 existence-only",
+    "line": 193
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_x64dbg.py",
+  "reports": [
+   "test_bridges_part2.md"
+  ],
+  "n": 3,
+  "findings": [
+   {
+    "test": "test_bridge_instantiation",
+    "severity": "CRITICAL",
+    "category": "vacuous (N4)",
+    "line": 66
+   },
+   {
+    "test": "test_breakpoint_info_fields",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 134
+   },
+   {
+    "test": "test_disassemble_requires_capstone",
+    "severity": "CRITICAL",
+    "category": "vacuous conditional (N1/N6)",
+    "line": 374
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 3,
+  "findings": [
+   {
+    "test": "test_set_chunk_size",
+    "severity": "LOW",
+    "category": "literal-return(N4/N8)",
+    "line": 154
+   },
+   {
+    "test": "test_get_memory_usage",
+    "severity": "MEDIUM",
+    "category": "dict-key existence on self-built literal(N8/N10)",
+    "line": 167
+   },
+   {
+    "test": "test_set_memory_budget",
+    "severity": "LOW",
+    "category": "literal-return(N4/N8)",
+    "line": 182
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_pe_introspection.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 3,
+  "findings": [
+   {
+    "test": "test_get_pe_sections_signature",
+    "severity": "MEDIUM",
+    "category": "type/existence-only(N8)",
+    "line": 587
+   },
+   {
+    "test": "test_get_pe_imports_signature",
+    "severity": "MEDIUM",
+    "category": "type/existence-only(N8)",
+    "line": 599
+   },
+   {
+    "test": "test_get_pe_exports_signature",
+    "severity": "MEDIUM",
+    "category": "type/existence-only(N8)",
+    "line": 611
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 3,
+  "findings": [
+   {
+    "test": "test_search_with_alignment_4_returns_only_aligned_offsets",
+    "severity": "HIGH",
+    "category": "vacuously-satisfiable(N6)",
+    "line": 198
+   },
+   {
+    "test": "test_search_max_results_caps_returned_matches",
+    "severity": "HIGH",
+    "category": "vacuously-satisfiable(N6)",
+    "line": 232
+   },
+   {
+    "test": "test_search_on_minimal_data_does_not_crash",
+    "severity": "HIGH",
+    "category": "conditional skips real check(N6)",
+    "line": 278
+   }
+  ]
+ },
+ {
+  "file": "tests/test_sandbox/test_sandbox_bridge.py",
+  "reports": [
+   "test_sandbox_and_hexpat.md"
+  ],
+  "n": 3,
+  "findings": [
+   {
+    "test": "test_definition_exists",
+    "severity": "LOW",
+    "category": "N4-adjacent (existence-only)",
+    "line": 105
+   },
+   {
+    "test": "test_all_resolve_to_methods",
+    "severity": "MEDIUM",
+    "category": "N8 (existence-only for a behavior claim)",
+    "line": 122
+   },
+   {
+    "test": "test_create_failure_raises",
+    "severity": "MEDIUM",
+    "category": "N7 (accepts unrelated failure causes)",
+    "line": 276
+   }
+  ]
+ },
+ {
+  "file": "tests/test_ui/test_process_panel.py",
+  "reports": [
+   "test_ui_part1.md"
+  ],
+  "n": 3,
+  "findings": [
+   {
+    "test": "test_panel_creates",
+    "severity": "LOW",
+    "category": "N8 (type-only)",
+    "line": 95
+   },
+   {
+    "test": "test_import_from_package",
+    "severity": "LOW",
+    "category": "N8 (import-presence only)",
+    "line": 333
+   },
+   {
+    "test": "test_import_from_panels",
+    "severity": "LOW",
+    "category": "N8 (import-presence only)",
+    "line": 337
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit3/bridges/test_installer.py",
+  "reports": [
+   "test_audit3.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_get_version_x64dbg_uses_pe_when_available",
+    "severity": "HIGH",
+    "category": "N7 (accepts-both-outcomes)",
+    "line": 395
+   },
+   {
+    "test": "test_progress_threshold_is_per_megabyte",
+    "severity": "MEDIUM",
+    "category": "N6 (vacuously-satisfiable range)",
+    "line": 744
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit3/sandbox/test_injection_monitor.py",
+  "reports": [
+   "test_audit3.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_script_does_not_label_normal_thread_starts_as_shellcode_injection",
+    "severity": "HIGH",
+    "category": "N6 (vacuously-satisfiable)",
+    "line": 307
+   },
+   {
+    "test": "test_script_emits_threat_intel_unavailable_warning_when_not_admin",
+    "severity": "HIGH",
+    "category": "N6 (guarded no-op)",
+    "line": 352
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py",
+  "reports": [
+   "test_audit4_group3.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_pyproject_parses",
+    "severity": "LOW",
+    "category": "weak/structural gate (N8)",
+    "line": 177
+   },
+   {
+    "test": "test_pyproject_parses_under_active_interpreter",
+    "severity": "MEDIUM",
+    "category": "partial-overlap structural gate (N8)",
+    "line": 202
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py",
+  "reports": [
+   "test_audit5.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_vendor_mem_base_address_smoke",
+    "severity": "MEDIUM",
+    "category": "N3",
+    "line": 738
+   },
+   {
+    "test": "test_vendor_string_parse_int_smoke",
+    "severity": "MEDIUM",
+    "category": "N3",
+    "line": 766
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_cutter.py",
+  "reports": [
+   "test_bridges_part1.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "TestToolDefinition::test_all_functions_resolve_to_methods",
+    "severity": "LOW",
+    "category": "N8 existence-only",
+    "line": 532
+   },
+   {
+    "test": "TestToolDefinition::test_all_function_parameters_have_types",
+    "severity": "LOW",
+    "category": "N8 existence-only",
+    "line": 545
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_sandbox_bridge.py",
+  "reports": [
+   "test_bridges_part2.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_diff_wraps_unexpected_exception",
+    "severity": "MEDIUM",
+    "category": "mock-the-thing-under-test (N5)",
+    "line": 291
+   },
+   {
+    "test": "test_detect_behaviors_wraps_unexpected_exception",
+    "severity": "MEDIUM",
+    "category": "mock-the-thing-under-test (N5)",
+    "line": 320
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_x64dbg_events.py",
+  "reports": [
+   "test_bridges_part2.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_handle_event_with_no_callbacks",
+    "severity": "CRITICAL",
+    "category": "no-assert (N1)",
+    "line": 183
+   },
+   {
+    "test": "test_unknown_event_does_not_crash",
+    "severity": "CRITICAL",
+    "category": "no-assert (N1)",
+    "line": 227
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_alignment_color.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_set_alignment_grid",
+    "severity": "CRITICAL",
+    "category": "tautological(N4)",
+    "line": 200
+   },
+   {
+    "test": "test_set_color_mode",
+    "severity": "MEDIUM",
+    "category": "existence-only(N8)",
+    "line": 217
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_csharp_array_starts_with_new_byte_array",
+    "severity": "LOW",
+    "category": "shape-only prefix(N8)",
+    "line": 79
+   },
+   {
+    "test": "test_javascript_array_starts_with_new_uint8array",
+    "severity": "LOW",
+    "category": "shape-only prefix(N8)",
+    "line": 174
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_disassembly.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_disassemble_returns_list",
+    "severity": "MEDIUM",
+    "category": "type-only(N8)",
+    "line": 55
+   },
+   {
+    "test": "test_disassemble_pe_section_code_with_auto_arch",
+    "severity": "HIGH",
+    "category": "existence-only for behavior(N8)",
+    "line": 143
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_decode_text_invalid_encoding_handles_gracefully",
+    "severity": "HIGH",
+    "category": "accepts-both-outcomes(N7)",
+    "line": 159
+   },
+   {
+    "test": "test_list_encodings_with_open_document",
+    "severity": "LOW",
+    "category": "non-comparing(N6)",
+    "line": 296
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_templates.py",
+  "reports": [
+   "test_hexcore_e2e_part2.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_pe_template_on_elf_data_parses_or_raises",
+    "severity": "HIGH",
+    "category": "N2/N6 (swallowed failure + vacuously-satisfiable conditional)",
+    "line": 627
+   },
+   {
+    "test": "test_elf_template_on_pe_data_parses_or_raises",
+    "severity": "HIGH",
+    "category": "N2/N6 (swallowed failure + vacuously-satisfiable conditional)",
+    "line": 651
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_credential_loading.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "TestCredentialValidation.test_get_credentials_returns_credentials_or_none",
+    "severity": "MEDIUM",
+    "category": "N6/N8 existence-only",
+    "line": 231
+   },
+   {
+    "test": "TestEnvironmentVariableAccess.test_set_env_var_updates_value",
+    "severity": "LOW",
+    "category": "narrow gate",
+    "line": 393
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_local_xpu_e2e.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "TestVRAMManagement.test_memory_decreases_after_unload",
+    "severity": "MEDIUM",
+    "category": "N8 / wrong-behavior",
+    "line": 1465
+   },
+   {
+    "test": "TestErrorRecovery.test_empty_message_list_handled",
+    "severity": "CRITICAL",
+    "category": "N2 swallowed failure",
+    "line": 1732
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_model_discovery.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "Display-style model tests",
+    "severity": "MEDIUM",
+    "category": "N9/N8 log-presence + existence-only (5 tests)",
+    "line": 40
+   },
+   {
+    "test": "TestAllProvidersModelCount.test_summary_all_providers",
+    "severity": "MEDIUM",
+    "category": "N9/N8 summary-only",
+    "line": 142
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_ollama_provider.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "Model-field type-only family, vacuous on empty list",
+    "severity": "HIGH",
+    "category": "N6 vacuously-satisfiable (6 tests)",
+    "line": 51
+   },
+   {
+    "test": "test_multiple_calls_return_consistent_results",
+    "severity": "MEDIUM",
+    "category": "N6 (counted within the family above)",
+    "line": 146
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_providers_cloud_audit1.py",
+  "reports": [
+   "test_providers_part2.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_f0001_chat_signatures_accept_enable_cache_and_thinking",
+    "severity": "MEDIUM",
+    "category": "N8",
+    "line": 378
+   },
+   {
+    "test": "test_f0004_providers_use_retry_with_backoff_in_chat_path",
+    "severity": "MEDIUM",
+    "category": "N9",
+    "line": 890
+   }
+  ]
+ },
+ {
+  "file": "tests/test_sandbox/test_realcov_12b_analysis_real.py",
+  "reports": [
+   "test_sandbox_and_hexpat.md"
+  ],
+  "n": 2,
+  "findings": [
+   {
+    "test": "test_detect_c2_patterns_on_real_c2_port_capture",
+    "severity": "HIGH",
+    "category": "N3 (skip on the thing under test)",
+    "line": 310
+   },
+   {
+    "test": "test_match_behaviors_on_real_capture_is_consistent",
+    "severity": "HIGH",
+    "category": "N3 (skip on the thing under test)",
+    "line": 401
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit3/bridges/test_realcov_04_installer.py",
+  "reports": [
+   "test_audit3.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_frida_python_package_discovery",
+    "severity": "HIGH",
+    "category": "N7 / N3 (accepts-both-outcomes + skip masks)",
+    "line": 733
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit3/core/test_script_gen.py",
+  "reports": [
+   "test_audit3.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_reload_script_source_has_no_apology_comments",
+    "severity": "MEDIUM",
+    "category": "N9 (string-presence proxy)",
+    "line": 714
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit3/ui/test_script_manager.py",
+  "reports": [
+   "test_audit3.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_template_is_non_empty",
+    "severity": "MEDIUM",
+    "category": "N8 (existence-only)",
+    "line": 269
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py",
+  "reports": [
+   "test_audit5.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_f0012_compile_typescript_reuses_compiler_instance",
+    "severity": "HIGH",
+    "category": "N5",
+    "line": 462
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit7/sandbox_monitors/test_stop_event.py",
+  "reports": [
+   "test_audit7_group1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_start_monitors_skips_underscore_prefixed_scripts",
+    "severity": "MEDIUM",
+    "category": "Log/string-presence proxy (N9)",
+    "line": 140
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit7/sandbox_windows/test_anti_evasion_wmi_hijack.py",
+  "reports": [
+   "test_audit7_group1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_mof_text_is_well_formed_for_each_profile",
+    "severity": "MEDIUM",
+    "category": "Existence-only / weak structural check (N8)",
+    "line": 432
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py",
+  "reports": [
+   "test_audit7_group2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_omitting_print_sink_does_not_raise",
+    "severity": "LOW",
+    "category": "existence-only for a behavior test (N8)",
+    "line": 161
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py",
+  "reports": [
+   "test_audit7_group2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_button_text_reflects_state",
+    "severity": "LOW",
+    "category": "log/string-presence proxy (N9)",
+    "line": 363
+   }
+  ]
+ },
+ {
+  "file": "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py",
+  "reports": [
+   "test_audit7_group2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_call_count_matches_forwarded_invocation",
+    "severity": "MEDIUM",
+    "category": "existence/forwarding-only (N8)",
+    "line": 198
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_frida_bridge.py",
+  "reports": [
+   "test_bridges_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_crash_info_bridge_internal_accumulation",
+    "severity": "LOW",
+    "category": "N10 self-fulfilling (mitigated)",
+    "line": 301
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_realcov_03c_cutter.py",
+  "reports": [
+   "test_bridges_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_relocations_real",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 490
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_win32_types.py",
+  "reports": [
+   "test_bridges_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_memory_basic_information_has_all_fields",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 370
+   }
+  ]
+ },
+ {
+  "file": "tests/test_bridges/test_x64dbg_audit6.py",
+  "reports": [
+   "test_bridges_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_step_does_not_use_fixed_sleep",
+    "severity": "LOW",
+    "category": "source-string proxy (N9)",
+    "line": 3629
+   }
+  ]
+ },
+ {
+  "file": "tests/test_core/test_elevation.py",
+  "reports": [
+   "test_core_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "TestPlatformHelpers::test_is_elevated_returns_bool",
+    "severity": "LOW",
+    "category": "existence-only (N8)",
+    "line": 55
+   }
+  ]
+ },
+ {
+  "file": "tests/test_core/test_orchestrator.py",
+  "reports": [
+   "test_core_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_stats_to_dict",
+    "severity": "MEDIUM",
+    "category": "existence-only for a behavior test (N8)",
+    "line": 103
+   }
+  ]
+ },
+ {
+  "file": "tests/test_core/test_realcov_05b_tools.py",
+  "reports": [
+   "test_core_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "TestExecuteToolCallRealDispatch::test_tool_name_is_case_insensitive",
+    "severity": "MEDIUM",
+    "category": "weak-assertion-on-rich-output (N8)",
+    "line": 170
+   }
+  ]
+ },
+ {
+  "file": "tests/test_core/test_tools_audit6.py",
+  "reports": [
+   "test_core_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_cutter_in_initialize_targets_set",
+    "severity": "MEDIUM",
+    "category": "existence-only membership (N8)",
+    "line": 130
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bookmarks.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_add_bookmark_returns_index",
+    "severity": "LOW",
+    "category": "existence/type-only(N8)",
+    "line": 27
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_ai_context.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_get_context_for_ai_bookmarks_contain_expected_fields_when_present",
+    "severity": "MEDIUM",
+    "category": "existence-only(N8)",
+    "line": 110
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_base_convert.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_result_has_base_keys",
+    "severity": "MEDIUM",
+    "category": "existence-only(N8)",
+    "line": 104
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_block_ops.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_copy_block_overlapping_forward",
+    "severity": "HIGH",
+    "category": "length-only on rich output(N8/N6)",
+    "line": 121
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_copy_as.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_copy_as_hex_contains_spaces",
+    "severity": "LOW",
+    "category": "shape-only(N8)",
+    "line": 61
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_document_info.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_undo_after_write_may_clear_modified",
+    "severity": "HIGH",
+    "category": "vacuously-satisfiable conditional(N6)",
+    "line": 220
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_error_handling.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_write_bytes_beyond_length_on_loaded_doc",
+    "severity": "HIGH",
+    "category": "accepts-both-outcomes(N7)",
+    "line": 69
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_list_process_regions_raises_without_hexcore",
+    "severity": "MEDIUM",
+    "category": "existence-only for behavior(N8)",
+    "line": 754
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_patches.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_import_patches_returns_integer_count",
+    "severity": "MEDIUM",
+    "category": "accepts-zero/type-only(N7/N6)",
+    "line": 95
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_pattern_engine.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_list_hexpat_patterns_items_have_required_keys",
+    "severity": "MEDIUM",
+    "category": "vacuously-satisfiable on empty list(N6)",
+    "line": 317
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_search.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_search_hex_max_results_respected",
+    "severity": "HIGH",
+    "category": "vacuously-satisfiable(N6)",
+    "line": 106
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_state_integration.py",
+  "reports": [
+   "test_hexcore_e2e_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_state_holder_accessible_after_set",
+    "severity": "LOW",
+    "category": "weaker duplicate(N8)",
+    "line": 88
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_transforms.py",
+  "reports": [
+   "test_hexcore_e2e_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_apply_transform_returns_length_matching_input",
+    "severity": "LOW",
+    "category": "weak gate",
+    "line": 129
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py",
+  "reports": [
+   "test_hexcore_e2e_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_pipeline_with_invalid_step_name_completes",
+    "severity": "HIGH",
+    "category": "N6/N2 (vacuously-satisfiable conditional)",
+    "line": 270
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_bridge_yara.py",
+  "reports": [
+   "test_hexcore_e2e_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_yara_scan_returns_list",
+    "severity": "LOW",
+    "category": "N8 (existence/type-only)",
+    "line": 79
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_encodings.py",
+  "reports": [
+   "test_hexcore_e2e_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_decode_invalid_utf8_does_not_crash",
+    "severity": "LOW",
+    "category": "N2/N7 (swallowed failure / accepts both outcomes)",
+    "line": 325
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py",
+  "reports": [
+   "test_hexcore_e2e_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_cast_negative_to_signed",
+    "severity": "CRITICAL",
+    "category": "N1 (no-assert)",
+    "line": 388
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_hexpat_stdlib.py",
+  "reports": [
+   "test_hexcore_e2e_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_format_via_interpreter_produces_string",
+    "severity": "LOW",
+    "category": "stale/mislabeled (does not exercise format())",
+    "line": 599
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_process_memory.py",
+  "reports": [
+   "test_hexcore_e2e_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_from_process_memory_zero_size_handled",
+    "severity": "LOW",
+    "category": "N7 (accepts both outcomes)",
+    "line": 181
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexcore_e2e/test_search.py",
+  "reports": [
+   "test_hexcore_e2e_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_wildcard_byte_matches_pe_header_sequence",
+    "severity": "HIGH",
+    "category": "N3 (skip on the feature under test)",
+    "line": 99
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexpat/test_realcov_07b_compiler_pragmas.py",
+  "reports": [
+   "test_sandbox_and_hexpat.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_at_least_one_vendor_pattern_compiles_to_static_json",
+    "severity": "HIGH",
+    "category": "N2 (swallowed failure) / N6 (vacuously satisfiable)",
+    "line": 313
+   }
+  ]
+ },
+ {
+  "file": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py",
+  "reports": [
+   "test_sandbox_and_hexpat.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_missing_include_does_not_raise",
+    "severity": "MEDIUM",
+    "category": "N8/N2-adjacent (asserts only that no exception propagates plus residual text)",
+    "line": 171
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_anthropic_buffers_live.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_live_module_importable",
+    "severity": "MEDIUM",
+    "category": "N4 vacuous / smoke-as-gate",
+    "line": 292
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_google_provider.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "Model-field type-only family",
+    "severity": "MEDIUM",
+    "category": "N8 existence-only (7 tests)",
+    "line": 79
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_grok_provider.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "Model-field type-only family",
+    "severity": "MEDIUM",
+    "category": "N8 existence-only (6 tests)",
+    "line": 62
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_huggingface_provider.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "Live model-field type-only family",
+    "severity": "MEDIUM",
+    "category": "N8 existence-only (5 tests)",
+    "line": 254
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_local_transformers_provider.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "TestProviderListModels.test_list_models_returns_list",
+    "severity": "MEDIUM",
+    "category": "N8 existence-only",
+    "line": 637
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_openai_provider.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "Model-field type-only family",
+    "severity": "MEDIUM",
+    "category": "N8 existence-only (6 tests)",
+    "line": 67
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_openrouter_provider.py",
+  "reports": [
+   "test_providers_part1.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "Model-field type-only family",
+    "severity": "MEDIUM",
+    "category": "N8 existence-only (3 tests)",
+    "line": 80
+   }
+  ]
+ },
+ {
+  "file": "tests/test_providers/test_registry.py",
+  "reports": [
+   "test_providers_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "TestF0005NameToClassMapping.test_register_class_recorded_alongside_instance",
+    "severity": "MEDIUM",
+    "category": "N8",
+    "line": 592
+   }
+  ]
+ },
+ {
+  "file": "tests/test_sandbox/test_base_types.py",
+  "reports": [
+   "test_sandbox_and_hexpat.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_new_fields_present",
+    "severity": "MEDIUM",
+    "category": "N8 (hasattr-only on a dataclass)",
+    "line": 291
+   }
+  ]
+ },
+ {
+  "file": "tests/test_sandbox/test_manager.py",
+  "reports": [
+   "test_sandbox_and_hexpat.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_timestamps_are_set",
+    "severity": "MEDIUM",
+    "category": "N4 (asserts values that provably cannot be None)",
+    "line": 258
+   }
+  ]
+ },
+ {
+  "file": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py",
+  "reports": [
+   "test_sandbox_and_hexpat.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_create_windows_sandbox_or_typed_error",
+    "severity": "HIGH",
+    "category": "N7 (accepts both outcomes)",
+    "line": 237
+   }
+  ]
+ },
+ {
+  "file": "tests/test_ui/test_resource_helper.py",
+  "reports": [
+   "test_ui_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_returns_false_for_empty_path",
+    "severity": "MEDIUM",
+    "category": "existence-only (N8)",
+    "line": 234
+   }
+  ]
+ },
+ {
+  "file": "tests/test_ui/test_xpu_status.py",
+  "reports": [
+   "test_ui_part2.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_memory_text_shows_gb_values",
+    "severity": "MEDIUM",
+    "category": "log/string-presence proxy (N9)",
+    "line": 397
+   }
+  ]
+ },
+ {
+  "file": "tests/ui/test_system_tab_warnings.py",
+  "reports": [
+   "misc_credentials_root_scripts.md"
+  ],
+  "n": 1,
+  "findings": [
+   {
+    "test": "test_unattached_handlers_do_not_raise",
+    "severity": "LOW",
+    "category": "N1 (no meaningful assertion)",
+    "line": 320
+   }
+  ]
+ }
+]

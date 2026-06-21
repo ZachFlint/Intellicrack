@@ -266,15 +266,6 @@ class TestX64dbgTemplateParse:
         return ScriptTypeInfo.get_template("x64dbg", target="demo.exe", address="0x401000")
 
     @staticmethod
-    def test_template_is_non_empty(rendered: str) -> None:
-        """Rendered template must be non-empty.
-
-        Args:
-            rendered: The fully interpolated x64dbg template text.
-        """
-        assert rendered.strip()
-
-    @staticmethod
     def test_template_interpolates_address(rendered: str) -> None:
         """Address placeholder must be substituted into the template.
 

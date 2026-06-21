@@ -86,11 +86,7 @@ def _pick_grok_text_model(model_ids: list[str]) -> str:
         str: A chat-capable Grok model identifier.
     """
     excluded = ("imagine", "image", "video", "vision")
-    text_models = [
-        mid
-        for mid in model_ids
-        if mid.startswith("grok-") and not any(token in mid for token in excluded)
-    ]
+    text_models = [mid for mid in model_ids if mid.startswith("grok-") and not any(token in mid for token in excluded)]
     if not text_models:
         pytest.skip("No grok text chat model available on this account")
     text_models.sort(reverse=True)

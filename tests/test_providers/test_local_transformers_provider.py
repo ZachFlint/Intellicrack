@@ -634,16 +634,6 @@ class TestProviderListModels:
 
     @pytest.mark.asyncio
     @staticmethod
-    async def test_list_models_returns_list() -> None:
-        """List models should return a list."""
-        provider = LocalTransformersProvider()
-        await provider.connect(ProviderCredentials())
-        models = await provider.list_models()
-        assert isinstance(models, list)
-        await provider.disconnect()
-
-    @pytest.mark.asyncio
-    @staticmethod
     async def test_list_models_has_recommended_models() -> None:
         """List models should include recommended models."""
         provider = LocalTransformersProvider()

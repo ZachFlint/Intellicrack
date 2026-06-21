@@ -264,9 +264,11 @@ class TestApplyPipelineInvalidStep:
     """Tests for apply_pipeline graceful handling of unknown step names."""
 
     def test_pipeline_with_invalid_step_name_completes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """A pipeline containing an unknown step name must not crash the bridge.
+        """A pipeline containing an unknown step name must return the original bytes unchanged.
 
-        Unknown steps are silently skipped; the result is the remaining output.
+        Unknown steps are silently skipped by the bridge; a pipeline whose only
+        step is unrecognised therefore acts as an identity transform and must
+        return the hex encoding of the original bytes.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -281,15 +283,9 @@ class TestApplyPipelineInvalidStep:
         pipeline = json.dumps([
             {"name": "nonexistent_transform_xyzzy", "params": {}},
         ])
-        raised: Exception | None = None
-        result: str | None = None
-        try:
-            result = _run(bridge.apply_pipeline(pipeline, 0, 4))
-        except (RuntimeError, ValueError, KeyError) as exc:
-            raised = exc
+        result = _run(bridge.apply_pipeline(pipeline, 0, 4))
 
-        if raised is None:
-            assert result is not None
+        assert result == binascii.hexlify(payload).decode("ascii")
 
 
 class TestApplyTransformDeep:

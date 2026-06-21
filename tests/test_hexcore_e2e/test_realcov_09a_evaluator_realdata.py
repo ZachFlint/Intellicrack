@@ -81,10 +81,7 @@ class TestBitfieldExtraction:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([0xAA]) + bytes(8)
-        source = (
-            '[[bitfield_order("left_to_right")]]\n'
-            "bitfield Flags {\n    first : 3;\n    second : 5;\n};\nFlags f @ 0;"
-        )
+        source = '[[bitfield_order("left_to_right")]]\nbitfield Flags {\n    first : 3;\n    second : 5;\n};\nFlags f @ 0;'
         results = interp.execute_bytes(source, data)
         bf = _field(results, "f")
         children = {c["name"]: c["display_value"] for c in bf["children"]}
@@ -224,11 +221,7 @@ class TestStructInheritance:
             interp: A fresh HexPatInterpreter fixture.
         """
         data = bytes([0x10, 0x20, 0x30, 0x40]) + bytes(8)
-        source = (
-            "struct Base {\n    u8 base_a;\n    u8 base_b;\n};\n"
-            "struct Derived : Base {\n    u8 own_c;\n};\n"
-            "Derived d @ 0;"
-        )
+        source = "struct Base {\n    u8 base_a;\n    u8 base_b;\n};\nstruct Derived : Base {\n    u8 own_c;\n};\nDerived d @ 0;"
         results = interp.execute_bytes(source, data)
         derived = _field(results, "d")
         assert derived["size"] == 3
@@ -354,11 +347,7 @@ class TestRealPeBinaryParsing:
         machine_offset = e_lfanew + 4
         expected_machine = struct.unpack_from("<H", data, machine_offset)[0]
 
-        source = (
-            "u32 e_lfanew @ 0x3C;\n"
-            "u16 machine @ (e_lfanew + 4);\n"
-            f"u8 verify @ (machine == {expected_machine} ? 1 : 2);"
-        )
+        source = f"u32 e_lfanew @ 0x3C;\nu16 machine @ (e_lfanew + 4);\nu8 verify @ (machine == {expected_machine} ? 1 : 2);"
         results = interp.execute_bytes(source, data)
         machine = _field(results, "machine")
         assert machine["offset"] == machine_offset
@@ -383,15 +372,7 @@ class TestRealElfBinaryParsing:
         expected_data_enc = data[5]
         expected_machine = struct.unpack_from("<H", data, 18)[0]
 
-        source = (
-            "struct ElfIdent {\n"
-            "    char magic[4];\n"
-            "    u8 ei_class;\n"
-            "    u8 ei_data;\n"
-            "};\n"
-            "ElfIdent ident @ 0;\n"
-            "u16 e_machine @ 18;"
-        )
+        source = "struct ElfIdent {\n    char magic[4];\n    u8 ei_class;\n    u8 ei_data;\n};\nElfIdent ident @ 0;\nu16 e_machine @ 18;"
         results = interp.execute_bytes(source, data)
         ident = _field(results, "ident")
         magic = next(c for c in ident["children"] if c["name"] == "magic")

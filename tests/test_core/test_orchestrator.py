@@ -101,17 +101,28 @@ def test_stats_record_response_time() -> None:
 
 
 def test_stats_to_dict() -> None:
-    """Verify to_dict returns all expected keys."""
+    """Verify to_dict serializes all fields with correct values.
+
+    Records one response time and then checks every serialised value against
+    the independent oracle computed from the known inputs and initial-state
+    defaults, so a field-swap, stale-value, or wrong-average regression fails.
+    """
     stats = OrchestratorStats()
     stats.record_response_time(_RESPONSE_TIME_A)
     d = stats.to_dict()
+
     assert len(d) == _STATS_KEYS
-    assert "total_requests" in d
-    assert "average_response_time_ms" in d
-    assert "provider_prompt_tokens" in d
-    assert "provider_completion_tokens" in d
-    assert "provider_total_tokens" in d
-    assert "thinking_blocks_collected" in d
+
+    assert d["total_requests"] == 0
+    assert d["total_tool_calls"] == 0
+    assert d["successful_tool_calls"] == 0
+    assert d["failed_tool_calls"] == 0
+    assert d["total_tokens_used"] == 0
+    assert d["provider_prompt_tokens"] == 0
+    assert d["provider_completion_tokens"] == 0
+    assert d["provider_total_tokens"] == 0
+    assert d["thinking_blocks_collected"] == 0
+    assert abs(d["average_response_time_ms"] - _RESPONSE_TIME_A) < _FLOAT_TOLERANCE
 
 
 def test_orchestrator_initial_state(tmp_path: Path) -> None:

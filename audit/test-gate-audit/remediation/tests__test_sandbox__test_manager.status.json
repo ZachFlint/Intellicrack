@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_sandbox/test_manager.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_sandbox/test_manager.py::TestSandboxInstance::test_timestamps_are_set",
+   "severity": "MEDIUM",
+   "category": "N4 Tautological \u2014 asserted is-not-None on fields unconditionally set to datetime.now(UTC) in the test-local _TestInstance; assertion could never fail",
+   "action": "hardened",
+   "oracle": "datetime.now(UTC) captured before and after SandboxInstance.__init__ forms an independent bracket; UTC tzinfo zero-offset from the datetime.timezone.utc spec is the independent type oracle",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/manager.py",
+    "mutation": "self.created_at = datetime.now(UTC) -> self.created_at = datetime(2000, 1, 1, tzinfo=UTC)",
+    "covering_test": "tests/test_sandbox/test_manager.py::TestSandboxInstance::test_timestamps_are_set",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

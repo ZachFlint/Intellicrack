@@ -96,11 +96,7 @@ class TestPragmaPropagation:
 
     def test_author_and_description_pragmas_propagate(self) -> None:
         """``#pragma author`` and ``#pragma description`` flow into JSON."""
-        source = (
-            '#pragma author "Zachary Flint"\n'
-            '#pragma description "ELF program header"\n'
-            "struct Hdr { u32 magic; };"
-        )
+        source = '#pragma author "Zachary Flint"\n#pragma description "ELF program header"\nstruct Hdr { u32 magic; };'
         result = _compile(source)
         assert result["author"] == "Zachary Flint"
         assert result["description"] == "ELF program header"
@@ -120,11 +116,7 @@ class TestPragmaPropagation:
 
     def test_base_address_and_pointer_size_in_pragma_metadata(self) -> None:
         """Non-default base_address/pointer_size land in ``pragma_metadata``."""
-        source = (
-            "#pragma base_address 0x400000\n"
-            "#pragma pointer_size 4\n"
-            "struct Hdr { u32 magic; };"
-        )
+        source = "#pragma base_address 0x400000\n#pragma pointer_size 4\nstruct Hdr { u32 magic; };"
         result = _compile(source)
         meta = result["pragma_metadata"]
         assert meta["base_address"] == 0x400000
@@ -132,11 +124,7 @@ class TestPragmaPropagation:
 
     def test_bitfield_order_and_mime_in_pragma_metadata(self) -> None:
         """``bitfield_order`` and ``MIME`` pragmas surface in pragma_metadata."""
-        source = (
-            "#pragma bitfield_order right_to_left\n"
-            "#pragma MIME application/x-elf\n"
-            "struct Hdr { u32 magic; };"
-        )
+        source = "#pragma bitfield_order right_to_left\n#pragma MIME application/x-elf\nstruct Hdr { u32 magic; };"
         result = _compile(source)
         meta = result["pragma_metadata"]
         assert meta["bitfield_order"] == "right_to_left"
@@ -155,10 +143,7 @@ class TestConditionalInvertedOperator:
 
     def test_equality_else_branch_uses_ne(self) -> None:
         """An ``== 1`` true-branch yields an ``Ne`` else-branch."""
-        source = (
-            "struct P { u8 type; "
-            "if (type == 1) { u32 a; } else { u16 b; } };"
-        )
+        source = "struct P { u8 type; if (type == 1) { u32 a; } else { u16 b; } };"
         result = _compile(source)
         if_field = _field_by_name(result, "_if_type")
         else_field = _field_by_name(result, "_else_type")
@@ -168,10 +153,7 @@ class TestConditionalInvertedOperator:
 
     def test_greater_than_else_branch_uses_le(self) -> None:
         """A ``> 4`` true-branch yields an ``Le`` else-branch."""
-        source = (
-            "struct P { u8 flags; "
-            "if (flags > 4) { u32 a; } else { u16 b; } };"
-        )
+        source = "struct P { u8 flags; if (flags > 4) { u32 a; } else { u16 b; } };"
         result = _compile(source)
         if_field = _field_by_name(result, "_if_flags")
         else_field = _field_by_name(result, "_else_flags")
@@ -180,10 +162,7 @@ class TestConditionalInvertedOperator:
 
     def test_bitmask_else_branch_uses_bitandzero(self) -> None:
         """A ``& mask`` true-branch yields a ``BitAndZero`` else-branch."""
-        source = (
-            "struct P { u8 flags; "
-            "if (flags & 8) { u32 a; } else { u16 b; } };"
-        )
+        source = "struct P { u8 flags; if (flags & 8) { u32 a; } else { u16 b; } };"
         result = _compile(source)
         if_field = _field_by_name(result, "_if_flags")
         else_field = _field_by_name(result, "_else_flags")
@@ -314,10 +293,7 @@ class TestEnumAndBitfieldCodegen:
 
     def test_enum_auto_increment_and_explicit_reset(self) -> None:
         """Enum entries auto-increment, and an explicit value resets the run."""
-        source = (
-            "enum Color : u8 { Red, Green, Blue = 10, Cyan };"
-            " struct A { Color c; };"
-        )
+        source = "enum Color : u8 { Red, Green, Blue = 10, Cyan }; struct A { Color c; };"
         result = _compile(source)
         values = result["types"]["Color"]["values"]
         as_pairs = dict(values)
@@ -325,45 +301,106 @@ class TestEnumAndBitfieldCodegen:
 
     def test_bitfield_widths_emitted(self) -> None:
         """Bitfield entries emit ``(name, width)`` pairs from the DSL widths."""
-        source = (
-            "bitfield Flags { a : 1; b : 3; c : 4; };"
-            " struct A { Flags f; };"
-        )
+        source = "bitfield Flags { a : 1; b : 3; c : 4; }; struct A { Flags f; };"
         result = _compile(source)
         fields = result["types"]["Flags"]["fields"]
         assert dict(fields) == {"a": 1, "b": 3, "c": 4}
 
 
+_SPEC_TYPE_MAP: dict[str, str] = {
+    "u8": "UInt8",
+    "u16": "UInt16",
+    "u32": "UInt32",
+    "u64": "UInt64",
+    "s8": "Int8",
+    "s16": "Int16",
+    "s32": "Int32",
+    "s64": "Int64",
+    "float": "Float32",
+    "double": "Float64",
+    "char": "Char",
+    "bool": "Bool",
+}
+
+_CDA_HEADER_FIELDS: tuple[tuple[str, str], ...] = (
+    ("RIFF", "UInt32"),
+    ("size", "Int32"),
+    ("CDDA", "UInt32"),
+    ("fmt", "UInt32"),
+    ("lenghtofthechunck", "UInt32"),
+    ("versionofcdformat", "UInt16"),
+    ("numberofrange", "UInt16"),
+    ("identifier", "UInt32"),
+)
+
+
 class TestVendorPatternCompilation:
     """A static-only vendor ``.hexpat`` must compile or be rejected cleanly."""
 
-    def test_at_least_one_vendor_pattern_compiles_to_static_json(self) -> None:
-        """Some committed community pattern compiles to a real JSON template.
+    def test_known_static_cda_pattern_compiles_to_exact_schema(self) -> None:
+        """The ``cda.hexpat`` pattern compiles to the exact expected JSON schema.
 
-        Walks the committed ``vendor/community-patterns`` collection and
-        compiles each ``.hexpat`` source. Patterns built purely from static
-        constructs must produce a well-formed template (a ``name`` and a
-        ``fields`` list); patterns containing runtime constructs must be
-        rejected with :class:`HexPatError` rather than crashing. The test
-        asserts that at least one real-world pattern compiles successfully,
-        proving the static codegen handles authentic input.
+        Reads ``vendor/community-patterns/patterns/cda.hexpat`` from the
+        repository, compiles it through the full production pipeline, and
+        asserts the result against an independent oracle: the struct name,
+        field count, field names, and primitive type JSON identifiers are
+        all derived by reading the DSL source manually and applying the
+        HexPat primitive-type specification, not from the production
+        ``_TYPE_MAP`` dict under test.
+
+        The oracle field list was hand-derived from the eight ``u32``/``s32``/
+        ``u16`` declarations in the ``Header`` struct in ``cda.hexpat``;
+        the expected JSON type strings come from the HexPat specification
+        for unsigned/signed integer widths.
         """
-        manager = TemplateManager(Path.cwd())
-        patterns = manager.list_hexpat_patterns()
+        cda_path: Path = Path(__file__).resolve().parents[2] / "vendor" / "community-patterns" / "patterns" / "cda.hexpat"
+        if not cda_path.exists():
+            pytest.skip("no vendor .hexpat patterns are available")
+
+        source: str = cda_path.read_text(encoding="utf-8", errors="replace")
+        result: dict[str, Any] = HexPatCompiler.compile_to_dict(source)
+
+        assert result["name"] == "Header"
+        assert result["default_endianness"] == "little"
+
+        fields: list[dict[str, Any]] = result["fields"]
+        assert len(fields) == len(_CDA_HEADER_FIELDS)
+
+        for i, (expected_name, expected_json_type) in enumerate(_CDA_HEADER_FIELDS):
+            field: dict[str, Any] = fields[i]
+            assert field["name"] == expected_name
+            assert field["field_type"]["type"] == expected_json_type, (
+                f"field {expected_name!r}: expected type {expected_json_type!r} from HexPat spec, got {field['field_type']['type']!r}"
+            )
+
+    def test_corpus_sweep_only_rejects_via_hexpat_error(self) -> None:
+        """A corpus sweep lets only :class:`HexPatError` silence a pattern.
+
+        Walks every pattern returned by :class:`TemplateManager` and
+        compiles each one via the full production pipeline. Patterns with
+        runtime constructs must be rejected with :class:`HexPatError`; any
+        other exception (``ValueError``, ``RecursionError``, ``KeyError``,
+        etc.) is a compiler crash and propagates immediately, failing the
+        test. Patterns that compile successfully must emit a non-empty
+        ``name`` string and a ``fields`` list. The test asserts that at
+        least one real-world pattern compiles successfully, proving the
+        static codegen handles authentic input without masking crashes.
+        """
+        manager: TemplateManager = TemplateManager(Path.cwd())
+        patterns: list[dict[str, str]] = manager.list_hexpat_patterns()
         if not patterns:
             pytest.skip("no vendor .hexpat patterns are available")
 
-        compiled = 0
+        compiled: int = 0
         for entry in patterns:
-            source = Path(entry["file_path"]).read_text(encoding="utf-8", errors="replace")
+            source: str = Path(entry["file_path"]).read_text(encoding="utf-8", errors="replace")
             try:
-                result = HexPatCompiler.compile_to_dict(source)
+                result: dict[str, Any] = HexPatCompiler.compile_to_dict(source)
             except HexPatError:
                 continue
-            except (ValueError, RecursionError, KeyError):
-                continue
-            assert isinstance(result.get("name"), str)
-            assert isinstance(result.get("fields"), list)
+            assert isinstance(result["name"], str)
+            assert result["name"]
+            assert isinstance(result["fields"], list)
             compiled += 1
 
         assert compiled >= 1

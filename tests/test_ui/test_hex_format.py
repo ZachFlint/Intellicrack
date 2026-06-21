@@ -37,9 +37,29 @@ class TestFormatHexDumpBasic:
 
     @staticmethod
     def test_single_byte_layout() -> None:
-        """A one-byte buffer renders one line with proper padding."""
-        result = format_hex_dump(b"A", 0)
-        assert result == "00000000  41                                                A"
+        """A one-byte buffer renders one line with proper padding.
+
+        The hex column must be left-padded to exactly 48 characters and
+        the ASCII column must contain the single printable character.
+        Assertions are derived independently from the formatting constants
+        so that a change to field-width, separator, or byte encoding
+        would be caught as a regression.
+        """
+        data = b"A"
+        result = format_hex_dump(data, 0)
+        hex_field_width = 48
+        addr_col_width = 8
+        separator = "  "
+        expected_hex = " ".join(f"{b:02X}" for b in data)
+        expected_ascii = "A"
+        expected = f"{'00000000'}{separator}{expected_hex:<{hex_field_width}s}{separator}{expected_ascii}"
+        assert result == expected
+        assert result.startswith("00000000  ")
+        assert result.endswith("  A")
+        addr_end = addr_col_width + len(separator)
+        hex_col = result[addr_end : addr_end + hex_field_width]
+        assert hex_col == "41" + " " * 46
+        assert len(result.splitlines()) == 1
 
     @staticmethod
     def test_full_line_layout() -> None:

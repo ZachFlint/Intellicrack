@@ -317,21 +317,6 @@ class TestUnattachedPidGuards:
         assert isinstance(title, str)
         assert "Job Info" in title
 
-    def test_unattached_handlers_do_not_raise(
-        self,
-        warning_calls: list[tuple[object, ...]],
-    ) -> None:
-        """The three handlers must not raise when invoked without an attached PID.
-
-        Args:
-            warning_calls: Recorder fixture for ``QMessageBox.warning`` invocations.
-        """
-        _ = warning_calls
-        tab = _make_tab(pid=None)
-        getattr(tab, "_refresh_mitigations")()
-        getattr(tab, "_on_gui_resources")()
-        getattr(tab, "_on_job_info")()
-
     def test_require_attached_pid_returns_pid_when_attached(self) -> None:
         """The helper returns the PID and skips the warning when attached."""
         tab = _make_tab(pid=4321)

@@ -22,7 +22,6 @@ from __future__ import annotations
 import ctypes
 import os
 import sys
-from dataclasses import fields
 from pathlib import Path
 
 import pytest
@@ -61,12 +60,6 @@ TEST_BP_ID_THIRD = 3
 TEST_BP_COUNT_TWO = 2
 TEST_BP_COUNT_THREE = 3
 BUFFER_SIZE_4K = 4096
-
-
-def test_bridge_instantiation() -> None:
-    """Verify bridge can be instantiated."""
-    bridge = X64DbgBridge()
-    assert bridge is not None
 
 
 def test_bridge_initial_state() -> None:
@@ -129,13 +122,6 @@ def test_bridge_name() -> None:
     """Verify bridge has correct name property."""
     bridge = X64DbgBridge()
     assert bridge.name == ToolName.X64DBG
-
-
-def test_breakpoint_info_fields() -> None:
-    """Verify BreakpointInfo has all required fields."""
-    field_names = {f.name for f in fields(BreakpointInfo)}
-    required = {"id", "address", "bp_type", "enabled", "hit_count"}
-    assert required.issubset(field_names)
 
 
 @pytest.fixture
@@ -369,20 +355,6 @@ def x64dbg_bridge_64bit() -> X64DbgBridge:
     bridge = X64DbgBridge()
     bridge.is_64bit = True
     return bridge
-
-
-@pytest.mark.asyncio
-async def test_disassemble_requires_capstone(
-    x64dbg_bridge_64bit: X64DbgBridge,
-) -> None:
-    """Verify disassemble_at depends on capstone availability.
-
-    Args:
-        x64dbg_bridge_64bit: Bridge fixture configured for 64-bit disassembly.
-    """
-    if get_capstone() is None:
-        result = await x64dbg_bridge_64bit.disassemble_at(TEST_ADDR_CODE_1, 5)
-        assert result == []
 
 
 @pytest.mark.asyncio

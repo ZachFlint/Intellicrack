@@ -80,7 +80,9 @@
       "oracle": "Real Session + bridge; set_last_error('rizin crashed: exit code 139') publishes verbatim to session; clear_error() resets last_error to None; idempotent second call also returns None without raising"
     }
   ],
-  "filesModified": ["tests/test_bridges/test_base.py"],
+  "filesModified": [
+    "tests/test_bridges/test_base.py"
+  ],
   "checks": {
     "ruff": true,
     "ruffFormat": true,

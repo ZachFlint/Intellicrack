@@ -610,6 +610,53 @@ class TestRealProviderConnectionContract:
         assert provider.connected is False
         assert provider.is_connected is False
 
+    @pytest.mark.asyncio
+    @staticmethod
+    async def test_discover_all_real_unconnected_provider_gates_via_is_connected() -> None:
+        """``discover_all`` gates on the real ``is_connected`` property, not raw ``connected``.
+
+        A fresh ``OpenAIProvider`` has ``connected = False``; ``is_connected``
+        returns the same value because the base-class property is ``return
+        self.connected``. The ``discover_all`` inner coroutine checks
+        ``not provider.is_connected`` at line 601 of discovery.py and takes
+        the early-return path — it does NOT call ``list_models()``.
+
+        Assertions that pin this contract:
+
+        1. ``is_connected is False`` on the real provider before the call.
+        2. The result dict contains the provider key with an empty list
+           (the early-return path populates results[], not just an empty dict).
+        3. The stale cache entry is invalidated (force_refresh=True triggers
+           ``ainvalidate`` inside the is_connected branch).
+        4. A ``DiscoveryEvent`` is recorded with ``success=False`` and
+           ``error_message == "Provider not connected"`` — the exact sentinel
+           string produced by the is_connected branch. If the guard were
+           removed, the provider would reach ``list_models()`` and raise
+           ``ProviderError("Not connected to OpenAI API")``, producing a
+           *different* error_message and failing assertion 4.
+        """
+        provider = OpenAIProvider()
+        assert provider.is_connected is False
+
+        reg = ProviderRegistry()
+        reg.register(provider)
+        discovery = ModelDiscovery(reg)
+        await discovery.cache.aset(
+            ProviderName.OPENAI,
+            [_model(ProviderName.OPENAI, "gpt-stale-all")],
+        )
+
+        results = await discovery.discover_all(force_refresh=True)
+
+        assert ProviderName.OPENAI in results
+        assert results[ProviderName.OPENAI] == []
+        assert discovery.cache.get(ProviderName.OPENAI) is None
+
+        last = discovery.get_last_event(ProviderName.OPENAI)
+        assert last is not None
+        assert last.success is False
+        assert last.error_message == "Provider not connected"
+
 
 class TestRealProviderDiscoveryErrorPropagation:
     """Discovery pipeline driven through the real OpenAIProvider error path.

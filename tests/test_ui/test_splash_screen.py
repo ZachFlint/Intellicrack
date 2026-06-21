@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from PyQt6.QtCore import QPropertyAnimation, QRectF
-from PyQt6.QtGui import QPainter, QPixmap
+from PyQt6.QtGui import QColor, QImage, QPainter, QPixmap
 from PyQt6.QtWidgets import QLabel, QProgressBar, QWidget
 
 from intellicrack.ui.dialogs.splash_screen import (
@@ -61,6 +61,77 @@ _MAX_SPLASH_IMAGE_WIDTH: int = 2000
 _MAX_SPLASH_IMAGE_HEIGHT: int = 1500
 _MIN_SPLASH_FILE_SIZE: int = 10000
 
+_RENDER_W: int = 600
+_RENDER_H: int = 400
+_SENTINEL_R: int = 17
+_SENTINEL_G: int = 71
+_SENTINEL_B: int = 137
+_PNG_SIGNATURE: bytes = b"\x89PNG\r\n\x1a\n"
+_PNG_IHDR_OFFSET: int = 16
+_MIN_PAINTED_PIXELS: int = 1000
+_MIN_DISTINCT_COLORS: int = 8
+_MIN_PIPELINE_COLORS: int = 2
+_PIXEL_SAMPLE_STEP: int = 4
+_STAGE_COUNT: int = 8
+
+
+def _render_splash_layers(splash: SplashScreen) -> QImage:
+    """Render the background, pipeline, and status layers onto an image.
+
+    The target image is pre-filled with a known sentinel color so that the
+    number of pixels the real production draw helpers overwrite can be measured
+    independently of any value the test injected. The full-screen gradient
+    background guarantees substantial output when the helper runs correctly.
+
+    Args:
+        splash: The SplashScreen whose draw helpers are exercised.
+
+    Returns:
+        QImage: The rendered image after the three draw helpers have run.
+    """
+    pixmap = QPixmap(_RENDER_W, _RENDER_H)
+    pixmap.fill(QColor(_SENTINEL_R, _SENTINEL_G, _SENTINEL_B))
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+    rect = QRectF(0.0, 0.0, float(_RENDER_W), float(_RENDER_H))
+    draw_bg = getattr(splash, "_draw_gradient_background")
+    draw_pipe = getattr(splash, "_draw_pipeline")
+    draw_status = getattr(splash, "_draw_status_and_version")
+    draw_bg(painter, rect)
+    draw_pipe(painter, rect)
+    draw_status(painter, rect)
+    painter.end()
+    return pixmap.toImage()
+
+
+def _count_painted_and_distinct(image: QImage) -> tuple[int, int]:
+    """Count overwritten pixels and distinct colors in a rendered image.
+
+    A pixel is considered "painted" when it no longer matches the sentinel fill
+    color. This provides an independent measure that the production draw helpers
+    actually produced output rather than silently returning.
+
+    Args:
+        image: The rendered image to inspect.
+
+    Returns:
+        tuple[int, int]: ``(painted_pixel_count, distinct_color_count)`` sampled
+        across the image on a fixed stride.
+    """
+    sentinel = QColor(_SENTINEL_R, _SENTINEL_G, _SENTINEL_B).rgb()
+    painted = 0
+    colors: set[int] = set()
+    width = image.width()
+    height = image.height()
+    for y in range(0, height, _PIXEL_SAMPLE_STEP):
+        for x in range(0, width, _PIXEL_SAMPLE_STEP):
+            rgb = image.pixel(x, y)
+            colors.add(rgb)
+            if rgb != sentinel:
+                painted += 1
+    return painted, len(colors)
+
 
 @pytest.fixture
 def splash_screen(
@@ -103,14 +174,27 @@ class TestSplashScreenCreation:
 
     @staticmethod
     def test_creates_splash_screen(qapp: QApplication) -> None:
-        """SplashScreen can be instantiated.
+        """Construction establishes the documented initial invariants.
+
+        Asserting ``splash is not None`` cannot fail because the constructor
+        would raise first; instead this gate checks the observable state the
+        ``__init__`` body is responsible for setting up: zero progress, the
+        default status string, all eight pipeline stages PENDING, and a
+        non-null backing pixmap sized from the DPI-scaled dimensions.
 
         Args:
             qapp: QApplication fixture required by Qt widgets.
         """
         del qapp
         splash = SplashScreen()
-        assert splash is not None
+        assert splash.progress == 0
+        assert splash.status == "Initializing..."
+        stages: list[int] = getattr(splash, "_stage_states")
+        assert len(stages) == _STAGE_COUNT
+        assert all(int(s) == _STATE_PENDING for s in stages)
+        assert not splash.pixmap().isNull()
+        assert splash.pixmap().width() == splash.scaled_width
+        assert splash.pixmap().height() == splash.scaled_height
         splash.close()
 
     @staticmethod
@@ -311,12 +395,40 @@ class TestProgressSignal:
 
     @staticmethod
     def test_progress_signal_emits(splash_screen: SplashScreen) -> None:
-        """Signal can be emitted without error.
+        """progress_updated signal delivers (value, message) to connected slots.
+
+        The previous test emitted the signal without connecting any handler
+        and made no assertions, so a completely broken signal-emit path would
+        still pass.  This gate connects an explicit capturing slot before
+        emission, then asserts the captured arguments exactly match the emitted
+        values and that the splash state was updated accordingly.  If signal
+        emission is broken, ``received`` stays empty and the first assertion
+        fails.  If the connected ``_on_progress_updated`` slot is broken,
+        ``splash_screen.progress`` will not equal ``_PROGRESS_50``.
 
         Args:
             splash_screen: SplashScreen fixture instance.
         """
+        received: list[tuple[int, str]] = []
+
+        def _capture(value: int, message: str) -> None:
+            received.append((value, message))
+
+        splash_screen.progress_updated.connect(_capture)
         splash_screen.progress_updated.emit(_PROGRESS_50, "Test")
+
+        assert len(received) == 1, (
+            f"Expected 1 signal delivery, got {len(received)}"
+        )
+        assert received[0] == (_PROGRESS_50, "Test"), (
+            f"Signal delivered wrong arguments: {received[0]!r}"
+        )
+        assert splash_screen.progress == _PROGRESS_50, (
+            f"splash.progress not updated after signal: {splash_screen.progress}"
+        )
+        assert splash_screen.status == "Test", (
+            f"splash.status not updated after signal: {splash_screen.status!r}"
+        )
 
 
 class TestOverlayWidgets:
@@ -504,26 +616,45 @@ class TestSplashScreenIntegration:
 
     @staticmethod
     def test_splash_screen_no_exceptions_on_operations(qapp: QApplication) -> None:
-        """Splash screen operations don't raise exceptions.
+        """Splash screen operations produce the expected state after completing.
+
+        The previous gate only checked that no exception was raised; a method
+        that silently returned without doing anything would still pass.  This
+        gate additionally asserts concrete observable state after each
+        operation so that a regression in set_progress, status tracking, or
+        progress clamping is immediately detectable.
 
         Args:
             qapp: QApplication fixture required by Qt widgets.
         """
         del qapp
-        try:
-            TestSplashScreenIntegration._exercise_splash_operations()
-        except (RuntimeError, OSError, ValueError) as e:
-            pytest.fail(f"Splash screen operations raised exception: {e}")
-
-    @staticmethod
-    def _exercise_splash_operations() -> None:
-        """Exercise the splash screen show/progress/close lifecycle."""
         splash = SplashScreen()
         splash.show()
+
         splash.set_progress(_PROGRESS_50, "Testing...")
+        assert splash.progress == _PROGRESS_50, (
+            f"Expected progress={_PROGRESS_50} after set_progress, got {splash.progress}"
+        )
+        assert splash.status == "Testing...", (
+            f"Expected status='Testing...' after set_progress, got {splash.status!r}"
+        )
+
         splash.set_progress(_PROGRESS_60, "Step 1")
-        _ = splash.progress
-        _ = splash.status
+        assert splash.progress == _PROGRESS_60, (
+            f"Expected progress={_PROGRESS_60} after second set_progress, got {splash.progress}"
+        )
+        assert splash.status == "Step 1", (
+            f"Expected status='Step 1' after second set_progress, got {splash.status!r}"
+        )
+
+        assert splash.progress_animation is not None, (
+            "progress_animation must be created after set_progress"
+        )
+        assert splash.progress_animation.endValue() == _PROGRESS_60, (
+            f"Animation end value should be {_PROGRESS_60}, "
+            f"got {splash.progress_animation.endValue()}"
+        )
+
         splash.close()
 
 
@@ -659,14 +790,30 @@ class TestProgressAnimation:
         assert splash_screen.progress_value == _PROGRESS_75
 
     @staticmethod
-    def test_rapid_progress_calls_no_error(splash_screen: SplashScreen) -> None:
-        """Rapid successive set_progress calls don't raise.
+    def test_rapid_progress_calls_track_final_state(splash_screen: SplashScreen) -> None:
+        """Rapid successive set_progress calls leave correct final state.
+
+        The previous test only checked that the loop did not raise. This gate
+        drives the same rapid loop but then asserts the observable end state:
+        the final progress value, the animation end value tracking the last
+        call, and all pipeline stages COMPLETE at full progress. A regression
+        where rapid calls stopped updating internal state would fail here.
 
         Args:
             splash_screen: SplashScreen fixture instance.
         """
+        last = 0
         for i in range(0, _PROGRESS_100 + 1, 5):
             splash_screen.set_progress(i)
+            last = i
+
+        assert last == _PROGRESS_100
+        assert splash_screen.progress == _PROGRESS_100
+        assert splash_screen.progress_value == _PROGRESS_100
+        assert splash_screen.progress_animation is not None
+        assert splash_screen.progress_animation.endValue() == _PROGRESS_100
+        stages: list[int] = getattr(splash_screen, "_stage_states")
+        assert all(int(s) == _STATE_COMPLETE for s in stages)
 
     @staticmethod
     def test_progress_animation_correct_duration(
@@ -887,44 +1034,86 @@ class TestPaintEventRendering:
     """Tests for custom paint event rendering."""
 
     @staticmethod
-    def test_paint_event_no_crash(qapp: QApplication) -> None:
-        """Paint event renders without crashing.
+    def test_paint_event_draws_pixels(qapp: QApplication) -> None:
+        """Paint helpers actually overwrite the canvas with multiple colors.
+
+        ``repaint()`` swallows paint exceptions in Qt, so a no-op handler would
+        pass a smoke test. This gate renders the real production draw helpers
+        onto a sentinel-filled image and verifies, against the independent
+        sentinel oracle, that a substantial number of pixels were overwritten
+        and that the rendered output contains many distinct colors (the
+        animated gradient background alone produces a continuous color ramp).
 
         Args:
             qapp: QApplication fixture required by Qt widgets.
         """
         del qapp
         splash = SplashScreen(version="1.0.0")
-        splash.show()
-        splash.repaint()
+        image = _render_splash_layers(splash)
+        painted, distinct = _count_painted_and_distinct(image)
+        assert painted >= _MIN_PAINTED_PIXELS, (
+            f"Only {painted} pixels overwritten; paint helpers drew nothing"
+        )
+        assert distinct >= _MIN_DISTINCT_COLORS, (
+            f"Only {distinct} distinct colors; gradient background not rendered"
+        )
         splash.close()
 
     @staticmethod
-    def test_paint_with_progress(qapp: QApplication) -> None:
-        """Paint event works after progress updates.
+    def test_paint_with_progress_reflects_state(qapp: QApplication) -> None:
+        """Paint after a progress update reflects updated state and renders.
+
+        Drives a real ``set_progress(50, ...)`` then renders the production
+        draw helpers. Asserts the progress and status state were applied and
+        that the rendered output overwrote the sentinel canvas with multiple
+        colors, so a paint regression that skipped a layer would fail.
 
         Args:
             qapp: QApplication fixture required by Qt widgets.
         """
         del qapp
         splash = SplashScreen(version="1.0.0")
-        splash.show()
-        splash.set_progress(50, "Loading...")
-        splash.repaint()
+        splash.set_progress(_PROGRESS_50, "Loading...")
+        assert splash.progress == _PROGRESS_50
+        assert splash.status == "Loading..."
+        image = _render_splash_layers(splash)
+        painted, distinct = _count_painted_and_distinct(image)
+        assert painted >= _MIN_PAINTED_PIXELS
+        assert distinct >= _MIN_DISTINCT_COLORS
         splash.close()
 
     @staticmethod
-    def test_paint_full_pipeline(qapp: QApplication) -> None:
-        """Paint event works with all pipeline stages complete.
+    def test_paint_full_pipeline_all_complete(qapp: QApplication) -> None:
+        """Full progress completes all stages and the pipeline renders.
+
+        Drives ``set_progress(100, ...)``, asserts every pipeline stage is
+        COMPLETE, then renders the pipeline draw helper onto a sentinel canvas
+        and asserts the completed-stage glyphs (filled accent circles plus
+        white checkmarks and connecting lines) overwrote the sentinel with
+        multiple colors.
 
         Args:
             qapp: QApplication fixture required by Qt widgets.
         """
         del qapp
         splash = SplashScreen(version="2.0.0")
-        splash.show()
-        splash.set_progress(100, "Ready")
-        splash.repaint()
+        splash.set_progress(_PROGRESS_100, "Ready")
+        assert splash.progress == _PROGRESS_100
+        stages: list[int] = getattr(splash, "_stage_states")
+        assert all(int(s) == _STATE_COMPLETE for s in stages)
+
+        pixmap = QPixmap(_RENDER_W, _RENDER_H)
+        pixmap.fill(QColor(_SENTINEL_R, _SENTINEL_G, _SENTINEL_B))
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rect = QRectF(0.0, 0.0, float(_RENDER_W), float(_RENDER_H))
+        draw_pipe = getattr(splash, "_draw_pipeline")
+        draw_pipe(painter, rect)
+        painter.end()
+
+        painted, distinct = _count_painted_and_distinct(pixmap.toImage())
+        assert painted > 0, "Pipeline render drew nothing for completed stages"
+        assert distinct >= _MIN_PIPELINE_COLORS, "Completed pipeline produced no distinct colors"
         splash.close()
 
 
@@ -955,22 +1144,46 @@ class TestSplashImageCompositing:
     """Tests for splash image compositing in paintEvent."""
 
     @staticmethod
-    def test_splash_image_loaded(splash_screen: SplashScreen) -> None:
-        """Splash image is loaded when splash.png exists and the brain icon is absent.
+    def test_splash_image_mutual_exclusion_with_brain_icon(splash_screen: SplashScreen) -> None:
+        """Image-source selection follows the brain-icon-preferred precedence.
+
+        The production rule is ``_splash_image = load(splash.png) if
+        _brain_icon is None else None``. The previous test re-ran that exact
+        ladder against the same conditions, making it tautological. Here the
+        expected outcome is derived independently: the shipped
+        ``splash-icon.png`` is decoded straight from disk via its PNG header,
+        proving it is a valid (loadable) image, so production must select the
+        brain icon and leave ``_splash_image`` ``None``. The general invariant
+        - the two image sources are mutually exclusive - is also asserted.
 
         Args:
             splash_screen: SplashScreen fixture instance.
         """
         assets = get_assets_path()
+        brain_path = assets / "splash-icon.png"
         splash_path = assets / "splash.png"
-        brain_icon = getattr(splash_screen, "_brain_icon")
-        splash_image = getattr(splash_screen, "_splash_image")
-        if brain_icon is not None:
-            assert splash_image is None
-        elif splash_path.exists():
-            assert splash_image is not None
-        else:
-            assert splash_image is None
+
+        brain_icon: QPixmap | None = getattr(splash_screen, "_brain_icon")
+        splash_image: QPixmap | None = getattr(splash_screen, "_splash_image")
+
+        both_present = brain_icon is not None and splash_image is not None
+        assert not both_present, "Brain icon and splash image must be mutually exclusive"
+
+        assert brain_path.exists(), f"brain icon asset missing at {brain_path}"
+        brain_header = brain_path.read_bytes()[: _PNG_IHDR_OFFSET + 8]
+        assert brain_header[:8] == _PNG_SIGNATURE, "splash-icon.png is not a valid PNG"
+        brain_w = int.from_bytes(brain_header[_PNG_IHDR_OFFSET : _PNG_IHDR_OFFSET + 4], "big")
+        brain_h = int.from_bytes(brain_header[_PNG_IHDR_OFFSET + 4 : _PNG_IHDR_OFFSET + 8], "big")
+        assert brain_w > 0, "splash-icon.png reports zero width"
+        assert brain_h > 0, "splash-icon.png reports zero height"
+
+        assert brain_icon is not None, "brain icon should load from the valid splash-icon.png asset"
+        assert not brain_icon.isNull()
+        assert splash_image is None, "splash_image must be None when the brain icon is selected"
+
+        assert splash_path.exists(), f"splash.png asset missing at {splash_path}"
+        splash_header = splash_path.read_bytes()[: _PNG_IHDR_OFFSET + 8]
+        assert splash_header[:8] == _PNG_SIGNATURE, "splash.png is not a valid PNG"
 
     @staticmethod
     def test_overlay_hidden(splash_screen: SplashScreen) -> None:

@@ -149,9 +149,7 @@ class TestRealMonitorLogParsing:
         assert renamed["old_path"] == "C:\\Windows\\Temp\\stage.bin"
         assert renamed["size"] == 8192
 
-        https_conn = next(
-            a for a in real_report.network_activity if a["remote_port"] == 443
-        )
+        https_conn = next(a for a in real_report.network_activity if a["remote_port"] == 443)
         assert https_conn["protocol"] == "tcp"
         assert https_conn["remote_address"] == "93.184.216.34"
         assert https_conn["bytes_sent"] == 512

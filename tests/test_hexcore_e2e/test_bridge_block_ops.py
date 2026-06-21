@@ -119,7 +119,11 @@ class TestCopyBlock:
         assert result.replace(" ", "").lower() == "cafebabedeadbeef"
 
     def test_copy_block_overlapping_forward(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify copy handles overlapping forward regions correctly.
+        """Verify copy_block with overlapping forward region writes the source snapshot.
+
+        copy_block reads the source bytes before writing to the destination,
+        so the 8 bytes placed at offset 4 must exactly equal the original
+        source bytes at offset 0 regardless of overlap.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -132,7 +136,7 @@ class TestCopyBlock:
         _run(bridge.copy_block(0, 8, 4))
         result = _run(bridge.read_bytes(4, 8))
         raw = bytes.fromhex(result.replace(" ", ""))
-        assert len(raw) == 8
+        assert raw == b"\x01\x02\x03\x04\x05\x06\x07\x08"
 
 
 class TestMoveBlock:

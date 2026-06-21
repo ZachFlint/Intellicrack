@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from PyQt6.QtWidgets import QWidget
 
 from intellicrack.bridges.process import ProcessBridge
 from intellicrack.core.tools import ToolRegistry
@@ -91,14 +90,6 @@ def process_registry(tmp_path: object) -> ToolRegistry:
 
 class TestPanelConstruction:
     """Verify ProcessPanel construction and initial widget structure."""
-
-    def test_panel_creates(self, panel: ProcessPanel) -> None:
-        """Verify panel is a QWidget instance.
-
-        Args:
-            panel: ProcessPanel fixture instance.
-        """
-        assert isinstance(panel, QWidget)
 
     def test_panel_has_five_tabs(self, panel: ProcessPanel) -> None:
         """Verify panel has exactly 5 tabs.
@@ -329,14 +320,6 @@ class TestMemoryTabFormatMemory:
 
 class TestImportCompatibility:
     """Verify ProcessPanel can be imported from expected paths."""
-
-    def test_import_from_package(self) -> None:
-        """Verify import from process_panel package."""
-        assert ProcessPanel is not None
-
-    def test_import_from_panels(self) -> None:
-        """Verify import from panels package."""
-        assert ProcessPanelFromPanels is not None
 
     def test_both_imports_same_class(self) -> None:
         """Verify both import paths resolve to the same class."""

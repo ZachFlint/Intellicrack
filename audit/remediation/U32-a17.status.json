@@ -1,1 +1,36 @@
-{"unitId":"U32-a17","findings":[{"ref":"tests/test_audit7/u12_hexpat_print_sink/test_ui_print_sink.py:261 - test_constructor_receives_callable_print_sink","severity":"High","status":"FIXED","oracle":"StubInterpreterWithPrintSink factory captures print_sink kwarg; after trigger_apply_via_interpreter the stub holds a callable bound to harness._append_pattern_print_line; calling that callable asserts exact string appears in harness.print_output_widget().toPlainText()"},{"ref":"tests/test_ui/log_viewer/test_model.py:79 - test_column_data_for_display_role","severity":"Medium","status":"FIXED","oracle":"json.loads(extras_text) asserts parsed dict equals {\"widget\":\"x\",\"count\":3,\"active\":True} with type checks; also asserts no newlines or tabs; UserRole returns full LogRecordDict"},{"ref":"tests/test_ui/log_viewer/test_model.py:154 - test_background_role_tints_warn_error_critical_only","severity":"High","status":"FIXED","oracle":"BackgroundRole for WARNING asserts QColor(60,48,16), ERROR asserts QColor(70,24,24), CRITICAL asserts QColor(70,16,56); DEBUG and INFO assert None; distinctness check ensures no color is reused across tinted levels"}],"filesModified":["tests/test_audit7/u12_hexpat_print_sink/test_ui_print_sink.py","tests/test_ui/log_viewer/test_model.py"],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"19 passed in 1.50s"}
+{
+  "unitId": "U32-a17",
+  "findings": [
+    {
+      "ref": "tests/test_audit7/u12_hexpat_print_sink/test_ui_print_sink.py:261 - test_constructor_receives_callable_print_sink",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "StubInterpreterWithPrintSink factory captures print_sink kwarg; after trigger_apply_via_interpreter the stub holds a callable bound to harness._append_pattern_print_line; calling that callable asserts exact string appears in harness.print_output_widget().toPlainText()"
+    },
+    {
+      "ref": "tests/test_ui/log_viewer/test_model.py:79 - test_column_data_for_display_role",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "json.loads(extras_text) asserts parsed dict equals {\"widget\":\"x\",\"count\":3,\"active\":True} with type checks; also asserts no newlines or tabs; UserRole returns full LogRecordDict"
+    },
+    {
+      "ref": "tests/test_ui/log_viewer/test_model.py:154 - test_background_role_tints_warn_error_critical_only",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "BackgroundRole for WARNING asserts QColor(60,48,16), ERROR asserts QColor(70,24,24), CRITICAL asserts QColor(70,16,56); DEBUG and INFO assert None; distinctness check ensures no color is reused across tinted levels"
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit7/u12_hexpat_print_sink/test_ui_print_sink.py",
+    "tests/test_ui/log_viewer/test_model.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "19 passed in 1.50s"
+}

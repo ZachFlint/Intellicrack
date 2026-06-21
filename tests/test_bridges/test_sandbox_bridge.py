@@ -288,63 +288,103 @@ class TestF0002NarrowExceptionHandling:
         asyncio.run(run())
         assert bridge.state.last_error is not None
 
-    def test_diff_wraps_unexpected_exception(self) -> None:
-        """diff() wraps an unexpected exception as ToolError."""
+    def test_diff_wraps_real_attribute_error_from_bad_process_activity(self) -> None:
+        """diff() raises ToolError when a report's process_activity holds a non-dict entry.
+
+        The real ``analysis.diff_reports`` indexes every ``process_activity``
+        entry through ``_extract_identity_key``, which calls ``item.get(...)``
+        for each key field. When an entry is a bare ``str`` instead of a dict,
+        ``str`` has no ``.get`` method, so the production code raises
+        ``AttributeError`` with the standard CPython message
+        ``"'str' object has no attribute 'get'"``. The bridge must re-raise that
+        as ``ToolError`` with prefix "Failed to diff reports" and embed the
+        original ``AttributeError`` text. Neither the analysis module nor the
+        report is mocked, so the failure originates in production code.
+
+        ``bridge.state.last_error`` must be populated with the same detail.
+        """
         bridge = SandboxBridge()
 
-        mock_report = MagicMock()
-        mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        bad_report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            process_activity=[cast("Any", "not-a-dict")],
+        )
+        good_report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+        )
 
-        with patch("intellicrack.bridges.sandbox_bridge._get_analysis_module") as mock_mod:
-            analysis = MagicMock()
-            analysis.diff_reports = MagicMock(side_effect=MemoryError("oom"))
-            mock_mod.return_value = analysis
+        inst_a = MagicMock()
+        inst_a.last_report = bad_report
+        inst_b = MagicMock()
+        inst_b.last_report = good_report
 
-            async def run() -> None:
-                with patch.object(bridge, "ensure_manager") as mock_mgr:
-                    manager = AsyncMock()
-                    manager.get = AsyncMock(return_value=mock_instance)
-                    mock_mgr.return_value = manager
-                    with pytest.raises(ToolError) as exc_info:
-                        await bridge.diff("id-a", "id-b")
-                err = str(exc_info.value)
-                assert "Failed to diff reports" in err, f"missing prefix: {err!r}"
-                assert "oom" in err, f"missing cause: {err!r}"
+        def get_side_effect(instance_id: str) -> MagicMock:
+            return inst_a if instance_id == "id-a" else inst_b
 
-            asyncio.run(run())
+        async def run() -> None:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(side_effect=get_side_effect)
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError) as exc_info:
+                    await bridge.diff("id-a", "id-b")
+            err = str(exc_info.value)
+            assert "Failed to diff reports" in err, f"missing prefix: {err!r}"
+            assert "'str' object has no attribute 'get'" in err, f"missing real AttributeError cause: {err!r}"
+
+        asyncio.run(run())
 
         assert bridge.state.last_error is not None
-        assert "oom" in bridge.state.last_error
+        assert "'str' object has no attribute 'get'" in bridge.state.last_error
 
-    def test_detect_behaviors_wraps_unexpected_exception(self) -> None:
-        """detect_behaviors() wraps an unexpected exception as ToolError."""
+    def test_detect_behaviors_wraps_real_keyerror_from_bad_process_activity(self) -> None:
+        """detect_behaviors() raises ToolError when process_activity lacks the ``name`` key.
+
+        The real ``analysis.match_behaviors`` reads ``proc["name"]`` for every
+        ``process_activity`` entry (in ``_match_persistence``). A dict missing
+        the ``name`` key causes a genuine ``KeyError('name')`` inside production
+        code. The bridge must re-raise it as ``ToolError`` with prefix
+        "Failed to detect behaviors" and embed the missing key name. No analysis
+        module is mocked, so the exception originates in the real rule engine.
+
+        ``bridge.state.last_error`` must be populated.
+        """
         bridge = SandboxBridge()
 
-        mock_report = MagicMock()
+        report = ExecutionReport(
+            result="success",
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=1.0,
+            process_activity=[cast("Any", {"pid": 1, "command_line": "x"})],
+        )
         mock_instance = MagicMock()
-        mock_instance.last_report = mock_report
+        mock_instance.last_report = report
 
-        with patch("intellicrack.bridges.sandbox_bridge._get_analysis_module") as mock_mod:
-            analysis = MagicMock()
-            analysis.match_behaviors = MagicMock(side_effect=ZeroDivisionError("oops"))
-            mock_mod.return_value = analysis
+        async def run() -> None:
+            with patch.object(bridge, "ensure_manager") as mock_mgr:
+                manager = AsyncMock()
+                manager.get = AsyncMock(return_value=mock_instance)
+                mock_mgr.return_value = manager
+                with pytest.raises(ToolError) as exc_info:
+                    await bridge.detect_behaviors("some-id")
+            err = str(exc_info.value)
+            assert "Failed to detect behaviors" in err, f"missing prefix: {err!r}"
+            assert "name" in err, f"missing missing-key name in error: {err!r}"
 
-            async def run() -> None:
-                with patch.object(bridge, "ensure_manager") as mock_mgr:
-                    manager = AsyncMock()
-                    manager.get = AsyncMock(return_value=mock_instance)
-                    mock_mgr.return_value = manager
-                    with pytest.raises(ToolError) as exc_info:
-                        await bridge.detect_behaviors("some-id")
-                err = str(exc_info.value)
-                assert "Failed to detect behaviors" in err, f"missing prefix: {err!r}"
-                assert "oops" in err, f"missing cause: {err!r}"
-
-            asyncio.run(run())
+        asyncio.run(run())
 
         assert bridge.state.last_error is not None
-        assert "oops" in bridge.state.last_error
+        assert "Failed to detect behaviors" in bridge.state.last_error or "name" in bridge.state.last_error
 
 
 class TestF0003DetectBehaviorsYAML:
@@ -724,16 +764,61 @@ class TestF0004YaraScanModeValidation:
 
         asyncio.run(run())
 
-    def test_accepts_files_target(self) -> None:
-        """yara_scan accepts 'files' as a valid scan_target and returns a structured result.
+    @staticmethod
+    def _scan_target_passthrough_matches() -> list[dict[str, Any]]:
+        """Build two distinguishing YARA match records for passthrough assertions.
 
-        The return dict must have both ``match_count`` (int) and ``matches`` (list)
-        keys so callers can iterate results without guessing the schema.
+        Returns:
+            list[dict[str, Any]]: Two match dicts with unique rule names, tags,
+            and string offsets so a transform that drops or renames fields is
+            detectable against this oracle.
+        """
+        return [
+            {
+                "rule": "EvilPacker",
+                "namespace": "default",
+                "tags": ["packer", "evasion"],
+                "meta": {"author": "test", "severity": 5},
+                "strings": [{"identifier": "$a", "offset": 4096, "data": "deadbeef"}],
+            },
+            {
+                "rule": "SuspiciousImport",
+                "namespace": "imports",
+                "tags": ["api"],
+                "meta": {"author": "test", "severity": 2},
+                "strings": [{"identifier": "$b", "offset": 8192, "data": "cafebabe"}],
+            },
+        ]
+
+    def _assert_matches_preserved(self, result: dict[str, Any]) -> None:
+        """Assert the bridge forwarded the transport matches without loss.
+
+        Args:
+            result: The dict returned by ``bridge.yara_scan``.
+        """
+        expected = self._scan_target_passthrough_matches()
+        matches: list[dict[str, Any]] = cast("list[dict[str, Any]]", result["matches"])
+        assert isinstance(matches, list)
+        assert result["match_count"] == len(expected), f"match_count must equal number of real matches: {result['match_count']!r}"
+        assert result["match_count"] > 0, "passthrough matches must be non-empty to gate against silent dropping"
+        assert matches == expected, f"bridge altered the match records during passthrough: {matches!r}"
+        rule_names = [m["rule"] for m in matches]
+        assert rule_names == ["EvilPacker", "SuspiciousImport"], f"rule names not preserved in order: {rule_names!r}"
+        assert matches[0]["strings"][0]["offset"] == 4096, f"nested match field corrupted: {matches[0]['strings']!r}"
+
+    def test_accepts_files_target(self) -> None:
+        """yara_scan accepts 'files' and forwards the engine's match records intact.
+
+        The transport boundary (``instance.sandbox.yara_scan``) returns two
+        distinguishing match records. The bridge must preserve every record and
+        nested field verbatim and set ``match_count`` to exactly ``len(matches)``,
+        so a transform that drops, renames, or reorders matches trips the gate.
         """
         bridge = SandboxBridge()
+        engine_matches = self._scan_target_passthrough_matches()
 
         mock_instance = MagicMock()
-        mock_instance.sandbox.yara_scan = AsyncMock(return_value=[])
+        mock_instance.sandbox.yara_scan = AsyncMock(return_value=engine_matches)
 
         async def run() -> dict[str, Any]:
             with patch.object(bridge, "ensure_manager") as mock_mgr:
@@ -743,21 +828,21 @@ class TestF0004YaraScanModeValidation:
                 return await bridge.yara_scan("some-id", scan_target="files")
 
         result = asyncio.run(run())
-        assert result["match_count"] == 0
-        matches: list[object] = cast("list[object]", result["matches"])
-        assert isinstance(matches, list)
-        assert len(matches) == 0
+        mock_instance.sandbox.yara_scan.assert_awaited_once_with(None, "files")
+        self._assert_matches_preserved(result)
 
     def test_accepts_memory_target(self) -> None:
-        """yara_scan accepts 'memory' as a valid scan_target and returns a structured result.
+        """yara_scan accepts 'memory' and forwards the engine's match records intact.
 
-        Same schema check as for 'files': both ``match_count`` and ``matches`` must
-        be present with consistent values.
+        Same passthrough-fidelity gate as the 'files' case, additionally
+        confirming the validated ``scan_target`` is forwarded unchanged to the
+        sandbox scan call.
         """
         bridge = SandboxBridge()
+        engine_matches = self._scan_target_passthrough_matches()
 
         mock_instance = MagicMock()
-        mock_instance.sandbox.yara_scan = AsyncMock(return_value=[])
+        mock_instance.sandbox.yara_scan = AsyncMock(return_value=engine_matches)
 
         async def run() -> dict[str, Any]:
             with patch.object(bridge, "ensure_manager") as mock_mgr:
@@ -767,8 +852,8 @@ class TestF0004YaraScanModeValidation:
                 return await bridge.yara_scan("some-id", scan_target="memory")
 
         result = asyncio.run(run())
-        assert result["match_count"] == 0
-        assert isinstance(result["matches"], list)
+        mock_instance.sandbox.yara_scan.assert_awaited_once_with(None, "memory")
+        self._assert_matches_preserved(result)
 
 
 class TestF0005PublicQMPAgentAccessors:

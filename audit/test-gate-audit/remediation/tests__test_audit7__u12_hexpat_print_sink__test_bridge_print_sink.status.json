@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py::TestExecutePatternForwardsPrintSink::test_omitting_print_sink_does_not_raise",
+   "severity": "LOW",
+   "category": "N8 existence-only for a behavior test",
+   "action": "hardened",
+   "oracle": "The pattern source `_PRINT_PATTERN` declares `u8 __mark @ __ping();` \u2014 the real HexPat interpreter must return a field list containing a field whose name includes `__mark`. This is verified by inspecting the pattern AST independently: the `u8 __mark` declaration is the sole top-level typed variable, so any correct evaluation must emit exactly that named field. The `assert fields` plus `any('__mark' in name ...)` check uses the pattern source text as the independent oracle.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "fields: list[dict[str, Any]] = interpreter.execute(source, self.document, offset) -> fields: list[dict[str, Any]] = []",
+    "covering_test": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py::TestExecutePatternForwardsPrintSink::test_omitting_print_sink_does_not_raise",
+    "expected_baseline": "green",
+    "green_status": "unknown",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

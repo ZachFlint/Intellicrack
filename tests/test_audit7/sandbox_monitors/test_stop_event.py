@@ -137,18 +137,112 @@ def test_stop_monitors_cmd_signals_event_and_waits() -> None:
     assert "taskkill /PID !TARGET_PID! /F /T" in text, "must retain taskkill fallback for unhonoured PIDs"
 
 
-def test_start_monitors_skips_underscore_prefixed_scripts() -> None:
-    """``start_monitors.cmd`` must not try to launch helper PS1 files.
+_WINDOWS_ONLY: Final = pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="Monitor stop-event integration requires Windows pwsh + Win32 named events",
+)
 
-    The filter lives inside ``:launch_one`` so the outer simple for-loop
-    over ``*.ps1`` stays single-statement (no parenthesised body) — a
-    parenthesised body around ``call :launch_one`` interacts badly with
-    cmd's control-flow on some Windows builds and can leave the launcher
-    hanging after the first monitor spawns.
+
+def _drive_start_monitors_filter_check(
+    cmd: str,
+    scripts_dir: Path,
+    log_dir: Path,
+    launched_pids: list[int],
+) -> None:
+    """Run start_monitors.cmd and assert the filter result via monitors.pids.
+
+    Invokes the real ``start_monitors.cmd`` launcher against a scratch
+    directory that contains exactly one underscore-prefixed helper and one
+    regular monitor script, then asserts that the helper was skipped while
+    the regular monitor was tracked.
+
+    Args:
+        cmd: Absolute path to ``cmd.exe``.
+        scripts_dir: Scratch directory holding ``start_monitors.cmd`` and
+            the two test PS1 scripts.
+        log_dir: Log directory where ``start_monitors.cmd`` writes
+            ``monitors.pids``.
+        launched_pids: Mutable list that receives the PIDs recorded in
+            ``monitors.pids`` so the caller can clean them up.
     """
-    text = _START_MONITORS_CMD.read_text(encoding="utf-8")
-    assert '%SCRIPT_NAME:~0,1%"=="_"' in text, "leading-underscore filter must be present in :launch_one"
-    assert "goto :eof" in text, "filter must skip via goto :eof"
+    result = run(
+        [cmd, "/c", str(scripts_dir / "start_monitors.cmd"), str(log_dir)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+        timeout=60.0,
+    )
+
+    pid_file = log_dir / "monitors.pids"
+    pid_file_text = pid_file.read_text(encoding="utf-8", errors="replace") if pid_file.is_file() else ""
+
+    for line in pid_file_text.splitlines():
+        parts = line.strip().split()
+        if len(parts) >= 1:
+            with contextlib.suppress(ValueError):
+                launched_pids.append(int(parts[0]))
+
+    assert result.returncode == 0, (
+        f"start_monitors.cmd must succeed; rc={result.returncode} stderr={result.stderr!r}"
+    )
+    assert "_helper.ps1" not in pid_file_text, (
+        f"underscore-prefixed _helper.ps1 must not appear in monitors.pids; contents={pid_file_text!r}"
+    )
+    assert "monitor.ps1" in pid_file_text, (
+        f"monitor.ps1 must be tracked in monitors.pids; contents={pid_file_text!r}"
+    )
+
+
+@_WINDOWS_ONLY
+def test_start_monitors_skips_underscore_prefixed_scripts(tmp_path: Path) -> None:
+    """``start_monitors.cmd`` must not launch underscore-prefixed helper scripts.
+
+    Places an ``_helper.ps1`` (helper, must be skipped) and a
+    ``monitor.ps1`` (real monitor, must be launched) in a scratch
+    directory, invokes the real ``start_monitors.cmd`` against it, then
+    reads the ``monitors.pids`` file and asserts that the helper script
+    name is absent while the monitor name is present.  This exercises
+    the actual runtime filter, not the source-text spelling of it.
+
+    Args:
+        tmp_path: Pytest-provided temp directory.
+    """
+    cmd = _resolve_cmd()
+    taskkill_exe = _ensure_taskkill()
+
+    scripts_dir = tmp_path / "scripts"
+    scripts_dir.mkdir()
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+
+    (scripts_dir / "start_monitors.cmd").write_text(
+        _START_MONITORS_CMD.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    helper_source = "param([string]$LogDir='.')\nStart-Sleep -Seconds 300\n"
+    (scripts_dir / "_helper.ps1").write_text(helper_source, encoding="utf-8")
+
+    monitor_source = "param([string]$LogDir='.')\nStart-Sleep -Seconds 300\n"
+    (scripts_dir / "monitor.ps1").write_text(monitor_source, encoding="utf-8")
+
+    launched_pids: list[int] = []
+    try:
+        _drive_start_monitors_filter_check(cmd, scripts_dir, log_dir, launched_pids)
+    finally:
+        for pid in launched_pids:
+            try:
+                run(
+                    [taskkill_exe, "/PID", str(pid), "/F", "/T"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=10.0,
+                )
+            except (SubprocessError, OSError):
+                continue
 
 
 @pytest.mark.parametrize(
@@ -209,12 +303,6 @@ def test_monitor_emits_lifecycle_records(script_path: Path, lifecycle_helper: st
 # ----------------------------------------------------------------------
 # Windows-only integration tests.
 # ----------------------------------------------------------------------
-
-
-_WINDOWS_ONLY: Final = pytest.mark.skipif(
-    sys.platform != "win32",
-    reason="Monitor stop-event integration requires Windows pwsh + Win32 named events",
-)
 
 
 @_WINDOWS_ONLY

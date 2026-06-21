@@ -13,7 +13,6 @@ provider connection lifecycle, dtype selection, and error recovery.
 
 from __future__ import annotations
 
-import contextlib
 import itertools
 import re
 from datetime import UTC, datetime
@@ -1464,18 +1463,38 @@ class TestVRAMManagement:
 
     async def test_memory_decreases_after_unload(
         self,
-        xpu_provider: LocalTransformersProvider,
+        tinyllama_model_id: str,
     ) -> None:
-        """Memory info should remain valid and queryable after operations.
+        """XPU allocated memory must decrease after a model is unloaded.
+
+        A dedicated provider with its own isolated ModelCache is created so
+        that no other reference to the loaded model's tensors exists when
+        unload_model() is called.  Using the global cache would leave the
+        session-scoped loaded_xpu_provider holding a live reference to the
+        same LoadedModel object, preventing GPU tensor reclamation and making
+        the before/after comparison non-deterministic.  With a private cache
+        the provider owns the only reference, so after unload() the GPU
+        allocator can and must reclaim those bytes.
 
         Args:
-            xpu_provider: The session-scoped XPU provider.
+            tinyllama_model_id: The TinyLlama model identifier.
         """
-        assert xpu_provider.device_type in {"xpu", "cuda", "cpu"}
-        allocated, total = get_xpu_memory_info(0)
-        assert isinstance(allocated, int)
-        assert isinstance(total, int)
-        assert total > 0
+        if not is_xpu_available():
+            pytest.skip("requires Intel XPU hardware to measure VRAM reclamation")
+        private_cache = ModelCache()
+        provider = LocalTransformersProvider(model_cache=private_cache, prefer_xpu=True)
+        await provider.connect(ProviderCredentials())
+        messages = _make_messages("Hello")
+        await provider.chat(messages=messages, model=tinyllama_model_id, max_tokens=1)
+        allocated_before, total = get_xpu_memory_info(0)
+        assert total > 0, "XPU must report a non-zero total VRAM"
+        assert allocated_before > 0, "loaded model must occupy VRAM before unload"
+        await provider.unload_model()
+        allocated_after, _ = get_xpu_memory_info(0)
+        assert allocated_after < allocated_before, (
+            f"allocated VRAM must decrease after unload: before={allocated_before}, after={allocated_after}"
+        )
+        await provider.disconnect()
 
     async def test_total_vram_remains_stable(self) -> None:
         """Total VRAM should remain consistent across multiple queries."""
@@ -1734,13 +1753,20 @@ class TestErrorRecovery:
         loaded_xpu_provider: LocalTransformersProvider,
         tinyllama_model_id: str,
     ) -> None:
-        """Empty message list should not crash with an unhandled exception.
+        """An empty message list must be rejected with ProviderError.
+
+        The production contract is that passing an empty ``messages`` list is
+        invalid input.  ``apply_chat_template([])`` raises ``ValueError``,
+        which the ``chat()`` method's ``except (RuntimeError, ImportError,
+        ValueError, OSError)`` block wraps into ``ProviderError``.  Any other
+        exception type (e.g. ``IndexError``) propagating to the caller is
+        itself a test failure, ensuring this gate is falsifiable.
 
         Args:
             loaded_xpu_provider: XPU provider with model loaded.
             tinyllama_model_id: The TinyLlama model identifier.
         """
-        with contextlib.suppress(ProviderError, ValueError, RuntimeError, IndexError):
+        with pytest.raises(ProviderError):
             await loaded_xpu_provider.chat(
                 messages=[],
                 model=tinyllama_model_id,

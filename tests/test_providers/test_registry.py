@@ -591,15 +591,22 @@ class TestF0005NameToClassMapping:
 
     @staticmethod
     def test_register_class_recorded_alongside_instance() -> None:
-        """register() should also remember the concrete class."""
+        """register() must record the concrete class in the internal class mapping.
+
+        Verifies that ``_provider_classes[name]`` is set to ``type(instance)``
+        when ``register(instance)`` is called, which is the fix introduced by
+        F-0005 so that :meth:`connect_provider` can later reconstruct a
+        provider from its class when the instance is absent.
+        """
         reg = ProviderRegistry()
-        reg.register(_make_provider())
-        # Internal mapping is the source of truth for class lookup.
-        # We do not assert against private state directly; instead we
-        # confirm that after unregister, a fresh class registration works.
-        assert reg.unregister(ProviderName.ANTHROPIC) is True
-        reg.register_class(ProviderName.ANTHROPIC, ConcreteTestProvider)
-        assert reg.list_registered() == []
+        instance = _make_provider()
+        reg.register(instance)
+        provider_classes: dict[ProviderName, type[LLMProviderBase]] = cast(
+            "dict[ProviderName, type[LLMProviderBase]]",
+            getattr(reg, "_provider_classes"),
+        )
+        recorded: type[LLMProviderBase] | None = provider_classes.get(ProviderName.ANTHROPIC)
+        assert recorded is ConcreteTestProvider
 
 
 class TestF0013DisconnectAllAggregates:

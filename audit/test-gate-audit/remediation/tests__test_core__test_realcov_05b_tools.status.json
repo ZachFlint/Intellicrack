@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_core/test_realcov_05b_tools.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_core/test_realcov_05b_tools.py::TestExecuteToolCallRealDispatch::test_tool_name_is_case_insensitive",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only for a behavior test (weak-assertion-on-rich-output)",
+   "action": "hardened",
+   "oracle": "Direct bridge.get_breakpoints() call on the real X64DbgBridge instance retrieved from the registry \u2014 the same bridge that both dispatch paths must route through. The registry exposes the instance via get_x64dbg_bridge(), so the comparison is independently derived from the production bridge rather than from the dispatched return value itself.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/core/tools.py",
+    "mutation": "tool_enum = ToolName(tool_name.lower()) -> tool_enum = ToolName(tool_name)",
+    "covering_test": "tests/test_core/test_realcov_05b_tools.py::TestExecuteToolCallRealDispatch::test_tool_name_is_case_insensitive",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

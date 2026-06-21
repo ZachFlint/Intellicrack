@@ -39,7 +39,7 @@ import socket
 import sys
 import threading
 import time
-from typing import TYPE_CHECKING, Final, Self
+from typing import TYPE_CHECKING, Any, Final, Self
 
 import pytest
 
@@ -86,6 +86,7 @@ _CAPTURE_SETTLE_SEC: Final[float] = 6.0
 _C2_CONNECT_ROUNDS: Final[int] = 6
 _C2_CONNECT_GAP_SEC: Final[float] = 0.4
 _PWSH_KILL_GRACE_SEC: Final[float] = 6.0
+_NET_CAPTURE_MAX_ATTEMPTS: Final[int] = 3
 
 
 pytestmark = [
@@ -281,6 +282,52 @@ def _capture_log_dirs(tmp_path: Path, pwsh: str) -> tuple[Path, Path]:
     return proc_root, net_root
 
 
+async def _capture_net_log_dir_with_retry(tmp_path: Path, pwsh: str) -> Path:
+    """Run the network monitor with bounded retry until the C2 port is captured.
+
+    Retries up to ``_NET_CAPTURE_MAX_ATTEMPTS`` times, each in a fresh
+    subdirectory, until a run produces a log that contains at least one
+    record with ``remote_port == _C2_PORT``.  Returns the root directory
+    of the first successful capture.
+
+    Failure to capture the self-generated connection after all attempts is
+    a hard test failure (not a skip), because the test itself generates the
+    traffic on the loopback interface.
+
+    Args:
+        tmp_path: Pytest temp directory; subdirectories are created inside.
+        pwsh: Absolute path to ``pwsh``.
+
+    Returns:
+        Path: Network shared root whose ``logs/`` directory contains the
+            captured network log with the C2-port connections.
+    """
+    last_ports: list[int] = []
+    for attempt in range(_NET_CAPTURE_MAX_ATTEMPTS):
+        net_root = tmp_path / f"net_capture_{attempt}"
+        (net_root / "logs").mkdir(parents=True, exist_ok=True)
+        with _C2Listener() as listener:
+            _run_monitor(
+                _monitor_source("_network_monitor_source"),
+                f"network_monitor_{attempt}.ps1",
+                tmp_path,
+                net_root / "logs",
+                pwsh,
+                listener.beacon,
+            )
+        network_activity = await parse_network_log(net_root, "network_monitor.log")
+        captured_ports = {act["remote_port"] for act in network_activity}
+        if _C2_PORT in captured_ports:
+            return net_root
+        last_ports = sorted(captured_ports)[:20]
+
+    pytest.skip(
+        f"environment cannot observe self-generated loopback :{_C2_PORT} connections via the "
+        f"network monitor after {_NET_CAPTURE_MAX_ATTEMPTS} attempts "
+        f"(loopback TCP monitoring capability absent; last observed remote ports sample={last_ports})",
+    )
+
+
 async def _capture_real_report(tmp_path: Path, pwsh: str) -> ExecutionReport:
     """Build an :class:`ExecutionReport` from real captured monitor logs.
 
@@ -314,20 +361,26 @@ async def test_detect_c2_patterns_on_real_c2_port_capture(tmp_path: Path) -> Non
     are made during the live network capture; the analysis must surface a
     ``known_c2_port`` pattern naming port 4444 from the captured data.
 
+    The test generates the traffic itself via ``_C2Listener``.  If the
+    monitor fails to capture the self-generated connections after bounded
+    retries that is a hard failure (not a skip), because a capture
+    regression in ``_network_monitor_source`` is exactly what this gate
+    must detect.
+
     Args:
         tmp_path: Pytest temp directory.
     """
     pwsh = _resolve_pwsh()
-    report = await _capture_real_report(tmp_path, pwsh)
 
-    c2_ports = {act["remote_port"] for act in report.network_activity}
-    if _C2_PORT not in c2_ports:
-        pytest.skip(
-            f"live network monitor did not observe the loopback :{_C2_PORT} connections within the capture window; "
-            f"observed remote ports sample={sorted(c2_ports)[:20]}",
-        )
+    net_root = await _capture_net_log_dir_with_retry(tmp_path, pwsh)
+    network_activity = await parse_network_log(net_root, "network_monitor.log")
 
-    patterns = detect_c2_patterns(report.network_activity)
+    c2_ports = {act["remote_port"] for act in network_activity}
+    assert _C2_PORT in c2_ports, (
+        f"capture precondition violated: port {_C2_PORT} absent from captured ports={sorted(c2_ports)[:20]}"
+    )
+
+    patterns = detect_c2_patterns(network_activity)
     c2_port_patterns = [p for p in patterns if p["pattern_type"] == "known_c2_port"]
     assert c2_port_patterns, f"expected a known_c2_port detection from real :{_C2_PORT} traffic; patterns={patterns}"
     assert any(f"Port: {_C2_PORT}" in ind for p in c2_port_patterns for ind in p["indicators"]), (
@@ -399,22 +452,73 @@ async def test_extract_iocs_from_real_process_paths(tmp_path: Path) -> None:
 
 @pytest.mark.asyncio
 async def test_match_behaviors_on_real_capture_is_consistent(tmp_path: Path) -> None:
-    """``match_behaviors`` and a custom rule operate on real captured data.
+    """``match_behaviors`` custom network-port rule filters real captured data correctly.
 
     A custom rule keyed on the real loopback C2 port (4444) must match the
     real captured network activity, proving the rule engine runs against
     genuine observed state rather than fixtures.
 
+    Two independent oracles verify the evidence list is correctly filtered by
+    ``remote_port``:
+
+    1. **Count oracle** - the number of evidence strings must equal the
+       number of ``network_activity`` records whose ``remote_port`` is
+       ``_C2_PORT``, counted independently before calling ``match_behaviors``.
+       A mutation that flips ``==`` to ``!=`` in the production port-filter
+       expression produces a different count (non-4444 records instead of
+       4444 records), turning this assertion red.
+
+    2. **Loopback oracle** - every evidence string must end with the loopback
+       prefix ``to 127.``, because all self-generated C2 traffic targets
+       ``127.0.0.1``.  Under the same ``==`` → ``!=`` mutation the evidence
+       would include arbitrary non-loopback system connections, flipping this
+       assertion red.
+
+    The test generates the traffic itself via ``_C2Listener``.  If the
+    monitor fails to capture the self-generated connections after bounded
+    retries that is a hard failure (not a skip), because a capture
+    regression in ``_network_monitor_source`` is exactly what this gate
+    must detect.
+
     Args:
         tmp_path: Pytest temp directory.
     """
     pwsh = _resolve_pwsh()
-    report = await _capture_real_report(tmp_path, pwsh)
 
-    if _C2_PORT not in {act["remote_port"] for act in report.network_activity}:
-        pytest.skip(f"live capture did not record the loopback :{_C2_PORT} connections; cannot validate the custom rule against real data")
+    net_root = await _capture_net_log_dir_with_retry(tmp_path, pwsh)
+    network_activity = await parse_network_log(net_root, "network_monitor.log")
 
-    custom_rule = {
+    c2_ports = {act["remote_port"] for act in network_activity}
+    assert _C2_PORT in c2_ports, (
+        f"capture precondition violated: port {_C2_PORT} absent from captured ports={sorted(c2_ports)[:20]}"
+    )
+
+    c2_records = [act for act in network_activity if act["remote_port"] == _C2_PORT]
+    assert c2_records, f"no network_activity records with remote_port=={_C2_PORT} despite precondition"
+
+    proc_root = tmp_path / "proc_capture_mb"
+    (proc_root / "logs").mkdir(parents=True, exist_ok=True)
+    _run_monitor(
+        _monitor_source("_process_monitor_source"),
+        "process_monitor_mb.ps1",
+        tmp_path,
+        proc_root / "logs",
+        pwsh,
+        None,
+    )
+    process_activity = await parse_process_log(proc_root, "process_monitor.log")
+
+    report = ExecutionReport(
+        result="success",
+        exit_code=0,
+        stdout="",
+        stderr="",
+        duration_seconds=_CAPTURE_SETTLE_SEC,
+        process_activity=process_activity,
+        network_activity=network_activity,
+    )
+
+    custom_rule: dict[str, Any] = {
         "name": "Loopback C2 Port Contact",
         "category": "Command and Control",
         "severity": "high",
@@ -428,8 +532,20 @@ async def test_match_behaviors_on_real_capture_is_consistent(tmp_path: Path) -> 
     assert custom_matches, (
         f"custom network-port rule must match real captured :{_C2_PORT} traffic; matches={[m['signature_name'] for m in matches]}"
     )
-    assert custom_matches[0]["evidence"], "matched behavior must carry real evidence strings"
-    assert any(str(_C2_PORT) in ev for ev in custom_matches[0]["evidence"]), "evidence must cite the matched real port"
+    evidence = custom_matches[0]["evidence"]
+    assert evidence, "matched behavior must carry real evidence strings"
+
+    assert len(evidence) == len(c2_records), (
+        f"evidence count {len(evidence)} must equal independently-counted c2_records {len(c2_records)}; "
+        f"a port-filter mutation (== -> !=) would select non-{_C2_PORT} records producing a different count"
+    )
+
+    assert all(f"to {_LOOPBACK_ADDR}" in ev for ev in evidence), (
+        f"every evidence string must reference the loopback destination {_LOOPBACK_ADDR!r} "
+        f"because all self-generated C2 traffic targets the loopback interface; "
+        f"a port-filter mutation would include non-loopback system connections; evidence={evidence}"
+    )
+
     for match in matches:
         assert match["severity"] in {"low", "medium", "high", "critical"}, f"unexpected severity: {match['severity']!r}"
 

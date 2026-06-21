@@ -1,42 +1,221 @@
 {
   "unitId": "U10-a09",
   "findings": [
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:58 - test_cont_wraps_general_exception", "severity": "High", "status": "FIXED", "oracle": "Real QMPClient over a real loopback asyncio QMP server that drops the socket mid-command; cont() raises ToolError and we assert the message starts with the production _ERR_CONT_FAILED prefix (no mock of qmp.cont)."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:79 - test_cont_wraps_value_error", "severity": "High", "status": "FIXED", "oracle": "Real QMPClient + real loopback server returning a real QMP error frame; assert exact 'Failed to resume VM execution: VM is not paused' propagated from the real wire response."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:100 - test_cont_raises_on_qmp_failure_response", "severity": "High", "status": "FIXED", "oracle": "Real loopback server emits {'error':{'desc':'VM is not paused'}}; real QMPClient parses it; assert exact wrapped ToolError message AND the success path returns the exact real 'return' payload {'resumed': True}."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:154 - test_extract_iocs_wraps_unexpected_exception", "severity": "High", "status": "FIXED", "oracle": "Real analysis module (no patch): malformed real NetworkActivity (missing remote_port) forces a real KeyError; plus no-report path asserts exact _ERR_NO_REPORT, and success path asserts the real extracted public-IP IOC equals extract_iocs() oracle."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:177 - test_timeline_wraps_unexpected_exception", "severity": "High", "status": "FIXED", "oracle": "Real generate_timeline drives the bridge: no-report path asserts exact _ERR_NO_REPORT message; success path asserts events are the real chronologically-sorted timeline matching generate_timeline() oracle."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:200 - test_detect_c2_wraps_unexpected_exception", "severity": "High", "status": "FIXED", "oracle": "Real detect_c2_patterns: malformed real network record raises a genuine KeyError('remote_port') which the bridge wraps; assert prefix + 'remote_port' in message and in state.last_error; success path matches detect_c2_patterns() oracle (known_c2_port)."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:224 - test_diff_wraps_unexpected_exception", "severity": "High", "status": "FIXED", "oracle": "Real diff_reports over two real ExecutionReports: missing-report path asserts exact per-instance error naming instance_id_b; success path asserts result['diff'] == diff_reports() oracle with exact unique_to_a/unique_to_b endpoints."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:247 - test_detect_behaviors_wraps_unexpected_exception", "severity": "High", "status": "FIXED", "oracle": "Real match_behaviors drives detect_behaviors with a real custom YAML rule against a real whoami.exe process event; assert the real BehaviorMatch (T1033, whoami evidence) and count == match_behaviors() oracle."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:274 - test_raises_when_rules_file_not_found", "severity": "Medium", "status": "FIXED", "oracle": "Real detect_behaviors against a real registered instance; assert the exact full message 'Custom rules file not found: <missing path>' including the path."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:293 - test_raises_on_invalid_yaml", "severity": "Medium", "status": "FIXED", "oracle": "Real yaml.safe_load over a real malformed YAML file; assert message starts with _ERR_RULES_INVALID and that the wrapped real YAML error mentions 'line'."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:314 - test_raises_when_yaml_not_a_list", "severity": "Medium", "status": "FIXED", "oracle": "Real YAML dict file parsed; assert the exact message '...expected a list, got dict' reflecting the real parsed top-level type."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:335 - test_valid_yaml_list_rules_passed_to_behaviors", "severity": "High", "status": "FIXED", "oracle": "Real match_behaviors (no mock) applied to a real report + real custom YAML rule keyed on whoami.exe; assert the produced BehaviorMatch signature_name/mitre_attack_id/evidence and count equal the match_behaviors() oracle."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:382 - test_raises_on_invalid_scan_target", "severity": "Medium", "status": "FIXED", "oracle": "Real yara_scan validation; assert the exact full message \"Invalid scan_target; must be 'files' or 'memory': 'processes'\" naming the valid options and the rejected value."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:392 - test_accepts_files_target", "severity": "High", "status": "FIXED", "oracle": "Real SandboxBase subclass with a real yara_scan; assert the bridge forwarded (rules_path, scan_target) unchanged as ('rules.yar','files') and returned the real match payload with match_count and rule name."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:409 - test_accepts_memory_target", "severity": "High", "status": "FIXED", "oracle": "Real sandbox yara_scan; assert the bridge forwarded (None,'memory') to the real implementation and surfaced match_count == 0 from the real return."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:430 - test_qemu_sandbox_qmp_returns_none_when_not_set", "severity": "Low", "status": "FIXED", "oracle": "Real QEMUSandbox public qmp/agent default to None; plus a behavioral gate: get_pending_messages on a QEMU instance with no agent raises the exact 'guest agent channel not connected' ToolError."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:442 - test_qemu_sandbox_has_public_qmp_property", "severity": "Low", "status": "FIXED", "oracle": "Real QMPClient exposed via the public qmp property is returned identically, AND end-to-end cont() over that real client returns the real QMP payload (property is actually used)."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:454 - test_qemu_sandbox_has_public_agent_property", "severity": "Low", "status": "FIXED", "oracle": "Real GuestAgentClient exposed via the public agent property is drained end-to-end by get_pending_messages, asserting the real message types/data (property is actually exercised, not just present)."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:466 - test_get_pending_messages_uses_agent_not_private", "severity": "High", "status": "FIXED", "oracle": "Real GuestAgentClient queue seeded with two real GuestAgentMessage dataclasses; the real get_pending_messages drains them via the public agent property; assert exact ordered types and data dicts."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:492 - test_is_available_no_info_log", "severity": "Medium", "status": "FIXED", "oracle": "Real SandboxManager with a deterministically-seeded availability cache; assert is_available() returns True (reflecting seeded availability) AND emits no 'started' info log."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:517 - test_status_no_info_log", "severity": "Medium", "status": "FIXED", "oracle": "Real manager status(); assert the full documented schema keys, available_types == ['windows','qemu'], total_count == 0, instances == [], and no 'started' log."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:542 - test_list_no_info_log", "severity": "Medium", "status": "FIXED", "oracle": "Real registered instance via real manager; assert list() returns the exact id/type/binary fields and UTC-suffixed created_at, with no 'started' log."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:571 - test_raises_on_non_qemu_sandbox", "severity": "Medium", "status": "FIXED", "oracle": "Real Windows-typed instance; assert get_vnc_port raises the exact full message 'VNC port is not allocated on this QEMU sandbox: requires QEMU sandbox'."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:588 - test_raises_when_vnc_port_is_none", "severity": "Medium", "status": "FIXED", "oracle": "Real QEMUSandbox whose real vnc_port property is None; assert the exact '...VNC display not configured on this QEMU instance' message (bridge actually probed vnc_port)."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:606 - test_returns_vnc_port_when_configured", "severity": "Medium", "status": "FIXED", "oracle": "Real QEMU sandbox subclass exposing a real vnc_port property == 5905; assert the bridge returns exactly 5905 read from the real property."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:624 - test_raises_on_missing_instance", "severity": "Medium", "status": "FIXED", "oracle": "Real empty SandboxManager; assert get_vnc_port raises the exact 'Sandbox instance not found: does-not-exist' naming the missing id."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:659 - test_raises_on_windows_sandbox (parametrized)", "severity": "Medium", "status": "FIXED", "oracle": "Each QEMU-only method (pcap_start/screenshot/extract_dropped_files/anti_evasion) tested individually against a real Windows instance; assert each method's EXACT distinct gating message from a per-method expected map."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:686 - test_raises_after_shutdown", "severity": "Medium", "status": "FIXED", "oracle": "Real manager shutdown(); assert ensure_manager raises exact _ERR_MANAGER_DESTROYED AND that dependent async methods list()/status() also surface 'manager was shut down' (bridge fully unusable)."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:702 - test_succeeds_before_shutdown", "severity": "High", "status": "FIXED", "oracle": "ensure_manager builds a real SandboxManager (assert isinstance) on first use without any mock and exposes it via bridge.manager."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:712 - test_returns_existing_manager", "severity": "Low", "status": "FIXED", "oracle": "Real attached manager returned identically across two ensure_manager calls AND actually drives a subsequent list() returning the registered instance id (manager is genuinely reused)."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:1560 - test_catches_attribute_error_during_message_build", "severity": "High", "status": "FIXED", "oracle": "Real GuestAgentClient queue seeded with a genuinely malformed real object() (no message_type/data); real get_pending_messages serialises it to exact {'type':'unknown','data':{}}."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:1584 - test_message_type_read_via_getattr", "severity": "Medium", "status": "FIXED", "oracle": "Real GuestAgentMessage('exec_result', data={'exit_code':7,'stdout':'ok'}) drained through the real bridge; assert exact type AND full data dict preserved."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:1671 - test_raises_on_non_dataclass", "severity": "Low", "status": "FIXED", "oracle": "dataclass_to_dict over a real plain dict; assert the exact full message 'Expected a dataclass instance, got dict' naming the actual type."},
-    {"ref": "tests/test_bridges/test_sandbox_bridge.py:1676 - test_raises_on_dataclass_class_not_instance", "severity": "Low", "status": "FIXED", "oracle": "dataclass_to_dict over the dataclass CLASS object; assert the exact 'Expected a dataclass instance, got type' distinguishing class from instance."}
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:58 - test_cont_wraps_general_exception",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real QMPClient over a real loopback asyncio QMP server that drops the socket mid-command; cont() raises ToolError and we assert the message starts with the production _ERR_CONT_FAILED prefix (no mock of qmp.cont)."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:79 - test_cont_wraps_value_error",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real QMPClient + real loopback server returning a real QMP error frame; assert exact 'Failed to resume VM execution: VM is not paused' propagated from the real wire response."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:100 - test_cont_raises_on_qmp_failure_response",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real loopback server emits {'error':{'desc':'VM is not paused'}}; real QMPClient parses it; assert exact wrapped ToolError message AND the success path returns the exact real 'return' payload {'resumed': True}."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:154 - test_extract_iocs_wraps_unexpected_exception",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real analysis module (no patch): malformed real NetworkActivity (missing remote_port) forces a real KeyError; plus no-report path asserts exact _ERR_NO_REPORT, and success path asserts the real extracted public-IP IOC equals extract_iocs() oracle."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:177 - test_timeline_wraps_unexpected_exception",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real generate_timeline drives the bridge: no-report path asserts exact _ERR_NO_REPORT message; success path asserts events are the real chronologically-sorted timeline matching generate_timeline() oracle."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:200 - test_detect_c2_wraps_unexpected_exception",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real detect_c2_patterns: malformed real network record raises a genuine KeyError('remote_port') which the bridge wraps; assert prefix + 'remote_port' in message and in state.last_error; success path matches detect_c2_patterns() oracle (known_c2_port)."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:224 - test_diff_wraps_unexpected_exception",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real diff_reports over two real ExecutionReports: missing-report path asserts exact per-instance error naming instance_id_b; success path asserts result['diff'] == diff_reports() oracle with exact unique_to_a/unique_to_b endpoints."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:247 - test_detect_behaviors_wraps_unexpected_exception",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real match_behaviors drives detect_behaviors with a real custom YAML rule against a real whoami.exe process event; assert the real BehaviorMatch (T1033, whoami evidence) and count == match_behaviors() oracle."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:274 - test_raises_when_rules_file_not_found",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real detect_behaviors against a real registered instance; assert the exact full message 'Custom rules file not found: <missing path>' including the path."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:293 - test_raises_on_invalid_yaml",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real yaml.safe_load over a real malformed YAML file; assert message starts with _ERR_RULES_INVALID and that the wrapped real YAML error mentions 'line'."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:314 - test_raises_when_yaml_not_a_list",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real YAML dict file parsed; assert the exact message '...expected a list, got dict' reflecting the real parsed top-level type."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:335 - test_valid_yaml_list_rules_passed_to_behaviors",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real match_behaviors (no mock) applied to a real report + real custom YAML rule keyed on whoami.exe; assert the produced BehaviorMatch signature_name/mitre_attack_id/evidence and count equal the match_behaviors() oracle."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:382 - test_raises_on_invalid_scan_target",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real yara_scan validation; assert the exact full message \"Invalid scan_target; must be 'files' or 'memory': 'processes'\" naming the valid options and the rejected value."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:392 - test_accepts_files_target",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real SandboxBase subclass with a real yara_scan; assert the bridge forwarded (rules_path, scan_target) unchanged as ('rules.yar','files') and returned the real match payload with match_count and rule name."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:409 - test_accepts_memory_target",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real sandbox yara_scan; assert the bridge forwarded (None,'memory') to the real implementation and surfaced match_count == 0 from the real return."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:430 - test_qemu_sandbox_qmp_returns_none_when_not_set",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real QEMUSandbox public qmp/agent default to None; plus a behavioral gate: get_pending_messages on a QEMU instance with no agent raises the exact 'guest agent channel not connected' ToolError."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:442 - test_qemu_sandbox_has_public_qmp_property",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real QMPClient exposed via the public qmp property is returned identically, AND end-to-end cont() over that real client returns the real QMP payload (property is actually used)."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:454 - test_qemu_sandbox_has_public_agent_property",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real GuestAgentClient exposed via the public agent property is drained end-to-end by get_pending_messages, asserting the real message types/data (property is actually exercised, not just present)."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:466 - test_get_pending_messages_uses_agent_not_private",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real GuestAgentClient queue seeded with two real GuestAgentMessage dataclasses; the real get_pending_messages drains them via the public agent property; assert exact ordered types and data dicts."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:492 - test_is_available_no_info_log",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real SandboxManager with a deterministically-seeded availability cache; assert is_available() returns True (reflecting seeded availability) AND emits no 'started' info log."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:517 - test_status_no_info_log",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real manager status(); assert the full documented schema keys, available_types == ['windows','qemu'], total_count == 0, instances == [], and no 'started' log."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:542 - test_list_no_info_log",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real registered instance via real manager; assert list() returns the exact id/type/binary fields and UTC-suffixed created_at, with no 'started' log."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:571 - test_raises_on_non_qemu_sandbox",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real Windows-typed instance; assert get_vnc_port raises the exact full message 'VNC port is not allocated on this QEMU sandbox: requires QEMU sandbox'."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:588 - test_raises_when_vnc_port_is_none",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real QEMUSandbox whose real vnc_port property is None; assert the exact '...VNC display not configured on this QEMU instance' message (bridge actually probed vnc_port)."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:606 - test_returns_vnc_port_when_configured",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real QEMU sandbox subclass exposing a real vnc_port property == 5905; assert the bridge returns exactly 5905 read from the real property."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:624 - test_raises_on_missing_instance",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real empty SandboxManager; assert get_vnc_port raises the exact 'Sandbox instance not found: does-not-exist' naming the missing id."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:659 - test_raises_on_windows_sandbox (parametrized)",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Each QEMU-only method (pcap_start/screenshot/extract_dropped_files/anti_evasion) tested individually against a real Windows instance; assert each method's EXACT distinct gating message from a per-method expected map."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:686 - test_raises_after_shutdown",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real manager shutdown(); assert ensure_manager raises exact _ERR_MANAGER_DESTROYED AND that dependent async methods list()/status() also surface 'manager was shut down' (bridge fully unusable)."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:702 - test_succeeds_before_shutdown",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "ensure_manager builds a real SandboxManager (assert isinstance) on first use without any mock and exposes it via bridge.manager."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:712 - test_returns_existing_manager",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real attached manager returned identically across two ensure_manager calls AND actually drives a subsequent list() returning the registered instance id (manager is genuinely reused)."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:1560 - test_catches_attribute_error_during_message_build",
+      "severity": "High",
+      "status": "FIXED",
+      "oracle": "Real GuestAgentClient queue seeded with a genuinely malformed real object() (no message_type/data); real get_pending_messages serialises it to exact {'type':'unknown','data':{}}."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:1584 - test_message_type_read_via_getattr",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Real GuestAgentMessage('exec_result', data={'exit_code':7,'stdout':'ok'}) drained through the real bridge; assert exact type AND full data dict preserved."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:1671 - test_raises_on_non_dataclass",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "dataclass_to_dict over a real plain dict; assert the exact full message 'Expected a dataclass instance, got dict' naming the actual type."
+    },
+    {
+      "ref": "tests/test_bridges/test_sandbox_bridge.py:1676 - test_raises_on_dataclass_class_not_instance",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "dataclass_to_dict over the dataclass CLASS object; assert the exact 'Expected a dataclass instance, got type' distinguishing class from instance."
+    }
   ],
-  "filesModified": ["tests/test_bridges/test_sandbox_bridge.py"],
-  "checks": {"ruff": true, "ruffFormat": true, "basedpyright": true, "pydoclint": true, "pydocstyle": true, "pytest": true},
+  "filesModified": [
+    "tests/test_bridges/test_sandbox_bridge.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
   "pytestSummary": "57 passed in 2.48s"
 }

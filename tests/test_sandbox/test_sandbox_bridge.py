@@ -29,7 +29,7 @@ import inspect
 import sys
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 import pytest
 
@@ -55,6 +55,9 @@ _MISSING_INSTANCE: Final[str] = "nonexistent-instance"
 _REPORT_DICT_KEY_COUNT: Final[int] = 17
 _REAL_INSTANCE: Final[str] = "real-localproc-001"
 
+# VNC port advertised by the conftest ``InMemoryQEMUSandbox.vnc_port`` property.
+_VNC_PORT: Final[int] = 5900
+
 # True when running on host (not inside the Docker sandbox and not explicitly
 # opted in).  Used as the ``condition`` for ``@pytest.mark.skipif`` on the
 # integration test class so the decorator is visible in the source rather than
@@ -66,6 +69,7 @@ INTEGRATION_SANDBOX: Final[bool] = not is_sandboxed() and not allow_host_process
 _WIN_REMOTE_IP: Final[str] = "185.220.101.45"
 
 
+@pytest.mark.unit
 class TestBridgeInstantiation:
     """Verify bridge construction and basic properties."""
 
@@ -97,13 +101,9 @@ class TestBridgeInstantiation:
         assert caps.supports_patching is False
 
 
+@pytest.mark.unit
 class TestToolDefinition:
     """Verify tool definition completeness and consistency."""
-
-    def test_definition_exists(self) -> None:
-        """Tool definition is not None."""
-        bridge = SandboxBridge()
-        assert bridge.tool_definition is not None
 
     def test_function_count(self) -> None:
         """Tool definition has expected number of functions."""
@@ -117,13 +117,111 @@ class TestToolDefinition:
         for func in bridge.tool_definition.functions:
             assert len(func.description) > _MIN_DESC_LEN, f"{func.name} has short description"
 
-    def test_all_resolve_to_methods(self) -> None:
-        """All function names resolve to callable methods on the bridge."""
-        bridge = SandboxBridge()
-        for func in bridge.tool_definition.functions:
-            method_name = func.name.split(".", 1)[1] if "." in func.name else func.name
-            assert hasattr(bridge, method_name), f"Method {method_name} not found"
-            assert callable(getattr(bridge, method_name)), f"{method_name} not callable"
+    @pytest.mark.asyncio
+    async def test_all_definition_functions_dispatch_to_real_behavior(
+        self,
+        sandbox_bridge: SandboxBridge,
+        tmp_path: Path,
+    ) -> None:
+        """Every tool-definition function dispatches end-to-end and returns its documented value.
+
+        Resolves each ``tool_definition`` function name to a bridge method exactly the
+        way the production ``ToolRegistry.execute_tool_call`` dispatch does (via
+        ``getattr``), then *invokes* it against the real fixture instances with arguments
+        derived from real fixture state. Each invocation is checked against an oracle
+        independent of the bridge: a documented return key whose value is computed from
+        the fixture (the known instance IDs, the ``InMemorySandbox`` constant return
+        values, the ``StubManager`` advertised types, and a real on-disk source file).
+
+        This replaces the previous existence-only ``hasattr``/``callable`` smoke check:
+        a method that exists but returns wrong data, drops the documented key, or relays
+        the wrong instance id now fails. The set of names exercised is asserted to equal
+        the full set of definition function names, so adding a tool without a real
+        dispatch assertion also fails.
+
+        Args:
+            sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
+            tmp_path: Pytest temporary directory used for a real copy_to source file.
+        """
+        bridge = sandbox_bridge
+        tmpdir = Path(tempfile.gettempdir())
+        source_file = tmp_path / "dispatch_source.bin"
+        source_file.write_bytes(b"DISPATCH-SRC\x00\x01")
+        recovered = tmp_path / "dispatch_recovered.bin"
+
+        definition_names: set[str] = {
+            func.name.split(".", 1)[1] if "." in func.name else func.name for func in bridge.tool_definition.functions
+        }
+        for name in definition_names:
+            method = getattr(bridge, name, None)
+            assert callable(method), f"definition function {name!r} does not resolve to a callable bridge method"
+
+        exercised: set[str] = set()
+
+        async def _dispatch(name: str, *args: object, **kwargs: object) -> dict[str, Any]:
+            """Invoke a bridge tool by its definition name via getattr dispatch.
+
+            Args:
+                name: Bare definition function name (no ``sandbox.`` prefix).
+                *args: Positional arguments forwarded to the resolved method.
+                **kwargs: Keyword arguments forwarded to the resolved method.
+
+            Returns:
+                dict[str, Any]: The dispatched method's result dictionary.
+            """
+            method: Any = getattr(bridge, name)
+            exercised.add(name)
+            return cast("dict[str, Any]", await method(*args, **kwargs))
+
+        status = await _dispatch("status")
+        assert status["active_count"] == 2
+        assert set(status["available_types"]) == {"windows", "qemu"}
+
+        list_entries = cast("list[dict[str, Any]]", await getattr(bridge, "list")())
+        exercised.add("list")
+        assert {entry["id"] for entry in list_entries} == {_WIN_INSTANCE, _QEMU_INSTANCE}
+
+        vnc_method: Any = getattr(bridge, "get_vnc_port")
+        exercised.add("get_vnc_port")
+        assert await vnc_method(_QEMU_INSTANCE) == _VNC_PORT
+
+        assert (await _dispatch("execute", _WIN_INSTANCE, "dir"))["stdout"] == "ok: dir"
+        assert (await _dispatch("copy_to", _WIN_INSTANCE, str(source_file), "staged.bin"))["success"] is True
+        assert (await _dispatch("copy_from", _WIN_INSTANCE, "staged.bin", str(recovered)))["success"] is True
+
+        assert (await _dispatch("yara_scan", _WIN_INSTANCE))["match_count"] == 1
+        assert (await _dispatch("extract_iocs", _WIN_INSTANCE))["instance_id"] == _WIN_INSTANCE
+        assert (await _dispatch("timeline", _WIN_INSTANCE))["count"] == 2
+        assert (await _dispatch("detect_behaviors", _WIN_INSTANCE))["count"] == 0
+        assert (await _dispatch("detect_c2", _WIN_INSTANCE))["count"] == 0
+        assert (await _dispatch("diff", _WIN_INSTANCE, _QEMU_INSTANCE))["instance_id_a"] == _WIN_INSTANCE
+
+        assert (await _dispatch("cont", _QEMU_INSTANCE))["data"] == {"status": "running"}
+        assert (await _dispatch("get_pending_messages", _QEMU_INSTANCE))["count"] == 1
+        assert (await _dispatch("screenshot", _QEMU_INSTANCE))["screenshot_path"] == str(tmpdir / "screenshot.png")
+        assert (await _dispatch("anti_evasion", _QEMU_INSTANCE))["profile"] == "default"
+        assert (await _dispatch("memory_dump", _QEMU_INSTANCE))["dump_path"] == str(tmpdir / "memdump.raw")
+        assert (await _dispatch("extract_dropped_files", _QEMU_INSTANCE))["zip_path"] == str(tmpdir / "dropped.zip")
+
+        capture_id = (await _dispatch("pcap_start", _QEMU_INSTANCE))["capture_id"]
+        assert capture_id == "cap-001"
+        assert (await _dispatch("pcap_stop", _QEMU_INSTANCE, capture_id))["pcap_path"] == str(tmpdir / "capture.pcap")
+
+        snapshot_id = (await _dispatch("snapshot_create", _QEMU_INSTANCE, "dispatch_snap"))["snapshot_id"]
+        assert snapshot_id == "snap-dispatch_snap"
+        assert (await _dispatch("snapshot_list", _QEMU_INSTANCE))["snapshots"] == [snapshot_id]
+        assert (await _dispatch("snapshot_restore", _QEMU_INSTANCE, snapshot_id))["success"] is True
+        assert (await _dispatch("snapshot_delete", _QEMU_INSTANCE, "dispatch_snap"))["success"] is True
+
+        created = await _dispatch("create", sandbox_type="qemu")
+        assert created["type"] == "qemu"
+        assert (await _dispatch("run_binary", sys.executable, sandbox_type="windows"))["result"] == "success"
+        assert (await _dispatch("destroy", _WIN_INSTANCE))["success"] is True
+
+        assert exercised == definition_names, (
+            f"dispatch coverage drift: not exercised {sorted(definition_names - exercised)}, "
+            f"unexpected {sorted(exercised - definition_names)}"
+        )
 
     def test_parameter_names_match_signatures(self) -> None:
         """Parameter names in tool definitions match method signatures."""
@@ -164,6 +262,7 @@ class TestToolDefinition:
         assert bridge.tool_definition.tool_name == ToolName.SANDBOX
 
 
+@pytest.mark.unit
 class TestInitializeShutdown:
     """Verify bridge initialization and shutdown."""
 
@@ -220,6 +319,7 @@ class TestInitializeShutdown:
         assert mgr1 is mgr2
 
 
+@pytest.mark.unit
 class TestCreateDestroy:
     """Verify create and destroy sandbox operations."""
 
@@ -269,14 +369,37 @@ class TestCreateDestroy:
             await sandbox_bridge.destroy(_MISSING_INSTANCE)
 
     @pytest.mark.asyncio
-    async def test_create_failure_raises(self) -> None:
-        """Create on bridge with no available types raises ToolError on real manager."""
+    async def test_create_translates_unavailable_type_to_typed_tool_error(self) -> None:
+        """Create against the real manager raises a typed ToolError pinned to the capability-absence reason.
+
+        Drives the genuine ``SandboxManager`` (created by ``initialize``), which probes
+        ``WindowsSandbox.is_available()``. The oracle is the manager's own contract in
+        ``intellicrack.sandbox.manager.SandboxManager.create``: when the type is not
+        available it raises ``SandboxError("Sandbox type not available: windows")``, and
+        the bridge must wrap that as ``ToolError`` prefixed with ``"Failed to create
+        sandbox"`` while recording the unwrapped manager reason in
+        ``state.last_error``. The ``match`` and ``last_error`` assertions pin *why* the
+        failure occurred, so a regression that fails create for an unrelated reason (or
+        stops translating the manager error / stops recording ``last_error``) no longer
+        passes vacuously.
+
+        When the host genuinely provides Windows Sandbox the create-failure path cannot
+        be exercised, so the test skips rather than asserting a contradiction.
+        """
         bridge = SandboxBridge()
         await bridge.initialize()
-        with pytest.raises(ToolError):
+        manager = bridge.ensure_manager()
+        available = await manager.get_available_types()
+        if "windows" in available:
+            pytest.skip("Windows Sandbox is available on this host; the create-failure path cannot be exercised")
+
+        with pytest.raises(ToolError, match="Failed to create sandbox: Sandbox type not available: windows"):
             await bridge.create(sandbox_type="windows")
 
+        assert bridge.state.last_error == "Sandbox type not available: windows"
 
+
+@pytest.mark.unit
 class TestExecuteCommand:
     """Verify command execution in sandbox."""
 
@@ -306,6 +429,7 @@ class TestExecuteCommand:
             await sandbox_bridge.execute(_MISSING_INSTANCE, "dir")
 
 
+@pytest.mark.unit
 class TestFileCopy:
     """Verify file copy operations."""
 
@@ -350,6 +474,7 @@ class TestFileCopy:
             await sandbox_bridge.copy_from(_MISSING_INSTANCE, "src.txt", "dest.txt")
 
 
+@pytest.mark.unit
 class TestStatusAndList:
     """Verify status and list operations."""
 
@@ -389,6 +514,7 @@ class TestStatusAndList:
         assert by_id[_QEMU_INSTANCE]["status"] == "running"
 
 
+@pytest.mark.unit
 class TestSnapshots:
     """Verify snapshot operations (QEMU only)."""
 
@@ -499,6 +625,7 @@ class TestSnapshots:
             await sandbox_bridge.snapshot_delete(_WIN_INSTANCE, "snap1")
 
 
+@pytest.mark.unit
 class TestQEMUSpecificMethods:
     """Verify QEMU-specific methods (cont, pending messages)."""
 
@@ -576,6 +703,7 @@ class TestQEMUSpecificMethods:
             await sandbox_bridge.get_pending_messages(_MISSING_INSTANCE)
 
 
+@pytest.mark.unit
 class TestNewCapabilities:
     """Verify new sandbox capabilities (pcap, screenshot, etc.)."""
 
@@ -754,6 +882,7 @@ class TestNewCapabilities:
             await sandbox_bridge.yara_scan(_MISSING_INSTANCE)
 
 
+@pytest.mark.unit
 class TestAnalysisWrappers:
     """Verify analysis method wrappers on the bridge."""
 
@@ -950,6 +1079,7 @@ class TestAnalysisWrappers:
             await bridge_no_reports.diff(_WIN_NOREPORT, _QEMU_NOREPORT)
 
 
+@pytest.mark.unit
 class TestGetVncPort:
     """Verify VNC port retrieval."""
 
@@ -974,6 +1104,7 @@ class TestGetVncPort:
             await sandbox_bridge.get_vnc_port(_MISSING_INSTANCE)
 
 
+@pytest.mark.unit
 class TestReportToDict:
     """Verify _report_to_dict conversion."""
 

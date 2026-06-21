@@ -1,0 +1,48 @@
+{
+ "file": "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "TestNetworkMonitorSource::test_uses_owner_pid_variable",
+   "severity": null,
+   "category": null,
+   "action": "hardened",
+   "oracle": "source.count(\"$ownerPid|$name\") == 2 \u2014 independently verified by grep showing exactly 2 occurrences in windows.py (TCP line 1553 and UDP line 1567); removing either occurrence flips the count from 2 to 1 and fails the assertion",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/windows.py",
+    "mutation": "\"$ts|bind|$local|$remote|$state|udp|0|0|$ownerPid|$name\" |\\n\" -> \"$ts|bind|$local|$remote|$state|udp|0|0|$pid|$name\" |\\n\"",
+    "covering_test": "TestNetworkMonitorSource::test_uses_owner_pid_variable",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": null,
+    "proven_falsifiable": null
+   }
+  },
+  {
+   "test": "TestRegistryMonitorSource::test_type_included_in_log_entry",
+   "severity": null,
+   "category": null,
+   "action": "hardened",
+   "oracle": "source.count(\"$rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }\") == 2 plus separate assertions for the created-log and deleted-log emit lines; independently verified by grep showing exactly 2 occurrences at windows.py:1498 and windows.py:1513",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/windows.py",
+    "mutation": "\"                $rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }\\n\" -> \"                $rtype = 'Unknown'\\n\"",
+    "covering_test": "TestRegistryMonitorSource::test_type_included_in_log_entry",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": null,
+    "proven_falsifiable": null
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 2
+}

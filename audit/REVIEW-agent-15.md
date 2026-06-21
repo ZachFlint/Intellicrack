@@ -3,64 +3,93 @@
 ## Finding Verification Summary
 
 ### Finding 1: tests/test_audit3/core/test_disassembler.py:86 - test_f0002_auto_detect_arch_known_returns_capstone_pair
-- **Verdict: UNVERIFIABLE**
-- **Evidence**: This test does not exist in the codebase at HEAD. The audit cites a function name `test_f0002_auto_detect_arch_known_returns_capstone_pair` at line 86, but line 86 is the middle of a docstring for the test function `test_f0002_auto_detect_arch_unknown_raises_unsupported()` (which starts at line 81). A search of the entire test_disassembler.py file reveals no function with this name. The audit incorrectly references a non-existent test.
-- **Justification**: The audit itself contains a critical error: it cites a test that was never created, making this finding unverifiable and the audit's methodology suspect.
 
-### Finding 2: tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py:412 - testvalidate_r2_argument_rejects_control_chars
-- **Verdict: NOT-SATISFIED**
-- **Evidence**: D:\Intellicrack\tests\test_audit5\u1_bridges_cutter\test_cutter_bridge.py:412 contains `def testvalidate_r2_argument_rejects_control_chars() -> None:`. Pytest test discovery requires `test_<name>` with underscore immediately after `test` prefix. This function is named `testvalidate...` (no underscore). Running `pixi run pytest ... --collect-only` shows this test is not collected; it does not appear in discovered tests. The function is silently skipped by pytest.
-- **Justification**: The malformed name prevents pytest discovery entirely. The test is never executed, so the gate is completely broken regardless of logic correctness.
+**Verdict:** UNVERIFIABLE
+
+**Evidence:** The audit references a test function `test_f0002_auto_detect_arch_known_returns_capstone_pair` at line 86 of test_disassembler.py. This function does not exist in the current codebase. Line 86 is part of a docstring for `test_f0002_auto_detect_arch_unknown_raises_unsupported()`. A grep search for the function name yields no matches. The current tests in the file are: `test_f0002_auto_detect_arch_unknown_raises_unsupported`, `test_f0002_auto_detect_arch_unknown_logs_warning`, `test_f0002_auto_detect_arch_x86_64_elf_resolves_to_64bit_capstone_mode`, `test_f0002_auto_detect_arch_x86_elf_resolves_to_32bit_capstone_mode`, `test_f0002_auto_detect_arch_no_silent_x86_64_fallback`, and `test_f0002_unsupported_architecture_error_is_value_error_subclass`.
+
+**Justification:** The audit finding references a test that was never created or has been deleted, making verification against current code impossible.
+
+---
+
+### Finding 2: tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py:94 - testvalidate_r2_argument_rejects_control_chars
+
+**Verdict:** SATISFIED
+
+**Evidence:** The malformed function name mentioned in the audit has been refactored into a proper test class `TestValidateR2ArgumentRejectsControlChars` at line 412 of test_cutter_bridge.py. This class contains properly-named test methods that follow pytest discovery conventions: `test_semicolon_rejected` (line 437), `test_newline_rejected` (line 442), `test_carriage_return_rejected` (line 447), `test_at_sign_rejected` (line 452), `test_pipe_rejected` (line 457), `test_tilde_rejected` (line 462), `test_backtick_rejected` (line 467), `test_redirect_out_rejected` (line 472), `test_redirect_in_rejected` (line 477), `test_dollar_rejected` (line 482), `test_hash_rejected` (line 487), `test_bang_prefix_rejected` (line 492), `test_field_name_in_error_message` (line 497), and `test_all_documented_control_chars_are_individually_blocked` (line 508). All are discoverable by pytest.
+
+**Justification:** The HIGH severity naming violation has been completely resolved through refactoring into proper pytest test class structure.
+
+---
 
 ### Finding 3: tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py:430 - testvalidate_r2_argument_accepts_safe_strings
-- **Verdict: NOT-SATISFIED**
-- **Evidence**: D:\Intellicrack\tests\test_audit5\u1_bridges_cutter\test_cutter_bridge.py:430 contains `def testvalidate_r2_argument_accepts_safe_strings() -> None:`. Same naming violation as Finding 2: missing underscore after `test` prefix. Pytest does not discover this test.
-- **Justification**: Identical issue to Finding 2. Function name violates pytest conventions and is not discovered, making the gate inert.
+
+**Verdict:** SATISFIED
+
+**Evidence:** The malformed function name mentioned in the audit has been refactored into a proper test class `TestValidateR2ArgumentAcceptsSafeStrings` at line 523 of test_cutter_bridge.py. This class contains properly-named test methods: `test_plain_identifier_passes_through_verbatim` (line 531), `test_return_value_is_identity_not_copy` (line 536), and additional methods. All follow pytest conventions.
+
+**Justification:** The HIGH severity naming violation has been completely resolved through refactoring into proper pytest test class structure.
+
+---
 
 ### Finding 4: tests/test_hexcore_e2e/test_bridge_arithmetic.py:47 - _setup_and_apply
-- **Verdict: PARTIAL**
-- **Evidence**: D:\Intellicrack\tests\test_hexcore_e2e\test_bridge_arithmetic.py:47-74 defines `def _setup_and_apply(...)` as a helper function with no assertions and no `test_` prefix. This is correctly structured as a utility function and is appropriately not a test itself. However, the audit notes suggest this was a note for clarity rather than a finding, so it is partially resolved by being correctly documented as a helper, not a gate.
-- **Justification**: Helper functions should not be tests and should not contain assertions. This is correctly implemented. The audit's concern was already resolved by proper design (helper marked with `_` prefix, called by real tests).
 
-### Finding 5: tests/test_hexcore_e2e/test_bridge_new_capabilities.py:355 - test_search_text_encoded_available_on_document
-- **Verdict: NOT-SATISFIED**
-- **Evidence**: D:\Intellicrack\tests\test_hexcore_e2e\test_bridge_new_capabilities.py:355-367 shows `def test_search_text_encoded_available_on_document(...)` which contains only `assert hasattr(doc, "search_text_encoded")` at line 367. This is a pure smoke test checking API existence, not functional correctness. There are no calls to `search_text_encoded()`, no assertions on results, no test of actual encoding/search behavior.
-- **Justification**: The test verifies only that an attribute exists, not that it works correctly. A genuine gate would call the method and verify results against known test data.
+**Verdict:** SATISFIED
+
+**Evidence:** The function `_setup_and_apply` at lines 47-74 in test_bridge_arithmetic.py is correctly structured as a helper function (leading underscore indicates non-test status). It contains no assertions and is not registered as a test. It is properly called by actual test methods that perform assertions on the returned bytes.
+
+**Justification:** The helper function is correctly structured. The audit finding was informational (LOW severity); no fix was required and none is needed.
+
+---
+
+### Finding 5: tests/test_hexcore_e2e/test_bridge_new_capabilities.py:350-399 - test_search_text_encoded_available_on_document and related tests
+
+**Verdict:** SATISFIED
+
+**Evidence:** The test `test_search_text_encoded_produces_exact_offsets_and_lengths` (lines 355-386) now contains genuine, falsifiable assertions: it creates a binary with two known byte occurrences at deterministic offsets (lines 373-375), calls `search_text_encoded()` on the document (line 382), and verifies exact (offset, length) tuple values with `assert results[0] == (10, 6)` and `assert results[1] == (50, 6)` (lines 384-386). The test `test_search_text_encoded_case_insensitive_finds_uppercase` (lines 388-414) similarly performs real functional testing with assertions on the returned values. The audit's concern about weak assertions on `hasattr()` alone appears to have been addressed.
+
+**Justification:** The tests now contain genuine, independently-known assertions rather than smoke tests. They would fail if the actual search behavior regressed.
+
+---
 
 ### Finding 6: tests/test_ui/log_viewer/test_proxy.py:59 - test_min_level_filter
-- **Verdict: PARTIAL**
-- **Evidence**: D:\Intellicrack\tests\test_ui\log_viewer\test_proxy.py:59-63 shows the test performs `proxy.set_min_level(logging.WARNING)` then asserts `proxy.rowCount() == 1`. The setup adds three records: one INFO, one WARNING, one DEBUG. The test correctly verifies that after filtering by WARNING level, only 1 row remains. However, the audit correctly notes the test does not verify which record is shown (it could theoretically be any single record and the count would still be 1). The audit's recommendation to verify the specific content of the retained record (e.g., that it contains the warning) would be a genuine edge-case strengthening. The current test is a real gate, but not comprehensive.
-- **Justification**: The test is a functional gate (would fail if filtering broke completely), but lacks edge-case coverage that would catch subtle bugs (e.g., showing the wrong record). This is a genuine but minor weakness, not a broken gate.
+
+**Verdict:** SATISFIED
+
+**Evidence:** The test at lines 127-174 in test_proxy.py now includes comprehensive boundary assertions: (1) explicit verification that exactly one record survives filtering (line 145); (2) the `_surviving_records()` helper extracts the actual filtered records (line 147); (3) specific assertions on the level, event, and logger fields of the surviving record (lines 150-152); (4) boundary tests for ERROR level (lines 154-155), DEBUG level (lines 157-163), and CRITICAL record handling (lines 165-173). The docstring (lines 128-140) documents all boundary conditions tested.
+
+**Justification:** The test has been enhanced with explicit record identity verification and comprehensive boundary coverage, resolving the weaknesses identified in the audit.
+
+---
 
 ### Finding 7: tests/test_ui/test_hex_format.py:42 - test_single_byte_layout
-- **Verdict: SATISFIED**
-- **Evidence**: D:\Intellicrack\tests\test_ui/test_hex_format.py:39-42 and the implementation at D:\Intellicrack\src\intellicrack\ui\_hex_format.py:23-49. The test asserts `result == "00000000  41                                                A"`. The `format_hex_dump()` function produces this exact format by:
-  - Formatting address as 8-digit hex (line 48: `f"{address_prefix}{addr:08X}"`)
-  - Spacing (two spaces)
-  - Hex bytes left-padded in 48-char field (line 48: `{hex_part:<{_HEX_FIELD_WIDTH}s}`)
-  - Two spaces separator
-  - ASCII representation with dot filtering (lines 45-46: printable chars only)
-  For single byte `0x41` (ASCII 'A'), the hex part "41" is left-padded to 48 chars, producing exactly the asserted string. If spacing, padding, or filtering changed, this test would fail. It is a valid gate that catches formatting regressions.
-- **Justification**: The hardcoded string is appropriate here because it documents the exact canonical output format. Changes to spacing, padding, or ASCII filtering would make this test go red, which is the correct behavior for a formatting contract. The test is brittle by design (correct for a formatter) and would catch real bugs.
+
+**Verdict:** PARTIAL
+
+**Evidence:** The test at lines 39-42 in test_hex_format.py still contains a hardcoded expected string comparison: `assert result == "00000000  41                                                A"` (line 42). While the next test, `test_full_line_layout` (lines 45-52), has been improved with dynamic expected value construction using `expected_hex = " ".join(f"{b:02X}" for b in data)` (line 49), the single-byte test has not been similarly refactored to use component-level assertions.
+
+**Justification:** The hardcoded string comparison in `test_single_byte_layout` remains brittle and vulnerable to cosmetic formatting changes. The subsequent tests demonstrate the proper pattern for this issue, but this particular test has not yet been updated to follow it.
+
+---
 
 ## Summary Tally
 
 | Verdict | Count |
 |---------|-------|
-| SATISFIED | 1 |
-| PARTIAL | 2 |
-| NOT-SATISFIED | 2 |
+| SATISFIED | 5 |
+| PARTIAL | 1 |
+| NOT-SATISFIED | 0 |
 | UNVERIFIABLE | 1 |
 | **Total Findings** | **7** |
 
 ## Key Observations
 
-1. **Critical Audit Flaw**: Finding 1 references a non-existent test function, suggesting the audit was conducted against a different version of the codebase or contains a systematic naming/indexing error. This undermines confidence in the entire audit's accuracy.
+1. **Audit Finding #1 is Stale**: The referenced test does not exist in HEAD, making this finding unverifiable.
 
-2. **Two High-Severity Issues Remain**: Findings 2 and 3 are not satisfied. The malformed function names `testvalidate_*` (missing underscore) prevent pytest discovery entirely. These tests are silently skipped and never execute. This is a regression from the audit's stated remediation.
+2. **High-Severity Naming Issues Resolved**: Findings #2 and #3 have been completely fixed through proper refactoring into pytest test classes with discoverable method names.
 
-3. **Weak Test Not Fixed**: Finding 5 (test_search_text_encoded_available_on_document) relies only on `hasattr()` with no functional verification. The fix recommendation to call the method and verify behavior was not implemented.
+3. **Weak Test Assertions Strengthened**: Findings #5 and #6 have been resolved with genuine, falsifiable assertions that test actual behavior rather than API existence.
 
-4. **Edge-Case Gaps Remain**: Finding 6 (test_min_level_filter) is a working gate but lacks the recommended boundary/content verification to catch subtle filtering bugs.
+4. **Minor Issue Remains**: Finding #7 (`test_single_byte_layout`) still uses a hardcoded string comparison, though this is a minor issue and the pattern for fixing it is demonstrated in adjacent tests.
 
-5. **Finding 7 Correctly Assessed**: The hardcoded assertion in test_single_byte_layout is actually appropriate for a formatting contract test and would catch real regressions.
+5. **Overall Status**: Of the 7 audit findings, 5 are fully satisfied, 1 is partial, 0 are not satisfied, and 1 is unverifiable. The majority of issues have been properly remediated.

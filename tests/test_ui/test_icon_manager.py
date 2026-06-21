@@ -12,11 +12,17 @@ using real asset files.
 from __future__ import annotations
 
 import hashlib
+from typing import TYPE_CHECKING
 
 import defusedxml.ElementTree
 import pytest
 from PyQt6.QtGui import QIcon
 
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+from intellicrack.ui.resources import icon_manager as icon_module
 from intellicrack.ui.resources.icon_manager import (
     ICON_MAP,
     UNICODE_FALLBACK,
@@ -131,16 +137,6 @@ class TestIconManagerSingleton:
 
 class TestIconLoading:
     """Tests for icon loading from files."""
-
-    @staticmethod
-    def test_get_icon_returns_qicon(icon_manager: IconManager) -> None:
-        """get_icon returns a QIcon instance.
-
-        Args:
-            icon_manager: Fresh IconManager fixture instance.
-        """
-        icon = icon_manager.get_icon("status_success")
-        assert isinstance(icon, QIcon)
 
     @staticmethod
     def test_loads_svg_icon_successfully(icon_manager: IconManager) -> None:
@@ -443,14 +439,32 @@ class TestFallbackIcons:
             assert name in UNICODE_FALLBACK, f"Missing fallback for {name}"
 
     @staticmethod
-    def test_missing_icon_returns_icon_object(icon_manager: IconManager) -> None:
-        """Missing icons still return a QIcon object.
+    def test_missing_icon_with_no_fallback_loads_null_via_full_pipeline(icon_manager: IconManager) -> None:
+        """Requesting a missing icon with no Unicode fallback yields a null QIcon end-to-end.
+
+        Drives the complete get_icon() pipeline (cache miss -> _load_icon ->
+        file-not-found -> _create_fallback_icon -> no-fallback branch).  The
+        chosen name is independently verified to be absent from ICON_MAP (so
+        _load_icon falls back to ``<name>.svg`` which does not exist) and absent
+        from UNICODE_FALLBACK (so _create_fallback_icon returns ``QIcon()``).
+        The spec-mandated outcome is therefore a null QIcon, which the original
+        type-only assertion could never catch.
+
+        This complements test_no_fallback_icon_returns_null_qicon (which calls
+        _create_fallback_icon directly): this one exercises the full public
+        get_icon() path including the missing-file branch of _load_icon.
 
         Args:
             icon_manager: Fresh IconManager fixture instance.
         """
-        icon = icon_manager.get_icon("nonexistent_icon_12345")
+        missing_name = "nonexistent_icon_12345"
+        assert missing_name not in ICON_MAP, "Precondition: chosen name must be absent from ICON_MAP"
+        assert missing_name not in UNICODE_FALLBACK, "Precondition: chosen name must be absent from UNICODE_FALLBACK"
+        assert not icon_manager.icon_exists(missing_name), "Precondition: no icon file may exist for the chosen name"
+
+        icon = icon_manager.get_icon(missing_name)
         assert isinstance(icon, QIcon)
+        assert icon.isNull(), "A missing icon with no Unicode fallback must load as a null QIcon"
 
     @staticmethod
     def test_fallback_characters_are_exactly_correct() -> None:
@@ -528,10 +542,20 @@ class TestListAvailableIcons:
     """Tests for list_available_icons method."""
 
     @staticmethod
-    def test_returns_list() -> None:
-        """list_available_icons returns a list."""
+    def test_list_equals_full_icon_map_key_set() -> None:
+        """list_available_icons returns exactly every ICON_MAP key, in order.
+
+        The independent oracle is the ICON_MAP dict itself: list_available_icons
+        must expose the complete set of mapped icon names with no omissions,
+        additions, or duplicates.  A type-only assertion would pass for an empty
+        or truncated list; this asserts both the exact element sequence and the
+        absence of duplicate names.
+        """
         icons = IconManager.list_available_icons()
-        assert isinstance(icons, list)
+        expected = list(ICON_MAP.keys())
+        assert icons == expected, "list_available_icons must return every ICON_MAP key in insertion order"
+        assert len(icons) == len(set(icons)), "list_available_icons must not contain duplicate names"
+        assert set(icons) == set(ICON_MAP), "list_available_icons must expose exactly the ICON_MAP key set"
 
     @staticmethod
     def test_list_not_empty() -> None:
@@ -591,33 +615,70 @@ class TestIconIntegrity:
         assert not missing_files, f"ICON_MAP entries without files: {missing_files}"
 
     @staticmethod
-    def test_svg_icons_load_without_errors(icon_manager: IconManager) -> None:
-        """SVG-backed icons load without raising exceptions.
+    def test_svg_icons_load_non_null(icon_manager: IconManager) -> None:
+        """SVG-backed icons load as non-null QIcons via the real pipeline.
 
         Only iterates SVG-keyed entries from ICON_MAP.  PNG-backed keys are
         excluded: QIcon(png_path) triggers a Qt renderer crash during pytest
         teardown on Windows, making any PNG-loading test non-deterministic.
         PNG icon presence is verified separately via icon_exists().
 
+        Each icon must load to a non-null QIcon: a present-but-corrupt SVG that
+        Qt cannot parse loads to a null QIcon without raising, so asserting
+        ``not icon.isNull()`` (instead of only the return type) is what turns
+        this into a real corruption gate, matching
+        test_critical_svg_icons_load_and_have_available_sizes.
+
         Args:
             icon_manager: Fresh IconManager fixture instance.
         """
         svg_keys = sorted(_SVG_ICON_KEYS)[:_MAX_PREVIEW_ICONS]
+        assert svg_keys, "ICON_MAP must contain at least one SVG-backed icon"
+        null_icons: list[str] = []
         for name in svg_keys:
-            try:
-                icon = icon_manager.get_icon(name)
-                assert isinstance(icon, QIcon)
-            except (RuntimeError, OSError, ValueError) as e:
-                pytest.fail(f"SVG icon {name!r} raised exception: {e}")
+            icon = icon_manager.get_icon(name)
+            assert isinstance(icon, QIcon)
+            if icon.isNull():
+                null_icons.append(name)
+        assert not null_icons, f"SVG icons loaded as null QIcons (corrupt or missing): {null_icons}"
 
     @staticmethod
-    def test_icon_manager_available_flag(icon_manager: IconManager) -> None:
-        """IconManager correctly detects icons availability.
+    def test_icons_availability_detection_flips_with_assets_presence(
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """_check_icons_available returns True for a populated icons dir and False otherwise.
+
+        Drives the real detection logic (IconManager._check_icons_available)
+        against three independently-controlled filesystem states rather than
+        only snapshotting the flag in the current environment:
+
+        - the real bundled assets directory (must detect True),
+        - a directory whose ``icons`` subdir exists but is empty (must be False),
+        - a directory with no ``icons`` subdir at all (must be False).
+
+        Only the external path resolver get_assets_path is redirected; the unit
+        under test (_check_icons_available, which calls ``icons_dir.iterdir()``)
+        runs unmodified.  The expected outcomes follow directly from the
+        ``any(icons_dir.iterdir())`` contract, an independent oracle.
 
         Args:
-            icon_manager: Fresh IconManager fixture instance.
+            monkeypatch: pytest monkeypatch fixture for redirecting get_assets_path.
+            tmp_path: pytest temporary directory unique to this test.
         """
-        assert icon_manager.icons_available, "Icons should be available"
+        real_assets = get_assets_path()
+        assert (real_assets / "icons").is_dir(), "Test precondition: real icons dir must exist"
+        assert IconManager._check_icons_available() is True, "Real populated assets must detect as available"
+
+        empty_assets = tmp_path / "empty_assets"
+        (empty_assets / "icons").mkdir(parents=True)
+        monkeypatch.setattr(icon_module, "get_assets_path", lambda: empty_assets)
+        assert IconManager._check_icons_available() is False, "An empty icons dir must detect as unavailable"
+
+        missing_assets = tmp_path / "missing_assets"
+        missing_assets.mkdir()
+        monkeypatch.setattr(icon_module, "get_assets_path", lambda: missing_assets)
+        assert IconManager._check_icons_available() is False, "A missing icons dir must detect as unavailable"
 
 
 class TestAllMappedIconsLoad:

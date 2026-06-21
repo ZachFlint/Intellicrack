@@ -29,6 +29,7 @@ from intellicrack.sandbox.base import (
     SandboxError,
     SandboxState,
 )
+from intellicrack.sandbox.manager import SandboxInstance
 
 from .conftest import InMemorySandbox
 
@@ -256,11 +257,34 @@ class TestSandboxInstance:
         assert i1.id != i2.id
 
     def test_timestamps_are_set(self) -> None:
-        """created_at and last_used are set on creation."""
+        """created_at and last_used are UTC datetimes bracketed by the call instant.
+
+        Gates the real SandboxInstance from intellicrack.sandbox.manager using
+        datetime.now(UTC) as an independent oracle. Three falsifiable properties:
+          1. Both fields are timezone-aware datetime objects (not None, not naive).
+          2. Both fields have zero UTC offset confirming they are UTC-zoned, so a
+             naive or local-time timestamp fails.
+          3. Both values fall within [before, after], so a wrong constant
+             (epoch 0, datetime.max, a far future/past value) fails.
+        """
+        before = datetime.now(UTC)
         sb = InMemorySandbox()
-        inst = _TestInstance(sb)
-        assert inst.created_at is not None
-        assert inst.last_used is not None
+        inst = SandboxInstance(sandbox=sb, sandbox_type="windows")
+        after = datetime.now(UTC)
+
+        assert isinstance(inst.created_at, datetime)
+        assert inst.created_at.tzinfo is not None
+        ca_offset = inst.created_at.utcoffset()
+        assert ca_offset is not None
+        assert ca_offset == timedelta(0)
+        assert before <= inst.created_at <= after
+
+        assert isinstance(inst.last_used, datetime)
+        assert inst.last_used.tzinfo is not None
+        lu_offset = inst.last_used.utcoffset()
+        assert lu_offset is not None
+        assert lu_offset == timedelta(0)
+        assert before <= inst.last_used <= after
 
     def test_touch_updates_last_used(self) -> None:
         """touch() updates last_used to current time."""

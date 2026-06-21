@@ -6,12 +6,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from intellicrack.bridges.hex_editor import HexEditorBridge
-from intellicrack.bridges.hex_state import HexDocumentState
+from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
 
 
 if TYPE_CHECKING:
@@ -197,35 +197,97 @@ class TestSnapToAlignment:
 class TestAlignmentGrid:
     """Tests for setting the alignment grid size."""
 
-    def test_set_alignment_grid(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify setting alignment grid returns True.
+    def test_set_alignment_grid_persists_and_notifies(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify the grid size is stored and broadcast, not merely acknowledged.
+
+        Two independent oracles confirm the side effect:
+
+        * the public :meth:`get_alignment_grid` getter must read back the value
+          that was written (round-trips through the backend field), and
+        * an observer registered on a separate :class:`HexDocumentState` with a
+          non-bridge source must receive an ``ALIGNMENT_GRID_CHANGED`` event
+          whose payload ``size`` equals the value set. The event payload is
+          decoded independently of the stored attribute, so a setter that
+          returns ``True`` without storing or notifying trips the assertions.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
+        state = HexDocumentState()
+        bridge.set_state_holder(state)
+        received: list[tuple[HexDocumentEvent, int]] = []
+
+        def observer(event: HexDocumentEvent, data: dict[str, Any]) -> None:
+            """Record alignment-grid change events.
+
+            Args:
+                event: The emitted state-change event type.
+                data: The event payload dictionary.
+            """
+            if event == HexDocumentEvent.ALIGNMENT_GRID_CHANGED:
+                received.append((event, int(data["size"])))
+
+        state.register_callback(observer, source_id="observer")
+
         f = tmp_path / "grid.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
+
         result = _run(bridge.set_alignment_grid(4096))
+
         assert result is True
+        assert _run(bridge.get_alignment_grid()) == 4096, "get_alignment_grid must read back the size that was set"
+        assert received == [(HexDocumentEvent.ALIGNMENT_GRID_CHANGED, 4096)], (
+            "state holder (independent oracle) must receive exactly one alignment-grid event carrying the set size"
+        )
 
 
 class TestColorMode:
     """Tests for byte color-mapping mode get/set."""
 
-    def test_set_color_mode(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify setting color mode to entropy returns True.
+    def test_set_color_mode_persists_and_notifies(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify the color mode is stored and broadcast, not merely acknowledged.
+
+        Two independent oracles confirm the side effect: the public
+        :meth:`get_color_mode` getter must read back ``"entropy"`` (round-trips
+        through the stored field), and an observer registered on a separate
+        :class:`HexDocumentState` with a non-bridge source must receive a
+        ``COLOR_MODE_CHANGED`` event whose payload ``mode`` equals the value
+        set. A setter that returned ``True`` while storing the wrong mode, or
+        without notifying, trips the assertions.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
+        state = HexDocumentState()
+        bridge.set_state_holder(state)
+        received: list[tuple[HexDocumentEvent, str]] = []
+
+        def observer(event: HexDocumentEvent, data: dict[str, Any]) -> None:
+            """Record color-mode change events.
+
+            Args:
+                event: The emitted state-change event type.
+                data: The event payload dictionary.
+            """
+            if event == HexDocumentEvent.COLOR_MODE_CHANGED:
+                received.append((event, str(data["mode"])))
+
+        state.register_callback(observer, source_id="observer")
+
         f = tmp_path / "color.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
+
         result = _run(bridge.set_color_mode("entropy"))
+
         assert result is True
+        assert _run(bridge.get_color_mode()) == "entropy", "get_color_mode must read back the mode that was set"
+        assert received == [(HexDocumentEvent.COLOR_MODE_CHANGED, "entropy")], (
+            "state holder (independent oracle) must receive exactly one color-mode event carrying the set mode"
+        )
 
     def test_get_color_mode_default(self, bridge: HexEditorBridge) -> None:
         """Verify default color mode is none.

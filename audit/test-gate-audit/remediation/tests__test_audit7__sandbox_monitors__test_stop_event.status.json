@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_audit7/sandbox_monitors/test_stop_event.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_audit7/sandbox_monitors/test_stop_event.py::test_start_monitors_skips_underscore_prefixed_scripts",
+   "severity": "MEDIUM",
+   "category": "N9 Log/string-presence proxy \u2014 asserted source-text substrings in start_monitors.cmd rather than runtime behavior",
+   "action": "hardened",
+   "oracle": "The `monitors.pids` file written by the real `start_monitors.cmd` run: parse it as text and check that `_helper.ps1` (underscore-prefixed) does NOT appear while `monitor.ps1` (regular) DOES appear. The file is produced by the production cmd script itself, not by the test.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/scripts/start_monitors.cmd",
+    "mutation": "if \"%SCRIPT_NAME:~0,1%\"==\"_\" goto :eof -> rem if \"%SCRIPT_NAME:~0,1%\"==\"_\" goto :eof",
+    "covering_test": "tests/test_audit7/sandbox_monitors/test_stop_event.py::test_start_monitors_skips_underscore_prefixed_scripts",
+    "expected_baseline": "green",
+    "green_status": "unknown",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

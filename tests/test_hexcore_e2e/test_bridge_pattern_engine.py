@@ -315,12 +315,19 @@ class TestListAndAutoDetect:
         assert isinstance(result, list)
 
     def test_list_hexpat_patterns_items_have_required_keys(self, bridge: HexEditorBridge) -> None:
-        """Verify that each entry from list_hexpat_patterns has name, description, and category.
+        """Verify catalog is non-empty and every entry has name, description, and category keys.
+
+        The vendor community-patterns directory ships at least a ``pe`` pattern
+        (pe.hexpat). A working registry must discover it; an empty result means
+        scanning is broken.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
         result: list[dict[str, str]] = _run(bridge.list_hexpat_patterns())
+        assert len(result) > 0, "pattern catalog must not be empty; vendor patterns directory not scanned"
+        pattern_names: set[str] = {entry["name"] for entry in result}
+        assert "pe" in pattern_names, "built-in 'pe' pattern must be present in the catalog"
         for entry in result:
             assert "name" in entry
             assert "description" in entry

@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_providers/test_registry.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "TestF0005NameToClassMapping::test_register_class_recorded_alongside_instance",
+   "severity": "MEDIUM",
+   "category": "N8 \u2014 existence-only / vacuous assertion for a behavior test",
+   "action": "hardened",
+   "oracle": "getattr+cast to read _provider_classes dict directly; expected value is ConcreteTestProvider (the concrete class of the registered instance), independently known from the test fixture type",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/providers/registry.py",
+    "mutation": "self._provider_classes[name] = type(provider) -> self._provider_classes[name] = type(self)",
+    "covering_test": "tests/test_providers/test_registry.py::TestF0005NameToClassMapping::test_register_class_recorded_alongside_instance",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

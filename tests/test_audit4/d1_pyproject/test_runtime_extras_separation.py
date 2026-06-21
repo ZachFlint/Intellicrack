@@ -174,12 +174,32 @@ class TestRuntimeDependenciesAreLean:
         )
 
     @staticmethod
-    def test_pyproject_parses() -> None:
-        """The pyproject.toml must remain a valid TOML document after the restructure."""
+    def test_runtime_and_extras_tables_are_declared() -> None:
+        """The F-0001 restructure must keep both the runtime and the extras tables.
+
+        The defect fix relies on two concrete tables existing: a non-empty
+        ``[project].dependencies`` list (the lean runtime set) and a
+        ``[project.optional-dependencies]`` table holding the moved dev/test
+        tooling. Asserting these specific tables — rather than only that the
+        document parses and has top-level ``project``/``build-system`` keys —
+        catches a regression that deletes the extras table or empties the
+        runtime list while leaving the document well-formed.
+        """
         data = _load_pyproject()
-        assert isinstance(data, dict)
-        assert "project" in data
-        assert "build-system" in data
+        project_raw = data["project"]
+        assert isinstance(project_raw, dict)
+        project = cast("dict[str, Any]", project_raw)
+
+        deps_raw = project["dependencies"]
+        assert isinstance(deps_raw, list)
+        deps = cast("list[Any]", deps_raw)
+        assert len(deps) > 0, "[project].dependencies must declare the runtime imports"
+        assert all(isinstance(d, str) for d in deps), "[project].dependencies entries must be PEP 508 strings"
+
+        extras_raw = project["optional-dependencies"]
+        assert isinstance(extras_raw, dict)
+        extras = cast("dict[str, Any]", extras_raw)
+        assert "dev" in extras, "[project.optional-dependencies] must declare the dev extras group after the F-0001 move"
 
 
 class TestDevExtrasGroupContainsTooling:
@@ -199,12 +219,34 @@ class TestPyprojectIsValid:
     """The pyproject must remain valid for the canonical Python version."""
 
     @staticmethod
-    def test_pyproject_parses_under_active_interpreter() -> None:
-        """Loading pyproject.toml must succeed under the currently running interpreter."""
+    def test_runtime_deps_disjoint_from_moved_extras() -> None:
+        """No package moved into an extras group may also remain a runtime dep.
+
+        This is the core F-0001 separation invariant: every dev/test/docs/profile
+        package must live in exactly one place — its extras group, never also in
+        ``[project].dependencies``. A double-declaration regression (re-adding a
+        moved tool to runtime while leaving it in its extra) would make
+        ``pip install intellicrack`` pull dev tooling again, which is precisely
+        the defect this module exists to prevent. The per-package ``_DEV_ONLY_PACKAGES``
+        blocklist cannot catch tools that were not on that list, so this checks
+        the structural disjointness directly.
+
+        The interpreter precondition only guarantees ``tomllib`` is importable so
+        the assertion can run; the disjointness comparison is the actual gate.
+        """
         assert sys.version_info >= (3, 11), "tomllib was added in 3.11; this test requires it to be importable"
-        data = _load_pyproject()
-        project_raw = data["project"]
-        assert isinstance(project_raw, dict)
-        project = cast("dict[str, Any]", project_raw)
-        name = project.get("name")
-        assert name == "intellicrack"
+
+        runtime = _runtime_dependencies()
+        moved = (
+            _optional_dep_group("dev")
+            | _optional_dep_group("test")
+            | _optional_dep_group("docs")
+            | _optional_dep_group("profile")
+        )
+        assert moved, "no extras groups (dev/test/docs/profile) were declared — the F-0001 move did not happen"
+
+        double_declared = runtime & moved
+        assert not double_declared, (
+            f"packages declared in BOTH [project].dependencies and an extras group: {sorted(double_declared)}. "
+            "Each dev/test/docs/profile package must live only in its extra, never also in the runtime list."
+        )

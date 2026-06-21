@@ -40,22 +40,6 @@ def _run[T](coro: Coroutine[object, object, T]) -> T:
 class TestBridgeExportPatches:
     """Tests covering IPS/IPS32 patch export from a modified document."""
 
-    def test_export_patches_returns_string(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that export_patches returns a string.
-
-        Args:
-            bridge: An initialized HexEditorBridge fixture.
-            tmp_path: Pytest temporary directory.
-        """
-        payload = b"\x00" * 64
-        f = tmp_path / "patch_export.bin"
-        f.write_bytes(payload)
-        _run(bridge.open_file(str(f)))
-        _run(bridge.write_bytes(0, "AA BB CC DD"))
-        result: str = _run(bridge.export_patches("ips"))
-        assert isinstance(result, str)
-        assert result
-
     def test_export_patches_ips_decodes_to_bytes_starting_with_patch(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that decoded IPS data begins with the PATCH magic header.
 
@@ -72,8 +56,16 @@ class TestBridgeExportPatches:
         decoded = base64.b64decode(b64_result)
         assert decoded[:5] == b"PATCH"
 
-    def test_export_patches_ips32_returns_valid_base64(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that ips32 export result is valid base64.
+    def test_export_patches_ips32_record_roundtrips_written_byte(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify IPS32 export emits a structurally valid record for the written byte.
+
+        Decodes the base64 IPS32 blob and validates it against the IPS32 wire
+        format independently of the producer: the ``IPS32`` magic header, the
+        ``EEOF`` terminator, and a single record whose 32-bit big-endian offset,
+        16-bit big-endian size, and payload bytes equal the offset, length, and
+        value written into the document. A regression that emitted the wrong
+        magic, dropped the terminator, mislocated the record, or corrupted the
+        payload fails this gate.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -84,16 +76,29 @@ class TestBridgeExportPatches:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         _run(bridge.write_bytes(0, "FF"))
-        b64_result: str = _run(bridge.export_patches("ips32"))
-        decoded = base64.b64decode(b64_result)
-        assert len(decoded) > 0
+        decoded = base64.b64decode(_run(bridge.export_patches("ips32")))
+
+        assert decoded[:5] == b"IPS32"
+        assert decoded[-4:] == b"EEOF"
+        body = decoded[5:-4]
+        offset = int.from_bytes(body[0:4], "big")
+        size = int.from_bytes(body[4:6], "big")
+        data = body[6 : 6 + size]
+        assert offset == 0
+        assert size == 1
+        assert data == b"\xff"
+        assert len(body) == 6 + size
 
 
 class TestBridgeImportPatches:
     """Tests covering IPS patch import into a fresh document."""
 
     def test_import_patches_returns_integer_count(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that import_patches returns a non-negative integer.
+        """Verify that import_patches applies exactly one IPS record and restores the written bytes.
+
+        One contiguous write_bytes call produces exactly one IPS record, so count must equal 1.
+        Reading back offset 0..1 on the destination document must match the two bytes written
+        in the source document, proving the import actually applied the patch payload.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -113,8 +118,9 @@ class TestBridgeImportPatches:
         _run(fresh.initialize())
         _run(fresh.open_file(str(dst)))
         count: int = _run(fresh.import_patches(b64_patches))
-        assert isinstance(count, int)
-        assert count >= 0
+        assert count == 1
+        after: str = _run(fresh.read_bytes(0, 2))
+        assert after == "AA BB"
 
 
 class TestBridgePatchRoundtrip:

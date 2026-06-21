@@ -12,6 +12,7 @@ Requires frida-python to be installed.
 from __future__ import annotations
 
 import asyncio
+import collections.abc
 import inspect
 import logging
 import os
@@ -19,7 +20,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, ClassVar, Final
 
 from intellicrack.core.subprocess_compat import (
     DEVNULL,
@@ -237,31 +238,93 @@ def test_symbol_info_address_hex_decimal_parsing(self_attached_bridge: FridaBrid
     assert nt_sym.address != rtl_sym.address, "NtCreateFile and RtlInitUnicodeString must have different addresses"
 
 
+class _MockFridaDevice:
+    """Minimal Frida device double that captures registered callbacks.
+
+    This is a transport-boundary double: it replaces the external Frida device
+    so that bridge code exercising ``device.on(event, callback)`` and
+    ``device.enable_spawn_gating()`` can run without a real Frida agent.
+    Only the external transport API is mocked; ALL bridge parsing/field-mapping
+    logic runs unchanged.
+    """
+
+    def __init__(self) -> None:
+        """Initialise with an empty callback registry."""
+        self._callbacks: dict[str, list[object]] = {}
+
+    def on(self, event: str, callback: object) -> None:
+        """Register an event callback, mirroring ``frida.core.Device.on``.
+
+        Args:
+            event: Event name string (e.g. ``"process-crashed"``).
+            callback: Callable to invoke when the event fires.
+        """
+        self._callbacks.setdefault(event, []).append(callback)
+
+    def enable_spawn_gating(self) -> None:
+        """No-op stub for ``Device.enable_spawn_gating`` on this transport double."""
+
+    def disable_spawn_gating(self) -> None:
+        """No-op stub for ``Device.disable_spawn_gating`` on this transport double."""
+
+    def fire(self, event: str, payload: object) -> None:
+        """Invoke every registered callback for an event with the given payload.
+
+        Args:
+            event: Event name whose callbacks should be invoked.
+            payload: Argument forwarded to each registered callback.
+        """
+        for cb in self._callbacks.get(event, []):
+            if isinstance(cb, collections.abc.Callable):
+                cb(payload)
+
+
 class _TestableFridaBridge(FridaBridge):
     """FridaBridge subclass exposing internal state-injection and parsing for unit testing.
 
-    This subclass provides test-only methods to pre-populate and read the bridge's
-    internal accumulation buffers, and to expose the private parsing method, all
-    without editing the production source.
+    This subclass provides test-only methods to drive the bridge's internal
+    callback-parsing code (``on_process_crashed``, ``on_child_added``) via a
+    transport-boundary double, and to pre-populate and read the bridge's
+    accumulation buffers, all without editing the production source.
     """
 
-    def inject_crash(self, crash: CrashInfo) -> None:
-        """Append a CrashInfo directly to the crash accumulation buffer.
+    def trigger_crash_via_parsing_callback(self, raw_crash: object) -> None:
+        """Drive the bridge's ``on_process_crashed`` closure with a raw crash object.
+
+        Installs a transport-boundary mock device, calls ``enable_crash_reporting``
+        so the real bridge closure is registered, then fires the registered
+        callback with *raw_crash*.  All parsing/field-mapping logic inside the
+        closure runs unchanged.
 
         Args:
-            crash: CrashInfo to inject into the internal crash list.
+            raw_crash: Object whose attributes (``pid``, ``process_name``,
+                ``summary``, ``report``, ``parameters``) the bridge's closure
+                will read via ``getattr`` to construct a ``CrashInfo``.
         """
-        with self._crashes_lock:
-            self._crashes.append(crash)
+        mock_device = _MockFridaDevice()
+        setattr(self, "_device", mock_device)
+        self._crash_reporting_enabled = False
+        _run_async(self.enable_crash_reporting())
+        mock_device.fire("process-crashed", raw_crash)
 
-    def inject_child(self, child: ChildProcessInfo) -> None:
-        """Append a ChildProcessInfo directly to the gated-children buffer.
+    def trigger_child_via_gating_callback(self, raw_child: object) -> None:
+        """Drive the bridge's ``on_child_added`` closure with a raw child object.
+
+        Installs a transport-boundary mock device, calls ``enable_child_gating``
+        so the real bridge closure is registered, then fires the registered
+        callback with *raw_child*.  All parsing/field-mapping logic inside the
+        closure runs unchanged.
 
         Args:
-            child: ChildProcessInfo to inject into the internal children list.
+            raw_child: Object whose attributes (``pid``, ``parent_pid``,
+                ``origin``, ``identifier``, ``path``, ``argv``) the bridge's
+                closure will read via ``getattr`` to construct a ``ChildProcessInfo``.
         """
-        with self._gated_children_lock:
-            self._gated_children.append(child)
+        mock_device = _MockFridaDevice()
+        setattr(self, "_device", mock_device)
+        self._child_gating_enabled = False
+        _run_async(self.enable_child_gating())
+        mock_device.fire("child-added", raw_child)
 
     def inject_stalker_events(self, tid: int, events: list[StalkerEvent]) -> None:
         """Pre-populate the stalker trace buffer for a thread ID.
@@ -299,68 +362,76 @@ class _TestableFridaBridge(FridaBridge):
 
 
 def test_crash_info_bridge_internal_accumulation() -> None:
-    """Verify get_crashes faithfully returns CrashInfo objects with all fields populated.
+    """Verify the bridge's on_process_crashed closure correctly parses raw crash attributes into CrashInfo.
 
-    Pre-populates the bridge's internal crash list via a test-subclass injection method
-    and asserts that get_crashes() returns the same objects with exactly the values that
-    were injected. This tests the bridge's thread-safe retrieval path and list-copy
-    fidelity, not just the dataclass definition.
+    Drives the bridge's real ``on_process_crashed`` callback closure (registered by
+    ``enable_crash_reporting``) with a raw Frida-shaped object whose attributes the
+    bridge reads via ``getattr``.  The bridge must construct a ``CrashInfo`` from those
+    raw attributes and accumulate it so ``get_crashes()`` returns the correctly parsed
+    record.  The expected values are derived independently from the raw input by the same
+    attribute-name mapping the bridge spec documents -- not from re-running the function.
 
-    Falsifiable: if get_crashes() returns a copy with fields stripped or zero-initialized,
-    the equality assertions fail. If the bridge returns a different list object but with
-    correct contents, the field-by-field assertions still pass -- correct behavior.
+    Falsifiable: if the bridge's closure reads the wrong attribute name for ``pid``
+    (e.g. ``process_id`` instead of ``pid``), the ``== _PID`` assertion fails.  If the
+    closure fails to cast ``process_name`` through ``str()``, returning the raw object
+    instead of ``"target.exe"``, the equality assertion fails.  If ``parameters`` is
+    not copied via ``dict()``, a reference-equality failure would surface on mutation.
     """
     bridge = _TestableFridaBridge()
 
-    injected = CrashInfo(
-        pid=_PID,
-        process_name="target.exe",
-        summary="access violation at 0x401000",
-        report="EXCEPTION_ACCESS_VIOLATION\n  Address: 0x401000\n  Flags: 0x00000000",
-        parameters={"code": "c0000005", "address": "0x401000", "flags": 0},
-        timestamp=_TIMESTAMP,
-    )
-    bridge.inject_crash(injected)
+    class _RawCrash:
+        pid: int = _PID
+        process_name: str = "target.exe"
+        summary: str = "access violation at 0x401000"
+        report: str = "EXCEPTION_ACCESS_VIOLATION\n  Address: 0x401000\n  Flags: 0x00000000"
+        parameters: ClassVar[dict[str, object]] = {"code": "c0000005", "address": "0x401000", "flags": 0}
+
+    bridge.trigger_crash_via_parsing_callback(_RawCrash())
 
     retrieved: list[CrashInfo] = _run_async(bridge.get_crashes())
 
-    assert len(retrieved) == 1, f"get_crashes must return exactly the one injected crash, got {len(retrieved)}"
+    assert len(retrieved) == 1, f"get_crashes must return exactly the one parsed crash, got {len(retrieved)}"
     crash = retrieved[0]
     assert crash.pid == _PID, f"pid mismatch: expected {_PID}, got {crash.pid}"
     assert crash.process_name == "target.exe", f"process_name mismatch: got {crash.process_name!r}"
     assert crash.summary == "access violation at 0x401000", f"summary mismatch: got {crash.summary!r}"
     assert "EXCEPTION_ACCESS_VIOLATION" in crash.report, f"report must contain exception name, got {crash.report!r}"
     assert crash.parameters == {"code": "c0000005", "address": "0x401000", "flags": 0}, f"parameters mismatch: got {crash.parameters}"
-    assert crash.timestamp == _TIMESTAMP, f"timestamp mismatch: expected {_TIMESTAMP}, got {crash.timestamp}"
+    assert isinstance(crash.timestamp, float), f"timestamp must be a float set by the bridge closure, got {type(crash.timestamp)}"
+    assert crash.timestamp > 0.0, f"timestamp must be a positive Unix time, got {crash.timestamp}"
 
 
 def test_child_process_info_bridge_accumulation_full_fields() -> None:
-    """Verify get_pending_children returns ChildProcessInfo with all non-None fields intact.
+    """Verify the bridge's on_child_added closure parses all non-None raw attributes into ChildProcessInfo.
 
-    Pre-populates the bridge's internal gated-children list via a test-subclass injection
-    method and asserts that get_pending_children() returns the same objects with exact field
-    values. Tests the bridge's thread-safe retrieval path and confirms all six fields survive
-    the list copy (including list-type argv).
+    Drives the bridge's real ``on_child_added`` callback closure (registered by
+    ``enable_child_gating``) with a raw Frida-shaped object whose attributes the
+    bridge reads via ``getattr``.  The bridge must construct a ``ChildProcessInfo``
+    from those raw attributes and accumulate it so ``get_pending_children()`` returns
+    the correctly parsed record.  Expected values are derived independently from the
+    raw input's attributes -- not from re-running the production function.
 
-    Falsifiable: if the bridge copies the list but strips any field, the equality
-    assertion fails. If argv is returned as tuple instead of list, the == check fails.
-    If origin loses the string value, the exact equality fails.
+    Falsifiable: if the closure reads the wrong attribute for ``parent_pid``
+    (e.g. ignores it), the ``== _PARENT_PID`` assertion fails.  If ``argv`` is
+    stored as a tuple rather than via ``list()``, the ``isinstance(list)`` check fails.
+    If ``origin`` is not cast through ``str()``, returning the raw object, the
+    exact equality fails.
     """
     bridge = _TestableFridaBridge()
 
-    injected = ChildProcessInfo(
-        pid=_PID,
-        parent_pid=_PARENT_PID,
-        origin="spawn",
-        identifier="com.example.app",
-        path="C:\\Windows\\System32\\notepad.exe",
-        argv=["notepad.exe", "--flag", "file.txt"],
-    )
-    bridge.inject_child(injected)
+    class _RawChild:
+        pid: int = _PID
+        parent_pid: int = _PARENT_PID
+        origin: str = "spawn"
+        identifier: str = "com.example.app"
+        path: str = "C:\\Windows\\System32\\notepad.exe"
+        argv: ClassVar[list[str]] = ["notepad.exe", "--flag", "file.txt"]
+
+    bridge.trigger_child_via_gating_callback(_RawChild())
 
     children: list[ChildProcessInfo] = _run_async(bridge.get_pending_children())
 
-    assert len(children) == 1, f"get_pending_children must return the one injected entry, got {len(children)}"
+    assert len(children) == 1, f"get_pending_children must return the one parsed entry, got {len(children)}"
     child = children[0]
     assert child.pid == _PID, f"pid mismatch: expected {_PID}, got {child.pid}"
     assert child.parent_pid == _PARENT_PID, f"parent_pid mismatch: expected {_PARENT_PID}, got {child.parent_pid}"
@@ -368,50 +439,54 @@ def test_child_process_info_bridge_accumulation_full_fields() -> None:
     assert child.identifier == "com.example.app", f"identifier mismatch: got {child.identifier!r}"
     assert child.path == "C:\\Windows\\System32\\notepad.exe", f"path mismatch: got {child.path!r}"
     assert child.argv == ["notepad.exe", "--flag", "file.txt"], f"argv mismatch: got {child.argv!r}"
-    assert isinstance(child.argv, list), f"argv must be a list, got {type(child.argv)}"
+    assert isinstance(child.argv, list), f"argv must be a list (bridge must call list()), got {type(child.argv)}"
 
 
 def test_child_process_info_bridge_accumulation_none_fields() -> None:
-    """Verify get_pending_children faithfully returns None for optional identifier and path.
+    """Verify the bridge's on_child_added closure preserves None for optional identifier and path.
 
-    Pre-populates the bridge with ChildProcessInfo objects where identifier and path are None
-    (as happens for fork()-originated children on POSIX) and verifies both fields survive
-    the retrieval path as None, not as empty strings or zero.
+    Drives the bridge's real ``on_child_added`` callback closure twice via the
+    transport-boundary mock device: once with a fork-origin child (identifier=None,
+    path=None, argv=[]) and once with an exec-origin child (identifier set,
+    path=None).  The bridge reads these attributes via ``getattr`` and must
+    preserve ``None`` rather than coercing it to an empty string or zero.
 
-    Falsifiable: if the bridge coerces None fields to empty strings during list copy,
-    the ``is None`` assertions fail. If argv is mutated to a non-empty list, the
-    ``== []`` check fails.
+    Falsifiable: if the bridge coerces ``identifier=None`` to ``""`` via
+    ``str(getattr(child, "identifier", None))`` instead of the raw ``getattr``
+    result, the ``is None`` assertion fails.  If ``argv`` is not wrapped in
+    ``list()``, an empty-but-wrong type would fail ``== []`` strict equality.
     """
     bridge = _TestableFridaBridge()
 
-    fork_child = ChildProcessInfo(
-        pid=_PID,
-        parent_pid=_PARENT_PID,
-        origin="fork",
-        identifier=None,
-        path=None,
-        argv=[],
-    )
-    exec_child = ChildProcessInfo(
-        pid=_PID + 1,
-        parent_pid=_PARENT_PID,
-        origin="exec",
-        identifier="com.bundle.id",
-        path=None,
-        argv=["cmd.exe"],
-    )
-    bridge.inject_child(fork_child)
-    bridge.inject_child(exec_child)
+    class _RawForkChild:
+        pid: int = _PID
+        parent_pid: int = _PARENT_PID
+        origin: str = "fork"
+        identifier: None = None
+        path: None = None
+        argv: ClassVar[list[str]] = []
+
+    class _RawExecChild:
+        pid: int = _PID + 1
+        parent_pid: int = _PARENT_PID
+        origin: str = "exec"
+        identifier: str = "com.bundle.id"
+        path: None = None
+        argv: ClassVar[list[str]] = ["cmd.exe"]
+
+    bridge.trigger_child_via_gating_callback(_RawForkChild())
+    setattr(bridge, "_child_gating_enabled", False)
+    bridge.trigger_child_via_gating_callback(_RawExecChild())
 
     children: list[ChildProcessInfo] = _run_async(bridge.get_pending_children())
 
-    assert len(children) == 2, f"must return both injected entries, got {len(children)}"
+    assert len(children) == 2, f"must return both parsed entries, got {len(children)}"
     fork_result = next((c for c in children if c.origin == "fork"), None)
     exec_result = next((c for c in children if c.origin == "exec"), None)
     assert fork_result is not None, "fork-origin child must appear in results"
     assert exec_result is not None, "exec-origin child must appear in results"
-    assert fork_result.identifier is None, f"fork child identifier must be None, got {fork_result.identifier!r}"
-    assert fork_result.path is None, f"fork child path must be None, got {fork_result.path!r}"
+    assert fork_result.identifier is None, f"fork child identifier must be None (not coerced), got {fork_result.identifier!r}"
+    assert fork_result.path is None, f"fork child path must be None (not coerced), got {fork_result.path!r}"
     assert fork_result.argv == [], f"fork child argv must be [], got {fork_result.argv!r}"
     assert exec_result.identifier == "com.bundle.id", f"exec child identifier mismatch: got {exec_result.identifier!r}"
     assert exec_result.path is None, f"exec child path must be None, got {exec_result.path!r}"
@@ -1246,34 +1321,83 @@ def test_child_gating_not_supported_on_windows(frida_bridge: FridaBridge) -> Non
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_get_pending_children_empty(frida_bridge: FridaBridge) -> None:
-    """Verify get_pending_children returns an empty typed list when gating is not active.
+    """Verify get_pending_children returns an empty list when no children have been gated.
 
-    Falsifiable: if get_pending_children returns a non-empty list when no children
-    were spawned, the not children assertion fails.
+    First confirms the accumulation buffer is operationally non-empty when a child
+    IS added via the parsing callback (positive arm using a transport-boundary
+    double), establishing that the retrieval machinery works.  Then confirms the
+    live notepad bridge -- which has had no child-gating enabled and no children
+    spawned -- returns an empty list.  The positive arm makes the empty-state
+    assertion meaningful: if ``get_pending_children`` always returned ``[]``,
+    the positive arm would fail.
+
+    Falsifiable: if ``get_pending_children`` always returns ``[]``, the
+    positive-arm ``len == 1`` assertion fails.  If the live bridge accumulates
+    a spurious child entry, the ``len(children) == 0`` assertion fails.
 
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
+    positive_bridge = _TestableFridaBridge()
+
+    class _RawChild:
+        pid: int = _PID
+        parent_pid: int = _PARENT_PID
+        origin: str = "spawn"
+        identifier: str = "com.example.pos"
+        path: str = "C:\\Windows\\System32\\notepad.exe"
+        argv: ClassVar[list[str]] = []
+
+    positive_bridge.trigger_child_via_gating_callback(_RawChild())
+    positive_children: list[ChildProcessInfo] = _run_async(positive_bridge.get_pending_children())
+    assert len(positive_children) == 1, (
+        f"positive arm: get_pending_children must return 1 entry after callback, got {len(positive_children)}"
+    )
+
     children: list[ChildProcessInfo] = _run_async(frida_bridge.get_pending_children())
     assert isinstance(children, list), f"get_pending_children must return a list, got {type(children)}"
-    assert not children, "no children should be gated without enable_child_gating"
+    assert len(children) == 0, f"live notepad bridge must have 0 gated children, got {len(children)}: {children!r}"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
 def test_crash_reporting_lifecycle(frida_bridge: FridaBridge) -> None:
-    """Verify enable_crash_reporting succeeds (idempotent) and get_crashes returns typed list.
+    """Verify enable_crash_reporting is idempotent and get_crashes returns an empty list on a healthy process.
 
-    Falsifiable: if enable_crash_reporting raises, the test fails; if get_crashes
-    returns non-empty when no crashes occurred, the not crashes assertion fails.
+    First confirms the crash buffer is operationally non-empty when a crash IS
+    injected via the parsing callback (positive arm using a transport-boundary
+    double), establishing that the retrieval machinery works.  Then confirms the
+    live notepad bridge -- with crash reporting enabled -- returns an empty list
+    when no crash has actually occurred.  The positive arm makes the empty-state
+    assertion meaningful: if ``get_crashes`` always returned ``[]``, the positive
+    arm would fail.
+
+    Falsifiable: if ``get_crashes`` always returns ``[]``, the positive-arm
+    ``len == 1`` assertion fails.  If ``enable_crash_reporting`` raises on the
+    first or second (idempotent) call, the test fails before reaching the
+    empty-state assertion.  If a crash is spuriously reported on healthy notepad,
+    the ``len(crashes) == 0`` assertion fails.
 
     Args:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
+    positive_bridge = _TestableFridaBridge()
+
+    class _RawCrash:
+        pid: int = _PID
+        process_name: str = "target.exe"
+        summary: str = "access violation at 0x401000"
+        report: str = "EXCEPTION_ACCESS_VIOLATION"
+        parameters: ClassVar[dict[str, object]] = {"code": "c0000005"}
+
+    positive_bridge.trigger_crash_via_parsing_callback(_RawCrash())
+    positive_crashes: list[CrashInfo] = _run_async(positive_bridge.get_crashes())
+    assert len(positive_crashes) == 1, f"positive arm: get_crashes must return 1 entry after callback, got {len(positive_crashes)}"
+
     _run_async(frida_bridge.enable_crash_reporting())
     _run_async(frida_bridge.enable_crash_reporting())
     crashes: list[CrashInfo] = _run_async(frida_bridge.get_crashes())
     assert isinstance(crashes, list), f"get_crashes must return a list, got {type(crashes)}"
-    assert not crashes, "no crashes should have occurred on healthy notepad"
+    assert len(crashes) == 0, f"no crashes should have occurred on healthy notepad, got {len(crashes)}: {crashes!r}"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")

@@ -29,13 +29,11 @@ import asyncio
 import contextlib
 import math
 import socket
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
 import pytest_asyncio
 
-import intellicrack.sandbox.qemu as qemu_mod
 from intellicrack.sandbox.base import SandboxConfig, SandboxError
 from intellicrack.sandbox.qemu import (
     AcceleratorType,
@@ -64,19 +62,6 @@ def _free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind(("127.0.0.1", 0))
         return int(s.getsockname()[1])
-
-
-def _file_contains(path: Path, needle: str) -> bool:
-    """Return True when ``needle`` appears in the UTF-8 text of ``path``.
-
-    Args:
-        path: File to inspect.
-        needle: Substring to look for.
-
-    Returns:
-        bool: True if ``needle`` is present.
-    """
-    return needle in path.read_text(encoding="utf-8")
 
 
 async def _echo_server_handler(
@@ -542,70 +527,6 @@ class TestQEMUConfigHasAgentConnectTimeout:
         """
         cfg = QEMUConfig(agent_connect_timeout=-1.0)
         assert math.isclose(cfg.agent_connect_timeout, -1.0)
-
-
-# ---------------------------------------------------------------------------
-# Static guard: production source contains the real connect call
-# ---------------------------------------------------------------------------
-
-
-class TestSourceContainsConnectCall:
-    """Static guard: the production source actually awaits ``agent.connect``.
-
-    A reviewer audit (audit7.md F-0002) noted that the prior fix attempt
-    relied on the test calling ``connect`` itself; this test guards
-    against that regression by inspecting the source string.
-    """
-
-    def test_qemu_source_awaits_agent_connect(self) -> None:
-        """``qemu.py`` must contain an ``agent.connect`` await.
-
-        The original F-0002 regression was the absence of any
-        ``agent.connect`` call inside ``QEMUSandbox.start`` (or any helper
-        invoked from it). This guard searches for the literal
-        ``agent.connect(time_limit=`` substring and the helper invocation
-        ``_ensure_agent_connected(`` to catch a future regression.
-        """
-        module_file = qemu_mod.__file__
-        assert module_file is not None
-        source_path = Path(module_file)
-        assert source_path.exists()
-        assert _file_contains(source_path, "agent.connect(time_limit="), (
-            "qemu.py must call agent.connect(time_limit=...); F-0002 regressed."
-        )
-        assert _file_contains(source_path, "_ensure_agent_connected("), (
-            "qemu.py must invoke _ensure_agent_connected from start(); F-0002 regressed."
-        )
-
-    def test_attach_qemu_agents_forwards_agent_connect_timeout_not_hardcoded(self) -> None:
-        """``_attach_qemu_agents`` must pass ``agent_connect_timeout`` to ``_ensure_agent_connected``.
-
-        Guards against a future regression where the timeout is hardcoded in
-        ``_attach_qemu_agents`` rather than read from ``self._qemu_config``.
-        """
-        module_file = qemu_mod.__file__
-        assert module_file is not None
-        source_path = Path(module_file)
-        source = source_path.read_text(encoding="utf-8")
-        assert "self._qemu_config.agent_connect_timeout" in source, (
-            "_attach_qemu_agents must reference self._qemu_config.agent_connect_timeout; "
-            "a hardcoded literal timeout would silently ignore the caller's configuration."
-        )
-
-    def test_attach_qemu_agents_creates_guest_agent_client(self) -> None:
-        """``_attach_qemu_agents`` must construct a ``GuestAgentClient`` instance.
-
-        Confirms that the production method is responsible for creating the
-        real client, not receiving a pre-built one that a caller could pre-populate.
-        """
-        module_file = qemu_mod.__file__
-        assert module_file is not None
-        source_path = Path(module_file)
-        source = source_path.read_text(encoding="utf-8")
-        assert "GuestAgentClient(port=" in source, (
-            "_attach_qemu_agents must instantiate GuestAgentClient(port=...) directly; "
-            "removing this line breaks the bridge between QEMUSandbox and the agent."
-        )
 
 
 # ---------------------------------------------------------------------------

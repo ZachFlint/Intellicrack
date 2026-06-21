@@ -102,12 +102,12 @@ class TestBaseConvertEdgeCases:
     """Tests for base_convert edge cases."""
 
     def test_result_has_base_keys(self) -> None:
-        """Verify result always contains decimal, hex, octal, binary keys."""
+        """Verify result for 42 contains correct decimal, hex, octal, and binary values."""
         result = cast("dict[str, str]", _run(HexEditorBridge.base_convert("42")))
-        assert "decimal" in result
-        assert "hex" in result
-        assert "octal" in result
-        assert "binary" in result
+        assert result["decimal"] == str(42)
+        assert result["hex"] == hex(42)
+        assert result["octal"] == oct(42)
+        assert result["binary"] == bin(42)
 
     def test_zero_value(self) -> None:
         """Verify zero converts correctly across all representations."""

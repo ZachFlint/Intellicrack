@@ -202,19 +202,32 @@ class TestSearchNumericDeep:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        target_value: int = 0xABCDABCD
+        target_value: int = 0x11223344
+        aligned_offsets: set[int] = {0, 12, 16, 20, 24}
+        misaligned_offset: int = 6
         data = bytearray(64)
-        for offset in (0, 4, 8, 12, 20):
+        for offset in sorted(aligned_offsets):
             struct.pack_into("<I", data, offset, target_value)
-        struct.pack_into("<I", data, 6, target_value)
+        struct.pack_into("<I", data, misaligned_offset, target_value)
         f = tmp_path / "aligned.bin"
         f.write_bytes(bytes(data))
         _run(bridge.open_file(str(f)))
+
+        unaligned: list[dict[str, int]] = _run(
+            bridge.search_numeric(target_value, size=4, value_type="uint", endianness="little", alignment=1),
+        )
+        unaligned_offsets: set[int] = {r["offset"] for r in unaligned}
+        assert unaligned_offsets == aligned_offsets | {misaligned_offset}, (
+            f"alignment=1 must find every planted copy, got {sorted(unaligned_offsets)}"
+        )
+
         results: list[dict[str, int]] = _run(
             bridge.search_numeric(target_value, size=4, value_type="uint", endianness="little", alignment=4),
         )
-        for r in results:
-            assert r["offset"] % 4 == 0
+        result_offsets: set[int] = {r["offset"] for r in results}
+        assert result_offsets == aligned_offsets, (
+            f"alignment=4 must return exactly the 4-byte-aligned offsets {sorted(aligned_offsets)}, got {sorted(result_offsets)}"
+        )
 
     def test_search_absent_value_returns_empty_list(self, bridge: HexEditorBridge, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric returns an empty list when the value is not present.
@@ -238,15 +251,24 @@ class TestSearchNumericDeep:
         """
         target_value: int = 0x11223344
         data = bytearray(64)
+        expected_match_count: int = 64 // 4
         for i in range(0, 64, 4):
             struct.pack_into("<I", data, i, target_value)
         f = tmp_path / "maxres.bin"
         f.write_bytes(bytes(data))
         _run(bridge.open_file(str(f)))
+
+        uncapped: list[dict[str, int]] = _run(
+            bridge.search_numeric(target_value, size=4, value_type="uint", endianness="little", max_results=100),
+        )
+        assert len(uncapped) == expected_match_count, (
+            f"uncapped search must find all {expected_match_count} planted matches, got {len(uncapped)}"
+        )
+
         results: list[dict[str, int]] = _run(
             bridge.search_numeric(target_value, size=4, value_type="uint", endianness="little", max_results=1),
         )
-        assert len(results) <= 1
+        assert len(results) == 1, f"max_results=1 must truncate to exactly 1 match, got {len(results)}"
 
     def test_search_uint32_100_finds_at_offset_42(self, bridge: HexEditorBridge, tmp_path: Path, pattern_data: bytes) -> None:
         """Verify search_numeric finds uint32 100 at offset 42 in pattern_data.
@@ -284,11 +306,11 @@ class TestSearchNumericDeep:
         """
         target_value: int = 0xDEADBEEF
         data = struct.pack("<I", target_value)
+        assert data == b"\xef\xbe\xad\xde", f"oracle mismatch: 0xDEADBEEF little-endian is {data.hex()}"
         f = tmp_path / "tiny.bin"
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
         results: list[dict[str, int]] = _run(bridge.search_numeric(target_value, size=4, value_type="uint", endianness="little"))
-        assert isinstance(results, list)
-        if results:
-            assert results[0]["offset"] == 0
-            assert results[0]["length"] == 4
+        assert len(results) == 1, f"the 4-byte buffer is exactly the target, so search must find one match, got {results}"
+        assert results[0]["offset"] == 0, f"the only match must be at offset 0, got {results[0]['offset']}"
+        assert results[0]["length"] == 4, f"a size=4 match must report length 4, got {results[0]['length']}"

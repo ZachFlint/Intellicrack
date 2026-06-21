@@ -19,6 +19,7 @@ import asyncio
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import psutil
@@ -30,11 +31,13 @@ from intellicrack.bridges.cutter import CutterBridge
 from intellicrack.bridges.ghidra import GhidraBridge
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.subprocess_compat import PIPE, Popen
-from intellicrack.core.types import ToolError
+from intellicrack.core.types import SandboxError, ToolError
+from intellicrack.sandbox.qemu import QEMUSandbox
+from intellicrack.ui.sandbox_config import SandboxTestWorker
 
 
 if TYPE_CHECKING:
-    from pathlib import Path
+    from collections.abc import Awaitable, Callable
 
 
 _GRACEFUL_TIMEOUT = 5.0
@@ -46,17 +49,15 @@ _ELAPSED_UPPER_BOUND = 5.0
 _EXPECTED_PID_IMMEDIATE = 99999
 _EXPECTED_PID_DELAYED = 54321
 _EXPECTED_PID_CORRUPT = 77777
-_PIDFILE_RETRY_DELAY_SHORT = 0.1
-_PIDFILE_RETRY_DELAY_MINIMAL = 0.01
-_PIDFILE_MAX_RETRIES_SHORT = 5
-_PIDFILE_MAX_RETRIES_MINIMAL = 3
 _SLEEP_DELAY_HALF = 0.5
-_SLEEP_DELAY_PIDFILE_WRITE = 0.15
-_SLEEP_DELAY_FIRST_RETRY = 0.01
 _MIN_RETRIES = 2
 _MIN_RETRY_DELAY = 1.0
 _MIN_TOTAL_WAIT = 4.0
 _BLOCKING_WAIT_TIMEOUT = 30
+_FAST_RETRY_DELAY = 0.02
+_FAST_MAX_RETRIES = 10
+_DELAYED_WRITE_DELAY = 0.05
+_IS_WINDOWS = sys.platform == "win32"
 
 
 # ─── 1. Process termination (sandbox_config.py finally-block pattern) ────────
@@ -144,21 +145,55 @@ time.sleep(60)
     assert not psutil.pid_exists(child_pid), "Child process leaked"
 
 
-def test_sandbox_temp_wsb_file_cleaned_up(tmp_path: Path) -> None:
-    """Verify temp .wsb file is deleted in the finally block.
+@pytest.mark.skipif(not _IS_WINDOWS, reason="Windows Sandbox (SandboxTestWorker.run) is a Windows-only OS capability")
+def test_sandbox_temp_wsb_file_cleaned_up() -> None:
+    """SandboxTestWorker.run() unlinks the real .wsb file in its finally block.
 
-    The SandboxTestWorker.run() finally block now calls wsb_file.unlink().
-    Before the fix, the temp file was never removed.
+    Drives the production ``SandboxTestWorker.run()`` end-to-end. The worker
+    generates a real ``.wsb`` configuration with the production
+    ``_generate_wsb_config`` helper, writes it to a real ``NamedTemporaryFile``,
+    then attempts to launch the external ``WindowsSandbox.exe`` tool. Whether
+    that external binary is present or absent, the production ``finally`` block
+    is responsible for calling ``unlink()`` on the temp file it created.
 
-    Args:
-        tmp_path: Pytest temporary directory for the test.
+    The oracle is the file path the production code records in ``_wsb_file``
+    together with the independently recomputed configuration XML: the test
+    reconstructs the expected ``.wsb`` body from the worker's public
+    constructor arguments via the production generator and asserts that the
+    file the worker actually wrote existed with that exact content, and that
+    the production cleanup removed it after ``run()`` returned. Deleting the
+    ``self._wsb_file.unlink()`` call in the ``finally`` block leaves the file
+    on disk and fails this test.
     """
-    wsb_file = tmp_path / "test_sandbox.wsb"
-    _ = wsb_file.write_text("<Configuration><VGpu>Enable</VGpu></Configuration>")
-    assert wsb_file.exists()
+    worker = SandboxTestWorker(network_enabled=False, memory_limit_mb=2048)
+    captured: dict[str, Path | str | None] = {"path": None, "content": None}
 
-    wsb_file.unlink()
-    assert not wsb_file.exists(), "Temp .wsb file should be deleted"
+    def _on_output(message: str) -> None:
+        """Capture the .wsb path and its on-disk content from the worker output.
+
+        Args:
+            message: A status line emitted by the production worker.
+        """
+        marker = "Configuration file: "
+        if not message.startswith(marker):
+            return
+        wsb_path = Path(message[len(marker) :])
+        captured["path"] = wsb_path
+        if wsb_path.exists():
+            captured["content"] = wsb_path.read_text(encoding="utf-8")
+
+    worker.output.connect(_on_output)
+    worker.run()
+
+    created = captured["path"]
+    assert isinstance(created, Path), "Production worker must emit the .wsb file path it created"
+    assert created.suffix == ".wsb", "Production code must use a .wsb suffix"
+
+    generate_wsb_config: Callable[[], str] = getattr(worker, "_generate_wsb_config")
+    expected_xml = generate_wsb_config()
+    assert captured["content"] == expected_xml, "Worker must write the generated WSB XML to the temp file"
+
+    assert not created.exists(), "SandboxTestWorker.run() finally block must unlink the .wsb file"
 
 
 # ─── 2. Cutter command timeout (cutter.py) ───────────────────────────────────
@@ -306,140 +341,191 @@ async def test_r2_cmd_no_binary_raises_tool_error() -> None:
 # ─── 3. QEMU pidfile retry logic (qemu.py) ──────────────────────────────────
 
 
-def test_qemu_pidfile_retry_constants_are_reasonable() -> None:
-    """Verify pidfile retry constants allow sufficient time for QEMU startup."""
-    max_retries = qemu_module.PIDFILE_MAX_RETRIES
-    retry_delay = qemu_module.PIDFILE_RETRY_DELAY
+def _make_qemu_sandbox(pidfile: Path) -> QEMUSandbox:
+    """Build a real QEMUSandbox and point its pidfile path at ``pidfile``.
 
-    assert max_retries >= _MIN_RETRIES, "Need at least 2 retries for reliability"
-    assert retry_delay >= _MIN_RETRY_DELAY, "Retry delay should be at least 1 second"
-    total_wait = max_retries * retry_delay
-    assert total_wait >= _MIN_TOTAL_WAIT, "Total retry window should be at least 4 seconds"
+    Args:
+        pidfile: Path the production retry loop should poll.
+
+    Returns:
+        QEMUSandbox: A real sandbox instance whose ``_pidfile_path`` is set.
+    """
+    sandbox = QEMUSandbox()
+    setattr(sandbox, "_pidfile_path", pidfile)
+    return sandbox
+
+
+def _install_fast_retry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Shrink the production retry delay/count so real-loop tests run quickly.
+
+    Patches the module-level constants the production ``_resolve_qemu_pid``
+    loop actually reads, leaving its real polling logic intact.
+
+    Args:
+        monkeypatch: Pytest monkeypatch fixture used to set the constants.
+    """
+    monkeypatch.setattr(qemu_module, "_PIDFILE_RETRY_DELAY", _FAST_RETRY_DELAY)
+    monkeypatch.setattr(qemu_module, "_PIDFILE_MAX_RETRIES", _FAST_MAX_RETRIES)
 
 
 @pytest.mark.asyncio
-async def test_qemu_pidfile_retry_reads_immediate_file(tmp_path: Path) -> None:
-    """Pidfile retry loop reads a pidfile that exists on the first attempt.
+async def test_qemu_resolve_pid_uses_real_retry_constants(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Real _resolve_qemu_pid reads the PID by consuming its retry constants.
 
-    Replicates the exact retry loop from QemuSandbox.start().
+    Exercises the shipping retry loop end-to-end against a real pidfile rather
+    than asserting the bare numeric value of the configuration constants. The
+    public ``PIDFILE_MAX_RETRIES`` / ``PIDFILE_RETRY_DELAY`` re-exports are
+    still verified to expose a sane bound, but the gate is the real loop
+    returning the PID parsed from the file.
 
     Args:
         tmp_path: Pytest temporary directory for the test.
+        monkeypatch: Pytest monkeypatch fixture used to speed up the loop.
     """
+    assert qemu_module.PIDFILE_MAX_RETRIES >= _MIN_RETRIES
+    assert qemu_module.PIDFILE_RETRY_DELAY >= _MIN_RETRY_DELAY
+    assert qemu_module.PIDFILE_MAX_RETRIES * qemu_module.PIDFILE_RETRY_DELAY >= _MIN_TOTAL_WAIT
+
+    _install_fast_retry(monkeypatch)
     pidfile = tmp_path / "qemu.pid"
     _ = pidfile.write_text(str(_EXPECTED_PID_IMMEDIATE))
 
-    qemu_pid: int | None = None
-    for _attempt in range(qemu_module.PIDFILE_MAX_RETRIES):
-        await asyncio.sleep(_SLEEP_DELAY_FIRST_RETRY)
-        if pidfile.exists():
-            try:
-                pid_content = await asyncio.to_thread(pidfile.read_text, encoding="utf-8")
-                qemu_pid = int(pid_content.strip())
-                break
-            except (ValueError, OSError):
-                pass
+    sandbox = _make_qemu_sandbox(pidfile)
+    resolve_qemu_pid: Callable[[], Awaitable[int | None]] = getattr(sandbox, "_resolve_qemu_pid")
+    qemu_pid = await resolve_qemu_pid()
+
+    assert qemu_pid == _EXPECTED_PID_IMMEDIATE, "Real retry loop must return the PID written to the pidfile"
+
+
+@pytest.mark.asyncio
+async def test_qemu_pidfile_retry_reads_immediate_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Real _resolve_qemu_pid reads a pidfile present on the first attempt.
+
+    Drives the production ``QEMUSandbox._resolve_qemu_pid`` retry loop, which
+    delegates to ``_read_pidfile_once``. The oracle is the integer the test
+    independently wrote to the file: production must return exactly that value.
+
+    Args:
+        tmp_path: Pytest temporary directory for the test.
+        monkeypatch: Pytest monkeypatch fixture used to speed up the loop.
+    """
+    _install_fast_retry(monkeypatch)
+    pidfile = tmp_path / "qemu.pid"
+    _ = pidfile.write_text(str(_EXPECTED_PID_IMMEDIATE))
+
+    sandbox = _make_qemu_sandbox(pidfile)
+    resolve_qemu_pid: Callable[[], Awaitable[int | None]] = getattr(sandbox, "_resolve_qemu_pid")
+    qemu_pid = await resolve_qemu_pid()
 
     assert qemu_pid == _EXPECTED_PID_IMMEDIATE, "Should read pidfile on first attempt"
 
 
 @pytest.mark.asyncio
-async def test_qemu_pidfile_retry_reads_delayed_file(tmp_path: Path) -> None:
-    """Pidfile retry loop succeeds when pidfile appears after a delay.
+async def test_qemu_pidfile_retry_reads_delayed_file(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Real _resolve_qemu_pid recovers a pidfile that appears after a delay.
 
-    Before the fix, a single read attempt after a fixed sleep would miss
-    pidfiles written at unpredictable times. The retry loop handles this.
+    A background task writes the pidfile after the first poll would have
+    missed it. A single non-retrying read would return ``None``; the
+    production retry loop must keep polling and eventually return the PID.
 
     Args:
         tmp_path: Pytest temporary directory for the test.
+        monkeypatch: Pytest monkeypatch fixture used to speed up the loop.
     """
+    _install_fast_retry(monkeypatch)
     pidfile = tmp_path / "qemu.pid"
 
     async def write_pidfile_after_delay() -> None:
         """Write the expected pidfile after a short delay."""
-        await asyncio.sleep(_SLEEP_DELAY_PIDFILE_WRITE)
+        await asyncio.sleep(_DELAYED_WRITE_DELAY)
         _ = pidfile.write_text(str(_EXPECTED_PID_DELAYED))
 
     writer = asyncio.create_task(write_pidfile_after_delay())
-
-    qemu_pid: int | None = None
-    for _attempt in range(_PIDFILE_MAX_RETRIES_SHORT):
-        await asyncio.sleep(_PIDFILE_RETRY_DELAY_SHORT)
-        if pidfile.exists():
-            try:
-                pid_content = await asyncio.to_thread(pidfile.read_text, encoding="utf-8")
-                qemu_pid = int(pid_content.strip())
-                break
-            except (ValueError, OSError):
-                pass
-
+    sandbox = _make_qemu_sandbox(pidfile)
+    resolve_qemu_pid: Callable[[], Awaitable[int | None]] = getattr(sandbox, "_resolve_qemu_pid")
+    qemu_pid = await resolve_qemu_pid()
     await writer
+
     assert qemu_pid == _EXPECTED_PID_DELAYED, "Retry loop should catch delayed pidfile"
 
 
 @pytest.mark.asyncio
-async def test_qemu_pidfile_retry_exhausted_returns_none(
+async def test_qemu_pidfile_retry_exhausted_raises_sandbox_error(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Pidfile retry loop returns None when pidfile never appears.
+    """Exhausted pidfile retries yield None and verification raises SandboxError.
 
-    Before the fix, a single failed read would leave qemu_pid as None
-    but execution continued without raising an error. Now the code raises
-    SandboxError when all retries are exhausted.
+    Drives the production ``_resolve_qemu_pid`` against a pidfile that never
+    appears: the real loop must return ``None`` after exhausting its retries.
+    The documented contract is that the missing PID is fatal, so the test then
+    drives the real ``_verify_qemu_pid`` and asserts it raises ``SandboxError``
+    on that ``None`` result. Removing the raise from ``_verify_qemu_pid`` fails
+    this test.
 
     Args:
         tmp_path: Pytest temporary directory for the test.
+        monkeypatch: Pytest monkeypatch fixture used to speed up the loop.
     """
+    _install_fast_retry(monkeypatch)
     pidfile = tmp_path / "nonexistent_qemu.pid"
 
-    qemu_pid: int | None = None
-    for _attempt in range(_PIDFILE_MAX_RETRIES_MINIMAL):
-        await asyncio.sleep(_PIDFILE_RETRY_DELAY_MINIMAL)
-        if pidfile.exists():
-            try:
-                pid_content = await asyncio.to_thread(pidfile.read_text, encoding="utf-8")
-                qemu_pid = int(pid_content.strip())
-                break
-            except (ValueError, OSError):
-                pass
+    sandbox = _make_qemu_sandbox(pidfile)
+    resolve_qemu_pid: Callable[[], Awaitable[int | None]] = getattr(sandbox, "_resolve_qemu_pid")
+    qemu_pid = await resolve_qemu_pid()
 
-    assert qemu_pid is None, "Should be None when pidfile never appears"
+    assert qemu_pid is None, "Real retry loop must return None when the pidfile never appears"
+
+    verify_qemu_pid: Callable[[int | None], Awaitable[None]] = getattr(sandbox, "_verify_qemu_pid")
+    with pytest.raises(SandboxError):
+        await verify_qemu_pid(qemu_pid)
 
 
 @pytest.mark.asyncio
 async def test_qemu_pidfile_retry_handles_corrupt_content(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Pidfile retry loop retries on corrupt content then succeeds.
+    """Real _read_pidfile_once tolerates corrupt content; retry recovers the PID.
 
-    Simulates QEMU partially writing the pidfile (race condition).
+    First asserts the production ``_read_pidfile_once`` returns ``None`` for an
+    unparseable pidfile (rather than raising). Then a background task rewrites
+    the file with a valid PID and the real ``_resolve_qemu_pid`` retry loop
+    must recover that PID. A regression that stopped tolerating corrupt content
+    (e.g. letting ``int()`` propagate) would fail the first assertion.
 
     Args:
         tmp_path: Pytest temporary directory for the test.
+        monkeypatch: Pytest monkeypatch fixture used to speed up the loop.
     """
+    _install_fast_retry(monkeypatch)
     pidfile = tmp_path / "qemu.pid"
-
     _ = pidfile.write_text("not_a_number\n")
+
+    read_pidfile_once: Callable[[Path], Awaitable[int | None]] = getattr(QEMUSandbox, "_read_pidfile_once")
+    corrupt_read = await read_pidfile_once(pidfile)
+    assert corrupt_read is None, "Corrupt pidfile content must parse to None, not raise"
 
     async def fix_pidfile_after_delay() -> None:
         """Rewrite the pidfile with valid content after a short delay."""
-        await asyncio.sleep(_SLEEP_DELAY_PIDFILE_WRITE)
+        await asyncio.sleep(_DELAYED_WRITE_DELAY)
         _ = pidfile.write_text(str(_EXPECTED_PID_CORRUPT))
 
     fixer = asyncio.create_task(fix_pidfile_after_delay())
-
-    qemu_pid: int | None = None
-    for _attempt in range(_PIDFILE_MAX_RETRIES_SHORT):
-        await asyncio.sleep(_PIDFILE_RETRY_DELAY_SHORT)
-        if pidfile.exists():
-            try:
-                pid_content = await asyncio.to_thread(pidfile.read_text, encoding="utf-8")
-                qemu_pid = int(pid_content.strip())
-                break
-            except (ValueError, OSError):
-                pass
-
+    sandbox = _make_qemu_sandbox(pidfile)
+    resolve_qemu_pid: Callable[[], Awaitable[int | None]] = getattr(sandbox, "_resolve_qemu_pid")
+    qemu_pid = await resolve_qemu_pid()
     await fixer
+
     assert qemu_pid == _EXPECTED_PID_CORRUPT, "Retry should recover after corrupt content is corrected"
 
 

@@ -3667,14 +3667,28 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
 
         await self.write_memory(remote_mem, dll_path_utf16)
 
+        self._kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+        self._kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
         kernel32_handle = self._kernel32.GetModuleHandleW("kernel32.dll")
         if not kernel32_handle:
             raise ToolError(_ERR_KERNEL32_HANDLE)
 
+        self._kernel32.GetProcAddress.restype = ctypes.c_void_p
+        self._kernel32.GetProcAddress.argtypes = [wintypes.HMODULE, wintypes.LPCSTR]
         load_library_addr = self._kernel32.GetProcAddress(kernel32_handle, b"LoadLibraryW")
         if not load_library_addr:
             raise ToolError(_ERR_LOADLIB_ADDR)
 
+        self._kernel32.CreateRemoteThread.restype = wintypes.HANDLE
+        self._kernel32.CreateRemoteThread.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+            ctypes.POINTER(wintypes.DWORD),
+        ]
         thread_handle = self._kernel32.CreateRemoteThread(
             self._process_handle,
             None,

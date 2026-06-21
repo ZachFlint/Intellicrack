@@ -13,6 +13,7 @@ Help menu integration using real XPU backend APIs.
 
 from __future__ import annotations
 
+import re
 import time
 from typing import TYPE_CHECKING, cast
 
@@ -395,14 +396,70 @@ class TestXPUStatusDialogMemory:
     @staticmethod
     @pytest.mark.skipif(not is_xpu_available(), reason="No XPU device available")
     def test_memory_text_shows_gb_values(xpu_dialog: XPUStatusDialog) -> None:
-        """Memory text label includes GB values and percentage.
+        """Memory text label shows correctly formatted GB and percentage values.
+
+        The oracle is ``get_xpu_memory_info(0)`` read immediately before forcing
+        a dialog refresh so that the dialog state and the reference values are
+        derived from the same VRAM snapshot.  The production format is:
+
+            ``"{alloc_gb:.2f} GB / {total_gb:.2f} GB ({pct}%)"``
+
+        where ``alloc_gb = allocated / _BYTES_PER_GB``,
+        ``total_gb = total / _BYTES_PER_GB``,
+        ``pct = int(allocated / total * 100)``.
+
+        When ``total == 0`` the dialog shows ``"Unable to determine memory size"``;
+        both branches are verified so the test is not vacuous on hardware that
+        reports zero total memory.
+
+        A regression that swaps ``allocated`` and ``total``, that drops the
+        ``:.2f`` format, or that prints ``"NaN%"`` will fail because the
+        parsed numeric values diverge from the oracle by more than the accepted
+        ±1 GB / ±2 pp tolerance (which covers legitimate memory churn between
+        the oracle read and the widget refresh).
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
         """
+        allocated, total = get_xpu_memory_info(0)
+        refresh_memory = getattr(xpu_dialog, "_refresh_memory")
+        refresh_memory()
+
         text = xpu_dialog.memory_text.text()
-        assert "GB" in text
-        assert "%" in text
+
+        if total == 0:
+            assert text == "Unable to determine memory size", (
+                f"memory_text must be 'Unable to determine memory size' when total==0, got {text!r}"
+            )
+            return
+
+        expected_alloc_gb = allocated / _BYTES_PER_GB
+        expected_total_gb = total / _BYTES_PER_GB
+        expected_pct = int((allocated / total) * 100)
+
+        match = re.fullmatch(
+            r"(\d+\.\d{2}) GB / (\d+\.\d{2}) GB \((\d+)%\)",
+            text,
+        )
+        assert match is not None, (
+            f"memory_text must match '<alloc> GB / <total> GB (<pct>%)' format; got {text!r}"
+        )
+        actual_alloc_gb = float(match.group(1))
+        actual_total_gb = float(match.group(2))
+        actual_pct = int(match.group(3))
+
+        assert abs(actual_alloc_gb - expected_alloc_gb) <= 1.0, (
+            f"memory_text allocated GB {actual_alloc_gb:.2f} must be within 1 GB of oracle "
+            f"{expected_alloc_gb:.2f} (allocated={allocated} bytes)"
+        )
+        assert abs(actual_total_gb - expected_total_gb) <= 1.0, (
+            f"memory_text total GB {actual_total_gb:.2f} must be within 1 GB of oracle "
+            f"{expected_total_gb:.2f} (total={total} bytes)"
+        )
+        assert abs(actual_pct - expected_pct) <= 2, (
+            f"memory_text percentage {actual_pct}% must be within 2 pp of oracle "
+            f"{expected_pct}% (allocated={allocated}, total={total})"
+        )
 
     @staticmethod
     @pytest.mark.skipif(is_xpu_available(), reason="XPU is available")

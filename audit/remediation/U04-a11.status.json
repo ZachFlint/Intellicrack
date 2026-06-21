@@ -1,1 +1,36 @@
-{"unitId":"U04-a11","findings":[{"ref":"tests/test_audit4/c8_hex_signatures_offload/test_signatures_offload.py:173 - TestReadDocumentForScan.test_bytes_passthrough","severity":"Low","status":"FIXED","oracle":"Replaced the identity passthrough with test_reads_full_document_with_correct_offset_and_length (content = bytes(range(256))*2; oracle = test-chosen 512-byte sequence) asserting result == content, read_call_count == 1, and read_args == [(0, 512)]; added test_partial_read_would_not_satisfy_full_content (capped-read document) asserting requested_lengths == [len(content)] and result == content[:4]. A no-op or wrong offset/length read_document_for_scan now fails (verified RED by patching read_args expectation)."},{"ref":"tests/test_audit4/c8_hex_signatures_offload/test_signatures_offload.py:356 - TestUIThreadAllocationBudget.test_ui_thread_does_not_materialise_large_document","severity":"Medium","status":"FIXED","oracle":"Removed the conditional 'if harness.worker() is not None' guard. Now unconditionally asserts a worker is spawned, that doc.read_call_count == 0 immediately after trigger_scan (no UI-thread read), waits for completion (finished is True), asserts doc.read_call_count >= 1, asserts read_thread_ids is non-empty, that every read thread id != main thread id, and that tracemalloc peak UI-thread allocation for a real 50 MiB document stays < 1 MiB. A regression that fails to spawn the worker or reads on the UI thread now fails instead of silently no-opping."},{"ref":"tests/test_sandbox/test_sandbox_bridge.py:50 - fixture-heavy tests (InMemorySandbox)","severity":"Critical","status":"FIXED","oracle":"Added TestBridgeRealSandboxLifecycle (8 tests, @pytest.mark.integration/@pytest.mark.spawns_process) driving a real SandboxBridge whose manager (_RealLocalManager) wraps the conftest LocalProcessSandbox that genuinely runs sys.executable as a subprocess and diffs its workdir. Oracle = a deterministic driver script whose payload bytes, stdout text, exit code, and dropped-file name are all test-chosen. Asserts the bridge surfaces exact stdout 'bridge-run-ok', exit_code 0/9, result success/error, the genuinely-created artefact (operation 'created', exact path, size == len(payload), on-disk sha256 match), bridge.state.binary_loaded/target_path; real copy_to->copy_from byte round-trip through the workdir; extract_iocs returning IPv4 203.0.113.50 parsed from a genuinely-observed dropped-file path (verified RED by patching the expected IP); and ToolError on missing binary, missing sandbox file, and no-report-before-run. The in-memory fixture tests remain as fast unit coverage."}],"filesModified":["tests/test_audit4/c8_hex_signatures_offload/test_signatures_offload.py","tests/test_sandbox/test_sandbox_bridge.py"],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"102 passed in 7.96s"}
+{
+  "unitId": "U04-a11",
+  "findings": [
+    {
+      "ref": "tests/test_audit4/c8_hex_signatures_offload/test_signatures_offload.py:173 - TestReadDocumentForScan.test_bytes_passthrough",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Replaced the identity passthrough with test_reads_full_document_with_correct_offset_and_length (content = bytes(range(256))*2; oracle = test-chosen 512-byte sequence) asserting result == content, read_call_count == 1, and read_args == [(0, 512)]; added test_partial_read_would_not_satisfy_full_content (capped-read document) asserting requested_lengths == [len(content)] and result == content[:4]. A no-op or wrong offset/length read_document_for_scan now fails (verified RED by patching read_args expectation)."
+    },
+    {
+      "ref": "tests/test_audit4/c8_hex_signatures_offload/test_signatures_offload.py:356 - TestUIThreadAllocationBudget.test_ui_thread_does_not_materialise_large_document",
+      "severity": "Medium",
+      "status": "FIXED",
+      "oracle": "Removed the conditional 'if harness.worker() is not None' guard. Now unconditionally asserts a worker is spawned, that doc.read_call_count == 0 immediately after trigger_scan (no UI-thread read), waits for completion (finished is True), asserts doc.read_call_count >= 1, asserts read_thread_ids is non-empty, that every read thread id != main thread id, and that tracemalloc peak UI-thread allocation for a real 50 MiB document stays < 1 MiB. A regression that fails to spawn the worker or reads on the UI thread now fails instead of silently no-opping."
+    },
+    {
+      "ref": "tests/test_sandbox/test_sandbox_bridge.py:50 - fixture-heavy tests (InMemorySandbox)",
+      "severity": "Critical",
+      "status": "FIXED",
+      "oracle": "Added TestBridgeRealSandboxLifecycle (8 tests, @pytest.mark.integration/@pytest.mark.spawns_process) driving a real SandboxBridge whose manager (_RealLocalManager) wraps the conftest LocalProcessSandbox that genuinely runs sys.executable as a subprocess and diffs its workdir. Oracle = a deterministic driver script whose payload bytes, stdout text, exit code, and dropped-file name are all test-chosen. Asserts the bridge surfaces exact stdout 'bridge-run-ok', exit_code 0/9, result success/error, the genuinely-created artefact (operation 'created', exact path, size == len(payload), on-disk sha256 match), bridge.state.binary_loaded/target_path; real copy_to->copy_from byte round-trip through the workdir; extract_iocs returning IPv4 203.0.113.50 parsed from a genuinely-observed dropped-file path (verified RED by patching the expected IP); and ToolError on missing binary, missing sandbox file, and no-report-before-run. The in-memory fixture tests remain as fast unit coverage."
+    }
+  ],
+  "filesModified": [
+    "tests/test_audit4/c8_hex_signatures_offload/test_signatures_offload.py",
+    "tests/test_sandbox/test_sandbox_bridge.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "102 passed in 7.96s"
+}

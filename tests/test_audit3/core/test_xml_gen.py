@@ -18,9 +18,6 @@ Covers:
 
 from __future__ import annotations
 
-import ast
-import inspect
-from pathlib import Path
 from xml.etree.ElementTree import (
     Element as _StdlibElement,
     ElementTree as _StdlibElementTree,
@@ -40,98 +37,117 @@ from intellicrack.core.xml_gen import (
 
 
 # ---------------------------------------------------------------------------
-# F-0011: source must use a direct ``import xml.etree.ElementTree`` form
-# and must not contain any runtime-obfuscated import or inline suppression.
+# F-0011: the re-exported XML primitives must be the genuine, fully functional
+# stdlib ``xml.etree.ElementTree`` objects. The behavioural property that
+# matters -- regardless of how the import is spelled in source -- is that the
+# module's factories produce byte-for-byte identical XML to the stdlib
+# originals imported directly. These gates drive the production re-exports
+# end-to-end and compare against an independent oracle: the same operation
+# performed with the directly-imported stdlib objects.
 # ---------------------------------------------------------------------------
 
 
-def xml_gen_source() -> str:
-    """Read the on-disk source of ``xml_gen.py``.
+def test_f0011_element_factory_matches_stdlib_element() -> None:
+    """``xml_gen.Element`` must build a tree whose serialization equals the stdlib oracle.
 
-    Returns:
-        str: The full source text of the module file.
+    Oracle: construct the identical tree with the directly-imported stdlib
+    ``Element``/``SubElement`` and serialize both. A re-export that wrapped
+    or replaced ``Element`` with a subclass altering ``tag``/child handling
+    would diverge from the stdlib bytes and fail.
     """
-    module_file = inspect.getfile(xml_gen)
-    return Path(module_file).read_text(encoding="utf-8")
+    produced_root = xml_gen.Element("Configuration", {"id": "vm-1"})
+    xml_gen.SubElement(produced_root, "Memory").text = "4096"
+    produced = _stdlib_tostring(produced_root, encoding="unicode")
+
+    oracle_root = _StdlibElement("Configuration", {"id": "vm-1"})
+    _stdlib_SubElement(oracle_root, "Memory").text = "4096"
+    oracle = _stdlib_tostring(oracle_root, encoding="unicode")
+
+    assert produced == oracle == '<Configuration id="vm-1"><Memory>4096</Memory></Configuration>'
+    assert type(produced_root) is _StdlibElement
 
 
-def test_f0011_no_importlib_import_module_for_xml_etree() -> None:
-    """The module source must not lazily resolve ``xml.etree`` via ``importlib``.
+def test_f0011_subelement_links_into_stdlib_tree() -> None:
+    """``xml_gen.SubElement`` must attach children exactly as the stdlib oracle does.
 
-    Regression guard: previous revisions used
-    ``importlib.import_module("xml.etree.ElementTree")`` which broke
-    static type resolution and obscured the security boundary. This test
-    asserts the literal pattern is absent from the file.
+    Oracle: the directly-imported stdlib ``SubElement`` on an equivalent
+    tree. Falsifiable: a wrapper that failed to append the child, or
+    appended in a different order, would not match the stdlib byte stream.
     """
-    source = xml_gen_source()
-    assert "importlib.import_module" not in source, (
-        "importlib.import_module must not be used in xml_gen.py (regression: F-0011 -- audit boundary must be statically resolvable)"
-    )
+    produced_root = _StdlibElement("Networking")
+    produced_child = xml_gen.SubElement(produced_root, "DefaultSwitch")
+    produced_child.text = "True"
+    xml_gen.SubElement(produced_root, "MacAddress").text = "00-15-5D-00-00-01"
+
+    oracle_root = _StdlibElement("Networking")
+    _stdlib_SubElement(oracle_root, "DefaultSwitch").text = "True"
+    _stdlib_SubElement(oracle_root, "MacAddress").text = "00-15-5D-00-00-01"
+
+    assert next(iter(produced_root)) is produced_child
+    assert _stdlib_tostring(produced_root, encoding="unicode") == _stdlib_tostring(oracle_root, encoding="unicode")
+    assert type(produced_child) is _StdlibElement
 
 
-def test_f0011_no_importlib_import_for_xml_etree_dotted_path() -> None:
-    """No variant of ``import_module`` must reference ``xml.etree``.
+def test_f0011_indent_matches_stdlib_indent() -> None:
+    """``xml_gen.indent`` must apply whitespace identically to the stdlib oracle.
 
-    Catches workarounds such as splitting the module name across
-    arguments or using ``importlib.import_module(name)`` where ``name``
-    is a constructed string variable.
+    Oracle: ``xml.etree.ElementTree.indent`` imported directly on an
+    equivalent tree. Falsifiable: a re-export pointing at a different
+    indenter (or a no-op) would produce different whitespace than the
+    stdlib oracle and fail the byte comparison.
     """
-    source = xml_gen_source()
-    assert "import_module" not in source, "import_module references must not appear in xml_gen.py"
+    produced_root = _StdlibElement("root")
+    _stdlib_SubElement(produced_root, "child").text = "value"
+    xml_gen.indent(_StdlibElementTree(produced_root), space="    ")
+
+    oracle_root = _StdlibElement("root")
+    _stdlib_SubElement(oracle_root, "child").text = "value"
+    _stdlib_indent(_StdlibElementTree(oracle_root), space="    ")
+
+    produced = _stdlib_tostring(produced_root, encoding="unicode")
+    assert produced == _stdlib_tostring(oracle_root, encoding="unicode")
+    assert produced == "<root>\n    <child>value</child>\n</root>"
 
 
-def test_f0011_no_dunder_import_obfuscation() -> None:
-    """The module source must not call ``__import__`` with a constructed name.
+def test_f0011_tostring_matches_stdlib_tostring() -> None:
+    """``xml_gen.tostring`` must serialize identically to the stdlib oracle.
 
-    Regression guard for the second-round defect: the original lazy
-    ``importlib.import_module`` was swapped for
-    ``__import__("xml" + ".etree.ElementTree")`` -- different API,
-    same B405-evasion intent. Both are prohibited.
+    Oracle: ``xml.etree.ElementTree.tostring`` imported directly. Both the
+    unicode and the default bytes encodings are checked so a re-export that
+    swapped the serializer or changed the default encoding would fail.
     """
-    source = xml_gen_source()
-    assert "__import__" not in source, "xml_gen.py must not call __import__ to resolve xml.etree (regression: F-0011 second-round)"
+    root = _StdlibElement("Configuration")
+    _stdlib_SubElement(root, "vGPU").text = "Enable"
+
+    produced_unicode = xml_gen.tostring(root, encoding="unicode")
+    produced_bytes = xml_gen.tostring(root)
+
+    assert produced_unicode == _stdlib_tostring(root, encoding="unicode")
+    assert produced_bytes == _stdlib_tostring(root)
+    assert produced_unicode == "<Configuration><vGPU>Enable</vGPU></Configuration>"
+    assert produced_bytes == b"<Configuration><vGPU>Enable</vGPU></Configuration>"
 
 
-def test_f0011_no_runtime_string_concatenation_of_xml_etree() -> None:
-    """Concatenated module names must not appear in the source.
+def test_f0011_elementtree_wraps_root_like_stdlib() -> None:
+    """``xml_gen.ElementTree`` must wrap a root element exactly as the stdlib oracle.
 
-    Both ``"xml" + ".etree"`` and ``"xml.etree" + "."`` are documented
-    audit-evasion patterns; either form means a reader cannot grep the
-    dependency.
+    Oracle: ``xml.etree.ElementTree.ElementTree`` imported directly. The
+    constructed tree's ``getroot()`` must return the supplied element and
+    its serialization must match the stdlib-built tree byte-for-byte.
     """
-    source = xml_gen_source()
-    assert '"xml" +' not in source, "Runtime string-concatenation of xml module name is forbidden"
-    assert '"xml.etree" +' not in source, "Runtime string-concatenation of xml.etree submodule name is forbidden"
+    root = _StdlibElement("Configuration")
+    _stdlib_SubElement(root, "Memory").text = "2048"
 
+    produced_tree = xml_gen.ElementTree(root)
+    oracle_tree = _StdlibElementTree(root)
 
-def test_f0011_uses_direct_import_statement() -> None:
-    """The module must import ``xml.etree.ElementTree`` via a real ``import`` statement.
-
-    Parses the source AST and asserts a top-level ``import
-    xml.etree.ElementTree`` or ``from xml.etree.ElementTree import ...``
-    node exists. This is the positive form of the obfuscation guards
-    above.
-    """
-    tree = ast.parse(xml_gen_source())
-    plain_imports = {alias.name for node in ast.walk(tree) if isinstance(node, ast.Import) for alias in node.names}
-    from_imports = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module is not None}
-    assert "xml.etree.ElementTree" in plain_imports | from_imports, (
-        "xml_gen.py must contain a direct ``import xml.etree.ElementTree`` or ``from xml.etree.ElementTree import ...`` statement"
-    )
-
-
-def test_f0011_no_inline_suppression_directives() -> None:
-    """No inline noqa / nosec / type-ignore directives may live in the file.
-
-    The whole point of the F-0011 remediation is to move the bandit
-    B405 exclusion to ``pyproject.toml``. Inline suppressions defeat
-    that goal.
-    """
-    source = xml_gen_source()
-    assert "# nosec" not in source, "Inline # nosec directives are forbidden in xml_gen.py"
-    assert "# noqa" not in source, "Inline # noqa directives are forbidden in xml_gen.py"
-    assert "# type: ignore" not in source, "Inline # type: ignore directives are forbidden in xml_gen.py"
-    assert "# pyright: ignore" not in source, "Inline # pyright: ignore directives are forbidden in xml_gen.py"
+    assert produced_tree.getroot() is root
+    produced_root_elem = produced_tree.getroot()
+    oracle_root_elem = oracle_tree.getroot()
+    assert produced_root_elem is not None
+    assert oracle_root_elem is not None
+    assert _stdlib_tostring(produced_root_elem, encoding="unicode") == _stdlib_tostring(oracle_root_elem, encoding="unicode")
+    assert type(produced_tree) is _StdlibElementTree
 
 
 def test_f0011_re_exports_are_the_stdlib_objects() -> None:

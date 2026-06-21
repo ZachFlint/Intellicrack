@@ -332,9 +332,9 @@ class TestTimeoutBehaviour:
         scanner = YaraScanner(timeout=1)
         if not scanner.available:
             pytest.skip("yara-python is not available in this environment")
-        heavy_rule = "rule Heavy { strings: " + " ".join(
-            f"$s{i} = /a{{1,{i + 1}}}b.{{0,5}}c/" for i in range(40)
-        ) + " condition: any of them }"
+        heavy_rule = (
+            "rule Heavy { strings: " + " ".join(f"$s{i} = /a{{1,{i + 1}}}b.{{0,5}}c/" for i in range(40)) + " condition: any of them }"
+        )
         rules = YaraScanner.compile_source(heavy_rule)
         big_buffer = bytes(range(256)) * 200_000
         with pytest.raises(yara.TimeoutError):

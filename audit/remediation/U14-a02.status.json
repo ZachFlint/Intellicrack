@@ -44,7 +44,9 @@
       "oracle": "Populates real x64dbg/cutter/ghidra/frida tabs plus analysis/script/stack panels before close_embedded_tools(). Records the x64dbg tool_closed signal and asserts times_called==1 (real stop ran), every static/dynamic bridge ref nulled, every panel ref None, and tabs/panels/embedded_tools dicts emptied."
     }
   ],
-  "filesModified": ["tests/test_ui/test_tools_logic.py"],
+  "filesModified": [
+    "tests/test_ui/test_tools_logic.py"
+  ],
   "checks": {
     "ruff": true,
     "ruffFormat": true,

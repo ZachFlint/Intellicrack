@@ -326,7 +326,9 @@
       "oracle": "3 fixed names present + get_memory_ranges absent + all callable and async (deduplicated finding)"
     }
   ],
-  "filesModified": ["tests/test_bridges/test_frida_bridge.py"],
+  "filesModified": [
+    "tests/test_bridges/test_frida_bridge.py"
+  ],
   "checks": {
     "ruff": true,
     "ruffFormat": true,

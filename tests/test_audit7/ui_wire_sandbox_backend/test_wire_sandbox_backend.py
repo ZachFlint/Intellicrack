@@ -199,7 +199,11 @@ class TestMainWindowWireSandboxBackend:
         main_window: MainWindow,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Each ``MainWindow.wire_sandbox_backend`` call invokes the panel exactly once.
+        """Each ``MainWindow.wire_sandbox_backend`` call invokes the panel exactly once and wires the sandbox.
+
+        Verifies the delegation count and identity, then asserts the resulting
+        bridge state so a regression that forwards-but-drops the sandbox fails
+        this test directly rather than only being caught by the sibling test.
 
         Args:
             main_window: Real main window fixture.
@@ -218,7 +222,15 @@ class TestMainWindowWireSandboxBackend:
         main_window.wire_sandbox_backend(sandbox)
 
         assert len(calls) == 1, "wire_sandbox_backend must be invoked exactly once"
-        assert calls[0][0] is sandbox
+        assert calls[0][0] is sandbox, "forwarded sandbox must be the same object"
+
+        bridge = main_window.tool_panel.get_sandbox_bridge()
+        assert isinstance(bridge, SandboxBridge), "tool_panel must expose a SandboxBridge after forwarding"
+        wired_manager = bridge.manager
+        assert wired_manager is not None, "wired bridge must own a manager"
+        assert any(
+            inst.sandbox is sandbox for inst in wired_manager.instances
+        ), "injected sandbox must be reachable through the wired bridge manager"
 
     @staticmethod
     def test_rejects_non_sandbox_input(main_window: MainWindow) -> None:

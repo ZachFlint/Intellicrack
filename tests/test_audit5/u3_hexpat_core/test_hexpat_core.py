@@ -71,6 +71,7 @@ from intellicrack.core.hexpat.errors import HexPatError, HexPatRuntimeError, Hex
 from intellicrack.core.hexpat.evaluator import BuiltinCallable, HexPatEvaluator, PatternValue
 from intellicrack.core.hexpat.interpreter import HexPatInterpreter
 from intellicrack.core.hexpat.pragma import PragmaInfo
+from intellicrack.core.hexpat.preprocessor import HexPatPreprocessor
 from intellicrack.core.hexpat.stdlib import BuiltinFunctions, set_print_sink
 from intellicrack.core.hexpat.type_system import StructTypeInfo, TypeRegistry
 
@@ -685,11 +686,7 @@ def test_break_continue_no_warning_log(interp: HexPatInterpreter) -> None:
         "hexpat_while_continue",
     }
     control_records = [entry for entry in captured if entry.get("event") in control_events]
-    elevated = [
-        str(entry.get("event"))
-        for entry in control_records
-        if entry.get("log_level") in {"warning", "error", "critical"}
-    ]
+    elevated = [str(entry.get("event")) for entry in control_records if entry.get("log_level") in {"warning", "error", "critical"}]
     assert not elevated, elevated
 
     debug_events = {str(entry["event"]) for entry in control_records if entry.get("log_level") == "debug"}
@@ -740,54 +737,78 @@ def test_pointer_array_field_routes_through_pointer_array(
 
 
 def test_vendor_mem_base_address_smoke(vendor_std_lib: Path) -> None:
-    """``std::mem::base_address()`` must round-trip through the real ``mem.pat``.
+    """``import std.mem`` must inline the real ``mem.pat`` and resolve base_address.
 
-    The upstream ``mem.pat`` opens with ``namespace auto std::mem`` whose
-    leading ``auto`` keyword is a parser feature outside this audit unit's
-    scope. The test imports the vendored file, then either round-trips the
-    base-address through it (when the parser already accepts the syntax) or
-    skips with a precise reason so the integration smoke check still asserts
-    the file is present and the stdlib bridge is wired.
+    This is an integration gate over two real behaviours, asserted
+    unconditionally (no skip-on-interpreter-failure mask):
+
+    * The preprocessor, configured with the vendor include directory the
+      interpreter uses, must resolve ``import std.mem;`` against the
+      on-disk ``includes/std/mem.pat`` and inline its real contents. The
+      independent oracle is the exact ``fn base_address()`` definition
+      line read directly from the vendored file: if the include-path /
+      ``import`` resolution regresses, the inlined output no longer
+      contains that signature.
+    * The real interpreter must resolve the short ``std::mem::base_address``
+      alias end-to-end and place the field at the pragma-configured base.
+      The upstream ``mem.pat`` opens with ``namespace auto std::mem`` whose
+      leading ``auto`` keyword is outside this audit unit's parser scope, so
+      the end-to-end leg uses a parser-supported source rather than the
+      vendored namespace block; both legs together gate that the vendored
+      library is on the include path and the stdlib bridge is wired.
 
     Args:
         vendor_std_lib: The vendor includes directory fixture.
     """
+    mem_pat = vendor_std_lib / "std" / "mem.pat"
+    signature = next(line.strip() for line in mem_pat.read_text(encoding="utf-8").splitlines() if "fn base_address()" in line)
+    preprocessor = HexPatPreprocessor([vendor_std_lib])
+    processed, _pragma = preprocessor.process("import std.mem;\n")
+    assert signature in processed
+
     interp = HexPatInterpreter(std_lib_path=vendor_std_lib)
     source = """
     #pragma base_address 0x4000
-    import std.mem;
-
     u8 mark @ std::mem::base_address();
     """
     payload = _zeros(0x4001 + 16)
-    try:
-        results = interp.execute_bytes(source, payload)
-    except HexPatError as exc:
-        pytest.skip(f"vendor mem.pat needs parser features outside audit5 U3 scope: {exc}")
+    results = interp.execute_bytes(source, payload)
     assert results[0]["offset"] == 0x4000
 
 
 def test_vendor_string_parse_int_smoke(vendor_std_lib: Path) -> None:
-    r"""``std::string::parse_int("123", 10)`` must return 123 via vendored library.
+    r"""``import std.string`` must inline the real ``string.pat`` and parse_int must work.
 
-    Same parser-scope caveat as :func:`test_vendor_mem_base_address_smoke`
-    applies — when the parser cannot ingest the vendor file the test skips
-    with a precise reason.
+    Asserted unconditionally (no skip-on-interpreter-failure mask), mirroring
+    :func:`test_vendor_mem_base_address_smoke`:
+
+    * The preprocessor configured with the vendor include directory must
+      resolve ``import std.string;`` against the on-disk
+      ``includes/std/string.pat`` and inline its real contents. The
+      independent oracle is the exact ``fn parse_int(...)`` definition line
+      read directly from the vendored file.
+    * The real interpreter must resolve the short ``std::string::parse_int``
+      alias end-to-end and return the parsed integer. The end-to-end leg
+      uses a parser-supported source because the vendored ``string.pat``
+      opens with ``namespace auto std::string`` (outside this unit's parser
+      scope), so the two legs together gate include-path wiring plus the
+      ``parse_int`` builtin.
 
     Args:
         vendor_std_lib: The vendor includes directory fixture.
     """
+    string_pat = vendor_std_lib / "std" / "string.pat"
+    signature = next(line.strip() for line in string_pat.read_text(encoding="utf-8").splitlines() if "fn parse_int(" in line)
+    preprocessor = HexPatPreprocessor([vendor_std_lib])
+    processed, _pragma = preprocessor.process("import std.string;\n")
+    assert signature in processed
+
     interp = HexPatInterpreter(std_lib_path=vendor_std_lib)
     source = """
-    import std.string;
-
     u8 mark @ std::string::parse_int("123", 10);
     """
     payload = _zeros(256)
-    try:
-        results = interp.execute_bytes(source, payload)
-    except HexPatError as exc:
-        pytest.skip(f"vendor string.pat needs parser features outside audit5 U3 scope: {exc}")
+    results = interp.execute_bytes(source, payload)
     assert results[0]["offset"] == 123
 
 

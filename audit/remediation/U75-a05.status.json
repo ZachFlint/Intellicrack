@@ -1,1 +1,30 @@
-{"unitId":"U75-a05","findings":[{"ref":"tests/test_ui/test_realcov_15_chat_panel.py:64-78 - test_send_button_emits_typed_text","severity":"Low","status":"FIXED","oracle":"Real ChatPanel driven via qtbot mouseClick on the real Send button after typing whitespace-padded text; independent recorders capture both inner ChatInput.message_submitted and outer ChatPanel.message_submitted; asserts inner_emissions == panel_emissions == [('disassemble the entry point',)], exactly one emission, single str arg, input cleared, no bubble/no stored message, Send button stays enabled - corrupting the _input.message_submitted->self.message_submitted.emit relay or the strip/clear in _on_send turns it red."},{"ref":"tests/test_ui/test_tool_status_dialog_prefetch.py:133-157 - test_prefetched_data_skips_initial_worker_spawn","severity":"Low","status":"FIXED","oracle":"Real ToolStatusDialog(tool_statuses=prefetched) with NO faked QThread.start; asserts _status_workers == [] (no worker spawned), all six rows rendered exactly row-by-row against independently built _EXPECTED_ROWS in canonical _tool_rows() order, each glyph cross-checked against the payload availability flag (checkmark/cross), display name and message present per row, currentRow()==0 - a scrambled order, blanked row, wrong glyph, or stray worker turns it red."}],"filesModified":["tests/test_ui/test_realcov_15_chat_panel.py","tests/test_ui/test_tool_status_dialog_prefetch.py"],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"13 passed in 2.92s"}
+{
+  "unitId": "U75-a05",
+  "findings": [
+    {
+      "ref": "tests/test_ui/test_realcov_15_chat_panel.py:64-78 - test_send_button_emits_typed_text",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real ChatPanel driven via qtbot mouseClick on the real Send button after typing whitespace-padded text; independent recorders capture both inner ChatInput.message_submitted and outer ChatPanel.message_submitted; asserts inner_emissions == panel_emissions == [('disassemble the entry point',)], exactly one emission, single str arg, input cleared, no bubble/no stored message, Send button stays enabled - corrupting the _input.message_submitted->self.message_submitted.emit relay or the strip/clear in _on_send turns it red."
+    },
+    {
+      "ref": "tests/test_ui/test_tool_status_dialog_prefetch.py:133-157 - test_prefetched_data_skips_initial_worker_spawn",
+      "severity": "Low",
+      "status": "FIXED",
+      "oracle": "Real ToolStatusDialog(tool_statuses=prefetched) with NO faked QThread.start; asserts _status_workers == [] (no worker spawned), all six rows rendered exactly row-by-row against independently built _EXPECTED_ROWS in canonical _tool_rows() order, each glyph cross-checked against the payload availability flag (checkmark/cross), display name and message present per row, currentRow()==0 - a scrambled order, blanked row, wrong glyph, or stray worker turns it red."
+    }
+  ],
+  "filesModified": [
+    "tests/test_ui/test_realcov_15_chat_panel.py",
+    "tests/test_ui/test_tool_status_dialog_prefetch.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "13 passed in 2.92s"
+}

@@ -107,22 +107,40 @@ class TestBridgeHighlights:
         assert isinstance(rule_id, str)
         assert rule_id
 
-    def test_list_highlight_rules_contains_added_rule(self, bridge: HexEditorBridge) -> None:
-        """Verify that list_highlight_rules returns the newly added rule.
+    def test_list_highlight_rules_contains_added_rule_with_correct_properties(
+        self,
+        bridge: HexEditorBridge,
+    ) -> None:
+        """Verify list_highlight_rules returns the rule with all properties intact.
+
+        After adding a rule with known condition_type, condition_params, and color,
+        list_highlight_rules must return a dict for that rule whose fields exactly
+        match the inputs.  A regression that drops or mutates any field would cause
+        this test to fail.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
         """
+        condition_type = "byte_value"
+        condition_params_dict = {"value": 255}
+        color = "#00FF00"
+
         rule_id: str = _run(
             bridge.add_highlight_rule(
-                "byte_value",
-                json.dumps({"value": 255}),
-                "#00FF00",
+                condition_type,
+                json.dumps(condition_params_dict),
+                color,
             ),
         )
         rules: list[dict[str, Any]] = _run(bridge.list_highlight_rules())
-        ids = [r["id"] for r in rules]
-        assert rule_id in ids
+
+        matched = [r for r in rules if r["id"] == rule_id]
+        assert len(matched) == 1, f"rule {rule_id!r} not found in {rules!r}"
+
+        rule = matched[0]
+        assert rule["condition_type"] == condition_type
+        assert rule["condition_params"] == condition_params_dict
+        assert rule["color"] == color
 
     def test_remove_highlight_rule_returns_true_for_valid_id(self, bridge: HexEditorBridge) -> None:
         """Verify that remove_highlight_rule returns True for an existing rule.

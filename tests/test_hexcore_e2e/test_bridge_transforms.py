@@ -127,7 +127,11 @@ class TestBridgeApplyTransform:
         assert result == "00000000"
 
     def test_apply_transform_returns_length_matching_input(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that apply_transform output length in bytes equals the input length.
+        """Verify that XOR-ing 0xAA bytes with key 0x00 preserves all byte values exactly.
+
+        XOR with 0x00 is the identity transform: each input byte b satisfies
+        b ^ 0x00 == b. This asserts the exact hex output, which catches both
+        length and value regressions on the same operation.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -143,7 +147,7 @@ class TestBridgeApplyTransform:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         result: str = _run(bridge.apply_transform("xor_single", 0, 16, json.dumps({"key": "00"})))
-        assert len(result) == 32
+        assert result == "aa" * 16
 
 
 class TestBridgeApplyPipeline:

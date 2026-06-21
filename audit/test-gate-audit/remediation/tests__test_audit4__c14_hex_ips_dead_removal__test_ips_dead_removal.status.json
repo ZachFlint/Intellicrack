@@ -1,0 +1,82 @@
+{
+ "file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes",
+   "severity": "MEDIUM",
+   "category": "N8",
+   "action": "hardened",
+   "oracle": "Independent IPS-spec encoder via struct: b'PATCH' + struct.pack('>I',offset)[1:] + struct.pack('>H',len(data)) + data + b'EOF' (offset 0x123456 and 3-byte data are below the 0x454F46 EOF terminator, so the single non-RLE record path applies exactly).",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "parts.append(struct.pack(\">I\", offset)[1:]) -> parts.append(struct.pack(\">I\", offset)[2:])",
+    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes",
+   "severity": "MEDIUM",
+   "category": "N8",
+   "action": "hardened",
+   "oracle": "Same independent struct-based IPS-spec encoder, invoked through the documented class-level (no-instance) call shape; asserts the full PATCH+record+EOF blob byte-for-byte.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "            parts.append(struct.pack(\">H\", size), data)) ->             parts.append(struct.pack(\">H\", size), data))",
+    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout",
+   "severity": "MEDIUM",
+   "category": "N8",
+   "action": "hardened",
+   "oracle": "struct.unpack on the produced record body decodes the 3-byte offset, 2-byte size, and data slice independently of the builder and asserts each round-trips to the original inputs.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/hex_editor.py",
+    "mutation": "parts.extend((struct.pack(\">H\", size), data)) -> parts.extend((struct.pack(\">H\", size + 1), data))",
+    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob",
+   "severity": "MEDIUM",
+   "category": "N8",
+   "action": "hardened",
+   "oracle": "Independent IPS-spec encoder via struct; a real native HexDocument is opened, one contiguous overwrite at offset 10 (single coalesced record, far below the 0x454F46 terminator) is performed, and export_patches_ips() output is compared byte-for-byte to b'PATCH' + struct offset/size + data + b'EOF'.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack-hexcore/src/patch_export.rs",
+    "mutation": "    output.extend_from_slice(b\"PATCH\"); ->     output.extend_from_slice(b\"PATCX\");",
+    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "pass",
+    "proven_falsifiable": "no"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 4
+}

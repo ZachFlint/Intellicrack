@@ -52,8 +52,16 @@ _EXPECTED_INSN_KEYS = {"address", "bytes", "mnemonic", "operands", "size"}
 class TestBridgeDisassembly:
     """Tests covering disassemble with x86_64 machine code bytes."""
 
-    def test_disassemble_returns_list(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify that disassemble returns a list.
+    def test_disassemble_matches_independent_capstone_decode(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify disassemble output matches an independent capstone decode.
+
+        The bridge result for a known INT3 payload is checked field-by-field
+        against capstone decoding the same bytes directly. capstone is an
+        independent oracle: it is not the code path the bridge selects through
+        ``_get_disassembler``. Each returned instruction must match capstone's
+        address, mnemonic, operands, byte size, and raw byte encoding. A broken
+        disassembler returning an empty list, wrong mnemonics, or garbage byte
+        encodings would diverge from the oracle and fail.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -64,7 +72,20 @@ class TestBridgeDisassembly:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
         result: list[dict[str, Any]] = _run(bridge.disassemble(0, count=4, arch="x86", mode="64"))
-        assert isinstance(result, list)
+
+        md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+        expected: list[tuple[int, str, str, int, str]] = [
+            (insn.address, insn.mnemonic, insn.op_str, insn.size, insn.bytes.hex())
+            for insn in md.disasm(payload, 0, count=4)
+        ]
+        assert expected
+        assert len(result) == len(expected)
+        for actual_insn, (addr, mnemonic, op_str, size, byte_hex) in zip(result, expected, strict=True):
+            assert actual_insn["address"] == addr
+            assert actual_insn["mnemonic"] == mnemonic
+            assert actual_insn["operands"] == op_str
+            assert actual_insn["size"] == size
+            assert actual_insn["bytes"] == byte_hex
 
     def test_disassemble_int3_mnemonic(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify that INT3 bytes disassemble to the int3 mnemonic.
@@ -141,16 +162,34 @@ class TestBridgeDisassembly:
         bytes.fromhex(result[0]["bytes"])
 
     def test_disassemble_pe_section_code_with_auto_arch(self, loaded_bridge: HexEditorBridge) -> None:
-        """Verify that auto arch detection works from the PE header bytes.
+        """Verify auto arch detection on the AMD64 PE header decodes like x86-64.
 
-        ``disassemble`` runs architecture auto-detection on the same byte
-        window it disassembles, and that detection relies on the file's magic
-        and machine fields. Those fields live at offset 0, so ``arch='auto'``
-        is exercised by disassembling from offset 0 where the ``MZ``/PE header
-        is present; the AMD64 machine field resolves to x86-64.
+        ``disassemble`` runs architecture auto-detection from offset 0, where
+        the fixture PE carries the AMD64 machine field (0x8664). The auto run
+        is checked against an explicit ``x86``/``64`` run as the independent
+        oracle and against a fresh capstone decode of the same header bytes:
+        instruction count, and each first instruction's mnemonic, operands,
+        byte encoding, and size must agree. A detector that resolved the wrong
+        arch/mode, or a disassembler returning an empty list, would diverge and
+        fail.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
         """
-        result: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="auto"))
-        assert isinstance(result, list)
+        auto_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="auto"))
+        explicit_results: list[dict[str, Any]] = _run(loaded_bridge.disassemble(0, count=4, arch="x86", mode="64"))
+        assert explicit_results
+        assert auto_results
+        assert len(auto_results) == len(explicit_results)
+        assert auto_results[0]["mnemonic"] == explicit_results[0]["mnemonic"]
+        assert auto_results[0]["operands"] == explicit_results[0]["operands"]
+        assert auto_results[0]["bytes"] == explicit_results[0]["bytes"]
+        assert auto_results[0]["size"] == explicit_results[0]["size"]
+
+        header: bytes = bytes(loaded_bridge.document.read(0, 16)) if loaded_bridge.document is not None else b""
+        md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+        first_oracle = next(md.disasm(header, 0, count=1))
+        assert auto_results[0]["mnemonic"] == first_oracle.mnemonic
+        assert auto_results[0]["operands"] == first_oracle.op_str
+        assert auto_results[0]["size"] == first_oracle.size
+        assert auto_results[0]["bytes"] == first_oracle.bytes.hex()

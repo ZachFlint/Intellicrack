@@ -125,25 +125,17 @@ def test_enumerate_modules_real_notepad(frida_bridge: FridaBridge) -> None:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
     modules: list[ModuleInfo] = _run_async(frida_bridge.enumerate_modules())
-    assert len(modules) >= _NOTEPAD_MIN_MODULES, (
-        f"notepad must have several loaded modules, got {len(modules)}"
-    )
+    assert len(modules) >= _NOTEPAD_MIN_MODULES, f"notepad must have several loaded modules, got {len(modules)}"
 
     by_name = {m.name.lower(): m for m in modules}
     assert "ntdll.dll" in by_name, f"ntdll.dll must be loaded; got modules {sorted(by_name)}"
     assert "kernel32.dll" in by_name, "kernel32.dll must be loaded in every Win32 process"
 
     ntdll = by_name["ntdll.dll"]
-    assert ntdll.base_address >= _NTDLL_BASE_MIN, (
-        f"ntdll base 0x{ntdll.base_address:X} should be in high system DLL range"
-    )
-    assert ntdll.base_address % 0x10000 == 0, (
-        f"ntdll base 0x{ntdll.base_address:X} must be 64KB-aligned"
-    )
+    assert ntdll.base_address >= _NTDLL_BASE_MIN, f"ntdll base 0x{ntdll.base_address:X} should be in high system DLL range"
+    assert ntdll.base_address % 0x10000 == 0, f"ntdll base 0x{ntdll.base_address:X} must be 64KB-aligned"
     assert ntdll.size > 0, "ntdll module must report a non-zero in-memory size"
-    assert ntdll.path.name.lower() == "ntdll.dll", (
-        f"ntdll path should end in ntdll.dll, got {ntdll.path}"
-    )
+    assert ntdll.path.name.lower() == "ntdll.dll", f"ntdll path should end in ntdll.dll, got {ntdll.path}"
 
     bases = [m.base_address for m in modules]
     assert len(set(bases)) == len(bases), "every loaded module must have a distinct base address"
@@ -163,20 +155,14 @@ def test_enumerate_exports_kernel32_real(frida_bridge: FridaBridge) -> None:
     """
     base = _run_async(frida_bridge.find_base_address("kernel32.dll"))
     exports: list[ExportInfo] = _run_async(frida_bridge.enumerate_exports("kernel32.dll"))
-    assert len(exports) >= _KERNEL32_MIN_EXPORTS, (
-        f"kernel32 exports hundreds of APIs, got {len(exports)}"
-    )
+    assert len(exports) >= _KERNEL32_MIN_EXPORTS, f"kernel32 exports hundreds of APIs, got {len(exports)}"
 
     by_name = {e.name: e for e in exports}
     for required in ("LoadLibraryA", "GetProcAddress", "CreateFileW"):
-        assert required in by_name, (
-            f"kernel32 must export {required}; missing from {len(by_name)} exports"
-        )
+        assert required in by_name, f"kernel32 must export {required}; missing from {len(by_name)} exports"
         export = by_name[required]
         assert export.address > 0, f"{required} must resolve to a non-zero address"
-        assert export.address >= base, (
-            f"{required} at 0x{export.address:X} must lie at/above module base 0x{base:X}"
-        )
+        assert export.address >= base, f"{required} at 0x{export.address:X} must lie at/above module base 0x{base:X}"
 
 
 @pytest.mark.spawns_process
@@ -218,8 +204,7 @@ def test_replace_function_real_callback(frida_bridge: FridaBridge) -> None:
         assert hook.active, "replacement hook must be marked active"
         assert hook.target == "kernel32.dll!GetTickCount"
         assert hook.address == expected_addr, (
-            f"resolved replacement address 0x{(hook.address or 0):X} must match the real "
-            f"GetTickCount export 0x{expected_addr:X}"
+            f"resolved replacement address 0x{(hook.address or 0):X} must match the real GetTickCount export 0x{expected_addr:X}"
         )
     finally:
         removed = _run_async(frida_bridge.remove_hook(hook.id))

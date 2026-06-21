@@ -322,23 +322,22 @@ class TestDecodeTextEdgeCases:
         result = doc.decode_text(0, 0, "utf-8")
         assert not result
 
-    def test_decode_invalid_utf8_does_not_crash(self, hexcore: types.ModuleType) -> None:
-        """Verify that decode_text() on invalid UTF-8 bytes returns a string or raises a known error.
+    def test_decode_invalid_utf8_uses_replacement_characters(self, hexcore: types.ModuleType) -> None:
+        """Verify decode_text() substitutes U+FFFD for each invalid UTF-8 byte sequence.
+
+        The encoding_rs UTF-8 decoder follows the WHATWG encoding spec and never
+        raises for recognised encodings; it replaces invalid byte sequences with
+        U+FFFD.  Python's bytes.decode('utf-8', errors='replace') uses the same
+        per-byte replacement policy and serves as the independent oracle.
 
         Args:
             hexcore: The native hexcore module fixture.
         """
         invalid_utf8 = bytes([0x80, 0xFF, 0xFE, 0xC0, 0x80])
+        expected: str = invalid_utf8.decode("utf-8", errors="replace")
         doc = hexcore.HexDocument.open_bytes(invalid_utf8 + b"\x00" * 10)
-        raised: Exception | None = None
-        result: str | None = None
-        try:
-            result = doc.decode_text(0, len(invalid_utf8), "utf-8")
-        except (ValueError, RuntimeError) as exc:
-            raised = exc
-        if raised is None:
-            assert result is not None
-            assert isinstance(result, str)
+        result: str = doc.decode_text(0, len(invalid_utf8), "utf-8")
+        assert result == expected
 
     def test_decode_single_ascii_byte(self, hexcore: types.ModuleType) -> None:
         """Verify that decode_text() on a single ASCII byte returns a one-character string.

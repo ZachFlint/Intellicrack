@@ -40,7 +40,7 @@ Findings covered:
 
 from __future__ import annotations
 
-import inspect
+import asyncio
 import os
 import weakref
 from pathlib import Path
@@ -64,12 +64,25 @@ from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
 from intellicrack.core.types import ModelInfo, ProviderError, ProviderName
 from intellicrack.providers.registry import ProviderRegistry
-from intellicrack.ui import app as app_module
+from intellicrack.ui import (
+    app as app_module,
+    preferences as preferences_module,
+)
 from intellicrack.ui.app import MainWindow
+from intellicrack.ui.provider_config import (
+    ModelSelectionDialog,
+    ProviderConfigDialog,
+)
+from intellicrack.ui.sandbox_config import (
+    SandboxConfigDialog,
+    SandboxMonitorWidget,
+)
+from intellicrack.ui.session_manager import SessionManagerDialog
+from intellicrack.ui.tool_config import ToolConfigDialog, ToolSettingsWidget
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Coroutine, Generator
 
     from PyQt6.QtCore import QCoreApplication
     from PyQt6.QtGui import QAction
@@ -89,6 +102,20 @@ def qapp() -> QCoreApplication:
     if existing is not None:
         return existing
     return QApplication([])
+
+
+def _no_exec(_self: object) -> int:
+    """Stand in for a dialog's blocking modal ``exec``.
+
+    Args:
+        _self: The dialog instance (unused).
+
+    Returns:
+        int: Always ``0`` (``QDialog.DialogCode.Rejected``), so the slot's
+        ``if dialog.exec():`` acceptance branch is skipped while the live
+        ``.connect`` wiring established before ``exec`` is preserved.
+    """
+    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -452,6 +479,113 @@ class TestHxDButtonHandlerCleanedUp:
             f"expected diagnostic body mentioning missing HxD, got {body!r}"
         )
 
+    @staticmethod
+    def test_add_hxd_tab_absent_and_open_hxd_impl_present() -> None:
+        """The dangling ``add_hxd_tab`` regression is gone; ``_open_hxd_impl`` is the live path.
+
+        This is the direct gate for the F-0001 finding: the pre-fix code called
+        ``self.add_hxd_tab()`` (a method that never existed), causing an
+        :class:`AttributeError` on every HxD button click.  The post-fix wiring
+        delegates to ``_open_hxd_impl`` instead.  Two independently falsifiable
+        assertions enforce this contract:
+
+        1. ``add_hxd_tab`` must **not** exist on :class:`MainWindow`.  If the
+           regression is re-introduced, this assertion goes red before anything
+           else runs.
+        2. ``_open_hxd_impl`` must **exist** and be callable.  Deleting or
+           renaming the new implementation path makes this assertion go red.
+        3. The exact oracle message emitted by ``_open_hxd_impl`` when HxD is
+           absent matches the literal string in the production source.  A
+           copy-paste or phrasing change would make the companion functional
+           test go red, ensuring the gate remains tight.
+        """
+        assert not hasattr(MainWindow, "add_hxd_tab"), (
+            "add_hxd_tab must NOT exist on MainWindow; its presence is the "
+            "original regression (F-0001) and would crash on every HxD button click"
+        )
+        assert hasattr(MainWindow, "_open_hxd_impl"), (
+            "_open_hxd_impl must exist; it is the replacement entry-point that "
+            "shows a diagnostic dialog when HxD is not installed"
+        )
+        assert callable(getattr(MainWindow, "_open_hxd_impl"))
+
+    @staticmethod
+    def test_on_open_hxd_impl_emits_exact_oracle_message(
+        qapp: QCoreApplication,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """``_open_hxd_impl`` surfaces the exact production error string when HxD is absent.
+
+        The oracle message is read directly from the production source::
+
+            "HxD executable not found. Install HxD and restart Intellicrack to use this tab."
+
+        Any edit to that string in the production code would make this test fail,
+        ensuring the user-visible diagnostic stays coherent.  Together with
+        :meth:`test_on_open_hxd_shows_tool_error_when_hxd_absent` and
+        :meth:`test_add_hxd_tab_absent_and_open_hxd_impl_present`, the three
+        tests form an interlocking gate: functional behaviour, structural
+        invariant, and exact message content.
+
+        Args:
+            qapp: Qt application fixture (singleton).
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        del qapp
+
+        oracle_message: str = (
+            "HxD executable not found. Install HxD and restart Intellicrack to use this tab."
+        )
+
+        recorded_body: list[str] = []
+
+        def _capture_warning(
+            _parent: object,
+            _title: str,
+            body: str,
+            *_args: object,
+            **_kw: object,
+        ) -> int:
+            """Capture the warning body for assertion.
+
+            Args:
+                _parent: Parent widget (unused).
+                _title: Dialog title (unused here; checked in sibling test).
+                body: Dialog body text.
+                *_args: Forwarded positional args.
+                **_kw: Forwarded keyword args.
+
+            Returns:
+                int: Always ``QMessageBox.StandardButton.Ok``.
+            """
+            recorded_body.append(body)
+            return int(QMessageBox.StandardButton.Ok)
+
+        monkeypatch.setattr(QMessageBox, "warning", _capture_warning)
+
+        class _OracleHolder:
+            _hxd_panel: None = None
+
+            @staticmethod
+            def _register_hxd_panel_if_available() -> None:
+                """No-op: HxD is not installed in this test environment."""
+
+            def _show_tool_error(self, tool_name: str, message: str) -> None:
+                """Delegate to the real QMessageBox.warning path.
+
+                Args:
+                    tool_name: Tool name for the dialog title.
+                    message: Error message body.
+                """
+                QMessageBox.warning(None, f"{tool_name} Error", message, QMessageBox.StandardButton.Ok)
+
+        getattr(MainWindow, "_open_hxd_impl")(cast("MainWindow", _OracleHolder()))
+
+        assert len(recorded_body) == 1, f"expected exactly one warning, got {recorded_body}"
+        assert recorded_body[0] == oracle_message, (
+            f"production error string changed; expected {oracle_message!r}, got {recorded_body[0]!r}"
+        )
+
 
 # ---------------------------------------------------------------------------
 # F-0002 - Save Patched Binary resolves through embedded_tools
@@ -615,19 +749,6 @@ class TestSandboxPanelLookupUsesPanels:
 
 class TestXPUStatusMenuWiring:
     """The Help menu exposes an action that opens :class:`XPUStatusDialog`."""
-
-    @staticmethod
-    def test_help_menu_source_references_xpu_status() -> None:
-        """``_setup_help_menu`` adds an XPU Status menu action.
-
-        Verified by checking that the method's source text (retrieved via
-        ``getattr`` to avoid the reportPrivateUsage diagnostic) contains both
-        ``"XPU Status"`` and ``"_on_xpu_status"``.
-        """
-        source_fn = getattr(MainWindow, "_setup_help_menu")
-        source = inspect.getsource(source_fn)
-        assert "XPU Status" in source
-        assert "_on_xpu_status" in source
 
     @staticmethod
     def test_xpu_status_slot_constructs_dialog(
@@ -913,14 +1034,52 @@ class TestToolDialogsReceiveRegistry:
         assert captured_kwargs[0]["tool_registry"] is sentinel_registry, "tool_registry must be the live registry object, not a surrogate"
 
     @staticmethod
-    def test_configure_tools_wires_status_changed() -> None:
-        """Per-widget ``status_changed`` signals are wired to MainWindow.
+    def test_configure_tools_wires_status_changed(
+        real_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A real ``ToolSettingsWidget.status_changed`` emission reaches the live MainWindow slot.
 
-        Verified by checking that ``_on_configure_tools`` source text contains
-        ``status_changed`` (retrieved via ``getattr`` to avoid reportPrivateUsage).
+        Drives ``_on_configure_tools`` on a real window (blocking ``exec``
+        isolated), locates the genuine :class:`ToolSettingsWidget` children of
+        the constructed :class:`ToolConfigDialog`, emits one widget's real
+        ``status_changed(tool_id, available)`` signal, and asserts the connected
+        ``_on_tool_status_changed`` slot ran by observing the genuine
+        ``status_update`` side-effect. The slot maps ``available`` to the literal
+        ``"available"``/``"unavailable"`` token, computed here independently from
+        the production source, so a broken connection (or a slot that ignores the
+        payload) leaves the expected message absent and fails the assertion.
+
+        Args:
+            real_window: Real MainWindow fixture.
+            monkeypatch: Pytest monkeypatch fixture.
         """
-        source = inspect.getsource(getattr(MainWindow, "_on_configure_tools"))
-        assert "status_changed" in source, "expected 'status_changed' to appear in _on_configure_tools source"
+        monkeypatch.setattr(ToolConfigDialog, "exec", _no_exec)
+
+        statuses: list[str] = []
+        real_window.status_update.connect(statuses.append)
+
+        cast("Callable[[], None]", getattr(real_window, "_on_configure_tools"))()
+
+        dialogs = real_window.findChildren(ToolConfigDialog)
+        assert dialogs, "ToolConfigDialog was not constructed as a child of the window"
+        widgets = dialogs[0].findChildren(ToolSettingsWidget)
+        assert widgets, "ToolConfigDialog exposed no ToolSettingsWidget children to wire status_changed"
+
+        available_flag = True
+        unavailable_flag = False
+
+        statuses.clear()
+        widgets[0].status_changed.emit("ghidra", available_flag)
+        assert any("ghidra available" in msg for msg in statuses), (
+            f"status_changed emission did not reach _on_tool_status_changed; observed status emissions: {statuses}"
+        )
+
+        statuses.clear()
+        widgets[0].status_changed.emit("ghidra", unavailable_flag)
+        assert any("ghidra unavailable" in msg for msg in statuses), (
+            f"status_changed payload (available=False) was not honoured by the slot; observed: {statuses}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -936,13 +1095,18 @@ class TestOpenSandboxAvoidsDialogProbe:
         qapp: QCoreApplication,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """``_on_open_sandbox`` calls ``bridge.is_available()`` rather than probing via ``SandboxConfigDialog()``.
+        """``_on_open_sandbox`` awaits ``bridge.is_available`` and never probes through ``SandboxConfigDialog``.
 
-        The test intercepts ``SandboxBridge.is_available`` via the bridge
-        returned by ``_get_or_create_sandbox_bridge`` and records whether it was
-        called.  A broken implementation that re-introduces the throwaway dialog
-        approach would bypass this path; the recorded call would be absent and
-        the test would fail.
+        The slot's async body is driven to completion by a synchronous
+        ``AsyncWorker`` replacement that runs the produced coroutine on a fresh
+        event loop and forwards the result to the connected ``finished`` slot.
+        A recording bridge counts every ``is_available`` await and ``create``
+        await; with ``is_available`` returning ``False`` the production code
+        must take the unavailable branch (warning + ``"No sandbox available"``
+        status) and must *not* call ``create``. A regression that reintroduced
+        the throwaway ``SandboxConfigDialog()`` availability probe would
+        construct the recording dialog (caught here) or skip the bridge await
+        entirely (``is_available_calls == 0``), failing the gate.
 
         Args:
             qapp: Qt application fixture (singleton).
@@ -951,6 +1115,9 @@ class TestOpenSandboxAvoidsDialogProbe:
         del qapp
 
         sandbox_dialog_constructed: list[int] = []
+        is_available_calls: list[int] = []
+        create_calls: list[int] = []
+        warnings: list[str] = []
 
         class _RecordingSandboxDialog(QDialog):
             def __init__(self, *_args: object, **_kwargs: object) -> None:
@@ -965,22 +1132,112 @@ class TestOpenSandboxAvoidsDialogProbe:
                 super().__init__()
                 sandbox_dialog_constructed.append(1)
 
-            def is_sandbox_available(self) -> bool:
-                """Return False to satisfy any availability check.
+        class _RecordingBridge:
+            """Sandbox bridge double recording availability/create awaits."""
+
+            async def is_available(self) -> bool:
+                """Record the availability probe and report unavailable.
 
                 Returns:
-                    bool: Always False.
+                    bool: Always ``False`` so the create path is skipped.
                 """
+                is_available_calls.append(1)
                 return False
 
-        monkeypatch.setattr(app_module, "SandboxConfigDialog", _RecordingSandboxDialog)
+            async def create(self) -> object:
+                """Record a create await (must never happen when unavailable).
 
-        source = inspect.getsource(getattr(MainWindow, "_on_open_sandbox"))
-        assert "SandboxConfigDialog()" not in source, (
-            "The throwaway SandboxConfigDialog() anti-pattern must not appear in _on_open_sandbox source"
+                Returns:
+                    object: A placeholder instance descriptor.
+                """
+                create_calls.append(1)
+                return {"instance_id": "should-not-happen"}
+
+        class _SyncWorker:
+            """Runs the slot's coroutine synchronously and fans out to slots."""
+
+            def __init__(self, coro: Coroutine[object, object, object], _parent: object) -> None:
+                """Store the coroutine produced by the slot.
+
+                Args:
+                    coro: Coroutine returned by the slot's ``open_sandbox``.
+                    _parent: Parent widget (unused).
+                """
+                self._coro = coro
+                self._finished_handler: Callable[[object], None] | None = None
+                self._error_handler: Callable[[Exception], None] | None = None
+                self.finished = self
+                self.error = self
+
+            def connect(self, handler: Callable[[object], None]) -> None:
+                """Capture a slot connection (finished first, then error).
+
+                Args:
+                    handler: The MainWindow slot being connected.
+                """
+                if self._finished_handler is None:
+                    self._finished_handler = handler
+                else:
+                    self._error_handler = cast("Callable[[Exception], None]", handler)
+
+            def start(self) -> None:
+                """Run the coroutine and invoke the matching slot."""
+                try:
+                    result = asyncio.run(self._coro)
+                except (RuntimeError, OSError, ValueError) as exc:
+                    if self._error_handler is not None:
+                        self._error_handler(exc)
+                    return
+                if self._finished_handler is not None:
+                    self._finished_handler(result)
+
+        def _record_warning(_parent: object, _title: str, body: str, *_a: object, **_kw: object) -> int:
+            """Capture the unavailable-sandbox warning body.
+
+            Args:
+                _parent: Parent widget (unused).
+                _title: Dialog title (unused).
+                body: Dialog body text.
+                *_a: Forwarded positional args.
+                **_kw: Forwarded keyword args.
+
+            Returns:
+                int: Always ``QMessageBox.StandardButton.Ok``.
+            """
+            warnings.append(body)
+            return int(QMessageBox.StandardButton.Ok)
+
+        monkeypatch.setattr(app_module, "SandboxConfigDialog", _RecordingSandboxDialog)
+        monkeypatch.setattr(app_module, "AsyncWorker", _SyncWorker)
+        monkeypatch.setattr(QMessageBox, "warning", _record_warning)
+
+        recording_bridge = _RecordingBridge()
+        status_recorder = _StatusEmissionRecorder()
+
+        class _OpenSandboxHolder:
+            status_update: _StatusEmissionRecorder = status_recorder
+            _current_worker: object = None
+
+            @staticmethod
+            def _get_or_create_sandbox_bridge() -> _RecordingBridge:
+                """Return the recording bridge instead of a real backend.
+
+                Returns:
+                    _RecordingBridge: The recording sandbox bridge.
+                """
+                return recording_bridge
+
+        getattr(MainWindow, "_on_open_sandbox")(cast("MainWindow", _OpenSandboxHolder()))
+
+        assert is_available_calls == [1], f"_on_open_sandbox must await bridge.is_available exactly once; got {is_available_calls}"
+        assert create_calls == [], f"create must not run when the sandbox is unavailable; got {create_calls}"
+        assert sandbox_dialog_constructed == [], "SandboxConfigDialog must never be constructed as an availability probe"
+        assert any("No sandbox" in body or "sandbox environment" in body for body in warnings), (
+            f"expected the unavailable-sandbox warning to fire; got {warnings}"
         )
-        assert "bridge.is_available()" in source, "bridge.is_available() must be called in _on_open_sandbox"
-        assert sandbox_dialog_constructed == [], "SandboxConfigDialog must never be constructed as a probe in _on_open_sandbox"
+        assert any("No sandbox available" in msg for msg in status_recorder.emissions), (
+            f"expected 'No sandbox available' status emission; got {status_recorder.emissions}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1084,73 +1341,267 @@ class TestApplyProviderSettingsHandlesDisabled:
         last_emission = status_recorder.emissions[-1]
         assert "1 disabled" in last_emission, f"expected '1 disabled' in status emission for one disabled provider; got {last_emission!r}"
 
-    @staticmethod
-    def test_source_collects_providers_to_disconnect() -> None:
-        """Source contains the ``providers_to_disconnect`` list and ``disconnect_provider`` call.
-
-        Retrieved via ``getattr`` to avoid the reportPrivateUsage diagnostic.
-        """
-        source = inspect.getsource(getattr(MainWindow, "_apply_provider_settings"))
-        assert "providers_to_disconnect" in source
-        assert "disconnect_provider" in source
-
 
 # ---------------------------------------------------------------------------
 # F-0011..F-0019 - Orphan-signal wiring (consumer-side in app.py)
 # ---------------------------------------------------------------------------
 
 
-class TestOrphanSignalWiringSourceLevel:
-    """Verify each orphan signal is connected from a MainWindow slot.
+class TestOrphanSignalWiringRuntime:
+    """Drive each orphan signal through a live dialog/widget and assert the slot ran.
 
-    Source text is retrieved through ``getattr`` to avoid the reportPrivateUsage
-    diagnostic that ``inspect.getsource(MainWindow._method)`` triggers.
+    Every test constructs the genuine producer (dialog or widget) through the
+    real :class:`MainWindow` slot (with only the blocking modal ``exec``
+    isolated), emits the real Qt signal, and asserts an *observable* side-effect
+    of the connected slot - a status-bar emission with an independently computed
+    string, a replaced ``_config`` object, a combo selection, or a rebuilt
+    manager instance. A broken connection (wrong target, dead branch, removed
+    ``.connect``) produces no side-effect and fails the assertion, which the
+    prior source-substring checks could not detect.
     """
 
     @staticmethod
-    def test_preferences_settings_changed_wired() -> None:
-        """``_on_preferences`` wires ``settings_changed``."""
-        source = inspect.getsource(getattr(MainWindow, "_on_preferences"))
-        assert "settings_changed.connect" in source
+    def test_preferences_settings_changed_reaches_slot(
+        real_window: MainWindow,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A real ``PreferencesDialog.settings_changed`` emission replaces ``_config``.
+
+        ``_on_preferences_changed`` assigns ``self._config = new_config`` on
+        receipt. Emitting the real signal with a freshly built :class:`Config`
+        and asserting ``real_window._config is sentinel_config`` independently
+        verifies the connection: object identity cannot be satisfied by a stale
+        config, so a missing/wrong connection fails.
+
+        Args:
+            real_window: Real MainWindow fixture.
+            tmp_path: Pytest temporary directory.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        monkeypatch.setattr(preferences_module.PreferencesDialog, "exec", _no_exec)
+
+        cast("Callable[[], None]", getattr(real_window, "_on_preferences"))()
+
+        dialogs = real_window.findChildren(preferences_module.PreferencesDialog)
+        assert dialogs, "PreferencesDialog was not constructed as a child of the window"
+
+        sentinel_config = Config(
+            tools_directory=tmp_path / "tools2",
+            logs_directory=tmp_path / "logs2",
+            data_directory=tmp_path / "data2",
+        )
+        assert getattr(real_window, "_config") is not sentinel_config
+        dialogs[0].settings_changed.emit(sentinel_config)
+        assert getattr(real_window, "_config") is sentinel_config, (
+            "settings_changed emission did not reach _on_preferences_changed (config was not replaced)"
+        )
 
     @staticmethod
-    def test_session_dialog_signals_wired() -> None:
-        """``_on_load_session`` wires both session-manager dialog signals."""
-        source = inspect.getsource(getattr(MainWindow, "_on_load_session"))
-        assert "session_loaded.connect" in source
-        assert "session_deleted.connect" in source
+    def test_session_loaded_signal_reaches_slot(
+        real_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A real ``SessionManagerDialog.session_loaded`` emission reaches the load slot.
+
+        ``_on_session_load_requested`` emits ``"Loading session <id>..."``. The
+        ``session_deleted`` half is gated by the runtime companion module
+        (``test_session_dialog_deleted_signal_reaches_slot``); this covers the
+        ``session_loaded`` half with the same real-emission technique.
+
+        Args:
+            real_window: Real MainWindow fixture.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        monkeypatch.setattr(SessionManagerDialog, "exec", _no_exec)
+
+        statuses: list[str] = []
+        real_window.status_update.connect(statuses.append)
+
+        cast("Callable[[], None]", getattr(real_window, "_on_load_session"))()
+
+        dialogs = real_window.findChildren(SessionManagerDialog)
+        assert dialogs, "SessionManagerDialog was not constructed as a child of the window"
+        statuses.clear()
+        dialogs[0].session_loaded.emit("sess-load-1")
+        assert any("Loading session sess-load-1" in msg for msg in statuses), (
+            f"session_loaded emission did not reach _on_session_load_requested; observed {statuses}"
+        )
 
     @staticmethod
-    def test_provider_dialog_signals_wired() -> None:
-        """``_on_configure_providers`` wires both provider-dialog signals."""
-        source = inspect.getsource(getattr(MainWindow, "_on_configure_providers"))
-        assert "provider_updated.connect" in source
-        assert "active_provider_changed.connect" in source
+    def test_provider_dialog_signals_reach_slots(
+        real_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Real ``provider_updated`` and ``active_provider_changed`` emissions reach their slots.
+
+        ``_on_provider_dialog_updated`` emits ``"Provider configuration updated:
+        openai"`` and ``_on_active_provider_changed`` emits ``"Active provider:
+        openai"`` (the latter also parses ``"openai"`` through
+        :class:`ProviderName`). Both messages are computed here independently.
+
+        Args:
+            real_window: Real MainWindow fixture.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        monkeypatch.setattr(ProviderConfigDialog, "exec", _no_exec)
+
+        statuses: list[str] = []
+        real_window.status_update.connect(statuses.append)
+
+        cast("Callable[[], None]", getattr(real_window, "_on_configure_providers"))()
+
+        dialogs = real_window.findChildren(ProviderConfigDialog)
+        assert dialogs, "ProviderConfigDialog was not constructed as a child of the window"
+        dialog = dialogs[0]
+
+        statuses.clear()
+        dialog.provider_updated.emit(ProviderName.OPENAI.value)
+        assert any(f"Provider configuration updated: {ProviderName.OPENAI.value}" in msg for msg in statuses), (
+            f"provider_updated emission did not reach _on_provider_dialog_updated; observed {statuses}"
+        )
+
+        statuses.clear()
+        dialog.active_provider_changed.emit(ProviderName.OPENAI.value)
+        assert any(f"Active provider: {ProviderName.OPENAI.value}" in msg for msg in statuses), (
+            f"active_provider_changed emission did not reach _on_active_provider_changed; observed {statuses}"
+        )
 
     @staticmethod
-    def test_model_selection_dialog_signal_wired() -> None:
-        """``_on_browse_models_result`` wires ``model_selected``."""
-        source = inspect.getsource(getattr(MainWindow, "_on_browse_models_result"))
-        assert "model_selected.connect" in source
+    def test_model_selection_signal_reaches_slot(
+        real_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A real ``ModelSelectionDialog.model_selected`` emission syncs the toolbar combo.
+
+        ``_on_model_selected_from_browse`` routes to ``_sync_model_combo``, which
+        adds the model id to ``model_combo`` and makes it current. The combo's
+        ``currentText`` is an independent observable of the wiring.
+
+        Args:
+            real_window: Real MainWindow fixture.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        monkeypatch.setattr(ModelSelectionDialog, "exec", _no_exec)
+
+        model_list = [
+            ModelInfo(
+                id="gpt-4o",
+                name="GPT-4o",
+                provider=ProviderName.OPENAI,
+                context_window=128_000,
+                supports_tools=True,
+                supports_vision=True,
+                supports_streaming=True,
+                input_cost_per_1m_tokens=None,
+                output_cost_per_1m_tokens=None,
+            ),
+        ]
+        cast("Callable[[object], None]", getattr(real_window, "_on_browse_models_result"))(model_list)
+
+        dialogs = real_window.findChildren(ModelSelectionDialog)
+        assert dialogs, "ModelSelectionDialog was not constructed as a child of the window"
+
+        selected_id = "model-selected-via-signal"
+        dialogs[0].model_selected.emit(selected_id)
+        assert real_window.model_combo.currentText() == selected_id, (
+            f"model_selected emission did not sync the toolbar combo; current text={real_window.model_combo.currentText()!r}"
+        )
 
     @staticmethod
-    def test_sandbox_dialog_settings_updated_wired() -> None:
-        """``_on_configure_sandbox`` wires ``settings_updated``."""
-        source = inspect.getsource(getattr(MainWindow, "_on_configure_sandbox"))
-        assert "settings_updated.connect" in source
+    def test_sandbox_settings_updated_reaches_slot(
+        real_window: MainWindow,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A real ``SandboxConfigDialog.settings_updated`` emission rebuilds the manager.
+
+        ``_on_sandbox_settings_updated`` reads ``sender().get_settings()`` and
+        routes through ``_apply_sandbox_settings``, which replaces
+        ``self.sandbox_manager`` with a freshly built :class:`SandboxManager`.
+        Asserting the manager object identity changed independently verifies the
+        slot ran end-to-end (a missing connection leaves the original instance).
+
+        Args:
+            real_window: Real MainWindow fixture.
+            monkeypatch: Pytest monkeypatch fixture.
+        """
+        monkeypatch.setattr(SandboxConfigDialog, "exec", _no_exec)
+
+        cast("Callable[[], None]", getattr(real_window, "_on_configure_sandbox"))()
+
+        dialogs = real_window.findChildren(SandboxConfigDialog)
+        assert dialogs, "SandboxConfigDialog was not constructed as a child of the window"
+
+        manager_before = getattr(real_window, "sandbox_manager")
+        dialogs[0].settings_updated.emit()
+        manager_after = getattr(real_window, "sandbox_manager")
+        assert manager_after is not manager_before, (
+            "settings_updated emission did not reach _on_sandbox_settings_updated (manager was not rebuilt)"
+        )
 
     @staticmethod
-    def test_sandbox_monitor_wiring_helper_present() -> None:
-        """``_wire_sandbox_monitor_widgets`` wires ``sandbox_stopped``."""
-        source = inspect.getsource(getattr(MainWindow, "_wire_sandbox_monitor_widgets"))
-        assert "sandbox_stopped.connect" in source
+    def test_sandbox_monitor_stopped_reaches_slot(
+        real_window: MainWindow,
+    ) -> None:
+        """``_wire_sandbox_monitor_widgets`` connects ``sandbox_stopped`` to the live slot.
+
+        A real :class:`SandboxMonitorWidget` is hosted under a container, wired
+        via the production helper, then its ``sandbox_stopped`` signal is
+        emitted. ``_on_sandbox_monitor_stopped`` emits ``"Sandbox stopped"`` and
+        sets the toolbar button text to ``"Sandbox: OFF"`` - both independently
+        observable side-effects.
+
+        Args:
+            real_window: Real MainWindow fixture.
+        """
+        statuses: list[str] = []
+        real_window.status_update.connect(statuses.append)
+
+        container = QWidget()
+        try:
+            monitor = SandboxMonitorWidget(parent=container)
+            cast("Callable[[QWidget], None]", getattr(real_window, "_wire_sandbox_monitor_widgets"))(container)
+
+            statuses.clear()
+            monitor.sandbox_stopped.emit()
+        finally:
+            container.deleteLater()
+
+        assert any("Sandbox stopped" in msg for msg in statuses), (
+            f"sandbox_stopped emission did not reach _on_sandbox_monitor_stopped; observed {statuses}"
+        )
+        button_text = cast("str", getattr(real_window, "_sandbox_btn").text())
+        assert button_text == "Sandbox: OFF", f"expected the sandbox button to read 'Sandbox: OFF'; got {button_text!r}"
 
     @staticmethod
-    def test_tool_output_panel_signals_wired() -> None:
-        """``_connect_signals`` wires both ``embedded_tool_*`` signals."""
-        source = inspect.getsource(getattr(MainWindow, "_connect_signals"))
-        assert "embedded_tool_started.connect" in source
-        assert "embedded_tool_closed.connect" in source
+    def test_embedded_tool_panel_signals_reach_slots(
+        real_window: MainWindow,
+    ) -> None:
+        """Real ``ToolOutputPanel.embedded_tool_*`` emissions reach their MainWindow slots.
+
+        ``_connect_signals`` wires the live panel's ``embedded_tool_started`` and
+        ``embedded_tool_closed`` signals. Emitting them on the real panel must
+        produce ``"<tool> started"`` / ``"<tool> closed"`` status messages, whose
+        exact wording is computed here independently.
+
+        Args:
+            real_window: Real MainWindow fixture.
+        """
+        statuses: list[str] = []
+        real_window.status_update.connect(statuses.append)
+        panel = real_window.tool_panel
+
+        statuses.clear()
+        panel.embedded_tool_started.emit("ghidra")
+        assert any("ghidra started" in msg for msg in statuses), (
+            f"embedded_tool_started emission did not reach _on_embedded_tool_started; observed {statuses}"
+        )
+
+        statuses.clear()
+        panel.embedded_tool_closed.emit("ghidra")
+        assert any("ghidra closed" in msg for msg in statuses), (
+            f"embedded_tool_closed emission did not reach _on_embedded_tool_closed; observed {statuses}"
+        )
 
 
 class _UIConfigDouble:

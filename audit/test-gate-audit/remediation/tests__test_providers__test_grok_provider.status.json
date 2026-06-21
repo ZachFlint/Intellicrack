@@ -1,0 +1,31 @@
+{
+ "file": "tests/test_providers/test_grok_provider.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "TestGrokModelListing (6-test family): test_list_models_returns_model_info_instances, test_model_info_has_valid_id, test_model_info_has_valid_name, test_model_info_has_correct_provider, test_model_info_has_positive_context_window, test_model_info_has_boolean_capabilities",
+   "severity": "MEDIUM",
+   "category": "N8 existence-only \u2014 structural isinstance/len/bool type checks only; no value from the production parsing logic was ever asserted against an independent oracle",
+   "action": "hardened",
+   "oracle": "Hand-encoded X.AI published documentation constants: grok-4 context_window=256000; grok-3/grok-2/default context_window=131072; grok-1 context_window=8192; supports_tools=True for all chat models; supports_vision computed from 'vision'/'image' substring in model id; supports_streaming=True for all chat models",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/providers/grok.py",
+    "mutation": "        if \"grok-4\" in model_id:\n            return _GROK_4_CONTEXT_WINDOW\n        if \"grok-3\" in model_id:\n            return _GROK_3_CONTEXT_WINDOW ->         if \"grok-4\" in model_id:\n            return _GROK_4_CONTEXT_WINDOW\n        if \"grok-3\" in model_id:\n            return _GROK_4_CONTEXT_WINDOW",
+    "covering_test": "tests/test_providers/test_grok_provider.py::TestGrokModelListing::test_model_capability_values_match_published_profile",
+    "expected_baseline": "green",
+    "green_status": "skip",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 1
+}

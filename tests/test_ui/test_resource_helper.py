@@ -232,9 +232,8 @@ class TestResourceExists:
 
     @staticmethod
     def test_returns_false_for_empty_path() -> None:
-        """Handles empty path gracefully."""
-        result = resource_exists("")
-        assert isinstance(result, bool)
+        """An empty resource path must not be reported as an existing resource."""
+        assert resource_exists("") is False
 
 
 class TestAssetIntegrity:

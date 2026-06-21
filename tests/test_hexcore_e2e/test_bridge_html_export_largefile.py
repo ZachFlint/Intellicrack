@@ -152,42 +152,71 @@ class TestLargeFileControls:
     """Tests for large file memory management controls."""
 
     def test_set_chunk_size(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify set_chunk_size returns True.
+        """Verify set_chunk_size stores the hint and round-trips through the backend.
+
+        The chosen hint (65536) differs from the native default chunk size
+        (4 * 1024 * 1024), so reading it back through get_memory_usage proves
+        the value reached and was retained by the native HexDocument rather
+        than a no-op that returns True.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
+        native_default_chunk_size = 4 * 1024 * 1024
+        chunk_hint = 65536
+        assert chunk_hint != native_default_chunk_size
         f = tmp_path / "chunk.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = _run(bridge.set_chunk_size(65536))
+        result = _run(bridge.set_chunk_size(chunk_hint))
         assert result is True
+        usage = _run(bridge.get_memory_usage())
+        assert usage["chunk_size"] == chunk_hint
 
     def test_get_memory_usage(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify get_memory_usage returns a dict with required keys.
+        """Verify get_memory_usage reports the real document size and stored hints.
+
+        The expected usage is recomputed independently from the file size on
+        disk, and the chunk_size is verified against a non-default value set
+        beforehand, so the native getter path (not the zero default fallback)
+        must execute for the assertions to hold.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
+        payload = bytes(range(256)) * 4
+        expected_usage = len(payload)
+        chunk_hint = 32768
         f = tmp_path / "mem.bin"
-        f.write_bytes(b"\x00" * 64)
+        f.write_bytes(payload)
+        assert f.stat().st_size == expected_usage
         _run(bridge.open_file(str(f)))
+        _run(bridge.set_chunk_size(chunk_hint))
         result = _run(bridge.get_memory_usage())
-        assert "usage_bytes" in result
-        assert "chunk_size" in result
-        assert "memory_budget" in result
+        assert result["usage_bytes"] == expected_usage
+        assert result["chunk_size"] == chunk_hint
 
     def test_set_memory_budget(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Verify set_memory_budget returns True.
+        """Verify set_memory_budget stores the hint and round-trips through the backend.
+
+        The chosen budget (1 MiB) differs from the native default memory
+        budget (512 * 1024 * 1024), so reading it back through
+        get_memory_usage proves the value was retained rather than a no-op
+        that returns True.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
+        native_default_budget = 512 * 1024 * 1024
+        budget_hint = 1024 * 1024
+        assert budget_hint != native_default_budget
         f = tmp_path / "budget.bin"
         f.write_bytes(b"\x00" * 64)
         _run(bridge.open_file(str(f)))
-        result = _run(bridge.set_memory_budget(1024 * 1024))
+        result = _run(bridge.set_memory_budget(budget_hint))
         assert result is True
+        usage = _run(bridge.get_memory_usage())
+        assert usage["memory_budget"] == budget_hint

@@ -156,8 +156,14 @@ class TestDecodeText:
         assert result_a == word_a
         assert result_b == word_b
 
-    def test_decode_text_invalid_encoding_handles_gracefully(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """decode_text with an unknown encoding must not crash; it may raise or return a string.
+    def test_decode_text_unknown_encoding_raises_value_error(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """decode_text with an unrecognized codec must raise ValueError naming the codec.
+
+        The native hexcore backend resolves the codec via ``resolve_encoding``
+        (src/intellicrack-hexcore/src/encodings.rs); an unknown name yields
+        ``EncodingError::UnsupportedEncoding`` which is surfaced to Python as a
+        ``ValueError`` whose message is ``"unsupported encoding: <name>"``. This
+        gate rejects both the silent-success and the wrong-exception-type defects.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -168,16 +174,11 @@ class TestDecodeText:
         f.write_bytes(payload)
         _run(bridge.open_file(str(f)))
 
-        raised: Exception | None = None
-        result: str | None = None
-        try:
-            result = _run(bridge.decode_text(0, len(payload), "bogus-encoding-xyz"))
-        except (LookupError, ValueError, RuntimeError) as exc:
-            raised = exc
+        unknown_codec = "bogus-encoding-xyz"
+        with pytest.raises(ValueError, match="unsupported encoding") as exc_info:
+            _run(bridge.decode_text(0, len(payload), unknown_codec))
 
-        if raised is None:
-            assert result is not None
-            assert isinstance(result, str)
+        assert unknown_codec in str(exc_info.value)
 
     def test_decode_text_returns_string_type(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """decode_text must return a str object, not bytes or None.
@@ -293,23 +294,38 @@ class TestListEncodings:
             assert isinstance(entry["label"], str)
             assert len(entry["label"]) > 0
 
-    def test_list_encodings_with_open_document(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """list_encodings must work the same way with or without an open document.
+    def test_list_encodings_with_open_document_is_content_independent(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """list_encodings on an open document must yield the native catalog independent of file content.
+
+        With a document open the bridge routes to the native ``HexDocument.list_encodings``
+        backed by the Rust ``ENCODING_LIST`` table (src/intellicrack-hexcore/src/encodings.rs).
+        The catalog is a static table, so opening two documents with different byte content
+        must produce byte-for-byte identical catalogs. The independent oracle is the hand-
+        transcribed Rust spec: the native catalog must contain the native-only ``ebcdic``
+        entry (absent from the Python fallback list) plus the documented ``utf-8`` and
+        ``big5`` labels, proving the native path actually executed and returned the real
+        table rather than garbage or the fallback.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
             tmp_path: Pytest temporary directory.
         """
-        without_doc: list[dict[str, str]] = _run(bridge.list_encodings())
+        first = tmp_path / "doc_a.bin"
+        first.write_bytes(b"A" * 64)
+        _run(bridge.open_file(str(first)))
+        catalog_a: list[dict[str, str]] = _run(bridge.list_encodings())
 
-        f = tmp_path / "doc.bin"
-        f.write_bytes(b"A" * 64)
-        _run(bridge.open_file(str(f)))
+        second = tmp_path / "doc_b.bin"
+        second.write_bytes(bytes(range(256)))
+        _run(bridge.open_file(str(second)))
+        catalog_b: list[dict[str, str]] = _run(bridge.list_encodings())
 
-        with_doc: list[dict[str, str]] = _run(bridge.list_encodings())
+        assert catalog_a == catalog_b
 
-        assert with_doc
-        assert without_doc
+        entries = {entry["name"]: entry["label"] for entry in catalog_a}
+        assert entries["utf-8"] == "UTF-8"
+        assert entries["ebcdic"] == "EBCDIC Code Page 037"
+        assert entries["big5"] == "Big5 (Chinese Traditional)"
 
     def test_list_encodings_standalone_bridge(self) -> None:
         """list_encodings must return a usable list on a freshly initialized bridge."""

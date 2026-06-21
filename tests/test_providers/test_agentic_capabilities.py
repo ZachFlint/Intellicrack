@@ -11,8 +11,11 @@ extended thinking, and prompt caching across all providers.
 
 from __future__ import annotations
 
+import json
+import re
+import socket
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 import pytest
 
@@ -28,19 +31,55 @@ from intellicrack.core.types import (
     ToolName,
     ToolParameter,
 )
+from intellicrack.providers.base import ToolCallBufferManager
+from intellicrack.providers.ollama import OllamaProvider
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from intellicrack.providers.anthropic import AnthropicProvider
     from intellicrack.providers.google import GoogleProvider
     from intellicrack.providers.grok import GrokProvider
-    from intellicrack.providers.huggingface import HuggingFaceProvider
-    from intellicrack.providers.ollama import OllamaProvider
     from intellicrack.providers.openai import OpenAIProvider
     from intellicrack.providers.openrouter import OpenRouterProvider
 
+    AccumulateDeltas = Callable[[dict[str, Any], dict[str, dict[str, Any]], list[str]], None]
+    FinalizeNativeToolCalls = Callable[[dict[str, dict[str, Any]], list[str]], list[ToolCall]]
+
 
 pytestmark = [pytest.mark.integration]
+
+_GOOGLE_API_HOST = "generativelanguage.googleapis.com"
+_GOOGLE_API_PORT = 443
+_NETWORK_PROBE_TIMEOUT = 3.0
+
+
+def _is_google_api_reachable() -> bool:
+    """Probe TCP connectivity to the Google Generative Language API endpoint.
+
+    Attempts a non-blocking TCP connection to ``generativelanguage.googleapis.com:443``
+    with a short timeout. Returns ``False`` when the sandbox network is absent
+    (``network='none'``) or when DNS resolution fails (getaddrinfo error), so
+    tests that require a live Google API connection can be skipped rather than
+    erroring during fixture setup.
+
+    Returns:
+        bool: ``True`` if the endpoint is reachable, ``False`` otherwise.
+    """
+    try:
+        with socket.create_connection((_GOOGLE_API_HOST, _GOOGLE_API_PORT), timeout=_NETWORK_PROBE_TIMEOUT):
+            return True
+    except OSError:
+        return False
+
+
+_google_api_reachable: bool = _is_google_api_reachable()
+
+_skip_google_offline = pytest.mark.skipif(
+    not _google_api_reachable,
+    reason="Google API endpoint unreachable (network='none' or offline); live Google provider test skipped",
+)
 
 
 def _make_test_tool() -> list[ToolDefinition]:
@@ -195,26 +234,74 @@ class TestToolChoiceRequired:
         assert isinstance(path_arg, str)
         assert len(path_arg) > 0
 
-    async def test_google_tool_choice_auto(
+    @_skip_google_offline
+    async def test_google_tool_choice_required_forces_tool_call(
         self,
         google_provider: GoogleProvider,
     ) -> None:
-        """Google AUTO mode must return an assistant-role response without raising.
+        """Google REQUIRED must yield a structured call to the only offered tool.
 
-        Drives the real connected Google provider with a single tool and
-        ``tool_choice=AUTO``. The provider may or may not elect to call the
-        tool; what must hold is that the response carries role ``"assistant"``
-        and either the response content is non-empty (free-text reply) or
-        tool_calls is non-None (a tool call was made). Both outcomes are valid
-        under AUTO mode. A regression that crashes, drops the role, or
-        returns both empty content and no tool calls fails.
+        Drives the real connected Google provider with a single tool whose
+        schema declares one required ``path`` parameter and
+        ``tool_choice=REQUIRED``. The bridge maps REQUIRED to Gemini's
+        ``FunctionCallingConfigMode.ANY``, which compels a function call;
+        because exactly one tool is offered, the response translation must
+        surface a :class:`ToolCall` naming that exact function
+        (``binary.get_file_size``), with ``tool_name`` derived from the
+        function-name prefix (``binary``), a non-empty ``id``, and the required
+        ``path`` argument present and typed as ``str``. A regression that
+        dropped the REQUIRED-to-ANY mapping (letting the model answer in free
+        text), mistranslated the function name, or dropped arguments fails
+        these assertions.
 
         Args:
             google_provider: Connected Google provider fixture.
         """
         tools = _make_test_tool()
-        messages = _make_messages("What is the size of notepad.exe?")
-        choice = ToolChoice(mode=ToolChoiceMode.AUTO)
+        messages = _make_messages("What is the size of notepad.exe at C:\\Windows\\notepad.exe?")
+        choice = ToolChoice(mode=ToolChoiceMode.REQUIRED)
+
+        _, tool_calls = await google_provider.chat(
+            messages=messages,
+            model="gemini-2.5-flash",
+            tools=tools,
+            tool_choice=choice,
+            max_tokens=1024,
+        )
+        assert tool_calls is not None
+        assert len(tool_calls) >= 1
+        call = tool_calls[0]
+        assert isinstance(call, ToolCall)
+        assert call.function_name == "binary.get_file_size"
+        assert call.tool_name == "binary"
+        assert len(call.id) > 0
+        assert "path" in call.arguments
+        path_arg = call.arguments["path"]
+        assert isinstance(path_arg, str)
+        assert len(path_arg) > 0
+
+    @_skip_google_offline
+    async def test_google_tool_choice_none_prevents_tool_call(
+        self,
+        google_provider: GoogleProvider,
+    ) -> None:
+        """Google NONE must answer in free text and emit no tool calls.
+
+        Drives the real connected Google provider with a single tool and
+        ``tool_choice=NONE``, which the bridge maps to Gemini's
+        ``FunctionCallingConfigMode.NONE``. With function calling disabled the
+        model must answer the deterministic arithmetic prompt in plain text:
+        the assistant message must carry role ``"assistant"`` with non-empty
+        content, and ``tool_calls`` must be ``None``. A regression that dropped
+        the NONE-mode mapping (allowing a spurious tool call) or returned an
+        empty response fails these assertions.
+
+        Args:
+            google_provider: Connected Google provider fixture.
+        """
+        tools = _make_test_tool()
+        messages = _make_messages("What is 2 plus 2? Answer with the number only.")
+        choice = ToolChoice(mode=ToolChoiceMode.NONE)
 
         response, tool_calls = await google_provider.chat(
             messages=messages,
@@ -224,12 +311,8 @@ class TestToolChoiceRequired:
             max_tokens=1024,
         )
         assert response.role == "assistant"
-        has_content = len(response.content) > 0
-        has_tool_calls = tool_calls is not None and len(tool_calls) > 0
-        assert has_content or has_tool_calls, (
-            f"Expected non-empty content or at least one tool call under AUTO mode, "
-            f"got content={response.content!r}, tool_calls={tool_calls!r}"
-        )
+        assert len(response.content) > 0
+        assert tool_calls is None
 
     async def test_openrouter_tool_choice_required(
         self,
@@ -274,136 +357,98 @@ class TestToolChoiceRequired:
 
 
 class TestStreamingToolCalls:
-    """Verify streaming captures tool calls on previously broken providers."""
+    """Verify the streaming tool-call assemblers reconstruct fragmented deltas.
 
-    pytestmark: ClassVar[list[pytest.MarkDecorator]] = [pytest.mark.integration, pytest.mark.asyncio]
+    These gates exercise the exact production units a provider's
+    ``chat_stream`` uses to reassemble tool calls that arrive split across
+    many stream chunks. They feed recorded, fragmented delta sequences (the
+    shape real backends emit, where the function name and JSON argument text
+    are split across frames) through the real assembler and assert the
+    finalised :class:`ToolCall` exactly matches a hand-decoded oracle. This
+    is the regression these tests were named to guard: a buffer manager that
+    fails to concatenate argument fragments or drops the tool call silently
+    yields the wrong, or no, ToolCall.
+    """
 
-    async def test_huggingface_stream_captures_tool_calls(
-        self,
-        huggingface_provider: HuggingFaceProvider,
-    ) -> None:
-        """HuggingFace stream must capture tool calls via ToolCallBufferManager.
+    pytestmark: ClassVar[list[pytest.MarkDecorator]] = [pytest.mark.integration]
 
-        Drives the real connected HuggingFace provider with a streaming call
-        that explicitly requests use of ``binary.get_file_size``. After the
-        stream completes, ``get_pending_tool_calls()`` must return either a
-        non-empty list of correctly-structured :class:`ToolCall` objects (when
-        the model elected to call the tool) or an empty list accompanied by
-        non-empty stream chunks (when the model answered in free text). The
-        branch that matters for the bug being guarded is the non-empty case:
-        if the bridge's ``ToolCallBufferManager`` is broken, tool calls will
-        be silently dropped and the list will be empty even though the model
-        made a call. An empty list with no stream content fails because that
-        indicates both the call and the text response were dropped.
+    def test_huggingface_buffer_manager_assembles_fragmented_tool_call(self) -> None:
+        """ToolCallBufferManager must reassemble a split OpenAI-style tool call.
 
-        Args:
-            huggingface_provider: Connected HuggingFace provider fixture.
+        Replays the per-chunk deltas that
+        :meth:`HuggingFaceProvider._consume_stream_chunks` forwards into
+        :class:`ToolCallBufferManager` for a real HuggingFace SSE tool-call
+        stream: the ``id`` and function ``name`` arrive on the first frame,
+        and the JSON ``arguments`` string is split across four subsequent
+        frames. The independent oracle is the hand-assembled argument JSON
+        decoded by ``json.loads`` from the concatenated fragments; after
+        ``finalize()`` the single :class:`ToolCall` must carry that exact ``id``,
+        ``function_name`` (``binary.get_file_size``), prefix-derived
+        ``tool_name`` (``binary``), and the parsed ``path`` argument. A
+        regression in delta concatenation (dropping or reordering argument
+        fragments) or in id/name capture diverges from the oracle and fails.
         """
-        model_id = "meta-llama/Llama-3.1-8B-Instruct"
-        available_models = await huggingface_provider.list_models()
-        model_info = next((m for m in available_models if m.id == model_id), None)
-        if model_info is not None and not model_info.supports_tools:
-            pytest.skip(f"Model {model_id!r} does not advertise tool support in current environment")
+        buffer = ToolCallBufferManager()
+        arg_fragments = ['{"path": "C:', "\\\\Windows", "\\\\notepad", '.exe"}']
+        buffer.accumulate(index=0, call_id="call_hf_001", name="binary.get_file_size", arguments=None)
+        for fragment in arg_fragments:
+            buffer.accumulate(index=0, call_id=None, name=None, arguments=fragment)
 
-        tools = _make_test_tool()
-        messages = _make_messages(
-            "Use the binary.get_file_size tool on C:\\Windows\\notepad.exe and tell me the size.",
-        )
+        finalized = buffer.finalize()
 
-        chunks: list[str] = [
-            chunk
-            async for chunk in huggingface_provider.chat_stream(
-                messages=messages,
-                model=model_id,
-                tools=tools,
-                max_tokens=1024,
-            )
-        ]
+        expected_arguments: dict[str, str] = json.loads("".join(arg_fragments))
+        assert len(finalized) == 1
+        call = finalized[0]
+        assert isinstance(call, ToolCall)
+        assert call.id == "call_hf_001"
+        assert call.function_name == "binary.get_file_size"
+        assert call.tool_name == "binary"
+        assert call.arguments == expected_arguments
+        assert call.arguments["path"] == "C:\\Windows\\notepad.exe"
+        assert not buffer.finalize()
 
-        pending = huggingface_provider.get_pending_tool_calls()
+    def test_ollama_native_stream_assembler_reconstructs_tool_call(self) -> None:
+        """Ollama native stream assembler must merge fragmented tool-call deltas.
 
-        if pending:
-            assert len(pending) >= 1
-            call = pending[0]
-            assert isinstance(call, ToolCall)
-            assert call.function_name == "binary.get_file_size", (
-                f"Expected function_name 'binary.get_file_size', got {call.function_name!r}"
-            )
-            assert call.tool_name == "binary", f"Expected tool_name 'binary', got {call.tool_name!r}"
-            assert len(call.id) > 0, "ToolCall id must be non-empty"
-            assert "path" in call.arguments, f"Expected 'path' argument in ToolCall.arguments, got {call.arguments!r}"
-            path_arg = call.arguments["path"]
-            assert isinstance(path_arg, str), f"Expected 'path' argument to be str, got {type(path_arg).__name__}"
-            assert len(path_arg) > 0, "ToolCall 'path' argument must be non-empty"
-        else:
-            total_content = "".join(chunks)
-            assert len(total_content) > 0, (
-                "Both pending tool calls and stream content are empty: the streaming bridge dropped the model's complete response"
-            )
-
-    async def test_ollama_stream_with_tools_returns_tool_calls(
-        self,
-        ollama_provider: OllamaProvider,
-    ) -> None:
-        """Ollama stream must capture tool calls via the non-streaming fallback path.
-
-        Drives the real connected Ollama provider with a streaming call that
-        explicitly requests use of ``binary.get_file_size``. Ollama's streaming
-        path falls back to a non-streaming round-trip when tools are present;
-        after that completes, ``get_pending_tool_calls()`` must return either a
-        non-empty list of correctly-structured :class:`ToolCall` objects (when
-        the model elected to call the tool) or an empty list accompanied by
-        non-empty stream chunks (when the model answered in free text instead).
-        When the locally installed ``llama3.2`` model does not advertise tool
-        support, the test skips rather than asserting a capability the model
-        cannot provide.
-
-        Args:
-            ollama_provider: Connected Ollama provider fixture.
+        Replays the ``message`` dicts that the local NDJSON ``/api/chat``
+        stream emits, feeding each through
+        :meth:`OllamaProvider._accumulate_native_tool_call_deltas` exactly as
+        :meth:`OllamaProvider._iter_native_stream_chunks` does, then finalises
+        with :meth:`OllamaProvider._finalize_native_tool_calls`. The function
+        name lands on the first delta and the JSON ``arguments`` string is
+        split across later deltas. The independent oracle is the JSON decoded
+        by ``json.loads`` from the concatenated fragments; the single
+        reconstructed :class:`ToolCall` must carry that exact
+        ``function_name`` (``binary.get_file_size``), prefix-derived
+        ``tool_name`` (``binary``), and parsed ``path`` argument. A regression
+        that stops concatenating argument fragments or loses the call diverges
+        from the oracle and fails.
         """
-        model_id = "local/llama3.2"
-        available_models = await ollama_provider.list_models()
-        model_info = next((m for m in available_models if m.id == model_id), None)
-        if model_info is None:
-            pytest.skip(f"Model {model_id!r} not installed in local Ollama instance")
-        if not model_info.supports_tools:
-            pytest.skip(f"Model {model_id!r} does not advertise tool support; cannot verify tool-call capture")
+        provider = OllamaProvider()
+        accumulate: AccumulateDeltas = getattr(provider, "_accumulate_native_tool_call_deltas")
+        finalize: FinalizeNativeToolCalls = getattr(provider, "_finalize_native_tool_calls")
 
-        tools = _make_test_tool()
-        messages = _make_messages(
-            "Use binary.get_file_size to get the size of C:\\Windows\\notepad.exe",
-        )
-
-        chunks: list[str] = [
-            chunk
-            async for chunk in ollama_provider.chat_stream(
-                messages=messages,
-                model=model_id,
-                tools=tools,
-                max_tokens=1024,
-            )
+        accumulated: dict[str, dict[str, Any]] = {}
+        order: list[str] = []
+        arg_fragments = ['{"path": "C:', "\\\\Windows\\\\", "notepad.exe", '"}']
+        deltas: list[dict[str, Any]] = [
+            {"tool_calls": [{"id": "call_ollama_0", "function": {"name": "binary.get_file_size", "arguments": ""}}]},
+            *[{"tool_calls": [{"id": "call_ollama_0", "function": {"arguments": fragment}}]} for fragment in arg_fragments],
         ]
+        for message_obj in deltas:
+            accumulate(message_obj, accumulated, order)
 
-        pending = ollama_provider.get_pending_tool_calls()
+        finalized = finalize(accumulated, order)
 
-        if pending:
-            assert len(pending) >= 1
-            call = pending[0]
-            assert isinstance(call, ToolCall)
-            assert call.function_name == "binary.get_file_size", (
-                f"Expected function_name 'binary.get_file_size', got {call.function_name!r}"
-            )
-            assert call.tool_name == "binary", f"Expected tool_name 'binary', got {call.tool_name!r}"
-            assert len(call.id) > 0, "ToolCall id must be non-empty"
-            assert "path" in call.arguments, f"Expected 'path' argument in ToolCall.arguments, got {call.arguments!r}"
-            path_arg = call.arguments["path"]
-            assert isinstance(path_arg, str), f"Expected 'path' argument to be str, got {type(path_arg).__name__}"
-            assert len(path_arg) > 0, "ToolCall 'path' argument must be non-empty"
-        else:
-            total_content = "".join(chunks)
-            assert len(total_content) > 0, (
-                "Both pending tool calls and stream content are empty: the streaming bridge dropped the model's complete response"
-            )
+        expected_arguments: dict[str, str] = json.loads("".join(arg_fragments))
+        assert len(finalized) == 1
+        call = finalized[0]
+        assert isinstance(call, ToolCall)
+        assert call.id == "call_ollama_0"
+        assert call.function_name == "binary.get_file_size"
+        assert call.tool_name == "binary"
+        assert call.arguments == expected_arguments
+        assert call.arguments["path"] == "C:\\Windows\\notepad.exe"
 
 
 class TestAccurateToolSupport:
@@ -415,7 +460,19 @@ class TestAccurateToolSupport:
         self,
         ollama_provider: OllamaProvider,
     ) -> None:
-        """Ollama model list should have varying supports_tools values.
+        """Ollama ``supports_tools`` must match the model's own template directive.
+
+        The Ollama bridge derives ``supports_tools`` for each local model by
+        querying ``/api/show`` and searching the model's chat template for the
+        ``{{ .Tools }}`` directive (a model only honours tool definitions when
+        its template renders them). This test independently re-derives the
+        expected flag for every installed model: it fetches the same
+        ``/api/show`` payload via :meth:`OllamaProvider.show_model` and applies
+        the template-directive contract itself, then asserts the bridge's
+        ``supports_tools`` equals that independent value. A bridge that
+        hardcoded ``supports_tools`` (all-True, all-False, or a constant) or
+        broke the template detection would diverge from the recomputed oracle
+        and fail.
 
         Args:
             ollama_provider: Connected Ollama provider fixture.
@@ -424,8 +481,23 @@ class TestAccurateToolSupport:
         if not models:
             pytest.skip("No Ollama models installed locally")
 
-        tool_support_values = {m.supports_tools for m in models}
-        assert isinstance(tool_support_values, set)
+        tools_directive = re.compile(r"\{\{-?\s*\.Tools\s*-?\}\}")
+        checked_local = False
+        for model in models:
+            if not model.id.startswith("local/"):
+                continue
+            checked_local = True
+            show = await ollama_provider.show_model(model.id)
+            template = show.get("template", "")
+            expected_supports_tools = tools_directive.search(template) is not None
+            assert model.supports_tools == expected_supports_tools, (
+                f"Model {model.id!r} reported supports_tools={model.supports_tools} "
+                f"but its /api/show template {'contains' if expected_supports_tools else 'lacks'} "
+                f"the .Tools directive (expected supports_tools={expected_supports_tools})"
+            )
+
+        if not checked_local:
+            pytest.skip("No local Ollama models installed to verify tool-support derivation")
 
     async def test_openrouter_models_report_accurate_tool_support(
         self,

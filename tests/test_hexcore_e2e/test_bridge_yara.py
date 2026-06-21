@@ -77,13 +77,23 @@ class TestBridgeYaraScan:
     """Tests covering YARA scanning of document data via inline rule source."""
 
     def test_yara_scan_returns_list(self, loaded_bridge: HexEditorBridge) -> None:
-        """Verify that yara_scan returns a list.
+        """Verify that yara_scan returns a list with the MZHeader match at offset zero.
+
+        The PE fixture starts with bytes 0x4D 0x5A (ASCII 'MZ'). The YARA rule
+        uses condition ``$mz at 0``, so exactly one rule must match and the
+        string hit must be at byte offset 0. The oracle is the PE specification:
+        the DOS MZ signature is always at offset 0.
 
         Args:
             loaded_bridge: Bridge with a PE file already loaded.
         """
         results: list[dict[str, Any]] = _run(loaded_bridge.yara_scan(_MZ_YARA_RULE))
         assert isinstance(results, list)
+        assert len(results) == 1, f"expected exactly one MZHeader match, got {len(results)}"
+        assert results[0]["rule"] == "MZHeader"
+        strings: list[dict[str, Any]] = results[0]["strings"]
+        assert strings, "expected at least one string match from $mz"
+        assert strings[0]["offset"] == 0, f"MZ bytes must be at offset 0, got {strings[0]['offset']}"
 
     def test_yara_scan_mz_rule_matches_pe_file(self, loaded_bridge: HexEditorBridge) -> None:
         """Verify that the MZ header rule returns at least one match on a PE file.

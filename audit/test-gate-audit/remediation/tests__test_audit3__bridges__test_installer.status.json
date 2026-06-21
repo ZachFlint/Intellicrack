@@ -1,0 +1,48 @@
+{
+ "file": "tests/test_audit3/bridges/test_installer.py",
+ "review_overall": "pass",
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_audit3/bridges/test_installer.py::TestPEVersionForGUITools::test_get_version_x64dbg_uses_pe_when_available",
+   "severity": "HIGH",
+   "category": "N7 (accepts-both-outcomes)",
+   "action": "hardened",
+   "oracle": "pefile \u2014 independently opens the same PE copy (system notepad.exe/cmd.exe) with pefile.PE, walks FileInfo.StringTable.entries for FileVersion/ProductVersion, falls back to VS_FIXEDFILEINFO MS/LS fields, parses via ToolInstallerVersion.parse; the resulting (major, minor, patch) triple is the independent expected value",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/installer.py",
+    "mutation": "if raw := _read_pe_version_info(exe_path): -> if raw := None:",
+    "covering_test": "tests/test_audit3/bridges/test_installer.py::TestPEVersionForGUITools::test_get_version_x64dbg_uses_pe_when_available",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_audit3/bridges/test_installer.py::TestProgressLoggingPerMB::test_progress_threshold_is_per_megabyte",
+   "severity": "MEDIUM",
+   "category": "N6 (vacuously-satisfiable range)",
+   "action": "hardened",
+   "oracle": "arithmetic \u2014 300 chunks \u00d7 8192 bytes = 2,457,600 bytes total; 1 MiB threshold = 1,048,576 bytes; chunks_per_mb = 1,048,576 // 8192 = 128; expected_event_count = 300 // 128 = 2. The production _copy_response_chunks resets bytes_since_last_log to 0 each time it crosses _ONE_MB, firing exactly at chunk 128 (1,048,576 bytes downloaded) and chunk 256 (2,097,152 bytes downloaded).",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/installer.py",
+    "mutation": "if total > 0 and bytes_since_last_log >= _ONE_MB: -> if total > 0 and bytes_since_last_log >= _ONE_MB // 2:",
+    "covering_test": "tests/test_audit3/bridges/test_installer.py::TestProgressLoggingPerMB::test_progress_threshold_is_per_megabyte",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 2
+}

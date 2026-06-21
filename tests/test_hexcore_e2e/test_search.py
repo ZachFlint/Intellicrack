@@ -9,8 +9,6 @@ import math
 import struct
 from typing import TYPE_CHECKING
 
-import pytest
-
 
 if TYPE_CHECKING:
     import types
@@ -99,20 +97,23 @@ class TestSearchHex:
     def test_wildcard_byte_matches_pe_header_sequence(self, hexcore: types.ModuleType, pe_bytes: bytes) -> None:
         """Verify that a hex pattern with a wildcard byte matches the MZ header sequence.
 
-        The PE header constructed by conftest starts 4D 5A 90 00 so the pattern
-        "4D ?? 90" must match at offset 0.
+        The PE header constructed by conftest stores 0x4D at offset 0, 0x5A at
+        offset 1, and 0x90 at offset 2.  The pattern "4D ?? 90" pins the first and
+        third bytes exactly and wildcards the middle byte, so it must produce exactly
+        one match starting at offset 0 with a matched-region length of 3 bytes.
 
         Args:
             hexcore: The native module fixture.
             pe_bytes: Minimal PE binary bytes.
         """
+        assert pe_bytes[0] == 0x4D
+        assert pe_bytes[1] == 0x5A
+        assert pe_bytes[2] == 0x90
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
-        try:
-            results: list[tuple[int, int]] = doc.search_hex("4D ?? 90", 100)
-        except (RuntimeError, ValueError):
-            pytest.skip("wildcard hex search not supported by this build")
-        assert results
+        results: list[tuple[int, int]] = doc.search_hex("4D ?? 90", 100)
+        assert len(results) >= 1
         assert results[0][0] == 0
+        assert results[0][1] == 3
 
     def test_no_match_returns_empty(self, hexcore: types.ModuleType) -> None:
         """Verify that search_hex returns an empty list when the pattern is absent.

@@ -8,7 +8,7 @@
 These tests require a valid OPENROUTER_API_KEY in the .env file.
 Tests will be skipped if credentials are not available.
 
-All tests use LIVE API calls - NO hardcoded model names.
+All tests use LIVE API calls against the real OpenRouter API.
 """
 
 from __future__ import annotations
@@ -16,19 +16,100 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
+import pytest_asyncio
 
 
 if TYPE_CHECKING:
-    from intellicrack.credentials.store import CredentialLoader
+    from collections.abc import AsyncGenerator
+
+    from intellicrack.credentials.env_loader import CredentialLoader
 
 from intellicrack.core.types import (
     AuthenticationError,
-    ModelInfo,
     ProviderCredentials,
     ProviderError,
     ProviderName,
 )
 from intellicrack.providers.openrouter import OpenRouterProvider
+
+
+_NETWORK_OFFLINE_SIGNALS: tuple[str, ...] = (
+    "getaddrinfo",
+    "name or service not known",
+    "network is unreachable",
+    "connection refused",
+    "nodename nor servname provided",
+    "temporary failure in name resolution",
+    "failed to establish a new connection",
+    "connection timed out",
+)
+
+
+def _is_network_offline_error(exc: BaseException) -> bool:
+    """Return True when an exception chain signals a DNS or network-down failure.
+
+    Walks the ``__cause__`` / ``__context__`` chain of a provider failure and
+    tests each stringified exception against :data:`_NETWORK_OFFLINE_SIGNALS`.
+    This distinguishes transient connectivity absences (sandbox ``network=none``,
+    no internet) from genuine Intellicrack defects.
+
+    Args:
+        exc: The exception raised by a provider connection attempt.
+
+    Returns:
+        bool: ``True`` when at least one network-offline signal is found in
+        the exception chain; ``False`` otherwise.
+    """
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        text = str(current).lower()
+        if any(signal in text for signal in _NETWORK_OFFLINE_SIGNALS):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
+
+
+@pytest_asyncio.fixture
+async def openrouter_provider(
+    credential_loader: CredentialLoader,
+    *,
+    has_openrouter_key: bool,
+) -> AsyncGenerator[OpenRouterProvider]:
+    """Get a connected OpenRouter provider instance.
+
+    Skips when ``OPENROUTER_API_KEY`` is absent or when the sandbox runs
+    without network access (``network=none``).  Automatically disconnects
+    after test completion.
+
+    Args:
+        credential_loader: The credential loader instance.
+        has_openrouter_key: Whether an OpenRouter API key is configured.
+
+    Yields:
+        AsyncGenerator[OpenRouterProvider]: A connected OpenRouterProvider instance.
+
+    Raises:
+        ProviderError: Re-raised when the connection failure is not due to network
+            being offline.
+    """
+    if not has_openrouter_key:
+        pytest.skip("OPENROUTER_API_KEY not configured in .env")
+
+    provider = OpenRouterProvider()
+    credentials = credential_loader.get_credentials(ProviderName.OPENROUTER)
+    assert credentials is not None, "Expected credentials after validation"
+
+    try:
+        await provider.connect(credentials)
+    except ProviderError as exc:
+        if _is_network_offline_error(exc):
+            pytest.skip(f"OpenRouter unreachable (no network): {exc}")
+        raise
+
+    yield provider
+    await provider.disconnect()
 
 
 _MIN_OPENROUTER_MODELS = 10
@@ -40,7 +121,7 @@ class TestOpenRouterModelListing:
     """Tests for OpenRouter model listing functionality.
 
     These tests validate that OpenRouterProvider can dynamically fetch
-    models from the OpenRouter API. NO hardcoded model names are used.
+    models from the OpenRouter API and correctly parse their fields.
     """
 
     @pytest.mark.asyncio
@@ -77,18 +158,42 @@ class TestOpenRouterModelListing:
 
     @pytest.mark.asyncio
     @staticmethod
-    async def test_list_models_returns_model_info_instances(
+    async def test_known_model_present_with_correct_fields(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
-        """Test all returned items are ModelInfo instances.
+        """Test that a known model is present with correct parsed fields.
+
+        Asserts that ``openai/gpt-4o-mini`` appears in the listing and that the
+        bridge correctly sets provider, streaming support, tool support, and a
+        positive context window.  ``supports_streaming`` is always ``True``
+        because OpenRouter routes every model through its streaming proxy;
+        ``supports_tools`` is ``True`` for gpt-family models either from the
+        ``supported_parameters`` field or the family-name fallback in
+        ``_build_model_info``.  These values are derived from the API response
+        and the bridge's parsing logic, not injected by this test.
 
         Args:
             openrouter_provider: Connected OpenRouter provider fixture.
         """
         models = await openrouter_provider.list_models()
 
-        for model in models[:_SAMPLE_MODEL_LIMIT]:
-            assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
+        known_id = "openai/gpt-4o-mini"
+        matching = [m for m in models if m.id == known_id]
+        assert matching, f"Expected to find '{known_id}' in OpenRouter model listing, got {[m.id for m in models[:10]]}"
+
+        model = matching[0]
+        assert model.provider == ProviderName.OPENROUTER, (
+            f"Expected provider OPENROUTER, got {model.provider}"
+        )
+        assert model.supports_tools is True, (
+            f"Expected {known_id} to have supports_tools=True (gpt-family + documented tool support)"
+        )
+        assert model.supports_streaming is True, (
+            f"Expected {known_id} to have supports_streaming=True (OpenRouter universal streaming)"
+        )
+        assert model.context_window > 0, (
+            f"Expected {known_id} to have positive context_window, got {model.context_window}"
+        )
 
     @pytest.mark.asyncio
     @staticmethod
@@ -124,21 +229,6 @@ class TestOpenRouterModelListing:
 
     @pytest.mark.asyncio
     @staticmethod
-    async def test_model_info_has_correct_provider(
-        openrouter_provider: OpenRouterProvider,
-    ) -> None:
-        """Test all models report OPENROUTER as provider.
-
-        Args:
-            openrouter_provider: Connected OpenRouter provider fixture.
-        """
-        models = await openrouter_provider.list_models()
-
-        for model in models[:_SAMPLE_MODEL_LIMIT]:
-            assert model.provider == ProviderName.OPENROUTER, f"Expected OPENROUTER provider, got {model.provider}"
-
-    @pytest.mark.asyncio
-    @staticmethod
     async def test_model_info_has_positive_context_window(
         openrouter_provider: OpenRouterProvider,
     ) -> None:
@@ -152,23 +242,6 @@ class TestOpenRouterModelListing:
         for model in models[:_SAMPLE_MODEL_LIMIT]:
             assert isinstance(model.context_window, int), f"Expected int context_window, got {type(model.context_window)}"
             assert model.context_window > 0, f"Model {model.id} has invalid context_window: {model.context_window}"
-
-    @pytest.mark.asyncio
-    @staticmethod
-    async def test_model_info_has_boolean_capabilities(
-        openrouter_provider: OpenRouterProvider,
-    ) -> None:
-        """Test all models have boolean capability flags.
-
-        Args:
-            openrouter_provider: Connected OpenRouter provider fixture.
-        """
-        models = await openrouter_provider.list_models()
-
-        for model in models[:_SAMPLE_MODEL_LIMIT]:
-            assert isinstance(model.supports_tools, bool), f"Expected bool supports_tools, got {type(model.supports_tools)}"
-            assert isinstance(model.supports_vision, bool), f"Expected bool supports_vision, got {type(model.supports_vision)}"
-            assert isinstance(model.supports_streaming, bool), f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
 
     @pytest.mark.asyncio
     @staticmethod

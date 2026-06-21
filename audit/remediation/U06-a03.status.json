@@ -1,1 +1,23 @@
-{"unitId":"U06-a03","findings":[{"ref":"tests/test_providers/test_providers_local_audit1.py:218 - test_f0001_b580_device_ids_constant_drives_detection","severity":"Critical","status":"FIXED","oracle":"Drives real production _is_b580_device(name,id) with name 'Generic GPU' (no 'b580' substring) so the verdict depends solely on the device-ID path. Positive oracle = the four independently-documented Intel Arc B580 PCI device-ID spellings of 0xE20B; negative oracle = real adjacent/foreign IDs (Battlemage 0xE20C, NVIDIA RTX 4090 0x2684, AMD RX6700XT 0x73DF, empty/garbage/'e20'). Asserts each B580 alias returns True and every non-B580 id returns False, making the test go RED if the matcher regressed to substring/any-id matching or wrong constant membership."}],"filesModified":["tests/test_providers/test_providers_local_audit1.py"],"checks":{"ruff":true,"ruffFormat":true,"basedpyright":true,"pydoclint":true,"pydocstyle":true,"pytest":true},"pytestSummary":"16 passed in 1.54s"}
+{
+  "unitId": "U06-a03",
+  "findings": [
+    {
+      "ref": "tests/test_providers/test_providers_local_audit1.py:218 - test_f0001_b580_device_ids_constant_drives_detection",
+      "severity": "Critical",
+      "status": "FIXED",
+      "oracle": "Drives real production _is_b580_device(name,id) with name 'Generic GPU' (no 'b580' substring) so the verdict depends solely on the device-ID path. Positive oracle = the four independently-documented Intel Arc B580 PCI device-ID spellings of 0xE20B; negative oracle = real adjacent/foreign IDs (Battlemage 0xE20C, NVIDIA RTX 4090 0x2684, AMD RX6700XT 0x73DF, empty/garbage/'e20'). Asserts each B580 alias returns True and every non-B580 id returns False, making the test go RED if the matcher regressed to substring/any-id matching or wrong constant membership."
+    }
+  ],
+  "filesModified": [
+    "tests/test_providers/test_providers_local_audit1.py"
+  ],
+  "checks": {
+    "ruff": true,
+    "ruffFormat": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true,
+    "pytest": true
+  },
+  "pytestSummary": "16 passed in 1.54s"
+}

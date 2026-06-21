@@ -1,0 +1,116 @@
+{
+ "file": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_anti_evasion_profile_drives_real_smbios_argv",
+   "severity": "MEDIUM",
+   "category": "N6/N10",
+   "action": "hardened",
+   "oracle": "Documented _anti_evasion_identity mapping (workstation -> Dell Inc./OptiPlex 7090; default -> HP), cross-checked against the real -smbios argv produced by _build_qemu_command",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "mutation": "return (\"Dell Inc.\", \"OptiPlex 7090\") -> return (\"HP\", \"OptiPlex 7090\")",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_anti_evasion_profile_drives_real_smbios_argv",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_laptop_profile_emits_laptop_specific_smbios_argv",
+   "severity": "MEDIUM",
+   "category": "N10",
+   "action": "hardened",
+   "oracle": "Documented laptop identity (Lenovo/ThinkPad T14 Gen 3) plus SMBIOS spec chassis-type=10 for laptop and the laptop board product 21AHS00000, checked against the real -smbios argv from _build_qemu_command",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "mutation": "return (\"Lenovo\", \"ThinkPad T14 Gen 3\") -> return (\"HP\", \"HP EliteDesk 800 G6\")",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_laptop_profile_emits_laptop_specific_smbios_argv",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0028YaraScanFallback::test_yara_scan_scans_zip_artifacts_when_present",
+   "severity": "MEDIUM",
+   "category": "N6",
+   "action": "hardened",
+   "oracle": "The artifact.bin file the test placed into the dropped-files zip is the independent oracle for which file must be scanned; path containment check against shared/input",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "mutation": "output_dir.glob(\"dropped_files_*.zip\") -> output_dir.glob(\"no_such_dropped_files_*.zip\")",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0028YaraScanFallback::test_yara_scan_scans_zip_artifacts_when_present",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_windows_startup_script_wires_agent",
+   "severity": "MEDIUM",
+   "category": "N8",
+   "action": "hardened",
+   "oracle": "The production-fixed startup wiring contract: start_agent.cmd must launch powershell.exe targeting agent.ps1 (hand-decoded from _create_guest_agent_script's documented behavior)",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "mutation": "-File \"Z:\\\\monitor\\\\agent.ps1\" -> -File \"Z:\\\\monitor\\\\unwired.ps1\"",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_windows_startup_script_wires_agent",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_linux_startup_script_wires_agent",
+   "severity": "MEDIUM",
+   "category": "N8",
+   "action": "hardened",
+   "oracle": "The startup wiring contract: start_agent.sh must invoke python3 against agent.py (hand-decoded from _create_guest_agent_script's documented behavior)",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "mutation": "python3 /mnt/shared/monitor/agent.py & -> python3 /mnt/shared/monitor/unwired.py &",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_linux_startup_script_wires_agent",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  },
+  {
+   "test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0009AgentScriptNoPsUsing::test_windows_agent_script_binds_and_reads_log_path_via_messagedata",
+   "severity": "LOW",
+   "category": "N7-adjacent",
+   "action": "hardened",
+   "oracle": "PowerShell Register-ObjectEvent semantics: -MessageData binds a value reachable only as $Event.MessageData inside the -Action block; both halves of that contract verified against the produced script source",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/qemu.py",
+    "mutation": "Register-ObjectEvent $watcher 'Created' -MessageData $fileLog -Action { -> Register-ObjectEvent $watcher 'Created' -Action {",
+    "covering_test": "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0009AgentScriptNoPsUsing::test_windows_agent_script_binds_and_reads_log_path_via_messagedata",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 6
+}

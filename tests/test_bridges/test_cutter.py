@@ -37,6 +37,7 @@ import pytest
 import r2pipe
 
 from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.bridges.schemas import is_recognized_type, normalize_type
 from intellicrack.core.types import ToolError, ToolName
 from intellicrack.ui.panels.cutter_panel import perm_to_rwx
 
@@ -529,21 +530,20 @@ class TestToolDefinition:
         for func in td.functions:
             assert len(func.description) > _MIN_DESC_LEN, f"{func.name} description too short"
 
-    def test_all_functions_resolve_to_methods(self, bridge: CutterBridge) -> None:
-        """Verify every tool_def function name maps to a callable method.
+    def test_all_function_parameters_have_recognized_types(self, bridge: CutterBridge) -> None:
+        """Verify every tool-function parameter declares a recognized schema type.
 
-        Args:
-            bridge: CutterBridge fixture.
-        """
-        td = bridge.tool_definition
-        for func in td.functions:
-            method_name = func.name.replace("cutter.", "")
-            method = getattr(bridge, method_name, None)
-            assert method is not None, f"Missing method: {method_name}"
-            assert callable(method), f"Not callable: {method_name}"
-
-    def test_all_function_parameters_have_types(self, bridge: CutterBridge) -> None:
-        """Verify tool function parameters have type specifications.
+        A non-empty ``type`` string is insufficient: a parameter advertised
+        with an unrecognized type (a parameterized generic, an optional union,
+        or an arbitrary class name) cannot be serialized into a JSON Schema for
+        LLM providers without information loss. This gate recomputes the
+        validity of each declared type with the production
+        :func:`is_recognized_type` oracle from :mod:`intellicrack.bridges.schemas`
+        -- the same predicate the schema builder uses -- so a malformed type
+        string fails here rather than silently degrading at provider-serialization
+        time. Array parameters additionally have their ``items_type`` validated,
+        since strict providers reject array element schemas with unrecognized
+        element types.
 
         Args:
             bridge: CutterBridge fixture.
@@ -552,6 +552,11 @@ class TestToolDefinition:
         for func in td.functions:
             for param in func.parameters:
                 assert param.type, f"Param {param.name} in {func.name} has no type"
+                assert is_recognized_type(param.type), f"Param {param.name} in {func.name} has unrecognized type {param.type!r}"
+                if normalize_type(param.type) == "array":
+                    assert is_recognized_type(param.items_type), (
+                        f"Array param {param.name} in {func.name} has unrecognized items_type {param.items_type!r}"
+                    )
 
     def test_parameter_names_match_method_signatures(self, bridge: CutterBridge) -> None:
         """Verify tool_def parameter names match the Python method parameters.

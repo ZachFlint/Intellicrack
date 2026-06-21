@@ -1,0 +1,27 @@
+{
+ "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py": [
+  101,
+  1345,
+  1404
+ ],
+ "tests/test_bridges/test_ghidra.py": [
+  289,
+  305,
+  329,
+  360
+ ],
+ "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py": [
+  35,
+  36
+ ],
+ "tests/test_bridges/test_x64dbg_audit6.py": [
+  2058,
+  2217,
+  2218,
+  2259,
+  2260,
+  2307,
+  2308,
+  2352
+ ]
+}

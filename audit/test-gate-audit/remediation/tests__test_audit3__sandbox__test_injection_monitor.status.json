@@ -1,0 +1,48 @@
+{
+ "file": "tests/test_audit3/sandbox/test_injection_monitor.py",
+ "review_overall": null,
+ "lint": {
+  "ruff": true,
+  "basedpyright": true,
+  "pydoclint": true,
+  "pydocstyle": true
+ },
+ "findings_addressed": [
+  {
+   "test": "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_does_not_label_normal_thread_starts_as_shellcode_injection",
+   "severity": "HIGH",
+   "category": "N6 vacuously-satisfiable conditional",
+   "action": "hardened",
+   "oracle": "The production injection_monitor.ps1 write_injection_record format (pipe-delimited: timestamp|src_pid|src_name|inj_pid|inj_name|inj_type|api_calls) as the independent oracle; the inj_type field (index 5) is asserted to never equal the string shellcode_injection. The asserting test now requires a non-empty all_records list before iterating, eliminating the vacuous path.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/scripts/injection_monitor.ps1",
+    "mutation": "$injType = 'remote_thread_outside_modules' -> $injType = 'shellcode_injection'",
+    "covering_test": "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_does_not_label_normal_thread_starts_as_shellcode_injection",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "pass",
+    "proven_falsifiable": "no"
+   }
+  },
+  {
+   "test": "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_emits_threat_intel_unavailable_warning_when_not_admin",
+   "severity": "HIGH",
+   "category": "N6 guarded no-op",
+   "action": "hardened",
+   "oracle": "The production script's outer catch block (lines 490-497 of injection_monitor.ps1) unconditionally calls throw after writing the trace_session_failed diagnostic, guaranteeing a non-zero exit on any session failure. The outer catch also calls Write-InjectionDiagnostic before throwing, guaranteeing the diag file is created. On the TraceEvent-missing path (lines 127-134) the diag file is also written before throw. Either path guarantees: (a) returncode != 0, (b) diag file exists, (c) at least one timestamp|category|detail record in the diag file.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/sandbox/scripts/injection_monitor.ps1",
+    "mutation": "    Write-InjectionDiagnostic -Timestamp $ts -Category 'trace_session_failed' -Detail $_.Exception.Message\n    throw ->     Write-InjectionDiagnostic -Timestamp $ts -Category 'trace_session_failed' -Detail $_.Exception.Message",
+    "covering_test": "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_emits_threat_intel_unavailable_warning_when_not_admin",
+    "expected_baseline": "green",
+    "green_status": "skip",
+    "mutation_result": "not-green",
+    "proven_falsifiable": "skipped"
+   }
+  }
+ ],
+ "production_defects": [],
+ "n_mutations": 2
+}

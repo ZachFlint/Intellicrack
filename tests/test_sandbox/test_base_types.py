@@ -288,22 +288,6 @@ class TestExecutionReport:
         assert report.exit_code == 1
         assert len(report.file_changes) == 1
 
-    def test_new_fields_present(self) -> None:
-        """New fields (service_changes, kernel_objects, etc.) are accessible."""
-        report = ExecutionReport(
-            result="success",
-            exit_code=0,
-            stdout="",
-            stderr="",
-            duration_seconds=0.0,
-        )
-        assert hasattr(report, "service_changes")
-        assert hasattr(report, "kernel_objects")
-        assert hasattr(report, "dll_loads")
-        assert hasattr(report, "injection_events")
-        assert hasattr(report, "resource_samples")
-        assert hasattr(report, "clipboard_events")
-
     def test_backward_compatible_minimal(self) -> None:
         """Minimal construction (original fields only) still works."""
         report = ExecutionReport(

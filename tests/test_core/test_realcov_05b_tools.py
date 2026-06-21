@@ -37,7 +37,7 @@ import pytest_asyncio
 from intellicrack.bridges.hex_editor import HexEditorBridge
 from intellicrack.core.session import Session
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ProviderName, ToolError, ToolName
+from intellicrack.core.types import BreakpointInfo, ProviderName, ToolError, ToolName
 
 
 if TYPE_CHECKING:
@@ -170,13 +170,28 @@ class TestExecuteToolCallRealDispatch:
     async def test_tool_name_is_case_insensitive(
         initialized_registry: ToolRegistry,
     ) -> None:
-        """An uppercase tool name resolves to the registered bridge.
+        """Uppercase and lowercase tool names both route to the same bridge.
+
+        The registry lower-cases the caller-supplied name before resolving it
+        to a ``ToolName`` enum value, so ``"X64DBG"`` must reach the same
+        ``X64DbgBridge`` instance as ``"x64dbg"``.  Falsifiability oracle:
+        call the bridge directly and assert both dispatch results equal it.
 
         Args:
             initialized_registry: Fully initialized real ToolRegistry.
         """
-        result = await initialized_registry.execute_tool_call("X64DBG", "get_breakpoints", {})
-        assert isinstance(result, list)
+        bridge = initialized_registry.get_x64dbg_bridge()
+        oracle: list[BreakpointInfo] = await bridge.get_breakpoints()
+
+        result_upper: object = await initialized_registry.execute_tool_call("X64DBG", "get_breakpoints", {})
+        result_lower: object = await initialized_registry.execute_tool_call("x64dbg", "get_breakpoints", {})
+
+        assert result_upper == oracle, (
+            f"'X64DBG' dispatch returned {result_upper!r}, expected oracle {oracle!r}"
+        )
+        assert result_lower == oracle, (
+            f"'x64dbg' dispatch returned {result_lower!r}, expected oracle {oracle!r}"
+        )
 
 
 class TestExecuteToolCallCapabilityGate:

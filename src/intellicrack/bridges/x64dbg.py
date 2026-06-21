@@ -10,6 +10,7 @@ This module provides integration with x64dbg for dynamic analysis, debugging, an
 from __future__ import annotations
 
 import asyncio
+import functools
 import math
 import os
 import re
@@ -415,9 +416,7 @@ def _coerce_address(value: object) -> int | None:
     return None
 
 
-_win32_apis_configured: bool = False
-
-
+@functools.cache
 def _configure_win32_apis() -> None:
     """Configure ``restype``/``argtypes`` for every Win32 API used by this bridge.
 
@@ -425,10 +424,10 @@ def _configure_win32_apis() -> None:
     ``HANDLE`` pointers on 64-bit Python and corrupts subsequent ``ReadProcessMemory`` / ``CloseHandle`` / ``VirtualQueryEx`` calls.
     Centralising the declarations guarantees they are configured exactly once and that every call site sees consistent signatures.
 
-    The function is idempotent and a no-op on non-Windows platforms.
+    The ``functools.cache`` wrapper makes the body run at most once per process;
+    the function is a no-op on non-Windows platforms.
     """
-    global _win32_apis_configured
-    if _win32_apis_configured or not _IS_WIN32:
+    if not _IS_WIN32:
         return
 
     kernel32 = ctypes.windll.kernel32
@@ -539,8 +538,6 @@ def _configure_win32_apis() -> None:
     if wow64_get_ctx is not None:
         wow64_get_ctx.restype = wintypes.BOOL
         wow64_get_ctx.argtypes = [wintypes.HANDLE, ctypes.c_void_p]
-
-    _win32_apis_configured = True
 
 
 if _IS_WIN32:
@@ -786,9 +783,6 @@ class _X64DbgBridgeBase(DebuggerBridge):
         STEP_TIMEOUT_SECONDS: Maximum seconds to wait for the plugin's
             paused-event reply before a step coroutine times out (the
             audit6 F-0004 bound that replaces the legacy fixed sleep).
-        SUPPORTED_ANTI_DEBUG_PATCHES: Tuple of accepted check names for
-            ``patch_anti_debug``; documents the fixed contract that
-            unknown names are rejected with a per-check error.
     """
 
     DEFAULT_PORT = 27015
@@ -2907,8 +2901,6 @@ class _X64DbgBridgeBase(DebuggerBridge):
         caller (audit6.md F-0018).
 
         Args:
-            cls: The owning bridge class used to resolve sibling static
-                helpers through normal attribute lookup.
             pid: Process ID of the target process.
 
         Returns:
@@ -2929,8 +2921,6 @@ class _X64DbgBridgeBase(DebuggerBridge):
         """Open the target process and read its WOW64 status.
 
         Args:
-            cls: The owning bridge class used to resolve sibling static
-                helpers through normal attribute lookup.
             pid: Process ID of the target process.
 
         Returns:
@@ -3989,9 +3979,6 @@ class _X64DbgBridgeBase(DebuggerBridge):
         x86_64 user-mode boundary.
 
         Args:
-            cls: The owning bridge class used to resolve the sibling
-                ``_append_committed_region`` helper through normal
-                attribute lookup.
             kernel32: ``ctypes.windll.kernel32`` proxy used to issue
                 ``VirtualQueryEx``.
             handle: Open process handle with ``PROCESS_QUERY_INFORMATION``
@@ -4581,9 +4568,6 @@ class _X64DbgBridgeBase(DebuggerBridge):
         access-denied on a single thread.
 
         Args:
-            cls: The owning bridge class used to resolve the sibling
-                ``_query_thread_start_address_with_handle`` helper
-                through normal attribute lookup.
             tid: Thread identifier.
 
         Returns:
@@ -5001,9 +4985,6 @@ class _X64DbgBridgeBase(DebuggerBridge):
         """Get parent process ID using Windows Toolhelp API.
 
         Args:
-            cls: The owning bridge class used to resolve the sibling
-                ``_find_parent_pid_in_snapshot`` helper through normal
-                attribute lookup.
             pid: Process ID to get parent for.
 
         Returns:
@@ -8307,8 +8288,6 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         """Query system-wide handle information and filter by PID.
 
         Args:
-            cls: The owning bridge class used to resolve sibling static
-                helpers through normal attribute lookup.
             target_pid: Process ID to filter handles by.
 
         Returns:
@@ -8945,10 +8924,6 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
     async def get_privileges(cls) -> list[dict[str, Any]]:
         """Enumerate current process token privileges.
 
-        Args:
-            cls: The owning bridge class used to resolve sibling static
-                helpers through normal attribute lookup.
-
         Returns:
             list[dict[str, Any]]: List of privilege dicts with name and enabled status.
         """
@@ -8965,11 +8940,6 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
     @classmethod
     def _enumerate_process_token_privileges(cls) -> list[dict[str, Any]]:
         """Open the current process token and enumerate its privileges.
-
-        Args:
-            cls: The owning bridge class used to resolve the sibling
-                ``_read_token_privileges`` helper through normal
-                attribute lookup.
 
         Returns:
             list[dict[str, Any]]: List of privilege dictionaries with
@@ -8996,9 +8966,6 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         """Fetch and parse ``TokenPrivileges`` data for an open token.
 
         Args:
-            cls: The owning bridge class used to resolve the sibling
-                ``_append_token_privilege`` helper through normal
-                attribute lookup.
             advapi32: ``ctypes.windll.advapi32`` proxy used to query the
                 token via ``GetTokenInformation`` and resolve LUIDs via
                 ``LookupPrivilegeNameW``.
@@ -9068,9 +9035,6 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         """Adjust a process token privilege.
 
         Args:
-            cls: The owning bridge class used to resolve the sibling
-                ``_adjust_token_privilege_by_name`` helper through
-                normal attribute lookup.
             name: Privilege name (e.g. 'SeDebugPrivilege').
             enable: True to enable, False to disable.
 
@@ -9092,9 +9056,6 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
         """Look up ``name``, open the process token, and toggle the privilege.
 
         Args:
-            cls: The owning bridge class used to resolve the sibling
-                ``_invoke_adjust_token_privileges`` helper through
-                normal attribute lookup.
             name: Privilege name (for example ``"SeDebugPrivilege"``).
             enable: ``True`` to enable the privilege,
                 ``False`` to disable it.

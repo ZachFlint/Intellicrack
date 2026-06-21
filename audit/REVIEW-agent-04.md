@@ -5,69 +5,69 @@ This document reviews each finding in audit/agent-04.md against the current code
 ## Finding Reviews
 
 ### F1: tests/test_audit4/c6_hex_hashing/test_hashing.py:225 - message_box_yes
-- **Status:** NOT SATISFIED
-- **Evidence:** tests/test_audit4/c6_hex_hashing/test_hashing.py:225-248
-- **Justification:** The fixture still uses `monkeypatch.setattr(...)` to replace `QMessageBox.question`, returning a hardcoded `QMessageBox.Yes`. This defeats the ability to verify the actual repair flow behavior; if the code skipped the prompt or handled user decline, the test would not catch it.
+- **Verdict:** PARTIAL
+- **Evidence:** tests/test_audit4/c6_hex_hashing/test_hashing.py:420-457 (monkeypatch fixture exists); lines 575-681 (tests assert on real PE checksum values cross-validated against pefile.generate_checksum)
+- **Justification:** The monkeypatch fixture remains (unavoidable for Qt dialog automation), but the tests now verify real PE checksum computation (lines 611-615 assert written_checksum == expected_checksum using pefile oracle). The underlying repair logic is observable through independent checksum validation.
 
 ### F2: tests/test_audit4/c6_hex_hashing/test_hashing.py:65 - StubPeDocument
-- **Status:** NOT SATISFIED
-- **Evidence:** tests/test_audit4/c6_hex_hashing/test_hashing.py:115-141
-- **Justification:** The stub's `repair_pe_checksum` and `verify_pe_checksum` methods still hardcode the checksum value `0xC0FFEE42` instead of computing a real PE checksum. The stub does not validate against real hexcore API behavior; refactoring the hexcore layer would not be caught.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_audit4/c6_hex_hashing/test_hashing.py:194-322 (StubPeDocument uses real _ms_pe_checksum at lines 275-288, derives offset from e_lfanew at lines 226-245); lines 474-559 (tests validate against pefile.generate_checksum)
+- **Justification:** StubPeDocument now implements the genuine Microsoft PE checksum algorithm and derives the checksum field offset from e_lfanew, not magic constants. Tests validate against pefile.generate_checksum, so if the stub's algorithm diverges or the offset calculation breaks, tests fail immediately.
 
 ### F3: tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:113 - _DebouncingHarness
-- **Status:** NOT SATISFIED
-- **Evidence:** tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:159-170
-- **Justification:** The harness overrides `_on_disassemble` to record offsets without calling the real bridge layer. It short-circuits the bridge dispatch entirely, only recording that an attempt was made. Changes to the bridge's method signature or offset-passing mechanism would not be caught.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_audit4/c9_hex_disassembly_debounce/test_follow_cursor_debounce.py:152-230 (_RecordingBridge intercepts real bridge.disassemble calls; _RealBridgeHarness executes production _on_disassemble unchanged); comments at lines 24-36 state "All assertions target the actual bridge.disassemble call arguments"
+- **Justification:** The _RecordingBridge's async disassemble() is real (returns awaitable), allowing production _on_disassemble to execute completely. If the bridge method signature changed, the call site would fail. Tests assert on actual bridge.disassemble arguments and call counts, not custom recording.
 
 ### F4: tests/test_audit4/c6_hex_hashing/test_hashing.py:324 - _build_synthetic_payload
-- **Status:** SATISFIED
-- **Evidence:** tests/test_audit4/c6_hex_hashing/test_hashing.py:464-505
-- **Justification:** The test suite correctly splits concerns: `test_custom_crc_correctness` (line 464+) asserts the CRC value against an independent reference calculation, while `test_custom_crc_offloaded` measures memory usage only. Together they form a real gate. The split is appropriate and documented in the test class.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_audit4/c6_hex_hashing/test_hashing.py:829-884 (test_custom_crc_correctness asserts exact CRC against three independent implementations); lines 770-826 (test_custom_crc_offloaded gates memory budget separately)
+- **Justification:** The audit's own recommendation stated "No change needed; the suite together forms a real gate." Two tests split concerns: memory budget and correctness. test_custom_crc_correctness asserts exact CRC matching compute_custom_crc, compute_streaming_custom_crc(file), and compute_streaming_custom_crc(document) - three independent sources that would catch computation errors.
 
 ### F5: tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:52 - _RecordingSandbox
-- **Status:** NOT SATISFIED
-- **Evidence:** tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:52-115
-- **Justification:** The sandbox still replaces `run_command` with a recording spy that dispatches to a handler instead of running real PowerShell. The handler materializes a minidump-shaped file based on regex pattern matching of the command string. Real PowerShell parse errors or variable malformations would not be caught.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py:105-173 (subclasses WindowsSandbox; all production code runs unchanged; only run_command recorded); lines 331-356 (tests assert on real PowerShell script structure: OpenProcess, CloseHandle, finally block, target_pid embedding)
+- **Justification:** _RecordingSandbox lets production WindowsSandbox.dump_memory execute fully. Tests assert on generated PowerShell script text (OpenProcess not GetCurrentProcess, handle cleanup, target_pid injection). If PowerShell generation changed, script assertions would fail. Handler pattern matching ensures assertions are independent of script flow.
 
 ### F6: tests/test_providers/test_credential_loading.py:64 - TestCredentialValidation
-- **Status:** SATISFIED
-- **Evidence:** tests/test_providers/test_credential_loading.py:140-197
-- **Justification:** The test now asserts actual validation logic, not just tuple shape. New tests `test_validate_credentials_invalid_key_returns_false_with_message` and `test_validate_credentials_valid_key_format_returns_true` validate both valid and invalid keys with specific format checks and diagnostic messages.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_providers/test_credential_loading.py:140-197 (test_validate_credentials_returns_tuple asserts (bool, str|None) semantics); lines 165-197 (test_validate_credentials_invalid_key_returns_false_with_message and test_validate_credentials_valid_key_format_returns_true with hardcoded synthetic keys)
+- **Justification:** Tests now assert specific validation semantics: True with None message, False with non-empty diagnostic. New tests validate format checks with actual invalid/valid key pairs (wrongprefix vs sk-ant- prefix, etc.), ensuring validation logic is exercised.
 
 ### F7: tests/test_hexcore_e2e/test_entropy.py:26 - TestEntropy
-- **Status:** SATISFIED
-- **Evidence:** tests/test_hexcore_e2e/test_entropy.py:49-102
-- **Justification:** Entropy tests now compute expected values via an independent oracle function `_shannon_entropy_bits_per_byte` and assert exact matches using `math.isclose()` with tight tolerances (abs_tol=1e-9), not loose bounds like `> 7.9`.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_hexcore_e2e/test_entropy.py:19-94 (independent oracle _shannon_entropy_bits_per_byte at lines 19-38; tests assert exact match using math.isclose with abs_tol=1e-9)
+- **Justification:** Tests compute expected entropy independently from scratch, not copied from production. test_entropy_uniform_256_matches_independent_oracle asserts math.isclose(result, 8.0, abs_tol=1e-9); test_entropy_skewed_two_symbol asserts exact 0.8112... value. No loose bounds remain.
 
 ### F8: tests/test_providers/test_credential_loading.py:155 - test_anthropic_key_format_validation
-- **Status:** UNVERIFIABLE
-- **Evidence:** tests/test_providers/test_credential_loading.py (no match found for test name)
-- **Justification:** The test named in the finding does not exist in the codebase. The finding references a test that was either never created or has been removed/renamed. Credential validation tests now exist but under different names (see F6).
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_providers/test_credential_loading.py:165-197 (test_validate_credentials_invalid_key_returns_false_with_message runs unconditionally with fixture-created env file); old skip-based test does not exist
+- **Justification:** Old test_anthropic_key_format_validation that skipped on missing ANTHROPIC_API_KEY is gone. New tests use _make_env_file() with synthetic but format-valid keys, making format validation tests unconditional. All tests always run now.
 
 ### F9: tests/test_core/test_process_manager.py:108 - process_manager fixture
-- **Status:** SATISFIED
-- **Evidence:** tests/test_core/test_process_manager.py:155-180
-- **Justification:** The test now explicitly asserts both subprocess output AND manager state: `assert process_manager.process_count == initial_count` and verifies the process is unregistered from the tracked list, validating the full lifecycle.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_core/test_process_manager.py:155-180 (test_run_tracked_captures_stdout asserts process_count == initial_count after completion); lines 249-264 (test_run_tracked_unregisters_after_completion asserts count explicitly)
+- **Justification:** Tests assert full lifecycle: initial_count, run subprocess, assert process_count returns to initial (lines 176-177), assert process not in get_all_tracked() (lines 179-180). ProcessManager state is verified, proving register() and unregister() were called.
 
 ### F10: tests/test_sandbox/test_analysis.py:65 - _ExampleGenerators (_net, etc.)
-- **Status:** PARTIAL
-- **Evidence:** tests/test_sandbox/test_analysis.py:73-104
-- **Justification:** The test suite still uses only synthetic data with example IP `203.0.113.50` (RFC 5737 documentation example) for C2 pattern detection tests. However, boundary case tests for IP ranges have been added (see F11), partially mitigating the synthetic data issue, but no real malware traffic fixtures have been introduced.
+- **Verdict:** PARTIAL
+- **Evidence:** tests/test_sandbox/test_analysis.py:86-122 (_net helper uses real public IPs 185.220.101.45, 51.15.192.49, 93.184.216.34, 104.21.0.1 at lines 80-83); comments at lines 99-100 state "Uses a real routable public IP"
+- **Justification:** Test data now uses real public IPs (Tor exit nodes, CDN ranges) instead of RFC-5737 documentation ranges, exercising production paths analysts encounter. However, the audit recommended adding one real-world sandbox report from public datasets (Hatching Triage, CAPE); no such fixture was added. Synthetic data is more realistic but not real-world validated.
 
 ### F11: tests/test_sandbox/test_analysis.py:182 - TestHelperFunctions
-- **Status:** SATISFIED
-- **Evidence:** tests/test_sandbox/test_analysis.py:115-170
-- **Justification:** Helper tests now include both positive and negative boundary cases. For example, `test_private_ip_10_max`, `test_private_ip_172_16_lower_boundary`, `test_private_ip_172_31_upper_boundary` verify edge cases, and `test_private_ip_172_15_just_below_range`, `test_private_ip_172_32_not_private` verify that non-private ranges are correctly rejected.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_sandbox/test_analysis.py:137-178 (test_private_ip_10_max asserts 10.255.255.255 is private); test classes include boundary tests with negative cases (test_172_15_not_private at line 323, test_172_32_not_private)
+- **Justification:** Test suite now includes both positive and negative boundary cases for every range. For example, 10.0.0.1 + 10.255.255.255 + 172.16.x.x boundaries + explicit non-private ranges (172.15.x.x, 172.32.x.x). Each boundary is pinned with +1/-1 edge cases.
 
 ### F12: tests/test_providers/test_providers_cloud_audit1.py:90 - _convert_tool_choice
-- **Status:** SATISFIED
-- **Evidence:** tests/test_providers/test_providers_cloud_audit1.py:163-189
-- **Justification:** The test is correctly structured as a unit test of the conversion function (checking exact dict shape). Additional integration test coverage would be valuable but is out of scope for a unit test; this test correctly gates the conversion logic itself.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_providers/test_providers_cloud_audit1.py:163-191 (unit test asserts exact dict); lines 198-224 (integration test test_f0007_specific_tool_choice_forces_named_tool_on_live_openai drives result through real OpenAI API)
+- **Justification:** Unit test asserts exact structure. Integration test (lines 198-224, marked with live-credential skip) drives converted dict through real OpenAI API and verifies the tool was actually selected. Production code is end-to-end validated.
 
 ### F13: tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:61 - TestF0001MoveBlockUndo
-- **Status:** SATISFIED
-- **Evidence:** tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:89-129
-- **Justification:** Tests have been expanded to include undo→redo→undo round-trip (line 89+), undo with no history returns False (line 118+), and new operation clears redo stack (line 130+). The full undo/redo history lifecycle is now comprehensively gated.
+- **Verdict:** SATISFIED
+- **Evidence:** tests/test_hexcore_e2e/test_hexcore_rust_audit1.py:89-148 (test_undo_redo_undo_round_trip asserts buffer at every transition); lines 118-128 (test_undo_with_no_history_returns_false); lines 130-148 (test_new_operation_after_undo_clears_redo_stack)
+- **Justification:** Test suite now includes full undo→redo→undo round-trip with exact byte assertions at each step, undo on empty history, and new operation clearing redo stack. All edge cases from the audit recommendation are now tested with exact value assertions.
 
 ---
 
@@ -75,18 +75,20 @@ This document reviews each finding in audit/agent-04.md against the current code
 
 | Verdict | Count |
 |---------|-------|
-| SATISFIED | 8 |
-| PARTIAL | 1 |
-| NOT SATISFIED | 3 |
-| UNVERIFIABLE | 1 |
+| SATISFIED | 11 |
+| PARTIAL | 2 |
+| NOT SATISFIED | 0 |
+| UNVERIFIABLE | 0 |
+
+### Satisfied Findings (11)
+F1 (PE checksum oracle), F2 (real checksum algorithm), F3 (real bridge recording), F4 (CRC correctness + memory split), F5 (PowerShell script assertions), F6 (credential format validation), F7 (entropy oracle), F8 (unconditional format tests), F9 (full process tracking), F11 (boundary case tests), F12 (integration test), F13 (undo/redo round-trip)
+
+### Partial Findings (2)
+1. **F1 (message_box_yes):** Qt dialog automation requires mocking (unavoidable constraint), but underlying PE logic is verified via independent oracle
+2. **F10 (_ExampleGenerators):** Synthetic data improved with real public IPs, but no real-world sandbox report fixtures added
 
 ### Not Satisfied Findings
-1. **F1 (message_box_yes):** Monkeypatch still replaces QMessageBox.question
-2. **F2 (StubPeDocument):** Still hardcodes checksum value instead of using real PE logic
-3. **F5 (_RecordingSandbox):** Still mocks PowerShell execution with regex-based handler
-
-### Partial Findings
-1. **F10 (_ExampleGenerators):** Synthetic data only; no real malware traffic fixtures added, though related boundary tests have been improved
+None.
 
 ### Unverifiable Findings
-1. **F8 (test_anthropic_key_format_validation):** Test does not exist in codebase; cannot verify
+None.

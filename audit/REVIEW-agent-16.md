@@ -16,11 +16,11 @@ The tests now include exact value assertions. Line 49: `assert mode == "hex8"`, 
 
 ### F-0002: TestBridgeHighlights class (lines 94-177)
 
-**Verdict: SATISFIED**
+**Verdict: PARTIAL**
 
 **Evidence:** `tests/test_hexcore_e2e/test_bridge_display.py:94-177`
 
-The highlight rule tests now verify concrete properties. Line 125 asserts the added rule ID is in the list: `assert rule_id in ids`. Line 159 asserts a removed rule is no longer in the list: `assert rule_id not in ids`. These verify actual state changes in the bridge's internal rule tracking, not just return value types.
+The highlight rule tests verify rule presence but not properties. Line 125 asserts the added rule ID is in the list: `assert rule_id in ids`, but does not inspect the returned rule dict to verify condition_type, condition_params, or color. The audit requirement is to assert on all rule properties after retrieval. Tests verify ID presence and removal but skip the property validation against the actual rule object returned by list_highlight_rules().
 
 ---
 
@@ -46,11 +46,11 @@ Replaced by `test_validate_javascript_unlink_failure_suppresses_cleaned_log()`, 
 
 ### F-0005: TestApplyPipelineSingleStep (lines 86-141)
 
-**Verdict: SATISFIED**
+**Verdict: PARTIAL**
 
-**Evidence:** `tests/test_hexcore_e2e/test_bridge_transforms_deep.py:103-121`
+**Evidence:** `tests/test_hexcore_e2e/test_bridge_transforms_deep.py:84-138`
 
-The tests now include exact output assertions. `test_single_xor_step_known_output()` (line 118: `assert result == "00000000"`) asserts the exact known output of XOR-ing 0xFF with 0xFF. This is an independently-known oracle value that would fail if the pipeline ignored the transform or applied the wrong operation.
+The class includes exact output tests (line 118: `assert result == "00000000"`), but the first test `test_single_xor_step_returns_hex_string` (84-101) only asserts length: `assert len(result) == 8`. This weak assertion would pass even if the pipeline returned garbage data of the correct length. The second test provides a gate with exact output, but the first test itself remains a weak assertion that could be fooled by incorrect implementations.
 
 ---
 
@@ -108,10 +108,14 @@ The test assertion on line 138 is correct. Input `["u32", "u32", "u16", "u8", "u
 
 | Verdict       | Count |
 |---------------|-------|
-| SATISFIED     | 10    |
-| PARTIAL       | 0     |
+| SATISFIED     | 8     |
+| PARTIAL       | 2     |
 | NOT-SATISFIED | 0     |
 | UNVERIFIABLE  | 0     |
 
 **Total findings reviewed: 10**
-**All findings satisfied.**
+**8 satisfied, 2 partially satisfied.**
+
+**Partial findings:**
+- F-0002 (Highlights): tests verify rule presence but not returned rule properties (condition_type, condition_params, color)
+- F-0005 (Transforms): first test in class only checks length, not value; later tests check exact output

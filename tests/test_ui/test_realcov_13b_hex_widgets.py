@@ -83,11 +83,7 @@ def _count_foreground_colors(widget: QWidget, width: int, height: int) -> int:
     painter = QPainter(image)
     widget.render(painter)
     painter.end()
-    samples: list[int] = [
-        image.pixelColor(x, y).rgb()
-        for y in range(0, height, 4)
-        for x in range(0, width, 4)
-    ]
+    samples: list[int] = [image.pixelColor(x, y).rgb() for y in range(0, height, 4) for x in range(0, width, 4)]
     if not samples:
         return 0
     background = max(set(samples), key=samples.count)

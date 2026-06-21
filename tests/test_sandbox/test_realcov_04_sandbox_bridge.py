@@ -27,6 +27,7 @@ These tests strengthen the existing sandbox-bridge suite:
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import pytest
@@ -230,71 +231,75 @@ class TestRealManagerErrorTranslation:
 
 
 class TestRealManagerIntegration:
-    """04-F004: real SandboxManager create path, success or typed failure."""
+    """04-F004: real SandboxManager create path gates only the success outcome."""
 
     @pytest.mark.spawns_process
     @pytest.mark.asyncio
-    async def test_create_windows_sandbox_or_typed_error(self) -> None:
-        """Drive the real manager; require success or a typed ToolError.
+    async def test_create_windows_sandbox_success_path(self) -> None:
+        """Gate the real create-success path; skip only when capability is absent.
 
-        On a machine where Windows Sandbox is genuinely available and can
-        initialize, the create call succeeds and yields an instance id. On
-        a machine where the feature is absent, or where the host Hyper-V /
-        Host Compute Service state prevents the guest VM from starting, the
-        real ``SandboxManager`` raises ``SandboxError`` which the bridge
-        must translate into a ``ToolError`` carrying a meaningful message.
-        Both outcomes are accepted; the test never fakes success.
+        Probes the real ``SandboxManager`` for Windows Sandbox availability
+        before attempting creation.  If the host genuinely lacks the
+        ``Containers-DisposableClientVM`` Windows feature or Hyper-V, the
+        test skips cleanly.  When the capability is present the create call
+        MUST succeed and return a non-empty instance id with the expected
+        field values; a regression in the create path makes the test fail.
+
+        The error-translation contract (``SandboxError`` -> ``ToolError``) is
+        already gated by
+        ``TestRealManagerErrorTranslation.test_create_translates_sandbox_error``;
+        this test does NOT accept a ``ToolError`` as a passing outcome so that
+        a capability regression on a capable host is detected immediately.
         """
         bridge = SandboxBridge()
         await bridge.initialize()
         manager = bridge.ensure_manager()
         assert isinstance(manager, SandboxManager)
 
-        created_id, tool_error = await self._attempt_create(bridge)
+        available_types = await manager.get_available_types()
+        if "windows" not in available_types:
+            pytest.skip("Windows Sandbox not available on this host")
+
+        created_id: str | None = None
         try:
-            self._assert_create_outcome(bridge, created_id, tool_error)
+            result = await bridge.create(sandbox_type="windows")
+            created_id = str(result["instance_id"])
+            listed = await bridge.list()
+            self._assert_create_success(bridge, result, created_id, listed)
         finally:
             if created_id is not None:
                 await bridge.destroy(created_id)
             await bridge.shutdown()
 
     @staticmethod
-    def _assert_create_outcome(
+    def _assert_create_success(
         bridge: SandboxBridge,
-        created_id: str | None,
-        tool_error: ToolError | None,
+        result: dict[str, object],
+        created_id: str,
+        listed: list[dict[str, object]],
     ) -> None:
-        """Assert the real create attempt is either a success or a typed error.
+        """Assert all real fields of a successful Windows Sandbox create.
+
+        Uses ``datetime.fromisoformat`` as an independent oracle for the
+        ``created_at`` timestamp: if the bridge stops emitting a valid
+        ISO-8601 string the parse raises and the test fails.
 
         Args:
             bridge: The bridge whose state recorded the outcome.
-            created_id: The instance id on success, otherwise ``None``.
-            tool_error: The raised :class:`ToolError` on failure, otherwise
-                ``None``.
+            result: The dict returned by ``bridge.create``.
+            created_id: The extracted non-empty instance id.
+            listed: The list returned by ``bridge.list`` after create.
         """
-        if tool_error is not None:
-            message = str(tool_error)
-            assert "Failed to create sandbox" in message
-            assert message.strip(), "ToolError must carry a meaningful message"
-            assert bridge.state.last_error, "failure must be recorded on state"
-        else:
-            assert created_id
-
-    @staticmethod
-    async def _attempt_create(bridge: SandboxBridge) -> tuple[str | None, ToolError | None]:
-        """Attempt a real windows-sandbox create, returning the outcome.
-
-        Args:
-            bridge: An initialized bridge backed by the real manager.
-
-        Returns:
-            tuple[str | None, ToolError | None]: The created instance id on
-            success (with a ``None`` error), or ``None`` plus the raised
-            :class:`ToolError` when the host cannot create the sandbox.
-        """
-        try:
-            result = await bridge.create(sandbox_type="windows")
-        except ToolError as exc:
-            return None, exc
+        assert created_id, "create must return a non-empty instance_id"
         assert result["type"] == "windows"
-        return str(result["instance_id"]), None
+        assert result["status"] == "running"
+
+        parsed = datetime.fromisoformat(str(result["created_at"]))
+        assert parsed.tzinfo is not None, "created_at must be timezone-aware"
+
+        listed_ids = {entry["id"] for entry in listed}
+        assert created_id in listed_ids, "newly created instance must appear in list()"
+
+        assert bridge.state.connected is True
+        assert bridge.state.tool_running is True
+        assert bridge.state.last_error is None

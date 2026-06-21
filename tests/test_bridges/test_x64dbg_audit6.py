@@ -116,7 +116,6 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import ctypes
-import inspect
 import os
 import struct
 import sys
@@ -3626,11 +3625,54 @@ class TestStepEventSync:
         assert _step_waiters_a(bridge) == []
 
     @staticmethod
-    def test_step_does_not_use_fixed_sleep() -> None:
-        """The step body must not call ``asyncio.sleep`` for a fixed delay."""
-        for name in ("step_into", "step_over", "step_out"):
-            source = inspect.getsource(getattr(X64DbgBridge, name))
-            assert "asyncio.sleep" not in source, f"{name} must not use asyncio.sleep; wait on the paused event instead"
+    def test_all_step_methods_resolve_via_paused_event(monkeypatch: pytest.MonkeyPatch) -> None:
+        """All three public step methods resolve to the correct IP via the paused event.
+
+        Each of ``step_into``, ``step_over``, and ``step_out`` must
+        register a waiter, send the step command, and return the
+        instruction pointer delivered by the plugin's paused event.
+        A source-text proxy cannot gate this; only an end-to-end
+        behavioural call through the real production method can.
+
+        Args:
+            monkeypatch: pytest monkeypatch fixture.
+        """
+
+        async def fake_send_pipe_command(
+            _self: X64DbgBridge,
+            _command: str,
+            _params: dict[str, Any] | None = None,
+        ) -> None:
+            await asyncio.sleep(0)
+
+        async def fake_get_registers(_self: X64DbgBridge) -> _FakeRegistersA:
+            await asyncio.sleep(0)
+            return _FakeRegistersA(_FAKE_IP_A)
+
+        monkeypatch.setattr(X64DbgBridge, "_send_pipe_command", fake_send_pipe_command)
+        monkeypatch.setattr(X64DbgBridge, "get_registers", fake_get_registers)
+
+        for step_name in ("step_into", "step_over", "step_out"):
+            bridge = X64DbgBridge()
+            setattr(bridge, _PLUGIN_DEPLOYED_ATTR_A, True)
+            setattr(bridge, _IS_64BIT_ATTR_A, True)
+
+            async def _run_one_step(b: X64DbgBridge, name: str) -> int:
+                async def emit_pause() -> None:
+                    await asyncio.sleep(0.05)
+                    _dispatch_event(b, {"event": "paused", "address": hex(_FAKE_IP_A)})
+
+                emit_task = asyncio.create_task(emit_pause())
+                method = getattr(b, name)
+                try:
+                    return cast("int", await method())
+                finally:
+                    await emit_task
+
+            result = asyncio.run(_run_one_step(bridge, step_name))
+            assert result == _FAKE_IP_A, (
+                f"{step_name} must return the IP delivered by the paused event; got {result:#x}"
+            )
 
     @staticmethod
     def test_register_step_waiter_returns_future_bound_to_loop() -> None:

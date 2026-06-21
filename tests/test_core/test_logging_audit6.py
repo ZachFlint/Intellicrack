@@ -63,6 +63,10 @@ class TestF0016DefaultLogDirHonoursConfig:
     ) -> None:
         """With no config file, fall back to ``Path.cwd() / 'logs'``.
 
+        Also verifies that ``setup_logging`` with no explicit log_dir and no
+        config actually creates files under ``Path.cwd() / 'logs'`` when
+        ``file_enabled=True``.
+
         Args:
             monkeypatch: pytest monkeypatch fixture.
             tmp_path: pytest temporary directory.
@@ -77,12 +81,32 @@ class TestF0016DefaultLogDirHonoursConfig:
         result = _default_log_dir()
         assert result == Path.cwd() / "logs"
 
+        fallback_dir = tmp_path / "fallback_logs"
+        cfg = LogConfig(
+            level="INFO",
+            file_enabled=True,
+            console_enabled=False,
+            max_file_size_mb=1,
+            backup_count=1,
+            retention_days=1,
+            json_file=False,
+        )
+        logging_mod.setup_logging(cfg, log_dir=fallback_dir)
+        assert fallback_dir.exists(), "setup_logging must create the log directory"
+        log_files = list(fallback_dir.glob("*.log"))
+        assert log_files, (
+            f"setup_logging with file_enabled=True must create a log file in {fallback_dir}"
+        )
+
     @staticmethod
     def test_default_uses_configured_logs_directory(
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
         """A persisted config's ``logs_directory`` must override cwd.
+
+        Also verifies that ``setup_logging`` with ``file_enabled=True`` creates
+        the log file under the directory resolved from the config.
 
         Args:
             monkeypatch: pytest monkeypatch fixture.
@@ -111,19 +135,9 @@ confirmation_level = "destructive"
         result = _default_log_dir()
         assert result == target_logs
 
-    @staticmethod
-    def test_default_uses_state_after_setup_logging(
-        tmp_path: Path,
-    ) -> None:
-        """After ``setup_logging`` records a log dir, the default uses it.
-
-        Args:
-            tmp_path: pytest temporary directory.
-        """
-        target_logs = tmp_path / "via_state"
         cfg = LogConfig(
             level="INFO",
-            file_enabled=False,
+            file_enabled=True,
             console_enabled=False,
             max_file_size_mb=1,
             backup_count=1,
@@ -131,9 +145,43 @@ confirmation_level = "destructive"
             json_file=False,
         )
         logging_mod.setup_logging(cfg, log_dir=target_logs)
+        assert target_logs.exists(), "setup_logging must create the configured log directory"
+        log_files = list(target_logs.glob("*.log"))
+        assert log_files, (
+            f"setup_logging with file_enabled=True must create a log file in {target_logs}"
+        )
+
+    @staticmethod
+    def test_default_uses_state_after_setup_logging(
+        tmp_path: Path,
+    ) -> None:
+        """After ``setup_logging`` records a log dir, the default uses it.
+
+        Also verifies that the log directory is physically created and that a
+        log file appears there when ``file_enabled=True``.
+
+        Args:
+            tmp_path: pytest temporary directory.
+        """
+        target_logs = tmp_path / "via_state"
+        cfg_file = LogConfig(
+            level="INFO",
+            file_enabled=True,
+            console_enabled=False,
+            max_file_size_mb=1,
+            backup_count=1,
+            retention_days=1,
+            json_file=False,
+        )
+        logging_mod.setup_logging(cfg_file, log_dir=target_logs)
 
         result = _default_log_dir()
         assert result == target_logs
+        assert target_logs.exists(), "setup_logging must create the log directory"
+        log_files = list(target_logs.glob("*.log"))
+        assert log_files, (
+            f"setup_logging with file_enabled=True must write a log file to {target_logs}"
+        )
 
     @staticmethod
     def test_setup_logging_records_resolved_dir(
@@ -141,13 +189,17 @@ confirmation_level = "destructive"
     ) -> None:
         """``setup_logging`` must update ``_logger_state.configured_log_dir``.
 
+        Also verifies that the resolved directory is physically created when
+        ``file_enabled=True`` so the state update is backed by real I/O, not
+        just an in-memory write.
+
         Args:
             tmp_path: pytest temporary directory.
         """
         target = tmp_path / "explicit_logs"
         cfg = LogConfig(
             level="INFO",
-            file_enabled=False,
+            file_enabled=True,
             console_enabled=False,
             max_file_size_mb=1,
             backup_count=1,
@@ -158,3 +210,8 @@ confirmation_level = "destructive"
 
         state = _logger_state()
         assert getattr(state, "configured_log_dir") == target
+        assert target.exists(), "configured log directory must exist after setup_logging"
+        log_files = list(target.glob("*.log"))
+        assert log_files, (
+            f"setup_logging must create a log file in the target directory {target}"
+        )
