@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_providers/test_providers_package_exports.py",
+  "findings_addressed": [
+    {
+      "id": "G0277",
+      "test": "test_canonical_sources_still_export_names",
+      "action": "hardened",
+      "oracle": "dataclasses.is_dataclass() + isinstance(cls, type) to verify real dataclass classes; typing.get_origin() is typing.Literal + frozenset(typing.get_args()) == _DTYPE_OPTION_VALUES to verify real Literal type alias with exact expected members; dataclasses.fields() to verify required field names exist on each class",
+      "documented_mutation": "In src/intellicrack/providers/discovery.py, replace `class DiscoveryEvent:` body with `DiscoveryEvent = None` — dataclasses.is_dataclass(None) returns False, causing the assertion to fail"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Replaced three bare hasattr() existence checks with structural oracle assertions: (1) DiscoveryEvent verified as a real dataclass type with provider and model_count fields; (2) DtypeOption verified as typing.Literal with exactly the six expected dtype strings via get_origin/get_args comparison against an independent frozen reference set; (3) ModelConfig verified as a real dataclass type with model_id and dtype fields. A sentinel value like None or a plain string would pass hasattr() but fail all of these checks. Split compound 'and' assertions into separate asserts to satisfy PT018."
+}

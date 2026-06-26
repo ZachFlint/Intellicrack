@@ -181,6 +181,9 @@ def resource_exists(resource_path: str) -> bool:
     Returns:
         bool: True if the resource exists, False otherwise.
     """
+    if not resource_path:
+        _logger.debug("resource_exists_check", resource=resource_path, exists=False)
+        return False
     try:
         path = get_resource_path(resource_path)
         exists = path.exists()

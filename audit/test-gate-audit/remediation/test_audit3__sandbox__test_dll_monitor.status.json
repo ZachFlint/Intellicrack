@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_audit3/sandbox/test_dll_monitor.py",
+  "findings_addressed": [
+    {
+      "id": "G0009",
+      "test": "test_smoke_script_runs_and_writes_logs",
+      "action": "hardened",
+      "oracle": "Two independent helper functions check the on-disk artefacts: (1) _main_log_has_structured_record() returns True only if dll_monitor.log contains a line with >= 7 pipe separators (the Write-DllRecord format: timestamp|pid|name|path|base|size|event_id|schema); (2) _diag_has_monitoring_evidence() returns True only if dll_monitor.diag.log contains a line whose second pipe-field is one of the monitoring-phase categories {etw_unavailable_falling_back_to_wmi, dll_event_unparsed, dll_event_handler_error, dll_event_schema_discovered, wmi_event_handler_error, traceevent_probe_failed, lifecycle_stopped} - explicitly excluding the lifecycle_started startup entry which is written before any monitoring code runs. The assertion requires has_record or has_monitoring_diag; the lifecycle_started entry alone satisfies neither helper.",
+      "documented_mutation": "In dll_monitor.ps1: (1) empty the body of Write-DllRecord so it never calls Add-Content - the main log stays empty, _main_log_has_structured_record returns False. (2) remove the Write-DllDiagnostic call inside Invoke-WmiFallback so etw_unavailable_falling_back_to_wmi is never written. With both changes the diag log contains only lifecycle_started/lifecycle_stopped entries; _diag_has_monitoring_evidence returns False because those categories are not in _MONITORING_DIAG_CATEGORIES. The assertion then fails."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0009 previously had a N7 (accepts-both-outcomes disjunction) anti-pattern: 'assert main_non_empty or diag_non_empty' accepted the trivial case where diag_non_empty=True from the unconditional lifecycle_started startup entry (dll_monitor.ps1 line 498), regardless of whether any monitoring code ran. The hardened test introduces two structured helper functions that distinguish monitoring-phase evidence from startup lifecycle entries. The lifecycle_started/lifecycle_stopped diag entries are excluded from the positive-evidence set. A no-op Write-DllRecord body (the concrete breakage described by the reviewer) leaves the main log empty and no monitoring-phase category in the diag log, causing the assertion to fail. POST-WORKFLOW FIX (2026-06-23): adversarial reviewer found test_smoke_script_runs_and_writes_logs accepts both outcomes (has_record OR has_monitoring_diag) where has_monitoring_diag was trivially True because 'lifecycle_stopped' was in _MONITORING_DIAG_CATEGORIES and the finally block ALWAYS writes it - so the OR passed with zero real monitoring evidence (contradicting the test's own docstring which excludes lifecycle markers). Removed 'lifecycle_stopped' from _MONITORING_DIAG_CATEGORIES; the container still produces a real ETW-fallback category (traceevent_probe_failed / etw_unavailable_falling_back_to_wmi) so the test stays GREEN and is now falsifiable (empty Write-DllRecord + no WMI-fallback diagnostic -> only lifecycle entries -> both False -> fail). Verified GREEN in sandbox."
+}

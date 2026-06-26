@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_providers/test_google_provider.py",
+  "findings_addressed": [
+    {
+      "id": "G0258",
+      "test": "TestGoogleModelListing::test_multiple_calls_return_consistent_results",
+      "action": "hardened",
+      "oracle": "Both calls must return a non-empty list with at least one model whose id contains 'gemini' (independent of each other); the set of all ids returned by call 1 must equal the set returned by call 2. An implementation that returns [] deterministically would fail the len > 0 guards; one that returns a different set on each call would fail the ids1 == ids2 assertion.",
+      "documented_mutation": "In src/intellicrack/providers/google.py _fetch_and_sort_models(), change `return sorted_models` to `return []` — both len(models1) > 0 and len(models2) > 0 assertions fail immediately."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Added non-empty guards before the consistency assertion and also verified that at least one Gemini model is present in each call's results. This closes the vacuous-pass window where a broken list_models() returning [] would satisfy set() == set(). The live-cloud skip guards (google_network_required, has_google_key) are preserved."
+}

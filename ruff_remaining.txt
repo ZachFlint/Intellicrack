@@ -1,0 +1,745 @@
+blank-lines-top-level: [*] Expected 2 blank lines, found 1
+  --> src\intellicrack\sandbox\log_helpers.py:25:1
+   |
+23 | """
+24 |
+25 | def split_addr_port(value: str) -> tuple[str, int]:
+   | ^^^
+26 |     """Split an ``address:port`` literal into its components.
+   |
+help: Add missing blank line(s)
+22 | Each entry is expected to be ``(offset, identifier, data)``; entries with fewer than three positional members are skipped.
+23 | """
+24 |
+25 +
+26 | def split_addr_port(value: str) -> tuple[str, int]:
+27 |     """Split an ``address:port`` literal into its components.
+28 |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> src\intellicrack\sandbox\windows.py:211:12
+    |
+209 |     @property
+210 |     def vendor(self) -> str:
+211 |         """Return the Win32_ComputerSystemProduct.Vendor spoofed value.
+    |            ^^^^^^
+212 |
+213 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> src\intellicrack\ui\app.py:542:12
+    |
+540 |     @property
+541 |     def hxd_panel(self) -> HxDPanel | None:
+542 |         """Return the registered ``HxDPanel`` instance, if any.
+    |            ^^^^^^
+543 |
+544 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+    --> src\intellicrack\ui\app.py:2719:12
+     |
+2717 |     @property
+2718 |     def log_viewer_window(self) -> LogViewerWindow | None:
+2719 |         """Return the live Log Viewer instance, if one has been opened.
+     |            ^^^^^^
+2720 |
+2721 |         Returns:
+     |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+   --> src\intellicrack\ui\confirmation_dialog.py:112:12
+    |
+110 |     @property
+111 |     def approved(self) -> bool:
+112 |         """Get whether the call was approved.
+    |            ^^^
+113 |
+114 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+   --> src\intellicrack\ui\confirmation_dialog.py:121:12
+    |
+119 |     @property
+120 |     def remember_similar(self) -> bool:
+121 |         """Get whether to remember choice for similar operations.
+    |            ^^^
+122 |
+123 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> src\intellicrack\ui\log_viewer\_model.py:112:12
+    |
+110 |     @property
+111 |     def total_received(self) -> int:
+112 |         """Return the total number of records ever appended.
+    |            ^^^^^^
+113 |
+114 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> src\intellicrack\ui\overflow_toolbar.py:167:12
+    |
+165 |     @property
+166 |     def overflow_menu(self) -> QMenu:
+167 |         """Return the overflow menu used for hidden toolbar items.
+    |            ^^^^^^
+168 |
+169 |         Exposes the populated :class:`QMenu` so callers (including the
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> src\intellicrack\ui\overflow_toolbar.py:181:12
+    |
+179 |     @property
+180 |     def extension_button(self) -> QToolButton | None:
+181 |         """Return Qt's extension button once it has been hooked.
+    |            ^^^^^^
+182 |
+183 |         Qt creates the extension button lazily during the toolbar's first
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+  --> src\intellicrack\ui\panel_dock.py:90:12
+   |
+88 |     @property
+89 |     def panel(self) -> QWidget:
+90 |         """Get the hosted panel widget.
+   |            ^^^
+91 |
+92 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+   --> src\intellicrack\ui\panel_dock.py:99:12
+    |
+ 97 |     @property
+ 98 |     def panel_title(self) -> str:
+ 99 |         """Get the tab title for re-docking.
+    |            ^^^
+100 |
+101 |         Returns:
+    |
+
+blank-lines-top-level: [*] Expected 2 blank lines, found 1
+  --> src\intellicrack\ui\panels\async_bridge.py:77:1
+   |
+75 | """
+76 |
+77 | class _LoopState:
+   | ^^^^^
+78 |     """Module-level mutable state for the persistent event loop."""
+   |
+help: Add missing blank line(s)
+74 | the process panel's "Refreshing..." button) stuck indefinitely with no result and no surfaced error.
+75 | """
+76 |
+77 +
+78 | class _LoopState:
+79 |     """Module-level mutable state for the persistent event loop."""
+80 |
+
+blank-line-after-function: [*] No blank lines allowed after function docstring (found 1)
+   --> src\intellicrack\ui\panels\hex_editor\sandbox.py:190:9
+    |
+188 |           time_limit: int,
+189 |       ) -> dict[str, Any]:
+190 | /         """Invoke ``SandboxBridge.copy_to`` under an ``asyncio.timeout`` deadline.
+191 | |
+192 | |         ``SandboxBridge.copy_to`` does not expose a timeout parameter, so the
+193 | |         user-supplied limit from the hex editor's Sandbox panel is enforced
+194 | |         at this call site to prevent indefinitely hanging copy operations.
+195 | |
+196 | |         Args:
+197 | |             bridge: SandboxBridge instance providing the ``copy_to`` coroutine.
+198 | |             instance_id: ID of the sandbox instance to copy into.
+199 | |             source: Local source file path.
+200 | |             dest: Destination path inside the sandbox.
+201 | |             time_limit: Maximum number of seconds the copy may take before
+202 | |                 ``TimeoutError`` is raised.
+203 | |
+204 | |         Returns:
+205 | |             dict[str, Any]: Success confirmation returned by ``copy_to``.
+206 | |
+207 | |         Raises:
+208 | |             TimeoutError: If the copy operation exceeds ``time_limit`` seconds.
+209 | |         """
+    | |___________^
+210 |
+211 |           async with asyncio.timeout(time_limit):
+    |
+help: Remove blank line(s) after function docstring
+207 |         Raises:
+208 |             TimeoutError: If the copy operation exceeds ``time_limit`` seconds.
+209 |         """
+    -
+210 |         async with asyncio.timeout(time_limit):
+211 |             return await bridge.copy_to(instance_id, source, dest)
+212 |
+
+blank-lines-top-level: [*] Expected 2 blank lines, found 1
+  --> src\intellicrack\ui\panels\hex_editor\sections.py:44:1
+   |
+42 | """Map :func:`detect_format` results to ``(display_name, template_id)`` for the templates panel."""
+43 |
+44 | @runtime_checkable
+   | ^
+45 | class _StringsSource(Protocol):
+46 |     """Subset of the hexcore ``HexDocument`` API required by ``execute_strings_extraction``."""
+   |
+help: Add missing blank line(s)
+41 | }
+42 | """Map :func:`detect_format` results to ``(display_name, template_id)`` for the templates panel."""
+43 |
+44 +
+45 | @runtime_checkable
+46 | class _StringsSource(Protocol):
+47 |     """Subset of the hexcore ``HexDocument`` API required by ``execute_strings_extraction``."""
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> src\intellicrack\ui\panels\hxd_panel.py:165:12
+    |
+163 |     @property
+164 |     def embed_info_label(self) -> QLabel:
+165 |         """Return the label that mirrors the embedded HxD process state.
+    |            ^^^^^^
+166 |
+167 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+   --> src\intellicrack\ui\panels\hxd_panel.py:201:12
+    |
+199 |     @property
+200 |     def embed_host(self) -> QWidget:
+201 |         """Get the embed host widget.
+    |            ^^^
+202 |
+203 |         Returns:
+    |
+
+redundant-backslash: [*] Redundant backslash
+   --> src\intellicrack\ui\panels\script_manager.py:171:24
+    |
+169 |             "extension": ".txt",
+170 |             "language": "x64dbg",
+171 |             "template":\
+    |                        ^
+172 |                         """// x64dbg script for license bypass
+173 | // Target: {target}
+    |
+help: Remove redundant backslash
+168 |             "display": "x64dbg",
+169 |             "extension": ".txt",
+170 |             "language": "x64dbg",
+    -             "template":\
+171 +             "template":
+172 |                         """// x64dbg script for license bypass
+173 | // Target: {target}
+174 |
+
+redundant-backslash: [*] Redundant backslash
+   --> src\intellicrack\ui\panels\script_manager.py:193:24
+    |
+191 |             "extension": ".py",
+192 |             "language": "python",
+193 |             "template":\
+    |                        ^
+194 |                         '''"""
+195 | Python analysis script for license examination.
+    |
+help: Remove redundant backslash
+190 |             "display": "Python",
+191 |             "extension": ".py",
+192 |             "language": "python",
+    -             "template":\
+193 +             "template":
+194 |                         '''"""
+195 | Python analysis script for license examination.
+196 | Target: {target}
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+    --> src\intellicrack\ui\resources\theme_manager.py:1444:12
+     |
+1442 |     @property
+1443 |     def current_theme(self) -> str:
+1444 |         """Get the resolved theme name currently rendered.
+     |            ^^^
+1445 |
+1446 |         Returns:
+     |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+    --> src\intellicrack\ui\resources\theme_manager.py:1454:12
+     |
+1452 |     @property
+1453 |     def requested_theme(self) -> str:
+1454 |         """Get the theme the user requested.
+     |            ^^^
+1455 |
+1456 |         Returns:
+     |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\_helpers\process_cleanup.py:239:12
+    |
+237 |     @property
+238 |     def pid(self) -> int:
+239 |         """Return the PID of the wrapped process.
+    |            ^^^^^^
+240 |
+241 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+  --> tests\test_audit4\b6_system_tab\conftest.py:67:12
+   |
+65 |     @property
+66 |     def titles(self) -> list[str]:
+67 |         """Return the titles of every captured warning dialog, in order.
+   |            ^^^^^^
+68 |
+69 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+  --> tests\test_audit4\b6_system_tab\conftest.py:76:12
+   |
+74 |     @property
+75 |     def messages(self) -> list[str]:
+76 |         """Return the message text of every captured warning dialog, in order.
+   |            ^^^^^^
+77 |
+78 |         Returns:
+   |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+  --> tests\test_audit4\b6_system_tab\conftest.py:84:17
+   |
+84 | @pytest.fixture(autouse=True)
+   |                 ^^^^^^^^^^^^
+85 | def warning_recorder() -> Iterator[WarningRecorder]:
+86 |     """Capture real ``QMessageBox.warning`` dialogs without faking them.
+   |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+  --> tests\test_audit4\c12_hex_sandbox_route\test_sandbox_route.py:53:17
+   |
+53 | @pytest.fixture(autouse=True)
+   |                 ^^^^^^^^^^^^
+54 | def block_message_boxes(monkeypatch: pytest.MonkeyPatch) -> None:
+55 |     """Replace QMessageBox.warning with a raising stub to prevent test hangs.
+   |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+  --> tests\test_audit4\c12_hex_sandbox_route\test_sandbox_route.py:79:33
+   |
+79 | @pytest.fixture(scope="module", autouse=True)
+   |                                 ^^^^^^^^^^^^
+80 | def sandbox_qapp() -> Generator[QApplication]:
+81 |     """Provide a session QApplication for Qt widgets created in this module.
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_audit4\c16_hex_panel_selection_dispatch\test_selection_dispatch.py:215:12
+    |
+213 |     @property
+214 |     def selection_start(self) -> int:
+215 |         """Return the stored selection start offset.
+    |            ^^^^^^
+216 |
+217 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_audit4\c16_hex_panel_selection_dispatch\test_selection_dispatch.py:224:12
+    |
+222 |     @property
+223 |     def selection_end(self) -> int:
+224 |         """Return the stored selection end offset.
+    |            ^^^^^^
+225 |
+226 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_audit5\u5_ui_mainwindow\test_realcov_15_mainwindow_runtime.py:267:12
+    |
+265 |     @override
+266 |     def name(self) -> ProviderName:
+267 |         """Return the provider name.
+    |            ^^^^^^
+268 |
+269 |         Returns:
+    |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+  --> tests\test_audit5\u9_ui_confirmation\test_confirmation_dialog.py:63:17
+   |
+63 | @pytest.fixture(autouse=True)
+   |                 ^^^^^^^^^^^^
+64 | def reset_remembered_decisions() -> Iterator[None]:
+65 |     """Clear class-level remembered decisions before and after each test.
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+  --> tests\test_audit7\core_orchestration\test_tool_registry_session.py:49:12
+   |
+47 |     @property
+48 |     def name(self) -> ToolName:
+49 |         """Return the bridge's tool identity.
+   |            ^^^^^^
+50 |
+51 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+  --> tests\test_audit7\core_orchestration\test_tool_registry_session.py:58:12
+   |
+56 |     @property
+57 |     def tool_definition(self) -> ToolDefinition:
+58 |         """Return a minimal tool definition.
+   |            ^^^^^^
+59 |
+60 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+  --> tests\test_audit7\core_orchestration\test_tool_state_lifecycle.py:45:12
+   |
+43 |     @property
+44 |     def name(self) -> ToolName:
+45 |         """Return the bridge's tool identity.
+   |            ^^^^^^
+46 |
+47 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+  --> tests\test_audit7\core_orchestration\test_tool_state_lifecycle.py:54:12
+   |
+52 |     @property
+53 |     def tool_definition(self) -> ToolDefinition:
+54 |         """Return a minimal tool definition.
+   |            ^^^^^^
+55 |
+56 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+  --> tests\test_audit7\providers_meta\test_discover_all_cache.py:71:12
+   |
+69 |     @override
+70 |     def name(self) -> ProviderName:
+71 |         """Return the provider's enum name.
+   |            ^^^^^^
+72 |
+73 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_audit7\providers_meta\test_discover_all_cache.py:218:12
+    |
+216 |     @override
+217 |     def name(self) -> ProviderName:
+218 |         """Return the provider's enum name.
+    |            ^^^^^^
+219 |
+220 |         Returns:
+    |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+   --> tests\test_audit7\sandbox_monitors\conftest.py:113:17
+    |
+113 | @pytest.fixture(autouse=True)
+    |                 ^^^^^^^^^^^^
+114 | def reset_stop_event() -> Iterator[None]:
+115 |     """Reset the shared ``IntellicrackMonitorStop`` event around each test.
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+  --> tests\test_bridges\test_base.py:59:12
+   |
+57 |     @property
+58 |     def name(self) -> ToolName:
+59 |         """Get the tool name.
+   |            ^^^
+60 |
+61 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+  --> tests\test_bridges\test_base.py:68:12
+   |
+66 |     @property
+67 |     def tool_definition(self) -> ToolDefinition:
+68 |         """Get a minimal tool definition for unit tests.
+   |            ^^^
+69 |
+70 |         Returns:
+   |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+   --> tests\test_bridges\test_frida_bridge.py:162:17
+    |
+162 | @pytest.fixture(autouse=True)
+    |                 ^^^^^^^^^^^^
+163 | def require_frida() -> None:
+164 |     """Skip any test in this module when frida-python is not installed."""
+    |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+  --> tests\test_core\test_logging_audit6.py:48:17
+   |
+48 | @pytest.fixture(autouse=True)
+   |                 ^^^^^^^^^^^^
+49 | def reset_logger_state() -> None:
+50 |     """Reset cached logger state between tests."""
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+    --> tests\test_core\test_orchestrator_audit6.py:1032:12
+     |
+1030 |     @override
+1031 |     def name(self) -> ProviderName:
+1032 |         """Return provider name.
+     |            ^^^^^^
+1033 |
+1034 |         Returns:
+     |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+    --> tests\test_core\test_orchestrator_audit6.py:1200:12
+     |
+1198 |     @override
+1199 |     def name(self) -> ToolName:
+1200 |         """Return tool name.
+     |            ^^^^^^
+1201 |
+1202 |         Returns:
+     |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+    --> tests\test_core\test_orchestrator_audit6.py:1210:12
+     |
+1208 |     @override
+1209 |     def tool_definition(self) -> ToolDefinition:
+1210 |         """Return the configured tool definition.
+     |            ^^^^^^
+1211 |
+1212 |         Returns:
+     |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_core\test_realcov_05a_orchestration.py:173:12
+    |
+171 |     @override
+172 |     def name(self) -> ToolName:
+173 |         """Return the tool name this bridge serves.
+    |            ^^^^^^
+174 |
+175 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_core\test_realcov_05a_orchestration.py:183:12
+    |
+181 |     @override
+182 |     def tool_definition(self) -> ToolDefinition:
+183 |         """Return the advertised tool definition.
+    |            ^^^^^^
+184 |
+185 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_core\test_realcov_05a_orchestration.py:283:12
+    |
+281 |     @override
+282 |     def name(self) -> ProviderName:
+283 |         """Return the provider name.
+    |            ^^^^^^
+284 |
+285 |         Returns:
+    |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+  --> tests\test_providers\conftest.py:63:17
+   |
+63 | @pytest.fixture(autouse=True)
+   |                 ^^^^^^^^^^^^
+64 | def restore_provider_key_env() -> Generator[None]:
+65 |     """Snapshot and restore provider API-key env vars around every test.
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+  --> tests\test_providers\test_discovery_unit.py:79:12
+   |
+77 |     @override
+78 |     def name(self) -> ProviderName:
+79 |         """Return the provider's enum name.
+   |            ^^^^^^
+80 |
+81 |         Returns:
+   |
+
+pytest-useless-yield-fixture: [*] No teardown in fixture `loaded_xpu_provider`, use `return` instead of `yield`
+   --> tests\test_providers\test_local_xpu_e2e.py:601:5
+    |
+599 |     messages = _make_messages("Hello")
+600 |     await xpu_provider.chat(messages=messages, model=tinyllama_model_id, max_tokens=1)
+601 |     yield xpu_provider
+    |     ^^^^^^^^^^^^^^^^^^
+    |
+help: Replace `yield` with `return`
+598 |     """
+599 |     messages = _make_messages("Hello")
+600 |     await xpu_provider.chat(messages=messages, model=tinyllama_model_id, max_tokens=1)
+    -     yield xpu_provider
+601 +     return xpu_provider
+602 |
+603 |
+604 | @pytest_asyncio.fixture(scope="session")
+
+pytest-useless-yield-fixture: [*] No teardown in fixture `loaded_cpu_provider`, use `return` instead of `yield`
+   --> tests\test_providers\test_local_xpu_e2e.py:622:5
+    |
+620 |     messages = _make_messages("Hello")
+621 |     await cpu_provider.chat(messages=messages, model=tinyllama_model_id, max_tokens=1)
+622 |     yield cpu_provider
+    |     ^^^^^^^^^^^^^^^^^^
+    |
+help: Replace `yield` with `return`
+619 |     """
+620 |     messages = _make_messages("Hello")
+621 |     await cpu_provider.chat(messages=messages, model=tinyllama_model_id, max_tokens=1)
+    -     yield cpu_provider
+622 +     return cpu_provider
+623 |
+624 |
+625 | @pytest.fixture
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_providers\test_openai_format_helpers.py:119:12
+    |
+117 |     @property
+118 |     def name(self) -> ProviderName:
+119 |         """Return a placeholder provider name.
+    |            ^^^^^^
+120 |
+121 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_providers\test_provider_loop_rebind.py:196:12
+    |
+194 |     @property
+195 |     def base_url(self) -> str:
+196 |         """Return the ``http://host:port`` base URL for the bound server.
+    |            ^^^^^^
+197 |
+198 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+  --> tests\test_sandbox\test_manager.py:58:12
+   |
+56 |     @property
+57 |     def instances(self) -> list[Any]:
+58 |         """Get all instances.
+   |            ^^^
+59 |
+60 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+  --> tests\test_sandbox\test_manager.py:67:12
+   |
+65 |     @property
+66 |     def active_count(self) -> int:
+67 |         """Get count of running instances.
+   |            ^^^
+68 |
+69 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Get")
+   --> tests\test_sandbox\test_manager.py:236:12
+    |
+234 |     @property
+235 |     def state(self) -> SandboxState:
+236 |         """Get sandbox state.
+    |            ^^^
+237 |
+238 |         Returns:
+    |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+    --> tests\test_sandbox\test_sandbox_bridge.py:1204:12
+     |
+1202 |     @property
+1203 |     def instances(self) -> list[StubInstance]:
+1204 |         """Return all tracked instances.
+     |            ^^^^^^
+1205 |
+1206 |         Returns:
+     |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+    --> tests\test_sandbox\test_sandbox_bridge.py:1213:12
+     |
+1211 |     @property
+1212 |     def active_count(self) -> int:
+1213 |         """Return the number of running instances.
+     |            ^^^^^^
+1214 |
+1215 |         Returns:
+     |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+  --> tests\test_scripts\test_commit_message.py:51:17
+   |
+51 | @pytest.fixture(autouse=True)
+   |                 ^^^^^^^^^^^^
+52 | def disable_throttle(monkeypatch: pytest.MonkeyPatch) -> None:
+53 |     """Disable API throttling for all tests so they run instantly.
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+  --> tests\test_ui\conftest.py:69:12
+   |
+67 |     @property
+68 |     def times_called(self) -> int:
+69 |         """Return the number of recorded calls.
+   |            ^^^^^^
+70 |
+71 |         Returns:
+   |
+
+property-docstring-starts-with-verb: Property docstring should not start with a verb ("Return")
+   --> tests\test_ui\conftest.py:160:12
+    |
+158 |     @property
+159 |     def times_called(self) -> int:
+160 |         """Return the number of recorded calls.
+    |            ^^^^^^
+161 |
+162 |         Returns:
+    |
+
+pytest-fixture-autouse: Avoid using `autouse=True` in `pytest.fixture` decorators
+  --> tests\test_ui\log_viewer\conftest.py:34:17
+   |
+34 | @pytest.fixture(autouse=True)
+   |                 ^^^^^^^^^^^^
+35 | def cleanup_qt_log_handler() -> Generator[None]:
+36 |     """Detach the shared Qt log handler after each test.
+   |
+
+Found 62 errors.
+[*] 8 fixable with the `--fix` option.

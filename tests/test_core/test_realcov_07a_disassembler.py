@@ -289,7 +289,12 @@ class TestDisassembleRealMachineCode:
         disasm: HexDisassembler,
         real_pe_dll: Path,
     ) -> None:
-        """The ``count`` argument bounds the number of returned instructions.
+        """The ``count`` argument limits returned instructions to exactly that many.
+
+        Drives the real ``.text`` section from ``kernel32.dll`` (thousands of
+        decodable x86-64 instructions), so ``count=5`` must yield exactly 5.
+        An independent oracle built directly from capstone validates that the
+        returned mnemonics and addresses match what raw capstone produces.
 
         Args:
             disasm: Live disassembler.
@@ -299,7 +304,32 @@ class TestDisassembleRealMachineCode:
         section, rva = _extract_pe_text_section(data)
         arch, mode = disasm.auto_detect_arch(data)
         instructions = disasm.disassemble(section, base_addr=rva, arch=arch, mode=mode, count=5)
-        assert len(instructions) <= 5
+
+        assert len(instructions) == 5, (
+            f"disassemble(count=5) must return exactly 5 instructions from a real .text section, "
+            f"got {len(instructions)}"
+        )
+
+        cs_arch = capstone.CS_ARCH_X86
+        cs_mode = capstone.CS_MODE_64
+        oracle_engine = capstone.Cs(cs_arch, cs_mode)
+        oracle_engine.detail = False
+        oracle_insns: list[tuple[int, str, str]] = []
+        for insn in oracle_engine.disasm(section, rva):
+            oracle_insns.append((insn.address, insn.mnemonic, insn.op_str))
+            if len(oracle_insns) >= 5:
+                break
+
+        assert len(oracle_insns) == 5, "capstone oracle must also decode at least 5 instructions"
+        for idx, (insn, (oracle_addr, oracle_mnem, _oracle_op)) in enumerate(
+            zip(instructions, oracle_insns, strict=True),
+        ):
+            assert insn.address == oracle_addr, (
+                f"instruction[{idx}].address {insn.address:#x} != oracle {oracle_addr:#x}"
+            )
+            assert insn.mnemonic == oracle_mnem, (
+                f"instruction[{idx}].mnemonic {insn.mnemonic!r} != oracle {oracle_mnem!r}"
+            )
 
 
 class TestSupportedArchitecturesAndSingleton:

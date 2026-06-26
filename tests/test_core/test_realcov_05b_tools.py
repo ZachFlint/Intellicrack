@@ -301,6 +301,9 @@ class TestSetSessionPropagation:
         assert published.target_path.name.lower() == real_pe_dll.name.lower()
 
 
+_ALIGNMENT_GRID_SIZE: Final[int] = 512
+
+
 class TestRegisterBridgeRealInstance:
     """``register_bridge`` swaps in a real bridge and routes to it."""
 
@@ -309,7 +312,15 @@ class TestRegisterBridgeRealInstance:
     async def test_registered_bridge_is_returned_and_dispatched(
         tmp_path: Path,
     ) -> None:
-        """A freshly registered real bridge is reachable via the registry.
+        """A freshly registered real bridge is reached by the full dispatch path.
+
+        After registering a real ``HexEditorBridge``, the test drives
+        ``execute_tool_call`` end-to-end (tool-name normalisation, bridge
+        lookup, capability check, attribute resolution, coroutine dispatch).
+        The independent oracle is calling ``bridge.get_alignment_grid()``
+        directly on the same instance: if the registry routes to the wrong
+        bridge, or fails to resolve the method, the oracle stays at ``0``
+        while the dispatch result is ``512``, or vice-versa.
 
         Args:
             tmp_path: Pytest temporary directory used as the tools directory.
@@ -321,5 +332,30 @@ class TestRegisterBridgeRealInstance:
         assert registry.get(ToolName.HEX_EDITOR) is bridge
         assert registry.get_hex_editor_bridge() is bridge
         assert ToolName.HEX_EDITOR in registry.get_available_tools()
+
+        set_result = await registry.execute_tool_call(
+            "hex_editor",
+            "set_alignment_grid",
+            {"size": _ALIGNMENT_GRID_SIZE},
+        )
+        assert set_result is True, (
+            f"set_alignment_grid dispatch returned {set_result!r}, expected True"
+        )
+
+        oracle_grid: int = await bridge.get_alignment_grid()
+        assert oracle_grid == _ALIGNMENT_GRID_SIZE, (
+            f"direct bridge oracle returned {oracle_grid}, "
+            f"expected {_ALIGNMENT_GRID_SIZE} after dispatch"
+        )
+
+        get_result = await registry.execute_tool_call(
+            "hex_editor",
+            "get_alignment_grid",
+            {},
+        )
+        assert get_result == _ALIGNMENT_GRID_SIZE, (
+            f"get_alignment_grid dispatch returned {get_result!r}, "
+            f"expected oracle {_ALIGNMENT_GRID_SIZE}"
+        )
 
         await registry.shutdown()

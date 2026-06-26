@@ -396,48 +396,174 @@ def test_script_records_lifecycle_transitions(tmp_path: Path) -> None:
     assert target_transitions, f"expected at least one jsonl modified record for {_TARGET_SERVICE}; records={jsonl_records!r}"
 
 
+def _build_dedup_harness(log_dir: Path) -> str:
+    """Construct a PowerShell harness that exercises the dedup logic.
+
+    Extracts the exact function bodies from the production
+    ``service_monitor.ps1`` (verbatim, not reimplemented) and assembles
+    a standalone script that:
+
+    1. Calls ``Publish-LifecycleTransition`` five times in rapid
+       succession with identical (service, state) inputs.
+    2. Sleeps 350 ms (> 250 ms dedup window).
+    3. Calls ``Publish-LifecycleTransition`` once more.
+    4. Prints the total JSONL record count to stdout.
+
+    The expected count is **2**: one from the first burst (the four
+    duplicates are suppressed) and one after the window expires.
+
+    Args:
+        log_dir: Writable directory for JSONL/pipe/error log files.
+
+    Returns:
+        str: Full PowerShell script text for the harness.
+    """
+    script_text = _SCRIPT_PATH.read_text(encoding="utf-8")
+
+    log_path_ps = str(log_dir / _LOG_NAME).replace("\\", "/")
+    jsonl_path_ps = str(log_dir / _JSONL_NAME).replace("\\", "/")
+    error_path_ps = str(log_dir / _ERROR_LOG_NAME).replace("\\", "/")
+
+    harness_lines = [
+        "$ErrorActionPreference = 'Stop'",
+        f"$logPath     = '{log_path_ps}'",
+        f"$jsonlPath   = '{jsonl_path_ps}'",
+        f"$errorLogPath = '{error_path_ps}'",
+        "$script:lastTransition   = @{}",
+        "$script:duplicateWindowMs = 250",
+        "",
+    ]
+
+    func_names = [
+        "Format-Field",
+        "Write-ErrorRecord",
+        "Write-PipeRecord",
+        "Write-JsonlRecord",
+        "ConvertTo-StateName",
+        "Test-DuplicateTransition",
+        "Publish-LifecycleTransition",
+    ]
+
+    lines = script_text.splitlines()
+    for func_name in func_names:
+        start_idx: int | None = None
+        for i, line in enumerate(lines):
+            if line.strip().startswith(f"function {func_name}"):
+                start_idx = i
+                break
+        assert start_idx is not None, f"function {func_name} not found in {_SCRIPT_PATH}"
+
+        brace_depth = 0
+        end_idx: int | None = None
+        for j in range(start_idx, len(lines)):
+            brace_depth += lines[j].count("{") - lines[j].count("}")
+            if brace_depth <= 0 and j > start_idx:
+                end_idx = j
+                break
+        assert end_idx is not None, f"function {func_name} body not closed in {_SCRIPT_PATH}"
+
+        harness_lines.extend(lines[start_idx : end_idx + 1])
+        harness_lines.append("")
+
+    harness_lines.extend([
+        "$syntheticSvc = [PSCustomObject]@{",
+        "    Name        = 'TestDedup'",
+        "    DisplayName = 'Test Dedup Service'",
+        "    PathName    = 'C:/Windows/test.exe'",
+        "    StartMode   = 'Auto'",
+        "    State       = 'Stopped'",
+        "}",
+        "",
+        "for ($i = 0; $i -lt 5; $i++) {",
+        "    Publish-LifecycleTransition -Instance $syntheticSvc -EventKind 'modified'",
+        "}",
+        "",
+        "Start-Sleep -Milliseconds 350",
+        "",
+        "Publish-LifecycleTransition -Instance $syntheticSvc -EventKind 'modified'",
+        "",
+        "$jsonlContent = if (Test-Path -LiteralPath $jsonlPath) {",
+        "    Get-Content -LiteralPath $jsonlPath -Raw -Encoding utf8",
+        "} else { '' }",
+        "$count = ($jsonlContent.Trim().Split(\"`n\") | Where-Object { $_.Trim().StartsWith('{') }).Count",
+        'Write-Output "DEDUP_COUNT=$count"',
+    ])
+
+    return "\n".join(harness_lines)
+
+
 def test_script_idempotency_dedupes_rapid_duplicate_transitions(tmp_path: Path) -> None:
     """F-0009 idempotency: identical back-to-back transitions are deduped.
 
-    Subsequent identical state observations within 250 ms must not
-    multiply log records (the in-memory ``$script:lastTransition``
-    table guards against duplicate WMI emissions).
+    Runs a PowerShell harness that loads the exact production function
+    bodies from ``service_monitor.ps1`` verbatim (not reimplemented)
+    and exercises ``Publish-LifecycleTransition`` with five rapid
+    back-to-back calls sharing the same ``(service, state)`` key,
+    followed by a 350 ms pause and one additional call.
+
+    Independent oracle: the JSONL record count emitted by the harness
+    must equal **2** (one from the first burst, one after the dedup
+    window expires). Under the documented production mutation --- removing
+    the ``Test-DuplicateTransition`` guard at line 196 of
+    ``service_monitor.ps1`` so that ``Publish-LifecycleTransition``
+    writes a record on every call --- all six calls write JSONL records,
+    yielding a count of 6, which fails the ``== 2`` assertion.
+
+    Documented falsifying mutation: in ``service_monitor.ps1`` at
+    line 196, remove ``if (Test-DuplicateTransition -ServiceName
+    $serviceName -State "$EventKind::$stateName") { return }``.  Under
+    that mutation the harness emits 6 JSONL records and the assertion
+    ``count == 2`` fails.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
     """
-    if not _is_admin():
-        pytest.skip("idempotency test requires administrator privileges to control the Spooler service")
-
     pwsh = _resolve_pwsh()
-    if not _service_exists(_TARGET_SERVICE, pwsh):
-        pytest.skip(f"target service {_TARGET_SERVICE!r} is not installed on this host")
-
-    log_dir = tmp_path / "idempotent_logs"
+    log_dir = tmp_path / "dedup_harness_logs"
     log_dir.mkdir()
 
-    proc = _start_script(log_dir, pwsh)
-    try:
-        _drive_spooler_stop_start(pwsh)
-    finally:
-        _terminate(proc)
+    harness_text = _build_dedup_harness(log_dir)
+    harness_path = tmp_path / "dedup_harness.ps1"
+    harness_path.write_text(harness_text, encoding="utf-8")
 
-    log_path = log_dir / _LOG_NAME
-    pipe_contents = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
+    completed = run(
+        [
+            pwsh,
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(harness_path),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+        timeout=15.0,
+    )
 
-    state_lines: dict[str, int] = {}
-    for raw in pipe_contents.splitlines():
-        if "|state_changed|" not in raw or f"|{_TARGET_SERVICE}|" not in raw:
-            continue
-        parts = raw.split("|")
-        if len(parts) < 6:
-            continue
-        state = parts[5]
-        key = f"{state}"
-        state_lines[key] = state_lines.get(key, 0) + 1
+    assert completed.returncode == 0, (
+        f"dedup harness exited with rc={completed.returncode}; "
+        f"stderr={completed.stderr!r}; stdout={completed.stdout!r}"
+    )
 
-    for state, count in state_lines.items():
-        assert count <= 4, (
-            f"transition state {state!r} was emitted {count} times for {_TARGET_SERVICE}; "
-            "duplicate WMI events should be deduped within the idempotency window"
-        )
+    count_line = next(
+        (ln for ln in completed.stdout.splitlines() if ln.startswith("DEDUP_COUNT=")),
+        None,
+    )
+    assert count_line is not None, (
+        f"harness did not emit DEDUP_COUNT= line; stdout={completed.stdout!r} stderr={completed.stderr!r}"
+    )
+
+    actual_count = int(count_line.split("=", 1)[1].strip())
+
+    assert actual_count == 2, (
+        f"dedup gate FAILED: expected 2 JSONL records (1 from initial burst + 1 after "
+        f"window expiry) but got {actual_count}. "
+        f"The Test-DuplicateTransition guard in Publish-LifecycleTransition "
+        f"(service_monitor.ps1 line 196) is not suppressing rapid duplicate events. "
+        f"stdout={completed.stdout!r} stderr={completed.stderr!r}"
+    )

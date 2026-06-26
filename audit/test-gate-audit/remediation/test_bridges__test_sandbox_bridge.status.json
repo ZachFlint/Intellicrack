@@ -1,0 +1,35 @@
+{
+  "file": "tests/test_bridges/test_sandbox_bridge.py",
+  "findings_addressed": [
+    {
+      "id": "G0094",
+      "test": "TestF0012AnalysisModuleCache::test_analysis_module_called_once_for_multiple_bridge_calls",
+      "action": "hardened",
+      "oracle": "Patch intellicrack.bridges.sandbox_bridge.importlib.import_module with a counter; clear lru_cache before the run; make TWO distinct bridge calls (extract_iocs then timeline); assert import_count == 1. The cache prevents the second bridge call from re-invoking import_module.",
+      "documented_mutation": "Remove @functools.lru_cache(maxsize=1) from _get_analysis_module in src/intellicrack/bridges/sandbox_bridge.py (line 53) — each bridge call would then call importlib.import_module independently, producing import_count==2 and failing the assert import_count == 1."
+    },
+    {
+      "id": "G0095",
+      "test": "TestF0016UTCTimestamps::test_list_normalises_non_utc_input_to_utc_offset_zero",
+      "action": "hardened",
+      "oracle": "Supply a fixed aware datetime in UTC-5 (timezone(timedelta(hours=-5))). Call bridge.list() via monkeypatched _manager. Parse the result strings with datetime.fromisoformat() and assert utcoffset() == timedelta(0). Also verify the round-trip value equals the original instant converted to UTC.",
+      "documented_mutation": "Remove .astimezone(UTC) from the isoformat() expression at src/intellicrack/bridges/sandbox_bridge.py line 1400 so it becomes inst.created_at.isoformat(). The output would then contain '-05:00' and datetime.fromisoformat(created_at).utcoffset() would equal timedelta(hours=-5), not timedelta(0), causing the assertion to fail."
+    },
+    {
+      "id": "G0096",
+      "test": "TestF0012AnalysisModuleCache::test_get_analysis_module_returns_module",
+      "action": "hardened",
+      "oracle": "Assert result.__name__ == 'intellicrack.sandbox.analysis' and that each of the five public callables (extract_iocs, generate_timeline, match_behaviors, detect_c2_patterns, diff_reports) is callable on the returned object.",
+      "documented_mutation": "Change importlib.import_module('intellicrack.sandbox.analysis') to importlib.import_module('intellicrack.sandbox') in src/intellicrack/bridges/sandbox_bridge.py (line 60) — __name__ would be 'intellicrack.sandbox' and the required callables would be absent, failing both assertions."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0094: The tautological test (single call asserting count==1) was replaced with a two-call gate that patches importlib.import_module inside sandbox_bridge and verifies the lru_cache prevents the second import. G0095: re-gated from a tautological schema-text keyword check to behavioral UTC normalisation. test_tool_def_schemas_mention_utc was NOT deleted - it was rewritten to drive SandboxBridge.list() and assert the produced created_at/last_used strings parse to utcoffset()==timedelta(0). The companion test_list_normalises_non_utc_input_to_utc_offset_zero remains. FIX (2026-06-22): test_tool_def_schemas_mention_utc had a host-timezone-dependent 'naive' input case whose oracle wrongly assumed production does value.replace(tzinfo=UTC); production actually does .astimezone(UTC), which interprets naive datetimes as host-local time. In a non-UTC container naive 12:00 became 18:00 UTC, failing the round-trip. Replaced the naive case with a second aware non-UTC offset (UTC-5) so all three inputs (UTC, UTC-5, UTC+9) are deterministic and falsifiable. Verified GREEN in sandbox. G0096: Added __name__ check and callable presence check for all five public analysis functions."
+}

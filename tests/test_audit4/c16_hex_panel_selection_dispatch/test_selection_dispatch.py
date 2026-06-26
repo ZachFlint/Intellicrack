@@ -234,23 +234,6 @@ class TestSelectionPropagation:
     """F-0004: GUI selection must propagate to the shared state holder and bridge."""
 
     @staticmethod
-    def test_selection_updates_state_holder(qapp: QApplication) -> None:
-        """Assert a valid selection fires SELECTION_CHANGED on the state holder.
-
-        Args:
-            qapp: Qt application fixture (kept alive for widget construction).
-        """
-        del qapp
-        state = _RecordingState()
-        bridge = _StubBridge()
-        harness = _PanelHarness(state, bridge)
-
-        harness.trigger_selection_changed(_SEL_START, _SEL_END)
-
-        events = state.selection_changed_events()
-        assert len(events) >= 1, "SELECTION_CHANGED must be fired after _on_selection_changed"
-
-    @staticmethod
     def test_selection_payload_matches_range(qapp: QApplication) -> None:
         """Assert the SELECTION_CHANGED payload carries the correct start and end.
 

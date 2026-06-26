@@ -1,0 +1,26 @@
+{
+  "file": "tests/test_audit4/c16_hex_panel_selection_dispatch/test_selection_dispatch.py",
+  "findings_addressed": [
+    {
+      "id": "G0030",
+      "test": "TestSelectionPropagation::test_selection_updates_state_holder",
+      "action": "deleted",
+      "oracle": "TestSelectionPropagation::test_selection_payload_matches_range",
+      "documented_mutation": "In src/intellicrack/ui/panels/hex_editor/panel.py line 1022, change `self.state_holder.set_selection(start, end, source=\"panel\")` to `self.state_holder.set_selection(0, 0, source=\"panel\")` — test_selection_payload_matches_range fails because payload.get(\"start\") returns 0 instead of _SEL_START (4) and payload.get(\"end\") returns 0 instead of _SEL_END (12)."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    {
+      "test": "TestSelectionPropagation::test_selection_updates_state_holder",
+      "covered_by": "TestSelectionPropagation::test_selection_payload_matches_range"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The flagged test test_selection_updates_state_holder (G0030) no longer exists in the file; it was deleted in a prior remediation round and replaced by the stronger sibling test_selection_payload_matches_range which asserts both that a SELECTION_CHANGED event fires AND that its payload carries the exact start and end values. No edits to the test file were required. All four quality tools pass clean with zero findings."
+}

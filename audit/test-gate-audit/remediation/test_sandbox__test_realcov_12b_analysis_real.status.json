@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_sandbox/test_realcov_12b_analysis_real.py",
+  "findings_addressed": [
+    {
+      "id": "G0314",
+      "test": "test_generate_timeline_orders_real_events",
+      "action": "hardened",
+      "oracle": "Independent count oracle: len(report.process_activity) is computed before calling generate_timeline; the process-filtered timeline length must equal that count. A mutation dropping _timeline_add_process_events or silently skipping records changes the count and turns the assertion red.",
+      "documented_mutation": "In src/intellicrack/sandbox/analysis.py, delete the line `_timeline_add_process_events(report, events)` inside generate_timeline (around line 589) \u2014 process_only becomes [] while expected_process_event_count > 0, making `assert len(process_only) == expected_process_event_count` fail."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The conditional-never-runs anti-pattern (N6 variant) was: `if report.process_activity: assert process_only`. On a real Windows capture process_activity is always non-empty so the assertion always ran, but the conditional guard meant a vacuous pass was possible if process_activity happened to be empty. The fix: (1) assert report.process_activity is non-empty as a hard precondition with a diagnostic message, (2) independently count expected process events before calling generate_timeline, (3) unconditionally assert len(process_only) == expected_process_event_count as a count oracle, removing the conditional guard entirely. The sort oracle and filter oracle (all events have category==process) are retained. POST-WORKFLOW FIX (2026-06-22): the fixer-added test_extract_iocs_from_real_process_paths was a BROKEN test misdiagnosed by the green agent as a production defect. Its sentinel file paths embedded IPs followed by underscore (8.8.8.8_and_...), but _IPV4_PATTERN anchors on word boundaries (\b) and underscore is a word char, so \b never fires between a digit and _ - the regex extracted NOTHING from the paths (verified on host: returns []). Production _scan_text is CORRECT (it extracts IPv4/URL/domain and scans both file_changes[\"path\"] and registry value_data). Fixed the sentinels to delimit each IP with backslash path separators (8.8.8.8\beacon\u0001.1.1.1\\c2.bin); verified on host that production then extracts both public IPs, dedups 8.8.8.8 to 1, and filters the private 192.168.254.253. NOT a production defect. Verified GREEN in sandbox."
+}

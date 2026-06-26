@@ -264,6 +264,14 @@ class _RecordingBridge(ProcessBridge):
             raise ValueError(msg)
         return True
 
+    def notify_privileges_changed(self) -> None:
+        """Invoke the base bridge privilege-changed notification from test code.
+
+        Provides a public entry point so tests do not access the protected
+        ``_notify_privileges_changed`` method from outside the class hierarchy.
+        """
+        self._notify_privileges_changed()
+
 
 @pytest.fixture
 def panel(qapp: QCoreApplication) -> Generator[ProcessPanel]:
@@ -302,7 +310,7 @@ def _simulate_attach(panel: ProcessPanel, pid: int) -> None:
         panel: ProcessPanel to attach.
         pid: PID to attach to.
     """
-    panel._on_process_attached(pid)
+    getattr(panel, "_on_process_attached")(pid)
 
 
 def _simulate_detach(panel: ProcessPanel) -> None:
@@ -311,7 +319,7 @@ def _simulate_detach(panel: ProcessPanel) -> None:
     Args:
         panel: ProcessPanel to detach.
     """
-    panel._on_process_detached()
+    getattr(panel, "_on_process_detached")()
 
 
 class TestF0001ArchLabelUpdatesOnAttach:
@@ -323,7 +331,7 @@ class TestF0001ArchLabelUpdatesOnAttach:
         Args:
             panel: ProcessPanel fixture.
         """
-        assert panel._status_arch.text() == "Arch: --"
+        assert getattr(panel, "_status_arch").text() == "Arch: --"
 
     def test_arch_label_updates_after_attach(
         self,
@@ -347,9 +355,9 @@ class TestF0001ArchLabelUpdatesOnAttach:
         success = _process_events_until(qapp, lambda: bridge.arch_calls != [])
         assert success, "detect_architecture was never called after attach"
 
-        success = _process_events_until(qapp, lambda: panel._status_arch.text() != "Arch: --")
+        success = _process_events_until(qapp, lambda: getattr(panel, "_status_arch").text() != "Arch: --")
         assert success, "Arch label was not updated after attach"
-        assert panel._status_arch.text() == "Arch: x86_64"
+        assert getattr(panel, "_status_arch").text() == "Arch: x86_64"
 
     def test_arch_label_resets_on_detach(
         self,
@@ -367,9 +375,9 @@ class TestF0001ArchLabelUpdatesOnAttach:
         bridge.arch_result = "x86"
         panel.set_bridge(bridge)
         _simulate_attach(panel, 999)
-        _process_events_until(qapp, lambda: panel._status_arch.text() != "Arch: --")
+        _process_events_until(qapp, lambda: getattr(panel, "_status_arch").text() != "Arch: --")
         _simulate_detach(panel)
-        assert panel._status_arch.text() == "Arch: --"
+        assert getattr(panel, "_status_arch").text() == "Arch: --"
 
     def test_arch_label_shows_unknown_on_bridge_error(
         self,
@@ -392,10 +400,10 @@ class TestF0001ArchLabelUpdatesOnAttach:
         assert success
         success = _process_events_until(
             qapp,
-            lambda: panel._status_arch.text() in {"Arch: Unknown", "Arch: --"},
+            lambda: getattr(panel, "_status_arch").text() in {"Arch: Unknown", "Arch: --"},
         )
         assert success
-        assert panel._status_arch.text() == "Arch: Unknown"
+        assert getattr(panel, "_status_arch").text() == "Arch: Unknown"
 
     def test_arch_bridge_called_with_attached_pid(
         self,
@@ -443,8 +451,8 @@ class TestF0002PrivilegeLabelRefreshesOnMutation:
         success = _process_events_until(qapp, lambda: bridge.priv_calls != [])
         assert success, "get_token_privileges was never called after attach"
 
-        success = _process_events_until(qapp, lambda: "Debug" in panel._status_priv.text())
-        assert success, f"Privilege label not updated to Debug; got: {panel._status_priv.text()}"
+        success = _process_events_until(qapp, lambda: "Debug" in getattr(panel, "_status_priv").text())
+        assert success, f"Privilege label not updated to Debug; got: {getattr(panel, '_status_priv').text()}"
 
     def test_priv_label_standard_when_no_debug_priv(
         self,
@@ -452,22 +460,36 @@ class TestF0002PrivilegeLabelRefreshesOnMutation:
         panel: ProcessPanel,
         bridge: _RecordingBridge,
     ) -> None:
-        """Privilege label must show 'Standard' when SeDebugPrivilege is absent/disabled.
+        """Privilege label must show 'Standard' when SeDebugPrivilege transitions from enabled to absent.
+
+        Drives the label to 'Debug' first via SeDebugPrivilege enabled, then fires a
+        privileges_changed event with only SeChangeNotifyPrivilege so the label must
+        transition back to 'Standard'.  The round-trip proves the async refresh path
+        correctly responds to a privilege mutation rather than relying on the initial
+        default value.
 
         Args:
             qapp: Qt application.
             panel: ProcessPanel fixture.
-            bridge: Recording bridge with debug privilege disabled.
+            bridge: Recording bridge configured to start with debug privilege enabled.
         """
-        bridge.priv_result = [{"name": "SeChangeNotifyPrivilege", "luid": 23, "enabled": True, "attributes": 2}]
+        bridge.priv_result = [{"name": "SeDebugPrivilege", "luid": 20, "enabled": True, "attributes": 2}]
         panel.set_bridge(bridge)
         _simulate_attach(panel, 200)
 
-        success = _process_events_until(qapp, lambda: bridge.priv_calls != [])
-        assert success
-        success = _process_events_until(qapp, lambda: panel._status_priv.text() != "Privilege: Standard" or True)
-        qapp.processEvents()
-        assert "Standard" in panel._status_priv.text()
+        success = _process_events_until(qapp, lambda: "Debug" in getattr(panel, "_status_priv").text())
+        assert success, f"Expected 'Debug' after attach with SeDebugPrivilege enabled; got: {getattr(panel, '_status_priv').text()}"
+
+        initial_calls = len(bridge.priv_calls)
+        bridge.priv_result = [{"name": "SeChangeNotifyPrivilege", "luid": 23, "enabled": True, "attributes": 2}]
+        bridge.notify_privileges_changed()
+
+        success = _process_events_until(qapp, lambda: len(bridge.priv_calls) > initial_calls)
+        assert success, "get_token_privileges not called after privileges_changed event"
+
+        success = _process_events_until(qapp, lambda: "Standard" in getattr(panel, "_status_priv").text())
+        assert success, f"Expected 'Standard' after privilege mutation; got: {getattr(panel, '_status_priv').text()}"
+        assert getattr(panel, "_status_priv").text() == "Privilege: Standard"
 
     def test_priv_label_refreshes_on_privileges_changed_event(
         self,
@@ -492,13 +514,13 @@ class TestF0002PrivilegeLabelRefreshesOnMutation:
         initial_calls = len(bridge.priv_calls)
 
         bridge.priv_result = [{"name": "SeDebugPrivilege", "luid": 20, "enabled": True, "attributes": 2}]
-        bridge._notify_privileges_changed()
+        bridge.notify_privileges_changed()
 
         success = _process_events_until(qapp, lambda: len(bridge.priv_calls) > initial_calls)
         assert success, "get_token_privileges not called after privileges_changed event"
 
-        success = _process_events_until(qapp, lambda: "Debug" in panel._status_priv.text())
-        assert success, f"Privilege label not updated after event; got: {panel._status_priv.text()}"
+        success = _process_events_until(qapp, lambda: "Debug" in getattr(panel, "_status_priv").text())
+        assert success, f"Privilege label not updated after event; got: {getattr(panel, '_status_priv').text()}"
 
     def test_priv_bridge_called_with_attached_pid(
         self,
@@ -534,9 +556,9 @@ class TestF0002PrivilegeLabelRefreshesOnMutation:
         bridge.priv_result = [{"name": "SeDebugPrivilege", "luid": 20, "enabled": True, "attributes": 2}]
         panel.set_bridge(bridge)
         _simulate_attach(panel, 888)
-        _process_events_until(qapp, lambda: "Debug" in panel._status_priv.text())
+        _process_events_until(qapp, lambda: "Debug" in getattr(panel, "_status_priv").text())
         _simulate_detach(panel)
-        assert panel._status_priv.text() == "Privilege: Standard"
+        assert getattr(panel, "_status_priv").text() == "Privilege: Standard"
 
 
 class TestF0025ProcessButtonsGatedWhenUnattached:
@@ -553,7 +575,8 @@ class TestF0025ProcessButtonsGatedWhenUnattached:
             bridge: Recording bridge.
         """
         panel.set_bridge(bridge)
-        assert panel._process_tab._suspend_btn.isEnabled() is False
+        proc_tab = getattr(panel, "_process_tab")
+        assert getattr(proc_tab, "_suspend_btn").isEnabled() is False
 
     def test_resume_disabled_when_unattached(self, panel: ProcessPanel, bridge: _RecordingBridge) -> None:
         """Resume button must be disabled when no process is attached.
@@ -563,7 +586,8 @@ class TestF0025ProcessButtonsGatedWhenUnattached:
             bridge: Recording bridge.
         """
         panel.set_bridge(bridge)
-        assert panel._process_tab._resume_btn.isEnabled() is False
+        proc_tab = getattr(panel, "_process_tab")
+        assert getattr(proc_tab, "_resume_btn").isEnabled() is False
 
     def test_detach_disabled_when_unattached(self, panel: ProcessPanel, bridge: _RecordingBridge) -> None:
         """Detach button must be disabled when no process is attached.
@@ -573,7 +597,8 @@ class TestF0025ProcessButtonsGatedWhenUnattached:
             bridge: Recording bridge.
         """
         panel.set_bridge(bridge)
-        assert panel._process_tab._detach_btn.isEnabled() is False
+        proc_tab = getattr(panel, "_process_tab")
+        assert getattr(proc_tab, "_detach_btn").isEnabled() is False
 
     def test_inject_disabled_when_unattached(self, panel: ProcessPanel, bridge: _RecordingBridge) -> None:
         """Inject button must be disabled when no process is attached.
@@ -583,7 +608,8 @@ class TestF0025ProcessButtonsGatedWhenUnattached:
             bridge: Recording bridge.
         """
         panel.set_bridge(bridge)
-        assert panel._process_tab._inject_btn.isEnabled() is False
+        proc_tab = getattr(panel, "_process_tab")
+        assert getattr(proc_tab, "_inject_btn").isEnabled() is False
 
     def test_action_buttons_enabled_after_attach(
         self,
@@ -602,10 +628,11 @@ class TestF0025ProcessButtonsGatedWhenUnattached:
         panel.set_bridge(bridge)
         _simulate_attach(panel, 555)
 
-        assert panel._process_tab._suspend_btn.isEnabled() is True
-        assert panel._process_tab._resume_btn.isEnabled() is True
-        assert panel._process_tab._detach_btn.isEnabled() is True
-        assert panel._process_tab._inject_btn.isEnabled() is True
+        proc_tab = getattr(panel, "_process_tab")
+        assert getattr(proc_tab, "_suspend_btn").isEnabled() is True
+        assert getattr(proc_tab, "_resume_btn").isEnabled() is True
+        assert getattr(proc_tab, "_detach_btn").isEnabled() is True
+        assert getattr(proc_tab, "_inject_btn").isEnabled() is True
 
     def test_action_buttons_disabled_after_detach(
         self,
@@ -625,10 +652,11 @@ class TestF0025ProcessButtonsGatedWhenUnattached:
         _simulate_attach(panel, 666)
         _simulate_detach(panel)
 
-        assert panel._process_tab._suspend_btn.isEnabled() is False
-        assert panel._process_tab._resume_btn.isEnabled() is False
-        assert panel._process_tab._detach_btn.isEnabled() is False
-        assert panel._process_tab._inject_btn.isEnabled() is False
+        proc_tab = getattr(panel, "_process_tab")
+        assert getattr(proc_tab, "_suspend_btn").isEnabled() is False
+        assert getattr(proc_tab, "_resume_btn").isEnabled() is False
+        assert getattr(proc_tab, "_detach_btn").isEnabled() is False
+        assert getattr(proc_tab, "_inject_btn").isEnabled() is False
 
     def test_attach_always_enabled_with_selection(
         self,
@@ -642,10 +670,10 @@ class TestF0025ProcessButtonsGatedWhenUnattached:
             bridge: Recording bridge.
         """
         panel.set_bridge(bridge)
-        proc_tab = panel._process_tab
-        proc_tab._selected_pid = 9999
-        panel._update_controls_for_state()
-        assert proc_tab._attach_btn.isEnabled() is True
+        proc_tab = getattr(panel, "_process_tab")
+        setattr(proc_tab, "_selected_pid", 9999)
+        getattr(panel, "_update_controls_for_state")()
+        assert getattr(proc_tab, "_attach_btn").isEnabled() is True
 
     def test_terminate_enabled_with_selection_not_attach(
         self,
@@ -659,7 +687,7 @@ class TestF0025ProcessButtonsGatedWhenUnattached:
             bridge: Recording bridge.
         """
         panel.set_bridge(bridge)
-        proc_tab = panel._process_tab
-        proc_tab._selected_pid = 1111
-        panel._update_controls_for_state()
-        assert proc_tab._terminate_btn.isEnabled() is True
+        proc_tab = getattr(panel, "_process_tab")
+        setattr(proc_tab, "_selected_pid", 1111)
+        getattr(panel, "_update_controls_for_state")()
+        assert getattr(proc_tab, "_terminate_btn").isEnabled() is True

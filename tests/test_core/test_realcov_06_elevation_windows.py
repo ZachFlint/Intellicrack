@@ -126,13 +126,33 @@ def test_is_elevated_matches_independent_token_query() -> None:
     assert elevation.is_elevated() is _query_token_elevation_independently()
 
 
-def test_maybe_elevate_already_attempted_never_relaunches() -> None:
+def test_maybe_elevate_already_attempted_never_relaunches(monkeypatch: pytest.MonkeyPatch) -> None:
     """A child flagged ``already_attempted`` continues without any relaunch.
 
-    Runs the genuine ``maybe_elevate`` over the real process token; the
-    already-attempted guard must return ``False`` and never reach
-    ``ShellExecuteW``, regardless of the real elevation state.
+    ``is_elevated`` is forced to ``False`` so the already-elevated fallback
+    cannot mask the branch under test, and the UAC transport boundary
+    ``_relaunch_elevated`` is spied. The ``already_attempted`` guard must return
+    ``False`` WITHOUT reaching ``_relaunch_elevated``.
+
+    Concrete mutation (static proof, do NOT run): delete the
+    ``if already_attempted: ... return False`` block in
+    ``src/intellicrack/core/elevation.py``. Execution then falls through to the
+    (monkeypatched-False) ``is_elevated`` check and reaches ``_relaunch_elevated``;
+    the spy records the call and ``assert relaunch_called == []`` fails.
+
+    Args:
+        monkeypatch: pytest fixture for temporarily replacing module attributes.
     """
+    monkeypatch.setattr(elevation, "is_elevated", lambda: False)
+
+    relaunch_called: list[tuple[list[str], str]] = []
+
+    def _spy_relaunch(original_args: list[str], working_dir: str) -> bool:
+        relaunch_called.append((original_args, working_dir))
+        return False
+
+    monkeypatch.setattr(elevation, "_relaunch_elevated", _spy_relaunch)
+
     result = elevation.maybe_elevate(
         disabled=False,
         already_attempted=True,
@@ -140,10 +160,39 @@ def test_maybe_elevate_already_attempted_never_relaunches() -> None:
         working_dir=str(Path.cwd()),
     )
     assert result is False
+    assert relaunch_called == [], (
+        "maybe_elevate must short-circuit at the already-attempted guard and "
+        "never invoke _relaunch_elevated; the guard branch is missing or broken"
+    )
 
 
-def test_maybe_elevate_disabled_never_relaunches() -> None:
-    """The real ``--no-elevate`` decision path returns ``False`` on Windows."""
+def test_maybe_elevate_disabled_never_relaunches(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The real ``--no-elevate`` decision path returns ``False`` on Windows.
+
+    ``is_elevated`` is forced to ``False`` so the already-elevated fallback
+    cannot mask the branch under test, and the UAC transport boundary
+    ``_relaunch_elevated`` is spied. The ``disabled`` guard must return ``False``
+    WITHOUT reaching ``_relaunch_elevated``.
+
+    Concrete mutation (static proof, do NOT run): delete the
+    ``if disabled: return False`` block in
+    ``src/intellicrack/core/elevation.py``. Execution then falls through to the
+    (monkeypatched-False) ``is_elevated`` check and reaches ``_relaunch_elevated``;
+    the spy records the call and ``assert relaunch_called == []`` fails.
+
+    Args:
+        monkeypatch: pytest fixture for temporarily replacing module attributes.
+    """
+    monkeypatch.setattr(elevation, "is_elevated", lambda: False)
+
+    relaunch_called: list[tuple[list[str], str]] = []
+
+    def _spy_relaunch(original_args: list[str], working_dir: str) -> bool:
+        relaunch_called.append((original_args, working_dir))
+        return False
+
+    monkeypatch.setattr(elevation, "_relaunch_elevated", _spy_relaunch)
+
     result = elevation.maybe_elevate(
         disabled=True,
         already_attempted=False,
@@ -151,19 +200,50 @@ def test_maybe_elevate_disabled_never_relaunches() -> None:
         working_dir=str(Path.cwd()),
     )
     assert result is False
+    assert relaunch_called == [], (
+        "maybe_elevate must short-circuit at the disabled guard and never invoke "
+        "_relaunch_elevated; the guard branch is missing or broken"
+    )
 
 
-def test_maybe_elevate_when_already_elevated_returns_false() -> None:
-    """An elevated process needs no relaunch; an unprivileged one is skipped.
+def test_maybe_elevate_when_already_elevated_returns_false(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An already-elevated process short-circuits to ``False`` without relaunching.
 
-    When the test runs in a genuinely elevated process, the real
-    ``maybe_elevate`` must short-circuit to ``False`` without prompting. When
-    the process is not elevated, calling ``maybe_elevate`` here would trigger a
-    real UAC prompt, which cannot be answered non-interactively, so that case
-    is skipped with a precise reason.
+    Monkeypatches ``elevation.is_elevated`` to return ``True`` so the
+    already-elevated guard in :func:`elevation.maybe_elevate` is exercised
+    unconditionally, without requiring a genuinely elevated OS process or
+    triggering a real UAC prompt. Also monkeypatches the UAC transport boundary
+    ``elevation._relaunch_elevated`` to record whether it was reached.
+
+    The falsifiability gate is that ``_relaunch_elevated`` must NOT have been
+    called: if the ``if is_elevated(): return False`` guard at production line 234
+    were deleted (or changed to ``if False:``), ``_relaunch_elevated`` would be
+    invoked and the second assertion would fail, turning this test red.
+
+    Concrete mutation (static proof, do NOT run): in
+    ``src/intellicrack/core/elevation.py`` delete the block::
+
+        if is_elevated():
+            _logger.debug("already_elevated")
+            return False
+
+    With that block removed, ``maybe_elevate`` falls through to
+    ``_relaunch_elevated``; the relaunch spy records the call and
+    ``assert relaunch_called == []`` fails immediately.
+
+    Args:
+        monkeypatch: pytest fixture for temporarily replacing module attributes.
     """
-    if not elevation.is_elevated():
-        pytest.skip("Process is not elevated; exercising the relaunch path would raise a real UAC prompt")
+    monkeypatch.setattr(elevation, "is_elevated", lambda: True)
+
+    relaunch_called: list[tuple[list[str], str]] = []
+
+    def _spy_relaunch(original_args: list[str], working_dir: str) -> bool:
+        relaunch_called.append((original_args, working_dir))
+        return False
+
+    monkeypatch.setattr(elevation, "_relaunch_elevated", _spy_relaunch)
+
     result = elevation.maybe_elevate(
         disabled=False,
         already_attempted=False,
@@ -171,6 +251,10 @@ def test_maybe_elevate_when_already_elevated_returns_false() -> None:
         working_dir=str(Path.cwd()),
     )
     assert result is False
+    assert relaunch_called == [], (
+        "maybe_elevate must short-circuit at the already-elevated guard and "
+        "never invoke _relaunch_elevated; the guard branch is missing or broken"
+    )
 
 
 _PIXI_ENV_KEYS: tuple[str, str, str] = (

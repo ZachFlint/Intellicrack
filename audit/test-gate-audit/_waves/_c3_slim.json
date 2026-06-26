@@ -1,0 +1,176 @@
+{
+  "group": "test_hexcore_e2e__c3",
+  "files": {
+    "tests/test_hexcore_e2e/test_hexpat_compiler_e2e.py": [
+      {
+        "id": "G0219",
+        "test": "TestHexPatCompilerCompile (all tests)",
+        "line": 13,
+        "category": "skip-masks-failure",
+        "severity": "high"
+      },
+      {
+        "id": "G0221",
+        "test": "TestHexPatCompilerCompile::test_compile_syntax_error_missing_semicolon_raises",
+        "line": 316,
+        "category": "tautological",
+        "severity": "low"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py": [
+      {
+        "id": "G0222",
+        "test": "All tests in file",
+        "line": 1,
+        "category": "skip-masks-failure",
+        "severity": "high"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_hexpat_control_flow.py": [
+      {
+        "id": "G0223",
+        "test": "All tests in file",
+        "line": 1,
+        "category": "skip-masks-failure",
+        "severity": "high"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_hexpat_data_reader.py": [
+      {
+        "id": "G0224",
+        "test": "All tests in file",
+        "line": 1,
+        "category": "skip-masks-failure",
+        "severity": "high"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_hexpat_evaluator.py": [
+      {
+        "id": "G0225",
+        "test": "All tests in file",
+        "line": 1,
+        "category": "skip-masks-failure",
+        "severity": "high"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_hexpat_preprocessor.py": [
+      {
+        "id": "G0226",
+        "test": "TestIncludeResolution::test_pragma_once_prevents_double_include",
+        "line": 198,
+        "category": "other",
+        "severity": "high"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_hexpat_stdlib.py": [
+      {
+        "id": "G0227",
+        "test": "TestStringFunctions::test_string_at_out_of_bounds",
+        "line": 326,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0228",
+        "test": "TestStringFunctions::test_string_reverse_empty",
+        "line": 410,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0229",
+        "test": "TestIOFunctions::test_io_print_does_not_raise",
+        "line": 555,
+        "category": "no-assertion",
+        "severity": "high"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_patch_export.py": [
+      {
+        "id": "G0233",
+        "test": "TestGetPatches::test_patch_list_entries_are_two_tuples",
+        "line": 72,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_process_memory.py": [
+      {
+        "id": "G0234",
+        "test": "TestListProcessMemoryRegions::test_list_regions_returns_list",
+        "line": 75,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0235",
+        "test": "TestFromProcessMemory::test_from_process_memory_returns_hex_document",
+        "line": 168,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_templates.py": [
+      {
+        "id": "G0236",
+        "test": "TestListTemplates::test_returns_nonempty_list",
+        "line": 55,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0237",
+        "test": "TestListTemplates::test_entries_are_name_description_pairs",
+        "line": 66,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0238",
+        "test": "TestListTemplatesDetailed::test_returns_nonempty_list",
+        "line": 121,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0239",
+        "test": "TestApplyPETemplate::test_apply_returns_nonempty_fields",
+        "line": 198,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0240",
+        "test": "TestApplyELFTemplate::test_apply_returns_fields",
+        "line": 289,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0241",
+        "test": "TestApplyZIPTemplate::test_apply_returns_fields",
+        "line": 341,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_transforms.py": [
+      {
+        "id": "G0242",
+        "test": "TestListTransforms::test_list_transforms_contains_xor",
+        "line": 149,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_hexcore_e2e/test_undo_redo.py": [
+      {
+        "id": "G0243",
+        "test": "TestModificationTracking::test_is_modified_tracks_through_undo_redo",
+        "line": 159,
+        "category": "no-assertion",
+        "severity": "high"
+      }
+    ]
+  }
+}

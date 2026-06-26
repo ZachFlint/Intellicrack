@@ -1,0 +1,105 @@
+{
+  "file": "tests/test_bridges/test_process_bridge.py",
+  "findings_addressed": [
+    {
+      "id": "G0078",
+      "test": "TestF0025ImageHlpModuleStruct::test_imagehlp_module64_struct_has_module_name",
+      "action": "deleted",
+      "oracle": "TestF0025ImageHlpModuleStruct::test_resolve_module_returns_kernel32",
+      "documented_mutation": "N/A - deleted tautological test; companion test_resolve_module_returns_kernel32 gates the real production code path"
+    },
+    {
+      "id": "G0079",
+      "test": "TestF0035HandleEnumNonBlocking::test_get_handles_yields_event_loop",
+      "action": "hardened",
+      "oracle": "ticks_during_call sampled immediately after get_handles() returns and before ticker_task is awaited; a blocking implementation cannot advance the ticker during the call",
+      "documented_mutation": "In process.py _sync_iterate_handles_for_pid: remove the asyncio.to_thread dispatch and call the method synchronously from get_handles() - the ticker will not advance during the blocking call, ticks_during_call will be 0, and the assertion fails"
+    },
+    {
+      "id": "G0080",
+      "test": "TestF0035HandleEnumNonBlocking::test_enum_handles_yields_event_loop",
+      "action": "hardened",
+      "oracle": "ticks_during_call sampled immediately after enum_handles() returns and before ticker_task is awaited; a blocking implementation cannot advance the ticker during the call",
+      "documented_mutation": "In process.py enum_handles: replace 'await asyncio.to_thread(self._sync_enum_handles, pid)' with 'self._sync_enum_handles(pid)' - the ticker will not advance during the synchronous call, ticks_during_call will be 0, and the assertion fails"
+    },
+    {
+      "id": "G0081",
+      "test": "TestInitialization::test_initialize_debug_privilege_flag",
+      "action": "re-hardened (adversarial review pass 2)",
+      "oracle": "OpenProcessToken + GetTokenInformation(TokenPrivileges) + LookupPrivilegeValueW used as independent oracle to read SeDebugPrivilege state directly from the OS token; bridge flag must exactly match OS-reported state in both admin and non-admin contexts",
+      "documented_mutation": "In process.py _adjust_se_debug_privilege: remove 'self._debug_privilege_enabled = True' - on an admin runner the token has SeDebugPrivilege enabled but bridge flag stays False; the equality assertion 'flag == token_privilege_enabled' fails"
+    },
+    {
+      "id": "G0082",
+      "test": "TestWindowEnumeration::test_get_windows_no_crash",
+      "action": "re-hardened (adversarial review pass 2)",
+      "oracle": "CreateWindowExW creates a real top-level Win32 window in the test process; get_windows is called on os.getpid(); the created window must appear in results allowing non-vacuous structural assertions on hwnd/title/class_name/visible keys",
+      "documented_mutation": "In process.py _enum_impl callback: rename 'class_name' to 'cls_name' in the appended dict - the 'class_name in test_entry' assertion fails for the test window entry that was created in this PID"
+    },
+    {
+      "id": "G0083",
+      "test": "TestServiceListing::test_list_services_returns_list",
+      "action": "hardened",
+      "oracle": "well-known Windows services 'EventLog', 'RpcSs', or 'Winmgmt' as independent oracle; every Windows installation has at least one of these",
+      "documented_mutation": "In process.py _parse_service_entries: return [] unconditionally - len(services) > 0 fails, and the EventLog membership assertion also fails"
+    },
+    {
+      "id": "G0084",
+      "test": "TestF0024SymbolInfoSizeOfStruct::test_sizeofsruct_equals_header_size",
+      "action": "re-hardened (pass 3) — PRODUCTION DEFECT gate",
+      "oracle": "_sym_from_addr_direct(SizeOfStruct=88) as independent oracle; 88 = offsetof(Name)+1 rounded to 8-byte alignment; SymFromAddr only accepts this value (empirically confirmed: 84, 85, 89 all return ERROR_INVALID_PARAMETER=87); bridge formula yields 89 because ctypes sizeof(SYMBOL_INFO with Name[1024]) includes 4 bytes of trailing alignment padding not present in the C struct with Name[1]; 89 is REJECTED by SymFromAddr",
+      "documented_mutation": "Fix process.py _resolve_symbol: change SizeOfStruct from formula (sizeof(SYMBOL_INFO)-sizeof(c_char*1024)+sizeof(c_char)=89) to 88 (offsetof(Name)+sizeof(c_char) = 84+1 rounded to 8) — SymFromAddr then accepts the call and returns the symbol name; test passes. Reverting to 89 causes SymFromAddr to fail silently, bridge returns ('',0), assertion fires.",
+      "prod_defect_ref": "PD-SYM-001"
+    },
+    {
+      "id": "G0085",
+      "test": "TestF0042SymbolBufferAllocation::test_sym_buf_size_accommodates_max_sym_name",
+      "action": "re-hardened (pass 3) — PRODUCTION DEFECT gate",
+      "oracle": "_sym_from_addr_direct oracle confirms oracle-resolvable addresses; bridge must resolve at least one; structural gate asserts _MAX_SYM_NAME >= 2000",
+      "documented_mutation": "Fix _resolve_symbol SizeOfStruct to 88 — bridge then resolves symbols; test passes. Additionally reducing _MAX_SYM_NAME below 2000 triggers structural assertion failure.",
+      "prod_defect_ref": "PD-SYM-001"
+    },
+    {
+      "id": "G0086",
+      "test": "TestJobGuiCom::test_enumerate_com_servers_returns_list",
+      "action": "re-hardened (pass 3) — bounce fix: now requires >= 1 result when HKCR\\CLSID has InprocServer32 entries",
+      "oracle": "winreg HKCR\\CLSID scan (independent of bridge) confirms InprocServer32 entries exist; bridge must find at least one matching loaded-module/CLSID intersection; each entry validated as valid GUID string via regex",
+      "documented_mutation": "In process.py _scan_clsid_entries: return [] unconditionally — len(result) >= 1 assertion fails because oracle confirmed registrations exist. Or rename 'server_type' key to 'type' — key assertion fails for every entry."
+    },
+    {
+      "id": "G0025-bounce",
+      "test": "TestF0025ImageHlpModuleStruct::test_resolve_module_returns_kernel32",
+      "action": "bounce fix: _assert_module_resolves no longer skips when module_name is empty; it only skips when oracle (direct SymGetModuleInfo64) confirms the subsystem is unavailable",
+      "oracle": "_sym_get_module_info64_direct oracle (direct SymGetModuleInfo64 call with correct SizeOfStruct) confirms module info is available before gating bridge result; empty bridge return on available subsystem now FAILS instead of skipping",
+      "documented_mutation": "In process.py _resolve_module: return '' unconditionally — oracle succeeds, bridge returns empty, assertion fires: 'bridge _resolve_module returned empty for a kernel32 address'"
+    }
+  ],
+  "prod_defects": [
+    {
+      "id": "PD-SYM-001",
+      "file": "src/intellicrack/bridges/process.py",
+      "method": "_resolve_symbol",
+      "description": "SizeOfStruct formula yields 89 but SymFromAddr only accepts 88 on x64. The formula sizeof(_SYMBOL_INFO) - sizeof(c_char*1024) + sizeof(c_char) = 1112 - 1024 + 1 = 89. The correct value is offsetof(Name) + sizeof(Name[1]) rounded to 8-byte struct alignment = 84 + 1 = 85 rounded to 88. SymFromAddr rejects 89 with ERROR_INVALID_PARAMETER (87). Additionally, the name is read from sym_header_size=89 instead of Name.offset=84, reading 5 bytes past the actual name start.",
+      "evidence": "Empirical test: SymFromAddr with SizeOfStruct in {84,85,89} returns False (err=87); SizeOfStruct=88 returns True with NameLen=17 and name='GetCurrentProcess' at offset 84.",
+      "fix": "In _resolve_symbol, replace the formula with: sym_header_size = SYMBOL_INFO.Name.offset + ctypes.sizeof(ctypes.c_char) and round up to 8: sym_header_size = ((sym_header_size + 7) // 8) * 8 = 88. Also change name-reading offset from sym_header_size to SYMBOL_INFO.Name.offset.",
+      "gate_tests": [
+        "TestF0024SymbolInfoSizeOfStruct::test_sizeofsruct_equals_header_size",
+        "TestF0042SymbolBufferAllocation::test_sym_buf_size_accommodates_max_sym_name"
+      ],
+      "status": "RED — gate tests will FAIL until src is fixed"
+    }
+  ],
+  "deletions": [
+    {
+      "test": "TestF0025ImageHlpModuleStruct::test_imagehlp_module64_struct_has_module_name",
+      "covered_by": "TestF0025ImageHlpModuleStruct::test_resolve_module_returns_kernel32"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Pass 3 adversarial re-hardening. PRODUCTION DEFECT discovered: _resolve_symbol in process.py uses SizeOfStruct=89 which SymFromAddr rejects with ERROR_INVALID_PARAMETER; correct value is 88. Tests G0084/G0085 converted to RED production defect gates. G0086 bounce: enumerate_com_servers test now requires >= 1 result with HKCR registry oracle and GUID regex validation. G0025 bounce: _assert_module_resolves now fails (not skips) when oracle confirms module info is available but bridge returns empty. All four tools (ruff/basedpyright/pydoclint/pydocstyle) pass with zero findings."
+}

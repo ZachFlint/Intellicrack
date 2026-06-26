@@ -77,18 +77,6 @@ class _AntiEvasionTestSandbox(QEMUSandbox):
         """
         self._qemu_config = cfg
 
-    @staticmethod
-    def smbios_entries_for_test(profile: str) -> list[dict[str, str]]:
-        """Expose ``_anti_evasion_smbios_entries`` for cross-class assertion.
-
-        Args:
-            profile: Anti-evasion profile name.
-
-        Returns:
-            list[dict[str, str]]: SMBIOS entry dicts produced for ``profile``.
-        """
-        return QEMUSandbox._anti_evasion_smbios_entries(profile)
-
 
 class _DisconnectedAgent(GuestAgentClient):
     """GuestAgentClient that reports as disconnected without performing I/O.
@@ -174,28 +162,64 @@ class TestF0029AntiEvasionProfileHonoured:
         Given a sandbox launched with ``anti_evasion_profile='default'`` and a
         caller passing ``profile='default'``, the method must succeed and the
         reported launch-time techniques (SMBIOS types, CPUID mask) must
-        correspond to the actual config-driven SMBIOS entries.
+        correspond to the frozen audit-specified SMBIOS type numbers.
+
+        The independent oracle is the frozen set ``{"1", "2", "3"}``: the three
+        SMBIOS table types that ``_anti_evasion_smbios_entries`` must emit for
+        every profile (system, baseboard, chassis).  It is hand-maintained and
+        kept separate from any production helper so a regression in
+        ``_anti_evasion_smbios_entries`` cannot regress the expected value in
+        lockstep.
+
+        Mutation proof: deleting the type-2 entry from the ``default`` branch of
+        ``_anti_evasion_smbios_entries`` (e.g. returning only types ``"1"`` and
+        ``"3"``) changes ``reported_smbios_types`` to ``{"1", "3"}`` which
+        differs from the frozen ``{"1", "2", "3"}`` oracle and fails this test.
         """
+        frozen_default_smbios_types: frozenset[str] = frozenset({"1", "2", "3"})
+        frozen_launch_techniques: list[str] = [
+            "smbios_type_1_launch_arg",
+            "smbios_type_2_launch_arg",
+            "smbios_type_3_launch_arg",
+            "cpuid_hypervisor_mask_launch_arg",
+        ]
+
         sb = _make_sandbox(anti_evasion_profile="default")
 
         result: dict[str, Any] = asyncio.run(sb.apply_anti_evasion(profile="default"))
 
-        assert result["profile"] == "default"
+        assert result["profile"] == "default", (
+            f"result['profile'] must be 'default', got {result['profile']!r}"
+        )
         raw_techniques: object = result["techniques"]
         assert isinstance(raw_techniques, list)
         techniques: list[str] = []
         for raw in cast("list[object]", raw_techniques):
             assert isinstance(raw, str)
             techniques.append(raw)
-        assert "cpuid_hypervisor_mask_launch_arg" in techniques
-        expected_smbios_types: set[str] = {entry["type"] for entry in _AntiEvasionTestSandbox.smbios_entries_for_test("default")}
-        reported_smbios_types: set[str] = {
+
+        assert "cpuid_hypervisor_mask_launch_arg" in techniques, (
+            "cpuid_hypervisor_mask_launch_arg must be present in launch-time techniques"
+        )
+
+        reported_smbios_types: frozenset[str] = frozenset(
             t.removeprefix("smbios_type_").removesuffix("_launch_arg")
             for t in techniques
             if t.startswith("smbios_type_") and t.endswith("_launch_arg")
-        }
-        assert reported_smbios_types == expected_smbios_types
-        assert result["count"] == len(techniques)
+        )
+        assert reported_smbios_types == frozen_default_smbios_types, (
+            f"SMBIOS type numbers must be exactly {sorted(frozen_default_smbios_types)!r} "
+            f"(frozen audit oracle); got {sorted(reported_smbios_types)!r}"
+        )
+
+        assert techniques == frozen_launch_techniques, (
+            f"launch-time techniques (agent disconnected) must be exactly "
+            f"{frozen_launch_techniques!r}; got {techniques!r}"
+        )
+
+        assert result["count"] == len(techniques), (
+            f"count {result['count']!r} must equal len(techniques) {len(techniques)}"
+        )
 
     def test_mismatched_profile_raises_sandbox_error_with_both_names(self) -> None:
         """Scenario B: mismatched profile raises SandboxError.

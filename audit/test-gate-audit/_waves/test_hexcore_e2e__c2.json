@@ -1,0 +1,506 @@
+{
+  "group": "test_hexcore_e2e__c2",
+  "files": {
+    "tests/test_hexcore_e2e/test_bridge_pattern_engine.py": [
+      {
+        "id": "G0161",
+        "test": "TestCompilePattern::test_compile_simple_struct_returns_nonempty_string",
+        "line": 67,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Remove this test and rely only on test_compile_simple_struct_result_is_valid_json, which is semantically stronger. Alternatively, assert that json.loads(result) succeeds in THIS test so the gate is in one place.",
+        "why_not_gate": "The test asserts only that the result is a non-empty string (isinstance and truthiness). The sibling test_compile_simple_struct_result_is_valid_json (line 78) checks JSON validity separately. This test adds no gate: a stub that returns 'E' or '{\"error\":\"stub\"}' would pass. If compile_pattern is broken and returns any non-empty string, the test stays green."
+      },
+      {
+        "id": "G0162",
+        "test": "TestExecutePattern::test_execute_u32_field_returns_field_list",
+        "line": 135,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Remove this test and consolidate into test_execute_u32_field_has_correct_size or test_execute_u32_field_has_correct_offset, which are semantically stronger. Or assert specific values in THIS test: `fields[0]['name'] == 'value'`, `fields[0]['offset'] == 0`, `fields[0]['size'] == 4`.",
+        "why_not_gate": "The test asserts only isinstance(fields, list) and truthiness. Companion tests (test_execute_u32_field_has_correct_size and test_execute_u32_field_has_correct_offset) verify the name, size, and offset separately. This test adds no gate: a stub returning [{'name': 'junk', 'offset': 999, 'size': 99}] would pass. The production execute_pattern (line 7253) calls interpreter.execute(), and if the interpreter is broken and returns wrong field data, this test would still pass."
+      },
+      {
+        "id": "G0163",
+        "test": "TestExecutePattern::test_execute_struct_with_multiple_fields_returns_multiple_results",
+        "line": 174,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Change the assertion to require BOTH fields: `assert 'magic' in all_names and 'header' in all_names`, or navigate to the 'header' entry, extract its children, and verify that 'magic' appears in the children's names.",
+        "why_not_gate": "The test constructs all_names from the field list and asserts `'magic' in all_names or 'header' in all_names`. The OR operator is the critical flaw: since struct execution wraps the struct in a parent node named 'header', even a stub that returns only [{'name': 'header', 'children': []}] (with no actual 'magic' field parsed) would satisfy the OR branch. The multi-field parsing capability (correctly expanding both the magic and value fields inside the struct) is not verified."
+      },
+      {
+        "id": "G0164",
+        "test": "TestListAndAutoDetect::test_auto_detect_with_pe_file_returns_list",
+        "line": 345,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert that len(result) > 0 and that at least one entry's name or description contains 'pe' or 'mz', verifying that the PE magic was actually detected.",
+        "why_not_gate": "The test asserts only isinstance(result, list). An empty list passes. The test uses loaded_bridge, which has a real PE file (from conftest) already open. If the auto_detect_pattern implementation is broken (e.g., returns empty or garbage), this test would still pass. The test never verifies that at least one PE-related pattern (e.g., 'pe' or 'mz') is detected, which would be expected for a valid PE file."
+      },
+      {
+        "id": "G0165",
+        "test": "TestCompilePattern::test_compile_complex_struct_with_nested_types_is_valid_json",
+        "line": 98,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert that the result dict contains references to the declared type names ('Inner', 'Outer') or field names ('tag', 'val', 'hdr', 'sub') in string form, or check that the dict has expected keys like 'structs' or 'definitions' with non-empty values.",
+        "why_not_gate": "The test asserts only isinstance(parsed, dict) after json.loads(). An empty dict `{}` or a dict like `{\"ok\": True}` would pass. The test does not verify that the nested Inner and Outer struct definitions appear in the compiled result, nor that field names (tag, val, hdr, sub) are present. The compilation capability could be completely broken (returning a generic stub) and the test would still pass."
+      },
+      {
+        "id": "G0166",
+        "test": "TestCompilePattern::test_compile_enum_produces_valid_json",
+        "line": 109,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert that the result dict (when converted to a string or searched recursively) contains references to 'Color', 'Red', 'Green', or 'Blue'.",
+        "why_not_gate": "The test asserts only isinstance(parsed, dict). Any dict passes, even `{}` or `{\"error\":\"stub\"}`. The test does not verify that the enum Color or its member names (Red, Green, Blue) appear anywhere in the output. If enum compilation is broken, this test would still pass."
+      },
+      {
+        "id": "G0167",
+        "test": "TestCompilePattern::test_compile_union_produces_valid_json",
+        "line": 120,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert that the result dict contains 'Word' or 'as_u16' or 'bytes', or check that the compiled size is 2 bytes (max of the member sizes), not 3 or 4.",
+        "why_not_gate": "The test asserts only isinstance(parsed, dict). Any dict passes. The test does not verify that the union Word or its members (as_u16, bytes) appear in the output, nor does it check that the compiled size reflects union semantics (overlapping memory, not sequential). A broken union compiler returning a struct-like layout would still pass."
+      },
+      {
+        "id": "G0168",
+        "test": "TestListAndAutoDetect::test_list_hexpat_patterns_returns_list",
+        "line": 308,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove this test and rely only on test_list_hexpat_patterns_items_have_required_keys, which is stronger (requires len(result) > 0). Alternatively, assert `len(result) > 0` in THIS test so any broken scanner turns it red.",
+        "why_not_gate": "The test asserts only isinstance(result, list). An empty list passes this test. The sibling test test_list_hexpat_patterns_items_have_required_keys (line 317) checks that the catalog is non-empty and verifies the structure. This test adds no gate: if the scanner is completely broken and returns [], the test stays green."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_pe_introspection.py": [
+      {
+        "id": "G0169",
+        "test": "TestToolDefinitionsRegistration::test_bridge_dispatches_via_getattr",
+        "line": 542,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "For a genuine dispatch gate, call each method with appropriate arguments on the loaded bridge's PE document and assert the return type or a minimal structural shape (e.g., isinstance(sections, list)). Alternatively, drop this test since the E2E tests TestGetPeSections*, TestGetPeImports*, and TestGetPeExports* (line 588 onwards) already verify the methods work end-to-end and return correct results.",
+        "why_not_gate": "The test iterates over the three method names (get_pe_sections, get_pe_imports, get_pe_exports) and asserts callable(attr). Any callable object (including a stub function that always raises or returns []) satisfies the callable() check. The test does not actually invoke the methods or verify they produce correct results. The ToolRegistry dispatch capability (that getattr can retrieve the method) is tested, but the method's actual behavior is not gated."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_search.py": [
+      {
+        "id": "G0170",
+        "test": "TestBridgeSearchHex::test_search_hex_returns_list",
+        "line": 43,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Add assertion `assert len(results) > 0` to verify non-empty results. Better yet, rely on the dedicated tests test_search_hex_finds_mz_signature_at_offset_zero and test_search_hex_result_length_matches_pattern_byte_count which already enforce correctness, and consider removing this redundant type-check-only test or consolidating it with a more comprehensive test.",
+        "why_not_gate": "The test only validates that search_hex returns a list type via isinstance check. It does not verify the list is non-empty, contains correct results, has accurate offset/length values, or that the search actually found matches in the PE file. An implementation that returned an empty list [] or a list of dicts with arbitrary/incorrect offset and length values would pass this test. The test provides no gate against broken search functionality."
+      },
+      {
+        "id": "G0171",
+        "test": "TestBridgeSearchHex::test_search_hex_result_items_have_offset_and_length",
+        "line": 52,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Add value-level assertions: `assert item[\"offset\"] >= 0 and assert item[\"length\"] > 0`. Better yet, consolidate with test_search_hex_finds_mz_signature_at_offset_zero (which checks offset==0) and test_search_hex_result_length_matches_pattern_byte_count (which checks length==2), and remove this key-presence-only test as redundant.",
+        "why_not_gate": "The test asserts only that 'offset' and 'length' keys are present in result dicts (line 61-62) and that results is non-empty (line 59). It does not validate the actual values of those keys. An implementation returning [{\"offset\": -1, \"length\": 999}] or [{\"offset\": 0, \"length\": 0}] would pass this test. The real production capability—computing correct byte offsets and match lengths for a hex search—is not exercised by this key-presence assertion."
+      },
+      {
+        "id": "G0172",
+        "test": "TestBridgeSearchRegex::test_search_regex_finds_pattern_match",
+        "line": 193,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Add concrete assertions: `assert results[0][\"offset\"] == 0 and assert results[0][\"length\"] == 3`. Better yet, add a second assertion that offset 6 is present in results to verify the second [A-Z]{3} match (DEF) is found. This ensures the regex engine is functioning, not just returning dummy non-empty results.",
+        "why_not_gate": "The test asserts only that results is truthy (line 205), which requires a non-empty list. It does not validate that the regex pattern [A-Z]{3} was actually matched correctly against the payload b\"ABC123DEF456\". An implementation that returned hardcoded [{\"offset\": 0, \"length\": 1}] for any input, or returned only the first match at offset 0, would pass this test. The test does not verify correct pattern matching, match length, or the presence of the second match (DEF at offset 6)."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_signatures.py": [
+      {
+        "id": "G0173",
+        "test": "TestSignatureResultStructure::test_scan_result_structure",
+        "line": 220,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add concrete value assertions: assert any(r[\"name\"] == \"MZ Executable\" for r in results), assert any(r[\"type\"] == \"PE\" for r in results), and assert any(r[\"offset\"] == 0 for r in results). This converts the test to the same correctness standard already provided by test_die_scan_detects_mz_header. Consider removing this key-presence-only test as it provides no independent gate beyond key-name validation.",
+        "why_not_gate": "The test verifies only that result dictionaries contain the five keys 'name', 'type', 'version', 'offset', 'details' (lines 237-241) and that results is non-empty (line 235). It does not validate the actual values of those keys. An implementation returning [{\"name\": \"\", \"type\": \"\", \"version\": \"\", \"offset\": -1, \"details\": \"\"}] would pass this test. The test does not verify that the MZ Executable signature was correctly identified at the entry point, or that the signature name and type match the expected values from die_test.json."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_transforms.py": [
+      {
+        "id": "G0175",
+        "test": "TestBridgeListTransforms::test_list_transforms_items_have_required_keys",
+        "line": 63,
+        "category": "conditional-never-runs",
+        "severity": "high",
+        "recommendation": "Add `if not _pipeline_available: pytest.skip(...)` at test start. Then assert `len(result) > 0` before the for loop to ensure the list is non-empty. This converts the silent pass into an explicit failure if list is empty.",
+        "why_not_gate": "The walrus operator `if result := _run(bridge.list_transforms()):` at line 69 makes the entire assertion block conditional on non-empty list. When the pipeline module is unavailable or when code is broken and returns [], the if-block never executes, so assertions for 'name', 'category', 'description' keys never run. The test passes silently without validating any keys."
+      },
+      {
+        "id": "G0176",
+        "test": "TestBridgeListTransforms::test_list_transforms_name_values_are_strings",
+        "line": 75,
+        "category": "conditional-never-runs",
+        "severity": "high",
+        "recommendation": "Add `if not _pipeline_available: pytest.skip(...)` at test start. Then assert `result` is non-empty before the loop (e.g., `assert len(result) > 0`). This ensures empty lists cause explicit failure, not silent pass.",
+        "why_not_gate": "The for loop `for item in result:` at line 82 never executes if result is []. When the pipeline module is unavailable or code returns [], the loop body never runs and no assertions fire. The test passes silently. This is identical gap to finding #3."
+      },
+      {
+        "id": "G0177",
+        "test": "TestBridgeApplyPipeline::test_apply_pipeline_with_single_xor_step",
+        "line": 156,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert the exact expected output: `assert result == '55555555'`. This matches the pattern of test_apply_transform_xor_single_known_output (line 127 in same file) and test_single_xor_step_known_output (line 120 in test_bridge_transforms_deep.py), which do verify exact output.",
+        "why_not_gate": "Assertions only check isinstance(result, str) and len(result)==8. XOR of 0xFF with key 0xAA must produce 0x55 bytes, so correct output is '55555555'. A broken pipeline returning any 8-char hex string (e.g. 'deadbeef', 'XXXXXXXX', or any wrong bytes) would still pass. The test does not verify the actual XOR computation is correct."
+      },
+      {
+        "id": "G0178",
+        "test": "TestBridgeListTransforms::test_list_transforms_returns_list",
+        "line": 54,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add `if not _pipeline_available: pytest.skip(...)` at test start (matching other transform tests). Then assert `len(result) > 0` to verify the list is non-empty when pipeline is available. Optionally spot-check for a known transform name like 'xor_single'.",
+        "why_not_gate": "The assertion only checks isinstance(result, list). Production code at line 7773 legitimately returns [] when pipeline unavailable. A broken implementation that always returns [] (even when transforms are available) would pass this test silently. The test lacks verification that the list contains expected content (at minimum, that it's non-empty when the module is available). This is a weak existence check."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_transforms_deep.py": [
+      {
+        "id": "G0179",
+        "test": "TestApplyPipelineSingleStep::test_single_xor_step_returns_hex_string",
+        "line": 84,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert exact output: `assert result == '55555555'`. The complementary test test_single_xor_step_known_output (line 103+, which XORs 0xFF with 0xFF) does verify exact output ('00000000'), establishing the pattern for this test to follow.",
+        "why_not_gate": "Only asserts len(result)==8. XOR of 0xFF with 0xAA must produce 0x55 bytes. Expected output: '55555555'. A broken XOR implementation returning any wrong 8-char hex string would pass silently. The actual byte computation is not verified."
+      },
+      {
+        "id": "G0180",
+        "test": "TestApplyPipelineMultiStep::test_three_step_pipeline_produces_output",
+        "line": 199,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Precompute expected output from keys and assert exactly. For this test: keys combine to XOR(0x00), so output equals input '00112233'. Assert `assert result == '00112233'`. The test_apply_pipeline_three_steps_with_known_verification (line 437+) verifies exact output for a similar scenario, establishing this as the expected pattern.",
+        "why_not_gate": "Only asserts len(result)==8. Three-step XOR with keys 0xFF, 0x0F, 0xF0 combined equals 0xFF^0x0F^0xF0=0x00, so result for input 0x00112233 should be '00112233' unchanged. A broken implementation returning any 8-char hex string would pass silently."
+      },
+      {
+        "id": "G0181",
+        "test": "TestApplyPipelineMultiStep::test_pipeline_result_length_matches_input_length",
+        "line": 222,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Precompute and assert exact output. For input bytes(range(16)) XOR with 0x55: expected is bytes(b^0x55 for b in range(16)). Assert `assert result == binascii.hexlify(bytes(b ^ 0x55 for b in range(16))).decode('ascii')` to verify actual byte values, matching the pattern in other tests like test_apply_pipeline_range_preserves_structure.",
+        "why_not_gate": "Only asserts len(result)==byte_count*2. Input is bytes(range(16)) XOR'd with 0x55. Expected output is fully determined: each byte b becomes (b^0x55). A broken pipeline returning any 32-char hex string (wrong byte values, wrong order, etc.) would pass silently. The actual computation is not verified."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_yara.py": [
+      {
+        "id": "G0182",
+        "test": "TestBridgeYaraScanFiles::test_yara_scan_files_with_rule_file_matches_pe",
+        "line": 166,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Add assertions that match the rule name ('MZHeader') and verify at least one string hit at offset 0, mirroring test_yara_scan_returns_list. This closes the gate on file-loading behavior and ensures the correct rule was applied.",
+        "why_not_gate": "After the isinstance check, the only substantive assertion is `assert results` (truthiness). yara_scan_files could return a list of malformed dicts with wrong rule names, wrong offsets, or other corrupt content and this test passes. A critical scenario - that yara_scan_files correctly loads the .yar file from disk instead of using cached/wrong results - is not gated. The test does not verify that the rule name is 'MZHeader' or that any string hit appears at offset 0."
+      },
+      {
+        "id": "G0183",
+        "test": "TestBridgeYaraScan::test_yara_scan_mz_rule_matches_pe_file",
+        "line": 104,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove this test as it adds no gate beyond test_yara_scan_returns_list, or add assertions for rule name ('MZHeader') and string offset (0) to make it distinct and complementary.",
+        "why_not_gate": "The sole assertion is `assert results` (truthiness). A production bug that returned a list with wrong rule names, wrong string offsets, corrupted match dicts, or any other incorrect content would still pass this test. The stronger sibling test test_yara_scan_returns_list (line 79) verifies specific rule names and offsets, making this test redundant and non-gating for value correctness."
+      },
+      {
+        "id": "G0184",
+        "test": "TestBridgeYaraScan::test_yara_scan_match_has_required_keys",
+        "line": 115,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add 'namespace' to _EXPECTED_MATCH_KEYS to be consistent with production output, and add spot-checks on actual field values (e.g., assert results[0]['rule'] == 'MZHeader') to gate value correctness.",
+        "why_not_gate": "The assertion `_EXPECTED_MATCH_KEYS.issubset(match.keys())` only verifies key presence, not values. Any dict with the four keys present but populated with garbage values passes. Additionally, the production code (lines 8916, 8971 of hex_editor.py) includes 'namespace' in the returned dict, but _EXPECTED_MATCH_KEYS omits it. If a bug removed 'namespace' from the output, this test would not catch it (test_bridge_yara_deep.py would catch it, but that's a separate test)."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_data_inspector.py": [
+      {
+        "id": "G0185",
+        "test": "TestInspectAtBasic::test_inspect_at_returns_dict",
+        "line": 49,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Combine with a content check: assert result.get('uint8') == '0' to gate that at least the first byte interpretation is correct. Or clarify that this test is purely for type-schema validation.",
+        "why_not_gate": "Asserts only `isinstance(result, dict)`. Any dict returned by inspect_at() - even one with completely wrong keys or wrong values - passes. The actual data-type interpretation capability is not gated; a stub returning {'garbage': 'values'} would pass. Value correctness is gated elsewhere (TestInspectAtValues class), but this basic test does not verify the content."
+      },
+      {
+        "id": "G0186",
+        "test": "TestInspectAtBasic::test_inspect_at_has_uint8_key",
+        "line": 58,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert the value: `assert result['uint8'] == '0'` since the fixture's byte at offset 0 is 0x00 (from bytes(range(256))). This makes it a real gate for uint8 interpretation.",
+        "why_not_gate": "Asserts only `'uint8' in result`. If inspect_at() returns {'uint8': 'completely_wrong_value'} this test passes. The actual uint8 decoding capability for offset 0 is not gated by this assertion - it only gates that the key exists."
+      },
+      {
+        "id": "G0187",
+        "test": "TestInspectAtBasic::test_inspect_at_has_int8_key",
+        "line": 67,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert the value: `assert result['int8'] == '0'` since byte 0x00 at offset 0 is 0 in both signed and unsigned interpretations.",
+        "why_not_gate": "Asserts only `'int8' in result`. A stub returning {'int8': 'garbage'} passes. The signed-byte interpretation capability is not gated."
+      },
+      {
+        "id": "G0188",
+        "test": "TestInspectAtBasic::test_inspect_at_has_uint16_le_key",
+        "line": 76,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert the value: `assert result['uint16_le'] == '256'` (bytes 0x00, 0x01 at little-endian offset 0 yields 0x0100 = 256).",
+        "why_not_gate": "Asserts only `'uint16_le' in result`. The uint16_le decoding at offset 0 on bytes(range(256)) (expected value 0x0100 = 256) is not gated."
+      },
+      {
+        "id": "G0189",
+        "test": "TestInspectAtBasic::test_inspect_at_has_uint32_le_key",
+        "line": 85,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert the value: `assert result['uint32_le'] == '50462976'` (bytes 0x00,0x01,0x02,0x03 LE = 0x03020100 = 50462976).",
+        "why_not_gate": "Asserts only `'uint32_le' in result`. The uint32_le decoding capability is not gated."
+      },
+      {
+        "id": "G0190",
+        "test": "TestInspectAtBasic::test_inspect_at_has_uint32_be_key",
+        "line": 94,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert the value: `assert result['uint32_be'] == '66051'` (bytes 0x00,0x01,0x02,0x03 BE = 0x00010203 = 66051).",
+        "why_not_gate": "Asserts only `'uint32_be' in result`. The big-endian uint32 decoding capability is not gated."
+      },
+      {
+        "id": "G0191",
+        "test": "TestInspectAtBasic::test_inspect_at_has_uint64_le_key",
+        "line": 103,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert the value: `assert result['uint64_le'] == str(0x0706050403020100)` (bytes 0-7 at LE).",
+        "why_not_gate": "Asserts only `'uint64_le' in result`. The uint64_le decoding capability is not gated."
+      },
+      {
+        "id": "G0192",
+        "test": "TestInspectAtBasic::test_inspect_at_has_float32_le_key",
+        "line": 112,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert that `float(result['float32_le'])` does not raise and produces a value consistent with the IEEE 754 interpretation of bytes 0x00,0x01,0x02,0x03.",
+        "why_not_gate": "Asserts only `'float32_le' in result`. The float32 parsing capability is not gated; a stub returning {'float32_le': 'garbage'} passes."
+      },
+      {
+        "id": "G0193",
+        "test": "TestInspectAtBasic::test_inspect_at_has_float64_le_key",
+        "line": 121,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert that `float(result['float64_le'])` succeeds and returns the expected IEEE 754 double interpretation of bytes 0-7.",
+        "why_not_gate": "Asserts only `'float64_le' in result`. The float64 parsing capability is not gated; same issue as float32."
+      },
+      {
+        "id": "G0194",
+        "test": "TestInspectAtBasic::test_inspect_at_contains_all_expected_keys",
+        "line": 130,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "This test is useful for schema validation but should be complemented by value checks. Add a spot-check: verify that result['uint8'] == '0' to ensure at least one interpretation is correct, not just that keys exist.",
+        "why_not_gate": "Checks that each key in _EXPECTED_KEYS is present but does not check values. Any dict containing all 14 expected keys with arbitrary or wrong values passes. The capability being gated - correct multi-type data interpretation - is not verified."
+      },
+      {
+        "id": "G0195",
+        "test": "TestInspectAtBasic::test_inspect_at_all_values_are_strings",
+        "line": 141,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add spot-checks: e.g. `assert result['uint8'] == '0'` to ensure the string representation is actually a correct numeric string, not just any string.",
+        "why_not_gate": "Asserts only that all values are str instances. A stub returning {'uint8': 'banana', 'int8': 'orange', ...} satisfies this assertion. The actual numeric correctness of the string representations is not gated."
+      },
+      {
+        "id": "G0196",
+        "test": "TestInspectAtEdge::test_inspect_at_last_valid_offset",
+        "line": 275,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add `assert result['uint8'] == '255'` since the byte at offset 255 of bytes(range(256)) is 0xFF = 255. This gates the boundary handling for offset correctness.",
+        "why_not_gate": "Asserts `isinstance(result, dict)` and `'uint8' in result` at the last valid offset (255). Neither the uint8 value (which must be '255' at offset 255 of bytes(range(256))) nor any other field value is checked. A stub returning {'uint8': ''} passes."
+      },
+      {
+        "id": "G0197",
+        "test": "TestInspectAtEdge::test_inspect_at_near_end_partial_types",
+        "line": 285,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add `assert result['uint8'] == '253'` (byte at offset 253 of bytes(range(256)) is 0xFD = 253) to make this a real gate for the boundary handling path.",
+        "why_not_gate": "Asserts only `isinstance(result, dict)` and `'uint8' in result` at offset 253. No value is checked. The capability being gated - that inspect_at() handles near-boundary positions where multi-byte reads would exceed the document - is not substantiated."
+      },
+      {
+        "id": "G0198",
+        "test": "TestInspectAtEdge::test_inspect_at_mid_document_offset",
+        "line": 295,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add `assert result['uint8'] == '128'` (byte at offset 128 of bytes(range(256)) is 0x80 = 128) to gate the mid-document invocation.",
+        "why_not_gate": "Asserts `isinstance(result, dict)` and `result` (truthiness) at offset 128. Neither the uint8 value nor any field is verified. A stub returning any non-empty dict passes."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_encodings.py": [
+      {
+        "id": "G0200",
+        "test": "TestListEncodings::test_list_encodings_returns_nonempty_list",
+        "line": 198,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "This test alone is subsumable. Consider consolidating with test_list_encodings_contains_utf8 and test_list_encodings_contains_ascii into a single test that asserts both non-empty AND known encodings present.",
+        "why_not_gate": "Without companion tests this would be weak, but alongside test_list_encodings_contains_utf8 (line 221) and test_list_encodings_contains_ascii (line 231), the overall test suite is strong. HOWEVER, this specific test in isolation is weak: a stub returning [('x', 'y')] would pass. The auditor is correct that THIS test by itself does not validate the real capability. The stronger tests elsewhere cover it."
+      },
+      {
+        "id": "G0201",
+        "test": "TestListEncodings::test_list_encodings_entries_are_two_tuples",
+        "line": 208,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Consolidate this structural check into test_list_encodings_contains_utf8 or similar. Or strengthen it to assert len(entry) == 2 AND entry[0] in known_encoding_names.",
+        "why_not_gate": "The test checks only tuple length. A list of ('', '') tuples would pass. This is a structural/format check without semantic validation. The real capability (returning meaningful encoding names) is tested by companion tests (test_list_encodings_contains_utf8, test_list_encodings_contains_ascii, test_list_encodings_entries_are_strings) but THIS test alone adds no gate against semantic correctness."
+      },
+      {
+        "id": "G0202",
+        "test": "TestListEncodings::test_list_encodings_entries_are_strings",
+        "line": 219,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove or consolidate with test_list_encodings_names_are_nonempty into a single test that asserts both isinstance AND len(name) > 0 AND some canonical encoding is present.",
+        "why_not_gate": "The test checks isinstance(name, str) and isinstance(label, str). Empty strings satisfy this. A stub returning [('', '')] would pass. The real capability (returning meaningful encoding identifiers with non-empty names) is gated by test_list_encodings_names_are_nonempty but THIS test alone is purely a type check."
+      },
+      {
+        "id": "G0203",
+        "test": "TestListEncodings::test_list_encodings_names_are_nonempty",
+        "line": 249,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Strengthen to assert that at least one entry matches a known canonical encoding name (e.g., name in {'utf-8', 'utf8', 'ascii', 'latin-1'}) rather than only checking non-empty length.",
+        "why_not_gate": "The test asserts only len(name) > 0, which a stub returning [('x', 'x')] satisfies. While companion tests (test_list_encodings_contains_utf8, test_list_encodings_contains_ascii) verify known encodings, THIS test alone does not validate that the returned encoding names correspond to real, usable codecs. It is a length check, not a semantic gate."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_entropy.py": [
+      {
+        "id": "G0204",
+        "test": "TestEntropy::test_entropy_sample_bytes_at_most_eight",
+        "line": 118,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove this test as it is subsumed by test_entropy_uniform_256_matches_independent_oracle and test_entropy_repeating_byte_is_zero. If bound protection is desired, add it to the oracle test.",
+        "why_not_gate": "The test asserts only result <= 8.0. A stub returning 0.0 always passes. This is a mathematical upper-bound constraint check, not a behavioral gate. The real gate is test_entropy_uniform_256_matches_independent_oracle (line 59) which compares against an independent oracle. This test adds no gate against wrong computation; it only asserts a trivial bound satisfied by any constant."
+      },
+      {
+        "id": "G0205",
+        "test": "TestEntropy::test_entropy_is_float",
+        "line": 127,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove as subsumed by test_entropy_uniform_256_matches_independent_oracle. If type checking is important, integrate into that test.",
+        "why_not_gate": "The test asserts only isinstance(result, float). A stub returning 0.0 or any float constant passes. This is a type-check only. The actual entropy computation is verified by test_entropy_uniform_256_matches_independent_oracle (line 59), which is the real behavioral gate. This test provides no defense against wrong entropy calculation."
+      },
+      {
+        "id": "G0206",
+        "test": "TestEntropy::test_entropy_lower_bound",
+        "line": 136,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove as subsumed by existing oracle-based and zero-entropy tests. If non-negativity is important, it is already implicitly tested by the oracle test.",
+        "why_not_gate": "The test asserts only result >= 0.0. Any non-negative constant (including 0.0) satisfies this. This is a mathematical constraint check, not a behavioral gate. The real gates are test_entropy_uniform_256_matches_independent_oracle and test_entropy_repeating_byte_is_zero. Breaking entropy computation would leave this test green."
+      },
+      {
+        "id": "G0208",
+        "test": "TestByteDistribution::test_byte_distribution_returns_ints",
+        "line": 264,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "This test is subsumed by test_byte_distribution_uniform_all_ones and test_byte_distribution_zeros_only. Consider removing it or integrating the type check into those stronger tests.",
+        "why_not_gate": "The test asserts only isinstance(count, int) for each element. A stub returning [0]*256 would pass despite being completely wrong in the case where the document contains non-zero bytes. However, line 237 (test_byte_distribution_uniform_all_ones) verifies that for the uniform bytes(range(256)) document, every count equals 1. And line 246 (test_byte_distribution_zeros_only) checks the all-zero case. THIS test in isolation is purely a type check without semantic validation."
+      },
+      {
+        "id": "G0210",
+        "test": "TestContentClassification::test_content_classification_values_in_range",
+        "line": 398,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Strengthen to assert expected classification codes for the known uniform-distribution input, or for all-zero data (which should receive low classification). Or consolidate with test_content_classification_zeros_classified_low_entropy (line 412) into a more comprehensive test.",
+        "why_not_gate": "The test asserts only isinstance(value, int) and 0 <= value <= 4 for each element. A stub returning [0]*N would pass. The auditor is correct: this is purely a range check without semantic validation. The actual classification logic (entropy-based categorization) is not tested by this assertion alone."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_hashing.py": [
+      {
+        "id": "G0211",
+        "test": "TestHashAlgorithms::test_sha256_output_is_64_hex_chars",
+        "line": 204,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove this test as fully subsumed by test_sha256_matches_hashlib, which asserts the correct value (and implicitly the correct length).",
+        "why_not_gate": "The test checks only len(result) == 64 and that all characters are hex digits. A stub returning 'a' * 64 or 'deadbeef' padded to 64 chars would pass. However, line 67 (test_sha256_matches_hashlib) already verifies the EXACT hash value against hashlib.sha256. That test is the real gate. This test adds no additional production defect detection; it only checks format, which is implicitly correct if the value is correct."
+      },
+      {
+        "id": "G0212",
+        "test": "TestHashAlgorithms::test_md5_output_is_32_hex_chars",
+        "line": 214,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove as subsumed by test_md5_matches_hashlib.",
+        "why_not_gate": "The test checks only len(result) == 32 and hex-digit membership. A stub returning 'deadbeef' * 4 would pass. Line 45 (test_md5_matches_hashlib) verifies the exact value, making THIS test redundant. The format is implicitly validated by the value check."
+      },
+      {
+        "id": "G0213",
+        "test": "TestHashAlgorithms::test_sha1_output_is_40_hex_chars",
+        "line": 224,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove as subsumed by test_sha1_matches_hashlib.",
+        "why_not_gate": "The test checks only len(result) == 40 and hex-digit membership. Line 56 (test_sha1_matches_hashlib) verifies the exact value, making THIS test subsumed. Correct value implies correct length and format."
+      },
+      {
+        "id": "G0214",
+        "test": "TestHashAlgorithms::test_sha512_output_is_128_hex_chars",
+        "line": 234,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove as subsumed by test_sha512_matches_hashlib.",
+        "why_not_gate": "The test checks only len(result) == 128 and hex-digit membership. Line 78 (test_sha512_matches_hashlib) verifies the exact value, fully subsuming this format check. Correct value guarantees correct length."
+      },
+      {
+        "id": "G0215",
+        "test": "TestCustomCRC::test_crc32_output_format_is_hex_string",
+        "line": 413,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove as subsumed by test_crc32_standard_matches_binascii, which is the real behavioral gate.",
+        "why_not_gate": "The test asserts only that result is a non-empty string with all hex digits. A stub returning 'deadbeef' would pass. Line 316 (test_crc32_standard_matches_binascii) verifies the EXACT CRC-32 value, making THIS test redundant. Correct value ensures correct format."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_hex_document_state.py": [
+      {
+        "id": "G0216",
+        "test": "TestThreadSafety::test_concurrent_set_cursor_does_not_raise",
+        "line": 1167,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "After threads finish, add an assertion: assert state.cursor_offset in range(50) to verify the final cursor value is one of the written values, not a torn-write garbage value. Also catch all Exception types, not just RuntimeError.",
+        "why_not_gate": "The test asserts only assert not errors where errors collects only RuntimeError instances. The test catches synchronization exceptions but makes no assertion about the final cursor_offset value. A data race that silently corrupts _cursor_offset (e.g., torn write, lost update) would NOT raise RuntimeError and the test would pass green. The auditor is correct: this test does not gate correctness of concurrent state, only that no exception is raised."
+      },
+      {
+        "id": "G0217",
+        "test": "TestThreadSafety::test_unregister_while_concurrent_notify_does_not_raise",
+        "line": 1199,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "After threads join, add assertions: (1) verify state.cursor_offset is a valid written value (in range 0-99), (2) verify the callback was actually invoked the expected number of times. Also catch all Exception types in thread funcs.",
+        "why_not_gate": "The test asserts only assert not errors where errors catches only RuntimeError. The test verifies no exception is raised during concurrent unregister and set_cursor calls, but makes no assertion about actual state correctness or whether callbacks were safely handled. If the thread-safe list snapshot mechanism in _dispatch_one were removed (a real regression), the test could still pass as long as no RuntimeError is raised. The auditor is correct that the test does not gate thread-safe correctness."
+      }
+    ]
+  }
+}

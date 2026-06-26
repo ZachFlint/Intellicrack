@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
+from PyQt6.QtCore import Qt
+
 from intellicrack.core.logging import get_logger
 
 
@@ -23,7 +25,6 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from typing import Any
 
-    from PyQt6.QtCore import Qt
     from PyQt6.QtGui import QKeyEvent, QWheelEvent
     from PyQt6.QtWidgets import (
         QAbstractItemView,
@@ -217,9 +218,7 @@ def qt_key_page_up() -> int:
     Returns:
         int: Integer value of Qt.Key.Key_PageUp.
     """
-    from PyQt6.QtCore import Qt as _Qt
-
-    return int(getattr(getattr(_Qt, _KEY_ENUM), _KEY_PAGE_UP))
+    return int(getattr(getattr(Qt, _KEY_ENUM), _KEY_PAGE_UP))
 
 
 def qt_key_page_down() -> int:
@@ -228,9 +227,7 @@ def qt_key_page_down() -> int:
     Returns:
         int: Integer value of Qt.Key.Key_PageDown.
     """
-    from PyQt6.QtCore import Qt as _Qt
-
-    return int(getattr(getattr(_Qt, _KEY_ENUM), _KEY_PAGE_DOWN))
+    return int(getattr(getattr(Qt, _KEY_ENUM), _KEY_PAGE_DOWN))
 
 
 def tree_add_child(parent: QTreeWidgetItem, child: QTreeWidgetItem) -> None:

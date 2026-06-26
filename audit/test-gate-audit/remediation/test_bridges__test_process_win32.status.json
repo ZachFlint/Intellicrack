@@ -1,0 +1,53 @@
+{
+  "file": "tests/test_bridges/test_process_win32.py",
+  "findings_addressed": [
+    {
+      "id": "G0087",
+      "test": "test_enumerate_services_returns_list",
+      "action": "hardened-prod-defect",
+      "oracle": "Windows registry HKLM\\SYSTEM\\CurrentControlSet\\Services subkeys (read independently via winreg.EnumKey); bridge_names must be a subset of reg_names, and known_services={eventlog,plugplay} must intersect bridge_names.",
+      "documented_mutation": "In src/intellicrack/bridges/process.py _parse_service_entries(), change `services.append({...})` to `services.append({\"name\": \"\", ...})` (empty name) - bridge_names would not intersect known_services, failing the assert.",
+      "prod_defect": "P-TG-005",
+      "notes": "Gate now resets the shared advapi32 SCM ctypes prototypes via _reset_scm_ctypes_prototypes() before driving enumerate_services so the gate is deterministically RED regardless of test order. enumerate_services returns [] standalone because it never configures OpenSCManagerW.restype = SC_HANDLE, truncating the 64-bit SCM handle. Stays RED until P-TG-005 is fixed in src."
+    },
+    {
+      "id": "G0088",
+      "test": "test_enumerate_services_active_filter",
+      "action": "hardened-prod-defect",
+      "oracle": "Independent cross-check: active_names must equal the set of names whose state=='running' in the full (active=False) list; every entry in active_services must carry state=='running'.",
+      "documented_mutation": "In src/intellicrack/bridges/process.py enumerate_services(), change `state_filter = SERVICE_ACTIVE if active else SERVICE_STATE_ALL` to always use `SERVICE_STATE_ALL` - active_services would then include stopped services with state!='running', failing `assert svc.get('state') == 'running'`.",
+      "prod_defect": "P-TG-005",
+      "notes": "Same _reset_scm_ctypes_prototypes() determinism guard as G0087. Stays RED until P-TG-005 is fixed in src."
+    }
+  ],
+  "prod_defects": [
+    {
+      "id": "P-TG-004",
+      "source": "src/intellicrack/bridges/process.py:6641 (time_thread_wait)",
+      "summary": "OpenThread uses THREAD_QUERY_INFORMATION but WaitForSingleObject requires SYNCHRONIZE, so the wait always returns WAIT_FAILED; also WaitForSingleObject.restype is not DWORD so WAIT_FAILED (0xFFFFFFFF) is read as -1 and mislabelled 'other_-1'.",
+      "red_gates": [
+        "test_time_thread_wait_running_thread_times_out",
+        "test_time_thread_wait_exited_thread_signals"
+      ],
+      "empirical_proof": "OpenThread(THREAD_QUERY_INFORMATION)+WaitForSingleObject returns 0xFFFFFFFF (WAIT_FAILED); OpenThread(THREAD_QUERY_INFORMATION|SYNCHRONIZE) returns 0x102 (WAIT_TIMEOUT) for a running thread."
+    },
+    {
+      "id": "P-TG-005",
+      "source": "src/intellicrack/bridges/process.py:6527/6557 (enumerate_services / _enumerate_services_by_state)",
+      "summary": "enumerate_services never configures OpenSCManagerW.restype = SC_HANDLE so the 64-bit SCM handle is truncated to 32 bits; EnumServicesStatusExW then fails with ERROR_INVALID_HANDLE and the method returns []. Only works by accident if list_services (which configures the shared prototype) ran first in the same process.",
+      "red_gates": [
+        "test_enumerate_services_returns_list",
+        "test_enumerate_services_active_filter"
+      ],
+      "empirical_proof": "Standalone enumerate_services() returns 0; after list_services() (which sets OpenSCManagerW.restype=SC_HANDLE) a subsequent enumerate_services() returns 333. Probe shows unconfigured OpenSCManagerW returns a truncated handle 431280464 with EnumServicesStatusExW GetLastError=6 (ERROR_INVALID_HANDLE); configured handle 2830814730112 yields GetLastError=234 (ERROR_MORE_DATA), bytes_needed=56435."
+    }
+  ],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The two enumerate_services gates are production-defect gates (P-TG-005), made deterministically RED via _reset_scm_ctypes_prototypes(). A prior fixer also added two time_thread_wait gates that are not in the findings but legitimately surface P-TG-004 (missing SYNCHRONIZE); kept as falsifiable RED gates. All 4 gates stay RED until src is fixed (see PRODUCTION-DEFECTS.md). Sandbox: 14 passed, 1 env-skip (GetProcessMitigationPolicy), 4 expected-RED prod-defect gates."
+}

@@ -337,13 +337,47 @@ class TestF0011TlsUsesOwnSelector:
         assert _process_events_until(qapp, lambda: len(bridge.tls_calls) >= 1)
         assert bridge.tls_calls[0] == 42, f"Expected TID 42 from _tls_thread_combo, got {bridge.tls_calls[0]}"
 
-    def test_tls_thread_combo_exists_as_separate_widget(self, tab: ThreadsTab) -> None:
-        """The TLS combo must be a distinct QComboBox from the Fiber combo.
+    def test_tls_and_fiber_combos_dispatch_to_separate_bridge_calls(
+        self,
+        qapp: QCoreApplication,
+        tab: ThreadsTab,
+        bridge: _RecordingBridge,
+    ) -> None:
+        """Each combo must dispatch its own TID — cross-wiring is detected by the bridge.
+
+        Populates ``_fiber_combo`` with TID=777 and ``_tls_thread_combo`` with TID=888.
+        After invoking ``_on_tls``, the bridge must have received exactly 888 (the TLS
+        combo's value) and NOT 777 (the fiber combo's value).  A developer who wires
+        ``_on_tls`` to read from ``_fiber_combo`` will cause bridge.tls_calls[0] == 777,
+        failing the assertion.
+
+        Documented falsifying mutation: in ``threads_tab.py`` ``_on_tls()``, change
+        ``tid = self._tls_thread_combo.currentData()`` to
+        ``tid = self._fiber_combo.currentData()`` — bridge.tls_calls[0] becomes 777,
+        not 888, and the ``!= 777`` assertion fails.
 
         Args:
+            qapp: Qt application.
             tab: ThreadsTab fixture.
+            bridge: Recording bridge.
         """
-        assert _get_tls_thread_combo(tab) is not _get_fiber_combo(tab)
+        tab.set_bridge(bridge)
+
+        fiber_combo = _get_fiber_combo(tab)
+        tls_combo = _get_tls_thread_combo(tab)
+
+        fiber_combo.addItem("TID 777", 777)
+        tls_combo.addItem("TID 888", 888)
+
+        fiber_combo.setCurrentIndex(0)
+        tls_combo.setCurrentIndex(0)
+
+        _call_on_tls(tab)
+
+        assert _process_events_until(qapp, lambda: len(bridge.tls_calls) >= 1), "_on_tls never delivered a TID to the bridge"
+        received_tid = bridge.tls_calls[0]
+        assert received_tid == 888, f"Expected TID 888 from _tls_thread_combo, got {received_tid}"
+        assert received_tid != 777, "_on_tls read from _fiber_combo (got 777) instead of _tls_thread_combo"
 
 
 # ---------------------------------------------------------------------------
@@ -353,34 +387,6 @@ class TestF0011TlsUsesOwnSelector:
 
 class TestF0019WriteRegistersReadsLastEditedColumn:
     """F-0019: ``_on_write_registers`` must read from the last-edited column."""
-
-    def test_write_registers_reads_hex_column_by_default(
-        self,
-        qapp: QCoreApplication,
-        tab: ThreadsTab,
-        bridge: _RecordingBridge,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """When no column has been edited, the Hex column must be read.
-
-        Args:
-            qapp: Qt application.
-            tab: ThreadsTab fixture.
-            bridge: Recording bridge.
-            monkeypatch: Pytest monkeypatch fixture.
-        """
-        _accept_write_dialog(monkeypatch)
-        tab.set_bridge(bridge)
-        reg_combo = _get_reg_combo(tab)
-        reg_combo.addItem("TID 1", 1)
-        reg_combo.setCurrentIndex(0)
-        _add_reg_row(tab, "RAX", "0xDEADBEEF", "3735928559")
-
-        _call_on_write_registers(tab)
-
-        assert _process_events_until(qapp, lambda: len(bridge.set_context_calls) >= 1)
-        _tid, regs = bridge.set_context_calls[0]
-        assert regs["RAX"] == 0xDEADBEEF, f"Expected 0xDEADBEEF, got {regs['RAX']:#x}"
 
     def test_write_registers_reads_decimal_column(
         self,

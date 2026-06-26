@@ -1,0 +1,42 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_transforms.py",
+  "findings_addressed": [
+    {
+      "id": "G0178",
+      "test": "TestBridgeListTransforms::test_list_transforms_returns_list",
+      "action": "hardened",
+      "oracle": "get_all_transform_nodes() in transform_pipeline.py always registers exactly 5 Python-only nodes (RegexReplaceNode, CustomExpressionNode, RepeatNode, TruncateNode, PadNode) independent of Rust hexcore availability; oracle is the minimum count 5 and the known name 'regex_replace'.",
+      "documented_mutation": "In src/intellicrack/core/transform_pipeline.py line 889, change `nodes.extend(python_nodes)` to `nodes.extend([])` — the assertion `len(result) >= 5` and `'regex_replace' in names` would both fail."
+    },
+    {
+      "id": "G0175",
+      "test": "TestBridgeListTransforms::test_list_transforms_items_have_required_keys",
+      "action": "hardened",
+      "oracle": "Same 5-node floor guarantee from get_all_transform_nodes(); replaced walrus-conditional block with an unconditional `assert len(result) >= 5` that makes the for-loop execute against real data on every run.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py line 7777, remove the 'category' key from the returned dict comprehension — `assert 'category' in item` would fail for every item."
+    },
+    {
+      "id": "G0176",
+      "test": "TestBridgeListTransforms::test_list_transforms_name_values_are_strings",
+      "action": "hardened",
+      "oracle": "frozenset({'regex_replace', 'custom_expression', 'repeat', 'truncate', 'pad'}) — the five string literals returned by the `name` property of RegexReplaceNode, CustomExpressionNode, RepeatNode, TruncateNode, and PadNode in src/intellicrack/core/transform_pipeline.py (lines 369, 450, 523, 586, 654). These names are registered unconditionally by get_all_transform_nodes() regardless of Rust hexcore availability. The test asserts _CANONICAL_PYTHON_TRANSFORM_NAMES.issubset(names), so renaming or dropping any Python-only node causes an immediate failure.",
+      "documented_mutation": "Rename RegexReplaceNode.name to return 'rx_replace' in src/intellicrack/core/transform_pipeline.py line 369 — _CANONICAL_PYTHON_TRANSFORM_NAMES.issubset(names) fails because 'regex_replace' is no longer in the returned name set."
+    },
+    {
+      "id": "G0177",
+      "test": "TestBridgeApplyPipeline::test_apply_pipeline_with_single_xor_step",
+      "action": "hardened",
+      "oracle": "Independent byte-level oracle: `bytes(b ^ 0xAA for b in b'\\xff' * 4).hex()` == '55555555' (0xFF XOR 0xAA = 0x55 per XOR truth table); computed without calling any bridge code.",
+      "documented_mutation": "In src/intellicrack/core/transform_pipeline.py inside RustTransformNode.process(), change XOR key application to use 0x00 instead of the supplied key — the assertion `result == '55555555'` would fail (would get 'ffffffff' instead)."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "All four findings hardened in place. G0175 and G0176 (conditional-never-runs) fixed by replacing walrus/empty-loop patterns with an explicit `assert len(result) >= _MIN_PYTHON_TRANSFORM_COUNT` guard before iteration, plus a `pytest.skip` for when the pipeline module is unavailable. G0178 upgraded from type-only to non-empty + known-name oracle. G0177 upgraded from type/length to exact XOR oracle computed independently. G0176 re-hardened (2026-06-21): replaced isinstance/len loop with an independent oracle set assertion (_CANONICAL_PYTHON_TRANSFORM_NAMES.issubset(names)); oracle derived from the five `name` property literals in transform_pipeline.py; renaming any Python-only node breaks the test immediately. No production defects found; no tests deleted."
+}

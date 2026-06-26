@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING, cast
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtTest import QSignalSpy
 from PyQt6.QtWidgets import (
     QApplication,
     QLabel,
@@ -316,24 +315,42 @@ class TestRegionFilterFiltersTable:
         assert not table.isRowHidden(1), "row 1 must be revealed when the signal re-drives the slot with empty text"
 
     def test_region_filter_signal_drives_slot_without_direct_call(self, tab: MemoryTab) -> None:
-        """A ``QSignalSpy`` confirms ``setText`` emits ``textChanged`` carrying the typed value.
+        """Signal-driven filter: ``setText`` changes row visibility without a direct slot call.
 
-        This isolates the emission side of the wiring: the spy is an independent
-        oracle that captures the exact payload Qt delivers to every connected
-        slot. The captured argument must equal the text we set, proving the
-        production slot receives the real user input verbatim (not a stale or
-        empty string), without the test invoking the slot itself.
+        Populates the table with two distinct module names, then drives the
+        filter exclusively through ``QLineEdit.setText`` (which emits
+        ``textChanged`` and reaches the slot only via the Qt signal connection).
+        Row visibility is the independent oracle: if the signal were disconnected
+        or the slot replaced with a no-op the rows would remain in their
+        pre-filter state, turning the assertions red.
 
         Args:
             tab: MemoryTab fixture.
         """
+        table = _region_table(tab)
         region_filter = _region_filter(tab)
-        spy = QSignalSpy(region_filter.textChanged)
+        table.setSortingEnabled(False)
+        table.setRowCount(2)
+        table.setItem(0, 5, QTableWidgetItem("ntdll.dll"))
+        table.setItem(1, 5, QTableWidgetItem("kernel32.dll"))
 
         region_filter.setText("ntdll")
 
-        assert len(spy) == 1, f"setText must emit textChanged exactly once; got {len(spy)} emissions"
-        assert list(spy[0]) == ["ntdll"], f"textChanged must carry the typed value verbatim; got {list(spy[0])!r}"
+        assert not table.isRowHidden(0), (
+            "Row 0 (ntdll.dll) must be visible after signal-driven filter setText('ntdll')"
+        )
+        assert table.isRowHidden(1), (
+            "Row 1 (kernel32.dll) must be hidden after signal-driven filter setText('ntdll')"
+        )
+
+        region_filter.setText("kernel32")
+
+        assert table.isRowHidden(0), (
+            "Row 0 (ntdll.dll) must be hidden after signal-driven filter setText('kernel32')"
+        )
+        assert not table.isRowHidden(1), (
+            "Row 1 (kernel32.dll) must be visible after signal-driven filter setText('kernel32')"
+        )
 
     def test_region_filter_case_insensitive(self, tab: MemoryTab) -> None:
         """Filter match is case-insensitive.
@@ -460,30 +477,44 @@ class TestActionsDisabledHandlerNoDispatch:
         assert "Not attached to any process" in message, f"Expected 'Not attached to any process' in message, got {message!r}"
 
     def test_on_read_dispatches_when_attached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_on_read calls run_bridge_coroutine_logged when _attached_pid is set.
+        """_on_read dispatches the coroutine from bridge.read_memory with matching address kwarg.
 
-        This paired test proves that the guard on ``_attached_pid`` is the
-        controlling factor: removing the unattached check would let this test
-        pass regardless, so the pair together proves the guard is specific.
+        Asserts that (1) ``run_bridge_coroutine_logged`` is called with the
+        coroutine returned by ``bridge.read_memory`` as its first positional
+        argument, and (2) the ``address`` keyword argument equals ``hex(0x1000)``.
+        These checks fail if ``_on_read`` dispatches the wrong bridge method or
+        passes a wrong address, not merely when the ``_attached_pid`` guard is
+        absent.
 
         Args:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        mock_bridge = MagicMock()
+        _set_private(tab, "_bridge", mock_bridge)
         tab.set_attached_pid(1234)
 
-        dispatch_calls: list[object] = []
+        dispatch_args: list[tuple[object, ...]] = []
+        dispatch_kwargs: list[dict[str, object]] = []
 
-        def _capture_dispatch(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
+        def _capture_dispatch(*args: object, **kwargs: object) -> None:
+            dispatch_args.append(args)
+            dispatch_kwargs.append(kwargs)
 
         monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
 
         _line_edit(tab, "_read_addr").setText("0x1000")
         _invoke(tab, "_on_read")
 
-        assert dispatch_calls, "run_bridge_coroutine_logged must be called when _attached_pid is set"
+        assert dispatch_args, "run_bridge_coroutine_logged must be called when _attached_pid is set"
+        assert dispatch_args[0][0] is mock_bridge.read_memory.return_value, (
+            "First positional argument must be the coroutine returned by bridge.read_memory; "
+            f"got {dispatch_args[0][0]!r}"
+        )
+        assert dispatch_kwargs[0].get("address") == hex(0x1000), (
+            f"address kwarg must equal {hex(0x1000)!r}; "
+            f"got {dispatch_kwargs[0].get('address')!r}"
+        )
 
     def test_on_write_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
         """_on_write shows the 'Not Attached' warning and skips dispatch when _attached_pid is None.
@@ -528,22 +559,29 @@ class TestActionsDisabledHandlerNoDispatch:
         assert "Not attached to any process" in message, f"Expected 'Not attached to any process' in message, got {message!r}"
 
     def test_on_write_dispatches_when_attached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_on_write calls run_bridge_coroutine_logged when _attached_pid is set.
+        """_on_write dispatches the coroutine from bridge.write_memory with matching address kwarg.
 
-        Paired counterpart confirming the guard is specifically the PID check,
-        not an address-parse exception or any other coincidental control flow.
+        Asserts that (1) ``run_bridge_coroutine_logged`` is called with the
+        coroutine returned by ``bridge.write_memory`` as its first positional
+        argument, and (2) the ``address`` keyword argument equals ``hex(0x1000)``.
+        These checks fail if ``_on_write`` dispatches the wrong bridge method or
+        passes a wrong address, not merely when the ``_attached_pid`` guard is
+        absent.
 
         Args:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        mock_bridge = MagicMock()
+        _set_private(tab, "_bridge", mock_bridge)
         tab.set_attached_pid(1234)
 
-        dispatch_calls: list[object] = []
+        dispatch_args: list[tuple[object, ...]] = []
+        dispatch_kwargs: list[dict[str, object]] = []
 
-        def _capture_dispatch(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
+        def _capture_dispatch(*args: object, **kwargs: object) -> None:
+            dispatch_args.append(args)
+            dispatch_kwargs.append(kwargs)
 
         monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
         monkeypatch.setattr(QMessageBox, "warning", _noop_warning_yes)
@@ -552,7 +590,15 @@ class TestActionsDisabledHandlerNoDispatch:
         _plain_text(tab, "_write_input").setPlainText("90 90")
         _invoke(tab, "_on_write")
 
-        assert dispatch_calls, "run_bridge_coroutine_logged must be called when _attached_pid is set"
+        assert dispatch_args, "run_bridge_coroutine_logged must be called when _attached_pid is set"
+        assert dispatch_args[0][0] is mock_bridge.write_memory.return_value, (
+            "First positional argument must be the coroutine returned by bridge.write_memory; "
+            f"got {dispatch_args[0][0]!r}"
+        )
+        assert dispatch_kwargs[0].get("address") == hex(0x1000), (
+            f"address kwarg must equal {hex(0x1000)!r}; "
+            f"got {dispatch_kwargs[0].get('address')!r}"
+        )
 
     def test_on_search_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
         """_on_search shows the 'Not Attached' warning and skips dispatch when _attached_pid is None.
@@ -595,29 +641,45 @@ class TestActionsDisabledHandlerNoDispatch:
         assert "Not attached to any process" in message, f"Expected 'Not attached to any process' in message, got {message!r}"
 
     def test_on_search_dispatches_when_attached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
-        """_on_search calls run_bridge_coroutine_logged when _attached_pid is set.
+        """_on_search dispatches the coroutine from bridge.search_pattern with matching pattern_length kwarg.
 
-        Paired counterpart proving the guard is specifically the ``_attached_pid``
-        check, not an empty-pattern guard or any other coincidental exit.
+        Asserts that (1) ``run_bridge_coroutine_logged`` is called with the
+        coroutine returned by ``bridge.search_pattern`` as its first positional
+        argument, and (2) the ``pattern_length`` keyword argument equals the
+        length of the search pattern string ``'90 90'``.  These checks fail if
+        ``_on_search`` dispatches the wrong bridge method or passes a mismatched
+        pattern length, not merely when the ``_attached_pid`` guard is absent.
 
         Args:
             tab: MemoryTab fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        _set_private(tab, "_bridge", MagicMock())
+        mock_bridge = MagicMock()
+        _set_private(tab, "_bridge", mock_bridge)
         tab.set_attached_pid(1234)
 
-        dispatch_calls: list[object] = []
+        dispatch_args: list[tuple[object, ...]] = []
+        dispatch_kwargs: list[dict[str, object]] = []
 
-        def _capture_dispatch(*args: object, **_kwargs: object) -> None:
-            dispatch_calls.append(args)
+        def _capture_dispatch(*args: object, **kwargs: object) -> None:
+            dispatch_args.append(args)
+            dispatch_kwargs.append(kwargs)
 
         monkeypatch.setattr(_memory_tab_mod, "run_bridge_coroutine_logged", _capture_dispatch)
 
-        _line_edit(tab, "_search_pattern").setText("90 90")
+        pattern = "90 90"
+        _line_edit(tab, "_search_pattern").setText(pattern)
         _invoke(tab, "_on_search")
 
-        assert dispatch_calls, "run_bridge_coroutine_logged must be called when _attached_pid is set"
+        assert dispatch_args, "run_bridge_coroutine_logged must be called when _attached_pid is set"
+        assert dispatch_args[0][0] is mock_bridge.search_pattern.return_value, (
+            "First positional argument must be the coroutine returned by bridge.search_pattern; "
+            f"got {dispatch_args[0][0]!r}"
+        )
+        assert dispatch_kwargs[0].get("pattern_length") == len(pattern), (
+            f"pattern_length kwarg must equal {len(pattern)!r}; "
+            f"got {dispatch_kwargs[0].get('pattern_length')!r}"
+        )
 
 
 class TestSearchStatusResetsOnFailure:
@@ -848,24 +910,31 @@ class TestAddressFieldHasPlaceholder:
     """F-0009: _build_protect_tab address field has a setPlaceholderText hint."""
 
     def test_prot_addr_has_placeholder(self, tab: MemoryTab) -> None:
-        """_prot_addr placeholder text shows the expected address format.
+        """_prot_addr placeholder text is exactly the canonical 64-bit example address.
+
+        The production constructor calls ``set_hint_p('0x7FF600000000')``.
+        Asserting the exact value means any regression to a generic ``'0x...'``
+        or empty string turns the test red immediately.
 
         Args:
             tab: MemoryTab fixture.
         """
         placeholder = _line_edit(tab, "_prot_addr").placeholderText()
-        assert placeholder, "Expected placeholder text on _prot_addr — F-0009 not fixed"
-        assert "0x" in placeholder.lower() or "7FF" in placeholder, (
-            f"Placeholder '{placeholder}' does not indicate hex address format — F-0009 not fixed"
+        assert placeholder == "0x7FF600000000", (
+            f"Expected placeholder '0x7FF600000000' on _prot_addr; got {placeholder!r} — F-0009 not fixed"
         )
 
     def test_prot_addr_placeholder_matches_expected_format(self, tab: MemoryTab) -> None:
-        """_prot_addr placeholder shows an example with a realistic 64-bit address format.
+        """_prot_addr placeholder contains the exact 64-bit example address string.
+
+        Asserts ``'0x7FF600000000' in placeholder`` without a second disjunct,
+        so any regression to a shorter or generic placeholder (e.g. ``'0x...'``)
+        turns the test red.
 
         Args:
             tab: MemoryTab fixture.
         """
         placeholder = _line_edit(tab, "_prot_addr").placeholderText()
-        assert "0x7FF600000000" in placeholder or ("0x" in placeholder and len(placeholder) > 4), (
-            f"Placeholder '{placeholder}' does not match expected format — F-0009 not fixed"
+        assert "0x7FF600000000" in placeholder, (
+            f"Placeholder '{placeholder}' does not contain the expected '0x7FF600000000' — F-0009 not fixed"
         )

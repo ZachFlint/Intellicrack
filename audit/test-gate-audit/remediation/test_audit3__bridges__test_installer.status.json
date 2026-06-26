@@ -1,0 +1,51 @@
+{
+  "file": "tests/test_audit3/bridges/test_installer.py",
+  "findings_addressed": [
+    {
+      "id": "G0001",
+      "test": "TestKindDiscriminator::test_install_result_has_kind_field",
+      "action": "deleted",
+      "oracle": "TestKindDiscriminator::test_install_tool_process_returns_builtin_kind",
+      "documented_mutation": "N/A - deleted as weaker duplicate of test_install_tool_process_returns_builtin_kind which drives real install_tool(PROCESS) and asserts result.kind == 'builtin'"
+    },
+    {
+      "id": "G0002",
+      "test": "TestKindDiscriminator::test_found_tool_has_kind_field",
+      "action": "deleted",
+      "oracle": "TestKindDiscriminator::test_find_tool_detailed_process_reports_builtin",
+      "documented_mutation": "N/A - deleted as weaker duplicate of test_find_tool_detailed_process_reports_builtin which drives real find_tool_detailed(PROCESS) and asserts ft.kind == 'builtin'"
+    },
+    {
+      "id": "G0003",
+      "test": "TestTypeDataclassesSanity::test_arch_deploy_result_carries_error",
+      "action": "hardened",
+      "oracle": "The OSError message raised by the patched shutil.copy2 stub is used as the oracle; the real deploy_x64dbg_plugin_detailed propagates it into ArchDeployResult.error",
+      "documented_mutation": "In installer.py _deploy_arch_plugin: remove the 'except OSError as exc: ... error=str(exc)' branch so ArchDeployResult.error is never populated; the assertion 'assert oracle_error in x64_arch.error' then fails with AttributeError or the assertion fails because error is None"
+    },
+    {
+      "id": "G0004",
+      "test": "TestTypeDataclassesSanity::test_is_user_admin_returns_bool",
+      "action": "hardened",
+      "oracle": "ctypes.windll.shell32.IsUserAnAdmin() called independently as oracle on win32; documented return True on non-Windows per production source",
+      "documented_mutation": "In installer.py _is_user_admin: change 'return bool(is_admin_fn())' to 'return not bool(is_admin_fn())'; the assertion 'result is oracle' then fails when the admin state is known"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    {
+      "test": "TestKindDiscriminator::test_install_result_has_kind_field",
+      "covered_by": "TestKindDiscriminator::test_install_tool_process_returns_builtin_kind"
+    },
+    {
+      "test": "TestKindDiscriminator::test_found_tool_has_kind_field",
+      "covered_by": "TestKindDiscriminator::test_find_tool_detailed_process_reports_builtin"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0001 and G0002 were exact weaker duplicates of stronger siblings already in the same class that drive real Intellicrack code; deleted per the redundant-duplicate rule. G0003 now drives deploy_x64dbg_plugin_detailed with a shutil.copy2 stub that raises a known OSError message and asserts the real ArchDeployResult.error from the deploy path contains that message. G0004 now calls ctypes.windll.shell32.IsUserAnAdmin() as an independent oracle on win32 and asserts is_user_admin() matches it exactly; on non-Windows asserts True per the documented unconditional return."
+}

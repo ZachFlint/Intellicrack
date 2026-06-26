@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_hexcore_e2e/test_hexpat_data_reader.py",
+  "findings_addressed": [
+    {
+      "id": "G0224",
+      "test": "All tests in file",
+      "action": "hardened",
+      "oracle": "The conftest.py module-level importorskip was already removed per wave context, so all tests now run unconditionally. Each test uses struct.pack as an independent oracle: e.g., test_read_u16_little_endian packs 0x1234 via struct.pack('<H', 0x1234) and asserts DataReader.read_u16 returns the same integer; test_u16_little_vs_big_differ asserts LE=0x3412 and BE=0x1234 from bytes [0x12, 0x34] (a concrete struct-derived oracle); test_read_raw_bytes asserts r.read(1,3)==bytes([1,2,3]) on a known input; bounds tests assert HexPatRuntimeError is raised for invalid ranges.",
+      "documented_mutation": "In DataReader.read_u16 (data_reader.py line 180), change 'prefix = \"<\" if endian == \"little\" else \">\"' to 'prefix = \">\" if endian == \"little\" else \"<\"' — this swaps LE/BE, making test_read_u16_little_endian fail (expects 0x1234 from LE-packed bytes but gets byte-swapped value) and test_u16_little_vs_big_differ fail (both assertions invert)."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The test file itself never contained a module-level importorskip — the masking was entirely in conftest.py, which was already refactored per wave context (module-level importorskip removed, importorskip moved to the 'hexcore' fixture). All existing tests are genuine falsifiable gates using struct.pack/unpack as independent oracles and concrete integer/bytes assertions. No changes to the test file were required; all four quality tools pass with zero findings."
+}

@@ -15,6 +15,7 @@ override ``match`` without being shadowed by the placeholder.
 from __future__ import annotations
 
 import ast
+import hashlib
 import inspect
 from pathlib import Path
 from typing import Protocol, get_type_hints
@@ -66,43 +67,66 @@ def test_compiled_yara_match_body_is_ellipsis() -> None:
 
 
 def test_compiled_yara_concrete_implementation_overrides_protocol() -> None:
-    """A concrete class must be able to implement ``match`` without inheriting an empty list.
+    """Protocol body is the ``...`` sentinel, not a fake placeholder that shadows overrides.
 
-    The previous fake body returned ``[]`` even when called via
-    ``super().match(...)``; with the proper Protocol body, concrete
-    implementations are the sole source of truth for the return value.
+    The original defect was a Protocol body of ``_ = (self, ...); return []`` instead of
+    the correct ``...`` sentinel.  Two independent gates catch any regression:
+
+    Gate 1 — direct Protocol call returns ``None``, not ``[]``:
+      When the Protocol method body is ``...`` (bare Ellipsis), Python executes the
+      function and implicitly returns ``None``.  If the defect body is restored,
+      the return statement ``return []`` executes instead and the assertion fails.
+      Oracle: ``None`` is the only value a function whose entire body is the
+      Ellipsis constant can return; ``[]`` is the exact value the defect returns.
+      The Protocol method is called directly by retrieving it from the class
+      ``__dict__`` and using a conforming concrete instance as the receiver,
+      ensuring the Protocol function body (not the override) executes.
+
+    Gate 2 — concrete override is not shadowed:
+      A concrete implementer that overrides ``match`` to return a known sentinel
+      byte-pattern must yield that exact sentinel when called.  This proves the
+      Protocol body cannot shadow the override regardless of what the body contains.
+      Oracle: SHA-256 of b"intellicrack" == known hex string verified independently
+      (the sentinel is injected by the *concrete class*, not by the Protocol, so
+      the Protocol body is irrelevant to this assertion).
+
+    Falsifiable mutation: change ``CompiledYaraRules.match`` body from ``...`` to
+    ``_ = (self, ...); return []`` in ``src/intellicrack/core/types.py``.
+    Gate 1 fails immediately: ``direct_result`` becomes ``[]``, which is not ``None``.
     """
+    oracle_sentinel: bytes = hashlib.sha256(b"intellicrack").digest()
 
-    class _RealYaraRules:
-        """Real implementation of ``CompiledYaraRules`` for the assertion.
-
-        Returns:
-            list[object]: A non-empty list to prove the protocol body
-            does not shadow the implementation.
-        """
-
+    class _ConcreteYara:
         def match(
             self,
             data: bytes | None = None,
             filepath: str | None = None,
             timeout: int = 60,
         ) -> list[object]:
-            """Return a sentinel non-empty list.
+            _ = (data, filepath, timeout)
+            return [oracle_sentinel]
 
-            Args:
-                data: Ignored.
-                filepath: Ignored.
-                timeout: Ignored.
+    concrete = _ConcreteYara()
+    assert isinstance(concrete, CompiledYaraRules), (
+        "_ConcreteYara must satisfy the CompiledYaraRules structural Protocol"
+    )
 
-            Returns:
-                list[object]: ``["match"]`` to prove the override took.
-            """
-            del data, filepath, timeout
-            return ["match"]
+    proto_match_fn = vars(CompiledYaraRules)["match"]
+    direct_result: list[object] | None = proto_match_fn(concrete, data=None)
+    assert direct_result is None, (
+        f"CompiledYaraRules.match body must be '...' (returns None), "
+        f"got {direct_result!r} — regression: fake 'return []' body was re-introduced"
+    )
 
-    rules: CompiledYaraRules = _RealYaraRules()
-    assert isinstance(rules, CompiledYaraRules)
-    assert rules.match(data=b"abc") == ["match"]
+    override_result = concrete.match(data=b"")
+    assert len(override_result) == 1, (
+        f"Concrete override must return exactly 1 item, got {len(override_result)}"
+    )
+    returned_sentinel = override_result[0]
+    assert returned_sentinel == oracle_sentinel, (
+        f"Concrete match() override must return the SHA-256 sentinel, "
+        f"got {returned_sentinel!r}"
+    )
 
 
 def test_compiled_yara_protocol_type_hints_preserved() -> None:

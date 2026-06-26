@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_display.py",
+  "findings_addressed": [
+    {
+      "id": "G0140",
+      "test": "TestBridgeDisplayMode::test_get_display_mode_returns_hex8_by_default",
+      "action": "hardened",
+      "oracle": "Module-level @pytest.fixture named bridge defined in test_bridge_display.py directly instantiates HexEditorBridge() and calls initialize() without depending on conftest hexcore_mod importorskip, so tests execute regardless of whether intellicrack_hexcore is built. Default mode 'hex8' is cross-checked against HexEditorBridge._VALID_DISPLAY_MODES via getattr. uuid.UUID(rule_id, version=4) construction validates UUID4 format independently of the production uuid.uuid4() call.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py change `self._display_mode: str = \"hex8\"` to `self._display_mode: str = \"hex16_le\"` — test_get_display_mode_returns_hex8_by_default will fail with AssertionError because `mode == 'hex8'` becomes False."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Anti-pattern N3 (skip masking real capability) resolved by shadowing the conftest bridge fixture with a local module-level fixture that bypasses the importorskip guard. The display_mode and highlight_rule methods are pure-Python state management (self._display_mode str, self._highlight_rules dict) and execute correctly without the Rust intellicrack_hexcore extension. Two new tests added: test_set_display_mode_invalid_raises_value_error (gates ValueError contract) and test_set_display_mode_all_valid_modes_accepted (exhaustive round-trip over all 18 documented modes). Original test_add_highlight_rule_returns_nonempty_string_id strengthened to test_add_highlight_rule_returns_valid_uuid4 with uuid.UUID version check and regex pattern match as independent oracle."
+}

@@ -34,7 +34,9 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import platform
 import shutil
+import subprocess
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -55,6 +57,75 @@ if TYPE_CHECKING:
 
 
 _HW_ACCELERATORS: frozenset[AcceleratorType] = frozenset({AcceleratorType.WHPX, AcceleratorType.KVM})
+
+
+def _oracle_expected_accelerator(qemu_exe: Path) -> AcceleratorType:
+    """Compute the expected accelerator via an independent subprocess oracle.
+
+    Runs ``qemu-system-x86_64 -accel help`` directly and parses the raw text
+    output to determine which hardware accelerators are advertised.  This is
+    an oracle that is *structurally independent* of ``_detect_accelerator``:
+    it does not call any ``QEMUSandbox`` code and does not share the WHPX /
+    KVM smoke-test logic.  It only asks: given this binary, does the host
+    advertise ``whpx`` (Windows) or ``kvm`` (Linux)?  The answer defines the
+    *minimum* accelerator ``_detect_accelerator`` must select — TCG is only
+    acceptable when neither is advertised.
+
+    On Windows the oracle returns ``AcceleratorType.WHPX`` only when both the
+    binary advertises it *and* the Windows ``HypervisorPlatform`` feature is
+    enabled (same prerequisite ``_detect_accelerator`` checks).  When the
+    feature is absent the oracle falls through to KVM / TCG exactly as
+    production does.
+
+    Args:
+        qemu_exe: Resolved path to the ``qemu-system-x86_64`` executable.
+
+    Returns:
+        AcceleratorType: The accelerator type that production code must select
+        or a more capable one — never a *less* capable one.
+    """
+    try:
+        result = subprocess.run(
+            [str(qemu_exe), "-accel", "help"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return AcceleratorType.TCG
+
+    combined = (result.stdout + result.stderr).lower()
+
+    if "whpx" in combined and platform.system() == "Windows":
+        pwsh = shutil.which("pwsh") or shutil.which("powershell")
+        if pwsh:
+            try:
+                ps_result = subprocess.run(
+                    [
+                        pwsh,
+                        "-NoLogo",
+                        "-NoProfile",
+                        "-NonInteractive",
+                        "-ExecutionPolicy",
+                        "Bypass",
+                        "-Command",
+                        "(Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction Stop).State",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=15,
+                    check=False,
+                )
+                if ps_result.stdout.strip().lower() == "enabled":
+                    return AcceleratorType.WHPX
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+
+    if "kvm" in combined:
+        return AcceleratorType.KVM
+
+    return AcceleratorType.TCG
 
 
 def _run[T](coro: Coroutine[object, object, T]) -> T:
@@ -123,6 +194,30 @@ class _RealOpsSandbox(QEMUSandbox):
             path: QEMU executable path, or ``None`` to clear it.
         """
         self._qemu_path = path
+
+    def get_accelerator_cached(self) -> bool:
+        """Return whether the accelerator detection result has been cached.
+
+        Returns:
+            bool: ``True`` if the accelerator probe result is cached.
+        """
+        return self._accelerator_cached
+
+    def get_accelerator(self) -> AcceleratorType:
+        """Return the cached accelerator type selected by ``is_available``.
+
+        Returns:
+            AcceleratorType: The accelerator stored in ``_accelerator``.
+        """
+        return self._accelerator
+
+    def get_qemu_path(self) -> Path | None:
+        """Return the resolved QEMU executable path.
+
+        Returns:
+            Path | None: Resolved QEMU path, or ``None`` if not yet set.
+        """
+        return self._qemu_path
 
     async def poll_for_result_public(
         self,
@@ -426,6 +521,34 @@ class TestYaraScanRealRulesRealBinary:
         assert not any("not_a_pe" in s for s in scanned if s), "the non-PE control must not produce a match"
 
 
+def _qemu_is_findable() -> bool:
+    """Return whether the production ``_find_qemu`` search would locate QEMU.
+
+    Mirrors the exact search order used by :meth:`QEMUSandbox._find_qemu`:
+    the TOOLS_PATH exe file, ``shutil.which``, and the common install dirs.
+    This guard is used to choose the absent-QEMU branch of the accelerator
+    probe test without relying on a narrower check that diverges from
+    production.
+
+    Returns:
+        bool: ``True`` if at least one candidate exists as a regular file.
+    """
+    candidates: list[Path] = []
+    if QEMUSandbox.TOOLS_PATH.exists():
+        candidates.append(QEMUSandbox.TOOLS_PATH / f"{QEMUSandbox.QEMU_EXE}.exe")
+    if found := shutil.which(QEMUSandbox.QEMU_EXE):
+        candidates.append(Path(found))
+    for base in (
+        Path("C:/Program Files/qemu"),
+        Path("C:/Program Files (x86)/qemu"),
+        Path("/usr/bin"),
+        Path("/usr/local/bin"),
+    ):
+        exe_name = f"{QEMUSandbox.QEMU_EXE}.exe" if base.drive else QEMUSandbox.QEMU_EXE
+        candidates.append(base / exe_name)
+    return any(p.exists() and p.is_file() for p in candidates)
+
+
 class TestRealHostAcceleratorProbe:
     """``is_available`` / ``_detect_accelerator`` must probe the REAL QEMU host."""
 
@@ -434,24 +557,102 @@ class TestRealHostAcceleratorProbe:
         """A real ``is_available`` probe resolves the real QEMU binary and accelerator.
 
         When QEMU is genuinely absent the method must report ``False`` rather
-        than fabricate availability; when present it must cache a real
-        accelerator that ``_build_qemu_command`` can consume consistently.
+        than fabricate availability; when present it must cache the correct
+        accelerator for this host and ``_detect_accelerator`` must agree with
+        an independent subprocess oracle.
+
+        **Falsifiability** (Branch B, QEMU present):
+
+        - ``assert available is True`` — fails if ``_find_qemu`` is broken to
+          return ``None`` despite a real binary being present.
+        - ``assert sb.get_accelerator_cached() is True`` — fails if
+          ``self._accelerator_cached = True`` (line 1046 of qemu.py) is
+          removed or the assignment is skipped.
+        - ``assert sb.get_qemu_path() is not None`` — fails if
+          ``self._qemu_path = qemu_path`` (line 1042) is removed.
+        - Accelerator selection is gated against the independent oracle, which
+          runs ``qemu-system-x86_64 -accel help`` directly. The falsifiable
+          claim splits on what the host genuinely offers:
+
+          * Hardware-accel host (oracle is WHPX or KVM): ``detected`` must equal
+            the oracle. Removing the WHPX/KVM probe logic and returning
+            ``AcceleratorType.TCG`` makes this fail.
+          * TCG-only host (oracle is TCG — e.g. the headless sandbox container,
+            where the ``HypervisorPlatform`` prerequisite is not satisfiable):
+            the hardware-selection branch is genuinely unexercisable, so the
+            test instead asserts ``detected == TCG`` — production must fall back
+            to TCG and must NOT fabricate an unusable WHPX/KVM result.
+            Hard-coding ``return AcceleratorType.WHPX`` makes this fail.
+
+        - ``assert detected == sb.get_accelerator()`` — fails if the value
+          returned by ``_detect_accelerator`` diverges from the cached
+          ``_accelerator`` that ``is_available`` stored after its own
+          internal call, proving the two calls are consistent and the
+          cached field is not independent of the detection path.
+
+        **Mutation proofs (one-line breakages in src that make the test red)**:
+        In ``src/intellicrack/sandbox/qemu.py`` -
+
+        * On a hardware-accel host: change ``_detect_accelerator_impl`` to
+          ``return None`` unconditionally (removing the WHPX/KVM probes); the
+          fallback yields ``TCG`` while the oracle is ``WHPX``/``KVM``, failing
+          ``detected == oracle_accelerator``.
+        * On any host (including TCG-only): hard-code
+          ``return AcceleratorType.WHPX`` in ``_detect_accelerator_impl``; on a
+          TCG-only host ``detected`` becomes ``WHPX`` while the oracle is
+          ``TCG``, failing the ``detected == TCG`` branch.
+
+        Detecting a TCG-fallback regression on a host that itself provides no
+        hardware accelerator is environmentally impossible (the selection branch
+        cannot run), so that specific check is scoped to hardware-accel hosts.
         """
         sb = _RealOpsSandbox(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.WINDOWS))
 
-        if shutil.which(QEMUSandbox.QEMU_EXE) is None and not QEMUSandbox.TOOLS_PATH.exists():
+        if not _qemu_is_findable():
             available = _run(sb.is_available())
             assert available is False, "is_available must report False when no real QEMU binary exists"
             return
 
         available = _run(sb.is_available())
         assert available is True, "is_available must report True when the real QEMU binary is present on the host"
-        assert isinstance(sb.qemu_config, QEMUConfig)
+        assert sb.get_accelerator_cached() is True, (
+            "is_available must cache the accelerator result; a broken caching path leaves _accelerator_cached False"
+        )
 
-        # A second probe must reuse the cached accelerator and re-detect a value
-        # of the same concrete type from the real host.
+        qemu_path = sb.get_qemu_path()
+        assert qemu_path is not None, (
+            "is_available must populate _qemu_path when the QEMU binary is found"
+        )
+
+        oracle_accelerator = _oracle_expected_accelerator(qemu_path)
+
+        sb.invalidate_accelerator_cache()
         detected = _run(sb.detect_accelerator_for_test_value())
-        assert isinstance(detected, AcceleratorType), "real accelerator detection must yield an AcceleratorType"
+
+        if oracle_accelerator in _HW_ACCELERATORS:
+            assert detected == oracle_accelerator, (
+                f"_detect_accelerator must select {oracle_accelerator.value!r} based on "
+                f"the independent -accel-help oracle; got {detected.value!r}. "
+                "Removing all WHPX/KVM probe logic and returning AcceleratorType.TCG "
+                "unconditionally causes this assertion to fail on a host that "
+                "genuinely advertises hardware acceleration."
+            )
+        else:
+            assert detected == AcceleratorType.TCG, (
+                f"the host offers no usable hardware accelerator (oracle={oracle_accelerator.value!r}), "
+                f"so _detect_accelerator must fall back to TCG and must NOT fabricate an "
+                f"unusable WHPX/KVM result; got {detected.value!r}. Hard-coding "
+                "`return AcceleratorType.WHPX` (or KVM) makes this assertion fail."
+            )
+
+        cached_accelerator = sb.get_accelerator()
+        assert detected == cached_accelerator, (
+            f"_detect_accelerator must return a value consistent with the "
+            f"cached _accelerator field; got detected={detected.value!r} "
+            f"vs cached={cached_accelerator.value!r}. A divergence here means "
+            "is_available cached a different accelerator than _detect_accelerator "
+            "now computes on the same binary, indicating a path inconsistency."
+        )
 
 
 class TestBuildQemuCommandRealContract:

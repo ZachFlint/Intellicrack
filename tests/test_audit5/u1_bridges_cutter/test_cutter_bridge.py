@@ -821,13 +821,28 @@ class TestF0025R2SetterIsActive:
 class TestF0026DynamicAnalysisFlag:
     """Capabilities advertise ESIL emulation as dynamic analysis."""
 
-    def test_dynamic_analysis_supported(self, bridge: CutterBridge) -> None:
-        """Bridge claims dynamic analysis to match its ESIL surface.
+    def test_dynamic_analysis_supported(
+        self,
+        bridge: CutterBridge,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        """Flag is backed by a working ESIL implementation, not just a static value.
+
+        Drives the real ``esil_eval`` path end-to-end via the recorder so
+        the assertion fails if ``supports_dynamic_analysis`` is set True while
+        the ESIL implementation is removed or broken.
 
         Args:
             bridge: Fresh CutterBridge fixture.
+            loop: Per-test asyncio loop.
         """
         assert bridge.capabilities.supports_dynamic_analysis is True
+        recorder = _RecordingR2(responses={"ae ": "0x1"})
+        _attach(bridge, recorder)
+        result: str = loop.run_until_complete(bridge.esil_eval("1,1,+"))
+        assert isinstance(result, str)
+        assert result == "0x1"
+        assert any(cmd.startswith("ae ") for cmd in recorder.commands)
 
     def test_esil_methods_present(self, bridge: CutterBridge) -> None:
         """Every ESIL tool the audit calls out remains exposed.
@@ -852,20 +867,30 @@ class TestF0026DynamicAnalysisFlag:
 
 
 class TestF0028AssembleAtToolDocstring:
-    """Tool definition for assemble_at says raw bytes object."""
+    """assemble_at returns a real bytes object, not a hex string."""
 
-    def test_returns_description_mentions_bytes_object(
+    def test_assemble_at_returns_bytes_with_correct_encoding(
         self,
         bridge: CutterBridge,
+        loop: asyncio.AbstractEventLoop,
     ) -> None:
-        """Returns string explicitly references a Python bytes object.
+        """assemble_at returns a bytes object whose value matches the assembled instruction.
+
+        The independent oracle is the well-known x86 encoding of ``ret``
+        (opcode 0xC3 = one byte). Any implementation that returns a hex
+        string, an integer, or the wrong byte sequence will fail this check.
 
         Args:
             bridge: Fresh CutterBridge fixture.
+            loop: Per-test asyncio loop.
         """
-        td = bridge.tool_definition
-        match = next(f for f in td.functions if f.name == "cutter.assemble_at")
-        assert "bytes object" in match.returns.lower()
+        recorder = _RecordingR2(responses={"pa ": "c3\n"})
+        _attach_and_analyze(bridge, recorder, loop)
+        result: bytes = loop.run_until_complete(bridge.assemble_at(0x2000, "ret"))
+        oracle: bytes = bytes.fromhex("c3")
+        assert isinstance(result, bytes)
+        assert result == oracle
+        assert len(result) == 1
 
 
 # ---------------------------------------------------------------------------

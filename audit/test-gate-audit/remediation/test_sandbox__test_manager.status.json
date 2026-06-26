@@ -1,0 +1,56 @@
+{
+  "file": "tests/test_sandbox/test_manager.py",
+  "findings_addressed": [
+    {
+      "id": "G0304",
+      "test": "TestSandboxInstance::test_touch_updates_last_used",
+      "action": "hardened",
+      "oracle": "datetime.now(UTC) bracketing: after_create <= inst.last_used <= after_touch, three independent inequalities that collectively require touch() to call datetime.now(UTC) and store the result",
+      "documented_mutation": "In src/intellicrack/sandbox/manager.py line 108, change `self.last_used = datetime.now(UTC)` to `pass` (no-op) -- the test fails because inst.last_used remains at its creation timestamp which is strictly before after_create"
+    },
+    {
+      "id": "G0305",
+      "test": "TestSandboxInstance::test_last_report_settable",
+      "action": "hardened",
+      "oracle": "Independently constructed expected field values: result='error', exit_code=42, stdout='sentinel-stdout', stderr='sentinel-stderr', duration_seconds=7.5; plus a before-state check confirming last_report starts as None",
+      "documented_mutation": "In src/intellicrack/sandbox/manager.py, change `self.last_report: ExecutionReport | None = None` initialization and add a @property getter that returns `None` unconditionally -- stored is None so `stored is report` fails immediately"
+    },
+    {
+      "id": "G0306",
+      "test": "TestSandboxInstance::test_binary_path_settable",
+      "action": "hardened",
+      "oracle": "Two-phase state check: assert binary_path is None before assignment (pre-condition), then assert path equality plus .name and .suffix derived properties after assignment (post-condition)",
+      "documented_mutation": "In src/intellicrack/sandbox/manager.py, make binary_path a read-only property that always returns None -- the post-assignment assert `inst.binary_path == target` fails"
+    },
+    {
+      "id": "G0307",
+      "test": "TestManagerProperties::test_instances_returns_copy",
+      "action": "re-hardened (adversarial review: was _TestableManager tautology)",
+      "oracle": "Mutation isolation on the real SandboxManager: after create() populates the real registry via _in_memory_sandbox_factory-patched WindowsSandbox, the returned list is cleared; a second call to instances must still yield length 1 because SandboxManager.instances returns list(self._instances.values()) -- a copy. An implementation that returns the live dict_values or a reference propagates the clear() and len(second_list) becomes 0.",
+      "documented_mutation": "In src/intellicrack/sandbox/manager.py line 148, change `return list(self._instances.values())` to `return self._instances.values()` -- clear() on the returned view object raises AttributeError OR a for-loop over the cleared view yields 0 items, so len(list(second_list)) == 0; the `len(second_list) == 1` assertion fails."
+    },
+    {
+      "id": "G0308",
+      "test": "TestManagerCreate::test_create_returns_instance",
+      "action": "re-hardened (adversarial review: was _TestableManager tautology)",
+      "oracle": "UUID format contract on the real SandboxManager: str(uuid4()) always produces exactly 36 characters split into 5 segments by 4 hyphens at positions 8, 13, 18, 23 (lengths 8-4-4-4-12). Registry membership check `await mgr.get(inst.id) is inst` confirms the instance was stored under its own ID by the real manager.",
+      "documented_mutation": "Mutation 1: in SandboxInstance.__init__, change `self.id = str(uuid4())` to `self.id = 'bad'` -- len(inst.id) == 36 fails (3 != 36). Mutation 2: in SandboxManager.create(), remove `self._instances[instance.id] = instance` -- `await mgr.get(inst.id)` returns None so `found is inst` fails."
+    },
+    {
+      "id": "G0309",
+      "test": "TestManagerStatus::test_status_has_expected_keys",
+      "action": "re-hardened (adversarial review: was _TestableManager tautology)",
+      "oracle": "Real SandboxManager.get_status() is exercised end-to-end with _in_memory_sandbox_factory patched for WindowsSandbox/QEMUSandbox. Scalar oracles: max_instances == 5 (constructor arg), active_count == 1 (one auto_start=True instance), total_count == 1. Instance-entry oracle: key 'type' (not 'sandbox_type') == 'windows', 'id' == inst.id, 'status' == 'running'. The real get_status() also calls get_available_types() which probes both types via the patched factories.",
+      "documented_mutation": "Mutation 1: change `'max_instances': self._max_instances` to `'max_instances': 0` -- assertion fails. Mutation 2: rename instance-entry key 'type' to 'sandbox_type' -- entry['type'] raises KeyError. Mutation 3: replace `self.active_count` with constant 0 -- status['active_count'] == 1 fails."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0304/G0305/G0306 were already genuinely falsifiable (confirmed by adversarial review). G0307/G0308/G0309 re-hardened: all three now exercise the real SandboxManager from intellicrack.sandbox.manager (not _TestableManager). WindowsSandbox and QEMUSandbox are replaced at the module level via unittest.mock.patch with _in_memory_sandbox_factory (a variadic factory returning InMemorySandbox) so the real create(), get(), and get_status() code paths run without a live OS sandbox service. The 'type' key in get_status() instance entries was also corrected from the test-helper's 'sandbox_type' to match the real implementation."
+}

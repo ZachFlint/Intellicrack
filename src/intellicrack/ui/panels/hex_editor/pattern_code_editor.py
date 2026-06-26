@@ -127,7 +127,7 @@ class PatternCodeEditor(QPlainTextEdit):
             return
 
         is_shortcut = (e.modifiers() & Qt.KeyboardModifier.ControlModifier) == Qt.KeyboardModifier.ControlModifier and e.key() == int(
-            Qt.Key.Key_Space
+            Qt.Key.Key_Space,
         )
         if not is_shortcut:
             super().keyPressEvent(e)

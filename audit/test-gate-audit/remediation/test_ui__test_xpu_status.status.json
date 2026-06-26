@@ -1,0 +1,50 @@
+{
+  "file": "tests/test_ui/test_xpu_status.py",
+  "findings_addressed": [
+    {
+      "id": "G0369",
+      "test": "TestXPUStatusDialogCache::test_cache_usage_label_has_value",
+      "action": "re-hardened (third pass — non-zero oracle)",
+      "oracle": "Real ModelCache singleton seeded with exactly 256 MiB (268,435,456 bytes) by setting cache._current_memory_bytes directly before _refresh_cache(); expected label is independently computed '256.0 MB'. A constant-output mutation hardcoding '0.0 MB' fails because abs(0.0 - 256.0) = 256.0 > 1.0 tolerance.",
+      "documented_mutation": "In src/intellicrack/ui/xpu_status.py _apply_cache_info(), change `self.cache_usage_label.setText(f\"{usage_mb:.1f} MB\")` to `self.cache_usage_label.setText(\"0.0 MB\")` unconditionally — the previous test allowed this to pass when the global cache was empty (oracle=0, actual=0, abs(0-0)=0 ≤ 1); the re-hardened test fails because abs(0.0 - 256.0) = 256.0 > 1.0.",
+      "prior_weakness": "Oracle was get_global_model_cache().get_memory_usage() which returned 0 in a clean test run (empty cache). abs(actual - 0.0) <= 1.0 passed for any mutation that output '0.0 MB', making the assertion vacuous. The oracle always equalled the mutant output."
+    },
+    {
+      "id": "G0370",
+      "test": "TestXPUStatusDialogCache::test_cache_limit_label_has_value",
+      "action": "re-hardened",
+      "oracle": "int(get_global_model_cache().max_memory_bytes / (1024.0 * 1024.0)) compared to int parsed from label text, exact equality. Terminal strings 'N/A' and 'Error' are not accepted silently.",
+      "documented_mutation": "In src/intellicrack/ui/xpu_status.py _refresh_cache(), change the happy-path branch to always set `self.cache_limit_label.setText('N/A')` unconditionally — the test fails because text does not end with ' MB'.",
+      "prior_weakness": "Previous version used `if text in terminal_texts: return` allowing 'N/A' or 'Error' to pass with zero assertions."
+    },
+    {
+      "id": "G0371",
+      "test": "TestXPUStatusDialogRequirements::test_requirements_text_is_populated",
+      "action": "re-hardened",
+      "oracle": "_wait_for_requirements_render() joins the background QThread, then asserts: (a) text is not empty, (b) 'Checking system requirements' is absent, (c) text is NOT 'Requirements check not available.' (because check_windows_requirements is importable here so that string cannot legitimately appear), (d) text matches one of the real terminal outcomes (all met / warnings / failed).",
+      "documented_mutation": "In src/intellicrack/ui/xpu_status.py _on_requirements_ready(), replace the setHtml() call with `self.requirements_text.setPlainText('Requirements check not available.')` — the re-hardened test fails the `assert text.strip() != unavailable` assertion.",
+      "prior_weakness": "Previous version accepted 'Requirements check not available.' unconditionally via `text.strip() in terminal_stubs`, but since check_windows_requirements is successfully imported in this test module, that string should never appear."
+    },
+    {
+      "id": "G0372",
+      "test": "TestProviderConfigXPUGroupBox::test_device_combo_has_xpu_entries_when_available",
+      "action": "deleted",
+      "oracle": "TestProviderConfigXPUGroupBox::test_device_combo_exists_and_populated",
+      "documented_mutation": "N/A — test deleted as exact weaker duplicate of test_device_combo_exists_and_populated."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    {
+      "test": "TestProviderConfigXPUGroupBox::test_device_combo_has_xpu_entries_when_available",
+      "covered_by": "TestProviderConfigXPUGroupBox::test_device_combo_exists_and_populated"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Third-pass hardening of G0369. The second-pass oracle (get_global_model_cache().get_memory_usage()) was vacuous in a clean test run because the global cache is empty — oracle=0, so abs(actual-0) <= 1.0 passed for any mutation that output '0.0 MB'. The fix seeds the real ModelCache singleton's _current_memory_bytes to exactly 256 MiB before calling _refresh_cache(), then asserts the label equals independently computed '256.0 MB'. The seeded bytes are restored in a finally block. No model loading or torch dependency is required because get_memory_usage() reads _current_memory_bytes directly under the cache lock. G0370/G0371/G0372 are unchanged from second pass."
+}

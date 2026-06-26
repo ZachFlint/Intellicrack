@@ -1,0 +1,36 @@
+{
+  "file": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py",
+  "findings_addressed": [
+    {
+      "id": "G0310",
+      "test": "TestToolDefinitionDispatchEndToEnd::test_status_dispatch",
+      "action": "hardened",
+      "oracle": "bridge.list() as an independent oracle: the status() id-set is cross-checked against list() so a bridge regression that drops instances from status while list() still returns them fails; also pins exact available_types set to {'windows','qemu'}, exact instance count, exact per-id type values, and asserts active_count equals independently-counted running instances",
+      "documented_mutation": "In sandbox_bridge.py SandboxBridge.status(), change `return dict(await manager.get_status())` to `return {**await manager.get_status(), 'instances': []}` — the `len(status_instances) == 2` assertion fails because the instances list is now empty, and `status_ids == list_ids` fails because status_ids is empty while list_ids is {'win-test-001', 'qemu-test-001'}. Alternatively, renaming the 'id' key in status instances raises KeyError when extracting status_ids.",
+      "weakness_eliminated": "N6 vacuous empty-collection loop: the prior test iterated result['instances'] in a for-loop that succeeded trivially if the bridge returned an empty list while total_count remained 2. The new test pins the exact count (2), the exact id-set, per-id type values, and cross-checks against list() — an empty instances list now makes multiple concrete assertions fail."
+    },
+    {
+      "id": "G0311",
+      "test": "TestToolDefinitionDispatchEndToEnd::test_list_dispatch",
+      "action": "hardened",
+      "oracle": "datetime.fromisoformat() on created_at and last_used for every entry (independent oracle that the bridge's astimezone(UTC).isoformat() serialization is well-formed); also asserts exact type values per instance id",
+      "documented_mutation": "In sandbox_bridge.py SandboxBridge.list(), remove the `astimezone(UTC)` call so created_at becomes a naive datetime; datetime.fromisoformat() would then parse it without tzinfo and the `parsed.tzinfo is not None` assertion fails"
+    },
+    {
+      "id": "G0312",
+      "test": "TestStubManagerFullCallChain::test_create_updates_state_with_real_fields",
+      "action": "hardened",
+      "oracle": "datetime.fromisoformat() on result['created_at'] from SandboxBridge.create(); cross-check that the returned instance_id actually appears in bridge.list() so a fabricated return dict with a bogus id fails",
+      "documented_mutation": "In sandbox_bridge.py SandboxBridge.create(), change `instance.created_at.astimezone(UTC).isoformat()` to `instance.created_at.isoformat()` removing UTC conversion; the tzinfo assertion then fails for naive datetimes on systems where the sandbox creates a naive UTC datetime"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "test_status_dispatch re-hardened (wave 2): prior version used a vacuous for-loop over result['instances'] that accepted an empty list as passing. New version pins the exact instance count (2), the exact id-set {_WIN_INSTANCE, _QEMU_INSTANCE}, per-id type values, active_count cross-check, and compares the id-set against bridge.list() as an independent oracle. The list() path is independently falsifiable (test_list_dispatch already gates it) so comparing status ids against list ids provides a genuine two-path cross-check."
+}

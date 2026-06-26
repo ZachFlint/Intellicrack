@@ -53,6 +53,7 @@ _PWSH_LAUNCH_TIMEOUT_SEC: Final[float] = 4.0
 _PWSH_KILL_GRACE_SEC: Final[float] = 3.0
 _LOG_NAME: Final[str] = "injection_monitor.log"
 _DIAG_NAME: Final[str] = "injection_monitor.diag.log"
+_LIFECYCLE_NAME: Final[str] = "injection_monitor.lifecycle.log"
 
 
 pytestmark = pytest.mark.skipif(
@@ -278,11 +279,20 @@ def test_script_throws_when_traceevent_dll_missing(tmp_path: Path) -> None:
         f"stdout={completed.stdout!r} stderr={completed.stderr!r}"
     )
     diag_path = log_dir / _DIAG_NAME
-    if diag_path.exists():
-        diag_text = diag_path.read_text(encoding="utf-8", errors="replace")
-        assert "traceevent_dll_missing" in diag_text or "TraceEvent" in diag_text, (
-            f"expected traceevent_dll_missing diagnostic; diag={diag_text!r}"
-        )
+    assert diag_path.exists(), (
+        f"F-0016 regression: diag log must be written before throw when TraceEvent.dll is missing; "
+        f"log_dir contents={list(log_dir.iterdir())!r} stdout={completed.stdout!r} stderr={completed.stderr!r}"
+    )
+    diag_text = diag_path.read_text(encoding="utf-8", errors="replace")
+    diag_lines = [ln.strip() for ln in diag_text.splitlines() if ln.strip()]
+    assert diag_lines, (
+        f"F-0016 regression: diag log must be non-empty when TraceEvent.dll is missing; diag={diag_text!r}"
+    )
+    categories = [ln.split("|")[1] for ln in diag_lines if ln.count("|") >= 2]
+    assert any(cat in {"traceevent_dll_missing", "traceevent_dll_load_failed"} for cat in categories), (
+        f"F-0016 regression: diag log must contain traceevent_dll_missing or traceevent_dll_load_failed category; "
+        f"found categories={categories!r} diag={diag_text!r}"
+    )
 
 
 def test_script_uses_verified_provider_events_not_fabricated_apis() -> None:
@@ -430,13 +440,19 @@ def test_script_emits_threat_intel_unavailable_warning_when_not_admin(
         )
 
 
-def test_smoke_script_runs_without_crash(tmp_path: Path) -> None:
-    """End-to-end smoke: the script must launch and create its log directory.
+def test_smoke_lifecycle_records_started_and_stopped(tmp_path: Path) -> None:
+    """Lifecycle log must contain both ``started`` and ``stopped`` structured records.
 
-    On non-elevated runs the script throws after the kernel-provider
-    enable fails (expected behaviour after F-0016). On elevated runs
-    the script enters its ETW loop and is killed by the test
-    teardown. Either path must exit cleanly.
+    ``Write-InjectionLifecycle`` is called unconditionally at startup
+    (line 272 of the script) and in the ``finally`` block (line 517).
+    Both paths must produce a pipe-delimited record whose third field
+    (index 2) equals the expected state token.
+
+    Mutation that falsifies this test: removing either
+    ``Write-InjectionLifecycle -State 'started'`` (line 272) or
+    ``Write-InjectionLifecycle -State 'stopped'`` (line 517) from the
+    production script causes the corresponding assertion to fail because
+    the lifecycle file would then lack that state token.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -449,10 +465,35 @@ def test_smoke_script_runs_without_crash(tmp_path: Path) -> None:
     try:
         time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
     finally:
-        stdout, stderr, _ = _terminate(proc)
+        stdout, stderr, returncode = _terminate(proc)
 
-    assert log_dir.is_dir(), f"log directory missing after run: {log_dir}"
-    produced_artefact = (log_dir / _LOG_NAME).exists() or (log_dir / _DIAG_NAME).exists() or bool((stderr or "").strip())
-    assert produced_artefact, (
-        f"script produced no observable output; stdout={stdout!r} stderr={stderr!r} dir contents={list(log_dir.iterdir())!r}"
+    if returncode != 0 and "TraceEvent.dll not found" in stderr:
+        pytest.skip(
+            "Microsoft.Diagnostics.Tracing.TraceEvent.dll is unavailable in this "
+            "environment; injection_monitor.ps1 correctly throws before the lifecycle "
+            "monitor can start (see test_script_throws_when_traceevent_dll_missing)",
+        )
+
+    lifecycle_file = log_dir / _LIFECYCLE_NAME
+    assert lifecycle_file.exists(), (
+        f"injection_monitor.lifecycle.log not written; "
+        f"returncode={returncode!r} stdout={stdout!r} stderr={stderr!r} "
+        f"dir={list(log_dir.iterdir())!r}"
+    )
+
+    raw = lifecycle_file.read_text(encoding="utf-8", errors="replace")
+    records = [ln.strip() for ln in raw.splitlines() if ln.strip()]
+    assert records, (
+        f"lifecycle log is empty; returncode={returncode!r} "
+        f"stdout={stdout!r} stderr={stderr!r}"
+    )
+
+    states = {ln.split("|")[2] for ln in records if ln.count("|") >= 3}
+    assert "started" in states, (
+        f"lifecycle log missing 'started' record; states={states!r} raw={raw!r}; "
+        f"falsified by removing Write-InjectionLifecycle -State 'started' at line 272 of the script"
+    )
+    assert "stopped" in states, (
+        f"lifecycle log missing 'stopped' record; states={states!r} raw={raw!r}; "
+        f"falsified by removing Write-InjectionLifecycle -State 'stopped' at line 517 of the script"
     )

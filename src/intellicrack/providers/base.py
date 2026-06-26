@@ -62,11 +62,19 @@ class UsageInfo:
         completion_tokens: Tokens generated in the completion / output.
         total_tokens: Sum of prompt and completion tokens as reported
             by the provider when available.
+        cache_read_tokens: Prompt tokens served from a provider-side
+            prompt cache (Anthropic ``cache_read_input_tokens``); ``0``
+            when the provider reports no cache hit or lacks the field.
+        cache_creation_tokens: Prompt tokens written into the
+            provider-side prompt cache (Anthropic
+            ``cache_creation_input_tokens``); ``0`` when not reported.
     """
 
     prompt_tokens: int = field(default=0)
     completion_tokens: int = field(default=0)
     total_tokens: int = field(default=0)
+    cache_read_tokens: int = field(default=0)
+    cache_creation_tokens: int = field(default=0)
 
 
 @dataclass(frozen=True, slots=True)

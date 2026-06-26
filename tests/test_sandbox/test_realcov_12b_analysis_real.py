@@ -34,6 +34,7 @@ launch real ``pwsh`` and socket processes.
 from __future__ import annotations
 
 import importlib
+import ipaddress
 import shutil
 import socket
 import sys
@@ -51,7 +52,7 @@ from intellicrack.sandbox.analysis import (
     generate_timeline,
     match_behaviors,
 )
-from intellicrack.sandbox.base import ExecutionReport
+from intellicrack.sandbox.base import ExecutionReport, FileChange, RegistryChange
 from intellicrack.sandbox.log_parsers import parse_network_log, parse_process_log
 from intellicrack.sandbox.windows import WindowsSandbox
 
@@ -391,13 +392,36 @@ async def test_detect_c2_patterns_on_real_c2_port_capture(tmp_path: Path) -> Non
 
 @pytest.mark.asyncio
 async def test_generate_timeline_orders_real_events(tmp_path: Path) -> None:
-    """``generate_timeline`` merges and sorts real captured events.
+    """``generate_timeline`` merges and sorts real captured events with correct category filtering.
+
+    An independent oracle verifies:
+
+    1. **Sort oracle** — timestamps extracted from the full timeline must equal
+       the sorted sequence of those same timestamps; any break in chronological
+       order makes the equality assertion fail.
+
+    2. **Count oracle** — the length of the process-category-filtered timeline
+       must equal the number of ``process_activity`` records in the report,
+       computed independently before calling ``generate_timeline``.  A mutation
+       that drops the ``_timeline_add_process_events`` call or silently skips
+       records produces a different count, turning this assertion red.
+
+    3. **Filter oracle** — every event in the process-filtered timeline must
+       carry ``category == "process"``; a mutation that removes the
+       ``_should_include`` guard would include events of other categories.
 
     Args:
         tmp_path: Pytest temp directory.
     """
     pwsh = _resolve_pwsh()
     report = await _capture_real_report(tmp_path, pwsh)
+
+    assert report.process_activity, (
+        "real Windows capture precondition violated: process_activity is empty; "
+        "the live process-monitor must produce at least one record on any running Windows system"
+    )
+
+    expected_process_event_count: int = len(report.process_activity)
 
     timeline = generate_timeline(report)
     assert timeline, "expected timeline events from a real captured report"
@@ -410,19 +434,104 @@ async def test_generate_timeline_orders_real_events(tmp_path: Path) -> None:
     assert categories & {"process", "network"}, f"expected process/network timeline categories from real capture; saw {categories}"
 
     process_only = generate_timeline(report, categories=["process"])
-    assert all(ev["category"] == "process" for ev in process_only), "category filter must restrict timeline to requested categories"
-    if report.process_activity:
-        assert process_only, "process category timeline must be non-empty when real process activity exists"
+    assert all(ev["category"] == "process" for ev in process_only), (
+        "category filter must restrict timeline to requested categories only"
+    )
+    assert len(process_only) == expected_process_event_count, (
+        f"process-filtered timeline length {len(process_only)} must equal the independently-counted "
+        f"process_activity record count {expected_process_event_count}; "
+        "a mutation that drops _timeline_add_process_events or skips records produces a different count"
+    )
+
+
+_SENTINEL_PUBLIC_IP_A: Final[str] = "8.8.8.8"
+_SENTINEL_PUBLIC_IP_B: Final[str] = "1.1.1.1"
+_SENTINEL_PRIVATE_IP: Final[str] = "192.168.254.253"
+_SENTINEL_URL: Final[str] = "https://example.com/payload.bin"
+
+
+def _stdlib_is_private(ip: str) -> bool:
+    """Return True when *ip* is a private or loopback IPv4 address.
+
+    Uses only the Python standard-library ``ipaddress`` module — an
+    independent implementation that does not import or call any production
+    code from ``intellicrack.sandbox.analysis``.
+
+    Args:
+        ip: IPv4 address string to classify.
+
+    Returns:
+        bool: True if the address is private or loopback.
+    """
+    try:
+        return ipaddress.ip_address(ip).is_private
+    except ValueError:
+        return False
 
 
 @pytest.mark.asyncio
 async def test_extract_iocs_from_real_process_paths(tmp_path: Path) -> None:
-    """``extract_iocs`` extracts real artefacts from real process activity.
+    r"""``extract_iocs`` extracts and deduplicates IOCs from real+injected artefacts.
 
-    The live process table includes real loopback connections (private IPs,
-    which must be filtered) and real System32 image paths. This validates
-    the IOC extractor against real data: private/loopback IPs are excluded
-    and every emitted IOC has a recognised type and non-empty value.
+    The original test was not falsifiable: with only System32 processes and
+    loopback connections, ``extract_iocs`` legitimately returns ``[]``, making
+    every loop-body assertion vacuously pass and the deduplication check
+    ``0 == 0`` trivially true.
+
+    This version drives the extractor end-to-end with a real captured
+    ``ExecutionReport`` whose ``file_changes`` and ``registry_changes`` are
+    augmented with two deterministic sentinel entries:
+
+    * **File-path sentinel** — a ``FileChange`` whose ``path`` contains the
+      known public IPs ``8.8.8.8`` and ``1.1.1.1``, each delimited by path
+      separators (``\``).  The separators matter: ``_IPV4_PATTERN`` anchors on
+      ``\b`` word boundaries, and ``_`` is a word character, so an IP embedded
+      as ``8.8.8.8_x`` would NOT match — the IPs must be bounded by a non-word
+      character (here the backslash path separator).  Both must appear in
+      ``iocs`` as ``ipv4`` entries.
+    * **Registry-value sentinel** — a ``RegistryChange`` whose ``value_data``
+      contains the URL ``https://example.com/payload.bin``.  It must appear
+      in ``iocs`` as a ``url`` entry.
+    * **Private-IP sentinel** — a second ``FileChange`` path that contains
+      ``192.168.254.253``.  This IP is private and must NOT appear in
+      ``iocs``, exercising the ``_is_private_ip`` filter independently.
+    * **Dedup sentinel** — the file-path sentinel IP ``8.8.8.8`` is embedded
+      in both ``FileChange`` entries; the extractor must deduplicate by
+      ``(ioc_type, value)`` so that only one ``("ipv4", "8.8.8.8")`` entry
+      exists.
+
+    Independent oracles (no production code reused):
+
+    1. **Presence oracle** — ``8.8.8.8``, ``1.1.1.1``, and
+       ``https://example.com/payload.bin`` are asserted to be in the IOC
+       value set.  Deleting the ``_add_ioc("ipv4", ...)`` call inside
+       ``_scan_text`` removes these entries and fails this oracle.
+
+    2. **Exclusion oracle** — ``192.168.254.253`` must not be in the IOC
+       value set.  Removing the ``_is_private_ip`` guard inside ``_add_ioc``
+       allows this private IP to pass through and fails this oracle.
+
+    3. **Dedup oracle** — the count of ``("ipv4", "8.8.8.8")`` entries in
+       ``iocs`` must equal exactly 1.  Removing the ``if key in seen: return``
+       deduplication guard allows duplicates through and increases the count,
+       failing this oracle.
+
+    4. **Type oracle** — all emitted IOC types must belong to the known
+       vocabulary.  The private-IP check uses the stdlib ``ipaddress`` module
+       exclusively — not the production ``_is_private_ip`` — so mutations to
+       the private-IP filter are independently caught by oracle 2 rather than
+       being masked by a circular self-check.
+
+    Falsifiability proof (static):
+    * Deleting ``_add_ioc("ipv4", match.group(1), source, ctx)`` in
+      ``_scan_text`` → ``8.8.8.8`` and ``1.1.1.1`` absent from ``iocs`` →
+      oracle 1 fails.
+    * Deleting ``_add_ioc("url", match.group(1), source, ctx)`` in
+      ``_scan_text`` → URL absent → oracle 1 fails.
+    * Removing ``if ioc_type == "ipv4" and _is_private_ip(value): return``
+      → ``192.168.254.253`` appears in IOC values → oracle 2 fails.
+    * Removing ``if key in seen: return`` → two ``("ipv4", "8.8.8.8")``
+      entries in ``iocs`` → oracle 3 count exceeds 1 → fails.
 
     Args:
         tmp_path: Pytest temp directory.
@@ -430,24 +539,106 @@ async def test_extract_iocs_from_real_process_paths(tmp_path: Path) -> None:
     pwsh = _resolve_pwsh()
     report = await _capture_real_report(tmp_path, pwsh)
 
-    iocs = extract_iocs(report)
+    assert report.process_activity, (
+        "real Windows capture precondition violated: process_activity is empty; "
+        "the live process-monitor must produce at least one record on any running Windows system"
+    )
+
+    now_iso = "2026-01-01T00:00:00+00:00"
+
+    sentinel_file_a: FileChange = {
+        "path": rf"C:\analysis\{_SENTINEL_PUBLIC_IP_A}\beacon\{_SENTINEL_PUBLIC_IP_B}\c2.bin",
+        "operation": "created",
+        "old_path": None,
+        "timestamp": now_iso,
+        "size": 1024,
+    }
+    sentinel_file_b: FileChange = {
+        "path": rf"C:\analysis\{_SENTINEL_PRIVATE_IP}\filtered\{_SENTINEL_PUBLIC_IP_A}\dup.log",
+        "operation": "created",
+        "old_path": None,
+        "timestamp": now_iso,
+        "size": 512,
+    }
+    sentinel_registry: RegistryChange = {
+        "key": r"HKCU\Software\Analysis\C2Config",
+        "value_name": "DownloadUrl",
+        "operation": "created",
+        "value_type": "REG_SZ",
+        "value_data": _SENTINEL_URL,
+        "timestamp": now_iso,
+    }
+
+    augmented_report = ExecutionReport(
+        result=report.result,
+        exit_code=report.exit_code,
+        stdout=report.stdout,
+        stderr=report.stderr,
+        duration_seconds=report.duration_seconds,
+        file_changes=[sentinel_file_a, sentinel_file_b],
+        registry_changes=[sentinel_registry],
+        network_activity=report.network_activity,
+        process_activity=report.process_activity,
+    )
+
+    iocs = extract_iocs(augmented_report)
+
+    assert iocs, (
+        "extract_iocs must return at least one IOC from the augmented report whose "
+        "file_changes embed known public IPs and registry value_data contains a URL; "
+        "returning [] means the scan loop or _add_ioc call is silently broken"
+    )
 
     values = {ioc["value"] for ioc in iocs}
-    assert _LOOPBACK_ADDR not in values, "loopback addresses must be filtered from IOCs"
 
-    is_private: Callable[[str], bool] = getattr(_analysis_mod, "_is_private_ip")
-    valid_types = {"ipv4", "domain", "url", "sha256", "sha1", "md5", "email"}
+    assert _SENTINEL_PUBLIC_IP_A in values, (
+        f"expected public IP {_SENTINEL_PUBLIC_IP_A!r} in IOC values from file-path scan; "
+        f"a mutation deleting the ipv4 _add_ioc call in _scan_text makes this absent; "
+        f"got values={sorted(values)}"
+    )
+    assert _SENTINEL_PUBLIC_IP_B in values, (
+        f"expected public IP {_SENTINEL_PUBLIC_IP_B!r} in IOC values from file-path scan; "
+        f"got values={sorted(values)}"
+    )
+    assert _SENTINEL_URL in values, (
+        f"expected URL {_SENTINEL_URL!r} in IOC values from registry value_data scan; "
+        f"a mutation deleting the url _add_ioc call in _scan_text makes this absent; "
+        f"got values={sorted(values)}"
+    )
+
+    assert _SENTINEL_PRIVATE_IP not in values, (
+        f"private IP {_SENTINEL_PRIVATE_IP!r} must be filtered from IOC output; "
+        f"removing the _is_private_ip guard in _add_ioc makes this appear; "
+        f"got values={sorted(values)}"
+    )
+    assert _LOOPBACK_ADDR not in values, (
+        "loopback address 127.0.0.1 must be filtered from IOC output"
+    )
+
+    sentinel_ip_a_iocs = [ioc for ioc in iocs if ioc["ioc_type"] == "ipv4" and ioc["value"] == _SENTINEL_PUBLIC_IP_A]
+    assert len(sentinel_ip_a_iocs) == 1, (
+        f"expected exactly 1 deduplicated IOC for {_SENTINEL_PUBLIC_IP_A!r} "
+        f"(it appears in two different FileChange paths); "
+        f"got {len(sentinel_ip_a_iocs)}; removing the dedup guard allows duplicates through"
+    )
+
+    valid_types: frozenset[str] = frozenset({"ipv4", "domain", "url", "sha256", "sha1", "md5", "email"})
     for ioc in iocs:
-        assert ioc["ioc_type"] in valid_types, f"unknown IOC type: {ioc['ioc_type']!r}"
-        assert ioc["value"], "IOC value must be non-empty"
+        assert ioc["ioc_type"] in valid_types, (
+            f"unknown IOC type {ioc['ioc_type']!r}; value={ioc['value']!r}"
+        )
+        assert ioc["value"], f"IOC value must be non-empty; ioc_type={ioc['ioc_type']!r}"
         if ioc["ioc_type"] == "ipv4":
-            octets = ioc["value"].split(".")
-            assert len(octets) == 4, f"malformed IPv4 IOC: {ioc['value']!r}"
-            assert all(0 <= int(o) <= 255 for o in octets), f"IPv4 octet out of range: {ioc['value']!r}"
-            assert not is_private(ioc["value"]), f"private/reserved IPv4 must be filtered from IOCs: {ioc['value']!r}"
+            assert not _stdlib_is_private(ioc["value"]), (
+                f"private/reserved IPv4 {ioc['value']!r} must be filtered; "
+                "checked via stdlib ipaddress (independent of production _is_private_ip)"
+            )
 
     keys = [(ioc["ioc_type"], ioc["value"]) for ioc in iocs]
-    assert len(keys) == len(set(keys)), "IOC extraction must deduplicate by (type, value)"
+    assert len(keys) == len(set(keys)), (
+        "IOC list must be deduplicated by (ioc_type, value); "
+        "duplicates indicate the dedup guard was removed from _add_ioc"
+    )
 
 
 @pytest.mark.asyncio

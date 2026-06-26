@@ -1,0 +1,299 @@
+{
+  "group": "test_hexcore_e2e__c1",
+  "files": {
+    "tests/test_hexcore_e2e/test_bridge_ai_context.py": [
+      {
+        "id": "G0126",
+        "test": "TestBridgeAIContext::test_get_context_for_ai_contains_expected_top_level_keys",
+        "line": 51,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert concrete values: ctx['file_path'] == str(pe_binary), ctx['size'] == 1024, ctx['cursor'] == 0, ctx['modified'] == False. The PE fixture always produces a 1024-byte file, providing a deterministic oracle.",
+        "why_not_gate": "Asserts only that five keys (file_path, size, modified, cursor, selection) exist in the returned dict, not their values. If get_document_info() were changed to always return stub values {file_path: None, size: 0, ...} even when a document is loaded, the key-presence assertions would still pass while the functionality is completely broken."
+      },
+      {
+        "id": "G0127",
+        "test": "TestBridgeAIContext::test_get_context_for_ai_bookmarks_is_list",
+        "line": 77,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "On a fresh document with no bookmarks, assert ctx['bookmarks'] == [] and ctx['bookmark_count_total'] == 0 to gate the metadata fields and verify the list is properly initialized.",
+        "why_not_gate": "Only checks isinstance(ctx['bookmarks'], list), not the structure or content of bookmark entries. If _populate_ai_bookmarks() inserted an empty list or failed to serialize bookmark fields (offset, length, label), this test would still pass. The companion test test_get_context_for_ai_bookmarks_contain_expected_fields_when_present covers values, but this test alone is insufficient."
+      },
+      {
+        "id": "G0128",
+        "test": "TestBridgeAIContext::test_get_context_for_ai_size_is_positive",
+        "line": 106,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert the exact document size: assert ctx['size'] == 1024. The _build_pe_binary() fixture always produces a deterministic 1024-byte buffer, providing an oracle independent of the bridge's internal document state.",
+        "why_not_gate": "Asserts only isinstance(ctx['size'], int) and ctx['size'] > 0. Any positive integer satisfies this check. If get_document_info() returned a hardcoded sentinel size (e.g., 1) instead of calling self.document.length(), the test would still pass despite the actual document being 1024 bytes."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_alignment_color.py": [
+      {
+        "id": "G0129",
+        "test": "TestColorMode::test_all_color_modes_accepted",
+        "line": 328,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "After each `set_color_mode(mode)` call, add `assert _run(bridge.get_color_mode()) == mode` to confirm the mode is actually persisted. This converts the loop into a round-trip gate for every supported mode value.",
+        "why_not_gate": "The test iterates all five valid color modes and only asserts `result is True`. Production `set_color_mode` (hex_editor.py line 8593-8618) validates the mode string against `_VALID_COLOR_MODES` and always returns True for a valid mode. If storage were broken — for example `self._color_mode` was never updated, or was always set to a hardcoded wrong value — the method would still return True and this test would remain green. `test_color_mode_roundtrip` covers read-back for one mode ('byte_value'), and `test_set_color_mode_persists_and_notifies` covers storage and event dispatch for 'entropy', but no test verifies read-back for all five modes. This test therefore only gates that valid modes do not raise an exception and return True, not that they are persistently stored."
+      },
+      {
+        "id": "G0130",
+        "test": "TestSnapToAlignment::test_snap_to_alignment_512",
+        "line": 129,
+        "category": "tautological",
+        "severity": "low",
+        "recommendation": "Remove the inline oracle computation at lines 127-129. The docstring comment 'cursor at 1000, boundaries 512 and 1024, 1024 is nearer' already documents intent. The actual production gate is the three assertions at lines 133-135 which compare bridge output against `ceil_boundary`.",
+        "why_not_gate": "The assertion at line 129 (`assert nearer == ceil_boundary`) only validates the test's own local conditional. `nearer` is assigned `ceil_boundary` when `(1000 - 512) > (1024 - 1000)` evaluates to True (488 > 24), which is an arithmetic constant — this can never fail regardless of what the production bridge does. The production `snap_to_alignment` at line 5977 of hex_editor.py uses `(self._cursor_offset - floor_offset) * 2 >= alignment_size`, which for this specific input yields the same result, but the test assertion at line 129 does not call the bridge at all. A production breakage (e.g., snap always returns `floor_offset`) would not affect line 129; lines 133-135 catch that instead."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_arithmetic.py": [
+      {
+        "id": "G0131",
+        "test": "TestArithmeticEdgeCases::test_returns_operation_metadata",
+        "line": 223,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "After `apply_arithmetic_to_selection('not')`, read back the bytes with `_run(bridge.read_bytes(0, 4))` and assert they equal `bytes([0x55, 0x44, 0x33, 0x22])` (bitwise NOT of 0xAA 0xBB 0xCC 0xDD). This makes the test a real gate for the NOT transform rather than a pure metadata shape check.",
+        "why_not_gate": "The test asserts only that the returned dict has the correct keys and that `result['operation'] == 'not'` and `result['length'] == 4`. Looking at production `apply_arithmetic_to_selection` (hex_editor.py lines 5759-5762), the return value `{'offset': start, 'length': length, 'operation': operation}` is constructed entirely from the input arguments, not from the transformed data. If the NOT transform were silently replaced with an identity no-op (bytes unchanged), the metadata dict would still be `{'offset': 0, 'length': 4, 'operation': 'not'}` and all assertions in this test would pass. The actual byte-inversion correctness is separately covered by `test_not_selection` (lines 136-144), which uses `_setup_and_apply` and asserts the result bytes equal `bytes([0xFF, 0x00, 0x55, 0xAA])`. This test therefore only gates metadata shape, not the NOT transform itself."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_disassembly.py": [
+      {
+        "id": "G0137",
+        "test": "TestBridgeDisassembly::test_disassemble_result_items_have_required_keys",
+        "line": 119,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove test_disassemble_result_items_have_required_keys entirely since test_disassemble_matches_independent_capstone_decode already gates correctness with full field-value comparison, or add concrete value assertions (mnemonic == 'nop', size == 1) to this test.",
+        "why_not_gate": "The test only asserts that _EXPECTED_INSN_KEYS = {address, bytes, mnemonic, operands, size} is a subset of each instruction dict's keys. A regression where the disassembler returns dicts with the correct keys but all empty/zero values (e.g., mnemonic='', size=0, bytes='', address=0, operands='') would pass this test. The test provides no assertion of actual values. However, this is mitigated by test_disassemble_matches_independent_capstone_decode (line 55) and test_disassemble_int3_mnemonic (line 90) which DO verify field values against an oracle. But those tests could be disabled or skipped while this weak gate stays green."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py": [
+      {
+        "id": "G0138",
+        "test": "TestDisassemblePeTextSection::test_disassemble_pe_text_count_4_returns_up_to_4",
+        "line": 81,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Change assertion from `assert 1 <= len(results) <= 4` to `assert len(results) == 4` since the input fixture (4 INT3 bytes at a known offset) deterministically produces exactly 4 decodable instructions.",
+        "why_not_gate": "The assertion `1 <= len(results) <= 4` only checks a range, not the exact count. The fixture is designed with exactly 4 INT3 bytes (0xCC each) at _PE_TEXT_OFFSET, and count=4 is requested. Each INT3 is a 1-byte instruction, so exactly 4 should be returned. A broken disassembler that stops after processing 1 byte (returning only 1 result) would pass this range check. The test provides no oracle to verify the count should be exactly 4, not just within a range."
+      },
+      {
+        "id": "G0139",
+        "test": "TestDisassemblePeTextSection::test_disassemble_pe_text_all_required_keys_present",
+        "line": 101,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove this redundant test and rely on test_disassemble_pe_text_int3_mnemonic which asserts the actual mnemonic value, or add concrete assertions for all fields (address == _PE_TEXT_OFFSET, bytes == 'cc', mnemonic == 'int3', size == 1).",
+        "why_not_gate": "Identical weakness as the analogous test in test_bridge_disassembly.py: only checks key presence (keys.issubset) without verifying field values. A stub returning dicts with empty/zero values for address, bytes, mnemonic, operands, size would pass. Mitigated only if test_disassemble_pe_text_int3_mnemonic (line 55) remains enabled, but that single test does not gate all field values (only mnemonic)."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_display.py": [
+      {
+        "id": "G0140",
+        "test": "TestBridgeDisplayMode::test_get_display_mode_returns_hex8_by_default",
+        "line": 48,
+        "category": "skip-masks-failure",
+        "severity": "high",
+        "recommendation": "Move display_mode and highlight_rule tests to a separate conftest scope (or directory) that does not import intellicrack_hexcore, or refactor to remove the module-level importorskip guard so tests can run independently of the Rust extension's availability.",
+        "why_not_gate": "The conftest.py at test_hexcore_e2e/conftest.py line 36 contains a module-level `pytest.importorskip('intellicrack_hexcore')` that skips ALL tests in the directory when the Rust native module is absent. However, the display_mode methods (get_display_mode, set_display_mode) are pure-Python operations on self._display_mode (a str initialized to 'hex8' at line 444 of hex_editor.py) with no dependency on intellicrack_hexcore. If the Rust build fails in CI but the Python bridge remains, all 11 display/highlight tests would be skipped as a group, masking any regression in the pure-Python state management."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_display_modes_complete.py": [
+      {
+        "id": "G0141",
+        "test": "TestDisplayModesExtended::test_roundtrip_hex32_le",
+        "line": 71,
+        "category": "skip-masks-failure",
+        "severity": "high",
+        "recommendation": "Relocate these 19 display-mode tests to a test file outside test_hexcore_e2e/ (or create a separate conftest that excludes the importorskip guard) so they run independently of the Rust native module's build status.",
+        "why_not_gate": "Same root cause as test_bridge_display.py: line 20 imports and skips on intellicrack_hexcore, despite all test methods (set_display_mode, get_display_mode) being pure-Python. The tests exercise only the state assignment `self._display_mode = mode` (line 8498 of hex_editor.py) and the getter `return self._display_mode` (line 8512), with no call to any Rust method. A broken implementation that ignores the set() argument (e.g., `self._display_mode = mode` deleted accidentally) would be undetected in any CI run where the Rust extension is unavailable."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_document_info.py": [
+      {
+        "id": "G0142",
+        "test": "TestDocumentInfoNoDocument::test_no_document_all_required_keys_present",
+        "line": 101,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove this redundant key-presence gate since the per-field tests already enforce correct values (file_path==None, size==0, modified==False, cursor==0, selection==None).",
+        "why_not_gate": "The test asserts only that _REQUIRED_KEYS (file_path, size, modified, cursor, selection) is a subset of the returned dict's keys. It does not verify the values. A broken get_document_info() could return {file_path: 0, size: -1, modified: None, cursor: 'invalid', selection: 123} and still pass. This is weaker than the per-field tests (test_no_document_file_path_is_none, test_no_document_size_is_zero, etc.) which directly verify the expected values."
+      },
+      {
+        "id": "G0143",
+        "test": "TestDocumentInfoWithFile::test_all_required_keys_present_with_file",
+        "line": 185,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove this redundant key-presence test or fold it into the per-field tests. The individual field assertions already gate correctness completely.",
+        "why_not_gate": "The test asserts only key presence (issubset check) after opening a file, without verifying field values. A broken implementation returning {file_path: None, size: 0, modified: True, cursor: None, selection: []} would pass despite failing to track the opened file's properties. The per-field tests (test_open_pe_file_path_matches, test_open_pe_size_is_1024, etc.) already gate the actual values."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py": [
+      {
+        "id": "G0144",
+        "test": "TestListEncodings::test_list_encodings_returns_nonempty_list",
+        "line": 218,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert that the result is non-empty AND includes at least two canonical encodings by name (e.g., assert any(e['name'].lower() in ['utf-8', 'ascii'] for e in result)), or remove this test as redundant if relying on companion tests for gating.",
+        "why_not_gate": "Asserts only non-emptiness without validating any content. A stub returning [{'name': '', 'label': ''}] or any malformed dict would pass. Companion tests (line 251-271) validate specific names like 'utf-8' and 'ascii', but this test in isolation is a format check that does not gate the actual encoding catalog correctness."
+      },
+      {
+        "id": "G0145",
+        "test": "TestListEncodings::test_list_encodings_standalone_bridge",
+        "line": 330,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert that the returned list contains the Python fallback set of canonical codecs (e.g., assert len(result) > 10 and any('utf-8' in e['name'].lower() for e in result)) to gate the actual encoding availability.",
+        "why_not_gate": "Asserts only isinstance(result, list) and truthiness. A stub returning [{'name': 'dummy', 'label': 'Dummy'}] on a fresh bridge would pass. The fallback at line 6832-6849 returns 14 real encodings, but this test does not validate that any specific or canonical encodings are present."
+      },
+      {
+        "id": "G0146",
+        "test": "TestDecodeText::test_decode_text_returns_string_type",
+        "line": 183,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add an assertion validating the specific decoded value: assert result == 'StrType' (matching the payload at line 190), or remove as redundant if relying on the stronger companion tests.",
+        "why_not_gate": "Asserts only isinstance(result, str). If decode_text returned 'WRONG', 'X', or any incorrect string, this test would still pass. The companion tests at line 53-212 validate actual decoded content (e.g., 'Hello, World!' == expected text), but this test in isolation is type-only."
+      },
+      {
+        "id": "G0147",
+        "test": "TestListEncodings::test_list_encodings_entries_have_name_key",
+        "line": 229,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Combine with the non-emptiness check into a single assertion, or remove as redundant if relying on line 273 test for gating value quality.",
+        "why_not_gate": "Tests only the presence of the 'name' key, not its value. A stub could return [{'name': '', 'label': ''}] and pass. The companion test at line 273 validates non-empty values, but this test in isolation is weak."
+      },
+      {
+        "id": "G0148",
+        "test": "TestListEncodings::test_list_encodings_entries_have_label_key",
+        "line": 240,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Combine with the non-emptiness check from line 285 into a single assertion, or remove as redundant if relying on that test for gating.",
+        "why_not_gate": "Tests only the presence of the 'label' key without validating content. A stub could return entries with empty or garbage label values and still pass. The companion test at line 285 validates non-empty values, but this test is weak in isolation."
+      },
+      {
+        "id": "G0149",
+        "test": "TestListEncodings::test_list_encodings_names_are_nonempty_strings",
+        "line": 273,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add a spot-check validating that at least one entry's name is in a set of known valid Python codec names, or rely on the companion tests at line 251-271 that check for 'utf-8' and 'ascii' specifically.",
+        "why_not_gate": "Validates only that each name is a non-empty string. A stub returning [{'name': 'fake-codec-x', 'label': 'Label X'}] would pass even though the encoding catalog is entirely wrong or contains invalid codec names. Companion tests (line 251-271) validate specific real names, but this test in isolation gates format, not correctness."
+      },
+      {
+        "id": "G0150",
+        "test": "TestListEncodings::test_list_encodings_labels_are_nonempty_strings",
+        "line": 285,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove as redundant if the test at line 297-329 is the actual gate, or add a spot-check assertion for at least one known label (e.g., entries['utf-8'] == 'UTF-8').",
+        "why_not_gate": "Validates only that each label is a non-empty string. A stub returning [{'name': 'utf-8', 'label': 'x'}] would pass even with a completely wrong label table. The companion test at line 297-329 validates specific label values, but this test in isolation is format-only."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_hash_advanced.py": [
+      {
+        "id": "G0151",
+        "test": "TestCalculateHashRange::test_sha256_on_first_16_bytes_of_pe_is_nonempty_hex",
+        "line": 106,
+        "category": "weak-existence",
+        "severity": "high",
+        "recommendation": "Compute the expected hash independently: expected = hashlib.sha256(pe_bytes[:16]).hexdigest(), then assert result.lower() == expected.lower(), to actually gate SHA-256 computation correctness.",
+        "why_not_gate": "Asserts only that result is non-empty and parseable as hex. If the bridge returned the wrong SHA-256 (e.g., hash of wrong byte range, or a different algorithm), this test would still pass as long as the output is valid hex. No oracle (hashlib) comparison is performed. The companion test at line 119-130 validates against hashlib, but this test in isolation is format-only."
+      },
+      {
+        "id": "G0152",
+        "test": "TestCalculateHashRange::test_sha1_range_is_valid_hex_digest",
+        "line": 157,
+        "category": "weak-existence",
+        "severity": "high",
+        "recommendation": "Compare against hashlib: expected = hashlib.sha1(_KNOWN_PAYLOAD[:64]).hexdigest(), then assert result.lower() == expected.lower(), to gate SHA-1 computation correctness.",
+        "why_not_gate": "Asserts only that result is 40 characters of valid hex. If the bridge computed SHA-1 of the wrong byte range, wrong algorithm, or returned another algorithm's digest, this format check would still pass. No hashlib comparison is performed. The companion test at line 169-180 validates against hashlib, but this test is format-only."
+      },
+      {
+        "id": "G0153",
+        "test": "TestCalculateHashCustomCrc::test_crc16_on_pe_bytes_returns_hex_string",
+        "line": 299,
+        "category": "weak-existence",
+        "severity": "high",
+        "recommendation": "Compare against the reference: crc_val = _crc16_ccitt(pe_bytes[:16]), expected = f'{crc_val:04x}', then assert result.lower() == expected.lower(), to gate CRC-16 computation correctness.",
+        "why_not_gate": "Asserts only that result is non-empty and valid hex. If the CRC-16 computation used the wrong polynomial, init value, or byte range, this test would still pass. No reference _crc16_ccitt() comparison is performed. The companion test at line 285-297 validates against the reference implementation, but this test is format-only."
+      },
+      {
+        "id": "G0154",
+        "test": "TestCalculateHashCustomCrc::test_crc8_returns_valid_hex_string",
+        "line": 328,
+        "category": "weak-existence",
+        "severity": "high",
+        "recommendation": "Compare against the reference: crc_val = _crc8_smbus(bytes(range(16))), expected = f'{crc_val:02x}', then assert result.lower() == expected.lower(), to gate CRC-8 computation correctness.",
+        "why_not_gate": "Asserts only that result is non-empty and valid hex. If the CRC-8 computation returned garbage or the wrong polynomial, this test would still pass as long as the format is hex. No reference _crc8_smbus() comparison is performed. The companion test at line 314-326 validates against the reference implementation, but this test is format-only."
+      },
+      {
+        "id": "G0155",
+        "test": "TestCalculateHashRange::test_md5_range_differs_from_sha256_range",
+        "line": 132,
+        "category": "other",
+        "severity": "medium",
+        "recommendation": "Remove this test and rely on the companion tests (line 144-155, 169-180, 182-194) that each validate a hash against its hashlib reference value. If this test must remain, validate each hash independently rather than via mutual inequality.",
+        "why_not_gate": "Asserts only that md5 and sha256 produce different results. If both paths were broken and returned wrong-but-distinct values (e.g., md5 path returns sha1, sha256 returns sha384), this test would still pass. Neither hash is compared against an independent oracle. Companion tests (line 144-155, 169-180) validate individual hashes, but this test uses mutual inequality as a proxy for correctness, which is insufficient."
+      },
+      {
+        "id": "G0156",
+        "test": "TestCalculateHashCustomCrc::test_crc32_result_is_8_hex_chars",
+        "line": 342,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Compare against binascii: crc_val = binascii.crc32(bytes(range(64))) & 0xFFFFFFFF, expected = f'{crc_val:08x}', then assert result.lower() == expected.lower(), to gate CRC-32 computation correctness.",
+        "why_not_gate": "Asserts only len(result) <= 8. A stub always returning '00000000' would pass. The actual CRC-32 value over bytes(range(64)) is never compared against binascii.crc32(). Companion tests (line 252-266, 268-283) validate content, but this test in isolation gates only length."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py": [
+      {
+        "id": "G0157",
+        "test": "TestHTMLExport::test_html_export_returns_valid_html",
+        "line": 50,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert that the exported HTML contains at least one hex byte from the test payload: assert 'AA' in html and 'BB' in html (for the b'\\xaa\\xbb\\xcc\\xdd' data), to verify the rendering path actually executed.",
+        "why_not_gate": "Asserts only that the string contains '<!DOCTYPE html>' and '</html>'. These are emitted by the static _html_header() method (line 3442-3464) regardless of whether _render_hex_rows() executed or is broken. If _render_hex_rows() were removed or returned garbage, the header/footer would still be present and this test would pass. The companion test at line 64-78 validates actual hex data rendering, but this test does not gate content rendering."
+      }
+    ],
+    "tests/test_hexcore_e2e/test_bridge_new_capabilities.py": [
+      {
+        "id": "G0158",
+        "test": "TestProcessMemoryBridge::test_list_process_regions_returns_list",
+        "line": 672,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Add assertions: (1) base_address > 0 for at least some regions, (2) size is a multiple of 0x1000 (4KB page size), (3) protection is a known Windows constant (0x02, 0x04, 0x20, 0x40), (4) state is either 0x1000 (MEM_COMMIT) or 0x2000 (MEM_RESERVE).",
+        "why_not_gate": "The test asserts the presence of keys (base_address, size, protection, state) but never validates their numeric values. The production list_process_regions (line 8121) calls _hexcore_mod.HexDocument.list_process_memory_regions(pid) and unpacks the result into these 4 fields. If the native binding returned tuples with all 4 zeros (e.g., from a stub), or if the Rust-to-Python conversion lost precision (e.g., truncated addresses), this test would still pass. No assertions check that base_address is non-zero, size is a reasonable page multiple, or that protection/state are valid Windows memory constants."
+      },
+      {
+        "id": "G0159",
+        "test": "TestProcessMemoryBridge::test_list_process_regions_has_committed_regions",
+        "line": 689,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert that the count of committed regions is > 10 for any real Python process, or cross-validate that at least one region contains the current process's code or heap by checking address ranges against known memory (e.g., that the region containing the address of the current function is present).",
+        "why_not_gate": "The test asserts only that at least one region has state == 0x1000 (MEM_COMMIT). It does not verify that the enumeration is complete or correct. If the native list_process_memory_regions were broken (e.g., returning only the first enumerated region or a single hardcoded stub region), as long as that one region has MEM_COMMIT, the test passes. The test does not verify that multiple committed regions exist (as any real Python process would have)."
+      },
+      {
+        "id": "G0160",
+        "test": "TestToolDefinitionCompleteness::test_tool_function_count_increased",
+        "line": 799,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove this test entirely, as test_new_tool_functions_registered already provides a stronger semantic gate by enumerating the exact function names required.",
+        "why_not_gate": "The assertion `len(td.functions) > 42` is purely quantitative and does not enumerate the specific 5 new functions (encode_text, search_bytes, search_numeric_range, list_process_regions, open_process_memory). If the implementation added 3 unrelated dummy functions instead of the 5 intended ones, the count would still pass 42. The companion test test_new_tool_functions_registered verifies the names, but this test adds no semantic gate -- a silent removal or rename of the intended functions could pass if the count threshold remained above 42."
+      }
+    ]
+  }
+}

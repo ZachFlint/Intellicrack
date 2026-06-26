@@ -1,0 +1,42 @@
+{
+  "file": "tests/test_sandbox/test_analysis.py",
+  "findings_addressed": [
+    {
+      "id": "G0294",
+      "test": "TestDetectC2Patterns::test_multiple_patterns_simultaneously",
+      "action": "hardened",
+      "oracle": "Independent recomputation from fixture geometry: five uniform-interval connections (CV=0) trigger beaconing; xkqwzjrtmnpv SLD entropy = log2(12) ~3.585 > 3.5 triggers dga_domain; port 4444 in _C2_PORTS triggers known_c2_port; 5242880 bytes >= 1 MiB with 52428.8x ratio triggers data_exfiltration. Expected set = {\"beaconing\", \"dga_domain\", \"known_c2_port\", \"data_exfiltration\"} is not derived from the function return.",
+      "documented_mutation": "In src/intellicrack/sandbox/analysis.py, change `_DGA_ENTROPY_THRESHOLD = 3.5` to `_DGA_ENTROPY_THRESHOLD = 4.0`; xkqwzjrtmnpv entropy ~3.585 would no longer exceed threshold, dropping dga_domain from pattern_types, causing `pattern_types == expected_pattern_types` to fail."
+    },
+    {
+      "id": "G0295",
+      "test": "TestExtractIOCs::test_full_sample_report",
+      "action": "hardened",
+      "oracle": "Independent trace through fixture content and extraction code: network_activity yields ipv4 (five public IPs) and domain (xkqwzjrtmnpv.evil.com); process cmd line yields url (https://evil.com/dl.exe) and domain (evil.com, deduped). Registry value_data ('enabled', 'C:\\\\Temp\\\\payload.exe') and file paths contain no additional IOC types. Expected set = {\"ipv4\", \"domain\", \"url\"} with specific IPs/URLs asserted independently.",
+      "documented_mutation": "In src/intellicrack/sandbox/analysis.py, in `extract_iocs`, comment out the `for proc in report.process_activity:` block; url IOC would not be extracted, dropping 'url' from ioc_types, causing `ioc_types == expected_ioc_types` to fail."
+    },
+    {
+      "id": "G0296",
+      "test": "TestGenerateTimeline::test_full_sample_report",
+      "action": "hardened",
+      "oracle": "Independent enumeration of sub-fixtures in conftest.py: sample_file_changes (3 entries) → file; sample_registry_changes (3) → registry; sample_network_activity (10) → network; sample_process_activity (4) → process; sample_api_calls (3) → api; sample_service_changes (1) → service; sample_kernel_objects (1) → kernel; sample_dll_loads (1) → dll; sample_injection_events (1) → injection; sample_clipboard_events (2) → clipboard. Expected set = {\"file\",\"registry\",\"network\",\"process\",\"api\",\"service\",\"kernel\",\"dll\",\"injection\",\"clipboard\"} (10 categories).",
+      "documented_mutation": "In src/intellicrack/sandbox/analysis.py, in `generate_timeline`, remove the `if _should_include('dll'): _timeline_add_dll_events(report, events)` block; dll events would not be generated, dropping 'dll' from categories, causing `categories == expected_categories` to fail."
+    },
+    {
+      "id": "G0297",
+      "test": "TestMatchBehaviors::test_full_sample_report",
+      "action": "hardened",
+      "oracle": "Independent trace of each _match_* sub-function against fixture data: _match_persistence fires on MalSvc + Run key + schtasks.exe; _match_defense_evasion fires on CreateRemoteThread + IsDebuggerPresent + Sleep(120000); _match_command_and_control fires on beaconing + DoH 1.1.1.1; _match_exfiltration fires on 5 MiB outbound + clipboard read; _match_discovery fires on whoami.exe. Expected set = {\"Persistence\",\"Defense Evasion\",\"Command and Control\",\"Exfiltration\",\"Discovery\"}.",
+      "documented_mutation": "In src/intellicrack/sandbox/analysis.py, in `match_behaviors`, remove the `_match_discovery(report, matches)` call; no Discovery matches would be generated, dropping 'Discovery' from categories, causing `categories == expected_categories` to fail."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "All four findings were N8/weak-existence assertions that counted items or checked len >= N without asserting concrete values. Each was replaced with an exact equality check against an independently-computed oracle set. No production defects were found. No test deletions were made."
+}

@@ -826,7 +826,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def attached_pid(self) -> int | None:
-        """Get the currently attached process ID.
+        """PID of the currently attached process, or ``None`` if not attached.
 
         Returns:
             int | None: The PID of the attached process, or None if not attached.
@@ -844,7 +844,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def binary_path(self) -> Path | None:
-        """Get the path to the loaded binary.
+        """Path to the loaded binary, or None if no binary is loaded.
 
         Returns:
             Path | None: The binary file path, or None if no binary is loaded.
@@ -862,7 +862,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def is_64bit(self) -> bool:
-        """Get whether the bridge is in 64-bit mode.
+        """Whether the bridge is operating in 64-bit mode.
 
         Returns:
             bool: True if operating in 64-bit mode.
@@ -880,7 +880,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def plugin_status(self) -> dict[str, object]:
-        """Get diagnostic information about plugin deployment readiness.
+        """Diagnostic information about plugin deployment readiness.
 
         Returns:
             dict[str, object]: Dictionary with keys ``plugin_deployed``, ``x64dbg_found``,
@@ -918,7 +918,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def breakpoints(self) -> dict[int, BreakpointInfo]:
-        """Get the breakpoints dictionary.
+        """Mapping of breakpoint IDs to their info.
 
         Returns:
             dict[int, BreakpointInfo]: Mapping of breakpoint IDs to their info.
@@ -927,7 +927,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def next_bp_id(self) -> int:
-        """Get the next breakpoint ID.
+        """Next breakpoint ID to be assigned.
 
         Returns:
             int: The next breakpoint ID to be assigned.
@@ -945,7 +945,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def watchpoints(self) -> dict[int, WatchpointInfo]:
-        """Get the watchpoints dictionary.
+        """Mapping of watchpoint IDs to their info.
 
         Returns:
             dict[int, WatchpointInfo]: Mapping of watchpoint IDs to their info.
@@ -954,7 +954,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def next_wp_id(self) -> int:
-        """Get the next watchpoint ID.
+        """Next watchpoint ID to be assigned.
 
         Returns:
             int: The next watchpoint ID to be assigned.
@@ -972,7 +972,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def x64dbg_path(self) -> Path | None:
-        """Get the path to the x64dbg installation.
+        """Path to the x64dbg installation, or None if not found.
 
         Returns:
             Path | None: The x64dbg installation path, or None if not found.
@@ -990,7 +990,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def debugger_pid(self) -> int | None:
-        """Get the PID of the running debugger process.
+        """PID of the running debugger process, or None if not running.
 
         Returns:
             int | None: Process ID of the debugger, or None if not running.
@@ -999,7 +999,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """Tool name identifier for x64dbg.
 
         Returns:
             ToolName: ToolName.X64DBG
@@ -1008,7 +1008,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """Tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.

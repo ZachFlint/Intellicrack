@@ -1,0 +1,22 @@
+{
+  "file": "tests/test_providers/test_model_discovery.py",
+  "findings_addressed": [
+    {
+      "id": "G0272",
+      "test": "TestAllProvidersModelCount::test_summary_all_providers",
+      "action": "hardened",
+      "oracle": "Gate Part A (unconditional): an httpx.MockTransport stub is injected at the HTTP-transport boundary; OllamaProvider.connect() + list_models() run with full production parsing logic (_fetch_local_models, _populate_ollama_models, _fetch_model_metadata, _query_model_show). Assertions verify: exactly 2 records returned, ids prefixed 'local/', provider==ProviderName.OLLAMA, llama3 context_window==8192 (parsed from stub /api/show 'num_ctx 8192'), llava supports_tools==True (template '{{ .Tools }}' detected), llava supports_vision==True ('llava' in name). Gate Part B (conditional): live provider gates remain for any configured provider, but the test no longer skips when configured_count==0 — Gate Part A always runs.",
+      "documented_mutation": "Change id_prefix=\"local/\" to id_prefix=\"\" inside OllamaProvider._populate_ollama_models() in src/intellicrack/providers/ollama.py. The assertion 'stub_ids == {\"local/llama3\", \"local/llava\"}' turns red because the returned ids would be {\"llama3\", \"llava\"}. This is a one-line change to production code that definitively falsifies the gate.",
+      "anti_pattern_eliminated": "N3 (skip masking real capability) — the original test unconditionally called pytest.skip() when configured_count==0, which is the common case in CI/sandbox environments. The test now always exercises real OllamaProvider parsing code through the stub transport path regardless of whether any live provider credentials are present."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Re-hardened in response to adversarial reviewer finding that configured_count==0 still caused unconditional skip. The fix introduces an always-running Gate Part A that exercises OllamaProvider end-to-end with a fake httpx.MockTransport injected only at the network-transport boundary (the only legitimate mock point). The stub serves /api/tags with two known model records and /api/show responses with precise metadata, allowing the full _populate_ollama_models + _query_model_show parsing pipeline to be validated without any live endpoint. Gate Part B (live providers) runs only when credentials are present but no longer causes a skip when they are absent — the test always produces a meaningful signal."
+}

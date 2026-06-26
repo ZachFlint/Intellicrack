@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_hexcore_e2e/test_undo_redo.py",
+  "findings_addressed": [
+    {
+      "id": "G0243",
+      "test": "TestModificationTracking::test_is_modified_tracks_through_undo_redo",
+      "action": "hardened",
+      "oracle": "After undo(), is_modified() must return False because no write operations remain in the undo stack. The oracle is the inverse of the already-tested write path: write sets modified=True, undo must reset it to False, redo must restore it to True. The three-state sequence (False->True->False->True) provides a complete cycle check.",
+      "documented_mutation": "In UndoManager.undo() (or HexDocument.undo()), remove or skip the call that resets the modification flag (e.g., change `self.is_modified = False` to a no-op or delete the reset line) — after this mutation, is_modified() would remain True after undo(), making `assert not sample_doc_from_bytes.is_modified()` fail."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Added `assert not sample_doc_from_bytes.is_modified()` immediately after the undo() call at line 159. This closes the no-assertion gap: the test now verifies the full three-state transition (modified=True after write, modified=False after undo, modified=True after redo). Without this assertion, a broken undo() that failed to reset modification state would pass silently."
+}

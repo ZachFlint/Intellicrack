@@ -50,8 +50,25 @@
     "mutation_result": "fail",
     "proven_falsifiable": "yes"
    }
+  },
+  {
+   "test": "test_not_none (TestBridgeInstantiation)",
+   "severity": "LOW",
+   "category": "N8",
+   "action": "hardened",
+   "oracle": "Hard-coded literal lists from SandboxBridge.__init__: supported_architectures=[\"x86\", \"x86_64\"] and supported_formats=[\"pe\", \"elf\"]. Sorted comparison against independently typed expected constants. Also asserts _manager_destroyed is False immediately after construction.",
+   "deletion_sibling": null,
+   "falsifiability": {
+    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+    "mutation": "supported_architectures=[\"x86\", \"x86_64\"] -> supported_architectures=[\"arm\"]",
+    "covering_test": "tests/test_sandbox/test_sandbox_bridge.py::TestBridgeInstantiation::test_not_none",
+    "expected_baseline": "green",
+    "green_status": "pass",
+    "mutation_result": "fail",
+    "proven_falsifiable": "yes"
+   }
   }
  ],
  "production_defects": [],
- "n_mutations": 2
+ "n_mutations": 3
 }

@@ -325,6 +325,14 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Harden test suite and fix win32 bridge defects (`f6b413e`)
+Refactors the test suite across all modules to replace static source-level regex checks with real behavioral assertions, independent oracles, and transport-boundary doubles. Fixes critical Win32 bridge defects including ctypes pointer truncation on 64-bit Python by explicitly declaring `restype` and `argtypes` for kernel32 APIs. Resolves test execution non-determinism by ensuring `structlog` configurations are reset around every test.
+- **Bridges**: Declared explicit ctypes signatures in process and x64dbg bridges to prevent pointer truncation, and hardened VNC, Ghidra, and Frida tests.
+- **Core**: Added autouse fixture to reset `structlog` defaults, preventing cross-test log-capture pollution.
+- **Sandbox**: Added timeout handling to Docker CLI invocations and hardened network capture tests with bounded retries.
+- **UI**: Hardened main window, main tab, and log viewer tests to verify real signal-slot connections and geometry persistence.
+- **Hexcore**: Updated type stubs and added comprehensive e2e tests for bookmarks, alignment, and disassembly.
+
 - Harden test suite and integrate agent configurations (`122f2e5`)
 Harden the test suite by replacing dynamic oracles and mocks with deterministic, hand-written constants, exact-value assertions, and real async dispatch paths. This eliminates race conditions in memory map tests and ensures robust validation of signal propagation, undo/redo history states, and cryptographic digests.
 - **Agents & Hooks**: Introduce `.codex` agent configurations, skills, and lifecycle hooks.
@@ -800,13 +808,13 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Harden test suite and fix win32 bridge defects (``)
-Refactors the test suite across all modules to replace static source-level regex checks with real behavioral assertions, independent oracles, and transport-boundary doubles. Fixes critical Win32 bridge defects including ctypes pointer truncation on 64-bit Python by explicitly declaring `restype` and `argtypes` for kernel32 APIs. Resolves test execution non-determinism by ensuring `structlog` configurations are reset around every test.
-- **Bridges**: Declared explicit ctypes signatures in process and x64dbg bridges to prevent pointer truncation, and hardened VNC, Ghidra, and Frida tests.
-- **Core**: Added autouse fixture to reset `structlog` defaults, preventing cross-test log-capture pollution.
-- **Sandbox**: Added timeout handling to Docker CLI invocations and hardened network capture tests with bounded retries.
-- **UI**: Hardened main window, main tab, and log viewer tests to verify real signal-slot connections and geometry persistence.
-- **Hexcore**: Updated type stubs and added comprehensive e2e tests for bookmarks, alignment, and disassembly.
+- Fix win32 bridge integrations and strengthen test gates (``)
+Resolve critical Win32 integration issues by configuring explicit ctypes prototypes for SCM and thread handles to prevent 64-bit truncation, and correct struct alignment calculations for symbol resolution. Additionally, update the test suites with robust independent oracles and falsifiability gates to guarantee assertion integrity across all core modules.
+- **bridges**: Configure explicit ctypes prototypes for SCM and thread APIs, and replace manual DLL handle caching with `lru_cache`.
+- **core**: Fix global atexit registration state mutation in the process manager.
+- **providers**: Add prompt caching token tracking to the Anthropic provider.
+- **tests**: Implement independent oracles and strict falsifiability assertions across test suites.
+- **audit**: Update test coverage and gate audit documentation.
 
 
 ### Documentation

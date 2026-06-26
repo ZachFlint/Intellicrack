@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_audit3/sandbox/test_api_trace.py",
+  "findings_addressed": [
+    {
+      "id": "G0008",
+      "test": "test_f0013_handler_extracts_target_process_id_and_return_code",
+      "action": "hardened",
+      "oracle": "The probe now constructs the full 7-field pipe-delimited trace line using the real production helpers Format-TraceField and Get-AuditApiName, outputs it with a TRACELINE: prefix, and the Python assertion parses the structured line to check fields[3]=='NtOpenProcess' and fields[4]=='ntoskrnl.exe'. The module constant 'ntoskrnl.exe' is set by the probe (not by a production helper, since no helper exists for it), but it now flows through the real Format-TraceField before appearing in the output - so a bug in Format-TraceField that corrupted the module field would cause fields[4] to differ from 'ntoskrnl.exe' and the test would fail. The self-fulfilling Write-Output ('Module=ntoskrnl.exe') stub line has been removed and replaced by this structured-parse gate.",
+      "documented_mutation": "In src/intellicrack/sandbox/scripts/api_trace.ps1 line 30, change 'if ($null -eq $Value) { return '' }' to 'if ($null -eq $Value) { return \"CORRUPTED\" }' - Format-TraceField would then emit 'ntoskrnl.exe' as-is for a non-null value, so this specific mutation would not break it; the stronger falsifying mutation is: change line 30 to return the value with a pipe appended: \"return ([string]$Value) -replace '|', '_' -replace '[\\r\\n]+', ' '\" replaced by \"return ([string]$Value) + '|'\", which would inject an extra pipe into the trace line and cause len(fields) != 7, making the assertion fail."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The only flagged finding (G0008) was a self-fulfilling stub-output assertion: the probe unconditionally emitted Write-Output ('Module=ntoskrnl.exe') and the test asserted that same literal string appeared in output. The fix replaces that with a structured TRACELINE: row that the probe constructs using the real Format-TraceField and Get-AuditApiName production helpers, then parsed in Python to check exact field values at positions 3 (api_name) and 4 (module). The existing assertions for TargetProcessId=4321, ReturnCode=0, DesiredAccess=0x1FFFFF, Missing=True, and Function=NtOpenProcess are retained unchanged."
+}

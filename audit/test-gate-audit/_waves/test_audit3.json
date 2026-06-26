@@ -1,0 +1,156 @@
+{
+  "group": "test_audit3",
+  "files": {
+    "tests/test_audit3/bridges/test_installer.py": [
+      {
+        "id": "G0001",
+        "test": "TestKindDiscriminator::test_install_result_has_kind_field",
+        "line": 344,
+        "category": "tautological",
+        "severity": "low",
+        "recommendation": "Remove this test. The field-existence guarantee is already implicitly covered by every behavioral test that constructs an InstallResult. The real discriminator gate is test_install_tool_process_returns_builtin_kind.",
+        "why_not_gate": "The test only constructs InstallResult(success=True, kind='builtin') and reads back r.kind == 'builtin'. It does catch field removal (that would cause TypeError), but the production capability it is named after — that install_tool(PROCESS) produces kind='builtin' from real execution — is not exercised. A production regression where install_tool returns kind='filesystem' instead of 'builtin' would leave this test green. The behavioral gate already exists in test_install_tool_process_returns_builtin_kind which calls the real ToolInstaller."
+      },
+      {
+        "id": "G0002",
+        "test": "TestKindDiscriminator::test_found_tool_has_kind_field",
+        "line": 351,
+        "category": "tautological",
+        "severity": "low",
+        "recommendation": "Remove this test. Fold any field-existence check into the behavioral tests that already drive real production logic and assert the returned FoundTool.kind value.",
+        "why_not_gate": "FoundTool.kind is a required positional field (no default), so FoundTool(kind='python_package') would only fail if the field itself were removed or renamed. The test does not call any production finder logic; a regression where find_tool_detailed returns kind='filesystem' instead of 'python_package' leaves this test green. The behavioral gate is test_find_tool_detailed_process_reports_builtin which invokes the real ToolInstaller."
+      },
+      {
+        "id": "G0003",
+        "test": "TestTypeDataclassesSanity::test_arch_deploy_result_carries_error",
+        "line": 1347,
+        "category": "tautological",
+        "severity": "low",
+        "recommendation": "Replace with a test that invokes deploy_x64dbg_plugin_detailed against a controlled failure (e.g. a read-only plugin destination directory) and asserts the returned ArchDeployResult carries status='failed' and a non-empty error string from the real failure path.",
+        "why_not_gate": "The test constructs ArchDeployResult with explicit status='failed' and error='permission denied' then asserts those same values back. It catches field removal (TypeError from the dataclass constructor), but the production failure path — that deploy_x64dbg_plugin_detailed actually populates status and error from a real permission failure — is not exercised. Removing the error-population logic from the deploy function would not make this test fail."
+      },
+      {
+        "id": "G0004",
+        "test": "TestTypeDataclassesSanity::test_is_user_admin_returns_bool",
+        "line": 1365,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Monkeypatch ctypes.windll.shell32.IsUserAnAdmin (or the entire windll path) to return a known value and assert that is_user_admin() returns the corresponding bool. Add a second parameterized case for the non-Windows branch (sys.platform != 'win32' should return True). This proves the branch logic is exercised, not just that a bool is returned.",
+        "why_not_gate": "isinstance(is_user_admin(), bool) passes for any return value of True or False, which means a stub that always returns False (breaking admin detection on a real admin session) or always True (granting spurious admin rights) both pass. The production logic — checking ctypes.windll.shell32.IsUserAnAdmin — is exercised, but the test cannot distinguish correct detection from a hardcoded constant. It does gate that the function does not raise and returns a bool, but not that the bool reflects actual privilege."
+      }
+    ],
+    "tests/test_audit3/bridges/test_named_pipe_client.py": [
+      {
+        "id": "G0005",
+        "test": "test_send_command_docstring_lists_required_raises",
+        "line": 748,
+        "category": "other",
+        "severity": "medium",
+        "recommendation": "Remove this test from the runtime suite. The behavioral gates for each named exception should be dedicated tests that provoke the relevant production code path and assert the exception is raised. Docstring accuracy is a pydoclint concern, not a runtime test concern.",
+        "why_not_gate": "The test only asserts that specific exception names appear in NamedPipeClient.send_command.__doc__. The actual exception-raising behavior — ToolError on closed pipe, TimeoutError on timeout, OSError from I/O layer — is entirely unverified by this test. All those exception paths could be removed from the production implementation and this test would still pass as long as the docstring retained the words. Docstring content is already enforced at lint time by pydoclint."
+      },
+      {
+        "id": "G0006",
+        "test": "test_no_os_name_nt_predicate_in_module",
+        "line": 437,
+        "category": "other",
+        "severity": "low",
+        "recommendation": "Move this check to a ruff custom rule, a pre-commit hook, or a dedicated code-standards test that is clearly separate from behavioral regression gates. If the intent is to ensure platform branching works correctly, write a behavioral test that monkeypatches sys.platform and asserts the correct code path is taken.",
+        "why_not_gate": "The test scans the module source text for the literal string 'os.name == \"nt\"' and passes if absent. The production module already uses sys.platform exclusively, so this test is trivially green. If a developer introduced a broken platform predicate using sys.platform in an inverted or incorrect form (e.g. sys.platform != 'win32' where win32 was intended), this test would still pass. The check enforces a coding-standard convention, not behavioral correctness — it is a lint rule expressed as a unit test."
+      },
+      {
+        "id": "G0007",
+        "test": "test_close_docstring_describes_thread_pool_and_wait",
+        "line": 824,
+        "category": "other",
+        "severity": "low",
+        "recommendation": "Remove this test. The behavioral gate test_close_waits_for_inflight_write already covers the production guarantee. Docstring phrasing compliance belongs in pydoclint, not the runtime test suite.",
+        "why_not_gate": "The test asserts that 'in-flight', 'thread', and either 'asyncio.to_thread' or 'thread pool' appear in NamedPipeClient.close.__doc__. The production behavioral guarantee — that close() actually waits for in-flight writes — is already gated by test_close_waits_for_inflight_write. If close() regressed to return immediately before the write thread finished, this docstring test would remain green. The check gates documentation phrasing, not behavior."
+      }
+    ],
+    "tests/test_audit3/sandbox/test_api_trace.py": [
+      {
+        "id": "G0008",
+        "test": "test_f0013_handler_extracts_target_process_id_and_return_code",
+        "line": 783,
+        "category": "asserts-on-stub-output",
+        "severity": "medium",
+        "recommendation": "Remove the hardcoded `Write-Output ('Module=ntoskrnl.exe')` line from the probe and instead extract the module assignment into a testable helper function in api_trace.ps1 (e.g., `Get-ApiCallModule -EventId $id`). Then call that production helper from the probe and assert on its output. Alternatively, if module is intentionally always 'ntoskrnl.exe' as a known constant, drop the assertion entirely and add a comment explaining that fact, rather than asserting on a self-emitted string.",
+        "why_not_gate": "The probe unconditionally emits `Write-Output ('Module=ntoskrnl.exe')` at line 750 of the test, so the assertion at line 783 (`assert \"Module=ntoskrnl.exe\" in out`) can never fail regardless of what the production script does. In api_trace.ps1 line 283, the module is also hardcoded as `$module = 'ntoskrnl.exe'`, but that assignment happens inside the ETW callback body — a code path that is intentionally excluded by `_slice_helpers_only`. No production function for module resolution is called by the probe; the probe emits the constant itself. If the production script were changed to compute a wrong module name, use a variable lookup, or omit module reporting entirely, line 783 would still pass. No realistic production breakage in module-reporting logic is caught by this assertion."
+      }
+    ],
+    "tests/test_audit3/sandbox/test_dll_monitor.py": [
+      {
+        "id": "G0009",
+        "test": "test_smoke_script_runs_and_writes_logs",
+        "line": 364,
+        "category": "swallows-failure",
+        "severity": "high",
+        "recommendation": "Remove the `or bool((stderr or '').strip())` branch. Assert that at least one of `log_path` or `diag_path` exists and is non-empty. Non-empty stderr should be surfaced in the failure message as diagnostic context, not treated as evidence of success.",
+        "why_not_gate": "The third branch `bool((stderr or '').strip())` genuinely swallows failures. A dll_monitor.ps1 with a broken ETW subscription, a missing Write-DllRecord function, or a syntax error will crash immediately and emit a PowerShell terminating-error traceback to stderr. That non-empty stderr satisfies the condition and the assertion passes despite zero monitoring output ever being produced. The test cannot distinguish a legitimate non-admin WMI-fallback warning on stderr from a script that crashed before setting up any subscription."
+      }
+    ],
+    "tests/test_audit3/sandbox/test_injection_monitor.py": [
+      {
+        "id": "G0010",
+        "test": "test_smoke_script_runs_without_crash",
+        "line": 455,
+        "category": "swallows-failure",
+        "severity": "high",
+        "recommendation": "Drop the `or bool((stderr or '').strip())` branch. The docstring already explains that both non-admin (throw) and admin (killed ETW loop) paths are acceptable; require that the diag log exists for the non-admin throw path, or that the main log exists for the admin path. Check returncode to distinguish the two cases rather than relying on stderr presence.",
+        "why_not_gate": "The third branch `bool((stderr or '').strip())` makes the assertion vacuous whenever the script emits anything to stderr. After F-0016, a non-admin run is expected to throw (non-zero exit) and that throw emits a PowerShell exception traceback to stderr. Any regression that causes the script to crash earlier — broken ETW setup, removed throw path replaced by a silent return that still emits a parse error, or a syntax error — also produces stderr, so the smoke test still passes. The test cannot distinguish a healthy early-throw from a completely dysfunctional script."
+      },
+      {
+        "id": "G0011",
+        "test": "test_script_throws_when_traceevent_dll_missing",
+        "line": 281,
+        "category": "conditional-never-runs",
+        "severity": "medium",
+        "recommendation": "Assert `diag_path.exists()` unconditionally before reading its contents, then assert the expected keyword. The diagnostic log is part of the F-0016 observable contract and should be a mandatory output, not an optional one that is checked only when it happens to appear.",
+        "why_not_gate": "The diagnostic content assertion (`assert 'traceevent_dll_missing' in diag_text or 'TraceEvent' in diag_text`) is inside `if diag_path.exists():` at line 281. If the script exits non-zero (the line 276 gate) but never writes the diagnostic log — for example because the throw is triggered before the `Write-InjectionDiagnostic` call is reached, or the diag-write path is removed — the inner assertion is silently skipped. The F-0016 contract requires both a non-zero exit AND a structured diagnostic record; this test only enforces the exit code."
+      }
+    ],
+    "tests/test_audit3/sandbox/test_kernel_object_monitor.py": [
+      {
+        "id": "G0012",
+        "test": "test_script_captures_transient_mutex",
+        "line": 440,
+        "category": "skip-masks-failure",
+        "severity": "high",
+        "recommendation": "Replace the non-admin skip with a `pytest.fail` when `observed` is False, or add a mandatory assertion that verifies the monitor at least reached steady state with the correct millisecond cadence (e.g. assert the error log contains entries within the expected window). If the capability is genuinely unavailable without elevation, gate the entire test with an admin-only marker rather than allowing a silent skip on the most common execution context.",
+        "why_not_gate": "On non-admin CI runs, when `observed` is False, the code at line 440 calls `pytest.skip(...)` rather than `pytest.fail(...)`. If F-0021 regresses — the poll cadence reverts to `Start-Sleep -Seconds 3` — the monitor running non-admin would fail to capture the transient mutex (lifetime 2000 ms, shorter than the 3 s cadence). `observed` stays False, the non-admin branch fires, and CI sees a skip rather than a failure. The F-0021 regression goes completely undetected in all typical non-admin CI pipelines."
+      },
+      {
+        "id": "G0013",
+        "test": "test_script_no_orphan_pwsh_after_terminate",
+        "line": 507,
+        "category": "tautological",
+        "severity": "low",
+        "recommendation": "Remove the `assert os.name == 'nt'` line entirely. The pytestmark skip already guarantees Windows; the assertion provides no gate value. If the comment 'Reference os to keep import' is the motivation, remove the import instead of adding a tautological assertion.",
+        "why_not_gate": "The module-level `pytestmark` skips the entire test file on `sys.platform != 'win32'`. On any platform where this test actually runs, `os.name` is always `'nt'`, so `assert os.name == 'nt'` can never fail. The assertion does not guard the orphan-process check or any other behavior; it is purely decorative. The test's real gate is `assert check.returncode == 0` at line 504."
+      }
+    ],
+    "tests/test_audit3/sandbox/test_service_monitor.py": [
+      {
+        "id": "G0014",
+        "test": "test_script_idempotency_dedupes_rapid_duplicate_transitions",
+        "line": 439,
+        "category": "conditional-never-runs",
+        "severity": "high",
+        "recommendation": "Add `assert state_lines, 'no state_changed transitions observed; log may be empty or service lifecycle was not captured'` before the for loop. This converts a vacuous pass into a genuine failure whenever the monitor produces no relevant output, and ensures the per-state count check is always exercised.",
+        "why_not_gate": "If `state_lines` is empty — because `log_path` does not exist, the log is empty, or no lines match both `|state_changed|` and `|Spooler|` — the `for` loop body at line 439 never executes. A broken `service_monitor.ps1` that emits no log output (e.g. because the WMI subscription silently fails, the log-write path is broken, or `-LogDir` is ignored) produces an empty `state_lines` dict. The idempotency property goes entirely unverified and the test passes vacuously."
+      }
+    ],
+    "tests/test_audit3/ui/test_script_manager.py": [
+      {
+        "id": "G0015",
+        "test": "TestScriptTypeInfoX64dbgMetadata::test_x64dbg_display_name",
+        "line": 373,
+        "category": "asserts-on-stub-output",
+        "severity": "low",
+        "recommendation": "Add a direct assertion on the TYPES entry: `assert ScriptTypeInfo.TYPES['x64dbg'].get('display') == 'x64dbg'`. This verifies that the value is explicitly stored in the dict rather than silently falling back to the script_type key. Alternatively, if a distinct human-readable label is ever intended (e.g. 'x64dbg Script'), change TYPES['x64dbg']['display'] to that value and assert the non-trivially-equal form, making the fallback path distinguishable.",
+        "why_not_gate": "Production code at script_manager.py:263-264 does `info.get('display', script_type)`. The TYPES['x64dbg']['display'] value is literally the string 'x64dbg', identical to the fallback `script_type`. Deleting the 'display' key entirely still returns 'x64dbg' via the fallback, so the assertion `== 'x64dbg'` remains green. No realistic mutation to the 'display' field (removal, silent corruption to the same value) is caught by this test. A change to a *different* display value (e.g. 'x64dbg Script') would be caught, but the specific structural guard — that the 'display' key exists and is sourced from TYPES, not the fallback — is completely absent."
+      }
+    ]
+  }
+}

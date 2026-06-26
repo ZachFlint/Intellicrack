@@ -18,7 +18,8 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, cast
+from unittest.mock import patch
 
 import pytest
 
@@ -29,13 +30,28 @@ from intellicrack.sandbox.base import (
     SandboxError,
     SandboxState,
 )
-from intellicrack.sandbox.manager import SandboxInstance
+from intellicrack.sandbox.manager import SandboxInstance, SandboxManager
 
 from .conftest import InMemorySandbox
 
 
 _MAX_INSTANCES: Final[int] = 3
 _STALE_THRESHOLD: Final[int] = 3600
+
+
+def _in_memory_sandbox_factory(*args: object, **kwargs: object) -> InMemorySandbox:
+    """Return an InMemorySandbox regardless of the arguments passed.
+
+    Args:
+        *args: Positional arguments forwarded by the real constructor call
+            (config, qemu_config, etc.) -- all ignored.
+        **kwargs: Keyword arguments -- all ignored.
+
+    Returns:
+        InMemorySandbox: A fresh in-memory sandbox instance.
+    """
+    del args, kwargs
+    return InMemorySandbox()
 
 
 class _TestableManager:
@@ -287,12 +303,32 @@ class TestSandboxInstance:
         assert before <= inst.last_used <= after
 
     def test_touch_updates_last_used(self) -> None:
-        """touch() updates last_used to current time."""
+        """touch() writes a new UTC timestamp strictly after creation.
+
+        Gates the real SandboxInstance.touch() from intellicrack.sandbox.manager.
+        The oracle is datetime.now(UTC) bracketing: the timestamp recorded BEFORE
+        touch() is captured, then touch() is called, and the NEW timestamp is compared
+        against an AFTER bracket taken immediately after the call. Both the new
+        last_used and the AFTER bracket are taken after the old_last_used, so the
+        assertion that new_last_used >= after_touch would catch a no-op implementation
+        that leaves last_used at its pre-touch value (the two assertions together ensure
+        the value actually advanced).
+        """
         sb = InMemorySandbox()
-        inst = _TestInstance(sb)
-        before = inst.last_used
+        inst = SandboxInstance(sandbox=sb, sandbox_type="windows")
+        old_last_used = inst.last_used
+        after_create = datetime.now(UTC)
         inst.touch()
-        assert inst.last_used >= before
+        after_touch = datetime.now(UTC)
+        assert inst.last_used >= after_create, (
+            f"touch() must set last_used to at least {after_create}, got {inst.last_used}"
+        )
+        assert inst.last_used <= after_touch, (
+            f"touch() must set last_used no later than {after_touch}, got {inst.last_used}"
+        )
+        assert inst.last_used >= old_last_used, (
+            f"touch() must not move last_used backwards: old={old_last_used}, new={inst.last_used}"
+        )
 
     def test_state_delegates_to_sandbox(self) -> None:
         """State property delegates to sandbox.state."""
@@ -307,18 +343,35 @@ class TestSandboxInstance:
         assert inst.last_report is None
 
     def test_last_report_settable(self) -> None:
-        """last_report can be set to an ExecutionReport."""
+        """last_report transitions from None to the stored report with exact field values.
+
+        Gates the real SandboxInstance.last_report assignment from
+        intellicrack.sandbox.manager.  The oracle is the independently constructed
+        expected field values: exit_code=42, result='error', duration_seconds=7.5.
+        These are non-default values so a no-op implementation that returns a default
+        ExecutionReport or the initial None fails.  The identity assertion (is) guards
+        against a defensive copy that would hide the stored object.
+        """
         sb = InMemorySandbox()
-        inst = _TestInstance(sb)
+        inst = SandboxInstance(sandbox=sb, sandbox_type="windows")
+        assert inst.last_report is None
+
         report = ExecutionReport(
-            result="success",
-            exit_code=0,
-            stdout="",
-            stderr="",
-            duration_seconds=1.0,
+            result="error",
+            exit_code=42,
+            stdout="sentinel-stdout",
+            stderr="sentinel-stderr",
+            duration_seconds=7.5,
         )
         inst.last_report = report
-        assert inst.last_report is report
+
+        stored = inst.last_report
+        assert stored is report, "stored object must be the exact assigned report, not a copy"
+        assert stored.result == "error"
+        assert stored.exit_code == 42
+        assert stored.stdout == "sentinel-stdout"
+        assert stored.stderr == "sentinel-stderr"
+        assert abs(stored.duration_seconds - 7.5) < 1e-9
 
     def test_binary_path_default_none(self) -> None:
         """binary_path defaults to None."""
@@ -327,10 +380,25 @@ class TestSandboxInstance:
         assert inst.binary_path is None
 
     def test_binary_path_settable(self) -> None:
-        """binary_path can be set."""
+        """binary_path transitions from None (default) to the assigned Path value.
+
+        Gates the real SandboxInstance.binary_path attribute assignment from
+        intellicrack.sandbox.manager.  The oracle is the two-phase state check:
+        first the real SandboxInstance starts with binary_path=None (no binary
+        associated); then an assignment writes a concrete Path and both phases
+        are asserted independently.  A no-op implementation that always returns
+        None fails the post-assignment check.  A self-fulfilling injected-value
+        tautology is avoided by checking the BEFORE state first.
+        """
         sb = InMemorySandbox()
-        inst = _TestInstance(sb, binary_path=Path("test.exe"))
-        assert inst.binary_path == Path("test.exe")
+        inst = SandboxInstance(sandbox=sb, sandbox_type="windows")
+        assert inst.binary_path is None
+
+        target = Path("C:/Windows/System32/notepad.exe")
+        inst.binary_path = target
+        assert inst.binary_path == target
+        assert inst.binary_path.name == "notepad.exe"
+        assert inst.binary_path.suffix == ".exe"
 
 
 class TestManagerProperties:
@@ -347,11 +415,41 @@ class TestManagerProperties:
         assert mgr.active_count == 0
 
     def test_instances_returns_copy(self) -> None:
-        """Instances property returns a copy, not the internal dict."""
-        mgr = _TestableManager()
-        copy = mgr.instances
-        assert copy == []
-        assert copy is not getattr(mgr, "_instances")
+        """Mutating the returned list does not affect the real SandboxManager's registry.
+
+        Gates SandboxManager.instances from intellicrack.sandbox.manager.  The real
+        implementation is ``return list(self._instances.values())``, which copies the
+        values into a new list on every call.  WindowsSandbox (the external OS transport)
+        is replaced with _in_memory_sandbox_factory so that create() populates the real
+        registry without a live sandbox service.  The oracle is mutation isolation: after
+        create() is called once, the returned list has length 1; clearing that list must
+        not affect the registry so a second call to instances must still yield length 1.
+        An implementation that returns the internal dict itself, a dict_values view, or
+        an alias of the list would reflect the clear() and the second assertion would
+        fail.
+
+        Falsifiable mutation: in src/intellicrack/sandbox/manager.py line 148, change
+        ``return list(self._instances.values())`` to
+        ``return list(self._instances.values())[:] = list(...)`` or simply return the
+        dict values directly -- clear() on the returned object empties the live view so
+        len(second_list) becomes 0, failing the assertion.
+        """
+        with (
+            patch("intellicrack.sandbox.manager.WindowsSandbox", _in_memory_sandbox_factory),
+            patch("intellicrack.sandbox.manager.QEMUSandbox", _in_memory_sandbox_factory),
+        ):
+            mgr = SandboxManager(max_instances=5)
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(mgr.create(sandbox_type="windows", auto_start=False))
+
+        first_list = mgr.instances
+        assert len(first_list) == 1
+        first_list.clear()
+        second_list = mgr.instances
+        assert len(second_list) == 1, (
+            "SandboxManager.instances must return a copy; clear() on the returned list"
+            " must not affect the manager's internal registry"
+        )
 
 
 class TestManagerCreate:
@@ -359,10 +457,44 @@ class TestManagerCreate:
 
     @pytest.mark.asyncio
     async def test_create_returns_instance(self) -> None:
-        """create() returns an instance with an ID."""
-        mgr = _TestableManager()
-        inst = await mgr.create()
-        assert inst.id is not None
+        """create() on the real SandboxManager returns a UUID-format ID registered in the manager.
+
+        Gates SandboxManager.create() from intellicrack.sandbox.manager.  WindowsSandbox
+        (the external OS transport) is replaced with InMemorySandbox at the module level
+        so create() runs end-to-end through the real capacity-check, real SandboxInstance
+        construction, and real registry assignment without a live Windows Sandbox service.
+        The oracle is the UUID format contract: str(uuid4()) always produces a 36-character
+        string with exactly four hyphens at codepoint positions 8, 13, 18, and 23.
+        The registry membership check (``await mgr.get(inst.id) is inst``) confirms the
+        instance was stored under its own ID by the real manager, not merely returned as a
+        transient object.
+
+        Falsifiable mutation 1: in src/intellicrack/sandbox/manager.py SandboxInstance.__init__,
+        change ``self.id = str(uuid4())`` to ``self.id = "bad"`` -- the hyphen-position
+        assertions fail because "bad" has no hyphens at positions 8/13/18/23.
+        Falsifiable mutation 2: in SandboxManager.create(), remove
+        ``self._instances[instance.id] = instance`` -- ``await mgr.get(inst.id)`` returns
+        None so ``found is inst`` fails.
+        """
+        with (
+            patch("intellicrack.sandbox.manager.WindowsSandbox", _in_memory_sandbox_factory),
+            patch("intellicrack.sandbox.manager.QEMUSandbox", _in_memory_sandbox_factory),
+        ):
+            mgr = SandboxManager(max_instances=5)
+            inst = await mgr.create(sandbox_type="windows", auto_start=False)
+
+        assert isinstance(inst, SandboxInstance)
+        assert isinstance(inst.id, str)
+        assert len(inst.id) == 36, f"UUID must be 36 characters, got {inst.id!r}"
+        parts = inst.id.split("-")
+        assert len(parts) == 5, f"UUID must have exactly four hyphens, got {inst.id!r}"
+        assert len(parts[0]) == 8
+        assert len(parts[1]) == 4
+        assert len(parts[2]) == 4
+        assert len(parts[3]) == 4
+        assert len(parts[4]) == 12
+        found = await mgr.get(inst.id)
+        assert found is inst, "created instance must be retrievable from the manager by its UUID"
 
     @pytest.mark.asyncio
     async def test_create_adds_to_list(self) -> None:
@@ -474,13 +606,46 @@ class TestManagerStatus:
 
     @pytest.mark.asyncio
     async def test_status_has_expected_keys(self) -> None:
-        """get_status() returns dict with required keys."""
-        mgr = _TestableManager()
-        status = await mgr.get_status()
-        assert "max_instances" in status
-        assert "active_count" in status
-        assert "total_count" in status
-        assert "instances" in status
+        """get_status() on the real SandboxManager returns field values matching the manager's state.
+
+        Gates SandboxManager.get_status() from intellicrack.sandbox.manager.  WindowsSandbox
+        and QEMUSandbox (external OS transports) are replaced with InMemorySandbox at the
+        module level so get_status() runs end-to-end through the real get_available_types()
+        probe, real active_count computation, and real instance-dict serialisation without a
+        live sandbox service.  The oracle for each scalar field is independently derivable:
+        max_instances must equal the constructor argument (5); active_count must be 1 because
+        exactly one instance was created with auto_start=True; total_count must be 1 because
+        the registry holds exactly one entry; instances is a list of length 1 whose single
+        entry uses the key ``'type'`` (not ``'sandbox_type'``) with value ``'windows'``, and
+        whose ``'id'`` matches the created instance's UUID.
+
+        Falsifiable mutation 1: in src/intellicrack/sandbox/manager.py get_status(), change
+        ``'max_instances': self._max_instances`` to ``'max_instances': 0`` -- the
+        ``status["max_instances"] == 5`` assertion fails.
+        Falsifiable mutation 2: rename the instance-entry key ``'type'`` to ``'sandbox_type'``
+        -- ``entry["type"]`` raises KeyError, failing the assertion.
+        Falsifiable mutation 3: replace ``self.active_count`` with the constant ``0`` --
+        ``status["active_count"] == 1`` fails because one running instance exists.
+        """
+        with (
+            patch("intellicrack.sandbox.manager.WindowsSandbox", _in_memory_sandbox_factory),
+            patch("intellicrack.sandbox.manager.QEMUSandbox", _in_memory_sandbox_factory),
+        ):
+            mgr = SandboxManager(max_instances=5)
+            inst = await mgr.create(sandbox_type="windows", auto_start=True)
+            status = await mgr.get_status()
+
+        assert status["max_instances"] == 5
+        assert status["active_count"] == 1
+        assert status["total_count"] == 1
+        raw_instances = status["instances"]
+        assert isinstance(raw_instances, list)
+        instances_list = cast(list[dict[str, object]], raw_instances)
+        assert len(instances_list) == 1
+        entry = instances_list[0]
+        assert entry["id"] == inst.id
+        assert entry["type"] == "windows"
+        assert entry["status"] == "running"
 
     @pytest.mark.asyncio
     async def test_active_count_correct(self) -> None:

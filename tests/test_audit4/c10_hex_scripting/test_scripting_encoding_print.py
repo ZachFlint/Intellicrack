@@ -197,11 +197,17 @@ class TestF0020SearchTextEncoding:
 
     @staticmethod
     def test_latin1_encoding_not_utf8() -> None:
-        """With latin-1 encoding, the forwarded encoding must not be ``'utf-8'``."""
+        """With latin-1 encoding, the forwarded encoding must be exactly ``'latin1'``.
+
+        Falsifiability: changing ``_resolve_search_encoding`` to always return
+        ``"ascii"`` (or any codec other than ``"latin1"``) makes this assertion
+        fail because ``"ascii" != "latin1"``.  The negative-only predecessor
+        ``!= "utf-8"`` would still pass under that mutation.
+        """
         doc = _RecordingDoc()
         api = _DocAPI(doc, None, None, _encoding_provider("latin1"))
         api.search_text("café")
-        assert doc.search_text_calls[0]["encoding"] != "utf-8"
+        assert doc.search_text_calls[0]["encoding"] == "latin1"
 
     @staticmethod
     def test_custom_encoding_cp1252_forwarded() -> None:
@@ -242,48 +248,84 @@ class TestF0021PrintCapture:
         """
         return _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
 
-    @pytest.mark.parametrize("script", ['print("hello")', "x = 1\nprint(x)"])
-    def test_print_output_captured(self, script: str) -> None:
-        """Output from ``print()`` with no ``file=`` must appear in the result.
+    @pytest.mark.parametrize(
+        ("script", "expected_output"),
+        [
+            ('print("hello")', "hello\n"),
+            ("x = 1\nprint(x)", "1\n"),
+        ],
+    )
+    def test_print_output_captured(self, script: str, expected_output: str) -> None:
+        r"""Output from ``print()`` with no ``file=`` must match an independent oracle.
+
+        The oracle is derived from Python language semantics: ``print("hello")``
+        writes ``"hello\n"`` to stdout, and ``print(1)`` writes ``"1\n"``.
+        These expected values are independent of ``execute_script``'s
+        implementation.
+
+        Falsifiability: changing ``_safe_print`` to prepend a ``"PREFIX"`` to
+        every line (e.g. ``text = "PREFIX" + text``) produces ``"PREFIXhello\n"``
+        and ``"PREFIX1\n"``, both of which differ from the exact expected
+        strings ``"hello\n"`` and ``"1\n"``, causing the assertion to fail.
 
         Args:
             script: Python source with a ``print()`` call.
+            expected_output: Exact stdout string expected from the script.
         """
         api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
         result = execute_script(script, api)
         assert result["error"] is None
-        assert "output" in result
-        assert result["output"].strip()
+        assert result["output"] == expected_output
 
     @staticmethod
     def test_print_hello_appears_in_output() -> None:
-        """``print('hello')`` must produce ``'hello'`` in the ``output`` field."""
+        r"""``print('hello')`` must produce exactly ``'hello\n'`` in ``output``.
+
+        The oracle is Python's ``print`` semantics: a single string argument with
+        the default ``end`` writes the string followed by one newline. Asserting
+        exact equality (not substring containment) makes the gate fail under any
+        decoration/prefix mutation in ``_safe_print``.
+        """
         result = execute_script('print("hello")', _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None)))
-        assert "hello" in result["output"]
+        assert result["error"] is None
+        assert result["output"] == "hello\n"
 
     @staticmethod
     def test_print_with_file_none_does_not_lose_output() -> None:
-        """``print('hello', file=None)`` must not lose output to the capture buffer."""
+        r"""``print('captured', file=None)`` must capture exactly ``'captured\n'``.
+
+        ``file=None`` is documented to fall back to ``sys.stdout``; the captured
+        buffer must therefore equal ``'captured\n'`` exactly, proving the output
+        is neither lost nor decorated.
+        """
         doc_api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
         result = execute_script('print("captured", file=None)', doc_api)
         assert result["error"] is None
-        assert "captured" in result["output"]
+        assert result["output"] == "captured\n"
 
     @staticmethod
     def test_print_with_none_file_kwarg_captures_output() -> None:
-        """``print('hello', file=None)`` must still produce captured output."""
+        r"""``print('hello', file=None)`` must capture exactly ``'hello\n'``.
+
+        The ``file=None`` keyword resolves to ``sys.stdout``, so the captured
+        output must equal ``'hello\n'`` exactly.
+        """
         doc_api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
         result = execute_script('print("hello", file=None)', doc_api)
         assert result["error"] is None
-        assert "hello" in result["output"]
+        assert result["output"] == "hello\n"
 
     @staticmethod
     def test_print_with_flush_true_captures_output() -> None:
-        """``print('world', flush=True)`` must produce captured output without error."""
+        r"""``print('world', flush=True)`` must capture exactly ``'world\n'``.
+
+        ``flush=True`` affects buffering only, not content, so the captured
+        output must equal ``'world\n'`` exactly.
+        """
         doc_api = _ReadOnlyDocAPI(_DocAPI(_RecordingDoc(), None, None))
         result = execute_script('print("world", flush=True)', doc_api)
         assert result["error"] is None
-        assert "world" in result["output"]
+        assert result["output"] == "world\n"
 
     @staticmethod
     def test_print_sep_and_end_honoured() -> None:

@@ -1,0 +1,66 @@
+{
+  "file": "tests/test_hexcore_e2e/test_entropy.py",
+  "findings_addressed": [
+    {
+      "id": "G0204",
+      "test": "TestEntropy::test_entropy_sample_bytes_at_most_eight",
+      "action": "deleted",
+      "oracle": "test_entropy_uniform_256_matches_independent_oracle (line 59) — asserts exact Shannon entropy 8.0 via independent oracle, which subsumes the trivial upper-bound check",
+      "documented_mutation": "N/A — deleted as redundant duplicate; sibling gate mutation: change `math.isclose(result, expected, abs_tol=1e-9)` to `assert result >= 0` in the sibling test to see it pass a stub returning 0.0"
+    },
+    {
+      "id": "G0205",
+      "test": "TestEntropy::test_entropy_is_float",
+      "action": "deleted",
+      "oracle": "test_entropy_uniform_256_matches_independent_oracle (line 59) — math.isclose comparison requires a float result implicitly; type-only check adds nothing",
+      "documented_mutation": "N/A — deleted as redundant duplicate"
+    },
+    {
+      "id": "G0206",
+      "test": "TestEntropy::test_entropy_lower_bound",
+      "action": "deleted",
+      "oracle": "test_entropy_uniform_256_matches_independent_oracle and test_entropy_repeating_byte_is_zero both gate the actual entropy values against independent constants, fully subsume the >= 0 bound",
+      "documented_mutation": "N/A — deleted as redundant duplicate"
+    },
+    {
+      "id": "G0208",
+      "test": "TestByteDistribution::test_byte_distribution_returns_ints",
+      "action": "deleted",
+      "oracle": "test_byte_distribution_uniform_all_ones (asserts count == 1 for all 256 entries) and test_byte_distribution_zeros_only (asserts result[0] == 100 and all others == 0) both subsume the type-only isinstance check",
+      "documented_mutation": "N/A — deleted as redundant duplicate"
+    },
+    {
+      "id": "G0210",
+      "test": "TestContentClassification::test_content_classification_values_in_range",
+      "action": "hardened",
+      "oracle": "Independent arithmetic oracle: each 32-byte block from bytes(range(256)) has exactly 32 distinct values giving Shannon entropy = log2(32) = 5.0 bits/byte; the classify_block function in entropy.rs returns code 4 for entropy in [4.5, 7.0]; expected block count = math.ceil(256 / 32) = 8. Oracle is hand-derived from the published Shannon formula, not copied from production code.",
+      "documented_mutation": "In entropy.rs classify_block(), change `if (4.5..=7.0).contains(&entropy) { return 4; }` to `if (4.5..=7.0).contains(&entropy) { return 2; }` — the assertion `all(code == 4 for code in result)` would then fail because all 8 blocks of bytes(range(256)) fall in this entropy band."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    {
+      "test": "TestEntropy::test_entropy_sample_bytes_at_most_eight",
+      "covered_by": "TestEntropy::test_entropy_uniform_256_matches_independent_oracle"
+    },
+    {
+      "test": "TestEntropy::test_entropy_is_float",
+      "covered_by": "TestEntropy::test_entropy_uniform_256_matches_independent_oracle"
+    },
+    {
+      "test": "TestEntropy::test_entropy_lower_bound",
+      "covered_by": "TestEntropy::test_entropy_uniform_256_matches_independent_oracle"
+    },
+    {
+      "test": "TestByteDistribution::test_byte_distribution_returns_ints",
+      "covered_by": "TestByteDistribution::test_byte_distribution_uniform_all_ones"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0204/G0205/G0206/G0208 were deleted as exact weaker duplicates of stronger oracle-based siblings already in the file. G0210 was hardened from a range-check-only assertion into a concrete oracle-verified test: bytes(range(256)) with block_size=32 produces 8 blocks each with entropy=log2(32)=5.0, which the classify_block algorithm maps deterministically to code 4. The renamed test is test_content_classification_uniform_bytes_all_medium_entropy."
+}

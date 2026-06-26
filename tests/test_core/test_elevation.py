@@ -19,6 +19,7 @@ import ctypes
 import sys
 from ctypes import wintypes
 from typing import TYPE_CHECKING, cast
+from unittest.mock import MagicMock
 
 from intellicrack.core import elevation
 
@@ -187,42 +188,73 @@ class TestMaybeElevate:
     def test_disabled_skips_elevation(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """The ``--no-elevate`` path never relaunches.
 
+        ``_relaunch_elevated`` is replaced with a spy that raises on any call.
+        If the ``disabled`` guard were removed from ``maybe_elevate`` the
+        unprivileged path (``is_elevated`` returns ``False``) would reach
+        ``_relaunch_elevated`` and raise, turning this test red.
+
         Args:
-            monkeypatch: Pytest fixture used to force Windows and fail on relaunch.
+            monkeypatch: Pytest fixture used to force Windows, an unprivileged
+                token, and a raising sentinel for any relaunch attempt.
         """
+        spy: MagicMock = MagicMock(side_effect=AssertionError("_relaunch_elevated must not be called when disabled"))
         monkeypatch.setattr(elevation, "is_windows", lambda: True)
-        monkeypatch.setattr(elevation, "_relaunch_elevated", _fail_relaunch)
-        assert (
-            elevation.maybe_elevate(disabled=True, already_attempted=False, original_args=[], working_dir=".") is False
+        monkeypatch.setattr(elevation, "is_elevated", lambda: False)
+        monkeypatch.setattr(elevation, "_relaunch_elevated", spy)
+        result: bool = elevation.maybe_elevate(
+            disabled=True, already_attempted=False, original_args=[], working_dir=".",
         )
+        assert result is False
+        spy.assert_not_called()
 
     def test_already_attempted_does_not_loop(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A child started with ``--elevated`` never relaunches again.
 
+        ``_relaunch_elevated`` is replaced with a spy that raises on any call.
+        If the ``already_attempted`` guard were removed from ``maybe_elevate``
+        the unprivileged path (``is_elevated`` returns ``False``) would reach
+        ``_relaunch_elevated`` and raise, turning this test red.
+
         Args:
             monkeypatch: Pytest fixture used to force Windows, simulate an
-                unprivileged child, and fail on any relaunch attempt.
+                unprivileged child, and place a raising sentinel for any
+                relaunch attempt.
         """
+        spy: MagicMock = MagicMock(
+            side_effect=AssertionError("_relaunch_elevated must not be called when already_attempted=True"),
+        )
         monkeypatch.setattr(elevation, "is_windows", lambda: True)
         monkeypatch.setattr(elevation, "is_elevated", lambda: False)
-        monkeypatch.setattr(elevation, "_relaunch_elevated", _fail_relaunch)
-        assert (
-            elevation.maybe_elevate(disabled=False, already_attempted=True, original_args=[], working_dir=".") is False
+        monkeypatch.setattr(elevation, "_relaunch_elevated", spy)
+        result: bool = elevation.maybe_elevate(
+            disabled=False, already_attempted=True, original_args=[], working_dir=".",
         )
+        assert result is False
+        spy.assert_not_called()
 
     def test_already_elevated_needs_no_relaunch(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """An already-elevated process does not relaunch.
 
+        ``_relaunch_elevated`` is replaced with a spy that raises on any call.
+        If the ``is_elevated()`` short-circuit guard were removed from
+        ``maybe_elevate``, the code would call ``_relaunch_elevated`` and
+        raise, turning this test red.
+
         Args:
             monkeypatch: Pytest fixture used to force Windows, an elevated
-                token, and fail on any relaunch attempt.
+                token, and place a raising sentinel for any relaunch attempt.
         """
+        spy: MagicMock = MagicMock(
+            side_effect=AssertionError("_relaunch_elevated must not be called when already elevated"),
+        )
         monkeypatch.setattr(elevation, "is_windows", lambda: True)
         monkeypatch.setattr(elevation, "is_elevated", lambda: True)
-        monkeypatch.setattr(elevation, "_relaunch_elevated", _fail_relaunch)
-        assert (
-            elevation.maybe_elevate(disabled=False, already_attempted=False, original_args=[], working_dir=".") is False
+        monkeypatch.setattr(elevation, "_relaunch_elevated", spy)
+        result: bool = elevation.maybe_elevate(
+            disabled=False, already_attempted=False, original_args=[], working_dir=".",
         )
+        assert result is False
+        spy.assert_not_called()
 
     def test_unelevated_triggers_relaunch_and_exits(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """An unelevated process relaunches and signals the caller to exit.

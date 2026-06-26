@@ -1771,7 +1771,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             _logger.error("get_pattern_registry_failed_unavailable")
             msg = "pattern registry not available"
             raise RuntimeError(msg)
-        project_root = Path(__file__).resolve().parents[2]
+        project_root = Path(__file__).resolve().parents[3]
         patterns_dir = project_root / "vendor" / "community-patterns" / "patterns"
         pattern_dirs: list[Path] = []
         if patterns_dir.exists():

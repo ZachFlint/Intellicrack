@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_hexcore_e2e/test_process_memory.py",
+  "findings_addressed": [
+    {
+      "id": "G0234",
+      "test": "TestListProcessMemoryRegions::test_list_regions_minimum_count",
+      "action": "hardened",
+      "oracle": "Any Python process on Windows maps at minimum dozens of VMA entries (code, heap, stack, PEB, ntdll, python3x.dll, etc.). The independent oracle is the structural invariant: len(regions) >= 10 and sum(sizes) >= 65536. A stub returning [] or a list with fewer than 10 synthetic entries fails both assertions. The previous isinstance(regions, list) check allowed any list including an empty one.",
+      "documented_mutation": "In the Rust list_process_memory_regions implementation, change the VirtualQueryEx loop to `break` after pushing the first 5 entries instead of continuing until the address space is exhausted - this caps the returned list at 5 entries and causes `assert len(regions) >= 10` to fail."
+    },
+    {
+      "id": "G0235",
+      "test": "TestFromProcessMemory::test_from_process_memory_read_matches_ctypes_oracle",
+      "action": "hardened",
+      "oracle": "ctypes.windll.kernel32.ReadProcessMemory called directly on the same address with the same 8-byte count. Both the hexcore HexDocument.read(0, 8) result and the ctypes oracle must return identical bytes. This proves the HexDocument is backed by real process memory, not a stub. The previous test only checked hasattr and doc.length(), never calling doc.read().",
+      "documented_mutation": "In the Rust from_process_memory implementation, change ProcessDataSource::read to return a buffer of all-zero bytes instead of calling ReadProcessMemory - the ctypes oracle will still return the real bytes, causing `assert actual_bytes == oracle_bytes` to fail."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0234 was renamed from test_list_regions_returns_list to test_list_regions_minimum_count and hardened from isinstance(regions, list) to asserting len >= 10 and total mapped bytes >= 65536, which cannot pass for a stub or empty implementation. G0235 was renamed from test_from_process_memory_returns_hex_document to test_from_process_memory_read_matches_ctypes_oracle and hardened by adding a direct ctypes ReadProcessMemory oracle comparison against doc.read(0, 8), proving the HexDocument reads actual process memory. All four quality tools (ruff, basedpyright, pydoclint, pydocstyle) pass with zero findings and no suppressions."
+}

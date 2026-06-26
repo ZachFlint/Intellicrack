@@ -1,0 +1,50 @@
+{
+  "group": "test_audit7__c1",
+  "files": {
+    "tests/test_audit7/core_orchestration/test_compiled_yara_protocol.py": [
+      {
+        "id": "G0048",
+        "test": "test_compiled_yara_concrete_implementation_overrides_protocol",
+        "line": 103,
+        "category": "asserts-on-stub-output",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_audit7/sandbox_monitors/test_stop_event.py": [
+      {
+        "id": "G0049",
+        "test": "test_monitor_emits_lifecycle_records",
+        "line": 297,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_audit7/sandbox_qemu/test_anti_evasion_profile.py": [
+      {
+        "id": "G0050",
+        "test": "TestF0029AntiEvasionProfileHonoured::test_matching_profile_returns_success_with_actual_config_techniques",
+        "line": 191,
+        "category": "tautological",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_audit7/sandbox_qemu/test_logs_stable.py": [
+      {
+        "id": "G0051",
+        "test": "test_returns_after_writer_stops",
+        "line": 147,
+        "category": "other",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py": [
+      {
+        "id": "G0052",
+        "test": "TestAttachQemuAgentsSetsAgentProperty::test_agent_property_is_none_before_attach",
+        "line": 544,
+        "category": "tautological",
+        "severity": "low"
+      }
+    ]
+  }
+}

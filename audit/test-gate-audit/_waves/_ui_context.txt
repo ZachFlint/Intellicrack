@@ -1,0 +1,7 @@
+UI panel tests (PyQt/PySide). Important context:
+
+- Worker QThreads must be retained against GC or the test process exits 255; modal dialogs (exec()) block and hang the test (exit 124). Do NOT introduce real modal dialog .exec() calls or unretained QThreads. When a behavior is driven by a dialog/elevation/UAC prompt, the dialog/transport is the ONLY allowed double - stub it at that boundary and assert the real downstream effect.
+
+- Never mock the panel/widget class under test. Drive the real widget: construct it, call its real slots/methods, and assert the real resulting model/state/signal. Use qtbot if available, or call slots directly and assert the widget's real attributes/model contents.
+
+- Tests run headless in the sandbox (offscreen Qt platform). Tests that genuinely require a display server, a real GPU, or external GUI services may skip as environment-capability gaps - keep those skips. Everything else must run and assert concrete state, not just isinstance/not-None.

@@ -19,7 +19,13 @@ from PyQt6.QtWidgets import QDialog
 
 import intellicrack.ui.panels.hex_editor.transforms as _t_mod
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
+from intellicrack.ui.panels.hex_editor.base import PREVIEW_BYTES
 from intellicrack.ui.panels.hex_editor.transforms import TransformsMixin
+
+
+_BlockFillDialogCls: type[QDialog] = getattr(_t_mod, "_BlockFillDialog")
+_BlockCopyMoveDialogCls: type[QDialog] = getattr(_t_mod, "_BlockCopyMoveDialog")
+_BlockSwapDialogCls: type[QDialog] = getattr(_t_mod, "_BlockSwapDialog")
 
 
 class _SpyDoc:
@@ -178,6 +184,46 @@ class _ConcreteTransforms(TransformsMixin):
         """Count data-changed callbacks."""
         self._data_changed_calls += 1
 
+    def set_hex_widget(self, widget: object) -> None:
+        """Set the hex widget attribute.
+
+        Args:
+            widget: Widget to assign as the hex widget.
+        """
+        self._hex_widget = widget
+
+    def set_transform_pipeline(self, pipeline: object) -> None:
+        """Set the transform pipeline attribute.
+
+        Args:
+            pipeline: Pipeline object to assign.
+        """
+        self._transform_pipeline = pipeline
+
+    def apply_transform(self) -> None:
+        """Invoke the transform-apply action."""
+        self._on_transform_apply()
+
+    def execute_pipeline(self) -> None:
+        """Invoke the pipeline-execute action."""
+        self._on_pipeline_execute()
+
+    def fill_block_action(self) -> None:
+        """Invoke the block-fill action."""
+        self._on_block_fill()
+
+    def copy_block_action(self) -> None:
+        """Invoke the block-copy action."""
+        self._on_block_copy()
+
+    def move_block_action(self) -> None:
+        """Invoke the block-move action."""
+        self._on_block_move()
+
+    def swap_blocks_action(self) -> None:
+        """Invoke the block-swap action."""
+        self._on_block_swap()
+
 
 def _subscribe(state: HexDocumentState) -> list[tuple[int, int, str]]:
     """Register a DATA_MODIFIED subscriber on state.
@@ -226,17 +272,23 @@ class TestTransformApplyNotify:
     ) -> None:
         """Notify fires at cursor offset when no selection is set.
 
+        With a 256-byte document and no hex_widget/selection the production
+        code computes apply_len = PREVIEW_BYTES, read_len = min(PREVIEW_BYTES,
+        256-0) = PREVIEW_BYTES, identity result is 256 bytes, write_len =
+        min(256, 256) = PREVIEW_BYTES.  The emitted DATA_MODIFIED length must
+        equal exactly PREVIEW_BYTES.
+
         Args:
             doc_state_events: Fixture providing spy doc, state, and events.
         """
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
-        mixin._on_transform_apply()
+        mixin.apply_transform()
 
         assert len(events) == 1
         offset, length, source = events[0]
         assert offset == 0
-        assert length > 0
+        assert length == PREVIEW_BYTES
         assert source == "hex-editor.transforms.apply"
 
     def test_fires_with_selection_extent(
@@ -256,8 +308,8 @@ class TestTransformApplyNotify:
             _selection_start: int = 10
             _selection_end: int = 30
 
-        mixin._hex_widget = _FakeWidget()
-        mixin._on_transform_apply()
+        mixin.set_hex_widget(_FakeWidget())
+        mixin.apply_transform()
 
         assert len(events) == 1
         offset, length, source = events[0]
@@ -278,7 +330,7 @@ class TestTransformApplyNotify:
         mixin = _ConcreteTransforms(_SpyDoc(bytearray(0)), state)
         mixin.document = None
 
-        mixin._on_transform_apply()
+        mixin.apply_transform()
 
         assert events == []
 
@@ -299,8 +351,8 @@ class TestTransformApplyNotify:
             _selection_start: int = 256
             _selection_end: int = 256
 
-        mixin._hex_widget = _FakeWidget()
-        mixin._on_transform_apply()
+        mixin.set_hex_widget(_FakeWidget())
+        mixin.apply_transform()
 
         assert events == []
 
@@ -335,15 +387,15 @@ class TestPipelineExecuteNotify:
                 """
                 return data
 
-        mixin._transform_pipeline = _FakePipeline()
+        mixin.set_transform_pipeline(_FakePipeline())
 
         class _FakeWidget:
             _cursor_offset: int = 4
             _selection_start: int = 4
             _selection_end: int = 20
 
-        mixin._hex_widget = _FakeWidget()
-        mixin._on_pipeline_execute()
+        mixin.set_hex_widget(_FakeWidget())
+        mixin.execute_pipeline()
 
         assert len(events) == 1
         offset, length, source = events[0]
@@ -362,9 +414,9 @@ class TestPipelineExecuteNotify:
         """
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
-        mixin._transform_pipeline = None
+        mixin.set_transform_pipeline(None)
 
-        mixin._on_pipeline_execute()
+        mixin.execute_pipeline()
 
         assert events == []
 
@@ -383,8 +435,8 @@ class TestPipelineExecuteNotify:
         class _EmptyPipeline:
             steps: ClassVar[list[object]] = []
 
-        mixin._transform_pipeline = _EmptyPipeline()
-        mixin._on_pipeline_execute()
+        mixin.set_transform_pipeline(_EmptyPipeline())
+        mixin.execute_pipeline()
 
         assert events == []
 
@@ -406,18 +458,16 @@ class TestBlockFillNotify:
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
-        monkeypatch.setattr(
-            _t_mod._BlockFillDialog,
-            "exec",
-            lambda _self: QDialog.DialogCode.Accepted,
-        )
-        monkeypatch.setattr(
-            _t_mod._BlockFillDialog,
-            "get_values",
-            lambda _self: (8, 16, bytes([0xAA])),
-        )
+        def _fill_exec(_self: QDialog) -> QDialog.DialogCode:
+            return QDialog.DialogCode.Accepted
 
-        mixin._on_block_fill()
+        def _fill_get_values(_self: QDialog) -> tuple[int, int, bytes]:
+            return (8, 16, bytes([0xAA]))
+
+        monkeypatch.setattr(_BlockFillDialogCls, "exec", _fill_exec)
+        monkeypatch.setattr(_BlockFillDialogCls, "get_values", _fill_get_values)
+
+        mixin.fill_block_action()
 
         assert len(events) == 1
         offset, length, source = events[0]
@@ -439,13 +489,12 @@ class TestBlockFillNotify:
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
-        monkeypatch.setattr(
-            _t_mod._BlockFillDialog,
-            "exec",
-            lambda _self: QDialog.DialogCode.Rejected,
-        )
+        def _fill_exec(_self: QDialog) -> QDialog.DialogCode:
+            return QDialog.DialogCode.Rejected
 
-        mixin._on_block_fill()
+        monkeypatch.setattr(_BlockFillDialogCls, "exec", _fill_exec)
+
+        mixin.fill_block_action()
 
         assert events == []
 
@@ -467,18 +516,16 @@ class TestBlockCopyNotify:
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
-        monkeypatch.setattr(
-            _t_mod._BlockCopyMoveDialog,
-            "exec",
-            lambda _self: QDialog.DialogCode.Accepted,
-        )
-        monkeypatch.setattr(
-            _t_mod._BlockCopyMoveDialog,
-            "get_values",
-            lambda _self: (0, 8, 64),
-        )
+        def _copy_exec(_self: QDialog) -> QDialog.DialogCode:
+            return QDialog.DialogCode.Accepted
 
-        mixin._on_block_copy()
+        def _copy_get_values(_self: QDialog) -> tuple[int, int, int]:
+            return (0, 8, 64)
+
+        monkeypatch.setattr(_BlockCopyMoveDialogCls, "exec", _copy_exec)
+        monkeypatch.setattr(_BlockCopyMoveDialogCls, "get_values", _copy_get_values)
+
+        mixin.copy_block_action()
 
         assert len(events) == 1
         offset, length, source = events[0]
@@ -504,18 +551,16 @@ class TestBlockMoveNotify:
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
-        monkeypatch.setattr(
-            _t_mod._BlockCopyMoveDialog,
-            "exec",
-            lambda _self: QDialog.DialogCode.Accepted,
-        )
-        monkeypatch.setattr(
-            _t_mod._BlockCopyMoveDialog,
-            "get_values",
-            lambda _self: (0, 16, 64),
-        )
+        def _move_exec(_self: QDialog) -> QDialog.DialogCode:
+            return QDialog.DialogCode.Accepted
 
-        mixin._on_block_move()
+        def _move_get_values(_self: QDialog) -> tuple[int, int, int]:
+            return (0, 16, 64)
+
+        monkeypatch.setattr(_BlockCopyMoveDialogCls, "exec", _move_exec)
+        monkeypatch.setattr(_BlockCopyMoveDialogCls, "get_values", _move_get_values)
+
+        mixin.move_block_action()
 
         assert len(events) == 1
         _offset, length, source = events[0]
@@ -540,18 +585,16 @@ class TestBlockSwapNotify:
         doc, state, events = doc_state_events
         mixin = _ConcreteTransforms(doc, state)
 
-        monkeypatch.setattr(
-            _t_mod._BlockSwapDialog,
-            "exec",
-            lambda _self: QDialog.DialogCode.Accepted,
-        )
-        monkeypatch.setattr(
-            _t_mod._BlockSwapDialog,
-            "get_values",
-            lambda _self: (0, 8, 16, 8),
-        )
+        def _swap_exec(_self: QDialog) -> QDialog.DialogCode:
+            return QDialog.DialogCode.Accepted
 
-        mixin._on_block_swap()
+        def _swap_get_values(_self: QDialog) -> tuple[int, int, int, int]:
+            return (0, 8, 16, 8)
+
+        monkeypatch.setattr(_BlockSwapDialogCls, "exec", _swap_exec)
+        monkeypatch.setattr(_BlockSwapDialogCls, "get_values", _swap_get_values)
+
+        mixin.swap_blocks_action()
 
         assert len(events) == 1
         offset, length, source = events[0]
@@ -572,7 +615,7 @@ class TestNoStateHolderSafety:
         mixin = _ConcreteTransforms(doc, HexDocumentState())
         mixin.state_holder = None
 
-        mixin._on_transform_apply()
+        mixin.apply_transform()
 
         assert doc.write_calls, "document.write_bytes must still be called"
 
@@ -600,7 +643,7 @@ class TestNoStateHolderSafety:
                 """
                 return data
 
-        mixin._transform_pipeline = _IdentityPipeline()
-        mixin._on_pipeline_execute()
+        mixin.set_transform_pipeline(_IdentityPipeline())
+        mixin.execute_pipeline()
 
         assert doc.write_calls, "document.write_bytes must still be called"

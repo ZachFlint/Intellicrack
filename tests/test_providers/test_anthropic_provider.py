@@ -514,6 +514,32 @@ class TestBuildUsageFromMessage:
         assert usage.completion_tokens == 0
         assert usage.total_tokens == 0
 
+    def test_cache_token_fields_surface_exactly(self) -> None:
+        """cache_read_tokens and cache_creation_tokens carry the exact API cache counts."""
+        msg: AnthropicMessage = AnthropicMessage(
+            id="msg_03",
+            type="message",
+            role="assistant",
+            content=[TextBlock(type="text", text="cached")],
+            model="claude-3-5-sonnet-20241022",
+            stop_reason="end_turn",
+            stop_sequence=None,
+            usage=Usage(
+                input_tokens=12,
+                output_tokens=4,
+                cache_read_input_tokens=2048,
+                cache_creation_input_tokens=512,
+            ),
+        )
+
+        usage: UsageInfo | None = _build_usage_from_message(msg)
+
+        assert usage is not None
+        assert usage.cache_read_tokens == 2048
+        assert usage.cache_creation_tokens == 512
+        assert usage.prompt_tokens == 12
+        assert usage.completion_tokens == 4
+
 
 class TestParseResponseBlocks:
     """Unit tests for AnthropicProvider._parse_response_blocks.

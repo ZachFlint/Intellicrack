@@ -371,8 +371,17 @@ class TestScriptTypeInfoX64dbgMetadata:
 
     @staticmethod
     def test_x64dbg_display_name() -> None:
-        """The x64dbg display name must be human-readable."""
-        assert ScriptTypeInfo.get_display_name("x64dbg") == "x64dbg"
+        """The x64dbg display name must be stored explicitly in TYPES, not via fallback.
+
+        The fallback in ``get_display_name`` returns the ``script_type`` argument
+        when the ``'display'`` key is absent, so asserting only on the method
+        return value cannot distinguish an explicitly configured display name from
+        the silent fallback.  This test asserts the key exists in the TYPES dict
+        directly, then verifies the method returns the stored value.
+        """
+        stored = ScriptTypeInfo.TYPES["x64dbg"]["display"]
+        assert stored == "x64dbg"
+        assert ScriptTypeInfo.get_display_name("x64dbg") == stored
 
     @staticmethod
     def test_x64dbg_extension() -> None:

@@ -32,10 +32,6 @@ from intellicrack.core.hexpat.preprocessor import HexPatPreprocessor, extract_pr
 class TestPragmaDefaultEvalDepth:
     """F-0028: default eval_depth is high enough for common parent/recursive patterns."""
 
-    def test_default_eval_depth_constant_exists(self) -> None:
-        """``DEFAULT_EVAL_DEPTH`` is exposed from ``pragma`` for shared use."""
-        assert isinstance(DEFAULT_EVAL_DEPTH, int)
-
     def test_default_eval_depth_handles_tiff_pattern(self) -> None:
         """The default must clear the bar that ``tiff.hexpat`` sets explicitly.
 

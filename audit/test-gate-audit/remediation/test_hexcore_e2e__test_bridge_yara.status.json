@@ -1,0 +1,40 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_yara.py",
+  "findings_addressed": [
+    {
+      "id": "G0182",
+      "test": "TestBridgeYaraScanFiles::test_yara_scan_files_with_rule_file_matches_pe",
+      "action": "hardened",
+      "oracle": "PE DOS stub specification: MZ magic (0x4D 0x5A) is always at byte offset 0; the fixture _build_pe_binary() writes b'MZ' at data[0:2] deterministically.",
+      "documented_mutation": "In hex_editor.py yara_scan_files(), change `'rule': m.rule_name` to `'rule': 'WRONG'` — the assertion `results[0]['rule'] == 'MZHeader'` would fail immediately."
+    },
+    {
+      "id": "G0183",
+      "test": "TestBridgeYaraScan::test_yara_scan_mz_rule_matches_pe_file",
+      "action": "deleted",
+      "oracle": "Covered by sibling TestBridgeYaraScan::test_yara_scan_returns_list which asserts len==1, rule=='MZHeader', and strings[0]['offset']==0.",
+      "documented_mutation": "N/A — test deleted as exact weaker duplicate of test_yara_scan_returns_list."
+    },
+    {
+      "id": "G0184",
+      "test": "TestBridgeYaraScan::test_yara_scan_match_has_required_keys",
+      "action": "hardened",
+      "oracle": "PE DOS stub specification: MZ magic at offset 0 means $mz string hit must have identifier '$mz' and offset 0; production yara_scan() always includes 'namespace' in returned dicts (hex_editor.py line 8916).",
+      "documented_mutation": "In hex_editor.py yara_scan(), delete the `'namespace': m.namespace` entry from the returned dict — the assertion `_EXPECTED_MATCH_KEYS.issubset(match.keys())` would fail because 'namespace' would be missing."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    {
+      "test": "TestBridgeYaraScan::test_yara_scan_mz_rule_matches_pe_file",
+      "covered_by": "TestBridgeYaraScan::test_yara_scan_returns_list"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0182 hardened by adding exact count, rule name, and string offset assertions against the PE DOS stub oracle. G0183 deleted as weaker duplicate; test_yara_scan_returns_list is the covering sibling with full value assertions. G0184 hardened by adding 'namespace' to _EXPECTED_MATCH_KEYS (which production always emits), asserting rule=='MZHeader', namespace is a string, and the string hit has identifier '$mz' at offset 0."
+}

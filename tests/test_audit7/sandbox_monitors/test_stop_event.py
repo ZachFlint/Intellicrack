@@ -222,10 +222,10 @@ def test_start_monitors_skips_underscore_prefixed_scripts(tmp_path: Path) -> Non
         encoding="utf-8",
     )
 
-    helper_source = "param([string]$LogDir='.')\nStart-Sleep -Seconds 300\n"
+    helper_source = "param([string]$LogDir='.')\nStart-Sleep -Seconds 10\n"
     (scripts_dir / "_helper.ps1").write_text(helper_source, encoding="utf-8")
 
-    monitor_source = "param([string]$LogDir='.')\nStart-Sleep -Seconds 300\n"
+    monitor_source = "param([string]$LogDir='.')\nStart-Sleep -Seconds 10\n"
     (scripts_dir / "monitor.ps1").write_text(monitor_source, encoding="utf-8")
 
     launched_pids: list[int] = []
@@ -288,7 +288,12 @@ def test_monitor_opens_named_stop_event(script_path: Path) -> None:
     ],
 )
 def test_monitor_emits_lifecycle_records(script_path: Path, lifecycle_helper: str) -> None:
-    """Each monitor must emit ``started`` and ``stopped`` lifecycle records.
+    """Each monitor must emit ``started`` and ``stopped`` records inside the ``finally`` block.
+
+    Asserts that both lifecycle calls are present in the script source and that
+    the ``stopped`` call appears structurally after the outermost ``} finally {``
+    marker, proving it cannot be inside a dead-code branch that precedes the
+    ``finally`` clause.
 
     Args:
         script_path: Path to the monitor script under test.
@@ -296,8 +301,26 @@ def test_monitor_emits_lifecycle_records(script_path: Path, lifecycle_helper: st
     """
     text = script_path.read_text(encoding="utf-8")
     assert lifecycle_helper in text, f"{script_path.name} must define {lifecycle_helper}"
-    assert f"{lifecycle_helper} -State 'started'" in text
-    assert f"{lifecycle_helper} -State 'stopped'" in text
+
+    started_call = f"{lifecycle_helper} -State 'started'"
+    stopped_call = f"{lifecycle_helper} -State 'stopped'"
+    assert started_call in text, (
+        f"{script_path.name} must call {lifecycle_helper} with -State 'started'"
+    )
+    assert stopped_call in text, (
+        f"{script_path.name} must call {lifecycle_helper} with -State 'stopped'"
+    )
+
+    finally_pos = text.rfind("} finally {")
+    stopped_pos = text.rfind(stopped_call)
+    assert finally_pos != -1, (
+        f"{script_path.name} must contain a top-level '}} finally {{' block"
+    )
+    assert stopped_pos > finally_pos, (
+        f"{script_path.name}: '{stopped_call}' (offset {stopped_pos}) must appear "
+        f"after the outermost '}} finally {{' (offset {finally_pos}); "
+        f"a call placed in a branch before 'finally' does not guarantee shutdown telemetry"
+    )
 
 
 # ----------------------------------------------------------------------

@@ -538,11 +538,42 @@ class TestAttachQemuAgentsSetsAgentProperty:
     """After ``_attach_qemu_agents`` succeeds, ``sandbox.agent`` is a connected client."""
 
     @pytest.mark.asyncio
-    async def test_agent_property_is_none_before_attach(self) -> None:
-        """``sandbox.agent`` is ``None`` before ``_attach_qemu_agents`` runs."""
-        cfg = QEMUConfig(guest_os=GuestOS.WINDOWS, agent_port=_free_port())
+    async def test_agent_property_is_none_before_attach(
+        self,
+        listening_server: int,
+    ) -> None:
+        """``sandbox.agent`` transitions from ``None`` to a connected client after attach.
+
+        Asserts the concrete before/after state transition: ``sandbox.agent``
+        is ``None`` immediately after construction (init invariant), then
+        becomes a live ``GuestAgentClient`` whose ``is_connected`` attribute
+        is ``True`` once ``_attach_qemu_agents`` succeeds.  The oracle is
+        independent: after attach, both ``isinstance`` and ``is_connected``
+        must hold simultaneously — a no-op or broken ``_attach_qemu_agents``
+        leaves ``self._agent`` as ``None`` and fails the after-state assertion.
+
+        Args:
+            listening_server: Port of the real TCP echo server fixture.
+        """
+        cfg = QEMUConfig(
+            guest_os=GuestOS.WINDOWS,
+            agent_port=listening_server,
+            agent_connect_timeout=5.0,
+        )
         sandbox = _AttachTestSandbox(config=SandboxConfig(), qemu_config=cfg)
-        assert sandbox.agent is None, "sandbox.agent must be None before _attach_qemu_agents is called"
+
+        agent_before = sandbox.agent
+        assert agent_before is None, "sandbox.agent must be None before _attach_qemu_agents is called"
+
+        await sandbox.attach_agents()
+
+        agent_after = sandbox.agent
+        assert agent_after is not None, "sandbox.agent must not be None after _attach_qemu_agents succeeds"
+        assert agent_after.is_connected is True, (
+            "sandbox.agent.is_connected must be True; real GuestAgentClient.connect was not called or failed"
+        )
+
+        await agent_after.disconnect()
 
     @pytest.mark.asyncio
     async def test_agent_property_is_guest_agent_client_after_attach(

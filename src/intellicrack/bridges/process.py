@@ -111,6 +111,7 @@ from intellicrack.bridges.win32_types import (
     SERVICE_WIN32,
     STACKFRAME64,
     SYMBOL_INFO,
+    SYNCHRONIZE,
     SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX,
     TH32CS_SNAPHEAPLIST,
     TH32CS_SNAPMODULE,
@@ -4554,21 +4555,27 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
     # Service management
     # ------------------------------------------------------------------
 
-    async def list_services(self, filter_pid: int | None = None) -> list[dict[str, object]]:
-        """List Windows services, optionally filtered by owning PID.
+    def _configure_scm_prototypes(
+        self,
+    ) -> tuple[Callable[..., int], Callable[..., int], Callable[..., int]]:
+        """Configure advapi32 SCM ctypes prototypes for service enumeration.
 
-        Args:
-            filter_pid: Filter to services owned by this PID.
+        Sets ``restype``/``argtypes`` on ``OpenSCManagerW``,
+        ``EnumServicesStatusExW``, and ``CloseServiceHandle`` so the 64-bit
+        ``SC_HANDLE`` returned by the SCM is not truncated to 32 bits by the
+        default ``c_int`` return type. Without this, a high 64-bit handle is
+        sign/zero truncated and ``EnumServicesStatusExW`` fails with
+        ``ERROR_INVALID_HANDLE``.
 
         Returns:
-            list[dict[str, object]]: List of service dicts.
+            tuple[Callable[..., int], Callable[..., int], Callable[..., int]]:
+                The ``(OpenSCManagerW, EnumServicesStatusExW,
+                CloseServiceHandle)`` callables with prototypes configured.
 
         Raises:
-            ToolError: If operation fails.
+            ToolError: If advapi32 is unavailable.
         """
-        _logger.debug("process_list_services_started", filter_pid=filter_pid)
         if self._advapi32 is None:
-            _logger.error("advapi32_unavailable", operation="list_services")
             raise ToolError(_ERR_ADVAPI32_NA)
 
         open_scm = self._advapi32.OpenSCManagerW
@@ -4593,6 +4600,27 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
         close_svc = self._advapi32.CloseServiceHandle
         close_svc.restype = wintypes.BOOL
         close_svc.argtypes = [wintypes.SC_HANDLE]
+
+        return open_scm, enum_svc, close_svc
+
+    async def list_services(self, filter_pid: int | None = None) -> list[dict[str, object]]:
+        """List Windows services, optionally filtered by owning PID.
+
+        Args:
+            filter_pid: Filter to services owned by this PID.
+
+        Returns:
+            list[dict[str, object]]: List of service dicts.
+
+        Raises:
+            ToolError: If operation fails.
+        """
+        _logger.debug("process_list_services_started", filter_pid=filter_pid)
+        if self._advapi32 is None:
+            _logger.error("advapi32_unavailable", operation="list_services")
+            raise ToolError(_ERR_ADVAPI32_NA)
+
+        open_scm, enum_svc, close_svc = self._configure_scm_prototypes()
 
         scm = open_scm(None, None, SC_MANAGER_ENUMERATE_SERVICE)
         if not scm:
@@ -5928,7 +5956,10 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         sym_from_addr.restype = wintypes.BOOL
 
         displacement = ctypes.c_ulonglong(0)
-        sym_header_size = ctypes.sizeof(SYMBOL_INFO) - ctypes.sizeof(ctypes.c_char * 1024) + ctypes.sizeof(ctypes.c_char)
+        name_field_offset: int = SYMBOL_INFO.Name.offset
+        struct_alignment = ctypes.alignment(SYMBOL_INFO)
+        unaligned_header = name_field_offset + ctypes.sizeof(ctypes.c_char)
+        sym_header_size = -(-unaligned_header // struct_alignment) * struct_alignment
         sym_buf_size = sym_header_size + _MAX_SYM_NAME * ctypes.sizeof(ctypes.c_char)
         sym_buf = (ctypes.c_char * sym_buf_size)()
         sym_ptr = ctypes.cast(sym_buf, ctypes.POINTER(SYMBOL_INFO))
@@ -5942,7 +5973,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             sym_buf,
         ):
             name_len = min(sym_ptr[0].NameLen, _MAX_SYM_NAME)
-            raw_name: bytes = bytes(sym_buf[sym_header_size : sym_header_size + name_len])
+            raw_name: bytes = bytes(sym_buf[name_field_offset : name_field_offset + name_len])
             return raw_name.rstrip(b"\x00").decode("utf-8", errors="ignore"), displacement.value
         return "", 0
 
@@ -6541,22 +6572,25 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         if self._advapi32 is None:
             raise ToolError(_ERR_ADVAPI32_NA)
 
-        scm = self._advapi32.OpenSCManagerW(None, None, SC_MANAGER_ENUMERATE_SERVICE)
+        open_scm, enum_svc, close_svc = self._configure_scm_prototypes()
+
+        scm = open_scm(None, None, SC_MANAGER_ENUMERATE_SERVICE)
         if not scm:
             raise ToolError(_ERR_SCM_OPEN_FAILED)
 
         state_filter = SERVICE_ACTIVE if active else SERVICE_STATE_ALL
 
         try:
-            services = self._enumerate_services_by_state(scm, state_filter)
+            services = self._enumerate_services_by_state(scm, enum_svc, state_filter)
             _logger.debug("enumerate_services_completed", active=active, count=len(services))
             return services
         finally:
-            self._advapi32.CloseServiceHandle(scm)
+            close_svc(scm)
 
     def _enumerate_services_by_state(
         self,
         scm: int,
+        enum_svc: Callable[..., int],
         state_filter: int,
     ) -> list[dict[str, object]]:
         """Size-probe and enumerate services matching ``state_filter``.
@@ -6564,6 +6598,8 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         Args:
             scm: Open SCM handle with ``SC_MANAGER_ENUMERATE_SERVICE``
                 access.
+            enum_svc: ``EnumServicesStatusExW`` callable with argtypes
+                already configured.
             state_filter: ``SERVICE_ACTIVE``, ``SERVICE_INACTIVE``, or
                 ``SERVICE_STATE_ALL``.
 
@@ -6580,7 +6616,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         services_returned = wintypes.DWORD(0)
         resume_handle = wintypes.DWORD(0)
 
-        self._advapi32.EnumServicesStatusExW(
+        enum_svc(
             scm,
             0,
             SERVICE_WIN32,
@@ -6598,7 +6634,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
             return []
 
         buffer = ctypes.create_string_buffer(buf_size)
-        if not self._advapi32.EnumServicesStatusExW(
+        if not enum_svc(
             scm,
             0,
             SERVICE_WIN32,
@@ -6638,7 +6674,9 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
             raise ToolError(_ERR_KERNEL32_NA)
 
         inherit_handle = False
-        handle: int = self._kernel32.OpenThread(THREAD_QUERY_INFORMATION, inherit_handle, tid)
+        self._kernel32.OpenThread.restype = wintypes.HANDLE
+        self._kernel32.OpenThread.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        handle: int = self._kernel32.OpenThread(THREAD_QUERY_INFORMATION | SYNCHRONIZE, inherit_handle, tid)
         if not handle:
             error_code: int = ctypes.get_last_error()
             msg = f"{_ERR_THREAD_OPEN_FAILED} (tid={tid}, error={error_code})"
@@ -6665,6 +6703,8 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         """
         if self._kernel32 is None:
             return {"result": "failed", "elapsed_us": 0}
+        self._kernel32.WaitForSingleObject.restype = wintypes.DWORD
+        self._kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
         start = time.perf_counter()
         wait_result: int = self._kernel32.WaitForSingleObject(handle, timeout_ms)
         elapsed_us = int((time.perf_counter() - start) * 1_000_000)

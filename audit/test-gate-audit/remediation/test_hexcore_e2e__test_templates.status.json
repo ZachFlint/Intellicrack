@@ -1,0 +1,65 @@
+{
+  "file": "tests/test_hexcore_e2e/test_templates.py",
+  "findings_addressed": [
+    {
+      "id": "G0236",
+      "test": "TestListTemplates::test_returns_nonempty_list",
+      "action": "deleted",
+      "oracle": "Covered by test_entries_are_name_description_pairs which asserts all three built-in names are present AND each description contains the exact Rust-source prefix (PE DOS Header / ELF64 File Header / ZIP Local File Header) from _EXPECTED_BUILTIN_DESCRIPTIONS",
+      "documented_mutation": "N/A - deleted; the stronger sibling test_entries_are_name_description_pairs fails if any built-in name is absent or its description omits the required prefix"
+    },
+    {
+      "id": "G0237",
+      "test": "TestListTemplates::test_entries_are_name_description_pairs",
+      "action": "hardened",
+      "oracle": "Independent oracle: _EXPECTED_BUILTIN_TEMPLATE_NAMES = {IMAGE_DOS_HEADER, Elf64_Ehdr, ZIP_LOCAL_FILE_HEADER} from Rust source; _EXPECTED_BUILTIN_DESCRIPTIONS maps each name to a required substring from the Rust StructTemplate description field (pe.rs / elf.rs / zip.rs). A stub returning [('x', 'y')] fails name lookup. A stub returning correct names with empty or wrong descriptions fails the prefix check.",
+      "documented_mutation": "Remove the registration of IMAGE_DOS_HEADER in register_templates() in pe.rs -> 'built-in template IMAGE_DOS_HEADER missing from list_templates()' assertion fails"
+    },
+    {
+      "id": "G0238",
+      "test": "TestListTemplatesDetailed::test_returns_nonempty_list",
+      "action": "deleted",
+      "oracle": "Covered by three strengthened siblings: test_dos_header_field_count_positive asserts field_count == 19 (Windows SDK count, not > 0); test_elf64_field_count_positive asserts field_count == 15 (ELF64 Ehdr fields including endianness marker, from elf.rs); test_zip_template_field_count_positive asserts field_count == 11 (APPNOTE.TXT LFH fields, from zip.rs). All three assert exact equality, not positivity.",
+      "documented_mutation": "N/A - deleted; exact equality assertions in siblings catch any field addition or deletion"
+    },
+    {
+      "id": "G0239",
+      "test": "TestApplyPETemplate::test_apply_returns_nonempty_fields",
+      "action": "hardened",
+      "oracle": "Independent struct oracle: (1) struct.unpack_from('<H', pe_bytes, 0)[0] == 23117 (0x5A4D, MZ magic) - asserted before apply_template; e_magic display_value must contain '23117' or '5A4D'; (2) struct.unpack_from('<i', pe_bytes, 0x3C)[0] == 128 (0x80, e_lfanew set by fixture builder) - asserted before apply_template; e_lfanew display_value must contain '128'; (3) len(fields) == 19 (Windows SDK IMAGE_DOS_HEADER); (4) all three leading field names (e_magic, e_cblp, e_cp) and last field e_lfanew present by name; (5) max(offset+size) == 64 (struct byte span). Oracle values are computed from fixture bytes independently of the template engine.",
+      "documented_mutation": "Rename field 'e_magic' to 'magic' in pe.rs -> 'field e_magic missing from IMAGE_DOS_HEADER parse' assertion fails"
+    },
+    {
+      "id": "G0240",
+      "test": "TestApplyELFTemplate::test_apply_returns_fields",
+      "action": "hardened",
+      "oracle": "Independent struct oracle: (1) elf_bytes[:4] == b'\\x7fELF' asserted before apply_template; (2) struct.unpack_from('<H', elf_bytes, 18)[0] == oracle_e_machine (0x3E for x86-64 from fixture builder); e_machine display_value must contain that value; (3) e_ident display_value must contain '7F', '45', '4C', '46' (space-separated hex of ELF magic from 16-byte e_ident block); (4) all five known field names (e_ident, e_type, e_machine, e_version, e_entry) present; (5) e_ident size == 16 per ELF spec. Oracle values computed from fixture bytes independently.",
+      "documented_mutation": "Rename field 'e_machine' to 'machine' in elf.rs -> 'field e_machine missing from Elf64_Ehdr parse' assertion fails"
+    },
+    {
+      "id": "G0241",
+      "test": "TestApplyZIPTemplate::test_apply_returns_fields",
+      "action": "hardened",
+      "oracle": "Independent struct oracle: (1) struct.unpack_from('<I', zip_bytes, 0)[0] == 0x04034B50 (PK local file header signature) asserted before apply_template; signature display_value must contain the hex or decimal representation; (2) struct.unpack_from('<H', zip_bytes, 26)[0] == oracle_filename_len (filename length at fixed APPNOTE offset 26); filename_length display_value must contain that value; (3) all five known field names (signature, version_needed, compression_method, crc32, filename_length) present. Oracle values computed from fixture bytes independently.",
+      "documented_mutation": "Rename field 'filename_length' to 'fname_len' in zip.rs -> 'field filename_length missing from ZIP_LOCAL_FILE_HEADER parse' assertion fails"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    {
+      "test": "TestListTemplates::test_returns_nonempty_list",
+      "covered_by": "TestListTemplates::test_entries_are_name_description_pairs (asserts all three built-in names present with description substrings matching Rust source)"
+    },
+    {
+      "test": "TestListTemplatesDetailed::test_returns_nonempty_list",
+      "covered_by": "TestListTemplatesDetailed::test_dos_header_field_count_positive (field_count == 19, category == PE), test_elf64_field_count_positive (field_count == 15, category == ELF), test_zip_template_field_count_positive (field_count == 11, category == ZIP)"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "All six weak-gate IDs resolved. G0236 and G0238 deleted with stronger sibling coverage. G0237 hardened with exact description-prefix oracle from Rust source (not just non-empty). G0239 hardened with full struct.unpack oracle: pre-compute e_magic (23117) and e_lfanew (128) from fixture bytes before calling apply_template, assert field names present and display_values contain oracle values, assert count == 19 and span == 64. G0240 hardened with ELF struct oracle: pre-compute e_machine from fixture bytes, assert ELF magic bytes in e_ident display, assert known field names present, assert e_ident size == 16. G0241 hardened with ZIP struct oracle: pre-compute PK signature (0x04034B50) and filename_length from fixture bytes at APPNOTE-specified offsets, assert both values in respective display_values, assert known field names present. Detailed field counts hardened from > 0 to exact equality (19 / 15 / 11) derived from Rust template source."
+}

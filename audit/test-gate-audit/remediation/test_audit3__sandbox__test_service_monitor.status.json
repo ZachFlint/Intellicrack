@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_audit3/sandbox/test_service_monitor.py",
+  "findings_addressed": [
+    {
+      "id": "G0014",
+      "test": "test_script_idempotency_dedupes_rapid_duplicate_transitions",
+      "action": "hardened",
+      "oracle": "Independent oracle: a PowerShell harness extracts the exact production function bodies from service_monitor.ps1 verbatim (Format-Field, Write-ErrorRecord, Write-PipeRecord, Write-JsonlRecord, ConvertTo-StateName, Test-DuplicateTransition, Publish-LifecycleTransition) and calls Publish-LifecycleTransition five times in rapid succession with an identical (service='TestDedup', state='Stopped') synthetic PSCustomObject, then waits 350ms (> 250ms dedup window) and calls it once more. The harness counts JSONL records written to the log file and emits DEDUP_COUNT=N to stdout. The test asserts N == 2: one record from the first burst (the four duplicates are suppressed by Test-DuplicateTransition) and one record after the dedup window expires. The count 2 is computed independently from the JSONL file on disk, not from the call count.",
+      "documented_mutation": "In service_monitor.ps1 at line 196, remove or comment out 'if (Test-DuplicateTransition -ServiceName $serviceName -State \"$EventKind::$stateName\") { return }' so that Publish-LifecycleTransition writes a JSONL record on every call without deduplication. Under that mutation all six calls write records, producing DEDUP_COUNT=6, which fails the 'assert actual_count == 2' assertion."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The previously-weak test used a per-state count bound (<= 4) that was too loose to distinguish working dedup from no dedup, because each natural service stop/start cycle only visits each state once so the count never reaches 4 regardless. The re-hardened test replaces the full service stop/start cycle with a synthetic call harness that extracts the production function bodies verbatim (no reimplementation) and directly calls Publish-LifecycleTransition with injected rapid duplicate events within the 250ms window. The JSONL record count of 2 (1 suppressed burst + 1 post-window record) is the independent oracle. The test no longer requires admin privileges or the Spooler service. Verified passing in Docker sandbox (7 passed / 1 skipped for lifecycle test needing admin)."
+}

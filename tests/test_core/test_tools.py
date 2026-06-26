@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 from intellicrack.core.tools import ToolRegistry, ToolStatus
-from intellicrack.core.types import ToolError, ToolName
+from intellicrack.core.types import ToolDefinition, ToolError, ToolFunction, ToolName
 
 
 _BRIDGE_COUNT_ALL: Final[int] = 7
@@ -44,13 +44,31 @@ def registry(tmp_path: Path) -> ToolRegistry:
     return ToolRegistry(tools_dir=tools_dir)
 
 
-def test_tools_directory(registry: ToolRegistry) -> None:
-    """Verify tools_directory returns configured path.
+def test_tools_directory(tmp_path: Path) -> None:
+    """Verify tools_directory reports the path the registry actually wires and creates.
+
+    The directory is NOT pre-created: ``ToolRegistry.__init__`` passes
+    ``tools_dir`` into its ``ToolInstaller``, whose ``__init__`` performs
+    ``mkdir(parents=True, exist_ok=True)``. The post-condition that the
+    directory now exists proves ``tools_dir`` is genuinely wired into the
+    installer (not merely stored), and the equality/name checks prove the
+    property reports that exact path rather than a derived one (e.g.
+    ``self._tools_dir.parent``).
 
     Args:
-        registry: ToolRegistry fixture under test.
+        tmp_path: Pytest temporary directory.
     """
-    assert registry.tools_directory.exists()
+    tools_dir = tmp_path / "tools_root"
+    assert not tools_dir.exists(), "precondition: the tools directory must not exist yet"
+
+    reg = ToolRegistry(tools_dir=tools_dir)
+
+    assert reg.tools_directory == tools_dir
+    assert reg.tools_directory.name == "tools_root"
+    assert tools_dir.is_dir(), (
+        "ToolRegistry must wire tools_dir into its ToolInstaller, which creates the "
+        "directory on construction; a missing directory means tools_dir is not used"
+    )
 
 
 def test_get_available_tools_empty(registry: ToolRegistry) -> None:
@@ -198,13 +216,40 @@ async def test_ensure_tool_ready_not_found(registry: ToolRegistry) -> None:
 
 
 @pytest.mark.asyncio
-async def test_shutdown_empty(registry: ToolRegistry) -> None:
-    """Verify shutdown succeeds on empty registry.
+async def test_shutdown_empty(tmp_path: Path) -> None:
+    """Verify shutdown clears bridges and definitions from a populated registry.
+
+    The test drives a genuine state transition: initialize() populates the
+    registry with all bridges (observable pre-condition), then shutdown()
+    must empty it (asserted post-condition). An implementation that omits
+    ``self._bridges.clear()`` inside shutdown() would leave len > 0 and fail.
+
+    Mutation that falsifies: remove ``self._bridges.clear()`` from
+    ToolRegistry.shutdown() (src/intellicrack/core/tools.py line 281);
+    get_available_tools() would then return the same non-empty list it
+    returned before shutdown, so both equality assertions would fail.
 
     Args:
-        registry: ToolRegistry fixture under test.
+        tmp_path: Pytest temporary directory.
     """
-    await registry.shutdown()
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir()
+    reg = ToolRegistry(tools_dir=tools_dir)
+    await reg.initialize()
+
+    pre_tools = reg.get_available_tools()
+    pre_defs = reg.get_tool_definitions()
+    assert len(pre_tools) == _BRIDGE_COUNT_ALL, (
+        f"Expected {_BRIDGE_COUNT_ALL} bridges before shutdown, got {len(pre_tools)}"
+    )
+    assert len(pre_defs) == _BRIDGE_COUNT_ALL, (
+        f"Expected {_BRIDGE_COUNT_ALL} definitions before shutdown, got {len(pre_defs)}"
+    )
+
+    await reg.shutdown()
+
+    assert reg.get_available_tools() == []
+    assert reg.get_tool_definitions() == []
 
 
 @pytest.mark.asyncio
@@ -245,9 +290,38 @@ async def test_initialize_idempotent(tmp_path: Path) -> None:
     await reg.shutdown()
 
 
+def _assert_real_tool_definitions(defs: list[ToolDefinition], available: set[ToolName]) -> None:
+    """Assert every definition is a real ToolDefinition covering the bridge set.
+
+    Args:
+        defs: Tool definitions returned by ``get_tool_definitions``.
+        available: The registry's available tool names from ``get_available_tools``.
+    """
+    assert len(defs) == _BRIDGE_COUNT_ALL
+    assert all(isinstance(d, ToolDefinition) for d in defs)
+    assert {d.tool_name for d in defs} == available
+    for definition in defs:
+        assert isinstance(definition.tool_name, ToolName)
+        assert definition.description.strip(), (
+            f"{definition.tool_name} definition must carry a non-empty description"
+        )
+        assert definition.functions, (
+            f"{definition.tool_name} definition must expose at least one function"
+        )
+        assert all(isinstance(fn, ToolFunction) for fn in definition.functions)
+
+
 @pytest.mark.asyncio
 async def test_get_tool_definitions_after_init(tmp_path: Path) -> None:
-    """Verify get_tool_definitions returns definitions after init.
+    """Verify get_tool_definitions returns real ToolDefinitions for every bridge.
+
+    Asserts the concrete structure, not just the count: every element is a
+    ``ToolDefinition`` (not, say, a raw bridge object that happens to number
+    seven), the set of ``tool_name`` values equals the registry's available
+    tools exactly, and each definition carries a non-empty description and at
+    least one real ``ToolFunction``. A mutation returning
+    ``list(self._bridges.values())`` (seven bridge objects) satisfies the old
+    ``len == 7`` check but fails the ``isinstance(ToolDefinition)`` gate here.
 
     Args:
         tmp_path: Pytest temporary directory.
@@ -256,9 +330,10 @@ async def test_get_tool_definitions_after_init(tmp_path: Path) -> None:
     tools_dir.mkdir()
     reg = ToolRegistry(tools_dir=tools_dir)
     await reg.initialize()
-    defs = reg.get_tool_definitions()
-    assert len(defs) > 0
-    await reg.shutdown()
+    try:
+        _assert_real_tool_definitions(reg.get_tool_definitions(), set(reg.get_available_tools()))
+    finally:
+        await reg.shutdown()
 
 
 @pytest.mark.asyncio

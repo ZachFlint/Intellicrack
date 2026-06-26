@@ -1,0 +1,17 @@
+[
+  "test_hexcore_e2e__c1",
+  "test_hexcore_e2e__c2",
+  "test_hexcore_e2e__c3",
+  "test_providers__c1",
+  "test_providers__c2",
+  "test_ui__c1",
+  "test_ui__c2",
+  "test_bridges",
+  "test_audit4",
+  "test_sandbox",
+  "test_core",
+  "test_audit3",
+  "test_audit7",
+  "test_audit5",
+  "test_hexpat"
+]

@@ -1,0 +1,54 @@
+{
+  "file": "tests/test_bridges/test_hex_editor_top_audit1.py",
+  "findings_addressed": [
+    {
+      "id": "G0069",
+      "test": "TestF0005StateLockUsage::test_close_file_holds_state_lock",
+      "action": "hardened",
+      "oracle": "All five fields mutated inside the lock-protected block in close_file (document, binary_loaded, target_path, _cursor_offset, _selection) are independently asserted against their sentinel values after the call; before the call, their non-sentinel values confirm the pre-condition held.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py close_file(), remove the line `self._state.binary_loaded = False` — the assertion `assert bridge.state.binary_loaded is False` will then fail."
+    },
+    {
+      "id": "G0070",
+      "test": "TestF0013PeImportsExportsDiskPath::test_get_pe_imports_succeeds_on_unmodified_pe",
+      "action": "hardened",
+      "oracle": "Real Windows system DLL kernel32.dll is used as the fixture; the oracle is the independently known fact that kernel32.dll always imports from ntdll.dll. Result must be non-empty, each entry must have keys dll/function/address/ordinal with correct types, and at least one dll name must contain 'ntdll'.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py _walk_pe_imports(), change `results.extend(_collect_import_entries(entry))` to `pass` — the assertion `assert len(result) > 0` will then fail."
+    },
+    {
+      "id": "G0071",
+      "test": "TestF0013PeImportsExportsDiskPath::test_get_pe_imports_succeeds_after_modification",
+      "action": "hardened",
+      "oracle": "A spy wrapping pefile.PE records keyword arguments passed to each call. After writing to the document, _document_disk_path_if_unmodified() must return None, so _open_pe_for_inspection must call pefile.PE(data=...) not pefile.PE(name=...). The spy asserts 'data' is present and 'name' is absent in the last call kwargs.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py _document_disk_path_if_unmodified(), remove the `if hasattr(self.document, 'is_modified') and bool(self.document.is_modified()): return None` block — after modification the disk path would still be returned, causing pefile.PE(name=...) to be called instead of data=, making the assertion `assert 'name' not in last_call` fail."
+    },
+    {
+      "id": "G0072",
+      "test": "TestF0014YaraScanDiskPath::test_yara_scan_unmodified_uses_filepath",
+      "action": "hardened",
+      "oracle": "A real YARA rule matching the PE MZ magic bytes ({ 4D 5A }) is compiled via YaraScanner.compile_source_async (called internally by bridge.yara_scan) and the on-disk fixture is known to start with MZ at offset 0. Side-effect spies on scan_file_async and scan_data_async delegate to the real unbound methods via an explicit delegate instance, correctly threading the self argument that AsyncMock(wraps=<unbound>) omits. For an unmodified document scan_file_async must be called exactly once and scan_data_async must not be called. The match result is independently asserted: mz_marker rule must match, result dict must have keys rule/tags/meta/namespace/strings, strings must contain a hit with identifier=$a, data=4d5a, and offset=0.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py yara_scan(), change `if disk_path is not None: ... await scanner.scan_file_async(...)` to always call `scan_data_async` — the assertion `assert spy_file.call_count == 1` will then fail."
+    },
+    {
+      "id": "G0073",
+      "test": "TestF0013PeImportsExportsDiskPath::test_get_pe_imports_does_not_raise_for_pe",
+      "action": "deleted",
+      "oracle": "TestF0013PeImportsExportsDiskPath::test_get_pe_imports_succeeds_on_unmodified_pe",
+      "documented_mutation": "N/A — test deleted as exact duplicate of test_get_pe_imports_succeeds_on_unmodified_pe; the stronger sibling now covers and exceeds the deleted test's coverage."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    {
+      "test": "TestF0013PeImportsExportsDiskPath::test_get_pe_imports_does_not_raise_for_pe",
+      "covered_by": "TestF0013PeImportsExportsDiskPath::test_get_pe_imports_succeeds_on_unmodified_pe"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0070 and G0071 now use resolve_real_pe_dll() (kernel32.dll) instead of the minimal synthetic pe_binary fixture; the synthetic fixture has no import directory so would produce an empty list, preventing a meaningful gate. Both tests have sys.platform guards and FixtureUnavailableError-based skips. G0072 fixed: the previous implementation used AsyncMock(wraps=<unbound method>) which failed because patch.object on a class replaces the descriptor, so the mock is called without self being prepended — the unbound method then received (disk_path, compiled) as (self, path) with rules missing. Fix: side_effect closures capture the unbound methods and a shared delegate_instance, then call orig_scan_file(delegate_instance, *args, **kwargs) explicitly. Rule changed from a string literal to a hex-pattern { 4D 5A } rule that is more precise. Independent oracle: fixture starts with MZ at offset 0 (built by _build_pe_binary() in conftest.py line 65), so the match offset assertion is independently verifiable. G0073 was an exact byte-for-byte duplicate of G0070 (before hardening) and was deleted."
+}

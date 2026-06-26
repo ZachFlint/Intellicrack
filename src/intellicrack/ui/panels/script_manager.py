@@ -168,8 +168,7 @@ public class LicenseAnalyzer extends GhidraScript {
             "display": "x64dbg",
             "extension": ".txt",
             "language": "x64dbg",
-            "template":\
-                        """// x64dbg script for license bypass
+            "template": """// x64dbg script for license bypass
 // Target: {target}
 
 // Set an unconditional breakpoint at the validation function entry
@@ -190,8 +189,7 @@ run
             "display": "Python",
             "extension": ".py",
             "language": "python",
-            "template":\
-                        '''"""
+            "template": '''"""
 Python analysis script for license examination.
 Target: {target}
 """

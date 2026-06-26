@@ -268,18 +268,55 @@ def test_rendered_pids_match_real_bridge_snapshot(
     real_bridge: ProcessBridge,
     tab: _ProcessTabProbe,
 ) -> None:
-    """Rendered PIDs must be a subset of a fresh real bridge snapshot.
+    """Rendered PIDs must be a subset of fresh real bridge snapshots.
+
+    Takes a bridge snapshot before and after the tab refresh so that PIDs
+    legitimately created or destroyed during the small churn window are still
+    covered. Every PID rendered by the tab must appear in at least one of those
+    two snapshots. A fabricated or hardcoded PID set would fail because those
+    PIDs would not exist in any real OS snapshot.
+
+    The structural oracle checks that every rendered PID is a non-negative
+    integer (PID 0 is the Windows System Idle Process, which the real
+    enumeration legitimately includes), which a fabricated ``str`` or ``None``
+    payload cannot satisfy. The subset check proves the rendered set is derived
+    from the genuine ``list_processes_detailed`` enumeration and not from any
+    injected data.
 
     Args:
         qapp: Qt application driving the event loop.
         real_bridge: Real bridge against the live system.
         tab: ProcessTab probe bound to the real bridge.
     """
-    snapshot = run_bridge_sync(real_bridge.list_processes_detailed())
-    real_pids = {p.get("pid") for p in snapshot if isinstance(p.get("pid"), int)}
-    assert os.getpid() in real_pids
+    snapshot_before = run_bridge_sync(real_bridge.list_processes_detailed())
+    pids_before: set[int] = {
+        int(p["pid"])
+        for p in snapshot_before
+        if isinstance(p.get("pid"), int)
+    }
+    assert os.getpid() in pids_before, "own PID missing from pre-refresh bridge snapshot"
 
     tab.refresh()
     populated = pump_until(qapp, lambda: tab.row_count() > 0)
-    assert populated
-    assert os.getpid() in tab.rendered_pids()
+    assert populated, "process table never populated after refresh"
+
+    snapshot_after = run_bridge_sync(real_bridge.list_processes_detailed())
+    pids_after: set[int] = {
+        int(p["pid"])
+        for p in snapshot_after
+        if isinstance(p.get("pid"), int)
+    }
+
+    real_pids_union = pids_before | pids_after
+    rendered = tab.rendered_pids()
+
+    assert rendered, "rendered PID set is empty"
+    assert all(isinstance(pid, int) and pid >= 0 for pid in rendered), (
+        "rendered set contains a negative or non-integer PID"
+    )
+    assert os.getpid() in rendered, "own PID missing from rendered set"
+
+    spurious = rendered - real_pids_union
+    assert not spurious, (
+        f"rendered PIDs not present in either bridge snapshot: {spurious!r}"
+    )

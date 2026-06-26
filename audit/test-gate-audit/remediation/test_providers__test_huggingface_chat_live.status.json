@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_providers/test_huggingface_chat_live.py",
+  "findings_addressed": [
+    {
+      "id": "G0259",
+      "test": "test_live_chat_stream_yields_and_captures_usage",
+      "action": "hardened",
+      "oracle": "Independent oracle: HuggingFaceProvider.get_pending_usage() must return a non-None UsageInfo with prompt_tokens > 0, completion_tokens > 0, and total_tokens >= prompt_tokens + completion_tokens. This structural contract is verified unconditionally against the live streaming path, matching the non-streaming test pattern in test_live_chat_returns_content_and_usage.",
+      "documented_mutation": "In src/intellicrack/providers/huggingface.py line 684, change `if usage is not None:` to `if False:` (or delete the block) so _pending_usage is never populated — the assertion `assert usage is not None` at the new test line 147 would fail."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0259 was a conditional-never-runs finding: the entire usage assertion block was guarded by `if usage is not None:`, which silently passes when the streaming path fails to populate _pending_usage. The fix removes the guard and asserts usage is not None unconditionally, then checks prompt_tokens > 0, completion_tokens > 0, and total_tokens >= prompt_tokens + completion_tokens. Also strengthened chunk assertion to assert len(chunks) > 0 (not just any()) for clarity. No production code was modified."
+}

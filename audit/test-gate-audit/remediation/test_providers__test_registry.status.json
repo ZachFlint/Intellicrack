@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_providers/test_registry.py",
+  "findings_addressed": [
+    {
+      "id": "G0291",
+      "test": "TestF0015SingletonResetAndDI::test_credential_loader_passed_at_first_construction",
+      "action": "hardened",
+      "oracle": "Two independent assertions: (1) getattr(reg, '_credential_loader') is concrete_loader - direct attribute inspection proves the DI argument was stored, not discarded. (2) ProviderName.ANTHROPIC in concrete_loader.calls - the _StaticCredentialLoader call log proves the registry actually invoked the loader when connect_provider() was called without explicit credentials. (3) provider.is_connected - proves the credentials fetched by the loader were successfully used to complete the connection.",
+      "documented_mutation": "In src/intellicrack/providers/registry.py ProviderRegistry.__init__, change `self._credential_loader = credential_loader` to `self._credential_loader = None` — the assert stored_loader is concrete_loader assertion will fail immediately."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Removed the unused CredentialLoaderProtocol import (the old test used it for a type annotation on the local variable; the hardened test uses the concrete _StaticCredentialLoader type directly). The test is now fully falsifiable: asserting the stored loader identity catches silent discard of the DI argument, and asserting the call log exercises the end-to-end path from connect_provider through the loader to connect()."
+}

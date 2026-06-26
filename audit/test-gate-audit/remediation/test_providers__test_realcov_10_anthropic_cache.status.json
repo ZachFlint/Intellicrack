@@ -1,0 +1,36 @@
+{
+  "file": "tests/test_providers/test_realcov_10_anthropic_cache.py",
+  "findings_addressed": [
+    {
+      "id": "G0278-A",
+      "test": "TestApplyCacheBreakpoints::test_breakpoint_count_within_anthropic_limit",
+      "action": "hardened",
+      "oracle": "Independent recursive count of cache_control keys over the mutated kwargs dict, asserted to equal exactly 3 (system block + last tool + last message block). The previous upper-bound-only check (`<= 4`) admitted 0 markers and could not detect a gutted implementation. The new exact equality check (`== 3`) is falsified by any implementation that omits any of the three placement sites.",
+      "documented_mutation": "In src/intellicrack/providers/anthropic.py _apply_cache_breakpoints, remove the `AnthropicProvider._cache_last_message_block(messages_list)` call (lines 341-342). This drops the message-block breakpoint, reducing the count from 3 to 2 and failing `assert n == 3`."
+    },
+    {
+      "id": "G0278-B",
+      "test": "TestAnthropicCacheLive::test_repeated_cached_prompt_reports_cache_read",
+      "action": "red-prod-defect",
+      "oracle": "Hard assert `usage is not None` (replaces the former `pytest.skip` guard). Independent re-computation invariant: `total_tokens == prompt_tokens + completion_tokens`. Cache-hit gate: `cache_read_tokens is not None and > 0` stays red because UsageInfo lacks the field and _build_usage_from_message never extracts cache_read_input_tokens.",
+      "documented_mutation": "In src/intellicrack/providers/anthropic.py _build_usage_from_message, change `total_tokens=input_tokens + output_tokens` to `total_tokens=input_tokens + output_tokens + 1` — that breaks the `usage.total_tokens == usage.prompt_tokens + usage.completion_tokens` assertion immediately. Alternatively, make the function always `return None` — that breaks the new `assert usage is not None` gate."
+    }
+  ],
+  "prod_defects": [
+    {
+      "src_file": "src/intellicrack/providers/anthropic.py",
+      "line": 394,
+      "expected": "UsageInfo returned by _build_usage_from_message should include cache_read_tokens and cache_creation_tokens fields populated from response.usage.cache_read_input_tokens and response.usage.cache_creation_input_tokens respectively, so the live gate can assert cache_read_tokens > 0 on the second identical cached request",
+      "actual": "_build_usage_from_message constructs UsageInfo with only prompt_tokens, completion_tokens, total_tokens; cache usage fields are silently discarded; UsageInfo dataclass has no cache_read_tokens attribute so getattr(usage, 'cache_read_tokens', None) returns None and the cache-hit assertion fails with AssertionError",
+      "red_test": "TestAnthropicCacheLive::test_repeated_cached_prompt_reports_cache_read"
+    }
+  ],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Two tests re-hardened in this pass. (1) test_breakpoint_count_within_anthropic_limit: replaced the tautological upper-bound-only check (`<= 4`, admits 0) with an exact-equality oracle (`== 3`) that counts all three placement sites independently of the production code path being tested. (2) test_repeated_cached_prompt_reports_cache_read: replaced the `if usage is None: pytest.skip(...)` skip guard (N3/N6 pattern — accepts-both-outcomes) with `assert usage is not None`, turning the most important regression path (missing usage extraction) into a hard failure. The cache_read_tokens gate intentionally stays RED, correctly documenting the production defect that _build_usage_from_message discards Anthropic cache usage fields."
+}

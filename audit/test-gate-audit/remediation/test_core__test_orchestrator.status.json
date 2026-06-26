@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_core/test_orchestrator.py",
+  "findings_addressed": [
+    {
+      "id": "G0108",
+      "test": "test_orchestrator_custom_config",
+      "action": "hardened",
+      "oracle": "set_confirmation_level() writes to the stored config reference; after calling it with a sentinel value, the original config object reflects the change, proving the orchestrator stores the passed-in config rather than a copy. The default OrchestratorConfig() independently confirms the default level is DESTRUCTIVE, not NONE. config.max_iterations is asserted to equal _CUSTOM_MAX_ITER (5) which is distinct from _MAX_ITER (20), so a regression that discards the kwarg fails.",
+      "documented_mutation": "In Orchestrator.__init__ change `self._config = config or OrchestratorConfig()` to `self._config = OrchestratorConfig()` (always use default); then config.confirmation_level after set_confirmation_level() would not match the orchestrator's level and the assertion `config.confirmation_level == ConfirmationLevel.ALL` after `orch.set_confirmation_level(ConfirmationLevel.ALL)` would fail because `set_confirmation_level` writes to `self._config` (the default), not the injected `config`."
+    },
+    {
+      "id": "G0109",
+      "test": "test_orchestrator_provider_registry",
+      "action": "hardened",
+      "oracle": "The same ProviderRegistry instance injected at construction time is the oracle. `orch.provider_registry is registry` asserts object identity (not just isinstance). `orch.provider_registry.list_registered() == []` uses the freshly constructed registry's own state as the expected value, which is independently known to be empty before any providers are registered.",
+      "documented_mutation": "In Orchestrator.__init__ change `self._providers = provider_registry` to `self._providers = ProviderRegistry()` (always create a fresh one); then `orch.provider_registry is registry` would fail because the returned object would be a different instance."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0108 was a no-assertion finding: the test only asserted orch.state == 'idle' which says nothing about whether the custom config was accepted. Hardened by using set_confirmation_level() as a public write path into the stored config to prove the orchestrator holds the passed-in OrchestratorConfig reference. G0109 was weak-existence: isinstance check says nothing about WHICH registry was stored. Hardened with identity check (is) plus list_registered() == [] as a behavioral oracle on the returned reference. Both tests now use only public Orchestrator APIs without accessing private attributes."
+}
