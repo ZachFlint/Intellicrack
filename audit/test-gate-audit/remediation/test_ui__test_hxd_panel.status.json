@@ -1,0 +1,63 @@
+{
+  "file": "tests/test_ui/test_hxd_panel.py",
+  "findings_addressed": [
+    {
+      "id": "G0330",
+      "test": "TestHxDPanelLifecycle::test_stop_tool_process_is_none_after_call",
+      "action": "hardened",
+      "oracle": "Inject dummy_process = QProcess() into panel.process before stop_tool(); after the call the independent fact is that _terminate_existing must set self.process = None (hxd_panel.py line 387), so panel.process is None is the independently expected post-condition.",
+      "documented_mutation": "Remove 'self.process = None' from _terminate_existing in hxd_panel.py (line 387) and the assertion 'panel.process is None' fails because process remains the injected QProcess object."
+    },
+    {
+      "id": "G0331",
+      "test": "TestHxDPanelLifecycle::test_stop_tool_clears_embedded_container",
+      "action": "hardened",
+      "oracle": "Inject dummy_container = QWidget() into panel.embedded_container before stop_tool(); after the call _terminate_existing must set self.embedded_container = None (hxd_panel.py line 398), so the post-condition is independently known.",
+      "documented_mutation": "Remove 'self.embedded_container = None' from _terminate_existing in hxd_panel.py (line 398) and the assertion 'panel.embedded_container is None' fails because embedded_container remains the injected QWidget."
+    },
+    {
+      "id": "G0332",
+      "test": "TestHxDPanelLifecycle::test_terminate_existing_sets_process_to_none",
+      "action": "hardened",
+      "oracle": "Inject dummy_process = QProcess() into panel.process before terminate_existing(); after the call _terminate_existing must set self.process = None (hxd_panel.py line 387).",
+      "documented_mutation": "Remove 'self.process = None' from _terminate_existing in hxd_panel.py (line 387) and the assertion 'panel.process is None' fails."
+    },
+    {
+      "id": "G0333",
+      "test": "TestHxDPanelLifecycle::test_terminate_existing_sets_container_to_none",
+      "action": "hardened",
+      "oracle": "Inject dummy_container = QWidget() into panel.embedded_container before terminate_existing(); after the call _terminate_existing must set self.embedded_container = None (hxd_panel.py line 398).",
+      "documented_mutation": "Remove 'self.embedded_container = None' from _terminate_existing in hxd_panel.py (line 398) and the assertion 'panel.embedded_container is None' fails."
+    },
+    {
+      "id": "G0334",
+      "test": "TestHxDPanelLifecycle::test_cleanup_sets_process_to_none",
+      "action": "hardened",
+      "oracle": "Inject dummy_process = QProcess() into panel.process before cleanup(); cleanup() delegates to _terminate_existing which must set self.process = None (hxd_panel.py line 387).",
+      "documented_mutation": "Remove 'self.process = None' from _terminate_existing in hxd_panel.py (line 387) and the assertion 'panel.process is None' fails."
+    },
+    {
+      "id": "G0335",
+      "test": "TestHxDPanelLifecycle::test_double_terminate_is_safe_and_idempotent",
+      "action": "hardened",
+      "oracle": "Inject dummy_process = QProcess() before the first terminate_existing() call; assert process is None after the first call (exercises cleanup on non-None), then assert process is None after the second call (exercises idempotence on already-None state).",
+      "documented_mutation": "Remove 'self.process = None' from _terminate_existing in hxd_panel.py (line 387) and the intermediate assertion 'panel.process is None' after the first call fails."
+    },
+    {
+      "id": "G0336",
+      "test": "TestHxDPanelLifecycle::test_stop_then_cleanup_is_safe",
+      "action": "hardened",
+      "oracle": "Inject dummy_process = QProcess() before stop_tool(); assert process is None after stop_tool() (exercises cleanup on non-None); then assert process is None after cleanup() (demonstrates idempotent second cleanup).",
+      "documented_mutation": "Remove 'self.process = None' from _terminate_existing in hxd_panel.py (line 387) and the assertion 'panel.process is None' immediately after stop_tool() fails."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "All 7 findings were tautological: each test operated on panel state that was already None by construction (process=None, embedded_container=None at lines 150-151 of hxd_panel.py), so the cleanup code paths in _terminate_existing were never exercised on non-None objects. Each test was hardened by injecting a non-None QProcess or QWidget before the lifecycle call, making the assertion falsifiable. The injected objects cause _terminate_existing to enter its cleanup branches and actually execute the clearing assignments. No production defects found; all tests remain non-red."
+}

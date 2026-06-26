@@ -1108,7 +1108,6 @@ class SessionManager:
         Args:
             session: Session to update.
         """
-
         async with self._db_lock:
             await asyncio.to_thread(self.store.save, session)
         _logger.debug("session_updated", session_id=session.id)

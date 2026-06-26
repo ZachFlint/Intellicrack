@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_ui/test_sandbox_panel_fixes.py",
+  "findings_addressed": [
+    {
+      "id": "G0351",
+      "test": "TestSandboxPanelLifecycle::test_start_tool_emits_tool_started_signal",
+      "action": "hardened",
+      "oracle": "SignalRecorder connected to panel.tool_started before calling start_tool(); asserts recorder.times_called == 1, independently verifying the signal wired in AnalysisPanelBase.start_tool() actually fires.",
+      "documented_mutation": "In src/intellicrack/ui/panels/base_panel.py line 308, remove `self.tool_started.emit()` so start_tool() returns True but never emits; recorder.times_called remains 0 and the assertion fails."
+    },
+    {
+      "id": "G0352",
+      "test": "TestSandboxPanelLifecycle::test_stop_tool_emits_tool_closed_and_stops_timer",
+      "action": "hardened",
+      "oracle": "Two independent oracles: (1) SignalRecorder on tool_closed asserts exactly one emission; (2) panel._status_poll_timer.isActive() asserts False after stop_tool(), proving SandboxPanel._cleanup() ran and stopped the timer.",
+      "documented_mutation": "In src/intellicrack/ui/panels/sandbox_panel.py line 332, remove `self._status_poll_timer.stop()` from _cleanup(); the timer remains active after stop_tool() and the isActive() assertion fails."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Both findings were tautological: start_tool() and stop_tool() always return True by AnalysisPanelBase contract regardless of SandboxPanel-specific state. Replaced with signal-emission and timer-state assertions that drive real production code and would fail under realistic defects. No src/ files modified."
+}

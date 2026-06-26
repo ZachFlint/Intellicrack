@@ -1,0 +1,47 @@
+{
+  "group": "test_audit5",
+  "files": {
+    "tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py": [
+      {
+        "id": "G0038",
+        "test": "TestF0028AssembleAtToolDocstring::test_returns_description_mentions_bytes_object",
+        "line": 857,
+        "category": "asserts-on-stub-output",
+        "severity": "medium",
+        "recommendation": "Add an end-to-end assertion that actually invokes assemble_at and verifies the return type: 'assert isinstance(result, bytes)' where result comes from an actual assemble_at call. Alternatively, merge this test's documentation check with TestF0002 or replace it with a check that the ToolFunction's parameters schema is correctly populated (checking structural metadata rather than just text).",
+        "why_not_gate": "The test checks only the static documentation string in the ToolDefinition (line 653: 'Assembled instruction as a Python bytes object'), not the actual runtime return type. The production implementation at line 2343 has signature 'async def assemble_at(...) -> bytes' and returns bytes.fromhex(...) at line 2382. If an engineer changed the implementation to return str (hex string) instead of bytes, this test would still pass because the documentation string remains unchanged. The test would only fail if someone edits the documentation string itself, not if the implementation breaks. TestF0002AssembleAtSingleWrite.test_single_write_command (line 227) already gates the actual return type with 'assert result == bytes.fromhex(...)'. This test gates documentation only, making it a stub assertion."
+      },
+      {
+        "id": "G0039",
+        "test": "TestF0026DynamicAnalysisFlag::test_dynamic_analysis_supported",
+        "line": 824,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Either remove this test in favor of the stronger 'test_esil_methods_present' check, or extend it to call one ESIL method end-to-end (e.g., call 'esil_eval' with a recorder and assert it returns a valid result) to prove the flag is backed by working implementation.",
+        "why_not_gate": "The test asserts 'bridge.capabilities.supports_dynamic_analysis is True', checking only a static BridgeCapabilities field hardcoded to True in the constructor (line 1123). If every ESIL method (esil_eval, esil_step, esil_emulate_function, esil_init_memory, esil_set_pc) were deleted from the bridge while the flag remained True, this test would still pass. The companion test 'test_esil_methods_present' (line 832) already gates method presence separately, making this flag-only test redundant with no unique coverage. The test does not execute any ESIL capability; it only reads a boolean."
+      }
+    ],
+    "tests/test_audit5/u4_hexpat_aux/test_pragma_eval_depth_default.py": [
+      {
+        "id": "G0044",
+        "test": "TestPragmaDefaultEvalDepth::test_default_eval_depth_constant_exists",
+        "line": 36,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Remove this test; it is fully subsumed by test_default_eval_depth_handles_common_parent_recursion which already asserts >= 256. Alternatively, replace the isinstance check with assert DEFAULT_EVAL_DEPTH >= 256 and fold it into the sibling test.",
+        "why_not_gate": "The test only asserts isinstance(DEFAULT_EVAL_DEPTH, int). The same class contains test_default_eval_depth_handles_common_parent_recursion (asserts >= 256) and test_default_eval_depth_handles_tiff_pattern (asserts >= 100), which are the real value-constraining gates. Setting DEFAULT_EVAL_DEPTH = 1 still passes this test. The existence check is entirely subsumed by the sibling tests and gates nothing independently."
+      }
+    ],
+    "tests/test_audit5/u5_ui_mainwindow/test_realcov_15_mainwindow_runtime.py": [
+      {
+        "id": "G0046",
+        "test": "test_open_sandbox_panel_resolves_via_get_panel",
+        "line": 469,
+        "category": "skip-masks-failure",
+        "severity": "high",
+        "recommendation": "Restructure the test to separate two concerns: (1) assert that _on_open_sandbox_panel invokes get_panel('sandbox') using a recording stub (identical to the approach in TestSandboxPanelLookupUsesPanels) -- this assertion must always run unconditionally; (2) gate the 'panel is a QWidget' assertion on backend availability and skip only that sub-check. This way a broken call path fails in CI rather than silently skipping.",
+        "why_not_gate": "A broken _on_open_sandbox_panel that never calls get_panel at all, or calls the wrong API, leaves window.tool_panel.get_panel('sandbox') returning None -- identical to the legitimate 'backend not installed' signal. The test then skips rather than fails, providing no gate. The sibling test TestSandboxPanelLookupUsesPanels.test_get_panel_called_with_sandbox_key in test_ui_mainwindow.py uses a recording stub to assert the call path directly and is the actual gate for this behaviour; this runtime test adds no independent signal for the get_panel call contract in any environment without Windows Sandbox installed."
+      }
+    ]
+  }
+}

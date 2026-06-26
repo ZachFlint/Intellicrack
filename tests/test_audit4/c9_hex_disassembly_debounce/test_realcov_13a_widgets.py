@@ -24,7 +24,7 @@ import intellicrack_hexcore
 import pytest
 from PyQt6.QtCore import QEvent, QPointF, QSize, Qt
 from PyQt6.QtGui import QColor, QMouseEvent, QPixmap
-from PyQt6.QtWidgets import QApplication, QWidget
+from PyQt6.QtWidgets import QApplication, QCheckBox, QWidget
 
 from intellicrack.ui.panels.hex_editor.base import ENTROPY_BLOCK_SIZE
 from intellicrack.ui.panels.hex_editor.statistics import compute_statistics
@@ -86,7 +86,11 @@ class TestEntropyGraphWidget:
 
     @staticmethod
     def test_real_entropy_data_paints_without_error(qapp: QApplication, real_pe_dll: Path) -> None:
-        """Real per-block entropy renders through the real paint path.
+        """Real per-block entropy renders through the real paint path and produces distinct pixels.
+
+        The painted output for a widget loaded with real entropy data must differ
+        from the painted output of an empty widget, proving the ``paintEvent``
+        implementation responds to the loaded data.
 
         Args:
             qapp: Qt application fixture.
@@ -101,7 +105,27 @@ class TestEntropyGraphWidget:
         widget.set_data(result.entropy_values, ENTROPY_BLOCK_SIZE)
         assert widget.entropy_values() == result.entropy_values
         assert widget.block_size() == ENTROPY_BLOCK_SIZE
-        _force_paint(widget, 400, 160)
+
+        width, height = 400, 160
+
+        empty_widget = EntropyGraphWidget()
+        empty_pixmap = QPixmap(width, height)
+        empty_widget.resize(width, height)
+        empty_widget.render(empty_pixmap)
+        empty_img = empty_pixmap.toImage()
+
+        data_pixmap = QPixmap(width, height)
+        widget.resize(width, height)
+        widget.render(data_pixmap)
+        data_img = data_pixmap.toImage()
+
+        differing = sum(
+            1
+            for y in range(0, height, 4)
+            for x in range(0, width, 4)
+            if empty_img.pixel(x, y) != data_img.pixel(x, y)
+        )
+        assert differing > 0, "real entropy data must cause paintEvent to draw differently from the empty state"
 
     @staticmethod
     def test_block_click_emits_real_byte_offset(qapp: QApplication, real_pe_dll: Path) -> None:
@@ -216,7 +240,12 @@ class TestLargeFileSettingsDialog:
 
     @staticmethod
     def test_dialog_exposes_configured_values(qapp: QApplication) -> None:
-        """The dialog properties reflect the constructor arguments.
+        """The dialog properties reflect the constructor arguments and checkbox state.
+
+        ``chunk_size_kb`` and ``memory_budget_mb`` must round-trip the
+        constructor arguments.  ``prefetch_on_scroll`` must delegate to the
+        checkbox widget rather than returning a hardcoded constant: toggling
+        the checkbox must change the property value.
 
         Args:
             qapp: Qt application fixture.
@@ -226,3 +255,7 @@ class TestLargeFileSettingsDialog:
         assert dialog.chunk_size_kb == 2048
         assert dialog.memory_budget_mb == 256
         assert dialog.prefetch_on_scroll is True
+        prefetch_check = dialog.findChild(QCheckBox)
+        assert prefetch_check is not None
+        prefetch_check.setChecked(False)
+        assert dialog.prefetch_on_scroll is False

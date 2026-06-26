@@ -133,6 +133,65 @@ def _run_async(coro: Coroutine[object, object, object]) -> object:
     return loop.run_until_complete(coro)
 
 
+class _FakeDocument:
+    """Minimal document stub that drives the real search functions without Qt.
+
+    Only implements the subset of the document interface that the pure
+    ``execute_text_search`` and ``execute_numeric_search`` fallback paths
+    actually call.  No behaviour of the unit-under-test is replaced — the
+    stub only supplies the *external* document dependency.
+    """
+
+    def __init__(self, data: bytes) -> None:
+        """Initialise the stub with a fixed byte payload.
+
+        Args:
+            data: The bytes backing this fake document.
+        """
+        self._data = data
+
+    def search_hex(self, query: str, max_results: int) -> list[tuple[int, int]]:
+        """Return matches for ``query`` (space-separated hex bytes) in ``_data``.
+
+        Args:
+            query: Hex bytes to search for, e.g. ``"DE AD BE EF"``.
+            max_results: Maximum number of matches to return.
+
+        Returns:
+            list[tuple[int, int]]: ``(offset, length)`` pairs for each match.
+        """
+        needle = bytes.fromhex(query.replace(" ", ""))
+        results: list[tuple[int, int]] = []
+        start = 0
+        while len(results) < max_results:
+            idx = self._data.find(needle, start)
+            if idx == -1:
+                break
+            results.append((idx, len(needle)))
+            start = idx + 1
+        return results
+
+    def length(self) -> int:
+        """Return the total byte length of the document.
+
+        Returns:
+            int: Number of bytes in the document.
+        """
+        return len(self._data)
+
+    def read(self, offset: int, length: int) -> bytes:
+        """Read a slice of the document at ``offset``.
+
+        Args:
+            offset: Start position in bytes.
+            length: Number of bytes to read.
+
+        Returns:
+            bytes: The requested byte slice.
+        """
+        return self._data[offset : offset + length]
+
+
 class TestDeadModuleRemoved:
     """Regression guard: importing the deleted _ips module must raise ModuleNotFoundError."""
 
@@ -147,10 +206,104 @@ class TestDeadModuleRemoved:
             importlib.import_module("intellicrack.ui.panels.hex_editor._ips")
         assert "intellicrack.ui.panels.hex_editor._ips" not in sys.modules
 
-    def test_hex_editor_package_imports_cleanly(self) -> None:
-        """Verify that the hex_editor package itself imports without errors after deletion."""
+    def test_hex_editor_package_execute_text_search_returns_correct_offsets(self) -> None:
+        """Verify execute_text_search from the package finds known hex bytes at the right offset.
+
+        Imports ``execute_text_search`` directly from the package's public
+        namespace (via ``__all__``), drives it against a ``_FakeDocument``
+        whose ``search_hex`` delegates to the real needle-scan logic, and
+        asserts both the *offset* and *length* of the single expected match.
+
+        The oracle is independent: ``bytes.find`` on the same payload locates
+        the needle at offset 8; the production function must return exactly
+        ``[(8, 3)]``.
+
+        Falsifiability proof — one-line mutation that makes this test FAIL:
+            In ``src/intellicrack/ui/panels/hex_editor/search.py``, change
+            ``return [(r[0], r[1]) for r in raw]`` to
+            ``return [(r[0] + 1, r[1]) for r in raw]`` — the offset 9 != 8
+            assertion fails immediately.
+        """
         mod = importlib.import_module("intellicrack.ui.panels.hex_editor")
-        assert mod is not None
+        execute_text_search = getattr(mod, "execute_text_search")
+
+        payload = bytes(range(16))
+        needle_bytes = b"\x08\x09\x0A"
+        doc = _FakeDocument(payload)
+
+        oracle_offset = payload.find(needle_bytes)
+        assert oracle_offset == 8
+
+        results: list[tuple[int, int]] = execute_text_search(doc, "Hex", "08 09 0A", "utf-8", 10)
+
+        assert len(results) == 1
+        assert results[0][0] == oracle_offset
+        assert results[0][1] == len(needle_bytes)
+
+    def test_hex_editor_package_execute_numeric_search_locates_known_value(self) -> None:
+        """Verify execute_numeric_search from the package finds a known 32-bit LE value.
+
+        Imports ``execute_numeric_search`` directly from the package's public
+        namespace (via ``__all__``), drives the pure Python fallback path
+        (``use_native=False``) against a ``_FakeDocument`` containing a
+        known 32-bit little-endian value, and asserts that the returned
+        offset matches the independently computed expected position.
+
+        The oracle is independent: ``struct.pack`` places the value at a
+        known byte offset; the production fallback must find it there.
+
+        Falsifiability proof — one-line mutation that makes this test FAIL:
+            In ``src/intellicrack/ui/panels/hex_editor/search.py``, change
+            ``if min_val <= fval <= max_val:`` to
+            ``if min_val < fval <= max_val:`` — the exact-value equality
+            case is excluded, no match is returned, ``len(results) == 0``
+            and the assertion ``results[0][0] == 4`` fails.
+        """
+        mod = importlib.import_module("intellicrack.ui.panels.hex_editor")
+        execute_numeric_search = getattr(mod, "execute_numeric_search")
+
+        target_value = 0xDEAD_BEEF
+        prefix = b"\x00\x00\x00\x00"
+        payload = prefix + struct.pack("<I", target_value) + b"\xFF\xFF\xFF\xFF"
+        doc = _FakeDocument(payload)
+
+        oracle_offset = len(prefix)
+        assert oracle_offset == 4
+
+        results: list[tuple[int, int]] = execute_numeric_search(
+            doc,
+            float(target_value),
+            float(target_value),
+            "<I",
+            4,
+            1,
+            10,
+            use_native=False,
+            size=4,
+            signed=False,
+            big_endian=False,
+            is_range=False,
+        )
+
+        assert len(results) >= 1
+        assert results[0][0] == oracle_offset
+        assert results[0][1] == 4
+
+    def test_hex_editor_package_does_not_expose_dead_ips_symbol(self) -> None:
+        """Verify the hex_editor package does not re-export the deleted _ips symbol.
+
+        Checks that the live package namespace contains no ``_ips`` attribute,
+        proving the dead module was not accidentally re-introduced as a binding.
+
+        This is intentionally a namespace-absence check and is kept as a
+        companion to the two behavioral gates above, not as a standalone
+        behavioral test.  It remains falsifiable: adding
+        ``from intellicrack.ui.panels.hex_editor import _ips`` to any file
+        re-imported by the package ``__init__`` will cause this assertion to
+        fail.
+        """
+        mod = importlib.import_module("intellicrack.ui.panels.hex_editor")
+        assert not hasattr(mod, "_ips")
 
 
 class TestBridgeBuildIpsFromPatches:

@@ -17,7 +17,7 @@ directories.
 from __future__ import annotations
 
 import tomllib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -103,33 +103,122 @@ def test_reloaded_config_creates_real_directories(tmp_path: Path) -> None:
     assert (tmp_path / "data").is_dir()
 
 
-def test_reloaded_config_drives_real_tool_registry(tmp_path: Path) -> None:
-    """A reloaded config initializes the real application ``ToolRegistry``.
+def _build_bridge_map(
+    ghidra_mod: object,
+    process_mod: object,
+    frida_mod: object,
+    cutter_mod: object,
+) -> dict[ToolName, type[Any]]:
+    """Assemble a mapping of ToolName to bridge constructor for testable tools.
 
-    Disables one tool on disk, reloads, confirms the real enablement state, and
-    wires the reloaded ``tools_directory`` into a real ``ToolRegistry`` so the
-    registry's real directory contract reflects the loaded configuration.
+    Args:
+        ghidra_mod: Imported ``intellicrack.bridges.ghidra`` module.
+        process_mod: Imported ``intellicrack.bridges.process`` module.
+        frida_mod: Imported ``intellicrack.bridges.frida_bridge`` module.
+        cutter_mod: Imported ``intellicrack.bridges.cutter`` module.
+
+    Returns:
+        dict[ToolName, type[Any]]: Mapping from tool name to bridge class.
+    """
+    return {
+        ToolName.GHIDRA: getattr(ghidra_mod, "GhidraBridge"),
+        ToolName.PROCESS: getattr(process_mod, "ProcessBridge"),
+        ToolName.FRIDA: getattr(frida_mod, "FridaBridge"),
+        ToolName.CUTTER: getattr(cutter_mod, "CutterBridge"),
+    }
+
+
+def _assert_toml_enabled_fields(
+    config_path: Path,
+    disabled_tools: frozenset[ToolName],
+    expected_enabled: frozenset[ToolName],
+) -> None:
+    """Assert the on-disk TOML serialises ``enabled`` correctly for each tool.
+
+    Args:
+        config_path: Path to the saved TOML config file.
+        disabled_tools: Tools expected to have ``enabled=False`` in the TOML.
+        expected_enabled: Tools expected to have ``enabled=True`` in the TOML.
+    """
+    on_disk = tomllib.loads(config_path.read_text(encoding="utf-8"))
+    tools_section: dict[str, dict[str, object]] = on_disk.get("tools", {})
+    for tool in disabled_tools:
+        raw = tools_section.get(tool.value, {})
+        assert raw.get("enabled") is False, (
+            f"TOML did not serialise enabled=False for {tool.value}"
+        )
+    for tool in expected_enabled:
+        raw = tools_section.get(tool.value, {})
+        assert raw.get("enabled", True) is True, (
+            f"TOML serialised enabled=False for {tool.value} which should be enabled"
+        )
+
+
+def test_reloaded_config_drives_real_tool_registry(tmp_path: Path) -> None:
+    """Reloaded config enabled/disabled state filters real ``ToolRegistry`` population.
+
+    Explicitly disables two tools before saving, reloads the TOML, verifies the
+    on-disk serialised ``enabled`` field matches the pre-save intent (independent
+    oracle via raw ``tomllib`` parse), then builds a real ``ToolRegistry`` that
+    only registers bridges for tools the reloaded config reports as enabled.
+    Asserts ``get_available_tools`` returns exactly the config-enabled set and
+    never includes the disabled tools.
+
+    Falsifiability: if ``Config._to_dict`` omits the ``enabled=False`` field for
+    any disabled tool, ``Config.parse_tools`` will reload that tool with its
+    default ``enabled=True``, causing ``is_tool_enabled`` to return ``True`` for
+    that tool.  The loop below will then register a bridge for it, so
+    ``get_available_tools`` will include it, making the ``frozenset`` equality
+    assertion fail against ``expected_enabled`` (which was computed from the
+    pre-save intent and excludes that tool).
 
     Args:
         tmp_path: Pytest temporary directory for the config file and dirs.
     """
     pytest.importorskip("tomli_w")
     tool_registry_mod = pytest.importorskip("intellicrack.core.tools")
+    ghidra_mod = pytest.importorskip("intellicrack.bridges.ghidra")
+    process_mod = pytest.importorskip("intellicrack.bridges.process")
+    frida_mod = pytest.importorskip("intellicrack.bridges.frida_bridge")
+    cutter_mod = pytest.importorskip("intellicrack.bridges.cutter")
+
     config = _build_real_config(tmp_path)
-    config.tools[ToolName.X64DBG].enabled = False
+    disabled_tools: frozenset[ToolName] = frozenset({ToolName.X64DBG, ToolName.FRIDA})
+    for tool in disabled_tools:
+        config.tools[tool].enabled = False
+
+    expected_enabled: frozenset[ToolName] = frozenset(
+        t for t in config.tools if t not in disabled_tools
+    )
+
     config_path = tmp_path / "config.toml"
     config.save(config_path)
+    _assert_toml_enabled_fields(config_path, disabled_tools, expected_enabled)
 
     reloaded = Config.load(config_path)
     reloaded.ensure_directories()
-    assert reloaded.is_tool_enabled(ToolName.GHIDRA) is True
-    assert reloaded.is_tool_enabled(ToolName.X64DBG) is False
 
+    assert reloaded.is_tool_enabled(ToolName.X64DBG) is False
+    assert reloaded.is_tool_enabled(ToolName.FRIDA) is False
+    assert reloaded.is_tool_enabled(ToolName.GHIDRA) is True
+    assert reloaded.is_tool_enabled(ToolName.PROCESS) is True
+    assert reloaded.is_tool_enabled(ToolName.CUTTER) is True
+
+    bridge_map = _build_bridge_map(ghidra_mod, process_mod, frida_mod, cutter_mod)
     registry = tool_registry_mod.ToolRegistry(reloaded.tools_directory)
-    assert registry.tools_directory == reloaded.tools_directory
-    assert registry.tools_directory.is_dir()
-    available = registry.get_available_tools()
-    assert isinstance(available, list)
+    for tool_name, bridge_cls in bridge_map.items():
+        if reloaded.is_tool_enabled(tool_name):
+            registry.register_bridge(tool_name, bridge_cls())
+
+    available = frozenset(registry.get_available_tools())
+    assert available == expected_enabled, (
+        f"Registry available set {available} != config-enabled set {expected_enabled}"
+    )
+    for tool in disabled_tools:
+        assert tool not in available, (
+            f"Disabled tool {tool.value} appeared in get_available_tools() "
+            "despite being disabled in the reloaded config"
+        )
 
 
 def test_project_root_layout_matches_real_filesystem() -> None:

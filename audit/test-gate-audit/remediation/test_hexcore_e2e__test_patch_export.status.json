@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_hexcore_e2e/test_patch_export.py",
+  "findings_addressed": [
+    {
+      "id": "G0233",
+      "test": "TestGetPatches::test_patch_list_entries_record_exact_offset_and_data",
+      "action": "hardened",
+      "oracle": "Independent oracle: the exact offset (5) and data (b'\\x01\\x02') are the values injected by write_bytes, matched against the patch_map built from get_patches() - the test asserts patch_map[5] == b'\\x01\\x02', which is a concrete value check not derivable from the get_patches() output alone.",
+      "documented_mutation": "In src/intellicrack_hexcore (Rust), change get_patches() to always return patches with offset 0 instead of the real written offset; this makes patch_map[5] a KeyError, failing the assertion `write_offset in patch_map`."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Renamed test from test_patch_list_entries_are_two_tuples to test_patch_list_entries_record_exact_offset_and_data to reflect the strengthened oracle. Replaced type/shape assertions with exact offset and data value assertions. The test now fails if get_patches() returns wrong offset or wrong data bytes, making it a genuine gate for the production write_bytes -> get_patches pipeline."
+}

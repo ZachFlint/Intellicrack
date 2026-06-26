@@ -1,0 +1,35 @@
+{
+  "file": "tests/test_ui/test_splash_screen.py",
+  "findings_addressed": [
+    {
+      "id": "G0353",
+      "test": "TestEndToEndLifecycle::test_rendering_at_every_progress_step",
+      "action": "previously-hardened",
+      "oracle": "Sentinel pixel count: pixmap pre-filled with RGB(17,71,137) before each draw pass; _count_painted_and_distinct counts pixels that no longer match the sentinel after the five draw helpers run. The gradient background covers the full canvas so a correct implementation overwrites >= _MIN_PAINTED_PIXELS (1000) pixels; five no-op helpers leave the count at 0.",
+      "documented_mutation": "In src/intellicrack/ui/dialogs/splash_screen.py, change `_draw_gradient_background` to `def _draw_gradient_background(self, painter, rect): return` (no-op) -- painted count stays 0, assert painted >= 1000 fails."
+    },
+    {
+      "id": "G0356",
+      "test": "TestSplashPixmapLoading::test_pixmap_has_correct_dimensions",
+      "action": "re-hardened",
+      "oracle": "Independent aspect-ratio oracle: bundled splash.png is 1024x1024 (square). Qt KeepAspectRatio fit of (1024,1024) into (600,400) produces scale=400/1024=0.390625, expected output 400x400 exactly. Test asserts pixmap.width()==400 and pixmap.height()==400 (exact match to oracle), pixmap fits within (600,400), and aspect ratio preserved within 1px. A broken scaling path returning a tiny pixmap or wrong size fails the exact-match assertion. Previous 80%-lower-bound was brittle: the real image is 400px wide which is only 67% of SPLASH_WIDTH=600.",
+      "documented_mutation": "In src/intellicrack/ui/dialogs/splash_screen.py, change _try_load_splash_image to scale to width=1, height=1 -- pixmap.width()==1 != 400, assert fails immediately."
+    },
+    {
+      "id": "G0357",
+      "test": "TestEndToEndLifecycle::test_failed_stage_renders_through_full_sequence",
+      "action": "re-hardened",
+      "oracle": "Full-image error-color scan: render _draw_pipeline onto a sentinel canvas, scan every pixel, count those within _ERROR_COLOR_SCAN_TOLERANCE=16 of #cc3333 (R=204,G=51,B=51). Failed-stage render must have >= 1 error-red pixels. Contrast: a clean (all-COMPLETE) render of the same pipeline must have 0 error-red pixels, proving error-pixel presence is caused exclusively by the FAILED branch. Previous hardening probed a single hardcoded pixel at (189,350) which was R=255 (background), not the error color.",
+      "documented_mutation": "In src/intellicrack/ui/dialogs/splash_screen.py _draw_pipeline_stage, change the FAILED branch from `painter.setBrush(QBrush(error_color))` to `painter.setBrush(QBrush(pending_color))` -- FAILED circle is filled grey (#555555), error-pixel count drops to 0, assert error_count >= 1 fails."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0356 (test_pixmap_has_correct_dimensions) fixed: splash.png is 1024x1024, KeepAspectRatio into (600,400) yields 400x400 exactly. Replaced brittle 80%-lower-bound (which was 480, larger than the real 400px output) with exact oracle: assert width==400, height==400 plus fits-within and aspect-ratio-preserved checks. G0357 (test_failed_stage_renders_through_full_sequence) fixed: replaced hardcoded pixel-coordinate probe at (189,350) (which landed on background R=255) with a whole-image error-color scan. Added _count_error_color_pixels helper that scans every pixel for proximity to #cc3333. Two-oracle approach: failed render asserts >= 1 error pixels; clean (all-COMPLETE) render asserts 0 error pixels, making the gate falsifiable in both directions. Added module-level constants _SPLASH_PNG_NATIVE_W/H, _SPLASH_EXPECTED_PIXMAP_W/H, _ERROR_COLOR_R/G/B, _ERROR_COLOR_SCAN_TOLERANCE, _MIN_ERROR_PIXELS_WHEN_FAILED, _MAX_ERROR_PIXELS_WHEN_CLEAN. No production source files edited."
+}

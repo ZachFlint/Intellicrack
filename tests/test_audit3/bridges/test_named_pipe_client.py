@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import inspect
 import json
 import os
 import sys
@@ -434,11 +433,60 @@ def test_open_handle_passes_shared_read_write_to_createfilew(
 # ---------------------------------------------------------------------------
 
 
-def test_no_os_name_nt_predicate_in_module() -> None:
-    """Module standardises on ``sys.platform == "win32"`` (F-0032)."""
-    src = inspect.getsource(npc_module)
-    assert 'os.name == "nt"' not in src
-    assert "os.name == 'nt'" not in src
+@pytest.mark.asyncio
+async def test_no_os_name_nt_predicate_in_module(
+    monkeypatch: pytest.MonkeyPatch,
+    fake_pipe: _FakePipe,
+) -> None:
+    """Platform guard uses ``sys.platform`` consistently, not ``os.name`` (F-0032).
+
+    Forces the Cygwin disagreement scenario where ``sys.platform != "win32"``
+    is ``True`` but ``os.name != "nt"`` is ``False``:
+
+    * ``sys.platform`` is overridden to ``"cygwin"``
+    * ``os.name`` is overridden to ``"nt"`` (mimicking a Cygwin process running
+      atop Windows NT whose POSIX emulation layer still reports NT as the OS)
+
+    Under the *correct* predicate (``sys.platform != "win32"``):
+    ``"cygwin" != "win32"`` is ``True``, so ``connect()`` immediately raises
+    ``ToolError("Named pipes are only supported on Windows")``.
+
+    Under the *wrong* predicate (``os.name != "nt"``):
+    ``"nt" != "nt"`` is ``False``, so ``connect``'s own guard is silently
+    bypassed.
+
+    To isolate ``connect``'s guard from the *redundant* ``sys.platform`` guard
+    inside ``_open_handle`` (which would otherwise raise the same message and
+    mask the mutation), the in-memory fake transport is bound first via
+    ``_bind_fake_pipe``. That replaces ``_open_handle`` with a fake that returns
+    a canned handle and performs no platform check. With the fake in place,
+    ``connect`` raises "only supported on Windows" ONLY from its own guard:
+
+    * Correct predicate: ``sys.platform != "win32"`` is ``True`` (cygwin), so
+      ``connect`` raises before ever reaching the fake ``_open_handle``.
+    * Mutated predicate (``os.name != "nt"``): the guard is bypassed, ``connect``
+      proceeds to the fake ``_open_handle``, obtains the canned handle, and
+      returns successfully WITHOUT raising - so ``pytest.raises`` fails.
+
+    Falsifiability mutation (static proof — do not apply):
+        Change ``src/intellicrack/bridges/named_pipe_client.py`` line 194 from
+        ``if sys.platform != "win32":`` to ``if os.name != "nt":``. With
+        ``os.name`` monkeypatched to ``"nt"`` the guard is bypassed; the bound
+        fake transport lets ``connect`` complete without raising, so the
+        ``pytest.raises(ToolError, ...)`` assertion fails.
+
+    Args:
+        monkeypatch: Fixture used to override ``sys.platform`` and ``os.name``
+            to simulate the Cygwin disagreement scenario.
+        fake_pipe: In-memory transport bound onto the client so ``_open_handle``
+            performs no platform check and cannot mask ``connect``'s guard.
+    """
+    monkeypatch.setattr(sys, "platform", "cygwin")
+    monkeypatch.setattr(os, "name", "nt")
+    client = NamedPipeClient()
+    _bind_fake_pipe(client, fake_pipe)
+    with pytest.raises(ToolError, match="only supported on Windows"):
+        await client.connect()
 
 
 # ---------------------------------------------------------------------------
@@ -745,21 +793,21 @@ def test_separate_write_lock_and_id_lock_present() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_send_command_docstring_lists_required_raises() -> None:
-    """``send_command`` docstring enumerates every exception path (F-0013/F-0039).
+@pytest.mark.asyncio
+async def test_send_command_raises_tool_error_when_not_connected() -> None:
+    """``send_command`` raises ``ToolError`` immediately when the pipe is not connected (F-0013/F-0039).
 
-    The docstring carries a ``Raises:`` section for the directly raised
-    ``ToolError`` and a separate paragraph that lists the propagated
-    exceptions: ``TimeoutError``, ``asyncio.CancelledError``, ``OSError``
-    and ``RuntimeError``. ``DOC503`` blocks pydoclint from accepting
-    propagated exceptions inside a ``Raises:`` block, so we surface them
-    in the description body instead.
+    Drives the real ``send_command`` code path against a freshly-constructed
+    ``NamedPipeClient`` whose ``_handle`` is ``None`` and asserts that
+    ``ToolError`` is raised with a message indicating the pipe is not
+    connected. The independent oracle is the ``ToolError`` type itself: the
+    production code must check ``self._handle is None`` before attempting any
+    I/O and raise ``ToolError`` — a regression that dropped the guard or raised
+    a different exception type would cause this test to fail.
     """
-    doc = NamedPipeClient.send_command.__doc__
-    assert doc is not None
-    assert "Raises:" in doc
-    for exc in ("ToolError", "TimeoutError", "asyncio.CancelledError", "OSError", "RuntimeError"):
-        assert exc in doc, f"missing {exc} in send_command docstring"
+    client = NamedPipeClient()
+    with pytest.raises(ToolError, match="not connected"):
+        await client.send_command("probe")
 
 
 # ---------------------------------------------------------------------------
@@ -821,14 +869,51 @@ async def test_close_waits_for_inflight_write(
         await asyncio.wait_for(send_task, timeout=2.0)
 
 
-def test_close_docstring_describes_thread_pool_and_wait() -> None:
-    """``close()`` docstring describes wait + thread-pool side effects (F-0040)."""
-    doc = NamedPipeClient.close.__doc__
-    assert doc is not None
-    lower = doc.lower()
-    assert "in-flight" in lower or "in flight" in lower
-    assert "thread" in lower
-    assert "asyncio.to_thread" in doc or "thread pool" in lower
+@pytest.mark.asyncio
+async def test_close_dispatches_handle_close_via_thread_pool(
+    fake_pipe: _FakePipe,
+) -> None:
+    """``close()`` dispatches the handle-close through ``asyncio.to_thread`` (F-0040).
+
+    Connects a client using the in-memory pipe transport and then records
+    whether the underlying ``_close_handle`` method is invoked from a worker
+    thread (i.e. via ``asyncio.to_thread``) rather than directly on the event
+    loop thread. The oracle is threading identity: calls routed through
+    ``asyncio.to_thread`` run on an ``asyncio`` thread-pool thread which is
+    distinct from the main event-loop thread. A regression that changed
+    ``await asyncio.to_thread(self._close_handle)`` to a direct
+    ``self._close_handle()`` call would cause ``close_thread_id`` to equal
+    ``loop_thread_id`` and fail this assertion.
+
+    Args:
+        fake_pipe: Shared in-memory pipe transport.
+    """
+    config = PipeConfig(
+        pipe_name=r"\\.\pipe\intellicrack_thread_probe",
+        connect_timeout=1.0,
+        io_timeout=1.0,
+    )
+    client = NamedPipeClient(config=config)
+    _bind_fake_pipe(client, fake_pipe)
+    await client.connect()
+
+    loop_thread_id = threading.get_ident()
+    close_thread_ids: list[int] = []
+
+    original_close_handle: Callable[[], None] = getattr(client, "_close_handle")
+
+    def recording_close_handle() -> None:
+        """Record the thread id on which the close executes, then delegate."""
+        close_thread_ids.append(threading.get_ident())
+        original_close_handle()
+
+    setattr(client, "_close_handle", recording_close_handle)
+    await client.close()
+
+    assert close_thread_ids, "_close_handle was never called"
+    assert close_thread_ids[0] != loop_thread_id, (
+        "_close_handle must run on a thread-pool thread, not the event-loop thread"
+    )
 
 
 @pytest.mark.asyncio

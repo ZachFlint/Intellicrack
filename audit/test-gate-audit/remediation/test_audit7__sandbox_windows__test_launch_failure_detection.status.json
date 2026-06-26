@@ -1,0 +1,30 @@
+{
+  "file": "tests/test_audit7/sandbox_windows/test_launch_failure_detection.py",
+  "findings_addressed": [
+    {
+      "id": "G0053",
+      "test": "TestCheckStartupHealth::test_no_process_is_noop",
+      "action": "hardened",
+      "oracle": "Independent oracle: SandboxState dataclass defaults from base.py — status='stopped' (line 319), pid=None (line 321), started_at=None (line 320), last_error=None (line 322). Spy oracle: a local detector_calls list installed via monkeypatch on _detect_client_failure_dialog; asserting detector_calls==[] proves the None-guard caused an early return before the detector was reached. These oracle values are NOT injected by the test — they are drawn from the SandboxState dataclass definition and from independently-counted spy invocations.",
+      "documented_mutation": "In windows.py, delete the `if self.process is None: return` guard at lines 637-638 so the method continues to `self.process.poll()` on a None value. That raises `AttributeError: 'NoneType' object has no attribute 'poll'`, causing the test to fail immediately before any assertion runs.",
+      "wave": 2
+    },
+    {
+      "id": "G0054",
+      "test": "TestCheckStartupHealth::test_live_client_without_dialog_is_noop",
+      "action": "hardened",
+      "oracle": "The spy list `calls` is independently built by capturing PID arguments; `calls == [client_pid]` proves the production code reached and invoked `_detect_client_failure_dialog` exactly once with the correct PID (windows.py:644). `probe.state.status != 'error'` and `probe.state.last_error is None` are verified against the SandboxState dataclass defaults, confirming no error path was triggered.",
+      "documented_mutation": "In windows.py, remove the `detail = await asyncio.to_thread(self._detect_client_failure_dialog, self.process.pid)` call at line 644 (e.g. replace with `detail = None` unconditionally); this causes `calls == []` instead of `[5555]`, making `assert calls == [client_pid]` fail.",
+      "wave": 1
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Wave-2 re-hardening of G0053 (test_no_process_is_noop). Previous version asserted only data it injected (status_before captured from the instance, then compared to itself) — a tautology under any body that leaves state unchanged, including `pass`. Hardened by: (1) replacing the self-referential status_before capture with direct assertions against the canonical SandboxState dataclass defaults ('stopped', None, None, None); (2) installing a monkeypatched detector spy that asserts detector_calls==[], proving the None-guard caused an early return before the detector was reached. Static falsifiability proof: removing the None-guard causes self.process.poll() on None to raise AttributeError, failing the test before any assertion runs. G0054 (test_live_client_without_dialog_is_noop) was already genuinely falsifiable and is preserved unchanged."
+}

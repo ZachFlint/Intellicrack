@@ -11,6 +11,7 @@ access. Contains no business logic.
 from __future__ import annotations
 
 import ctypes
+import functools
 import sys
 from ctypes import wintypes
 from typing import ClassVar, Final, TypedDict
@@ -59,6 +60,11 @@ PROCESS_TERMINATE: Final[int] = 0x0001
 PROCESS_SUSPEND_RESUME: Final[int] = 0x0800
 PROCESS_CREATE_THREAD: Final[int] = 0x0002
 PROCESS_DUP_HANDLE: Final[int] = 0x0040
+
+# ---------------------------------------------------------------------------
+# Standard access rights
+# ---------------------------------------------------------------------------
+SYNCHRONIZE: Final[int] = 0x00100000
 
 # ---------------------------------------------------------------------------
 # Thread access rights
@@ -871,16 +877,9 @@ class PROCESS_MITIGATION_FONT_DISABLE_POLICY(ctypes.Structure):
 # DLL handle helpers
 # ---------------------------------------------------------------------------
 
-_ntdll_cache: ctypes.WinDLL | None = None
-_advapi32_cache: ctypes.WinDLL | None = None
-_user32_cache: ctypes.WinDLL | None = None
-_dbghelp_cache: ctypes.WinDLL | None = None
-_psapi_cache: ctypes.WinDLL | None = None
-_kernel32_cache: ctypes.WinDLL | None = None
-
-
+@functools.lru_cache(maxsize=1)
 def get_kernel32() -> ctypes.WinDLL:
-    """Get a cached handle to kernel32.dll.
+    """Cached handle to kernel32.dll.
 
     Returns:
         ctypes.WinDLL: Handle to kernel32.dll.
@@ -888,19 +887,17 @@ def get_kernel32() -> ctypes.WinDLL:
     Raises:
         OSError: If kernel32.dll cannot be loaded.
     """
-    global _kernel32_cache
-    if _kernel32_cache is None:
-        _logger.debug("dll_cache_miss_loading", dll_name="kernel32")
-        try:
-            _kernel32_cache = ctypes.windll.kernel32
-        except OSError:
-            _logger.exception("dll_load_failed", dll_name="kernel32")
-            raise
-    return _kernel32_cache
+    _logger.debug("dll_cache_miss_loading", dll_name="kernel32")
+    try:
+        return ctypes.windll.kernel32
+    except OSError:
+        _logger.exception("dll_load_failed", dll_name="kernel32")
+        raise
 
 
+@functools.lru_cache(maxsize=1)
 def get_ntdll() -> ctypes.WinDLL:
-    """Get a cached handle to ntdll.dll.
+    """Cached handle to ntdll.dll.
 
     Returns:
         ctypes.WinDLL: Handle to ntdll.dll.
@@ -908,19 +905,17 @@ def get_ntdll() -> ctypes.WinDLL:
     Raises:
         OSError: If ntdll.dll cannot be loaded.
     """
-    global _ntdll_cache
-    if _ntdll_cache is None:
-        _logger.debug("dll_cache_miss_loading", dll_name="ntdll")
-        try:
-            _ntdll_cache = ctypes.WinDLL("ntdll")
-        except OSError:
-            _logger.exception("dll_load_failed", dll_name="ntdll")
-            raise
-    return _ntdll_cache
+    _logger.debug("dll_cache_miss_loading", dll_name="ntdll")
+    try:
+        return ctypes.WinDLL("ntdll")
+    except OSError:
+        _logger.exception("dll_load_failed", dll_name="ntdll")
+        raise
 
 
+@functools.lru_cache(maxsize=1)
 def get_advapi32() -> ctypes.WinDLL:
-    """Get a cached handle to advapi32.dll.
+    """Cached handle to advapi32.dll.
 
     Returns:
         ctypes.WinDLL: Handle to advapi32.dll.
@@ -928,19 +923,17 @@ def get_advapi32() -> ctypes.WinDLL:
     Raises:
         OSError: If advapi32.dll cannot be loaded.
     """
-    global _advapi32_cache
-    if _advapi32_cache is None:
-        _logger.debug("dll_cache_miss_loading", dll_name="advapi32")
-        try:
-            _advapi32_cache = ctypes.WinDLL("advapi32")
-        except OSError:
-            _logger.exception("dll_load_failed", dll_name="advapi32")
-            raise
-    return _advapi32_cache
+    _logger.debug("dll_cache_miss_loading", dll_name="advapi32")
+    try:
+        return ctypes.WinDLL("advapi32")
+    except OSError:
+        _logger.exception("dll_load_failed", dll_name="advapi32")
+        raise
 
 
+@functools.lru_cache(maxsize=1)
 def get_user32() -> ctypes.WinDLL:
-    """Get a cached handle to user32.dll.
+    """Cached handle to user32.dll.
 
     Returns:
         ctypes.WinDLL: Handle to user32.dll.
@@ -948,19 +941,17 @@ def get_user32() -> ctypes.WinDLL:
     Raises:
         OSError: If user32.dll cannot be loaded.
     """
-    global _user32_cache
-    if _user32_cache is None:
-        _logger.debug("dll_cache_miss_loading", dll_name="user32")
-        try:
-            _user32_cache = ctypes.WinDLL("user32")
-        except OSError:
-            _logger.exception("dll_load_failed", dll_name="user32")
-            raise
-    return _user32_cache
+    _logger.debug("dll_cache_miss_loading", dll_name="user32")
+    try:
+        return ctypes.WinDLL("user32")
+    except OSError:
+        _logger.exception("dll_load_failed", dll_name="user32")
+        raise
 
 
+@functools.lru_cache(maxsize=1)
 def get_dbghelp() -> ctypes.WinDLL:
-    """Get a cached handle to dbghelp.dll.
+    """Cached handle to dbghelp.dll.
 
     Returns:
         ctypes.WinDLL: Handle to dbghelp.dll.
@@ -968,19 +959,17 @@ def get_dbghelp() -> ctypes.WinDLL:
     Raises:
         OSError: If dbghelp.dll cannot be loaded.
     """
-    global _dbghelp_cache
-    if _dbghelp_cache is None:
-        _logger.debug("dll_cache_miss_loading", dll_name="dbghelp")
-        try:
-            _dbghelp_cache = ctypes.WinDLL("dbghelp")
-        except OSError:
-            _logger.exception("dll_load_failed", dll_name="dbghelp")
-            raise
-    return _dbghelp_cache
+    _logger.debug("dll_cache_miss_loading", dll_name="dbghelp")
+    try:
+        return ctypes.WinDLL("dbghelp")
+    except OSError:
+        _logger.exception("dll_load_failed", dll_name="dbghelp")
+        raise
 
 
+@functools.lru_cache(maxsize=1)
 def get_psapi() -> ctypes.WinDLL:
-    """Get a cached handle to psapi.dll.
+    """Cached handle to psapi.dll.
 
     Returns:
         ctypes.WinDLL: Handle to psapi.dll.
@@ -988,15 +977,12 @@ def get_psapi() -> ctypes.WinDLL:
     Raises:
         OSError: If psapi.dll cannot be loaded.
     """
-    global _psapi_cache
-    if _psapi_cache is None:
-        _logger.debug("dll_cache_miss_loading", dll_name="psapi")
-        try:
-            _psapi_cache = ctypes.windll.psapi
-        except OSError:
-            _logger.exception("dll_load_failed", dll_name="psapi")
-            raise
-    return _psapi_cache
+    _logger.debug("dll_cache_miss_loading", dll_name="psapi")
+    try:
+        return ctypes.windll.psapi
+    except OSError:
+        _logger.exception("dll_load_failed", dll_name="psapi")
+        raise
 
 
 class MemoryProtectionFlags(TypedDict):

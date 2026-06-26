@@ -33,12 +33,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-hexcore = pytest.importorskip(
-    "intellicrack_hexcore",
-    reason="intellicrack_hexcore backend required for document-backed streaming CRC",
-)
-
-
 pytestmark = pytest.mark.integration
 
 
@@ -114,64 +108,112 @@ class TestChecksumsMatchReference:
         data = _read_real_pe(real_pe_dll)
         assert compute_hash("Adler32", data) == f"{zlib.adler32(data) & 0xFFFFFFFF:08x}"
 
-    def test_crc8_engine_matches_production_dispatch(self, real_pe_dll: Path) -> None:
-        """Verify the CRC-8 engine matches the production ``compute_hash`` path.
+    def test_crc8_engine_matches_production_dispatch(self) -> None:
+        """Verify the CRC-8 engine against the published catalogue check value.
 
-        ``compute_hash("CRC-8", ...)`` formats ``compute_custom_crc`` output
-        with the same parameter set, so the parametric engine and the
-        production checksum dispatch must agree on a real PE body.
+        The standard CRC-8 algorithm (poly=0x07, init=0x00, ref_in=False,
+        ref_out=False, xor_out=0x00) applied to the canonical test vector
+        ``b"123456789"`` must produce 0xF4.  This catalogue constant (Greg
+        Cook's CRC Catalogue, CRC-8/SMBUS) is derived independently of the
+        production implementation by the CRC RevEng project.
 
-        Args:
-            real_pe_dll: Real PE DLL fixture path.
+        ``compute_hash("CRC-8", ...)`` must produce the same formatted result,
+        proving the dispatcher wires the correct parameters to the engine.
+
+        Mutation proof: flip ``ref_in=True`` inside the CRC-8 branch of
+        ``_compute_hash_checksums`` in ``base.py``; the reflected computation
+        yields 0x97 for the test vector, so ``compute_custom_crc(...) == 0xF4``
+        fails immediately.
         """
-        data = _read_real_pe(real_pe_dll)
-        crc = compute_custom_crc(data, 8, 0x07, 0x00, ref_in=False, ref_out=False, xor_out=0x00)
-        assert f"{crc:02x}" == compute_hash("CRC-8", data)
+        check_vector = b"123456789"
+        catalogue_crc8 = 0xF4
+        assert compute_custom_crc(check_vector, 8, 0x07, 0x00, ref_in=False, ref_out=False, xor_out=0x00) == catalogue_crc8
+        assert compute_hash("CRC-8", check_vector) == f"{catalogue_crc8:02x}"
 
-    def test_crc16_engine_matches_production_dispatch(self, real_pe_dll: Path) -> None:
-        """Verify the CRC-16 engine matches the production ``compute_hash`` path.
+    def test_crc16_engine_matches_production_dispatch(self) -> None:
+        """Verify the CRC-16 engine against the published catalogue check value.
 
-        Args:
-            real_pe_dll: Real PE DLL fixture path.
+        The standard CRC-16/ARC algorithm (poly=0x8005, init=0x0000,
+        ref_in=True, ref_out=True, xor_out=0x0000) applied to the canonical
+        test vector ``b"123456789"`` must produce 0xBB3D.  This constant is
+        from the CRC Catalogue (CRC-16/ARC, also known as CRC-16/IBM) and
+        is derived independently of the production implementation.
+
+        ``compute_hash("CRC-16", ...)`` must produce the same formatted result,
+        proving the dispatcher wires the correct parameters to the engine.
+
+        Mutation proof: change ``ref_in=False`` in the CRC-16 branch of
+        ``_compute_hash_checksums`` in ``base.py``; the unreflected computation
+        yields 0xFEE8 for the test vector, so
+        ``compute_custom_crc(...) == 0xBB3D`` fails immediately.
         """
-        data = _read_real_pe(real_pe_dll)
-        crc = compute_custom_crc(data, 16, 0x8005, 0x0000, ref_in=True, ref_out=True, xor_out=0x0000)
-        assert f"{crc:04x}" == compute_hash("CRC-16", data)
+        check_vector = b"123456789"
+        catalogue_crc16 = 0xBB3D
+        assert compute_custom_crc(check_vector, 16, 0x8005, 0x0000, ref_in=True, ref_out=True, xor_out=0x0000) == catalogue_crc16
+        assert compute_hash("CRC-16", check_vector) == f"{catalogue_crc16:04x}"
 
-    def test_crc64_engine_matches_production_dispatch(self, real_pe_dll: Path) -> None:
-        """Verify the CRC-64 engine matches the production ``compute_hash`` path.
+    def test_crc64_engine_matches_production_dispatch(self) -> None:
+        """Verify the CRC-64 engine against the published catalogue check value.
 
-        Args:
-            real_pe_dll: Real PE DLL fixture path.
+        The CRC-64/ECMA-182 algorithm (poly=0x42F0E1EBA9EA3693,
+        init=0xFFFFFFFFFFFFFFFF, ref_in=False, ref_out=False,
+        xor_out=0xFFFFFFFFFFFFFFFF) applied to the canonical test vector
+        ``b"123456789"`` must produce 0x62EC59E3F1A4F00A.  This constant is
+        from the CRC Catalogue (CRC-64/ECMA-182 / CRC-64/WE) and is derived
+        independently of the production implementation by the CRC RevEng
+        project.
+
+        ``compute_hash("CRC-64", ...)`` must produce the same formatted result,
+        proving the dispatcher wires the correct parameters to the engine.
+
+        Mutation proof: flip ``ref_in=True`` inside the CRC-64 branch of
+        ``_compute_hash_checksums`` in ``base.py``; the reflected computation
+        yields a different value for the test vector, so
+        ``compute_custom_crc(...) == 0x62EC59E3F1A4F00A`` fails immediately.
         """
-        data = _read_real_pe(real_pe_dll)
-        crc = compute_custom_crc(
-            data,
-            64,
-            0x42F0E1EBA9EA3693,
-            0xFFFFFFFFFFFFFFFF,
-            ref_in=False,
-            ref_out=False,
-            xor_out=0xFFFFFFFFFFFFFFFF,
+        check_vector = b"123456789"
+        catalogue_crc64 = 0x62EC59E3F1A4F00A
+        assert (
+            compute_custom_crc(
+                check_vector,
+                64,
+                0x42F0E1EBA9EA3693,
+                0xFFFFFFFFFFFFFFFF,
+                ref_in=False,
+                ref_out=False,
+                xor_out=0xFFFFFFFFFFFFFFFF,
+            )
+            == catalogue_crc64
         )
-        assert f"{crc:016x}" == compute_hash("CRC-64", data)
+        assert compute_hash("CRC-64", check_vector) == f"{catalogue_crc64:016x}"
 
     def test_unreflected_crc32_engine_matches_bit_serial(self, real_pe_dll: Path) -> None:
-        """Verify the parametric engine is deterministic for an unreflected CRC-32.
+        """Verify the parametric engine produces the catalogue value for CRC-32/BZIP2-no-xor.
 
-        The engine is exercised over a real PE body with a non-standard
-        (unreflected) CRC-32 parameter set so the result is reproducible and
-        depends on the full byte stream; recomputing it must yield the same
-        value, proving the per-byte processing is stable on real data.
+        The CRC-32 parameters poly=0x04C11DB7, init=0xFFFFFFFF, ref_in=False,
+        ref_out=False, xor_out=0x00 applied to the check vector ``b"123456789"``
+        must yield 0x0376E6E7 — the complement of the CRC-32/BZIP2 catalogue
+        check value 0xFC891918 (which uses xor_out=0xFFFFFFFF). This
+        independently derived constant is computed a different way than the
+        production code, so any wrong-constant-return regression in
+        ``compute_custom_crc`` fails the assertion. The real PE body is also
+        hashed and its digest must change when one byte is removed, proving the
+        full-stream avalanche property on real data.
 
         Args:
             real_pe_dll: Real PE DLL fixture path.
         """
+        check_vector = b"123456789"
+        expected_check_value = 0x0376E6E7
+        assert (
+            compute_custom_crc(
+                check_vector, 32, 0x04C11DB7, 0xFFFFFFFF, ref_in=False, ref_out=False, xor_out=0x00,
+            )
+            == expected_check_value
+        )
         data = _read_real_pe(real_pe_dll)
-        first = compute_custom_crc(data, 32, 0x04C11DB7, 0xFFFFFFFF, ref_in=False, ref_out=False, xor_out=0x00)
-        second = compute_custom_crc(data, 32, 0x04C11DB7, 0xFFFFFFFF, ref_in=False, ref_out=False, xor_out=0x00)
-        assert first == second
-        assert first != compute_custom_crc(
+        full = compute_custom_crc(data, 32, 0x04C11DB7, 0xFFFFFFFF, ref_in=False, ref_out=False, xor_out=0x00)
+        assert full != compute_custom_crc(
             data[:-1],
             32,
             0x04C11DB7,
@@ -221,8 +263,71 @@ class TestFnvHashes:
 class TestStreamingCrcMatchesInMemory:
     """Streaming CRC over a real file must equal the in-memory CRC."""
 
-    def test_streaming_file_path_matches_zlib(self, real_pe_dll: Path) -> None:
+    @staticmethod
+    def _bitserial_crc_unreflected(data: bytes, width: int, poly: int, init: int, xor_out: int) -> int:
+        """Compute an MSB-first, unreflected CRC one bit at a time.
+
+        This reference is structurally independent of the production
+        table-driven, byte-at-a-time engine: it processes the message bit by
+        bit using only shifts and the polynomial, so a regression in the
+        production CRC table, chunk offsets, or reflection handling produces a
+        divergent value here.
+
+        Args:
+            data: Message bytes to checksum.
+            width: CRC width in bits.
+            poly: Generator polynomial (unreflected, MSB-first).
+            init: Initial register value.
+            xor_out: Final XOR value applied to the register.
+
+        Returns:
+            int: The width-bit CRC of ``data``.
+        """
+        topbit = 1 << (width - 1)
+        mask = (1 << width) - 1
+        crc = init & mask
+        for byte in data:
+            crc ^= (byte << (width - 8)) & mask
+            for _ in range(8):
+                crc = ((crc << 1) ^ poly) & mask if crc & topbit else (crc << 1) & mask
+        return (crc ^ xor_out) & mask
+
+    def test_streaming_file_path_matches_bitserial_reference(self, real_pe_dll: Path) -> None:
+        """Verify the mmap-streamed table-driven CRC-32 over a real PE.
+
+        Uses CRC-32/BZIP2-style parameters with ``ref_in=False`` /
+        ``ref_out=False`` so the standard zlib short-circuit in
+        ``_crc_over_chunks`` is NOT taken and the production table-driven,
+        mmap-chunked streaming engine is genuinely exercised.  The independent
+        oracle is :meth:`_bitserial_crc_unreflected`, a bit-at-a-time CRC that
+        shares no code with the production byte-at-a-time engine, so any
+        regression in the CRC table, the chunk boundaries, or the streaming
+        loop yields a divergent value and fails the assertion.
+
+        Args:
+            real_pe_dll: Real PE DLL fixture path.
+        """
+        data = _read_real_pe(real_pe_dll)
+        crc = compute_streaming_custom_crc(
+            str(real_pe_dll),
+            None,
+            32,
+            0x04C11DB7,
+            0xFFFFFFFF,
+            ref_in=False,
+            ref_out=False,
+            xor_out=0x00,
+        )
+        expected = self._bitserial_crc_unreflected(data, 32, 0x04C11DB7, 0xFFFFFFFF, 0x00)
+        assert crc == expected
+
+    def test_streaming_standard_crc32_matches_zlib(self, real_pe_dll: Path) -> None:
         """Verify mmap-streamed standard CRC-32 over a real PE matches zlib.
+
+        This complements
+        :meth:`test_streaming_file_path_matches_bitserial_reference` by
+        confirming the standard (reflected) CRC-32 path agrees with the
+        independent ``zlib.crc32`` implementation over the real binary.
 
         Args:
             real_pe_dll: Real PE DLL fixture path.
@@ -251,6 +356,10 @@ class TestStreamingCrcMatchesInMemory:
         Args:
             real_pe_dll: Real PE DLL fixture path.
         """
+        hexcore = pytest.importorskip(
+            "intellicrack_hexcore",
+            reason="intellicrack_hexcore backend required for document-backed streaming CRC",
+        )
         document = hexcore.HexDocument.open(str(real_pe_dll))
         via_file = compute_streaming_custom_crc(
             str(real_pe_dll),
@@ -279,13 +388,33 @@ class TestFormatSize:
     """``format_size`` must produce human-readable sizes for a real PE."""
 
     def test_real_pe_size_is_kb_or_mb(self, real_pe_dll: Path) -> None:
-        """Verify a real PE size formats into a KB/MB string with the right unit.
+        """Verify a real PE size formats to the exact human-readable string.
+
+        The independent oracle recomputes the expected string a different way
+        from the 1024-based unit boundaries, asserting exact equality rather
+        than a ``.endswith`` proxy (which would pass a wrong-divisor MB branch).
+        Explicit MB and GB checks deterministically gate those branches
+        regardless of the real fixture's size.
 
         Args:
             real_pe_dll: Real PE DLL fixture path.
         """
+        kib = 1 << 10
+        mib = 1 << 20
+        gib = 1 << 30
+
         size = real_pe_dll.stat().st_size
-        formatted = format_size(size)
-        assert formatted.endswith(("KB", "MB"))
+        if size < kib:
+            expected = f"{size} B"
+        elif size < mib:
+            expected = f"{size / kib:.1f} KB"
+        elif size < gib:
+            expected = f"{size / mib:.1f} MB"
+        else:
+            expected = f"{size / gib:.2f} GB"
+        assert format_size(size) == expected
+
         assert format_size(0) == "0 B"
         assert format_size(1536) == "1.5 KB"
+        assert format_size(3 * mib // 2) == "1.5 MB"
+        assert format_size(3 * gib // 2) == "1.50 GB"

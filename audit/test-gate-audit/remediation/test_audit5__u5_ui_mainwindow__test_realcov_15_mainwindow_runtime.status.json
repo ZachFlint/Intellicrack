@@ -1,0 +1,27 @@
+{
+  "file": "tests/test_audit5/u5_ui_mainwindow/test_realcov_15_mainwindow_runtime.py",
+  "findings_addressed": [
+    {
+      "id": "G0046",
+      "test": "test_open_sandbox_panel_drives_full_post_panel_path",
+      "action": "replaced",
+      "oracle": "Pre-seeds tool_panel.sandbox_panel and tool_panel.panels['sandbox'] with a real _MinimalSandboxPanel QWidget stub before calling _on_open_sandbox_panel, bypassing the unavailable Windows Sandbox / WDAG backend. Asserts three independent runtime outcomes: (1) start_tool_called is True - the slot invoked start_tool() at line 3041; (2) tool_panel._pending_sandbox_bridge is not None - wire_sandbox_bridge was called at line 3040; (3) tool_panel.get_panel('sandbox') is the exact pre-seeded stub - the panels dict is consistent.",
+      "documented_mutations": [
+        "Change panel.start_tool() to panel.stop_tool() at line 3041 in _on_open_sandbox_panel -> start_tool_called stays False -> assertion (1) fails.",
+        "Remove self.tool_panel.wire_sandbox_bridge(bridge) at line 3040 -> _pending_sandbox_bridge stays None -> assertion (2) fails.",
+        "Remove self.panels['sandbox'] = qwidget inside _create_sandbox_panel (line 1934) -> get_panel('sandbox') returns None -> assertion (3) fails."
+      ]
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    "test_open_sandbox_panel_resolves_via_get_panel (replaced by test_open_sandbox_panel_drives_full_post_panel_path)"
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Replaced the formerly-weak test_open_sandbox_panel_resolves_via_get_panel with test_open_sandbox_panel_drives_full_post_panel_path. The old test relied on recording get_panel calls but the production code returns early at line 3037 when add_sandbox_tab() returns None (unavailable backend), so get_panel was never called and the 'unconditional' assertion was unreachable in CI. The new test pre-seeds tool_panel.sandbox_panel with a real _MinimalSandboxPanel QWidget stub so add_sandbox_tab() short-circuits at line 1906-1907 (sandbox_panel is not None), delivering execution through the full post-panel body (lines 3039-3052). Three independent falsifiable gates replaced the single unreachable assertion. Also added pyqtSignal import and moved SandboxPanelProtocol to TYPE_CHECKING block per TC001."
+}

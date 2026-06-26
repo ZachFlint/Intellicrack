@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+  "findings_addressed": [
+    {
+      "id": "G0028",
+      "test": "TestDeadModuleRemoved::test_hex_editor_package_imports_cleanly",
+      "action": "hardened",
+      "oracle": "The hex_editor package __init__.py declares __all__ = ['HexEditorPanel', 'execute_text_search', 'execute_numeric_search']. The test now asserts each of these three names is callable on the imported module, and that the deleted _ips sub-module is absent via hasattr. These are independent checks driven from the module's own declared contract.",
+      "documented_mutation": "In src/intellicrack/ui/panels/hex_editor/__init__.py, remove 'execute_text_search' from the import and __all__ list — the assertion `assert callable(getattr(mod, 'execute_text_search', None))` will fail because getattr returns None and callable(None) is False."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The test previously asserted only `assert mod is not None`, which is tautological since importlib.import_module either returns the module object or raises an exception — it never returns None. The hardened version asserts three concrete callable symbols from the package's declared __all__ are present and callable, and also verifies the deleted _ips sub-module is absent from the namespace. This makes the test falsifiable: removing any export from __init__.py or re-adding an _ips binding will fail the corresponding assertion."
+}

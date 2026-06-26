@@ -306,16 +306,36 @@ class TestBitfields:
     def test_bitfield_extraction(self, interp: HexPatInterpreter) -> None:
         """Verify extracting individual bit-width fields from a byte.
 
+        For data=0xB5 (0b10110101) with right_to_left bit ordering (default),
+        the fields are extracted from LSB upward:
+          a (1 bit, pos 0): (0xB5 >> 0) & 0x1 = 1
+          b (1 bit, pos 1): (0xB5 >> 1) & 0x1 = 0
+          c (2 bits, pos 2): (0xB5 >> 2) & 0x3 = 1
+          d (4 bits, pos 4): (0xB5 >> 4) & 0xF = 11 = 0xB
+
         Args:
             interp: Fresh interpreter fixture.
         """
-        data = bytes([0b10110101])
+        raw_byte = 0b10110101
+        data = bytes([raw_byte])
         source = "bitfield F { a : 1; b : 1; c : 2; d : 4; }; F f @ 0;"
         results = interp.execute_bytes(source, data)
         kids = results[0]["children"]
         assert len(kids) == 4
+
+        expected_a = (raw_byte >> 0) & 0x1
+        expected_b = (raw_byte >> 1) & 0x1
+        expected_c = (raw_byte >> 2) & 0x3
+        expected_d = (raw_byte >> 4) & 0xF
+
         assert kids[0]["name"] == "a"
+        assert kids[0]["display_value"] == f"0x{expected_a:X} (1 bits)"
+        assert kids[1]["name"] == "b"
+        assert kids[1]["display_value"] == f"0x{expected_b:X} (1 bits)"
+        assert kids[2]["name"] == "c"
+        assert kids[2]["display_value"] == f"0x{expected_c:X} (2 bits)"
         assert kids[3]["name"] == "d"
+        assert kids[3]["display_value"] == f"0x{expected_d:X} (4 bits)"
 
 
 class TestArrays:
@@ -337,13 +357,23 @@ class TestArrays:
     def test_u8_array(self, interp: HexPatInterpreter) -> None:
         """Verify parsing a top-level u8 array placement.
 
+        Each element is decoded independently as an unsigned 8-bit integer.
+        The expected display values are independently computed via hex formatting.
+
         Args:
             interp: Fresh interpreter fixture.
         """
-        data = bytes([10, 20, 30, 40])
-        source = "u8 bytes[4] @ 0;"
+        raw_values = [10, 20, 30, 40]
+        data = bytes(raw_values)
+        source = "u8 arr[4] @ 0;"
         results = interp.execute_bytes(source, data)
         assert results[0]["size"] == 4
+        kids = results[0]["children"]
+        assert len(kids) == 4
+        for i, raw_val in enumerate(raw_values):
+            expected_display = f"0x{raw_val:X}"
+            assert kids[i]["display_value"] == expected_display
+            assert kids[i]["size"] == 1
 
 
 class TestAtOffset:
@@ -412,15 +442,23 @@ class TestOutputFormat:
     """Tests for the structure and content of parsed field output dicts."""
 
     def test_parsed_field_keys(self, interp: HexPatInterpreter) -> None:
-        """Verify that parsed fields contain all required dictionary keys.
+        """Verify that parsed fields contain correct values for all required keys.
+
+        Oracle: 42 = 0x2A; independently computed with format(42, 'X').
 
         Args:
             interp: Fresh interpreter fixture.
         """
-        results = interp.execute_bytes("u8 v @ 0;", bytes([42]))
+        raw_byte = 42
+        results = interp.execute_bytes("u8 v @ 0;", bytes([raw_byte]))
         field = results[0]
-        required_keys = {"name", "offset", "size", "raw_bytes", "display_value", "children", "color", "validation_passed", "description"}
-        assert required_keys.issubset(set(field.keys()))
+        assert field["name"] == "v"
+        assert field["offset"] == 0
+        assert field["size"] == 1
+        assert field["raw_bytes"] == [raw_byte]
+        assert field["display_value"] == f"0x{raw_byte:X}"
+        assert field["children"] == []
+        assert not field["description"]
 
     def test_raw_bytes_is_list_of_int(self, interp: HexPatInterpreter) -> None:
         """Verify that raw_bytes is a list of integers matching the data.

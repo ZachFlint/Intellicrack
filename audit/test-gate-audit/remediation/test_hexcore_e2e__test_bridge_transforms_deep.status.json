@@ -1,0 +1,47 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py",
+  "findings_addressed": [
+    {
+      "id": "G0179",
+      "test": "TestApplyPipelineSingleStep::test_single_xor_step_returns_hex_string",
+      "action": "hardened",
+      "oracle": "Independent byte-wise computation: bytes(b ^ 0xAA for b in b'\\xff\\xff\\xff\\xff') == b'\\x55\\x55\\x55\\x55', encoded as '55555555'",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py, change `result = pipeline.execute(data)` to `result = data` (skip XOR) — the assertion `result == '55555555'` fails because the unchanged 0xFF bytes encode as 'ffffffff'"
+    },
+    {
+      "id": "G0180",
+      "test": "TestApplyPipelineMultiStep::test_three_step_pipeline_produces_output",
+      "action": "rehardened",
+      "keys_chosen": [
+        "0x11",
+        "0x22",
+        "0x44"
+      ],
+      "combined_key": "0x77",
+      "combined_key_nonzero": true,
+      "payload": "b'\\x00\\x11\\x22\\x33'",
+      "expected": "77665544",
+      "input_hex": "00112233",
+      "expected_differs_from_input": true,
+      "oracle": "combined_key = 0x11 ^ 0x22 ^ 0x44 = 0x77 (non-zero); expected = binascii.hexlify(bytes(b ^ 0x77 for b in b'\\x00\\x11\\x22\\x33')).decode() = '77665544'; input hex '00112233' != expected '77665544', so a no-op pipeline cannot satisfy the assertion",
+      "weakness_fixed": "Previous keys 0xFF ^ 0x0F ^ 0xF0 = 0x00 caused combined key to be zero, making expected == hexlify(payload) == '00112233'; a silent no-op pipeline would also return '00112233' and incorrectly PASS",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py, change pipeline step accumulation to apply only the first step (breaking multi-step chaining) — the assertion `result == '77665544'` fails because applying only XOR(0x11) to b'\\x00\\x11\\x22\\x33' yields '11002233'"
+    },
+    {
+      "id": "G0181",
+      "test": "TestApplyPipelineMultiStep::test_pipeline_result_length_matches_input_length",
+      "action": "hardened",
+      "oracle": "Independent per-byte XOR: bytes(b ^ 0x55 for b in range(16)) is fully determined without calling production code; all 32 hex characters must match exactly",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py, change XOR key parsing to always use 0x00 instead of the provided hex key — the assertion fails because bytes(b ^ 0x00 for b in range(16)) != bytes(b ^ 0x55 for b in range(16))"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0180 re-hardened: keys changed from (0xFF, 0x0F, 0xF0) whose XOR-combination was 0x00 (self-cancelling, no-op indistinguishable) to (0x11, 0x22, 0x44) whose XOR-combination is 0x77 (non-zero). Two inline assertions added: `assert combined_key != 0` and `assert expected != binascii.hexlify(payload).decode()` to permanently document and enforce the non-cancelling invariant. No production code modified."
+}

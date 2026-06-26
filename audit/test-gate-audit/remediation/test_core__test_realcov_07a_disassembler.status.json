@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_core/test_realcov_07a_disassembler.py",
+  "findings_addressed": [
+    {
+      "id": "G0114",
+      "test": "TestDisassembleRealMachineCode::test_disassemble_count_caps_instruction_total",
+      "action": "hardened",
+      "oracle": "capstone.Cs(CS_ARCH_X86, CS_MODE_64) driven directly on the same section/rva — first 5 instructions' addresses and mnemonics are compared against those returned by disasm.disassemble(count=5)",
+      "documented_mutation": "In src/intellicrack/core/disassembler.py line 271: change `if len(instructions) >= count:` to `if len(instructions) >= 0:` — the loop breaks immediately, returning an empty list, causing `assert len(instructions) == 5` to fail"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Replaced `assert len(instructions) <= 5` (trivially true for empty list) with `assert len(instructions) == 5` (exact count gate). Added an independent capstone oracle that drives capstone.Cs directly on the same .text bytes and verifies that each of the 5 returned instructions has matching address and mnemonic. kernel32.dll .text section always has thousands of decodable x86-64 instructions, so count=5 must return exactly 5."
+}

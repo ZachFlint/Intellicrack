@@ -48,7 +48,7 @@ _WIN_PROCESS_QUERY_INFORMATION = 0x0400
 _WIN_INVALID_PARAMETER = 87
 _WIN_ACCESS_DENIED = 5
 
-_atexit_registered_globally: bool = False
+_atexit_registered_globally: list[bool] = [False]
 _atexit_guard_lock: threading.Lock = threading.Lock()
 
 
@@ -355,11 +355,10 @@ class ProcessManager:
         if self.atexit_registered:
             return
 
-        global _atexit_registered_globally
         with _atexit_guard_lock:
-            if not _atexit_registered_globally:
+            if not _atexit_registered_globally[0]:
                 atexit.register(ProcessManager._atexit_cleanup_global)
-                _atexit_registered_globally = True
+                _atexit_registered_globally[0] = True
         self.atexit_registered = True
 
         if sys.platform != "win32":

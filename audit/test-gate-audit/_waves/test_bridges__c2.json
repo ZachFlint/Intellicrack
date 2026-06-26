@@ -1,0 +1,25 @@
+{
+  "group": "test_bridges__c2",
+  "files": {
+    "tests/test_bridges/test_x64dbg_new_methods.py": [
+      {
+        "id": "G0102",
+        "test": "TestScanMemory::test_scan_with_hex_string",
+        "line": 320,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Add assert any(r.address == _buf_addr for r in results) (and rename _buf_addr to buf_addr to signal its use as an oracle). This confirms the hex-string parser converted the input to the exact same bytes as the marker buffer and found exactly that allocation, mirroring the address-verification pattern in test_scan_with_bytes.",
+        "why_not_gate": "The variable _buf_addr (underscore prefix signals it is intentionally unused) is computed but appears in no assertion. The test only asserts isinstance(results, list) and len(results) > 0. A broken hex-string parser — for example one that strips every other hex pair, interprets the string as big-endian, or silently returns the equivalent bytes for a different string — could still scan and find any matching region elsewhere in process memory, satisfying len(results) > 0 while the actual hex-parsing round-trip is not verified. By contrast, test_scan_with_bytes (line 275) anchors to buf_addr and validates matched_bytes, making it a genuine gate. This test provides no comparable anchor."
+      },
+      {
+        "id": "G0103",
+        "test": "TestScanMemory::test_scan_with_spaced_hex_string",
+        "line": 335,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Rename _buf_addr to buf_addr and add assert any(r.address == buf_addr for r in results). This pins the assertion to the specific buffer whose bytes are the canonical reference encoding of the spaced hex pattern, confirming that space-delimited parsing round-trips correctly to the same byte sequence.",
+        "why_not_gate": "Identical structural weakness to test_scan_with_hex_string. _buf_addr is computed (line 333) but unused in any assertion. The production parser strips spaces via pattern.replace(' ', '') before calling bytes.fromhex(); if that replacement were broken (e.g. stripped only leading/trailing spaces, skipped alternate tokens, or produced off-by-one bytes), scan_memory could still find a spurious match elsewhere in process memory and pass both isinstance and len checks. The space-delimiter parsing path is the specific capability under audit here, but no result is tied back to the known buffer address where the correctly-parsed bytes must reside."
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "file": "tests/test_sandbox/test_sandbox_bridge.py",
+  "findings_addressed": [
+    {
+      "id": "G0316",
+      "test": "TestInitializeShutdown::test_ensure_manager_creates",
+      "action": "hardened",
+      "oracle": "isinstance(mgr, SandboxManager) verifies the real class; inspect.iscoroutinefunction(mgr.get_available_types) verifies the method is awaitable as the bridge requires",
+      "documented_mutation": "In sandbox_bridge.py ensure_manager(), change `self._manager = SandboxManager()` to `self._manager = object()` — the isinstance(mgr, SandboxManager) assertion fails immediately"
+    },
+    {
+      "id": "G0317",
+      "test": "TestAnalysisWrappers::test_diff_success",
+      "action": "hardened",
+      "oracle": "The win fixture report has FileChange(path='C:\\\\out.txt') and NetworkActivity(remote_address='185.220.101.45') unique to it; the qemu fixture has neither — independently verified by reading conftest.py fixture definitions; diff_section['file_changes']['unique_to_a'] must contain the path and diff_section['network_activity']['unique_to_a'] must contain the IP",
+      "documented_mutation": "In analysis.py diff_reports(), delete the `for field_name, key_fields in field_key_map.items():` loop (lines 1319-1344) — the result collapses to only {'scalars': ...}, KeyError on diff_section['file_changes'] makes both new asserts fail"
+    },
+    {
+      "id": "G0318",
+      "test": "TestBridgeInstantiation::test_not_none",
+      "action": "hardened",
+      "oracle": "isinstance(bridge, SandboxBridge) asserts the real constructed type; bridge.name == ToolName.SANDBOX pins the class-level name constant — both are independent of the mere non-None existence check",
+      "documented_mutation": "In sandbox_bridge.py, change `self._name = ToolName.SANDBOX` to `self._name = ToolName.HEX_EDITOR` — the bridge.name == ToolName.SANDBOX assertion fails"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "SandboxManager moved from TYPE_CHECKING to runtime import to support isinstance check in G0316. The test_not_none (G0318) is kept but upgraded rather than deleted — its weaker sibling test_name_is_sandbox already covered the name check but the combined isinstance+name assertion in a single test is stronger. The diff test (G0317) now navigates the actual dict structure and asserts the concrete unique entries from the known fixture data."
+}

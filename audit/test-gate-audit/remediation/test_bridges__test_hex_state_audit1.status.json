@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_bridges/test_hex_state_audit1.py",
+  "findings_addressed": [
+    {
+      "id": "G0074",
+      "test": "TestF0038DisplayModeAsymmetricLocking::test_concurrent_set_get_display_mode_observes_consistent_values",
+      "action": "rehardened",
+      "oracle": "A _BlockingLengthDoc holds the state lock inside set_document for a measurable interval. While the lock is held, both set_display_mode_state('hex32_le') and get_display_mode() are launched in separate threads. After 50 ms, get_display_mode() must NOT have returned (assert not getter_returned.is_set()). This creates genuine concurrent lock contention — not the earlier serialised set→notify→callback pattern that never produced an overlapping critical section.",
+      "documented_mutation": "Remove 'with self._lock:' from get_display_mode() so it reads self._display_mode directly without waiting for the lock. Without the lock, get_display_mode() returns immediately while set_document still holds the lock, so getter_returned.is_set() is True after 50 ms and the assertion 'assert not getter_returned.is_set()' fails."
+    },
+    {
+      "id": "G0075",
+      "test": "TestF0037SetDocumentLengthOutsideLock::test_document_length_in_event_matches_published_document",
+      "action": "rehardened",
+      "oracle": "Independent oracle: doc_a is always installed at Path('a.bin') with a fixed length of 999; doc_b is always installed at Path('b.bin') with a fixed length of 42. The test uses _BlockingLengthDoc to hold the state lock while an interloper thread races to install doc_b (and is itself blocked). After both threads join, every DOCUMENT_OPENED event is checked: the event for 'a.bin' must have size==999 and the event for 'b.bin' must have size==42. The old test only checked event_size in {1024, 4096} which can never fail regardless of which document's length was recorded.",
+      "documented_mutation": "In set_document, change 'doc_len = length_fn()' (called on local parameter 'document') to read length from self._document BEFORE the self._document = document assignment, e.g. 'doc_len = getattr(self._document, \"length\", lambda: 0)()'. This causes the event for 'a.bin' to report the previously installed document's length instead of 999, failing the assertion opened.get(str(path_a)) == 999."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Both tests were rehardened to eliminate the serialised-execution weakness. test_concurrent_set_get_display_mode_observes_consistent_values now uses _BlockingLengthDoc to hold the state lock and verifies get_display_mode() BLOCKS while the lock is held — a genuine concurrent critical-section overlap. test_document_length_in_event_matches_published_document now uses a path-to-expected-size oracle: doc_a at 'a.bin' must always report size 999 and doc_b at 'b.bin' must always report size 42, catching any mutation that reads length from the wrong document object."
+}

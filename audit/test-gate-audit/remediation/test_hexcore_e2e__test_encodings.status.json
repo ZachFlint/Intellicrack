@@ -1,0 +1,42 @@
+{
+  "file": "tests/test_hexcore_e2e/test_encodings.py",
+  "findings_addressed": [
+    {
+      "id": "G0200",
+      "test": "TestListEncodings::test_list_encodings_returns_nonempty_list",
+      "action": "hardened",
+      "oracle": "len(_EXPECTED_ENCODING_NAMES) == 36, mirroring the ENCODING_LIST constant in src/intellicrack-hexcore/src/encodings.rs",
+      "documented_mutation": "In encodings.rs, remove any one entry from ENCODING_LIST (e.g. delete the ('koi8-u', ...) line) — the returned list would have 35 entries and assert len(result) == 36 would fail"
+    },
+    {
+      "id": "G0201",
+      "test": "TestListEncodings::test_list_encodings_entries_are_two_tuples",
+      "action": "hardened",
+      "oracle": "_EXPECTED_ENCODING_NAMES.issubset(returned_names) — canonical set derived from ENCODING_LIST in encodings.rs",
+      "documented_mutation": "In encodings.rs, rename ('ascii', 'ASCII (7-bit)') to ('ascii7', 'ASCII (7-bit)') — 'ascii' would be absent from returned_names and the issubset check would fail"
+    },
+    {
+      "id": "G0202",
+      "test": "TestListEncodings::test_list_encodings_entries_are_strings",
+      "action": "hardened",
+      "oracle": "assert name in _EXPECTED_ENCODING_NAMES — canonical set from ENCODING_LIST in encodings.rs ensures every name is a known identifier, not just any non-empty string",
+      "documented_mutation": "In encodings.rs, change the first tuple from ('utf-8', 'UTF-8') to ('', 'UTF-8') — empty string is not in _EXPECTED_ENCODING_NAMES and the membership assertion would fail"
+    },
+    {
+      "id": "G0203",
+      "test": "TestListEncodings::test_list_encodings_names_are_nonempty",
+      "action": "hardened",
+      "oracle": "returned_names == _EXPECTED_ENCODING_NAMES — exact set equality against the canonical mirror of ENCODING_LIST in encodings.rs",
+      "documented_mutation": "In encodings.rs, add a new entry ('x', 'Unknown') to ENCODING_LIST — 'x' would be in returned_names but not in _EXPECTED_ENCODING_NAMES and the set equality assertion would fail"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "All four findings are in TestListEncodings and are weak-existence checks. The hardening strategy introduces a module-level frozenset _EXPECTED_ENCODING_NAMES that mirrors the ENCODING_LIST static constant in the Rust source (encodings.rs). This provides an independent oracle for every assertion. G0200 now asserts exact count; G0201 asserts canonical-name subset within tuples; G0202 asserts every returned name is in the canonical set; G0203 asserts exact set equality between returned names and canonical set. The two passing companion tests (test_list_encodings_contains_utf8, test_list_encodings_contains_ascii) are retained unchanged."
+}

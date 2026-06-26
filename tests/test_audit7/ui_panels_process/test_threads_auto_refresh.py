@@ -173,6 +173,10 @@ class _CountingThreadsTab(ThreadsTab):
         """
         self._on_auto_refresh_toggled(checked=checked)
 
+    def invoke_refresh_threads(self) -> None:
+        """Invoke the overridden ``_refresh_threads`` for direct testing."""
+        self._refresh_threads()
+
 
 @pytest.fixture
 def counting_tab(qapp: QApplication) -> Generator[_CountingThreadsTab]:
@@ -395,28 +399,68 @@ class TestF0012ThreadsTabAutoRefresh:
         timer = counting_tab.get_auto_refresh_timer()
         assert not timer.isActive(), "QTimer must not be active before Auto-Refresh is enabled"
 
-    def test_refresh_count_zero_before_toggle(self, counting_tab: _CountingThreadsTab) -> None:
-        """No refresh must be issued before Auto-Refresh is toggled on.
+    def test_refresh_count_increments_after_direct_call(self, counting_tab: _CountingThreadsTab) -> None:
+        """``_refresh_threads`` must increment ``refresh_call_count`` on each invocation.
+
+        The test drives the before->after transition: count is 0 before any
+        call, then exactly 1 after the first direct invocation, and exactly 2
+        after a second.  This gates the counting mechanism used by all
+        timer-driven tests above and ensures the override body is executed for
+        each call rather than being silently skipped.
 
         Args:
             counting_tab: ``_CountingThreadsTab`` fixture.
         """
-        assert counting_tab.refresh_call_count == 0, "refresh_call_count must be 0 before toggle-on; got {counting_tab.refresh_call_count}"
+        assert counting_tab.refresh_call_count == 0, (
+            "refresh_call_count must be 0 before any invocation"
+        )
 
-    def test_combos_empty_before_refresh(self, counting_tab: _CountingThreadsTab) -> None:
-        """All thread combos must be empty before the first auto-refresh fires.
+        counting_tab.invoke_refresh_threads()
+        assert counting_tab.refresh_call_count == 1, (
+            f"refresh_call_count must be 1 after the first call; got {counting_tab.refresh_call_count}"
+        )
 
-        This test confirms that ``update_thread_list`` is not called except via
-        the timer-driven ``_refresh_threads`` path.
+        counting_tab.invoke_refresh_threads()
+        assert counting_tab.refresh_call_count == 2, (
+            f"refresh_call_count must be 2 after the second call; got {counting_tab.refresh_call_count}"
+        )
+
+    def test_combos_populate_after_update_thread_list(self, counting_tab: _CountingThreadsTab) -> None:
+        """``update_thread_list`` must populate all thread combos with the supplied TIDs.
+
+        The test drives the before->after transition: all combos are empty
+        before the call, and after ``update_thread_list`` is invoked with a
+        known batch every combo must contain exactly those TIDs in order.  The
+        oracle is the input batch itself (the expected list is constructed
+        independently of the combo-population path).
 
         Args:
             counting_tab: ``_CountingThreadsTab`` fixture.
         """
-        assert counting_tab.get_reg_combo().count() == 0, "reg_combo must be empty before refresh"
-        assert counting_tab.get_stack_combo().count() == 0, "stack_combo must be empty before refresh"
-        assert counting_tab.get_seh_combo().count() == 0, "seh_combo must be empty before refresh"
-        assert counting_tab.get_fiber_combo().count() == 0, "fiber_combo must be empty before refresh"
-        assert counting_tab.get_tls_combo().count() == 0, "tls_combo must be empty before refresh"
+        for combo_name, combo in [
+            ("reg_combo", counting_tab.get_reg_combo()),
+            ("stack_combo", counting_tab.get_stack_combo()),
+            ("seh_combo", counting_tab.get_seh_combo()),
+            ("fiber_combo", counting_tab.get_fiber_combo()),
+            ("tls_combo", counting_tab.get_tls_combo()),
+        ]:
+            assert combo.count() == 0, f"{combo_name} must be empty before update_thread_list"
+
+        expected_tids: list[int] = [1001, 1002, 1003]
+        counting_tab.update_thread_list(_make_threads(expected_tids))
+
+        for combo_name, combo in [
+            ("reg_combo", counting_tab.get_reg_combo()),
+            ("stack_combo", counting_tab.get_stack_combo()),
+            ("seh_combo", counting_tab.get_seh_combo()),
+            ("fiber_combo", counting_tab.get_fiber_combo()),
+            ("tls_combo", counting_tab.get_tls_combo()),
+        ]:
+            actual_tids = _combo_tids(combo)
+            assert actual_tids == expected_tids, (
+                f"{combo_name} must contain exactly {expected_tids} after update_thread_list; "
+                f"got {actual_tids}"
+            )
 
     def test_exact_tids_in_combos_after_single_batch(
         self,

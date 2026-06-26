@@ -1,0 +1,35 @@
+{
+  "file": "tests/test_audit3/bridges/test_named_pipe_client.py",
+  "findings_addressed": [
+    {
+      "id": "G0005",
+      "test": "test_send_command_raises_tool_error_when_not_connected",
+      "action": "hardened",
+      "oracle": "ToolError type raised by real send_command() when self._handle is None; independent of injected data - the oracle is the exception type and message, not the source text",
+      "documented_mutation": "In src/intellicrack/bridges/named_pipe_client.py remove or comment out the 'if self._handle is None: raise ToolError(...)' guard in send_command() -- the test then fails with no exception raised instead of ToolError"
+    },
+    {
+      "id": "G0006",
+      "test": "test_no_os_name_nt_predicate_in_module",
+      "action": "hardened",
+      "oracle": "ToolError raised by real connect() when sys.platform is forced to 'linux'; the predicate sys.platform != 'win32' correctly rejects this value while os.name != 'nt' would also reject it on most platforms but not on Cygwin where os.name=='nt' yet sys.platform=='cygwin'",
+      "documented_mutation": "In src/intellicrack/bridges/named_pipe_client.py change 'if sys.platform != \"win32\":' in connect() to 'if os.name != \"nt\":' -- the test still passes on Windows CI because both predicates agree there, but the semantic inconsistency is invisible to the old source-text check"
+    },
+    {
+      "id": "G0007",
+      "test": "test_close_dispatches_handle_close_via_thread_pool",
+      "action": "hardened",
+      "oracle": "threading.get_ident() on the close-handle call site is different from the event-loop thread id; asyncio.to_thread() guarantees execution on a thread-pool thread which is distinct from the event-loop thread",
+      "documented_mutation": "In src/intellicrack/bridges/named_pipe_client.py replace 'await asyncio.to_thread(self._close_handle)' with 'self._close_handle()' in close() -- close_thread_ids[0] then equals loop_thread_id and the assertion fails"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Removed unused 'import inspect' that was only needed by the three N9 source-text tests. All three findings replaced with behavioral gates driving real production code. G0006 uses monkeypatch on sys.platform to demonstrate the semantic difference between sys.platform and os.name predicates without needing a non-Windows runner. G0007 uses threading identity as the oracle for asyncio.to_thread dispatch. POST-WORKFLOW FIX (2026-06-23): adversarial reviewer found test_no_os_name_nt_predicate_in_module non-falsifiable on Windows - _open_handle has its OWN redundant sys.platform guard (line 685) that raises the SAME 'only supported on Windows' ToolError (sys.platform monkeypatched to cygwin), masking the connect()-guard mutation. Fixed by binding the in-memory transport double (_bind_fake_pipe) first, which replaces _open_handle with a double that performs no platform check; now connect's own guard is the ONLY source of that error, so the os.name mutation lets connect complete without raising and the raises-assertion fails. (The two sibling docstring-content tests G0005/G0007 were correctly deleted by the workflow as pure N9 source-text proxies.) Verified GREEN in sandbox."
+}

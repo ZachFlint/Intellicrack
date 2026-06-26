@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py",
+  "findings_addressed": [
+    {
+      "id": "G0138",
+      "test": "TestDisassemblePeTextSection::test_disassemble_pe_text_count_4_returns_up_to_4",
+      "action": "hardened",
+      "oracle": "x86 encoding table: 0xCC is always a 1-byte int3 opcode; 4 such bytes must decode to exactly 4 instructions when count=4 is requested",
+      "documented_mutation": "In hex_editor.py disassemble(), change `raw_instructions = disassembler.disassemble(data, offset, arch, mode, count)` to cap count at 1 (e.g. `count=1`) — the returned list would have length 1, not 4, failing `assert len(results) == _PE_TEXT_INT3_COUNT`"
+    },
+    {
+      "id": "G0139",
+      "test": "TestDisassemblePeTextSection::test_disassemble_pe_text_all_required_keys_present",
+      "action": "hardened",
+      "oracle": "x86 encoding table: 0xCC is always a 1-byte int3 opcode (mnemonic='int3', hex bytes='cc', size=1); addresses must increment by 1 from _PE_TEXT_OFFSET for consecutive 1-byte instructions",
+      "documented_mutation": "In hex_editor.py disassemble(), change the returned dict's 'mnemonic' key to `insn.mnemonic.upper()` or to a fixed string — the assertion `insn['mnemonic'] == 'int3'` would fail"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0138: Changed weak range check (1<=len<=4) to exact equality (len==4) using _PE_TEXT_INT3_COUNT constant. The fixture at conftest.py line 164 places exactly 4 0xCC bytes at PE_SECTION_RAW_OFFSET=0x200=_PE_TEXT_OFFSET, each a 1-byte instruction. G0139: Replaced vacuous key-presence check with concrete per-instruction assertions on address, bytes, mnemonic, and size, all independently verifiable from the x86 opcode encoding of 0xCC."
+}

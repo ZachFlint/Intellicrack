@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py",
+  "findings_addressed": [
+    {
+      "id": "G0056",
+      "test": "module-level (entire file)",
+      "action": "hardened",
+      "oracle": "The bridge's _get_interpreter() raises RuntimeError when hexpat is unavailable (hex_editor.py line 1748-1751). A genuine ImportError/ModuleNotFoundError inside the hexpat package propagates through execute_pattern and is caught in the fixture, triggering pytest.skip. Any structural breakage short of a missing module (syntax error, removed class) now causes RuntimeError which turns tests RED instead of silently skipping the whole file.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py around line 205, delete the `_hexpat_interpreter_available = True` assignment (or change it to False) so that _get_interpreter() always raises RuntimeError; the probe call `_run(bridge.execute_pattern('u8 x @ 0x00;'))` in the fixture will then raise RuntimeError, which is not caught, turning every test in the file RED instead of silently SKIPPED."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The module-level pytest.importorskip('intellicrack.core.hexpat') at line 43 was removed. The loaded_bridge fixture now probes the real interpreter by executing a minimal pattern after attaching the stub document. Only ImportError/ModuleNotFoundError (missing package) triggers pytest.skip; any other failure (broken hexpat, RuntimeError from bridge guard) propagates and turns tests RED. The worklist also contained an N8 finding for test_omitting_print_sink_does_not_raise, but that test was already hardened in the current file with non-empty assertion and __mark anchor field check - no additional change required there. POST-WORKFLOW FIX (2026-06-23): adversarial reviewer flagged 3 weak tests. (1) test_pattern_without_print_returns_empty_hexpat_print asserted only absence (not payload['hexpat_print']) which the pre-fix unwired-sink bug ALSO satisfies -> added a positive anchor: first run _PRINT_PATTERN through the same sink path and assert 'hello-from-print-sink' is captured (proves the sink is wired), THEN assert the silent pattern yields empty (proves no fabricated output). (2,3) test_execute_pattern_{file_,}with_output_is_registered only checked 'name in set' (a stub with the name registered would pass) -> strengthened to fetch the ToolFunction by name and assert non-empty description+returns, the required parameter (source / pattern_path, verified via host probe), and that the bare method name resolves to a real callable on the bridge. Verified GREEN in sandbox (9/9)."
+}

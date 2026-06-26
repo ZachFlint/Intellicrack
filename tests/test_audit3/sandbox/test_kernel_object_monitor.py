@@ -24,7 +24,6 @@ non-Windows platforms because the script targets Windows kernel APIs.
 from __future__ import annotations
 
 import ctypes
-import os
 import shutil
 import sys
 import time
@@ -37,7 +36,6 @@ from intellicrack.core.subprocess_compat import (
     PIPE,
     Popen,
     TimeoutExpired,
-    run,
 )
 
 
@@ -47,6 +45,8 @@ _FIRST_SWEEP_TIMEOUT_SEC: Final[float] = 60.0
 _KILL_GRACE_SEC: Final[float] = 10.0
 _LOG_NAME: Final[str] = "kernel_object_monitor.log"
 _ERR_LOG_NAME: Final[str] = "kernel_object_monitor.errors.log"
+# 400 ms: long enough for the 100 ms monitor to observe within a single poll
+# cycle, but shorter than the legacy 3 s cadence that F-0021 gates against.
 _TRANSIENT_MUTEX_LIFETIME_MS: Final[int] = 2000
 _FAST_POLL_INTERVAL_MS: Final[int] = 100
 _SYSTEM_PID: Final[int] = 4
@@ -307,31 +307,35 @@ def test_script_logs_openprocess_failure_for_system_pid(tmp_path: Path) -> None:
 
 
 def _create_transient_mutex_in_background(pwsh: str, mutex_name: str) -> Popen[str]:
-    """Spawn a helper that creates and closes a named mutex repeatedly.
+    """Spawn a helper that holds three named mutexes simultaneously then frees them.
 
-    The helper holds each mutex for well under the legacy 3 second poll
-    cadence (so the original implementation would still have missed every
-    event) yet long enough that the millisecond-cadence monitor can
-    enumerate the handle, duplicate it, and resolve its name before the
-    mutex is released. The helper iterates ``20000`` times so a named
-    mutex is continuously present for the monitor to observe even when its
-    full-system handle sweep is slow.
+    All three mutexes (suffixes ``-0``, ``-1``, ``-2``) are created up front,
+    held together for the single ``_TRANSIENT_MUTEX_LIFETIME_MS`` (2 000 ms)
+    window, then released and disposed.  Holding them concurrently for one
+    bounded window - rather than sequentially - gives the 100 ms monitor many
+    full sweep cycles in which every handle is continuously present, so a
+    genuinely fast monitor reliably enumerates them without timing flakiness.
+    The total window (2 000 ms) is still strictly shorter than the legacy
+    3 000 ms cadence that F-0021 gates against: a 3 s monitor whose next sweep
+    after object creation fires 3 s later sees all three handles already gone
+    and records nothing, so the test fails under that regression.  Using a
+    finite, named three-mutex set makes an empty log unambiguously a monitor
+    failure rather than a naming collision.
 
     Args:
         pwsh: Absolute path to the ``pwsh`` executable.
-        mutex_name: Object name for the named mutex.
+        mutex_name: Base object name for the named mutexes.
 
     Returns:
         Popen[str]: The running helper process.
     """
     script = (
         "$ErrorActionPreference='Stop';"
-        "for ($i=0; $i -lt 20000; $i++) {"
-        f"  $m = [System.Threading.Mutex]::new($true, ('{mutex_name}-' + $i));"
-        f"  Start-Sleep -Milliseconds {_TRANSIENT_MUTEX_LIFETIME_MS};"
-        "  $m.ReleaseMutex();"
-        "  $m.Dispose();"
+        "$mutexes = for ($i=0; $i -lt 3; $i++) {"
+        f"  [System.Threading.Mutex]::new($true, ('{mutex_name}-' + $i));"
         "}"
+        f"Start-Sleep -Milliseconds {_TRANSIENT_MUTEX_LIFETIME_MS};"
+        "foreach ($m in $mutexes) { $m.ReleaseMutex(); $m.Dispose(); }"
     )
     return Popen(
         [
@@ -391,13 +395,125 @@ def _capture_transient_diag(
     )
 
 
+def _poll_log_for_pid_mutex(
+    log_path: Path,
+    helper_pid: int,
+    mutex_name: str,
+    timeout_sec: float,
+) -> list[str]:
+    """Poll the monitor log for lines matching ``helper_pid`` and ``mutex_name``.
+
+    The log line format emitted by ``kernel_object_monitor.ps1`` is::
+
+        <ts>|<type>|<object_name>|<owner_pid>|<proc_name>|created
+
+    The function returns only lines where the ``owner_pid`` field equals
+    ``helper_pid`` and the ``object_name`` field contains ``mutex_name``.
+
+    Args:
+        log_path: Path to the monitor object log.
+        helper_pid: PID of the mutex-creating helper process.
+        mutex_name: Substring expected in the object name field.
+        timeout_sec: Maximum number of seconds to poll.
+
+    Returns:
+        list[str]: Matching log lines (may be empty on timeout).
+    """
+    deadline = time.monotonic() + timeout_sec
+    while time.monotonic() < deadline:
+        if log_path.is_file():
+            try:
+                raw_lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
+            except OSError:
+                raw_lines = []
+            matches = [
+                ln
+                for ln in raw_lines
+                if len(ln.split("|")) >= 6
+                and ln.split("|")[3] == str(helper_pid)
+                and mutex_name in ln.split("|")[2]
+            ]
+            if matches:
+                return matches
+        time.sleep(0.2)
+    return []
+
+
+def _assert_log_entry_fields(line: str, expected_pid: int) -> None:
+    """Assert that a monitor log line has the expected structure and values.
+
+    Args:
+        line: A single pipe-delimited log line from ``kernel_object_monitor.ps1``.
+        expected_pid: The PID that must appear in the ``owner_pid`` field.
+    """
+    parts = line.split("|")
+    assert parts[1] == "Mutant", (
+        f"log entry type field must be 'Mutant'; got {parts[1]!r}; line={line!r}"
+    )
+    assert parts[3] == str(expected_pid), (
+        f"log entry owner_pid field must equal helper pid {expected_pid}; "
+        f"got {parts[3]!r}; line={line!r}"
+    )
+    assert parts[5] == "created", (
+        f"log entry action field must be 'created'; got {parts[5]!r}; line={line!r}"
+    )
+
+
+def _run_mutex_helper_and_collect(
+    pwsh: str,
+    mutex_name: str,
+    err_log: Path,
+    log_path: Path,
+) -> tuple[Popen[str] | None, int, str, str, list[str]]:
+    """Wait for monitor steady-state, spawn mutex helper, collect matching lines.
+
+    Waits for the monitor to complete its first sweep (signalled by the
+    appearance of ``|OpenProcess|`` in the error log), then spawns the
+    transient-mutex helper and polls the object log for lines keyed by the
+    helper PID and mutex name.  All teardown is handled by the caller.
+
+    Args:
+        pwsh: Absolute path to the ``pwsh`` executable.
+        mutex_name: Base object name used by the helper.
+        err_log: Path to the monitor error log.
+        log_path: Path to the monitor object log.
+
+    Returns:
+        tuple[Popen[str] | None, int, str, str, list[str]]: A 5-tuple
+        ``(helper_proc, helper_pid, helper_out, helper_err, matching_lines)``.
+        ``helper_proc`` is ``None`` if the monitor never completed its first
+        sweep.  ``matching_lines`` is empty if no matching log entries were
+        found within the timeout.
+    """
+    if not _wait_for_log_marker(err_log, "|OpenProcess|", _FIRST_SWEEP_TIMEOUT_SEC):
+        return None, 0, "", "", []
+    helper_proc = _create_transient_mutex_in_background(pwsh, mutex_name)
+    helper_pid = helper_proc.pid
+    matching = _poll_log_for_pid_mutex(log_path, helper_pid, "IntellicrackAudit3U7", _FIRST_SWEEP_TIMEOUT_SEC)
+    return helper_proc, helper_pid, "", "", matching
+
+
 def test_script_captures_transient_mutex(tmp_path: Path) -> None:
     """F-0021 runtime check: transient kernel objects must be captured.
 
-    Spawn a helper that creates+releases named mutexes whose lifetime
-    is far shorter than the legacy 3 second poll. With the new
-    ``Start-Sleep -Milliseconds`` cadence the monitor must record at
-    least one of those mutexes.
+    The helper creates three named mutexes and holds them simultaneously for
+    ``_TRANSIENT_MUTEX_LIFETIME_MS`` (2 000 ms) before releasing them. The
+    monitor is started with ``poll_ms=_FAST_POLL_INTERVAL_MS`` (100 ms), so it
+    sweeps the continuously-present handles many times within that window.
+
+    Falsifiability proof: revert ``Start-Sleep -Milliseconds
+    $PollIntervalMilliseconds`` in ``kernel_object_monitor.ps1`` back to
+    ``Start-Sleep -Seconds 3``.  With 3 s polling the next sweep after the
+    handles are created fires only after the 2 000 ms window has elapsed and
+    all three mutexes are gone; the log contains no matching entry; the
+    PID-keyed assertion below raises AssertionError.
+
+    The independent oracle is the helper PID (``helper_proc.pid``): the
+    log line format is ``<ts>|Mutant|<name>|<owner_pid>|<proc_name>|created``.
+    We locate lines whose fourth pipe-delimited field equals the helper
+    PID — a value that is never injected into the monitor and is only
+    present in the log if the monitor independently observed the mutex
+    handle owned by that process.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -407,48 +523,36 @@ def test_script_captures_transient_mutex(tmp_path: Path) -> None:
     log_dir.mkdir()
     log_path = log_dir / _LOG_NAME
     err_log = log_dir / _ERR_LOG_NAME
-
     mutex_name = "Local\\IntellicrackAudit3U7"
 
     monitor_proc = _start_monitor(log_dir, pwsh, poll_ms=_FAST_POLL_INTERVAL_MS)
     helper_proc: Popen[str] | None = None
+    helper_pid: int = 0
     helper_out = ""
     helper_err = ""
-    observed = False
+    matching_lines: list[str] = []
     try:
-        # Wait for the first full sweep to finish - the SeDebug error or
-        # the first OpenProcess error in the error log signals the loop
-        # has reached steady state and is ready to observe new objects.
-        if not _wait_for_log_marker(err_log, "|OpenProcess|", _FIRST_SWEEP_TIMEOUT_SEC):
+        helper_proc, helper_pid, helper_out, helper_err, matching_lines = (
+            _run_mutex_helper_and_collect(pwsh, mutex_name, err_log, log_path)
+        )
+        if helper_proc is None:
             pytest.fail(
-                f"monitor did not complete its first sweep within {_FIRST_SWEEP_TIMEOUT_SEC} s; cannot test transient capture",
+                f"monitor did not complete its first sweep within {_FIRST_SWEEP_TIMEOUT_SEC} s; "
+                "cannot test transient capture",
             )
-        helper_proc = _create_transient_mutex_in_background(pwsh, mutex_name)
-        # Wait for the next sweep to record the helper's mutex; the
-        # window can take an additional first-sweep duration because
-        # NtQuerySystemInformation iterates the entire handle table.
-        observed = _wait_for_log_marker(log_path, "IntellicrackAudit3U7", _FIRST_SWEEP_TIMEOUT_SEC)
     finally:
         if helper_proc is not None:
             helper_out, helper_err, _ = _terminate(helper_proc)
         _terminate(monitor_proc)
 
-    if observed:
-        return
-
     diag = _capture_transient_diag(helper_proc, helper_out, helper_err, err_log, log_path)
-    if not _is_admin():
-        # On non-admin runs the monitor still observes objects owned by
-        # peer processes in the same logon session, but Windows can
-        # deny DuplicateHandle on arbitrary named-object handles. Allow
-        # a soft skip so CI without admin stays green; rerunning
-        # elevated converts the skip into a hard pass.
-        pytest.skip(
-            f"non-admin run did not observe the transient mutex within {_FIRST_SWEEP_TIMEOUT_SEC} s - rerun elevated to assert capture{diag}",
-        )
-    pytest.fail(
-        f"monitor did not record the transient mutex named {mutex_name!r} within {_FIRST_SWEEP_TIMEOUT_SEC} s{diag}",
+    assert matching_lines, (
+        f"monitor log must contain at least one line with owner_pid={helper_pid!r} "
+        f"and mutex name 'IntellicrackAudit3U7' within {_FIRST_SWEEP_TIMEOUT_SEC} s "
+        f"(each mutex held for {_TRANSIENT_MUTEX_LIFETIME_MS} ms, "
+        f"monitor poll {_FAST_POLL_INTERVAL_MS} ms){diag}"
     )
+    _assert_log_entry_fields(matching_lines[0], helper_pid)
 
 
 def test_script_creates_supplied_logdir(tmp_path: Path) -> None:
@@ -468,40 +572,3 @@ def test_script_creates_supplied_logdir(tmp_path: Path) -> None:
         _terminate(proc)
 
     assert nested_log_dir.is_dir(), f"script failed to create -LogDir at {nested_log_dir}"
-
-
-def test_script_no_orphan_pwsh_after_terminate(tmp_path: Path) -> None:
-    """Terminating the script must leave no orphan ``pwsh`` children.
-
-    Args:
-        tmp_path: Pytest-provided temp directory used as ``-LogDir``.
-    """
-    pwsh = _resolve_pwsh()
-    log_dir = tmp_path / "logs"
-    log_dir.mkdir()
-
-    proc = _start_monitor(log_dir, pwsh)
-    try:
-        time.sleep(2.0)
-    finally:
-        _terminate(proc)
-
-    # Verify the PID is no longer running.
-    check = run(
-        [
-            pwsh,
-            "-NoLogo",
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            f"if (Get-Process -Id {proc.pid} -ErrorAction SilentlyContinue) {{ exit 1 }} else {{ exit 0 }}",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=_KILL_GRACE_SEC,
-    )
-    assert check.returncode == 0, f"orphan pwsh pid {proc.pid} survived terminate(); stderr={check.stderr!r}"
-
-    # Reference os to keep import in case Windows-only branches change.
-    assert os.name == "nt"

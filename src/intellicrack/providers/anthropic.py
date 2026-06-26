@@ -391,10 +391,14 @@ class AnthropicProvider(LLMProviderBase):
             return None
         input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
         output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
+        cache_read_tokens = int(getattr(usage, "cache_read_input_tokens", 0) or 0)
+        cache_creation_tokens = int(getattr(usage, "cache_creation_input_tokens", 0) or 0)
         return UsageInfo(
             prompt_tokens=input_tokens,
             completion_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens,
+            cache_read_tokens=cache_read_tokens,
+            cache_creation_tokens=cache_creation_tokens,
         )
 
     def _parse_response_blocks(

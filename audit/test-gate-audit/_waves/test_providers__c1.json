@@ -1,0 +1,252 @@
+{
+  "group": "test_providers__c1",
+  "files": {
+    "tests/test_providers/test_agentic_capabilities.py": [
+      {
+        "id": "G0249",
+        "test": "TestPromptCaching::test_anthropic_caching_succeeds",
+        "line": 623,
+        "category": "no-assertion",
+        "severity": "high",
+        "recommendation": "After each chat() call, assert provider.get_pending_usage() is not None. On the second call, inspect the usage object for cache-specific fields (Anthropic populates cache_creation_input_tokens and cache_read_input_tokens when cache-control is present). Assert cache_read_input_tokens > 0 on the second call to prove the cache was actually hit. Alternatively, mock the Anthropic client and assert _apply_cache_breakpoints() was called with the expected kwargs structure.",
+        "why_not_gate": "The test only asserts response1.role == 'assistant' and response2.role == 'assistant' (lines 640, 648). If the production code never called _apply_cache_breakpoints(), silently dropped enable_cache from kwargs, or deleted the entire cache-control insertion logic, both responses would still arrive with role='assistant' and the test would pass. The cache-specific behavior (cache breakpoints being placed, server acknowledging the cache hint, cache-read tokens on second call) is completely unverified. Only the existence of a response is tested, not the presence of cache-control structures in the request or evidence of cache hits in the usage metadata."
+      },
+      {
+        "id": "G0250",
+        "test": "TestContextWindowEnforcement::test_message_trimming_removes_oldest_first",
+        "line": 523,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert the identity of surviving messages. For example, after trimming, verify that the newest user message (user-C) is still present with a check like `assert any('C' * 4000 in m.content for m in trimmed)`, and verify that older messages were removed with `assert not any('A' * 4000 in m.content for m in trimmed)`. This will fail if the removal order is reversed.",
+        "why_not_gate": "The test asserts trimmed[0].role == 'system' (line 537) and len(trimmed) < len(messages) (line 538). Neither assertion verifies WHICH non-system messages were removed. The input is [system, user-A-4000, assistant-B-4000, user-C-4000]. The function name and docstring claim 'oldest non-system messages should be removed first', but if the production code removed messages in reverse order (newest-first: user-C, then assistant-B, then user-A), the test would still pass because: trimmed[0] would still be system, and len(trimmed) would still be less than 4. The actual ordering invariant ('oldest first') is not validated."
+      },
+      {
+        "id": "G0251",
+        "test": "TestExtendedThinking::test_non_anthropic_ignores_thinking",
+        "line": 597,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add assertions: `assert response.thinking_content is None`, `assert len(response.content) > 0`. Verify in code review that OpenAI provider's _reasoning_effort_for() correctly returns None for non-reasoning models, preventing thinking from leaking into API calls.",
+        "why_not_gate": "The test only asserts response.role == 'assistant' (line 615). This is insufficient. If the OpenAI provider were broken and: (1) forwarded thinking to OpenAI API (which doesn't support it), (2) swallowed a TypeError internally, (3) returned empty response content, or (4) accidentally set thinking_content on the Message, the response.role would still be 'assistant' and the test would pass. The test must also verify: response.thinking_content is None (no thinking leaked into non-Anthropic provider), response.content is non-empty (the model answered), and no exception was suppressed."
+      },
+      {
+        "id": "G0252",
+        "test": "TestAccurateToolSupport::test_openrouter_models_report_accurate_tool_support",
+        "line": 502,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert bidirectionally: `assert True in tool_support_values` (some models must support tools) AND `assert False in tool_support_values` (some must not). Additionally, add a concrete oracle check for at least one known tool-capable model. For example, assert that any GPT-4 or Claude model in the list has supports_tools=True, and assert that at least one known limited model has supports_tools=False. This validates accuracy in both directions, not just the presence of False.",
+        "why_not_gate": "Despite the test name claiming 'accurate tool support', it only asserts len(models) > 0 (line 512) and False in tool_support_values (line 515). This only verifies the EXISTENCE of a False value, not ACCURACY. A bridge implementation that hardcodes supports_tools=False for every model would pass this test (False is in the set). A bridge that set all models to True would fail, but only because True would be the only value. The actual accuracy—whether a model known to support tools is marked True and whether a model known not to support tools is marked False—is not verified against any independent oracle or ground truth."
+      }
+    ],
+    "tests/test_providers/test_credential_loading.py": [
+      {
+        "id": "G0253",
+        "test": "TestProviderListing::test_list_configured_providers_returns_list",
+        "line": 294,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Create a controlled env file with exactly one synthetic (structurally valid) provider key before calling list_configured_providers(), then assert that key appears in the result and others do not. This makes the test unconditional and independent of the ambient .env.",
+        "why_not_gate": "CONFIRMED as conditional-never-runs in CI. The test uses the credential_loader fixture which loads the real project .env file. In a sandbox with no credentials, list_configured_providers() returns []. The type assertions isinstance(configured, list) and isinstance(provider, ProviderName) are then vacuously satisfied over an empty list. If the production code changed to always return [] regardless of credentials, or to return all ProviderName enums (breaking the 'configured' semantic), the test would pass in CI because no credentials are present. The test only exercises meaningful logic when live credentials exist in the environment."
+      },
+      {
+        "id": "G0254",
+        "test": "TestProviderListing::test_list_missing_providers_returns_list",
+        "line": 308,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Create a controlled env file with one known-present provider key and assert that provider is NOT in the missing list and others ARE in it. Use the complement assertion (provider X is configured AND not missing) to make the test unconditional.",
+        "why_not_gate": "CONFIRMED as conditional-never-runs in CI. Same issue as test_list_configured_providers_returns_list. In a sandbox with no credentials, list_missing_providers() returns all ProviderName enums. The type assertions pass over any list. If the production code changed to return [] (all present) or to return all ProviderName enums incorrectly, the test would pass in CI. The gate only exercises meaningful logic when the .env has a partial set of credentials."
+      },
+      {
+        "id": "G0255",
+        "test": "TestReload::test_reload_maintains_configured_providers",
+        "line": 479,
+        "category": "conditional-never-runs",
+        "severity": "medium",
+        "recommendation": "Set up a controlled env file with at least one synthetic (structurally valid but not live) provider key, create a CredentialLoader, confirm the provider appears in list_configured_providers(), then modify the .env file, call reload(), and confirm the list updates. This makes the test unconditional and independent of real credentials.",
+        "why_not_gate": "CONFIRMED. The credential_loader fixture loads the real .env. In CI with no credentials, list_configured_providers() returns [] both before and after reload(). The set comparison set([]) == set([]) is trivially True. A reload() implementation that is a complete no-op, that clears state without restoring it, or that corrupts internal variables would all produce the same result when the list is empty. The gate only exercises meaningful logic when credentials are present."
+      },
+      {
+        "id": "G0257",
+        "test": "TestCredentialLoaderInitialization::test_loader_finds_env_file",
+        "line": 151,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Replace this with a test that validates the provided path is stored exactly (assert loader.env_path == env_file_path) AND that the file was actually read (assert len(loader._env_vars) > 0 or assert loader.get_credentials(ProviderName.ANTHROPIC) is not None to verify content parsing). Separate the path-storage concern from the file-reading concern.",
+        "why_not_gate": "CONFIRMED. The test passes env_file_path (a real .env file) to the constructor, which stores it unchanged as self.env_path. Then asserts loader.env_path.exists(). If production code changed to silently ignore the provided path and point to a non-existent default instead, the assertion would still pass because the fixture-supplied path exists. The test validates only that the provided path is stored, not that _load_env_file() actually reads or parses the file's contents. There is no oracle on whether the file was actually processed."
+      }
+    ],
+    "tests/test_providers/test_google_provider.py": [
+      {
+        "id": "G0258",
+        "test": "TestGoogleModelListing::test_multiple_calls_return_consistent_results",
+        "line": 243,
+        "category": "no-assertion",
+        "severity": "low",
+        "recommendation": "Add a non-empty guard before the consistency assertion: assert len(models1) > 0 and len(models2) > 0, 'Both calls must return at least one model for consistency to be meaningful'. This ensures the consistency check is only meaningful when there is non-trivial data to be consistent about.",
+        "why_not_gate": "CONFIRMED. The test asserts ids1 == ids2 where both come from live API calls. If list_models() were broken to always return [], then set() == set() is True. The test has no guard asserting that at least one model was returned. While the preceding test test_list_models_returns_non_empty_list checks len(models) > 0, that assertion is in a separate test and does not apply here. A completely broken list_models() that returns [] deterministically would pass the consistency check."
+      }
+    ],
+    "tests/test_providers/test_huggingface_chat_live.py": [
+      {
+        "id": "G0259",
+        "test": "test_live_chat_stream_yields_and_captures_usage",
+        "line": 144,
+        "category": "conditional-never-runs",
+        "severity": "high",
+        "recommendation": "Add unconditional assertion before the conditional block: `assert usage is not None, 'chat_stream must populate usage metadata'` at line 144, then move the existing type/value assertions inside the conditional (or remove the conditional entirely and always assert usage properties). This matches the pattern used in test_live_chat_returns_content_and_usage.",
+        "why_not_gate": "The entire usage assertion block (lines 145-148) is guarded by `if usage is not None:`. When chat_stream() completes, get_pending_usage() returns the cached _pending_usage value, which is set to None at line 736 in chat_stream(). If the streaming path fails to populate _pending_usage (e.g., usage extraction at lines 683-689 is broken or commented out), the conditional silently skips all assertions. The test would pass green even if streaming completely stops capturing usage metadata. Unlike the non-streaming test test_live_chat_returns_content_and_usage (line 82-86), which uses unconditional assertions, this test provides zero enforcement that the streaming path populates usage."
+      }
+    ],
+    "tests/test_providers/test_huggingface_provider.py": [
+      {
+        "id": "G0260",
+        "test": "TestHuggingFaceModelListing::test_display_all_available_models",
+        "line": 228,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Either: (1) Remove test_display_all_available_models as redundant (all structural assertions covered by test_list_models_returns_model_info_instances), or (2) Upgrade it to check concrete values: `assert model.context_window == _HUGGINGFACE_DEFAULT_CONTEXT_WINDOW`, `assert model.provider is ProviderName.HUGGINGFACE`, and `assert model.supports_streaming is True` to match the sibling test's strength.",
+        "why_not_gate": "The test (lines 228-232) checks only isinstance(model.context_window, int), isinstance(model.supports_tools, bool), isinstance(model.supports_vision, bool). These type checks pass for any stub: a model with context_window=0, supports_tools=False, supports_vision=False would satisfy all assertions. The sibling test test_list_models_returns_model_info_instances (lines 131-170) already comprehensively validates the actual builder invariants: context_window must equal _HUGGINGFACE_DEFAULT_CONTEXT_WINDOW (4096), provider must be HUGGINGFACE, supports_streaming must be True. If the builder's context_window assignment (line 452 in huggingface.py) changed to return 0, or if supports_tools/supports_vision logic broke, this test would not catch it."
+      }
+    ],
+    "tests/test_providers/test_local_transformers_live.py": [
+      {
+        "id": "G0261",
+        "test": "test_unload_then_disconnect_cleanly",
+        "line": 147,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "Add assertion immediately after unload_model() completes: `assert provider._loaded_model is None, 'unload_model must clear _loaded_model reference'` at line 147.5 (between unload_model and disconnect). This enforces the primary side effect of unload_model before testing the disconnect path, matching the pattern used in test_chat_produces_text_and_usage which unconditionally asserts usage properties.",
+        "why_not_gate": "The test calls provider.unload_model() at line 147 then provider.disconnect() at line 148, but only asserts provider.connected is False at line 149. The unload_model() contract (lines 1599-1613 in local_transformers.py) requires setting self._loaded_model = None (line 1611). If unload_model() became a no-op (the unload block never executes or the assignment is removed), _loaded_model would still hold a reference to the loaded model, causing a memory leak and defeating the entire purpose of unload. The single assertion provider.connected is False would still pass because disconnect() independently sets self.connected = False (inherited from base). The production capability 'unload clears the model reference' is completely untested."
+      }
+    ],
+    "tests/test_providers/test_local_xpu_e2e.py": [
+      {
+        "id": "G0263",
+        "test": "TestXPUHardwareValidation::test_rebar_and_windows_requirements",
+        "line": 749,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Add assertions that validate actual requirement state when XPU is available: e.g., assert (all_met or len(warnings) > 0) to reject stub implementations, and optionally assert specific warning keys appear based on known environment state.",
+        "why_not_gate": "The test only asserts isinstance(all_met, bool) and isinstance(warnings, list). If check_windows_requirements() were broken to always return (True, []) regardless of actual driver state or ReBAR status, both assertions would still pass. The test does not verify that the function actually validates Windows-specific requirements."
+      },
+      {
+        "id": "G0264",
+        "test": "TestMultiTurnConversation::test_two_turn_conversation",
+        "line": 1101,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "Add assertion after line 1133: `assert 'alice' in response2.content.lower(), 'response must contain name from conversation context'` to verify the provider actually passed conversation history to the model.",
+        "why_not_gate": "The test introduces 'My name is Alice' in turn 1 and asks 'What is my name?' in turn 2, but only asserts len(response2.content) > 0. A broken multi-turn implementation that discards conversation history and returns any non-empty generic response (e.g., 'Hello') would still pass. The production capability (actual context preservation) is not gated."
+      },
+      {
+        "id": "G0265",
+        "test": "TestMultiTurnConversation::test_three_turn_with_system_prompt",
+        "line": 1135,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "Apply `_assert_coherent_english()` to both responses (as done in other conversation tests like test_simple_chat_returns_response) to reject degenerate output. Optionally assert that the provider does not raise when a system message heads the list.",
+        "why_not_gate": "Both response1 (line 1163) and response2 (line 1171) are asserted only to have len(content) > 0. There is no check that the system prompt ('You are a helpful assistant.') had any effect or that the responses relate to the conversation context. A no-op implementation returning a single letter for both turns would pass."
+      },
+      {
+        "id": "G0266",
+        "test": "TestMaxTokensControl::test_max_tokens_100_longer_output",
+        "line": 1285,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "Either compare the 100-token response length to the 10-token response (store both and assert len(r100.content) > len(r10.content)), or at minimum assert len(response.content.split()) > 5 to reject trivially short output.",
+        "why_not_gate": "The docstring states 'should produce a longer response than max tokens of 10', but the only assertion is len(response.content) > 0 at line 1302. No comparison is made to the actual output from a 10-token run. A max_tokens parameter that is completely ignored would pass."
+      },
+      {
+        "id": "G0267",
+        "test": "TestCPUFallbackInference::test_cpu_inference_produces_response",
+        "line": 1340,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert that '4' appears in the response content to validate that CPU inference actually computed the answer, not just returned placeholder text.",
+        "why_not_gate": "The prompt 'What is 2 + 2?' is a known-answer arithmetic question, but only role == 'assistant' and len(content) > 0 are asserted. A CPU-path stub that returns any non-empty string (including garbage unrelated to the question) would pass. The production capability (real CPU inference producing sensible output) is not gated."
+      },
+      {
+        "id": "G0268",
+        "test": "TestVRAMManagement::test_memory_increases_after_model_load",
+        "line": 1450,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Change line 1462 from `assert allocated >= 0` to `assert allocated > 0, 'allocated VRAM must be non-zero after model load'` to actually gate that the model consumed device memory.",
+        "why_not_gate": "The assertion is `assert allocated >= 0`, not `> 0`. This allows a broken get_xpu_memory_info() that always returns (0, total) to pass. The docstring explicitly says 'VRAM allocation should be non-zero after model is loaded', but the assertion does not enforce this."
+      },
+      {
+        "id": "G0269",
+        "test": "TestVRAMManagement::test_total_vram_remains_stable",
+        "line": 1499,
+        "category": "tautological",
+        "severity": "medium",
+        "recommendation": "Add an explicit `if not is_xpu_available(): pytest.skip(...)` guard inside the method body, then add `assert total1 > 0` before the equality check to confirm real hardware reporting rather than fallback stub values.",
+        "why_not_gate": "The method has @pytest.mark.xpu and @pytest.mark.b580 class-level markers but no explicit skip guard inside. When XPU is unavailable, get_xpu_memory_info(0) returns (0, 0) for all three calls, making 0 == 0 == 0 unconditionally true. The assertion does not validate that actual VRAM reporting occurred."
+      },
+      {
+        "id": "G0270",
+        "test": "TestProviderConnectionLifecycle::test_get_device_info_after_connect",
+        "line": 1651,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert concrete values: info['device_type'] == 'xpu' (this fixture skips on non-XPU), isinstance(info['xpu_available'], bool), info['xpu_available'] is True, and isinstance(info['warnings'], list) to catch stub implementations.",
+        "why_not_gate": "The test asserts only that four keys exist in the returned dict (lines 1662-1665: 'device_type' in info, etc.). A stub get_device_info() that returns {'device_type': None, 'xpu_available': None, 'is_arc_b580': None, 'warnings': None} would pass. The actual values—whether device_type equals 'xpu', whether xpu_available is True, whether warnings is a list—are never verified."
+      },
+      {
+        "id": "G0271",
+        "test": "TestErrorRecovery::test_very_long_input_handled",
+        "line": 1776,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "Add `assert len(response.content) > 0` and apply `_assert_coherent_english()` to verify the response is genuine text rather than degenerate output caused by truncation mishandling.",
+        "why_not_gate": "The only assertion is response.role == 'assistant' at line 1794. A production implementation that silently truncates the long input to an empty prompt or corrupted text and returns a generic one-token response would still pass. There is no gate on coherent content, only on the role field."
+      }
+    ],
+    "tests/test_providers/test_model_discovery.py": [
+      {
+        "id": "G0272",
+        "test": "TestAllProvidersModelCount::test_summary_all_providers",
+        "line": 254,
+        "category": "tautological",
+        "severity": "medium",
+        "recommendation": "Remove the tautological assertion or replace it with a meaningful gate that validates all configured providers actually returned model counts > 0, e.g., `assert all(v > 0 for v in results.values() if isinstance(v, int))`.",
+        "why_not_gate": "The assertion assert configured_count > 0 at line 254 is unreachable in a failing state. Execution reaches line 254 only when configured_count > 0 is already true, because pytest.skip() is called at lines 251-252 when configured_count == 0. The assertion can never fail and contributes zero gate strength."
+      }
+    ],
+    "tests/test_providers/test_ollama_provider.py": [
+      {
+        "id": "G0273",
+        "test": "TestOllamaModelListing::test_list_models_returns_list",
+        "line": 61,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Either remove this test entirely and rely on test_list_models_returns_model_info_instances (which already validates structure and content via the non-empty installed_models fixture), or add an assertion that installed models are actually returned when the Ollama instance has at least one model. If retaining, pair with a separate assertion: assert models, 'list_models must return at least one model when Ollama instance is running with installed models.'",
+        "why_not_gate": "Test only asserts isinstance(models, list). A realistic bug in _populate_ollama_models (e.g., API endpoint returning {\"models\": []}, or field-extraction logic filtering out all models due to a parsing regex change) would cause list_models() to return [] instead of a populated list. The empty list still satisfies isinstance(models, list), so the test passes. The test is further weakened because the installed_models fixture (which has real assertions) will skip when the list is empty, leaving this bare type-check test to run unchecked. The only way this test fails is if list_models() returns a non-list object (e.g., None, dict), which is not a realistic regression."
+      }
+    ],
+    "tests/test_providers/test_openrouter_provider.py": [
+      {
+        "id": "G0274",
+        "test": "TestOpenRouterConnection::test_connection_with_invalid_key_may_succeed_initially",
+        "line": 311,
+        "category": "swallows-failure",
+        "severity": "high",
+        "recommendation": "Add an explicit assertion after connect(): either (a) assert provider.is_connected is False for an invalid key, or (b) assert provider.is_connected is True and add a real API call (e.g., list_models()) that will fail with AuthenticationError when the key is invalid. Alternatively, if the test's intent is genuinely to allow either success or AuthenticationError (because OpenRouter may validate keys only on first use), document that contract explicitly and add a follow-up assertion that confirms the actual behavior (e.g., assert provider.is_connected or capture exception type and verify it is AuthenticationError). At minimum, replace the bare except with explicit re-raising of unexpected exceptions: except AuthenticationError: pass followed by except Exception as e: raise AssertionError(f'Unexpected exception: {e}') from e",
+        "why_not_gate": "The test wraps the entire connect() call in try/except AuthenticationError that passes in both the success and exception branches. No positive assertion is made about the connection state or the specific behavior under invalid credentials. A realistic bug where connect() is modified to silently succeed (set self.connected=True) without validating the API key would pass this test—the try block completes normally, no exception is raised, disconnect succeeds, and the test ends without any falsifiable outcome. The test only fails if connect() raises an exception type other than AuthenticationError, but this is a weak guard because it doesn't verify WHAT the function did, only that it didn't raise a specific exception."
+      }
+    ],
+    "tests/test_providers/test_provider_bugfixes.py": [
+      {
+        "id": "G0275",
+        "test": "TestOAuthFlowValidation::test_oauth_configs_contains_google",
+        "line": 151,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add structural validation to test line 151, such as: assert config.authorization_url and config.token_url and config.scopes, to ensure the config actually contains usable OAuth endpoints rather than being a hollow placeholder.",
+        "why_not_gate": "The test checks only isinstance(config, OAuthConfig), not the content of the configuration. A realistic production breakage would be if OAUTH_CONFIGS[OAuthProvider.GOOGLE] had blank authorization_url or token_url (e.g., OAuthConfig(provider=OAuthProvider.GOOGLE, client_id='', client_secret=None, authorization_url='', token_url='', scopes=())), which would fail the OAuth flow in production. This test would still pass with such a gutted config. The companion test test_build_authorization_url_emits_spec_compliant_pkce_request (line 157) does validate the URL endpoints, but the flagged test itself does not."
+      }
+    ]
+  }
+}

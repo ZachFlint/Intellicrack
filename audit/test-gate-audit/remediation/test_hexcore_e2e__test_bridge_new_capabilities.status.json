@@ -1,0 +1,40 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py",
+  "findings_addressed": [
+    {
+      "id": "G0158",
+      "test": "TestProcessMemoryBridge::test_list_process_regions_returns_list",
+      "action": "hardened",
+      "oracle": "Windows VirtualQueryEx API specification: page sizes are always multiples of 0x1000, states are drawn from {MEM_COMMIT=0x1000, MEM_RESERVE=0x2000, MEM_FREE=0x10000}, protections are drawn from documented PAGE_* constants. All-zero stub tuples now fail size-alignment and state/protection membership checks.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py HexEditorProcessMemoryMixin.list_process_regions, change `return [{'base_address': r[0], 'size': r[1], 'protection': r[2], 'state': r[3]} for r in regions]` to `return [{'base_address': 0, 'size': 0, 'protection': 0, 'state': 0} for _ in regions]` — the new assertions `r['size'] > 0`, `r['size'] % 0x1000 == 0`, `r['state'] in known_states`, and `r['protection'] in known_protections` all fail."
+    },
+    {
+      "id": "G0159",
+      "test": "TestProcessMemoryBridge::test_list_process_regions_has_committed_regions",
+      "action": "hardened",
+      "oracle": "Windows memory model: a running CPython interpreter will always have far more than 10 MEM_COMMIT regions (heap, stack, code, DLLs, private data). A single hardcoded stub region now fails the `len(committed) > 10` threshold.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py HexEditorProcessMemoryMixin.list_process_regions, replace the real VirtualQueryEx enumeration with `return [{'base_address': 0x1000, 'size': 0x1000, 'protection': 0x04, 'state': 0x1000}]` — `len(committed) > 10` fails because only 1 committed region is returned."
+    },
+    {
+      "id": "G0160",
+      "test": "TestToolDefinitionCompleteness::test_tool_function_count_increased",
+      "action": "deleted",
+      "oracle": "TestToolDefinitionCompleteness::test_new_tool_functions_registered",
+      "documented_mutation": "N/A (deleted as redundant duplicate: test_new_tool_functions_registered already gates the exact function names present in tool_definition; the count threshold > 42 adds no semantic gate and is covered by the sibling test)"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    {
+      "test": "TestToolDefinitionCompleteness::test_tool_function_count_increased",
+      "covered_by": "TestToolDefinitionCompleteness::test_new_tool_functions_registered"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0158 hardened: replaced key-existence-only assertions with value-level checks against Windows VirtualQueryEx API semantics (size page-alignment, state set membership, protection set membership, non-zero base address count). G0159 hardened: replaced single-region committed check with a count threshold (>10) that a real Python process always satisfies but a stub returning one fake region does not. G0160 deleted: test_tool_function_count_increased is a pure count gate (> 42) with no semantic meaning beyond what test_new_tool_functions_registered already gates by exact name enumeration."
+}

@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py",
+  "findings_addressed": [
+    {
+      "id": "G0055",
+      "test": "TestF0021DumpMemoryProducesPIDMatchingMinidump::test_minidump_pid_field_distinguishes_target_from_host",
+      "action": "hardened",
+      "oracle": "re.search(r\"\\$targetPid = (\\d+);\", fixed_dispatched) parses the injected PID value from the actual production-generated PowerShell script text, independent of the test-supplied target_pid constant; combined with direct script-content assertions that OpenProcess is present and GetCurrentProcess() is absent from the dispatched command string",
+      "documented_mutation": "In src/intellicrack/sandbox/windows.py line 2332, change '$handle = [MiniDumper]::OpenProcess($access, $false, $targetPid);' to '$handle = [MiniDumper]::GetCurrentProcess();' — this would make 'assert \"GetCurrentProcess()\" not in fixed_dispatched' fail immediately"
+    },
+    {
+      "id": "G0055b",
+      "test": "TestF0021DumpMemoryProducesPIDMatchingMinidump::test_successive_dumps_with_different_pids_are_independent",
+      "action": "hardened",
+      "oracle": "re.search(r\"\\$targetPid = (\\d+);\", dispatched_a/b) independently parses the PID injected by production code into each successive dispatched PowerShell script; combined with OpenProcess presence and GetCurrentProcess() absence assertions on both scripts, and a cross-script assertion that script_pid_a != script_pid_b",
+      "documented_mutation": "In src/intellicrack/sandbox/windows.py, change '$handle = [MiniDumper]::OpenProcess($access, $false, $targetPid);' to '$handle = [MiniDumper]::GetCurrentProcess();' — this makes both 'assert \"GetCurrentProcess()\" not in dispatched_a' and 'assert \"GetCurrentProcess()\" not in dispatched_b' fail immediately. Alternatively, removing the f\"$targetPid = {target_pid};\" f-string from the script template makes both script_pid_match_a and script_pid_match_b return None, failing the 'assert ... is not None' guards."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Wave 2 hardening: test_successive_dumps_with_different_pids_are_independent was tautological — its three assertions (result_a != result_b via secrets.token_hex, embedded_a == pid_a from handler's own _make_minidump_bytes, embedded_a != embedded_b trivially since 1111 != 2222) had no assertions against the dispatched script text. A regression reverting dump_memory to use GetCurrentProcess() instead of OpenProcess($targetPid) would not be caught. The fix adds: (1) independent regex oracle re.search(r'\\$targetPid = (\\d+);', dispatched_a/b) that parses what production code actually injected into each script; (2) assertions that script_pid_a == pid_a and script_pid_b == pid_b using values from the production script, not from test constants; (3) OpenProcess presence and GetCurrentProcess() absence on both scripts; (4) cross-script assertion script_pid_a != script_pid_b. The boundary between the two dump calls is tracked via cmd_idx_after_a = len(sb.commands) so each dispatched script is retrieved from the correct recording position."
+}

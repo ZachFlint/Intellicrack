@@ -199,15 +199,11 @@ class SandboxMixin:
             source: Local source file path.
             dest: Destination path inside the sandbox.
             time_limit: Maximum number of seconds the copy may take before
-                ``TimeoutError`` is raised.
+                the deadline is exceeded and the operation is cancelled.
 
         Returns:
             dict[str, Any]: Success confirmation returned by ``copy_to``.
-
-        Raises:
-            TimeoutError: If the copy operation exceeds ``time_limit`` seconds.
         """
-
         async with asyncio.timeout(time_limit):
             return await bridge.copy_to(instance_id, source, dest)
 

@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_hexcore_e2e/test_hexpat_preprocessor.py",
+  "findings_addressed": [
+    {
+      "id": "G0226",
+      "test": "TestIncludeResolution::test_pragma_once_prevents_double_include",
+      "action": "hardened",
+      "oracle": "Control case: file without #pragma once included twice across two process() calls on the same preprocessor instance yields repeated_field count == 2 (independent oracle proving _included_files resets between calls). Gate case: file with #pragma once included twice across two process() calls yields once_field count == 1, proving _pragma_once_files (not _included_files) is the active guard because _included_files is reset by process() on line 116 but _pragma_once_files persists across calls.",
+      "documented_mutation": "In src/intellicrack/core/hexpat/preprocessor.py line 395, remove the block `if _PRAGMA_ONCE_RE.search(content): self._pragma_once_files.add(resolved_str)` so that #pragma once files are never added to _pragma_once_files; the second process() call would then find the file absent from both sets and inline it again, making combined.count('once_field') == 2 and the assertion fail."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The original test used a single process() call with two #include directives in the same source string. Within one process() call, _included_files accumulates across the whole call, so the second include was blocked by _included_files rather than _pragma_once_files - the #pragma once mechanism was not isolated. The hardened test calls process() twice on the same preprocessor instance (which resets _included_files on line 116 but preserves _pragma_once_files), plus adds a control case with a file lacking #pragma once that correctly appears twice, confirming the experimental setup."
+}

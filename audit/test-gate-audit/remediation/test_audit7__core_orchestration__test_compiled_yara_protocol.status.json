@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_audit7/core_orchestration/test_compiled_yara_protocol.py",
+  "findings_addressed": [
+    {
+      "id": "G0048",
+      "test": "test_compiled_yara_concrete_implementation_overrides_protocol",
+      "action": "hardened",
+      "oracle": "Gate 1: calls CompiledYaraRules.match (the Protocol function body itself) directly via vars(CompiledYaraRules)['match'] with a conforming concrete instance as self. When the body is '...' the function returns None implicitly; when the defect 'return []' body is present it returns []. Asserts direct_result is None — an independent oracle because None is the only possible return value of a function whose entire body is the Ellipsis constant. Gate 2: concrete _ConcreteYara.match returns SHA-256(b'intellicrack').digest() — a 32-byte sentinel derived by hashing a fixed string, independently verifiable as e9bdf064b766ad93a79fe4433ea40fc9b93087e4c29000074f28c1975afe258f. The concrete override must yield exactly that sentinel, proving the Protocol body does not shadow the override.",
+      "documented_mutation": "In src/intellicrack/core/types.py, change the CompiledYaraRules.match body from '...' to '_ = (self, ...); return []'. Gate 1 fails immediately: proto_match_fn(concrete, data=None) now executes the 'return []' statement and direct_result becomes [], which is not None."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Replaced the weak test that called yara.Rules.match (which bypasses the Protocol body entirely) with two gates that directly exercise the Protocol function body. Gate 1 retrieves the unbound Protocol method via vars() and calls it directly, asserting the return is None (not []). Gate 2 verifies a concrete override returns the SHA-256 sentinel it injects, proving the Protocol body cannot shadow the implementation. No src/ files were modified. hashlib imported at module level; importlib and pytest imports removed as no longer needed."
+}

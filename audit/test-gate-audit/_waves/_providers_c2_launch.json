@@ -1,0 +1,77 @@
+{
+  "group": "test_providers__c2",
+  "files": {
+    "tests/test_providers/test_ollama_provider.py": [
+      {
+        "id": "G0273",
+        "test": "TestOllamaModelListing::test_list_models_returns_list",
+        "line": 61,
+        "category": "weak-existence",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_providers/test_openrouter_provider.py": [
+      {
+        "id": "G0274",
+        "test": "TestOpenRouterConnection::test_connection_with_invalid_key_may_succeed_initially",
+        "line": 311,
+        "category": "swallows-failure",
+        "severity": "high"
+      }
+    ],
+    "tests/test_providers/test_provider_bugfixes.py": [
+      {
+        "id": "G0275",
+        "test": "TestOAuthFlowValidation::test_oauth_configs_contains_google",
+        "line": 151,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_providers/test_providers_local_audit1.py": [
+      {
+        "id": "G0276",
+        "test": "test_f0004_provider_name_matches_logger_binding",
+        "line": 432,
+        "category": "no-assertion",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_providers/test_providers_package_exports.py": [
+      {
+        "id": "G0277",
+        "test": "test_canonical_sources_still_export_names",
+        "line": 64,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_providers/test_realcov_10_anthropic_cache.py": [
+      {
+        "id": "G0278",
+        "test": "TestAnthropicCacheLive::test_repeated_cached_prompt_reports_cache_read",
+        "line": 236,
+        "category": "tautological",
+        "severity": "high"
+      }
+    ],
+    "tests/test_providers/test_realcov_10_cancel_request.py": [
+      {
+        "id": "G0279",
+        "test": "TestAnthropicCancelRequestLive::test_cancel_during_stream_stops_without_error",
+        "line": 131,
+        "category": "tautological",
+        "severity": "medium"
+      },
+      {
+        "id": "G0280",
+        "test": "TestGrokCancelRequestLive::test_cancel_during_stream_stops_without_error",
+        "line": 169,
+        "category": "tautological",
+        "severity": "medium"
+      }
+    ]
+  },
+  "context": "Provider tests. Important context:\n\n- Live-cloud provider tests that require real API billing/credentials, and Intel-XPU / CUDA-GPU tests, legitimately SKIP when the capability or credentials are absent. The repo's conftest converts live-cloud-without-billing into a skip. KEEP those as skips - they are acceptable environment-capability skips; do NOT convert them into hard failures and do NOT delete the skip guard.\n\n- For tests that actually load a local model (transformers / torch), the real model load and inference IS the behavior under test: assert concrete properties of the real output against an independent oracle (e.g. the generated token ids decode to a non-empty string, the response role/structure matches the provider API contract, token counts equal an independent tokenizer count) - never just assert the result is not None.\n\n- The external transport boundary (HTTP to the cloud provider, the model weight files) is the ONLY place a double is allowed. Never mock the provider class or the unit under test itself. Prefer driving the real provider object against a real local model or a recorded/real transport response.",
+  "greenFlags": "--memory 16g"
+}

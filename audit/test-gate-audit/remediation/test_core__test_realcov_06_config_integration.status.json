@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_core/test_realcov_06_config_integration.py",
+  "findings_addressed": [
+    {
+      "id": "G0112",
+      "test": "test_reloaded_config_drives_real_tool_registry",
+      "action": "re-hardened",
+      "oracle": "Pre-save intent frozenset (expected_enabled = tools in config minus explicitly disabled ones) is the independent oracle. TOML on-disk fields are verified via raw tomllib parse (bypasses Config.parse_tools entirely). The registry is then populated by iterating bridge_map and calling reloaded.is_tool_enabled() as the filter gate. frozenset(registry.get_available_tools()) must equal expected_enabled exactly.",
+      "documented_mutation": "In src/intellicrack/core/config.py Config._to_dict(), remove the 'enabled' key from tool_dict for disabled tools (e.g. guard with 'if tool_config.enabled'). Then Config.parse_tools() reloads disabled tools with default enabled=True. reloaded.is_tool_enabled(X64DBG) returns True, the loop registers X64DBG and FRIDA bridges, get_available_tools() includes them, frozenset(available) != expected_enabled (which excludes X64DBG and FRIDA). Additionally, _assert_toml_enabled_fields() fails first because the on-disk TOML won't have enabled=False for the disabled tools."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Re-hardened after adversarial review identified tautologies (lines 133-134 self-injected directory, lines 142-143 self-injected bridge set) and missing config-drives-registry contract. New design: (1) pre-save config state is the independent oracle for expected_enabled; (2) _assert_toml_enabled_fields() uses raw tomllib to verify serialisation of enabled=False independently of Config.parse_tools; (3) bridge population loop is gated by reloaded.is_tool_enabled(), so if round-trip drops enabled=False, disabled tools get registered and the frozenset equality fails. Helper functions _build_bridge_map and _assert_toml_enabled_fields extracted to keep PLR0914 (local variable count) under the ruff limit."
+}

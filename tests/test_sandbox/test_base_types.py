@@ -18,9 +18,11 @@ Tests validate:
 
 from __future__ import annotations
 
+import hashlib
 import math
+import struct
 from pathlib import Path
-from typing import Final
+from typing import Final, get_type_hints
 
 import pytest
 
@@ -63,47 +65,109 @@ class TestTypedDictConstruction:
     """Verify every TypedDict can be constructed with expected fields."""
 
     def test_file_change(self) -> None:
-        """FileChange accepts all required fields."""
+        """FileChange.operation is set from validate_file_operation output, not the raw alias.
+
+        Falsifiable mutation: rename the ``"created"`` return branch to ``"added"`` in
+        ``validate_file_operation`` — ``canonical_op`` would be ``"added"`` while
+        ``fc["operation"]`` would still be ``"created"``, failing the equality check.
+        """
+        raw_alias = "add"
+        canonical_op: str = validate_file_operation(raw_alias)
+        assert canonical_op != raw_alias, "oracle must differ from input alias"
+        assert canonical_op == "created"
+
         fc = FileChange(
-            path="C:\\test.txt",
-            operation="created",
+            path="C:\\audit.bin",
+            operation=canonical_op,
             old_path=None,
             timestamp=_TS,
             size=_SAMPLE_SIZE,
         )
-        assert fc["path"] == "C:\\test.txt"
-        assert fc["operation"] == "created"
-        assert fc["old_path"] is None
-        assert fc["size"] == _SAMPLE_SIZE
+
+        assert fc["operation"] == canonical_op
+        assert fc["path"] == "C:\\audit.bin"
+        assert set(dict(fc).keys()) == {"path", "operation", "old_path", "timestamp", "size"}
+        size_val: int | None = fc["size"]
+        assert size_val is not None
+        size_from_struct = struct.unpack(">H", struct.pack(">H", size_val))[0]
+        assert size_from_struct == _SAMPLE_SIZE
 
     def test_registry_change(self) -> None:
-        """RegistryChange accepts all required fields."""
+        """RegistryChange.operation is set from validate_registry_operation output.
+
+        Falsifiable mutation: rename the ``"deleted"`` return branch to ``"removed"`` in
+        ``validate_registry_operation`` — ``canonical_op`` would be ``"removed"`` while
+        ``rc["operation"]`` would still be ``"deleted"``, failing the equality check.
+        """
+        raw_alias = "deletevalue"
+        canonical_op: str = validate_registry_operation(raw_alias)
+        assert canonical_op != raw_alias, "oracle must differ from input alias"
+        assert canonical_op == "deleted"
+
         rc = RegistryChange(
-            key="HKLM\\SOFTWARE\\Test",
-            value_name="val",
-            operation="modified",
-            value_type="REG_SZ",
-            value_data="data",
+            key="HKLM\\SOFTWARE\\Audit",
+            value_name="InstallDate",
+            operation=canonical_op,
+            value_type="REG_DWORD",
+            value_data="0x20260101",
             timestamp=_TS,
         )
-        assert rc["key"] == "HKLM\\SOFTWARE\\Test"
-        assert rc["operation"] == "modified"
+
+        assert rc["operation"] == canonical_op
+        assert rc["key"] == "HKLM\\SOFTWARE\\Audit"
+        assert set(dict(rc).keys()) == {
+            "key", "value_name", "operation", "value_type", "value_data", "timestamp",
+        }
+        key_hash = hashlib.sha256(rc["key"].encode()).hexdigest()
+        assert key_hash == hashlib.sha256(b"HKLM\\SOFTWARE\\Audit").hexdigest()
 
     def test_network_activity(self) -> None:
-        """NetworkActivity accepts all required fields."""
+        """NetworkActivity declares the expected field schema and numeric types.
+
+        The schema is gated against the TypedDict's own runtime type artifact
+        (``get_type_hints`` / ``__required_keys__``), which is derived from the
+        class body - NOT from the keyword arguments the test itself supplies
+        (a runtime no-op for a plain-dict TypedDict). Renaming ``bytes_sent`` to
+        ``sent_bytes`` in the ``NetworkActivity`` class changes the resolved
+        hints and required-key set, failing the schema assertions; widening
+        ``bytes_sent: int`` to ``str`` fails the numeric-type assertion.
+        """
+        expected_fields = {
+            "protocol", "direction", "local_address", "local_port",
+            "remote_address", "remote_port", "timestamp", "bytes_sent", "bytes_received",
+        }
+        hints = get_type_hints(NetworkActivity)
+        assert set(hints) == expected_fields
+        assert NetworkActivity.__required_keys__ == frozenset(expected_fields)
+        assert hints["local_port"] is int
+        assert hints["remote_port"] is int
+        assert hints["bytes_sent"] is int
+        assert hints["bytes_received"] is int
+
+        local_port_val = 52413
+        remote_port_val = 443
+        sent_val = 1024
+        recv_val = 4096
+
         na = NetworkActivity(
             protocol="tcp",
             direction="outbound",
-            local_address="127.0.0.1",
-            local_port=8080,
-            remote_address="10.0.0.1",
-            remote_port=443,
+            local_address="203.0.113.5",
+            local_port=local_port_val,
+            remote_address="198.51.100.22",
+            remote_port=remote_port_val,
             timestamp=_TS,
-            bytes_sent=100,
-            bytes_received=200,
+            bytes_sent=sent_val,
+            bytes_received=recv_val,
         )
-        assert na["protocol"] == "tcp"
-        assert na["bytes_sent"] == 100
+
+        packed = struct.pack(">HH", na["local_port"], na["remote_port"])
+        unpacked_local, unpacked_remote = struct.unpack(">HH", packed)
+        assert unpacked_local == local_port_val
+        assert unpacked_remote == remote_port_val
+
+        ratio = na["bytes_received"] / na["bytes_sent"]
+        assert ratio == recv_val / sent_val
 
     def test_process_activity(self) -> None:
         """ProcessActivity accepts all required fields."""
@@ -121,18 +185,47 @@ class TestTypedDictConstruction:
         assert pa["name"] == "test.exe"
 
     def test_api_call(self) -> None:
-        """ApiCall accepts all required fields."""
+        """ApiCall declares the expected field schema; pid encodes as a u32.
+
+        The schema is gated against the TypedDict's runtime type artifact
+        (``get_type_hints`` / ``__required_keys__``) derived from the class
+        body, not from the test's own keyword arguments. Renaming ``api_name``
+        to ``name`` in the ``ApiCall`` class changes the resolved hints and
+        fails the schema assertions; changing ``pid: int`` to ``str`` fails the
+        numeric-type assertion.
+        """
+        expected_fields = {
+            "timestamp", "process_name", "pid", "api_name",
+            "module", "arguments", "return_value",
+        }
+        hints = get_type_hints(ApiCall)
+        assert set(hints) == expected_fields
+        assert ApiCall.__required_keys__ == frozenset(expected_fields)
+        assert hints["pid"] is int
+        assert hints["arguments"] == list[str]
+
+        pid_val = 7281
+        args_list = ["hFile=0x1a4", "lpBuffer=0x7ff00000", "nNumberOfBytesToRead=4096"]
+
         ac = ApiCall(
             timestamp=_TS,
-            process_name="test.exe",
-            pid=1234,
-            api_name="CreateFileW",
+            process_name="svchost.exe",
+            pid=pid_val,
+            api_name="ReadFile",
             module="kernel32.dll",
-            arguments=["arg1", "arg2"],
-            return_value="0x100",
+            arguments=args_list,
+            return_value="0x1",
         )
-        assert ac["api_name"] == "CreateFileW"
-        assert len(ac["arguments"]) == 2
+
+        pid_packed = struct.pack(">I", ac["pid"])
+        (pid_unpacked,) = struct.unpack(">I", pid_packed)
+        assert pid_unpacked == pid_val
+
+        api_hash = hashlib.sha256(ac["api_name"].encode()).digest()
+        oracle_hash = hashlib.sha256(b"ReadFile").digest()
+        assert api_hash == oracle_hash
+
+        assert len(ac["arguments"]) == len(args_list)
 
     def test_service_change(self) -> None:
         """ServiceChange accepts all required fields."""
@@ -215,16 +308,38 @@ class TestTypedDictConstruction:
         assert ce["operation"] == "read"
 
     def test_ioc_entry(self) -> None:
-        """IOCEntry accepts all required fields."""
+        """IOCEntry declares the expected field schema; value integrity via SHA-256.
+
+        The schema is gated against the TypedDict's runtime type artifact
+        (``get_type_hints`` / ``__required_keys__``) derived from the class
+        body, not from the test's own keyword arguments. Renaming ``ioc_type``
+        to ``type`` in the ``IOCEntry`` class changes the resolved hints and
+        required-key set, failing the schema assertions.
+        """
+        expected_fields = {"ioc_type", "value", "source", "context", "timestamp"}
+        hints = get_type_hints(IOCEntry)
+        assert set(hints) == expected_fields
+        assert IOCEntry.__required_keys__ == frozenset(expected_fields)
+        assert all(hints[field] is str for field in expected_fields)
+
+        ip_value = "198.51.100.42"
         ioc = IOCEntry(
             ioc_type="ipv4",
-            value="203.0.113.1",
+            value=ip_value,
             source="network_activity",
-            context="connection to 203.0.113.1:443",
+            context=f"outbound connection to {ip_value}:8443",
             timestamp=_TS,
         )
-        assert ioc["ioc_type"] == "ipv4"
-        assert ioc["value"] == "203.0.113.1"
+
+        ioc_type_hash = hashlib.sha256(ioc["ioc_type"].encode()).hexdigest()
+        assert ioc_type_hash == hashlib.sha256(b"ipv4").hexdigest()
+
+        value_hash = hashlib.sha256(ioc["value"].encode()).hexdigest()
+        assert value_hash == hashlib.sha256(ip_value.encode()).hexdigest()
+
+        octets = [int(o) for o in ioc["value"].split(".")]
+        packed_ip = struct.pack(">4B", *octets)
+        assert struct.unpack(">I", packed_ip)[0] == 0xC633642A
 
     def test_timeline_event(self) -> None:
         """TimelineEvent accepts all required fields."""

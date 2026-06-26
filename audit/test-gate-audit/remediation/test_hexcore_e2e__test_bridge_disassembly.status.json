@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_disassembly.py",
+  "findings_addressed": [
+    {
+      "id": "G0137",
+      "test": "TestBridgeDisassembly::test_disassemble_result_items_have_required_keys",
+      "action": "hardened",
+      "oracle": "capstone.Cs(CS_ARCH_X86, CS_MODE_64).disasm(payload, 0, count=4) applied to the same NOP payload; each field (address, mnemonic, operands, size, bytes) is checked field-by-field against capstone output — capstone is independent of the bridge's _get_disassembler code path",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py line 6750, change '\"mnemonic\": insn.mnemonic' to '\"mnemonic\": insn.mnemonic + \"_bad\"' — the assertion 'actual_insn[\"mnemonic\"] == mnemonic' would then fail because the bridge emits \"nop_bad\" while capstone returns \"nop\""
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0137 was a weak N8 (existence/type-only check for a behaviour test). The test was hardened in-place: after asserting the key subset is present, each instruction field is now validated against an independent capstone decode of the same NOP payload. The sibling test test_disassemble_matches_independent_capstone_decode uses INT3 bytes; this test uses NOP bytes, so both cover different payloads and are complementary rather than redundant. Deletion was not appropriate."
+}

@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_ui/test_realcov_13b_hex_widgets.py",
+  "findings_addressed": [
+    {
+      "id": "G0341",
+      "test": "TestEntropyGraphWidget::test_renders_real_entropy_curve",
+      "action": "hardened",
+      "oracle": "Two independent oracles: (1) widget.entropy_values() must equal the exact list passed to set_data() - gating the storage assignment at widgets.py line 117; (2) an identical EntropyGraphWidget constructed without any data (empty_baseline) is rendered first to capture the unconditional gradient-band pixel count, then the loaded widget must produce strictly more non-background pixels than that baseline, gating the polyline rendering loop at lines 179-189.",
+      "documented_mutation": "Change `self._entropy_values = entropy_values` (widgets.py line 117) to `self._entropy_values = []` - oracle 1 fails because `widget.entropy_values() == []` not the real list; if oracle 1 were removed, oracle 2 would also fail because no polyline is drawn and the pixel count equals the empty baseline."
+    },
+    {
+      "id": "G0342",
+      "test": "TestLargeFileSettingsDialog::test_properties_reflect_inputs",
+      "action": "hardened",
+      "oracle": "For chunk_size_kb and memory_budget_mb: constructor arguments 2048 and 256 differ from the defaults (_DEFAULT_CHUNK_KB=4096 and _DEFAULT_BUDGET_MB=512), so the assertions fail if the spinbox ignores the constructor input. For prefetch_on_scroll: after construction the test calls dialog._prefetch_check.setChecked(False) and asserts dialog.prefetch_on_scroll is False, distinguishing a property that reads self._prefetch_check.isChecked() from one that returns a hardcoded True.",
+      "documented_mutation": "Change `return self._prefetch_check.isChecked()` (widgets.py line 774) to `return True` - the post-toggle assertion `dialog.prefetch_on_scroll is False` fails."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0341: The key insight is that gradient bands are painted unconditionally before the isEmpty check, so any pixel-count > 0 assertion passes even when set_data is broken. Fixed by adding an explicit equality check on entropy_values() plus a differential pixel count using an empty-widget baseline. G0342: The constructor hardcodes setChecked(True) with no parameter for prefetch_on_scroll; the tautology is broken by toggling the checkbox post-construction and verifying the property follows."
+}

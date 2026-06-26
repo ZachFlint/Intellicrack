@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_bridges/test_hex_editor_bottom_audit1.py",
+  "findings_addressed": [
+    {
+      "id": "G0068",
+      "test": "TestBpsExportStreaming::test_bps_export_via_mmap_pyfallback",
+      "action": "hardened",
+      "oracle": "Apply the generated patch back to the source via _call_apply_bps_patch and assert rebuilt == target (b'\\x10\\x11' * 1024). This independently recomputes the expected result using the BPS decoder as a second path, verifying the encoder produced a correct patch rather than just a correctly-magicked byte sequence.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py _build_bps_patch, change the SourceRead opcode encoding so it emits garbage data bytes instead of the correct source bytes — the round-trip assertion (rebuilt == target) will fail because the decoded target will contain wrong byte values."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0068 was a weak-existence check asserting only the BPS1 magic header. The hardened test now calls _call_apply_bps_patch with the generated patch and the original source, then asserts the result equals the expected target. Source=b'\\x00\\x01'*1024 and target=b'\\x10\\x11'*1024 are chosen so every byte differs, making it impossible for a broken encoder to accidentally produce a valid round-trip. The documented_mutation names a concrete change to _build_bps_patch that would make the rebuilt != target assertion fail."
+}

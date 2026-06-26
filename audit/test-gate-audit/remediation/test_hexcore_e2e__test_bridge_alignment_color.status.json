@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_alignment_color.py",
+  "findings_addressed": [
+    {
+      "id": "G0129",
+      "test": "TestColorMode::test_all_color_modes_accepted",
+      "action": "hardened",
+      "oracle": "bridge.get_color_mode() called immediately after each set_color_mode(mode) and compared to the mode string just set; get_color_mode reads self._color_mode independently of set_color_mode's return value",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py ~line 8614, change `self._color_mode = mode` to `self._color_mode = 'none'` — get_color_mode() would return 'none' after every set call, making every read-back assertion fail for the non-'none' modes"
+    },
+    {
+      "id": "G0130",
+      "test": "TestSnapToAlignment::test_snap_to_alignment_512",
+      "action": "hardened",
+      "oracle": "ceil_boundary = 1024 is a hand-computed constant (1000-512=488 > 1024-1000=24 proves 1024 is nearer); bridge return value, get_cursor_position(), and HexDocumentState.cursor_offset are each independently asserted against it",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py snap_to_alignment implementation, change the nearest-boundary selection to always return the floor boundary — snap_to_alignment(512) with cursor 1000 would return 512 instead of 1024, failing all three assertions"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0129: Added get_color_mode() read-back assertion inside the loop, making the test falsifiable — a broken setter that stores the wrong mode or ignores the argument would fail. G0130: Removed tautological local-arithmetic assertion (lines 127-129 in original) that only validated the test's own conditional expression without ever calling the bridge; the real gates at result/get_cursor_position/state.cursor_offset already existed and are now the sole assertions. ceil_boundary=1024 kept as a named constant for readability."
+}

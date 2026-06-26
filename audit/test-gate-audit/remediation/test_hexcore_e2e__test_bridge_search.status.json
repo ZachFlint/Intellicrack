@@ -1,0 +1,44 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_search.py",
+  "findings_addressed": [
+    {
+      "id": "G0170",
+      "test": "TestBridgeSearchHex::test_search_hex_returns_list",
+      "action": "deleted",
+      "oracle": "Covered by TestBridgeSearchHex::test_search_hex_finds_mz_signature_at_offset_zero (asserts offset 0 in results, guaranteeing non-empty list with correct data) and TestBridgeSearchHex::test_search_hex_result_length_matches_pattern_byte_count (asserts results[0]['length'] == 2)",
+      "documented_mutation": "N/A - deleted as redundant duplicate; the covering siblings are the falsifiable gates"
+    },
+    {
+      "id": "G0171",
+      "test": "TestBridgeSearchHex::test_search_hex_result_items_have_offset_and_length",
+      "action": "deleted",
+      "oracle": "Covered by TestBridgeSearchHex::test_search_hex_finds_mz_signature_at_offset_zero (verifies offset key with exact value 0) and TestBridgeSearchHex::test_search_hex_result_length_matches_pattern_byte_count (verifies length key with exact value 2); key-presence-only check adds no gate beyond what siblings already enforce",
+      "documented_mutation": "N/A - deleted as redundant duplicate; the covering siblings are the falsifiable gates"
+    },
+    {
+      "id": "G0172",
+      "test": "TestBridgeSearchRegex::test_search_regex_finds_pattern_match",
+      "action": "hardened",
+      "oracle": "re.finditer(r'[A-Z]{3}', 'ABC123DEF456') independently computes two matches: (offset=0, length=3) for 'ABC' and (offset=6, length=3) for 'DEF'. The oracle assertion `assert oracle_matches == [(0, 3), (6, 3)]` is self-validating. The bridge results are then required to contain both (offset, length) pairs.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py, change `results = self.document.search_regex(pattern, max_results)` to `results = self.document.search_regex(pattern, max_results)[:0]` (return empty list) - the assertion `(0, 3) in result_pairs` fails because result_pairs is empty."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [
+    {
+      "test": "TestBridgeSearchHex::test_search_hex_returns_list",
+      "covered_by": "TestBridgeSearchHex::test_search_hex_finds_mz_signature_at_offset_zero"
+    },
+    {
+      "test": "TestBridgeSearchHex::test_search_hex_result_items_have_offset_and_length",
+      "covered_by": "TestBridgeSearchHex::test_search_hex_finds_mz_signature_at_offset_zero"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0170 and G0171 were exact weaker duplicates of already-present stronger siblings. The siblings (test_search_hex_finds_mz_signature_at_offset_zero, test_search_hex_result_length_matches_pattern_byte_count) verify actual numeric values rather than type/key presence, making G0170/G0171 wholly redundant per the REDUNDANT DUPLICATE decision rule. G0172 was hardened by adding an independent re.finditer oracle that computes expected (offset, length) pairs from the raw payload bytes and asserts the bridge results contain both matches at the correct positions."
+}

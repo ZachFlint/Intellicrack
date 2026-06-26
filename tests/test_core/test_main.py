@@ -16,11 +16,13 @@ Tests validate:
 from __future__ import annotations
 
 import sqlite3
-import tempfile
 from collections.abc import Callable
 from contextlib import AbstractContextManager
-from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 import pytest
 
@@ -126,20 +128,71 @@ class TestSessionManagerInitialization:
         assert manager.current is None
 
     @staticmethod
-    def test_session_manager_requires_session_store_type() -> None:
-        """Verify SessionManager requires SessionStore instance.
+    def test_session_manager_requires_session_store_type(tmp_path: Path) -> None:
+        """Verify manager.store performs a full-field round-trip through the real SQLite backend.
 
-        This tests that the correct initialization pattern is enforced.
+        The gate checks every injected field (name, provider, model, notes, tags)
+        against the values read back via manager.store.load(), AND independently
+        queries the raw SQLite ``sessions.provider`` column via a direct
+        sqlite3.connect() call to confirm the enum value was serialised correctly.
+
+        This distinguishes it from TestSessionDataIntegrity.test_session_roundtrip
+        (which calls store directly): this test verifies the SessionManager.store
+        reference is wired to the same real backend, not a stub.
+
+        Falsifiability mutation (documented, not executed):
+            In src/intellicrack/core/session.py SessionStore._save_session_transaction(),
+            replace ``session.provider.value`` with ``"openai"`` in the INSERT VALUES
+            tuple. The direct SQL oracle query ``SELECT provider FROM sessions WHERE id=?``
+            would then return ``"openai"`` instead of ``"anthropic"``, failing
+            ``assert raw_provider == ProviderName.ANTHROPIC.value``.
+
+        Args:
+            tmp_path: Pytest temporary directory for the session database.
         """
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            db_path = Path(tmp_dir) / "sessions.db"
+        db_path = tmp_path / "sessions.db"
+        store = SessionStore(db_path)
+        manager = SessionManager(store)
 
-            store = SessionStore(db_path)
-            manager = SessionManager(store)
+        session = Session.create(
+            provider=ProviderName.ANTHROPIC,
+            model="claude-3-opus-20240229",
+            name="Store-type gate",
+        )
+        session.notes = "manager-wiring-check"
+        session.tags = ["gate", "manager"]
 
-            assert hasattr(manager.store, "save")
-            assert hasattr(manager.store, "load")
-            assert hasattr(manager.store, "list_all")
+        manager.store.save(session)
+        loaded = manager.store.load(session.id)
+
+        assert loaded is not None
+        assert loaded.id == session.id
+        assert loaded.name == "Store-type gate"
+        assert loaded.provider == ProviderName.ANTHROPIC
+        assert loaded.model == "claude-3-opus-20240229"
+        assert loaded.notes == "manager-wiring-check"
+        assert set(loaded.tags) == {"gate", "manager"}
+
+        raw_conn = sqlite3.connect(str(db_path))
+        raw_conn.row_factory = sqlite3.Row
+        try:
+            row = raw_conn.execute(
+                "SELECT provider, name, model, notes FROM sessions WHERE id = ?",
+                (session.id,),
+            ).fetchone()
+        finally:
+            raw_conn.close()
+
+        assert row is not None
+        raw_provider = str(row["provider"])
+        raw_name = str(row["name"])
+        raw_model = str(row["model"])
+        raw_notes = str(row["notes"])
+
+        assert raw_provider == ProviderName.ANTHROPIC.value
+        assert raw_name == "Store-type gate"
+        assert raw_model == "claude-3-opus-20240229"
+        assert raw_notes == "manager-wiring-check"
 
     @staticmethod
     def test_session_manager_auto_save_default(tmp_path: Path) -> None:

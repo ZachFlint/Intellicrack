@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_providers/test_huggingface_provider.py",
+  "findings_addressed": [
+    {
+      "id": "G0260",
+      "test": "TestHuggingFaceModelListing::test_display_all_available_models",
+      "action": "hardened",
+      "oracle": "Production constants in src/intellicrack/providers/huggingface.py: _DEFAULT_CONTEXT_WINDOW=4096 (line 123), provider stamp ProviderName.HUGGINGFACE (line 451), supports_streaming=True (line 455), name derivation via rsplit('/', maxsplit=1)[-1] (line 446) - each assertion is independently recomputed from the same rule the builder applies, not from the test's own injected values.",
+      "documented_mutation": "In src/intellicrack/providers/huggingface.py line 123, change `_DEFAULT_CONTEXT_WINDOW = 4096` to `_DEFAULT_CONTEXT_WINDOW = 8192` - this makes `assert model.context_window == _HUGGINGFACE_DEFAULT_CONTEXT_WINDOW` fail because the test uses the test-module constant 4096 while the builder stamps 8192."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "test_display_all_available_models was kept (not deleted) because it uniquely covers ALL models up to the MODELS_LIST_LIMIT=100 cap, whereas the sibling test_list_models_returns_model_info_instances only samples the first 20. The four isinstance-only checks were replaced with exact value assertions for the three builder invariants (context_window==4096, provider is HUGGINGFACE, supports_streaming is True) plus the name-derivation rule, mirroring the sibling's strength across the full listing."
+}

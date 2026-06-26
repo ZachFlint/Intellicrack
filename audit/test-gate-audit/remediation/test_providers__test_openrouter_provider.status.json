@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_providers/test_openrouter_provider.py",
+  "findings_addressed": [
+    {
+      "id": "G0274",
+      "test": "TestOpenRouterConnection::test_connection_with_invalid_key_raises_or_leaves_state_consistent",
+      "action": "hardened",
+      "oracle": "provider.is_connected is asserted False after the production connect() path receives a deterministic 401 HTTP response. The 401 is injected via httpx.MockTransport at the external transport boundary (the outbound HTTP socket); connect() production code runs fully unmodified. The exception branch (except httpx.HTTPStatusError, openrouter.py ~line 186) is always entered, so the assertion is unconditional — not conditioned on live API behaviour.",
+      "documented_mutation": "In openrouter.py ~line 186, change `self.connected = False` to `self.connected = True` inside the `except httpx.HTTPStatusError` branch. With that mutation, connect() sets connected=True before raising AuthenticationError, causing `assert provider.is_connected is False` to fail with AssertionError. The test is unconditionally falsifiable because the mock transport guarantees a 401 is always returned."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Previous version used an if/else branch accepting both 'AuthenticationError raised' and 'connect succeeds' as valid outcomes (N7 accepts-both-outcomes). The re-hardened test eliminates the disjunction by injecting a deterministic 401 response via httpx.MockTransport so the except httpx.HTTPStatusError branch is always entered. pytest.raises(AuthenticationError) asserts the exception is always raised; the follow-up assertion asserts is_connected is always False. A mutation setting connected=True in the except branch reliably breaks the assertion."
+}

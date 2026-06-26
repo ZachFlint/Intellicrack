@@ -702,6 +702,13 @@ def test_f0013_handler_extracts_target_process_id_and_return_code(tmp_path: Path
     helper resolves each field correctly and that absent fields return
     ``$null`` rather than raising.
 
+    The probe also assembles a pipe-delimited trace line using the real
+    production helper ``Format-TraceField`` and ``Get-AuditApiName`` and
+    outputs it with a ``TRACELINE:`` prefix.  The assertion parses that
+    structured line to verify the module field (column 5) passes through
+    ``Format-TraceField`` unmangled and that ``Get-AuditApiName`` emits
+    the correct API name into column 4.
+
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
     """
@@ -747,7 +754,12 @@ def test_f0013_handler_extracts_target_process_id_and_return_code(tmp_path: Path
         + "Write-Output ('DesiredAccess=' + ('0x{0:X}' -f [uint32]$da))\n"
         + "Write-Output ('Missing=' + ($null -eq $missing))\n"
         + "Write-Output ('Function=' + (Get-AuditApiName -EventId $evt.ID))\n"
-        + "Write-Output ('Module=ntoskrnl.exe')\n"
+        + "$moduleRaw = 'ntoskrnl.exe'\n"
+        + "$apiNameFormatted = Format-TraceField -Value (Get-AuditApiName -EventId $evt.ID)\n"
+        + "$moduleFormatted  = Format-TraceField -Value $moduleRaw\n"
+        + "$tpidFormatted    = Format-TraceField -Value ([int]$tpid)\n"
+        + "$rcFormatted      = Format-TraceField -Value ([int]$rc)\n"
+        + "Write-Output ('TRACELINE:' + '2000-01-01T00:00:00.000|proc|1234|' + $apiNameFormatted + '|' + $moduleFormatted + '|TargetProcessId=' + $tpidFormatted + ';DesiredAccess=0x1FFFFF|0x' + ('{0:X}' -f [uint32]$rc))\n"
     )
     probe.write_text(probe_body, encoding="utf-8")
 
@@ -778,9 +790,22 @@ def test_f0013_handler_extracts_target_process_id_and_return_code(tmp_path: Path
     assert "ReturnCode=0" in out, f"expected ReturnCode extraction; stdout={out!r}"
     assert "DesiredAccess=0x1FFFFF" in out, f"expected DesiredAccess extraction; stdout={out!r}"
     assert "Missing=True" in out, f"missing field must resolve to $null (True); stdout={out!r}"
-    # F-0013 also requires the per-event-id API name to flow into the 'Function' / api_name field.
     assert "Function=NtOpenProcess" in out, f"expected event id 5 to map to NtOpenProcess; stdout={out!r}"
-    assert "Module=ntoskrnl.exe" in out, f"expected module to be ntoskrnl.exe (kernel provider); stdout={out!r}"
+
+    trace_line: str | None = None
+    for line in out.splitlines():
+        if line.startswith("TRACELINE:"):
+            trace_line = line.removeprefix("TRACELINE:")
+            break
+    assert trace_line is not None, f"probe must emit a TRACELINE: row; stdout={out!r}"
+    fields = trace_line.split("|")
+    assert len(fields) == 7, f"trace line must have 7 pipe-fields; got {len(fields)} in {trace_line!r}"
+    assert fields[3] == "NtOpenProcess", (
+        f"column 4 (api_name) must be 'NtOpenProcess' after Format-TraceField; got {fields[3]!r}"
+    )
+    assert fields[4] == "ntoskrnl.exe", (
+        f"column 5 (module) must be 'ntoskrnl.exe' after Format-TraceField; got {fields[4]!r}"
+    )
 
 
 def test_smoke_script_emits_start_record_when_dll_available(tmp_path: Path) -> None:

@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_bridges/test_x64dbg_new_methods.py",
+  "findings_addressed": [
+    {
+      "id": "G0102",
+      "test": "TestScanMemory::test_scan_with_hex_string",
+      "action": "hardened",
+      "oracle": "ctypes.addressof(buf) for the exact allocation address; binascii.hexlify(marker).decode() for the expected matched_bytes hex string — both computed independently of the bridge",
+      "documented_mutation": "In x64dbg.py scan_memory(), change `pattern.replace(' ', '')` to `pattern.replace(' ', '')[::2]` (drops every other hex digit) — the decoded bytes no longer match the marker, the address assertion fails because the wrong byte sequence is scanned"
+    },
+    {
+      "id": "G0103",
+      "test": "TestScanMemory::test_scan_with_spaced_hex_string",
+      "action": "hardened",
+      "oracle": "ctypes.addressof(buf) for the exact allocation address; binascii.hexlify(marker).decode() for the expected matched_bytes hex string — both computed independently of the bridge",
+      "documented_mutation": "In x64dbg.py scan_memory(), remove the `.replace(' ', '')` call so `bytes.fromhex` receives the spaced string and raises ValueError — no results are returned and the address assertion fails"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Both tests computed buf_addr (prefixed _buf_addr to signal unused) but never asserted against it. The fix: remove the underscore prefix, add binascii.hexlify oracle for matched_bytes, assert at least one result has .address == buf_addr, and assert result.matched_bytes == expected_hex. This mirrors the already-correct test_scan_with_bytes pattern and gates the hex-string and space-stripping parsing paths specifically."
+}

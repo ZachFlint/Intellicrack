@@ -109,10 +109,12 @@ async def test_returns_after_writer_stops(tmp_path: Path) -> None:
     """``_wait_for_logs_stable`` returns shortly after the writer stops.
 
     Spawns a background task that appends bytes to one tracked log file every
-    0.1 seconds for ~1.0 seconds, then stops. The readiness check is invoked
-    with ``poll_delay=0.1`` and ``stable_polls=3``, so it should return
-    between roughly 1.0 and 2.5 seconds after the call begins, NOT the prior
-    fixed 2 seconds.
+    ``poll_delay`` seconds for ``write_duration`` seconds, then stops. The
+    readiness check is invoked with ``poll_delay=0.1`` and ``stable_polls=3``,
+    so it should return within ``write_duration + stable_polls * poll_delay +
+    0.5`` seconds (~1.8s). The upper bound of 1.8s specifically rejects a
+    naive ``asyncio.sleep(2)`` regression (~2.0s), distinguishing adaptive
+    polling from the prior fixed-delay implementation.
 
     Args:
         tmp_path: Pytest-provided temporary directory used as the shared
@@ -126,26 +128,36 @@ async def test_returns_after_writer_stops(tmp_path: Path) -> None:
     target_log.touch()
 
     write_duration = 1.0
+    poll_delay = 0.1
+    stable_polls = 3
     writer_task = asyncio.create_task(
         _append_until(
             target_log,
             stop_at_monotonic=time.monotonic() + write_duration,
-            interval=0.1,
+            interval=poll_delay,
         ),
     )
 
     start = time.monotonic()
     await sandbox.call_wait_for_logs_stable(
-        poll_delay=0.1,
-        stable_polls=3,
+        poll_delay=poll_delay,
+        stable_polls=stable_polls,
         max_wait=10.0,
     )
     elapsed = time.monotonic() - start
 
     await writer_task
 
-    assert elapsed >= write_duration, f"_wait_for_logs_stable returned at {elapsed:.3f}s before writer stopped at {write_duration:.3f}s"
-    assert elapsed <= 2.5, f"_wait_for_logs_stable took {elapsed:.3f}s; expected stability detection within 2.5s after writer stop"
+    upper_bound = write_duration + stable_polls * poll_delay + 0.5
+    assert elapsed >= write_duration, (
+        f"_wait_for_logs_stable returned at {elapsed:.3f}s before writer stopped at {write_duration:.3f}s"
+    )
+    assert elapsed <= upper_bound, (
+        f"_wait_for_logs_stable took {elapsed:.3f}s; "
+        f"expected adaptive stability detection within {upper_bound:.3f}s "
+        f"(write_duration={write_duration}s + stable_polls={stable_polls} * poll_delay={poll_delay}s + 0.5s slack). "
+        f"A fixed asyncio.sleep(2) implementation would return at ~2.0s, exceeding this bound."
+    )
 
 
 @pytest.mark.asyncio

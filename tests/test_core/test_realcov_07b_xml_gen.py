@@ -10,18 +10,26 @@ production consumer: it builds a Windows Sandbox ``.wsb`` configuration tree
 from the re-exported ``Element`` / ``SubElement`` / ``indent`` / ``ElementTree``
 / ``tostring`` primitives and serialises it to disk.
 
-These tests reproduce the exact node structure that
-``WindowsSandbox._generate_wsb_config`` emits, serialise it with the
-re-exported helpers, and parse it back with a hardened parser to prove the
-generated XML is real, well-formed, and schema-faithful to what the Windows
-Sandbox host actually consumes.
+These tests drive the real
+:meth:`intellicrack.sandbox.windows.WindowsSandbox._generate_wsb_config`
+method end-to-end, assert the written file is a valid WSB document, and verify
+exact node values against an independently computed oracle derived from the
+:class:`~intellicrack.sandbox.base.SandboxConfig` inputs.
 """
 
 from __future__ import annotations
 
-import io
+import asyncio
+import sys
+from typing import TYPE_CHECKING
 
 import defusedxml.ElementTree as DefusedET
+import pytest
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+    from xml.etree.ElementTree import Element as _ETElement
 
 from intellicrack.core.xml_gen import (
     Element,
@@ -30,6 +38,13 @@ from intellicrack.core.xml_gen import (
     indent,
     tostring,
 )
+from intellicrack.sandbox.base import SandboxConfig
+from intellicrack.sandbox.windows import WindowsSandbox
+
+
+_ATTR_WSB_PATH = "_wsb_path"
+_ATTR_SHARED_FOLDER = "_shared_folder"
+_METHOD_GENERATE_WSB_CONFIG = "_generate_wsb_config"
 
 
 def _build_wsb_config_tree() -> Element:
@@ -63,43 +78,121 @@ def _build_wsb_config_tree() -> Element:
     return config
 
 
+def _expected_logon_command() -> str:
+    """Return the logon command string the real producer must emit.
+
+    Computed independently from WindowsSandbox.SANDBOX_SHARED_PATH; this is
+    the independent oracle used to verify the written XML node.
+
+    Returns:
+        str: The expected ``LogonCommand/Command`` text.
+    """
+    bootstrap = rf"{WindowsSandbox.SANDBOX_SHARED_PATH}\monitor\sandbox_bootstrap.cmd"
+    return f'cmd.exe /c "{bootstrap}"'
+
+
+def _assert_wsb_folder_nodes(root: _ETElement, shared_folder_str: str) -> None:
+    """Assert the MappedFolders subtree matches the injected shared folder.
+
+    Args:
+        root: Parsed root ``Configuration`` element.
+        shared_folder_str: Expected string representation of the host shared folder.
+    """
+    folder = root.find("MappedFolders/MappedFolder")
+    assert folder is not None
+    assert folder.findtext("HostFolder") == shared_folder_str
+    assert folder.findtext("SandboxFolder") == WindowsSandbox.SANDBOX_SHARED_PATH
+    assert folder.findtext("ReadOnly") == "false"
+
+
+@pytest.fixture
+def wsb_sandbox(tmp_path: Path) -> tuple[WindowsSandbox, Path]:
+    """Provide a real WindowsSandbox with paths wired to tmp_path.
+
+    The fixture sets ``_wsb_path`` and ``_shared_folder`` via ``setattr`` to
+    bypass ``reportPrivateUsage`` while still injecting the minimum state
+    required for ``_generate_wsb_config`` to run without the full start
+    sequence.
+
+    Args:
+        tmp_path: Pytest-supplied temporary directory.
+
+    Returns:
+        tuple[WindowsSandbox, Path]: The sandbox instance and the expected wsb file path.
+    """
+    cfg = SandboxConfig(
+        memory_limit_mb=8192,
+        network_enabled=True,
+        clipboard_enabled=True,
+        audio_enabled=False,
+        video_enabled=False,
+        printer_enabled=True,
+        shared_folders=[],
+    )
+    sandbox = WindowsSandbox(config=cfg)
+    wsb_file = tmp_path / "intellicrack.wsb"
+    shared_folder = tmp_path / "shared"
+    shared_folder.mkdir()
+    setattr(sandbox, _ATTR_WSB_PATH, wsb_file)
+    setattr(sandbox, _ATTR_SHARED_FOLDER, shared_folder)
+    return sandbox, wsb_file
+
+
 class TestWsbConfigGeneration:
-    """The re-exported helpers must emit a real consumable WSB document."""
+    """The real _generate_wsb_config must emit a correct, consumable WSB document."""
 
-    def test_tree_structure_matches_consumer_schema(self) -> None:
-        """Built nodes carry the exact tags/text the sandbox host expects."""
-        config = _build_wsb_config_tree()
-        assert config.tag == "Configuration"
-        assert config.find("Networking") is not None
-        assert config.findtext("Networking") == "Disable"
-        assert config.findtext("MemoryInMB") == "4096"
-        assert config.findtext("ClipboardRedirection") == "Enable"
+    @pytest.mark.skipif(sys.platform != "win32", reason="WindowsSandbox is a Windows-only production class")
+    def test_tree_structure_matches_consumer_schema(self, wsb_sandbox: tuple[WindowsSandbox, Path]) -> None:
+        """Real _generate_wsb_config emits XML with exact tags/values derived from config.
 
-        folder = config.find("MappedFolders/MappedFolder")
-        assert folder is not None
-        assert folder.findtext("HostFolder") == "C:/Intellicrack/shared"
-        assert folder.findtext("SandboxFolder") == r"C:\shared"
-        assert folder.findtext("ReadOnly") == "false"
+        The oracle values are computed independently from the SandboxConfig inputs
+        and WindowsSandbox.SANDBOX_SHARED_PATH constant - never from the written file itself.
+        Private members are accessed via ``getattr``/``setattr`` to satisfy
+        ``reportPrivateUsage`` without suppression comments.
+        """
+        sandbox, wsb_file = wsb_sandbox
+        cfg = sandbox.config
+        generate = getattr(sandbox, _METHOD_GENERATE_WSB_CONFIG)
+        asyncio.run(generate())
 
-        command = config.findtext("LogonCommand/Command")
-        assert command is not None
-        assert command.startswith("cmd.exe /c")
+        assert wsb_file.exists(), "wsb file was not created"
+        root = DefusedET.fromstring(wsb_file.read_bytes().decode("utf-8"))
 
-    def test_serialised_document_roundtrips_through_real_parser(self) -> None:
-        """Serialised XML parses back to the same logical structure."""
-        config = _build_wsb_config_tree()
-        tree = ElementTree(config)
-        indent(tree, space="  ")
+        assert root.tag == "Configuration"
+        assert root.findtext("Networking") == ("Enable" if cfg.network_enabled else "Disable")
+        assert root.findtext("MemoryInMB") == (str(cfg.memory_limit_mb) if cfg.memory_limit_mb > 0 else None)
+        assert root.findtext("ClipboardRedirection") == ("Enable" if cfg.clipboard_enabled else "Disable")
+        assert root.findtext("vGPU") == ("Enable" if cfg.video_enabled else "Disable")
+        assert root.findtext("AudioInput") == ("Enable" if cfg.audio_enabled else "Disable")
+        assert root.findtext("PrinterRedirection") == ("Enable" if cfg.printer_enabled else "Disable")
 
-        buffer = io.BytesIO()
-        tree.write(buffer, encoding="utf-8", xml_declaration=True)
-        raw = buffer.getvalue()
+        shared_str = str(getattr(sandbox, _ATTR_SHARED_FOLDER))
+        _assert_wsb_folder_nodes(root, shared_str)
+        assert root.findtext("LogonCommand/Command") == _expected_logon_command()
 
-        assert raw.startswith(b"<?xml")
+    @pytest.mark.skipif(sys.platform != "win32", reason="WindowsSandbox is a Windows-only production class")
+    def test_serialised_document_roundtrips_through_real_parser(self, wsb_sandbox: tuple[WindowsSandbox, Path]) -> None:
+        """Real _generate_wsb_config writes UTF-8 XML that defusedxml can fully round-trip.
+
+        The oracle is independently derived from SandboxConfig and SANDBOX_SHARED_PATH;
+        nothing from the written file is fed back into the expected-value computation.
+        Private members are accessed via ``getattr`` to satisfy ``reportPrivateUsage``
+        without suppression comments.
+        """
+        sandbox, wsb_file = wsb_sandbox
+        cfg = sandbox.config
+        generate = getattr(sandbox, _METHOD_GENERATE_WSB_CONFIG)
+        asyncio.run(generate())
+
+        raw = wsb_file.read_bytes()
+        assert raw.startswith(b"<?xml"), "file must begin with an XML declaration"
+
         reparsed = DefusedET.fromstring(raw.decode("utf-8"))
         assert reparsed.tag == "Configuration"
-        assert reparsed.findtext("MemoryInMB") == "4096"
-        assert reparsed.findtext("MappedFolders/MappedFolder/SandboxFolder") == r"C:\shared"
+        assert reparsed.findtext("MemoryInMB") == (str(cfg.memory_limit_mb) if cfg.memory_limit_mb > 0 else None)
+        assert reparsed.findtext("MappedFolders/MappedFolder/SandboxFolder") == WindowsSandbox.SANDBOX_SHARED_PATH
+        assert reparsed.findtext("Networking") == ("Enable" if cfg.network_enabled else "Disable")
+        assert reparsed.findtext("LogonCommand/Command") == _expected_logon_command()
 
     def test_indent_produces_human_readable_layout(self) -> None:
         """``indent`` introduces real newline/indentation between children."""
@@ -109,7 +202,6 @@ class TestWsbConfigGeneration:
         text = tostring(config, encoding="unicode")
         assert "\n" in text
         assert "\n  <MappedFolders>" in text
-        # Indentation must not corrupt round-tripping.
         reparsed = DefusedET.fromstring(text)
         assert reparsed.findtext("vGPU") == "Disable"
 

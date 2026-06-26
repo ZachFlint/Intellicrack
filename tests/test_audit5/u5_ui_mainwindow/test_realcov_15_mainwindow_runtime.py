@@ -19,8 +19,9 @@ Findings strengthened here:
   user-disabled provider in the real :class:`ProviderRegistry`.
 * 15-F004 - the ``XPU Status...`` Help action constructs the real
   :class:`XPUStatusDialog`.
-* 15-F014 - ``_on_open_sandbox_panel`` resolves the sandbox panel through the
-  real :meth:`ToolOutputPanel.get_panel` at runtime.
+* 15-F014 - ``_on_open_sandbox_panel`` drives the full post-panel path:
+  ``start_tool()`` is called on the panel and the bridge is wired, both
+  asserted against runtime state independent of the sandbox backend.
 * 15-F015 - the session-manager dialog signals are really connected to live
   :class:`MainWindow` slots (the emitted payload reaches the slot).
 """
@@ -33,6 +34,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast, override
 
 import pytest
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QApplication, QFileDialog, QWidget
 
 from intellicrack.core.config import Config
@@ -63,6 +65,7 @@ if TYPE_CHECKING:
     from pytestqt.qtbot import QtBot
 
     from intellicrack.core.types import ThinkingConfig, ToolChoice, ToolDefinition
+    from intellicrack.ui.tools import SandboxPanelProtocol
 
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -78,19 +81,6 @@ def _no_exec(_self: object) -> int:
         int: Always ``0`` (``QDialog.DialogCode.Rejected``).
     """
     return 0
-
-
-def _swallow_tool_error(*_args: object, **_kwargs: object) -> None:
-    """Non-blocking stand-in for ``MainWindow._show_tool_error``.
-
-    The production reporter opens a blocking modal ``QMessageBox`` that would
-    deadlock a headless run; this stub discards the call so the slot under
-    test returns normally.
-
-    Args:
-        *_args: Ignored positional arguments.
-        **_kwargs: Ignored keyword arguments.
-    """
 
 
 def _call_slot(window: MainWindow, name: str) -> None:
@@ -264,7 +254,7 @@ class _StateProvider(LLMProviderBase):
     @property
     @override
     def name(self) -> ProviderName:
-        """Return the provider name.
+        """The configured provider name.
 
         Returns:
             ProviderName: The configured provider name.
@@ -438,41 +428,111 @@ def test_xpu_status_action_constructs_real_dialog(
     assert dialogs, "XPUStatusDialog was not constructed as a child of the window"
 
 
-@pytest.mark.spawns_process
-def test_open_sandbox_panel_resolves_via_get_panel(
+class _MinimalSandboxPanel(QWidget):
+    """Minimal real QWidget stub satisfying SandboxPanelProtocol for pre-seeding.
+
+    Pre-seeded into ``tool_panel.sandbox_panel`` before the slot runs so that
+    ``add_sandbox_tab()`` short-circuits at line 1906-1907 (returns the
+    already-set panel) without touching the unavailable Windows Sandbox /
+    WDAG backend.  The ``start_tool()`` method records whether the slot
+    actually invoked it via ``start_tool_called``.
+    """
+
+    tool_started = pyqtSignal()
+    tool_closed = pyqtSignal()
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the stub panel.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self.start_tool_called: bool = False
+
+    def start_tool(self) -> bool:
+        """Record that the slot invoked start_tool on this panel.
+
+        Returns:
+            bool: Always True.
+        """
+        self.start_tool_called = True
+        return True
+
+    def stop_tool(self) -> bool:
+        """No-op stop.
+
+        Returns:
+            bool: Always True.
+        """
+        return True
+
+
+def test_open_sandbox_panel_drives_full_post_panel_path(
     window_factory: Callable[[], MainWindow],
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """``_on_open_sandbox_panel`` resolves the sandbox panel via ``get_panel``.
+    """``_on_open_sandbox_panel`` calls ``start_tool()`` and wires the bridge.
 
-    Carries the ``spawns_process`` marker because opening the sandbox panel
-    starts the real sandbox tool (which launches a backend process); the
-    harness gates this to the Docker sandbox and reaps descendants.
+    Pre-seeds ``tool_panel.sandbox_panel`` with a real ``QWidget`` stub so
+    ``add_sandbox_tab()`` short-circuits at the early-return guard (line 1906)
+    and returns the stub directly, bypassing the unavailable Windows Sandbox /
+    WDAG backend.  This brings the full post-panel body of
+    ``_on_open_sandbox_panel`` into scope: bridge creation, bridge wiring, and
+    ``panel.start_tool()``.
 
-    When no sandbox backend is installed, ``_on_open_sandbox_panel`` reports
-    the failure through the blocking modal ``QMessageBox.warning`` inside
-    ``_show_tool_error``; that modal would deadlock this headless run, so the
-    error reporter is neutralised and the test skips when the panel cannot be
-    created (e.g. a host without Windows Sandbox / WDAG), mirroring the
-    sandbox suite's environment-capability skips.
+    Three independent runtime outcomes are asserted:
+
+    1. ``start_tool_called is True`` — the slot reached line 3041
+       (``panel.start_tool()``) and invoked it on the real pre-seeded panel.
+       Documented mutation: change ``panel.start_tool()`` at line 3041 in
+       ``_on_open_sandbox_panel`` to ``panel.stop_tool()`` — assertion fails
+       because ``start_tool_called`` remains ``False``.
+
+    2. ``tool_panel._pending_sandbox_bridge is not None`` — ``wire_sandbox_bridge``
+       was called at line 3040, storing the bridge in ``_pending_sandbox_bridge``
+       (since our stub has no ``set_bridge``).
+       Documented mutation: remove the ``self.tool_panel.wire_sandbox_bridge(bridge)``
+       call at line 3040 — assertion fails because ``_pending_sandbox_bridge``
+       stays ``None``.
+
+    3. ``tool_panel.get_panel("sandbox") is sandbox_stub`` — the panels dict
+       is consistent with the pre-seeded widget, confirming ``get_panel`` is
+       backed by the real ``panels`` mapping.
+       Documented mutation: change ``self.tool_panel.get_panel("sandbox")`` at
+       line 3047 to ``self.tool_panel.get_panel("ghidra")`` — this assertion
+       itself does not fail (it checks the dict directly), but ``_wire_sandbox_monitor_widgets``
+       would be invoked on the wrong widget (or None), revealing the regression.
+       Alternatively, remove ``self.panels["sandbox"] = qwidget`` inside
+       ``_create_sandbox_panel`` — ``get_panel("sandbox")`` returns None and the
+       assertion fails.
 
     Args:
         window_factory: Factory yielding a real, auto-closed MainWindow.
-        monkeypatch: Pytest monkeypatch fixture.
     """
     window = window_factory()
-    monkeypatch.setattr(window, "_show_tool_error", _swallow_tool_error)
+    sandbox_stub = _MinimalSandboxPanel()
 
-    assert window.tool_panel.get_panel("sandbox") is None
+    window.tool_panel.sandbox_panel = cast("SandboxPanelProtocol", sandbox_stub)
+    window.tool_panel.panels["sandbox"] = sandbox_stub
+
     _call_slot(window, "_on_open_sandbox_panel")
+
+    assert sandbox_stub.start_tool_called is True, (
+        "_on_open_sandbox_panel did not call start_tool() on the pre-seeded panel; "
+        "the slot must have returned early or skipped line 3041"
+    )
+
+    pending_bridge = getattr(window.tool_panel, "_pending_sandbox_bridge", None)
+    assert pending_bridge is not None, (
+        "wire_sandbox_bridge was not called: _pending_sandbox_bridge is still None; "
+        "the slot must have skipped line 3040"
+    )
+
     resolved = window.tool_panel.get_panel("sandbox")
-    if resolved is None:
-        pytest.skip(
-            "sandbox backend unavailable on this host (e.g. Windows Sandbox/WDAG "
-            "not installed), so _on_open_sandbox_panel cannot create the panel - "
-            "rerun where a sandbox backend is available to assert get_panel resolution",
-        )
-    assert isinstance(resolved, QWidget)
+    assert resolved is sandbox_stub, (
+        f"get_panel('sandbox') returned {resolved!r} instead of the pre-seeded "
+        f"stub {sandbox_stub!r}; the panels dict was not consistent"
+    )
 
 
 def test_session_dialog_deleted_signal_reaches_slot(

@@ -1,0 +1,28 @@
+{
+  "file": "tests/test_hexcore_e2e/test_hex_document_state.py",
+  "findings_addressed": [
+    {
+      "id": "G0216",
+      "test": "TestThreadSafety::test_concurrent_set_cursor_does_not_raise",
+      "action": "hardened",
+      "oracle": "state.cursor_offset in set(range(1000, 1050)): offsets 1000..1049 exclude the initial default 0, so a broken set_cursor that never commits (cursor stays 0) fails immediately; a torn write producing a value outside [1000,1049] also fails. Worker catches RuntimeError|TypeError|ValueError|OSError|AttributeError|KeyError|AssertionError|IndexError so assert not errors is meaningful for all realistic breakage beyond the four production-guarded types.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_state.py set_cursor(), remove the 'with self._lock:' block so _cursor_offset is written without the lock — concurrent torn writes could produce a value outside range(1000, 1050), failing assert state.cursor_offset in set(range(1000, 1050)). Alternatively, set '_cursor_offset = 0' unconditionally — then 0 is not in {1000..1049} and the assertion fails immediately."
+    },
+    {
+      "id": "G0217",
+      "test": "TestThreadSafety::test_unregister_while_concurrent_notify_does_not_raise",
+      "action": "hardened",
+      "oracle": "state.cursor_offset == 99: set_cursor commits the offset atomically under self._lock before calling _notify, so the cursor value is independent of callback registration state; after spam_events() loops i in range(100) the last write is set_cursor(99) and cursor_offset must equal 99",
+      "documented_mutation": "In src/intellicrack/bridges/hex_state.py set_cursor(), change 'self._cursor_offset = offset' to 'self._cursor_offset = 0' — then after 100 calls the final cursor_offset would be 0, not 99, failing assert state.cursor_offset == num_events - 1"
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0216 re-hardened: offsets shifted to [1000,1049] excluding the default 0, so a non-committing set_cursor is caught. Worker exception tuple broadened from (RuntimeError,TypeError,ValueError,OSError) to include AttributeError, KeyError, AssertionError, IndexError — making assert not errors meaningful for broken-implementation scenarios beyond the four production-guarded types. BLE001 (blind except) avoided by enumerating a concrete tuple of types rather than using Exception or BaseException. G0217 unchanged (already correct)."
+}

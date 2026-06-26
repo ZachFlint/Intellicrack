@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_audit3/ui/test_script_manager.py",
+  "findings_addressed": [
+    {
+      "id": "G0015",
+      "test": "TestScriptTypeInfoX64dbgMetadata::test_x64dbg_display_name",
+      "action": "hardened",
+      "oracle": "Direct key access ScriptTypeInfo.TYPES['x64dbg']['display'] as an independent oracle; the stored value must equal 'x64dbg' and must also match what get_display_name returns, distinguishing the explicit entry from the silent fallback.",
+      "documented_mutation": "In src/intellicrack/ui/panels/script_manager.py line 168, delete the 'display' key from the 'x64dbg' dict (e.g. change `\"display\": \"x64dbg\",` to nothing); `TYPES['x64dbg']['display']` then raises KeyError, turning the new assertion red while the old method-only assertion would have silently passed via the fallback."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Finding G0015: get_display_name uses info.get('display', script_type) so removing the 'display' key still returns 'x64dbg' via the fallback argument. Fixed by asserting TYPES['x64dbg']['display'] directly — a KeyError on that access is falsifiable proof. The method-return assertion is retained as an additional check that the stored value is also returned correctly."
+}

@@ -1,0 +1,34 @@
+{
+  "group": "test_hexpat",
+  "files": {
+    "tests/test_hexpat/test_interpreter.py": [
+      {
+        "id": "G0246",
+        "test": "TestBitfields::test_bitfield_extraction",
+        "line": 306,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Assert display_value for each child: e.g., assert kids[0]['display_value'] contains the extracted 1-bit value from 0b10110101, assert kids[1]['display_value'] for the next 1-bit value, etc. Reference the evaluator's bit-shift logic (line 1586: shift calculation depends on bitfield_order) and compute the expected display values for the test data, then assert all match.",
+        "why_not_gate": "Test asserts only that 4 children exist and children[0].name == 'a' and children[3].name == 'd'. The numeric display_value fields (which encode the actual bit-extracted values) are never asserted. For data=0b10110101 with bitfield layout a:1, b:1, c:2, d:4, the bit-shifting and masking math in evaluator._eval_bitfield_instance (lines 1585-1587) could produce incorrect values (e.g., wrong shift direction, wrong bit order) and the test would still pass because it only validates field count and names, not values. The bit-extraction semantics are entirely unverified."
+      },
+      {
+        "id": "G0247",
+        "test": "TestArrays::test_u8_array",
+        "line": 337,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Assert the children array and element display_values: e.g., assert len(results[0]['children']) == 4, then assert results[0]['children'][0]['display_value'] == '0xA' (10 in hex), results[0]['children'][1]['display_value'] == '0x14' (20), etc. This gates the actual element-reading logic, not just the total size.",
+        "why_not_gate": "Test asserts only results[0]['size'] == 4, confirming that 4 bytes were consumed. No assertion on array element values or children. If the evaluator's _eval_array_type method (lines 1666-1678) read from the wrong offset, returned all-zero elements, or skipped elements entirely while still reporting correct total size, this test would pass. The actual array element data (the 4 u8 values: 10, 20, 30, 40) is never validated."
+      },
+      {
+        "id": "G0248",
+        "test": "TestOutputFormat::test_parsed_field_keys",
+        "line": 414,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Add value assertions: assert field['name'] == 'v', field['offset'] == 0, field['size'] == 1, field['raw_bytes'] == [42], field['display_value'] == '0x2A', field['children'] == [], isinstance(field['validation_passed'], bool). This ensures each key is not only present but populated with correct, meaningful data.",
+        "why_not_gate": "Test uses issubset to verify only that required key names exist in the output dict. It does not assert the values under those keys. A broken implementation that returns all required keys mapped to None, empty strings, empty lists, or garbage values would pass this test. For instance, a field with name=None, offset=-1, size=0, raw_bytes=[], display_value='', children=[], validation_passed=None would satisfy the key-presence assertion but represent completely broken field data."
+      }
+    ]
+  }
+}

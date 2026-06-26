@@ -625,14 +625,31 @@ class TestDetectC2Patterns:
         self,
         sample_network_activity: list[NetworkActivity],
     ) -> None:
-        """Full sample data should trigger multiple pattern types.
+        """Sample network data triggers exactly four distinct C2 pattern types simultaneously.
+
+        The ``sample_network_activity`` fixture contains:
+        - Five connections at uniform 60s intervals to 185.220.101.45:8443
+          (timestamps [0, 60, 20, 80, 40] → sorted [0, 20, 40, 60, 80],
+          intervals [20, 20, 20, 20], CV=0 < 0.3 → beaconing).
+        - One connection to xkqwzjrtmnpv.evil.com (SLD entropy = log2(12) ≈ 3.585 > 3.5 → dga_domain).
+        - One connection on port 4444 to 62.102.148.69 (port in _C2_PORTS → known_c2_port).
+        - One connection with 5 242 880 bytes sent / 100 received to 51.15.192.49
+          (>= 1 MiB, ratio 52428.8 > 10 → data_exfiltration).
+
+        The exact set of pattern types is an independent oracle recomputed from
+        the fixture geometry; it is not the value returned by the function under
+        test.  Any implementation that omits one detection category will produce
+        the wrong set and fail.
 
         Args:
             sample_network_activity: Network-activity fixture with beaconing, DGA, C2, exfil, and normal traffic.
         """
         patterns = detect_c2_patterns(sample_network_activity)
         pattern_types = {p["pattern_type"] for p in patterns}
-        assert len(pattern_types) >= 2
+        expected_pattern_types = {"beaconing", "dga_domain", "known_c2_port", "data_exfiltration"}
+        assert pattern_types == expected_pattern_types, (
+            f"Expected C2 pattern types {expected_pattern_types!r}, got {pattern_types!r}"
+        )
 
 
 class TestExtractIOCs:
@@ -839,14 +856,46 @@ class TestExtractIOCs:
         assert _REAL_EXFIL_IP in ip_values, f"{_REAL_EXFIL_IP!r} from process command_line must be extracted"
 
     def test_full_sample_report(self, sample_report: ExecutionReport) -> None:
-        """Full sample report produces multiple IOC types.
+        """Full sample report produces exactly the IOC types derivable from the fixture content.
+
+        The ``sample_report`` fixture contains:
+        - ``network_activity``: five public IPv4 addresses (185.220.101.45, 62.102.148.69,
+          51.15.192.49, 1.1.1.1, 93.184.216.34) → ``ipv4``; one domain
+          (xkqwzjrtmnpv.evil.com) → ``domain``.
+        - ``process_activity``: cmd.exe command line contains
+          ``https://evil.com/dl.exe`` → ``url``; the same text also produces
+          ``domain`` (evil.com) which deduplicates into the domain set already
+          present from network_activity.
+        - ``registry_changes``: Run key paths and ``value_data`` entries contain no
+          patterns that produce new IOC types beyond those already listed.
+        - ``file_changes``: paths contain no hash-length hex strings.
+
+        The expected set ``{"ipv4", "domain", "url"}`` is computed independently
+        by tracing which IOC-extraction branches the fixture data reaches, and
+        is not derived from the function's return value.  Omitting any extraction
+        branch (e.g. not scanning process command lines) would drop the ``url``
+        type and fail this assertion.
 
         Args:
             sample_report: ExecutionReport fixture populated with all sample data.
         """
         iocs = extract_iocs(sample_report)
         ioc_types = {i["ioc_type"] for i in iocs}
-        assert len(ioc_types) >= 2
+        expected_ioc_types = {"ipv4", "domain", "url"}
+        assert ioc_types == expected_ioc_types, (
+            f"Expected IOC types {expected_ioc_types!r}, got {ioc_types!r}"
+        )
+        ip_values = {i["value"] for i in iocs if i["ioc_type"] == "ipv4"}
+        assert "185.220.101.45" in ip_values, "Tor-exit-node beaconing IP must be extracted"
+        assert "62.102.148.69" in ip_values, "Bulletproof-host C2-port IP must be extracted"
+        assert "10.0.0.1" not in ip_values, "Private 10.x.x.x IPs must not appear in IOC output"
+        assert not any(
+            v.startswith("192.168.") for v in ip_values
+        ), "Private 192.168.x.x IPs must not appear in IOC output"
+        url_values = {i["value"] for i in iocs if i["ioc_type"] == "url"}
+        assert any("https://evil.com/dl.exe" in v for v in url_values), (
+            "URL from process command line must be extracted"
+        )
 
 
 class TestGenerateTimeline:
@@ -1105,14 +1154,48 @@ class TestGenerateTimeline:
         assert "(Default)" in events[0]["summary"]
 
     def test_full_sample_report(self, sample_report: ExecutionReport) -> None:
-        """Full sample report produces events from multiple categories.
+        """Full sample report produces events for all ten monitoring categories.
+
+        The ``sample_report`` fixture is built from sub-fixtures that each
+        contribute at least one entry to a distinct category:
+
+        - ``sample_file_changes``      → ``file``       (3 entries)
+        - ``sample_registry_changes``  → ``registry``   (3 entries)
+        - ``sample_network_activity``  → ``network``    (10 entries)
+        - ``sample_process_activity``  → ``process``    (4 entries)
+        - ``sample_api_calls``         → ``api``        (3 entries)
+        - ``sample_service_changes``   → ``service``    (1 entry)
+        - ``sample_kernel_objects``    → ``kernel``     (1 entry)
+        - ``sample_dll_loads``         → ``dll``        (1 entry)
+        - ``sample_injection_events``  → ``injection``  (1 entry)
+        - ``sample_clipboard_events``  → ``clipboard``  (2 entries)
+
+        The expected set of ten category names is derived independently by
+        reading the fixture definitions in ``conftest.py`` and the category
+        label assigned in each ``_timeline_add_*`` helper.  Any implementation
+        change that omits a category (e.g. no longer emitting ``dll`` events)
+        will cause this assertion to fail.
 
         Args:
             sample_report: ExecutionReport fixture populated with all sample data.
         """
         events = generate_timeline(sample_report)
         categories = {e["category"] for e in events}
-        assert len(categories) >= 5
+        expected_categories = {
+            "file",
+            "registry",
+            "network",
+            "process",
+            "api",
+            "service",
+            "kernel",
+            "dll",
+            "injection",
+            "clipboard",
+        }
+        assert categories == expected_categories, (
+            f"Expected timeline categories {expected_categories!r}, got {categories!r}"
+        )
 
 
 class TestMatchBehaviors:
@@ -1459,14 +1542,48 @@ class TestMatchBehaviors:
         assert not any(m["signature_name"] == "No Match" for m in matches)
 
     def test_full_sample_report(self, sample_report: ExecutionReport) -> None:
-        """Full sample report matches multiple MITRE categories.
+        """Full sample report matches all five MITRE behavioral categories.
+
+        The ``sample_report`` fixture contains data that exercises every
+        built-in matching sub-function:
+
+        - ``_match_persistence``:
+          - MalSvc service (``service_changes``) → ``Persistence`` / T1543
+          - HKLM Run key (``registry_changes``) → ``Persistence`` / T1547
+          - schtasks.exe (``process_activity``) → ``Persistence`` / T1547
+        - ``_match_defense_evasion``:
+          - CreateRemoteThread injection (``injection_events``) → ``Defense Evasion`` / T1055
+          - IsDebuggerPresent (``api_calls``) → ``Defense Evasion`` / T1497
+          - Sleep(120000ms) (``api_calls``) → ``Defense Evasion`` / T1497
+        - ``_match_command_and_control``:
+          - Beaconing to 185.220.101.45 (``network_activity``) → ``Command and Control`` / T1071
+          - DoH connection to 1.1.1.1:443 (``network_activity``) → ``Command and Control`` / T1573
+        - ``_match_exfiltration``:
+          - 5 MiB outbound to 51.15.192.49 (``network_activity``) → ``Exfiltration`` / T1041
+          - Clipboard read (``clipboard_events``) → ``Exfiltration`` / T1115
+        - ``_match_discovery``:
+          - whoami.exe (``process_activity``) → ``Discovery`` / T1082
+
+        The expected category set is recomputed independently from the fixture
+        content and the production matching rules; it is not derived from the
+        function's return value.  Any implementation that drops a matching
+        sub-function (e.g. ``_match_discovery``) will produce the wrong set.
 
         Args:
             sample_report: ExecutionReport fixture populated with all sample data.
         """
         matches = match_behaviors(sample_report)
         categories = {m["category"] for m in matches}
-        assert len(categories) >= 3
+        expected_categories = {
+            "Persistence",
+            "Defense Evasion",
+            "Command and Control",
+            "Exfiltration",
+            "Discovery",
+        }
+        assert categories == expected_categories, (
+            f"Expected behavior categories {expected_categories!r}, got {categories!r}"
+        )
 
 
 class TestDiffReports:

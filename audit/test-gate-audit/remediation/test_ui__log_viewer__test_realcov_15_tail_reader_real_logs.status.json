@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_ui/log_viewer/test_realcov_15_tail_reader_real_logs.py",
+  "findings_addressed": [
+    {
+      "id": "G0319",
+      "test": "test_reader_parses_real_structlog_records",
+      "action": "hardened",
+      "oracle": "The _add_call_info processor in src/intellicrack/core/logging.py (lines 234-236) records module as the source filename stem and function as frame.f_code.co_name. The only callers of logger.info/warning in that test function are in test_reader_parses_real_structlog_records inside test_realcov_15_tail_reader_real_logs.py, so the expected values are determined independently from the call site.",
+      "documented_mutation": "In src/intellicrack/core/logging.py line 234, change `event_dict[\"module\"] = frame.f_code.co_filename.rsplit(\"\\\\\", 1)[-1].rsplit(\"/\", 1)[-1].replace(\".py\", \"\")` to `event_dict[\"module\"] = \"unknown\"` — the assertion `assert alpha[\"module\"] == \"test_realcov_15_tail_reader_real_logs\"` would then fail."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Replaced lines 87-88 (bare truthiness `assert str(alpha['module'])` and `assert str(alpha['function'])`) with exact equality assertions against the known call-site values: module must equal the test filename stem 'test_realcov_15_tail_reader_real_logs' and function must equal the test function name 'test_reader_parses_real_structlog_records'. These values are independently derivable from the source location of the logger.info call and from knowledge of how _add_call_info extracts frame information. A no-op implementation that writes placeholder strings such as 'unknown' now fails the gate."
+}

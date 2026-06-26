@@ -36,13 +36,13 @@ import pytest
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.types import ToolError, ToolName
 from intellicrack.sandbox.base import ExecutionReport
+from intellicrack.sandbox.manager import SandboxManager
 from tests._helpers.process_cleanup import allow_host_process_tests, is_sandboxed
 from tests.test_sandbox.conftest import LocalProcessSandbox, StubInstance
 
 
 if TYPE_CHECKING:
     from intellicrack.sandbox.base import SandboxConfig
-    from intellicrack.sandbox.manager import SandboxManager
 
 
 _EXPECTED_FUNC_COUNT: Final[int] = 27
@@ -74,9 +74,36 @@ class TestBridgeInstantiation:
     """Verify bridge construction and basic properties."""
 
     def test_not_none(self) -> None:
-        """Bridge instantiates successfully."""
+        """Bridge constructor wires the exact capabilities declared in SandboxBridge.__init__.
+
+        The oracle is the literal values hard-coded in the constructor:
+        supported_architectures=["x86", "x86_64"] and
+        supported_formats=["pe", "elf"].  Comparing the sorted lists
+        against independently typed expected constants ensures that any
+        refactor that drops, adds, or renames an architecture or format
+        entry is caught immediately.
+
+        Falsifying mutation: change ``supported_architectures=["x86", "x86_64"]``
+        to ``supported_architectures=["arm"]`` in ``SandboxBridge.__init__`` —
+        ``sorted(caps.supported_architectures) == expected_archs`` fails.
+        """
+        expected_archs: list[str] = sorted(["x86", "x86_64"])
+        expected_fmts: list[str] = sorted(["pe", "elf"])
+
         bridge = SandboxBridge()
-        assert bridge is not None
+        caps = getattr(bridge, "_capabilities")
+
+        assert sorted(caps.supported_architectures) == expected_archs, (
+            f"supported_architectures mismatch: got {sorted(caps.supported_architectures)!r}, "
+            f"expected {expected_archs!r}"
+        )
+        assert sorted(caps.supported_formats) == expected_fmts, (
+            f"supported_formats mismatch: got {sorted(caps.supported_formats)!r}, "
+            f"expected {expected_fmts!r}"
+        )
+        assert getattr(bridge, "_manager_destroyed") is False, (
+            "Bridge must not be in destroyed state immediately after construction"
+        )
 
     def test_name_is_sandbox(self) -> None:
         """Bridge name is ToolName.SANDBOX."""
@@ -302,10 +329,21 @@ class TestInitializeShutdown:
 
     @pytest.mark.asyncio
     async def test_ensure_manager_creates(self) -> None:
-        """ensure_manager creates manager if None."""
+        """ensure_manager creates a real SandboxManager with sandbox-type discovery.
+
+        The returned object must be the real SandboxManager (not a bare object or
+        wrong type) and must expose ``get_available_types`` as an awaitable, since
+        the bridge calls that method during ``create`` and ``status``. A regression
+        that returns ``object()`` or a wrong type would fail the isinstance check;
+        one that removes ``get_available_types`` from SandboxManager would fail the
+        hasattr check; one that makes the method non-awaitable would fail the
+        coroutine check.
+        """
         bridge = SandboxBridge()
         mgr = bridge.ensure_manager()
-        assert mgr is not None
+        assert isinstance(mgr, SandboxManager)
+        assert hasattr(mgr, "get_available_types")
+        assert inspect.iscoroutinefunction(mgr.get_available_types)
 
     @pytest.mark.asyncio
     async def test_ensure_manager_idempotent(self, sandbox_bridge: SandboxBridge) -> None:
@@ -1033,11 +1071,19 @@ class TestAnalysisWrappers:
 
     @pytest.mark.asyncio
     async def test_diff_success(self, sandbox_bridge: SandboxBridge) -> None:
-        """Diff returns correct instance IDs and a non-empty diff structure.
+        r"""Diff surfaces the concrete per-field differences between win and qemu fixture reports.
 
-        The win and qemu instances have different reports; the bridge must relay
-        ``instance_id_a`` and ``instance_id_b`` exactly and include a ``diff`` dict
-        with the per-field comparison keys from ``diff_reports``.
+        The win instance report has one file change (``C:\out.txt``) and one
+        network activity (``185.220.101.45:443``); the qemu instance report has
+        neither. ``diff_reports`` computes per-field ``unique_to_a`` / ``unique_to_b``
+        / ``common`` lists keyed by ``path`` for file changes and
+        ``remote_address,remote_port`` for network activity. The bridge must relay
+        all per-field sections without dropping any comparison lists.
+
+        A regression that deletes the ``field_key_map`` loop in
+        ``analysis.diff_reports`` would collapse the result to only ``{scalars: ...}``
+        and drop the ``file_changes`` and ``network_activity`` sections, making both
+        asserts below fail.
 
         Args:
             sandbox_bridge: SandboxBridge fixture with pre-populated windows and qemu instances.
@@ -1046,7 +1092,16 @@ class TestAnalysisWrappers:
         assert result["instance_id_a"] == _WIN_INSTANCE
         assert result["instance_id_b"] == _QEMU_INSTANCE
         diff_section: dict[str, object] = cast("dict[str, object]", result["diff"])
-        assert len(diff_section) > 0
+
+        file_diff = cast("dict[str, list[dict[str, object]]]", diff_section["file_changes"])
+        unique_paths_a = {entry["path"] for entry in file_diff["unique_to_a"]}
+        assert "C:\\out.txt" in unique_paths_a
+        assert file_diff["unique_to_b"] == []
+
+        net_diff = cast("dict[str, list[dict[str, object]]]", diff_section["network_activity"])
+        unique_remotes_a = {entry["remote_address"] for entry in net_diff["unique_to_a"]}
+        assert _WIN_REMOTE_IP in unique_remotes_a
+        assert net_diff["unique_to_b"] == []
 
     @pytest.mark.asyncio
     async def test_diff_missing_a_raises(self, sandbox_bridge: SandboxBridge) -> None:

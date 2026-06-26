@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -50,30 +50,121 @@ class TestToolDefinitionDispatchEndToEnd:
 
     @pytest.mark.asyncio
     async def test_status_dispatch(self, sandbox_bridge: SandboxBridge) -> None:
-        """sandbox.status resolves and returns a populated status mapping.
+        """sandbox.status instance list is cross-checked against bridge.list() as an independent oracle.
+
+        ``SandboxBridge.status()`` is a passthrough: ``return dict(await
+        manager.get_status())``. The bridge performs no transformation on the
+        payload.  Asserting only ``total_count == 2`` or iterating
+        ``result["instances"]`` with a no-op loop is insufficient because a
+        bridge regression that clears the ``instances`` list while leaving
+        ``total_count`` intact would pass trivially.
+
+        This test uses ``bridge.list()`` as an independent oracle.  ``list()``
+        builds its own dict from ``manager.instances`` via a separate production
+        code path (``inst.id``, ``inst.sandbox_type``, ``inst.state.status``,
+        ``inst.created_at.astimezone(UTC).isoformat()``), so a regression on the
+        ``status()`` path that corrupts or drops instances is caught by comparing
+        the two id-sets.
+
+        Concrete falsifying mutations:
+
+        * Changing ``status()`` to ``return {"instances": [], "total_count": 2,
+          ...}`` makes ``status_ids == list_ids`` fail because ``status_ids`` is
+          empty while ``list_ids`` is ``{"win-test-001", "qemu-test-001"}``.
+        * Dropping one instance from the status ``instances`` list makes the
+          exact id-set assertion fail.
+        * Renaming the ``"id"`` key in the status instances to ``"instance_id"``
+          raises ``KeyError`` when extracting ``status_ids``.
+        * Setting all status ``"type"`` values to ``"windows"`` makes the
+          per-id type assertion for ``qemu-test-001`` fail.
+        * Changing ``available_types`` to a list of integers makes the
+          ``isinstance(t, str)`` check fail.
 
         Args:
             sandbox_bridge: Fixture bridge with two pre-populated instances.
         """
         result = await sandbox_bridge.status()
         assert isinstance(result, dict)
-        assert "available_types" in result
-        assert "total_count" in result
+
+        available_types: list[Any] = result["available_types"]
+        assert isinstance(available_types, list)
+        assert set(available_types) == {"windows", "qemu"}, (
+            f"available_types must be exactly {{'windows', 'qemu'}}, got {available_types!r}"
+        )
+        for t in available_types:
+            assert isinstance(t, str), f"available_types elements must be strings, got {type(t)!r}"
+
         assert result["total_count"] == 2
+
+        status_instances: list[dict[str, Any]] = list(result["instances"])
+        assert len(status_instances) == 2, (
+            f"status() must return exactly 2 instances, got {len(status_instances)}"
+        )
+
+        status_ids = {str(entry["id"]) for entry in status_instances}
+        assert status_ids == {_WIN_INSTANCE, _QEMU_INSTANCE}, (
+            f"status() instance id-set {status_ids!r} must equal fixture ids"
+        )
+
+        status_type_by_id = {str(entry["id"]): str(entry["type"]) for entry in status_instances}
+        assert status_type_by_id[_WIN_INSTANCE] == "windows", (
+            f"win instance type must be 'windows', got {status_type_by_id[_WIN_INSTANCE]!r}"
+        )
+        assert status_type_by_id[_QEMU_INSTANCE] == "qemu", (
+            f"qemu instance type must be 'qemu', got {status_type_by_id[_QEMU_INSTANCE]!r}"
+        )
+
+        running_in_status = sum(1 for e in status_instances if str(e["status"]) == "running")
+        assert int(result["active_count"]) == running_in_status, (
+            f"active_count {result['active_count']!r} must equal independently-counted "
+            f"running instances {running_in_status}"
+        )
+
+        listed = await sandbox_bridge.list()
+        list_ids = {entry["id"] for entry in listed}
+        assert status_ids == list_ids, (
+            f"status() instance ids {status_ids!r} must exactly match list() ids {list_ids!r}; "
+            "a bridge regression that drops instances from status while list() still returns them "
+            "is caught here"
+        )
 
     @pytest.mark.asyncio
     async def test_list_dispatch(self, sandbox_bridge: SandboxBridge) -> None:
-        """sandbox.list resolves and returns one entry per real instance.
+        """sandbox.list serialises timestamps via the real bridge path.
+
+        ``SandboxBridge.list()`` formats ``created_at`` and ``last_used`` via
+        ``inst.created_at.astimezone(UTC).isoformat()`` (bridge production code).
+        This test uses ``datetime.fromisoformat`` as an independent oracle: if the
+        bridge stops emitting valid UTC ISO-8601 strings, the parse raises and
+        the test fails, catching the regression even though stub data was used.
+
+        The entry ``type`` field is asserted against the two concrete sandbox
+        flavours pre-loaded by the fixture so that a bridge change that coerces
+        types to a single value (e.g. always ``"windows"``) is caught.
 
         Args:
             sandbox_bridge: Fixture bridge with two pre-populated instances.
         """
         result = await sandbox_bridge.list()
         assert isinstance(result, list)
+        assert len(result) == 2
+
         ids = {entry["id"] for entry in result}
         assert ids == {_WIN_INSTANCE, _QEMU_INSTANCE}
+
+        type_by_id = {entry["id"]: entry["type"] for entry in result}
+        assert type_by_id[_WIN_INSTANCE] == "windows"
+        assert type_by_id[_QEMU_INSTANCE] == "qemu"
+
         for entry in result:
             assert entry["status"] == "running"
+
+            for ts_key in ("created_at", "last_used"):
+                ts_str = str(entry[ts_key])
+                parsed = datetime.fromisoformat(ts_str)
+                assert parsed.tzinfo is not None, (
+                    f"{ts_key} must be timezone-aware, got {ts_str!r} for entry {entry['id']!r}"
+                )
 
     @pytest.mark.asyncio
     async def test_instance_scoped_methods_dispatch(
@@ -131,7 +222,21 @@ class TestStubManagerFullCallChain:
         self,
         sandbox_bridge: SandboxBridge,
     ) -> None:
-        """create() drives the manager and writes connected state, no mocks.
+        """create() writes a UTC ISO-8601 created_at via the bridge production path.
+
+        The real ``SandboxBridge.create()`` builds its return dict as::
+
+            "created_at": instance.created_at.astimezone(UTC).isoformat()
+
+        ``datetime.fromisoformat`` is used as the independent oracle: if the
+        bridge were to stop emitting a timezone-aware ISO string (e.g. by
+        returning the raw ``datetime`` object, removing the field, or stripping
+        the UTC offset) the parse would raise and the test would fail.
+
+        The ``instance_id`` returned by ``create`` is cross-checked against
+        the live manager via ``bridge.list()`` so a regression that builds a
+        return dict with a fabricated id while registering nothing would also
+        be caught.
 
         Args:
             sandbox_bridge: Fixture bridge backed by the in-process manager.
@@ -143,14 +248,25 @@ class TestStubManagerFullCallChain:
         assert before is after, "ensure_manager must be idempotent across create"
         assert result["type"] == "qemu"
         assert result["status"] == "running"
-        assert result["instance_id"]
-        # The bridge state must reflect a live, connected sandbox session.
+
+        instance_id = str(result["instance_id"])
+        assert instance_id, "create must return a non-empty instance_id"
+
+        created_at_str = str(result["created_at"])
+        parsed = datetime.fromisoformat(created_at_str)
+        assert parsed.tzinfo is not None, (
+            f"created_at must be timezone-aware UTC ISO-8601, got {created_at_str!r}"
+        )
+
         assert sandbox_bridge.state.connected is True
         assert sandbox_bridge.state.tool_running is True
         assert sandbox_bridge.state.last_error is None
-        # The newly created instance is retrievable from the same manager.
+
         listed = await sandbox_bridge.list()
-        assert any(entry["id"] == result["instance_id"] for entry in listed)
+        listed_ids = {entry["id"] for entry in listed}
+        assert instance_id in listed_ids, (
+            f"newly created instance {instance_id!r} must appear in list(); got {listed_ids!r}"
+        )
 
     @pytest.mark.asyncio
     async def test_destroy_then_list_reflects_removal(

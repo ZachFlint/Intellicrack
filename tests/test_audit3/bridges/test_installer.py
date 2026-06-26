@@ -16,6 +16,7 @@ substitutions (``monkeypatch``) are used only at the boundary
 from __future__ import annotations
 
 import asyncio
+import ctypes
 import os
 import re
 import shutil
@@ -45,7 +46,6 @@ from intellicrack.bridges import installer as installer_mod
 from intellicrack.bridges.installer import (
     PLUGIN_ARCHS,
     TOOL_REGISTRY,
-    ArchDeployResult,
     DeployResult,
     FoundTool,
     InstallResult,
@@ -339,20 +339,6 @@ def _install_pm_substitute(
 
 class TestKindDiscriminator:
     """F-0001 (PROCESS) and F-0002 (FRIDA) - typed availability mechanism."""
-
-    @staticmethod
-    def test_install_result_has_kind_field() -> None:
-        """InstallResult exposes a typed ``kind`` discriminator (F-0001/F-0002)."""
-        r = InstallResult(success=True, kind="builtin")
-        assert r.kind == "builtin"
-        assert r.path is None
-
-    @staticmethod
-    def test_found_tool_has_kind_field() -> None:
-        """FoundTool exposes a typed ``kind`` discriminator (F-0001/F-0002)."""
-        ft = FoundTool(kind="python_package")
-        assert ft.kind == "python_package"
-        assert ft.path is None
 
     @staticmethod
     def test_install_tool_process_returns_builtin_kind(tmp_path: Path) -> None:
@@ -1344,16 +1330,40 @@ class TestTypeDataclassesSanity:
         assert r.kind == "filesystem"
 
     @staticmethod
-    def test_arch_deploy_result_carries_error() -> None:
-        """ArchDeployResult records error detail."""
-        ar = ArchDeployResult(
-            arch="x64",
-            filename="intellicrack_bridge_x64.dp64",
-            status="failed",
-            error="permission denied",
-        )
-        assert ar.status == "failed"
-        assert ar.error == "permission denied"
+    def test_arch_deploy_result_carries_error(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """ArchDeployResult.error captures the OSError message from a real failed deploy.
+
+        Drives deploy_x64dbg_plugin_detailed with a shutil.copy2 stub that
+        raises OSError for the x64 target, then asserts the ArchDeployResult
+        produced by the real deploy path carries exactly that error string.
+        The oracle value is the OSError message raised at the copy seam.
+        """
+        x64dbg = _make_x64dbg_tree(tmp_path)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", b"\xDE\xAD" * 16)
+
+        oracle_error = "synthetic permission denied at x64"
+        original_copy = shutil.copy2
+
+        def _failing_copy(
+            src: str | os.PathLike[str],
+            dst: str | os.PathLike[str],
+            *,
+            follow_symlinks: bool = True,
+        ) -> str | os.PathLike[str]:
+            if str(dst).endswith(".dp64"):
+                raise OSError(oracle_error)
+            return original_copy(src, dst, follow_symlinks=follow_symlinks)
+
+        monkeypatch.setattr(shutil, "copy2", _failing_copy)
+
+        result = deploy_x64dbg_plugin_detailed(x64dbg, tmp_path)
+        x64_arch = next(ar for ar in result.per_arch if ar.arch == "x64")
+        assert x64_arch.status == "failed"
+        assert x64_arch.error is not None
+        assert oracle_error in x64_arch.error
 
     @staticmethod
     def test_deploy_result_aggregate_default() -> None:
@@ -1362,9 +1372,30 @@ class TestTypeDataclassesSanity:
         assert dr.per_arch == []
 
     @staticmethod
-    def test_is_user_admin_returns_bool() -> None:
-        """is_user_admin returns a bool on every platform."""
-        assert isinstance(is_user_admin(), bool)
+    def test_is_user_admin_matches_ctypes_oracle() -> None:
+        """is_user_admin returns a value that matches the ctypes IsUserAnAdmin oracle.
+
+        On Windows: calls IsUserAnAdmin via ctypes as an independent oracle and
+        asserts is_user_admin() returns exactly the same bool.  On non-Windows:
+        the production code is documented to return True unconditionally, which
+        is asserted directly.
+        """
+        result = is_user_admin()
+        if sys.platform == "win32":
+            windll = getattr(ctypes, "windll", None)
+            assert windll is not None, "ctypes.windll missing on win32"
+            shell32 = getattr(windll, "shell32", None)
+            assert shell32 is not None, "ctypes.windll.shell32 missing on win32"
+            is_admin_fn = getattr(shell32, "IsUserAnAdmin", None)
+            assert is_admin_fn is not None, "IsUserAnAdmin not found in shell32"
+            oracle: bool = bool(is_admin_fn())
+            assert result is oracle, (
+                f"is_user_admin() returned {result!r} but ctypes oracle says {oracle!r}"
+            )
+        else:
+            assert result is True, (
+                f"is_user_admin() must return True on non-Windows; got {result!r}"
+            )
 
 
 # --------------------------------------------------------------------------

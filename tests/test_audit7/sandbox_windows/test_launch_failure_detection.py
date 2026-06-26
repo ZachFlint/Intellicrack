@@ -110,18 +110,6 @@ def _detect_returns_rpc(_pid: int) -> str | None:
     return "Windows Sandbox Error 0x800706d9 endpoint mapper"
 
 
-def _detect_returns_none(_pid: int) -> str | None:
-    """Fake dialog detector returning no failure.
-
-    Args:
-        _pid: Ignored client PID.
-
-    Returns:
-        str | None: Always None.
-    """
-    return None
-
-
 class TestFailureTextClassification:
     """Behaviour of the dialog-text failure classifier."""
 
@@ -188,11 +176,48 @@ class TestCheckStartupHealth:
     """Behaviour of the startup-health check."""
 
     @pytest.mark.asyncio
-    async def test_no_process_is_noop(self) -> None:
-        """With no launched process the check returns without raising."""
+    async def test_no_process_is_noop(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """With no launched process the guard returns early without invoking the detector.
+
+        The independent oracle for expected state is the SandboxState dataclass
+        defaults declared in base.py: status='stopped', pid=None,
+        started_at=None, last_error=None.  The detector-call spy proves the
+        None-guard caused an early return.  Static falsifiability proof: deleting
+        the ``if self.process is None: return`` guard causes the method to call
+        ``self.process.poll()`` on None, raising AttributeError before any
+        assertion runs.
+
+        Args:
+            monkeypatch: Pytest fixture used to install the detector spy.
+        """
+        detector_calls: list[int] = []
+
+        def _spy_detector(pid: int) -> str | None:
+            detector_calls.append(pid)
+            return None
+
+        monkeypatch.setattr(
+            WindowsSandbox,
+            "_detect_client_failure_dialog",
+            staticmethod(_spy_detector),
+        )
+
         probe = _make_probe()
         probe.process = None
         await probe.run_startup_health()
+
+        assert detector_calls == [], (
+            "detector must not be called when process is None; "
+            "the None-guard should have returned early"
+        )
+        assert probe.process is None
+        assert probe.state.status == "stopped"
+        assert probe.state.pid is None
+        assert probe.state.started_at is None
+        assert probe.state.last_error is None
 
     @pytest.mark.asyncio
     async def test_early_client_exit_raises_actionable_error(self) -> None:
@@ -233,20 +258,32 @@ class TestCheckStartupHealth:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """A healthy live client with no failure dialog does not raise.
+        """A healthy live client with no dialog leaves state unchanged and invokes the detector.
 
         Args:
             monkeypatch: Pytest fixture used to stub the dialog detector.
         """
         probe = _make_probe()
-        probe.process = _fake_process(poll_result=None, pid=5555)
+        client_pid = 5555
+        probe.process = _fake_process(poll_result=None, pid=client_pid)
+
+        calls: list[int] = []
+
+        def _spy_detector(pid: int) -> str | None:
+            calls.append(pid)
+            return None
+
         monkeypatch.setattr(
             WindowsSandbox,
             "_detect_client_failure_dialog",
-            staticmethod(_detect_returns_none),
+            staticmethod(_spy_detector),
         )
 
         await probe.run_startup_health()
+
+        assert calls == [client_pid]
+        assert probe.state.status != "error"
+        assert probe.state.last_error is None
 
 
 class TestStartPropagatesActionableError:

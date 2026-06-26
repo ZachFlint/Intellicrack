@@ -1,0 +1,49 @@
+{
+  "file": "tests/test_audit4/c6_hex_hashing/test_realcov_13b_base_hashing.py",
+  "findings_addressed": [
+    {
+      "id": "G0033",
+      "test": "TestStdlibHashesMatchReference (all parametrized cases), TestChecksumsMatchReference (all methods), TestFnvHashes::test_fnv_variants_match_reference, TestStreamingCrcMatchesInMemory::test_streaming_file_path_matches_zlib, TestFormatSize::test_real_pe_size_is_kb_or_mb",
+      "action": "hardened",
+      "oracle": "Module-level pytest.importorskip removed; pytest.importorskip('intellicrack_hexcore') moved inside test_streaming_file_path_matches_document_path only, so all pure-Python tests run unconditionally even when the Rust hexcore extension is absent.",
+      "documented_mutation": "In src/intellicrack/ui/panels/hex_editor/base.py, change `compute_hash` to always return 'WRONG' — all parametrized hashlib/zlib/FNV/CRC tests will now fail instead of silently skipping."
+    },
+    {
+      "id": "G0034",
+      "test": "TestChecksumsMatchReference::test_unreflected_crc32_engine_matches_bit_serial",
+      "action": "hardened",
+      "oracle": "CRC-32/BZIP2-no-xor catalogue check value 0x0376E6E7 for input b'123456789' (poly=0x04C11DB7, init=0xFFFFFFFF, ref_in=False, ref_out=False, xor_out=0x00), independently derived as the bitwise complement of the standard CRC-32/BZIP2 check value 0xFC891918 (xor_out=0xFFFFFFFF).",
+      "documented_mutation": "In src/intellicrack/ui/panels/hex_editor/base.py, change `compute_custom_crc` to return `init & mask` unconditionally — the assertion `compute_custom_crc(b'123456789', ...) == 0x0376E6E7` will fail because 0xFFFFFFFF != 0x0376E6E7."
+    },
+    {
+      "id": "G0035",
+      "test": "TestChecksumsMatchReference::test_crc8_engine_matches_production_dispatch",
+      "action": "hardened",
+      "oracle": "CRC-8/SMBUS catalogue check value 0xF4 for input b'123456789' (poly=0x07, init=0x00, ref_in=False, ref_out=False, xor_out=0x00), from the CRC RevEng catalogue (Greg Cook). Independently derived of the production implementation. Verified: compute_custom_crc(b'123456789', 8, 0x07, 0x00, ref_in=False, ref_out=False, xor_out=0x00) == 0xF4. The dispatcher assertion compute_hash('CRC-8', b'123456789') == 'f4' proves the production dispatch wires the correct parameters.",
+      "documented_mutation": "In src/intellicrack/ui/panels/hex_editor/base.py, flip ref_in=True in the CRC-8 branch of _compute_hash_checksums; the reflected computation yields 0x97 for b'123456789', so compute_custom_crc(...) == 0xF4 fails immediately."
+    },
+    {
+      "id": "G0036",
+      "test": "TestChecksumsMatchReference::test_crc16_engine_matches_production_dispatch",
+      "action": "hardened",
+      "oracle": "CRC-16/ARC catalogue check value 0xBB3D for input b'123456789' (poly=0x8005, init=0x0000, ref_in=True, ref_out=True, xor_out=0x0000), from the CRC RevEng catalogue (Greg Cook). Independently derived of the production implementation. Verified: compute_custom_crc(b'123456789', 16, 0x8005, 0x0000, ref_in=True, ref_out=True, xor_out=0x0000) == 0xBB3D. The dispatcher assertion compute_hash('CRC-16', b'123456789') == 'bb3d' proves the production dispatch wires the correct parameters.",
+      "documented_mutation": "In src/intellicrack/ui/panels/hex_editor/base.py, change ref_in=False in the CRC-16 branch of _compute_hash_checksums; the unreflected computation yields 0xFEE8 for b'123456789', so compute_custom_crc(...) == 0xBB3D fails immediately."
+    },
+    {
+      "id": "G0037",
+      "test": "TestChecksumsMatchReference::test_crc64_engine_matches_production_dispatch",
+      "action": "hardened",
+      "oracle": "CRC-64/ECMA-182 catalogue check value 0x62EC59E3F1A4F00A for input b'123456789' (poly=0x42F0E1EBA9EA3693, init=0xFFFFFFFFFFFFFFFF, ref_in=False, ref_out=False, xor_out=0xFFFFFFFFFFFFFFFF), from the CRC RevEng catalogue (Greg Cook). Independently derived of the production implementation. Verified: compute_custom_crc(b'123456789', 64, 0x42F0E1EBA9EA3693, 0xFFFFFFFFFFFFFFFF, ref_in=False, ref_out=False, xor_out=0xFFFFFFFFFFFFFFFF) == 0x62EC59E3F1A4F00A. The dispatcher assertion compute_hash('CRC-64', b'123456789') == '62ec59e3f1a4f00a' proves the production dispatch wires the correct parameters.",
+      "documented_mutation": "In src/intellicrack/ui/panels/hex_editor/base.py, flip ref_in=True in the CRC-64 branch of _compute_hash_checksums; the reflected computation yields a different value for b'123456789', so compute_custom_crc(...) == 0x62EC59E3F1A4F00A fails immediately."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0033: Moved pytest.importorskip('intellicrack_hexcore') from module level into test_streaming_file_path_matches_document_path only. G0034: Replaced tautological assertion with CRC-32/BZIP2-no-xor catalogue check value 0x0376E6E7. G0035-G0037: Replaced algebraically-identical tautologies (compute_custom_crc == compute_hash, both calling the same function with identical params) with assertions against published CRC catalogue check values for b'123456789'. The catalogue constants (0xF4, 0xBB3D, 0x62EC59E3F1A4F00A) are derived by the CRC RevEng project independently of the production implementation. Any bug in reflect logic, polynomial application, or parameter wiring causes the first assertion (against the catalogue constant) to fail. The dispatcher assertion proves both that the engine is correct AND that the production dispatch uses the right parameters. POST-WORKFLOW FIX (2026-06-22): adversarial reviewer flagged two remaining non-falsifiable tests. (1) test_streaming_file_path_matches_zlib used standard CRC-32 params (ref_in=True/ref_out=True) which hit the _is_zlib_crc32 short-circuit in _crc_over_chunks, so BOTH production and the reference delegated to zlib.crc32 - the table-driven mmap-chunked engine was never exercised (deleting it would not fail the test). Replaced with test_streaming_file_path_matches_bitserial_reference: uses CRC-32/BZIP2 params (ref_in=False/ref_out=False) that AVOID the short-circuit and force the table-driven streaming engine, validated against a new in-test _bitserial_crc_unreflected oracle (bit-at-a-time, shares no code with the production byte engine; verified on host to match production over the real PE = 0x3EAD39BA and the catalogue check vector = 0x0376E6E7). Kept the original zlib comparison as a separate test_streaming_standard_crc32_matches_zlib for the reflected path. (2) test_real_pe_size_is_kb_or_mb only asserted .endswith(('KB','MB')), so a MB-branch divisor mutation (size/MB -> size/KB) still ends with 'MB' and passed. Replaced with an exact recomputed-string oracle over the real PE plus explicit MB (1.5 MB) and GB (1.50 GB) branch exacts so every format_size branch is deterministically gated. Verified GREEN in sandbox."
+}

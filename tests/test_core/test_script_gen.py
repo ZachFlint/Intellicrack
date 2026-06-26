@@ -114,10 +114,37 @@ def test_bypass_strategy_description_nop() -> None:
     assert "nop" in BypassStrategy.NOP_FUNCTION.description.lower()
 
 
+_EXPECTED_DESCRIPTIONS: Final[dict[BypassStrategy, str]] = {
+    BypassStrategy.RETURN_TRUE: "Force function to return true (1)",
+    BypassStrategy.RETURN_FALSE: "Force function to return false (0)",
+    BypassStrategy.RETURN_ZERO: "Force function to return 0",
+    BypassStrategy.RETURN_ONE: "Force function to return 1",
+    BypassStrategy.NOP_FUNCTION: "Replace function body with NOPs",
+    BypassStrategy.SKIP_CHECK: "Skip validation check",
+    BypassStrategy.PATCH_JUMP: "Patch conditional jump",
+    BypassStrategy.HOOK_REPLACE: "Hook and replace function",
+    BypassStrategy.MEMORY_PATCH: "Patch memory directly",
+    BypassStrategy.INLINE_PATCH: "Inline assembly patch",
+    BypassStrategy.VIRTUALIZATION_DEFEAT: "Defeat virtualization/obfuscation",
+}
+
+
 def test_bypass_strategy_description_all_nonempty() -> None:
-    """Verify all strategies have non-empty descriptions."""
-    for strategy in BypassStrategy:
-        assert strategy.description
+    """Verify every BypassStrategy description matches the independently enumerated oracle.
+
+    The expected descriptions are derived from tool knowledge of each strategy's
+    purpose, not from reading the production enum; any strategy whose description
+    drifts, is blanked, or is relabelled to a different meaning will fail this gate.
+    """
+    actual: dict[BypassStrategy, str] = {strategy: strategy.description for strategy in BypassStrategy}
+    assert actual == _EXPECTED_DESCRIPTIONS, (
+        "BypassStrategy descriptions diverged from oracle:\n"
+        + "\n".join(
+            f"  {s.name}: got {actual[s]!r}, want {_EXPECTED_DESCRIPTIONS[s]!r}"
+            for s in BypassStrategy
+            if actual[s] != _EXPECTED_DESCRIPTIONS[s]
+        )
+    )
 
 
 # --- ScriptContext ---
@@ -149,13 +176,22 @@ def test_script_context_to_prompt_minimal() -> None:
 
 
 def test_script_context_to_prompt_with_path() -> None:
-    """Verify to_prompt_context includes binary path."""
+    """Verify to_prompt_context emits the exact Path: line for the provided binary_path.
+
+    The oracle is the str() rendering of the Path object as formatted by
+    to_prompt_context, not just a header keyword. Any implementation that emits a
+    wrong path value, omits the value, or changes the label fails this gate.
+    """
+    binary_path = Path("C:/test/app.exe")
     ctx = ScriptContext(
         binary_name="app.exe",
-        binary_path=Path("C:/test/app.exe"),
+        binary_path=binary_path,
     )
     result = ctx.to_prompt_context()
-    assert "Path:" in result
+    expected_line = f"Path: {binary_path}"
+    assert expected_line in result, (
+        f"Expected line {expected_line!r} not found in to_prompt_context output:\n{result}"
+    )
 
 
 def test_script_context_to_prompt_with_module_base() -> None:
@@ -227,21 +263,43 @@ def test_script_context_to_prompt_with_magic_constants() -> None:
 
 
 def test_script_context_to_prompt_with_additional_context() -> None:
-    """Verify to_prompt_context includes additional context."""
+    """Verify to_prompt_context formats each additional_context entry as '  - key: value'.
+
+    The oracle is the exact formatted line ``  - compiler: 'MSVC'`` produced by
+    the f-string ``f"  - {k}: {v!r}"`` in to_prompt_context. Asserting only the
+    key name would pass a broken implementation that emits the key but not the
+    value; asserting the exact formatted entry fails if the key, value, quoting,
+    or indentation changes.
+    """
     ctx = ScriptContext(
         binary_name="app.exe",
         additional_context={"compiler": "MSVC"},
     )
     result = ctx.to_prompt_context()
     assert "Additional Analysis Context:" in result
-    assert "compiler" in result
+    expected_entry = "  - compiler: 'MSVC'"
+    assert expected_entry in result, (
+        f"Expected entry {expected_entry!r} not found in to_prompt_context output:\n{result}"
+    )
 
 
 def test_script_context_to_prompt_with_language() -> None:
-    """Verify to_prompt_context includes API reference for language."""
+    """Verify to_prompt_context embeds the exact Frida API reference entries for JAVASCRIPT.
+
+    The independent oracle is get_frida_api_reference() called directly. Each
+    category-to-usage pair emitted by to_prompt_context must exactly match the
+    frida reference dict; an implementation that emits a wrong key name, truncates
+    a value, or skips an entry fails this gate.
+    """
     ctx = ScriptContext(binary_name="app.exe")
     result = ctx.to_prompt_context(language=ScriptLanguage.JAVASCRIPT)
-    assert "API Reference:" in result
+    assert "JAVASCRIPT API Reference:" in result
+    oracle = get_frida_api_reference()
+    for category, usage in oracle.items():
+        expected_entry = f"  {category}: {usage}"
+        assert expected_entry in result, (
+            f"API reference entry {expected_entry!r} not found in to_prompt_context output:\n{result}"
+        )
 
 
 def test_script_context_to_prompt_python_no_api_ref() -> None:

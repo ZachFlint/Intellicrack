@@ -1,0 +1,101 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_pattern_engine.py",
+  "findings_addressed": [
+    {
+      "id": "G0161",
+      "test": "TestCompilePattern::test_compile_simple_struct_returns_nonempty_string",
+      "action": "deleted",
+      "oracle": "test_compile_simple_struct_result_is_valid_json (stronger sibling: asserts JSON validity not just non-emptiness)",
+      "documented_mutation": "N/A - deleted as weaker duplicate"
+    },
+    {
+      "id": "G0162",
+      "test": "TestExecutePattern::test_execute_u32_field_returns_field_list",
+      "action": "deleted",
+      "oracle": "test_execute_u32_field_has_correct_size and test_execute_u32_field_has_correct_offset (stronger siblings: assert specific field attributes)",
+      "documented_mutation": "N/A - deleted as weaker duplicate"
+    },
+    {
+      "id": "G0163",
+      "test": "TestExecutePattern::test_execute_struct_with_multiple_fields_returns_multiple_results",
+      "action": "hardened",
+      "oracle": "_collect_field_names() recursively navigates the returned field dicts (top-level name keys and children list entries), collects all name strings structurally, then asserts 'header' and 'magic' are both present as exact string values. No str() coercion fallback. Fails if any field body is missing or misnamed.",
+      "documented_mutation": "In HexPatInterpreter.execute(), remove children propagation so the returned dicts carry no 'children' key and 'magic' never appears anywhere in the structural name walk."
+    },
+    {
+      "id": "G0164",
+      "test": "TestListAndAutoDetect::test_auto_detect_with_pe_file_returns_list",
+      "action": "red-prod-defect",
+      "oracle": "Structural: result must be non-empty, contain an entry whose 'name' is exactly 'pe', and have fewer than 50 entries (proving magic-byte selectivity). Independent oracle is the vendor pe.hexpat magic-byte declaration and the MZ-header PE fixture.",
+      "documented_mutation": "PROD DEFECT: _get_pattern_registry() at hex_editor.py:1774 uses parents[2] which resolves to src/; vendor/community-patterns/patterns lives at parents[3] (repo root) so the directory never exists and the catalog is always empty."
+    },
+    {
+      "id": "G0165",
+      "test": "TestCompilePattern::test_compile_complex_struct_with_nested_types_is_valid_json",
+      "action": "hardened",
+      "oracle": "Structural navigation: parsed['name'] == 'Outer'; parsed['fields'] contains names 'hdr' and 'sub'; parsed['types']['Inner']['kind'] == 'struct'; parsed['types']['Inner']['fields'] contains names 'tag' and 'val'. Every check navigates the parsed object - no substring search.",
+      "documented_mutation": "In HexPatCompiler.compile(), return json.dumps({'name': 'Outer', 'fields': [], 'types': {}}) - outer name passes but fields are empty so 'hdr'/'sub' assertions fail."
+    },
+    {
+      "id": "G0166",
+      "test": "TestCompilePattern::test_compile_enum_produces_valid_json",
+      "action": "hardened",
+      "oracle": "Structural navigation: parsed['types']['Color']['kind'] == 'enum'; values list has exactly 3 members; values_map['Red'] == 0, values_map['Green'] == 1, values_map['Blue'] == 2. Asserts exact integer values, not substring presence.",
+      "documented_mutation": "In HexPatCompiler.compile(), emit Color with values [] - len(values) == 3 assertion fails immediately."
+    },
+    {
+      "id": "G0167",
+      "test": "TestCompilePattern::test_compile_union_produces_valid_json",
+      "action": "hardened",
+      "oracle": "Structural navigation: parsed['types']['Word']['kind'] == 'union'; parsed['types']['Word']['fields'] contains names 'as_u16' and 'bytes' as exact string values in the name key of each field dict.",
+      "documented_mutation": "In HexPatCompiler.compile(), emit Word with fields [] - union_field_names is empty so both 'as_u16' and 'bytes' assertions fail."
+    },
+    {
+      "id": "G0168",
+      "test": "TestListAndAutoDetect::test_list_hexpat_patterns_returns_list",
+      "action": "deleted",
+      "oracle": "test_list_hexpat_patterns_items_have_required_keys (stronger sibling: asserts len > 0, presence of 'pe' pattern, and required keys on all entries)",
+      "documented_mutation": "N/A - deleted as weaker duplicate"
+    },
+    {
+      "id": "G0169",
+      "test": "TestListAndAutoDetect::test_list_hexpat_patterns_items_have_required_keys",
+      "action": "red-prod-defect",
+      "oracle": "Structural: result non-empty; exact name 'pe' in {entry['name'] for entry in result}; every entry has keys name/description/category. Independent oracle is the vendor community-patterns/patterns directory containing pe.hexpat among 245 files.",
+      "documented_mutation": "PROD DEFECT: _get_pattern_registry() at hex_editor.py:1774 uses parents[2] which resolves to src/; vendor/community-patterns/patterns lives at parents[3] (repo root) so the directory never exists and the catalog is always empty."
+    }
+  ],
+  "prod_defects": [
+    {
+      "src_file": "src/intellicrack/bridges/hex_editor.py",
+      "line": 1774,
+      "expected": "project_root = Path(__file__).resolve().parents[3] (repo root) so patterns_dir = <repo>/vendor/community-patterns/patterns exists with 245 real .hexpat files including pe.hexpat",
+      "actual": "parents[2] resolves to src/, so patterns_dir = src/vendor/community-patterns/patterns which never exists, making the catalog always empty",
+      "red_tests": [
+        "TestListAndAutoDetect::test_list_hexpat_patterns_items_have_required_keys",
+        "TestListAndAutoDetect::test_auto_detect_with_pe_file_returns_list"
+      ]
+    }
+  ],
+  "deletions": [
+    {
+      "test": "TestCompilePattern::test_compile_simple_struct_returns_nonempty_string",
+      "covered_by": "TestCompilePattern::test_compile_simple_struct_result_is_valid_json"
+    },
+    {
+      "test": "TestExecutePattern::test_execute_u32_field_returns_field_list",
+      "covered_by": "TestExecutePattern::test_execute_u32_field_has_correct_size and TestExecutePattern::test_execute_u32_field_has_correct_offset"
+    },
+    {
+      "test": "TestListAndAutoDetect::test_list_hexpat_patterns_returns_list",
+      "covered_by": "TestListAndAutoDetect::test_list_hexpat_patterns_items_have_required_keys"
+    }
+  ],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Second hardening pass. Three compile tests (G0165/G0166/G0167) now navigate the parsed JSON object structurally: assert type names as dict keys in 'types', field names as 'name' values in 'fields' lists, enum values as exact [name, int] pairs - no substring fallbacks remain. G0163 (multiple-fields struct) now uses _collect_field_names() for recursive structural navigation, eliminating the str()-coercion fallback that allowed missing children to slip through. G0164 and G0169 are hardened gates that are intentionally RED due to the confirmed parents[2] production defect in _get_pattern_registry; they are marked red-prod-defect and will remain RED until the src fix is applied (parents[2] -> parents[3])."
+}

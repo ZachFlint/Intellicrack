@@ -19,17 +19,17 @@ Validates that:
 from __future__ import annotations
 
 import os
-from typing import TYPE_CHECKING
-
-
-if TYPE_CHECKING:
-    from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from typing import TYPE_CHECKING, cast
 
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QComboBox, QLabel, QLineEdit
+
+
+if TYPE_CHECKING:
+    from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
 from intellicrack.ui.panels.hex_editor.search import SearchMixin
 
@@ -196,6 +196,101 @@ class _ConcreteSearch(SearchMixin):
         self._numeric_range_check = None
         self._numeric_max_input = None
 
+    @property
+    def search_input(self) -> QLineEdit:
+        """Expose the search input widget for test inspection.
+
+        Returns:
+            QLineEdit: The search input widget.
+        """
+        assert isinstance(self._search_input, QLineEdit)
+        return self._search_input
+
+    @property
+    def search_mode_combo(self) -> QComboBox:
+        """Expose the search mode combo box for test inspection.
+
+        Returns:
+            QComboBox: The search mode combo box.
+        """
+        assert isinstance(self._search_mode_combo, QComboBox)
+        return self._search_mode_combo
+
+    @property
+    def search_status_label(self) -> QLabel:
+        """Expose the search status label for test inspection.
+
+        Returns:
+            QLabel: The search status label.
+        """
+        assert isinstance(self._search_status_label, QLabel)
+        return self._search_status_label
+
+    @property
+    def search_worker(self) -> GenericCallableWorker | None:
+        """Expose the current search worker for test inspection.
+
+        Returns:
+            GenericCallableWorker | None: The active search worker, or None.
+        """
+        return self._search_worker
+
+    @property
+    def search_results(self) -> list[tuple[int, int]]:
+        """Expose the current search results for test inspection.
+
+        Returns:
+            list[tuple[int, int]]: List of (offset, length) match tuples.
+        """
+        return self._search_results
+
+    @search_results.setter
+    def search_results(self, value: list[tuple[int, int]]) -> None:
+        """Set the search results for test setup.
+
+        Args:
+            value: List of (offset, length) match tuples to inject.
+        """
+        self._search_results = value
+
+    @property
+    def search_index(self) -> int:
+        """Expose the current search index for test inspection.
+
+        Returns:
+            int: Current position within search results.
+        """
+        return self._search_index
+
+    @search_index.setter
+    def search_index(self, value: int) -> None:
+        """Set the search index for test setup.
+
+        Args:
+            value: New search index value.
+        """
+        self._search_index = value
+
+    def do_search(self) -> None:
+        """Invoke ``_on_search`` as a public entry point for tests."""
+        self._on_search()
+
+    def do_search_mode_changed(self, mode: str) -> None:
+        """Invoke ``_on_search_mode_changed`` as a public entry point for tests.
+
+        Args:
+            mode: Search mode string to pass to the handler.
+        """
+        self._on_search_mode_changed(mode)
+
+    def do_reset_search_state(self) -> None:
+        """Invoke ``_reset_search_state`` as a public entry point for tests."""
+        self._reset_search_state()
+
+    def do_setup_search_signals(self) -> None:
+        """Invoke ``_setup_search_signals`` as a public entry point for tests."""
+        self._setup_search_signals()
+
 
 @pytest.fixture(scope="module")
 def qapp() -> QApplication:
@@ -230,26 +325,27 @@ class TestSearchUsesDocument:
         doc = _FakeDocument(b"hello world hello")
         widget = _TrackingHexWidget()
         mixin = _ConcreteSearch(doc, widget)
-        mixin._search_input.setText("hello")
-        mixin._search_mode_combo.setCurrentText("Text")
+        mixin.search_input.setText("hello")
+        mixin.search_mode_combo.setCurrentText("Text")
 
-        mixin._on_search()
+        mixin.do_search()
 
-        worker = mixin._search_worker
+        worker = mixin.search_worker
         assert worker is not None, "_on_search must create a GenericCallableWorker"
-        assert worker._args[0] is doc, "First positional arg to worker must be self.document, not None or a different object"
+        worker_args = cast(tuple[object, ...], getattr(worker, "_args", ()))
+        assert worker_args[0] is doc, "First positional arg to worker must be self.document, not None or a different object"
         worker.quit()
         worker.wait(2000)
 
     @staticmethod
     def test_search_no_attribute_error_when_document_set(qapp: QApplication) -> None:
-        """``_on_search`` raises no ``AttributeError`` when ``self.document`` is set.
+        """``_on_search`` dispatches a worker bound to ``self.document`` for hex mode.
 
-        Before the fix, ``_on_search`` evaluated ``self._document`` which is
-        declared only as a class annotation and never assigned, causing an
-        ``AttributeError`` on attribute access in Python strict mode or
-        returning ``None`` via the class-dict lookup depending on the Python
-        version.
+        Verifies that calling ``_on_search`` with a hex pattern when
+        ``self.document`` is set creates a ``GenericCallableWorker`` and binds
+        it to the correct document object.  The dead ``self._document``
+        annotation (root cause of F-0001) caused a silent early return without
+        creating any worker; this test catches that regression independently.
 
         Args:
             qapp: QApplication fixture.
@@ -258,21 +354,22 @@ class TestSearchUsesDocument:
         doc = _FakeDocument(b"\xde\xad\xbe\xef" * 8)
         widget = _TrackingHexWidget()
         mixin = _ConcreteSearch(doc, widget)
-        mixin._search_input.setText("DEADBEEF")
-        mixin._search_mode_combo.setCurrentText("Hex")
+        mixin.search_input.setText("DEADBEEF")
+        mixin.search_mode_combo.setCurrentText("Hex")
 
-        raised: BaseException | None = None
-        try:
-            mixin._on_search()
-        except AttributeError as exc:
-            raised = exc
+        mixin.do_search()
 
-        assert raised is None, f"_on_search raised AttributeError: {raised}"
+        worker = mixin.search_worker
+        assert worker is not None, (
+            "_on_search must create a GenericCallableWorker when document is set"
+        )
+        worker_args = cast(tuple[object, ...], getattr(worker, "_args", ()))
+        assert worker_args[0] is doc, (
+            "Worker must be bound to self.document, not None or a stale reference"
+        )
 
-        worker = mixin._search_worker
-        if worker is not None:
-            worker.quit()
-            worker.wait(2000)
+        worker.quit()
+        worker.wait(2000)
 
     @staticmethod
     def test_search_returns_early_when_document_is_none(qapp: QApplication) -> None:
@@ -284,11 +381,11 @@ class TestSearchUsesDocument:
         _ = qapp
         widget = _TrackingHexWidget()
         mixin = _ConcreteSearch(None, widget)
-        mixin._search_input.setText("hello")
+        mixin.search_input.setText("hello")
 
-        mixin._on_search()
+        mixin.do_search()
 
-        assert mixin._search_worker is None, "_on_search must not create a worker when document is None"
+        assert mixin.search_worker is None, "_on_search must not create a worker when document is None"
 
     @staticmethod
     def test_dead_class_annotation_removed(qapp: QApplication) -> None:
@@ -327,15 +424,15 @@ class TestSearchResultsClearedOnModeChange:
         widget = _TrackingHexWidget()
         mixin = _ConcreteSearch(doc, widget)
 
-        mixin._search_results = [(0, 5), (12, 5)]
-        mixin._search_index = 1
-        assert len(mixin._search_results) == 2
+        mixin.search_results = [(0, 5), (12, 5)]
+        mixin.search_index = 1
+        assert len(mixin.search_results) == 2
 
-        mixin._search_mode_combo.setCurrentText("Hex")
-        mixin._on_search_mode_changed("Hex")
+        mixin.search_mode_combo.setCurrentText("Hex")
+        mixin.do_search_mode_changed("Hex")
 
-        assert mixin._search_results == [], "_search_results must be cleared when mode changes"
-        assert mixin._search_index == 0, "_search_index must reset to 0"
+        assert mixin.search_results == [], "_search_results must be cleared when mode changes"
+        assert mixin.search_index == 0, "_search_index must reset to 0"
 
     @staticmethod
     def test_highlights_cleared_after_mode_change(qapp: QApplication) -> None:
@@ -349,8 +446,8 @@ class TestSearchResultsClearedOnModeChange:
         widget = _TrackingHexWidget()
         mixin = _ConcreteSearch(doc, widget)
 
-        mixin._search_results = [(0, 3)]
-        mixin._on_search_mode_changed("Regex")
+        mixin.search_results = [(0, 3)]
+        mixin.do_search_mode_changed("Regex")
 
         assert "search" in widget.clear_calls, "clear_highlights('search') must be called on the hex widget when mode changes"
 
@@ -366,11 +463,10 @@ class TestSearchResultsClearedOnModeChange:
         widget = _TrackingHexWidget()
         mixin = _ConcreteSearch(doc, widget)
 
-        assert mixin._search_status_label is not None
-        mixin._search_status_label.setText("Found 3 results")
-        mixin._on_search_mode_changed("Text")
+        mixin.search_status_label.setText("Found 3 results")
+        mixin.do_search_mode_changed("Text")
 
-        assert not mixin._search_status_label.text(), "Status label must be cleared when mode changes"
+        assert not mixin.search_status_label.text(), "Status label must be cleared when mode changes"
 
     @staticmethod
     def test_reset_search_state_clears_all_fields(qapp: QApplication) -> None:
@@ -384,16 +480,15 @@ class TestSearchResultsClearedOnModeChange:
         widget = _TrackingHexWidget()
         mixin = _ConcreteSearch(doc, widget)
 
-        mixin._search_results = [(10, 4), (20, 4)]
-        mixin._search_index = 1
-        assert mixin._search_status_label is not None
-        mixin._search_status_label.setText("Found 2 results")
+        mixin.search_results = [(10, 4), (20, 4)]
+        mixin.search_index = 1
+        mixin.search_status_label.setText("Found 2 results")
 
-        mixin._reset_search_state()
+        mixin.do_reset_search_state()
 
-        assert mixin._search_results == []
-        assert mixin._search_index == 0
-        assert not mixin._search_status_label.text()
+        assert mixin.search_results == []
+        assert mixin.search_index == 0
+        assert not mixin.search_status_label.text()
         assert "search" in widget.clear_calls
 
     @staticmethod
@@ -412,10 +507,9 @@ class TestSearchResultsClearedOnModeChange:
         widget = _TrackingHexWidget()
         mixin = _ConcreteSearch(doc, widget)
 
-        mixin._setup_search_signals()
-        mixin._search_results = [(0, 5)]
+        mixin.do_setup_search_signals()
+        mixin.search_results = [(0, 5)]
 
-        assert mixin._search_input is not None
-        mixin._search_input.setText("new query")
+        mixin.search_input.setText("new query")
 
-        assert mixin._search_results == [], "Changing search input text must clear _search_results"
+        assert mixin.search_results == [], "Changing search input text must clear _search_results"

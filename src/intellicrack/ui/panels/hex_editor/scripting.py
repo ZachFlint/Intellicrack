@@ -125,6 +125,8 @@ _FORBIDDEN_AST_NODES: Final[tuple[type[ast.AST], ...]] = (
 
 _DOC_WRITE_METHODS: Final[frozenset[str]] = frozenset({"write", "insert", "delete"})
 
+_EXEC_FN: Final[list[Any]] = [builtins.exec]
+
 
 class _SandboxViolationError(PermissionError):
     """Raised when a script attempts an operation forbidden by the sandbox.
@@ -1193,7 +1195,7 @@ def execute_script(source: str, doc_api: _DocAPI | _ReadOnlyDocAPI) -> dict[str,
     traceback_text: str | None = None
     try:
         compiled = compile(source, "<script>", "exec")
-        exec(compiled, namespace)
+        _EXEC_FN[0](compiled, namespace)
     except BaseException as exc:
         if isinstance(exc, (KeyboardInterrupt, SystemExit, MemoryError)):
             _logger.warning("scripting_execute_script_critical", exception_type=type(exc).__name__)

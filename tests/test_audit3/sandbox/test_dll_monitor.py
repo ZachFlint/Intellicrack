@@ -331,14 +331,109 @@ def test_script_emits_fallback_diagnostic_when_etw_unavailable(tmp_path: Path) -
     )
 
 
-def test_smoke_script_runs_and_writes_logs(tmp_path: Path) -> None:
-    """End-to-end smoke: the script must start and create its log directory.
+_MONITORING_DIAG_CATEGORIES: Final[frozenset[str]] = frozenset(
+    {
+        "etw_unavailable_falling_back_to_wmi",
+        "dll_event_unparsed",
+        "dll_event_handler_error",
+        "dll_event_schema_discovered",
+        "wmi_event_handler_error",
+        "traceevent_probe_failed",
+    },
+)
 
-    On non-elevated runs the script may fall back to WMI; on elevated
-    runs it uses realtime ETW. Either path is acceptable for smoke -
-    the assertion is that the log directory exists and the script
-    produced some on-disk artefact (either the main log, the diagnostic
-    log, or a warning on stderr).
+_LOG_MIN_PIPE_COUNT: Final[int] = 7
+
+
+def _main_log_has_structured_record(log_text: str) -> bool:
+    """Return whether *log_text* contains at least one structured DLL record.
+
+    A valid ``Write-DllRecord`` line has the form::
+
+        <timestamp>|<pid>|<name>|<path>|<base>|<size>|<event_id>|<schema>
+
+    which means exactly 7 ``|`` separators per line.  We require at least
+    one such line to be present so that a silently-emptied
+    ``Write-DllRecord`` body is detected.
+
+    Documented mutation: empty the body of ``Write-DllRecord`` in
+    ``dll_monitor.ps1`` so it never calls ``Add-Content``.  The main log
+    remains empty and this function returns ``False``.
+
+    Args:
+        log_text: Full text of ``dll_monitor.log``.
+
+    Returns:
+        bool: ``True`` if at least one pipe-delimited record is present.
+    """
+    for line in log_text.splitlines():
+        stripped = line.strip()
+        if stripped and stripped.count("|") >= _LOG_MIN_PIPE_COUNT:
+            return True
+    return False
+
+
+def _diag_has_monitoring_evidence(diag_text: str) -> bool:
+    """Return whether *diag_text* contains a monitoring-phase diagnostic entry.
+
+    The diagnostic log receives a ``lifecycle_started`` entry at script
+    startup (``dll_monitor.ps1`` line 498, via ``Write-DllLifecycle``),
+    before any monitoring logic runs.  That entry alone does not constitute
+    evidence that the monitoring path executed; it is produced even if the
+    entire monitoring body is a no-op.
+
+    This function returns ``True`` only when at least one entry from
+    :data:`_MONITORING_DIAG_CATEGORIES` is present, which requires the
+    monitoring path (ETW or WMI fallback) to have run.
+
+    Documented mutation: remove the ``Invoke-WmiFallback`` call body in
+    ``dll_monitor.ps1`` so it never calls ``Write-DllDiagnostic`` with
+    ``etw_unavailable_falling_back_to_wmi``, AND empty ``Write-DllRecord``
+    so no parsed events reach the main log.  Then no monitoring-phase
+    category is written to the diag log and this function returns ``False``
+    even though ``lifecycle_started`` is still present.
+
+    Args:
+        diag_text: Full text of ``dll_monitor.diag.log``.
+
+    Returns:
+        bool: ``True`` if at least one monitoring-phase category is found.
+    """
+    for line in diag_text.splitlines():
+        parts = line.strip().split("|")
+        if len(parts) >= 2 and parts[1] in _MONITORING_DIAG_CATEGORIES:
+            return True
+    return False
+
+
+def test_smoke_script_runs_and_writes_logs(tmp_path: Path) -> None:
+    """End-to-end smoke: the monitoring path must produce structured evidence.
+
+    The test spawns a DLL-load helper so the monitor has live events to
+    observe, then asserts that the script produced either:
+
+    * a structured pipe-delimited record in ``dll_monitor.log`` (written
+      by ``Write-DllRecord``), OR
+    * a monitoring-phase diagnostic entry in ``dll_monitor.diag.log``
+      (one of :data:`_MONITORING_DIAG_CATEGORIES`, e.g.
+      ``etw_unavailable_falling_back_to_wmi`` when TraceEvent is absent,
+      or ``dll_event_unparsed`` when the payload schema is unexpected).
+
+    The ``lifecycle_started`` entry that ``Write-DllLifecycle`` emits at
+    startup (before any monitoring loop) is explicitly excluded from the
+    positive-evidence set, because it is written before any monitoring
+    code runs and thus cannot demonstrate that the monitoring path
+    executed.
+
+    Documented falsifying mutation: in ``dll_monitor.ps1`` empty the body
+    of ``Write-DllRecord`` (so it never calls ``Add-Content``) and remove
+    the ``Write-DllDiagnostic`` call inside ``Invoke-WmiFallback`` (so
+    ``etw_unavailable_falling_back_to_wmi`` is never written to the diag
+    log).  With those two changes the main log is empty and the diag log
+    contains only ``lifecycle_started`` / ``lifecycle_stopped`` entries;
+    neither ``_main_log_has_structured_record`` nor
+    ``_diag_has_monitoring_evidence`` returns ``True``, and the assertion
+    fails.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -361,9 +456,23 @@ def test_smoke_script_runs_and_writes_logs(tmp_path: Path) -> None:
     assert log_dir.is_dir(), f"log directory missing after run: {log_dir}"
     log_path = log_dir / _LOG_NAME
     diag_path = log_dir / _DIAG_NAME
-    produced_artefact = log_path.exists() or diag_path.exists() or bool((stderr or "").strip())
-    assert produced_artefact, (
-        f"script produced no observable output; stdout={stdout!r} stderr={stderr!r} dir contents={list(log_dir.iterdir())!r}"
+
+    main_text = log_path.read_text(encoding="utf-8", errors="replace") if log_path.exists() else ""
+    diag_text = diag_path.read_text(encoding="utf-8", errors="replace") if diag_path.exists() else ""
+
+    has_record = _main_log_has_structured_record(main_text)
+    has_monitoring_diag = _diag_has_monitoring_evidence(diag_text)
+
+    assert has_record or has_monitoring_diag, (
+        "script produced no monitoring-phase evidence; "
+        "expected either a pipe-delimited record in dll_monitor.log "
+        f"(>= {_LOG_MIN_PIPE_COUNT} pipes) or a monitoring-phase diagnostic "
+        f"category {sorted(_MONITORING_DIAG_CATEGORIES)!r} in "
+        "dll_monitor.diag.log - the lifecycle_started startup entry alone "
+        "does not count; "
+        f"stdout={stdout!r} stderr={stderr!r} "
+        f"main_log={main_text!r} diag_log={diag_text!r} "
+        f"dir_contents={list(log_dir.iterdir())!r}"
     )
 
 

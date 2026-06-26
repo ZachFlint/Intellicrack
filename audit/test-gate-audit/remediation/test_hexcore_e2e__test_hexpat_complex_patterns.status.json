@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py",
+  "findings_addressed": [
+    {
+      "id": "G0222",
+      "test": "All tests in file",
+      "action": "hardened",
+      "oracle": "The conftest.py module-level importorskip was already removed (wave context confirms this). The test file itself never imported intellicrack_hexcore. Tests now run unconditionally as pure-Python gates. Weak existence-only assertions were hardened: conditional branch tests now assert raw_bytes and display_value from known data bytes; struct-array test now verifies element offsets and byte values via struct.unpack_from as independent oracle; bool-cast tests now assert concrete offset/raw_bytes/display_value; struct-sequential-fields test now verifies child offsets and display_value strings derived via struct.unpack_from.",
+      "documented_mutation": "In src/intellicrack/core/hexpat/evaluator.py, change the if/else branch evaluation to always evaluate the if-branch regardless of condition truth (e.g., replace 'if condition:' with 'if True:' in _eval_conditional_field). This would cause test_conditional_else_branch_taken to fail because type_b would never appear in results (type_a would instead), and assert 'type_b' in named would raise AssertionError."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "The primary finding G0222 was a skip-masks-failure caused by conftest.py's module-level importorskip of intellicrack_hexcore. That conftest was already refactored before this agent ran (the hexcore importorskip is now scoped only to the hexcore fixture). The test file itself never contained an importorskip. Action taken: hardened previously weak existence-only assertions (test_conditional_if_branch_taken, test_conditional_else_branch_taken, test_conditional_inside_struct_body, test_array_of_struct_elements, test_cast_int_to_bool_nonzero_is_true, test_cast_zero_to_bool_is_false, test_struct_sequential_fields_advance_offset) by adding concrete oracle assertions on raw_bytes, display_value, and offset derived from known data bytes and struct.unpack_from."
+}

@@ -535,13 +535,24 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         assert f"$targetPid = {target_pid};" in dispatched, f"script must embed the exact target_pid={target_pid}"
 
     def test_minidump_pid_field_distinguishes_target_from_host(self, tmp_path: Path) -> None:
-        """The fix routes the target PID into the dump, not the PowerShell host PID.
+        r"""The fix routes the target PID into the dump script; the script must not use GetCurrentProcess.
 
-        Two sandboxes are created: one correct (with OpenProcess fix) and one
-        simulating the pre-fix bug (uses powershell_host_pid).  The correct
-        sandbox produces a dump whose ProcessId matches target_pid, and the
-        buggy handler produces a dump whose ProcessId matches the host PID.
-        This verifies that the test itself is a genuine discriminator.
+        The primary gate is the script content emitted by the real production
+        code: the dispatched PowerShell must contain ``$targetPid = <N>;`` and
+        ``OpenProcess`` and must NOT contain ``GetCurrentProcess()``.  These
+        assertions are falsifiable --- reverting the F-0021 fix in production
+        (i.e. replacing ``OpenProcess($targetPid)`` with ``GetCurrentProcess()``)
+        would make ``assert "GetCurrentProcess()" not in dispatched`` fail
+        immediately.
+
+        The independent oracle for ``target_pid`` injection is the regex
+        ``re.search(r"\$targetPid = (\d+);", dispatched)``, which parses the
+        PID value from the script text produced by production code without
+        reading it from the test-supplied constant.  The extracted value is then
+        compared against the independently known ``target_pid``.
+
+        The dump-content assertions additionally confirm that the dump filename
+        embeds the correct PID and that the file starts with the MDMP magic.
 
         Args:
             tmp_path: Pytest temporary directory fixture.
@@ -549,29 +560,77 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         target_pid = 3210
         powershell_host_pid = 9999
 
-        # --- Correct (fixed) path ---
-        sb_fixed = _make_recording_sandbox(tmp_path / "fixed")
         (tmp_path / "fixed").mkdir(exist_ok=True)
+        sb_fixed = _make_recording_sandbox(tmp_path / "fixed")
         sb_fixed.set_handler(_make_dump_handler(sb_fixed, pid_to_embed=target_pid))
         fixed_result = asyncio.run(sb_fixed.dump_memory(target_pid=target_pid))
-        fixed_pid = struct.unpack_from("<I", fixed_result.read_bytes(), 32)[0]
 
-        # --- Pre-fix (buggy) simulation path ---
-        sb_buggy = _make_recording_sandbox(tmp_path / "buggy")
+        fixed_dispatched = sb_fixed.commands[0]
+
+        script_pid_match = re.search(r"\$targetPid = (\d+);", fixed_dispatched)
+        assert script_pid_match is not None, (
+            f"production script must contain '$targetPid = <N>;' assignment; script: {fixed_dispatched[:300]!r}"
+        )
+        script_injected_pid = int(script_pid_match.group(1))
+        assert script_injected_pid == target_pid, (
+            f"production code must inject target_pid={target_pid} into the script; "
+            f"script contains $targetPid={script_injected_pid}"
+        )
+
+        assert "OpenProcess" in fixed_dispatched, (
+            "production script must call OpenProcess($targetPid) — the F-0021 fix; "
+            f"script excerpt: {fixed_dispatched[:300]!r}"
+        )
+        assert "GetCurrentProcess()" not in fixed_dispatched, (
+            "production script must NOT call GetCurrentProcess() — that is the F-0021 bug pattern; "
+            f"script excerpt: {fixed_dispatched[:300]!r}"
+        )
+
+        fixed_dump_bytes = fixed_result.read_bytes()
+        assert fixed_dump_bytes[:4] == b"MDMP", "fixed-path dump must begin with MDMP magic"
+        fixed_pid = struct.unpack_from("<I", fixed_dump_bytes, 32)[0]
+        assert fixed_pid == target_pid, (
+            f"fixed path: dump ProcessId field at offset 0x20 must be {target_pid}; got {fixed_pid}"
+        )
+
+        assert f"pid{target_pid}" in fixed_result.name, (
+            f"fixed-path dump filename must embed pid{target_pid}; got {fixed_result.name!r}"
+        )
+
         (tmp_path / "buggy").mkdir(exist_ok=True)
-        # Buggy handler always embeds the PowerShell host PID regardless of the script.
+        sb_buggy = _make_recording_sandbox(tmp_path / "buggy")
         sb_buggy.set_handler(_make_dump_handler(sb_buggy, pid_to_embed=powershell_host_pid))
         buggy_result = asyncio.run(sb_buggy.dump_memory(target_pid=target_pid))
         buggy_pid = struct.unpack_from("<I", buggy_result.read_bytes(), 32)[0]
 
-        assert fixed_pid == target_pid, f"fixed path: dump ProcessId must be {target_pid}; got {fixed_pid}"
         assert buggy_pid == powershell_host_pid, (
-            f"buggy path: simulated pre-fix dump ProcessId must be {powershell_host_pid}; got {buggy_pid}"
+            f"buggy-simulation path: handler wrote pid_to_embed={powershell_host_pid}; got {buggy_pid}"
         )
-        assert fixed_pid != buggy_pid, "fixed and buggy paths must produce different PIDs in the dump"
+        assert fixed_pid != buggy_pid, (
+            f"fixed dump PID ({fixed_pid}) must differ from buggy-simulation dump PID ({buggy_pid})"
+        )
 
     def test_successive_dumps_with_different_pids_are_independent(self, tmp_path: Path) -> None:
-        """Successive dump calls with distinct target PIDs produce separate files with distinct PIDs.
+        r"""Successive dump calls with distinct PIDs produce scripts that each embed the correct PID.
+
+        The primary gate is the actual text of the PowerShell commands dispatched
+        by the real production code for each successive call.  The PID embedded in
+        each script is extracted via ``re.search(r"\$targetPid = (\d+);", cmd)``
+        — an independent regex oracle that reads the value the production code
+        injected, not the test-supplied constant.  Both scripts must embed their
+        respective PID, must contain ``OpenProcess``, and must not contain
+        ``GetCurrentProcess()``.
+
+        Falsifiability: reverting the F-0021 fix in
+        ``src/intellicrack/sandbox/windows.py`` by replacing
+        ``$handle = [MiniDumper]::OpenProcess($access, $false, $targetPid);``
+        with ``$handle = [MiniDumper]::GetCurrentProcess();`` would cause both
+        ``assert "GetCurrentProcess()" not in dispatched_a`` and
+        ``assert "GetCurrentProcess()" not in dispatched_b`` to fail immediately.
+        Additionally, removing the ``f"$targetPid = {target_pid};"`` f-string
+        from the script template would cause both ``script_pid_match_a`` and
+        ``script_pid_match_b`` to be ``None``, failing the ``assert … is not None``
+        guards before any PID comparison is attempted.
 
         Args:
             tmp_path: Pytest temporary directory fixture.
@@ -583,18 +642,70 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         sb.set_handler(_make_dump_handler(sb, pid_to_embed=pid_a))
         result_a = asyncio.run(sb.dump_memory(target_pid=pid_a))
 
+        # Record the command index boundary so each call's dispatched script is
+        # retrieved from the correct position in the recording list.
+        cmd_idx_after_a = len(sb.commands)
+
         sb.set_handler(_make_dump_handler(sb, pid_to_embed=pid_b))
         result_b = asyncio.run(sb.dump_memory(target_pid=pid_b))
+
+        assert len(sb.commands) >= 2, "two dump_memory calls must each dispatch at least one command"
+
+        # Retrieve the actual dispatched script text produced by production code.
+        dispatched_a = sb.commands[0]
+        dispatched_b = sb.commands[cmd_idx_after_a]
+
+        # Independent oracle: parse the $targetPid value that production code injected
+        # into each script.  This is NOT derived from pid_a/pid_b — it reads what the
+        # production f-string actually emitted.
+        script_pid_match_a = re.search(r"\$targetPid = (\d+);", dispatched_a)
+        assert script_pid_match_a is not None, (
+            f"first dispatched script must contain '$targetPid = <N>;'; script: {dispatched_a[:300]!r}"
+        )
+        script_pid_a = int(script_pid_match_a.group(1))
+
+        script_pid_match_b = re.search(r"\$targetPid = (\d+);", dispatched_b)
+        assert script_pid_match_b is not None, (
+            f"second dispatched script must contain '$targetPid = <N>;'; script: {dispatched_b[:300]!r}"
+        )
+        script_pid_b = int(script_pid_match_b.group(1))
+
+        # The PID the production code injected must match the independently known target_pid.
+        assert script_pid_a == pid_a, (
+            f"first script must embed pid_a={pid_a}; production code injected {script_pid_a}"
+        )
+        assert script_pid_b == pid_b, (
+            f"second script must embed pid_b={pid_b}; production code injected {script_pid_b}"
+        )
+
+        # Each script must use OpenProcess (the fix) and must not use GetCurrentProcess (the bug).
+        assert "OpenProcess" in dispatched_a, (
+            "first dispatched script must call OpenProcess($targetPid) — the F-0021 fix"
+        )
+        assert "GetCurrentProcess()" not in dispatched_a, (
+            "first dispatched script must NOT call GetCurrentProcess() — that is the F-0021 bug pattern"
+        )
+        assert "OpenProcess" in dispatched_b, (
+            "second dispatched script must call OpenProcess($targetPid) — the F-0021 fix"
+        )
+        assert "GetCurrentProcess()" not in dispatched_b, (
+            "second dispatched script must NOT call GetCurrentProcess() — that is the F-0021 bug pattern"
+        )
+
+        # The two scripts must differ in their embedded PID, confirming independence.
+        assert script_pid_a != script_pid_b, (
+            f"successive calls with different PIDs must produce scripts with different $targetPid values; "
+            f"both scripts embedded {script_pid_a}"
+        )
 
         # The two result paths must be distinct (different filenames due to random hex).
         assert result_a != result_b, "successive dumps must produce distinct file paths"
 
+        # Secondary corroboration: the dump-file ProcessId field must match the known target PID.
         embedded_a = struct.unpack_from("<I", result_a.read_bytes(), 32)[0]
         embedded_b = struct.unpack_from("<I", result_b.read_bytes(), 32)[0]
-
-        assert embedded_a == pid_a, f"first dump ProcessId must be {pid_a}; got {embedded_a}"
-        assert embedded_b == pid_b, f"second dump ProcessId must be {pid_b}; got {embedded_b}"
-        assert embedded_a != embedded_b, "dumps for different target PIDs must embed different ProcessId values"
+        assert embedded_a == pid_a, f"first dump ProcessId at offset 0x20 must be {pid_a}; got {embedded_a}"
+        assert embedded_b == pid_b, f"second dump ProcessId at offset 0x20 must be {pid_b}; got {embedded_b}"
 
 
 class TestF0021DumpMemoryErrorPaths:

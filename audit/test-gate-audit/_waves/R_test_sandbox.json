@@ -1,0 +1,171 @@
+{
+  "group": "test_sandbox",
+  "files": {
+    "tests/test_sandbox/test_analysis.py": [
+      {
+        "id": "G0294",
+        "test": "TestDetectC2Patterns::test_multiple_patterns_simultaneously",
+        "line": 635,
+        "category": "weak-existence",
+        "severity": "medium"
+      },
+      {
+        "id": "G0295",
+        "test": "TestExtractIOCs::test_full_sample_report",
+        "line": 848,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0296",
+        "test": "TestGenerateTimeline::test_full_sample_report",
+        "line": 1114,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0297",
+        "test": "TestMatchBehaviors::test_full_sample_report",
+        "line": 1467,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_sandbox/test_base_types.py": [
+      {
+        "id": "G0299",
+        "test": "TestTypedDictConstruction::test_file_change",
+        "line": 74,
+        "category": "tautological",
+        "severity": "high"
+      },
+      {
+        "id": "G0300",
+        "test": "TestTypedDictConstruction::test_registry_change",
+        "line": 89,
+        "category": "tautological",
+        "severity": "high"
+      },
+      {
+        "id": "G0301",
+        "test": "TestTypedDictConstruction::test_network_activity",
+        "line": 105,
+        "category": "tautological",
+        "severity": "high"
+      },
+      {
+        "id": "G0302",
+        "test": "TestTypedDictConstruction::test_api_call",
+        "line": 134,
+        "category": "tautological",
+        "severity": "high"
+      },
+      {
+        "id": "G0303",
+        "test": "TestTypedDictConstruction::test_ioc_entry",
+        "line": 226,
+        "category": "tautological",
+        "severity": "high"
+      }
+    ],
+    "tests/test_sandbox/test_manager.py": [
+      {
+        "id": "G0304",
+        "test": "TestSandboxInstance::test_touch_updates_last_used",
+        "line": 294,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0305",
+        "test": "TestSandboxInstance::test_last_report_settable",
+        "line": 309,
+        "category": "other",
+        "severity": "low"
+      },
+      {
+        "id": "G0306",
+        "test": "TestSandboxInstance::test_binary_path_settable",
+        "line": 329,
+        "category": "other",
+        "severity": "low"
+      },
+      {
+        "id": "G0307",
+        "test": "TestManagerProperties::test_instances_returns_copy",
+        "line": 349,
+        "category": "tautological",
+        "severity": "low"
+      },
+      {
+        "id": "G0308",
+        "test": "TestManagerCreate::test_create_returns_instance",
+        "line": 361,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0309",
+        "test": "TestManagerStatus::test_status_has_expected_keys",
+        "line": 476,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_sandbox/test_realcov_04_sandbox_bridge.py": [
+      {
+        "id": "G0310",
+        "test": "TestToolDefinitionDispatchEndToEnd::test_status_dispatch",
+        "line": 58,
+        "category": "mock-shadows-target",
+        "severity": "medium"
+      },
+      {
+        "id": "G0311",
+        "test": "TestToolDefinitionDispatchEndToEnd::test_list_dispatch",
+        "line": 65,
+        "category": "mock-shadows-target",
+        "severity": "medium"
+      },
+      {
+        "id": "G0312",
+        "test": "TestStubManagerFullCallChain::test_create_updates_state_with_real_fields",
+        "line": 129,
+        "category": "mock-shadows-target",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_sandbox/test_realcov_12b_analysis_real.py": [
+      {
+        "id": "G0314",
+        "test": "test_generate_timeline_orders_real_events",
+        "line": 414,
+        "category": "conditional-never-runs",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_sandbox/test_sandbox_bridge.py": [
+      {
+        "id": "G0316",
+        "test": "TestInitializeShutdown::test_ensure_manager_creates",
+        "line": 308,
+        "category": "weak-existence",
+        "severity": "medium"
+      },
+      {
+        "id": "G0317",
+        "test": "TestAnalysisWrappers::test_diff_success",
+        "line": 1049,
+        "category": "weak-existence",
+        "severity": "medium"
+      },
+      {
+        "id": "G0318",
+        "test": "TestBridgeInstantiation::test_not_none",
+        "line": 79,
+        "category": "tautological",
+        "severity": "low"
+      }
+    ]
+  }
+}

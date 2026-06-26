@@ -1,0 +1,35 @@
+{
+  "file": "tests/test_hexcore_e2e/test_hexpat_stdlib.py",
+  "findings_addressed": [
+    {
+      "id": "G0227",
+      "test": "TestStringFunctions::test_string_at_out_of_bounds",
+      "action": "hardened",
+      "oracle": "isinstance(result, str) + len(result) == 0; the production contract for _string_at is that an out-of-bounds index returns exactly '' (empty string). An implementation returning the last character ('i' for input 'hi') would produce len==1 and fail; returning None would fail isinstance. Docstring updated to describe the falsifiable mutation explicitly.",
+      "documented_mutation": "In stdlib.py _string_at, change `return \"\"` (the out-of-bounds branch) to `return s[-1]`; the len(result)==0 assertion fails because s[-1]=='i' has length 1."
+    },
+    {
+      "id": "G0228",
+      "test": "TestStringFunctions::test_string_reverse_empty",
+      "action": "hardened",
+      "oracle": "Two sub-assertions: (1) len(empty_result)==0 asserts _string_reverse('') returns '' -- rejects any non-empty sentinel. (2) non_empty_result == known[::-1] uses an independent Python slice oracle for input 'Binary1', expected '1yranib' -- rejects unchanged input, prefix truncation, or any non-reversal.",
+      "documented_mutation": "Return input unchanged for non-empty: 'Binary1' != '1yranib' fails sub-assertion 2. Return sentinel 'x' for empty: len('x')==1 != 0 fails sub-assertion 1."
+    },
+    {
+      "id": "G0229",
+      "test": "TestIOFunctions::test_io_print_does_not_raise",
+      "action": "hardened",
+      "oracle": "Renamed to test_io_print_routes_message_to_sink. A capturing sink installed via set_print_sink; after calling _io_print('sentinel-42'), exactly one message must arrive at the sink and its content must equal 'sentinel-42'. The message is distinct from any default/empty output, so both a silent no-op and a mangling implementation fail.",
+      "documented_mutation": "In stdlib.py _io_print, remove the `if sink is not None: sink(formatted)` branch; the len(captured)==1 assertion fails because captured remains empty."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0227: test_string_at_out_of_bounds already had isinstance+len(result)==0 assertions but the docstring lacked an explicit falsifiable mutation description; updated docstring to name the exact mutation. G0228: test_string_reverse_empty was missing from the file despite status.json claiming it was addressed (session interrupted before write); added the test with two sub-assertions: empty-input len==0 check and non-empty oracle 'Binary1'[::-1]=='1yranib'. G0229: test_io_print_does_not_raise was renamed to test_io_print_routes_message_to_sink with full sink-capture hardening already in place; no further changes needed."
+}

@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_hexcore_e2e/test_bridge_signatures.py",
+  "findings_addressed": [
+    {
+      "id": "G0173",
+      "test": "TestSignatureResultStructure::test_scan_result_structure",
+      "action": "hardened",
+      "oracle": "Independent oracle: pe_binary_full.read_bytes().find(bytes.fromhex('4D5A')) == 0, confirming the MZ marker sits at byte offset 0 in the fixture. The die_test.json entry declares name='MZ Executable', type='PE', version='1.0' - these are read from the DB file, not injected by the test. The scanner must propagate all three fields plus compute offset=0 from the ep-pattern match for the assertions to pass.",
+      "documented_mutation": "In src/intellicrack/bridges/hex_editor.py, inside _match_die_pattern, change `'offset': idx` to `'offset': idx + 1` in the 'ep' branch result dict - the assertion `assert mz_match['offset'] == expected_offset` (expected_offset==0) would then fail because the scanner returns 1."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "Replaced five key-existence-only assertions with concrete value assertions: name=='MZ Executable', type=='PE', version=='1.0', offset==expected_offset (oracle-computed as 0 from reading the fixture bytes directly), and details is a non-empty string. The oracle independently verifies offset by calling bytes.find() on the raw PE data before invoking the bridge, so the test cannot be fooled by an implementation that propagates wrong metadata from the DB or computes wrong offsets."
+}

@@ -1,0 +1,163 @@
+{
+  "group": "test_ui__c2",
+  "files": {
+    "tests/test_ui/test_realcov_13b_hex_widgets.py": [
+      {
+        "id": "G0341",
+        "test": "TestEntropyGraphWidget::test_renders_real_entropy_curve",
+        "line": 156,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Either (1) count distinct colors and assert count is strictly greater than the baseline produced by an empty entropy_values scenario, or (2) add a direct assertion that widget.entropy_values() equals the list passed to set_data() before checking painting output. Option 2 directly gates the storage path.",
+        "why_not_gate": "The three gradient bands (gradient_low, gradient_mid, gradient_high at lines 155-163) are painted unconditionally before the isEmpty check at line 166. These bands are distinct from the background color #1E1E1E and will register as foreground pixels. If set_data were broken to never store the supplied entropy_values (e.g., line 117 changed to self._entropy_values = []), the paintEvent would still draw the three bands, return early at line 168, and _count_foreground_colors would return > 0. The actual entropy polyline rendering capability (lines 179-189) is not gated by this assertion."
+      },
+      {
+        "id": "G0342",
+        "test": "TestLargeFileSettingsDialog::test_properties_reflect_inputs",
+        "line": 234,
+        "category": "tautological",
+        "severity": "medium",
+        "recommendation": "Add current_prefetch_on_scroll: bool parameter to __init__ (matching current_chunk_kb and current_budget_mb pattern), pass it to setChecked() at line 735, then construct the dialog in the test with current_prefetch_on_scroll=False and assert dialog.prefetch_on_scroll is False. This gates the property-forwarding path independently of constructor defaults.",
+        "why_not_gate": "The constructor LargeFileSettingsDialog does not accept a current_prefetch_on_scroll parameter (lines 698-704). Line 735 unconditionally calls setChecked(True). The test can never construct the dialog with prefetch_on_scroll=False. The assertion at line 234 will always pass regardless of any production breakage, unless the hardcoded True in line 735 is changed—but such a change is breaking intentional behavior, not a realistic defect in the round-trip property path."
+      }
+    ],
+    "tests/test_ui/test_realcov_15_chat_panel.py": [
+      {
+        "id": "G0348",
+        "test": "test_clear_messages_empties_history_and_view",
+        "line": 233,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "Add 'QApplication.processEvents()' after 'qtbot.wait(50)' on line 231 to allow deferred deletion to complete, then add 'assert panel.findChildren(MessageBubble) == []' to gate the widget-tree cleanup alongside the in-memory assertion.",
+        "why_not_gate": "The test's docstring claims it verifies removal of both stored messages AND rendered bubbles (line 219). However, the only assertion after calling clear_messages() (line 233) is 'assert panel.get_messages() == []', which checks only the in-memory list. The visual contract—that MessageBubble widgets are actually removed from the layout—is never verified post-clear. Line 228 checks bubbles exist BEFORE the call, but there is no corresponding check AFTER. A regression where clear_messages() only clears self._messages but fails to call widget.deleteLater() or takeAt() would leave orphaned widgets in the layout while still passing this test."
+      }
+    ],
+    "tests/test_ui/test_sandbox_panel_fixes.py": [
+      {
+        "id": "G0351",
+        "test": "TestSandboxPanelLifecycle::test_start_tool_returns_true",
+        "line": 143,
+        "category": "tautological",
+        "severity": "low",
+        "recommendation": "Replace with a test that connects to tool_started signal and asserts it is emitted: 'spy = QSignalSpy(panel.tool_started); assert panel.start_tool() is True; assert spy.count() == 1'. Or assert post-conditions like 'assert panel._console_output is not None' to verify panel-specific state after tool start.",
+        "why_not_gate": "AnalysisPanelBase.start_tool() (base_panel.py:301-309) is documented to always return True with the comment 'True always since native panels are always ready'. SandboxPanel does not override this method. The assertion is guaranteed by the base-class contract, not by any SandboxPanel-specific behavior. A sandbox lifecycle regression (e.g. broken signal emission or state setup) would not prevent this test from passing."
+      },
+      {
+        "id": "G0352",
+        "test": "TestSandboxPanelLifecycle::test_stop_tool_returns_true",
+        "line": 148,
+        "category": "tautological",
+        "severity": "low",
+        "recommendation": "Replace with: Connect to tool_closed signal, call stop_tool(), and assert signal was emitted. Or verify post-cleanup state: assert panel._sandbox is None and assert tool_closed signal was emitted.",
+        "why_not_gate": "AnalysisPanelBase.stop_tool() (base_panel.py:311-320) is documented to always return True. SandboxPanel does not override it. The assertion passes by base-class guarantee regardless of SandboxPanel internals. A broken _cleanup override or sandbox teardown would not prevent this test from passing."
+      }
+    ],
+    "tests/test_ui/test_splash_screen.py": [
+      {
+        "id": "G0353",
+        "test": "TestEndToEndLifecycle::test_rendering_at_every_progress_step",
+        "line": 1331,
+        "category": "no-assertion",
+        "severity": "high",
+        "recommendation": "Apply sentinel-pixel verification after the draw loop: fill pixmap with known color before drawing, then assert pixmap pixels were overwritten (similar to _render_splash_layers helper on line 78). This gates that each layer actually produces visible output.",
+        "why_not_gate": "Lines 1349-1359 call all five draw helpers (_draw_gradient_background, _draw_splash_image, _draw_title, _draw_pipeline, _draw_status_and_version) but make zero assertions about pixmap contents. All five methods could be replaced with no-ops (pass) and the test would still pass. A complete regression in any render layer would go undetected."
+      },
+      {
+        "id": "G0356",
+        "test": "TestSplashPixmapLoading::test_pixmap_has_correct_dimensions",
+        "line": 502,
+        "category": "weak-existence",
+        "severity": "medium",
+        "recommendation": "Add lower-bound assertions: assert pixmap.width() >= SPLASH_WIDTH * 0.8 and assert pixmap.height() >= SPLASH_HEIGHT * 0.8 to detect regressions in image scaling or fallback generation.",
+        "why_not_gate": "Asserts only upper bounds: pixmap.width() <= SPLASH_WIDTH and pixmap.height() <= SPLASH_HEIGHT. A 1x1 pixmap would pass both assertions. Looking at load_splash_pixmap (splash_screen.py:282-300), if _try_load_splash_image fails, it calls _create_fallback_pixmap which creates exactly SPLASH_WIDTH x SPLASH_HEIGHT (lines 314, 326-343). However, if _try_load_splash_image succeeds but scaling is broken, a small or wrongly-sized pixmap could be returned and the test would not catch it. The upper-bound-only assertion is a genuine gap."
+      },
+      {
+        "id": "G0357",
+        "test": "TestEndToEndLifecycle::test_failed_stage_renders_through_full_sequence",
+        "line": 1366,
+        "category": "other",
+        "severity": "low",
+        "recommendation": "After draw_pipe(p, rect), sample the pixmap to confirm pixels were overwritten: fill pixmap with sentinel color, call draw_pipe, then assert painted pixel count >= threshold to verify the failed-stage glyph was actually rendered.",
+        "why_not_gate": "Lines 1380-1382 assert stage states correctly (real gates for mark_stage_failed and set_progress). However, lines 1388-1390 call _draw_pipeline without any assertion on the rendered output. If _draw_pipeline silently became a no-op or rendered nothing, the test would still pass. The state assertions are valid gates, but the rendering step is unguarded."
+      }
+    ],
+    "tests/test_ui/test_theme_manager.py": [
+      {
+        "id": "G0364",
+        "test": "TestAvailableThemes::test_get_available_themes_returns_list",
+        "line": 284,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Either delete this test (sibling tests provide all necessary coverage) or enhance it with assert len(themes) >= 3 to at least gate non-trivial population.",
+        "why_not_gate": "Test only checks isinstance(themes, list). A stub returning [] or ['x'] would pass. The sibling tests (lines 290, 296, 302) check for specific members (THEME_DARK, THEME_LIGHT, THEME_SYSTEM), which do gate the actual capability. This test adds only a type-check gate, not a capability gate. Removing this test would lose nothing; the sibling tests are the real gates."
+      },
+      {
+        "id": "G0365",
+        "test": "TestThemeIntegrity::test_theme_manager_initialization_no_exceptions",
+        "line": 562,
+        "category": "no-assertion",
+        "severity": "low",
+        "recommendation": "Replace the bare except with substantive assertions: assert manager.styles_available, assert manager.current_theme == DEFAULT_THEME, assert manager.theme_cache == {}. Remove the generic except wrapper and let initialization errors fail the test explicitly.",
+        "why_not_gate": "The try/except swallows exceptions, then asserts manager is not None. Since ThemeManager.get_instance() always returns a manager object (or raises), the assertion is tautological once the try block succeeds. Initialization bugs that leave the object in wrong state (e.g., styles_available=False, current_theme unset) would not be caught. The test is smoke-test only."
+      }
+    ],
+    "tests/test_ui/test_vnc_widget.py": [
+      {
+        "id": "G0366",
+        "test": "TestVNCWidget::test_disconnect_from_server_idempotent",
+        "line": 436,
+        "category": "no-assertion",
+        "severity": "medium",
+        "recommendation": "Manually start the timer (widget.update_timer.start(100)), connect a signal spy to connection_status_changed, call disconnect_from_server(), then assert not widget.update_timer.isActive() and verify the signal was emitted with False as the argument.",
+        "why_not_gate": "Calls disconnect_from_server() on a never-connected widget and asserts not widget.client.connected. Since client.connected was already False, the assertion is satisfied trivially. The real effects—stopping update_timer, cancelling the pump task, emitting connection_status_changed(False)—are not checked. A no-op implementation of disconnect_from_server() that does nothing would pass this test, even though it fails to stop the timer or emit the signal."
+      },
+      {
+        "id": "G0368",
+        "test": "TestVNCWidget::test_initial_client_disconnected",
+        "line": 431,
+        "category": "weak-existence",
+        "severity": "low",
+        "recommendation": "Delete this test. It is fully covered by test_construction. If retention is desired for clarity, broaden it to check additional widget state (e.g., timer.isActive() == False, focusPolicy == StrongFocus) that test_construction does not cover.",
+        "why_not_gate": "Asserts not widget.client.connected on a freshly constructed VNCWidget. This is an exact duplicate of test_construction (line 421), which also asserts not widget.client.connected. Breaking the initial-state setup would fail both identically. This test contributes zero independent gate coverage beyond test_construction."
+      }
+    ],
+    "tests/test_ui/test_xpu_status.py": [
+      {
+        "id": "G0369",
+        "test": "TestXPUStatusDialogCache::test_cache_usage_label_has_value",
+        "line": 494,
+        "category": "weak-existence",
+        "severity": "high",
+        "recommendation": "Call get_global_model_cache().get_memory_usage() / (1024*1024) directly in the test, format it to one decimal place (matching line 553's format), and assert that cache_usage_label.text() equals the computed value (allowing ±1 MB tolerance for timing skew).",
+        "why_not_gate": "The test accepts any string matching the pattern '<number> MB' regardless of the actual value. A realistic production breakage would be hardcoding cache_usage_label.setText('0.0 MB') in _refresh_cache (line 553), which would cause the cache display to show zero usage regardless of actual model memory consumption. The test would pass this breakage because '0.0 MB' matches the numeric-prefix-followed-by-MB format. The actual cache.get_memory_usage() value is never independently verified against the displayed text."
+      },
+      {
+        "id": "G0370",
+        "test": "TestXPUStatusDialogCache::test_cache_limit_label_has_value",
+        "line": 514,
+        "category": "weak-existence",
+        "severity": "high",
+        "recommendation": "Read get_global_model_cache().max_memory_bytes directly in the test, format it as '<N> MB' using integer formatting (matching line 556), and assert exact equality against cache_limit_label.text().",
+        "why_not_gate": "The test accepts any string matching '<number> MB' without validating the actual value. A realistic breakage would be if _apply_cache_info (line 556) was changed to hardcode the limit as 10240 MB instead of deriving it from cache.max_memory_bytes. The test would pass because '10240 MB' matches the format. The real max_memory_bytes value is never independently verified against the label text."
+      },
+      {
+        "id": "G0371",
+        "test": "TestXPUStatusDialogRequirements::test_requirements_text_is_populated",
+        "line": 536,
+        "category": "conditional-never-runs",
+        "severity": "high",
+        "recommendation": "Remove 'Checking system requirements...' from known_stubs and call _wait_for_requirements_render() before the assertion (as test_requirements_text_contains_met_or_warnings already does at line 574). This forces the test to wait for the actual worker completion, so a broken worker will cause the test to timeout or see stale placeholder text, turning it red.",
+        "why_not_gate": "The test accepts 'Checking system requirements...' as a valid known_stub (line 550), which is the synchronous placeholder set immediately in _refresh_requirements (line 591) before the background worker starts. If the _RequirementsCheckWorker thread is broken—for example, if the signal connections (lines 594-595) fail, the run() method raises an unhandled exception (caught at line 137 but worker never re-emits), or the thread deadlocks—the text stays at the placeholder indefinitely. The test would pass because the placeholder is in known_stubs, meaning a permanently-stuck worker would never be detected by this test."
+      },
+      {
+        "id": "G0372",
+        "test": "TestProviderConfigXPUGroupBox::test_device_combo_has_xpu_entries_when_available",
+        "line": 668,
+        "category": "conditional-never-runs",
+        "severity": "medium",
+        "recommendation": "Make get_xpu_device_info(0) None case explicit by asserting 'info is not None' when is_xpu_available() is True, then unconditionally assert the formatted string. Alternatively, remove this test and enhance test_device_combo_exists_and_populated to cover both the None and non-None cases with equivalent assertions, ensuring the test fails if _populate_device_combo sets incorrect text on either path.",
+        "why_not_gate": "On the XPU-available path (line 676), the device-name assertion (line 681) is nested inside 'if info is not None' (line 680). When get_xpu_device_info(0) returns None—a valid outcome even if is_xpu_available() is True (e.g., if PCI BAR enumeration fails transiently)—the critical assertion is silently skipped. A production bug in _populate_device_combo that corrupts the device text when info is available (e.g., setting 'XPU:0 - Unknown (0.0 GB)' instead of the real device name) would go undetected if info happens to be None during the test run. The test then reduces to verifying combo.count() == device_count, which does not validate the actual device names displayed."
+      }
+    ]
+  }
+}

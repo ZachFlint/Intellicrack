@@ -40,9 +40,6 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-pytest.importorskip("intellicrack.core.hexpat", reason="hexpat interpreter module unavailable")
-
-
 class _StubDocument:
     """Minimal HexDocument-compatible stub backed by an in-memory ``bytes`` buffer.
 
@@ -134,12 +131,23 @@ def loaded_bridge() -> HexEditorBridge:
     ``HexDocument``-shaped object. Using :class:`_StubDocument` keeps the
     suite independent of the optional ``intellicrack_hexcore`` build.
 
+    The fixture probes the real HexPat interpreter by executing a minimal
+    pattern before returning. A broken or missing hexpat package raises
+    ``RuntimeError`` (from the bridge's ``_get_interpreter`` guard) rather
+    than silently skipping at import time. A genuine
+    ``ImportError`` / ``ModuleNotFoundError`` inside the interpreter package
+    itself is the only condition that permits a legitimate skip.
+
     Returns:
         HexEditorBridge: Initialized bridge with a stub document attached.
     """
     bridge = HexEditorBridge()
     _run(bridge.initialize())
     bridge.document = _StubDocument(b"\x00" * 256)
+    try:
+        _run(bridge.execute_pattern("u8 x @ 0x00;"))
+    except (ImportError, ModuleNotFoundError) as exc:
+        pytest.skip(f"hexpat interpreter package unavailable: {exc}")
     return bridge
 
 
@@ -193,15 +201,39 @@ class TestExecutePatternWithOutputCapturesPrint:
         assert "hello-from-print-sink" in payload["hexpat_print"]
 
     def test_response_payload_preserves_fields_list_shape(self, loaded_bridge: HexEditorBridge) -> None:
-        """The response ``fields`` entry must mirror ``execute_pattern``'s output.
+        """The ``fields`` entry must match a direct ``execute_pattern`` call and contain ``__mark``.
+
+        The independent oracle is a direct invocation of ``execute_pattern`` on the
+        same source.  ``execute_pattern_with_output`` must return exactly the same
+        number of fields and must include the ``__mark`` anchor declared at the top
+        level of ``_PRINT_PATTERN``.  A regression that breaks print-sink wiring
+        but leaves the fields pipeline intact still passes ``test_omitting_print_sink_does_not_raise``;
+        this test gates the *with_output* wrapper's fields forwarding specifically.
+
+        Concrete mutation that makes this fail:
+            In ``execute_pattern_with_output`` change
+            ``fields: list[dict[str, Any]] = await self.execute_pattern(source, offset, print_sink=captured.append)``
+            to ``fields: list[dict[str, Any]] = []`` — the ``len(fields) == len(direct_fields)``
+            assertion fails because ``direct_fields`` is non-empty and ``fields`` is empty.
 
         Args:
             loaded_bridge: Bridge fixture with a 256-byte zero document open.
         """
         payload: dict[str, Any] = _run(loaded_bridge.execute_pattern_with_output(_PRINT_PATTERN))
-        fields = payload["fields"]
-        assert isinstance(fields, list)
-        assert fields, "expected at least one field for the u8 anchor in the pattern"
+        fields: list[dict[str, Any]] = payload["fields"]
+
+        direct_fields: list[dict[str, Any]] = _run(loaded_bridge.execute_pattern(_PRINT_PATTERN))
+
+        assert isinstance(fields, list), "fields must be a list"
+        assert len(fields) == len(direct_fields), (
+            f"execute_pattern_with_output returned {len(fields)} fields but "
+            f"execute_pattern returned {len(direct_fields)} for the same source"
+        )
+        field_names: list[str] = [str(f.get("name", "")) for f in fields]
+        assert any("__mark" in name for name in field_names), (
+            f"expected '__mark' anchor field in execute_pattern_with_output fields; "
+            f"got field names {field_names!r}"
+        )
 
     def test_multiple_prints_are_newline_joined(self, loaded_bridge: HexEditorBridge) -> None:
         """All ``std::print`` invocations must appear in the captured text.
@@ -216,13 +248,28 @@ class TestExecutePatternWithOutputCapturesPrint:
         assert "line-three" in captured_text
 
     def test_pattern_without_print_returns_empty_hexpat_print(self, loaded_bridge: HexEditorBridge) -> None:
-        """A pattern that emits no ``std::print`` must yield the empty string.
+        """A silent pattern yields empty output while a printing pattern is captured.
+
+        The silent-pattern empty result alone is not falsifiable: the pre-fix
+        broken state (no print sink wired) ALSO produced an empty string for
+        every pattern.  This test therefore first drives a printing pattern
+        through the same bridge/sink path and asserts the captured text is the
+        expected non-empty content - anchoring that the sink IS wired - then
+        asserts the silent pattern yields exactly the empty string, proving the
+        bridge does not fabricate output rather than that the sink is missing.
 
         Args:
             loaded_bridge: Bridge fixture with a 256-byte zero document open.
         """
-        payload: dict[str, Any] = _run(loaded_bridge.execute_pattern_with_output("u32 silent @ 0x00;"))
-        assert not payload["hexpat_print"]
+        printing: dict[str, Any] = _run(loaded_bridge.execute_pattern_with_output(_PRINT_PATTERN))
+        assert "hello-from-print-sink" in printing["hexpat_print"], (
+            "the print sink must capture std::print output; an unwired sink would also "
+            "yield empty output, so this positive case anchors the silent-pattern assertion"
+        )
+
+        silent: dict[str, Any] = _run(loaded_bridge.execute_pattern_with_output("u32 silent @ 0x00;"))
+        assert isinstance(silent["hexpat_print"], str)
+        assert not silent["hexpat_print"]
 
 
 class TestExecutePatternFileWithOutputCapturesPrint:
@@ -250,19 +297,47 @@ class TestExecutePatternToolFunctionRegistration:
     """The new ``*_with_output`` tools must be registered in the tool catalogue."""
 
     def test_execute_pattern_with_output_is_registered(self, loaded_bridge: HexEditorBridge) -> None:
-        """``hex_editor.execute_pattern_with_output`` must appear in tool_functions.
+        """``hex_editor.execute_pattern_with_output`` is registered with a real schema.
+
+        Beyond mere name presence (which a stub could satisfy), asserts the
+        registered ``ToolFunction`` carries a non-empty description and return
+        text, declares its required ``source`` parameter, and that the bare
+        method name resolves to a real callable on the bridge - so the registry
+        entry genuinely points at the implementation.
 
         Args:
-            loaded_bridge: Bridge fixture (used only for its tool catalogue).
+            loaded_bridge: Bridge fixture (used for its tool catalogue and method).
         """
-        names: set[str] = {fn.name for fn in loaded_bridge.tool_definition.functions}
-        assert "hex_editor.execute_pattern_with_output" in names
+        functions = {fn.name: fn for fn in loaded_bridge.tool_definition.functions}
+        fn = functions.get("hex_editor.execute_pattern_with_output")
+        assert fn is not None, "hex_editor.execute_pattern_with_output must be registered"
+        assert fn.description.strip(), "registered function must carry a description"
+        assert fn.returns.strip(), "registered function must document its return value"
+        param_names = {param.name for param in fn.parameters}
+        assert "source" in param_names, (
+            f"registered function must expose its required 'source' parameter; got {sorted(param_names)}"
+        )
+        method = getattr(loaded_bridge, "execute_pattern_with_output", None)
+        assert callable(method), "the registered tool name must resolve to a real bridge method"
 
     def test_execute_pattern_file_with_output_is_registered(self, loaded_bridge: HexEditorBridge) -> None:
-        """``hex_editor.execute_pattern_file_with_output`` must be registered.
+        """``hex_editor.execute_pattern_file_with_output`` is registered with a real schema.
+
+        Asserts the registered ``ToolFunction`` carries a non-empty description
+        and return text, declares its required ``pattern_path`` parameter, and
+        that the bare method name resolves to a real callable on the bridge.
 
         Args:
-            loaded_bridge: Bridge fixture (used only for its tool catalogue).
+            loaded_bridge: Bridge fixture (used for its tool catalogue and method).
         """
-        names: set[str] = {fn.name for fn in loaded_bridge.tool_definition.functions}
-        assert "hex_editor.execute_pattern_file_with_output" in names
+        functions = {fn.name: fn for fn in loaded_bridge.tool_definition.functions}
+        fn = functions.get("hex_editor.execute_pattern_file_with_output")
+        assert fn is not None, "hex_editor.execute_pattern_file_with_output must be registered"
+        assert fn.description.strip(), "registered function must carry a description"
+        assert fn.returns.strip(), "registered function must document its return value"
+        param_names = {param.name for param in fn.parameters}
+        assert "pattern_path" in param_names, (
+            f"registered function must expose its required 'pattern_path' parameter; got {sorted(param_names)}"
+        )
+        method = getattr(loaded_bridge, "execute_pattern_file_with_output", None)
+        assert callable(method), "the registered tool name must resolve to a real bridge method"

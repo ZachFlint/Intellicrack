@@ -1,0 +1,21 @@
+{
+  "file": "tests/test_providers/test_providers_local_audit1.py",
+  "findings_addressed": [
+    {
+      "id": "G0276",
+      "test": "test_f0004_provider_name_matches_logger_binding",
+      "action": "hardened",
+      "oracle": "ProviderName.LOCAL_TRANSFORMERS.value (the enum's string value declared in intellicrack/core/types.py) must equal the literal string 'local_transformers' that is hard-coded into the logger-bind call at local_transformers.py line 202. These are two separate source locations; neither is derived from the other in the test. Additionally, the test re-derives the logger context dict from the bound logger and asserts both the enum value and the logger field equal the same independent constant.",
+      "documented_mutation": "In src/intellicrack/core/types.py, change LOCAL_TRANSFORMERS = \"local_transformers\" to LOCAL_TRANSFORMERS = \"transformers_local\"; the assertion `assert ProviderName.LOCAL_TRANSFORMERS.value == expected_label` fails immediately because the enum value no longer equals the expected label string."
+    }
+  ],
+  "prod_defects": [],
+  "deletions": [],
+  "self_quality": {
+    "ruff": "pass",
+    "basedpyright": "pass",
+    "pydoclint": "pass",
+    "pydocstyle": "pass"
+  },
+  "notes": "G0276 was a no-assertion finding: the original test only checked `provider.name == ProviderName.LOCAL_TRANSFORMERS`, which is a tautology (the property returns exactly that enum member). The hardened version asserts `ProviderName.LOCAL_TRANSFORMERS.value == 'local_transformers'` (independent oracle: the string value in the enum declaration vs the hard-coded string in the logger binding) and additionally re-validates that the bound logger context field equals the same expected label, ensuring any desynchronisation between the enum string and the logger-bind literal is caught."
+}
