@@ -1,49 +1,49 @@
 {
- "file": "tests/test_providers/test_openrouter_provider.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only (was test_list_models_returns_model_info_instances)",
-   "action": "hardened",
-   "oracle": "OpenRouter API spec + _build_model_info source: openai/gpt-4o-mini is a persistent aggregator entry; supports_streaming=True is hardcoded for all OpenRouter models (bridge constant); supports_tools=True for gpt-family from supported_parameters or family-name fallback; provider=ProviderName.OPENROUTER is the bridge-stamped constant",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/openrouter.py",
-    "mutation": "supports_streaming=True, -> supports_streaming=False,",
-    "covering_test": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields",
-    "expected_baseline": "green",
-    "green_status": "skip",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
+  "file": "tests/test_providers/test_openrouter_provider.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_model_info_has_correct_provider",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields",
-   "falsifiability": null
-  },
-  {
-   "test": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_model_info_has_boolean_capabilities",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 1
+  "findings_addressed": [
+    {
+      "test": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only (was test_list_models_returns_model_info_instances)",
+      "action": "hardened",
+      "oracle": "OpenRouter API spec + _build_model_info source: openai/gpt-4o-mini is a persistent aggregator entry; supports_streaming=True is hardcoded for all OpenRouter models (bridge constant); supports_tools=True for gpt-family from supported_parameters or family-name fallback; provider=ProviderName.OPENROUTER is the bridge-stamped constant",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/openrouter.py",
+        "mutation": "supports_streaming=True, -> supports_streaming=False,",
+        "covering_test": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields",
+        "expected_baseline": "green",
+        "green_status": "skip",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_model_info_has_correct_provider",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_model_info_has_boolean_capabilities",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 1
 }

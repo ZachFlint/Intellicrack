@@ -460,8 +460,8 @@ class XPUStatusDialog(QDialog):
     def _refresh_live_data(self) -> None:
         """Refresh memory and cache metrics (cheap, timer-safe).
 
-        After refreshing the volatile metrics this performs a cheap availability probe. When XPU availability has flipped since the last full
-        device probe (for example, the discrete GPU was physically removed or re-attached) a full device refresh is triggered and the
+        After refreshing the volatile metrics this performs a cheap availability probe. When XPU availability has flipped since the last
+        full device probe (for example, the discrete GPU was physically removed or re-attached) a full device refresh is triggered and the
         resulting state change is logged. Steady-state ticks where nothing meaningful changed stay silent.
         """
         self._refresh_memory()

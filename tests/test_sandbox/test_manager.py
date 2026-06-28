@@ -320,15 +320,9 @@ class TestSandboxInstance:
         after_create = datetime.now(UTC)
         inst.touch()
         after_touch = datetime.now(UTC)
-        assert inst.last_used >= after_create, (
-            f"touch() must set last_used to at least {after_create}, got {inst.last_used}"
-        )
-        assert inst.last_used <= after_touch, (
-            f"touch() must set last_used no later than {after_touch}, got {inst.last_used}"
-        )
-        assert inst.last_used >= old_last_used, (
-            f"touch() must not move last_used backwards: old={old_last_used}, new={inst.last_used}"
-        )
+        assert inst.last_used >= after_create, f"touch() must set last_used to at least {after_create}, got {inst.last_used}"
+        assert inst.last_used <= after_touch, f"touch() must set last_used no later than {after_touch}, got {inst.last_used}"
+        assert inst.last_used >= old_last_used, f"touch() must not move last_used backwards: old={old_last_used}, new={inst.last_used}"
 
     def test_state_delegates_to_sandbox(self) -> None:
         """State property delegates to sandbox.state."""
@@ -447,8 +441,7 @@ class TestManagerProperties:
         first_list.clear()
         second_list = mgr.instances
         assert len(second_list) == 1, (
-            "SandboxManager.instances must return a copy; clear() on the returned list"
-            " must not affect the manager's internal registry"
+            "SandboxManager.instances must return a copy; clear() on the returned list must not affect the manager's internal registry"
         )
 
 

@@ -424,8 +424,7 @@ def _configure_win32_apis() -> None:
     ``HANDLE`` pointers on 64-bit Python and corrupts subsequent ``ReadProcessMemory`` / ``CloseHandle`` / ``VirtualQueryEx`` calls.
     Centralising the declarations guarantees they are configured exactly once and that every call site sees consistent signatures.
 
-    The ``functools.cache`` wrapper makes the body run at most once per process;
-    the function is a no-op on non-Windows platforms.
+    The ``functools.cache`` wrapper makes the body run at most once per process; the function is a no-op on non-Windows platforms.
     """
     if not _IS_WIN32:
         return

@@ -184,15 +184,11 @@ def _drive_start_monitors_filter_check(
             with contextlib.suppress(ValueError):
                 launched_pids.append(int(parts[0]))
 
-    assert result.returncode == 0, (
-        f"start_monitors.cmd must succeed; rc={result.returncode} stderr={result.stderr!r}"
-    )
+    assert result.returncode == 0, f"start_monitors.cmd must succeed; rc={result.returncode} stderr={result.stderr!r}"
     assert "_helper.ps1" not in pid_file_text, (
         f"underscore-prefixed _helper.ps1 must not appear in monitors.pids; contents={pid_file_text!r}"
     )
-    assert "monitor.ps1" in pid_file_text, (
-        f"monitor.ps1 must be tracked in monitors.pids; contents={pid_file_text!r}"
-    )
+    assert "monitor.ps1" in pid_file_text, f"monitor.ps1 must be tracked in monitors.pids; contents={pid_file_text!r}"
 
 
 @_WINDOWS_ONLY
@@ -304,18 +300,12 @@ def test_monitor_emits_lifecycle_records(script_path: Path, lifecycle_helper: st
 
     started_call = f"{lifecycle_helper} -State 'started'"
     stopped_call = f"{lifecycle_helper} -State 'stopped'"
-    assert started_call in text, (
-        f"{script_path.name} must call {lifecycle_helper} with -State 'started'"
-    )
-    assert stopped_call in text, (
-        f"{script_path.name} must call {lifecycle_helper} with -State 'stopped'"
-    )
+    assert started_call in text, f"{script_path.name} must call {lifecycle_helper} with -State 'started'"
+    assert stopped_call in text, f"{script_path.name} must call {lifecycle_helper} with -State 'stopped'"
 
     finally_pos = text.rfind("} finally {")
     stopped_pos = text.rfind(stopped_call)
-    assert finally_pos != -1, (
-        f"{script_path.name} must contain a top-level '}} finally {{' block"
-    )
+    assert finally_pos != -1, f"{script_path.name} must contain a top-level '}} finally {{' block"
     assert stopped_pos > finally_pos, (
         f"{script_path.name}: '{stopped_call}' (offset {stopped_pos}) must appear "
         f"after the outermost '}} finally {{' (offset {finally_pos}); "

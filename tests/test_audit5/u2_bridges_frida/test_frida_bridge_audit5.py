@@ -514,18 +514,11 @@ def test_f0012_compile_typescript_reuses_compiler_instance(
     assert len(build_log) == 2, f"expected 2 build calls, got {len(build_log)}"
 
     assert build_log[0] != build_log[1], (
-        f"both compile calls used the same entrypoint path, "
-        f"suggesting the second call was short-circuited: {build_log}"
+        f"both compile calls used the same entrypoint path, suggesting the second call was short-circuited: {build_log}"
     )
 
-    assert build_log[0] in r1, (
-        f"first result does not embed its own entrypoint path; "
-        f"entrypoint={build_log[0]!r}, result={r1!r}"
-    )
-    assert build_log[1] in r2, (
-        f"second result does not embed its own entrypoint path; "
-        f"entrypoint={build_log[1]!r}, result={r2!r}"
-    )
+    assert build_log[0] in r1, f"first result does not embed its own entrypoint path; entrypoint={build_log[0]!r}, result={r1!r}"
+    assert build_log[1] in r2, f"second result does not embed its own entrypoint path; entrypoint={build_log[1]!r}, result={r2!r}"
 
 
 def test_f0012_compile_typescript_real_output_is_js() -> None:
@@ -546,9 +539,7 @@ def test_f0012_compile_typescript_real_output_is_js() -> None:
     result = _run(driver())
     assert isinstance(result, str), f"expected str output, got {type(result)}"
     assert len(result) > 0, "compiled output must be non-empty"
-    assert "console.log" in result, (
-        f"compiled JS does not contain the expected console.log call; output={result!r}"
-    )
+    assert "console.log" in result, f"compiled JS does not contain the expected console.log call; output={result!r}"
 
 
 def test_f0013_stalker_unfollow_routes_through_owning_script() -> None:

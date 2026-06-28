@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
 
@@ -61,7 +61,6 @@ This tuple is the union of error types currently raised by hex-editor mixin call
 via the ``exceptions`` constructor argument.
 """
 
-
 _BRIDGE_CALL_EXCEPTIONS: tuple[type[BaseException], ...] = (
     IntellicrackError,
     *WORKER_DEFAULT_EXCEPTIONS,
@@ -69,13 +68,10 @@ _BRIDGE_CALL_EXCEPTIONS: tuple[type[BaseException], ...] = (
 )
 """Exception classes caught by ``BridgeCallWorker``.
 
-Extends ``WORKER_DEFAULT_EXCEPTIONS`` with the Intellicrack domain hierarchy
-(``IntellicrackError`` and every subclass, including ``ToolError`` raised by
-the bridges) and task cancellation. Without ``ToolError`` in this tuple a
-failing bridge coroutine would propagate out of ``BridgeCallWorker.run`` and
-terminate the worker thread without emitting ``call_finished`` or
-``call_error``, leaving callers (e.g. the process panel's "Refreshing..."
-button) stuck indefinitely with no result and no surfaced error.
+Extends ``WORKER_DEFAULT_EXCEPTIONS`` with the Intellicrack domain hierarchy (``IntellicrackError`` and every subclass, including
+``ToolError`` raised by the bridges) and task cancellation. Without ``ToolError`` in this tuple a failing bridge coroutine would propagate
+out of ``BridgeCallWorker.run`` and terminate the worker thread without emitting ``call_finished`` or ``call_error``, leaving callers (e.g.
+the process panel's "Refreshing..." button) stuck indefinitely with no result and no surfaced error.
 """
 
 
@@ -93,14 +89,11 @@ _state = _LoopState()
 class _WorkerRegistry:
     """Strong references to in-flight worker threads.
 
-    A fire-and-forget ``QThread`` whose only Python reference is a local in
-    the launching function is garbage-collected the moment that function
-    returns. If the underlying OS thread is still running, Qt aborts the
-    whole process with ``QThread: Destroyed while thread is still running``.
-    Retaining each started worker here until it has fully finished lets a
-    caller start a worker without a Qt parent (``parent=None``) and without a
-    running Qt event loop, which is exactly the case in unit tests and in any
-    bridge dispatch whose owner is not a ``QWidget``.
+    A fire-and-forget ``QThread`` whose only Python reference is a local in the launching function is garbage-collected the moment that
+    function returns. If the underlying OS thread is still running, Qt aborts the whole process with ``QThread: Destroyed while thread is
+    still running``. Retaining each started worker here until it has fully finished lets a caller start a worker without a Qt parent
+    (``parent=None``) and without a running Qt event loop, which is exactly the case in unit tests and in any bridge dispatch whose owner is
+    not a ``QWidget``.
     """
 
     workers: ClassVar[set[QThread]] = set()
@@ -134,10 +127,9 @@ def _retain_worker(worker: QThread) -> None:
 class _RetainedWorker(QThread):
     """``QThread`` base that pins itself against premature GC on ``start``.
 
-    Subclasses are retained in :class:`_WorkerRegistry` for the lifetime of
-    their OS thread, preventing the ``QThread: Destroyed while thread is
-    still running`` abort that occurs when an unparented worker's only Python
-    reference goes out of scope while the thread is still executing.
+    Subclasses are retained in :class:`_WorkerRegistry` for the lifetime of their OS thread, preventing the ``QThread: Destroyed while
+    thread is still running`` abort that occurs when an unparented worker's only Python reference goes out of scope while the thread is
+    still executing.
     """
 
     @override
@@ -342,7 +334,20 @@ class GenericCallableWorker(_RetainedWorker):
         self.call_finished.emit(result)
 
 
-def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
+@overload
+def run_bridge_coroutine[T](coro: Coroutine[object, object, T], /) -> T | None: ...
+
+
+@overload
+def run_bridge_coroutine[T](*, coro: Coroutine[object, object, T]) -> T | None: ...
+
+
+def run_bridge_coroutine(
+    _coro_positional: Coroutine[object, object, object] | None = None,
+    /,
+    *,
+    coro: Coroutine[object, object, object] | None = None,
+) -> object | None:
     """Run an async bridge coroutine from a synchronous Qt context.
 
     Uses a persistent background event loop thread to execute
@@ -355,12 +360,20 @@ def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
     for non-blocking execution with signal-based result delivery.
 
     Args:
-        coro: Coroutine to execute on the persistent event loop.
+        _coro_positional: Coroutine passed positionally.
+        coro: Coroutine passed by keyword.
 
     Returns:
-        T | None: Coroutine result when executed synchronously, or None
-            when the coroutine was scheduled on a running loop.
+        object | None: Coroutine result when executed synchronously, or
+            ``None`` when the coroutine was scheduled on a running loop.
+
+    Raises:
+        TypeError: If neither a positional nor keyword coroutine is given.
     """
+    resolved_coro = _coro_positional if _coro_positional is not None else coro
+    if resolved_coro is None:
+        msg = "run_bridge_coroutine() requires a coroutine argument"
+        raise TypeError(msg)
     try:
         running = asyncio.get_running_loop()
     except RuntimeError:
@@ -368,7 +381,7 @@ def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
         running = None
 
     if running is not None and running.is_running():
-        task = running.create_task(coro)
+        task = running.create_task(resolved_coro)
         with _pending.lock:
             _pending.tasks.add(task)
         task.add_done_callback(_log_task_exception)
@@ -376,7 +389,7 @@ def run_bridge_coroutine[T](coro: Coroutine[object, object, T]) -> T | None:
         return None
 
     loop = _ensure_loop()
-    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    future = asyncio.run_coroutine_threadsafe(resolved_coro, loop)
     return future.result()
 
 

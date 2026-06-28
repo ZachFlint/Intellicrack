@@ -1258,3 +1258,12 @@ QWidget#preferences_button_bar {
     background-color: #2d2d30;
     border-top: 1px solid #3e3e42;
 }
+
+QWidget#script_manager_panel QPushButton {
+    padding: 4px 8px;
+}
+
+QWidget#script_manager_panel QPushButton#execute_button {
+    padding: 5px 10px;
+}
+

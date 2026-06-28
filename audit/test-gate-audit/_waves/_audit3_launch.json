@@ -1,1 +1,127 @@
-{"group":"test_audit3","files":{"tests/test_audit3/bridges/test_installer.py":[{"id":"G0001","test":"TestKindDiscriminator::test_install_result_has_kind_field","line":344,"category":"tautological","severity":"low"},{"id":"G0002","test":"TestKindDiscriminator::test_found_tool_has_kind_field","line":351,"category":"tautological","severity":"low"},{"id":"G0003","test":"TestTypeDataclassesSanity::test_arch_deploy_result_carries_error","line":1347,"category":"tautological","severity":"low"},{"id":"G0004","test":"TestTypeDataclassesSanity::test_is_user_admin_returns_bool","line":1365,"category":"weak-existence","severity":"low"}],"tests/test_audit3/bridges/test_named_pipe_client.py":[{"id":"G0005","test":"test_send_command_docstring_lists_required_raises","line":748,"category":"other","severity":"medium"},{"id":"G0006","test":"test_no_os_name_nt_predicate_in_module","line":437,"category":"other","severity":"low"},{"id":"G0007","test":"test_close_docstring_describes_thread_pool_and_wait","line":824,"category":"other","severity":"low"}],"tests/test_audit3/sandbox/test_api_trace.py":[{"id":"G0008","test":"test_f0013_handler_extracts_target_process_id_and_return_code","line":783,"category":"asserts-on-stub-output","severity":"medium"}],"tests/test_audit3/sandbox/test_dll_monitor.py":[{"id":"G0009","test":"test_smoke_script_runs_and_writes_logs","line":364,"category":"swallows-failure","severity":"high"}],"tests/test_audit3/sandbox/test_injection_monitor.py":[{"id":"G0010","test":"test_smoke_script_runs_without_crash","line":455,"category":"swallows-failure","severity":"high"},{"id":"G0011","test":"test_script_throws_when_traceevent_dll_missing","line":281,"category":"conditional-never-runs","severity":"medium"}],"tests/test_audit3/sandbox/test_kernel_object_monitor.py":[{"id":"G0012","test":"test_script_captures_transient_mutex","line":440,"category":"skip-masks-failure","severity":"high"},{"id":"G0013","test":"test_script_no_orphan_pwsh_after_terminate","line":507,"category":"tautological","severity":"low"}],"tests/test_audit3/sandbox/test_service_monitor.py":[{"id":"G0014","test":"test_script_idempotency_dedupes_rapid_duplicate_transitions","line":439,"category":"conditional-never-runs","severity":"high"}],"tests/test_audit3/ui/test_script_manager.py":[{"id":"G0015","test":"TestScriptTypeInfoX64dbgMetadata::test_x64dbg_display_name","line":373,"category":"asserts-on-stub-output","severity":"low"}]},"context":"Tool-bridge + sandbox-monitor + UI tests. Context:\n\n- Sandbox monitors (api_trace, dll_monitor, injection_monitor, kernel_object_monitor, service_monitor) parse REAL trace/ETW/PowerShell output into structured records - drive the real parser over a real captured-output fixture (or a real generated trace) and assert the exact decoded fields (the parsed API name, DLL path, PID, service state), not isinstance/len>=0. A monitor that needs live ETW/admin/a running service legitimately SKIPS when that capability is absent - keep those skips.\n\n- named_pipe_client: the pipe/socket transport is the ONLY permitted double - stub it at the pipe boundary and assert the real serialized request bytes / parsed response. Never mock the client class under test.\n\n- installer / ui script_manager: drive the real object and assert the concrete produced state (resolved path, generated command, model/list contents), not existence."}
+{
+  "group": "test_audit3",
+  "files": {
+    "tests/test_audit3/bridges/test_installer.py": [
+      {
+        "id": "G0001",
+        "test": "TestKindDiscriminator::test_install_result_has_kind_field",
+        "line": 344,
+        "category": "tautological",
+        "severity": "low"
+      },
+      {
+        "id": "G0002",
+        "test": "TestKindDiscriminator::test_found_tool_has_kind_field",
+        "line": 351,
+        "category": "tautological",
+        "severity": "low"
+      },
+      {
+        "id": "G0003",
+        "test": "TestTypeDataclassesSanity::test_arch_deploy_result_carries_error",
+        "line": 1347,
+        "category": "tautological",
+        "severity": "low"
+      },
+      {
+        "id": "G0004",
+        "test": "TestTypeDataclassesSanity::test_is_user_admin_returns_bool",
+        "line": 1365,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_audit3/bridges/test_named_pipe_client.py": [
+      {
+        "id": "G0005",
+        "test": "test_send_command_docstring_lists_required_raises",
+        "line": 748,
+        "category": "other",
+        "severity": "medium"
+      },
+      {
+        "id": "G0006",
+        "test": "test_no_os_name_nt_predicate_in_module",
+        "line": 437,
+        "category": "other",
+        "severity": "low"
+      },
+      {
+        "id": "G0007",
+        "test": "test_close_docstring_describes_thread_pool_and_wait",
+        "line": 824,
+        "category": "other",
+        "severity": "low"
+      }
+    ],
+    "tests/test_audit3/sandbox/test_api_trace.py": [
+      {
+        "id": "G0008",
+        "test": "test_f0013_handler_extracts_target_process_id_and_return_code",
+        "line": 783,
+        "category": "asserts-on-stub-output",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_audit3/sandbox/test_dll_monitor.py": [
+      {
+        "id": "G0009",
+        "test": "test_smoke_script_runs_and_writes_logs",
+        "line": 364,
+        "category": "swallows-failure",
+        "severity": "high"
+      }
+    ],
+    "tests/test_audit3/sandbox/test_injection_monitor.py": [
+      {
+        "id": "G0010",
+        "test": "test_smoke_script_runs_without_crash",
+        "line": 455,
+        "category": "swallows-failure",
+        "severity": "high"
+      },
+      {
+        "id": "G0011",
+        "test": "test_script_throws_when_traceevent_dll_missing",
+        "line": 281,
+        "category": "conditional-never-runs",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_audit3/sandbox/test_kernel_object_monitor.py": [
+      {
+        "id": "G0012",
+        "test": "test_script_captures_transient_mutex",
+        "line": 440,
+        "category": "skip-masks-failure",
+        "severity": "high"
+      },
+      {
+        "id": "G0013",
+        "test": "test_script_no_orphan_pwsh_after_terminate",
+        "line": 507,
+        "category": "tautological",
+        "severity": "low"
+      }
+    ],
+    "tests/test_audit3/sandbox/test_service_monitor.py": [
+      {
+        "id": "G0014",
+        "test": "test_script_idempotency_dedupes_rapid_duplicate_transitions",
+        "line": 439,
+        "category": "conditional-never-runs",
+        "severity": "high"
+      }
+    ],
+    "tests/test_audit3/ui/test_script_manager.py": [
+      {
+        "id": "G0015",
+        "test": "TestScriptTypeInfoX64dbgMetadata::test_x64dbg_display_name",
+        "line": 373,
+        "category": "asserts-on-stub-output",
+        "severity": "low"
+      }
+    ]
+  },
+  "context": "Tool-bridge + sandbox-monitor + UI tests. Context:\n\n- Sandbox monitors (api_trace, dll_monitor, injection_monitor, kernel_object_monitor, service_monitor) parse REAL trace/ETW/PowerShell output into structured records - drive the real parser over a real captured-output fixture (or a real generated trace) and assert the exact decoded fields (the parsed API name, DLL path, PID, service state), not isinstance/len>=0. A monitor that needs live ETW/admin/a running service legitimately SKIPS when that capability is absent - keep those skips.\n\n- named_pipe_client: the pipe/socket transport is the ONLY permitted double - stub it at the pipe boundary and assert the real serialized request bytes / parsed response. Never mock the client class under test.\n\n- installer / ui script_manager: drive the real object and assert the concrete produced state (resolved path, generated command, model/list contents), not existence."
+}

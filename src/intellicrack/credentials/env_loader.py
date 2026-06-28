@@ -319,6 +319,7 @@ class CredentialLoader:
         ProviderName.LOCAL_TRANSFORMERS: ProviderCredentialMapping(
             api_key_var="LOCAL_TRANSFORMERS_HF_TOKEN",
             api_base_var="LOCAL_TRANSFORMERS_CACHE_DIR",
+            api_key_aliases=("HUGGINGFACE_API_TOKEN",),
         ),
     }
 

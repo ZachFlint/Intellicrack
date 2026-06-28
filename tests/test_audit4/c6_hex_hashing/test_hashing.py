@@ -772,9 +772,7 @@ class TestRepairPeChecksumFiresNotify:
             f"but spy recorded {message_box_yes_spy.call_count} call(s). "
             f"Removing the confirmation dialog would allow silent checksum overwrites."
         )
-        assert document.repair_calls == 1, (
-            "repair_pe_checksum must proceed after Yes is answered"
-        )
+        assert document.repair_calls == 1, "repair_pe_checksum must proceed after Yes is answered"
 
     @pytest.mark.usefixtures("qapp")
     def test_repair_no_answer_blocks_document_write(

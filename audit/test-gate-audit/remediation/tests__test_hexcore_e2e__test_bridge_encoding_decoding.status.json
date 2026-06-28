@@ -1,48 +1,48 @@
 {
- "file": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestDecodeText::test_decode_text_unknown_encoding_raises_value_error",
-   "severity": "HIGH",
-   "category": "N7 accepts-both-outcomes",
-   "action": "hardened",
-   "oracle": "Rust encodings.rs resolve_encoding spec: an unrecognized codec yields EncodingError::UnsupportedEncoding, surfaced to Python by the bridge as ValueError with message 'unsupported encoding: <name>'. Independent of any value the test injected.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "if hasattr(self.document, \"decode_text\"): -> if False and hasattr(self.document, \"decode_text\"):",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestDecodeText::test_decode_text_unknown_encoding_raises_value_error",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
+  "file": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestListEncodings::test_list_encodings_with_open_document_is_content_independent",
-   "severity": "LOW",
-   "category": "N6 non-comparing / vacuous",
-   "action": "hardened",
-   "oracle": "Rust encodings.rs ENCODING_LIST static table (hand-transcribed): native catalog must contain {utf-8: 'UTF-8'}, {ebcdic: 'EBCDIC Code Page 037'} (native-only, absent from the Python fallback list in hex_editor.py), and {big5: 'Big5 (Chinese Traditional)'}; plus the catalog must be byte-identical across two documents with different content because the table is static.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "return [{\"name\": str(e[0]), \"label\": str(e[1])} for e in raw] -> return [{\"name\": str(e[0]), \"label\": str(e[0])} for e in raw]",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestListEncodings::test_list_encodings_with_open_document_is_content_independent",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 2
+  "findings_addressed": [
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestDecodeText::test_decode_text_unknown_encoding_raises_value_error",
+      "severity": "HIGH",
+      "category": "N7 accepts-both-outcomes",
+      "action": "hardened",
+      "oracle": "Rust encodings.rs resolve_encoding spec: an unrecognized codec yields EncodingError::UnsupportedEncoding, surfaced to Python by the bridge as ValueError with message 'unsupported encoding: <name>'. Independent of any value the test injected.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "if hasattr(self.document, \"decode_text\"): -> if False and hasattr(self.document, \"decode_text\"):",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestDecodeText::test_decode_text_unknown_encoding_raises_value_error",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestListEncodings::test_list_encodings_with_open_document_is_content_independent",
+      "severity": "LOW",
+      "category": "N6 non-comparing / vacuous",
+      "action": "hardened",
+      "oracle": "Rust encodings.rs ENCODING_LIST static table (hand-transcribed): native catalog must contain {utf-8: 'UTF-8'}, {ebcdic: 'EBCDIC Code Page 037'} (native-only, absent from the Python fallback list in hex_editor.py), and {big5: 'Big5 (Chinese Traditional)'}; plus the catalog must be byte-identical across two documents with different content because the table is static.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "return [{\"name\": str(e[0]), \"label\": str(e[1])} for e in raw] -> return [{\"name\": str(e[0]), \"label\": str(e[0])} for e in raw]",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestListEncodings::test_list_encodings_with_open_document_is_content_independent",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 2
 }

@@ -5673,8 +5673,8 @@ class FridaBridge(_FridaBridgeAnalysisMixin):
     async def shutdown(self) -> None:
         """Shutdown Frida and cleanup resources.
 
-        The base class ``shutdown`` is invoked from a ``finally`` block so the shared ``BridgeState`` reset always runs even when one of
-        the per-resource cleanup steps raises an unexpected error.
+        The base class ``shutdown`` is invoked from a ``finally`` block so the shared ``BridgeState`` reset always runs even when one of the
+        per-resource cleanup steps raises an unexpected error.
         """
         try:
             await self._release_frida_resources()

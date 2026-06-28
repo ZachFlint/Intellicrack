@@ -76,7 +76,6 @@ class _SetupLoggingFn(Protocol):
                 default (``Path.cwd() / "logs"``).
         """
 
-
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _EARLY_SPLASH_WIDTH: Final[int] = 600
 _EARLY_SPLASH_HEIGHT: Final[int] = 400
@@ -617,21 +616,38 @@ async def _initialize_providers(
             provider_class: Concrete :class:`LLMProviderBase` subclass to
                 instantiate.
         """
+        display_mod = importlib.import_module("intellicrack.providers.display_names")
+        no_api_key_providers = display_mod.NO_API_KEY_PROVIDERS
+        provider_credentials_cls = types_mod.ProviderCredentials
+        provider_error_cls = types_mod.ProviderError
+
         provider = provider_class()
-        if creds := credentials.get_credentials(provider_name):
+        creds = credentials.get_credentials(provider_name)
+        if creds is None and provider_name in no_api_key_providers:
+            creds = provider_credentials_cls()
+
+        if creds is not None:
             try:
                 await asyncio.wait_for(
                     provider.connect(creds),
                     timeout=_PROVIDER_CONNECT_TIMEOUT,
                 )
                 logger.info("provider_connected", provider=provider_name.value)
-                registry.register(provider)
             except TimeoutError:
                 logger.warning(
                     "provider_connect_timeout",
                     provider=provider_name.value,
                     timeout=_PROVIDER_CONNECT_TIMEOUT,
                 )
+            except provider_error_cls as exc:
+                logger.warning(
+                    "provider_connect_failed",
+                    provider=provider_name.value,
+                    error=str(exc),
+                )
+                if provider_name not in no_api_key_providers:
+                    return
+            registry.register(provider)
         else:
             logger.debug("no_credentials", provider=provider_name.value)
             registry.register(provider)

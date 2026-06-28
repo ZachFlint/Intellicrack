@@ -186,12 +186,8 @@ class TestExecuteToolCallRealDispatch:
         result_upper: object = await initialized_registry.execute_tool_call("X64DBG", "get_breakpoints", {})
         result_lower: object = await initialized_registry.execute_tool_call("x64dbg", "get_breakpoints", {})
 
-        assert result_upper == oracle, (
-            f"'X64DBG' dispatch returned {result_upper!r}, expected oracle {oracle!r}"
-        )
-        assert result_lower == oracle, (
-            f"'x64dbg' dispatch returned {result_lower!r}, expected oracle {oracle!r}"
-        )
+        assert result_upper == oracle, f"'X64DBG' dispatch returned {result_upper!r}, expected oracle {oracle!r}"
+        assert result_lower == oracle, f"'x64dbg' dispatch returned {result_lower!r}, expected oracle {oracle!r}"
 
 
 class TestExecuteToolCallCapabilityGate:
@@ -262,9 +258,7 @@ class TestToolDefinitionsRealSchema:
         definitions = initialized_registry.get_tool_definitions()
         hex_def = next(d for d in definitions if d.tool_name == ToolName.HEX_EDITOR)
         advertised = {fn.name for fn in hex_def.functions}
-        assert any(name.endswith("open_file") for name in advertised), (
-            f"hex editor must advertise open_file, got {sorted(advertised)}"
-        )
+        assert any(name.endswith("open_file") for name in advertised), f"hex editor must advertise open_file, got {sorted(advertised)}"
 
 
 class TestSetSessionPropagation:
@@ -338,14 +332,11 @@ class TestRegisterBridgeRealInstance:
             "set_alignment_grid",
             {"size": _ALIGNMENT_GRID_SIZE},
         )
-        assert set_result is True, (
-            f"set_alignment_grid dispatch returned {set_result!r}, expected True"
-        )
+        assert set_result is True, f"set_alignment_grid dispatch returned {set_result!r}, expected True"
 
         oracle_grid: int = await bridge.get_alignment_grid()
         assert oracle_grid == _ALIGNMENT_GRID_SIZE, (
-            f"direct bridge oracle returned {oracle_grid}, "
-            f"expected {_ALIGNMENT_GRID_SIZE} after dispatch"
+            f"direct bridge oracle returned {oracle_grid}, expected {_ALIGNMENT_GRID_SIZE} after dispatch"
         )
 
         get_result = await registry.execute_tool_call(
@@ -354,8 +345,7 @@ class TestRegisterBridgeRealInstance:
             {},
         )
         assert get_result == _ALIGNMENT_GRID_SIZE, (
-            f"get_alignment_grid dispatch returned {get_result!r}, "
-            f"expected oracle {_ALIGNMENT_GRID_SIZE}"
+            f"get_alignment_grid dispatch returned {get_result!r}, expected oracle {_ALIGNMENT_GRID_SIZE}"
         )
 
         await registry.shutdown()

@@ -60,11 +60,33 @@ class TestCompilerDelegationToSharedPipeline:
     """Verify ``HexPatCompiler`` uses the shared lexer + parser + AST."""
 
     def test_compile_round_trips_through_shared_lexer(self) -> None:
-        """The compiler accepts the shared lexer's hex-tokens (numeric value as text)."""
+        """The shared lexer emits the exact token sequence for a struct+variable source.
+
+        Asserts every (type, value) pair so that deleting keyword dispatch—which
+        would demote ``struct`` and ``u8`` from STRUCT/U8 to IDENTIFIER—is
+        immediately detected.  The hex literal ``0xFF`` must be stored as the
+        decimal string ``"255"`` by the lexer's hex-to-decimal normalisation.
+        """
         source = "struct S { u8 first; }; u8 v = 0xFF;"
         tokens = SharedLexer(source).tokenize()
-        number_tokens = [t for t in tokens if t.type is TokenType.NUMBER]
-        assert any(int(t.value, 0) == 0xFF for t in number_tokens)
+        expected: list[tuple[TokenType, str]] = [
+            (TokenType.STRUCT, "struct"),
+            (TokenType.IDENTIFIER, "S"),
+            (TokenType.LBRACE, "{"),
+            (TokenType.U8, "u8"),
+            (TokenType.IDENTIFIER, "first"),
+            (TokenType.SEMICOLON, ";"),
+            (TokenType.RBRACE, "}"),
+            (TokenType.SEMICOLON, ";"),
+            (TokenType.U8, "u8"),
+            (TokenType.IDENTIFIER, "v"),
+            (TokenType.ASSIGN, "="),
+            (TokenType.NUMBER, "255"),
+            (TokenType.SEMICOLON, ";"),
+            (TokenType.EOF, ""),
+        ]
+        actual = [(t.type, t.value) for t in tokens]
+        assert actual == expected
 
     def test_compile_round_trips_through_shared_parser(self) -> None:
         """The compiler's pipeline produces shared StructDecl nodes from a struct."""

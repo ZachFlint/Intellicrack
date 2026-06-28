@@ -113,9 +113,7 @@ class TestHexPatCompilerCompile:
         assert isinstance(parsed, dict)
         assert parsed["name"] == "Header"
         field_names = [f["name"] for f in parsed["fields"]]
-        assert field_names == ["magic", "version", "flags"], (
-            f"Field names mismatch: {field_names!r}"
-        )
+        assert field_names == ["magic", "version", "flags"], f"Field names mismatch: {field_names!r}"
 
     def test_compile_simple_struct_has_name_key(self) -> None:
         """Compiled simple struct JSON contains the struct name."""
@@ -185,9 +183,7 @@ class TestHexPatCompilerCompile:
             f"Default endianness must be 'little' when no #pragma endian is set: {result['default_endianness']!r}"
         )
         assert isinstance(result["description"], str)
-        assert len(result["description"]) > 0, (
-            f"description must be a non-empty string: {result['description']!r}"
-        )
+        assert len(result["description"]) > 0, f"description must be a non-empty string: {result['description']!r}"
         assert len(result["fields"]) == 3
 
     def test_compile_multi_field_struct(self) -> None:
@@ -218,9 +214,7 @@ class TestHexPatCompilerCompile:
         assert "Format" in types, f"types must contain 'Format': {list(types.keys())!r}"
         fmt = types["Format"]
         assert fmt["kind"] == "enum", f"Format kind must be 'enum', got {fmt['kind']!r}"
-        assert fmt["backing_type"]["type"] == "UInt8", (
-            f"Format backing_type must be UInt8, got {fmt['backing_type']!r}"
-        )
+        assert fmt["backing_type"]["type"] == "UInt8", f"Format backing_type must be UInt8, got {fmt['backing_type']!r}"
         values_map = dict(fmt["values"])
         assert values_map.get("PNG") == 0x89, f"PNG must be 0x89, got {values_map.get('PNG')!r}"
         assert values_map.get("JPEG") == 0xFF, f"JPEG must be 0xFF, got {values_map.get('JPEG')!r}"
@@ -325,9 +319,7 @@ class TestHexPatCompilerCompile:
         with pytest.raises(HexPatError) as exc_info:
             HexPatCompiler.compile("")
         assert exc_info.value.message, "HexPatError message must not be empty for empty source"
-        assert "struct" in exc_info.value.message.lower(), (
-            f"Empty-source error message must mention 'struct': {exc_info.value.message!r}"
-        )
+        assert "struct" in exc_info.value.message.lower(), f"Empty-source error message must mention 'struct': {exc_info.value.message!r}"
 
     def test_compile_if_else_eq_emits_paired_conditionals(self) -> None:
         """if/else on equality emits a pair of Conditional fields with inverted ops."""
@@ -413,20 +405,14 @@ class TestHexPatLexerTokenization:
         """The token list always ends with an EOF token with an empty string value."""
         tokens = HexPatLexer(_SIMPLE_STRUCT).tokenize()
         assert tokens[-1].type == TokenType.EOF
-        assert not tokens[-1].value, (
-            f"EOF token value must be empty string, got {tokens[-1].value!r}"
-        )
+        assert not tokens[-1].value, f"EOF token value must be empty string, got {tokens[-1].value!r}"
 
     def test_tokenize_struct_keyword_present(self) -> None:
         """Tokenizing a struct source yields exactly one STRUCT token at position 0."""
         tokens = HexPatLexer(_SIMPLE_STRUCT).tokenize()
         struct_tokens = [t for t in tokens if t.type == TokenType.STRUCT]
-        assert len(struct_tokens) == 1, (
-            f"Expected exactly 1 STRUCT token, got {len(struct_tokens)}"
-        )
-        assert tokens[0].type == TokenType.STRUCT, (
-            f"STRUCT token must be the first token, but first token is {tokens[0].type!r}"
-        )
+        assert len(struct_tokens) == 1, f"Expected exactly 1 STRUCT token, got {len(struct_tokens)}"
+        assert tokens[0].type == TokenType.STRUCT, f"STRUCT token must be the first token, but first token is {tokens[0].type!r}"
 
     def test_tokenize_identifier_names_captured(self) -> None:
         """Identifier tokens capture the correct source text in the correct order.
@@ -438,9 +424,7 @@ class TestHexPatLexerTokenization:
         source = "struct Foo { u8 bar; };"
         tokens = HexPatLexer(source).tokenize()
         identifiers = [t.value for t in tokens if t.type == TokenType.IDENTIFIER]
-        assert identifiers == ["Foo", "bar"], (
-            f"Expected identifiers ['Foo', 'bar'] in order, got {identifiers!r}"
-        )
+        assert identifiers == ["Foo", "bar"], f"Expected identifiers ['Foo', 'bar'] in order, got {identifiers!r}"
 
     def test_tokenize_hex_number(self) -> None:
         """Hex number literals are tokenized as NUMBER tokens with the correct parsed value.
@@ -451,12 +435,8 @@ class TestHexPatLexerTokenization:
         source = "struct S { u8 v = 0xFF; };"
         tokens = HexPatLexer(source).tokenize()
         number_tokens = [t for t in tokens if t.type == TokenType.NUMBER]
-        assert len(number_tokens) == 1, (
-            f"Expected exactly 1 NUMBER token, got {len(number_tokens)}"
-        )
-        assert int(number_tokens[0].value, 0) == 0xFF, (
-            f"Number token value must equal 0xFF, got {number_tokens[0].value!r}"
-        )
+        assert len(number_tokens) == 1, f"Expected exactly 1 NUMBER token, got {len(number_tokens)}"
+        assert int(number_tokens[0].value, 0) == 0xFF, f"Number token value must equal 0xFF, got {number_tokens[0].value!r}"
 
     def test_tokenize_line_numbers_advance_correctly(self) -> None:
         r"""Token line numbers reflect newlines in the source.

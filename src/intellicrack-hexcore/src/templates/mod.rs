@@ -713,7 +713,12 @@ mod tests {
         assert!(!detailed.is_empty());
         let dos = detailed
             .iter()
-            .find(|(name, _, _, _)| name == "IMAGE_DOS_HEADER");
-        assert!(dos.is_some());
+            .find(|(name, _, _, _)| name == "IMAGE_DOS_HEADER")
+            .expect("IMAGE_DOS_HEADER must appear in list_detailed");
+        // IMAGE_DOS_HEADER per WinNT.h has exactly 19 named members:
+        // e_magic, e_cblp, e_cp, e_crlc, e_cparhdr, e_minalloc, e_maxalloc, e_ss, e_sp,
+        // e_csum, e_ip, e_cs, e_lfarlc, e_ovno, e_res[4], e_oemid, e_oeminfo, e_res2[10],
+        // e_lfanew.  Deleting any field registration changes this count and fails the gate.
+        assert_eq!(dos.3, 19, "IMAGE_DOS_HEADER must expose exactly 19 fields in list_detailed");
     }
 }

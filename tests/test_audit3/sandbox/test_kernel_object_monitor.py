@@ -427,11 +427,7 @@ def _poll_log_for_pid_mutex(
             except OSError:
                 raw_lines = []
             matches = [
-                ln
-                for ln in raw_lines
-                if len(ln.split("|")) >= 6
-                and ln.split("|")[3] == str(helper_pid)
-                and mutex_name in ln.split("|")[2]
+                ln for ln in raw_lines if len(ln.split("|")) >= 6 and ln.split("|")[3] == str(helper_pid) and mutex_name in ln.split("|")[2]
             ]
             if matches:
                 return matches
@@ -447,16 +443,9 @@ def _assert_log_entry_fields(line: str, expected_pid: int) -> None:
         expected_pid: The PID that must appear in the ``owner_pid`` field.
     """
     parts = line.split("|")
-    assert parts[1] == "Mutant", (
-        f"log entry type field must be 'Mutant'; got {parts[1]!r}; line={line!r}"
-    )
-    assert parts[3] == str(expected_pid), (
-        f"log entry owner_pid field must equal helper pid {expected_pid}; "
-        f"got {parts[3]!r}; line={line!r}"
-    )
-    assert parts[5] == "created", (
-        f"log entry action field must be 'created'; got {parts[5]!r}; line={line!r}"
-    )
+    assert parts[1] == "Mutant", f"log entry type field must be 'Mutant'; got {parts[1]!r}; line={line!r}"
+    assert parts[3] == str(expected_pid), f"log entry owner_pid field must equal helper pid {expected_pid}; got {parts[3]!r}; line={line!r}"
+    assert parts[5] == "created", f"log entry action field must be 'created'; got {parts[5]!r}; line={line!r}"
 
 
 def _run_mutex_helper_and_collect(
@@ -532,13 +521,10 @@ def test_script_captures_transient_mutex(tmp_path: Path) -> None:
     helper_err = ""
     matching_lines: list[str] = []
     try:
-        helper_proc, helper_pid, helper_out, helper_err, matching_lines = (
-            _run_mutex_helper_and_collect(pwsh, mutex_name, err_log, log_path)
-        )
+        helper_proc, helper_pid, helper_out, helper_err, matching_lines = _run_mutex_helper_and_collect(pwsh, mutex_name, err_log, log_path)
         if helper_proc is None:
             pytest.fail(
-                f"monitor did not complete its first sweep within {_FIRST_SWEEP_TIMEOUT_SEC} s; "
-                "cannot test transient capture",
+                f"monitor did not complete its first sweep within {_FIRST_SWEEP_TIMEOUT_SEC} s; cannot test transient capture",
             )
     finally:
         if helper_proc is not None:

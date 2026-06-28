@@ -18,28 +18,25 @@ from intellicrack.sandbox.manager import SandboxManager
 from intellicrack.ui.panels.sandbox_panel import SandboxPanel
 
 
-EXPECTED_COMBO_COUNT = 2
-
-
 @pytest.mark.usefixtures("qapp")
 class TestSandboxComboWiring:
     """Fix 4: Sandbox type combo box wiring tests."""
 
     @staticmethod
     def test_combo_has_two_items() -> None:
-        """Verify combo box has exactly Windows Sandbox and QEMU."""
-        panel = SandboxPanel()
-        combo = panel.sandbox_type_combo
-        assert combo.count() == EXPECTED_COMBO_COUNT
-
-    @staticmethod
-    def test_combo_items_are_correct() -> None:
-        """Verify combo box items are Windows Sandbox and QEMU only."""
+        """Verify combo box contains exactly the two expected sandbox type entries in order."""
         panel = SandboxPanel()
         combo = panel.sandbox_type_combo
         items = [combo.itemText(i) for i in range(combo.count())]
-        assert "Windows Sandbox" in items
-        assert "QEMU" in items
+        assert items == ["Windows Sandbox", "QEMU"]
+
+    @staticmethod
+    def test_combo_items_are_correct() -> None:
+        """Verify combo box item texts match exactly Windows Sandbox then QEMU with no extras."""
+        panel = SandboxPanel()
+        combo = panel.sandbox_type_combo
+        items = [combo.itemText(i) for i in range(combo.count())]
+        assert items == ["Windows Sandbox", "QEMU"]
 
     @staticmethod
     def test_docker_not_in_combo() -> None:
@@ -51,7 +48,7 @@ class TestSandboxComboWiring:
 
     @staticmethod
     def test_selected_sandbox_type_windows() -> None:
-        """Verify Windows Sandbox selection returns 'windows' type."""
+        """Verify Windows Sandbox combo selection maps to the 'windows' sandbox type."""
         panel = SandboxPanel()
         panel.sandbox_type_combo.setCurrentText("Windows Sandbox")
         result = panel._selected_sandbox_type()
@@ -59,11 +56,26 @@ class TestSandboxComboWiring:
 
     @staticmethod
     def test_selected_sandbox_type_qemu() -> None:
-        """Verify QEMU selection returns 'qemu' type."""
+        """Verify QEMU combo selection maps to the 'qemu' sandbox type."""
         panel = SandboxPanel()
         panel.sandbox_type_combo.setCurrentText("QEMU")
         result = panel._selected_sandbox_type()
         assert result == "qemu"
+
+    @staticmethod
+    def test_selected_sandbox_type_non_qemu_text_falls_back_to_windows() -> None:
+        """Verify any non-QEMU combo text maps to 'windows' via the else-fallback branch.
+
+        Temporarily adds a Docker entry to the combo, selects it, and asserts
+        that _selected_sandbox_type returns 'windows' because only 'QEMU' maps
+        to 'qemu' — all other texts use the else branch.
+        """
+        panel = SandboxPanel()
+        panel.sandbox_type_combo.addItem("Docker")
+        panel.sandbox_type_combo.setCurrentText("Docker")
+        assert panel.sandbox_type_combo.currentText() == "Docker"
+        result = panel._selected_sandbox_type()
+        assert result == "windows"
 
 
 @pytest.mark.usefixtures("qapp")

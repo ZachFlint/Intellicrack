@@ -1,23 +1,23 @@
 {
- "file": "tests/ui/test_system_tab_warnings.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/ui/test_system_tab_warnings.py::TestUnattachedPidGuards::test_unattached_handlers_do_not_raise",
-   "severity": "LOW",
-   "category": "N1 \u2014 no meaningful assertion; warning_calls discarded via `_ = warning_calls`, no dispatch tripwire, no falsifiable check; all three handlers already gated by stronger siblings",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/ui/test_system_tab_warnings.py::TestUnattachedPidGuards::test_refresh_mitigations_unattached_shows_warning",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 0
+  "file": "tests/ui/test_system_tab_warnings.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/ui/test_system_tab_warnings.py::TestUnattachedPidGuards::test_unattached_handlers_do_not_raise",
+      "severity": "LOW",
+      "category": "N1 — no meaningful assertion; warning_calls discarded via `_ = warning_calls`, no dispatch tripwire, no falsifiable check; all three handlers already gated by stronger siblings",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/ui/test_system_tab_warnings.py::TestUnattachedPidGuards::test_refresh_mitigations_unattached_shows_warning",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 0
 }

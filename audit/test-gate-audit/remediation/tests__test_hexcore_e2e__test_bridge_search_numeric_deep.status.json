@@ -1,65 +1,65 @@
 {
- "file": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_with_alignment_4_returns_only_aligned_offsets",
-   "severity": "HIGH",
-   "category": "N6 vacuously-satisfiable",
-   "action": "hardened",
-   "oracle": "Hand-laid byte layout: target 0xABCDABCD struct.pack_into at offsets {0,4,8,12,20} (4-aligned) plus 6 (misaligned). alignment=1 must report all six; alignment=4 steps by 4 so offset 6 is unreachable, yielding exactly {0,4,8,12,20}. Independent of any value the search returns.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "big_endian, alignment, max_results) -> big_endian, 1, max_results)",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_with_alignment_4_returns_only_aligned_offsets",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
+  "file": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_max_results_caps_returned_matches",
-   "severity": "HIGH",
-   "category": "N6 upper-bound-only",
-   "action": "hardened",
-   "oracle": "Buffer layout: target 0x11223344 packed at every 4-byte slot in a 64-byte buffer = 64//4 = 16 matches (known from the data construction). Uncapped (max_results=100) must return 16; max_results=1 must truncate to exactly 1.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "alignment, max_results) -> alignment, 100)",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_max_results_caps_returned_matches",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_on_minimal_data_does_not_crash",
-   "severity": "HIGH",
-   "category": "N6 if-result-guarded",
-   "action": "hardened",
-   "oracle": "struct.pack('<I', 0xDEADBEEF) == b'\\xef\\xbe\\xad\\xde' (verified independently in-test). The 4-byte buffer IS exactly the target value, so a correct uint32 little-endian search must return exactly one match at offset 0 with length 4. Guard removed; all three assertions unconditional.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "self.document.search_numeric(value, size, -> self.document.search_numeric(value + 1, size,",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_on_minimal_data_does_not_crash",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 3
+  "findings_addressed": [
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_with_alignment_4_returns_only_aligned_offsets",
+      "severity": "HIGH",
+      "category": "N6 vacuously-satisfiable",
+      "action": "hardened",
+      "oracle": "Hand-laid byte layout: target 0xABCDABCD struct.pack_into at offsets {0,4,8,12,20} (4-aligned) plus 6 (misaligned). alignment=1 must report all six; alignment=4 steps by 4 so offset 6 is unreachable, yielding exactly {0,4,8,12,20}. Independent of any value the search returns.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "big_endian, alignment, max_results) -> big_endian, 1, max_results)",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_with_alignment_4_returns_only_aligned_offsets",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_max_results_caps_returned_matches",
+      "severity": "HIGH",
+      "category": "N6 upper-bound-only",
+      "action": "hardened",
+      "oracle": "Buffer layout: target 0x11223344 packed at every 4-byte slot in a 64-byte buffer = 64//4 = 16 matches (known from the data construction). Uncapped (max_results=100) must return 16; max_results=1 must truncate to exactly 1.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "alignment, max_results) -> alignment, 100)",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_max_results_caps_returned_matches",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_on_minimal_data_does_not_crash",
+      "severity": "HIGH",
+      "category": "N6 if-result-guarded",
+      "action": "hardened",
+      "oracle": "struct.pack('<I', 0xDEADBEEF) == b'\\xef\\xbe\\xad\\xde' (verified independently in-test). The 4-byte buffer IS exactly the target value, so a correct uint32 little-endian search must return exactly one match at offset 0 with length 4. Guard removed; all three assertions unconditional.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "self.document.search_numeric(value, size, -> self.document.search_numeric(value + 1, size,",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_on_minimal_data_does_not_crash",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 3
 }

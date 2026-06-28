@@ -1,1167 +1,1167 @@
 {
- "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestToolDialogsReceiveRegistry::test_configure_tools_wires_status_changed": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOpenSandboxAvoidsDialogProbe::test_open_sandbox_uses_bridge_is_available": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_preferences_settings_changed_reaches_slot": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_session_loaded_signal_reaches_slot": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_provider_dialog_signals_reach_slots": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_model_selection_signal_reaches_slot": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_settings_updated_reaches_slot": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_monitor_stopped_reaches_slot": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_embedded_tool_panel_signals_reach_slots": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_quote_payload_is_escaped_not_executed": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_backslash_path_round_trips_verbatim": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_newline_payload_round_trips_verbatim": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_control_characters_round_trip_verbatim": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_process_win32.py::test_get_mitigation_policy_matches_win32_oracle": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_process_win32.py::test_get_extension_policy_matches_win32_oracle": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_process_win32.py::test_enumerate_handles_surfaces_planted_handle": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_process_win32.py::test_time_thread_wait_running_thread_times_out": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_process_win32.py::test_time_thread_wait_exited_thread_signals": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_process_win32.py::test_enumerate_heaps_includes_process_default_heap": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_ui/test_win32_embed.py::TestFindWindowByPid::test_finds_real_visible_window_for_current_pid": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_ui/test_win32_embed.py::TestFindWindowByPid::test_embeds_real_window_into_qt_parent": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_ui/test_win32_embed.py::TestPollAndEmbed::test_polling_embeds_and_invokes_callback": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_agentic_capabilities.py::TestAccurateToolSupport::test_ollama_models_report_accurate_tool_support": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_required_forces_tool_call": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_none_prevents_tool_call": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py::test_vendor_mem_base_address_smoke": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py::test_vendor_string_parse_int_smoke": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_cutter.py::TestToolDefinition::test_all_function_parameters_have_recognized_types": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_diff_wraps_real_attribute_error_from_bad_process_activity": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_detect_behaviors_wraps_real_keyerror_from_bad_process_activity": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_files_target": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_memory_target": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_hex_editor_pe_methods.py::TestMethodDispatchSurface::test_method_signature_and_return_value": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_emits_threat_intel_unavailable_warning_when_not_admin": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_local_xpu_e2e.py::TestVRAMManagement::test_memory_decreases_after_unload": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_model_discovery.py::TestAllProvidersModelCount::test_summary_all_providers": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_sandbox/test_realcov_12b_analysis_real.py::test_match_behaviors_on_real_capture_is_consistent": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit7/sandbox_monitors/test_stop_event.py::test_start_monitors_skips_underscore_prefixed_scripts": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit7/sandbox_windows/test_anti_evasion_wmi_hijack.py::test_mof_text_is_well_formed_for_each_profile": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py::TestExecutePatternForwardsPrintSink::test_omitting_print_sink_does_not_raise": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py::TestF0012ThreadsTabAutoRefresh::test_button_text_reflects_state": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py::TestMainWindowWireSandboxBackend::test_call_count_matches_forwarded_invocation": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_frida_bridge.py::test_crash_info_bridge_internal_accumulation": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_frida_bridge.py::test_child_process_info_bridge_accumulation_full_fields": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_frida_bridge.py::test_child_process_info_bridge_accumulation_none_fields": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_frida_bridge.py::test_get_pending_children_empty": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_frida_bridge.py::test_crash_reporting_lifecycle": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_realcov_03c_cutter.py::TestRealMetadata::test_relocations_real": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_advapi32_resolves_lookupprivilegevaluew": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_dbghelp_resolves_symgetoptions": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_hexcore_e2e/test_bridge_pattern_engine.py::TestListAndAutoDetect::test_list_hexpat_patterns_items_have_required_keys": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_includes_known_production_model_with_capabilities": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_grok_provider.py::TestGrokModelListing::test_model_capability_values_match_published_profile": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_list_models_returns_model_info_instances": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_openai_provider.py::TestOpenAIModelListing::test_known_model_gpt4o_mini_has_documented_capabilities": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_sandbox/test_realcov_04_sandbox_bridge.py::TestRealManagerIntegration::test_create_windows_sandbox_success_path": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_ui/test_xpu_status.py::TestXPUStatusDialogMemory::test_memory_text_shows_gb_values": {
-  "status": "not-green",
-  "falsifiable": "skipped",
-  "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
- },
- "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestAlignmentGrid::test_set_alignment_grid_persists_and_notifies": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: get_alignment_grid must read back the size that was set\nassert 0 == 4096\n +  where 0 = _run(<coroutine object HexEditorSelectionMixin.get_alignment_grid at 0x00000249428F05F0>)\n +    where <coroutine object HexEditorSelectionMixin.get_alignment_grid at 0x00000249428F05F0> = get_align"
- },
- "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_pointer_event_format": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'\\x06\\x01\\x00d\\x00\\xc8' == b'\\x05\\x01\\x00d\\x00\\xc8'\n  \n  At index 0 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x06#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x05#x1B[39;4"
- },
- "tests/test_core/test_logging.py::test_intellicrack_logger_get_logger_root": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'test_root.bad' == 'test_root'\n  \n  #x1B[0m#x1B[91m- test_root#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ test_root.bad#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?          ++++#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestOAuthFlowValidation::test_build_authorization_url_emits_spec_compliant_pkce_request": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: code_verifier must S256-hash to the emitted code_challenge\nassert False\n +  where False = verify_pkce_pair('yX1BORzB3vKfO9d9E50jF_rDwkbRLD_kpzfFMZtmU_INmxcHTCDD1416P0_F8eV6msL2DuMbTosP-1aDrf5_gA', '6VzexOWObMzj-3GCjMHl6uUKZALuYRxGzB7yiYxmNy')\n +    where 'yX1BORzB3vKfO9d9E50jF_rDwkbR"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestCredentialSourceDetectorPath::test_detect_source_classifies_environment_credential": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Expected ENVIRONMENT classification, got 'manual entry'\nassert 'manual entry' == 'environment'\n  \n  #x1B[0m#x1B[91m- environment#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ manual entry#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_malformed_503_body_falls_back_to_loading_message": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Malformed body must fall back, got ''\nassert '' == 'Model is loa...not yet ready'\n  \n  #x1B[0m#x1B[91m- Model is loading and not yet ready#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_valid_pricing_converts_to_micro_dollars": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: input micro-dollar mismatch: 0.015000000000000001 != 15.0\nassert 14.985 < 1e-06\n +  where 14.985 = abs((0.015000000000000001 - 15.0))\n +    where 0.015000000000000001 = ModelInfo(id='openrouter/test-model', name='Test Model', provider=<ProviderName.OPENROUTER: 'openrouter'>, context_"
- },
- "tests/core/test_process_cleanup.py::test_sandbox_temp_wsb_file_cleaned_up": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: SandboxTestWorker.run() finally block must unlink the .wsb file\nassert not True\n +  where True = exists()\n +    where exists = WindowsPath('C:/Users/ContainerAdministrator/AppData/Local/Temp/tmpc3znh6_b.wsb').exists"
- },
- "tests/core/test_process_cleanup.py::test_qemu_resolve_pid_uses_real_retry_constants": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Real retry loop must return the PID written to the pidfile\nassert 100000 == 99999"
- },
- "tests/test_audit3/core/test_xml_gen.py::test_f0011_element_factory_matches_stdlib_element": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "TypeError: expected an Element, not str"
- },
- "tests/test_ui/test_font_manager.py::TestCodeFont::test_get_code_font_uses_resolved_code_family": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert '' == 'JetBrains Mono'\n  \n  #x1B[0m#x1B[91m- JetBrains Mono#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_ui/test_splash_screen.py::TestSplashScreenCreation::test_creates_splash_screen": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'Booting...' == 'Initializing...'\n  \n  #x1B[0m#x1B[91m- Initializing...#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ Booting...#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_audit3/bridges/test_named_pipe_client.py::test_open_handle_passes_shared_read_write_to_createfilew": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert [1] == [3]\n  \n  At index 0 diff: #x1B[0m#x1B[94m1#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[94m3#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[90m #x1B[39;49;00m [#x1B[90m#x1B[39;49;00m\n  #x1B[91m-     3,#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?     ^#x1B[90m#x1B[3"
- },
- "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_publishes_data_modified": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: expected exactly one DATA_MODIFIED event after _on_add_bookmark, got 0\nassert 0 == 1\n +  where 0 = len([])"
- },
- "tests/test_core/test_script_gen.py::test_frida_api_reference_keys": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'Interceptor.attach' in ''"
- },
- "tests/test_ui/test_win32_embed.py::TestEmbedWindow::test_returns_none_for_zero_hwnd": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert <PyQt6.QtWidgets.QWidget object at 0x000002494239EF30> is None"
- },
- "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_huggingface_buffer_manager_assembles_fragmented_tool_call": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert {} == {'path': 'C:\\...\\notepad.exe'}\n  \n  Right contains 1 more item:\n  #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33mpath#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00m#x1B[33mC:#x1B[39;49;00m#x1B[33m\\\\#x1B[39;49;00m#x1B[33mWindows#x1B[39;49;00m#x1B[33m\\\\#x1B[39;49;00"
- },
- "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestColorMode::test_set_color_mode_persists_and_notifies": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: get_color_mode must read back the mode that was set\nassert 'none' == 'entropy'\n  \n  #x1B[0m#x1B[91m- entropy#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ none#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_format": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'\\x07\\x01\\x0...x00\\x00\\xff\\r' == b'\\x04\\x01\\x0...x00\\x00\\xff\\r'\n  \n  At index 0 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x07#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
- },
- "tests/test_core/test_logging.py::test_intellicrack_logger_get_logger_child": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'test_parent' == 'test_parent.child'\n  \n  #x1B[0m#x1B[91m- test_parent.child#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?            ------#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ test_parent#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestOAuthFlowValidation::test_build_authorization_url_rejects_missing_client_id": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "Failed: DID NOT RAISE <class 'intellicrack.credentials.oauth.OAuthConfigurationError'>"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestCredentialSourceDetectorPath::test_detect_source_returns_not_configured_for_empty_key": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Empty key must be NOT_CONFIGURED, got 'manual entry'\nassert 'manual entry' == 'not configured'\n  \n  #x1B[0m#x1B[91m- not configured#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ manual entry#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_html_503_body_falls_back_to_loading_message": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "re-proved with corrected mutation"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_non_numeric_pricing_is_nullified": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: empty string must nullify output cost, got 0.0\nassert 0.0 is None\n +  where 0.0 = ModelInfo(id='openrouter/free-model', name='Free Model', provider=<ProviderName.OPENROUTER: 'openrouter'>, context_win...ls=False, supports_vision=False, supports_streaming=True, input_cost_per_1m_token"
- },
- "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_immediate_file": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Should read pidfile on first attempt\nassert 100000 == 99999"
- },
- "tests/test_audit3/core/test_xml_gen.py::test_f0011_subelement_links_into_stdlib_tree": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "TypeError: Element() argument 2 must be dict, not str"
- },
- "tests/test_ui/test_font_manager.py::TestUIFont::test_get_ui_font_uses_resolved_ui_family": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert '' == 'sans-serif'\n  \n  #x1B[0m#x1B[91m- sans-serif#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_ui/test_splash_screen.py::TestProgressAnimation::test_rapid_progress_calls_track_final_state": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 99 == 100\n +  where 99 = <intellicrack.ui.dialogs.splash_screen.SplashScreen object at 0x000002414729E2B0>.progress"
- },
- "tests/test_audit3/bridges/test_named_pipe_client.py::test_close_handle_logs_when_closehandle_fails": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: CloseHandle failure must emit pipe_close_handle_failed\nassert 0 == 1\n +  where 0 = len([])"
- },
- "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_offset_and_length_match_bookmark": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: expected offset=23 (cursor), got 24\nassert 24 == 23"
- },
- "tests/test_core/test_script_gen.py::test_ghidra_api_reference_keys": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'DecompInterface' in ''"
- },
- "tests/test_ui/test_win32_embed.py::TestEmbedWindow::test_returns_none_for_garbage_hwnd": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_ollama_native_stream_assembler_reconstructs_tool_call": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert {} == {'path': 'C:\\...\\notepad.exe'}\n  \n  Right contains 1 more item:\n  #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33mpath#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00m#x1B[33mC:#x1B[39;49;00m#x1B[33m\\\\#x1B[39;49;00m#x1B[33mWindows#x1B[39;49;00m#x1B[33m\\\\#x1B[39;49;00"
- },
- "tests/test_ui/test_icon_manager.py::TestFallbackIcons::test_missing_icon_with_no_fallback_loads_null_via_full_pipeline": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: A missing icon with no Unicode fallback must load as a null QIcon\nassert False\n +  where False = <built-in method isNull of QIcon object at 0x000002414729FC50>()\n +    where <built-in method isNull of QIcon object at 0x000002414729FC50> = <PyQt6.QtGui.QIcon object at 0x000002414729FC"
- },
- "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_set_chunk_size": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_release_clears_down_flag": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'\\x04\\x01\\x0...0\\x00\\xff\\x1b' == b'\\x04\\x00\\x0...0\\x00\\xff\\x1b'\n  \n  At index 1 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x01#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
- },
- "tests/test_core/test_logging.py::test_intellicrack_logger_configure": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert False\n +  where False = exists()\n +    where exists = WindowsPath('C:/Users/ContainerAdministrator/AppData/Local/Temp/pytest-of-ContainerAdministrator/pytest-0/test_intellicrack_logger_confi0/intellicrack.log').exists"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_valid_503_json_body_is_parsed_by_provider": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Provider must format JSON body, got 'Model is loading (eta=20.0s)'\nassert 'Model is loading (eta=20.0s)' == 'Model is loa...d_time=20.0s)'\n  \n  #x1B[0m#x1B[91m- Model is loading (estimated_time=20.0s)#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?                    - -- --------#x1B[90m#x1"
- },
- "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_delayed_file": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Retry loop should catch delayed pidfile\nassert 54322 == 54321"
- },
- "tests/test_audit3/core/test_xml_gen.py::test_f0011_indent_matches_stdlib_indent": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "TypeError: tostring() got an unexpected keyword argument 'space'"
- },
- "tests/test_ui/test_font_manager.py::TestHeadingFont::test_get_heading_font_uses_resolved_ui_family": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'JetBrains Mono' == 'sans-serif'\n  \n  #x1B[0m#x1B[91m- sans-serif#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ JetBrains Mono#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_event_draws_pixels": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Only 169 pixels overwritten; paint helpers drew nothing\nassert 169 >= 1000"
- },
- "tests/test_audit3/bridges/test_named_pipe_client.py::test_write_sync_logs_routine_chunk_at_debug_not_info": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert False\n +  where False = all(<generator object test_write_sync_logs_routine_chunk_at_debug_not_info.<locals>.<genexpr> at 0x000001E963543AC0>)"
- },
- "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_source_literal_uses_bookmarks_namespace": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: _on_add_bookmark must dispatch with source 'hex-editor.bookmarks.add'; got 'panel'\nassert 'panel' == 'hex-editor.bookmarks.add'\n  \n  #x1B[0m#x1B[91m- hex-editor.bookmarks.add#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ panel#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_core/test_script_gen.py::test_cutter_reference_keys": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'aaa' in 'nope'"
- },
- "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'PATCH4V\\x00...aa\\xbb\\xccEOF' == b'PATCH\\x124V...aa\\xbb\\xccEOF'\n  \n  At index 5 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m4#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x12"
- },
- "tests/test_ui/test_icon_manager.py::TestListAvailableIcons::test_list_equals_full_icon_map_key_set": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: list_available_icons must return every ICON_MAP key in insertion order\nassert ['binary', 't...n_build', ...] == ['app', 'bina...process', ...]\n  \n  At index 0 diff: #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33mbinary#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B["
- },
- "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_set_memory_budget": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_sandbox/test_sandbox_bridge.py::TestToolDefinition::test_all_definition_functions_dispatch_to_real_behavior": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert {} == {'status': 'running'}\n  \n  Right contains 1 more item:\n  #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33mstatus#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00m#x1B[33mrunning#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m}#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[9"
- },
- "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestRuntimeDependenciesAreLean::test_runtime_and_extras_tables_are_declared": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_bridges/test_x64dbg_events.py::TestEventDispatch::test_handle_event_with_no_callbacks": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: internal hit-count path must run without user callbacks\nassert 0 == 1\n +  where 0 = BreakpointInfo(id=99, address=4198400, bp_type='software', enabled=True, hit_count=0, condition=None).hit_count"
- },
- "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_pe_template_on_elf_data_parses_wrong_e_magic": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_framebuffer_update_request_format": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'\\x03\\x00\\x0...2\\x80\\x01\\xe0' == b'\\x03\\x01\\x0...2\\x80\\x01\\xe0'\n  \n  At index 1 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x00#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
- },
- "tests/test_core/test_logging.py::test_intellicrack_logger_configure_no_file": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert not True\n +  where True = exists()\n +    where exists = (WindowsPath('C:/Users/ContainerAdministrator/AppData/Local/Temp/pytest-of-ContainerAdministrator/pytest-0/test_intellicrack_logger_confi0') / 'intellicrack.log').exists"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_missing_response_attribute_falls_back": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: No-response error must fall back, got 'unexpected'\nassert 'unexpected' == 'Model is loa...not yet ready'\n  \n  #x1B[0m#x1B[91m- Model is loading and not yet ready#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ unexpected#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_zero_pricing_converts_to_zero": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "TypeError: bad operand type for abs(): 'str'"
- },
- "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_exhausted_raises_sandbox_error": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "Failed: DID NOT RAISE <class 'intellicrack.core.types.SandboxError'>"
- },
- "tests/test_audit3/core/test_xml_gen.py::test_f0011_tostring_matches_stdlib_tostring": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "TypeError: C14NWriterTarget.__init__() got an unexpected keyword argument 'encoding'"
- },
- "tests/test_ui/test_font_manager.py::TestFontLoading::test_load_fonts_idempotent": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Second load_fonts call duplicated or mutated loaded families\nassert ['JetBrains M...tBrains Mono'] == ['JetBrains M...tBrains Mono']\n  \n  Left contains 2 more items, first extra item: #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33mJetBrains Mono#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1"
- },
- "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_with_progress_reflects_state": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 196 >= 1000"
- },
- "tests/test_audit3/bridges/test_named_pipe_client.py::test_connect_close_lifecycle_logs_at_info": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: pipe_connecting must be logged at INFO\nassert 'pipe_connecting' in ['pipe_connected', 'pipe_close_invoked', 'pipe_disconnecting', 'pipe_disconnected']"
- },
- "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_panel_loop_guarded_subscriber_receives_add_event": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: panel-loop-guarded subscriber must receive DATA_MODIFIED when a bookmark is added\nassert []"
- },
- "tests/test_core/test_script_gen.py::test_x64dbg_reference_keys": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'bp ' in 'set addr'"
- },
- "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'PATCH\\x00\\x...ad\\xbe\\xefEOF' == b'PATCH\\x00\\x...ad\\xbe\\xefEOF'\n  \n  At index 9 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x05#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
- },
- "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_svg_icons_load_non_null": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: SVG icons loaded as null QIcons (corrupt or missing): ['action_build', 'action_debug', 'action_deploy', 'action_generate', 'action_test', 'ai_inference', 'ai_model', 'ai_neural', 'ai_training', 'binary_disasm', 'binary_entropy']\nassert not ['action_build', 'action_debug', 'action_dep"
- },
- "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_get_memory_usage": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_sandbox/test_sandbox_bridge.py::TestCreateDestroy::test_create_translates_unavailable_type_to_typed_tool_error": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Regex pattern did not match.\n  Expected regex: 'Failed to create sandbox: Sandbox type not available: windows'\n  Actual message: 'Sandbox creation problem: Sandbox type not available: windows'"
- },
- "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestPyprojectIsValid::test_runtime_deps_disjoint_from_moved_extras": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_bridges/test_x64dbg_events.py::TestBreakpointHitCounting::test_unknown_event_is_forwarded_without_state_mutation": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: unknown event must be forwarded verbatim to callbacks\nassert [('breakpoint...nown_event'})] == [('unknown_ev...nown_event'})]\n  \n  At index 0 diff: #x1B[0m(#x1B[33m'#x1B[39;49;00m#x1B[33mbreakpoint#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m, {#x1B[33m'#x1B[39;49;00m#x1B[33mevent#x1B[39;49;"
- },
- "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_elf_template_on_pe_data_parses_wrong_e_ident": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_ui/test_vnc_widget.py::TestRFBClientState::test_request_framebuffer_update_when_disconnected": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'\\x03\\x01\\x0...0\\x00\\x00\\x00' == b''\n  \n  Full diff:\n  #x1B[0m#x1B[91m- b''#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ (b'\\x03\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_core/test_logging.py::test_intellicrack_logger_configure_plain_text": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "Failed: DID NOT RAISE <class 'json.decoder.JSONDecodeError'>"
- },
- "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_handles_corrupt_content": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Retry should recover after corrupt content is corrected\nassert 77778 == 77777"
- },
- "tests/test_audit3/core/test_xml_gen.py::test_f0011_elementtree_wraps_root_like_stdlib": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AttributeError: 'xml.etree.ElementTree.Element' object has no attribute 'getroot'"
- },
- "tests/test_ui/test_font_manager.py::TestFontAssets::test_font_config_declares_expected_families_and_assets": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: NotARealUiFont missing from ui_fonts.primary\nassert 'NotARealUiFont' in ['Segoe UI', 'Roboto', 'Arial']"
- },
- "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_full_pipeline_all_complete": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert False\n +  where False = all(<generator object TestPaintEventRendering.test_paint_full_pipeline_all_complete.<locals>.<genexpr> at 0x0000022200A401E0>)"
- },
- "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_no_dispatch_when_state_holder_absent": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: persisted bookmark length 0 must equal 1\nassert 0 == 1"
- },
- "tests/test_core/test_script_gen.py::test_bypass_strategy_members_complete": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: BypassStrategy members diverged from expected set: {'RETURN_TRUE': 'return_true', 'RETURN_FALSE': 'return_false', 'RETURN_ZERO': 'return_zero', 'RETURN_ONE': 'return_one', 'NOP_FUNCTION': 'nop_function', 'SKIP_CHECK': 'skip_check', 'PATCH_JUMP': 'jump_patch', 'HOOK_REPLACE': 'hook_re"
- },
- "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 6 == 5\n +  where 5 = len(b'\\x10 0@P')"
- },
- "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_icons_availability_detection_flips_with_assets_presence": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: An empty icons dir must detect as unavailable\nassert True is False\n +  where True = <function IconManager._check_icons_available at 0x000002220014B880>()\n +    where <function IconManager._check_icons_available at 0x000002220014B880> = IconManager._check_icons_available"
- },
- "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py::TestNetworkMonitorSource::test_uses_owner_pid_variable": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 1 == 2\n +  where 1 = <built-in method count of str object at 0x00000222660FA630>('$ownerPid|$name')\n +    where <built-in method count of str object at 0x00000222660FA630> = \"param([string]$LogDir = '.')\\n$ErrorActionPreference = 'SilentlyContinue'\\nif (-not (Test-Path -LiteralPath $LogDir))."
- },
- "tests/test_audit3/bridges/test_installer.py::TestPEVersionForGUITools::test_get_version_x64dbg_uses_pe_when_available": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: get_version returned None for a PE with known VS_VERSION_INFO\nassert False\n +  where False = isinstance(None, ToolVersion)"
- },
- "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_does_not_label_normal_thread_starts_as_shellcode_injection": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_providers/test_credential_loading.py::TestCredentialValidation::test_get_credentials_returns_credentials_or_none": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: get_credentials must propagate the exact injected api_key value; expected 'sk-ant-api03-ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ', got None\nassert None == 'sk-ant-api03-ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
- },
- "tests/test_providers/test_providers_cloud_audit1.py::test_f0001_chat_enable_cache_completes_full_call_path": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert '' == 'grok-cache-ok'\n  \n  #x1B[0m#x1B[91m- grok-cache-ok#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_grok_retries_on_transient_rate_limit": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "intellicrack.core.types.ProviderError: retry_with_backoff exhausted without capturing an exception"
- },
- "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py::test_f0012_compile_typescript_reuses_compiler_instance": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: compiler instances created: 2\nassert 2 == 1"
- },
- "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_context64_layout": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 976 == 1232\n +  where 976 = <built-in function sizeof>(CONTEXT64)\n +    where <built-in function sizeof> = ctypes.sizeof"
- },
- "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_pointer_when_disconnected": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'\\x05\\x01\\x00d\\x00\\xc8' == b''\n  \n  Full diff:\n  #x1B[0m#x1B[91m- b''#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ (b'\\x05\\x01\\x00d\\x00\\xc8')#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_core/test_logging.py::test_get_logger_returns_bound_logger": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'wrongroot.test_module' == 'intellicrack.test_module'\n  \n  #x1B[0m#x1B[91m- intellicrack.test_module#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ wrongroot.test_module#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_audit3/core/test_xml_gen.py::test_xml_gen_exports_match_dunder_all": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert {'ElementTree...', 'tostring'} == {'Element', '...', 'tostring'}\n  \n  Extra items in the right set:\n  #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33mElement#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[90m #x1B[39;49;00m {#x1B[90m#x1B[39;49;0"
- },
- "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_anti_evasion_profile_drives_real_smbios_argv": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: workstation profile must drive Dell Inc. SMBIOS vendor; argv smbios entries were ['type=1,manufacturer=HP,product=OptiPlex 7090,serial=SVC899AE90F02', 'type=2,manufacturer=HP,product=0WN7Y6', 'type=3,manufacturer=HP,chassis-type=3']\nassert 'manufacturer=Dell Inc.' in 'type=1,manufact"
- },
- "tests/test_ui/test_splash_screen.py::TestSplashImageCompositing::test_splash_image_mutual_exclusion_with_brain_icon": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Brain icon and splash image must be mutually exclusive\nassert not True"
- },
- "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassemblePeTextSection::test_disassemble_pe_text_with_auto_arch": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'dec' == 'pop'\n  \n  #x1B[0m#x1B[91m- pop#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ dec#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py::TestRegistryMonitorSource::test_type_included_in_log_entry": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 1 == 2\n +  where 1 = <built-in method count of str object at 0x000002152755D330>(\"$rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }\")\n +    where <built-in method count of str object at 0x000002152755D330> = \"param([string]$LogDir = '.')\\n$ErrorActionPreference = 'SilentlyContin"
- },
- "tests/test_audit3/bridges/test_installer.py::TestProgressLoggingPerMB::test_progress_threshold_is_per_megabyte": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: expected exactly 2 download_progress events for 2457600 bytes at 1-MiB threshold, got 4\nassert 4 == 2\n +  where 4 = len([21.3, 42.7, 64.0, 85.3])"
- },
- "tests/test_providers/test_credential_loading.py::TestEnvironmentVariableAccess::test_set_env_var_updates_value": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: os.environ must be updated by set_env_var; expected 'intellicrack_gate_value_7x9q', got ''\nassert '' == 'intellicrack_gate_value_7x9q'\n  \n  #x1B[0m#x1B[91m- intellicrack_gate_value_7x9q#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_openrouter_retries_on_transient_rate_limit": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "intellicrack.core.types.ProviderError: retry_with_backoff exhausted without capturing an exception"
- },
- "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_context32_layout": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 208 == 204\n +  where 208 = <built-in function sizeof>(CONTEXT32)\n +    where <built-in function sizeof> = ctypes.sizeof"
- },
- "tests/test_bridges/test_x64dbg_audit6.py::TestStepEventSync::test_all_step_methods_resolve_via_paused_event": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: step_out must return the IP delivered by the paused event; got 0x0\nassert 0 == 3735928559"
- },
- "tests/test_core/test_elevation.py::TestPlatformHelpers::test_is_elevated_matches_oracle": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert False is True"
- },
- "tests/test_core/test_orchestrator.py::test_stats_to_dict": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 100.0 < 1e-09\n +  where 100.0 = abs((0.0 - 100.0))"
- },
- "tests/test_core/test_realcov_05b_tools.py::TestExecuteToolCallRealDispatch::test_tool_name_is_case_insensitive": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "intellicrack.core.types.ToolError: unknown tool"
- },
- "tests/test_hexcore_e2e/test_bookmarks.py::TestBookmarks::test_add_bookmark_returns_index": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_hexcore_e2e/test_encodings.py::TestDecodeTextEdgeCases::test_decode_invalid_utf8_uses_replacement_characters": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py::TestTypeCasts::test_cast_negative_to_signed": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert '0x-1' == '-1'\n  \n  #x1B[0m#x1B[91m- -1#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ 0x-1#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_key_when_disconnected": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'\\x04\\x01\\x0...x00\\x00\\xff\\r' == b''\n  \n  Full diff:\n  #x1B[0m#x1B[91m- b''#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ (b'\\x04\\x01\\x00\\x00\\x00\\x00\\xff\\r')#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_core/test_logging.py::test_get_logger_no_name": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'notintellicrack' == 'intellicrack'\n  \n  #x1B[0m#x1B[91m- intellicrack#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ notintellicrack#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ? +++#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_laptop_profile_emits_laptop_specific_smbios_argv": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: laptop profile must emit the Lenovo vendor; argv smbios entries were ['type=1,manufacturer=HP,product=HP EliteDesk 800 G6,serial=PFF5D9722FCB', 'type=2,manufacturer=HP,product=21AHS00000', 'type=3,manufacturer=HP,chassis-type=10']\nassert 'manufacturer=Lenovo' in 'type=1,manufacturer="
- },
- "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassembleMzHeader::test_disassemble_at_mz_header_produces_coherent_first_instruction": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 1 == 0"
- },
- "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_google_retries_on_transient_rate_limit": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "intellicrack.core.types.ProviderError: retry_with_backoff exhausted without capturing an exception"
- },
- "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_memory_basic_information_layout": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "re-proved with corrected mutation"
- },
- "tests/test_hexcore_e2e/test_hexpat_stdlib.py::TestIOFunctions::test_format_via_interpreter_produces_string": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: format substitution produced wrong output: 'x=MUTATED'\nassert 'x=MUTATED' == 'x=171'\n  \n  #x1B[0m#x1B[91m- x=171#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ x=MUTATED#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_hexcore_e2e/test_process_memory.py::TestFromProcessMemory::test_from_process_memory_zero_size_handled": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_hexcore_e2e/test_search.py::TestSearchHex::test_wildcard_byte_matches_pe_header_sequence": {
-  "status": "pass",
-  "falsifiable": "no",
-  "detail": ""
- },
- "tests/test_hexpat/test_realcov_07b_compiler_pragmas.py::TestVendorPatternCompilation::test_known_static_cda_pattern_compiles_to_exact_schema": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: field 'RIFF': expected type 'UInt32' from HexPat spec, got 'UInt8'\nassert 'UInt8' == 'UInt32'\n  \n  #x1B[0m#x1B[91m- UInt32#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ UInt8#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py::TestVendorIncludeFlattening::test_missing_include_does_not_raise": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: expected structured 'include_not_found' warning, got records: [{'source_length': 52, 'file_path': None, 'event': 'hexpat_preprocess_started', 'log_level': 'debug'}, {'include_path': 'std/nonexistent_file_xyzzy.pat', 'search_paths': ['C:\\\\app\\\\vendor\\\\ImHex-Patterns\\\\includes'], 'line"
- },
- "tests/test_providers/test_registry.py::TestF0005NameToClassMapping::test_register_class_recorded_alongside_instance": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert <class 'intellicrack.providers.registry.ProviderRegistry'> is ConcreteTestProvider"
- },
- "tests/test_sandbox/test_manager.py::TestSandboxInstance::test_timestamps_are_set": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert datetime.datetime(2026, 6, 14, 19, 8, 37, 368755, tzinfo=datetime.timezone.utc) <= datetime.datetime(2000, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)\n +  where datetime.datetime(2000, 1, 1, 0, 0, tzinfo=datetime.timezone.utc) = <intellicrack.sandbox.manager.SandboxInstance object at 0x0000025A"
- },
- "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_partial_data": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 64 == 32\n +  where 64 = <built-in method red of QColor object at 0x000001D43ED913D0>()\n +    where <built-in method red of QColor object at 0x000001D43ED913D0> = <PyQt6.QtGui.QColor object at 0x000001D43ED913D0>.red"
- },
- "tests/test_core/test_logging.py::test_get_logger_with_name": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'app_root' == 'app_root.my_module'\n  \n  #x1B[0m#x1B[91m- app_root.my_module#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ app_root#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0028YaraScanFallback::test_yara_scan_scans_zip_artifacts_when_present": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: yara_scan did not scan any files from the zip\nassert []"
- },
- "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassembleEdgeCases::test_disassemble_last_byte_decodes_single_trailing_instruction": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 2 == 1"
- },
- "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_kernel32_resolves_getcurrentprocessid": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AttributeError: function 'GetCurrentProcessId' not found"
- },
- "tests/test_providers/test_anthropic_buffers_live.py::test_fresh_provider_buffers_start_empty": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: get_pending_usage() on a fresh provider must return None, got UsageInfo(prompt_tokens=0, completion_tokens=0, total_tokens=0)\nassert UsageInfo(prompt_tokens=0, completion_tokens=0, total_tokens=0) is None"
- },
- "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_no_framebuffer": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AttributeError: 'NoneType' object has no attribute 'width'"
- },
- "tests/test_core/test_logging.py::test_log_tool_call_minimal": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 0 == 1\n +  where 0 = len([])"
- },
- "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_windows_startup_script_wires_agent": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: start_agent.cmd must reference the agent script agent.ps1; got '@echo off\\n\\npowershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"Z:\\\\monitor\\\\unwired.ps1\"\\n\\n'\nassert 'agent.ps1' in '@echo off\\n\\npowershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle "
- },
- "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_sections_signature": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert ['MUTATED', 'MUTATED'] == ['.text', '.rdata']\n  \n  At index 0 diff: #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33mMUTATED#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33m.text#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00"
- },
- "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_ntdll_resolves_rtlgetversion": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AttributeError: function 'RtlGetVersion' not found"
- },
- "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_construction": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 0 >= 320\n +  where 0 = <built-in method minimumWidth of VNCWidget object at 0x000002172E8AA990>()\n +    where <built-in method minimumWidth of VNCWidget object at 0x000002172E8AA990> = <intellicrack.ui.panels.vnc_widget.VNCWidget object at 0x000002172E8AA990>.minimumWidth"
- },
- "tests/test_core/test_logging.py::test_log_tool_call_with_duration_and_success": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 43.0 == 42.57\n +  where 42.57 = round(42.567, 2)"
- },
- "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_linux_startup_script_wires_agent": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: start_agent.sh must reference the agent script agent.py; got '#!/bin/bash\\npython3 /mnt/shared/monitor/unwired.py &\\n'\nassert 'agent.py' in '#!/bin/bash\\npython3 /mnt/shared/monitor/unwired.py &\\n'"
- },
- "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_imports_signature": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert [{'dll': 'MUTATED'}] == []\n  \n  Left contains one more item: #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33mdll#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00m#x1B[33mMUTATED#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m}#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[91m- ["
- },
- "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_user32_resolves_getdesktopwindow": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AttributeError: function 'GetDesktopWindow' not found"
- },
- "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_button_mask_maps_qt_buttons_to_rfb_bits": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 8 == 2\n +  where 8 = <function VNCWidget.button_mask at 0x000002502822E840>(<PyQt6.QtGui.QMouseEvent object at 0x000002503D69EE90>)\n +    where <function VNCWidget.button_mask at 0x000002502822E840> = VNCWidget.button_mask"
- },
- "tests/test_core/test_logging.py::test_log_tool_call_with_failure": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert True is False"
- },
- "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0009AgentScriptNoPsUsing::test_windows_agent_script_binds_and_reads_log_path_via_messagedata": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: The file-creation watcher must bind the log path into the event via '-MessageData $fileLog'\nassert \"Register-ObjectEvent $watcher 'Created' -MessageData $fileLog -Action {\" in \"$ErrorActionPreference = 'SilentlyContinue'\\n\\n$shareHost = '10.0.2.4'\\n$shareName = 'qemu'\\n$driveLetter ="
- },
- "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_exports_signature": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert [{'address': ...'ordinal': 0}] == []\n  \n  Left contains one more item: #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33maddress#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[94m0#x1B[39;49;00m, #x1B[33m'#x1B[39;49;00m#x1B[33mname#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00"
- },
- "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_psapi_resolves_getprocessmemoryinfo": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AttributeError: function 'GetProcessMemoryInfo' not found"
- },
- "tests/test_core/test_logging.py::test_log_provider_request": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 0 == 1\n +  where 0 = len([])"
- },
- "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_with_alignment_4_returns_only_aligned_offsets": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: alignment=4 must return exactly the 4-byte-aligned offsets [0, 12, 16, 20, 24], got [0, 6, 12, 16, 20, 24]\nassert {0, 6, 12, 16, 20, 24} == {0, 12, 16, 20, 24}\n  \n  Extra items in the left set:\n  #x1B[0m#x1B[94m6#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[90m #"
- },
- "tests/test_core/test_logging.py::test_log_provider_response_minimal": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "re-proved with corrected mutation"
- },
- "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_max_results_caps_returned_matches": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: max_results=1 must truncate to exactly 1 match, got 16\nassert 16 == 1\n +  where 16 = len([{'length': 4, 'offset': 0}, {'length': 4, 'offset': 4}, {'length': 4, 'offset': 8}, {'length': 4, 'offset': 12}, {'length': 4, 'offset': 16}, {'length': 4, 'offset': 20}, ...])"
- },
- "tests/test_core/test_logging.py::test_log_provider_response_with_tokens": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 0 == 1500"
- },
- "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_on_minimal_data_does_not_crash": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: the 4-byte buffer is exactly the target, so search must find one match, got []\nassert 0 == 1\n +  where 0 = len([])"
- },
- "tests/test_core/test_logging.py::test_log_binary_operation": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "KeyError: 'size'"
- },
- "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py::TestCopyAsCsharpArray::test_csharp_array_full_string_matches_payload": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'new byte[] {..., 0x00, 0x00}' == 'new byte[] {..., 0x02, 0x7F}'\n  \n  #x1B[0m#x1B[91m- new byte[] {0x01, 0x02, 0x7F}#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?                ^     ^    ^^#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ new byte[] {0x00, 0x00, 0x00}#x1B[39;49;00m#x1B[90m#x1B[3"
- },
- "tests/test_core/test_logging.py::test_log_binary_operation_path_object": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert WindowsPath('/test/patched.exe') == '\\\\test\\\\patched.exe'\n +  where '\\\\test\\\\patched.exe' = str(WindowsPath('/test/patched.exe'))"
- },
- "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py::TestCopyAsJavascriptArray::test_javascript_array_full_string_matches_payload": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'new Uint8Arr...,20x0 ,10x0])' == 'new Uint8Arr... 0x02, 0x7F])'\n  \n  #x1B[0m#x1B[91m- new Uint8Array([0x01, 0x02, 0x7F])#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ new Uint8Array([F7x0 ,20x0 ,10x0])#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_core/test_logging.py::test_log_sandbox_operation": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 0 == 1\n +  where 0 = len([])"
- },
- "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_matches_independent_capstone_decode": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'cc00' == 'cc'\n  \n  #x1B[0m#x1B[91m- cc#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ cc00#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_core/test_logging.py::test_log_session_operation_minimal": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'session_id' not in {'event': 'session_operation', 'log_level': 'info', 'operation': 'create', 'session_id': None}"
- },
- "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_pe_section_code_with_auto_arch": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'dec' == 'pop'\n  \n  #x1B[0m#x1B[91m- pop#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ dec#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_core/test_logging.py::test_log_session_operation_with_id": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "KeyError: 'session_id'"
- },
- "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestDecodeText::test_decode_text_unknown_encoding_raises_value_error": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "LookupError: unknown encoding: bogus-encoding-xyz"
- },
- "tests/test_core/test_logging.py::test_log_session_operation_with_kwargs": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "KeyError: 'messages'"
- },
- "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestListEncodings::test_list_encodings_with_open_document_is_content_independent": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert 'utf-8' == 'UTF-8'\n  \n  #x1B[0m#x1B[91m- UTF-8#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ utf-8#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_core/test_logging.py::test_log_analysis_operation": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "KeyError: 'protection'"
- },
- "tests/test_hexcore_e2e/test_bridge_ai_context.py::TestBridgeAIContext::test_get_context_for_ai_bookmarks_contain_expected_fields_when_present": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: expected length 2, got 0\nassert 0 == 2"
- },
- "tests/test_core/test_logging.py::test_operation_timer_success": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 0 == 1\n +  where 0 = len([])"
- },
- "tests/test_hexcore_e2e/test_bridge_base_convert.py::TestBaseConvertEdgeCases::test_result_has_base_keys": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert '42' == '0x2a'\n  \n  #x1B[0m#x1B[91m- 0x2a#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ 42#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_core/test_logging.py::test_operation_timer_with_context": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "KeyError: 'target'"
- },
- "tests/test_hexcore_e2e/test_bridge_block_ops.py::TestCopyBlock::test_copy_block_overlapping_forward": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert b'\\x05\\x06\\x0...0\\x00\\x00\\x00' == b'\\x01\\x02\\x0...5\\x06\\x07\\x08'\n  \n  At index 0 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x05#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
- },
- "tests/test_core/test_logging.py::test_operation_timer_on_exception": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 0 == 1\n +  where 0 = len([])"
- },
- "tests/test_hexcore_e2e/test_bridge_document_info.py::TestDocumentInfoWithFile::test_undo_after_write_restores_original_byte": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert False is True"
- },
- "tests/test_hexcore_e2e/test_bridge_error_handling.py::TestWriteBytesErrors::test_write_bytes_beyond_length_on_loaded_doc": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: out-of-range write must not corrupt in-bounds bytes\nassert 'FF 5A' == '4D 5A'\n  \n  #x1B[0m#x1B[91m- 4D 5A#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ FF 5A#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_hexcore_e2e/test_bridge_new_capabilities.py::TestProcessMemoryBridge::test_list_process_regions_raises_without_hexcore": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Regex pattern did not match.\n  Expected regex: 'hexcore native module not available'\n  Actual message: 'hexcore native module is ready'"
- },
- "tests/test_hexcore_e2e/test_bridge_patches.py::TestBridgeImportPatches::test_import_patches_returns_integer_count": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "assert 0 == 1"
- },
- "tests/test_hexcore_e2e/test_bridge_search.py::TestBridgeSearchHex::test_search_hex_max_results_respected": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: Expected exactly 5 capped matches, got 200\nassert 200 == 5\n +  where 200 = len([{'length': 2, 'offset': 0}, {'length': 2, 'offset': 2}, {'length': 2, 'offset': 4}, {'length': 2, 'offset': 6}, {'length': 2, 'offset': 8}, {'length': 2, 'offset': 10}, ...])"
- },
- "tests/test_hexcore_e2e/test_bridge_transforms.py::TestBridgeApplyTransform::test_apply_transform_returns_length_matching_input": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: assert '000000000000...0000000000000' == 'aaaaaaaaaaaa...aaaaaaaaaaaaa'\n  \n  #x1B[0m#x1B[91m- aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ 00000000000000000000000000000000#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
- },
- "tests/test_hexcore_e2e/test_bridge_transforms_deep.py::TestApplyPipelineInvalidStep::test_pipeline_with_invalid_step_name_completes": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "KeyError: 'nonexistent_transform_xyzzy'"
- },
- "tests/test_hexcore_e2e/test_bridge_yara.py::TestBridgeYaraScan::test_yara_scan_returns_list": {
-  "status": "fail",
-  "falsifiable": "yes",
-  "detail": "AssertionError: MZ bytes must be at offset 0, got 1\nassert 1 == 0"
- }
+  "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestToolDialogsReceiveRegistry::test_configure_tools_wires_status_changed": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOpenSandboxAvoidsDialogProbe::test_open_sandbox_uses_bridge_is_available": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_preferences_settings_changed_reaches_slot": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_session_loaded_signal_reaches_slot": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_provider_dialog_signals_reach_slots": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_model_selection_signal_reaches_slot": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_settings_updated_reaches_slot": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_monitor_stopped_reaches_slot": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_embedded_tool_panel_signals_reach_slots": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_quote_payload_is_escaped_not_executed": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_backslash_path_round_trips_verbatim": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_newline_payload_round_trips_verbatim": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_control_characters_round_trip_verbatim": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_process_win32.py::test_get_mitigation_policy_matches_win32_oracle": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_process_win32.py::test_get_extension_policy_matches_win32_oracle": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_process_win32.py::test_enumerate_handles_surfaces_planted_handle": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_process_win32.py::test_time_thread_wait_running_thread_times_out": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_process_win32.py::test_time_thread_wait_exited_thread_signals": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_process_win32.py::test_enumerate_heaps_includes_process_default_heap": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_ui/test_win32_embed.py::TestFindWindowByPid::test_finds_real_visible_window_for_current_pid": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_ui/test_win32_embed.py::TestFindWindowByPid::test_embeds_real_window_into_qt_parent": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_ui/test_win32_embed.py::TestPollAndEmbed::test_polling_embeds_and_invokes_callback": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_agentic_capabilities.py::TestAccurateToolSupport::test_ollama_models_report_accurate_tool_support": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_required_forces_tool_call": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_none_prevents_tool_call": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py::test_vendor_mem_base_address_smoke": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit5/u3_hexpat_core/test_hexpat_core.py::test_vendor_string_parse_int_smoke": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_cutter.py::TestToolDefinition::test_all_function_parameters_have_recognized_types": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_diff_wraps_real_attribute_error_from_bad_process_activity": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_sandbox_bridge.py::TestF0002NarrowExceptionHandling::test_detect_behaviors_wraps_real_keyerror_from_bad_process_activity": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_files_target": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_sandbox_bridge.py::TestF0004YaraScanModeValidation::test_accepts_memory_target": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_hex_editor_pe_methods.py::TestMethodDispatchSurface::test_method_signature_and_return_value": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_emits_threat_intel_unavailable_warning_when_not_admin": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_local_xpu_e2e.py::TestVRAMManagement::test_memory_decreases_after_unload": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_model_discovery.py::TestAllProvidersModelCount::test_summary_all_providers": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_sandbox/test_realcov_12b_analysis_real.py::test_match_behaviors_on_real_capture_is_consistent": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit7/sandbox_monitors/test_stop_event.py::test_start_monitors_skips_underscore_prefixed_scripts": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit7/sandbox_windows/test_anti_evasion_wmi_hijack.py::test_mof_text_is_well_formed_for_each_profile": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py::TestExecutePatternForwardsPrintSink::test_omitting_print_sink_does_not_raise": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py::TestF0012ThreadsTabAutoRefresh::test_button_text_reflects_state": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py::TestMainWindowWireSandboxBackend::test_call_count_matches_forwarded_invocation": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_frida_bridge.py::test_crash_info_bridge_internal_accumulation": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_frida_bridge.py::test_child_process_info_bridge_accumulation_full_fields": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_frida_bridge.py::test_child_process_info_bridge_accumulation_none_fields": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_frida_bridge.py::test_get_pending_children_empty": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_frida_bridge.py::test_crash_reporting_lifecycle": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_realcov_03c_cutter.py::TestRealMetadata::test_relocations_real": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_advapi32_resolves_lookupprivilegevaluew": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_dbghelp_resolves_symgetoptions": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_hexcore_e2e/test_bridge_pattern_engine.py::TestListAndAutoDetect::test_list_hexpat_patterns_items_have_required_keys": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_structural_well_formedness": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_google_provider.py::TestGoogleModelListing::test_list_models_includes_known_production_model_with_capabilities": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_grok_provider.py::TestGrokModelListing::test_model_capability_values_match_published_profile": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_list_models_returns_model_info_instances": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_openai_provider.py::TestOpenAIModelListing::test_known_model_gpt4o_mini_has_documented_capabilities": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_providers/test_openrouter_provider.py::TestOpenRouterModelListing::test_known_model_present_with_correct_fields": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_sandbox/test_realcov_04_sandbox_bridge.py::TestRealManagerIntegration::test_create_windows_sandbox_success_path": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_ui/test_xpu_status.py::TestXPUStatusDialogMemory::test_memory_text_shows_gb_values": {
+    "status": "not-green",
+    "falsifiable": "skipped",
+    "detail": "covering test did not pass green baseline (skip-guard/defect/env)"
+  },
+  "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestAlignmentGrid::test_set_alignment_grid_persists_and_notifies": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: get_alignment_grid must read back the size that was set\nassert 0 == 4096\n +  where 0 = _run(<coroutine object HexEditorSelectionMixin.get_alignment_grid at 0x00000249428F05F0>)\n +    where <coroutine object HexEditorSelectionMixin.get_alignment_grid at 0x00000249428F05F0> = get_align"
+  },
+  "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_pointer_event_format": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'\\x06\\x01\\x00d\\x00\\xc8' == b'\\x05\\x01\\x00d\\x00\\xc8'\n  \n  At index 0 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x06#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x05#x1B[39;4"
+  },
+  "tests/test_core/test_logging.py::test_intellicrack_logger_get_logger_root": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'test_root.bad' == 'test_root'\n  \n  #x1B[0m#x1B[91m- test_root#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ test_root.bad#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?          ++++#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestOAuthFlowValidation::test_build_authorization_url_emits_spec_compliant_pkce_request": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: code_verifier must S256-hash to the emitted code_challenge\nassert False\n +  where False = verify_pkce_pair('yX1BORzB3vKfO9d9E50jF_rDwkbRLD_kpzfFMZtmU_INmxcHTCDD1416P0_F8eV6msL2DuMbTosP-1aDrf5_gA', '6VzexOWObMzj-3GCjMHl6uUKZALuYRxGzB7yiYxmNy')\n +    where 'yX1BORzB3vKfO9d9E50jF_rDwkbR"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestCredentialSourceDetectorPath::test_detect_source_classifies_environment_credential": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Expected ENVIRONMENT classification, got 'manual entry'\nassert 'manual entry' == 'environment'\n  \n  #x1B[0m#x1B[91m- environment#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ manual entry#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_malformed_503_body_falls_back_to_loading_message": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Malformed body must fall back, got ''\nassert '' == 'Model is loa...not yet ready'\n  \n  #x1B[0m#x1B[91m- Model is loading and not yet ready#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_valid_pricing_converts_to_micro_dollars": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: input micro-dollar mismatch: 0.015000000000000001 != 15.0\nassert 14.985 < 1e-06\n +  where 14.985 = abs((0.015000000000000001 - 15.0))\n +    where 0.015000000000000001 = ModelInfo(id='openrouter/test-model', name='Test Model', provider=<ProviderName.OPENROUTER: 'openrouter'>, context_"
+  },
+  "tests/core/test_process_cleanup.py::test_sandbox_temp_wsb_file_cleaned_up": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: SandboxTestWorker.run() finally block must unlink the .wsb file\nassert not True\n +  where True = exists()\n +    where exists = WindowsPath('C:/Users/ContainerAdministrator/AppData/Local/Temp/tmpc3znh6_b.wsb').exists"
+  },
+  "tests/core/test_process_cleanup.py::test_qemu_resolve_pid_uses_real_retry_constants": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Real retry loop must return the PID written to the pidfile\nassert 100000 == 99999"
+  },
+  "tests/test_audit3/core/test_xml_gen.py::test_f0011_element_factory_matches_stdlib_element": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "TypeError: expected an Element, not str"
+  },
+  "tests/test_ui/test_font_manager.py::TestCodeFont::test_get_code_font_uses_resolved_code_family": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert '' == 'JetBrains Mono'\n  \n  #x1B[0m#x1B[91m- JetBrains Mono#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_ui/test_splash_screen.py::TestSplashScreenCreation::test_creates_splash_screen": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'Booting...' == 'Initializing...'\n  \n  #x1B[0m#x1B[91m- Initializing...#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ Booting...#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_audit3/bridges/test_named_pipe_client.py::test_open_handle_passes_shared_read_write_to_createfilew": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert [1] == [3]\n  \n  At index 0 diff: #x1B[0m#x1B[94m1#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[94m3#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[90m #x1B[39;49;00m [#x1B[90m#x1B[39;49;00m\n  #x1B[91m-     3,#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?     ^#x1B[90m#x1B[3"
+  },
+  "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_publishes_data_modified": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: expected exactly one DATA_MODIFIED event after _on_add_bookmark, got 0\nassert 0 == 1\n +  where 0 = len([])"
+  },
+  "tests/test_core/test_script_gen.py::test_frida_api_reference_keys": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'Interceptor.attach' in ''"
+  },
+  "tests/test_ui/test_win32_embed.py::TestEmbedWindow::test_returns_none_for_zero_hwnd": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert <PyQt6.QtWidgets.QWidget object at 0x000002494239EF30> is None"
+  },
+  "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_huggingface_buffer_manager_assembles_fragmented_tool_call": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert {} == {'path': 'C:\\...\\notepad.exe'}\n  \n  Right contains 1 more item:\n  #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33mpath#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00m#x1B[33mC:#x1B[39;49;00m#x1B[33m\\\\#x1B[39;49;00m#x1B[33mWindows#x1B[39;49;00m#x1B[33m\\\\#x1B[39;49;00"
+  },
+  "tests/test_hexcore_e2e/test_bridge_alignment_color.py::TestColorMode::test_set_color_mode_persists_and_notifies": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: get_color_mode must read back the mode that was set\nassert 'none' == 'entropy'\n  \n  #x1B[0m#x1B[91m- entropy#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ none#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_format": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'\\x07\\x01\\x0...x00\\x00\\xff\\r' == b'\\x04\\x01\\x0...x00\\x00\\xff\\r'\n  \n  At index 0 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x07#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
+  },
+  "tests/test_core/test_logging.py::test_intellicrack_logger_get_logger_child": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'test_parent' == 'test_parent.child'\n  \n  #x1B[0m#x1B[91m- test_parent.child#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?            ------#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ test_parent#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestOAuthFlowValidation::test_build_authorization_url_rejects_missing_client_id": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "Failed: DID NOT RAISE <class 'intellicrack.credentials.oauth.OAuthConfigurationError'>"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestCredentialSourceDetectorPath::test_detect_source_returns_not_configured_for_empty_key": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Empty key must be NOT_CONFIGURED, got 'manual entry'\nassert 'manual entry' == 'not configured'\n  \n  #x1B[0m#x1B[91m- not configured#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ manual entry#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_html_503_body_falls_back_to_loading_message": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "re-proved with corrected mutation"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_non_numeric_pricing_is_nullified": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: empty string must nullify output cost, got 0.0\nassert 0.0 is None\n +  where 0.0 = ModelInfo(id='openrouter/free-model', name='Free Model', provider=<ProviderName.OPENROUTER: 'openrouter'>, context_win...ls=False, supports_vision=False, supports_streaming=True, input_cost_per_1m_token"
+  },
+  "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_immediate_file": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Should read pidfile on first attempt\nassert 100000 == 99999"
+  },
+  "tests/test_audit3/core/test_xml_gen.py::test_f0011_subelement_links_into_stdlib_tree": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "TypeError: Element() argument 2 must be dict, not str"
+  },
+  "tests/test_ui/test_font_manager.py::TestUIFont::test_get_ui_font_uses_resolved_ui_family": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert '' == 'sans-serif'\n  \n  #x1B[0m#x1B[91m- sans-serif#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_ui/test_splash_screen.py::TestProgressAnimation::test_rapid_progress_calls_track_final_state": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 99 == 100\n +  where 99 = <intellicrack.ui.dialogs.splash_screen.SplashScreen object at 0x000002414729E2B0>.progress"
+  },
+  "tests/test_audit3/bridges/test_named_pipe_client.py::test_close_handle_logs_when_closehandle_fails": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: CloseHandle failure must emit pipe_close_handle_failed\nassert 0 == 1\n +  where 0 = len([])"
+  },
+  "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_offset_and_length_match_bookmark": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: expected offset=23 (cursor), got 24\nassert 24 == 23"
+  },
+  "tests/test_core/test_script_gen.py::test_ghidra_api_reference_keys": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'DecompInterface' in ''"
+  },
+  "tests/test_ui/test_win32_embed.py::TestEmbedWindow::test_returns_none_for_garbage_hwnd": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_ollama_native_stream_assembler_reconstructs_tool_call": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert {} == {'path': 'C:\\...\\notepad.exe'}\n  \n  Right contains 1 more item:\n  #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33mpath#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00m#x1B[33mC:#x1B[39;49;00m#x1B[33m\\\\#x1B[39;49;00m#x1B[33mWindows#x1B[39;49;00m#x1B[33m\\\\#x1B[39;49;00"
+  },
+  "tests/test_ui/test_icon_manager.py::TestFallbackIcons::test_missing_icon_with_no_fallback_loads_null_via_full_pipeline": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: A missing icon with no Unicode fallback must load as a null QIcon\nassert False\n +  where False = <built-in method isNull of QIcon object at 0x000002414729FC50>()\n +    where <built-in method isNull of QIcon object at 0x000002414729FC50> = <PyQt6.QtGui.QIcon object at 0x000002414729FC"
+  },
+  "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_set_chunk_size": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_release_clears_down_flag": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'\\x04\\x01\\x0...0\\x00\\xff\\x1b' == b'\\x04\\x00\\x0...0\\x00\\xff\\x1b'\n  \n  At index 1 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x01#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
+  },
+  "tests/test_core/test_logging.py::test_intellicrack_logger_configure": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert False\n +  where False = exists()\n +    where exists = WindowsPath('C:/Users/ContainerAdministrator/AppData/Local/Temp/pytest-of-ContainerAdministrator/pytest-0/test_intellicrack_logger_confi0/intellicrack.log').exists"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_valid_503_json_body_is_parsed_by_provider": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Provider must format JSON body, got 'Model is loading (eta=20.0s)'\nassert 'Model is loading (eta=20.0s)' == 'Model is loa...d_time=20.0s)'\n  \n  #x1B[0m#x1B[91m- Model is loading (estimated_time=20.0s)#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?                    - -- --------#x1B[90m#x1"
+  },
+  "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_delayed_file": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Retry loop should catch delayed pidfile\nassert 54322 == 54321"
+  },
+  "tests/test_audit3/core/test_xml_gen.py::test_f0011_indent_matches_stdlib_indent": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "TypeError: tostring() got an unexpected keyword argument 'space'"
+  },
+  "tests/test_ui/test_font_manager.py::TestHeadingFont::test_get_heading_font_uses_resolved_ui_family": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'JetBrains Mono' == 'sans-serif'\n  \n  #x1B[0m#x1B[91m- sans-serif#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ JetBrains Mono#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_event_draws_pixels": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Only 169 pixels overwritten; paint helpers drew nothing\nassert 169 >= 1000"
+  },
+  "tests/test_audit3/bridges/test_named_pipe_client.py::test_write_sync_logs_routine_chunk_at_debug_not_info": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert False\n +  where False = all(<generator object test_write_sync_logs_routine_chunk_at_debug_not_info.<locals>.<genexpr> at 0x000001E963543AC0>)"
+  },
+  "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_source_literal_uses_bookmarks_namespace": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: _on_add_bookmark must dispatch with source 'hex-editor.bookmarks.add'; got 'panel'\nassert 'panel' == 'hex-editor.bookmarks.add'\n  \n  #x1B[0m#x1B[91m- hex-editor.bookmarks.add#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ panel#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_core/test_script_gen.py::test_cutter_reference_keys": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'aaa' in 'nope'"
+  },
+  "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'PATCH4V\\x00...aa\\xbb\\xccEOF' == b'PATCH\\x124V...aa\\xbb\\xccEOF'\n  \n  At index 5 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m4#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x12"
+  },
+  "tests/test_ui/test_icon_manager.py::TestListAvailableIcons::test_list_equals_full_icon_map_key_set": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: list_available_icons must return every ICON_MAP key in insertion order\nassert ['binary', 't...n_build', ...] == ['app', 'bina...process', ...]\n  \n  At index 0 diff: #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33mbinary#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B["
+  },
+  "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_set_memory_budget": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_sandbox/test_sandbox_bridge.py::TestToolDefinition::test_all_definition_functions_dispatch_to_real_behavior": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert {} == {'status': 'running'}\n  \n  Right contains 1 more item:\n  #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33mstatus#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00m#x1B[33mrunning#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m}#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[9"
+  },
+  "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestRuntimeDependenciesAreLean::test_runtime_and_extras_tables_are_declared": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_bridges/test_x64dbg_events.py::TestEventDispatch::test_handle_event_with_no_callbacks": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: internal hit-count path must run without user callbacks\nassert 0 == 1\n +  where 0 = BreakpointInfo(id=99, address=4198400, bp_type='software', enabled=True, hit_count=0, condition=None).hit_count"
+  },
+  "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_pe_template_on_elf_data_parses_wrong_e_magic": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_framebuffer_update_request_format": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'\\x03\\x00\\x0...2\\x80\\x01\\xe0' == b'\\x03\\x01\\x0...2\\x80\\x01\\xe0'\n  \n  At index 1 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x00#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
+  },
+  "tests/test_core/test_logging.py::test_intellicrack_logger_configure_no_file": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert not True\n +  where True = exists()\n +    where exists = (WindowsPath('C:/Users/ContainerAdministrator/AppData/Local/Temp/pytest-of-ContainerAdministrator/pytest-0/test_intellicrack_logger_confi0') / 'intellicrack.log').exists"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_missing_response_attribute_falls_back": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: No-response error must fall back, got 'unexpected'\nassert 'unexpected' == 'Model is loa...not yet ready'\n  \n  #x1B[0m#x1B[91m- Model is loading and not yet ready#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ unexpected#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_providers/test_provider_bugfixes.py::TestOpenRouterPricingConversion::test_zero_pricing_converts_to_zero": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "TypeError: bad operand type for abs(): 'str'"
+  },
+  "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_exhausted_raises_sandbox_error": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "Failed: DID NOT RAISE <class 'intellicrack.core.types.SandboxError'>"
+  },
+  "tests/test_audit3/core/test_xml_gen.py::test_f0011_tostring_matches_stdlib_tostring": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "TypeError: C14NWriterTarget.__init__() got an unexpected keyword argument 'encoding'"
+  },
+  "tests/test_ui/test_font_manager.py::TestFontLoading::test_load_fonts_idempotent": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Second load_fonts call duplicated or mutated loaded families\nassert ['JetBrains M...tBrains Mono'] == ['JetBrains M...tBrains Mono']\n  \n  Left contains 2 more items, first extra item: #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33mJetBrains Mono#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1"
+  },
+  "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_with_progress_reflects_state": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 196 >= 1000"
+  },
+  "tests/test_audit3/bridges/test_named_pipe_client.py::test_connect_close_lifecycle_logs_at_info": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: pipe_connecting must be logged at INFO\nassert 'pipe_connecting' in ['pipe_connected', 'pipe_close_invoked', 'pipe_disconnecting', 'pipe_disconnected']"
+  },
+  "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_panel_loop_guarded_subscriber_receives_add_event": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: panel-loop-guarded subscriber must receive DATA_MODIFIED when a bookmark is added\nassert []"
+  },
+  "tests/test_core/test_script_gen.py::test_x64dbg_reference_keys": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'bp ' in 'set addr'"
+  },
+  "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'PATCH\\x00\\x...ad\\xbe\\xefEOF' == b'PATCH\\x00\\x...ad\\xbe\\xefEOF'\n  \n  At index 9 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x05#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
+  },
+  "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_svg_icons_load_non_null": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: SVG icons loaded as null QIcons (corrupt or missing): ['action_build', 'action_debug', 'action_deploy', 'action_generate', 'action_test', 'ai_inference', 'ai_model', 'ai_neural', 'ai_training', 'binary_disasm', 'binary_entropy']\nassert not ['action_build', 'action_debug', 'action_dep"
+  },
+  "tests/test_hexcore_e2e/test_bridge_html_export_largefile.py::TestLargeFileControls::test_get_memory_usage": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_sandbox/test_sandbox_bridge.py::TestCreateDestroy::test_create_translates_unavailable_type_to_typed_tool_error": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Regex pattern did not match.\n  Expected regex: 'Failed to create sandbox: Sandbox type not available: windows'\n  Actual message: 'Sandbox creation problem: Sandbox type not available: windows'"
+  },
+  "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestPyprojectIsValid::test_runtime_deps_disjoint_from_moved_extras": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_bridges/test_x64dbg_events.py::TestBreakpointHitCounting::test_unknown_event_is_forwarded_without_state_mutation": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: unknown event must be forwarded verbatim to callbacks\nassert [('breakpoint...nown_event'})] == [('unknown_ev...nown_event'})]\n  \n  At index 0 diff: #x1B[0m(#x1B[33m'#x1B[39;49;00m#x1B[33mbreakpoint#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m, {#x1B[33m'#x1B[39;49;00m#x1B[33mevent#x1B[39;49;"
+  },
+  "tests/test_hexcore_e2e/test_templates.py::TestTemplateOnWrongData::test_elf_template_on_pe_data_parses_wrong_e_ident": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_ui/test_vnc_widget.py::TestRFBClientState::test_request_framebuffer_update_when_disconnected": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'\\x03\\x01\\x0...0\\x00\\x00\\x00' == b''\n  \n  Full diff:\n  #x1B[0m#x1B[91m- b''#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ (b'\\x03\\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00')#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_core/test_logging.py::test_intellicrack_logger_configure_plain_text": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "Failed: DID NOT RAISE <class 'json.decoder.JSONDecodeError'>"
+  },
+  "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_handles_corrupt_content": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Retry should recover after corrupt content is corrected\nassert 77778 == 77777"
+  },
+  "tests/test_audit3/core/test_xml_gen.py::test_f0011_elementtree_wraps_root_like_stdlib": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AttributeError: 'xml.etree.ElementTree.Element' object has no attribute 'getroot'"
+  },
+  "tests/test_ui/test_font_manager.py::TestFontAssets::test_font_config_declares_expected_families_and_assets": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: NotARealUiFont missing from ui_fonts.primary\nassert 'NotARealUiFont' in ['Segoe UI', 'Roboto', 'Arial']"
+  },
+  "tests/test_ui/test_splash_screen.py::TestPaintEventRendering::test_paint_full_pipeline_all_complete": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert False\n +  where False = all(<generator object TestPaintEventRendering.test_paint_full_pipeline_all_complete.<locals>.<genexpr> at 0x0000022200A401E0>)"
+  },
+  "tests/test_audit4/c7_hex_bookmarks_notify/test_bookmark_notify.py::TestAddBookmarkNotifies::test_add_bookmark_no_dispatch_when_state_holder_absent": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: persisted bookmark length 0 must equal 1\nassert 0 == 1"
+  },
+  "tests/test_core/test_script_gen.py::test_bypass_strategy_members_complete": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: BypassStrategy members diverged from expected set: {'RETURN_TRUE': 'return_true', 'RETURN_FALSE': 'return_false', 'RETURN_ZERO': 'return_zero', 'RETURN_ONE': 'return_one', 'NOP_FUNCTION': 'nop_function', 'SKIP_CHECK': 'skip_check', 'PATCH_JUMP': 'jump_patch', 'HOOK_REPLACE': 'hook_re"
+  },
+  "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 6 == 5\n +  where 5 = len(b'\\x10 0@P')"
+  },
+  "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_icons_availability_detection_flips_with_assets_presence": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: An empty icons dir must detect as unavailable\nassert True is False\n +  where True = <function IconManager._check_icons_available at 0x000002220014B880>()\n +    where <function IconManager._check_icons_available at 0x000002220014B880> = IconManager._check_icons_available"
+  },
+  "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py::TestNetworkMonitorSource::test_uses_owner_pid_variable": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 1 == 2\n +  where 1 = <built-in method count of str object at 0x00000222660FA630>('$ownerPid|$name')\n +    where <built-in method count of str object at 0x00000222660FA630> = \"param([string]$LogDir = '.')\\n$ErrorActionPreference = 'SilentlyContinue'\\nif (-not (Test-Path -LiteralPath $LogDir))."
+  },
+  "tests/test_audit3/bridges/test_installer.py::TestPEVersionForGUITools::test_get_version_x64dbg_uses_pe_when_available": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: get_version returned None for a PE with known VS_VERSION_INFO\nassert False\n +  where False = isinstance(None, ToolVersion)"
+  },
+  "tests/test_audit3/sandbox/test_injection_monitor.py::test_script_does_not_label_normal_thread_starts_as_shellcode_injection": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_providers/test_credential_loading.py::TestCredentialValidation::test_get_credentials_returns_credentials_or_none": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: get_credentials must propagate the exact injected api_key value; expected 'sk-ant-api03-ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ', got None\nassert None == 'sk-ant-api03-ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ"
+  },
+  "tests/test_providers/test_providers_cloud_audit1.py::test_f0001_chat_enable_cache_completes_full_call_path": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert '' == 'grok-cache-ok'\n  \n  #x1B[0m#x1B[91m- grok-cache-ok#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_grok_retries_on_transient_rate_limit": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "intellicrack.core.types.ProviderError: retry_with_backoff exhausted without capturing an exception"
+  },
+  "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py::test_f0012_compile_typescript_reuses_compiler_instance": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: compiler instances created: 2\nassert 2 == 1"
+  },
+  "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_context64_layout": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 976 == 1232\n +  where 976 = <built-in function sizeof>(CONTEXT64)\n +    where <built-in function sizeof> = ctypes.sizeof"
+  },
+  "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_pointer_when_disconnected": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'\\x05\\x01\\x00d\\x00\\xc8' == b''\n  \n  Full diff:\n  #x1B[0m#x1B[91m- b''#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ (b'\\x05\\x01\\x00d\\x00\\xc8')#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_core/test_logging.py::test_get_logger_returns_bound_logger": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'wrongroot.test_module' == 'intellicrack.test_module'\n  \n  #x1B[0m#x1B[91m- intellicrack.test_module#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ wrongroot.test_module#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_audit3/core/test_xml_gen.py::test_xml_gen_exports_match_dunder_all": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert {'ElementTree...', 'tostring'} == {'Element', '...', 'tostring'}\n  \n  Extra items in the right set:\n  #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33mElement#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[90m #x1B[39;49;00m {#x1B[90m#x1B[39;49;0"
+  },
+  "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_anti_evasion_profile_drives_real_smbios_argv": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: workstation profile must drive Dell Inc. SMBIOS vendor; argv smbios entries were ['type=1,manufacturer=HP,product=OptiPlex 7090,serial=SVC899AE90F02', 'type=2,manufacturer=HP,product=0WN7Y6', 'type=3,manufacturer=HP,chassis-type=3']\nassert 'manufacturer=Dell Inc.' in 'type=1,manufact"
+  },
+  "tests/test_ui/test_splash_screen.py::TestSplashImageCompositing::test_splash_image_mutual_exclusion_with_brain_icon": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Brain icon and splash image must be mutually exclusive\nassert not True"
+  },
+  "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassemblePeTextSection::test_disassemble_pe_text_with_auto_arch": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'dec' == 'pop'\n  \n  #x1B[0m#x1B[91m- pop#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ dec#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py::TestRegistryMonitorSource::test_type_included_in_log_entry": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 1 == 2\n +  where 1 = <built-in method count of str object at 0x000002152755D330>(\"$rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }\")\n +    where <built-in method count of str object at 0x000002152755D330> = \"param([string]$LogDir = '.')\\n$ErrorActionPreference = 'SilentlyContin"
+  },
+  "tests/test_audit3/bridges/test_installer.py::TestProgressLoggingPerMB::test_progress_threshold_is_per_megabyte": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: expected exactly 2 download_progress events for 2457600 bytes at 1-MiB threshold, got 4\nassert 4 == 2\n +  where 4 = len([21.3, 42.7, 64.0, 85.3])"
+  },
+  "tests/test_providers/test_credential_loading.py::TestEnvironmentVariableAccess::test_set_env_var_updates_value": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: os.environ must be updated by set_env_var; expected 'intellicrack_gate_value_7x9q', got ''\nassert '' == 'intellicrack_gate_value_7x9q'\n  \n  #x1B[0m#x1B[91m- intellicrack_gate_value_7x9q#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_openrouter_retries_on_transient_rate_limit": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "intellicrack.core.types.ProviderError: retry_with_backoff exhausted without capturing an exception"
+  },
+  "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_context32_layout": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 208 == 204\n +  where 208 = <built-in function sizeof>(CONTEXT32)\n +    where <built-in function sizeof> = ctypes.sizeof"
+  },
+  "tests/test_bridges/test_x64dbg_audit6.py::TestStepEventSync::test_all_step_methods_resolve_via_paused_event": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: step_out must return the IP delivered by the paused event; got 0x0\nassert 0 == 3735928559"
+  },
+  "tests/test_core/test_elevation.py::TestPlatformHelpers::test_is_elevated_matches_oracle": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert False is True"
+  },
+  "tests/test_core/test_orchestrator.py::test_stats_to_dict": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 100.0 < 1e-09\n +  where 100.0 = abs((0.0 - 100.0))"
+  },
+  "tests/test_core/test_realcov_05b_tools.py::TestExecuteToolCallRealDispatch::test_tool_name_is_case_insensitive": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "intellicrack.core.types.ToolError: unknown tool"
+  },
+  "tests/test_hexcore_e2e/test_bookmarks.py::TestBookmarks::test_add_bookmark_returns_index": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_hexcore_e2e/test_encodings.py::TestDecodeTextEdgeCases::test_decode_invalid_utf8_uses_replacement_characters": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py::TestTypeCasts::test_cast_negative_to_signed": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert '0x-1' == '-1'\n  \n  #x1B[0m#x1B[91m- -1#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ 0x-1#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_key_when_disconnected": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'\\x04\\x01\\x0...x00\\x00\\xff\\r' == b''\n  \n  Full diff:\n  #x1B[0m#x1B[91m- b''#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ (b'\\x04\\x01\\x00\\x00\\x00\\x00\\xff\\r')#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_core/test_logging.py::test_get_logger_no_name": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'notintellicrack' == 'intellicrack'\n  \n  #x1B[0m#x1B[91m- intellicrack#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ notintellicrack#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ? +++#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0022F0029AntiEvasion::test_laptop_profile_emits_laptop_specific_smbios_argv": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: laptop profile must emit the Lenovo vendor; argv smbios entries were ['type=1,manufacturer=HP,product=HP EliteDesk 800 G6,serial=PFF5D9722FCB', 'type=2,manufacturer=HP,product=21AHS00000', 'type=3,manufacturer=HP,chassis-type=10']\nassert 'manufacturer=Lenovo' in 'type=1,manufacturer="
+  },
+  "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassembleMzHeader::test_disassemble_at_mz_header_produces_coherent_first_instruction": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 1 == 0"
+  },
+  "tests/test_providers/test_providers_cloud_audit1.py::test_f0004_google_retries_on_transient_rate_limit": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "intellicrack.core.types.ProviderError: retry_with_backoff exhausted without capturing an exception"
+  },
+  "tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_memory_basic_information_layout": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "re-proved with corrected mutation"
+  },
+  "tests/test_hexcore_e2e/test_hexpat_stdlib.py::TestIOFunctions::test_format_via_interpreter_produces_string": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: format substitution produced wrong output: 'x=MUTATED'\nassert 'x=MUTATED' == 'x=171'\n  \n  #x1B[0m#x1B[91m- x=171#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ x=MUTATED#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_hexcore_e2e/test_process_memory.py::TestFromProcessMemory::test_from_process_memory_zero_size_handled": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_hexcore_e2e/test_search.py::TestSearchHex::test_wildcard_byte_matches_pe_header_sequence": {
+    "status": "pass",
+    "falsifiable": "no",
+    "detail": ""
+  },
+  "tests/test_hexpat/test_realcov_07b_compiler_pragmas.py::TestVendorPatternCompilation::test_known_static_cda_pattern_compiles_to_exact_schema": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: field 'RIFF': expected type 'UInt32' from HexPat spec, got 'UInt8'\nassert 'UInt8' == 'UInt32'\n  \n  #x1B[0m#x1B[91m- UInt32#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ UInt8#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py::TestVendorIncludeFlattening::test_missing_include_does_not_raise": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: expected structured 'include_not_found' warning, got records: [{'source_length': 52, 'file_path': None, 'event': 'hexpat_preprocess_started', 'log_level': 'debug'}, {'include_path': 'std/nonexistent_file_xyzzy.pat', 'search_paths': ['C:\\\\app\\\\vendor\\\\ImHex-Patterns\\\\includes'], 'line"
+  },
+  "tests/test_providers/test_registry.py::TestF0005NameToClassMapping::test_register_class_recorded_alongside_instance": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert <class 'intellicrack.providers.registry.ProviderRegistry'> is ConcreteTestProvider"
+  },
+  "tests/test_sandbox/test_manager.py::TestSandboxInstance::test_timestamps_are_set": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert datetime.datetime(2026, 6, 14, 19, 8, 37, 368755, tzinfo=datetime.timezone.utc) <= datetime.datetime(2000, 1, 1, 0, 0, tzinfo=datetime.timezone.utc)\n +  where datetime.datetime(2000, 1, 1, 0, 0, tzinfo=datetime.timezone.utc) = <intellicrack.sandbox.manager.SandboxInstance object at 0x0000025A"
+  },
+  "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_partial_data": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 64 == 32\n +  where 64 = <built-in method red of QColor object at 0x000001D43ED913D0>()\n +    where <built-in method red of QColor object at 0x000001D43ED913D0> = <PyQt6.QtGui.QColor object at 0x000001D43ED913D0>.red"
+  },
+  "tests/test_core/test_logging.py::test_get_logger_with_name": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'app_root' == 'app_root.my_module'\n  \n  #x1B[0m#x1B[91m- app_root.my_module#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ app_root#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0028YaraScanFallback::test_yara_scan_scans_zip_artifacts_when_present": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: yara_scan did not scan any files from the zip\nassert []"
+  },
+  "tests/test_hexcore_e2e/test_bridge_disassembly_deep.py::TestDisassembleEdgeCases::test_disassemble_last_byte_decodes_single_trailing_instruction": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 2 == 1"
+  },
+  "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_kernel32_resolves_getcurrentprocessid": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AttributeError: function 'GetCurrentProcessId' not found"
+  },
+  "tests/test_providers/test_anthropic_buffers_live.py::test_fresh_provider_buffers_start_empty": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: get_pending_usage() on a fresh provider must return None, got UsageInfo(prompt_tokens=0, completion_tokens=0, total_tokens=0)\nassert UsageInfo(prompt_tokens=0, completion_tokens=0, total_tokens=0) is None"
+  },
+  "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_no_framebuffer": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AttributeError: 'NoneType' object has no attribute 'width'"
+  },
+  "tests/test_core/test_logging.py::test_log_tool_call_minimal": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 0 == 1\n +  where 0 = len([])"
+  },
+  "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_windows_startup_script_wires_agent": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: start_agent.cmd must reference the agent script agent.ps1; got '@echo off\\n\\npowershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"Z:\\\\monitor\\\\unwired.ps1\"\\n\\n'\nassert 'agent.ps1' in '@echo off\\n\\npowershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle "
+  },
+  "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_sections_signature": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert ['MUTATED', 'MUTATED'] == ['.text', '.rdata']\n  \n  At index 0 diff: #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33mMUTATED#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33m'#x1B[39;49;00m#x1B[33m.text#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00"
+  },
+  "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_ntdll_resolves_rtlgetversion": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AttributeError: function 'RtlGetVersion' not found"
+  },
+  "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_construction": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 0 >= 320\n +  where 0 = <built-in method minimumWidth of VNCWidget object at 0x000002172E8AA990>()\n +    where <built-in method minimumWidth of VNCWidget object at 0x000002172E8AA990> = <intellicrack.ui.panels.vnc_widget.VNCWidget object at 0x000002172E8AA990>.minimumWidth"
+  },
+  "tests/test_core/test_logging.py::test_log_tool_call_with_duration_and_success": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 43.0 == 42.57\n +  where 42.57 = round(42.567, 2)"
+  },
+  "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0006AgentScriptStartupWired::test_linux_startup_script_wires_agent": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: start_agent.sh must reference the agent script agent.py; got '#!/bin/bash\\npython3 /mnt/shared/monitor/unwired.py &\\n'\nassert 'agent.py' in '#!/bin/bash\\npython3 /mnt/shared/monitor/unwired.py &\\n'"
+  },
+  "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_imports_signature": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert [{'dll': 'MUTATED'}] == []\n  \n  Left contains one more item: #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33mdll#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00m#x1B[33mMUTATED#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m}#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[91m- ["
+  },
+  "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_user32_resolves_getdesktopwindow": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AttributeError: function 'GetDesktopWindow' not found"
+  },
+  "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_button_mask_maps_qt_buttons_to_rfb_bits": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 8 == 2\n +  where 8 = <function VNCWidget.button_mask at 0x000002502822E840>(<PyQt6.QtGui.QMouseEvent object at 0x000002503D69EE90>)\n +    where <function VNCWidget.button_mask at 0x000002502822E840> = VNCWidget.button_mask"
+  },
+  "tests/test_core/test_logging.py::test_log_tool_call_with_failure": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert True is False"
+  },
+  "tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py::TestF0009AgentScriptNoPsUsing::test_windows_agent_script_binds_and_reads_log_path_via_messagedata": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: The file-creation watcher must bind the log path into the event via '-MessageData $fileLog'\nassert \"Register-ObjectEvent $watcher 'Created' -MessageData $fileLog -Action {\" in \"$ErrorActionPreference = 'SilentlyContinue'\\n\\n$shareHost = '10.0.2.4'\\n$shareName = 'qemu'\\n$driveLetter ="
+  },
+  "tests/test_hexcore_e2e/test_bridge_pe_introspection.py::test_get_pe_exports_signature": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert [{'address': ...'ordinal': 0}] == []\n  \n  Left contains one more item: #x1B[0m{#x1B[33m'#x1B[39;49;00m#x1B[33maddress#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[94m0#x1B[39;49;00m, #x1B[33m'#x1B[39;49;00m#x1B[33mname#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m: #x1B[33m'#x1B[39;49;00"
+  },
+  "tests/test_bridges/test_win32_types.py::TestDllHelperCaching::test_get_psapi_resolves_getprocessmemoryinfo": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AttributeError: function 'GetProcessMemoryInfo' not found"
+  },
+  "tests/test_core/test_logging.py::test_log_provider_request": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 0 == 1\n +  where 0 = len([])"
+  },
+  "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_with_alignment_4_returns_only_aligned_offsets": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: alignment=4 must return exactly the 4-byte-aligned offsets [0, 12, 16, 20, 24], got [0, 6, 12, 16, 20, 24]\nassert {0, 6, 12, 16, 20, 24} == {0, 12, 16, 20, 24}\n  \n  Extra items in the left set:\n  #x1B[0m#x1B[94m6#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  \n  Full diff:\n  #x1B[0m#x1B[90m #"
+  },
+  "tests/test_core/test_logging.py::test_log_provider_response_minimal": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "re-proved with corrected mutation"
+  },
+  "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_max_results_caps_returned_matches": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: max_results=1 must truncate to exactly 1 match, got 16\nassert 16 == 1\n +  where 16 = len([{'length': 4, 'offset': 0}, {'length': 4, 'offset': 4}, {'length': 4, 'offset': 8}, {'length': 4, 'offset': 12}, {'length': 4, 'offset': 16}, {'length': 4, 'offset': 20}, ...])"
+  },
+  "tests/test_core/test_logging.py::test_log_provider_response_with_tokens": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 0 == 1500"
+  },
+  "tests/test_hexcore_e2e/test_bridge_search_numeric_deep.py::TestSearchNumericDeep::test_search_on_minimal_data_does_not_crash": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: the 4-byte buffer is exactly the target, so search must find one match, got []\nassert 0 == 1\n +  where 0 = len([])"
+  },
+  "tests/test_core/test_logging.py::test_log_binary_operation": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "KeyError: 'size'"
+  },
+  "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py::TestCopyAsCsharpArray::test_csharp_array_full_string_matches_payload": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'new byte[] {..., 0x00, 0x00}' == 'new byte[] {..., 0x02, 0x7F}'\n  \n  #x1B[0m#x1B[91m- new byte[] {0x01, 0x02, 0x7F}#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  ?                ^     ^    ^^#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ new byte[] {0x00, 0x00, 0x00}#x1B[39;49;00m#x1B[90m#x1B[3"
+  },
+  "tests/test_core/test_logging.py::test_log_binary_operation_path_object": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert WindowsPath('/test/patched.exe') == '\\\\test\\\\patched.exe'\n +  where '\\\\test\\\\patched.exe' = str(WindowsPath('/test/patched.exe'))"
+  },
+  "tests/test_hexcore_e2e/test_bridge_copy_as_complete.py::TestCopyAsJavascriptArray::test_javascript_array_full_string_matches_payload": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'new Uint8Arr...,20x0 ,10x0])' == 'new Uint8Arr... 0x02, 0x7F])'\n  \n  #x1B[0m#x1B[91m- new Uint8Array([0x01, 0x02, 0x7F])#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ new Uint8Array([F7x0 ,20x0 ,10x0])#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_core/test_logging.py::test_log_sandbox_operation": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 0 == 1\n +  where 0 = len([])"
+  },
+  "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_matches_independent_capstone_decode": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'cc00' == 'cc'\n  \n  #x1B[0m#x1B[91m- cc#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ cc00#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_core/test_logging.py::test_log_session_operation_minimal": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'session_id' not in {'event': 'session_operation', 'log_level': 'info', 'operation': 'create', 'session_id': None}"
+  },
+  "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_pe_section_code_with_auto_arch": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'dec' == 'pop'\n  \n  #x1B[0m#x1B[91m- pop#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ dec#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_core/test_logging.py::test_log_session_operation_with_id": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "KeyError: 'session_id'"
+  },
+  "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestDecodeText::test_decode_text_unknown_encoding_raises_value_error": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "LookupError: unknown encoding: bogus-encoding-xyz"
+  },
+  "tests/test_core/test_logging.py::test_log_session_operation_with_kwargs": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "KeyError: 'messages'"
+  },
+  "tests/test_hexcore_e2e/test_bridge_encoding_decoding.py::TestListEncodings::test_list_encodings_with_open_document_is_content_independent": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert 'utf-8' == 'UTF-8'\n  \n  #x1B[0m#x1B[91m- UTF-8#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ utf-8#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_core/test_logging.py::test_log_analysis_operation": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "KeyError: 'protection'"
+  },
+  "tests/test_hexcore_e2e/test_bridge_ai_context.py::TestBridgeAIContext::test_get_context_for_ai_bookmarks_contain_expected_fields_when_present": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: expected length 2, got 0\nassert 0 == 2"
+  },
+  "tests/test_core/test_logging.py::test_operation_timer_success": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 0 == 1\n +  where 0 = len([])"
+  },
+  "tests/test_hexcore_e2e/test_bridge_base_convert.py::TestBaseConvertEdgeCases::test_result_has_base_keys": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert '42' == '0x2a'\n  \n  #x1B[0m#x1B[91m- 0x2a#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ 42#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_core/test_logging.py::test_operation_timer_with_context": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "KeyError: 'target'"
+  },
+  "tests/test_hexcore_e2e/test_bridge_block_ops.py::TestCopyBlock::test_copy_block_overlapping_forward": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert b'\\x05\\x06\\x0...0\\x00\\x00\\x00' == b'\\x01\\x02\\x0...5\\x06\\x07\\x08'\n  \n  At index 0 diff: #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\x05#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[90m#x1B[39;49;00m != #x1B[0m#x1B[33mb#x1B[39;49;00m#x1B[33m'#x1B[39;49;00m#x1B[33m\\"
+  },
+  "tests/test_core/test_logging.py::test_operation_timer_on_exception": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 0 == 1\n +  where 0 = len([])"
+  },
+  "tests/test_hexcore_e2e/test_bridge_document_info.py::TestDocumentInfoWithFile::test_undo_after_write_restores_original_byte": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert False is True"
+  },
+  "tests/test_hexcore_e2e/test_bridge_error_handling.py::TestWriteBytesErrors::test_write_bytes_beyond_length_on_loaded_doc": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: out-of-range write must not corrupt in-bounds bytes\nassert 'FF 5A' == '4D 5A'\n  \n  #x1B[0m#x1B[91m- 4D 5A#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ FF 5A#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_hexcore_e2e/test_bridge_new_capabilities.py::TestProcessMemoryBridge::test_list_process_regions_raises_without_hexcore": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Regex pattern did not match.\n  Expected regex: 'hexcore native module not available'\n  Actual message: 'hexcore native module is ready'"
+  },
+  "tests/test_hexcore_e2e/test_bridge_patches.py::TestBridgeImportPatches::test_import_patches_returns_integer_count": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "assert 0 == 1"
+  },
+  "tests/test_hexcore_e2e/test_bridge_search.py::TestBridgeSearchHex::test_search_hex_max_results_respected": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: Expected exactly 5 capped matches, got 200\nassert 200 == 5\n +  where 200 = len([{'length': 2, 'offset': 0}, {'length': 2, 'offset': 2}, {'length': 2, 'offset': 4}, {'length': 2, 'offset': 6}, {'length': 2, 'offset': 8}, {'length': 2, 'offset': 10}, ...])"
+  },
+  "tests/test_hexcore_e2e/test_bridge_transforms.py::TestBridgeApplyTransform::test_apply_transform_returns_length_matching_input": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: assert '000000000000...0000000000000' == 'aaaaaaaaaaaa...aaaaaaaaaaaaa'\n  \n  #x1B[0m#x1B[91m- aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa#x1B[39;49;00m#x1B[90m#x1B[39;49;00m\n  #x1B[92m+ 00000000000000000000000000000000#x1B[39;49;00m#x1B[90m#x1B[39;49;00m"
+  },
+  "tests/test_hexcore_e2e/test_bridge_transforms_deep.py::TestApplyPipelineInvalidStep::test_pipeline_with_invalid_step_name_completes": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "KeyError: 'nonexistent_transform_xyzzy'"
+  },
+  "tests/test_hexcore_e2e/test_bridge_yara.py::TestBridgeYaraScan::test_yara_scan_returns_list": {
+    "status": "fail",
+    "falsifiable": "yes",
+    "detail": "AssertionError: MZ bytes must be at offset 0, got 1\nassert 1 == 0"
+  }
 }

@@ -966,7 +966,9 @@ class TestF0009AgentScriptNoPsUsing:
             "The file-creation watcher must bind the log path into the event via '-MessageData $fileLog'"
         )
         assert "$Event.MessageData" in script, "Agent action block must read the bound log path via '$Event.MessageData'"
-        assert "Out-File -Append $Event.MessageData" in script, "Agent action block must append the file-change record to the log path carried by $Event.MessageData"
+        assert "Out-File -Append $Event.MessageData" in script, (
+            "Agent action block must append the file-change record to the log path carried by $Event.MessageData"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1062,9 +1064,15 @@ class TestF0022F0029AntiEvasion:
         assert smbios_values, "build must emit at least one -smbios argument"
         joined = "\n".join(smbios_values)
 
-        assert "manufacturer=Dell Inc." in joined, f"workstation profile must drive Dell Inc. SMBIOS vendor; argv smbios entries were {smbios_values!r}"
-        assert "product=OptiPlex 7090" in joined, f"workstation profile must drive the OptiPlex 7090 product; argv smbios entries were {smbios_values!r}"
-        assert "manufacturer=HP" not in joined, f"default HP vendor must not appear when launched as workstation; argv smbios entries were {smbios_values!r}"
+        assert "manufacturer=Dell Inc." in joined, (
+            f"workstation profile must drive Dell Inc. SMBIOS vendor; argv smbios entries were {smbios_values!r}"
+        )
+        assert "product=OptiPlex 7090" in joined, (
+            f"workstation profile must drive the OptiPlex 7090 product; argv smbios entries were {smbios_values!r}"
+        )
+        assert "manufacturer=HP" not in joined, (
+            f"default HP vendor must not appear when launched as workstation; argv smbios entries were {smbios_values!r}"
+        )
 
         sb.state.status = "running"
         sb.set_agent(_ConnectableAgent(connected=False))
@@ -1135,11 +1143,19 @@ class TestF0022F0029AntiEvasion:
         joined = "\n".join(smbios_values)
 
         assert "manufacturer=Lenovo" in joined, f"laptop profile must emit the Lenovo vendor; argv smbios entries were {smbios_values!r}"
-        assert "product=ThinkPad T14 Gen 3" in joined, f"laptop profile must emit the ThinkPad product; argv smbios entries were {smbios_values!r}"
-        assert "product=21AHS00000" in joined, f"laptop profile must emit the laptop board product 21AHS00000; argv smbios entries were {smbios_values!r}"
+        assert "product=ThinkPad T14 Gen 3" in joined, (
+            f"laptop profile must emit the ThinkPad product; argv smbios entries were {smbios_values!r}"
+        )
+        assert "product=21AHS00000" in joined, (
+            f"laptop profile must emit the laptop board product 21AHS00000; argv smbios entries were {smbios_values!r}"
+        )
         assert "chassis-type=10" in joined, f"laptop profile must emit laptop chassis-type=10; argv smbios entries were {smbios_values!r}"
-        assert "chassis-type=3" not in joined, f"laptop profile must not emit the desktop chassis-type=3; argv smbios entries were {smbios_values!r}"
-        assert "manufacturer=HP" not in joined, f"default HP vendor must not appear for laptop profile; argv smbios entries were {smbios_values!r}"
+        assert "chassis-type=3" not in joined, (
+            f"laptop profile must not emit the desktop chassis-type=3; argv smbios entries were {smbios_values!r}"
+        )
+        assert "manufacturer=HP" not in joined, (
+            f"default HP vendor must not appear for laptop profile; argv smbios entries were {smbios_values!r}"
+        )
 
         sb.state.status = "running"
         sb.set_agent(_ConnectableAgent(connected=False))
@@ -1151,7 +1167,9 @@ class TestF0022F0029AntiEvasion:
         result = asyncio.run(_run())
         assert result["profile"] == "laptop"
         smbios_techniques = [t for t in result["techniques"] if t.startswith("smbios_type_")]
-        assert len(smbios_techniques) == 3, f"apply_anti_evasion must report one technique per laptop SMBIOS entry; got {result['techniques']!r}"
+        assert len(smbios_techniques) == 3, (
+            f"apply_anti_evasion must report one technique per laptop SMBIOS entry; got {result['techniques']!r}"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1413,7 +1431,9 @@ class TestF0028YaraScanFallback:
 
         assert scanned_paths, "yara_scan did not scan any files from the zip"
         normalized = [Path(p) for p in scanned_paths]
-        assert any(p.name == "artifact.bin" for p in normalized), f"yara_scan must scan the artifact extracted from the dropped-files zip; scanned {scanned_paths!r}"
+        assert any(p.name == "artifact.bin" for p in normalized), (
+            f"yara_scan must scan the artifact extracted from the dropped-files zip; scanned {scanned_paths!r}"
+        )
         input_dir_resolved = input_dir.resolve()
         for p in normalized:
             assert input_dir_resolved not in p.resolve().parents, f"yara_scan must not scan anything under shared/input; found '{p}'"

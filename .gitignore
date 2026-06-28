@@ -502,3 +502,9 @@ reports/tests/
 
 # Codex configuration and workspace (never tracked)
 .codex/
+
+# Background-terminal capture logs (runtime scratch, never tracked)
+terminals/
+
+# MCP server tool-definition schema dumps (regenerable cache, never tracked)
+mcps/

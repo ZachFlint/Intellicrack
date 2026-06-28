@@ -403,4 +403,3 @@ The sole concern below is not a mock but a structural gap:
 
 **`ToolRegistry` typed getter ToolError on absence**
 - What to assert: Construct a `ToolRegistry(tools_dir=tmp_path)` with no bridges registered. Call `registry.get_hex_editor_bridge()` and assert `ToolError` with message `_ERR_BRIDGE_NA`.
-

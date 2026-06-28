@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import math
-from typing import Final
+from typing import Any, Final, cast
 
 import jsonschema
 import pytest
@@ -45,6 +45,15 @@ _PARAM_DESC: Final[str] = "A parameter"
 _TOOL_DESC: Final[str] = "Binary analysis tool"
 _ENUM_LIST: Final[list[str]] = ["a", "b", "c"]
 _MULTI_COUNT: Final[int] = 2
+
+_OPENAI_FORMAT_PROVIDERS: Final[frozenset[ProviderName]] = frozenset({
+    ProviderName.OPENAI,
+    ProviderName.OLLAMA,
+    ProviderName.OPENROUTER,
+    ProviderName.HUGGINGFACE,
+    ProviderName.GROK,
+    ProviderName.LOCAL_TRANSFORMERS,
+})
 
 
 def _param(
@@ -700,13 +709,50 @@ def test_openrouter_matches_openai() -> None:
 
 @pytest.mark.parametrize("provider", list(ProviderName))
 def test_get_schema_for_provider_all(provider: ProviderName) -> None:
-    """Verify schema generation works for every provider.
+    """Verify schema generation works for every provider and routes to the correct format.
+
+    The format discriminators mirror the dispatch logic in ``get_schema_for_provider``:
+    ANTHROPIC → ``input_schema`` key (Anthropic format, no ``type: function``);
+    GOOGLE → ``parameters.type == 'OBJECT'`` (Google format, uppercase type);
+    all others → ``type == 'function'`` (OpenAI-compatible format). The explicit
+    check on HUGGINGFACE, GROK, and LOCAL_TRANSFORMERS verifies each one does NOT
+    receive Anthropic format, catching a routing regression where a new provider
+    branch is accidentally wired to ``to_anthropic_schema``.
 
     Args:
         provider: The LLM provider to test.
     """
     result = get_schema_for_provider(_tool(), provider)
     assert len(result) == 1
+    schema = result[0]
+
+    if provider == ProviderName.ANTHROPIC:
+        assert "input_schema" in schema, (
+            f"ANTHROPIC must use Anthropic format with 'input_schema' key; "
+            f"got keys: {list(schema.keys())}"
+        )
+        assert schema.get("type") != "function", (
+            "ANTHROPIC format must NOT have type='function' at top level"
+        )
+    elif provider == ProviderName.GOOGLE:
+        params: dict[str, Any] = cast(dict[str, Any], schema.get("parameters") or {})
+        assert params.get("type") == "OBJECT", (
+            f"GOOGLE must have parameters.type='OBJECT' (uppercase); "
+            f"got {params.get('type')!r}"
+        )
+        assert "input_schema" not in schema, "GOOGLE must NOT use Anthropic input_schema format"
+    else:
+        assert provider in _OPENAI_FORMAT_PROVIDERS, (
+            f"Unhandled provider {provider!r}; add it to _OPENAI_FORMAT_PROVIDERS or a dedicated branch"
+        )
+        assert schema.get("type") == "function", (
+            f"{provider.value!r} must use OpenAI format with type='function'; "
+            f"got type={schema.get('type')!r}"
+        )
+        assert "input_schema" not in schema, (
+            f"{provider.value!r} must NOT use Anthropic format ('input_schema' found); "
+            "HUGGINGFACE, GROK, LOCAL_TRANSFORMERS, OLLAMA, OPENROUTER all route to OpenAI schema"
+        )
 
 
 def test_get_schema_for_provider_google_uppercase() -> None:

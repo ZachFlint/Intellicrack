@@ -417,18 +417,10 @@ class TestProgressSignal:
         splash_screen.progress_updated.connect(_capture)
         splash_screen.progress_updated.emit(_PROGRESS_50, "Test")
 
-        assert len(received) == 1, (
-            f"Expected 1 signal delivery, got {len(received)}"
-        )
-        assert received[0] == (_PROGRESS_50, "Test"), (
-            f"Signal delivered wrong arguments: {received[0]!r}"
-        )
-        assert splash_screen.progress == _PROGRESS_50, (
-            f"splash.progress not updated after signal: {splash_screen.progress}"
-        )
-        assert splash_screen.status == "Test", (
-            f"splash.status not updated after signal: {splash_screen.status!r}"
-        )
+        assert len(received) == 1, f"Expected 1 signal delivery, got {len(received)}"
+        assert received[0] == (_PROGRESS_50, "Test"), f"Signal delivered wrong arguments: {received[0]!r}"
+        assert splash_screen.progress == _PROGRESS_50, f"splash.progress not updated after signal: {splash_screen.progress}"
+        assert splash_screen.status == "Test", f"splash.status not updated after signal: {splash_screen.status!r}"
 
 
 class TestOverlayWidgets:
@@ -632,27 +624,16 @@ class TestSplashScreenIntegration:
         splash.show()
 
         splash.set_progress(_PROGRESS_50, "Testing...")
-        assert splash.progress == _PROGRESS_50, (
-            f"Expected progress={_PROGRESS_50} after set_progress, got {splash.progress}"
-        )
-        assert splash.status == "Testing...", (
-            f"Expected status='Testing...' after set_progress, got {splash.status!r}"
-        )
+        assert splash.progress == _PROGRESS_50, f"Expected progress={_PROGRESS_50} after set_progress, got {splash.progress}"
+        assert splash.status == "Testing...", f"Expected status='Testing...' after set_progress, got {splash.status!r}"
 
         splash.set_progress(_PROGRESS_60, "Step 1")
-        assert splash.progress == _PROGRESS_60, (
-            f"Expected progress={_PROGRESS_60} after second set_progress, got {splash.progress}"
-        )
-        assert splash.status == "Step 1", (
-            f"Expected status='Step 1' after second set_progress, got {splash.status!r}"
-        )
+        assert splash.progress == _PROGRESS_60, f"Expected progress={_PROGRESS_60} after second set_progress, got {splash.progress}"
+        assert splash.status == "Step 1", f"Expected status='Step 1' after second set_progress, got {splash.status!r}"
 
-        assert splash.progress_animation is not None, (
-            "progress_animation must be created after set_progress"
-        )
+        assert splash.progress_animation is not None, "progress_animation must be created after set_progress"
         assert splash.progress_animation.endValue() == _PROGRESS_60, (
-            f"Animation end value should be {_PROGRESS_60}, "
-            f"got {splash.progress_animation.endValue()}"
+            f"Animation end value should be {_PROGRESS_60}, got {splash.progress_animation.endValue()}"
         )
 
         splash.close()
@@ -1051,12 +1032,8 @@ class TestPaintEventRendering:
         splash = SplashScreen(version="1.0.0")
         image = _render_splash_layers(splash)
         painted, distinct = _count_painted_and_distinct(image)
-        assert painted >= _MIN_PAINTED_PIXELS, (
-            f"Only {painted} pixels overwritten; paint helpers drew nothing"
-        )
-        assert distinct >= _MIN_DISTINCT_COLORS, (
-            f"Only {distinct} distinct colors; gradient background not rendered"
-        )
+        assert painted >= _MIN_PAINTED_PIXELS, f"Only {painted} pixels overwritten; paint helpers drew nothing"
+        assert distinct >= _MIN_DISTINCT_COLORS, f"Only {distinct} distinct colors; gradient background not rendered"
         splash.close()
 
     @staticmethod

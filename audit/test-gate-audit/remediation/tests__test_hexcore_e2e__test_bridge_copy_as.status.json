@@ -1,23 +1,23 @@
 {
- "file": "tests/test_hexcore_e2e/test_bridge_copy_as.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_copy_as.py::TestBridgeCopyAs::test_copy_as_hex_contains_spaces",
-   "severity": "LOW",
-   "category": "N8 shape-only duplicate",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_hexcore_e2e/test_bridge_copy_as.py::TestBridgeCopyAs::test_copy_as_hex_expected_value",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 0
+  "file": "tests/test_hexcore_e2e/test_bridge_copy_as.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_copy_as.py::TestBridgeCopyAs::test_copy_as_hex_contains_spaces",
+      "severity": "LOW",
+      "category": "N8 shape-only duplicate",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_hexcore_e2e/test_bridge_copy_as.py::TestBridgeCopyAs::test_copy_as_hex_expected_value",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 0
 }

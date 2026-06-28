@@ -4,21 +4,15 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Windows UAC self-elevation for Intellicrack.
 
-Detects whether the current process holds an elevated (administrative) token
-and, when it does not, relaunches the application through the Windows
-``runas`` verb so the user is presented with a User Account Control (UAC)
-prompt.
+Detects whether the current process holds an elevated (administrative) token and, when it does not, relaunches the application through the
+Windows ``runas`` verb so the user is presented with a User Account Control (UAC) prompt.
 
-Elevation is what allows ``SeDebugPrivilege`` to be enabled on the process
-token (see :mod:`intellicrack.bridges.process`), which in turn grants the
-process bridge full access to protected, elevated, and cross-user target
-processes. Without it those operations fail with access-denied even though the
-rest of the application runs normally.
+Elevation is what allows ``SeDebugPrivilege`` to be enabled on the process token (see :mod:`intellicrack.bridges.process`), which in turn
+grants the process bridge full access to protected, elevated, and cross-user target processes. Without it those operations fail with access-
+denied even though the rest of the application runs normally.
 
-The relaunch is guarded against prompt loops: the elevated child is started
-with the internal :data:`ELEVATED_FLAG` argument, and a child that is still
-not elevated (for example because the user dismissed the UAC dialog) continues
-unprivileged instead of prompting again.
+The relaunch is guarded against prompt loops: the elevated child is started with the internal :data:`ELEVATED_FLAG` argument, and a child
+that is still not elevated (for example because the user dismissed the UAC dialog) continues unprivileged instead of prompting again.
 """
 
 from __future__ import annotations
@@ -28,7 +22,11 @@ import os
 import sys
 from ctypes import wintypes
 from pathlib import Path
-from typing import Final
+from typing import TYPE_CHECKING, Final
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.subprocess_compat import list2cmdline
@@ -196,7 +194,14 @@ def _relaunch_elevated(original_args: list[str], working_dir: str) -> bool:
     return False
 
 
-def maybe_elevate(*, disabled: bool, already_attempted: bool, original_args: list[str], working_dir: str) -> bool:
+def maybe_elevate(
+    *,
+    disabled: bool,
+    already_attempted: bool,
+    original_args: list[str],
+    working_dir: str,
+    relauncher: Callable[[list[str], str], bool] = _relaunch_elevated,
+) -> bool:
     """Relaunch the application elevated when required and possible.
 
     Decision order:
@@ -207,7 +212,7 @@ def maybe_elevate(*, disabled: bool, already_attempted: bool, original_args: lis
       still unprivileged the user declined the prompt and the app continues
       with limited rights.
     * An already-elevated process needs nothing further.
-    * Otherwise a UAC relaunch is attempted.
+    * Otherwise a UAC relaunch is attempted via ``relauncher``.
 
     Args:
         disabled: ``True`` when elevation was disabled via ``--no-elevate``.
@@ -216,6 +221,9 @@ def maybe_elevate(*, disabled: bool, already_attempted: bool, original_args: lis
         original_args: Original command-line arguments to forward when
             relaunching.
         working_dir: Working directory to assign to the elevated process.
+        relauncher: Callable that performs the actual UAC relaunch; defaults to
+            :func:`_relaunch_elevated`. Inject a recording callable in tests to
+            verify decision logic without spawning a real elevated process.
 
     Returns:
         bool: ``True`` when an elevated instance was started and the current
@@ -234,7 +242,7 @@ def maybe_elevate(*, disabled: bool, already_attempted: bool, original_args: lis
     if is_elevated():
         _logger.debug("already_elevated")
         return False
-    if _relaunch_elevated(original_args, working_dir):
+    if relauncher(original_args, working_dir):
         return True
     _logger.warning("running_unprivileged_elevation_unavailable")
     return False

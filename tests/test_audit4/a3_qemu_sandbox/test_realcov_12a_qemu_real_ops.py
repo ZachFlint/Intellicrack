@@ -620,9 +620,7 @@ class TestRealHostAcceleratorProbe:
         )
 
         qemu_path = sb.get_qemu_path()
-        assert qemu_path is not None, (
-            "is_available must populate _qemu_path when the QEMU binary is found"
-        )
+        assert qemu_path is not None, "is_available must populate _qemu_path when the QEMU binary is found"
 
         oracle_accelerator = _oracle_expected_accelerator(qemu_path)
 

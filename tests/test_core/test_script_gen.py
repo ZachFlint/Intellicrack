@@ -137,13 +137,10 @@ def test_bypass_strategy_description_all_nonempty() -> None:
     drifts, is blanked, or is relabelled to a different meaning will fail this gate.
     """
     actual: dict[BypassStrategy, str] = {strategy: strategy.description for strategy in BypassStrategy}
-    assert actual == _EXPECTED_DESCRIPTIONS, (
-        "BypassStrategy descriptions diverged from oracle:\n"
-        + "\n".join(
-            f"  {s.name}: got {actual[s]!r}, want {_EXPECTED_DESCRIPTIONS[s]!r}"
-            for s in BypassStrategy
-            if actual[s] != _EXPECTED_DESCRIPTIONS[s]
-        )
+    assert actual == _EXPECTED_DESCRIPTIONS, "BypassStrategy descriptions diverged from oracle:\n" + "\n".join(
+        f"  {s.name}: got {actual[s]!r}, want {_EXPECTED_DESCRIPTIONS[s]!r}"
+        for s in BypassStrategy
+        if actual[s] != _EXPECTED_DESCRIPTIONS[s]
     )
 
 
@@ -189,9 +186,7 @@ def test_script_context_to_prompt_with_path() -> None:
     )
     result = ctx.to_prompt_context()
     expected_line = f"Path: {binary_path}"
-    assert expected_line in result, (
-        f"Expected line {expected_line!r} not found in to_prompt_context output:\n{result}"
-    )
+    assert expected_line in result, f"Expected line {expected_line!r} not found in to_prompt_context output:\n{result}"
 
 
 def test_script_context_to_prompt_with_module_base() -> None:
@@ -278,9 +273,7 @@ def test_script_context_to_prompt_with_additional_context() -> None:
     result = ctx.to_prompt_context()
     assert "Additional Analysis Context:" in result
     expected_entry = "  - compiler: 'MSVC'"
-    assert expected_entry in result, (
-        f"Expected entry {expected_entry!r} not found in to_prompt_context output:\n{result}"
-    )
+    assert expected_entry in result, f"Expected entry {expected_entry!r} not found in to_prompt_context output:\n{result}"
 
 
 def test_script_context_to_prompt_with_language() -> None:
@@ -297,9 +290,7 @@ def test_script_context_to_prompt_with_language() -> None:
     oracle = get_frida_api_reference()
     for category, usage in oracle.items():
         expected_entry = f"  {category}: {usage}"
-        assert expected_entry in result, (
-            f"API reference entry {expected_entry!r} not found in to_prompt_context output:\n{result}"
-        )
+        assert expected_entry in result, f"API reference entry {expected_entry!r} not found in to_prompt_context output:\n{result}"
 
 
 def test_script_context_to_prompt_python_no_api_ref() -> None:

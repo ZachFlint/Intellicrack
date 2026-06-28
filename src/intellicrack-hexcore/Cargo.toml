@@ -23,10 +23,10 @@ encoding_rs = "0.8"
 flate2 = "1.1"
 half = "2.7"
 md-5 = "0.11.0"
-memmap2 = "0.9.10"
+memmap2 = "0.9.11"
 pyo3 = { version = "0.29", features = ["extension-module"] }
 rayon = "1.12.0"
-regex = "1.12.3"
+regex = "1.12.4"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.150"
 sha1 = "0.11.0"

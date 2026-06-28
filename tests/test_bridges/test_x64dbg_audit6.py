@@ -3670,9 +3670,7 @@ class TestStepEventSync:
                     await emit_task
 
             result = asyncio.run(_run_one_step(bridge, step_name))
-            assert result == _FAKE_IP_A, (
-                f"{step_name} must return the IP delivered by the paused event; got {result:#x}"
-            )
+            assert result == _FAKE_IP_A, f"{step_name} must return the IP delivered by the paused event; got {result:#x}"
 
     @staticmethod
     def test_register_step_waiter_returns_future_bound_to_loop() -> None:

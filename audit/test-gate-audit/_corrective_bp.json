@@ -1,1 +1,147 @@
-[{"file": "tests/core/test_process_cleanup.py", "task": "basedpyright", "diagnostics": ["L181 reportCallIssue: No parameter named \"type\"", "L188 reportPrivateUsage: \"_generate_wsb_config\" is protected and used outside of the class in which it is declared", "L349 reportPrivateUsage: \"_pidfile_path\" is protected and used outside of the class in which it is declared", "L392 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared", "L417 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared", "L447 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared", "L475 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared", "L480 reportPrivateUsage: \"_verify_qemu_pid\" is protected and used outside of the class in which it is declared", "L504 reportPrivateUsage: \"_read_pidfile_once\" is protected and used outside of the class in which it is declared", "L514 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared"]}, {"file": "tests/test_audit3/bridges/test_installer.py", "task": "basedpyright", "diagnostics": ["L111 reportUnknownVariableType: Type of \"file_info_raw\" is partially unknown", "L113 reportUnknownVariableType: Type of \"entry\" is unknown", "L113 reportUnknownArgumentType: Argument type is partially unknown", "L115 reportUnknownArgumentType: Argument type is partially unknown", "L117 reportUnknownArgumentType: Argument type is unknown", "L120 reportUnknownVariableType: Type of \"string_table\" is partially unknown", "L121 reportUnknownVariableType: Type of \"st\" is unknown", "L121 reportUnknownArgumentType: Argument type is partially unknown", "L122 reportUnknownVariableType: Type of \"raw_entries\" is partially unknown", "L122 reportUnknownArgumentType: Argument type is unknown", "L123 reportUnknownArgumentType: Argument type is partially unknown", "L149 reportUnknownVariableType: Type of \"fixed_info\" is partially unknown", "L150 reportUnknownVariableType: Type of \"ffi\" is unknown", "L150 reportUnknownArgumentType: Argument type is partially unknown", "L151 reportUnknownArgumentType: Argument type is unknown", "L152 reportUnknownArgumentType: Argument type is unknown", "L529 reportUnknownMemberType: Type of \"major\" is unknown", "L529 reportAttributeAccessIssue: Cannot access attribute \"major\" for class \"object\"", "L529 reportUnknownMemberType: Type of \"minor\" is unknown", "L529 reportAttributeAccessIssue: Cannot access attribute \"minor\" for class \"object\"", "L529 reportUnknownMemberType: Type of \"patch\" is unknown", "L529 reportAttributeAccessIssue: Cannot access attribute \"patch\" for class \"object\"", "L530 reportUnknownMemberType: Type of \"major\" is unknown", "L530 reportAttributeAccessIssue: Cannot access attribute \"major\" for class \"object\"", "L530 reportUnknownMemberType: Type of \"minor\" is unknown", "L530 reportAttributeAccessIssue: Cannot access attribute \"minor\" for class \"object\"", "L530 reportUnknownMemberType: Type of \"patch\" is unknown", "L530 reportAttributeAccessIssue: Cannot access attribute \"patch\" for class \"object\"", "L895 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared", "L904 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared", "L1029 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared", "L1035 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared", "L1077 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared"]}, {"file": "tests/test_audit3/bridges/test_named_pipe_client.py", "task": "basedpyright", "diagnostics": ["L1095 reportPrivateUsage: \"_obj\" is protected and used outside of the class in which it is declared"]}, {"file": "tests/test_audit3/core/test_xml_gen.py", "task": "basedpyright", "diagnostics": ["L145 reportCallIssue: No overloads for \"tostring\" match the provided arguments", "L145 reportArgumentType: Argument of type \"Element[str] | None\" cannot be assigned to parameter \"element\" of type \"Element[Any]\" in function \"tostring\"", "L145 reportCallIssue: No overloads for \"tostring\" match the provided arguments", "L145 reportArgumentType: Argument of type \"Element[str] | None\" cannot be assigned to parameter \"element\" of type \"Element[Any]\" in function \"tostring\""]}, {"file": "tests/test_audit3/sandbox/test_injection_monitor.py", "task": "basedpyright", "diagnostics": ["L163 reportUnusedFunction: Function \"_spawn_thread_helper\" is not accessed"]}, {"file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py", "task": "basedpyright", "diagnostics": ["L167 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L180 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L192 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L204 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L210 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L216 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L222 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L231 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L241 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L250 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L256 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared", "L261 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"]}, {"file": "tests/test_bridges/test_frida_bridge.py", "task": "basedpyright", "diagnostics": ["L478 reportPrivateUsage: \"_child_gating_enabled\" is protected and used outside of the class in which it is declared"]}, {"file": "tests/test_bridges/test_hex_editor_pe_methods.py", "task": "basedpyright", "diagnostics": ["L211 reportArgumentType: Argument of type \"object\" cannot be assigned to parameter \"x\" of type \"ConvertibleToInt\" in function \"__new__\"", "L211 reportArgumentType: Argument of type \"object\" cannot be assigned to parameter \"x\" of type \"ConvertibleToInt\" in function \"__new__\""]}, {"file": "tests/test_core/test_logging.py", "task": "basedpyright", "diagnostics": ["L700 reportPrivateUsage: \"_logger_state\" is private and used outside of the module in which it is declared", "L729 reportPrivateUsage: \"_logger_state\" is private and used outside of the module in which it is declared", "L766 reportPrivateUsage: \"_logger_state\" is private and used outside of the module in which it is declared", "L771 reportPrivateUsage: \"_logger_state\" is private and used outside of the module in which it is declared"]}, {"file": "tests/test_core/test_realcov_05b_tools.py", "task": "basedpyright", "diagnostics": ["L184 reportAssignmentType: Type \"list[BreakpointInfo]\" is not assignable to declared type \"list[object]\""]}, {"file": "tests/test_sandbox/test_sandbox_bridge.py", "task": "basedpyright", "diagnostics": ["L172 reportUnnecessaryCast: Unnecessary \"cast\" call; type is already \"Any\"", "L180 reportUnnecessaryCast: Unnecessary \"cast\" call; type is already \"Any\"", "L184 reportUnnecessaryCast: Unnecessary \"cast\" call; type is already \"Any\""]}, {"file": "tests/test_bridges/test_ghidra.py", "task": "ruff-noqa", "diagnostics": ["4x '# noqa: N802' on fake-Ghidra camelCase methods (createLabel/getSymbols/getName/getSymbolTable). Remove noqa; satisfy N802 by defining snake_case impl methods and aliasing camelCase via class-level assignment (e.g. createLabel = _create_label) which N802 does not flag."]}]
+[
+  {
+    "file": "tests/core/test_process_cleanup.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L181 reportCallIssue: No parameter named \"type\"",
+      "L188 reportPrivateUsage: \"_generate_wsb_config\" is protected and used outside of the class in which it is declared",
+      "L349 reportPrivateUsage: \"_pidfile_path\" is protected and used outside of the class in which it is declared",
+      "L392 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared",
+      "L417 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared",
+      "L447 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared",
+      "L475 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared",
+      "L480 reportPrivateUsage: \"_verify_qemu_pid\" is protected and used outside of the class in which it is declared",
+      "L504 reportPrivateUsage: \"_read_pidfile_once\" is protected and used outside of the class in which it is declared",
+      "L514 reportPrivateUsage: \"_resolve_qemu_pid\" is protected and used outside of the class in which it is declared"
+    ]
+  },
+  {
+    "file": "tests/test_audit3/bridges/test_installer.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L111 reportUnknownVariableType: Type of \"file_info_raw\" is partially unknown",
+      "L113 reportUnknownVariableType: Type of \"entry\" is unknown",
+      "L113 reportUnknownArgumentType: Argument type is partially unknown",
+      "L115 reportUnknownArgumentType: Argument type is partially unknown",
+      "L117 reportUnknownArgumentType: Argument type is unknown",
+      "L120 reportUnknownVariableType: Type of \"string_table\" is partially unknown",
+      "L121 reportUnknownVariableType: Type of \"st\" is unknown",
+      "L121 reportUnknownArgumentType: Argument type is partially unknown",
+      "L122 reportUnknownVariableType: Type of \"raw_entries\" is partially unknown",
+      "L122 reportUnknownArgumentType: Argument type is unknown",
+      "L123 reportUnknownArgumentType: Argument type is partially unknown",
+      "L149 reportUnknownVariableType: Type of \"fixed_info\" is partially unknown",
+      "L150 reportUnknownVariableType: Type of \"ffi\" is unknown",
+      "L150 reportUnknownArgumentType: Argument type is partially unknown",
+      "L151 reportUnknownArgumentType: Argument type is unknown",
+      "L152 reportUnknownArgumentType: Argument type is unknown",
+      "L529 reportUnknownMemberType: Type of \"major\" is unknown",
+      "L529 reportAttributeAccessIssue: Cannot access attribute \"major\" for class \"object\"",
+      "L529 reportUnknownMemberType: Type of \"minor\" is unknown",
+      "L529 reportAttributeAccessIssue: Cannot access attribute \"minor\" for class \"object\"",
+      "L529 reportUnknownMemberType: Type of \"patch\" is unknown",
+      "L529 reportAttributeAccessIssue: Cannot access attribute \"patch\" for class \"object\"",
+      "L530 reportUnknownMemberType: Type of \"major\" is unknown",
+      "L530 reportAttributeAccessIssue: Cannot access attribute \"major\" for class \"object\"",
+      "L530 reportUnknownMemberType: Type of \"minor\" is unknown",
+      "L530 reportAttributeAccessIssue: Cannot access attribute \"minor\" for class \"object\"",
+      "L530 reportUnknownMemberType: Type of \"patch\" is unknown",
+      "L530 reportAttributeAccessIssue: Cannot access attribute \"patch\" for class \"object\"",
+      "L895 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared",
+      "L904 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared",
+      "L1029 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared",
+      "L1035 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared",
+      "L1077 reportPrivateUsage: \"_logger\" is private and used outside of the module in which it is declared"
+    ]
+  },
+  {
+    "file": "tests/test_audit3/bridges/test_named_pipe_client.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L1095 reportPrivateUsage: \"_obj\" is protected and used outside of the class in which it is declared"
+    ]
+  },
+  {
+    "file": "tests/test_audit3/core/test_xml_gen.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L145 reportCallIssue: No overloads for \"tostring\" match the provided arguments",
+      "L145 reportArgumentType: Argument of type \"Element[str] | None\" cannot be assigned to parameter \"element\" of type \"Element[Any]\" in function \"tostring\"",
+      "L145 reportCallIssue: No overloads for \"tostring\" match the provided arguments",
+      "L145 reportArgumentType: Argument of type \"Element[str] | None\" cannot be assigned to parameter \"element\" of type \"Element[Any]\" in function \"tostring\""
+    ]
+  },
+  {
+    "file": "tests/test_audit3/sandbox/test_injection_monitor.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L163 reportUnusedFunction: Function \"_spawn_thread_helper\" is not accessed"
+    ]
+  },
+  {
+    "file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L167 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L180 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L192 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L204 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L210 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L216 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L222 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L231 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L241 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L250 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L256 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared",
+      "L261 reportPrivateUsage: \"_build_ips_from_patches\" is protected and used outside of the class in which it is declared"
+    ]
+  },
+  {
+    "file": "tests/test_bridges/test_frida_bridge.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L478 reportPrivateUsage: \"_child_gating_enabled\" is protected and used outside of the class in which it is declared"
+    ]
+  },
+  {
+    "file": "tests/test_bridges/test_hex_editor_pe_methods.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L211 reportArgumentType: Argument of type \"object\" cannot be assigned to parameter \"x\" of type \"ConvertibleToInt\" in function \"__new__\"",
+      "L211 reportArgumentType: Argument of type \"object\" cannot be assigned to parameter \"x\" of type \"ConvertibleToInt\" in function \"__new__\""
+    ]
+  },
+  {
+    "file": "tests/test_core/test_logging.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L700 reportPrivateUsage: \"_logger_state\" is private and used outside of the module in which it is declared",
+      "L729 reportPrivateUsage: \"_logger_state\" is private and used outside of the module in which it is declared",
+      "L766 reportPrivateUsage: \"_logger_state\" is private and used outside of the module in which it is declared",
+      "L771 reportPrivateUsage: \"_logger_state\" is private and used outside of the module in which it is declared"
+    ]
+  },
+  {
+    "file": "tests/test_core/test_realcov_05b_tools.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L184 reportAssignmentType: Type \"list[BreakpointInfo]\" is not assignable to declared type \"list[object]\""
+    ]
+  },
+  {
+    "file": "tests/test_sandbox/test_sandbox_bridge.py",
+    "task": "basedpyright",
+    "diagnostics": [
+      "L172 reportUnnecessaryCast: Unnecessary \"cast\" call; type is already \"Any\"",
+      "L180 reportUnnecessaryCast: Unnecessary \"cast\" call; type is already \"Any\"",
+      "L184 reportUnnecessaryCast: Unnecessary \"cast\" call; type is already \"Any\""
+    ]
+  },
+  {
+    "file": "tests/test_bridges/test_ghidra.py",
+    "task": "ruff-noqa",
+    "diagnostics": [
+      "4x '# noqa: N802' on fake-Ghidra camelCase methods (createLabel/getSymbols/getName/getSymbolTable). Remove noqa; satisfy N802 by defining snake_case impl methods and aliasing camelCase via class-level assignment (e.g. createLabel = _create_label) which N802 does not flag."
+    ]
+  }
+]

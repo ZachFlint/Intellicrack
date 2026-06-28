@@ -82,6 +82,8 @@ _logger = get_logger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from PyQt6.QtGui import QClipboard
+
     from intellicrack.bridges.hex_editor import HexEditorBridge
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.hexpat.completer import HexPatCompleter
@@ -1145,6 +1147,35 @@ class HexEditorPanel(
                 action.triggered.connect(_make_handler(fmt))
         return menu
 
+    @staticmethod
+    def _get_clipboard() -> QClipboard | None:
+        """Return the system clipboard for the current application.
+
+        Returns:
+            QClipboard | None: System clipboard instance, or ``None`` if
+                no QApplication is running or the platform has no clipboard.
+        """
+        return QApplication.clipboard()
+
+    @staticmethod
+    def _write_to_clipboard(clipboard: QClipboard, text: str) -> None:
+        """Write text to the given clipboard instance.
+
+        Args:
+            clipboard: The clipboard to write to.
+            text: The text to place in the clipboard buffer.
+        """
+        clipboard.setText(text)
+
+    def _warn_user(self, title: str, message: str) -> None:
+        """Display a warning dialog to the user.
+
+        Args:
+            title: Dialog window title shown at the top of the message box.
+            message: Warning message body shown to the user.
+        """
+        show_warning(self, title, message)
+
     def _do_copy_as(self, fmt: str) -> None:
         """Copy the current selection in the specified format.
 
@@ -1157,16 +1188,16 @@ class HexEditorPanel(
         if not callable(copy_fn):
             return
         result = str(copy_fn(fmt))
-        clipboard = QApplication.clipboard()
+        clipboard = self._get_clipboard()
         if clipboard is None:
             _logger.warning("copy_as_no_clipboard", fmt=fmt)
-            show_warning(self, "Clipboard Unavailable", "The system clipboard is not accessible. The selection could not be copied.")
+            self._warn_user("Clipboard Unavailable", "The system clipboard is not accessible. The selection could not be copied.")
             return
         try:
-            clipboard.setText(result)
+            self._write_to_clipboard(clipboard, result)
         except RuntimeError as exc:
             _logger.warning("copy_as_clipboard_write_failed", fmt=fmt, exc_info=True)
-            show_warning(self, "Clipboard Write Failed", f"Could not write to the clipboard:\n{exc}")
+            self._warn_user("Clipboard Write Failed", f"Could not write to the clipboard:\n{exc}")
 
     def _on_alignment_changed(self, text: str) -> None:
         """Handle alignment combo box changes.

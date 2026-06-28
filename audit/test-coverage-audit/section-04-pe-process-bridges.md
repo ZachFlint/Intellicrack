@@ -4,7 +4,7 @@
 **Scope:** `src/intellicrack/bridges/pe_format.py`, `src/intellicrack/bridges/win32_types.py`,
 `src/intellicrack/bridges/process.py`, `src/intellicrack/bridges/installer.py`
 
-**Audit date:** 2026-06-26  
+**Audit date:** 2026-06-26
 **Approach:** Adversarial. Each test is held to the falsifiability standard: if the production code it covers were deleted or corrupted, would this test fail?
 
 ---
@@ -240,56 +240,56 @@ The mitigating fact is that `_install_pm_substitute` only replaces `ProcessManag
 
 ### WO-01 — _extract_zip Zip Slip protection (fake gate by omission)
 
-**File:** `tests/test_audit3/bridges/test_installer.py`  
-**Problem:** The security-critical Zip Slip path in `installer.py:_extract_zip` is unreachable by any test. Deleting the `relative_to` guard and the `_is_reserved_windows_name` check would not cause any test to fail.  
-**Classification:** NO COVERAGE on security path  
+**File:** `tests/test_audit3/bridges/test_installer.py`
+**Problem:** The security-critical Zip Slip path in `installer.py:_extract_zip` is unreachable by any test. Deleting the `relative_to` guard and the `_is_reserved_windows_name` check would not cause any test to fail.
+**Classification:** NO COVERAGE on security path
 **Fix:** Create `test_extract_zip_rejects_zip_slip` and `test_extract_zip_rejects_reserved_name`. Use `zipfile.ZipFile` to build archives with adversarial members. Assert `ToolError` is raised.
 
 ### WO-02 — set_thread_context (complete blackout)
 
-**File:** none — no test for this operation exists  
-**Source:** `process.py:5513`  
-**Problem:** `set_thread_context` is the write-side counterpart of `get_thread_context`. A regression that silently ignored the register dict, wrote to the wrong offset, or called `SetThreadContext` without suspending first would not be caught.  
-**Classification:** NO COVERAGE  
+**File:** none — no test for this operation exists
+**Source:** `process.py:5513`
+**Problem:** `set_thread_context` is the write-side counterpart of `get_thread_context`. A regression that silently ignored the register dict, wrote to the wrong offset, or called `SetThreadContext` without suspending first would not be caught.
+**Classification:** NO COVERAGE
 **Fix:** In `test_process_bridge.py`, add a test that: (1) saves the context of a suspended thread in this process, (2) calls `set_thread_context` with the same or modified register values, (3) resumes the thread, (4) verifies the registers were written by re-reading the context and comparing field-by-field. Use the same `secondary_thread` fixture already present in the file.
 
 ### WO-03 — patch usage in test_process_audit7.py (forbidden mechanism)
 
-**File:** `tests/test_bridges/test_process_audit7.py:342, 400`  
-**Problem:** `unittest.mock.patch` is explicitly forbidden. Even though the underlying `asyncio.to_thread` calls still execute, any use of `patch` is prohibited by the review mandate.  
-**Classification:** WEAK (borderline — real behavior runs, but forbidden mechanism used)  
+**File:** `tests/test_bridges/test_process_audit7.py:342, 400`
+**Problem:** `unittest.mock.patch` is explicitly forbidden. Even though the underlying `asyncio.to_thread` calls still execute, any use of `patch` is prohibited by the review mandate.
+**Classification:** WEAK (borderline — real behavior runs, but forbidden mechanism used)
 **Fix:** Remove the `patch` call from `test_search_pattern_dispatches_to_thread`. The test can track dispatch count by patching at the Python level via subclassing or by using the ticker coroutine pattern already present in the adjacent test, which requires no patching.
 
 ### WO-04 — inject_dll tested only on error paths
 
-**File:** `tests/test_bridges/test_process_bridge.py`  
-**Source:** `process.py:3616`  
-**Problem:** `inject_dll` is tested only with a non-existent DLL path and a not-attached state. The actual injection path (remote memory allocation → WriteProcessMemory → CreateRemoteThread → WaitForSingleObject) is never exercised. A regression in the remote-thread creation or LoadLibrary wait would be invisible.  
-**Classification:** WEAK  
+**File:** `tests/test_bridges/test_process_bridge.py`
+**Source:** `process.py:3616`
+**Problem:** `inject_dll` is tested only with a non-existent DLL path and a not-attached state. The actual injection path (remote memory allocation → WriteProcessMemory → CreateRemoteThread → WaitForSingleObject) is never exercised. A regression in the remote-thread creation or LoadLibrary wait would be invisible.
+**Classification:** WEAK
 **Fix:** Write an integration test that injects a real loadable DLL (e.g., a trivial DLL compiled during test setup, or a benign system DLL that safe to double-load like `version.dll`) into the current process via the attached bridge. Assert the module appears in a subsequent `get_modules` call.
 
 ### WO-05 — get_fiber_data / get_tls_values — `isinstance` as sole assertion
 
-**File:** `tests/test_bridges/test_process_bridge.py:TestSehFiberTls`  
-**Source:** `process.py:9003, 9120`  
-**Problem:** Both tests assert only `isinstance(result, list)` or `isinstance(result, dict)`. If the function returned an empty list/dict, the test would still pass. This is the "weak-assertion-on-rich-output" anti-pattern.  
-**Classification:** WEAK  
+**File:** `tests/test_bridges/test_process_bridge.py:TestSehFiberTls`
+**Source:** `process.py:9003, 9120`
+**Problem:** Both tests assert only `isinstance(result, list)` or `isinstance(result, dict)`. If the function returned an empty list/dict, the test would still pass. This is the "weak-assertion-on-rich-output" anti-pattern.
+**Classification:** WEAK
 **Fix:** For `get_tls_values`: assert `result` is non-empty and each entry contains `"index"` and `"value"` keys with int-typed values. For `get_fiber_data`: assert `result` contains `"fiber_data"` key. Both checks require the test to run on a thread that actually has a fiber data pointer, which the `main_thread_tid` fixture provides.
 
 ### WO-06 — win32_types.py PROCESSENTRY32/MODULEENTRY32/TOKEN_PRIVILEGES/STACKFRAME64 — zero coverage
 
-**File:** none — no test for these structures  
-**Source:** `win32_types.py:~200, ~250, ~600, ~1000`  
-**Problem:** Four major ctypes structure definitions have no sizeof or field-offset test. A wrong type annotation (e.g., `DWORD` instead of `DWORD64`) would produce silent misreads.  
-**Classification:** NO COVERAGE  
+**File:** none — no test for these structures
+**Source:** `win32_types.py:~200, ~250, ~600, ~1000`
+**Problem:** Four major ctypes structure definitions have no sizeof or field-offset test. A wrong type annotation (e.g., `DWORD` instead of `DWORD64`) would produce silent misreads.
+**Classification:** NO COVERAGE
 **Fix:** Add to `TestStructureFieldVerification` in `test_win32_types.py`: `sizeof(PROCESSENTRY32) == 568`, `sizeof(MODULEENTRY32) == 548` (Windows-documented), `sizeof(TOKEN_PRIVILEGES) >= 16`, and for STACKFRAME64 at minimum `sizeof(STACKFRAME64) >= 64`. Each constant must be sourced from Windows SDK documentation, not from the implementation.
 
 ### WO-07 — decode_protection never tested directly
 
-**File:** `tests/test_bridges/test_win32_types.py`  
-**Source:** `win32_types.py:~400`  
-**Problem:** `decode_protection` is never called by any test. It is only exercised transitively through `protection_to_string`. If `decode_protection` swapped `readable` and `writable` fields, `protection_to_string` rendering tests would still pass for PAGE_READWRITE (both bits true) and would catch the swap only for asymmetric combinations — but only if those combinations happened to be tested. PAGE_READONLY and PAGE_WRITECOPY are asymmetric but the current tests don't call `decode_protection` directly to check individual flag bits.  
-**Classification:** NO COVERAGE (on the direct surface)  
+**File:** `tests/test_bridges/test_win32_types.py`
+**Source:** `win32_types.py:~400`
+**Problem:** `decode_protection` is never called by any test. It is only exercised transitively through `protection_to_string`. If `decode_protection` swapped `readable` and `writable` fields, `protection_to_string` rendering tests would still pass for PAGE_READWRITE (both bits true) and would catch the swap only for asymmetric combinations — but only if those combinations happened to be tested. PAGE_READONLY and PAGE_WRITECOPY are asymmetric but the current tests don't call `decode_protection` directly to check individual flag bits.
+**Classification:** NO COVERAGE (on the direct surface)
 **Fix:** Add `TestDecodeProtection` in `test_win32_types.py`. Test at minimum: `PAGE_READONLY` → `readable=True, writable=False, executable=False`; `PAGE_EXECUTE` → `readable=False, executable=True`; `PAGE_EXECUTE_READ_WRITE` → all three True; `PAGE_WRITECOPY` → `copy_on_write=True`. Use the `MemoryProtectionFlags` TypedDict returned by the function as the oracle type.
 
 ---
@@ -356,42 +356,42 @@ The mitigating fact is that `_install_pm_substitute` only replaces `ProcessManag
 
 ### P1 — Critical (security path or complete blackout)
 
-**R-01 — `_extract_zip` Zip Slip guard** (`installer.py`, `test_audit3/bridges/test_installer.py`)  
+**R-01 — `_extract_zip` Zip Slip guard** (`installer.py`, `test_audit3/bridges/test_installer.py`)
 Assert that `ToolError` is raised when a zip member resolves outside the destination directory. Use `zipfile.ZipFile(..., 'w')` with a member named `"../../escape.exe"` in the archive, feed it to `_extract_zip` against a real temp directory. Independent oracle: stdlib `os.path.realpath` confirms the resolved path escapes the destination prefix.
 
-**R-02 — `set_thread_context`** (`process.py:5513`, `test_bridges/test_process_bridge.py`)  
+**R-02 — `set_thread_context`** (`process.py:5513`, `test_bridges/test_process_bridge.py`)
 Add `TestSetThreadContext` using the `attached_bridge` and `secondary_thread` fixtures. Call `get_thread_context`, modify at least `Rax`/`Eax` to a known sentinel value, call `set_thread_context`, call `get_thread_context` again, assert the sentinel value appears at the correct register key. Oracle: the value written must equal the value read back, not a re-implementation of the write logic.
 
-**R-03 — `decode_protection` direct test** (`win32_types.py`, `test_bridges/test_win32_types.py`)  
+**R-03 — `decode_protection` direct test** (`win32_types.py`, `test_bridges/test_win32_types.py`)
 Add `TestDecodeProtection`. For each of PAGE_READONLY, PAGE_READWRITE, PAGE_EXECUTE, PAGE_EXECUTE_READ_WRITE, PAGE_WRITECOPY: call `decode_protection(const)` and assert individual fields against Microsoft-documented flag semantics. Oracle: the PAGE_* constant values and their R/W/X decomposition are in the Windows SDK documentation, independent of the implementation.
 
-**R-04 — PROCESSENTRY32 / MODULEENTRY32 sizeof** (`win32_types.py`, `test_bridges/test_win32_types.py`)  
+**R-04 — PROCESSENTRY32 / MODULEENTRY32 sizeof** (`win32_types.py`, `test_bridges/test_win32_types.py`)
 Extend `TestStructureFieldVerification`. Assert `ctypes.sizeof(PROCESSENTRY32) == 568`, `ctypes.sizeof(MODULEENTRY32) == 548`. Oracle: Windows SDK ProcessEntry32 documentation (PROCESSENTRY32: dwSize=4, cntUsage=4, th32ProcessID=4, th32DefaultHeapID=8, th32ModuleID=4, cntThreads=4, th32ParentProcessID=4, pcPriClassBase=4, dwFlags=4, szExeFile=260 bytes = total 304 on x64 due to alignment? — use actual documented sizes and verify; the important thing is the constant is sourced independently).
 
 ### P2 — High (missing path coverage on important operations)
 
-**R-05 — `inject_dll` success path** (`process.py:3616`, `test_bridges/test_process_bridge.py`)  
+**R-05 — `inject_dll` success path** (`process.py:3616`, `test_bridges/test_process_bridge.py`)
 Inject a real system DLL into the attached process. Assert that `get_modules()` subsequently lists a module whose path contains the injected DLL's name. System DLL chosen must be safe to double-load in a Python process (e.g., `version.dll`).
 
-**R-06 — `stack_walk` success** (`process.py:5682`, `test_bridges/test_process_bridge.py`)  
+**R-06 — `stack_walk` success** (`process.py:5682`, `test_bridges/test_process_bridge.py`)
 Add `TestStackWalk`. Using `attached_bridge` and `secondary_thread` fixtures: suspend the secondary thread, call `stack_walk(tid)`, assert result is a non-empty list where at least one frame has a non-zero `pc` value. Resume the thread afterward. Oracle: a thread known to be in a loop will have at least one stack frame.
 
-**R-07 — `get_seh_chain` content assertion** (`process.py:6015`, `test_bridges/test_process_bridge.py`)  
+**R-07 — `get_seh_chain` content assertion** (`process.py:6015`, `test_bridges/test_process_bridge.py`)
 For x86 (WOW64) targets: assert the returned list is non-empty and each entry has `"handler"` and `"next"` keys with integer values. For x64 targets: the SEH chain is not accessible via the Win32 FS walk (expected to raise `ToolError` per the audit7 test — that already exists). The gap is the positive-case structural assertion for WOW64.
 
-**R-08 — `rva_to_file_offset` max-branch** (`pe_format.py:~260`, `tests/test_bridges/test_pe_format.py`)  
+**R-08 — `rva_to_file_offset` max-branch** (`pe_format.py:~260`, `tests/test_bridges/test_pe_format.py`)
 Add a test case to `TestRvaToFileOffset` where a section dict has `virtual_size=0x500` and `raw_size=0x1000`. The RVA `section_va + 0x700` (inside raw_size but outside virtual_size) must resolve to a non-None file offset. Oracle: manually compute `raw_offset + (rva - virtual_address)` using the spec formula.
 
-**R-09 — `pipe_write` coverage** (`process.py:7509`, `test_bridges/test_process_bridge.py`)  
+**R-09 — `pipe_write` coverage** (`process.py:7509`, `test_bridges/test_process_bridge.py`)
 Add a test that: connects to a named pipe the process itself creates, writes bytes via `pipe_write`, reads them back via `pipe_read`, and asserts the round-trip. The process can act as both server and client (use `asyncio.create_server` or `CreateNamedPipe` in a helper thread).
 
 ### P3 — Medium (assertion quality improvements)
 
-**R-10 — `get_fiber_data` structural assertion** — assert `"fiber_data"` key present with int value.  
-**R-11 — `get_tls_values` structural assertion** — assert result is non-empty, each entry has `"index"` (int) and `"value"` (int) keys.  
-**R-12 — `detect_dotnet` positive test** — attach to a .NET process (e.g., launch `dotnet --version` as a child) and assert `detect_dotnet` returns a dict with `"managed": True`.  
-**R-13 — `remove_privilege` post-state assertion** — after `remove_privilege(pid, "SeChangeNotifyPrivilege")`, call `get_token_privileges` and assert the removed privilege is absent or disabled.  
-**R-14 — `win32_types.py` STACKFRAME64 / SYMBOL_INFO sizeof** — add to `TestStructureFieldVerification`; source sizes from WinSDK dbghelp.h documentation.  
+**R-10 — `get_fiber_data` structural assertion** — assert `"fiber_data"` key present with int value.
+**R-11 — `get_tls_values` structural assertion** — assert result is non-empty, each entry has `"index"` (int) and `"value"` (int) keys.
+**R-12 — `detect_dotnet` positive test** — attach to a .NET process (e.g., launch `dotnet --version` as a child) and assert `detect_dotnet` returns a dict with `"managed": True`.
+**R-13 — `remove_privilege` post-state assertion** — after `remove_privilege(pid, "SeChangeNotifyPrivilege")`, call `get_token_privileges` and assert the removed privilege is absent or disabled.
+**R-14 — `win32_types.py` STACKFRAME64 / SYMBOL_INFO sizeof** — add to `TestStructureFieldVerification`; source sizes from WinSDK dbghelp.h documentation.
 **R-15 — `_extract_zip` Windows reserved-name guard** — zip with member `CON.dll` (or `AUX.exe`) must raise `ToolError`.
 
 ---

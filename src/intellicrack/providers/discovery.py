@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ModelInfo, ProviderError, ProviderName
+from intellicrack.providers.display_names import provider_display_name
 
 
 if TYPE_CHECKING:
@@ -51,6 +52,48 @@ class DiscoveryEvent:
     new_models: list[str] = field(default_factory=list)
     removed_models: list[str] = field(default_factory=list)
     duration_ms: float = 0.0
+
+
+def format_discovery_status(
+    events: list[DiscoveryEvent],
+    *,
+    active_provider: ProviderName | None = None,
+) -> str:
+    """Build a human-readable discovery summary for the status bar.
+
+    Args:
+        events: Discovery events recorded by :class:`ModelDiscovery`.
+        active_provider: Optional active provider; when its latest event
+            failed, the failure detail is appended to the aggregate summary.
+
+    Returns:
+        str: Status text such as ``Discovery: 3/8 providers OK``, optionally
+        with an active-provider failure suffix, or an empty string when there
+        are no events.
+    """
+    if not events:
+        return ""
+
+    latest_by_provider: dict[ProviderName, DiscoveryEvent] = {}
+    for event in events:
+        existing = latest_by_provider.get(event.provider)
+        if existing is None or event.timestamp >= existing.timestamp:
+            latest_by_provider[event.provider] = event
+
+    total = len(latest_by_provider)
+    ok_count = sum(1 for event in latest_by_provider.values() if event.success)
+    summary = f"Discovery: {ok_count}/{total} providers OK"
+
+    if active_provider is None:
+        return summary
+
+    active_event = latest_by_provider.get(active_provider)
+    if active_event is None or active_event.success:
+        return summary
+
+    label = provider_display_name(active_provider)
+    detail = active_event.error_message or "failed"
+    return f"{summary} — {label}: {detail}"
 
 
 @dataclass

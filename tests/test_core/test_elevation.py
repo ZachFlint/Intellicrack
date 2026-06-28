@@ -8,9 +8,9 @@
 Tests validate:
 - Platform and elevation detection helpers
 - Relaunch command construction for interpreter and frozen builds
-- ``maybe_elevate`` decision logic (disabled, already-attempted,
-  already-elevated, and successful/declined relaunch) without ever invoking a
-  real ``ShellExecuteW`` UAC prompt
+- ``maybe_elevate`` decision logic gated via a real injectable relauncher seam:
+  disabled, already-attempted, already-elevated, exact argument forwarding, and
+  declined-relaunch return-value propagation
 """
 
 from __future__ import annotations
@@ -19,7 +19,6 @@ import ctypes
 import sys
 from ctypes import wintypes
 from typing import TYPE_CHECKING, cast
-from unittest.mock import MagicMock
 
 from intellicrack.core import elevation
 
@@ -172,142 +171,205 @@ class TestBuildRelaunchCommand:
 
 
 class TestMaybeElevate:
-    """Validate the ``maybe_elevate`` decision logic."""
+    """Validate the ``maybe_elevate`` decision logic via an injectable relauncher seam.
+
+    All gates inject a real callable through the ``relauncher`` parameter
+    introduced in :func:`intellicrack.core.elevation.maybe_elevate`.  No
+    module-level attribute of the production module is replaced, so every
+    mutation of the decision logic is detectable without relying on
+    monkeypatching internals.
+    """
 
     def test_non_windows_never_elevates(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """On non-Windows platforms no relaunch is attempted.
 
+        The relauncher seam raises if called.  If the
+        ``if not is_windows(): return False`` guard is deleted from
+        ``maybe_elevate``, execution falls through to the relauncher and the
+        test turns red.
+
         Args:
-            monkeypatch: Pytest fixture used to force the platform check.
+            monkeypatch: Pytest fixture used to force the platform check to
+                return ``False``.
         """
         monkeypatch.setattr(elevation, "is_windows", lambda: False)
-        assert (
-            elevation.maybe_elevate(disabled=False, already_attempted=False, original_args=[], working_dir=".") is False
-        )
 
-    def test_disabled_skips_elevation(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """The ``--no-elevate`` path never relaunches.
+        def _must_not_be_called(original_args: list[str], working_dir: str) -> bool:
+            msg = f"relauncher must not be called on non-Windows; args={original_args!r}, cwd={working_dir!r}"
+            raise AssertionError(msg)
 
-        ``_relaunch_elevated`` is replaced with a spy that raises on any call.
-        If the ``disabled`` guard were removed from ``maybe_elevate`` the
-        unprivileged path (``is_elevated`` returns ``False``) would reach
-        ``_relaunch_elevated`` and raise, turning this test red.
-
-        Args:
-            monkeypatch: Pytest fixture used to force Windows, an unprivileged
-                token, and a raising sentinel for any relaunch attempt.
-        """
-        spy: MagicMock = MagicMock(side_effect=AssertionError("_relaunch_elevated must not be called when disabled"))
-        monkeypatch.setattr(elevation, "is_windows", lambda: True)
-        monkeypatch.setattr(elevation, "is_elevated", lambda: False)
-        monkeypatch.setattr(elevation, "_relaunch_elevated", spy)
         result: bool = elevation.maybe_elevate(
-            disabled=True, already_attempted=False, original_args=[], working_dir=".",
+            disabled=False,
+            already_attempted=False,
+            original_args=[],
+            working_dir=".",
+            relauncher=_must_not_be_called,
         )
         assert result is False
-        spy.assert_not_called()
 
-    def test_already_attempted_does_not_loop(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A child started with ``--elevated`` never relaunches again.
+    def test_disabled_never_calls_relauncher(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The ``--no-elevate`` guard short-circuits before the relauncher.
 
-        ``_relaunch_elevated`` is replaced with a spy that raises on any call.
-        If the ``already_attempted`` guard were removed from ``maybe_elevate``
-        the unprivileged path (``is_elevated`` returns ``False``) would reach
-        ``_relaunch_elevated`` and raise, turning this test red.
+        The relauncher seam raises if called.  If the
+        ``if disabled: ... return False`` block is deleted from ``maybe_elevate``,
+        execution falls through to the relauncher and the test turns red.
 
         Args:
-            monkeypatch: Pytest fixture used to force Windows, simulate an
-                unprivileged child, and place a raising sentinel for any
-                relaunch attempt.
+            monkeypatch: Pytest fixture used to force Windows and an
+                unprivileged token so the ``disabled`` guard is the only
+                barrier before the relauncher.
         """
-        spy: MagicMock = MagicMock(
-            side_effect=AssertionError("_relaunch_elevated must not be called when already_attempted=True"),
-        )
         monkeypatch.setattr(elevation, "is_windows", lambda: True)
         monkeypatch.setattr(elevation, "is_elevated", lambda: False)
-        monkeypatch.setattr(elevation, "_relaunch_elevated", spy)
+
+        def _must_not_be_called(original_args: list[str], working_dir: str) -> bool:
+            msg = f"relauncher must not be called when disabled; args={original_args!r}, cwd={working_dir!r}"
+            raise AssertionError(msg)
+
         result: bool = elevation.maybe_elevate(
-            disabled=False, already_attempted=True, original_args=[], working_dir=".",
+            disabled=True,
+            already_attempted=False,
+            original_args=["--verbose"],
+            working_dir="D:/work",
+            relauncher=_must_not_be_called,
         )
         assert result is False
-        spy.assert_not_called()
 
-    def test_already_elevated_needs_no_relaunch(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """An already-elevated process does not relaunch.
+    def test_already_attempted_never_calls_relauncher(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A child flagged ``already_attempted`` continues without calling the relauncher.
 
-        ``_relaunch_elevated`` is replaced with a spy that raises on any call.
-        If the ``is_elevated()`` short-circuit guard were removed from
-        ``maybe_elevate``, the code would call ``_relaunch_elevated`` and
-        raise, turning this test red.
+        The relauncher seam raises if called.  If the
+        ``if already_attempted: ... return False`` block is deleted from
+        ``maybe_elevate``, execution falls through to the relauncher and the
+        test turns red.
 
         Args:
-            monkeypatch: Pytest fixture used to force Windows, an elevated
-                token, and place a raising sentinel for any relaunch attempt.
+            monkeypatch: Pytest fixture used to force Windows and an
+                unprivileged token so the ``already_attempted`` guard is the
+                only barrier before the relauncher.
         """
-        spy: MagicMock = MagicMock(
-            side_effect=AssertionError("_relaunch_elevated must not be called when already elevated"),
+        monkeypatch.setattr(elevation, "is_windows", lambda: True)
+        monkeypatch.setattr(elevation, "is_elevated", lambda: False)
+
+        def _must_not_be_called(original_args: list[str], working_dir: str) -> bool:
+            msg = f"relauncher must not be called when already_attempted; args={original_args!r}, cwd={working_dir!r}"
+            raise AssertionError(msg)
+
+        result: bool = elevation.maybe_elevate(
+            disabled=False,
+            already_attempted=True,
+            original_args=["--verbose"],
+            working_dir="D:/work",
+            relauncher=_must_not_be_called,
         )
+        assert result is False
+
+    def test_already_elevated_never_calls_relauncher(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """An already-elevated process short-circuits without calling the relauncher.
+
+        The relauncher seam raises if called.  If the
+        ``if is_elevated(): return False`` block is deleted from
+        ``maybe_elevate``, execution falls through to the relauncher and the
+        test turns red.
+
+        Args:
+            monkeypatch: Pytest fixture used to force Windows and a simulated
+                elevated token.
+        """
         monkeypatch.setattr(elevation, "is_windows", lambda: True)
         monkeypatch.setattr(elevation, "is_elevated", lambda: True)
-        monkeypatch.setattr(elevation, "_relaunch_elevated", spy)
+
+        def _must_not_be_called(original_args: list[str], working_dir: str) -> bool:
+            msg = f"relauncher must not be called when already elevated; args={original_args!r}, cwd={working_dir!r}"
+            raise AssertionError(msg)
+
         result: bool = elevation.maybe_elevate(
-            disabled=False, already_attempted=False, original_args=[], working_dir=".",
+            disabled=False,
+            already_attempted=False,
+            original_args=[],
+            working_dir=".",
+            relauncher=_must_not_be_called,
         )
         assert result is False
-        spy.assert_not_called()
 
-    def test_unelevated_triggers_relaunch_and_exits(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """An unelevated process relaunches and signals the caller to exit.
+    def test_relaunch_receives_exact_original_args_and_working_dir(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The relauncher receives the unmodified ``original_args`` and ``working_dir``.
+
+        The expected values are constructed from the call-site literals, never
+        from the production helper, so this is an independent oracle.
+
+        Concrete mutation: change ``relauncher(original_args, working_dir)`` to
+        ``relauncher([], working_dir)`` in
+        ``src/intellicrack/core/elevation.py`` — ``received_args == []``
+        diverges from ``expected_args`` and the test turns red.
 
         Args:
-            monkeypatch: Pytest fixture used to force Windows, an unprivileged
-                token, and a successful relaunch.
+            monkeypatch: Pytest fixture used to force Windows and an
+                unprivileged token so the relaunch path is exercised.
         """
         monkeypatch.setattr(elevation, "is_windows", lambda: True)
         monkeypatch.setattr(elevation, "is_elevated", lambda: False)
-        monkeypatch.setattr(elevation, "_relaunch_elevated", _succeed_relaunch)
-        assert (
-            elevation.maybe_elevate(disabled=False, already_attempted=False, original_args=[], working_dir=".") is True
+
+        captured: list[tuple[list[str], str]] = []
+
+        def _recording_relauncher(original_args: list[str], working_dir: str) -> bool:
+            captured.append((list(original_args), working_dir))
+            return True
+
+        expected_args: list[str] = ["--gui", "--project", "C:/my project/demo.bin"]
+        expected_working_dir: str = "D:/intellicrack"
+
+        result: bool = elevation.maybe_elevate(
+            disabled=False,
+            already_attempted=False,
+            original_args=expected_args,
+            working_dir=expected_working_dir,
+            relauncher=_recording_relauncher,
         )
 
-    def test_declined_relaunch_continues_unprivileged(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """A declined UAC prompt lets the current process continue.
+        assert result is True
+        assert len(captured) == 1, f"relauncher must be called exactly once; called {len(captured)} time(s)"
+        received_args, received_working_dir = captured[0]
+        assert received_args == expected_args
+        assert received_working_dir == expected_working_dir
+
+    def test_declined_relaunch_propagates_false_to_caller(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A declined relaunch returns ``False`` and the relauncher was invoked.
+
+        The ``call_count == [True]`` assertion rules out a false pass where the
+        function never reached the relauncher at all.
+
+        Concrete mutation: replace ``if relauncher(original_args, working_dir):
+        return True`` with an unconditional ``return True`` — ``result is
+        False`` fails because the mutation returns ``True`` regardless of the
+        relauncher's answer.
 
         Args:
-            monkeypatch: Pytest fixture used to force Windows, an unprivileged
-                token, and a failed relaunch.
+            monkeypatch: Pytest fixture used to force Windows and an
+                unprivileged token so the relaunch path is exercised.
         """
         monkeypatch.setattr(elevation, "is_windows", lambda: True)
         monkeypatch.setattr(elevation, "is_elevated", lambda: False)
-        monkeypatch.setattr(elevation, "_relaunch_elevated", _fail_relaunch)
-        assert (
-            elevation.maybe_elevate(disabled=False, already_attempted=False, original_args=[], working_dir=".") is False
+
+        call_count: list[bool] = []
+
+        def _declining_relauncher(original_args: list[str], working_dir: str) -> bool:
+            del original_args, working_dir
+            call_count.append(True)
+            return False
+
+        result: bool = elevation.maybe_elevate(
+            disabled=False,
+            already_attempted=False,
+            original_args=["--verbose"],
+            working_dir=".",
+            relauncher=_declining_relauncher,
         )
-
-
-def _fail_relaunch(original_args: list[str], working_dir: str) -> bool:
-    """Stand-in relaunch that reports failure (declined or unavailable).
-
-    Args:
-        original_args: Forwarded command-line arguments (unused).
-        working_dir: Working directory for the relaunch (unused).
-
-    Returns:
-        bool: Always ``False`` to simulate a declined or failed relaunch.
-    """
-    del original_args, working_dir
-    return False
-
-
-def _succeed_relaunch(original_args: list[str], working_dir: str) -> bool:
-    """Stand-in relaunch that reports a successfully started elevated process.
-
-    Args:
-        original_args: Forwarded command-line arguments (unused).
-        working_dir: Working directory for the relaunch (unused).
-
-    Returns:
-        bool: Always ``True`` to simulate a successful relaunch.
-    """
-    del original_args, working_dir
-    return True
+        assert result is False
+        assert call_count == [True], "relauncher must have been invoked exactly once"

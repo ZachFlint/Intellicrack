@@ -1,7 +1,7 @@
 # Section 12 — Sandbox Orchestration & Monitors: Test-Coverage Audit
 
-**Auditor:** test-reviewer  
-**Date:** 2026-06-26  
+**Auditor:** test-reviewer
+**Date:** 2026-06-26
 **Scope:** All Python source in `src/intellicrack/sandbox/` and `src/intellicrack/bridges/sandbox_bridge.py`; all PowerShell monitor scripts in `src/intellicrack/sandbox/scripts/`; all tests in `tests/test_sandbox/`, `tests/test_bridges/test_sandbox_bridge.py`, `tests/test_audit3/sandbox/`, `tests/test_audit4/a3_qemu_sandbox/`, `tests/test_audit7/sandbox_monitors/`, `tests/test_audit7/sandbox_windows/`, and `tests/test_audit7/sandbox_qemu/`.
 
 ---

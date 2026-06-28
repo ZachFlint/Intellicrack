@@ -129,6 +129,26 @@ mod tests {
         assert!(result.is_err());
     }
 
+    /// Wave-5 gate: assert the exact error variant and message for empty template name.
+    ///
+    /// The weak gate above only asserts `is_err()`.  This test asserts the
+    /// concrete `TemplateError::JsonParse` variant *and* that its message
+    /// contains the documented string "template name cannot be empty".
+    ///
+    /// Mutation caught: replacing `TemplateError::JsonParse(...)` with any other
+    /// variant (or changing the message text) fails the `matches!` predicate.
+    #[test]
+    fn test_parse_empty_name_exact_error_variant_and_message() {
+        let json =
+            r#"{"name": "", "description": "", "default_endianness": "little", "fields": []}"#;
+        let result = parse_json_template(json);
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, TemplateError::JsonParse(ref msg) if msg.contains("template name cannot be empty")),
+            "expected TemplateError::JsonParse(msg) containing 'template name cannot be empty', got: {err:?}"
+        );
+    }
+
     #[test]
     fn test_roundtrip() {
         let json = r#"{
@@ -188,5 +208,80 @@ mod tests {
         }"#;
         let result = parse_json_template(json);
         assert!(result.is_err());
+    }
+
+    /// Wave-5 gate: assert the exact error variant and message for an empty DynamicArray
+    /// count_field.
+    ///
+    /// The weak gate above only asserts `is_err()`.  This test asserts the concrete
+    /// `TemplateError::InvalidFieldReference` variant *and* that its message contains
+    /// "count_field".
+    ///
+    /// Mutation caught: returning `TemplateError::JsonParse` instead of
+    /// `TemplateError::InvalidFieldReference`, or omitting "count_field" from
+    /// the message, fails the `matches!` predicate.
+    #[test]
+    fn test_invalid_dynamic_array_ref_exact_error_variant_and_message() {
+        let json = r#"{
+            "name": "BAD_DA",
+            "description": "",
+            "default_endianness": "little",
+            "fields": [{
+                "name": "x",
+                "field_type": {
+                    "type": "DynamicArray",
+                    "params": {"element_type": {"type": "UInt8"}, "count_field": ""}
+                },
+                "description": ""
+            }]
+        }"#;
+        let result = parse_json_template(json);
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, TemplateError::InvalidFieldReference(ref msg) if msg.contains("count_field")),
+            "expected TemplateError::InvalidFieldReference(msg) containing 'count_field', got: {err:?}"
+        );
+    }
+
+    /// Wave-5 gate: assert `TemplateError::InvalidFieldReference` is returned for a
+    /// Conditional field whose `condition_field` is an empty string.
+    ///
+    /// This is the only test for the guard at `json_schema.rs:53`.  No test existed
+    /// before this wave.
+    ///
+    /// Oracle: the production source at line 53-56 returns
+    ///   `TemplateError::InvalidFieldReference("Conditional condition_field cannot be empty")`
+    /// when `condition_field.is_empty()`.  We assert exactly this variant and that
+    /// the message contains "condition_field".
+    ///
+    /// Mutation caught: removing or inverting the `is_empty()` guard would allow the
+    /// call to proceed (returning `Ok`) instead of failing, causing `unwrap_err()` to
+    /// panic.  Changing the error variant would cause the `matches!` predicate to fail.
+    #[test]
+    fn test_invalid_conditional_empty_condition_field_exact_error_variant() {
+        let json = r#"{
+            "name": "BAD_COND",
+            "description": "",
+            "default_endianness": "little",
+            "fields": [{
+                "name": "maybe_field",
+                "field_type": {
+                    "type": "Conditional",
+                    "params": {
+                        "condition_field": "",
+                        "condition_value": 0,
+                        "condition_op": "Eq",
+                        "fields": []
+                    }
+                },
+                "description": ""
+            }]
+        }"#;
+        let result = parse_json_template(json);
+        let err = result.unwrap_err();
+        assert!(
+            matches!(err, TemplateError::InvalidFieldReference(ref msg) if msg.contains("condition_field")),
+            "expected TemplateError::InvalidFieldReference(msg) containing 'condition_field', got: {err:?}"
+        );
     }
 }

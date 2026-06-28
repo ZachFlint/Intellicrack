@@ -41,6 +41,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.config import Config, LogConfig, SessionConfig, UIConfig
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ConfirmationLevel, ProviderName
+from intellicrack.providers.display_names import provider_display_name
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -117,7 +118,7 @@ class GeneralSettingsWidget(QWidget):
 
         self._provider_combo = QComboBox()
         for provider in ProviderName:
-            self._provider_combo.addItem(provider.value.title(), provider.value)
+            self._provider_combo.addItem(provider_display_name(provider), provider.value)
         provider_layout.addRow("Default Provider:", self._provider_combo)
 
         layout.addWidget(provider_group)

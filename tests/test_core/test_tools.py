@@ -239,12 +239,8 @@ async def test_shutdown_empty(tmp_path: Path) -> None:
 
     pre_tools = reg.get_available_tools()
     pre_defs = reg.get_tool_definitions()
-    assert len(pre_tools) == _BRIDGE_COUNT_ALL, (
-        f"Expected {_BRIDGE_COUNT_ALL} bridges before shutdown, got {len(pre_tools)}"
-    )
-    assert len(pre_defs) == _BRIDGE_COUNT_ALL, (
-        f"Expected {_BRIDGE_COUNT_ALL} definitions before shutdown, got {len(pre_defs)}"
-    )
+    assert len(pre_tools) == _BRIDGE_COUNT_ALL, f"Expected {_BRIDGE_COUNT_ALL} bridges before shutdown, got {len(pre_tools)}"
+    assert len(pre_defs) == _BRIDGE_COUNT_ALL, f"Expected {_BRIDGE_COUNT_ALL} definitions before shutdown, got {len(pre_defs)}"
 
     await reg.shutdown()
 
@@ -302,12 +298,8 @@ def _assert_real_tool_definitions(defs: list[ToolDefinition], available: set[Too
     assert {d.tool_name for d in defs} == available
     for definition in defs:
         assert isinstance(definition.tool_name, ToolName)
-        assert definition.description.strip(), (
-            f"{definition.tool_name} definition must carry a non-empty description"
-        )
-        assert definition.functions, (
-            f"{definition.tool_name} definition must expose at least one function"
-        )
+        assert definition.description.strip(), f"{definition.tool_name} definition must carry a non-empty description"
+        assert definition.functions, f"{definition.tool_name} definition must expose at least one function"
         assert all(isinstance(fn, ToolFunction) for fn in definition.functions)
 
 

@@ -800,12 +800,8 @@ def test_f0013_handler_extracts_target_process_id_and_return_code(tmp_path: Path
     assert trace_line is not None, f"probe must emit a TRACELINE: row; stdout={out!r}"
     fields = trace_line.split("|")
     assert len(fields) == 7, f"trace line must have 7 pipe-fields; got {len(fields)} in {trace_line!r}"
-    assert fields[3] == "NtOpenProcess", (
-        f"column 4 (api_name) must be 'NtOpenProcess' after Format-TraceField; got {fields[3]!r}"
-    )
-    assert fields[4] == "ntoskrnl.exe", (
-        f"column 5 (module) must be 'ntoskrnl.exe' after Format-TraceField; got {fields[4]!r}"
-    )
+    assert fields[3] == "NtOpenProcess", f"column 4 (api_name) must be 'NtOpenProcess' after Format-TraceField; got {fields[3]!r}"
+    assert fields[4] == "ntoskrnl.exe", f"column 5 (module) must be 'ntoskrnl.exe' after Format-TraceField; got {fields[4]!r}"
 
 
 def test_smoke_script_emits_start_record_when_dll_available(tmp_path: Path) -> None:

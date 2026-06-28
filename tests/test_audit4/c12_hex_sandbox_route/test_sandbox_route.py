@@ -104,8 +104,8 @@ class _RecordingBridge:
         self.execute_calls: list[tuple[str, str, int | None]] = []
         self.list_calls: int = 0
 
-    def copy_to(self, instance_id: str, source: str, dest: str) -> Coroutine[Any, Any, dict[str, Any]]:
-        """Record a ``copy_to`` invocation and return a coroutine.
+    async def copy_to(self, instance_id: str, source: str, dest: str) -> dict[str, Any]:
+        """Record a ``copy_to`` invocation and await one event-loop tick.
 
         Args:
             instance_id: Target sandbox instance ID.
@@ -113,29 +113,25 @@ class _RecordingBridge:
             dest: Destination path inside the sandbox.
 
         Returns:
-            Coroutine[Any, Any, dict[str, Any]]: Coroutine that resolves
-            to a synthetic success payload mirroring the bridge contract.
+            dict[str, Any]: Synthetic success payload mirroring the bridge contract.
         """
         self.copy_to_calls.append((instance_id, source, dest))
+        await asyncio.sleep(0)
+        return {
+            "success": True,
+            "source": source,
+            "dest": dest,
+            "instance_id": instance_id,
+        }
 
-        async def _inner() -> dict[str, Any]:  # noqa: RUF029
-            return {
-                "success": True,
-                "source": source,
-                "dest": dest,
-                "instance_id": instance_id,
-            }
-
-        return _inner()
-
-    def execute(
+    async def execute(
         self,
         instance_id: str,
         command: str,
         time_limit: int | None = None,
         working_directory: str | None = None,
-    ) -> Coroutine[Any, Any, dict[str, Any]]:
-        """Record an ``execute`` invocation and return a coroutine.
+    ) -> dict[str, Any]:
+        """Record an ``execute`` invocation and await one event-loop tick.
 
         Args:
             instance_id: Target sandbox instance ID.
@@ -144,30 +140,22 @@ class _RecordingBridge:
             working_directory: Optional working directory.
 
         Returns:
-            Coroutine[Any, Any, dict[str, Any]]: Coroutine resolving to
-            a synthetic execution payload.
+            dict[str, Any]: Synthetic execution payload.
         """
         del working_directory
         self.execute_calls.append((instance_id, command, time_limit))
+        await asyncio.sleep(0)
+        return {"exit_code": 0, "stdout": "", "stderr": ""}
 
-        async def _inner() -> dict[str, Any]:  # noqa: RUF029
-            return {"exit_code": 0, "stdout": "", "stderr": ""}
-
-        return _inner()
-
-    def list(self) -> Coroutine[Any, Any, list[dict[str, Any]]]:
-        """Record a ``list`` invocation and return a coroutine.
+    async def list(self) -> list[dict[str, Any]]:
+        """Record a ``list`` invocation and await one event-loop tick.
 
         Returns:
-            Coroutine[Any, Any, list[dict[str, Any]]]: Coroutine
-            resolving to an empty instance list.
+            list[dict[str, Any]]: Empty instance list.
         """
         self.list_calls += 1
-
-        async def _inner() -> list[dict[str, Any]]:  # noqa: RUF029
-            return []
-
-        return _inner()
+        await asyncio.sleep(0)
+        return []
 
 
 class _SandboxHost(SandboxMixin, QWidget):

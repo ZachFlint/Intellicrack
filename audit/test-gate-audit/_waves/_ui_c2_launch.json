@@ -1,1 +1,132 @@
-{"group":"test_ui__c2","files":{"tests/test_ui/test_realcov_13b_hex_widgets.py":[{"id":"G0341","test":"TestEntropyGraphWidget::test_renders_real_entropy_curve","line":156,"category":"weak-existence","severity":"medium"},{"id":"G0342","test":"TestLargeFileSettingsDialog::test_properties_reflect_inputs","line":234,"category":"tautological","severity":"medium"}],"tests/test_ui/test_realcov_15_chat_panel.py":[{"id":"G0348","test":"test_clear_messages_empties_history_and_view","line":233,"category":"no-assertion","severity":"medium"}],"tests/test_ui/test_sandbox_panel_fixes.py":[{"id":"G0351","test":"TestSandboxPanelLifecycle::test_start_tool_returns_true","line":143,"category":"tautological","severity":"low"},{"id":"G0352","test":"TestSandboxPanelLifecycle::test_stop_tool_returns_true","line":148,"category":"tautological","severity":"low"}],"tests/test_ui/test_splash_screen.py":[{"id":"G0353","test":"TestEndToEndLifecycle::test_rendering_at_every_progress_step","line":1331,"category":"no-assertion","severity":"high"},{"id":"G0356","test":"TestSplashPixmapLoading::test_pixmap_has_correct_dimensions","line":502,"category":"weak-existence","severity":"medium"},{"id":"G0357","test":"TestEndToEndLifecycle::test_failed_stage_renders_through_full_sequence","line":1366,"category":"other","severity":"low"}],"tests/test_ui/test_theme_manager.py":[{"id":"G0364","test":"TestAvailableThemes::test_get_available_themes_returns_list","line":284,"category":"weak-existence","severity":"low"},{"id":"G0365","test":"TestThemeIntegrity::test_theme_manager_initialization_no_exceptions","line":562,"category":"no-assertion","severity":"low"}],"tests/test_ui/test_vnc_widget.py":[{"id":"G0366","test":"TestVNCWidget::test_disconnect_from_server_idempotent","line":436,"category":"no-assertion","severity":"medium"},{"id":"G0368","test":"TestVNCWidget::test_initial_client_disconnected","line":431,"category":"weak-existence","severity":"low"}],"tests/test_ui/test_xpu_status.py":[{"id":"G0369","test":"TestXPUStatusDialogCache::test_cache_usage_label_has_value","line":494,"category":"weak-existence","severity":"high"},{"id":"G0370","test":"TestXPUStatusDialogCache::test_cache_limit_label_has_value","line":514,"category":"weak-existence","severity":"high"},{"id":"G0371","test":"TestXPUStatusDialogRequirements::test_requirements_text_is_populated","line":536,"category":"conditional-never-runs","severity":"high"},{"id":"G0372","test":"TestProviderConfigXPUGroupBox::test_device_combo_has_xpu_entries_when_available","line":668,"category":"conditional-never-runs","severity":"medium"}]},"context":"UI panel tests (PyQt/PySide). Important context:\n\n- Worker QThreads must be retained against GC or the test process exits 255; modal dialogs (exec()) block and hang the test (exit 124). Do NOT introduce real modal dialog .exec() calls or unretained QThreads. When a behavior is driven by a dialog/elevation/UAC prompt, the dialog/transport is the ONLY allowed double - stub it at that boundary and assert the real downstream effect.\n\n- Never mock the panel/widget class under test. Drive the real widget: construct it, call its real slots/methods, and assert the real resulting model/state/signal. Use qtbot if available, or call slots directly and assert the widget's real attributes/model contents.\n\n- Tests run headless in the sandbox (offscreen Qt platform). Tests that genuinely require a display server, a real GPU, or external GUI services may skip as environment-capability gaps - keep those skips. Everything else must run and assert concrete state, not just isinstance/not-None."}
+{
+  "group": "test_ui__c2",
+  "files": {
+    "tests/test_ui/test_realcov_13b_hex_widgets.py": [
+      {
+        "id": "G0341",
+        "test": "TestEntropyGraphWidget::test_renders_real_entropy_curve",
+        "line": 156,
+        "category": "weak-existence",
+        "severity": "medium"
+      },
+      {
+        "id": "G0342",
+        "test": "TestLargeFileSettingsDialog::test_properties_reflect_inputs",
+        "line": 234,
+        "category": "tautological",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_ui/test_realcov_15_chat_panel.py": [
+      {
+        "id": "G0348",
+        "test": "test_clear_messages_empties_history_and_view",
+        "line": 233,
+        "category": "no-assertion",
+        "severity": "medium"
+      }
+    ],
+    "tests/test_ui/test_sandbox_panel_fixes.py": [
+      {
+        "id": "G0351",
+        "test": "TestSandboxPanelLifecycle::test_start_tool_returns_true",
+        "line": 143,
+        "category": "tautological",
+        "severity": "low"
+      },
+      {
+        "id": "G0352",
+        "test": "TestSandboxPanelLifecycle::test_stop_tool_returns_true",
+        "line": 148,
+        "category": "tautological",
+        "severity": "low"
+      }
+    ],
+    "tests/test_ui/test_splash_screen.py": [
+      {
+        "id": "G0353",
+        "test": "TestEndToEndLifecycle::test_rendering_at_every_progress_step",
+        "line": 1331,
+        "category": "no-assertion",
+        "severity": "high"
+      },
+      {
+        "id": "G0356",
+        "test": "TestSplashPixmapLoading::test_pixmap_has_correct_dimensions",
+        "line": 502,
+        "category": "weak-existence",
+        "severity": "medium"
+      },
+      {
+        "id": "G0357",
+        "test": "TestEndToEndLifecycle::test_failed_stage_renders_through_full_sequence",
+        "line": 1366,
+        "category": "other",
+        "severity": "low"
+      }
+    ],
+    "tests/test_ui/test_theme_manager.py": [
+      {
+        "id": "G0364",
+        "test": "TestAvailableThemes::test_get_available_themes_returns_list",
+        "line": 284,
+        "category": "weak-existence",
+        "severity": "low"
+      },
+      {
+        "id": "G0365",
+        "test": "TestThemeIntegrity::test_theme_manager_initialization_no_exceptions",
+        "line": 562,
+        "category": "no-assertion",
+        "severity": "low"
+      }
+    ],
+    "tests/test_ui/test_vnc_widget.py": [
+      {
+        "id": "G0366",
+        "test": "TestVNCWidget::test_disconnect_from_server_idempotent",
+        "line": 436,
+        "category": "no-assertion",
+        "severity": "medium"
+      },
+      {
+        "id": "G0368",
+        "test": "TestVNCWidget::test_initial_client_disconnected",
+        "line": 431,
+        "category": "weak-existence",
+        "severity": "low"
+      }
+    ],
+    "tests/test_ui/test_xpu_status.py": [
+      {
+        "id": "G0369",
+        "test": "TestXPUStatusDialogCache::test_cache_usage_label_has_value",
+        "line": 494,
+        "category": "weak-existence",
+        "severity": "high"
+      },
+      {
+        "id": "G0370",
+        "test": "TestXPUStatusDialogCache::test_cache_limit_label_has_value",
+        "line": 514,
+        "category": "weak-existence",
+        "severity": "high"
+      },
+      {
+        "id": "G0371",
+        "test": "TestXPUStatusDialogRequirements::test_requirements_text_is_populated",
+        "line": 536,
+        "category": "conditional-never-runs",
+        "severity": "high"
+      },
+      {
+        "id": "G0372",
+        "test": "TestProviderConfigXPUGroupBox::test_device_combo_has_xpu_entries_when_available",
+        "line": 668,
+        "category": "conditional-never-runs",
+        "severity": "medium"
+      }
+    ]
+  },
+  "context": "UI panel tests (PyQt/PySide). Important context:\n\n- Worker QThreads must be retained against GC or the test process exits 255; modal dialogs (exec()) block and hang the test (exit 124). Do NOT introduce real modal dialog .exec() calls or unretained QThreads. When a behavior is driven by a dialog/elevation/UAC prompt, the dialog/transport is the ONLY allowed double - stub it at that boundary and assert the real downstream effect.\n\n- Never mock the panel/widget class under test. Drive the real widget: construct it, call its real slots/methods, and assert the real resulting model/state/signal. Use qtbot if available, or call slots directly and assert the widget's real attributes/model contents.\n\n- Tests run headless in the sandbox (offscreen Qt platform). Tests that genuinely require a display server, a real GPU, or external GUI services may skip as environment-capability gaps - keep those skips. Everything else must run and assert concrete state, not just isinstance/not-None."
+}

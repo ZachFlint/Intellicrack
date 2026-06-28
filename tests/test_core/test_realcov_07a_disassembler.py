@@ -306,8 +306,7 @@ class TestDisassembleRealMachineCode:
         instructions = disasm.disassemble(section, base_addr=rva, arch=arch, mode=mode, count=5)
 
         assert len(instructions) == 5, (
-            f"disassemble(count=5) must return exactly 5 instructions from a real .text section, "
-            f"got {len(instructions)}"
+            f"disassemble(count=5) must return exactly 5 instructions from a real .text section, got {len(instructions)}"
         )
 
         cs_arch = capstone.CS_ARCH_X86
@@ -324,12 +323,8 @@ class TestDisassembleRealMachineCode:
         for idx, (insn, (oracle_addr, oracle_mnem, _oracle_op)) in enumerate(
             zip(instructions, oracle_insns, strict=True),
         ):
-            assert insn.address == oracle_addr, (
-                f"instruction[{idx}].address {insn.address:#x} != oracle {oracle_addr:#x}"
-            )
-            assert insn.mnemonic == oracle_mnem, (
-                f"instruction[{idx}].mnemonic {insn.mnemonic!r} != oracle {oracle_mnem!r}"
-            )
+            assert insn.address == oracle_addr, f"instruction[{idx}].address {insn.address:#x} != oracle {oracle_addr:#x}"
+            assert insn.mnemonic == oracle_mnem, f"instruction[{idx}].mnemonic {insn.mnemonic!r} != oracle {oracle_mnem!r}"
 
 
 class TestSupportedArchitecturesAndSingleton:

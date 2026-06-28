@@ -1,48 +1,48 @@
 {
- "file": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestRuntimeDependenciesAreLean::test_pyproject_parses (renamed to test_runtime_and_extras_tables_are_declared)",
-   "severity": "LOW",
-   "category": "N8 existence/structural-only",
-   "action": "hardened",
-   "oracle": "Direct parse of the production pyproject.toml under test: assert the specific F-0001 tables exist and are well-typed ([project].dependencies non-empty list of strings; [project.optional-dependencies].dev present), rather than only top-level project/build-system keys.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "pyproject.toml",
-    "mutation": "optional-dependencies.dev = [ -> optional-dependencies.development = [",
-    "covering_test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestRuntimeDependenciesAreLean::test_runtime_and_extras_tables_are_declared",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "pass",
-    "proven_falsifiable": "no"
-   }
+  "file": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestPyprojectIsValid::test_pyproject_parses_under_active_interpreter (renamed to test_runtime_deps_disjoint_from_moved_extras)",
-   "severity": "MEDIUM",
-   "category": "N8 partial-overlap structural gate",
-   "action": "hardened",
-   "oracle": "Set-disjointness invariant computed independently from the parsed pyproject.toml: runtime deps (project.dependencies) intersected with the union of the dev/test/docs/profile extras groups must be empty. This is the F-0001 separation rule, derived structurally from the TOML rather than from any data the test injected.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "pyproject.toml",
-    "mutation": "  \"xxhash>=3.7.0,<4\", ->   \"xxhash>=3.7.0,<4\",\n  \"pytest\",",
-    "covering_test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestPyprojectIsValid::test_runtime_deps_disjoint_from_moved_extras",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "pass",
-    "proven_falsifiable": "no"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 2
+  "findings_addressed": [
+    {
+      "test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestRuntimeDependenciesAreLean::test_pyproject_parses (renamed to test_runtime_and_extras_tables_are_declared)",
+      "severity": "LOW",
+      "category": "N8 existence/structural-only",
+      "action": "hardened",
+      "oracle": "Direct parse of the production pyproject.toml under test: assert the specific F-0001 tables exist and are well-typed ([project].dependencies non-empty list of strings; [project.optional-dependencies].dev present), rather than only top-level project/build-system keys.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "pyproject.toml",
+        "mutation": "optional-dependencies.dev = [ -> optional-dependencies.development = [",
+        "covering_test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestRuntimeDependenciesAreLean::test_runtime_and_extras_tables_are_declared",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "pass",
+        "proven_falsifiable": "no"
+      }
+    },
+    {
+      "test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestPyprojectIsValid::test_pyproject_parses_under_active_interpreter (renamed to test_runtime_deps_disjoint_from_moved_extras)",
+      "severity": "MEDIUM",
+      "category": "N8 partial-overlap structural gate",
+      "action": "hardened",
+      "oracle": "Set-disjointness invariant computed independently from the parsed pyproject.toml: runtime deps (project.dependencies) intersected with the union of the dev/test/docs/profile extras groups must be empty. This is the F-0001 separation rule, derived structurally from the TOML rather than from any data the test injected.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "pyproject.toml",
+        "mutation": "  \"xxhash>=3.7.0,<4\", ->   \"xxhash>=3.7.0,<4\",\n  \"pytest\",",
+        "covering_test": "tests/test_audit4/d1_pyproject/test_runtime_extras_separation.py::TestPyprojectIsValid::test_runtime_deps_disjoint_from_moved_extras",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "pass",
+        "proven_falsifiable": "no"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 2
 }

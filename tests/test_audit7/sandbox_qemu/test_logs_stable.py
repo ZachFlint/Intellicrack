@@ -149,9 +149,7 @@ async def test_returns_after_writer_stops(tmp_path: Path) -> None:
     await writer_task
 
     upper_bound = write_duration + stable_polls * poll_delay + 0.5
-    assert elapsed >= write_duration, (
-        f"_wait_for_logs_stable returned at {elapsed:.3f}s before writer stopped at {write_duration:.3f}s"
-    )
+    assert elapsed >= write_duration, f"_wait_for_logs_stable returned at {elapsed:.3f}s before writer stopped at {write_duration:.3f}s"
     assert elapsed <= upper_bound, (
         f"_wait_for_logs_stable took {elapsed:.3f}s; "
         f"expected adaptive stability detection within {upper_bound:.3f}s "

@@ -116,7 +116,12 @@ class TestTypedDictConstruction:
         assert rc["operation"] == canonical_op
         assert rc["key"] == "HKLM\\SOFTWARE\\Audit"
         assert set(dict(rc).keys()) == {
-            "key", "value_name", "operation", "value_type", "value_data", "timestamp",
+            "key",
+            "value_name",
+            "operation",
+            "value_type",
+            "value_data",
+            "timestamp",
         }
         key_hash = hashlib.sha256(rc["key"].encode()).hexdigest()
         assert key_hash == hashlib.sha256(b"HKLM\\SOFTWARE\\Audit").hexdigest()
@@ -133,8 +138,15 @@ class TestTypedDictConstruction:
         ``bytes_sent: int`` to ``str`` fails the numeric-type assertion.
         """
         expected_fields = {
-            "protocol", "direction", "local_address", "local_port",
-            "remote_address", "remote_port", "timestamp", "bytes_sent", "bytes_received",
+            "protocol",
+            "direction",
+            "local_address",
+            "local_port",
+            "remote_address",
+            "remote_port",
+            "timestamp",
+            "bytes_sent",
+            "bytes_received",
         }
         hints = get_type_hints(NetworkActivity)
         assert set(hints) == expected_fields
@@ -195,8 +207,13 @@ class TestTypedDictConstruction:
         numeric-type assertion.
         """
         expected_fields = {
-            "timestamp", "process_name", "pid", "api_name",
-            "module", "arguments", "return_value",
+            "timestamp",
+            "process_name",
+            "pid",
+            "api_name",
+            "module",
+            "arguments",
+            "return_value",
         }
         hints = get_type_hints(ApiCall)
         assert set(hints) == expected_fields

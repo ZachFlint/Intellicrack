@@ -1,116 +1,116 @@
 {
- "file": "tests/core/test_process_cleanup.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/core/test_process_cleanup.py::test_sandbox_temp_wsb_file_cleaned_up",
-   "severity": "CRITICAL",
-   "category": "N4/N10 tautological/self-fulfilling",
-   "action": "hardened",
-   "oracle": "Independent recompute of the WSB XML via production _generate_wsb_config() compared against the file the worker actually wrote; plus the file-absence side-effect after the real run() finally-block. The external WindowsSandbox.exe launch is the only doubled boundary (it may be absent on the host).",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/sandbox_config.py",
-    "mutation": "self._wsb_file.unlink() -> pass",
-    "covering_test": "tests/core/test_process_cleanup.py::test_sandbox_temp_wsb_file_cleaned_up",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
+  "file": "tests/core/test_process_cleanup.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/core/test_process_cleanup.py::test_qemu_resolve_pid_uses_real_retry_constants",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only / asserts config constants",
-   "action": "hardened",
-   "oracle": "The PID integer the test independently wrote to the pidfile; the real _resolve_qemu_pid retry loop must return exactly that value (constants exercised through real code rather than asserted directly).",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/sandbox/qemu.py",
-    "mutation": "return int(pid_content.strip()) -> return int(pid_content.strip()) + 1",
-    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_resolve_pid_uses_real_retry_constants",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_immediate_file",
-   "severity": "CRITICAL",
-   "category": "N4 tautological: re-implements logic under test",
-   "action": "hardened",
-   "oracle": "PID integer written to the file; real QEMUSandbox._resolve_qemu_pid (delegating to _read_pidfile_once) must return that exact PID.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/sandbox/qemu.py",
-    "mutation": "return int(pid_content.strip()) -> return int(pid_content.strip()) + 1",
-    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_immediate_file",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_delayed_file",
-   "severity": "CRITICAL",
-   "category": "N4 tautological: re-implements logic under test",
-   "action": "hardened",
-   "oracle": "Delayed-written PID integer; the real retry loop must keep polling and return that exact PID (a single non-retrying read would return None).",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/sandbox/qemu.py",
-    "mutation": "return int(pid_content.strip()) -> return int(pid_content.strip()) + 1",
-    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_delayed_file",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_exhausted_raises_sandbox_error",
-   "severity": "CRITICAL",
-   "category": "N4 tautological: re-implements logic under test",
-   "action": "hardened",
-   "oracle": "Documented contract: real _resolve_qemu_pid returns None when the pidfile never appears, and real _verify_qemu_pid(None) raises SandboxError. Test was renamed from the misleading returns_none name to match the production raise path.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/sandbox/qemu.py",
-    "mutation": "raise SandboxError(_ERR_PIDFILE_UNREADABLE) -> return",
-    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_exhausted_raises_sandbox_error",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_handles_corrupt_content",
-   "severity": "CRITICAL",
-   "category": "N4 tautological: re-implements logic under test",
-   "action": "hardened",
-   "oracle": "Real _read_pidfile_once returns None for unparseable content (not raise); then the real retry loop recovers the exact PID written after correction.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/sandbox/qemu.py",
-    "mutation": "return int(pid_content.strip()) -> return int(pid_content.strip()) + 1",
-    "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_handles_corrupt_content",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 6
+  "findings_addressed": [
+    {
+      "test": "tests/core/test_process_cleanup.py::test_sandbox_temp_wsb_file_cleaned_up",
+      "severity": "CRITICAL",
+      "category": "N4/N10 tautological/self-fulfilling",
+      "action": "hardened",
+      "oracle": "Independent recompute of the WSB XML via production _generate_wsb_config() compared against the file the worker actually wrote; plus the file-absence side-effect after the real run() finally-block. The external WindowsSandbox.exe launch is the only doubled boundary (it may be absent on the host).",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/sandbox_config.py",
+        "mutation": "self._wsb_file.unlink() -> pass",
+        "covering_test": "tests/core/test_process_cleanup.py::test_sandbox_temp_wsb_file_cleaned_up",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/core/test_process_cleanup.py::test_qemu_resolve_pid_uses_real_retry_constants",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only / asserts config constants",
+      "action": "hardened",
+      "oracle": "The PID integer the test independently wrote to the pidfile; the real _resolve_qemu_pid retry loop must return exactly that value (constants exercised through real code rather than asserted directly).",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/sandbox/qemu.py",
+        "mutation": "return int(pid_content.strip()) -> return int(pid_content.strip()) + 1",
+        "covering_test": "tests/core/test_process_cleanup.py::test_qemu_resolve_pid_uses_real_retry_constants",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_immediate_file",
+      "severity": "CRITICAL",
+      "category": "N4 tautological: re-implements logic under test",
+      "action": "hardened",
+      "oracle": "PID integer written to the file; real QEMUSandbox._resolve_qemu_pid (delegating to _read_pidfile_once) must return that exact PID.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/sandbox/qemu.py",
+        "mutation": "return int(pid_content.strip()) -> return int(pid_content.strip()) + 1",
+        "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_immediate_file",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_delayed_file",
+      "severity": "CRITICAL",
+      "category": "N4 tautological: re-implements logic under test",
+      "action": "hardened",
+      "oracle": "Delayed-written PID integer; the real retry loop must keep polling and return that exact PID (a single non-retrying read would return None).",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/sandbox/qemu.py",
+        "mutation": "return int(pid_content.strip()) -> return int(pid_content.strip()) + 1",
+        "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_reads_delayed_file",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_exhausted_raises_sandbox_error",
+      "severity": "CRITICAL",
+      "category": "N4 tautological: re-implements logic under test",
+      "action": "hardened",
+      "oracle": "Documented contract: real _resolve_qemu_pid returns None when the pidfile never appears, and real _verify_qemu_pid(None) raises SandboxError. Test was renamed from the misleading returns_none name to match the production raise path.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/sandbox/qemu.py",
+        "mutation": "raise SandboxError(_ERR_PIDFILE_UNREADABLE) -> return",
+        "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_exhausted_raises_sandbox_error",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_handles_corrupt_content",
+      "severity": "CRITICAL",
+      "category": "N4 tautological: re-implements logic under test",
+      "action": "hardened",
+      "oracle": "Real _read_pidfile_once returns None for unparseable content (not raise); then the real retry loop recovers the exact PID written after correction.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/sandbox/qemu.py",
+        "mutation": "return int(pid_content.strip()) -> return int(pid_content.strip()) + 1",
+        "covering_test": "tests/core/test_process_cleanup.py::test_qemu_pidfile_retry_handles_corrupt_content",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 6
 }

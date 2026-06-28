@@ -1,31 +1,31 @@
 {
- "file": "tests/test_hexcore_e2e/test_bridge_base_convert.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_base_convert.py::TestBaseConvertEdgeCases::test_result_has_base_keys",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only for behavior test",
-   "action": "hardened",
-   "oracle": "Python built-in integer conversion functions: str(42)='42', hex(42)='0x2a', oct(42)='0o52', bin(42)='0b101010' \u2014 computed entirely independently of the production bridge code",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "\"hex\": hex(parsed), -> \"hex\": str(parsed),",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_base_convert.py::TestBaseConvertEdgeCases::test_result_has_base_keys",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 1
+  "file": "tests/test_hexcore_e2e/test_bridge_base_convert.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_base_convert.py::TestBaseConvertEdgeCases::test_result_has_base_keys",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only for behavior test",
+      "action": "hardened",
+      "oracle": "Python built-in integer conversion functions: str(42)='42', hex(42)='0x2a', oct(42)='0o52', bin(42)='0b101010' — computed entirely independently of the production bridge code",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "\"hex\": hex(parsed), -> \"hex\": str(parsed),",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_base_convert.py::TestBaseConvertEdgeCases::test_result_has_base_keys",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 1
 }

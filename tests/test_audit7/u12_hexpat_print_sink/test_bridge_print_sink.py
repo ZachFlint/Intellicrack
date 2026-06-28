@@ -231,8 +231,7 @@ class TestExecutePatternWithOutputCapturesPrint:
         )
         field_names: list[str] = [str(f.get("name", "")) for f in fields]
         assert any("__mark" in name for name in field_names), (
-            f"expected '__mark' anchor field in execute_pattern_with_output fields; "
-            f"got field names {field_names!r}"
+            f"expected '__mark' anchor field in execute_pattern_with_output fields; got field names {field_names!r}"
         )
 
     def test_multiple_prints_are_newline_joined(self, loaded_bridge: HexEditorBridge) -> None:
@@ -314,9 +313,7 @@ class TestExecutePatternToolFunctionRegistration:
         assert fn.description.strip(), "registered function must carry a description"
         assert fn.returns.strip(), "registered function must document its return value"
         param_names = {param.name for param in fn.parameters}
-        assert "source" in param_names, (
-            f"registered function must expose its required 'source' parameter; got {sorted(param_names)}"
-        )
+        assert "source" in param_names, f"registered function must expose its required 'source' parameter; got {sorted(param_names)}"
         method = getattr(loaded_bridge, "execute_pattern_with_output", None)
         assert callable(method), "the registered tool name must resolve to a real bridge method"
 

@@ -546,17 +546,14 @@ def test_script_idempotency_dedupes_rapid_duplicate_transitions(tmp_path: Path) 
     )
 
     assert completed.returncode == 0, (
-        f"dedup harness exited with rc={completed.returncode}; "
-        f"stderr={completed.stderr!r}; stdout={completed.stdout!r}"
+        f"dedup harness exited with rc={completed.returncode}; stderr={completed.stderr!r}; stdout={completed.stdout!r}"
     )
 
     count_line = next(
         (ln for ln in completed.stdout.splitlines() if ln.startswith("DEDUP_COUNT=")),
         None,
     )
-    assert count_line is not None, (
-        f"harness did not emit DEDUP_COUNT= line; stdout={completed.stdout!r} stderr={completed.stderr!r}"
-    )
+    assert count_line is not None, f"harness did not emit DEDUP_COUNT= line; stdout={completed.stdout!r} stderr={completed.stderr!r}"
 
     actual_count = int(count_line.split("=", 1)[1].strip())
 

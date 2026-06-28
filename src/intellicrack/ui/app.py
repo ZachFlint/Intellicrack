@@ -63,7 +63,8 @@ from intellicrack.core.types import (
     ToolResult,
 )
 from intellicrack.credentials import get_credentials
-from intellicrack.providers.discovery import ModelDiscovery
+from intellicrack.providers.discovery import ModelDiscovery, format_discovery_status
+from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
 from intellicrack.sandbox import SandboxConfig, SandboxManager
 from intellicrack.ui._screen_compat import get_screen_geometry, move_widget
 from intellicrack.ui.chat import ChatPanel
@@ -822,7 +823,7 @@ class MainWindow(QMainWindow):
         self._provider_combo.setMinimumWidth(120)
         self._provider_combo.setObjectName("toolbar_combo")
         for provider in ProviderName:
-            self._provider_combo.addItem(provider.value.title(), provider)
+            self._provider_combo.addItem(provider_display_name(provider), provider)
         self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
         toolbar.addWidget(self._provider_combo)
 
@@ -1046,11 +1047,13 @@ class MainWindow(QMainWindow):
         if self.model_discovery is None:
             return
         try:
-            if events := self.model_discovery.get_discovery_events():
-                last_event = events[-1]
-                provider_str = last_event.provider.value
-                status_str = "OK" if last_event.success else (last_event.error_message or "failed")
-                self.model_status_label.setText(f"Discovery: {provider_str} {status_str}")
+            events = self.model_discovery.get_discovery_events()
+            active_provider = self._orchestrator.provider_registry.active_name
+            status_text = format_discovery_status(
+                events,
+                active_provider=active_provider,
+            )
+            self.model_status_label.setText(status_text)
         except (RuntimeError, AttributeError, ValueError):
             _logger.debug("model_discovery_status_refresh_failed", exc_info=True)
 
@@ -1266,9 +1269,7 @@ class MainWindow(QMainWindow):
         """
         provider_data: object = self._provider_combo.currentData()
         model = self.model_combo.currentText().strip()
-        provider: str | ProviderName = (
-            provider_data if isinstance(provider_data, ProviderName) else str(provider_data)
-        )
+        provider: str | ProviderName = provider_data if isinstance(provider_data, ProviderName) else str(provider_data)
         return provider, model
 
     async def _ensure_active_session(self, provider: str | ProviderName, model: str) -> None:
@@ -2122,7 +2123,9 @@ class MainWindow(QMainWindow):
 
             existing_provider = registry.get(pname)
 
-            if not enabled or not api_key:
+            is_no_key_provider = provider_id in NO_API_KEY_PROVIDER_IDS
+
+            if not enabled or (not api_key and not is_no_key_provider):
                 if existing_provider is not None and existing_provider.is_connected:
                     providers_to_disconnect.append(pname)
                 continue
@@ -2130,7 +2133,11 @@ class MainWindow(QMainWindow):
             if existing_provider is None:
                 continue
 
-            creds = ProviderCredentials(api_key=api_key, api_base=api_base, organization_id=org_id)
+            creds = ProviderCredentials(
+                api_key=api_key or None,
+                api_base=api_base,
+                organization_id=org_id,
+            )
             providers_to_connect.append((pname, creds))
 
         if providers_to_connect or providers_to_disconnect:
@@ -3165,7 +3172,8 @@ class MainWindow(QMainWindow):
                 "provider_changed_not_connected",
                 provider=provider.value,
             )
-            choice = self._prompt_provider_not_connected(provider.value)
+            display_name = provider_display_name(provider)
+            choice = self._prompt_provider_not_connected(display_name)
             if choice == "configure":
                 self._on_configure_providers()
             else:
@@ -3173,7 +3181,7 @@ class MainWindow(QMainWindow):
                     if prev_idx >= 0:
                         self._provider_combo.setCurrentIndex(prev_idx)
             self.status_update.emit(
-                f"Provider {provider.value} selected but not connected. Configure credentials in Providers menu.",
+                f"Provider {display_name} selected but not connected. Configure credentials in Providers menu.",
             )
             return
 

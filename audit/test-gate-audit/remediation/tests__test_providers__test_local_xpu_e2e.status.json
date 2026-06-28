@@ -1,31 +1,31 @@
 {
- "file": "tests/test_providers/test_local_xpu_e2e.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "TestVRAMManagement::test_memory_decreases_after_unload",
-   "severity": null,
-   "category": null,
-   "action": "hardened",
-   "oracle": "get_xpu_memory_info(0) allocated bytes strictly decreases after unload_model() on a provider whose private ModelCache holds the only reference to the loaded tensors",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/local_transformers.py",
-    "mutation": "self._model_cache.remove(model_id, dtype, device_type) -> pass  # self._model_cache.remove(model_id, dtype, device_type)",
-    "covering_test": "TestVRAMManagement::test_memory_decreases_after_unload",
-    "expected_baseline": "green",
-    "green_status": "skip",
-    "mutation_result": null,
-    "proven_falsifiable": null
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 1
+  "file": "tests/test_providers/test_local_xpu_e2e.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "TestVRAMManagement::test_memory_decreases_after_unload",
+      "severity": null,
+      "category": null,
+      "action": "hardened",
+      "oracle": "get_xpu_memory_info(0) allocated bytes strictly decreases after unload_model() on a provider whose private ModelCache holds the only reference to the loaded tensors",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/local_transformers.py",
+        "mutation": "self._model_cache.remove(model_id, dtype, device_type) -> pass  # self._model_cache.remove(model_id, dtype, device_type)",
+        "covering_test": "TestVRAMManagement::test_memory_decreases_after_unload",
+        "expected_baseline": "green",
+        "green_status": "skip",
+        "mutation_result": null,
+        "proven_falsifiable": null
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 1
 }

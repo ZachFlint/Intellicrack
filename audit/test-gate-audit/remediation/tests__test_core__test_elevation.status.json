@@ -1,31 +1,31 @@
 {
- "file": "tests/test_core/test_elevation.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_core/test_elevation.py::TestPlatformHelpers::test_is_elevated_matches_oracle",
-   "severity": "LOW",
-   "category": "N8 existence-only for a behavior test",
-   "action": "hardened",
-   "oracle": "Independent ctypes.WinDLL('shell32').IsUserAnAdmin() call (fresh binding separate from production code's binding) on Windows; unconditional False on non-Windows (per spec at elevation.py:82-83)",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/core/elevation.py",
-    "mutation": "return bool(is_user_an_admin()) -> return not bool(is_user_an_admin())",
-    "covering_test": "tests/test_core/test_elevation.py::TestPlatformHelpers::test_is_elevated_matches_oracle",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 1
+  "file": "tests/test_core/test_elevation.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/test_core/test_elevation.py::TestPlatformHelpers::test_is_elevated_matches_oracle",
+      "severity": "LOW",
+      "category": "N8 existence-only for a behavior test",
+      "action": "hardened",
+      "oracle": "Independent ctypes.WinDLL('shell32').IsUserAnAdmin() call (fresh binding separate from production code's binding) on Windows; unconditional False on non-Windows (per spec at elevation.py:82-83)",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/core/elevation.py",
+        "mutation": "return bool(is_user_an_admin()) -> return not bool(is_user_an_admin())",
+        "covering_test": "tests/test_core/test_elevation.py::TestPlatformHelpers::test_is_elevated_matches_oracle",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 1
 }

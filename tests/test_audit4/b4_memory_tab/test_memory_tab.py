@@ -336,21 +336,13 @@ class TestRegionFilterFiltersTable:
 
         region_filter.setText("ntdll")
 
-        assert not table.isRowHidden(0), (
-            "Row 0 (ntdll.dll) must be visible after signal-driven filter setText('ntdll')"
-        )
-        assert table.isRowHidden(1), (
-            "Row 1 (kernel32.dll) must be hidden after signal-driven filter setText('ntdll')"
-        )
+        assert not table.isRowHidden(0), "Row 0 (ntdll.dll) must be visible after signal-driven filter setText('ntdll')"
+        assert table.isRowHidden(1), "Row 1 (kernel32.dll) must be hidden after signal-driven filter setText('ntdll')"
 
         region_filter.setText("kernel32")
 
-        assert table.isRowHidden(0), (
-            "Row 0 (ntdll.dll) must be hidden after signal-driven filter setText('kernel32')"
-        )
-        assert not table.isRowHidden(1), (
-            "Row 1 (kernel32.dll) must be visible after signal-driven filter setText('kernel32')"
-        )
+        assert table.isRowHidden(0), "Row 0 (ntdll.dll) must be hidden after signal-driven filter setText('kernel32')"
+        assert not table.isRowHidden(1), "Row 1 (kernel32.dll) must be visible after signal-driven filter setText('kernel32')"
 
     def test_region_filter_case_insensitive(self, tab: MemoryTab) -> None:
         """Filter match is case-insensitive.
@@ -508,12 +500,10 @@ class TestActionsDisabledHandlerNoDispatch:
 
         assert dispatch_args, "run_bridge_coroutine_logged must be called when _attached_pid is set"
         assert dispatch_args[0][0] is mock_bridge.read_memory.return_value, (
-            "First positional argument must be the coroutine returned by bridge.read_memory; "
-            f"got {dispatch_args[0][0]!r}"
+            f"First positional argument must be the coroutine returned by bridge.read_memory; got {dispatch_args[0][0]!r}"
         )
         assert dispatch_kwargs[0].get("address") == hex(0x1000), (
-            f"address kwarg must equal {hex(0x1000)!r}; "
-            f"got {dispatch_kwargs[0].get('address')!r}"
+            f"address kwarg must equal {hex(0x1000)!r}; got {dispatch_kwargs[0].get('address')!r}"
         )
 
     def test_on_write_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -592,12 +582,10 @@ class TestActionsDisabledHandlerNoDispatch:
 
         assert dispatch_args, "run_bridge_coroutine_logged must be called when _attached_pid is set"
         assert dispatch_args[0][0] is mock_bridge.write_memory.return_value, (
-            "First positional argument must be the coroutine returned by bridge.write_memory; "
-            f"got {dispatch_args[0][0]!r}"
+            f"First positional argument must be the coroutine returned by bridge.write_memory; got {dispatch_args[0][0]!r}"
         )
         assert dispatch_kwargs[0].get("address") == hex(0x1000), (
-            f"address kwarg must equal {hex(0x1000)!r}; "
-            f"got {dispatch_kwargs[0].get('address')!r}"
+            f"address kwarg must equal {hex(0x1000)!r}; got {dispatch_kwargs[0].get('address')!r}"
         )
 
     def test_on_search_no_dispatch_when_unattached(self, tab: MemoryTab, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -673,12 +661,10 @@ class TestActionsDisabledHandlerNoDispatch:
 
         assert dispatch_args, "run_bridge_coroutine_logged must be called when _attached_pid is set"
         assert dispatch_args[0][0] is mock_bridge.search_pattern.return_value, (
-            "First positional argument must be the coroutine returned by bridge.search_pattern; "
-            f"got {dispatch_args[0][0]!r}"
+            f"First positional argument must be the coroutine returned by bridge.search_pattern; got {dispatch_args[0][0]!r}"
         )
         assert dispatch_kwargs[0].get("pattern_length") == len(pattern), (
-            f"pattern_length kwarg must equal {len(pattern)!r}; "
-            f"got {dispatch_kwargs[0].get('pattern_length')!r}"
+            f"pattern_length kwarg must equal {len(pattern)!r}; got {dispatch_kwargs[0].get('pattern_length')!r}"
         )
 
 

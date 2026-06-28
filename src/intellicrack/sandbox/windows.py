@@ -785,11 +785,9 @@ class WindowsSandbox(SandboxBase):
     async def _abort_client(self) -> None:
         """Force-terminate a sandbox client (and its modal failure dialog) after a failed start.
 
-        Unlike :meth:`stop`, this skips the graceful ``WM_CLOSE`` path because a
-        failed launch typically leaves the client blocked on a modal error
-        dialog that never honours a close request; the client is force-killed
-        and unregistered so the next launch attempt is not blocked by a stale
-        instance.
+        Unlike :meth:`stop`, this skips the graceful ``WM_CLOSE`` path because a failed launch typically leaves the client blocked on a
+        modal error dialog that never honours a close request; the client is force-killed and unregistered so the next launch attempt is not
+        blocked by a stale instance.
         """
         if self.process is None:
             return

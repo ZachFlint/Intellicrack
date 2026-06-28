@@ -1,1 +1,307 @@
-[{"file": "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py", "report": "test_audit4_group1.md", "n": 7}, {"file": "tests/test_bridges/test_hex_editor_pe_methods.py", "report": "test_bridges_part1.md", "n": 3}, {"file": "tests/test_audit3/bridges/test_installer.py", "report": "test_audit3.md", "n": 2}, {"file": "tests/test_audit3/sandbox/test_injection_monitor.py", "report": "test_audit3.md", "n": 2}, {"file": "tests/test_providers/test_credential_loading.py", "report": "test_providers_part1.md", "n": 2}, {"file": "tests/test_providers/test_local_xpu_e2e.py", "report": "test_providers_part1.md", "n": 2}, {"file": "tests/test_providers/test_model_discovery.py", "report": "test_providers_part1.md", "n": 2}, {"file": "tests/test_providers/test_ollama_provider.py", "report": "test_providers_part1.md", "n": 2}, {"file": "tests/test_providers/test_providers_cloud_audit1.py", "report": "test_providers_part2.md", "n": 2}, {"file": "tests/test_sandbox/test_realcov_12b_analysis_real.py", "report": "test_sandbox_and_hexpat.md", "n": 2}, {"file": "tests/test_audit3/bridges/test_realcov_04_installer.py", "report": "test_audit3.md", "n": 1}, {"file": "tests/test_audit3/ui/test_script_manager.py", "report": "test_audit3.md", "n": 1}, {"file": "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py", "report": "test_audit5.md", "n": 1}, {"file": "tests/test_audit7/sandbox_monitors/test_stop_event.py", "report": "test_audit7_group1.md", "n": 1}, {"file": "tests/test_audit7/sandbox_windows/test_anti_evasion_wmi_hijack.py", "report": "test_audit7_group1.md", "n": 1}, {"file": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py", "report": "test_audit7_group2.md", "n": 1}, {"file": "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py", "report": "test_audit7_group2.md", "n": 1}, {"file": "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py", "report": "test_audit7_group2.md", "n": 1}, {"file": "tests/test_bridges/test_frida_bridge.py", "report": "test_bridges_part1.md", "n": 1}, {"file": "tests/test_bridges/test_realcov_03c_cutter.py", "report": "test_bridges_part2.md", "n": 1}, {"file": "tests/test_bridges/test_win32_types.py", "report": "test_bridges_part2.md", "n": 1}, {"file": "tests/test_bridges/test_x64dbg_audit6.py", "report": "test_bridges_part2.md", "n": 1}, {"file": "tests/test_core/test_elevation.py", "report": "test_core_part1.md", "n": 1}, {"file": "tests/test_core/test_orchestrator.py", "report": "test_core_part1.md", "n": 1}, {"file": "tests/test_core/test_realcov_05b_tools.py", "report": "test_core_part1.md", "n": 1}, {"file": "tests/test_core/test_tools_audit6.py", "report": "test_core_part2.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bookmarks.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_ai_context.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_base_convert.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_block_ops.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_copy_as.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_document_info.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_error_handling.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_patches.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_pattern_engine.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_search.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_state_integration.py", "report": "test_hexcore_e2e_part1.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_transforms.py", "report": "test_hexcore_e2e_part2.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py", "report": "test_hexcore_e2e_part2.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_bridge_yara.py", "report": "test_hexcore_e2e_part2.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_encodings.py", "report": "test_hexcore_e2e_part2.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py", "report": "test_hexcore_e2e_part2.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_hexpat_stdlib.py", "report": "test_hexcore_e2e_part2.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_process_memory.py", "report": "test_hexcore_e2e_part2.md", "n": 1}, {"file": "tests/test_hexcore_e2e/test_search.py", "report": "test_hexcore_e2e_part2.md", "n": 1}, {"file": "tests/test_hexpat/test_realcov_07b_compiler_pragmas.py", "report": "test_sandbox_and_hexpat.md", "n": 1}, {"file": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py", "report": "test_sandbox_and_hexpat.md", "n": 1}, {"file": "tests/test_providers/test_anthropic_buffers_live.py", "report": "test_providers_part1.md", "n": 1}, {"file": "tests/test_providers/test_google_provider.py", "report": "test_providers_part1.md", "n": 1}, {"file": "tests/test_providers/test_grok_provider.py", "report": "test_providers_part1.md", "n": 1}, {"file": "tests/test_providers/test_huggingface_provider.py", "report": "test_providers_part1.md", "n": 1}, {"file": "tests/test_providers/test_local_transformers_provider.py", "report": "test_providers_part1.md", "n": 1}, {"file": "tests/test_providers/test_openai_provider.py", "report": "test_providers_part1.md", "n": 1}, {"file": "tests/test_providers/test_openrouter_provider.py", "report": "test_providers_part1.md", "n": 1}, {"file": "tests/test_providers/test_registry.py", "report": "test_providers_part2.md", "n": 1}, {"file": "tests/test_sandbox/test_base_types.py", "report": "test_sandbox_and_hexpat.md", "n": 1}, {"file": "tests/test_sandbox/test_manager.py", "report": "test_sandbox_and_hexpat.md", "n": 1}, {"file": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py", "report": "test_sandbox_and_hexpat.md", "n": 1}, {"file": "tests/test_ui/test_xpu_status.py", "report": "test_ui_part2.md", "n": 1}, {"file": "tests/ui/test_system_tab_warnings.py", "report": "misc_credentials_root_scripts.md", "n": 1}]
+[
+  {
+    "file": "tests/test_audit4/a4_windows_sandbox/test_ps_sources.py",
+    "report": "test_audit4_group1.md",
+    "n": 7
+  },
+  {
+    "file": "tests/test_bridges/test_hex_editor_pe_methods.py",
+    "report": "test_bridges_part1.md",
+    "n": 3
+  },
+  {
+    "file": "tests/test_audit3/bridges/test_installer.py",
+    "report": "test_audit3.md",
+    "n": 2
+  },
+  {
+    "file": "tests/test_audit3/sandbox/test_injection_monitor.py",
+    "report": "test_audit3.md",
+    "n": 2
+  },
+  {
+    "file": "tests/test_providers/test_credential_loading.py",
+    "report": "test_providers_part1.md",
+    "n": 2
+  },
+  {
+    "file": "tests/test_providers/test_local_xpu_e2e.py",
+    "report": "test_providers_part1.md",
+    "n": 2
+  },
+  {
+    "file": "tests/test_providers/test_model_discovery.py",
+    "report": "test_providers_part1.md",
+    "n": 2
+  },
+  {
+    "file": "tests/test_providers/test_ollama_provider.py",
+    "report": "test_providers_part1.md",
+    "n": 2
+  },
+  {
+    "file": "tests/test_providers/test_providers_cloud_audit1.py",
+    "report": "test_providers_part2.md",
+    "n": 2
+  },
+  {
+    "file": "tests/test_sandbox/test_realcov_12b_analysis_real.py",
+    "report": "test_sandbox_and_hexpat.md",
+    "n": 2
+  },
+  {
+    "file": "tests/test_audit3/bridges/test_realcov_04_installer.py",
+    "report": "test_audit3.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_audit3/ui/test_script_manager.py",
+    "report": "test_audit3.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_audit5/u2_bridges_frida/test_frida_bridge_audit5.py",
+    "report": "test_audit5.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_audit7/sandbox_monitors/test_stop_event.py",
+    "report": "test_audit7_group1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_audit7/sandbox_windows/test_anti_evasion_wmi_hijack.py",
+    "report": "test_audit7_group1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py",
+    "report": "test_audit7_group2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py",
+    "report": "test_audit7_group2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_audit7/ui_wire_sandbox_backend/test_wire_sandbox_backend.py",
+    "report": "test_audit7_group2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_bridges/test_frida_bridge.py",
+    "report": "test_bridges_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_bridges/test_realcov_03c_cutter.py",
+    "report": "test_bridges_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_bridges/test_win32_types.py",
+    "report": "test_bridges_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_bridges/test_x64dbg_audit6.py",
+    "report": "test_bridges_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_core/test_elevation.py",
+    "report": "test_core_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_core/test_orchestrator.py",
+    "report": "test_core_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_core/test_realcov_05b_tools.py",
+    "report": "test_core_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_core/test_tools_audit6.py",
+    "report": "test_core_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bookmarks.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_ai_context.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_base_convert.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_block_ops.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_copy_as.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_document_info.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_error_handling.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_new_capabilities.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_patches.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_pattern_engine.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_search.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_state_integration.py",
+    "report": "test_hexcore_e2e_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_transforms.py",
+    "report": "test_hexcore_e2e_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py",
+    "report": "test_hexcore_e2e_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_bridge_yara.py",
+    "report": "test_hexcore_e2e_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_encodings.py",
+    "report": "test_hexcore_e2e_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_hexpat_complex_patterns.py",
+    "report": "test_hexcore_e2e_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_hexpat_stdlib.py",
+    "report": "test_hexcore_e2e_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_process_memory.py",
+    "report": "test_hexcore_e2e_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexcore_e2e/test_search.py",
+    "report": "test_hexcore_e2e_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexpat/test_realcov_07b_compiler_pragmas.py",
+    "report": "test_sandbox_and_hexpat.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_hexpat/test_realcov_08_preprocessor_vendor.py",
+    "report": "test_sandbox_and_hexpat.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_providers/test_anthropic_buffers_live.py",
+    "report": "test_providers_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_providers/test_google_provider.py",
+    "report": "test_providers_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_providers/test_grok_provider.py",
+    "report": "test_providers_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_providers/test_huggingface_provider.py",
+    "report": "test_providers_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_providers/test_local_transformers_provider.py",
+    "report": "test_providers_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_providers/test_openai_provider.py",
+    "report": "test_providers_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_providers/test_openrouter_provider.py",
+    "report": "test_providers_part1.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_providers/test_registry.py",
+    "report": "test_providers_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_sandbox/test_base_types.py",
+    "report": "test_sandbox_and_hexpat.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_sandbox/test_manager.py",
+    "report": "test_sandbox_and_hexpat.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py",
+    "report": "test_sandbox_and_hexpat.md",
+    "n": 1
+  },
+  {
+    "file": "tests/test_ui/test_xpu_status.py",
+    "report": "test_ui_part2.md",
+    "n": 1
+  },
+  {
+    "file": "tests/ui/test_system_tab_warnings.py",
+    "report": "misc_credentials_root_scripts.md",
+    "n": 1
+  }
+]

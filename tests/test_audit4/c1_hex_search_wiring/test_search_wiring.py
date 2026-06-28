@@ -360,13 +360,9 @@ class TestSearchUsesDocument:
         mixin.do_search()
 
         worker = mixin.search_worker
-        assert worker is not None, (
-            "_on_search must create a GenericCallableWorker when document is set"
-        )
+        assert worker is not None, "_on_search must create a GenericCallableWorker when document is set"
         worker_args = cast(tuple[object, ...], getattr(worker, "_args", ()))
-        assert worker_args[0] is doc, (
-            "Worker must be bound to self.document, not None or a stale reference"
-        )
+        assert worker_args[0] is doc, "Worker must be bound to self.document, not None or a stale reference"
 
         worker.quit()
         worker.wait(2000)

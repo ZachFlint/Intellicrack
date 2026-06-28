@@ -1,99 +1,99 @@
 {
- "file": "tests/test_providers/test_agentic_capabilities.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_providers/test_agentic_capabilities.py::TestAccurateToolSupport::test_ollama_models_report_accurate_tool_support",
-   "severity": "CRITICAL",
-   "category": "N4 vacuous",
-   "action": "hardened",
-   "oracle": "Independent re-derivation of supports_tools from the model's own /api/show template via the {{ .Tools }} directive regex, fetched separately through OllamaProvider.show_model and compared to the bridge's ModelInfo.supports_tools per local model.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/ollama.py",
-    "mutation": "re.search(r\"\\{\\{-?\\s*\\.Tools\\s*-?\\}\\}\", template) -> re.search(r\"\", template)",
-    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestAccurateToolSupport::test_ollama_models_report_accurate_tool_support",
-    "expected_baseline": "green",
-    "green_status": "skip",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
+  "file": "tests/test_providers/test_agentic_capabilities.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_required_forces_tool_call",
-   "severity": "HIGH",
-   "category": "N7 accepts-both-outcomes",
-   "action": "hardened",
-   "oracle": "tool_choice=REQUIRED with a single offered tool compels Gemini FunctionCallingConfigMode.ANY; asserts the returned ToolCall has exact function_name binary.get_file_size, prefix-derived tool_name binary, non-empty id, and a str path argument (structure dictated by ToolName/ToolDefinition and parse_tool_call dotted-name split).",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/google.py",
-    "mutation": "            elif tool_choice.mode == ToolChoiceMode.REQUIRED:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.ANY)) ->             elif tool_choice.mode == ToolChoiceMode.REQUIRED:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.NONE))",
-    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_required_forces_tool_call",
-    "expected_baseline": "green",
-    "green_status": "skip",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_none_prevents_tool_call",
-   "severity": "HIGH",
-   "category": "N7 accepts-both-outcomes",
-   "action": "hardened",
-   "oracle": "tool_choice=NONE maps to Gemini FunctionCallingConfigMode.NONE; the deterministic arithmetic prompt must be answered in free text: role assistant, non-empty content, tool_calls is None.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/google.py",
-    "mutation": "            elif tool_choice.mode == ToolChoiceMode.NONE:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.NONE)) ->             elif tool_choice.mode == ToolChoiceMode.NONE:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.ANY))",
-    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_none_prevents_tool_call",
-    "expected_baseline": "green",
-    "green_status": "skip",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_huggingface_buffer_manager_assembles_fragmented_tool_call",
-   "severity": "HIGH",
-   "category": "N6/N7 vacuously-satisfiable",
-   "action": "hardened",
-   "oracle": "json.loads of the concatenated argument fragments yields the expected arguments dict; this is the exact production unit (ToolCallBufferManager.accumulate/finalize) the HuggingFace chat_stream path uses via _consume_stream_chunks. Replaces a live-model if-pending/else test whose else branch was vacuous and whose tool-support skip masked the regression.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/base.py",
-    "mutation": "            buf[\"arguments\"] += arguments ->             buf[\"arguments\"] = arguments",
-    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_huggingface_buffer_manager_assembles_fragmented_tool_call",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_ollama_native_stream_assembler_reconstructs_tool_call",
-   "severity": "HIGH",
-   "category": "N6/N7 vacuously-satisfiable",
-   "action": "hardened",
-   "oracle": "json.loads of the concatenated argument fragments yields the expected arguments dict; replays NDJSON message deltas through the exact production native assembler OllamaProvider._accumulate_native_tool_call_deltas + _finalize_native_tool_calls (invoked via getattr to avoid SLF001 without any suppression). Replaces a live-model if-pending/else test whose else branch was vacuous and whose skips masked the fallback-assembler regression.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/ollama.py",
-    "mutation": "                entry_func[\"arguments\"] = cast(\"str\", entry_func[\"arguments\"]) + args_val ->                 entry_func[\"arguments\"] = args_val",
-    "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_ollama_native_stream_assembler_reconstructs_tool_call",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 5
+  "findings_addressed": [
+    {
+      "test": "tests/test_providers/test_agentic_capabilities.py::TestAccurateToolSupport::test_ollama_models_report_accurate_tool_support",
+      "severity": "CRITICAL",
+      "category": "N4 vacuous",
+      "action": "hardened",
+      "oracle": "Independent re-derivation of supports_tools from the model's own /api/show template via the {{ .Tools }} directive regex, fetched separately through OllamaProvider.show_model and compared to the bridge's ModelInfo.supports_tools per local model.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/ollama.py",
+        "mutation": "re.search(r\"\\{\\{-?\\s*\\.Tools\\s*-?\\}\\}\", template) -> re.search(r\"\", template)",
+        "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestAccurateToolSupport::test_ollama_models_report_accurate_tool_support",
+        "expected_baseline": "green",
+        "green_status": "skip",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_required_forces_tool_call",
+      "severity": "HIGH",
+      "category": "N7 accepts-both-outcomes",
+      "action": "hardened",
+      "oracle": "tool_choice=REQUIRED with a single offered tool compels Gemini FunctionCallingConfigMode.ANY; asserts the returned ToolCall has exact function_name binary.get_file_size, prefix-derived tool_name binary, non-empty id, and a str path argument (structure dictated by ToolName/ToolDefinition and parse_tool_call dotted-name split).",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/google.py",
+        "mutation": "            elif tool_choice.mode == ToolChoiceMode.REQUIRED:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.ANY)) ->             elif tool_choice.mode == ToolChoiceMode.REQUIRED:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.NONE))",
+        "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_required_forces_tool_call",
+        "expected_baseline": "green",
+        "green_status": "skip",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_none_prevents_tool_call",
+      "severity": "HIGH",
+      "category": "N7 accepts-both-outcomes",
+      "action": "hardened",
+      "oracle": "tool_choice=NONE maps to Gemini FunctionCallingConfigMode.NONE; the deterministic arithmetic prompt must be answered in free text: role assistant, non-empty content, tool_calls is None.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/google.py",
+        "mutation": "            elif tool_choice.mode == ToolChoiceMode.NONE:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.NONE)) ->             elif tool_choice.mode == ToolChoiceMode.NONE:\n                tool_config = types.ToolConfig(function_calling_config=types.FunctionCallingConfig(mode=fc_mode.ANY))",
+        "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestToolChoiceRequired::test_google_tool_choice_none_prevents_tool_call",
+        "expected_baseline": "green",
+        "green_status": "skip",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_huggingface_buffer_manager_assembles_fragmented_tool_call",
+      "severity": "HIGH",
+      "category": "N6/N7 vacuously-satisfiable",
+      "action": "hardened",
+      "oracle": "json.loads of the concatenated argument fragments yields the expected arguments dict; this is the exact production unit (ToolCallBufferManager.accumulate/finalize) the HuggingFace chat_stream path uses via _consume_stream_chunks. Replaces a live-model if-pending/else test whose else branch was vacuous and whose tool-support skip masked the regression.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/base.py",
+        "mutation": "            buf[\"arguments\"] += arguments ->             buf[\"arguments\"] = arguments",
+        "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_huggingface_buffer_manager_assembles_fragmented_tool_call",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_ollama_native_stream_assembler_reconstructs_tool_call",
+      "severity": "HIGH",
+      "category": "N6/N7 vacuously-satisfiable",
+      "action": "hardened",
+      "oracle": "json.loads of the concatenated argument fragments yields the expected arguments dict; replays NDJSON message deltas through the exact production native assembler OllamaProvider._accumulate_native_tool_call_deltas + _finalize_native_tool_calls (invoked via getattr to avoid SLF001 without any suppression). Replaces a live-model if-pending/else test whose else branch was vacuous and whose skips masked the fallback-assembler regression.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/ollama.py",
+        "mutation": "                entry_func[\"arguments\"] = cast(\"str\", entry_func[\"arguments\"]) + args_val ->                 entry_func[\"arguments\"] = args_val",
+        "covering_test": "tests/test_providers/test_agentic_capabilities.py::TestStreamingToolCalls::test_ollama_native_stream_assembler_reconstructs_tool_call",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 5
 }

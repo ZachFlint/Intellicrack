@@ -6,7 +6,7 @@
       "test": "test_monitor_emits_lifecycle_records",
       "action": "hardened",
       "oracle": "text.rfind('} finally {') gives the byte offset of the outermost finally block opener; text.rfind(stopped_call) gives the byte offset of the last -State 'stopped' call; the structural position assert stopped_pos > finally_pos is an independent positional oracle computed without injecting any data into the script.",
-      "documented_mutation": "In any of the four monitor scripts (e.g. dll_monitor.ps1), move `Write-DllLifecycle -State 'stopped' ...` from inside the `} finally {` block to a position *before* the `} finally {` marker (e.g. place it just before the `try {` that wraps the main loop) \u2014 the new `assert stopped_pos > finally_pos` assertion will FAIL because stopped_pos < finally_pos."
+      "documented_mutation": "In any of the four monitor scripts (e.g. dll_monitor.ps1), move `Write-DllLifecycle -State 'stopped' ...` from inside the `} finally {` block to a position *before* the `} finally {` marker (e.g. place it just before the `try {` that wraps the main loop) — the new `assert stopped_pos > finally_pos` assertion will FAIL because stopped_pos < finally_pos."
     }
   ],
   "prod_defects": [],

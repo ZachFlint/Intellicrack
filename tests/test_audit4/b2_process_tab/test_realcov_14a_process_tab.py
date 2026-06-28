@@ -289,11 +289,7 @@ def test_rendered_pids_match_real_bridge_snapshot(
         tab: ProcessTab probe bound to the real bridge.
     """
     snapshot_before = run_bridge_sync(real_bridge.list_processes_detailed())
-    pids_before: set[int] = {
-        int(p["pid"])
-        for p in snapshot_before
-        if isinstance(p.get("pid"), int)
-    }
+    pids_before: set[int] = {int(p["pid"]) for p in snapshot_before if isinstance(p.get("pid"), int)}
     assert os.getpid() in pids_before, "own PID missing from pre-refresh bridge snapshot"
 
     tab.refresh()
@@ -301,22 +297,14 @@ def test_rendered_pids_match_real_bridge_snapshot(
     assert populated, "process table never populated after refresh"
 
     snapshot_after = run_bridge_sync(real_bridge.list_processes_detailed())
-    pids_after: set[int] = {
-        int(p["pid"])
-        for p in snapshot_after
-        if isinstance(p.get("pid"), int)
-    }
+    pids_after: set[int] = {int(p["pid"]) for p in snapshot_after if isinstance(p.get("pid"), int)}
 
     real_pids_union = pids_before | pids_after
     rendered = tab.rendered_pids()
 
     assert rendered, "rendered PID set is empty"
-    assert all(isinstance(pid, int) and pid >= 0 for pid in rendered), (
-        "rendered set contains a negative or non-integer PID"
-    )
+    assert all(isinstance(pid, int) and pid >= 0 for pid in rendered), "rendered set contains a negative or non-integer PID"
     assert os.getpid() in rendered, "own PID missing from rendered set"
 
     spurious = rendered - real_pids_union
-    assert not spurious, (
-        f"rendered PIDs not present in either bridge snapshot: {spurious!r}"
-    )
+    assert not spurious, f"rendered PIDs not present in either bridge snapshot: {spurious!r}"

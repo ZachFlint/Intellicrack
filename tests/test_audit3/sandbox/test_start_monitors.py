@@ -229,8 +229,7 @@ def test_start_script_default_logdir_uses_programdata() -> None:
     """
     text = _START_SCRIPT.read_text(encoding="utf-8")
     assert "DEFAULT_LOG_DIR=%ProgramData%\\Intellicrack\\Sandbox\\logs" in text, (
-        "default LogDir constant missing or wrong; found text snippet: "
-        + text[:500]
+        "default LogDir constant missing or wrong; found text snippet: " + text[:500]
     )
     assert "WDAGUtilityAccount" not in text, "legacy hardcoded WDAG default must be removed"
     assert "-LogDir" in text, "monitors must receive -LogDir argument"
@@ -240,14 +239,10 @@ def test_start_script_default_logdir_uses_programdata() -> None:
         expected_resolved: str = program_data + "\\Intellicrack\\Sandbox\\logs"
         constant_line: str = "DEFAULT_LOG_DIR=%ProgramData%\\Intellicrack\\Sandbox\\logs"
         assert constant_line in text, (
-            f"DEFAULT_LOG_DIR must be set to the canonical ProgramData path; "
-            f"resolved path would be {expected_resolved!r}"
+            f"DEFAULT_LOG_DIR must be set to the canonical ProgramData path; resolved path would be {expected_resolved!r}"
         )
         suffix: str = "\\Intellicrack\\Sandbox\\logs"
-        assert text.count(suffix) >= 1, (
-            f"script must reference ...{suffix!r} at least once; "
-            f"expected resolved path {expected_resolved!r}"
-        )
+        assert text.count(suffix) >= 1, f"script must reference ...{suffix!r} at least once; expected resolved path {expected_resolved!r}"
 
 
 _SLEEPER_MONITOR: Final[str] = textwrap.dedent("""\

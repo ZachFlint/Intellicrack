@@ -94,9 +94,7 @@ class TestF0016DefaultLogDirHonoursConfig:
         logging_mod.setup_logging(cfg, log_dir=fallback_dir)
         assert fallback_dir.exists(), "setup_logging must create the log directory"
         log_files = list(fallback_dir.glob("*.log"))
-        assert log_files, (
-            f"setup_logging with file_enabled=True must create a log file in {fallback_dir}"
-        )
+        assert log_files, f"setup_logging with file_enabled=True must create a log file in {fallback_dir}"
 
     @staticmethod
     def test_default_uses_configured_logs_directory(
@@ -147,9 +145,7 @@ confirmation_level = "destructive"
         logging_mod.setup_logging(cfg, log_dir=target_logs)
         assert target_logs.exists(), "setup_logging must create the configured log directory"
         log_files = list(target_logs.glob("*.log"))
-        assert log_files, (
-            f"setup_logging with file_enabled=True must create a log file in {target_logs}"
-        )
+        assert log_files, f"setup_logging with file_enabled=True must create a log file in {target_logs}"
 
     @staticmethod
     def test_default_uses_state_after_setup_logging(
@@ -179,9 +175,7 @@ confirmation_level = "destructive"
         assert result == target_logs
         assert target_logs.exists(), "setup_logging must create the log directory"
         log_files = list(target_logs.glob("*.log"))
-        assert log_files, (
-            f"setup_logging with file_enabled=True must write a log file to {target_logs}"
-        )
+        assert log_files, f"setup_logging with file_enabled=True must write a log file to {target_logs}"
 
     @staticmethod
     def test_setup_logging_records_resolved_dir(
@@ -212,6 +206,4 @@ confirmation_level = "destructive"
         assert getattr(state, "configured_log_dir") == target
         assert target.exists(), "configured log directory must exist after setup_logging"
         log_files = list(target.glob("*.log"))
-        assert log_files, (
-            f"setup_logging must create a log file in the target directory {target}"
-        )
+        assert log_files, f"setup_logging must create a log file in the target directory {target}"

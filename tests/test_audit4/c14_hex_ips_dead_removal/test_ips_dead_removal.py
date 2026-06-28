@@ -228,7 +228,7 @@ class TestDeadModuleRemoved:
         execute_text_search = getattr(mod, "execute_text_search")
 
         payload = bytes(range(16))
-        needle_bytes = b"\x08\x09\x0A"
+        needle_bytes = b"\x08\x09\x0a"
         doc = _FakeDocument(payload)
 
         oracle_offset = payload.find(needle_bytes)
@@ -264,7 +264,7 @@ class TestDeadModuleRemoved:
 
         target_value = 0xDEAD_BEEF
         prefix = b"\x00\x00\x00\x00"
-        payload = prefix + struct.pack("<I", target_value) + b"\xFF\xFF\xFF\xFF"
+        payload = prefix + struct.pack("<I", target_value) + b"\xff\xff\xff\xff"
         doc = _FakeDocument(payload)
 
         oracle_offset = len(prefix)

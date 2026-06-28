@@ -68,9 +68,7 @@ class TestListTransforms:
         )
         names: list[str] = [entry[0] for entry in transforms]
         for expected_name, _, _ in _EXPECTED_TRANSFORMS:
-            assert expected_name in names, (
-                f"expected transform {expected_name!r} is missing from the registry; got {names}"
-            )
+            assert expected_name in names, f"expected transform {expected_name!r} is missing from the registry; got {names}"
 
     def test_list_transforms_each_entry_is_three_tuple(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that every entry has the exact name, category, and description from the oracle.
@@ -85,16 +83,10 @@ class TestListTransforms:
         transforms: list[tuple[str, str, str]] = sample_doc_from_bytes.list_transforms()
         by_name: dict[str, tuple[str, str, str]] = {entry[0]: entry for entry in transforms}
         for expected_name, expected_category, expected_description in _EXPECTED_TRANSFORMS:
-            assert expected_name in by_name, (
-                f"transform {expected_name!r} missing from registry"
-            )
+            assert expected_name in by_name, f"transform {expected_name!r} missing from registry"
             actual_name, actual_category, actual_description = by_name[expected_name]
-            assert actual_name == expected_name, (
-                f"name mismatch: {actual_name!r} != {expected_name!r}"
-            )
-            assert actual_category == expected_category, (
-                f"category for {expected_name!r}: {actual_category!r} != {expected_category!r}"
-            )
+            assert actual_name == expected_name, f"name mismatch: {actual_name!r} != {expected_name!r}"
+            assert actual_category == expected_category, f"category for {expected_name!r}: {actual_category!r} != {expected_category!r}"
             assert actual_description == expected_description, (
                 f"description for {expected_name!r}: {actual_description!r} != {expected_description!r}"
             )
@@ -114,9 +106,7 @@ class TestListTransforms:
         expected_names: set[str] = {name for name, _, _ in _EXPECTED_TRANSFORMS}
         extra: set[str] = actual_names - expected_names
         missing: set[str] = expected_names - actual_names
-        assert actual_names == expected_names, (
-            f"transform name set mismatch; extra={extra!r}, missing={missing!r}"
-        )
+        assert actual_names == expected_names, f"transform name set mismatch; extra={extra!r}, missing={missing!r}"
 
     def test_list_transforms_contains_base64_encode(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify that the base64_encode transform is present in the list.

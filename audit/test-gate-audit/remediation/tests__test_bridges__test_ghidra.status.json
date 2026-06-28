@@ -1,91 +1,91 @@
 {
- "file": "tests/test_bridges/test_ghidra.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_quote_payload_is_escaped_not_executed",
-   "severity": "MEDIUM",
-   "category": "N8/coverage-theater",
-   "action": "hardened",
-   "oracle": "Python exec interpreter (the exec-backed double genuinely compiles+runs the generated Jython; an injected `recorder.breached = True` would fire and createLabel would receive a truncated value if escaping failed) plus independently recomputed json.dumps(malicious) literal asserted present in the dispatched source",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/ghidra.py",
-    "mutation": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED) -> st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
-    "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_quote_payload_is_escaped_not_executed",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
+  "file": "tests/test_bridges/test_ghidra.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_backslash_path_round_trips_verbatim",
-   "severity": "MEDIUM",
-   "category": "N8/coverage-theater",
-   "action": "hardened",
-   "oracle": "Python exec interpreter (recorder captures the exact path string createLabel binds) plus recomputed json.dumps(path_name) backslash-doubled literal asserted present in dispatched source",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/ghidra.py",
-    "mutation": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED) -> st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
-    "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_backslash_path_round_trips_verbatim",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_newline_payload_round_trips_verbatim",
-   "severity": "MEDIUM",
-   "category": "N8/coverage-theater",
-   "action": "hardened",
-   "oracle": "Python exec interpreter (recorder captures the multi-line string; breach flag detects the embedded `recorder.breached = True` line executing) plus recomputed json.dumps(multiline) single-line literal asserted present in dispatched source",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/ghidra.py",
-    "mutation": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED) -> st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
-    "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_newline_payload_round_trips_verbatim",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_control_characters_round_trip_verbatim",
-   "severity": "MEDIUM",
-   "category": "N8/coverage-theater",
-   "action": "hardened",
-   "oracle": "Python exec interpreter (recorder captures the NUL-containing string verbatim) plus recomputed json.dumps(control_name) with explicit \u0000 escape asserted present in dispatched source",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/ghidra.py",
-    "mutation": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED) -> st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
-    "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_control_characters_round_trip_verbatim",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_bridges/test_ghidra.py::test_tool_definition_function_count",
-   "severity": "LOW",
-   "category": "weaker-than-it-should-be (redundant >= duplicate)",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_bridges/test_ghidra.py::test_tool_definition_exact_count",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 4
+  "findings_addressed": [
+    {
+      "test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_quote_payload_is_escaped_not_executed",
+      "severity": "MEDIUM",
+      "category": "N8/coverage-theater",
+      "action": "hardened",
+      "oracle": "Python exec interpreter (the exec-backed double genuinely compiles+runs the generated Jython; an injected `recorder.breached = True` would fire and createLabel would receive a truncated value if escaping failed) plus independently recomputed json.dumps(malicious) literal asserted present in the dispatched source",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/ghidra.py",
+        "mutation": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED) -> st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
+        "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_quote_payload_is_escaped_not_executed",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_backslash_path_round_trips_verbatim",
+      "severity": "MEDIUM",
+      "category": "N8/coverage-theater",
+      "action": "hardened",
+      "oracle": "Python exec interpreter (recorder captures the exact path string createLabel binds) plus recomputed json.dumps(path_name) backslash-doubled literal asserted present in dispatched source",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/ghidra.py",
+        "mutation": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED) -> st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
+        "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_backslash_path_round_trips_verbatim",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_newline_payload_round_trips_verbatim",
+      "severity": "MEDIUM",
+      "category": "N8/coverage-theater",
+      "action": "hardened",
+      "oracle": "Python exec interpreter (recorder captures the multi-line string; breach flag detects the embedded `recorder.breached = True` line executing) plus recomputed json.dumps(multiline) single-line literal asserted present in dispatched source",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/ghidra.py",
+        "mutation": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED) -> st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
+        "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_newline_payload_round_trips_verbatim",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_control_characters_round_trip_verbatim",
+      "severity": "MEDIUM",
+      "category": "N8/coverage-theater",
+      "action": "hardened",
+      "oracle": "Python exec interpreter (recorder captures the NUL-containing string verbatim) plus recomputed json.dumps(control_name) with explicit \u0000 escape asserted present in dispatched source",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/ghidra.py",
+        "mutation": "st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED) -> st = currentProgram.getSymbolTable()\n                    st.createLabel(addr, {name}, SourceType.USER_DEFINED)",
+        "covering_test": "tests/test_bridges/test_ghidra.py::TestStringInjectionPrevention::test_control_characters_round_trip_verbatim",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_bridges/test_ghidra.py::test_tool_definition_function_count",
+      "severity": "LOW",
+      "category": "weaker-than-it-should-be (redundant >= duplicate)",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_bridges/test_ghidra.py::test_tool_definition_exact_count",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 4
 }

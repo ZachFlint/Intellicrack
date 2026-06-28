@@ -194,18 +194,12 @@ class TestTrackedRefreshWorkerError:
         """
         worker = TrackedRefreshWorker()
         sig = worker.refresh_error
-        assert isinstance(sig, pyqtBoundSignal), (
-            f"refresh_error must be a pyqtBoundSignal, got {type(sig).__name__}"
-        )
-        assert "QString" in sig.signal, (
-            f"refresh_error must carry a single str argument; signal descriptor: {sig.signal!r}"
-        )
+        assert isinstance(sig, pyqtBoundSignal), f"refresh_error must be a pyqtBoundSignal, got {type(sig).__name__}"
+        assert "QString" in sig.signal, f"refresh_error must carry a single str argument; signal descriptor: {sig.signal!r}"
         received: list[str] = []
         sig.connect(received.append)
         sentinel = "Refresh failed: synthetic-sentinel-abc123"
         sig.emit(sentinel)
         qapp.processEvents()
         worker.deleteLater()
-        assert received == [sentinel], (
-            f"emit/receive round-trip failed: expected [{sentinel!r}], got {received}"
-        )
+        assert received == [sentinel], f"emit/receive round-trip failed: expected [{sentinel!r}], got {received}"

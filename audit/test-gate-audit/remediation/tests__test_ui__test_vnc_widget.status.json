@@ -1,201 +1,201 @@
 {
- "file": "tests/test_ui/test_vnc_widget.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_pointer_event_format",
-   "severity": "CRITICAL",
-   "category": "N4/N10",
-   "action": "hardened",
-   "oracle": "RFC 6143 PointerEvent wire layout hand-built independently: bytes([5, mask]) + x.to_bytes(2,'big') + y.to_bytes(2,'big')",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "struct.pack(\"!BBHH\", 5, button_mask, x, y) -> struct.pack(\"!BBHH\", 6, button_mask, x, y)",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_pointer_event_format",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
+  "file": "tests/test_ui/test_vnc_widget.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_format",
-   "severity": "CRITICAL",
-   "category": "N4/N10",
-   "action": "hardened",
-   "oracle": "RFC 6143 KeyEvent wire layout hand-built: bytes([4, down, 0, 0]) + keysym.to_bytes(4,'big')",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "struct.pack(\"!BBxxI\", 4, 1 if down else 0, key) -> struct.pack(\"!BBxxI\", 7, 1 if down else 0, key)",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_format",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_release_clears_down_flag",
-   "severity": "CRITICAL",
-   "category": "N4/N10",
-   "action": "hardened",
-   "oracle": "RFC 6143 KeyEvent down-flag spec: release must encode down byte = 0; expected bytes hand-built as bytes([4,0,0,0]) + keysym.to_bytes(4,'big')",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "struct.pack(\"!BBxxI\", 4, 1 if down else 0, key) -> struct.pack(\"!BBxxI\", 4, 1, key)",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_release_clears_down_flag",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_framebuffer_update_request_format",
-   "severity": "CRITICAL",
-   "category": "N4/N10",
-   "action": "hardened",
-   "oracle": "RFC 6143 FramebufferUpdateRequest layout hand-built: bytes([3, incremental]) + 0,0,w,h each as 2-byte big-endian",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "            1 if incremental else 0, ->             0,",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_framebuffer_update_request_format",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientState::test_request_framebuffer_update_when_disconnected",
-   "severity": "CRITICAL",
-   "category": "N1",
-   "action": "hardened",
-   "oracle": "RFB contract: a disconnected client must emit zero bytes; expected wire buffer is the empty byte string b''",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "if self._writer is None or not self._connected:\n            return\n\n        msg = struct.pack(\n            \"!BBHHHH\", -> if self._writer is None or False:\n            return\n\n        msg = struct.pack(\n            \"!BBHHHH\",",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientState::test_request_framebuffer_update_when_disconnected",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_pointer_when_disconnected",
-   "severity": "CRITICAL",
-   "category": "N1",
-   "action": "hardened",
-   "oracle": "RFB contract: disconnected send_pointer_event must write nothing; expected wire buffer b''",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "not self._connected:\n            return\n\n        msg = struct.pack(\"!BBHH\", 5, button_mask, x, y) -> False:\n            return\n\n        msg = struct.pack(\"!BBHH\", 5, button_mask, x, y)",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_pointer_when_disconnected",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_key_when_disconnected",
-   "severity": "CRITICAL",
-   "category": "N1",
-   "action": "hardened",
-   "oracle": "RFB contract: disconnected send_key_event must write nothing; expected wire buffer b''",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "not self._connected:\n            return\n\n        msg = struct.pack(\"!BBxxI\", 4, 1 if down else 0, key) -> False:\n            return\n\n        msg = struct.pack(\"!BBxxI\", 4, 1 if down else 0, key)",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_key_when_disconnected",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_partial_data",
-   "severity": "CRITICAL",
-   "category": "N1",
-   "action": "hardened",
-   "oracle": "Hand-traced scanline blit math (row_stride=16, 8 bytes => exactly 2 pixels in row 0) plus BGRX->QColor decoding: written pixels are R=32,G=64,B=128; all other pixels retain the fill (0,0,0)",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "scanline[byte_offset : byte_offset + byte_length] = pixel_data[src_offset : src_offset + byte_length] -> scanline[byte_offset : byte_offset + byte_length] = pixel_data[src_offset : src_offset + byte_length][::-1]",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_partial_data",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_no_framebuffer",
-   "severity": "CRITICAL",
-   "category": "N1",
-   "action": "hardened",
-   "oracle": "RFB contract: with framebuffer None the call is a no-op and allocates nothing; expected client.framebuffer is None and no exception",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "if self.framebuffer is None: -> if self.framebuffer is not None:",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_no_framebuffer",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_construction",
-   "severity": "MEDIUM",
-   "category": "N8",
-   "action": "hardened",
-   "oracle": "Module constants MIN_VNC_WIDTH=320 / MIN_VNC_HEIGHT=240 mirror the widget's documented minimum size contract; client wiring asserted as a real RFBClient, disconnected, no framebuffer",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "self.setMinimumSize(320, 240) -> self.setMinimumSize(0, 0)",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_construction",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_button_mask_maps_qt_buttons_to_rfb_bits",
-   "severity": "MEDIUM",
-   "category": "N8",
-   "action": "hardened",
-   "oracle": "RFB pointer button-mask spec: left=bit0(1), middle=bit1(2), right=bit2(4), OR-combined; asserted against real QMouseEvent button states",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
-    "mutation": "            mask |= 2 ->             mask |= 8",
-    "covering_test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_button_mask_maps_qt_buttons_to_rfb_bits",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 11
+  "findings_addressed": [
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_pointer_event_format",
+      "severity": "CRITICAL",
+      "category": "N4/N10",
+      "action": "hardened",
+      "oracle": "RFC 6143 PointerEvent wire layout hand-built independently: bytes([5, mask]) + x.to_bytes(2,'big') + y.to_bytes(2,'big')",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "struct.pack(\"!BBHH\", 5, button_mask, x, y) -> struct.pack(\"!BBHH\", 6, button_mask, x, y)",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_pointer_event_format",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_format",
+      "severity": "CRITICAL",
+      "category": "N4/N10",
+      "action": "hardened",
+      "oracle": "RFC 6143 KeyEvent wire layout hand-built: bytes([4, down, 0, 0]) + keysym.to_bytes(4,'big')",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "struct.pack(\"!BBxxI\", 4, 1 if down else 0, key) -> struct.pack(\"!BBxxI\", 7, 1 if down else 0, key)",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_format",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_release_clears_down_flag",
+      "severity": "CRITICAL",
+      "category": "N4/N10",
+      "action": "hardened",
+      "oracle": "RFC 6143 KeyEvent down-flag spec: release must encode down byte = 0; expected bytes hand-built as bytes([4,0,0,0]) + keysym.to_bytes(4,'big')",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "struct.pack(\"!BBxxI\", 4, 1 if down else 0, key) -> struct.pack(\"!BBxxI\", 4, 1, key)",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_key_event_release_clears_down_flag",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_framebuffer_update_request_format",
+      "severity": "CRITICAL",
+      "category": "N4/N10",
+      "action": "hardened",
+      "oracle": "RFC 6143 FramebufferUpdateRequest layout hand-built: bytes([3, incremental]) + 0,0,w,h each as 2-byte big-endian",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "            1 if incremental else 0, ->             0,",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_framebuffer_update_request_format",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientState::test_request_framebuffer_update_when_disconnected",
+      "severity": "CRITICAL",
+      "category": "N1",
+      "action": "hardened",
+      "oracle": "RFB contract: a disconnected client must emit zero bytes; expected wire buffer is the empty byte string b''",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "if self._writer is None or not self._connected:\n            return\n\n        msg = struct.pack(\n            \"!BBHHHH\", -> if self._writer is None or False:\n            return\n\n        msg = struct.pack(\n            \"!BBHHHH\",",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientState::test_request_framebuffer_update_when_disconnected",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_pointer_when_disconnected",
+      "severity": "CRITICAL",
+      "category": "N1",
+      "action": "hardened",
+      "oracle": "RFB contract: disconnected send_pointer_event must write nothing; expected wire buffer b''",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "not self._connected:\n            return\n\n        msg = struct.pack(\"!BBHH\", 5, button_mask, x, y) -> False:\n            return\n\n        msg = struct.pack(\"!BBHH\", 5, button_mask, x, y)",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_pointer_when_disconnected",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_key_when_disconnected",
+      "severity": "CRITICAL",
+      "category": "N1",
+      "action": "hardened",
+      "oracle": "RFB contract: disconnected send_key_event must write nothing; expected wire buffer b''",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "not self._connected:\n            return\n\n        msg = struct.pack(\"!BBxxI\", 4, 1 if down else 0, key) -> False:\n            return\n\n        msg = struct.pack(\"!BBxxI\", 4, 1 if down else 0, key)",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientProtocolStructures::test_send_key_when_disconnected",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_partial_data",
+      "severity": "CRITICAL",
+      "category": "N1",
+      "action": "hardened",
+      "oracle": "Hand-traced scanline blit math (row_stride=16, 8 bytes => exactly 2 pixels in row 0) plus BGRX->QColor decoding: written pixels are R=32,G=64,B=128; all other pixels retain the fill (0,0,0)",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "scanline[byte_offset : byte_offset + byte_length] = pixel_data[src_offset : src_offset + byte_length] -> scanline[byte_offset : byte_offset + byte_length] = pixel_data[src_offset : src_offset + byte_length][::-1]",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_partial_data",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_no_framebuffer",
+      "severity": "CRITICAL",
+      "category": "N1",
+      "action": "hardened",
+      "oracle": "RFB contract: with framebuffer None the call is a no-op and allocates nothing; expected client.framebuffer is None and no exception",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "if self.framebuffer is None: -> if self.framebuffer is not None:",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestRFBClientFramebuffer::test_apply_raw_rect_no_framebuffer",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_construction",
+      "severity": "MEDIUM",
+      "category": "N8",
+      "action": "hardened",
+      "oracle": "Module constants MIN_VNC_WIDTH=320 / MIN_VNC_HEIGHT=240 mirror the widget's documented minimum size contract; client wiring asserted as a real RFBClient, disconnected, no framebuffer",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "self.setMinimumSize(320, 240) -> self.setMinimumSize(0, 0)",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_construction",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_button_mask_maps_qt_buttons_to_rfb_bits",
+      "severity": "MEDIUM",
+      "category": "N8",
+      "action": "hardened",
+      "oracle": "RFB pointer button-mask spec: left=bit0(1), middle=bit1(2), right=bit2(4), OR-combined; asserted against real QMouseEvent button states",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/vnc_widget.py",
+        "mutation": "            mask |= 2 ->             mask |= 8",
+        "covering_test": "tests/test_ui/test_vnc_widget.py::TestVNCWidget::test_button_mask_maps_qt_buttons_to_rfb_bits",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 11
 }

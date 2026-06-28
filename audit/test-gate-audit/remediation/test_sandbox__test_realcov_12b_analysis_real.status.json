@@ -6,7 +6,7 @@
       "test": "test_generate_timeline_orders_real_events",
       "action": "hardened",
       "oracle": "Independent count oracle: len(report.process_activity) is computed before calling generate_timeline; the process-filtered timeline length must equal that count. A mutation dropping _timeline_add_process_events or silently skipping records changes the count and turns the assertion red.",
-      "documented_mutation": "In src/intellicrack/sandbox/analysis.py, delete the line `_timeline_add_process_events(report, events)` inside generate_timeline (around line 589) \u2014 process_only becomes [] while expected_process_event_count > 0, making `assert len(process_only) == expected_process_event_count` fail."
+      "documented_mutation": "In src/intellicrack/sandbox/analysis.py, delete the line `_timeline_add_process_events(report, events)` inside generate_timeline (around line 589) — process_only becomes [] while expected_process_event_count > 0, making `assert len(process_only) == expected_process_event_count` fail."
     }
   ],
   "prod_defects": [],

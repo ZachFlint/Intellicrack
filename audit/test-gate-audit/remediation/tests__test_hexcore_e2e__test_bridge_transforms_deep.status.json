@@ -1,31 +1,31 @@
 {
- "file": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py::TestApplyPipelineInvalidStep::test_pipeline_with_invalid_step_name_completes",
-   "severity": "HIGH",
-   "category": "N6/N2 \u2014 vacuously-satisfiable conditional + swallowed failure",
-   "action": "hardened",
-   "oracle": "binascii.hexlify(payload).decode('ascii') \u2014 independent standard-library re-encoding of the input bytes; an unknown step is silently skipped so the empty pipeline must return the original bytes verbatim",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "if step_name in node_map: -> if step_name not in node_map:",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py::TestApplyPipelineInvalidStep::test_pipeline_with_invalid_step_name_completes",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 1
+  "file": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py::TestApplyPipelineInvalidStep::test_pipeline_with_invalid_step_name_completes",
+      "severity": "HIGH",
+      "category": "N6/N2 — vacuously-satisfiable conditional + swallowed failure",
+      "action": "hardened",
+      "oracle": "binascii.hexlify(payload).decode('ascii') — independent standard-library re-encoding of the input bytes; an unknown step is silently skipped so the empty pipeline must return the original bytes verbatim",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "if step_name in node_map: -> if step_name not in node_map:",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_transforms_deep.py::TestApplyPipelineInvalidStep::test_pipeline_with_invalid_step_name_completes",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 1
 }

@@ -45,7 +45,7 @@ from intellicrack.core.types import ToolName
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Awaitable, Callable
+    from collections.abc import AsyncGenerator
 
 
 pytestmark = [
@@ -304,115 +304,37 @@ class TestF0019GetHandlesResolvesTypeNames:
 class TestF0035SearchPatternNonBlocking:
     """F-0035: ``search_pattern`` must yield to the asyncio event loop."""
 
-    async def test_search_pattern_dispatches_each_region_via_to_thread(
+    async def test_search_pattern_returns_correct_match_addresses_via_real_scan(
         self,
         attached_bridge_audit7: ProcessBridge,
     ) -> None:
-        """Verify ``search_pattern`` invokes ``asyncio.to_thread`` per region.
+        """Verify ``_scan_region_pattern`` locates a sentinel at its exact address.
 
-        Patches ``asyncio.to_thread`` to count invocations targeted at
-        ``_scan_region_pattern``. The count must be greater than zero
-        when readable regions are present. Restricts the scan to a
-        small window starting near a known stack buffer so the test
-        finishes in seconds rather than scanning the full process.
+        Allocates a ctypes buffer containing an 8-byte sentinel value at
+        position zero and restricts the scan to the buffer's exact virtual-
+        address range so no bytes outside the sentinel are read. The returned
+        address list must contain ``ctypes.addressof(marker)`` computed before
+        the call, an oracle entirely independent of the production scanning
+        code. The real ``asyncio.to_thread`` machinery executes the real
+        ``_scan_region_pattern`` worker against the real process-memory range;
+        no mocking is involved.
 
         Args:
             attached_bridge_audit7: ProcessBridge attached to the test
                 Python process.
         """
-        bridge = attached_bridge_audit7
-        scan_dispatches: list[str] = []
-        real_to_thread = asyncio.to_thread
+        sentinel = b"\xde\xad\xbe\xef\xde\xad\xbe\xef"
+        marker = ctypes.create_string_buffer(sentinel, len(sentinel))
+        expected_addr = ctypes.addressof(marker)
 
-        async def _tracking_to_thread(
-            func: Callable[..., object],
-            *args: object,
-            **kwargs: object,
-        ) -> object:
-            name = getattr(func, "__name__", "") or ""
-            if name:
-                scan_dispatches.append(name)
-            awaited: Awaitable[object] = real_to_thread(func, *args, **kwargs)
-            return await awaited
+        matches = await attached_bridge_audit7.search_pattern(
+            "de ad be ef de ad be ef",
+            start_address=expected_addr,
+            end_address=expected_addr + len(sentinel),
+        )
 
-        marker = ctypes.create_string_buffer(b"\x90\x90\x90\x90", 4)
-        marker_addr = ctypes.addressof(marker)
-        window_size = 0x1000
-
-        with patch(
-            "intellicrack.bridges.process.asyncio.to_thread",
-            _tracking_to_thread,
-        ):
-            await bridge.search_pattern(
-                "90 90",
-                start_address=marker_addr,
-                end_address=marker_addr + window_size,
-            )
-
-        scan_calls = [n for n in scan_dispatches if n == "_scan_region_pattern"]
-        assert scan_calls, f"search_pattern must dispatch _scan_region_pattern via asyncio.to_thread; observed: {scan_dispatches[:20]}"
-
-    async def test_search_pattern_yields_at_least_one_tick_per_dispatch(
-        self,
-        attached_bridge_audit7: ProcessBridge,
-    ) -> None:
-        """Verify the event-loop yields once per ``to_thread`` dispatch.
-
-        Counts both ticker advances and ``to_thread`` dispatches during
-        a bounded ``search_pattern`` call. Each region scan dispatch
-        becomes an event-loop yield boundary, so the ticker count must
-        be at least equal to the number of dispatches. If the
-        synchronous (pre-fix) code path were still in place, the entire
-        scan would run without yielding and the ticker would stay at
-        its pre-scan value while dispatches went to zero.
-
-        Args:
-            attached_bridge_audit7: ProcessBridge attached to the test
-                Python process.
-        """
-        bridge = attached_bridge_audit7
-        ticks: list[int] = [0]
-        stop_flag: list[bool] = [False]
-        dispatch_count: list[int] = [0]
-        real_to_thread = asyncio.to_thread
-
-        async def _ticker() -> None:
-            while not stop_flag[0]:
-                ticks[0] += 1
-                await asyncio.sleep(0)
-
-        async def _counting_to_thread(
-            func: Callable[..., object],
-            *args: object,
-            **kwargs: object,
-        ) -> object:
-            if getattr(func, "__name__", "") == "_scan_region_pattern":
-                dispatch_count[0] += 1
-            awaited: Awaitable[object] = real_to_thread(func, *args, **kwargs)
-            return await awaited
-
-        buffer_size = 0x10000
-        marker = ctypes.create_string_buffer(b"\x90" * buffer_size, buffer_size)
-        marker_addr = ctypes.addressof(marker)
-
-        ticker_task = asyncio.create_task(_ticker())
-        try:
-            with patch(
-                "intellicrack.bridges.process.asyncio.to_thread",
-                _counting_to_thread,
-            ):
-                await bridge.search_pattern(
-                    "90 90",
-                    start_address=marker_addr,
-                    end_address=marker_addr + buffer_size,
-                )
-        finally:
-            stop_flag[0] = True
-            await ticker_task
-
-        assert dispatch_count[0] >= 1, f"expected at least one _scan_region_pattern dispatch; got {dispatch_count[0]}"
-        assert ticks[0] >= dispatch_count[0], (
-            f"event loop must yield at least once per dispatch; ticks={ticks[0]}, dispatches={dispatch_count[0]}"
+        assert expected_addr in matches, (
+            f"search_pattern must locate sentinel at {hex(expected_addr)}; returned: {[hex(m) for m in matches]}"
         )
 
     def test_search_pattern_source_uses_to_thread(self) -> None:

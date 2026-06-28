@@ -1,10 +1,10 @@
 # Section 15 — UI Panels: Test Coverage Audit
 
-**Auditor:** test-reviewer agent  
-**Date:** 2026-06-26  
+**Auditor:** test-reviewer agent
+**Date:** 2026-06-26
 **Scope:** `src/intellicrack/ui/panels/`, `src/intellicrack/ui/panels/hex_editor/`,
-`src/intellicrack/ui/panels/process_panel/`  
-**Test tree searched:** all of `tests/`  
+`src/intellicrack/ui/panels/process_panel/`
+**Test tree searched:** all of `tests/`
 **Audit-only:** no source or test files were edited
 
 ---
