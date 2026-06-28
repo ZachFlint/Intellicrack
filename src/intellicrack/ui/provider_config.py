@@ -56,6 +56,7 @@ from intellicrack.credentials.oauth import (
     get_oauth_manager,
 )
 from intellicrack.credentials.store import CredentialStore
+from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources import IconManager
@@ -172,17 +173,6 @@ if TYPE_CHECKING:
 
 HTTP_OK = 200
 _MAX_DISCOVERY_PREVIEW_ITEMS = 3
-
-_PROVIDER_DISPLAY_NAMES: dict[str, str] = {
-    "anthropic": "Anthropic",
-    "openai": "OpenAI",
-    "google": "Google Gemini",
-    "ollama": "Ollama",
-    "openrouter": "OpenRouter",
-    "huggingface": "HuggingFace",
-    "grok": "Grok",
-    "local_transformers": "Local Transformers",
-}
 
 _PROVIDER_RESOURCE_LINKS: dict[str, tuple[tuple[str, str, str], ...]] = {
     "anthropic": (
@@ -1617,7 +1607,7 @@ class ProviderConfigDialog(QDialog):
     def _update_active_label(self) -> None:
         """Update the active provider display label."""
         if active_name := self._get_active_provider_name():
-            display = _PROVIDER_DISPLAY_NAMES.get(active_name, active_name)
+            display = provider_display_name(active_name)
             self._active_label.setText(f"<b>Active:</b> {display}")
         else:
             self._active_label.setText("<b>Active:</b> None selected")
@@ -1670,7 +1660,7 @@ class ProviderConfigDialog(QDialog):
             model_count = self._get_model_count(provider_id)
             has_credential = provider_id in configured_providers
 
-            display_name = _PROVIDER_DISPLAY_NAMES.get(provider_id, provider_id.title())
+            display_name = provider_display_name(provider_id)
 
             self._update_provider_item_display(
                 item,
@@ -2014,8 +2004,7 @@ class ProviderSettingsWidget(QFrame):
         if self.provider_id == "local_transformers":
             credentials_group.setVisible(False)
             no_credentials_note = QLabel(
-                "Local Transformers runs models directly on this machine (CPU/Intel XPU/CUDA). "
-                "No API key or credentials are required.",
+                "Local Transformers runs models directly on this machine (CPU/Intel XPU/CUDA). No API key or credentials are required.",
             )
             no_credentials_note.setWordWrap(True)
             no_credentials_note.setObjectName("hint_label")
@@ -2546,7 +2535,7 @@ class ProviderSettingsWidget(QFrame):
         Returns:
             str: Human-readable provider name.
         """
-        return _PROVIDER_DISPLAY_NAMES.get(self.provider_id, self.provider_id.title())
+        return provider_display_name(self.provider_id)
 
     def _toggle_key_visibility(self, *, show: bool) -> None:
         """Toggle API key visibility.
@@ -2639,11 +2628,14 @@ class ProviderSettingsWidget(QFrame):
             "google": "GOOGLE_API_KEY",
             "openrouter": "OPENROUTER_API_KEY",
             "huggingface": "HUGGINGFACE_API_TOKEN",
+            "local_transformers": "LOCAL_TRANSFORMERS_HF_TOKEN",
         }
 
         api_key = ""
         if self.provider_id in env_vars:
             env_key = os.environ.get(env_vars[self.provider_id], "")
+            if not env_key and self.provider_id == "local_transformers":
+                env_key = os.environ.get("HUGGINGFACE_API_TOKEN", "")
             config_key = saved_settings.get("api_key", "")
             api_key = config_key or env_key
             if api_key:
@@ -2676,7 +2668,7 @@ class ProviderSettingsWidget(QFrame):
         self._update_recommended_model()
 
         has_key = bool(self._api_key_input.text().strip())
-        if has_key or self.provider_id in self._NO_KEY_PROVIDERS:
+        if has_key or self.provider_id in NO_API_KEY_PROVIDER_IDS:
             QTimer.singleShot(200, self._auto_refresh_models)
 
     def _load_from_config(self) -> dict[str, Any]:
@@ -2729,13 +2721,11 @@ class ProviderSettingsWidget(QFrame):
             if isinstance(saved_cache, int):
                 cache_sp.setValue(saved_cache)
 
-    _NO_KEY_PROVIDERS: ClassVar[set[str]] = {"ollama", "local_transformers"}
-
     def _populate_default_models(self) -> None:
         """Populate model dropdown with initial status text before API fetch."""
         self._model_combo.clear()
         has_key = bool(self._api_key_input.text().strip())
-        if has_key or self.provider_id in self._NO_KEY_PROVIDERS:
+        if has_key or self.provider_id in NO_API_KEY_PROVIDER_IDS:
             self._model_combo.addItem("Loading models...")
         else:
             display = self._get_display_name()
@@ -2752,7 +2742,7 @@ class ProviderSettingsWidget(QFrame):
         api_key = self._api_key_input.text().strip()
         api_base = self._api_base_input.text().strip() if self._api_base_input else None
 
-        if not api_key and self.provider_id not in self._NO_KEY_PROVIDERS:
+        if not api_key and self.provider_id not in NO_API_KEY_PROVIDER_IDS:
             self._status_icon.setPixmap(icon_manager.get_pixmap("status_warning", 16))
             self._status_label.setText("API key required to refresh models")
             self._refresh_models_btn.setEnabled(True)
@@ -2838,7 +2828,7 @@ class ProviderSettingsWidget(QFrame):
         api_key = self._api_key_input.text().strip()
         api_base = self._api_base_input.text().strip() if self._api_base_input else None
 
-        if not api_key and self.provider_id not in self._NO_KEY_PROVIDERS:
+        if not api_key and self.provider_id not in NO_API_KEY_PROVIDER_IDS:
             _logger.warning(
                 "provider_connection_test_failed",
                 provider=self.provider_id,

@@ -1,108 +1,108 @@
 {
- "file": "tests/test_audit3/bridges/test_named_pipe_client.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_open_handle_passes_shared_read_write_to_createfilew (was test_open_handle_uses_shared_read_write)",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Win32 CreateFile contract: the 3rd positional arg is dwShareMode and must equal FILE_SHARE_READ|FILE_SHARE_WRITE == 0x3; the value is observed directly off the real kernel32.CreateFileW call rather than grepped from source.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/named_pipe_client.py",
-    "mutation": "            FILE_SHARE_READ | FILE_SHARE_WRITE,\n            None, ->             FILE_SHARE_READ,\n            None,",
-    "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_open_handle_passes_shared_read_write_to_createfilew",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
+  "file": "tests/test_audit3/bridges/test_named_pipe_client.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_allocate_request_id_uses_dedicated_lock",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_audit3/bridges/test_named_pipe_client.py::test_concurrent_send_command_ids_are_unique",
-   "falsifiability": null
-  },
-  {
-   "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_close_handle_logs_when_closehandle_fails (was test_close_handle_checks_return_value)",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Win32 contract: CloseHandle returns BOOL 0 on failure; the bridge must inspect that and emit pipe_close_handle_failed at warning level with the handle. Asserted via structlog capture_logs, not source text.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/named_pipe_client.py",
-    "mutation": "        if not ok: ->         if ok:",
-    "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_close_handle_logs_when_closehandle_fails",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_write_sync_logs_routine_chunk_at_debug_not_info (was test_write_sync_does_not_use_info_for_routine_io)",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "F-0029 contract observed via structlog capture_logs: the per-chunk pipe_write_chunk record produced by a real _write_sync run must carry log_level=='debug' and no INFO record may appear, rather than grepping for _logger.info absence.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/named_pipe_client.py",
-    "mutation": "            _logger.debug(\n                \"pipe_write_chunk\", ->             _logger.info(\n                \"pipe_write_chunk\",",
-    "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_write_sync_logs_routine_chunk_at_debug_not_info",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_connect_close_lifecycle_logs_at_info (was test_open_close_still_log_at_info)",
-   "severity": "LOW",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "F-0029 contract observed via structlog capture_logs across a real connect()+close() cycle over the in-memory transport: the four lifecycle events (pipe_connecting/pipe_connected/pipe_disconnecting/pipe_disconnected) must each appear at INFO level, rather than asserting the source spelling of the _logger.info calls.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/named_pipe_client.py",
-    "mutation": "_logger.info(\"pipe_connecting\" -> _logger.debug(\"pipe_connecting\"",
-    "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_connect_close_lifecycle_logs_at_info",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_no_os_name_nt_predicate_in_module",
-   "severity": "MEDIUM",
-   "category": "N7",
-   "action": "hardened",
-   "oracle": "Platform-guard contract via Cygwin disagreement scenario: sys.platform='cygwin' and os.name='nt' are both monkeypatched. Correct predicate (sys.platform != 'win32') fires because 'cygwin'!='win32'; wrong predicate (os.name != 'nt') does NOT fire because 'nt'!='nt' is False. With the wrong predicate, the guard is bypassed and connect() proceeds to _open_handle. On Linux CI, kernel32 is not defined (module-level block never ran) so NameError is raised, not ToolError; on Windows, a real pipe open on a non-existent path raises a ToolError whose message does not match 'only supported on Windows'. Either way, pytest.raises fails — making the gate falsifiable on both platforms.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/named_pipe_client.py",
-    "mutation": "if sys.platform != \"win32\": -> if os.name != \"nt\":",
-    "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_no_os_name_nt_predicate_in_module",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 5
+  "findings_addressed": [
+    {
+      "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_open_handle_passes_shared_read_write_to_createfilew (was test_open_handle_uses_shared_read_write)",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Win32 CreateFile contract: the 3rd positional arg is dwShareMode and must equal FILE_SHARE_READ|FILE_SHARE_WRITE == 0x3; the value is observed directly off the real kernel32.CreateFileW call rather than grepped from source.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/named_pipe_client.py",
+        "mutation": "            FILE_SHARE_READ | FILE_SHARE_WRITE,\n            None, ->             FILE_SHARE_READ,\n            None,",
+        "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_open_handle_passes_shared_read_write_to_createfilew",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_allocate_request_id_uses_dedicated_lock",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_audit3/bridges/test_named_pipe_client.py::test_concurrent_send_command_ids_are_unique",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_close_handle_logs_when_closehandle_fails (was test_close_handle_checks_return_value)",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Win32 contract: CloseHandle returns BOOL 0 on failure; the bridge must inspect that and emit pipe_close_handle_failed at warning level with the handle. Asserted via structlog capture_logs, not source text.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/named_pipe_client.py",
+        "mutation": "        if not ok: ->         if ok:",
+        "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_close_handle_logs_when_closehandle_fails",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_write_sync_logs_routine_chunk_at_debug_not_info (was test_write_sync_does_not_use_info_for_routine_io)",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "F-0029 contract observed via structlog capture_logs: the per-chunk pipe_write_chunk record produced by a real _write_sync run must carry log_level=='debug' and no INFO record may appear, rather than grepping for _logger.info absence.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/named_pipe_client.py",
+        "mutation": "            _logger.debug(\n                \"pipe_write_chunk\", ->             _logger.info(\n                \"pipe_write_chunk\",",
+        "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_write_sync_logs_routine_chunk_at_debug_not_info",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_connect_close_lifecycle_logs_at_info (was test_open_close_still_log_at_info)",
+      "severity": "LOW",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "F-0029 contract observed via structlog capture_logs across a real connect()+close() cycle over the in-memory transport: the four lifecycle events (pipe_connecting/pipe_connected/pipe_disconnecting/pipe_disconnected) must each appear at INFO level, rather than asserting the source spelling of the _logger.info calls.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/named_pipe_client.py",
+        "mutation": "_logger.info(\"pipe_connecting\" -> _logger.debug(\"pipe_connecting\"",
+        "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_connect_close_lifecycle_logs_at_info",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_no_os_name_nt_predicate_in_module",
+      "severity": "MEDIUM",
+      "category": "N7",
+      "action": "hardened",
+      "oracle": "Platform-guard contract via Cygwin disagreement scenario: sys.platform='cygwin' and os.name='nt' are both monkeypatched. Correct predicate (sys.platform != 'win32') fires because 'cygwin'!='win32'; wrong predicate (os.name != 'nt') does NOT fire because 'nt'!='nt' is False. With the wrong predicate, the guard is bypassed and connect() proceeds to _open_handle. On Linux CI, kernel32 is not defined (module-level block never ran) so NameError is raised, not ToolError; on Windows, a real pipe open on a non-existent path raises a ToolError whose message does not match 'only supported on Windows'. Either way, pytest.raises fails — making the gate falsifiable on both platforms.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/named_pipe_client.py",
+        "mutation": "if sys.platform != \"win32\": -> if os.name != \"nt\":",
+        "covering_test": "tests/test_audit3/bridges/test_named_pipe_client.py::test_no_os_name_nt_predicate_in_module",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 5
 }

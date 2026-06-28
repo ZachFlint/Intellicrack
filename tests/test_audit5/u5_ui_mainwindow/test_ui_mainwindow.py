@@ -504,8 +504,7 @@ class TestHxDButtonHandlerCleanedUp:
             "original regression (F-0001) and would crash on every HxD button click"
         )
         assert hasattr(MainWindow, "_open_hxd_impl"), (
-            "_open_hxd_impl must exist; it is the replacement entry-point that "
-            "shows a diagnostic dialog when HxD is not installed"
+            "_open_hxd_impl must exist; it is the replacement entry-point that shows a diagnostic dialog when HxD is not installed"
         )
         assert callable(getattr(MainWindow, "_open_hxd_impl"))
 
@@ -533,9 +532,7 @@ class TestHxDButtonHandlerCleanedUp:
         """
         del qapp
 
-        oracle_message: str = (
-            "HxD executable not found. Install HxD and restart Intellicrack to use this tab."
-        )
+        oracle_message: str = "HxD executable not found. Install HxD and restart Intellicrack to use this tab."
 
         recorded_body: list[str] = []
 
@@ -582,9 +579,7 @@ class TestHxDButtonHandlerCleanedUp:
         getattr(MainWindow, "_open_hxd_impl")(cast("MainWindow", _OracleHolder()))
 
         assert len(recorded_body) == 1, f"expected exactly one warning, got {recorded_body}"
-        assert recorded_body[0] == oracle_message, (
-            f"production error string changed; expected {oracle_message!r}, got {recorded_body[0]!r}"
-        )
+        assert recorded_body[0] == oracle_message, f"production error string changed; expected {oracle_message!r}, got {recorded_body[0]!r}"
 
 
 # ---------------------------------------------------------------------------

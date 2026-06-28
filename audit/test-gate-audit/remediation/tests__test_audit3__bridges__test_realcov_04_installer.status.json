@@ -1,23 +1,23 @@
 {
- "file": "tests/test_audit3/bridges/test_realcov_04_installer.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "test_frida_python_package_discovery",
-   "severity": "HIGH",
-   "category": "N7 accepts-both-outcomes + N3 skip-masks-real-capability",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_audit3/bridges/test_realcov_04_installer.py::TestProbePythonPackageRealSubprocess::test_present_package_returns_version",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 0
+  "file": "tests/test_audit3/bridges/test_realcov_04_installer.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "test_frida_python_package_discovery",
+      "severity": "HIGH",
+      "category": "N7 accepts-both-outcomes + N3 skip-masks-real-capability",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_audit3/bridges/test_realcov_04_installer.py::TestProbePythonPackageRealSubprocess::test_present_package_returns_version",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 0
 }

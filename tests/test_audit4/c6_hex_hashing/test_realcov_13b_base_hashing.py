@@ -207,7 +207,13 @@ class TestChecksumsMatchReference:
         expected_check_value = 0x0376E6E7
         assert (
             compute_custom_crc(
-                check_vector, 32, 0x04C11DB7, 0xFFFFFFFF, ref_in=False, ref_out=False, xor_out=0x00,
+                check_vector,
+                32,
+                0x04C11DB7,
+                0xFFFFFFFF,
+                ref_in=False,
+                ref_out=False,
+                xor_out=0x00,
             )
             == expected_check_value
         )

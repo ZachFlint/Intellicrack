@@ -1,91 +1,91 @@
 {
- "file": "tests/test_ui/test_icon_manager.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_ui/test_icon_manager.py::TestIconLoading::test_get_icon_returns_qicon",
-   "severity": "LOW",
-   "category": "N8 (type-only)",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_ui/test_icon_manager.py::TestIconLoading::test_loads_svg_icon_successfully",
-   "falsifiability": null
+  "file": "tests/test_ui/test_icon_manager.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_ui/test_icon_manager.py::TestFallbackIcons::test_missing_icon_with_no_fallback_loads_null_via_full_pipeline",
-   "severity": "MEDIUM",
-   "category": "N8 (type-only on fallback path)",
-   "action": "hardened",
-   "oracle": "icon_manager fallback spec: a name verified absent from ICON_MAP, absent from UNICODE_FALLBACK, and with no file on disk must yield a null QIcon (preconditions asserted independently in-test)",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/resources/icon_manager.py",
-    "mutation": "if fallback_char := UNICODE_FALLBACK.get(name, \"\"): -> if fallback_char := UNICODE_FALLBACK.get(name, \"X\"):",
-    "covering_test": "tests/test_ui/test_icon_manager.py::TestFallbackIcons::test_missing_icon_with_no_fallback_loads_null_via_full_pipeline",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_icon_manager.py::TestListAvailableIcons::test_list_equals_full_icon_map_key_set",
-   "severity": "MEDIUM",
-   "category": "N8 (type-only behavior test)",
-   "action": "hardened",
-   "oracle": "ICON_MAP itself: list(ICON_MAP.keys()) is the independent expected sequence and set",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/resources/icon_manager.py",
-    "mutation": "        return list(ICON_MAP.keys()) ->         return list(ICON_MAP.keys())[1:]",
-    "covering_test": "tests/test_ui/test_icon_manager.py::TestListAvailableIcons::test_list_equals_full_icon_map_key_set",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_svg_icons_load_non_null",
-   "severity": "MEDIUM",
-   "category": "N8 (type-only inside try/except)",
-   "action": "hardened",
-   "oracle": "Qt SVG load contract: a present, well-formed SVG (independently gated by the digest/viewBox/XML tests) must load to a non-null QIcon; a corrupt or unreadable file loads null without raising",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/resources/icon_manager.py",
-    "mutation": "                icon = QIcon(str(icon_path)) ->                 icon = QIcon()",
-    "covering_test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_svg_icons_load_non_null",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_icons_availability_detection_flips_with_assets_presence",
-   "severity": "LOW",
-   "category": "N8 (boolean attribute snapshot)",
-   "action": "hardened",
-   "oracle": "any(icons_dir.iterdir()) semantics: populated dir -> True, empty dir -> False, missing dir -> False (computed directly against controlled tmp dirs)",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/resources/icon_manager.py",
-    "mutation": "            available = any(icons_dir.iterdir()) if icons_dir.exists() else False ->             available = True if icons_dir.exists() else False",
-    "covering_test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_icons_availability_detection_flips_with_assets_presence",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 4
+  "findings_addressed": [
+    {
+      "test": "tests/test_ui/test_icon_manager.py::TestIconLoading::test_get_icon_returns_qicon",
+      "severity": "LOW",
+      "category": "N8 (type-only)",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_ui/test_icon_manager.py::TestIconLoading::test_loads_svg_icon_successfully",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_ui/test_icon_manager.py::TestFallbackIcons::test_missing_icon_with_no_fallback_loads_null_via_full_pipeline",
+      "severity": "MEDIUM",
+      "category": "N8 (type-only on fallback path)",
+      "action": "hardened",
+      "oracle": "icon_manager fallback spec: a name verified absent from ICON_MAP, absent from UNICODE_FALLBACK, and with no file on disk must yield a null QIcon (preconditions asserted independently in-test)",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/resources/icon_manager.py",
+        "mutation": "if fallback_char := UNICODE_FALLBACK.get(name, \"\"): -> if fallback_char := UNICODE_FALLBACK.get(name, \"X\"):",
+        "covering_test": "tests/test_ui/test_icon_manager.py::TestFallbackIcons::test_missing_icon_with_no_fallback_loads_null_via_full_pipeline",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_icon_manager.py::TestListAvailableIcons::test_list_equals_full_icon_map_key_set",
+      "severity": "MEDIUM",
+      "category": "N8 (type-only behavior test)",
+      "action": "hardened",
+      "oracle": "ICON_MAP itself: list(ICON_MAP.keys()) is the independent expected sequence and set",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/resources/icon_manager.py",
+        "mutation": "        return list(ICON_MAP.keys()) ->         return list(ICON_MAP.keys())[1:]",
+        "covering_test": "tests/test_ui/test_icon_manager.py::TestListAvailableIcons::test_list_equals_full_icon_map_key_set",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_svg_icons_load_non_null",
+      "severity": "MEDIUM",
+      "category": "N8 (type-only inside try/except)",
+      "action": "hardened",
+      "oracle": "Qt SVG load contract: a present, well-formed SVG (independently gated by the digest/viewBox/XML tests) must load to a non-null QIcon; a corrupt or unreadable file loads null without raising",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/resources/icon_manager.py",
+        "mutation": "                icon = QIcon(str(icon_path)) ->                 icon = QIcon()",
+        "covering_test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_svg_icons_load_non_null",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_icons_availability_detection_flips_with_assets_presence",
+      "severity": "LOW",
+      "category": "N8 (boolean attribute snapshot)",
+      "action": "hardened",
+      "oracle": "any(icons_dir.iterdir()) semantics: populated dir -> True, empty dir -> False, missing dir -> False (computed directly against controlled tmp dirs)",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/resources/icon_manager.py",
+        "mutation": "            available = any(icons_dir.iterdir()) if icons_dir.exists() else False ->             available = True if icons_dir.exists() else False",
+        "covering_test": "tests/test_ui/test_icon_manager.py::TestIconIntegrity::test_icons_availability_detection_flips_with_assets_presence",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 4
 }

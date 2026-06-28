@@ -56,7 +56,6 @@ from __future__ import annotations
 import struct
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
-from unittest import mock
 
 import pytest
 from structlog.testing import capture_logs
@@ -67,7 +66,7 @@ if TYPE_CHECKING:
 
 from intellicrack.core.hexpat.ast_nodes import StructDecl
 from intellicrack.core.hexpat.data_reader import DataReader
-from intellicrack.core.hexpat.errors import HexPatError, HexPatRuntimeError, HexPatTypeError
+from intellicrack.core.hexpat.errors import HexPatError, HexPatRuntimeError
 from intellicrack.core.hexpat.evaluator import BuiltinCallable, HexPatEvaluator, PatternValue
 from intellicrack.core.hexpat.interpreter import HexPatInterpreter
 from intellicrack.core.hexpat.pragma import PragmaInfo
@@ -244,23 +243,37 @@ def test_namespace_chain_three_levels(interp: HexPatInterpreter) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_compile_to_json_preserves_native_hexpat_error() -> None:
-    """``compile_to_json`` must propagate compiler errors without rewrapping.
+def test_compile_to_json_propagates_codegen_error_no_struct() -> None:
+    """``compile_to_json`` must propagate a codegen error for an enum-only source.
 
-    Pre-fix the wrapper caught ``HexPatError`` and re-raised a fresh
-    ``HexPatError`` with ``__cause__`` chained, hiding whether the failure
-    was a parse error, type error, or runtime error from the underlying
-    compiler. The fix must propagate the original instance unchanged so the
-    caller receives the precise subclass and original ``__cause__``.
+    An enum-only pattern has no struct declaration. The real codegen raises
+    :class:`HexPatError` with the diagnostic ``"no struct declaration
+    found"``. The gate asserts this error is not swallowed and reaches the
+    caller unchanged.
+
+    Mutation caught: making ``compile_to_json`` swallow compiler errors and
+    return ``{}`` instead of raising turns this gate red because no exception
+    is raised.
     """
-    sentinel = HexPatTypeError("synthetic compiler diagnostic", 7, 9)
-    with mock.patch("intellicrack.core.hexpat_compiler.HexPatCompiler.compile", side_effect=sentinel):
-        captured: HexPatError | None = None
-        try:
-            HexPatInterpreter.compile_to_json("dummy source")
-        except HexPatError as exc:
-            captured = exc
-    assert captured is sentinel
+    source = "enum Status : u8 { Ok = 0, Err = 1 };"
+    with pytest.raises(HexPatError, match=r"no struct declaration found"):
+        HexPatInterpreter.compile_to_json(source)
+
+
+def test_compile_to_json_propagates_error_runtime_construct() -> None:
+    """``compile_to_json`` must propagate an error for a function-only source.
+
+    A source containing only a function declaration is rejected by the real
+    codegen as a runtime construct. The gate asserts the resulting
+    :class:`HexPatError` propagates unchanged rather than being swallowed.
+
+    Mutation caught: making ``compile_to_json`` swallow compiler errors and
+    return ``{}`` instead of raising turns this gate red because no exception
+    is raised.
+    """
+    source = "fn process() { return 0; };"
+    with pytest.raises(HexPatError, match=r"runtime construct"):
+        HexPatInterpreter.compile_to_json(source)
 
 
 # ---------------------------------------------------------------------------

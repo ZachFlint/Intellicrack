@@ -215,12 +215,8 @@ class TestMethodDispatchSurface:
         )
 
         if method_name == "get_pe_sections":
-            assert result[0]["name"] == ".text", (
-                "first section must be '.text' as packed by _build_pe_buffer"
-            )
-            assert result[1]["name"] == ".rdata", (
-                "second section must be '.rdata' as packed by _build_pe_buffer"
-            )
+            assert result[0]["name"] == ".text", "first section must be '.text' as packed by _build_pe_buffer"
+            assert result[1]["name"] == ".rdata", "second section must be '.rdata' as packed by _build_pe_buffer"
 
 
 class TestRuntimeContract:

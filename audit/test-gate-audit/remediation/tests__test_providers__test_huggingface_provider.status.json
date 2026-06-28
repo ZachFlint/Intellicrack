@@ -1,67 +1,67 @@
 {
- "file": "tests/test_providers/test_huggingface_provider.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_list_models_returns_model_info_instances",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only for behavior test",
-   "action": "hardened",
-   "oracle": "Direct reading of production source constants: _DEFAULT_CONTEXT_WINDOW=4096 (line 123), supports_streaming=True hardcoded (line 455), provider=ProviderName.HUGGINGFACE stamped (line 451), name derived by rsplit('/',maxsplit=1)[-1] (line 446). Each asserted value is independently computed or read from source, not injected by the test.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/huggingface.py",
-    "mutation": "                    supports_streaming=True, ->                     supports_streaming=False,",
-    "covering_test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_list_models_returns_model_info_instances",
-    "expected_baseline": "green",
-    "green_status": "skip",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
+  "file": "tests/test_providers/test_huggingface_provider.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_valid_name",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only \u2014 weaker duplicate",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_providers/test_realcov_11_huggingface_logic.py::TestBuildModelInfoList::test_tool_and_vision_flags_from_tags",
-   "falsifiability": null
-  },
-  {
-   "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_correct_provider",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only \u2014 weaker duplicate",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_providers/test_realcov_11_huggingface_logic.py::TestBuildModelInfoList::test_tool_and_vision_flags_from_tags",
-   "falsifiability": null
-  },
-  {
-   "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_positive_context_window",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only \u2014 weaker duplicate",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_providers/test_realcov_11_huggingface_logic.py::TestBuildModelInfoList::test_all_models_stream_capable_with_positive_context",
-   "falsifiability": null
-  },
-  {
-   "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_boolean_capabilities",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only \u2014 weaker duplicate",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_providers/test_realcov_11_huggingface_logic.py::TestBuildModelInfoList::test_tool_and_vision_flags_from_tags",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 1
+  "findings_addressed": [
+    {
+      "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_list_models_returns_model_info_instances",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only for behavior test",
+      "action": "hardened",
+      "oracle": "Direct reading of production source constants: _DEFAULT_CONTEXT_WINDOW=4096 (line 123), supports_streaming=True hardcoded (line 455), provider=ProviderName.HUGGINGFACE stamped (line 451), name derived by rsplit('/',maxsplit=1)[-1] (line 446). Each asserted value is independently computed or read from source, not injected by the test.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/huggingface.py",
+        "mutation": "                    supports_streaming=True, ->                     supports_streaming=False,",
+        "covering_test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_list_models_returns_model_info_instances",
+        "expected_baseline": "green",
+        "green_status": "skip",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_valid_name",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only — weaker duplicate",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_providers/test_realcov_11_huggingface_logic.py::TestBuildModelInfoList::test_tool_and_vision_flags_from_tags",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_correct_provider",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only — weaker duplicate",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_providers/test_realcov_11_huggingface_logic.py::TestBuildModelInfoList::test_tool_and_vision_flags_from_tags",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_positive_context_window",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only — weaker duplicate",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_providers/test_realcov_11_huggingface_logic.py::TestBuildModelInfoList::test_all_models_stream_capable_with_positive_context",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_providers/test_huggingface_provider.py::TestHuggingFaceModelListing::test_model_info_has_boolean_capabilities",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only — weaker duplicate",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_providers/test_realcov_11_huggingface_logic.py::TestBuildModelInfoList::test_tool_and_vision_flags_from_tags",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 1
 }

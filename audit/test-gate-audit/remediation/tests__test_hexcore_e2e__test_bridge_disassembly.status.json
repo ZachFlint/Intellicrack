@@ -1,48 +1,48 @@
 {
- "file": "tests/test_hexcore_e2e/test_bridge_disassembly.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_returns_list",
-   "severity": "MEDIUM",
-   "category": "N8 type-only",
-   "action": "hardened",
-   "oracle": "capstone Cs(CS_ARCH_X86, CS_MODE_64).disasm of the same INT3 bytes - independent decode path, not the bridge's _get_disassembler selection",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "\"bytes\": insn.raw_bytes.hex(), -> \"bytes\": insn.raw_bytes.hex() + \"00\",",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_matches_independent_capstone_decode",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
+  "file": "tests/test_hexcore_e2e/test_bridge_disassembly.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_pe_section_code_with_auto_arch",
-   "severity": "HIGH",
-   "category": "N8 existence-only for behavior",
-   "action": "hardened",
-   "oracle": "explicit arch='x86'/mode='64' bridge run plus an independent capstone Cs(CS_ARCH_X86, CS_MODE_64) decode of the same PE header bytes; AMD64 machine field 0x8664 in the fixture PE must resolve to x86-64",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "arch, mode = disassembler.auto_detect_arch(header) -> arch, mode = (\"x86\", \"16\")",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_pe_section_code_with_auto_arch",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 2
+  "findings_addressed": [
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_returns_list",
+      "severity": "MEDIUM",
+      "category": "N8 type-only",
+      "action": "hardened",
+      "oracle": "capstone Cs(CS_ARCH_X86, CS_MODE_64).disasm of the same INT3 bytes - independent decode path, not the bridge's _get_disassembler selection",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "\"bytes\": insn.raw_bytes.hex(), -> \"bytes\": insn.raw_bytes.hex() + \"00\",",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_matches_independent_capstone_decode",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_pe_section_code_with_auto_arch",
+      "severity": "HIGH",
+      "category": "N8 existence-only for behavior",
+      "action": "hardened",
+      "oracle": "explicit arch='x86'/mode='64' bridge run plus an independent capstone Cs(CS_ARCH_X86, CS_MODE_64) decode of the same PE header bytes; AMD64 machine field 0x8664 in the fixture PE must resolve to x86-64",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "arch, mode = disassembler.auto_detect_arch(header) -> arch, mode = (\"x86\", \"16\")",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_disassembly.py::TestBridgeDisassembly::test_disassemble_pe_section_code_with_auto_arch",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 2
 }

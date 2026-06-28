@@ -34,11 +34,16 @@ level only — never source-level.
 from __future__ import annotations
 
 import asyncio
+import json
 import os
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, cast, override
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
+import openai
 import pytest
+from google.genai import Client as GenaiClient
+from google.genai.types import HttpOptions
 
 from intellicrack.core.orchestrator import Orchestrator, OrchestratorConfig, OrchestratorStats
 from intellicrack.core.types import (
@@ -374,116 +379,223 @@ async def test_f0010_fetch_all_models_forwards_limit() -> None:
 
 
 @pytest.mark.asyncio
-async def test_f0001_chat_enable_cache_completes_full_call_path() -> None:
-    """``enable_cache=True`` completes the full chat call path for every cloud provider.
+async def test_f0001_openai_enable_cache_http_request_body() -> None:
+    """OpenAI ``enable_cache=True`` sends the correct serialised chat request body.
 
-    The audit finding was that callers were silently dropping these knobs.
-    This behavioral gate drives ``chat(enable_cache=True)`` end-to-end
-    through each provider against a fake transport boundary and asserts
-    the API was actually invoked and returned a valid assistant
-    :class:`Message`.  An implementation that drops ``enable_cache``
-    before the API call or short-circuits the call path entirely would
-    leave the call counter at zero or fail to return a ``Message``, making
-    this test red.
+    A real :class:`httpx.AsyncBaseTransport` recording seam is injected into
+    the real :class:`openai.AsyncOpenAI` client so every SDK serialisation and
+    JSON-encoding layer runs without substitution.  The captured HTTP request
+    body is asserted against the OpenAI Chat Completions API request schema as
+    the independent oracle: ``model``, ``messages``, and ``max_tokens`` must
+    carry the literal values supplied to :meth:`OpenAIProvider.chat`.
 
-    OpenRouter and Anthropic are already gated by dedicated cache-control
-    mutation tests (``test_f0001_openrouter_enable_cache_attaches_cache_control``
-    and ``test_f0005_enable_cache_marks_system_tools_and_last_message``); this
-    test covers the remaining three providers (OpenAI, Grok, Google) where
-    caching is automatic server-side (no client-side mutation) and proves the
-    full call path runs when the flag is set.
+    OpenAI auto-caches prompts above 1024 tokens server-side; no
+    ``cache_control`` or ``prompt_caching`` field must appear in the client
+    request body.  A matching call with ``enable_cache=False`` must produce a
+    byte-identical body, confirming the flag does not corrupt the request
+    either way.
+
+    Mutation caught: replacing the API dispatch call with an early return when
+    ``enable_cache=True`` leaves ``captured`` empty, failing the
+    ``assert len(captured) == 2`` gate.
     """
-    openai_calls: list[dict[str, object]] = []
+    completion_body: dict[str, object] = {
+        "id": "chatcmpl-test",
+        "object": "chat.completion",
+        "model": "gpt-4o",
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": "ok"}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8},
+    }
+    captured: list[dict[str, object]] = []
 
-    async def _openai_create(**kwargs: object) -> object:
-        await asyncio.sleep(0)
-        openai_calls.append(dict(kwargs))
-        completion = MagicMock()
-        completion.choices = [MagicMock()]
-        completion.choices[0].message = MagicMock(content="cache-ok", tool_calls=None)
-        completion.usage = MagicMock(prompt_tokens=3, completion_tokens=2, total_tokens=5)
-        return completion
+    class _Transport(httpx.AsyncBaseTransport):
+        @override
+        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+            captured.append(cast("dict[str, object]", json.loads(request.content)))
+            return httpx.Response(
+                200,
+                content=json.dumps(completion_body).encode(),
+                headers={"content-type": "application/json"},
+            )
 
-    openai_provider = OpenAIProvider()
-    openai_provider.connected = True
-    fake_openai_client = MagicMock()
-    fake_openai_client.chat = MagicMock()
-    fake_openai_client.chat.completions = MagicMock()
-    fake_openai_client.chat.completions.create = _openai_create
-    openai_provider.client = fake_openai_client
+    sdk_client = openai.AsyncOpenAI(
+        api_key="test-key",
+        http_client=httpx.AsyncClient(transport=_Transport()),
+    )
+    provider = OpenAIProvider()
+    provider.connected = True
+    provider.client = sdk_client
 
-    openai_response, _ = await openai_provider.chat(
+    await provider.chat(
         messages=_user_messages("hello"),
         model="gpt-4o",
         max_tokens=64,
         enable_cache=True,
     )
-    assert len(openai_calls) == 1, "OpenAI API was not called with enable_cache=True"
-    assert isinstance(openai_response.content, str)
-    assert openai_response.content == "cache-ok"
-    assert openai_response.role == "assistant"
+    await provider.chat(
+        messages=_user_messages("hello"),
+        model="gpt-4o",
+        max_tokens=64,
+        enable_cache=False,
+    )
 
-    grok_calls: list[dict[str, object]] = []
+    assert len(captured) == 2, "Provider must dispatch two HTTP requests (one per chat call)"
+    body_true = captured[0]
+    body_false = captured[1]
 
-    async def _grok_create(**kwargs: object) -> object:
-        await asyncio.sleep(0)
-        grok_calls.append(dict(kwargs))
-        completion = MagicMock()
-        completion.choices = [MagicMock()]
-        completion.choices[0].message = MagicMock(content="grok-cache-ok", tool_calls=None)
-        completion.usage = MagicMock(prompt_tokens=3, completion_tokens=2, total_tokens=5)
-        return completion
+    assert body_true["model"] == "gpt-4o"
+    assert body_true["messages"] == [{"role": "user", "content": "hello"}]
+    assert body_true["max_tokens"] == 64
+    assert "cache_control" not in body_true
+    assert "prompt_caching" not in body_true
+    assert body_false == body_true
 
-    grok_provider = GrokProvider()
-    grok_provider.connected = True
-    fake_grok_client = MagicMock()
-    fake_grok_client.chat = MagicMock()
-    fake_grok_client.chat.completions = MagicMock()
-    fake_grok_client.chat.completions.create = _grok_create
-    grok_provider.client = fake_grok_client
 
-    grok_response, _ = await grok_provider.chat(
+@pytest.mark.asyncio
+async def test_f0001_grok_enable_cache_http_request_body() -> None:
+    """Grok ``enable_cache=True`` sends the correct serialised chat request body.
+
+    A real :class:`httpx.AsyncBaseTransport` recording seam is injected into
+    the real :class:`openai.AsyncOpenAI` client (with Grok's base URL) so
+    every SDK serialisation and JSON-encoding layer runs without substitution.
+    The captured HTTP request body is asserted against the OpenAI-compatible
+    Chat Completions API request schema as the independent oracle: ``model``,
+    ``messages``, and ``max_tokens`` must carry the literal values supplied to
+    :meth:`GrokProvider.chat`.
+
+    Grok auto-caches repeated prompt prefixes server-side; no ``cache_control``
+    field must appear in the client request body.  A matching call with
+    ``enable_cache=False`` must produce a byte-identical body.
+
+    Mutation caught: replacing the Grok API dispatch call with an early return
+    when ``enable_cache=True`` leaves ``captured`` empty, failing the
+    ``assert len(captured) == 2`` gate.
+    """
+    completion_body: dict[str, object] = {
+        "id": "chatcmpl-grok",
+        "object": "chat.completion",
+        "model": "grok-3",
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": "grok-ok"}, "finish_reason": "stop"}],
+        "usage": {"prompt_tokens": 5, "completion_tokens": 3, "total_tokens": 8},
+    }
+    captured: list[dict[str, object]] = []
+
+    class _Transport(httpx.AsyncBaseTransport):
+        @override
+        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+            captured.append(cast("dict[str, object]", json.loads(request.content)))
+            return httpx.Response(
+                200,
+                content=json.dumps(completion_body).encode(),
+                headers={"content-type": "application/json"},
+            )
+
+    sdk_client = openai.AsyncOpenAI(
+        api_key="test-key",
+        base_url=GrokProvider.BASE_URL,
+        http_client=httpx.AsyncClient(transport=_Transport()),
+    )
+    provider = GrokProvider()
+    provider.connected = True
+    provider.client = sdk_client
+
+    await provider.chat(
         messages=_user_messages("hello"),
         model="grok-3",
         max_tokens=64,
         enable_cache=True,
     )
-    assert len(grok_calls) == 1, "Grok API was not called with enable_cache=True"
-    assert isinstance(grok_response.content, str)
-    assert grok_response.content == "grok-cache-ok"
-    assert grok_response.role == "assistant"
+    await provider.chat(
+        messages=_user_messages("hello"),
+        model="grok-3",
+        max_tokens=64,
+        enable_cache=False,
+    )
 
-    google_calls: list[dict[str, object]] = []
+    assert len(captured) == 2, "Provider must dispatch two HTTP requests (one per chat call)"
+    body_true = captured[0]
+    body_false = captured[1]
 
-    async def _google_generate(**kwargs: object) -> object:
-        await asyncio.sleep(0)
-        google_calls.append(dict(kwargs))
-        response = MagicMock()
-        response.text = "google-cache-ok"
-        response.function_calls = None
-        response.candidates = []
-        response.prompt_feedback = None
-        response.usage_metadata = None
-        return response
+    assert body_true["model"] == "grok-3"
+    assert body_true["messages"] == [{"role": "user", "content": "hello"}]
+    assert body_true["max_tokens"] == 64
+    assert "cache_control" not in body_true
+    assert body_false == body_true
 
-    google_provider = GoogleProvider()
-    google_provider.connected = True
-    fake_google_client = MagicMock()
-    fake_google_client.aio = MagicMock()
-    fake_google_client.aio.models = MagicMock()
-    fake_google_client.aio.models.generate_content = AsyncMock(side_effect=_google_generate)
-    google_provider.client = fake_google_client
 
-    google_response, _ = await google_provider.chat(
+@pytest.mark.asyncio
+async def test_f0001_google_enable_cache_http_request_body() -> None:
+    """Google ``enable_cache=True`` sends the correct serialised generateContent body.
+
+    A real :class:`httpx.AsyncBaseTransport` recording seam is injected into
+    the real :class:`google.genai.Client` via :class:`HttpOptions` so every
+    genai SDK serialisation and JSON-encoding layer runs without substitution.
+    The captured HTTP request body is asserted against the Gemini
+    ``generateContent`` API request schema as the independent oracle:
+    ``contents`` must carry the Gemini-format user message and
+    ``generationConfig.maxOutputTokens`` must equal the ``max_tokens`` value
+    supplied to :meth:`GoogleProvider.chat`.
+
+    Google's implicit caching operates server-side; no ``cachedContent`` or
+    ``cacheContext`` field must appear in the client request body.  A matching
+    call with ``enable_cache=False`` must produce a byte-identical body.
+
+    Mutation caught: replacing the ``generate_content`` dispatch with an early
+    return when ``enable_cache=True`` leaves ``captured`` empty, failing the
+    ``assert len(captured) == 2`` gate.
+    """
+    gemini_response_body: dict[str, object] = {
+        "candidates": [
+            {
+                "content": {"parts": [{"text": "google-ok"}], "role": "model"},
+                "finishReason": "STOP",
+                "index": 0,
+            },
+        ],
+        "usageMetadata": {"promptTokenCount": 3, "candidatesTokenCount": 2, "totalTokenCount": 5},
+    }
+    captured: list[dict[str, object]] = []
+
+    class _Transport(httpx.AsyncBaseTransport):
+        @override
+        async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+            captured.append(cast("dict[str, object]", json.loads(request.content)))
+            return httpx.Response(
+                200,
+                content=json.dumps(gemini_response_body).encode(),
+                headers={"content-type": "application/json"},
+            )
+
+    provider = GoogleProvider()
+    provider.connected = True
+    provider.client = GenaiClient(
+        api_key="test-key",
+        http_options=HttpOptions(httpx_async_client=httpx.AsyncClient(transport=_Transport())),
+    )
+
+    await provider.chat(
         messages=_user_messages("hello"),
         model="gemini-2.0-flash",
         max_tokens=64,
         enable_cache=True,
     )
-    assert len(google_calls) == 1, "Google API was not called with enable_cache=True"
-    assert isinstance(google_response.content, str)
-    assert google_response.content == "google-cache-ok"
-    assert google_response.role == "assistant"
+    await provider.chat(
+        messages=_user_messages("hello"),
+        model="gemini-2.0-flash",
+        max_tokens=64,
+        enable_cache=False,
+    )
+
+    assert len(captured) == 2, "Provider must dispatch two HTTP requests (one per chat call)"
+    body_true = captured[0]
+    body_false = captured[1]
+
+    assert body_true["contents"] == [{"parts": [{"text": "hello"}], "role": "user"}]
+    gen_cfg = cast("dict[str, object]", body_true["generationConfig"])
+    assert gen_cfg["maxOutputTokens"] == 64
+    assert "cachedContent" not in body_true
+    assert "cacheContext" not in body_true
+    assert body_false == body_true
 
 
 def test_f0002_openai_thinking_maps_to_reasoning_effort() -> None:

@@ -1,31 +1,31 @@
 {
- "file": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py::TestRealManagerIntegration::test_create_windows_sandbox_success_path",
-   "severity": "HIGH",
-   "category": "N7 accepts-both-outcomes",
-   "action": "hardened",
-   "oracle": "datetime.fromisoformat() for the created_at field; exact string equality for type/status; set-membership for listed instance_id; BridgeState field equality for connected/tool_running/last_error",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
-    "mutation": "\"status\": instance.state.status, -> \"status\": \"stopped\",",
-    "covering_test": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py::TestRealManagerIntegration::test_create_windows_sandbox_success_path",
-    "expected_baseline": "green",
-    "green_status": "skip",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 1
+  "file": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py::TestRealManagerIntegration::test_create_windows_sandbox_success_path",
+      "severity": "HIGH",
+      "category": "N7 accepts-both-outcomes",
+      "action": "hardened",
+      "oracle": "datetime.fromisoformat() for the created_at field; exact string equality for type/status; set-membership for listed instance_id; BridgeState field equality for connected/tool_running/last_error",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/sandbox_bridge.py",
+        "mutation": "\"status\": instance.state.status, -> \"status\": \"stopped\",",
+        "covering_test": "tests/test_sandbox/test_realcov_04_sandbox_bridge.py::TestRealManagerIntegration::test_create_windows_sandbox_success_path",
+        "expected_baseline": "green",
+        "green_status": "skip",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 1
 }

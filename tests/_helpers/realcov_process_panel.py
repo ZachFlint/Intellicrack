@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload
 
 import pytest
 from PyQt6.QtCore import QEventLoop, QTimer
@@ -43,7 +43,11 @@ def require_windows() -> None:
         pytest.skip("Real ProcessBridge enumeration requires Windows")
 
 
-def run_bridge_sync[T](coro: Coroutine[object, object, T]) -> T:
+@overload
+def run_bridge_sync[T](coro: Coroutine[object, object, T]) -> T: ...
+
+
+def run_bridge_sync(coro: Coroutine[object, object, object]) -> object:
     """Execute a bridge coroutine to completion on the persistent loop.
 
     Runs ``coro`` on the same background event loop the UI panels use so the
@@ -55,7 +59,7 @@ def run_bridge_sync[T](coro: Coroutine[object, object, T]) -> T:
         coro: Bridge coroutine to await.
 
     Returns:
-        T: The coroutine's result.
+        object: The coroutine's result.
     """
     loop = ensure_loop()
     return asyncio.run_coroutine_threadsafe(coro, loop).result()

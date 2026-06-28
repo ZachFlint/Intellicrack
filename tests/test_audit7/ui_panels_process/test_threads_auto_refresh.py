@@ -344,17 +344,13 @@ class TestF0012ThreadsTabAutoRefresh:
         assert counting_tab.get_auto_refresh_button().text() == "Auto-Refresh: ON", (
             "Button text must be 'Auto-Refresh: ON' when auto-refresh is enabled"
         )
-        assert counting_tab.get_auto_refresh_timer().isActive(), (
-            "QTimer must be active when label shows 'Auto-Refresh: ON'"
-        )
+        assert counting_tab.get_auto_refresh_timer().isActive(), "QTimer must be active when label shows 'Auto-Refresh: ON'"
 
         counting_tab.invoke_auto_refresh_toggle(checked=False)
         assert counting_tab.get_auto_refresh_button().text() == "Auto-Refresh: OFF", (
             "Button text must be 'Auto-Refresh: OFF' when auto-refresh is disabled"
         )
-        assert not counting_tab.get_auto_refresh_timer().isActive(), (
-            "QTimer must be inactive when label shows 'Auto-Refresh: OFF'"
-        )
+        assert not counting_tab.get_auto_refresh_timer().isActive(), "QTimer must be inactive when label shows 'Auto-Refresh: OFF'"
 
     def test_cleanup_stops_timer(self, qtbot: QtBot, counting_tab: _CountingThreadsTab) -> None:
         """``cleanup()`` must stop the auto-refresh timer.
@@ -411,9 +407,7 @@ class TestF0012ThreadsTabAutoRefresh:
         Args:
             counting_tab: ``_CountingThreadsTab`` fixture.
         """
-        assert counting_tab.refresh_call_count == 0, (
-            "refresh_call_count must be 0 before any invocation"
-        )
+        assert counting_tab.refresh_call_count == 0, "refresh_call_count must be 0 before any invocation"
 
         counting_tab.invoke_refresh_threads()
         assert counting_tab.refresh_call_count == 1, (
@@ -458,8 +452,7 @@ class TestF0012ThreadsTabAutoRefresh:
         ]:
             actual_tids = _combo_tids(combo)
             assert actual_tids == expected_tids, (
-                f"{combo_name} must contain exactly {expected_tids} after update_thread_list; "
-                f"got {actual_tids}"
+                f"{combo_name} must contain exactly {expected_tids} after update_thread_list; got {actual_tids}"
             )
 
     def test_exact_tids_in_combos_after_single_batch(

@@ -11,8 +11,10 @@ import dataclasses
 import importlib
 import json
 import logging
+import tempfile
 import textwrap
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -25,11 +27,17 @@ from intellicrack.bridges.sandbox_bridge import (
 )
 from intellicrack.core.types import SandboxError, ToolError
 from intellicrack.sandbox import ExecutionReport
+from tests.test_sandbox.conftest import (
+    InMemoryQEMUSandbox,
+    StubInstance,
+    StubManager,
+)
 
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from pathlib import Path
+
+    from intellicrack.sandbox.manager import SandboxManager
 
 
 def _make_execution_report() -> ExecutionReport:
@@ -2357,3 +2365,171 @@ class TestF0016UTCTimestamps:
             if fn.name in {"sandbox.pcap_stop", "sandbox.screenshot", "sandbox.memory_dump"}:
                 combined = fn.description + " ".join(p.description for p in fn.parameters if p.description)
                 assert any(kw in combined.lower() for kw in ["utc", "iso", "temp"])
+
+
+class TestMV3RealSeamGates:
+    """MV-3: pcap/cont/snapshot/screenshot drive real InMemoryQEMUSandbox seam bodies.
+
+    Every gate wires the real bridge body to ``InMemoryQEMUSandbox`` (backed
+    by ``StubQMP``) via ``StubManager``.  No ``AsyncMock`` or ``MagicMock``
+    targets the bridge methods under test, so deleting any relevant
+    production-code body turns the gate red.
+    """
+
+    @staticmethod
+    def _make_qemu_bridge() -> tuple[SandboxBridge, str, InMemoryQEMUSandbox]:
+        """Build a SandboxBridge wired to a single running QEMU instance.
+
+        Creates an ``InMemoryQEMUSandbox`` (which includes a ``StubQMP`` and
+        ``StubAgent``), wraps it in a ``StubInstance``, attaches it to a
+        ``StubManager``, and returns the configured bridge together with the
+        instance ID and the backing sandbox so callers can inspect internal
+        seam state.
+
+        Returns:
+            tuple[SandboxBridge, str, InMemoryQEMUSandbox]: The configured
+            bridge, the fixed instance ID ``"qemu-mv3-001"``, and the
+            ``InMemoryQEMUSandbox`` whose internal dicts can be inspected to
+            verify that real seam bodies executed.
+        """
+        sandbox = InMemoryQEMUSandbox()
+        sandbox.state.status = "running"
+        instance = StubInstance(sandbox, "qemu", instance_id="qemu-mv3-001")
+        manager = StubManager({"qemu-mv3-001": instance})
+        bridge = SandboxBridge()
+        bridge.attach_manager(cast("SandboxManager", manager))
+        return bridge, "qemu-mv3-001", sandbox
+
+    def test_pcap_start_capture_id_forwarded_from_real_seam(self) -> None:
+        """pcap_start returns the exact capture_id produced by the real start_pcap_capture body.
+
+        The oracle is ``InMemorySandbox.start_pcap_capture``, which stores
+        ``"cap-001"`` (the module constant ``_DEFAULT_PCAP_ID``) in its
+        internal ``_pcap_captures`` dict and returns it.  The bridge must
+        forward that value verbatim so that:
+
+        - ``result["capture_id"]`` is exactly ``"cap-001"``
+        - ``bridge._active_pcap_captures[instance_id]`` is ``"cap-001"``
+        - ``sandbox._pcap_captures`` contains the key ``"cap-001"``
+
+        Mutation caught: deleting the body of ``start_pcap_capture`` so it
+        returns ``None`` causes ``result["capture_id"]`` to be ``None``,
+        which fails the equality assertion ``== "cap-001"``.
+        """
+        bridge, instance_id, sandbox = self._make_qemu_bridge()
+
+        result: dict[str, Any] = asyncio.run(bridge.pcap_start(instance_id))
+
+        active_caps: dict[str, str] = cast("dict[str, str]", getattr(bridge, "_active_pcap_captures"))
+        pcap_caps: dict[str, list[bytes]] = cast("dict[str, list[bytes]]", getattr(sandbox, "_pcap_captures"))
+        assert result["capture_id"] == "cap-001", f"capture_id not forwarded from real seam: {result['capture_id']!r}"
+        assert result["instance_id"] == instance_id
+        assert active_caps[instance_id] == "cap-001", f"bridge did not register capture_id in _active_pcap_captures: {active_caps!r}"
+        assert "cap-001" in pcap_caps, f"seam _pcap_captures does not show the started capture: {list(pcap_caps)!r}"
+
+    def test_cont_run_state_forwarded_from_real_stub_qmp(self) -> None:
+        """cont() returns success=True and data forwarded verbatim from the real StubQMP body.
+
+        The oracle is ``StubQMP.cont()``, which returns
+        ``QMPResponse(success=True, data={"status": "running"})``.  The
+        bridge must copy both fields into the return dict unchanged, so:
+
+        - ``result["success"]`` is exactly ``True``
+        - ``result["data"]`` is exactly ``{"status": "running"}``
+
+        Mutation caught: if the body of ``StubQMP.cont`` is deleted so it
+        returns ``None``, the bridge raises an ``AttributeError`` on
+        ``None.success``, converting to a ``ToolError``.  The test then
+        receives the error instead of a success dict and fails.
+        """
+        bridge, instance_id, _ = self._make_qemu_bridge()
+
+        result: dict[str, Any] = asyncio.run(bridge.cont(instance_id))
+
+        assert result["success"] is True, f"expected success=True from StubQMP.cont(): {result['success']!r}"
+        assert result["data"] == {"status": "running"}, f"data dict not forwarded verbatim from StubQMP.cont(): {result['data']!r}"
+        assert result["instance_id"] == instance_id
+
+    def test_snapshot_create_id_and_seam_state(self) -> None:
+        """snapshot_create returns the snapshot_id built by take_snapshot and recorded in the seam.
+
+        The oracle is ``InMemorySandbox.take_snapshot``, which constructs the
+        snapshot ID as ``f"snap-{name}"`` and stores the current file tree
+        under that key in ``sandbox._snapshots``.  The bridge must:
+
+        - return ``result["snapshot_id"] == "snap-test-snap"``
+        - the key ``"snap-test-snap"`` must be present in ``sandbox._snapshots``
+          after the call (confirming the body executed, not just returned)
+
+        Mutation caught: if ``take_snapshot`` is deleted so it returns
+        ``None``, ``result["snapshot_id"]`` is ``None``, which is not equal
+        to ``"snap-test-snap"``.
+        """
+        bridge, instance_id, sandbox = self._make_qemu_bridge()
+
+        result: dict[str, Any] = asyncio.run(bridge.snapshot_create(instance_id, "test-snap"))
+
+        snapshots: dict[str, dict[str, bytes]] = cast(
+            "dict[str, dict[str, bytes]]",
+            getattr(sandbox, "_snapshots"),
+        )
+        assert result["snapshot_id"] == "snap-test-snap", f"snapshot_id not forwarded from real seam: {result['snapshot_id']!r}"
+        assert result["name"] == "test-snap"
+        assert result["instance_id"] == instance_id
+        assert "snap-test-snap" in snapshots, f"take_snapshot did not record entry in seam _snapshots: {list(snapshots)!r}"
+
+    def test_screenshot_path_forwarded_from_real_seam(self) -> None:
+        """screenshot() returns the path string produced by the real capture_screenshot body.
+
+        The oracle is ``InMemorySandbox.capture_screenshot``, which returns
+        ``Path(tempfile.gettempdir()) / "screenshot.png"`` when called
+        without an explicit output path.  The bridge converts this ``Path``
+        to a string via ``str()`` and must return it verbatim, so
+        ``result["screenshot_path"]`` must equal
+        ``str(Path(tempfile.gettempdir()) / "screenshot.png")``.
+
+        Mutation caught: if ``capture_screenshot`` is deleted so it returns
+        ``None``, the bridge stores ``str(None) == "None"``, which does not
+        equal the expected filesystem path.
+        """
+        bridge, instance_id, _ = self._make_qemu_bridge()
+
+        result: dict[str, Any] = asyncio.run(bridge.screenshot(instance_id))
+
+        expected_path = str(Path(tempfile.gettempdir()) / "screenshot.png")
+        assert result["screenshot_path"] == expected_path, f"screenshot_path not forwarded from real seam: {result['screenshot_path']!r}"
+        assert result["instance_id"] == instance_id
+
+    def test_pcap_lifecycle_start_then_stop_clears_bridge_tracking(self) -> None:
+        """pcap_start followed by pcap_stop removes the capture from bridge._active_pcap_captures.
+
+        After ``pcap_start`` the bridge must register capture ``"cap-001"`` in
+        ``_active_pcap_captures``.  After ``pcap_stop`` the entry must be
+        removed and the returned ``pcap_path`` must equal the path produced by
+        the real ``stop_pcap_capture`` seam body (``_TMPDIR / "capture.pcap"``).
+
+        Mutation caught: if ``start_pcap_capture`` returns ``None``, the
+        ``capture_id`` stored in the bridge is ``None`` and the assertion
+        ``capture_id == "cap-001"`` immediately fails.
+        """
+        bridge, instance_id, _ = self._make_qemu_bridge()
+
+        start_result: dict[str, Any] = asyncio.run(bridge.pcap_start(instance_id))
+        capture_id: str = cast(str, start_result["capture_id"])
+        active_after_start: dict[str, str] = cast(
+            "dict[str, str]",
+            getattr(bridge, "_active_pcap_captures"),
+        )
+
+        assert capture_id == "cap-001"
+        assert instance_id in active_after_start, "pcap_start must register the capture in bridge._active_pcap_captures"
+
+        stop_result: dict[str, Any] = asyncio.run(bridge.pcap_stop(instance_id, capture_id))
+
+        active_after_stop: dict[str, str] = cast(
+            "dict[str, str]",
+            getattr(bridge, "_active_pcap_captures"),
+        )
+        assert instance_id not in active_after_stop, f"pcap_stop must remove the capture; still tracking: {active_after_stop!r}"
+        expected_pcap_path = str(Path(tempfile.gettempdir()) / "capture.pcap")
+        assert stop_result["pcap_path"] == expected_pcap_path, f"pcap_path not forwarded from real seam: {stop_result['pcap_path']!r}"

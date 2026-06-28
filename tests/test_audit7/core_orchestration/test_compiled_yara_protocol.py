@@ -107,9 +107,7 @@ def test_compiled_yara_concrete_implementation_overrides_protocol() -> None:
             return [oracle_sentinel]
 
     concrete = _ConcreteYara()
-    assert isinstance(concrete, CompiledYaraRules), (
-        "_ConcreteYara must satisfy the CompiledYaraRules structural Protocol"
-    )
+    assert isinstance(concrete, CompiledYaraRules), "_ConcreteYara must satisfy the CompiledYaraRules structural Protocol"
 
     proto_match_fn = vars(CompiledYaraRules)["match"]
     direct_result: list[object] | None = proto_match_fn(concrete, data=None)
@@ -119,14 +117,9 @@ def test_compiled_yara_concrete_implementation_overrides_protocol() -> None:
     )
 
     override_result = concrete.match(data=b"")
-    assert len(override_result) == 1, (
-        f"Concrete override must return exactly 1 item, got {len(override_result)}"
-    )
+    assert len(override_result) == 1, f"Concrete override must return exactly 1 item, got {len(override_result)}"
     returned_sentinel = override_result[0]
-    assert returned_sentinel == oracle_sentinel, (
-        f"Concrete match() override must return the SHA-256 sentinel, "
-        f"got {returned_sentinel!r}"
-    )
+    assert returned_sentinel == oracle_sentinel, f"Concrete match() override must return the SHA-256 sentinel, got {returned_sentinel!r}"
 
 
 def test_compiled_yara_protocol_type_hints_preserved() -> None:

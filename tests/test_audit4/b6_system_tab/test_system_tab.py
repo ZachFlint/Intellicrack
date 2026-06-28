@@ -617,9 +617,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
             getattr(tab, "_refresh_services")()
 
         assert calls == [], "no dispatcher call must occur when _attached_pid is None"
-        assert bridge.method_calls.get("list_services", 0) == 0, (
-            "list_services must not be called on the bridge when unattached"
-        )
+        assert bridge.method_calls.get("list_services", 0) == 0, "list_services must not be called on the bridge when unattached"
 
     def test_unattached_does_not_dispatch_read_peb(self) -> None:
         """Read PEB with no attached pid must not invoke the bridge."""
@@ -633,9 +631,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
             getattr(tab, "_on_read_peb")()
 
         assert calls == [], "no dispatcher call must occur when _attached_pid is None"
-        assert bridge.method_calls.get("read_peb", 0) == 0, (
-            "read_peb must not be called on the bridge when unattached"
-        )
+        assert bridge.method_calls.get("read_peb", 0) == 0, "read_peb must not be called on the bridge when unattached"
 
     def test_set_attached_pid_none_surfaces_not_attached_status(self) -> None:
         """_refresh_privileges with no pid writes Not Attached into raw output."""

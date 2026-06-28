@@ -56,7 +56,6 @@ Capstone's mode field is overloaded: ``"32"`` / ``"64"`` for x86 and MIPS, the l
 squashed to ``"64"`` because capstone has no separate 128-bit mode.
 """
 
-
 class UnsupportedArchitectureError(ValueError):
     """Raised when an architecture string cannot be mapped to capstone constants.
 

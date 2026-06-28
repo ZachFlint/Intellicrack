@@ -1,185 +1,185 @@
 {
- "file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestXPUStatusMenuWiring::test_help_menu_source_references_xpu_status",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestMainWindowConstructionWiresMenu::test_help_menu_contains_xpu_status_action",
-   "falsifiability": null
+  "file": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestApplyProviderSettingsHandlesDisabled::test_source_collects_providers_to_disconnect",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestApplyProviderSettingsHandlesDisabled::test_disabled_provider_reflected_in_status_emission",
-   "falsifiability": null
-  },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestToolDialogsReceiveRegistry::test_configure_tools_wires_status_changed",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Hand-computed slot string contract: ToolSettingsWidget.status_changed(tool_id, available) -> _on_tool_status_changed maps available True/False to the tokens 'available'/'unavailable' producing 'Tool status: <id> <token>'. Token recomputed in the test independently of the source.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/app.py",
-    "mutation": "status_changed.connect(_status_slot) -> status_changed.connect(lambda *_a: None)",
-    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestToolDialogsReceiveRegistry::test_configure_tools_wires_status_changed",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOpenSandboxAvoidsDialogProbe::test_open_sandbox_uses_bridge_is_available",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Recording bridge counts is_available/create awaits driven through the slot's real coroutine on a fresh event loop; the unavailable branch must fire (no create, warning + 'No sandbox available' status). Counts and the spec-defined unavailable behavior are the independent oracle.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/app.py",
-    "mutation": "available = await bridge.is_available() -> available = False",
-    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOpenSandboxAvoidsDialogProbe::test_open_sandbox_uses_bridge_is_available",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_preferences_settings_changed_reaches_slot",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Object identity: the test constructs a fresh Config and asserts real_window._config is that exact sentinel after emitting the real settings_changed signal. _on_preferences_changed assigns self._config = new_config. Identity cannot be satisfied without the live connection.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/app.py",
-    "mutation": "dialog.settings_changed.connect(self._on_preferences_changed) -> dialog.settings_changed.connect(lambda *_a: None)",
-    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_preferences_settings_changed_reaches_slot",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_session_loaded_signal_reaches_slot",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Independently computed status string 'Loading session sess-load-1...' that _on_session_load_requested emits; observed via the real status_update signal after emitting the real SessionManagerDialog.session_loaded signal.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/app.py",
-    "mutation": "dialog.session_loaded.connect(self._on_session_load_requested) -> dialog.session_loaded.connect(lambda *_a: None)",
-    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_session_loaded_signal_reaches_slot",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_provider_dialog_signals_reach_slots",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Independently computed status strings 'Provider configuration updated: openai' and 'Active provider: openai' (from ProviderName.OPENAI.value), observed via the real status_update signal after emitting both real ProviderConfigDialog signals.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/app.py",
-    "mutation": "dialog.provider_updated.connect(self._on_provider_dialog_updated) -> dialog.provider_updated.connect(lambda *_a: None)",
-    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_provider_dialog_signals_reach_slots",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_model_selection_signal_reaches_slot",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Toolbar combo state: emitting the real ModelSelectionDialog.model_selected('model-selected-via-signal') must route through _sync_model_combo and make model_combo.currentText() equal that exact id (combo widget state, not a string proxy).",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/app.py",
-    "mutation": "dialog.model_selected.connect(self._on_model_selected_from_browse) -> dialog.model_selected.connect(lambda *_a: None)",
-    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_model_selection_signal_reaches_slot",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_settings_updated_reaches_slot",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Manager object identity: emitting the real SandboxConfigDialog.settings_updated must route through _on_sandbox_settings_updated -> _apply_sandbox_settings, which replaces self.sandbox_manager with a new SandboxManager. The test asserts the manager instance identity changed.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/app.py",
-    "mutation": "dialog.settings_updated.connect(self._on_sandbox_settings_updated) -> dialog.settings_updated.connect(lambda *_a: None)",
-    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_settings_updated_reaches_slot",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_monitor_stopped_reaches_slot",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Independently computed status string 'Sandbox stopped' and the literal button text 'Sandbox: OFF' that _on_sandbox_monitor_stopped sets; observed after the production helper wires a real SandboxMonitorWidget and its sandbox_stopped signal is emitted.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/app.py",
-    "mutation": "monitor.sandbox_stopped.connect(self._on_sandbox_monitor_stopped) -> monitor.sandbox_stopped.connect(lambda *_a: None)",
-    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_monitor_stopped_reaches_slot",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  },
-  {
-   "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_embedded_tool_panel_signals_reach_slots",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "hardened",
-   "oracle": "Independently computed status strings 'ghidra started' and 'ghidra closed' that _on_embedded_tool_started/_closed emit; observed via the real status_update signal after emitting the real ToolOutputPanel embedded_tool_started/closed signals.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/app.py",
-    "mutation": "self.tool_panel.embedded_tool_started.connect(self._on_embedded_tool_started) -> self.tool_panel.embedded_tool_started.connect(lambda *_a: None)",
-    "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_embedded_tool_panel_signals_reach_slots",
-    "expected_baseline": "green",
-    "green_status": "unknown",
-    "mutation_result": "not-green",
-    "proven_falsifiable": "skipped"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 9
+  "findings_addressed": [
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestXPUStatusMenuWiring::test_help_menu_source_references_xpu_status",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestMainWindowConstructionWiresMenu::test_help_menu_contains_xpu_status_action",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestApplyProviderSettingsHandlesDisabled::test_source_collects_providers_to_disconnect",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestApplyProviderSettingsHandlesDisabled::test_disabled_provider_reflected_in_status_emission",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestToolDialogsReceiveRegistry::test_configure_tools_wires_status_changed",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Hand-computed slot string contract: ToolSettingsWidget.status_changed(tool_id, available) -> _on_tool_status_changed maps available True/False to the tokens 'available'/'unavailable' producing 'Tool status: <id> <token>'. Token recomputed in the test independently of the source.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/app.py",
+        "mutation": "status_changed.connect(_status_slot) -> status_changed.connect(lambda *_a: None)",
+        "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestToolDialogsReceiveRegistry::test_configure_tools_wires_status_changed",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOpenSandboxAvoidsDialogProbe::test_open_sandbox_uses_bridge_is_available",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Recording bridge counts is_available/create awaits driven through the slot's real coroutine on a fresh event loop; the unavailable branch must fire (no create, warning + 'No sandbox available' status). Counts and the spec-defined unavailable behavior are the independent oracle.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/app.py",
+        "mutation": "available = await bridge.is_available() -> available = False",
+        "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOpenSandboxAvoidsDialogProbe::test_open_sandbox_uses_bridge_is_available",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_preferences_settings_changed_reaches_slot",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Object identity: the test constructs a fresh Config and asserts real_window._config is that exact sentinel after emitting the real settings_changed signal. _on_preferences_changed assigns self._config = new_config. Identity cannot be satisfied without the live connection.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/app.py",
+        "mutation": "dialog.settings_changed.connect(self._on_preferences_changed) -> dialog.settings_changed.connect(lambda *_a: None)",
+        "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_preferences_settings_changed_reaches_slot",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_session_loaded_signal_reaches_slot",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Independently computed status string 'Loading session sess-load-1...' that _on_session_load_requested emits; observed via the real status_update signal after emitting the real SessionManagerDialog.session_loaded signal.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/app.py",
+        "mutation": "dialog.session_loaded.connect(self._on_session_load_requested) -> dialog.session_loaded.connect(lambda *_a: None)",
+        "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_session_loaded_signal_reaches_slot",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_provider_dialog_signals_reach_slots",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Independently computed status strings 'Provider configuration updated: openai' and 'Active provider: openai' (from ProviderName.OPENAI.value), observed via the real status_update signal after emitting both real ProviderConfigDialog signals.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/app.py",
+        "mutation": "dialog.provider_updated.connect(self._on_provider_dialog_updated) -> dialog.provider_updated.connect(lambda *_a: None)",
+        "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_provider_dialog_signals_reach_slots",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_model_selection_signal_reaches_slot",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Toolbar combo state: emitting the real ModelSelectionDialog.model_selected('model-selected-via-signal') must route through _sync_model_combo and make model_combo.currentText() equal that exact id (combo widget state, not a string proxy).",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/app.py",
+        "mutation": "dialog.model_selected.connect(self._on_model_selected_from_browse) -> dialog.model_selected.connect(lambda *_a: None)",
+        "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_model_selection_signal_reaches_slot",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_settings_updated_reaches_slot",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Manager object identity: emitting the real SandboxConfigDialog.settings_updated must route through _on_sandbox_settings_updated -> _apply_sandbox_settings, which replaces self.sandbox_manager with a new SandboxManager. The test asserts the manager instance identity changed.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/app.py",
+        "mutation": "dialog.settings_updated.connect(self._on_sandbox_settings_updated) -> dialog.settings_updated.connect(lambda *_a: None)",
+        "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_settings_updated_reaches_slot",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_monitor_stopped_reaches_slot",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Independently computed status string 'Sandbox stopped' and the literal button text 'Sandbox: OFF' that _on_sandbox_monitor_stopped sets; observed after the production helper wires a real SandboxMonitorWidget and its sandbox_stopped signal is emitted.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/app.py",
+        "mutation": "monitor.sandbox_stopped.connect(self._on_sandbox_monitor_stopped) -> monitor.sandbox_stopped.connect(lambda *_a: None)",
+        "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_sandbox_monitor_stopped_reaches_slot",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    },
+    {
+      "test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_embedded_tool_panel_signals_reach_slots",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "hardened",
+      "oracle": "Independently computed status strings 'ghidra started' and 'ghidra closed' that _on_embedded_tool_started/_closed emit; observed via the real status_update signal after emitting the real ToolOutputPanel embedded_tool_started/closed signals.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/app.py",
+        "mutation": "self.tool_panel.embedded_tool_started.connect(self._on_embedded_tool_started) -> self.tool_panel.embedded_tool_started.connect(lambda *_a: None)",
+        "covering_test": "tests/test_audit5/u5_ui_mainwindow/test_ui_mainwindow.py::TestOrphanSignalWiringRuntime::test_embedded_tool_panel_signals_reach_slots",
+        "expected_baseline": "green",
+        "green_status": "unknown",
+        "mutation_result": "not-green",
+        "proven_falsifiable": "skipped"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 9
 }

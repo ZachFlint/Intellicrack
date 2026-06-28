@@ -1,32 +1,32 @@
 # Section 02 — Disassembler / RE-Tool Bridges: Test Coverage Audit
 
-**Date:** 2026-06-26  
-**Auditor:** test-reviewer (adversarial, not charitable)  
-**Scope:**  
-- `src/intellicrack/bridges/ghidra.py` (311 KB, ~8000 lines; 81 tool-definition functions)  
-- `src/intellicrack/bridges/cutter.py` (4574 lines; 95 tool-definition functions + 2 public utilities)  
-- `src/intellicrack/core/disassembler.py` (427 lines; 9 public operations)  
+**Date:** 2026-06-26
+**Auditor:** test-reviewer (adversarial, not charitable)
+**Scope:**
+- `src/intellicrack/bridges/ghidra.py` (311 KB, ~8000 lines; 81 tool-definition functions)
+- `src/intellicrack/bridges/cutter.py` (4574 lines; 95 tool-definition functions + 2 public utilities)
+- `src/intellicrack/core/disassembler.py` (427 lines; 9 public operations)
 
-**Test files examined:**  
-- `tests/test_bridges/test_ghidra.py` (1416 lines)  
-- `tests/test_bridges/test_cutter.py` (1638 lines)  
-- `tests/test_bridges/test_realcov_03b_ghidra.py` (584 lines)  
-- `tests/test_bridges/test_ghidra_f11_audit.py` (172 lines)  
-- `tests/test_bridges/test_ghidra_audit6.py` (2746 lines)  
-- `tests/test_audit3/core/test_disassembler.py` (298 lines)  
-- `tests/test_audit3/ui/test_ghidra_panel.py` (268 lines)  
-- `tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_disassembly_output.py` (233 lines)  
-- `tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py` (1010 lines)  
-- `tests/test_core/test_realcov_07a_disassembler.py` (401 lines)  
-- `tests/test_hexcore_e2e/test_bridge_disassembly.py` (196 lines)  
-- `tests/test_hexcore_e2e/test_bridge_disassembly_deep.py` (308 lines)  
-- `tests/test_ui/test_realcov_14b_cutter_tabs.py` (313 lines)  
+**Test files examined:**
+- `tests/test_bridges/test_ghidra.py` (1416 lines)
+- `tests/test_bridges/test_cutter.py` (1638 lines)
+- `tests/test_bridges/test_realcov_03b_ghidra.py` (584 lines)
+- `tests/test_bridges/test_ghidra_f11_audit.py` (172 lines)
+- `tests/test_bridges/test_ghidra_audit6.py` (2746 lines)
+- `tests/test_audit3/core/test_disassembler.py` (298 lines)
+- `tests/test_audit3/ui/test_ghidra_panel.py` (268 lines)
+- `tests/test_audit4/c9_hex_disassembly_debounce/test_realcov_13a_disassembly_output.py` (233 lines)
+- `tests/test_audit5/u1_bridges_cutter/test_cutter_bridge.py` (1010 lines)
+- `tests/test_core/test_realcov_07a_disassembler.py` (401 lines)
+- `tests/test_hexcore_e2e/test_bridge_disassembly.py` (196 lines)
+- `tests/test_hexcore_e2e/test_bridge_disassembly_deep.py` (308 lines)
+- `tests/test_ui/test_realcov_14b_cutter_tabs.py` (313 lines)
 
-**Verdict key:**  
-- `REAL` — asserts specific values from an independent oracle; breaks if production code is deleted or corrupted  
-- `WEAK` — asserts only existence/type/non-emptiness; would not catch value-level regressions  
-- `FAKE` — test passes even when the operation is broken; forbidden anti-pattern present  
-- `NONE` — zero test coverage  
+**Verdict key:**
+- `REAL` — asserts specific values from an independent oracle; breaks if production code is deleted or corrupted
+- `WEAK` — asserts only existence/type/non-emptiness; would not catch value-level regressions
+- `FAKE` — test passes even when the operation is broken; forbidden anti-pattern present
+- `NONE` — zero test coverage
 
 ---
 
@@ -46,7 +46,7 @@
 | `HexDisassembler.get_supported_architectures()` | ~310 | test_realcov_07a:353–400 (`("x86","64")` and `("x86","32")` in pairs; schema `{"arch","mode","description"}`; RISC-V conditioned on real capstone attrs; roundtrip decode `\xc3` → `"ret"`) | REAL | No negative: removing an arch from `_CAPSTONE_ARCH_MODE_MAP` not caught (list is generative) |
 | `get_disassembler()` singleton | ~380 | test_realcov_07a:338–342 (`first is second`) | REAL | Thread-safety of singleton not tested |
 
-**disassembler.py gate score: 9 / 9 operations have at least one REAL gate (100%).**  
+**disassembler.py gate score: 9 / 9 operations have at least one REAL gate (100%).**
 **Edge-case score: 7 / 9** — ARM/MIPS paths and `count=0` boundary unexercised.
 
 ---
@@ -167,9 +167,9 @@ Operations are listed from the mixin chain: `_CutterBridgeBase → … → Cutte
 | `get_modules()` | 4509 | **NONE** | `"dmIj"` JSON; ModuleInfo field mapping; `size` from `addr_end-base` fallback never asserted |
 | `shutdown()` | 4562 | REAL | test_cutter_bridge.py:748–768 (`connected==False`, `binary_loaded==False`, `r2 is None` after ProcessManager raises) | — |
 
-**CutterBridge gate score: 62 / 97 operations have at least one REAL gate (64%).**  
-**Operations with ZERO coverage: 35 (entire debug subsystem + all write-transform ops + search/compare ops + display ops + project management).**  
-**Operations with WEAK-only coverage: 2 (`read_bytes` isinstance-only; `hexdump` isinstance-only).**  
+**CutterBridge gate score: 62 / 97 operations have at least one REAL gate (64%).**
+**Operations with ZERO coverage: 35 (entire debug subsystem + all write-transform ops + search/compare ops + display ops + project management).**
+**Operations with WEAK-only coverage: 2 (`read_bytes` isinstance-only; `hexdump` isinstance-only).**
 **Edge-case score: 45%** — injection prevention excellent; debug subsystem entirely absent; write-op command-format correctness unverified; real binary never driven through CutterBridge.disassemble.
 
 ---
@@ -219,9 +219,9 @@ Methods covered by disconnected-gate only (approximately 56 of 81):
 
 `analyze`, `get_functions`, `get_function`, `disassemble`, `get_xrefs_from`, `search_strings`, `search_bytes`, `get_imports`, `get_exports`, `get_data_type`, `set_data_type`, `get_segments`, `get_memory_map`, `get_structures`, `get_bookmarks`, `delete_function`, `edit_function_signature`, `set_function_variable_type`, `apply_structure_at`, `get_sections`, `get_classes`, `get_vtables`, `get_syscalls`, `get_callgraph`, `get_relocations`, `get_resources`, `get_symbols`, `get_flags`, `add_flag`, `get_types`, `get_function_graph`, `get_function_address`, `get_all_strings`, `get_libraries`, `get_headers`, `get_debug_info`, `get_comment`, `get_namespace`, `set_namespace`, `get_data_references`, `get_instruction_at`, `get_bytes_at`, `write_bytes`, `patch_bytes`, `get_register_values`, `emulate_function`, `get_stack_trace`, `get_local_variables`, `get_function_comments`, `import_c_header`, `define_union`, `define_enum`, `add_enum_value`, `get_typedef`, `create_typedef`, `delete_data_type`
 
-**GhidraBridge gate score: 25 / 81 operations have at least one REAL functional gate (31%).**  
-**Methods with disconnected-gate only: 56 (69%).** These are real gates for the connection check but fake gates for actual functionality.  
-**Methods with ZERO coverage of any kind: 0** (every method is at least reachable via the disconnected-state test).  
+**GhidraBridge gate score: 25 / 81 operations have at least one REAL functional gate (31%).**
+**Methods with disconnected-gate only: 56 (69%).** These are real gates for the connection check but fake gates for actual functionality.
+**Methods with ZERO coverage of any kind: 0** (every method is at least reachable via the disconnected-state test).
 **Edge-case score: 35%** — injection prevention and readback verification excellent; script-generation correctness for most methods (decompile, disassemble, search, import/export parsing) unverified.
 
 ---
@@ -230,29 +230,29 @@ Methods covered by disconnected-gate only (approximately 56 of 81):
 
 These tests pass even when the production logic they claim to verify is broken.
 
-### W-01: `TestReadBytes.test_returns_bytes` — isinstance-only gate  
-**File:** `tests/test_bridges/test_cutter.py` (approximate line 1200)  
-**Bogus assertion:** `assert isinstance(result, bytes)`  
-**Why it is fake:** If `read_bytes` returns `b""` instead of the requested bytes, or returns the wrong byte range, or reads from the wrong address — this test still passes. The method's actual contract (read `size` bytes from `address`, return them as `bytes`) is completely unverified.  
-**Falsifiability test:** Delete the `bytes.fromhex(hex_str)` conversion and return `b"deadbeef"` on every call — test still green.  
+### W-01: `TestReadBytes.test_returns_bytes` — isinstance-only gate
+**File:** `tests/test_bridges/test_cutter.py` (approximate line 1200)
+**Bogus assertion:** `assert isinstance(result, bytes)`
+**Why it is fake:** If `read_bytes` returns `b""` instead of the requested bytes, or returns the wrong byte range, or reads from the wrong address — this test still passes. The method's actual contract (read `size` bytes from `address`, return them as `bytes`) is completely unverified.
+**Falsifiability test:** Delete the `bytes.fromhex(hex_str)` conversion and return `b"deadbeef"` on every call — test still green.
 **Fix needed:** Use a `_CommandRecorder` that returns a known hex string for a given `"p8 {size} @ {addr}"` command, then assert `result == bytes.fromhex("the_known_hex")`.
 
-### W-02: `TestHexdump.test_sends_px_command` — isinstance-only gate  
-**File:** `tests/test_bridges/test_cutter.py` (approximate line 1250)  
-**Bogus assertion:** `assert isinstance(result, str)`  
-**Why it is fake:** Any non-raising string return — including an empty string or garbage — passes. The `px` command format, the address embedding, and the actual hexdump content are all unverified.  
+### W-02: `TestHexdump.test_sends_px_command` — isinstance-only gate
+**File:** `tests/test_bridges/test_cutter.py` (approximate line 1250)
+**Bogus assertion:** `assert isinstance(result, str)`
+**Why it is fake:** Any non-raising string return — including an empty string or garbage — passes. The `px` command format, the address embedding, and the actual hexdump content are all unverified.
 **Fix needed:** Assert the recorder received `f"px {length} @ {address}"` exactly, and assert `result` contains the hex-formatted bytes that the recorder returned.
 
-### W-03: GhidraBridge disconnected-state tests as functional gates  
-**File:** `tests/test_bridges/test_ghidra.py` (~lines 400–1416, `TestMutatingMethodsRequireConnection`, `TestQueryMethodsRaiseWhenDisconnected`, `TestNewMethodsRaiseWhenDisconnected`)  
-**Bogus pattern:** 56 methods verified only via `pytest.raises(ToolError, match="not connected")`.  
-**Why it is fake:** The test gates one guard clause (the connection check at the top of every method). Anything in the method body beyond that check is completely ungated. If `decompile()` were to silently return an empty string instead of C code when connected, all `TestQueryMethodsRaiseWhenDisconnected` tests remain green. If `get_imports()` parsed JSON incorrectly, all tests remain green.  
-**Falsifiability test:** Replace the entire body of `get_functions()` after the connection check with `return []` — every existing test for `get_functions` passes.  
+### W-03: GhidraBridge disconnected-state tests as functional gates
+**File:** `tests/test_bridges/test_ghidra.py` (~lines 400–1416, `TestMutatingMethodsRequireConnection`, `TestQueryMethodsRaiseWhenDisconnected`, `TestNewMethodsRaiseWhenDisconnected`)
+**Bogus pattern:** 56 methods verified only via `pytest.raises(ToolError, match="not connected")`.
+**Why it is fake:** The test gates one guard clause (the connection check at the top of every method). Anything in the method body beyond that check is completely ungated. If `decompile()` were to silently return an empty string instead of C code when connected, all `TestQueryMethodsRaiseWhenDisconnected` tests remain green. If `get_imports()` parsed JSON incorrectly, all tests remain green.
+**Falsifiability test:** Replace the entire body of `get_functions()` after the connection check with `return []` — every existing test for `get_functions` passes.
 **Fix needed:** Each method needs a `FakeGhidraBridge` test that provides a real Jython script result (via `_FakeBridgeClient` executing real Jython or providing pre-computed JSON) and asserts the specific data structure the method returns.
 
-### W-04: `TestEsilOps.test_esil_eval` — isinstance-only assertion (resolved by F0026 but original still present)  
-**File:** `tests/test_bridges/test_cutter.py` (approximate line 1440)  
-**Bogus assertion:** `assert isinstance(result, str)` as the sole check  
+### W-04: `TestEsilOps.test_esil_eval` — isinstance-only assertion (resolved by F0026 but original still present)
+**File:** `tests/test_bridges/test_cutter.py` (approximate line 1440)
+**Bogus assertion:** `assert isinstance(result, str)` as the sole check
 **Note:** `TestF0026DynamicAnalysisFlag.test_dynamic_analysis_supported` in `test_cutter_bridge.py` does assert `result == "0x1"`, which provides a real gate. The isinstance-only test in `test_cutter.py` is now redundant but not harmful since the real gate exists. However, the isinstance-only test in isolation would pass even if `esil_eval` returned `""`.
 
 ---
@@ -263,19 +263,19 @@ These tests pass even when the production logic they claim to verify is broken.
 
 All operations in the following CutterBridge mixins have no test coverage at all:
 
-**Project management** (3 ops): `save_project`, `open_project`, `list_projects`  
+**Project management** (3 ops): `save_project`, `open_project`, `list_projects`
 These are in the tool_definition and callable via AI — they issue `Ps`, `Po`, `Pl` rizin commands — but no test asserts the correct command is issued or the response is parsed correctly.
 
-**Write transforms** (7 ops): `write_xor`, `write_add`, `write_sub`, `write_from_file`, `write_to_file`, `write_value`, `write_string`  
+**Write transforms** (7 ops): `write_xor`, `write_add`, `write_sub`, `write_from_file`, `write_to_file`, `write_value`, `write_string`
 The `@!{length}` suffix that constrains write operations to the correct byte range (vs. the current session block size) is an important correctness invariant never tested. The `write_string` quote-escaping path (`"` → `\"`) is a potential injection vector with no test.
 
-**Extended searches** (5 ops): `search_crypto_constants`, `search_magic`, `search_value`, `compare_bytes`, `compare_disassembly`  
+**Extended searches** (5 ops): `search_crypto_constants`, `search_magic`, `search_value`, `compare_bytes`, `compare_disassembly`
 The `compare_disassembly` method issues two commands (`cD` + `cCj`) and joins their outputs — the output assembly logic is never tested.
 
-**Display operations** (3 of 5 ops): `hexdump_words`, `disassemble_function`, `get_basic_blocks`  
+**Display operations** (3 of 5 ops): `hexdump_words`, `disassemble_function`, `get_basic_blocks`
 `hexdump_words` (`pxw`) differs from `hexdump` (`px`) in output format; this difference is unverified. `get_basic_blocks` parses BlockInfo with `jump`/`fail` optional-int fields that need testing.
 
-**Full debug subsystem** (15 ops): `attach`, `detach`, `set_breakpoint`, `remove_breakpoint`, `get_breakpoints`, `step_into`, `step_over`, `run`, `get_registers`, `set_register`, `read_memory`, `write_memory`, `get_memory_regions`, `get_threads`, `get_modules`  
+**Full debug subsystem** (15 ops): `attach`, `detach`, `set_breakpoint`, `remove_breakpoint`, `get_breakpoints`, `step_into`, `step_over`, `run`, `get_registers`, `set_register`, `read_memory`, `write_memory`, `get_memory_regions`, `get_threads`, `get_modules`
 This is the largest single gap. `get_registers()` parses `drj` JSON into a full `RegisterState` with 64→32-bit fallbacks — all unverified. `set_breakpoint()` dispatches `db`/`dbH`/`dbm` based on type and applies `validate_r2_argument` to condition — the injection guard is never exercised. `read_memory()` handles invalid hex and size<0 — neither is tested.
 
 ### 3.2 GhidraBridge: Functional behavior unverified — 56 operations
@@ -284,12 +284,12 @@ Every one of the 56 methods listed in Section 1.3B has its actual behavior (the 
 
 Critical specific gaps:
 - `decompile()` happy path — C pseudocode structure never asserted
-- `get_functions()` — function list parsing never verified with a fake connected client  
-- `disassemble()` — disassembly text never verified  
-- `search_strings()` — result list structure and field values never verified  
-- `get_imports()` / `get_exports()` — ImportInfo / ExportInfo field values never verified  
-- `search_bytes()` — address list never verified  
-- `analyze()` — headless analysis submission path never verified when connected  
+- `get_functions()` — function list parsing never verified with a fake connected client
+- `disassemble()` — disassembly text never verified
+- `search_strings()` — result list structure and field values never verified
+- `get_imports()` / `get_exports()` — ImportInfo / ExportInfo field values never verified
+- `search_bytes()` — address list never verified
+- `analyze()` — headless analysis submission path never verified when connected
 
 ---
 
@@ -354,9 +354,9 @@ assert any(cmd == "p8 4 @ 0x1000" for cmd in recorder.commands)
 
 The `FakeGhidraBridge` / `_FakeBridgeClient` infrastructure already exists in `test_ghidra_audit6.py` and can be reused. For each method the test must:
 
-1. Provide a `_FakeBridgeClient` that returns a pre-known JSON response when the expected Jython script is executed  
-2. Assert the **specific field values** in the returned data structure  
-3. Assert the **specific Jython API calls** appear in the generated script  
+1. Provide a `_FakeBridgeClient` that returns a pre-known JSON response when the expected Jython script is executed
+2. Assert the **specific field values** in the returned data structure
+3. Assert the **specific Jython API calls** appear in the generated script
 
 For `get_functions()`:
 ```

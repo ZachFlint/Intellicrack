@@ -1,116 +1,116 @@
 {
- "file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes",
-   "severity": "MEDIUM",
-   "category": "N8",
-   "action": "hardened",
-   "oracle": "Independent IPS-spec encoder via struct: b'PATCH' + struct.pack('>I',offset)[1:] + struct.pack('>H',len(data)) + data + b'EOF' (offset 0x123456 and 3-byte data are below the 0x454F46 EOF terminator, so the single non-RLE record path applies exactly).",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "parts.append(struct.pack(\">I\", offset)[1:]) -> parts.append(struct.pack(\">I\", offset)[2:])",
-    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
+  "file": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes",
-   "severity": "MEDIUM",
-   "category": "N8",
-   "action": "hardened",
-   "oracle": "Same independent struct-based IPS-spec encoder, invoked through the documented class-level (no-instance) call shape; asserts the full PATCH+record+EOF blob byte-for-byte.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "            parts.append(struct.pack(\">H\", size), data)) ->             parts.append(struct.pack(\">H\", size), data))",
-    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout",
-   "severity": "MEDIUM",
-   "category": "N8",
-   "action": "hardened",
-   "oracle": "struct.unpack on the produced record body decodes the 3-byte offset, 2-byte size, and data slice independently of the builder and asserts each round-trips to the original inputs.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "parts.extend((struct.pack(\">H\", size), data)) -> parts.extend((struct.pack(\">H\", size + 1), data))",
-    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob",
-   "severity": "MEDIUM",
-   "category": "N8",
-   "action": "hardened",
-   "oracle": "Independent IPS-spec encoder via struct; a real native HexDocument is opened, one contiguous overwrite at offset 10 (single coalesced record, far below the 0x454F46 terminator) is performed, and export_patches_ips() output is compared byte-for-byte to b'PATCH' + struct offset/size + data + b'EOF'.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack-hexcore/src/patch_export.rs",
-    "mutation": "    output.extend_from_slice(b\"PATCH\"); ->     output.extend_from_slice(b\"PATCX\");",
-    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "pass",
-    "proven_falsifiable": "no"
-   }
-  },
-  {
-   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDeadModuleRemoved::test_hex_editor_package_execute_text_search_returns_correct_offsets",
-   "severity": "HIGH",
-   "category": "N8",
-   "action": "hardened",
-   "oracle": "bytes.find() on the same 16-byte payload independently locates the needle b'\\x08\\x09\\x0A' at offset 8. The production execute_text_search must return exactly [(8, 3)]; any broken implementation returning an incorrect offset or length fails the assertions.",
-   "deletion_sibling": "test_hex_editor_package_imports_cleanly",
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/hex_editor/search.py",
-    "mutation": "return [(r[0], r[1]) for r in raw] -> return [(r[0] + 1, r[1]) for r in raw]",
-    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDeadModuleRemoved::test_hex_editor_package_execute_text_search_returns_correct_offsets",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  },
-  {
-   "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDeadModuleRemoved::test_hex_editor_package_execute_numeric_search_locates_known_value",
-   "severity": "HIGH",
-   "category": "N8",
-   "action": "hardened",
-   "oracle": "struct.pack('<I', 0xDEADBEEF) places the target value at byte offset 4 in the payload (after 4 zero-prefix bytes). The production fallback must return at least one result with offset==4 and byte_width==4; an implementation returning empty or wrong offsets fails.",
-   "deletion_sibling": "test_hex_editor_package_imports_cleanly",
-   "falsifiability": {
-    "src_file": "src/intellicrack/ui/panels/hex_editor/search.py",
-    "mutation": "if min_val <= fval <= max_val: -> if min_val < fval <= max_val:",
-    "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDeadModuleRemoved::test_hex_editor_package_execute_numeric_search_locates_known_value",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 6
+  "findings_addressed": [
+    {
+      "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes",
+      "severity": "MEDIUM",
+      "category": "N8",
+      "action": "hardened",
+      "oracle": "Independent IPS-spec encoder via struct: b'PATCH' + struct.pack('>I',offset)[1:] + struct.pack('>H',len(data)) + data + b'EOF' (offset 0x123456 and 3-byte data are below the 0x454F46 EOF terminator, so the single non-RLE record path applies exactly).",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "parts.append(struct.pack(\">I\", offset)[1:]) -> parts.append(struct.pack(\">I\", offset)[2:])",
+        "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_single_patch_encodes_exact_ips_bytes",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes",
+      "severity": "MEDIUM",
+      "category": "N8",
+      "action": "hardened",
+      "oracle": "Same independent struct-based IPS-spec encoder, invoked through the documented class-level (no-instance) call shape; asserts the full PATCH+record+EOF blob byte-for-byte.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "            parts.append(struct.pack(\">H\", size), data)) ->             parts.append(struct.pack(\">H\", size), data))",
+        "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_static_call_form_emits_exact_bytes",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout",
+      "severity": "MEDIUM",
+      "category": "N8",
+      "action": "hardened",
+      "oracle": "struct.unpack on the produced record body decodes the 3-byte offset, 2-byte size, and data slice independently of the builder and asserts each round-trips to the original inputs.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "parts.extend((struct.pack(\">H\", size), data)) -> parts.extend((struct.pack(\">H\", size + 1), data))",
+        "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestBridgeBuildIpsFromPatches::test_offset_size_data_field_layout",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob",
+      "severity": "MEDIUM",
+      "category": "N8",
+      "action": "hardened",
+      "oracle": "Independent IPS-spec encoder via struct; a real native HexDocument is opened, one contiguous overwrite at offset 10 (single coalesced record, far below the 0x454F46 terminator) is performed, and export_patches_ips() output is compared byte-for-byte to b'PATCH' + struct offset/size + data + b'EOF'.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack-hexcore/src/patch_export.rs",
+        "mutation": "    output.extend_from_slice(b\"PATCH\"); ->     output.extend_from_slice(b\"PATCX\");",
+        "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDocumentExportPatchesIps::test_export_patches_ips_emits_exact_spec_blob",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "pass",
+        "proven_falsifiable": "no"
+      }
+    },
+    {
+      "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDeadModuleRemoved::test_hex_editor_package_execute_text_search_returns_correct_offsets",
+      "severity": "HIGH",
+      "category": "N8",
+      "action": "hardened",
+      "oracle": "bytes.find() on the same 16-byte payload independently locates the needle b'\\x08\\x09\\x0A' at offset 8. The production execute_text_search must return exactly [(8, 3)]; any broken implementation returning an incorrect offset or length fails the assertions.",
+      "deletion_sibling": "test_hex_editor_package_imports_cleanly",
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/hex_editor/search.py",
+        "mutation": "return [(r[0], r[1]) for r in raw] -> return [(r[0] + 1, r[1]) for r in raw]",
+        "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDeadModuleRemoved::test_hex_editor_package_execute_text_search_returns_correct_offsets",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    },
+    {
+      "test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDeadModuleRemoved::test_hex_editor_package_execute_numeric_search_locates_known_value",
+      "severity": "HIGH",
+      "category": "N8",
+      "action": "hardened",
+      "oracle": "struct.pack('<I', 0xDEADBEEF) places the target value at byte offset 4 in the payload (after 4 zero-prefix bytes). The production fallback must return at least one result with offset==4 and byte_width==4; an implementation returning empty or wrong offsets fails.",
+      "deletion_sibling": "test_hex_editor_package_imports_cleanly",
+      "falsifiability": {
+        "src_file": "src/intellicrack/ui/panels/hex_editor/search.py",
+        "mutation": "if min_val <= fval <= max_val: -> if min_val < fval <= max_val:",
+        "covering_test": "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py::TestDeadModuleRemoved::test_hex_editor_package_execute_numeric_search_locates_known_value",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 6
 }

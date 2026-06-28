@@ -285,9 +285,7 @@ def test_script_throws_when_traceevent_dll_missing(tmp_path: Path) -> None:
     )
     diag_text = diag_path.read_text(encoding="utf-8", errors="replace")
     diag_lines = [ln.strip() for ln in diag_text.splitlines() if ln.strip()]
-    assert diag_lines, (
-        f"F-0016 regression: diag log must be non-empty when TraceEvent.dll is missing; diag={diag_text!r}"
-    )
+    assert diag_lines, f"F-0016 regression: diag log must be non-empty when TraceEvent.dll is missing; diag={diag_text!r}"
     categories = [ln.split("|")[1] for ln in diag_lines if ln.count("|") >= 2]
     assert any(cat in {"traceevent_dll_missing", "traceevent_dll_load_failed"} for cat in categories), (
         f"F-0016 regression: diag log must contain traceevent_dll_missing or traceevent_dll_load_failed category; "
@@ -354,8 +352,7 @@ def test_script_does_not_label_normal_thread_starts_as_shellcode_injection(
 
     log_path = log_dir / _LOG_NAME
     assert log_path.exists(), (
-        f"F-0017: admin run with pid=0 must produce main log capturing thread-start events; "
-        f"log_dir={list(log_dir.iterdir())!r}"
+        f"F-0017: admin run with pid=0 must produce main log capturing thread-start events; log_dir={list(log_dir.iterdir())!r}"
     )
 
     contents = log_path.read_text(encoding="utf-8", errors="replace")
@@ -368,17 +365,11 @@ def test_script_does_not_label_normal_thread_starts_as_shellcode_injection(
         if len(fields) >= 6:
             all_records.append(line)
 
-    assert all_records, (
-        f"F-0017: at least one injection-monitor record expected in the main log; "
-        f"log contents={contents!r}"
-    )
+    assert all_records, f"F-0017: at least one injection-monitor record expected in the main log; log contents={contents!r}"
     for rec in all_records:
         fields = rec.split("|")
         inj_type = fields[5] if len(fields) >= 6 else ""
-        assert inj_type != "shellcode_injection", (
-            f"F-0017 regression: thread-start event labelled shellcode_injection; "
-            f"record={rec!r}"
-        )
+        assert inj_type != "shellcode_injection", f"F-0017 regression: thread-start event labelled shellcode_injection; record={rec!r}"
 
 
 def test_script_emits_threat_intel_unavailable_warning_when_not_admin(
@@ -418,25 +409,18 @@ def test_script_emits_threat_intel_unavailable_warning_when_not_admin(
 
     diag_path = log_dir / _DIAG_NAME
     assert diag_path.exists(), (
-        f"F-0017 regression: diag log must be written on failure, not silently dropped; "
-        f"log_dir contents={list(log_dir.iterdir())!r}"
+        f"F-0017 regression: diag log must be written on failure, not silently dropped; log_dir contents={list(log_dir.iterdir())!r}"
     )
 
     diag_text = diag_path.read_text(encoding="utf-8", errors="replace")
-    structured_lines = [
-        ln.strip()
-        for ln in diag_text.splitlines()
-        if ln.strip() and ln.count("|") >= 2
-    ]
+    structured_lines = [ln.strip() for ln in diag_text.splitlines() if ln.strip() and ln.count("|") >= 2]
     assert structured_lines, (
-        f"F-0017 regression: diag log must contain at least one structured pipe-delimited "
-        f"diagnostic entry; diag={diag_text!r}"
+        f"F-0017 regression: diag log must contain at least one structured pipe-delimited diagnostic entry; diag={diag_text!r}"
     )
 
     if "threat_intel_provider_unavailable" in diag_text:
         assert "WARNING:" in stderr or "Threat-Intelligence" in stderr, (
-            f"F-0017 regression: Write-Warning must reach stderr when ThreatIntel provider "
-            f"unavailable; stderr={stderr!r}"
+            f"F-0017 regression: Write-Warning must reach stderr when ThreatIntel provider unavailable; stderr={stderr!r}"
         )
 
 
@@ -483,10 +467,7 @@ def test_smoke_lifecycle_records_started_and_stopped(tmp_path: Path) -> None:
 
     raw = lifecycle_file.read_text(encoding="utf-8", errors="replace")
     records = [ln.strip() for ln in raw.splitlines() if ln.strip()]
-    assert records, (
-        f"lifecycle log is empty; returncode={returncode!r} "
-        f"stdout={stdout!r} stderr={stderr!r}"
-    )
+    assert records, f"lifecycle log is empty; returncode={returncode!r} stdout={stdout!r} stderr={stderr!r}"
 
     states = {ln.split("|")[2] for ln in records if ln.count("|") >= 3}
     assert "started" in states, (

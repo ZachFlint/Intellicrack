@@ -1,23 +1,23 @@
 {
- "file": "tests/test_sandbox/test_base_types.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_sandbox/test_base_types.py::TestExecutionReport::test_new_fields_present",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only for a behavior test",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_sandbox/test_base_types.py::TestExecutionReport::test_default_lists_are_empty",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 0
+  "file": "tests/test_sandbox/test_base_types.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/test_sandbox/test_base_types.py::TestExecutionReport::test_new_fields_present",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only for a behavior test",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_sandbox/test_base_types.py::TestExecutionReport::test_default_lists_are_empty",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 0
 }

@@ -1,0 +1,493 @@
+idx	section	verdict	operation	subsection	missing
+1	01	WEAK GATE	`TOOL_CAPABILITY_MAP` — scripting family	1.1 `src/intellicrack/bridges/base.py`	No direct `TOOL_CAPABILITY_MAP.get(op) == "scripting"` assertion; only tested through registry integration
+2	01	WEAK GATE	`TOOL_CAPABILITY_MAP` — decompilation family	1.1 `src/intellicrack/bridges/base.py`	Same — no direct map-value assertion for decompilation ops
+3	01	NO COVERAGE	`BinaryOperationsBridge.__init__` capability values	1.1 `src/intellicrack/bridges/base.py`	Test only checks that it cannot be instantiated directly; the specific capability flag values (formats, arches) are never asserted
+4	01	NO COVERAGE	`resolve()` — unknown name logs warning	1.2 `src/intellicrack/bridges/lazy.py`	`_logger.warning("lazy_resolve_unknown_attribute", ...)` never verified
+5	01	NO COVERAGE	`resolve()` — non-bridge/non-installer raises `TypeError`	1.2 `src/intellicrack/bridges/lazy.py`	The branch `if not (is_bridge or is_installer): raise TypeError` is never exercised; no test loads a LAZY_EXPORTS entry pointing to a non-class attribute
+6	01	NO COVERAGE	`build_schema_property` — array + object items recursive branch	1.3 `src/intellicrack/bridges/schemas.py`	`_build_array_items` when `element_type == "object"` and `param.item_properties` is set never exercised in test_schemas.py or test_bridges_core_audit1.py; only reached in test_providers/test_e2e_chat.py:155-172 (providers scope)
+7	01	NO COVERAGE	`validate_tool_parameter` — array + unrecognized items_type warning	1.3 `src/intellicrack/bridges/schemas.py`	The `ValidationError("Array parameter has unrecognized items_type …")` branch is never reached by any test
+8	01	NO COVERAGE	`validate_tool_parameter` — array of objects with no item_properties	1.3 `src/intellicrack/bridges/schemas.py`	The `ValidationError("Array of objects requires item_properties …")` error branch is never reached
+9	01	WEAK GATE	`get_schema_for_provider` — OLLAMA	1.3 `src/intellicrack/bridges/schemas.py`	Only length checked; format not verified. A mutation routing OLLAMA to `to_google_schema` would still pass.
+10	01	WEAK GATE	`get_schema_for_provider` — OPENROUTER	1.3 `src/intellicrack/bridges/schemas.py`	Same — format not verified independently
+11	01	WEAK GATE	`get_schema_for_provider` — HUGGINGFACE	1.3 `src/intellicrack/bridges/schemas.py`	Same
+12	01	WEAK GATE	`get_schema_for_provider` — GROK	1.3 `src/intellicrack/bridges/schemas.py`	Same
+13	01	WEAK GATE	`get_schema_for_provider` — LOCAL_TRANSFORMERS	1.3 `src/intellicrack/bridges/schemas.py`	Same
+14	01	NO COVERAGE	`_assert_never`	1.3 `src/intellicrack/bridges/schemas.py`	Deliberately unreachable via exhaustive if-chain in `get_schema_for_provider`; no test can reach it via production paths
+15	01	NO COVERAGE	`connect()` — already connected no-op	1.5 `src/intellicrack/bridges/named_pipe_client.py`	The `if self._handle is not None: return` branch is never explicitly tested
+16	01	NO COVERAGE	`send_command()` — `_read_failure` guard	1.5 `src/intellicrack/bridges/named_pipe_client.py`	The guard `if self._read_failure is not None: raise` is never isolated; broken-pipe tests exercise post-failure behavior but not the pre-send guard path specifically
+17	01	NO COVERAGE	`_reader_loop` — response missing id warning	1.5 `src/intellicrack/bridges/named_pipe_client.py`	The `_logger.warning("pipe_response_missing_id", ...)` branch never tested
+18	01	NO COVERAGE	`_reader_loop` — no waiter for response id (no-op log)	1.5 `src/intellicrack/bridges/named_pipe_client.py`	The `_logger.debug("pipe_response_no_waiter", ...)` branch never tested
+19	01	NO COVERAGE	`_send_message` — oversized payload raises ToolError	1.5 `src/intellicrack/bridges/named_pipe_client.py`	`max_message_size` enforcement never tested; no test constructs a payload exceeding the limit
+20	01	NO COVERAGE	`_read_message` — malformed JSON raises ToolError	1.5 `src/intellicrack/bridges/named_pipe_client.py`	`json.JSONDecodeError` path never exercised
+21	01	NO COVERAGE	`_read_message` — invalid length raises ToolError	1.5 `src/intellicrack/bridges/named_pipe_client.py`	`length <= 0 or length > max_message_size` path never exercised
+22	01	NO COVERAGE	`_read_message` — non-dict payload raises ToolError	1.5 `src/intellicrack/bridges/named_pipe_client.py`	`if not isinstance(payload, dict)` path never exercised
+23	01	NO COVERAGE	`_read_exact` — timeout raises ToolError	1.5 `src/intellicrack/bridges/named_pipe_client.py`	Write timeout path via `_write_bytes` is also untested in isolation
+24	01	NO COVERAGE	`_cancel_io`	1.5 `src/intellicrack/bridges/named_pipe_client.py`	Never directly tested; only invoked internally on timeout/close, no test asserts it was called or that it correctly unblocks pending I/O
+25	01	NO COVERAGE	`__dir__` — returns sorted combined set	1.6 `src/intellicrack/bridges/__init__.py`	Never called in any test; the sorted-union logic is entirely untested
+26	02	WEAK	`decompile(address)`	CutterBridge Methods (core analysis surface — lines 400–3391)	No specific C token/structure validated; decompile timeout; function not found
+27	02	**WEAK**	`read_bytes(address, size)`	CutterBridge Methods (core analysis surface — lines 400–3391)	No specific byte values asserted; negative size; zero-size
+28	02	**NONE**	`save_project(name)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+29	02	**NONE**	`open_project(name)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+30	02	**NONE**	`list_projects()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+31	02	**NONE**	`write_xor(address, length, key)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+32	02	**NONE**	`write_add(address, length, value)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+33	02	**NONE**	`write_sub(address, length, value)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+34	02	**NONE**	`write_from_file(file_path, address)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+35	02	**NONE**	`write_to_file(file_path, size, address)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+36	02	**NONE**	`write_value(address, value, size)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+37	02	**NONE**	`write_string(address, text)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+38	02	**NONE**	`search_crypto_constants()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+39	02	**NONE**	`search_magic()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+40	02	**NONE**	`search_value(value, size)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+41	02	**NONE**	`compare_bytes(hex_data, address)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+42	02	**NONE**	`compare_disassembly(file_path, address)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+43	02	**NONE**	`get_segments()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+44	02	**WEAK**	`hexdump(address, length)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+45	02	**NONE**	`hexdump_words(address, length)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+46	02	**NONE**	`disassemble_function(address)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+47	02	**NONE**	`get_basic_blocks(address)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+48	02	**NONE**	`attach(pid)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+49	02	**NONE**	`detach()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+50	02	**NONE**	`set_breakpoint(address, bp_type, condition)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+51	02	**NONE**	`remove_breakpoint(address)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+52	02	**NONE**	`get_breakpoints()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+53	02	**NONE**	`step_into()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+54	02	**NONE**	`step_over()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+55	02	**NONE**	`run()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+56	02	**NONE**	`get_registers()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+57	02	**NONE**	`set_register(register, value)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+58	02	**NONE**	`read_memory(address, size)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+59	02	**NONE**	`write_memory(address, data)`	Operations with ZERO real coverage (all in lines 3394–4551)	
+60	02	**NONE**	`get_memory_regions()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+61	02	**NONE**	`get_threads()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+62	02	**NONE**	`get_modules()`	Operations with ZERO real coverage (all in lines 3394–4551)	
+63	03	WEAK — not directly called; initialization logic untested	`initialize(tool_path)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Non-existent path, path without plugin DLL, Windows vs. non-Windows
+64	03	NO COVERAGE	`load(path, args)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All paths
+65	03	NO COVERAGE	`attach(pid)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Invalid PID, already-attached, architecture detection failure
+66	03	NO COVERAGE	`detach()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Process crash during detach, state cleanup
+67	03	WEAK — only confirms ToolError on missing plugin	`spawn(path, args)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Real spawn, Windows path quirks
+68	03	NO COVERAGE	`shutdown()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Cleanup-phase exception propagation, state reset
+69	03	REAL — fake pipe, verification path, absent path, protocol-violation path all gated	`set_breakpoint(address, type, condition)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Conditional breakpoint (`bpcond`) path partially via audit6 F-0026
+70	03	WEAK — only checks ToolError; success path is manual dict insert then dict read (tautology)	`remove_breakpoint(address)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Actual removal confirmed by debugger
+71	03	WEAK — only ToolError path; no success-path coverage	`set_watchpoint(...)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+72	03	NO COVERAGE	`remove_watchpoint(id)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+73	03	FAKE GATE — only checks ToolError; if get_registers() returned garbage data after connection fix this test still passes	`get_registers()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Real register values never verified
+74	03	FAKE GATE — only ToolError path	`set_register(name, value)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Real write + read-back
+75	03	WEAK — `assert len(memory_map) > 0` only; no protection/base/size field checks	`get_memory_regions()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Specific region coverage
+76	03	NO COVERAGE	`get_stack_trace()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+77	03	REAL — hex string, int, unparseable string, None, bool all tested via fake pipe	`evaluate_expression(expression)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	
+78	03	WEAK — `assert len(threads) > 0` only	`get_threads()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Thread field validation (TID, state, start_address)
+79	03	NO COVERAGE	`execute_til_return()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+80	03	NO COVERAGE	`skip_instruction()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+81	03	NO COVERAGE	`set_ip(address)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+82	03	NO COVERAGE	`get_labels(start, end)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+83	03	NO COVERAGE	`get_comments(start, end)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+84	03	WEAK — coverage claimed via monkeypatching; not independently verified from tested file sections	`set_breakpoint_on_api(module, fn)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Real API resolution
+85	03	NO COVERAGE	`trace_start(...)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+86	03	NO COVERAGE	`trace_stop()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+87	03	NO COVERAGE	`set_exception_config(code, handling)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+88	03	NO COVERAGE	`get_module_imports(module_name)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+89	03	NO COVERAGE	`find_references(address)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+90	03	NO COVERAGE	`find_string_references(module)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+91	03	NO COVERAGE	`find_intermodular_calls(module)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+92	03	NO COVERAGE	`get_function_cfg(address, max_blocks)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+93	03	NO COVERAGE	`clear_database()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+94	03	NO COVERAGE	`get_patches()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+95	03	NO COVERAGE	`restore_patch(address)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+96	03	NO COVERAGE	`export_patches(path)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+97	03	NO COVERAGE	`get_seh_chain()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+98	03	FAKE GATE — only checks tool definition's `returns` field for "address" keyword; no data-flow coverage	`read_peb()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Real PEB read from live process
+99	03	NO COVERAGE	`read_teb(tid)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+100	03	NO COVERAGE	`get_pe_directories(module_name)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+101	03	NO COVERAGE	`remove_watch(index)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+102	03	NO COVERAGE	`get_watches()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+103	03	NO COVERAGE	`set_logging_breakpoint(address, log_text)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+104	03	NO COVERAGE	`configure_breakpoint(...)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+105	03	NO COVERAGE	`set_dll_breakpoint(dll_name, event)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+106	03	NO COVERAGE	`trace_into(condition, max_steps)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+107	03	NO COVERAGE	`trace_over(condition, max_steps)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+108	03	NO COVERAGE	`get_trace_record(address, size)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+109	03	NO COVERAGE	`step_count(count, step_type)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+110	03	NO COVERAGE	`analyze_entropy(address, size, block_size)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Chunked read across unreadable page (F-0021)
+111	03	NO COVERAGE	`yara_scan(rule_text, rule_path)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	No yara installed, empty rule, file not found, real match
+112	03	WEAK — only checks debug log name; no verification of what was sent to debugger	`script_load(path)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Real script load result
+113	03	NO COVERAGE	`script_run()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+114	03	NO COVERAGE	`script_cmd(line)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+115	03	NO COVERAGE	`script_abort()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+116	03	NO COVERAGE	`get_handles()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+117	03	NO COVERAGE	`close_handle(handle)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+118	03	NO COVERAGE	`detect_anti_debug()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+119	03	NO COVERAGE	`reconstruct_imports(oep, output_path)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+120	03	NO COVERAGE	`goto_address(address)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+121	03	NO COVERAGE	`get_tls_callbacks(module_name)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+122	03	NO COVERAGE	`break_on_tls_callbacks(module_name)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+123	03	NO COVERAGE	`get_resources(module_name)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Real resource tree walk (F-0019)
+124	03	NO COVERAGE	`get_privileges()`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+125	03	NO COVERAGE	`adjust_privilege(name, enable)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	All
+126	03	REAL — pipe/unknown/real-error classifications via fake pipe, structured code override	`_classify_legacy_error(message)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	
+127	03	NO COVERAGE	`_coerce_address(value)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	bool input, hex string, decimal string, None, non-parseable
+128	03	WEAK — no direct test	`_x64dbg_error_code(exc)`	1. Operation Inventory — X64DbgBridge (`x64dbg.py`)	Missing key, non-string value
+129	03	NO COVERAGE	`is_available()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+130	03	NO COVERAGE	`attach_by_name(name, cancellable_id)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+131	03	NO COVERAGE	`spawn(path, args, ...)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+132	03	NO COVERAGE	`resume()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Not spawned
+133	03	WEAK — only exercised in fixture teardown with ToolError suppressed	`detach(kill_spawned)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	kill_spawned=True path, double-detach
+134	03	NO COVERAGE	`get_hooks()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+135	03	NO COVERAGE	`execute_script(script)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Real execution; timeout raises (audit5 test_f0021 covers _execute_script_and_wait, not this public method)
+136	03	NO COVERAGE	`unload_all_scripts()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+137	03	NO COVERAGE	`set_message_handler(handler)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+138	03	NO COVERAGE	`intercept_return(target, return_value)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+139	03	WEAK — only `pytest.raises(ToolError)`, no message/code check	`resume_child(pid)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	
+140	03	NO COVERAGE	`post_message(script_id, message)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+141	03	NO COVERAGE	`eternalize_script(script_id)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+142	03	NO COVERAGE	`rpc_call(script_id, method_name, args)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+143	03	NO COVERAGE	`create_cancellable()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+144	03	NO COVERAGE	`cancel(cancellable_id)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+145	03	NO COVERAGE	`patch_code(address, hex_data)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+146	03	NO COVERAGE	`allocate_string(value, encoding)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+147	03	NO COVERAGE	`enumerate_symbols(module_name)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+148	03	NO COVERAGE	`load_module(path)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+149	03	NO COVERAGE	`find_module_by_address(address)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+150	03	NO COVERAGE	`find_functions_matching(pattern)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+151	03	NO COVERAGE	`disassemble_instruction(address)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+152	03	NO COVERAGE	`get_backtrace(context_address, backtracer)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+153	03	NO COVERAGE	`set_exception_handler()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+154	03	NO COVERAGE	`revert_hook(target)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+155	03	NO COVERAGE	`flush_interceptor()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+156	03	NO COVERAGE	`call_system_function(address, ...)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+157	03	NO COVERAGE	`stalker_add_call_probe(address, callback_code)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+158	03	NO COVERAGE	`stalker_remove_call_probe(probe_id)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+159	03	NO COVERAGE	`enumerate_applications()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+160	03	NO COVERAGE	`inject_library_file(pid, path, ...)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+161	03	NO COVERAGE	`inject_library_blob(pid, blob_hex, ...)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+162	03	NO COVERAGE	`objc_enumerate_classes()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on Windows
+163	03	NO COVERAGE	`objc_enumerate_protocols()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on Windows
+164	03	NO COVERAGE	`objc_enumerate_loaded_classes(pattern)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on Windows
+165	03	NO COVERAGE	`objc_choose(class_name, limit)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on Windows
+166	03	NO COVERAGE	`objc_get_class_methods(class_name)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on Windows
+167	03	NO COVERAGE	`objc_hook_method(...)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on Windows
+168	03	WEAK — ToolError swallowed in finally; no positive test	`shutdown()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	
+169	03	NO COVERAGE	`java_enumerate_loaded_classes(pattern)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on non-Android
+170	03	NO COVERAGE	`java_choose(class_name, limit)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on non-Android
+171	03	NO COVERAGE	`java_use(class_name)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on non-Android
+172	03	NO COVERAGE	`java_hook_method(...)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on non-Android
+173	03	NO COVERAGE	`java_deoptimize()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Should raise on non-Android
+174	03	NO COVERAGE	`create_cmodule(code, symbols)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+175	03	NO COVERAGE	`kernel_enumerate_modules()`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Raises without kernel access
+176	03	NO COVERAGE	`kernel_enumerate_ranges(protection)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Raises without kernel access
+177	03	NO COVERAGE	`kernel_read(address, size)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Raises without kernel access
+178	03	NO COVERAGE	`kernel_write(address, hex_data)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Raises without kernel access
+179	03	NO COVERAGE	`kernel_alloc(size)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Raises without kernel access
+180	03	NO COVERAGE	`kernel_protect(address, size, protection)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	Raises without kernel access
+181	03	NO COVERAGE	`socket_listen(port, family)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+182	03	NO COVERAGE	`socket_connect(host, port, family)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+183	03	NO COVERAGE	`socket_type(handle)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+184	03	NO COVERAGE	`socket_local_address(handle)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+185	03	NO COVERAGE	`socket_peer_address(handle)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+186	03	NO COVERAGE	`file_read_target(path)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+187	03	NO COVERAGE	`file_write_target(path, hex_data)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+188	03	NO COVERAGE	`sqlite_open(path)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+189	03	NO COVERAGE	`sqlite_exec(script_id, sql)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+190	03	NO COVERAGE	`sqlite_dump(path)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+191	03	NO COVERAGE	`write_code(address, code, architecture)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+192	03	NO COVERAGE	`cloak_add_thread(thread_id)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+193	03	NO COVERAGE	`cloak_remove_thread(thread_id)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+194	03	NO COVERAGE	`cloak_add_range(address, size)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+195	03	NO COVERAGE	`cloak_remove_range(address, size)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+196	03	NO COVERAGE	`monitor_path(path)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+197	03	NO COVERAGE	`stop_monitor(monitor_id)`	2. Operation Inventory — FridaBridge (`frida_bridge.py`)	All
+198	04	**NO COVERAGE**	`decode_protection`	Operation inventory — win32_types.py	All inputs
+199	04	**WEAK**	PROCESSENTRY32 struct	Operation inventory — win32_types.py	No sizeof or field-offset test for PROCESSENTRY32 directly
+200	04	**NO COVERAGE**	MODULEENTRY32 struct	Operation inventory — win32_types.py	All
+201	04	**NO COVERAGE**	TOKEN_PRIVILEGES / LUID_AND_ATTRIBUTES structs	Operation inventory — win32_types.py	All
+202	04	**NO COVERAGE**	STACKFRAME64, SYMBOL_INFO layouts	Operation inventory — win32_types.py	All
+203	04	**NO COVERAGE**	SERVICE_STATUS_PROCESS struct	Operation inventory — win32_types.py	All
+204	04	**NO COVERAGE**	JOBOBJECT_EXTENDED_LIMIT_INFORMATION	Operation inventory — win32_types.py	All
+205	04	**WEAK**	PROCESS_MITIGATION_* structs	Operation inventory — win32_types.py	No sizeof / no field offset test
+206	04	**WEAK**	`inject_dll`	Operation inventory — process.py (selected critical operations)	No successful injection test
+207	04	**WEAK**	`adjust_token_privilege`	Operation inventory — process.py (selected critical operations)	Only error path; no successful adjustment test
+208	04	**WEAK**	`get_windows`	Operation inventory — process.py (selected critical operations)	Only smoke test; no assertion on returned window data
+209	04	**NO COVERAGE**	`set_thread_context`	Operation inventory — process.py (selected critical operations)	Entire operation
+210	04	**WEAK**	`stack_walk`	Operation inventory — process.py (selected critical operations)	No successful stack walk test
+211	04	**WEAK**	`get_seh_chain`	Operation inventory — process.py (selected critical operations)	Smoke test only; no assertion on chain content
+212	04	**WEAK**	`remove_privilege`	Operation inventory — process.py (selected critical operations)	No assertion on privilege being absent after removal
+213	04	**WEAK**	`detect_kernel_debugger`	Operation inventory — process.py (selected critical operations)	Only bool return; no positive detection
+214	04	**NO COVERAGE**	`pipe_write`	Operation inventory — process.py (selected critical operations)	Entire write path
+215	04	**WEAK**	`detect_dotnet`	Operation inventory — process.py (selected critical operations)	No positive detection of a real managed process
+216	04	**WEAK**	`get_job_info`	Operation inventory — process.py (selected critical operations)	Only checks `in_job` key exists; no assertion on `in_job` value vs known truth
+217	04	**WEAK**	`get_tls_values`	Operation inventory — process.py (selected critical operations)	Checks `isinstance(result, list)` as sole assertion on the no-argument path
+218	04	**WEAK**	`get_fiber_data`	Operation inventory — process.py (selected critical operations)	Checks `isinstance(result, dict)` only — no field content assertion
+219	04	**NO COVERAGE**	`shutdown`	Operation inventory — process.py (selected critical operations)	Entire shutdown sequence
+220	04	**WEAK**	`ToolInstaller._install_frida`	Operation inventory — installer.py	Uses subprocess substitute; no real pip test
+221	04	**WEAK**	`ToolInstaller._probe_version_command`	Operation inventory — installer.py	Uses subprocess substitute
+222	04	**WEAK**	`ToolInstaller._extract_zip`	Operation inventory — installer.py	See note C — Zip Slip path never hit
+223	04	**WEAK**	`ToolInstaller._get_latest_release_url`	Operation inventory — installer.py	Uses pre-built response dict; no live API call
+224	04	**NO COVERAGE**	`build_x64dbg_plugin`	Operation inventory — installer.py	Entire cmake build
+225	04	**WEAK**	`_find_cmake`	Operation inventory — installer.py	Uses subprocess substitute; real cmake not invoked
+226	04	**NO COVERAGE**	`_detect_vs_generator`	Operation inventory — installer.py	Entire VS generator detection
+227	05	REAL + WEAK	`get_context_for_ai`	1.1 Document Lifecycle	`bookmarks_is_list` test (line 83) is isinstance-only (WEAK); `size_is_positive` (line 112) asserts `> 0` only (WEAK)
+228	05	**NONE**	`test_in_sandbox`	1.1 Document Lifecycle	Entire method untested: sandbox create, copy, execute, monitor, result collection
+229	05	**NONE (bridge)**	`insert_bytes`	1.2 Core Read/Write/Edit	Bridge-level: hex parsing, no-document guard, state_holder notification, length growth round-trip — all untested at bridge async API level
+230	05	**NONE (bridge)**	`delete_bytes`	1.2 Core Read/Write/Edit	Same: hex parsing, no-document guard, state_holder notification, length shrink round-trip — all untested at bridge async API level
+231	05	WEAK	`get_selection`	1.5 Navigation & Selection	Only checks `is None`; post-select value shape not asserted at bridge level
+232	05	**NONE**	`inspect_data_at`	1.7 Data Inspection & Analysis	Bridge str-conversion of inspect_at dict entirely untested; if result is not a dict (line 6356 guard) also untested
+233	05	**NONE**	`get_byte_statistics`	1.7 Data Inspection & Analysis	No test: mapping `(s[0], s[1])` to `{"byte": ..., "count": ...}`, no-doc guard
+234	05	**NONE**	`get_content_classification`	1.7 Data Inspection & Analysis	No test: block classification mapping untested
+235	05	WEAK	`get_memory_usage`	1.14 Display / Memory Settings	No assertion on returned values; only invoked as part of broader `get_document_info` dict; no direct dedicated test
+236	05	WEAK + REAL	`get_pe_imports`	1.15 PE Introspection	`test_get_pe_imports_does_not_raise_for_pe` (top_audit1.py:496) only asserts `isinstance(result, list)` — fake gate; test_realcov_01.py provides real cross-validation with pefile oracle
+237	05	WEAK	`remove_highlight_rule_state`	1.18 HexDocumentState	Never called directly in test; only coverage is via `clear_all`; missing: direct test of True/False return value for found/not-found
+238	06	MOSTLY REAL (1 weak)	`tests/test_hexpat/test_compiler.py`	2. Test File Inventory	MOSTLY REAL (1 weak)
+239	06	UNKNOWN	`tests/test_hexpat/test_realcov_08_vendor_patterns.py`	2. Test File Inventory	UNKNOWN
+240	06	UNKNOWN	`tests/test_hexcore_e2e/test_realcov_09b_stdlib_realbin.py`	2. Test File Inventory	UNKNOWN
+241	06	UNKNOWN	`tests/test_audit5/u4_hexpat_aux/test_compiler_pragma_propagation.py`	2. Test File Inventory	UNKNOWN
+242	06	UNKNOWN	`tests/test_audit5/u4_hexpat_aux/test_preprocessor_preserves_pragmas.py`	2. Test File Inventory	UNKNOWN
+243	07	NO COVERAGE	`Orchestrator.shutdown()`	4. Weak / No Coverage	
+244	07	NO COVERAGE	`Orchestrator.list_sessions()`	4. Weak / No Coverage	
+245	07	NO COVERAGE	`Orchestrator.delete_session(session_id)`	4. Weak / No Coverage	
+246	07	NO COVERAGE	`Orchestrator` agent loop max_iterations guard	4. Weak / No Coverage	
+247	07	NO COVERAGE	`Orchestrator` agent loop timeout guard	4. Weak / No Coverage	
+248	07	NO COVERAGE	Confirmation gate: ConfirmationLevel.ALL vs. DESTRUCTIVE in live loop	4. Weak / No Coverage	
+249	07	NO COVERAGE	`SessionStore.export_to_json` / `import_from_json`	4. Weak / No Coverage	
+250	07	NO COVERAGE	`SessionManager.import_json(path, replace=True)`	4. Weak / No Coverage	
+251	07	NO COVERAGE	`ProcessManager.run_tracked` ProcessStateError (returncode is None)	4. Weak / No Coverage	
+252	07	WEAK	`ProcessManager._pid_exists_windows` kernel32 fallback path	4. Weak / No Coverage	
+253	07	NO COVERAGE	`AnalysisAggregator.aggregate` with Cutter bridge	4. Weak / No Coverage	
+254	07	NO COVERAGE	`AnalysisAggregator.aggregate` with both Ghidra + Cutter bridges	4. Weak / No Coverage	
+255	07	NO COVERAGE	`TransformPipeline` mid-pipeline step error propagation	4. Weak / No Coverage	
+256	07	NO COVERAGE (if exists)	`TransformPipeline.to_dict` / `from_dict` serialization	4. Weak / No Coverage	
+257	07	WEAK	`execute_tool_call` with a native coroutine bridge method	4. Weak / No Coverage	
+258	07	NO COVERAGE	`initialize_tool(GHIDRA)` / `initialize_tool(X64DBG)` installer path	4. Weak / No Coverage	
+259	07	WEAK	`ToolRegistry` typed getters raising ToolError when bridge absent	4. Weak / No Coverage	
+260	07	WEAK	`RustTransformNode` param coercion with invalid params	4. Weak / No Coverage	
+261	07	WEAK	`RegexReplaceNode` with bytes replacement that is a str type	4. Weak / No Coverage	
+262	08	WEAK	`get_stdlib_root_logger`	2.2 core/logging.py	No direct test
+263	08	NO COVERAGE	`ProviderError`	2.4 core/types.py	All fields, subclass chain
+264	08	NO COVERAGE	`AuthenticationError`	2.4 core/types.py	status_code, www_authenticate fields
+265	08	NO COVERAGE	`RateLimitError`	2.4 core/types.py	retry_after, daily_limit fields
+266	08	NO COVERAGE	`ModelNotFoundError`	2.4 core/types.py	model_id, available_models fields
+267	08	NO COVERAGE	`ToolError`	2.4 core/types.py	tool_name, operation fields
+268	08	NO COVERAGE	`ToolNotFoundError`	2.4 core/types.py	searched_paths field
+269	08	NO COVERAGE	`InitializationError`	2.4 core/types.py	reason, tool_name fields
+270	08	NO COVERAGE	`AttachError`	2.4 core/types.py	pid, process_name fields
+271	08	NO COVERAGE	`HexDocumentLike` protocol	2.4 core/types.py	Protocol methods (read_bytes, write_bytes, seek, tell)
+272	08	NO COVERAGE	`HexDocumentFull` protocol	2.4 core/types.py	Extended protocol methods
+273	08	NO COVERAGE	`ConfirmationLevel` enum	2.4 core/types.py	Values and ordering
+274	08	NO COVERAGE	`ToolChoiceMode` enum	2.4 core/types.py	Values
+275	08	WEAK	`ToolName` enum	2.4 core/types.py	Direct value/member tests
+276	08	NO COVERAGE (acceptable)	`_relaunch_elevated`	2.5 core/elevation.py	ShellExecuteW verb, quoted args
+277	08	WEAK	`maybe_elevate`	2.5 core/elevation.py	See fake-gate finding F-1 below
+278	08	NO COVERAGE	`Script.get_extension`	2.6 core/script_gen.py	All 6 language variants
+279	08	NO COVERAGE	`ScriptManager.delete_script`	2.6 core/script_gen.py	Non-existent name, script with saved file
+280	08	NO COVERAGE	`ScriptManager.list_scripts`	2.6 core/script_gen.py	Empty manager, after add/delete
+281	08	NO COVERAGE	`TemplateBootstrapError`	2.8 core/template_manager.py	Raised when native HexDocument export fails
+282	09	NO	`_translate_openai_errors` context manager	A. base.py — Shared infrastructure	All SDK exception types → typed errors; chained cause preservation
+283	09	WEAK	`_build_usage_from_openai_completion`	A. base.py — Shared infrastructure	Field-by-field token count assertion missing offline
+284	09	WEAK	`_build_usage_from_openai_chunk`	A. base.py — Shared infrastructure	Streaming usage accumulation not unit-gated offline
+285	09	NO	`get_pending_tool_calls`	A. base.py — Shared infrastructure	Returns accumulated ToolCall list after chat; cleared after read
+286	09	WEAK (F-0008 uses MagicMock to inject known usage — valid for Orchestrator test, but the base method itself is not gated)	`get_pending_usage`	A. base.py — Shared infrastructure	Base method unit test missing
+287	09	WEAK	`get_pending_thinking`	A. base.py — Shared infrastructure	Same as above
+288	09	UNKNOWN	`parse_tool_call`	A. base.py — Shared infrastructure	Not assessed
+289	09	UNKNOWN	`create_anthropic_tool_schema`	A. base.py — Shared infrastructure	Not assessed
+290	09	UNKNOWN	`create_openai_tool_schema`	A. base.py — Shared infrastructure	Not assessed
+291	09	UNKNOWN	`create_google_tool_schema`	A. base.py — Shared infrastructure	Not assessed
+292	09	WEAK	`disconnect`	B. anthropic.py — AnthropicProvider	Only state check; client cleanup not verified offline
+293	09	REAL for task lifecycle; WEAK for full response parsing offline	`chat` (non-streaming)	B. anthropic.py — AnthropicProvider	_current_task assigned and cleared; content verified; but mock transport means response parsing not independently gated
+294	09	NO	`_finalize_anthropic_stream`	B. anthropic.py — AnthropicProvider	Stream event sequence → final Message assembly not gated offline
+295	09	WEAK	`connect`	C. openai.py — OpenAIProvider	No offline gate; invalid key path (401) only via integration
+296	09	WEAK	`disconnect`	C. openai.py — OpenAIProvider	
+297	09	WEAK	`list_models`	C. openai.py — OpenAIProvider	`_is_chat_model` filter not unit-gated offline; exclusion list not verified
+298	09	FAKE (see Worst Offenders §1)	`chat` (non-o-series path)	C. openai.py — OpenAIProvider	enable_cache=True vs False produces no assertion difference
+299	09	NO	`_is_chat_model`	C. openai.py — OpenAIProvider	
+300	09	NO	`_infer_context_window`	C. openai.py — OpenAIProvider	gpt-4o-mini documented as 128K via live test only
+301	09	NO	`_infer_supports_vision`	C. openai.py — OpenAIProvider	
+302	09	NO	`_open_openai_stream`	C. openai.py — OpenAIProvider	16 code paths; tool-call streaming accumulation not gated
+303	09	NO	`_make_openai_api_call`	C. openai.py — OpenAIProvider	
+304	09	NO	`_iter_openai_stream`	C. openai.py — OpenAIProvider	ToolCallBufferManager integration not verified end-to-end offline
+305	09	NO	`_translate_openai_errors`	C. openai.py — OpenAIProvider	SDK exception → typed error mapping
+306	09	REAL for empty/None key; WEAK for full connect flow	`connect`	D. google.py — GoogleProvider	GEMINI_API_KEY env clearing not directly verified
+307	09	WEAK	`disconnect`	D. google.py — GoogleProvider	
+308	09	REAL for retry; FAKE for enable_cache path	`chat`	D. google.py — GoogleProvider	
+309	09	NO	`_parse_response`	D. google.py — GoogleProvider	text extraction; function_call detection; safety block call
+310	09	NO	`_extract_function_calls`	D. google.py — GoogleProvider	Multiple function calls; argument dict parsing
+311	09	NO	`_extract_visible_chunk_text`	D. google.py — GoogleProvider	thought=True parts excluded
+312	09	NO	`_extract_thinking_text`	D. google.py — GoogleProvider	
+313	09	NO	`_create_config` (ThinkingConfig, tool_config)	D. google.py — GoogleProvider	thinking_budget_tokens mapping; tool_config ALL/NONE/code-execution
+314	09	UNKNOWN	`_build_tool_declarations`	D. google.py — GoogleProvider	
+315	09	NO	`_convert_messages_to_provider_format`	D. google.py — GoogleProvider	user/assistant role; function_call in assistant; function_response in user
+316	09	WEAK	`disconnect`	E. grok.py — GrokProvider	
+317	09	REAL for retry; FAKE for enable_cache	`chat`	E. grok.py — GrokProvider	
+318	09	NO	`_supports_max_completion_tokens`	E. grok.py — GrokProvider	grok-4/5/6 flag
+319	09	NO	`_make_grok_api_call`	E. grok.py — GrokProvider	
+320	09	NO	`_dispatch_grok_create`	E. grok.py — GrokProvider	
+321	09	NO	`_open_grok_stream`	E. grok.py — GrokProvider	
+322	09	WEAK	`disconnect`	F. openrouter.py — OpenRouterProvider	
+323	09	REAL for retry; WEAK for enable_cache	`chat`	F. openrouter.py — OpenRouterProvider	
+324	09	NO	`get_generation`	F. openrouter.py — OpenRouterProvider	
+325	09	NO	`_parse_tool_calls_from_response`	F. openrouter.py — OpenRouterProvider	
+326	09	NO	`_raise_for_stream_status`	F. openrouter.py — OpenRouterProvider	
+327	09	NO	`_build_usage_from_data`	F. openrouter.py — OpenRouterProvider	
+328	09	WEAK	`disconnect`	G. ollama.py — OllamaProvider	
+329	09	NO	`list_tags`	G. ollama.py — OllamaProvider	
+330	09	NO	`list_running_models`	G. ollama.py — OllamaProvider	
+331	09	NO	`show_model`	G. ollama.py — OllamaProvider	
+332	09	NO	`generate` (/api/generate)	G. ollama.py — OllamaProvider	
+333	09	NO	`embeddings` (/api/embeddings)	G. ollama.py — OllamaProvider	
+334	09	UNKNOWN	`chat` (local NDJSON path)	G. ollama.py — OllamaProvider	
+335	09	NO	`chat` (cloud OpenAI path)	G. ollama.py — OllamaProvider	
+336	09	NO	`chat_stream`	G. ollama.py — OllamaProvider	
+337	09	NO	`pull_model`	G. ollama.py — OllamaProvider	
+338	09	WEAK	`_raise_for_status`	G. ollama.py — OllamaProvider	Local-specific error paths not gated
+339	09	WEAK	`_get_client_and_model`	G. ollama.py — OllamaProvider	
+340	09	NO	`_parse_chat_response` (local vs cloud)	G. ollama.py — OllamaProvider	
+341	09	NO	`_parse_ollama_tool_calls`	G. ollama.py — OllamaProvider	
+342	09	NO	`_record_usage_from_chunk`	G. ollama.py — OllamaProvider	
+343	09	NO	`_record_usage_from_openai_payload`	G. ollama.py — OllamaProvider	
+344	09	NO	`_accumulate_native_tool_call_deltas`	G. ollama.py — OllamaProvider	
+345	09	NO	`_finalize_native_tool_calls`	G. ollama.py — OllamaProvider	
+346	09	UNKNOWN	`connect_provider`	H. registry.py — ProviderRegistry	
+347	09	UNKNOWN	`ModelDiscovery.get_recommended_model`	I. discovery.py — ModelDiscovery + DiscoveryCache	
+348	10	FAKE	`_hf_status_code(exc)`	huggingface.py	No assertion on the extracted int vs a known HTTP code; status extraction regressing to `None` would not fail any test
+349	10	FAKE	`_close_client()`	huggingface.py	Whether the underlying `AsyncInferenceClient` is actually released is never verified
+350	10	WEAK	`disconnect()`	huggingface.py	Only asserts `is_connected is False`; client reference release and `_cancel_requested` reset not verified
+351	10	NONE	`_prepare_request_payload(messages, tools, tool_choice)`	huggingface.py	Full conversion chain (message roles, tool schemas, tool_choice wiring into SDK) has no unit test
+352	10	NONE	`_consume_stream_chunks(raw_stream, model, tc_buffer)`	huggingface.py	ToolCallBufferManager accumulation across multiple deltas has no unit-level test; only reachable via live API
+353	10	NONE	`chat_stream(messages, model, ...)`	huggingface.py	No dedicated test; `_cancel_requested=True` mid-stream path untested
+354	10	NONE (unconfirmed)	`cancel_request()`	huggingface.py	Flag mutation and its effect on in-flight generation not tested
+355	10	FAKE	`_convert_messages_to_provider_format(messages)`	huggingface.py	Called inside `chat()` live tests but output format never directly asserted
+356	10	NONE	`_convert_tools_to_provider_format(tools)`	huggingface.py	OpenAI-schema output for HuggingFace SDK never verified independently
+357	10	NONE	`_fetch_model_config(model_id)`	local_transformers.py	Network failure returns `{}`; 404 returns `{}`; malformed JSON returns `{}`; success returns parsed dict — none of these four branches tested
+358	10	NONE	`_classify_model_capabilities(config)`	local_transformers.py	Priority order of `max_position_embeddings` > `max_sequence_length` > `n_positions` not tested; vision detection via `architectures`, `vision_config`, `image_size` keys not tested; empty config → default 4096 not tested
+359	10	NONE	`_release_device_caches()`	local_transformers.py	XPU `empty_cache`, CUDA `empty_cache`, and `gc.collect` calls not verified independently
+360	10	WEAK	`list_models()`	local_transformers.py	Model ID match `any("phi" or "tiny")` is the only discriminating check; VRAM filter path not tested; `_classify_model_capabilities` output not verified; none of the 7 `RECOMMENDED_MODELS_B580` entries confirmed present by ID
+361	10	FAKE	`_run_local_chat(...)`	local_transformers.py	(text, usage) return structure never directly asserted in isolation
+362	10	FAKE	`_iter_local_stream(...)`	local_transformers.py	Chunk accumulation and end-of-stream tool call parse not tested in isolation
+363	10	NONE	`_config_device_for(device)`	local_transformers.py	`"xpu"` → `ModelConfig.device="xpu"`; other → `"cpu"` mapping not tested
+364	10	FAKE	`_load_for_device(device, config)`	local_transformers.py	Dispatch logic to XPU/CPU/CUDA loader not independently asserted
+365	10	NONE	`_load_model_for_cuda(config)`	local_transformers.py	Entire CUDA model-loading path untested; BitsAndBytesConfig for CUDA quantization not tested
+366	10	FAKE	`_iter_local_generation_loop(...)`	local_transformers.py	temperature=0 → argmax vs temperature>0 → softmax+multinomial branch not independently tested
+367	10	WEAK	`_convert_tools_to_provider_format(tools)`	local_transformers.py	Non-empty tool list conversion output never verified
+368	10	FAKE	`ModelCache._make_key(model_id, dtype, device_type)`	model_loader.py	Key format (double-colon separator) not directly asserted; a separator change would not break the round-trip tests
+369	10	FAKE	`_free_model_resources(loaded_model)`	model_loader.py	`del model_ref` + `gc.collect()` not independently verified; error-handling path in `_unload_model` not tested
+370	10	FAKE	`_unload_model(loaded_model)`	model_loader.py	Exception path inside `_unload_model` (where `_free_model_resources` raises) is never exercised
+371	10	NONE	`_load_xpu_model_impl(config, cache, device, dtype)`	model_loader.py	int8 and int4 quantization path on XPU; model-to-device transfer; cache insertion — all completely untested
+372	10	WEAK	`load_model_for_cpu(config, cache)`	model_loader.py	e2e only; cache-miss path and error path not unit-tested
+373	10	NONE direct	`_load_cpu_model_impl(config, cache, device, dtype)`	model_loader.py	dtype selection inside CPU loader; float32 vs int8/int4 for CPU not independently tested
+374	10	NONE	`set_global_cache_size(max_memory_bytes)`	model_loader.py	Completely untested; the global cache `max_memory_bytes` mutation and its effect on eviction not verified
+375	10	WEAK	`RECOMMENDED_MODELS_B580` constant	model_loader.py	Seven specific entries with `model_id`, `description`, `recommended_dtype`, `estimated_memory_gb` fields not individually verified
+376	10	FAKE	`_locate_devnode(cfg, device_id)`	gpu_pci_resources.py	Successful devnode resolution vs CM_LOCATE_DEVNODE_NORMAL failure not independently asserted
+377	10	FAKE	`_read_descriptor_bytes(cfg, res_des)`	gpu_pci_resources.py	Zero-size descriptor; `CM_Get_Res_Des_Data` returning an error code not tested
+378	10	FAKE	`_enumerate_bars_for_log_conf(cfg, log_conf)`	gpu_pci_resources.py	ResType_MEM vs ResType_MemLarge dispatch not independently exercised
+379	10	NONE	`_get_device_name_from_sycl(device_index)`	xpu_utils.py	SYCL name extraction from `torch.xpu.get_device_name()` not tested; index out-of-range behavior not tested
+380	10	FAKE	`_query_windows_gpus()`	xpu_utils.py	Malformed JSON from PowerShell not tested; empty stdout not tested; subprocess failure not tested
+381	10	NONE	`_strip_pwsh_payload(stdout)`	xpu_utils.py	BOM (`﻿`) stripping not tested; whitespace-only input not tested; non-BOM input passthrough not tested
+382	10	FAKE	`_extract_torch_xpu_properties(torch, device_index, device_name)`	xpu_utils.py	`total_memory`, `driver_version`, `name` field extraction from `get_device_properties()` not independently verified
+383	10	NONE	`_enrich_from_windows_gpus(device_name, driver_version, device_id)`	xpu_utils.py	Early-return (name + driver already present) path not tested; WMI enrichment for missing fields not tested
+384	10	FAKE	`_build_xpu_device_info(torch, device_index)`	xpu_utils.py	Assembly of `XPUDeviceInfo` fields from torch properties + WMI enrichment not independently tested
+385	10	NONE	`_estimate_memory_from_name(device_name)`	xpu_utils.py	b580→12 GB, a770→16 GB, a750→8 GB, a380→6 GB, a310→4 GB, unknown→8 GB — none of the six branches tested
+386	10	FAKE	`_validate_xpu_device(torch_mod, device)`	xpu_utils.py	RuntimeError on tensor-op failure path not independently tested
+387	10	FAKE	`_query_xpu_memory(torch, device_index)`	xpu_utils.py	Fallback to `get_xpu_device_info()` when `memory_allocated()` raises not tested
+388	10	NONE	`clear_xpu_cache()`	xpu_utils.py	`torch.xpu.empty_cache()` invocation not verified; no-XPU guard path not tested
+389	10	NONE	`_pick_primary_arc_gpu(gpus)`	xpu_utils.py	Multi-GPU disambiguation by largest BAR not tested; single-GPU list not tested; empty list not tested
+390	10	NONE	`_check_intel_driver(gpus)`	xpu_utils.py	Driver-present, driver-absent, and driver-empty-string paths not tested
+391	11	WEAK — never exercised directly with assertion on return	`_oauth_provider_to_name` — happy path	oauth.py	KeyError when unmapped provider
+392	11	NO COVERAGE	`_oauth_provider_to_name` — KeyError path	oauth.py	All
+393	11	NO COVERAGE	`OAuthToken.is_expired` (5-min buffer)	oauth.py	Just-expired boundary, valid-with-buffer, None expires_at
+394	11	NO COVERAGE	`OAuthToken.needs_refresh` (10-min buffer)	oauth.py	10-min boundary, valid, None expires_at
+395	11	NO COVERAGE	`OAuthToken.to_dict`	oauth.py	All fields, None values, scopes tuple
+396	11	NO COVERAGE	`OAuthToken.from_dict`	oauth.py	Round-trip, malformed/missing fields, None expires_at, bad type
+397	11	NO COVERAGE	`OAuthState.is_expired` (10-min timeout)	oauth.py	Just-expired, still-valid, boundary exactly at 10 min
+398	11	NO COVERAGE	`OAuthCallbackHandler.do_GET` — error in params	oauth.py	"error" param triggers 400 + error message
+399	11	NO COVERAGE	`OAuthCallbackHandler.do_GET` — missing code/state	oauth.py	Neither "code" nor "error" branch
+400	11	NO COVERAGE	`OAuthCallbackServer.start` — OSError on bind	oauth.py	OAuthCallbackError raised
+401	11	NO COVERAGE	`OAuthCallbackServer.wait_for_callback` — timeout	oauth.py	OAuthCallbackError raised
+402	11	NO COVERAGE	`OAuthCallbackServer.wait_for_callback` — denied	oauth.py	OAuthAuthorizationError for "denied"/"access_denied"
+403	11	NO COVERAGE	`OAuthCallbackServer.wait_for_callback` — missing code/state	oauth.py	OAuthCallbackError for null code or state
+404	11	NO COVERAGE	`OAuthManager.build_authorization_url` — PKCE disabled	oauth.py	code_challenge params must be absent
+405	11	NO COVERAGE	`OAuthManager.handle_callback` — unknown state	oauth.py	OAuthCallbackError
+406	11	NO COVERAGE	`OAuthManager.handle_callback` — expired state	oauth.py	OAuthCallbackError
+407	11	NO COVERAGE	`OAuthManager.handle_callback` — PKCE verifier missing	oauth.py	OAuthCallbackError
+408	11	NO COVERAGE	`OAuthManager._exchange_code_for_token` — HTTP error	oauth.py	OAuthTokenError wraps HTTPStatusError
+409	11	NO COVERAGE	`OAuthManager._exchange_code_for_token` — network error	oauth.py	OAuthTokenError wraps RequestError/OSError
+410	11	NO COVERAGE	`OAuthManager._store_token` — keyring unavailable	oauth.py	Warning only, no error raised
+411	11	NO COVERAGE	`OAuthManager._store_token` — keyring success	oauth.py	Token stored as JSON, exact keyring entry
+412	11	NO COVERAGE	`OAuthManager._load_token_from_store`	oauth.py	Returns token, None path, JSON decode error
+413	11	WEAK — cache seeded by helper, not via real store	`OAuthManager._load_token` — cache hit	oauth.py	
+414	11	NO COVERAGE	`OAuthManager._load_token` — cache miss, keyring load	oauth.py	
+415	11	NO COVERAGE	`OAuthManager._load_token` — JSON decode error	oauth.py	Warning + returns None
+416	11	NO COVERAGE	`OAuthManager.get_token` — no token	oauth.py	Returns None
+417	11	NO COVERAGE	`OAuthManager.get_token` — valid, no refresh needed	oauth.py	Returns token as-is
+418	11	NO COVERAGE	`OAuthManager.get_token` — needs_refresh, auto_refresh=True	oauth.py	refresh_token called
+419	11	NO COVERAGE	`OAuthManager.get_token` — needs_refresh, refresh fails with OAuthTokenRefreshError	oauth.py	Returns None
+420	11	NO COVERAGE	`OAuthManager.get_token` — needs_refresh, refresh fails OAuthTokenError, not expired	oauth.py	Returns stale but not-expired token
+421	11	NO COVERAGE	`OAuthManager.get_token` — expired after failed refresh	oauth.py	Returns None even if OAuthTokenError
+422	11	NO COVERAGE	`OAuthManager.refresh_token` — 403 response	oauth.py	403 must also raise OAuthTokenRefreshError
+423	11	NO COVERAGE	`OAuthManager.refresh_token` — other HTTP error	oauth.py	OAuthTokenError (non-auth)
+424	11	NO COVERAGE	`OAuthManager.refresh_token` — no refresh token	oauth.py	OAuthTokenError raised
+425	11	NO COVERAGE	`OAuthManager.revoke_token` — no token	oauth.py	Returns False
+426	11	NO COVERAGE	`OAuthManager.revoke_token` — no revoke_url	oauth.py	Skips remote, deletes from keyring
+427	11	NO COVERAGE	`OAuthManager.revoke_token` — with revoke_url, success	oauth.py	
+428	11	NO COVERAGE	`OAuthManager.revoke_token` — revoke HTTP error	oauth.py	revoke_succeeded=False
+429	11	NO COVERAGE	`OAuthManager.revoke_token` — cache always cleared	oauth.py	Cache cleared even on failure
+430	11	NO COVERAGE	`OAuthManager.to_provider_credentials`	oauth.py	Returns ProviderCredentials with access_token
+431	11	NO COVERAGE	`OAuthManager.run_authorization_flow`	oauth.py	All
+432	11	NO COVERAGE	`authorize_google`	oauth.py	All
+433	11	NO COVERAGE	`CredentialStore._check_keyring` — library not installed	store.py	Returns False, logs warning
+434	11	NO COVERAGE	`CredentialStore._check_keyring` — fail/null backend	store.py	Returns False
+435	11	NO COVERAGE	`CredentialStore._check_keyring` — priority <= 0	store.py	Returns False
+436	11	NO COVERAGE	`CredentialStore._deserialize_credentials` — malformed JSON	store.py	CredentialStoreError raised
+437	11	NO COVERAGE	`CredentialStore._deserialize_metadata` — corrupted fallback	store.py	Fallback StoredCredential returned
+438	11	NO COVERAGE	`CredentialStore.get_or_raise` — found	store.py	
+439	11	NO COVERAGE	`CredentialStore.get_or_raise` — not found	store.py	CredentialNotFoundError raised
+440	11	NO COVERAGE	`CredentialStore.set` — keyring unavailable	store.py	KeyringUnavailableError raised
+441	11	NO COVERAGE	`CredentialStore.delete` — keyring unavailable	store.py	KeyringUnavailableError raised
+442	11	NO COVERAGE	`CredentialStore.delete` — credential not found	store.py	Returns False
+443	11	WEAK — only `assert isinstance(result, list)`	`CredentialStore.list_providers`	store.py	Content not validated
+444	11	NO COVERAGE	`CredentialStore.migrate_from_env` — keyring unavailable	store.py	KeyringUnavailableError raised
+445	11	NO COVERAGE	`CredentialStore.migrate_from_env` — env missing key	store.py	results[provider]=False
+446	11	NO COVERAGE	`CredentialStore.validate` — no credentials	store.py	Returns (False, message)
+447	11	NO COVERAGE	`CredentialStore.get_source` — no credential	store.py	Returns None
+448	11	NO COVERAGE	`_decode_double_quoted` — unknown escape pass-through	env_loader.py	Behavior: drops backslash, keeps char
+449	11	NO COVERAGE	`CredentialLoader._load_env_file` — file missing	env_loader.py	Silently returns, no vars loaded
+450	11	NO COVERAGE	`CredentialLoader._load_env_file` — read error	env_loader.py	OSError logged, returns silently
+451	11	NO COVERAGE	`CredentialLoader.get_credentials` — alias lookup	env_loader.py	GEMINI_API_KEY alias for Google
+452	11	NO COVERAGE	`CredentialLoader.get_credentials` — unknown provider	env_loader.py	Returns None
+453	11	NO COVERAGE	`CredentialLoader.save_to_env_file` — read error	env_loader.py	OSError re-raised
+454	11	NO COVERAGE	`CredentialLoader.save_to_env_file` — write error	env_loader.py	OSError re-raised
+455	11	NO COVERAGE	`get_api_key_env_var_mapping`	env_loader.py	
+456	11	NO COVERAGE	`create_env_template`	env_loader.py	
+457	11	NO COVERAGE	`get_credential_loader` — singleton (lru_cache)	env_loader.py	Multiple calls return same instance
+458	12	WEAK	SHA1 extraction	`extract_iocs`	Not explicitly tested in reviewed tests; SHA256 and MD5 are tested. SHA1 is nominally covered by the pattern test but no dedicated test was found.
+459	12	NOT FOUND	Resource category events	`generate_timeline`	No test found for `resource_samples` → `resource` timeline category
+460	12	WEAK	`_StateTracker` clears `last_error` on success	3.4 `sandbox_bridge.py` — Bridge Layer (27 Functions)	Covered in `tests/test_bridges/test_sandbox_bridge.py` only via AsyncMock — see FAKE GATE below
+461	12	NO COVERAGE	`capture_screenshot` / PPM→PNG conversion	7. QEMU-Specific Coverage	See GAP-01
+462	12	NO COVERAGE	Real `tshark` PCAP start/stop	7. QEMU-Specific Coverage	See GAP-05
+463	13	NO COVERAGE (rust)	`DataSource::write`	1.14 `data_source.rs` — Data Source Trait and Implementations	**None** | **None**
+464	13	NO COVERAGE (rust)	`DataSource::length`	1.14 `data_source.rs` — Data Source Trait and Implementations	**None** | **None**
+465	13	NO COVERAGE (rust)	`DataSource::is_writable`	1.14 `data_source.rs` — Data Source Trait and Implementations	**None** | **None**
+466	13	NO COVERAGE (rust)	`DataSource::source_type`	1.14 `data_source.rs` — Data Source Trait and Implementations	**None** | **None**
+467	13	NO COVERAGE (rust)	`BufferDataSource::new`	1.14 `data_source.rs` — Data Source Trait and Implementations	**None** | **None**
+468	13	NO COVERAGE (rust)	`BufferDataSource::new_readonly`	1.14 `data_source.rs` — Data Source Trait and Implementations	**None** | **None**
+469	13	NO COVERAGE (rust)	`DataSourceError::ReadOnly`	1.14 `data_source.rs` — Data Source Trait and Implementations	**None** | **None**
+470	13	NO COVERAGE (rust)	`DataSourceError::OutOfBounds`	1.14 `data_source.rs` — Data Source Trait and Implementations	**None** | **None**
+471	13	NO COVERAGE (rust)	DynamicArray empty count_field	1.17 `templates/json_schema.rs` — JSON Template Serialization	**None** | **None**
+472	13	NO COVERAGE (rust)	Conditional empty condition_field	1.17 `templates/json_schema.rs` — JSON Template Serialization	**None** | **None**
+473	14	**NO COVERAGE**	`_resolve()` — Qt method lookup, AttributeError on miss	2. Operation Inventory Table	All paths
+474	14	**NO COVERAGE**	`get_screen_geometry()` — returns `(x,y,w,h)` or None	2. Operation Inventory Table	All paths
+475	14	**NO COVERAGE**	`move_widget()` — calls `_resolve(widget, "move")`	2. Operation Inventory Table	All paths
+476	14	**NO COVERAGE**	`CSyntaxHighlighter.highlightBlock()` — single-line rules	2. Operation Inventory Table	All paths
+477	14	**NO COVERAGE**	`CSyntaxHighlighter.highlightBlock()` — multi-line `/* */` block state	2. Operation Inventory Table	Block-state tracking
+478	14	**NO COVERAGE**	`AssemblySyntaxHighlighter.highlightBlock()`	2. Operation Inventory Table	All paths
+479	14	**NO COVERAGE**	`PythonSyntaxHighlighter.highlightBlock()` + `_highlight_triple_quotes()`	2. Operation Inventory Table	Triple-quote state machine
+480	14	**NO COVERAGE**	`JavaScriptSyntaxHighlighter.highlightBlock()` — multi-line `/* */` block state	2. Operation Inventory Table	Block-state tracking
+481	14	**NO COVERAGE**	`HexPatSyntaxHighlighter.highlightBlock()` — multi-line `/* */` block state	2. Operation Inventory Table	Block-state tracking
+482	14	**NO COVERAGE**	`get_highlighter_for_language()` — dispatch by alias	2. Operation Inventory Table	All aliases, unknown
+483	14	**WEAK**	`show_info()` — QMessageBox.information + structured log	2. Operation Inventory Table	Log emission side-effect not verified
+484	14	**NO COVERAGE**	`AppearanceSettingsWidget.get_settings()` — theme, font, show_tool_calls	2. Operation Inventory Table	All sub-settings
+485	14	**NO COVERAGE**	`SessionSettingsWidget.get_settings()` — auto_save, interval, retention	2. Operation Inventory Table	All sub-settings
+486	14	**NO COVERAGE**	`_FlowLayout` tag-chip flow wrapping	2. Operation Inventory Table	All layout paths
+487	14	**REAL** (weak — passes `None` for QCloseEvent)	`DetachedPanelWindow.reattach_requested` on close	2. Operation Inventory Table	Real QCloseEvent not used
+488	14	**WEAK** (construct-and-assert-exists)	Construction checks (group box titles, widget presence)	2. Operation Inventory Table	
+489	14	**NO COVERAGE**	`main.py` bootstrap: arg parsing, logging setup, bridge init	2. Operation Inventory Table	All paths
+490	14	**NO COVERAGE**	`__main__.py` entry point	2. Operation Inventory Table	
+491	15	MIXED	`tests/test_audit4/c16_hex_panel_selection_dispatch/test_selection_dispatch.py`	3.2 MIXED gates (real assertions alongside forbidden anti-patterns)	MIXED
+492	15	WEAK	`tests/test_ui/test_sandbox_panel_fixes.py`	3.3 WEAK gates (no mocks but assertions do not gate real behavior)	WEAK

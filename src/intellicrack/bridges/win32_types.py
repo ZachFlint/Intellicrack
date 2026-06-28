@@ -877,6 +877,7 @@ class PROCESS_MITIGATION_FONT_DISABLE_POLICY(ctypes.Structure):
 # DLL handle helpers
 # ---------------------------------------------------------------------------
 
+
 @functools.lru_cache(maxsize=1)
 def get_kernel32() -> ctypes.WinDLL:
     """Cached handle to kernel32.dll.

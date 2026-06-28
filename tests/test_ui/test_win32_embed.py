@@ -48,8 +48,7 @@ GARBAGE_HWND = 0xDEADBEEF
 EMBED_POLL_TIMEOUT_SEC = 5.0
 
 _HEADLESS_SKIP_REASON = (
-    "headless environment: QWidget.show() produced no enumerable native HWND; "
-    "no window manager available in this container"
+    "headless environment: QWidget.show() produced no enumerable native HWND; no window manager available in this container"
 )
 
 

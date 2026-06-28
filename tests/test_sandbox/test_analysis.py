@@ -647,9 +647,7 @@ class TestDetectC2Patterns:
         patterns = detect_c2_patterns(sample_network_activity)
         pattern_types = {p["pattern_type"] for p in patterns}
         expected_pattern_types = {"beaconing", "dga_domain", "known_c2_port", "data_exfiltration"}
-        assert pattern_types == expected_pattern_types, (
-            f"Expected C2 pattern types {expected_pattern_types!r}, got {pattern_types!r}"
-        )
+        assert pattern_types == expected_pattern_types, f"Expected C2 pattern types {expected_pattern_types!r}, got {pattern_types!r}"
 
 
 class TestExtractIOCs:
@@ -882,20 +880,14 @@ class TestExtractIOCs:
         iocs = extract_iocs(sample_report)
         ioc_types = {i["ioc_type"] for i in iocs}
         expected_ioc_types = {"ipv4", "domain", "url"}
-        assert ioc_types == expected_ioc_types, (
-            f"Expected IOC types {expected_ioc_types!r}, got {ioc_types!r}"
-        )
+        assert ioc_types == expected_ioc_types, f"Expected IOC types {expected_ioc_types!r}, got {ioc_types!r}"
         ip_values = {i["value"] for i in iocs if i["ioc_type"] == "ipv4"}
         assert "185.220.101.45" in ip_values, "Tor-exit-node beaconing IP must be extracted"
         assert "62.102.148.69" in ip_values, "Bulletproof-host C2-port IP must be extracted"
         assert "10.0.0.1" not in ip_values, "Private 10.x.x.x IPs must not appear in IOC output"
-        assert not any(
-            v.startswith("192.168.") for v in ip_values
-        ), "Private 192.168.x.x IPs must not appear in IOC output"
+        assert not any(v.startswith("192.168.") for v in ip_values), "Private 192.168.x.x IPs must not appear in IOC output"
         url_values = {i["value"] for i in iocs if i["ioc_type"] == "url"}
-        assert any("https://evil.com/dl.exe" in v for v in url_values), (
-            "URL from process command line must be extracted"
-        )
+        assert any("https://evil.com/dl.exe" in v for v in url_values), "URL from process command line must be extracted"
 
 
 class TestGenerateTimeline:
@@ -1193,9 +1185,7 @@ class TestGenerateTimeline:
             "injection",
             "clipboard",
         }
-        assert categories == expected_categories, (
-            f"Expected timeline categories {expected_categories!r}, got {categories!r}"
-        )
+        assert categories == expected_categories, f"Expected timeline categories {expected_categories!r}, got {categories!r}"
 
 
 class TestMatchBehaviors:
@@ -1581,9 +1571,7 @@ class TestMatchBehaviors:
             "Exfiltration",
             "Discovery",
         }
-        assert categories == expected_categories, (
-            f"Expected behavior categories {expected_categories!r}, got {categories!r}"
-        )
+        assert categories == expected_categories, f"Expected behavior categories {expected_categories!r}, got {categories!r}"
 
 
 class TestDiffReports:
@@ -1832,9 +1820,7 @@ class TestRealWorldSandboxReport:
             f"Emotet-like uniform C2 beaconing (5 conns at 20s intervals) must trigger "
             f"beaconing detection; got pattern_types={[p['pattern_type'] for p in patterns]}"
         )
-        assert beacon[0]["confidence"] > 0.9, (
-            f"CV=0.0 beaconing must yield confidence > 0.9, got {beacon[0]['confidence']}"
-        )
+        assert beacon[0]["confidence"] > 0.9, f"CV=0.0 beaconing must yield confidence > 0.9, got {beacon[0]['confidence']}"
         assert "185.220.101.45" in beacon[0]["remote_addresses"], (
             "Documented Emotet C2 IP 185.220.101.45 must appear in beaconing detection"
         )
@@ -1871,15 +1857,12 @@ class TestRealWorldSandboxReport:
         patterns = detect_c2_patterns(report.network_activity)
         c2 = [p for p in patterns if p["pattern_type"] == "known_c2_port"]
         assert len(c2) >= 1, (
-            f"Emotet-like connection on port 4444 must trigger C2 port detection; "
-            f"got pattern_types={[p['pattern_type'] for p in patterns]}"
+            f"Emotet-like connection on port 4444 must trigger C2 port detection; got pattern_types={[p['pattern_type'] for p in patterns]}"
         )
         assert math.isclose(c2[0]["confidence"], 0.55, abs_tol=1e-9), (
             f"Single port-4444 connection confidence must be 0.55, got {c2[0]['confidence']}"
         )
-        assert "62.102.148.69" in c2[0]["remote_addresses"], (
-            "Documented C2 IP 62.102.148.69 must appear in C2 port detection"
-        )
+        assert "62.102.148.69" in c2[0]["remote_addresses"], "Documented C2 IP 62.102.148.69 must appear in C2 port detection"
 
     @staticmethod
     def test_emotet_ioc_extraction_finds_c2_ips() -> None:
@@ -1892,15 +1875,9 @@ class TestRealWorldSandboxReport:
         report = _build_emotet_like_report()
         iocs = extract_iocs(report)
         ip_values = {i["value"] for i in iocs if i["ioc_type"] == "ipv4"}
-        assert "185.220.101.45" in ip_values, (
-            "Documented Emotet C2 beaconing IP 185.220.101.45 must be extracted as IOC"
-        )
-        assert "195.149.87.116" in ip_values, (
-            "Documented Emotet exfil IP 195.149.87.116 must be extracted as IOC"
-        )
-        assert "10.0.2.15" not in ip_values, (
-            "Local address 10.0.2.15 must be filtered by private-IP check"
-        )
+        assert "185.220.101.45" in ip_values, "Documented Emotet C2 beaconing IP 185.220.101.45 must be extracted as IOC"
+        assert "195.149.87.116" in ip_values, "Documented Emotet exfil IP 195.149.87.116 must be extracted as IOC"
+        assert "10.0.2.15" not in ip_values, "Local address 10.0.2.15 must be filtered by private-IP check"
 
     @staticmethod
     def test_emotet_persistence_run_key_matched() -> None:
@@ -1914,8 +1891,7 @@ class TestRealWorldSandboxReport:
         matches = match_behaviors(report)
         t1547 = [m for m in matches if m["mitre_attack_id"] == "T1547"]
         assert len(t1547) >= 1, (
-            f"Emotet HKCU Run-key persistence must be matched as T1547; "
-            f"got MITRE IDs={[m['mitre_attack_id'] for m in matches]}"
+            f"Emotet HKCU Run-key persistence must be matched as T1547; got MITRE IDs={[m['mitre_attack_id'] for m in matches]}"
         )
 
     @staticmethod
@@ -1929,10 +1905,7 @@ class TestRealWorldSandboxReport:
         report = _build_emotet_like_report()
         patterns = detect_c2_patterns(report.network_activity)
         pattern_types = {p["pattern_type"] for p in patterns}
-        assert len(pattern_types) >= 3, (
-            f"Real-world Emotet execution must trigger >= 3 distinct C2 pattern types; "
-            f"got {pattern_types}"
-        )
+        assert len(pattern_types) >= 3, f"Real-world Emotet execution must trigger >= 3 distinct C2 pattern types; got {pattern_types}"
         assert "beaconing" in pattern_types
         assert "data_exfiltration" in pattern_types
         assert "known_c2_port" in pattern_types

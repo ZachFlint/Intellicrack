@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Theme management for Intellicrack UI.
 
-Provides centralized theme and stylesheet management with support for dark,
-light, and system themes. The system theme follows the operating system's
-light/dark preference and tracks live OS changes.
+Provides centralized theme and stylesheet management with support for dark, light, and system themes. The system theme follows the operating
+system's light/dark preference and tracks live OS changes.
 """
 
 from __future__ import annotations
@@ -1204,8 +1203,7 @@ class ThemeManager:
     def release(self) -> None:
         """Release live OS color-scheme tracking held by this manager.
 
-        Disconnects the ``colorSchemeChanged`` subscription created for the
-        ``"system"`` theme. Safe to call when no subscription is active.
+        Disconnects the ``colorSchemeChanged`` subscription created for the ``"system"`` theme. Safe to call when no subscription is active.
         """
         hints = QGuiApplication.styleHints()
         if not self._system_watch_connected or hints is None:
@@ -1334,10 +1332,8 @@ class ThemeManager:
     def _update_system_watch(self) -> None:
         """Connect or disconnect live OS color-scheme tracking.
 
-        When the requested theme is ``"system"``, subscribe to Qt's
-        ``colorSchemeChanged`` signal so the application restyles itself the
-        moment the OS light/dark preference changes. For explicit dark/light
-        selections, the subscription is torn down.
+        When the requested theme is ``"system"``, subscribe to Qt's ``colorSchemeChanged`` signal so the application restyles itself the
+        moment the OS light/dark preference changes. For explicit dark/light selections, the subscription is torn down.
         """
         hints = QGuiApplication.styleHints()
         if QApplication.instance() is None or hints is None:

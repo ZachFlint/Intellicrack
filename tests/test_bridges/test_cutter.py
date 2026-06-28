@@ -1472,14 +1472,23 @@ class TestReadBytes:
 
     @pytest.mark.asyncio
     async def test_returns_bytes(self) -> None:
-        """Verify read_bytes parses p8 output correctly."""
+        r"""Verify read_bytes converts the p8 hex response to the exact byte value.
+
+        Independent oracle: the recorder is pre-loaded to return the hex string
+        "48 8b 05" for the p8 command prefix.  bytes.fromhex("48 8b 05") equals
+        b"\x48\x8b\x05", so the bridge must return that exact value and must have
+        issued "p8 3 @ 4096" to the session.  Mutation caught: returning b"" or
+        any incorrect byte sequence, or emitting the wrong command form, would
+        fail the exact-value or command assertions.
+        """
         rec = _CommandRecorder({
             "p8": "48 8b 05",
         })
         b = CutterBridge()
         b.r2 = _as_r2pipe(rec)
         result = await b.read_bytes(0x1000, 3)
-        assert isinstance(result, bytes)
+        assert result == b"\x48\x8b\x05"
+        assert f"p8 3 @ {0x1000}" in rec.commands
 
     @pytest.mark.asyncio
     async def test_sends_p8_command(self) -> None:
@@ -1553,17 +1562,23 @@ class TestHexdump:
 
     @pytest.mark.asyncio
     async def test_sends_px_command(self) -> None:
-        """Verify hexdump sends px command with correct parameters."""
+        """Verify hexdump issues the exact px command and returns the raw response string.
+
+        Independent oracle: the recorder is pre-loaded to return a known hexdump
+        string for the px command prefix.  The bridge must (1) emit exactly
+        "px 128 @ 4096" and (2) return the recorder-provided string verbatim without
+        modification.  Mutation caught: issuing "pxw 128 @ 4096" instead of
+        "px 128 @ 4096" would fail the command assertion; truncating or modifying
+        the output would fail the content assertion.
+        """
         rec = _CommandRecorder({
             "px": "- offset -   0 1  2 3\n0x00001000  9090 9090",
         })
         b = CutterBridge()
         b.r2 = _as_r2pipe(rec)
         result = await b.hexdump(0x1000, 128)
-        assert isinstance(result, str)
-        px_cmds = [c for c in rec.commands if c.startswith("px")]
-        assert len(px_cmds) == 1
-        assert "128" in px_cmds[0]
+        assert result == "- offset -   0 1  2 3\n0x00001000  9090 9090"
+        assert f"px 128 @ {0x1000}" in rec.commands
 
 
 class TestGetBasicBlocks:

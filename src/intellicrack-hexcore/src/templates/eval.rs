@@ -1497,4 +1497,351 @@ mod tests {
             .expect_err("pointer must propagate recursive evaluation errors");
         assert!(matches!(err, TemplateError::InvalidFieldReference(_)));
     }
+
+    /// Gate: `DynamicArray` resolves element count from a prior field and places
+    /// each element at the exact expected offset with the correct raw bytes and
+    /// display value.
+    ///
+    /// Data mimics a minimal PE import directory table: a 2-byte entry count
+    /// (LE u16 = 3) followed by three 4-byte RVA entries (LE u32 = 1, 2, 3).
+    ///
+    /// Mutation caught (one-liner): in `eval_dynamic_array`, change
+    /// `arr_offset = self.current_offset + i * inner_size` to
+    /// `self.current_offset` — `children[1].offset` becomes 2 instead of 6.
+    #[test]
+    fn test_dynamic_array_pe_import_exact_offsets_and_count() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "import_count".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "import_entries".to_string(),
+                field_type: FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::UInt32),
+                    count_field: "import_count".to_string(),
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        // import_count (LE u16) = 3, then 3 × LE u32 RVA entries
+        let data: [u8; 14] = [
+            0x03, 0x00,
+            0x01, 0x00, 0x00, 0x00,
+            0x02, 0x00, 0x00, 0x00,
+            0x03, 0x00, 0x00, 0x00,
+        ];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 2);
+
+        assert_eq!(result[0].name, "import_count");
+        assert_eq!(result[0].offset, 0);
+        assert_eq!(result[0].size, 2);
+        assert_eq!(result[0].raw_bytes, [0x03, 0x00]);
+        // Independent oracle: u16::from_le_bytes([0x03, 0x00]) = 3
+        assert_eq!(result[0].display_value, "3 (0x0003)");
+
+        assert_eq!(result[1].name, "import_entries");
+        assert_eq!(result[1].offset, 2);
+        assert_eq!(result[1].size, 12);
+        assert_eq!(result[1].display_value, "[3 x uint32]");
+        assert_eq!(result[1].children.len(), 3);
+
+        assert_eq!(result[1].children[0].name, "[0]");
+        assert_eq!(result[1].children[0].offset, 2);
+        assert_eq!(result[1].children[0].size, 4);
+        assert_eq!(result[1].children[0].raw_bytes, [0x01, 0x00, 0x00, 0x00]);
+        // Independent oracle: u32::from_le_bytes([0x01, 0x00, 0x00, 0x00]) = 1
+        assert_eq!(result[1].children[0].display_value, "1 (0x00000001)");
+
+        assert_eq!(result[1].children[1].name, "[1]");
+        assert_eq!(result[1].children[1].offset, 6);
+        assert_eq!(result[1].children[1].size, 4);
+        assert_eq!(result[1].children[1].raw_bytes, [0x02, 0x00, 0x00, 0x00]);
+        // Independent oracle: u32::from_le_bytes([0x02, 0x00, 0x00, 0x00]) = 2
+        assert_eq!(result[1].children[1].display_value, "2 (0x00000002)");
+
+        assert_eq!(result[1].children[2].name, "[2]");
+        assert_eq!(result[1].children[2].offset, 10);
+        assert_eq!(result[1].children[2].size, 4);
+        assert_eq!(result[1].children[2].raw_bytes, [0x03, 0x00, 0x00, 0x00]);
+        // Independent oracle: u32::from_le_bytes([0x03, 0x00, 0x00, 0x00]) = 3
+        assert_eq!(result[1].children[2].display_value, "3 (0x00000003)");
+    }
+
+    /// Gate: Conditional Eq true branch emits the correct inner field at the
+    /// exact offset with the correct size, raw bytes, and display value.
+    ///
+    /// Layout mimics the PE DOS header: `e_magic` matches MZ (0x5A4D LE), so
+    /// the conditional emits `e_lfanew` (LE u32 = 128).
+    ///
+    /// Mutation caught (one-liner): change `ConditionOp::Eq =>
+    /// actual == condition_value` to `actual != condition_value` — `result.len()`
+    /// becomes 1 and `result[1]` no longer exists.
+    #[test]
+    fn test_conditional_eq_true_emits_exact_field_offset_and_value() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "e_magic".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "pe_cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "e_magic".to_string(),
+                    condition_value: 0x5A4D,
+                    condition_op: ConditionOp::Eq,
+                    fields: vec![FieldDefinition {
+                        name: "e_lfanew".to_string(),
+                        field_type: FieldType::UInt32,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        // e_magic = 0x5A4D (MZ LE), e_lfanew = 128 = 0x00000080 (LE)
+        let data: [u8; 6] = [0x4D, 0x5A, 0x80, 0x00, 0x00, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 2);
+        assert_eq!(result[1].name, "e_lfanew");
+        assert_eq!(result[1].offset, 2);
+        assert_eq!(result[1].size, 4);
+        assert_eq!(result[1].raw_bytes, [0x80, 0x00, 0x00, 0x00]);
+        // Independent oracle: u32::from_le_bytes([0x80, 0x00, 0x00, 0x00]) = 128
+        assert_eq!(result[1].display_value, "128 (0x00000080)");
+    }
+
+    /// Gate: Conditional Eq false branch emits zero inner fields, leaving only
+    /// the predicate field in the result.
+    ///
+    /// Mutation caught (one-liner): change `if condition_met {` to `if true {`
+    /// — `result.len()` becomes 2 instead of 1.
+    #[test]
+    fn test_conditional_eq_false_produces_no_extra_fields() {
+        let reg = make_registry();
+        let fields = vec![
+            FieldDefinition {
+                name: "e_magic".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "pe_cond".to_string(),
+                field_type: FieldType::Conditional {
+                    condition_field: "e_magic".to_string(),
+                    condition_value: 0x5A4D,
+                    condition_op: ConditionOp::Eq,
+                    fields: vec![FieldDefinition {
+                        name: "e_lfanew".to_string(),
+                        field_type: FieldType::UInt32,
+                        endianness: None,
+                        description: String::new(),
+                        color: None,
+                        validation: None,
+                    }],
+                },
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        // e_magic = 0 (not MZ) — condition is false
+        let data: [u8; 6] = [0x00, 0x00, 0x80, 0x00, 0x00, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "e_magic");
+        assert_eq!(result[0].offset, 0);
+        assert_eq!(result[0].size, 2);
+        // Independent oracle: u16::from_le_bytes([0x00, 0x00]) = 0
+        assert_eq!(result[0].display_value, "0 (0x0000)");
+    }
+
+    /// Gate: `StructRef` evaluates the referenced template starting at the
+    /// current offset and produces children with exact offsets, sizes, raw
+    /// bytes, and display values matching the binary content.
+    ///
+    /// Data layout: prefix byte (0xAA) at offset 0, then a `PE_MZ_Fields`
+    /// struct (`e_magic` u16 + `e_cblp` u16 = 4 bytes) starting at offset 1.
+    ///
+    /// Mutation caught (one-liner): in `eval_struct_ref`, change
+    /// `size = end_offset - start_offset` to `end_offset - start_offset + 1`
+    /// — `result[1].size` becomes 5 instead of 4.
+    #[test]
+    fn test_struct_ref_resolves_nested_dos_header_layout_and_values() {
+        let mut reg = TemplateRegistry::new();
+        reg.register(StructTemplate {
+            name: "PE_MZ_Fields".to_string(),
+            description: String::new(),
+            fields: vec![
+                FieldDefinition {
+                    name: "e_magic".to_string(),
+                    field_type: FieldType::UInt16,
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+                FieldDefinition {
+                    name: "e_cblp".to_string(),
+                    field_type: FieldType::UInt16,
+                    endianness: None,
+                    description: String::new(),
+                    color: None,
+                    validation: None,
+                },
+            ],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+
+        let fields = vec![
+            FieldDefinition {
+                name: "prefix".to_string(),
+                field_type: FieldType::UInt8,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+            FieldDefinition {
+                name: "dos".to_string(),
+                field_type: FieldType::StructRef("PE_MZ_Fields".to_string()),
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            },
+        ];
+        // prefix=0xAA, then PE_MZ_Fields: e_magic=0x5A4D (MZ LE), e_cblp=2 (LE)
+        let data: [u8; 5] = [0xAA, 0x4D, 0x5A, 0x02, 0x00];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 2);
+
+        assert_eq!(result[0].name, "prefix");
+        assert_eq!(result[0].offset, 0);
+        assert_eq!(result[0].size, 1);
+        assert_eq!(result[0].raw_bytes, [0xAA]);
+
+        assert_eq!(result[1].name, "dos");
+        assert_eq!(result[1].offset, 1);
+        // Independent oracle: sizeof(PE_MZ_Fields) = 2 + 2 = 4
+        assert_eq!(result[1].size, 4);
+        assert_eq!(result[1].display_value, "struct PE_MZ_Fields");
+        assert_eq!(result[1].children.len(), 2);
+
+        assert_eq!(result[1].children[0].name, "e_magic");
+        assert_eq!(result[1].children[0].offset, 1);
+        assert_eq!(result[1].children[0].size, 2);
+        assert_eq!(result[1].children[0].raw_bytes, [0x4D, 0x5A]);
+        // Independent oracle: u16::from_le_bytes([0x4D, 0x5A]) = 0x5A4D = 23117
+        assert_eq!(result[1].children[0].display_value, "23117 (0x5A4D)");
+
+        assert_eq!(result[1].children[1].name, "e_cblp");
+        assert_eq!(result[1].children[1].offset, 3);
+        assert_eq!(result[1].children[1].size, 2);
+        assert_eq!(result[1].children[1].raw_bytes, [0x02, 0x00]);
+        // Independent oracle: u16::from_le_bytes([0x02, 0x00]) = 2
+        assert_eq!(result[1].children[1].display_value, "2 (0x0002)");
+    }
+
+    /// Gate: Pointer field reads the pointer value from the buffer and evaluates
+    /// the target template at the dereferenced offset, placing children at the
+    /// exact target location with the correct raw bytes and display values.
+    ///
+    /// Layout: 2-byte pointer (LE u16 = 4) at offset 0, two padding bytes at
+    /// offsets 2–3, and the 2-byte target value (0xABCD LE) at offset 4.
+    /// Mimics a PE import name RVA pointer.
+    ///
+    /// Mutation caught (one-liner): remove `self.current_offset = ptr_value;`
+    /// in `eval_pointer` — `children[0].offset` becomes 0 instead of 4.
+    #[test]
+    fn test_pointer_dereferences_to_exact_target_offset_and_value() {
+        let mut reg = TemplateRegistry::new();
+        reg.register(StructTemplate {
+            name: "PE_Name_RVA".to_string(),
+            description: String::new(),
+            fields: vec![FieldDefinition {
+                name: "value".to_string(),
+                field_type: FieldType::UInt16,
+                endianness: None,
+                description: String::new(),
+                color: None,
+                validation: None,
+            }],
+            default_endianness: Endianness::Little,
+            version: None,
+            author: None,
+            category: None,
+            magic_detection: None,
+        });
+
+        let fields = vec![FieldDefinition {
+            name: "name_ptr".to_string(),
+            field_type: FieldType::Pointer {
+                pointer_type: Box::new(FieldType::UInt16),
+                target_template: "PE_Name_RVA".to_string(),
+            },
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: None,
+        }];
+
+        // ptr value (LE u16 = 4) at [0..2], padding at [2..4], target (0xABCD LE) at [4..6]
+        let data: [u8; 6] = [0x04, 0x00, 0x00, 0x00, 0xCD, 0xAB];
+        let mut eval = TemplateEvaluator::new(&data, 0, Endianness::Little, &reg);
+        let result = eval.evaluate_fields(&fields).unwrap();
+
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "name_ptr");
+        assert_eq!(result[0].offset, 0);
+        assert_eq!(result[0].size, 2);
+        assert_eq!(result[0].raw_bytes, [0x04, 0x00]);
+        // Independent oracle: ptr_value = u16::from_le_bytes([0x04, 0x00]) = 4
+        assert_eq!(result[0].display_value, "-> 0x4 (PE_Name_RVA)");
+        assert_eq!(result[0].children.len(), 1);
+
+        assert_eq!(result[0].children[0].name, "value");
+        // Target is at offset 4, not at offset 0 of the pointer field
+        assert_eq!(result[0].children[0].offset, 4);
+        assert_eq!(result[0].children[0].size, 2);
+        assert_eq!(result[0].children[0].raw_bytes, [0xCD, 0xAB]);
+        // Independent oracle: u16::from_le_bytes([0xCD, 0xAB]) = 0xABCD = 43981
+        assert_eq!(result[0].children[0].display_value, "43981 (0xABCD)");
+    }
 }

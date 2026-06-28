@@ -377,9 +377,7 @@ async def test_detect_c2_patterns_on_real_c2_port_capture(tmp_path: Path) -> Non
     network_activity = await parse_network_log(net_root, "network_monitor.log")
 
     c2_ports = {act["remote_port"] for act in network_activity}
-    assert _C2_PORT in c2_ports, (
-        f"capture precondition violated: port {_C2_PORT} absent from captured ports={sorted(c2_ports)[:20]}"
-    )
+    assert _C2_PORT in c2_ports, f"capture precondition violated: port {_C2_PORT} absent from captured ports={sorted(c2_ports)[:20]}"
 
     patterns = detect_c2_patterns(network_activity)
     c2_port_patterns = [p for p in patterns if p["pattern_type"] == "known_c2_port"]
@@ -434,9 +432,7 @@ async def test_generate_timeline_orders_real_events(tmp_path: Path) -> None:
     assert categories & {"process", "network"}, f"expected process/network timeline categories from real capture; saw {categories}"
 
     process_only = generate_timeline(report, categories=["process"])
-    assert all(ev["category"] == "process" for ev in process_only), (
-        "category filter must restrict timeline to requested categories only"
-    )
+    assert all(ev["category"] == "process" for ev in process_only), "category filter must restrict timeline to requested categories only"
     assert len(process_only) == expected_process_event_count, (
         f"process-filtered timeline length {len(process_only)} must equal the independently-counted "
         f"process_activity record count {expected_process_event_count}; "
@@ -597,8 +593,7 @@ async def test_extract_iocs_from_real_process_paths(tmp_path: Path) -> None:
         f"got values={sorted(values)}"
     )
     assert _SENTINEL_PUBLIC_IP_B in values, (
-        f"expected public IP {_SENTINEL_PUBLIC_IP_B!r} in IOC values from file-path scan; "
-        f"got values={sorted(values)}"
+        f"expected public IP {_SENTINEL_PUBLIC_IP_B!r} in IOC values from file-path scan; got values={sorted(values)}"
     )
     assert _SENTINEL_URL in values, (
         f"expected URL {_SENTINEL_URL!r} in IOC values from registry value_data scan; "
@@ -611,9 +606,7 @@ async def test_extract_iocs_from_real_process_paths(tmp_path: Path) -> None:
         f"removing the _is_private_ip guard in _add_ioc makes this appear; "
         f"got values={sorted(values)}"
     )
-    assert _LOOPBACK_ADDR not in values, (
-        "loopback address 127.0.0.1 must be filtered from IOC output"
-    )
+    assert _LOOPBACK_ADDR not in values, "loopback address 127.0.0.1 must be filtered from IOC output"
 
     sentinel_ip_a_iocs = [ioc for ioc in iocs if ioc["ioc_type"] == "ipv4" and ioc["value"] == _SENTINEL_PUBLIC_IP_A]
     assert len(sentinel_ip_a_iocs) == 1, (
@@ -624,9 +617,7 @@ async def test_extract_iocs_from_real_process_paths(tmp_path: Path) -> None:
 
     valid_types: frozenset[str] = frozenset({"ipv4", "domain", "url", "sha256", "sha1", "md5", "email"})
     for ioc in iocs:
-        assert ioc["ioc_type"] in valid_types, (
-            f"unknown IOC type {ioc['ioc_type']!r}; value={ioc['value']!r}"
-        )
+        assert ioc["ioc_type"] in valid_types, f"unknown IOC type {ioc['ioc_type']!r}; value={ioc['value']!r}"
         assert ioc["value"], f"IOC value must be non-empty; ioc_type={ioc['ioc_type']!r}"
         if ioc["ioc_type"] == "ipv4":
             assert not _stdlib_is_private(ioc["value"]), (
@@ -636,8 +627,7 @@ async def test_extract_iocs_from_real_process_paths(tmp_path: Path) -> None:
 
     keys = [(ioc["ioc_type"], ioc["value"]) for ioc in iocs]
     assert len(keys) == len(set(keys)), (
-        "IOC list must be deduplicated by (ioc_type, value); "
-        "duplicates indicate the dedup guard was removed from _add_ioc"
+        "IOC list must be deduplicated by (ioc_type, value); duplicates indicate the dedup guard was removed from _add_ioc"
     )
 
 
@@ -680,9 +670,7 @@ async def test_match_behaviors_on_real_capture_is_consistent(tmp_path: Path) -> 
     network_activity = await parse_network_log(net_root, "network_monitor.log")
 
     c2_ports = {act["remote_port"] for act in network_activity}
-    assert _C2_PORT in c2_ports, (
-        f"capture precondition violated: port {_C2_PORT} absent from captured ports={sorted(c2_ports)[:20]}"
-    )
+    assert _C2_PORT in c2_ports, f"capture precondition violated: port {_C2_PORT} absent from captured ports={sorted(c2_ports)[:20]}"
 
     c2_records = [act for act in network_activity if act["remote_port"] == _C2_PORT]
     assert c2_records, f"no network_activity records with remote_port=={_C2_PORT} despite precondition"

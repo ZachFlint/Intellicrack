@@ -1,48 +1,48 @@
 {
- "file": "tests/test_providers/test_ollama_provider.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "TestOllamaModelListing::test_list_models_returns_model_info_instances",
-   "severity": null,
-   "category": null,
-   "action": "hardened",
-   "oracle": "Every ModelInfo in installed_models must have a non-empty id, a non-empty name, and provider==ProviderName.OLLAMA. These are independently derived from the _populate_ollama_models source (id=f'{id_prefix}{model_name}', name=f'{name_prefix}{model_name}', provider=ProviderName.OLLAMA). The fixture guarantee of non-empty list makes the loop non-vacuous.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/ollama.py",
-    "mutation": "id=f\"{id_prefix}{model_name}\" -> id=\"\"",
-    "covering_test": "TestOllamaModelListing::test_list_models_returns_model_info_instances",
-    "expected_baseline": "expected-red",
-    "green_status": "skip",
-    "mutation_result": null,
-    "proven_falsifiable": null
-   }
+  "file": "tests/test_providers/test_ollama_provider.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "TestOllamaModelListing::test_multiple_calls_return_consistent_results",
-   "severity": null,
-   "category": null,
-   "action": "hardened",
-   "oracle": "Every ID in ids1 (from the fixture's first call) must start with 'local/' and have a non-empty suffix after that prefix. This oracle is derived from the _populate_ollama_models source contract (id=f'local/{model_name}'). Additionally ids1 must equal ids2 from the second call. The 'local/' prefix check is an independent oracle that a stateless mutation would break on the first call without needing to compare two calls.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/providers/ollama.py",
-    "mutation": "id_prefix=\"local/\" -> id_prefix=\"\"",
-    "covering_test": "TestOllamaModelListing::test_multiple_calls_return_consistent_results",
-    "expected_baseline": "expected-red",
-    "green_status": "skip",
-    "mutation_result": null,
-    "proven_falsifiable": null
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 2
+  "findings_addressed": [
+    {
+      "test": "TestOllamaModelListing::test_list_models_returns_model_info_instances",
+      "severity": null,
+      "category": null,
+      "action": "hardened",
+      "oracle": "Every ModelInfo in installed_models must have a non-empty id, a non-empty name, and provider==ProviderName.OLLAMA. These are independently derived from the _populate_ollama_models source (id=f'{id_prefix}{model_name}', name=f'{name_prefix}{model_name}', provider=ProviderName.OLLAMA). The fixture guarantee of non-empty list makes the loop non-vacuous.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/ollama.py",
+        "mutation": "id=f\"{id_prefix}{model_name}\" -> id=\"\"",
+        "covering_test": "TestOllamaModelListing::test_list_models_returns_model_info_instances",
+        "expected_baseline": "expected-red",
+        "green_status": "skip",
+        "mutation_result": null,
+        "proven_falsifiable": null
+      }
+    },
+    {
+      "test": "TestOllamaModelListing::test_multiple_calls_return_consistent_results",
+      "severity": null,
+      "category": null,
+      "action": "hardened",
+      "oracle": "Every ID in ids1 (from the fixture's first call) must start with 'local/' and have a non-empty suffix after that prefix. This oracle is derived from the _populate_ollama_models source contract (id=f'local/{model_name}'). Additionally ids1 must equal ids2 from the second call. The 'local/' prefix check is an independent oracle that a stateless mutation would break on the first call without needing to compare two calls.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/providers/ollama.py",
+        "mutation": "id_prefix=\"local/\" -> id_prefix=\"\"",
+        "covering_test": "TestOllamaModelListing::test_multiple_calls_return_consistent_results",
+        "expected_baseline": "expected-red",
+        "green_status": "skip",
+        "mutation_result": null,
+        "proven_falsifiable": null
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 2
 }

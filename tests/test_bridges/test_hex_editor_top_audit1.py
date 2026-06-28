@@ -18,6 +18,7 @@ import base64
 import struct
 import zlib
 from importlib.util import find_spec
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import pytest
@@ -34,7 +35,6 @@ from intellicrack.core.types import ToolError, ToolName
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
-    from pathlib import Path
 
     from intellicrack.core.tools import ToolRegistry
 
@@ -42,6 +42,17 @@ if TYPE_CHECKING:
 pytest.importorskip("intellicrack_hexcore", reason="intellicrack_hexcore native module not built")
 
 _pefile_available: bool = find_spec("pefile") is not None
+
+_pefile_oracle_mod: Any = None
+if _pefile_available:
+    try:
+        import pefile as _pefile_oracle_import
+
+        _pefile_oracle_mod = _pefile_oracle_import
+    except ImportError:
+        pass
+
+_SYSTEM_PE_PATH: Path = Path(r"C:\Windows\System32\cmd.exe")
 
 
 def _run[T](coro: Coroutine[object, object, T]) -> T:
@@ -435,67 +446,147 @@ class TestF0008IpsApplyTruncationRaises:
 
 @pytest.mark.skipif(not _pefile_available, reason="pefile not installed")
 class TestF0013PeImportsExportsDiskPath:
-    """When the document is unmodified, pefile reads the file by name.
+    """get_pe_imports returns a set of (dll, function) pairs matching a pefile oracle.
 
-    Tests verify the observable behavior: ``get_pe_imports`` succeeds on an
-    unmodified PE (disk path is used) and continues to succeed after
-    modification (memory fallback is used).  The internal disk-path helper
-    is exercised indirectly through this public surface.
+    All three tests use the real System32 cmd.exe so pefile has imports to
+    walk.  The independent oracle calls pefile directly with the same
+    directory-parse logic the bridge uses, producing a frozenset of
+    (dll_lower, function_name) pairs that the bridge result must equal
+    exactly for the unmodified case or differ predictably for the modified case.
     """
+
+    @staticmethod
+    def _pefile_import_oracle(pe_path: Path) -> frozenset[tuple[str, str]]:
+        """Return the complete import set for pe_path via a direct pefile call.
+
+        Mirrors the logic in ``_collect_import_entries`` so the result is
+        directly comparable to bridge output converted to the same tuple form.
+
+        Args:
+            pe_path: Path to the PE file to parse.
+
+        Returns:
+            frozenset[tuple[str, str]]: Set of (dll_name_lower, function_name) pairs.
+        """
+        pf = _pefile_oracle_mod
+        pe_ref = pf.PE(str(pe_path))
+        try:
+            dir_entry: dict[str, int] = getattr(pf, "DIRECTORY_ENTRY", {})
+            dir_idx: int = dir_entry.get("IMAGE_DIRECTORY_ENTRY_IMPORT", 1)
+            pe_ref.parse_data_directories(directories=[dir_idx])
+            pairs: set[tuple[str, str]] = set()
+            for entry in getattr(pe_ref, "DIRECTORY_ENTRY_IMPORT", []):
+                dll_bytes: Any = getattr(entry, "dll", None)
+                dll_name: str = dll_bytes.decode("utf-8", errors="replace") if dll_bytes else "unknown"
+                for imp in getattr(entry, "imports", []):
+                    name_bytes: Any = getattr(imp, "name", None)
+                    ordinal_val: int = int(getattr(imp, "ordinal", 0) or 0)
+                    func_name: str = (
+                        name_bytes.decode("utf-8", errors="replace") if name_bytes else f"Ordinal {ordinal_val}"
+                    )
+                    pairs.add((dll_name.lower(), func_name))
+            return frozenset(pairs)
+        finally:
+            pe_ref.close()
 
     def test_get_pe_imports_succeeds_on_unmodified_pe(
         self,
         bridge: HexEditorBridge,
-        pe_binary: Path,
     ) -> None:
-        """get_pe_imports succeeds on an unmodified document via the disk path.
+        """get_pe_imports on an unmodified System32 PE matches the pefile oracle exactly.
 
-        When the document has not been modified since it was opened, the
-        bridge resolves the PE from disk.  Verifies that the method returns a
-        list without raising.
+        Opens cmd.exe unmodified so the bridge uses the disk path. The
+        pefile oracle is called independently with identical parse-directory
+        logic. Bridge output converted to (dll_lower, function) frozenset must
+        equal the oracle frozenset. A mutation omitting a DLL or function, or
+        returning wrong case/encoding, fails this exact-equality gate.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
-            pe_binary: Path to the PE binary fixture.
         """
-        _run(bridge.open_file(str(pe_binary)))
-        result = _run(bridge.get_pe_imports())
-        assert isinstance(result, list)
+        if not _SYSTEM_PE_PATH.exists():
+            pytest.skip(f"{_SYSTEM_PE_PATH} not available in this environment")
+        expected: frozenset[tuple[str, str]] = self._pefile_import_oracle(_SYSTEM_PE_PATH)
+        assert expected, "cmd.exe must expose at least one named import for this gate to be meaningful"
+        _run(bridge.open_file(str(_SYSTEM_PE_PATH)))
+        result: list[dict[str, Any]] = _run(bridge.get_pe_imports())
+        actual: frozenset[tuple[str, str]] = frozenset((r["dll"].lower(), r["function"]) for r in result)
+        assert actual == expected, (
+            f"bridge imports do not match pefile oracle: "
+            f"extra={actual - expected!r} missing={expected - actual!r}"
+        )
 
     def test_get_pe_imports_succeeds_after_modification(
         self,
         bridge: HexEditorBridge,
-        pe_binary: Path,
     ) -> None:
-        """get_pe_imports succeeds after a write via the memory fallback path.
+        """After writing to offset 0 (corrupts MZ magic), get_pe_imports returns exactly [].
 
-        Once the document is modified (not matching disk), the bridge falls
-        back to reading the in-memory document bytes.  Verifies the fallback
-        path executes without raising.
+        Opens cmd.exe, writes 0xEB to byte 0 to overwrite the 'M' of the MZ
+        header, then calls get_pe_imports. The bridge reads modified bytes from
+        memory (not disk). The head check ``head[:2] != b"MZ"`` fails so the
+        bridge must return an empty list without raising. A mutation that ignores
+        the MZ check and returns non-empty data would fail this gate.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
-            pe_binary: Path to the PE binary fixture.
         """
-        _run(bridge.open_file(str(pe_binary)))
+        if not _SYSTEM_PE_PATH.exists():
+            pytest.skip(f"{_SYSTEM_PE_PATH} not available in this environment")
+        _run(bridge.open_file(str(_SYSTEM_PE_PATH)))
         _run(bridge.write_bytes(0, "EB"))
-        result = _run(bridge.get_pe_imports())
-        assert isinstance(result, list)
+        result: list[dict[str, Any]] = _run(bridge.get_pe_imports())
+        assert result == [], (
+            f"corrupted MZ header must cause get_pe_imports to return []; got {result!r}"
+        )
 
     def test_get_pe_imports_does_not_raise_for_pe(
         self,
         bridge: HexEditorBridge,
-        pe_binary: Path,
     ) -> None:
-        """get_pe_imports executes against a real PE on disk and returns a list.
+        """get_pe_imports on cmd.exe includes at least one named KERNEL32 import found by pefile.
+
+        Uses the pefile oracle to discover the first named function imported
+        from KERNEL32.dll. Then asserts that function appears in bridge output.
+        A mutation that drops KERNEL32 entries or mangles function names would
+        fail this named-function assertion.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
-            pe_binary: Path to the PE binary fixture.
         """
-        _run(bridge.open_file(str(pe_binary)))
-        result = _run(bridge.get_pe_imports())
-        assert isinstance(result, list)
+        if not _SYSTEM_PE_PATH.exists():
+            pytest.skip(f"{_SYSTEM_PE_PATH} not available in this environment")
+        pf = _pefile_oracle_mod
+        pe_ref = pf.PE(str(_SYSTEM_PE_PATH))
+        oracle_func: str | None = None
+        try:
+            dir_entry: dict[str, int] = getattr(pf, "DIRECTORY_ENTRY", {})
+            dir_idx: int = dir_entry.get("IMAGE_DIRECTORY_ENTRY_IMPORT", 1)
+            pe_ref.parse_data_directories(directories=[dir_idx])
+            for entry in getattr(pe_ref, "DIRECTORY_ENTRY_IMPORT", []):
+                dll_b: Any = getattr(entry, "dll", None)
+                if dll_b and b"KERNEL32" in dll_b.upper():
+                    for imp in getattr(entry, "imports", []):
+                        nb: Any = getattr(imp, "name", None)
+                        if nb:
+                            oracle_func = nb.decode("utf-8", errors="replace")
+                            break
+                if oracle_func:
+                    break
+        finally:
+            pe_ref.close()
+
+        if oracle_func is None:
+            pytest.skip("cmd.exe has no named KERNEL32 imports in this environment")
+
+        _run(bridge.open_file(str(_SYSTEM_PE_PATH)))
+        result: list[dict[str, Any]] = _run(bridge.get_pe_imports())
+        assert result, "cmd.exe must have at least one import"
+        k32_funcs: set[str] = {r["function"] for r in result if "kernel32" in r["dll"].lower()}
+        assert oracle_func in k32_funcs, (
+            f"pefile oracle found KERNEL32 import {oracle_func!r} which must appear in bridge output; "
+            f"bridge KERNEL32 functions: {k32_funcs!r}"
+        )
 
 
 # ---------------------------------------------------------------------------

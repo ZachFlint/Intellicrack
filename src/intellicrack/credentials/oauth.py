@@ -172,6 +172,19 @@ class OAuthToken:
     scopes: tuple[str, ...] = field(default_factory=tuple)
     id_token: str | None = None
 
+    def is_expired_at(self, now: datetime) -> bool:
+        """Check if the access token is expired at a reference instant.
+
+        Args:
+            now: Reference datetime to evaluate the 5-minute expiry buffer against.
+
+        Returns:
+            bool: True if expires_at is set and now >= (expires_at - 5 minutes).
+        """
+        if self.expires_at is None:
+            return False
+        return now >= (self.expires_at - timedelta(minutes=5))
+
     @property
     def is_expired(self) -> bool:
         """Check if the access token is expired.
@@ -179,10 +192,20 @@ class OAuthToken:
         Returns:
             bool: True if expired or will expire within 5 minutes.
         """
+        return self.is_expired_at(datetime.now(UTC))
+
+    def needs_refresh_at(self, now: datetime) -> bool:
+        """Check if the token should be refreshed soon at a reference instant.
+
+        Args:
+            now: Reference datetime to evaluate the 10-minute refresh buffer against.
+
+        Returns:
+            bool: True if expires_at is set and now >= (expires_at - 10 minutes).
+        """
         if self.expires_at is None:
             return False
-        buffer = timedelta(minutes=5)
-        return datetime.now(UTC) >= (self.expires_at - buffer)
+        return now >= (self.expires_at - timedelta(minutes=10))
 
     @property
     def needs_refresh(self) -> bool:
@@ -191,10 +214,7 @@ class OAuthToken:
         Returns:
             bool: True if token will expire within 10 minutes.
         """
-        if self.expires_at is None:
-            return False
-        buffer = timedelta(minutes=10)
-        return datetime.now(UTC) >= (self.expires_at - buffer)
+        return self.needs_refresh_at(datetime.now(UTC))
 
     def to_dict(self) -> dict[str, str | list[str] | None]:
         """Convert token to dictionary for storage.
@@ -276,6 +296,17 @@ class OAuthState:
     provider: OAuthProvider
     config: OAuthConfig
 
+    def is_expired_at(self, now: datetime) -> bool:
+        """Check if this state has expired at a reference instant.
+
+        Args:
+            now: Reference datetime to evaluate the 10-minute state timeout against.
+
+        Returns:
+            bool: True if now >= (created_at + 10 minutes).
+        """
+        return now >= (self.created_at + timedelta(minutes=10))
+
     @property
     def is_expired(self) -> bool:
         """Check if this state has expired (10 minute timeout).
@@ -283,8 +314,7 @@ class OAuthState:
         Returns:
             bool: True if the state is older than 10 minutes.
         """
-        timeout = timedelta(minutes=10)
-        return datetime.now(UTC) >= (self.created_at + timeout)
+        return self.is_expired_at(datetime.now(UTC))
 
 
 OAUTH_CONFIGS: dict[OAuthProvider, OAuthConfig] = {

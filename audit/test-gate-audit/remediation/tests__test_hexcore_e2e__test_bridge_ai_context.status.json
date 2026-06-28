@@ -1,31 +1,31 @@
 {
- "file": "tests/test_hexcore_e2e/test_bridge_ai_context.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_hexcore_e2e/test_bridge_ai_context.py::TestBridgeAIContext::test_get_context_for_ai_bookmarks_contain_expected_fields_when_present",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only for behavior test",
-   "action": "hardened",
-   "oracle": "The exact values (offset=0, length=2, label=\"MZ_magic\") passed to add_bookmark(0, 2, \"MZ_magic\", \"#FF0000\") must round-trip identically through the native Rust HexDocument store and through _populate_ai_bookmarks serialization (hex_editor.py:1851). These are the independent ground-truth values: the production code must transform and faithfully reproduce them without loss or swapping.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack/bridges/hex_editor.py",
-    "mutation": "{\"offset\": b[0], \"length\": b[1], \"label\": b[2]} -> {\"offset\": b[0], \"length\": b[0], \"label\": b[2]}",
-    "covering_test": "tests/test_hexcore_e2e/test_bridge_ai_context.py::TestBridgeAIContext::test_get_context_for_ai_bookmarks_contain_expected_fields_when_present",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "fail",
-    "proven_falsifiable": "yes"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 1
+  "file": "tests/test_hexcore_e2e/test_bridge_ai_context.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/test_hexcore_e2e/test_bridge_ai_context.py::TestBridgeAIContext::test_get_context_for_ai_bookmarks_contain_expected_fields_when_present",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only for behavior test",
+      "action": "hardened",
+      "oracle": "The exact values (offset=0, length=2, label=\"MZ_magic\") passed to add_bookmark(0, 2, \"MZ_magic\", \"#FF0000\") must round-trip identically through the native Rust HexDocument store and through _populate_ai_bookmarks serialization (hex_editor.py:1851). These are the independent ground-truth values: the production code must transform and faithfully reproduce them without loss or swapping.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack/bridges/hex_editor.py",
+        "mutation": "{\"offset\": b[0], \"length\": b[1], \"label\": b[2]} -> {\"offset\": b[0], \"length\": b[0], \"label\": b[2]}",
+        "covering_test": "tests/test_hexcore_e2e/test_bridge_ai_context.py::TestBridgeAIContext::test_get_context_for_ai_bookmarks_contain_expected_fields_when_present",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "fail",
+        "proven_falsifiable": "yes"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 1
 }

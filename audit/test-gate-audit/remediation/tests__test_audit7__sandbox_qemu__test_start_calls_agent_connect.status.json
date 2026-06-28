@@ -1,41 +1,41 @@
 {
- "file": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestSourceContainsConnectCall::test_qemu_source_awaits_agent_connect",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestAgentConnectInvokedDuringStart::test_agent_connect_invoked_during_start",
-   "falsifiability": null
+  "file": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
   },
-  {
-   "test": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestSourceContainsConnectCall::test_attach_qemu_agents_forwards_agent_connect_timeout_not_hardcoded",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestAgentConnectInvokedDuringStart::test_attach_qemu_agents_uses_configured_timeout_not_hardcoded",
-   "falsifiability": null
-  },
-  {
-   "test": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestSourceContainsConnectCall::test_attach_qemu_agents_creates_guest_agent_client",
-   "severity": "MEDIUM",
-   "category": "N9",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestAttachQemuAgentsSetsAgentProperty::test_agent_host_and_port_match_config",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 0
+  "findings_addressed": [
+    {
+      "test": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestSourceContainsConnectCall::test_qemu_source_awaits_agent_connect",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestAgentConnectInvokedDuringStart::test_agent_connect_invoked_during_start",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestSourceContainsConnectCall::test_attach_qemu_agents_forwards_agent_connect_timeout_not_hardcoded",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestAgentConnectInvokedDuringStart::test_attach_qemu_agents_uses_configured_timeout_not_hardcoded",
+      "falsifiability": null
+    },
+    {
+      "test": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestSourceContainsConnectCall::test_attach_qemu_agents_creates_guest_agent_client",
+      "severity": "MEDIUM",
+      "category": "N9",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_audit7/sandbox_qemu/test_start_calls_agent_connect.py::TestAttachQemuAgentsSetsAgentProperty::test_agent_host_and_port_match_config",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 0
 }

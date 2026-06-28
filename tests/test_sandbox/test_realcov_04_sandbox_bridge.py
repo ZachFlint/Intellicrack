@@ -97,27 +97,20 @@ class TestToolDefinitionDispatchEndToEnd:
         assert result["total_count"] == 2
 
         status_instances: list[dict[str, Any]] = list(result["instances"])
-        assert len(status_instances) == 2, (
-            f"status() must return exactly 2 instances, got {len(status_instances)}"
-        )
+        assert len(status_instances) == 2, f"status() must return exactly 2 instances, got {len(status_instances)}"
 
         status_ids = {str(entry["id"]) for entry in status_instances}
-        assert status_ids == {_WIN_INSTANCE, _QEMU_INSTANCE}, (
-            f"status() instance id-set {status_ids!r} must equal fixture ids"
-        )
+        assert status_ids == {_WIN_INSTANCE, _QEMU_INSTANCE}, f"status() instance id-set {status_ids!r} must equal fixture ids"
 
         status_type_by_id = {str(entry["id"]): str(entry["type"]) for entry in status_instances}
         assert status_type_by_id[_WIN_INSTANCE] == "windows", (
             f"win instance type must be 'windows', got {status_type_by_id[_WIN_INSTANCE]!r}"
         )
-        assert status_type_by_id[_QEMU_INSTANCE] == "qemu", (
-            f"qemu instance type must be 'qemu', got {status_type_by_id[_QEMU_INSTANCE]!r}"
-        )
+        assert status_type_by_id[_QEMU_INSTANCE] == "qemu", f"qemu instance type must be 'qemu', got {status_type_by_id[_QEMU_INSTANCE]!r}"
 
         running_in_status = sum(1 for e in status_instances if str(e["status"]) == "running")
         assert int(result["active_count"]) == running_in_status, (
-            f"active_count {result['active_count']!r} must equal independently-counted "
-            f"running instances {running_in_status}"
+            f"active_count {result['active_count']!r} must equal independently-counted running instances {running_in_status}"
         )
 
         listed = await sandbox_bridge.list()
@@ -162,9 +155,7 @@ class TestToolDefinitionDispatchEndToEnd:
             for ts_key in ("created_at", "last_used"):
                 ts_str = str(entry[ts_key])
                 parsed = datetime.fromisoformat(ts_str)
-                assert parsed.tzinfo is not None, (
-                    f"{ts_key} must be timezone-aware, got {ts_str!r} for entry {entry['id']!r}"
-                )
+                assert parsed.tzinfo is not None, f"{ts_key} must be timezone-aware, got {ts_str!r} for entry {entry['id']!r}"
 
     @pytest.mark.asyncio
     async def test_instance_scoped_methods_dispatch(
@@ -254,9 +245,7 @@ class TestStubManagerFullCallChain:
 
         created_at_str = str(result["created_at"])
         parsed = datetime.fromisoformat(created_at_str)
-        assert parsed.tzinfo is not None, (
-            f"created_at must be timezone-aware UTC ISO-8601, got {created_at_str!r}"
-        )
+        assert parsed.tzinfo is not None, f"created_at must be timezone-aware UTC ISO-8601, got {created_at_str!r}"
 
         assert sandbox_bridge.state.connected is True
         assert sandbox_bridge.state.tool_running is True
@@ -264,9 +253,7 @@ class TestStubManagerFullCallChain:
 
         listed = await sandbox_bridge.list()
         listed_ids = {entry["id"] for entry in listed}
-        assert instance_id in listed_ids, (
-            f"newly created instance {instance_id!r} must appear in list(); got {listed_ids!r}"
-        )
+        assert instance_id in listed_ids, f"newly created instance {instance_id!r} must appear in list(); got {listed_ids!r}"
 
     @pytest.mark.asyncio
     async def test_destroy_then_list_reflects_removal(

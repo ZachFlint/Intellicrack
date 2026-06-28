@@ -206,9 +206,7 @@ class TestRFBClientProtocolStructures:
 
         wire = bytes(recorder.buffer)
         expected = (
-            bytes([POINTER_EVENT_MSG_TYPE, POINTER_BUTTON_MASK])
-            + POINTER_TEST_X.to_bytes(2, "big")
-            + POINTER_TEST_Y.to_bytes(2, "big")
+            bytes([POINTER_EVENT_MSG_TYPE, POINTER_BUTTON_MASK]) + POINTER_TEST_X.to_bytes(2, "big") + POINTER_TEST_Y.to_bytes(2, "big")
         )
         assert len(expected) == POINTER_EVENT_LEN
         assert wire == expected

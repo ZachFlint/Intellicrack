@@ -1,13 +1,12 @@
-
 {
-    "version": "1.39.6",
-    "time": "1781455017170",
-    "generalDiagnostics": [],
-    "summary": {
-        "filesAnalyzed": 12,
-        "errorCount": 0,
-        "warningCount": 0,
-        "informationCount": 0,
-        "timeInSec": 2.581
-    }
+  "version": "1.39.6",
+  "time": "1781455017170",
+  "generalDiagnostics": [],
+  "summary": {
+    "filesAnalyzed": 12,
+    "errorCount": 0,
+    "warningCount": 0,
+    "informationCount": 0,
+    "timeInSec": 2.581
+  }
 }

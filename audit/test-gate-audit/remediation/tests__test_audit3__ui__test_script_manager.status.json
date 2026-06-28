@@ -1,23 +1,23 @@
 {
- "file": "tests/test_audit3/ui/test_script_manager.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_audit3/ui/test_script_manager.py::TestX64dbgTemplateParse::test_template_is_non_empty",
-   "severity": "MEDIUM",
-   "category": "N8 existence-only for a behavior test",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_audit3/ui/test_script_manager.py::TestX64dbgTemplateParse::test_template_interpolates_address",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 0
+  "file": "tests/test_audit3/ui/test_script_manager.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/test_audit3/ui/test_script_manager.py::TestX64dbgTemplateParse::test_template_is_non_empty",
+      "severity": "MEDIUM",
+      "category": "N8 existence-only for a behavior test",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_audit3/ui/test_script_manager.py::TestX64dbgTemplateParse::test_template_interpolates_address",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 0
 }

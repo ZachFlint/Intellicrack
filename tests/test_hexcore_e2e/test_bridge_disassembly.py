@@ -75,8 +75,7 @@ class TestBridgeDisassembly:
 
         md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
         expected: list[tuple[int, str, str, int, str]] = [
-            (insn.address, insn.mnemonic, insn.op_str, insn.size, insn.bytes.hex())
-            for insn in md.disasm(payload, 0, count=4)
+            (insn.address, insn.mnemonic, insn.op_str, insn.size, insn.bytes.hex()) for insn in md.disasm(payload, 0, count=4)
         ]
         assert expected
         assert len(result) == len(expected)

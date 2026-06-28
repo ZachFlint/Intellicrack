@@ -472,7 +472,11 @@ mod tests {
     #[test]
     fn test_blake2s_empty() {
         let result = compute_hash(b"", "blake2s").unwrap();
-        assert_eq!(result.hex_digest.len(), 64);
+        // BLAKE2s-256 KAT: RFC 7693 / official test-vector for empty input
+        assert_eq!(
+            result.hex_digest,
+            "69217a3079908094e11121d042354a7c1f55b6482ca1a51e1b250dfd1ed0eef9"
+        );
     }
 
     #[test]
@@ -490,19 +494,22 @@ mod tests {
     #[test]
     fn test_xxh3() {
         let result = compute_hash(b"test", "xxh3").unwrap();
-        assert_eq!(result.hex_digest.len(), 16);
+        // xxh3-64 with seed=0 on b"test" — pinned from xxhash-rust crate output
+        assert_eq!(result.hex_digest, "9ec9f7918d7dfc40");
     }
 
     #[test]
     fn test_siphash64() {
         let result = compute_hash(b"test", "siphash64").unwrap();
-        assert_eq!(result.hex_digest.len(), 16);
+        // SipHash-2-4-64 with all-zero key on b"test" — pinned from siphasher crate output
+        assert_eq!(result.hex_digest, "3d5124c4cd58914e");
     }
 
     #[test]
     fn test_siphash128() {
         let result = compute_hash(b"test", "siphash128").unwrap();
-        assert_eq!(result.hex_digest.len(), 32);
+        // SipHash-2-4-128 with all-zero key on b"test" — pinned from siphasher crate output
+        assert_eq!(result.hex_digest, "1db83d391aa42131ee6b5493810c6370");
     }
 
     #[test]
@@ -514,7 +521,8 @@ mod tests {
     #[test]
     fn test_crc8() {
         let result = compute_hash(b"123456789", "crc8").unwrap();
-        assert_eq!(result.hex_digest.len(), 2);
+        // CRC-8/SMBUS check value for "123456789" per the CRC catalogue
+        assert_eq!(result.hex_digest, "f4");
     }
 
     #[test]
@@ -538,7 +546,8 @@ mod tests {
     #[test]
     fn test_crc64() {
         let result = compute_hash(b"123456789", "crc64").unwrap();
-        assert_eq!(result.hex_digest.len(), 16);
+        // CRC-64/ECMA-182 check value for "123456789" per the CRC catalogue
+        assert_eq!(result.hex_digest, "6c40df5f0b497347");
     }
 
     #[test]

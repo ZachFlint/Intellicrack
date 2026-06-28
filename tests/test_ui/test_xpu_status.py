@@ -133,7 +133,18 @@ class TestXPUStatusDialogConstruction:
 
     @staticmethod
     def test_dialog_contains_device_status_group(xpu_dialog: XPUStatusDialog) -> None:
-        """Dialog contains a 'Device Status' group box.
+        """Device Status group exists AND status_label shows the exact string from _refresh_device_info.
+
+        Three mutually exclusive outcomes from ``_refresh_device_info``:
+
+        - ``is_xpu_available is None`` (import failure): ``"XPU utilities not available"``
+        - ``is_xpu_available()`` returns ``False``: ``"CPU Only"``
+        - ``is_xpu_available()`` returns ``True``: ``"XPU Active"``
+
+        Since the test module imported ``is_xpu_available`` successfully, the import-failure path
+        cannot fire here.  The test derives the expected string from the same oracle the dialog
+        uses (``is_xpu_available()``) and asserts exact equality.  A typo or wrong-branch
+        mutation in ``_refresh_device_info`` makes this red.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
@@ -141,10 +152,24 @@ class TestXPUStatusDialogConstruction:
         groups = xpu_dialog.findChildren(QGroupBox)
         titles = [g.title() for g in groups]
         assert "Device Status" in titles
+        refresh_fn = getattr(xpu_dialog, "_refresh_device_info")
+        refresh_fn()
+        xpu_result = is_xpu_available()
+        expected_status = "XPU Active" if xpu_result else "CPU Only"
+        assert xpu_dialog.status_label.text() == expected_status, (
+            f"status_label must be exactly {expected_status!r} when is_xpu_available()={xpu_result}, "
+            f"got {xpu_dialog.status_label.text()!r}"
+        )
 
     @staticmethod
     def test_dialog_contains_memory_usage_group(xpu_dialog: XPUStatusDialog) -> None:
-        """Dialog contains a 'Memory Usage' group box.
+        """Memory Usage group exists AND memory_bar.value() equals the oracle percentage within 2 pp.
+
+        Oracle: ``get_xpu_memory_info(0)`` is read immediately before forcing ``_refresh_memory()``
+        to minimise the timing window.  When ``total > 0`` the expected bar value is
+        ``int(allocated / total * 100)``; when no XPU device is present the bar must be exactly 0.
+        A mutation that swaps ``allocated`` and ``total`` in the percentage formula produces a
+        grossly wrong bar value outside the ±2 pp tolerance.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
@@ -152,10 +177,35 @@ class TestXPUStatusDialogConstruction:
         groups = xpu_dialog.findChildren(QGroupBox)
         titles = [g.title() for g in groups]
         assert "Memory Usage" in titles
+        refresh_mem = getattr(xpu_dialog, "_refresh_memory")
+        if is_xpu_available():
+            allocated, total = get_xpu_memory_info(0)
+            refresh_mem()
+            if total > 0:
+                expected_pct = int((allocated / total) * 100)
+                actual_pct = xpu_dialog.memory_bar.value()
+                assert abs(actual_pct - expected_pct) <= 2, (
+                    f"memory_bar value {actual_pct} must be within 2 pp of oracle {expected_pct} "
+                    f"(allocated={allocated}, total={total})"
+                )
+            else:
+                assert xpu_dialog.memory_bar.value() == 0, (
+                    "memory_bar must be 0 when total VRAM is reported as 0"
+                )
+        else:
+            refresh_mem()
+            assert xpu_dialog.memory_bar.value() == 0, (
+                "memory_bar must be 0 when no XPU device is available"
+            )
 
     @staticmethod
     def test_dialog_contains_model_cache_group(xpu_dialog: XPUStatusDialog) -> None:
-        """Dialog contains a 'Model Cache' group box.
+        """Model Cache group exists AND cache_usage_label shows the exact MB from the global cache.
+
+        Oracle: ``get_global_model_cache().get_memory_usage()`` read immediately before forcing
+        ``_refresh_cache()``.  Production format is ``"{N:.1f} MB"``.  A regression that divides
+        by ``_BYTES_PER_GB`` instead of ``_BYTES_PER_MB`` produces a value ~1000x too small and
+        fails the ±0.5 MB tolerance.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
@@ -163,10 +213,34 @@ class TestXPUStatusDialogConstruction:
         groups = xpu_dialog.findChildren(QGroupBox)
         titles = [g.title() for g in groups]
         assert "Model Cache" in titles
+        cache = get_global_model_cache()
+        usage_bytes = cache.get_memory_usage()
+        expected_mb = usage_bytes / (1024.0 * 1024.0)
+        refresh_cache = getattr(xpu_dialog, "_refresh_cache")
+        refresh_cache()
+        label_text = xpu_dialog.cache_usage_label.text()
+        valid_stubs = {"Model cache not available", "Error reading cache"}
+        is_mb_value = label_text.endswith(" MB") and label_text[:-3].replace(".", "", 1).isdigit()
+        if is_mb_value:
+            actual_mb = float(label_text[:-3])
+            assert abs(actual_mb - expected_mb) <= 0.5, (
+                f"cache_usage_label must show {expected_mb:.1f} MB from global cache, got {label_text!r}"
+            )
+        else:
+            assert label_text in valid_stubs, (
+                f"cache_usage_label must be '<N> MB', 'Model cache not available', or "
+                f"'Error reading cache'; got {label_text!r}"
+            )
 
     @staticmethod
     def test_dialog_contains_system_requirements_group(xpu_dialog: XPUStatusDialog) -> None:
-        """Dialog contains a 'System Requirements' group box.
+        """System Requirements group exists AND requirements_text is not the uninitialised '--' placeholder.
+
+        Construction calls ``_refresh_requirements()`` which synchronously replaces the ``"--"``
+        placeholder with either ``"Requirements check not available."`` (no helper) or
+        ``"Checking system requirements..."`` (while the background worker runs).  Asserting
+        non-empty, non-placeholder content proves ``_refresh_requirements`` was invoked and that
+        its ``setPlainText`` call executed.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
@@ -174,20 +248,49 @@ class TestXPUStatusDialogConstruction:
         groups = xpu_dialog.findChildren(QGroupBox)
         titles = [g.title() for g in groups]
         assert "System Requirements" in titles
+        text = xpu_dialog.requirements_text.toPlainText()
+        assert text, "requirements_text must not be empty after construction"
+        assert text != "--", (
+            "requirements_text must not remain at the '--' placeholder; _refresh_requirements must have run"
+        )
+        known_stubs = {"Requirements check not available.", "Checking system requirements..."}
+        has_real_content = (
+            "requirements met" in text.lower()
+            or "warning" in text.lower()
+            or "failed" in text.lower()
+        )
+        assert text in known_stubs or has_real_content, (
+            f"requirements_text must be a known construction-time stub or rendered requirements result; "
+            f"got {text[:80]!r}"
+        )
 
     @staticmethod
     def test_dialog_has_four_group_boxes(xpu_dialog: XPUStatusDialog) -> None:
-        """Dialog has exactly four group boxes.
+        """Dialog has exactly four group boxes added in the exact construction order.
+
+        Production code in ``_setup_ui`` adds groups in the order: Device Status, Memory Usage,
+        Model Cache, System Requirements.  Asserting the exact ordered list means a group
+        reordering, a title rename, or an accidental fifth group will immediately go red.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
         """
         groups = xpu_dialog.findChildren(QGroupBox)
-        assert len(groups) == 4
+        titles = [g.title() for g in groups]
+        assert len(groups) == 4, f"expected exactly 4 group boxes, got {len(groups)}: {titles}"
+        expected_order = ["Device Status", "Memory Usage", "Model Cache", "System Requirements"]
+        assert titles == expected_order, (
+            f"group boxes must appear in construction order {expected_order!r}, got {titles!r}"
+        )
 
     @staticmethod
     def test_dialog_has_refresh_button(xpu_dialog: XPUStatusDialog) -> None:
-        """Dialog has a 'Refresh' button.
+        """Refresh button exists AND clicking it updates status_label, proving the signal is connected.
+
+        ``_refresh_all()`` calls ``_refresh_device_info()`` which sets ``status_label`` to the exact
+        string derived from ``is_xpu_available()``.  After clicking Refresh the label must equal the
+        oracle value.  A disconnected button leaves the label at its stale initial state and the
+        assertion goes red.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
@@ -195,10 +298,25 @@ class TestXPUStatusDialogConstruction:
         buttons = xpu_dialog.findChildren(QPushButton)
         texts = [b.text() for b in buttons]
         assert "Refresh" in texts
+        xpu_result = is_xpu_available()
+        expected_status = "XPU Active" if xpu_result else "CPU Only"
+        refresh_btns = [b for b in buttons if b.text() == "Refresh"]
+        assert refresh_btns, "Refresh button must be present"
+        refresh_btns[0].click()
+        QApplication.processEvents()
+        assert xpu_dialog.status_label.text() == expected_status, (
+            f"After Refresh click, status_label must be {expected_status!r}; "
+            f"got {xpu_dialog.status_label.text()!r}. "
+            "A disconnected button leaves the label stale."
+        )
 
     @staticmethod
     def test_dialog_has_close_button(xpu_dialog: XPUStatusDialog) -> None:
-        """Dialog has a 'Close' button.
+        """Close button exists AND clicking it stops the refresh timer, proving closeEvent is wired.
+
+        ``closeEvent`` calls ``self.refresh_timer.stop()``.  After clicking Close the timer must be
+        inactive.  A disconnected Close button means ``closeEvent`` is never invoked and the timer
+        stays running, making the assertion go red.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
@@ -206,29 +324,82 @@ class TestXPUStatusDialogConstruction:
         buttons = xpu_dialog.findChildren(QPushButton)
         texts = [b.text() for b in buttons]
         assert "Close" in texts
+        assert xpu_dialog.refresh_timer.isActive(), "refresh_timer must be active before Close is clicked"
+        close_btns = [b for b in buttons if b.text() == "Close"]
+        assert close_btns, "Close button must be present"
+        close_btns[0].click()
+        QApplication.processEvents()
+        assert not xpu_dialog.refresh_timer.isActive(), (
+            "refresh_timer must be stopped after Close is clicked; "
+            "a disconnected button means closeEvent is never called and the timer keeps running"
+        )
 
     @staticmethod
     def test_dialog_has_memory_progress_bar(xpu_dialog: XPUStatusDialog) -> None:
-        """Dialog contains a QProgressBar for memory display.
+        """Memory progress bar has correct range AND value after refresh matches the backend oracle.
+
+        The range assertions (min=0, max=100) verify widget configuration.  The value assertion
+        drives ``_refresh_memory()`` and reads ``get_xpu_memory_info(0)`` immediately before to
+        minimise timing skew.  A mutation that swaps ``allocated`` and ``total`` in the percentage
+        formula produces a wildly wrong bar value and fails the ±2 pp tolerance.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
         """
         bars = xpu_dialog.findChildren(QProgressBar)
         assert len(bars) == 1
-        assert bars[0].minimum() == 0
-        assert bars[0].maximum() == _PROGRESS_BAR_MAX
+        bar = bars[0]
+        assert bar.minimum() == 0
+        assert bar.maximum() == _PROGRESS_BAR_MAX
+        refresh_mem = getattr(xpu_dialog, "_refresh_memory")
+        if is_xpu_available():
+            allocated, total = get_xpu_memory_info(0)
+            refresh_mem()
+            if total > 0:
+                expected_pct = int((allocated / total) * 100)
+                actual_pct = bar.value()
+                assert abs(actual_pct - expected_pct) <= 2, (
+                    f"memory_bar value {actual_pct} must be within 2 pp of oracle {expected_pct} "
+                    f"(allocated={allocated}, total={total})"
+                )
+            else:
+                assert bar.value() == 0, "memory_bar must be 0 when total VRAM is reported as 0"
+        else:
+            refresh_mem()
+            assert bar.value() == 0, "memory_bar must be 0 when no XPU device is available"
 
     @staticmethod
     def test_dialog_has_requirements_text_edit(xpu_dialog: XPUStatusDialog) -> None:
-        """Dialog contains a read-only QTextEdit for requirements.
+        """Requirements text edit is read-only AND contains a non-placeholder string after construction.
+
+        Construction calls ``_refresh_requirements()`` which synchronously sets the text to one of
+        the known initial states (``"Requirements check not available."`` when no helper is present,
+        or ``"Checking system requirements..."`` while the background worker runs).  Asserting
+        non-empty, non-placeholder content verifies that ``_refresh_requirements`` was invoked and
+        that its ``setPlainText`` calls executed.
 
         Args:
             xpu_dialog: XPUStatusDialog fixture instance.
         """
         edits = xpu_dialog.findChildren(QTextEdit)
         assert len(edits) == 1
-        assert edits[0].isReadOnly()
+        edit = edits[0]
+        assert edit.isReadOnly()
+        text = edit.toPlainText()
+        assert text, "requirements_text must not be empty after construction"
+        assert text != "--", (
+            "requirements_text must not remain at the '--' placeholder; _refresh_requirements must have run"
+        )
+        known_stubs = {"Requirements check not available.", "Checking system requirements..."}
+        has_real_content = (
+            "requirements met" in text.lower()
+            or "warning" in text.lower()
+            or "failed" in text.lower()
+        )
+        assert text in known_stubs or has_real_content, (
+            f"requirements_text must be a known construction-time stub or rendered requirements result; "
+            f"got {text[:80]!r}"
+        )
 
 
 @pytest.mark.usefixtures("qapp")
@@ -441,9 +612,7 @@ class TestXPUStatusDialogMemory:
             r"(\d+\.\d{2}) GB / (\d+\.\d{2}) GB \((\d+)%\)",
             text,
         )
-        assert match is not None, (
-            f"memory_text must match '<alloc> GB / <total> GB (<pct>%)' format; got {text!r}"
-        )
+        assert match is not None, f"memory_text must match '<alloc> GB / <total> GB (<pct>%)' format; got {text!r}"
         actual_alloc_gb = float(match.group(1))
         actual_total_gb = float(match.group(2))
         actual_pct = int(match.group(3))
@@ -453,12 +622,10 @@ class TestXPUStatusDialogMemory:
             f"{expected_alloc_gb:.2f} (allocated={allocated} bytes)"
         )
         assert abs(actual_total_gb - expected_total_gb) <= 1.0, (
-            f"memory_text total GB {actual_total_gb:.2f} must be within 1 GB of oracle "
-            f"{expected_total_gb:.2f} (total={total} bytes)"
+            f"memory_text total GB {actual_total_gb:.2f} must be within 1 GB of oracle {expected_total_gb:.2f} (total={total} bytes)"
         )
         assert abs(actual_pct - expected_pct) <= 2, (
-            f"memory_text percentage {actual_pct}% must be within 2 pp of oracle "
-            f"{expected_pct}% (allocated={allocated}, total={total})"
+            f"memory_text percentage {actual_pct}% must be within 2 pp of oracle {expected_pct}% (allocated={allocated}, total={total})"
         )
 
     @staticmethod

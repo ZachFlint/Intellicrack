@@ -518,20 +518,17 @@ def test_open_sandbox_panel_drives_full_post_panel_path(
     _call_slot(window, "_on_open_sandbox_panel")
 
     assert sandbox_stub.start_tool_called is True, (
-        "_on_open_sandbox_panel did not call start_tool() on the pre-seeded panel; "
-        "the slot must have returned early or skipped line 3041"
+        "_on_open_sandbox_panel did not call start_tool() on the pre-seeded panel; the slot must have returned early or skipped line 3041"
     )
 
     pending_bridge = getattr(window.tool_panel, "_pending_sandbox_bridge", None)
     assert pending_bridge is not None, (
-        "wire_sandbox_bridge was not called: _pending_sandbox_bridge is still None; "
-        "the slot must have skipped line 3040"
+        "wire_sandbox_bridge was not called: _pending_sandbox_bridge is still None; the slot must have skipped line 3040"
     )
 
     resolved = window.tool_panel.get_panel("sandbox")
     assert resolved is sandbox_stub, (
-        f"get_panel('sandbox') returned {resolved!r} instead of the pre-seeded "
-        f"stub {sandbox_stub!r}; the panels dict was not consistent"
+        f"get_panel('sandbox') returned {resolved!r} instead of the pre-seeded stub {sandbox_stub!r}; the panels dict was not consistent"
     )
 
 

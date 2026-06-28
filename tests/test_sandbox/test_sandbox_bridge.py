@@ -94,16 +94,12 @@ class TestBridgeInstantiation:
         caps = getattr(bridge, "_capabilities")
 
         assert sorted(caps.supported_architectures) == expected_archs, (
-            f"supported_architectures mismatch: got {sorted(caps.supported_architectures)!r}, "
-            f"expected {expected_archs!r}"
+            f"supported_architectures mismatch: got {sorted(caps.supported_architectures)!r}, expected {expected_archs!r}"
         )
         assert sorted(caps.supported_formats) == expected_fmts, (
-            f"supported_formats mismatch: got {sorted(caps.supported_formats)!r}, "
-            f"expected {expected_fmts!r}"
+            f"supported_formats mismatch: got {sorted(caps.supported_formats)!r}, expected {expected_fmts!r}"
         )
-        assert getattr(bridge, "_manager_destroyed") is False, (
-            "Bridge must not be in destroyed state immediately after construction"
-        )
+        assert getattr(bridge, "_manager_destroyed") is False, "Bridge must not be in destroyed state immediately after construction"
 
     def test_name_is_sandbox(self) -> None:
         """Bridge name is ToolName.SANDBOX."""

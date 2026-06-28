@@ -121,6 +121,7 @@ _ALLOWLIST: Final[frozenset[str]] = frozenset(
         "pyqt6",
         "pyyaml",
         "r2pipe",
+        "rzpipe",
         "structlog",
         "tiktoken",
         "tomli-w",

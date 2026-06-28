@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Final, cast, override
 
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QEvent, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -28,6 +28,8 @@ from PyQt6.QtWidgets import (
     QPushButton,
     QSplitter,
     QStatusBar,
+    QStyle,
+    QStyleOptionButton,
     QVBoxLayout,
     QWidget,
 )
@@ -53,8 +55,8 @@ _PANEL_MARGIN: Final[int] = 8
 _PANEL_MARGIN_INNER: Final[int] = 4
 _PANEL_SPACING: Final[int] = 8
 _LEFT_PANEL_MAX_WIDTH: Final[int] = 250
-_SPLITTER_LEFT_SIZE: Final[int] = 200
-_SPLITTER_RIGHT_SIZE: Final[int] = 600
+_SPLITTER_LEFT_SIZE: Final[int] = 140
+_SPLITTER_RIGHT_SIZE: Final[int] = 660
 _RESULT_PANE_MIN_HEIGHT: Final[int] = 80
 _EXECUTION_TIMEOUT_MS: Final[int] = 30000
 _STATUS_RESET_MS: Final[int] = 3000
@@ -70,6 +72,43 @@ def _restyle(widget: QWidget) -> None:
     if s is not None:
         s.unpolish(widget)
         s.polish(widget)
+
+
+class AutoTooltipButton(QPushButton):
+    """A QPushButton that dynamically shows its text as a tooltip if the text is truncated."""
+
+    @override
+    def event(self, e: QEvent | None) -> bool:
+        """Handle events, specifically ToolTip events to set tooltip dynamically.
+
+        Args:
+            e: The QEvent to handle.
+
+        Returns:
+            bool: True if the event was recognized and handled, otherwise False.
+        """
+        if e is not None and e.type() == QEvent.Type.ToolTip:
+            text_width = self.fontMetrics().horizontalAdvance(self.text())
+            is_truncated = False
+            s = self.style()
+            if s is not None:
+                opt = QStyleOptionButton()
+                self.initStyleOption(opt)
+                content_rect = s.subElementRect(
+                    QStyle.SubElement.SE_PushButtonContents,
+                    opt,
+                    self,
+                )
+                if content_rect.width() < text_width:
+                    is_truncated = True
+            if not is_truncated and self.width() < text_width + 12:
+                is_truncated = True
+
+            if is_truncated:
+                self.setToolTip(self.text())
+            else:
+                self.setToolTip("")
+        return super().event(e)
 
 
 class ScriptTypeInfo:
@@ -168,7 +207,8 @@ public class LicenseAnalyzer extends GhidraScript {
             "display": "x64dbg",
             "extension": ".txt",
             "language": "x64dbg",
-            "template": """// x64dbg script for license bypass
+            "template":
+                        """// x64dbg script for license bypass
 // Target: {target}
 
 // Set an unconditional breakpoint at the validation function entry
@@ -189,7 +229,8 @@ run
             "display": "Python",
             "extension": ".py",
             "language": "python",
-            "template": '''"""
+            "template":
+                        '''"""
 Python analysis script for license examination.
 Target: {target}
 """
@@ -510,6 +551,7 @@ class ScriptManagerPanel(QWidget):
 
     def _setup_ui(self) -> None:
         """Set up the panel UI."""
+        self.setObjectName("script_manager_panel")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -577,29 +619,29 @@ class ScriptManagerPanel(QWidget):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(_PANEL_SPACING)
 
-        self._new_btn = QPushButton("New")
+        self._new_btn = AutoTooltipButton("New")
         self._new_btn.clicked.connect(self._on_new)
         button_layout.addWidget(self._new_btn)
 
-        self._save_btn = QPushButton("Save")
+        self._save_btn = AutoTooltipButton("Save")
         self._save_btn.clicked.connect(self._on_save)
         button_layout.addWidget(self._save_btn)
 
-        self._delete_btn = QPushButton("Delete")
+        self._delete_btn = AutoTooltipButton("Delete")
         self._delete_btn.clicked.connect(self._on_delete)
         button_layout.addWidget(self._delete_btn)
 
-        self._load_file_btn = QPushButton("Load File")
+        self._load_file_btn = AutoTooltipButton("Load File")
         self._load_file_btn.clicked.connect(self._on_load_file)
         button_layout.addWidget(self._load_file_btn)
 
         button_layout.addStretch()
 
-        self._validate_btn = QPushButton("Validate")
+        self._validate_btn = AutoTooltipButton("Validate")
         self._validate_btn.clicked.connect(self._on_validate)
         button_layout.addWidget(self._validate_btn)
 
-        self._execute_btn = QPushButton("Execute")
+        self._execute_btn = AutoTooltipButton("Execute")
         self._execute_btn.setObjectName("execute_button")
         self._execute_btn.clicked.connect(self._on_execute)
         button_layout.addWidget(self._execute_btn)

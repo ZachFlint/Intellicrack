@@ -1,31 +1,31 @@
 {
- "file": "tests/test_hexcore_e2e/test_process_memory.py",
- "review_overall": "pass",
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "tests/test_hexcore_e2e/test_process_memory.py::TestFromProcessMemory::test_from_process_memory_zero_size_handled",
-   "severity": "LOW",
-   "category": "N7 \u2014 accepts both outcomes (try/except OSError that passed unconditionally on either path)",
-   "action": "hardened",
-   "oracle": "Rust source data_source.rs:197-199: ProcessDataSource::read() returns Ok(Vec::new()) immediately when length==0, bypassing ReadProcessMemory entirely. MmapDocument::from_bytes(&[]) always produces a document of length 0. The zero-bytes contract is unconditional and verifiable from the source.",
-   "deletion_sibling": null,
-   "falsifiability": {
-    "src_file": "src/intellicrack-hexcore/src/data_source.rs",
-    "mutation": "        if length == 0 {\n            return Ok(Vec::new());\n        } ->         if length == 0 {\n            return Ok(vec![0u8]);\n        }",
-    "covering_test": "tests/test_hexcore_e2e/test_process_memory.py::TestFromProcessMemory::test_from_process_memory_zero_size_handled",
-    "expected_baseline": "green",
-    "green_status": "pass",
-    "mutation_result": "pass",
-    "proven_falsifiable": "no"
-   }
-  }
- ],
- "production_defects": [],
- "n_mutations": 1
+  "file": "tests/test_hexcore_e2e/test_process_memory.py",
+  "review_overall": "pass",
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "tests/test_hexcore_e2e/test_process_memory.py::TestFromProcessMemory::test_from_process_memory_zero_size_handled",
+      "severity": "LOW",
+      "category": "N7 — accepts both outcomes (try/except OSError that passed unconditionally on either path)",
+      "action": "hardened",
+      "oracle": "Rust source data_source.rs:197-199: ProcessDataSource::read() returns Ok(Vec::new()) immediately when length==0, bypassing ReadProcessMemory entirely. MmapDocument::from_bytes(&[]) always produces a document of length 0. The zero-bytes contract is unconditional and verifiable from the source.",
+      "deletion_sibling": null,
+      "falsifiability": {
+        "src_file": "src/intellicrack-hexcore/src/data_source.rs",
+        "mutation": "        if length == 0 {\n            return Ok(Vec::new());\n        } ->         if length == 0 {\n            return Ok(vec![0u8]);\n        }",
+        "covering_test": "tests/test_hexcore_e2e/test_process_memory.py::TestFromProcessMemory::test_from_process_memory_zero_size_handled",
+        "expected_baseline": "green",
+        "green_status": "pass",
+        "mutation_result": "pass",
+        "proven_falsifiable": "no"
+      }
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 1
 }

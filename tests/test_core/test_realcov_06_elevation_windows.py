@@ -201,8 +201,7 @@ def test_maybe_elevate_disabled_never_relaunches(monkeypatch: pytest.MonkeyPatch
     )
     assert result is False
     assert relaunch_called == [], (
-        "maybe_elevate must short-circuit at the disabled guard and never invoke "
-        "_relaunch_elevated; the guard branch is missing or broken"
+        "maybe_elevate must short-circuit at the disabled guard and never invoke _relaunch_elevated; the guard branch is missing or broken"
     )
 
 

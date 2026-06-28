@@ -119,12 +119,7 @@ class TestEntropyGraphWidget:
         widget.render(data_pixmap)
         data_img = data_pixmap.toImage()
 
-        differing = sum(
-            1
-            for y in range(0, height, 4)
-            for x in range(0, width, 4)
-            if empty_img.pixel(x, y) != data_img.pixel(x, y)
-        )
+        differing = sum(1 for y in range(0, height, 4) for x in range(0, width, 4) if empty_img.pixel(x, y) != data_img.pixel(x, y))
         assert differing > 0, "real entropy data must cause paintEvent to draw differently from the empty state"
 
     @staticmethod

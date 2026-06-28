@@ -573,13 +573,11 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         )
         script_injected_pid = int(script_pid_match.group(1))
         assert script_injected_pid == target_pid, (
-            f"production code must inject target_pid={target_pid} into the script; "
-            f"script contains $targetPid={script_injected_pid}"
+            f"production code must inject target_pid={target_pid} into the script; script contains $targetPid={script_injected_pid}"
         )
 
         assert "OpenProcess" in fixed_dispatched, (
-            "production script must call OpenProcess($targetPid) — the F-0021 fix; "
-            f"script excerpt: {fixed_dispatched[:300]!r}"
+            f"production script must call OpenProcess($targetPid) — the F-0021 fix; script excerpt: {fixed_dispatched[:300]!r}"
         )
         assert "GetCurrentProcess()" not in fixed_dispatched, (
             "production script must NOT call GetCurrentProcess() — that is the F-0021 bug pattern; "
@@ -589,13 +587,9 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         fixed_dump_bytes = fixed_result.read_bytes()
         assert fixed_dump_bytes[:4] == b"MDMP", "fixed-path dump must begin with MDMP magic"
         fixed_pid = struct.unpack_from("<I", fixed_dump_bytes, 32)[0]
-        assert fixed_pid == target_pid, (
-            f"fixed path: dump ProcessId field at offset 0x20 must be {target_pid}; got {fixed_pid}"
-        )
+        assert fixed_pid == target_pid, f"fixed path: dump ProcessId field at offset 0x20 must be {target_pid}; got {fixed_pid}"
 
-        assert f"pid{target_pid}" in fixed_result.name, (
-            f"fixed-path dump filename must embed pid{target_pid}; got {fixed_result.name!r}"
-        )
+        assert f"pid{target_pid}" in fixed_result.name, f"fixed-path dump filename must embed pid{target_pid}; got {fixed_result.name!r}"
 
         (tmp_path / "buggy").mkdir(exist_ok=True)
         sb_buggy = _make_recording_sandbox(tmp_path / "buggy")
@@ -603,12 +597,8 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         buggy_result = asyncio.run(sb_buggy.dump_memory(target_pid=target_pid))
         buggy_pid = struct.unpack_from("<I", buggy_result.read_bytes(), 32)[0]
 
-        assert buggy_pid == powershell_host_pid, (
-            f"buggy-simulation path: handler wrote pid_to_embed={powershell_host_pid}; got {buggy_pid}"
-        )
-        assert fixed_pid != buggy_pid, (
-            f"fixed dump PID ({fixed_pid}) must differ from buggy-simulation dump PID ({buggy_pid})"
-        )
+        assert buggy_pid == powershell_host_pid, f"buggy-simulation path: handler wrote pid_to_embed={powershell_host_pid}; got {buggy_pid}"
+        assert fixed_pid != buggy_pid, f"fixed dump PID ({fixed_pid}) must differ from buggy-simulation dump PID ({buggy_pid})"
 
     def test_successive_dumps_with_different_pids_are_independent(self, tmp_path: Path) -> None:
         r"""Successive dump calls with distinct PIDs produce scripts that each embed the correct PID.
@@ -659,35 +649,23 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         # into each script.  This is NOT derived from pid_a/pid_b — it reads what the
         # production f-string actually emitted.
         script_pid_match_a = re.search(r"\$targetPid = (\d+);", dispatched_a)
-        assert script_pid_match_a is not None, (
-            f"first dispatched script must contain '$targetPid = <N>;'; script: {dispatched_a[:300]!r}"
-        )
+        assert script_pid_match_a is not None, f"first dispatched script must contain '$targetPid = <N>;'; script: {dispatched_a[:300]!r}"
         script_pid_a = int(script_pid_match_a.group(1))
 
         script_pid_match_b = re.search(r"\$targetPid = (\d+);", dispatched_b)
-        assert script_pid_match_b is not None, (
-            f"second dispatched script must contain '$targetPid = <N>;'; script: {dispatched_b[:300]!r}"
-        )
+        assert script_pid_match_b is not None, f"second dispatched script must contain '$targetPid = <N>;'; script: {dispatched_b[:300]!r}"
         script_pid_b = int(script_pid_match_b.group(1))
 
         # The PID the production code injected must match the independently known target_pid.
-        assert script_pid_a == pid_a, (
-            f"first script must embed pid_a={pid_a}; production code injected {script_pid_a}"
-        )
-        assert script_pid_b == pid_b, (
-            f"second script must embed pid_b={pid_b}; production code injected {script_pid_b}"
-        )
+        assert script_pid_a == pid_a, f"first script must embed pid_a={pid_a}; production code injected {script_pid_a}"
+        assert script_pid_b == pid_b, f"second script must embed pid_b={pid_b}; production code injected {script_pid_b}"
 
         # Each script must use OpenProcess (the fix) and must not use GetCurrentProcess (the bug).
-        assert "OpenProcess" in dispatched_a, (
-            "first dispatched script must call OpenProcess($targetPid) — the F-0021 fix"
-        )
+        assert "OpenProcess" in dispatched_a, "first dispatched script must call OpenProcess($targetPid) — the F-0021 fix"
         assert "GetCurrentProcess()" not in dispatched_a, (
             "first dispatched script must NOT call GetCurrentProcess() — that is the F-0021 bug pattern"
         )
-        assert "OpenProcess" in dispatched_b, (
-            "second dispatched script must call OpenProcess($targetPid) — the F-0021 fix"
-        )
+        assert "OpenProcess" in dispatched_b, "second dispatched script must call OpenProcess($targetPid) — the F-0021 fix"
         assert "GetCurrentProcess()" not in dispatched_b, (
             "second dispatched script must NOT call GetCurrentProcess() — that is the F-0021 bug pattern"
         )

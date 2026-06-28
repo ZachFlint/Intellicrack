@@ -1,1 +1,56 @@
-{"group":"test_audit7__c2","files":{"tests/test_audit7/sandbox_windows/test_launch_failure_detection.py":[{"id":"G0053","test":"TestCheckStartupHealth::test_no_process_is_noop","line":194,"category":"no-assertion","severity":"low"},{"id":"G0054","test":"TestCheckStartupHealth::test_live_client_without_dialog_is_noop","line":249,"category":"no-assertion","severity":"low"}],"tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py":[{"id":"G0055","test":"TestF0021DumpMemoryProducesPIDMatchingMinidump::test_minidump_pid_field_distinguishes_target_from_host","line":567,"category":"tautological","severity":"high"}],"tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py":[{"id":"G0056","test":"module-level (entire file)","line":43,"category":"skip-masks-failure","severity":"high"}],"tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py":[{"id":"G0057","test":"TestF0012ThreadsTabAutoRefresh::test_refresh_count_zero_before_toggle","line":404,"category":"tautological","severity":"low"},{"id":"G0058","test":"TestF0012ThreadsTabAutoRefresh::test_combos_empty_before_refresh","line":406,"category":"tautological","severity":"low"}]},"context":"Windows-sandbox + hexpat-print-sink + UI tests. Context:\n\n- Windows sandbox (launch_failure_detection, memory_dump_target_pid): the Windows container/process and dump API are the ONLY permitted doubles - stub at that boundary and assert the real detected failure reason / the real target PID passed to the dump call. Legit SKIP when the Windows backend/privilege is absent.\n\n- hexpat print sink: drive the REAL hexpat interpreter print path and assert the exact captured output string (Python/hexpat semantics oracle), not substring/existence.\n\n- UI threads_auto_refresh: construct the real widget, drive the real refresh timer/slot, and assert the real model/table contents update. Retain worker QThreads (exit 255 otherwise); never call modal .exec() (exit 124). Headless offscreen Qt."}
+{
+  "group": "test_audit7__c2",
+  "files": {
+    "tests/test_audit7/sandbox_windows/test_launch_failure_detection.py": [
+      {
+        "id": "G0053",
+        "test": "TestCheckStartupHealth::test_no_process_is_noop",
+        "line": 194,
+        "category": "no-assertion",
+        "severity": "low"
+      },
+      {
+        "id": "G0054",
+        "test": "TestCheckStartupHealth::test_live_client_without_dialog_is_noop",
+        "line": 249,
+        "category": "no-assertion",
+        "severity": "low"
+      }
+    ],
+    "tests/test_audit7/sandbox_windows/test_memory_dump_target_pid.py": [
+      {
+        "id": "G0055",
+        "test": "TestF0021DumpMemoryProducesPIDMatchingMinidump::test_minidump_pid_field_distinguishes_target_from_host",
+        "line": 567,
+        "category": "tautological",
+        "severity": "high"
+      }
+    ],
+    "tests/test_audit7/u12_hexpat_print_sink/test_bridge_print_sink.py": [
+      {
+        "id": "G0056",
+        "test": "module-level (entire file)",
+        "line": 43,
+        "category": "skip-masks-failure",
+        "severity": "high"
+      }
+    ],
+    "tests/test_audit7/ui_panels_process/test_threads_auto_refresh.py": [
+      {
+        "id": "G0057",
+        "test": "TestF0012ThreadsTabAutoRefresh::test_refresh_count_zero_before_toggle",
+        "line": 404,
+        "category": "tautological",
+        "severity": "low"
+      },
+      {
+        "id": "G0058",
+        "test": "TestF0012ThreadsTabAutoRefresh::test_combos_empty_before_refresh",
+        "line": 406,
+        "category": "tautological",
+        "severity": "low"
+      }
+    ]
+  },
+  "context": "Windows-sandbox + hexpat-print-sink + UI tests. Context:\n\n- Windows sandbox (launch_failure_detection, memory_dump_target_pid): the Windows container/process and dump API are the ONLY permitted doubles - stub at that boundary and assert the real detected failure reason / the real target PID passed to the dump call. Legit SKIP when the Windows backend/privilege is absent.\n\n- hexpat print sink: drive the REAL hexpat interpreter print path and assert the exact captured output string (Python/hexpat semantics oracle), not substring/existence.\n\n- UI threads_auto_refresh: construct the real widget, drive the real refresh timer/slot, and assert the real model/table contents update. Retain worker QThreads (exit 255 otherwise); never call modal .exec() (exit 124). Headless offscreen Qt."
+}

@@ -228,9 +228,9 @@ class TestMainWindowWireSandboxBackend:
         assert isinstance(bridge, SandboxBridge), "tool_panel must expose a SandboxBridge after forwarding"
         wired_manager = bridge.manager
         assert wired_manager is not None, "wired bridge must own a manager"
-        assert any(
-            inst.sandbox is sandbox for inst in wired_manager.instances
-        ), "injected sandbox must be reachable through the wired bridge manager"
+        assert any(inst.sandbox is sandbox for inst in wired_manager.instances), (
+            "injected sandbox must be reachable through the wired bridge manager"
+        )
 
     @staticmethod
     def test_rejects_non_sandbox_input(main_window: MainWindow) -> None:

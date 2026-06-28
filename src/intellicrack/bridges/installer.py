@@ -824,6 +824,11 @@ class ToolInstaller:
         if tool == ToolName.GHIDRA:
             return self._get_ghidra_version(path)
 
+        if tool == ToolName.X64DBG:
+            notes_version = await asyncio.to_thread(self._get_x64dbg_notes_version, path)
+            if notes_version is not None:
+                return notes_version
+
         if tool in {ToolName.X64DBG, ToolName.CUTTER}:
             return await asyncio.to_thread(self._get_pe_version, path, tool_info)
 
@@ -877,6 +882,49 @@ class ToolInstaller:
 
         if result.returncode == 0:
             return _ToolInstallerVersion.parse(result.stdout.strip())
+        return None
+
+    @staticmethod
+    def _get_x64dbg_notes_version(path: Path) -> ToolVersion | None:
+        """Parse the release date from x64dbg release-notes.md.
+
+        Args:
+            path: Path to the x64dbg installation.
+
+        Returns:
+            ToolVersion | None: Parsed version or None when the file cannot be
+            read or no date is parsed.
+        """
+        for candidate in (
+            path / "release-notes.md",
+            path.parent / "release-notes.md",
+            path / "release" / "release-notes.md",
+        ):
+            if not candidate.is_file():
+                continue
+            try:
+                content = candidate.read_text(encoding="utf-8", errors="ignore")
+            except OSError as exc:
+                _logger.warning(
+                    "failed_to_read_x64dbg_release_notes",
+                    path=str(candidate),
+                    error=str(exc),
+                )
+                continue
+
+            for line in content.splitlines()[:10]:
+                line_stripped = line.strip()
+                date_match = re.search(r"(\d{4})\.(\d{2})\.(\d{2})", line_stripped)
+                if date_match:
+                    date_str = date_match.group(0)
+                    version = _ToolInstallerVersion.parse(date_str)
+                    if version is not None:
+                        _logger.debug(
+                            "x64dbg_version_from_release_notes",
+                            path=str(candidate),
+                            version=date_str,
+                        )
+                        return version
         return None
 
     @staticmethod
@@ -1407,7 +1455,7 @@ class ToolInstaller:
                 )
                 return url
 
-        if candidates and tool == ToolName.GHIDRA:
+        if candidates and tool in {ToolName.GHIDRA, ToolName.X64DBG}:
             name, url = candidates[0]
             _logger.info(
                 "release_asset_selected_arch_agnostic",

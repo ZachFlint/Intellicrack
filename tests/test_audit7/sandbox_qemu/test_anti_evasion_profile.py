@@ -188,9 +188,7 @@ class TestF0029AntiEvasionProfileHonoured:
 
         result: dict[str, Any] = asyncio.run(sb.apply_anti_evasion(profile="default"))
 
-        assert result["profile"] == "default", (
-            f"result['profile'] must be 'default', got {result['profile']!r}"
-        )
+        assert result["profile"] == "default", f"result['profile'] must be 'default', got {result['profile']!r}"
         raw_techniques: object = result["techniques"]
         assert isinstance(raw_techniques, list)
         techniques: list[str] = []
@@ -213,13 +211,10 @@ class TestF0029AntiEvasionProfileHonoured:
         )
 
         assert techniques == frozen_launch_techniques, (
-            f"launch-time techniques (agent disconnected) must be exactly "
-            f"{frozen_launch_techniques!r}; got {techniques!r}"
+            f"launch-time techniques (agent disconnected) must be exactly {frozen_launch_techniques!r}; got {techniques!r}"
         )
 
-        assert result["count"] == len(techniques), (
-            f"count {result['count']!r} must equal len(techniques) {len(techniques)}"
-        )
+        assert result["count"] == len(techniques), f"count {result['count']!r} must equal len(techniques) {len(techniques)}"
 
     def test_mismatched_profile_raises_sandbox_error_with_both_names(self) -> None:
         """Scenario B: mismatched profile raises SandboxError.

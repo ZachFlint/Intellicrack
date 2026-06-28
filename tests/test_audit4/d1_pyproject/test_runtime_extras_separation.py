@@ -237,12 +237,7 @@ class TestPyprojectIsValid:
         assert sys.version_info >= (3, 11), "tomllib was added in 3.11; this test requires it to be importable"
 
         runtime = _runtime_dependencies()
-        moved = (
-            _optional_dep_group("dev")
-            | _optional_dep_group("test")
-            | _optional_dep_group("docs")
-            | _optional_dep_group("profile")
-        )
+        moved = _optional_dep_group("dev") | _optional_dep_group("test") | _optional_dep_group("docs") | _optional_dep_group("profile")
         assert moved, "no extras groups (dev/test/docs/profile) were declared — the F-0001 move did not happen"
 
         double_declared = runtime & moved

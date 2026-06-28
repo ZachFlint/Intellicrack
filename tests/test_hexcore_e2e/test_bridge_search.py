@@ -116,13 +116,9 @@ class TestBridgeSearchHex:
         f.write_bytes(data)
         _run(bridge.open_file(str(f)))
         uncapped: list[dict[str, int]] = _run(bridge.search_hex("AA BB", max_results=repeat_count))
-        assert len(uncapped) == repeat_count, (
-            f"Expected {repeat_count} uncapped matches, got {len(uncapped)}"
-        )
+        assert len(uncapped) == repeat_count, f"Expected {repeat_count} uncapped matches, got {len(uncapped)}"
         capped: list[dict[str, int]] = _run(bridge.search_hex("AA BB", max_results=5))
-        assert len(capped) == 5, (
-            f"Expected exactly 5 capped matches, got {len(capped)}"
-        )
+        assert len(capped) == 5, f"Expected exactly 5 capped matches, got {len(capped)}"
 
 
 class TestBridgeSearchText:

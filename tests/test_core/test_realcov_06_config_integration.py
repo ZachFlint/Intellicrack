@@ -144,14 +144,10 @@ def _assert_toml_enabled_fields(
     tools_section: dict[str, dict[str, object]] = on_disk.get("tools", {})
     for tool in disabled_tools:
         raw = tools_section.get(tool.value, {})
-        assert raw.get("enabled") is False, (
-            f"TOML did not serialise enabled=False for {tool.value}"
-        )
+        assert raw.get("enabled") is False, f"TOML did not serialise enabled=False for {tool.value}"
     for tool in expected_enabled:
         raw = tools_section.get(tool.value, {})
-        assert raw.get("enabled", True) is True, (
-            f"TOML serialised enabled=False for {tool.value} which should be enabled"
-        )
+        assert raw.get("enabled", True) is True, f"TOML serialised enabled=False for {tool.value} which should be enabled"
 
 
 def test_reloaded_config_drives_real_tool_registry(tmp_path: Path) -> None:
@@ -187,9 +183,7 @@ def test_reloaded_config_drives_real_tool_registry(tmp_path: Path) -> None:
     for tool in disabled_tools:
         config.tools[tool].enabled = False
 
-    expected_enabled: frozenset[ToolName] = frozenset(
-        t for t in config.tools if t not in disabled_tools
-    )
+    expected_enabled: frozenset[ToolName] = frozenset(t for t in config.tools if t not in disabled_tools)
 
     config_path = tmp_path / "config.toml"
     config.save(config_path)
@@ -211,13 +205,10 @@ def test_reloaded_config_drives_real_tool_registry(tmp_path: Path) -> None:
             registry.register_bridge(tool_name, bridge_cls())
 
     available = frozenset(registry.get_available_tools())
-    assert available == expected_enabled, (
-        f"Registry available set {available} != config-enabled set {expected_enabled}"
-    )
+    assert available == expected_enabled, f"Registry available set {available} != config-enabled set {expected_enabled}"
     for tool in disabled_tools:
         assert tool not in available, (
-            f"Disabled tool {tool.value} appeared in get_available_tools() "
-            "despite being disabled in the reloaded config"
+            f"Disabled tool {tool.value} appeared in get_available_tools() despite being disabled in the reloaded config"
         )
 
 

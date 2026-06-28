@@ -1,23 +1,23 @@
 {
- "file": "tests/test_audit3/core/test_script_gen.py",
- "review_overall": null,
- "lint": {
-  "ruff": true,
-  "basedpyright": true,
-  "pydoclint": true,
-  "pydocstyle": true
- },
- "findings_addressed": [
-  {
-   "test": "test_reload_script_source_has_no_apology_comments",
-   "severity": "MEDIUM",
-   "category": "N9 (source-text/inspect.getsource substring proxy)",
-   "action": "deleted",
-   "oracle": "n/a",
-   "deletion_sibling": "tests/test_audit3/core/test_script_gen.py::test_reload_script_round_trips_subdir_save",
-   "falsifiability": null
-  }
- ],
- "production_defects": [],
- "n_mutations": 0
+  "file": "tests/test_audit3/core/test_script_gen.py",
+  "review_overall": null,
+  "lint": {
+    "ruff": true,
+    "basedpyright": true,
+    "pydoclint": true,
+    "pydocstyle": true
+  },
+  "findings_addressed": [
+    {
+      "test": "test_reload_script_source_has_no_apology_comments",
+      "severity": "MEDIUM",
+      "category": "N9 (source-text/inspect.getsource substring proxy)",
+      "action": "deleted",
+      "oracle": "n/a",
+      "deletion_sibling": "tests/test_audit3/core/test_script_gen.py::test_reload_script_round_trips_subdir_save",
+      "falsifiability": null
+    }
+  ],
+  "production_defects": [],
+  "n_mutations": 0
 }

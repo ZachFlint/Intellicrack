@@ -911,9 +911,7 @@ async def test_close_dispatches_handle_close_via_thread_pool(
     await client.close()
 
     assert close_thread_ids, "_close_handle was never called"
-    assert close_thread_ids[0] != loop_thread_id, (
-        "_close_handle must run on a thread-pool thread, not the event-loop thread"
-    )
+    assert close_thread_ids[0] != loop_thread_id, "_close_handle must run on a thread-pool thread, not the event-loop thread"
 
 
 @pytest.mark.asyncio

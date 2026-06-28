@@ -1,13 +1,13 @@
 {
- "tests/core/test_process_cleanup.py": 10,
- "tests/test_audit3/bridges/test_installer.py": 33,
- "tests/test_audit3/bridges/test_named_pipe_client.py": 1,
- "tests/test_audit3/core/test_xml_gen.py": 4,
- "tests/test_audit3/sandbox/test_injection_monitor.py": 1,
- "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py": 12,
- "tests/test_bridges/test_frida_bridge.py": 1,
- "tests/test_bridges/test_hex_editor_pe_methods.py": 2,
- "tests/test_core/test_logging.py": 4,
- "tests/test_core/test_realcov_05b_tools.py": 1,
- "tests/test_sandbox/test_sandbox_bridge.py": 3
+  "tests/core/test_process_cleanup.py": 10,
+  "tests/test_audit3/bridges/test_installer.py": 33,
+  "tests/test_audit3/bridges/test_named_pipe_client.py": 1,
+  "tests/test_audit3/core/test_xml_gen.py": 4,
+  "tests/test_audit3/sandbox/test_injection_monitor.py": 1,
+  "tests/test_audit4/c14_hex_ips_dead_removal/test_ips_dead_removal.py": 12,
+  "tests/test_bridges/test_frida_bridge.py": 1,
+  "tests/test_bridges/test_hex_editor_pe_methods.py": 2,
+  "tests/test_core/test_logging.py": 4,
+  "tests/test_core/test_realcov_05b_tools.py": 1,
+  "tests/test_sandbox/test_sandbox_bridge.py": 3
 }

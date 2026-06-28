@@ -1008,16 +1008,73 @@ class TestHandleEnumeration:
 
 
 class TestWindowEnumeration:
-    """Verify window enumeration doesn't crash."""
+    """Verify window enumeration returns exact structural fields matching an independent oracle."""
 
-    async def test_get_windows_no_crash(self, attached_bridge: ProcessBridge) -> None:
-        """Verify get_windows returns a list without crashing.
+    async def test_get_windows_no_crash(self, process_bridge: ProcessBridge) -> None:
+        """Verify get_windows returns an entry with exact hwnd, class_name, title, and visible fields.
+
+        Creates a hidden top-level STATIC window in the current process via
+        CreateWindowExW, reads its class name, title, and visibility directly
+        via user32 as an independent oracle, then asserts the bridge returns
+        a matching entry with exact field values. Destroys the window in the
+        finally block. Skips if CreateWindowExW fails (GUI unavailable in the
+        current environment).
+
+        Mutation caught: returning wrong class_name, a mismatched hwnd integer,
+        or inverting the visible flag causes the corresponding assertion to fail.
 
         Args:
-            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        windows = await attached_bridge.get_windows(os.getpid())
-        assert isinstance(windows, list)
+        user32 = ctypes.windll.user32
+        k32 = ctypes.windll.kernel32
+        user32.CreateWindowExW.restype = wintypes.HWND
+        user32.DestroyWindow.restype = wintypes.BOOL
+        user32.DestroyWindow.argtypes = [wintypes.HWND]
+        user32.IsWindowVisible.restype = wintypes.BOOL
+        user32.GetClassNameW.restype = ctypes.c_int
+        user32.GetWindowTextW.restype = ctypes.c_int
+
+        hinstance: int = k32.GetModuleHandleW(None)
+        expected_title = f"IntellicrackBridgeWindowTest_{os.getpid()}"
+        hwnd: int = user32.CreateWindowExW(
+            0,
+            "STATIC",
+            expected_title,
+            0,
+            0, 0, 1, 1,
+            None,
+            None,
+            hinstance,
+            None,
+        )
+        if not hwnd:
+            pytest.skip("CreateWindowExW failed — GUI not available in this environment")
+            return
+        try:
+            class_buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(hwnd, class_buf, 256)
+            expected_class: str = class_buf.value
+
+            expected_visible: bool = bool(user32.IsWindowVisible(hwnd))
+
+            windows = await process_bridge.get_windows(os.getpid())
+            matched = next((w for w in windows if w.get("hwnd") == hwnd), None)
+            assert matched is not None, (
+                f"created window HWND {hwnd:#x} (class={expected_class!r}, title={expected_title!r}) "
+                f"not found in get_windows({os.getpid()}); total windows returned: {len(windows)}"
+            )
+            assert matched["class_name"] == expected_class, (
+                f"class_name mismatch: bridge={matched['class_name']!r}, oracle={expected_class!r}"
+            )
+            assert matched["title"] == expected_title, (
+                f"title mismatch: bridge={matched['title']!r}, oracle={expected_title!r}"
+            )
+            assert matched["visible"] is expected_visible, (
+                f"visible mismatch: bridge={matched['visible']!r}, oracle={expected_visible!r}"
+            )
+        finally:
+            user32.DestroyWindow(hwnd)
 
 
 class TestServiceListing:
@@ -1151,6 +1208,69 @@ class TestThreadContext:
             await attached_bridge.get_thread_context(0)
 
 
+class TestSetThreadContext:
+    """set_thread_context writes register values verifiable via get_thread_context."""
+
+    _SENTINEL: int = 0xDEADB00F
+
+    async def test_set_thread_context_dr0_roundtrip(
+        self,
+        attached_bridge: ProcessBridge,
+        secondary_thread: int,
+    ) -> None:
+        """set_thread_context writes dr0; get_thread_context reads back the sentinel.
+
+        Dr0 is a hardware debug-address register. Setting it to a known sentinel
+        value on a parked worker thread and immediately reading it back via
+        GetThreadContext confirms that SetThreadContext was actually called.
+        Dr0 does not affect execution unless dr7 enables the breakpoint, so the
+        secondary thread continues safely with dr0 = sentinel until restored.
+
+        Mutation caught: returning True from set_thread_context without calling
+        SetThreadContext causes the readback to return the original dr0 value
+        instead of _SENTINEL, failing the equality assertion.
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+            secondary_thread: Windows thread id of a parked worker thread used for context queries.
+        """
+        if sys.platform != "win32":
+            pytest.skip("Windows-only: SetThreadContext / GetThreadContext")
+
+        ctx_before = await attached_bridge.get_thread_context(secondary_thread)
+        original_dr0 = int(ctx_before["dr0"])
+        try:
+            result = await attached_bridge.set_thread_context(
+                secondary_thread,
+                {"dr0": self._SENTINEL},
+            )
+            assert result is True, "set_thread_context must return True on success"
+
+            ctx_after = await attached_bridge.get_thread_context(secondary_thread)
+            read_back = int(ctx_after["dr0"])
+            assert read_back == self._SENTINEL, (
+                f"dr0 must equal sentinel {self._SENTINEL:#010x} after set_thread_context; "
+                f"got {read_back:#010x} -- SetThreadContext was not called or wrote to the wrong field"
+            )
+        finally:
+            await attached_bridge.set_thread_context(
+                secondary_thread,
+                {"dr0": original_dr0},
+            )
+
+    async def test_set_thread_context_invalid_tid_raises(
+        self,
+        attached_bridge: ProcessBridge,
+    ) -> None:
+        """set_thread_context raises ToolError for TID 0 (non-existent thread).
+
+        Args:
+            attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
+        """
+        with pytest.raises(ToolError, match="thread open failed"):
+            await attached_bridge.set_thread_context(0, {"dr0": 0})
+
+
 class TestMitigationPolicies:
     """Verify mitigation policy queries."""
 
@@ -1217,14 +1337,40 @@ class TestJobGuiCom:
     """Verify job object, GUI resources, and COM enumeration."""
 
     async def test_get_job_info_has_in_job(self, attached_bridge: ProcessBridge) -> None:
-        """Verify job info has 'in_job' key.
+        """Verify get_job_info returns in_job matching the IsProcessInJob Win32 oracle.
+
+        Calls IsProcessInJob on the current process handle directly (independent
+        of the bridge code path) to establish the expected boolean, then asserts
+        the bridge returns the identical value. Also asserts the value is bool, not
+        an int or None.
+
+        Mutation caught: always returning in_job=False when the process is actually
+        in a job causes the oracle comparison to fail; always returning in_job=True
+        when it is not in a job also fails.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
         """
+        k32 = ctypes.windll.kernel32
+        k32.IsProcessInJob.restype = wintypes.BOOL
+        k32.IsProcessInJob.argtypes = [wintypes.HANDLE, wintypes.HANDLE, ctypes.POINTER(wintypes.BOOL)]
+        k32.GetCurrentProcess.restype = wintypes.HANDLE
+
+        in_job_oracle = wintypes.BOOL(0)
+        current_handle: int = k32.GetCurrentProcess()
+        ok: int = k32.IsProcessInJob(current_handle, None, ctypes.byref(in_job_oracle))
+        if not ok:
+            pytest.skip("IsProcessInJob failed — cannot establish oracle")
+        expected_in_job: bool = bool(in_job_oracle.value)
+
         info = await attached_bridge.get_job_info(os.getpid())
+        assert isinstance(info, dict)
         assert "in_job" in info
-        assert isinstance(info["in_job"], bool)
+        in_job_val: object = info["in_job"]
+        assert isinstance(in_job_val, bool), f"in_job must be bool, got {type(in_job_val).__name__}"
+        assert in_job_val is expected_in_job, (
+            f"bridge in_job={in_job_val!r} does not match IsProcessInJob oracle={expected_in_job!r}"
+        )
 
     async def test_get_gui_resources_has_counts(self, attached_bridge: ProcessBridge) -> None:
         """Verify GUI resources has non-negative counts.
@@ -1244,6 +1390,81 @@ class TestJobGuiCom:
         """
         result = await attached_bridge.enumerate_com_servers(os.getpid())
         assert isinstance(result, list)
+
+
+class TestKernelDebuggerDetection:
+    """Verify detect_kernel_debugger returns an exact bool matching ProcessDebugPort oracle."""
+
+    async def test_detect_kernel_debugger_current_process_not_debugged(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Verify detect_kernel_debugger returns False matching NtQueryInformationProcess oracle.
+
+        Reads ProcessDebugPort (class 7) via NtQueryInformationProcess directly
+        as an independent oracle, then asserts the bridge returns the identical
+        bool. In the test sandbox (no debugger attached) both must be False.
+
+        Mutation caught: always returning True when the process has no debug port
+        causes both the oracle comparison and the explicit is-False assertion to fail.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        ntdll = ctypes.windll.ntdll
+        k32 = ctypes.windll.kernel32
+        process_debug_port: int = 7
+        process_query_information: int = 0x0400
+        inherit_handle: bool = False
+
+        proc_handle: int = k32.OpenProcess(process_query_information, inherit_handle, os.getpid())
+        if not proc_handle:
+            pytest.skip("cannot open own process for query")
+        try:
+            debug_port = ctypes.c_void_p(0)
+            ret_len = wintypes.ULONG(0)
+            status: int = ntdll.NtQueryInformationProcess(
+                proc_handle,
+                process_debug_port,
+                ctypes.byref(debug_port),
+                ctypes.sizeof(debug_port),
+                ctypes.byref(ret_len),
+            )
+            if status < 0:
+                pytest.skip(f"NtQueryInformationProcess returned NTSTATUS {status & 0xFFFFFFFF:#010x}")
+            expected: bool = bool(debug_port.value)
+        finally:
+            k32.CloseHandle(proc_handle)
+
+        result: bool = await process_bridge.detect_kernel_debugger(os.getpid())
+        assert result is expected, (
+            f"bridge returned {result!r} but NtQueryInformationProcess oracle says {expected!r} "
+            f"for ProcessDebugPort on pid={os.getpid()}"
+        )
+        assert result is False, (
+            "test process must not have a kernel debugger port attached; "
+            "a non-False result indicates an unexpected debugger or a bridge defect"
+        )
+
+    async def test_detect_kernel_debugger_invalid_pid_raises(
+        self,
+        process_bridge: ProcessBridge,
+    ) -> None:
+        """Verify detect_kernel_debugger raises ToolError for an invalid PID.
+
+        An invalid PID (99999999) causes OpenProcess to fail; the bridge must
+        surface this as ToolError rather than silently returning False. Silently
+        returning False for an inaccessible process would allow callers to treat
+        an un-openable process as un-debugged.
+
+        Mutation caught: returning False on OpenProcess failure instead of raising
+        ToolError allows a no-op false-negative result to propagate silently.
+
+        Args:
+            process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
+        """
+        with pytest.raises(ToolError, match="process open failed"):
+            await process_bridge.detect_kernel_debugger(99999999)
 
 
 class TestRegistry:
@@ -1344,12 +1565,18 @@ class TestSehFiberTls:
     """Verify SEH chain, fiber data, and TLS access."""
 
     async def test_get_seh_chain_no_crash(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
-        """Verify SEH chain raises on x64 target and returns list on WOW64.
+        """Verify SEH chain raises on x64 target and validates entry fields on WOW64.
 
         Per F-0008, SEH chain traversal via FS:[0] is only valid for x86 / WOW64.
-        On a native x64 target, ``get_seh_chain`` must raise ``ToolError`` because
-        Windows uses table-based exception handling and the FS:[0] chain pointer
-        is not populated. On a WOW64 (32-bit) target, the call must return a list.
+        On a native x64 target the bridge must raise ToolError with the exact
+        message. On a WOW64 (32-bit) target the bridge must return at least one
+        well-formed entry whose ``address``, ``handler_address``, and ``next``
+        fields are all integers with positive ``address`` and ``handler_address``
+        values (both must be valid pointer-sized memory addresses).
+
+        Mutation caught (x64): suppressing the ToolError raise causes the
+        ``pytest.raises`` block to fail. Mutation caught (WOW64): returning an
+        empty list or omitting required entry keys fails the structural assertions.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
@@ -1361,27 +1588,110 @@ class TestSehFiberTls:
         else:
             chain = await attached_bridge.get_seh_chain(main_thread_tid)
             assert isinstance(chain, list)
+            assert len(chain) >= 1, "WOW64 thread must have at least one SEH frame"
+            for entry in chain:
+                assert "address" in entry, f"SEH entry missing 'address' key: {entry}"
+                assert "handler_address" in entry, f"SEH entry missing 'handler_address' key: {entry}"
+                assert "next" in entry, f"SEH entry missing 'next' key: {entry}"
+                assert isinstance(entry["address"], int), (
+                    f"address must be int, got {type(entry['address']).__name__}"
+                )
+                assert isinstance(entry["handler_address"], int), (
+                    f"handler_address must be int, got {type(entry['handler_address']).__name__}"
+                )
+                assert isinstance(entry["next"], int), (
+                    f"next must be int, got {type(entry['next']).__name__}"
+                )
+                assert entry["address"] > 0, (
+                    f"SEH frame address {entry['address']:#x} must be positive (valid pointer)"
+                )
+                assert entry["handler_address"] > 0, (
+                    f"SEH handler_address {entry['handler_address']:#x} must be positive (valid function pointer)"
+                )
 
     async def test_get_fiber_data_returns_dict(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
-        """Verify fiber data has expected keys.
+        """Verify get_fiber_data reports a CPython thread as a non-fiber.
+
+        A CPython interpreter thread never calls ``ConvertThreadToFiber``, so it
+        is not a fiber and ``has_fiber`` must be False. The TEB ``FiberData``
+        field (offset 0x20) is a union with ``Version`` and is therefore non-zero
+        for ordinary threads, so ``has_fiber`` must be derived from the TEB
+        ``HasFiberData`` flag, never from ``fiber_data != 0``.
+
+        Mutation caught: deriving ``has_fiber`` from ``fiber_data != 0`` (the
+        current production behaviour) misclassifies every ordinary thread as a
+        fiber and turns this gate red - this is the documented defect PD-005 in
+        audit/PRODUCTION-DEFECTS.md.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
             main_thread_tid: Windows thread id of the first thread enumerated in the current process.
         """
         result = await attached_bridge.get_fiber_data(main_thread_tid)
-        assert "fiber_data" in result
-        assert "has_fiber" in result
+        assert isinstance(result, dict)
+        assert "fiber_data" in result, "result must contain 'fiber_data' key"
+        assert "has_fiber" in result, "result must contain 'has_fiber' key"
+
+        fiber_data_val: object = result["fiber_data"]
+        has_fiber_val: object = result["has_fiber"]
+
+        assert isinstance(fiber_data_val, int), (
+            f"fiber_data must be int, got {type(fiber_data_val).__name__}"
+        )
+        assert isinstance(has_fiber_val, bool), (
+            f"has_fiber must be bool, got {type(has_fiber_val).__name__}"
+        )
+        assert has_fiber_val is False, (
+            f"has_fiber must be False for a non-fiber Python thread, got {has_fiber_val!r}"
+        )
 
     async def test_get_tls_values_returns_list(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
-        """Verify TLS values returns a list.
+        """Verify get_tls_values excludes zero-value slots and returns exact sentinel at correct index.
+
+        Allocates a TLS slot via TlsAlloc, writes a known sentinel via TlsSetValue,
+        then asserts: (a) every returned entry has a non-zero value (the bridge
+        must exclude zero-value slots), and (b) the allocated slot appears at the
+        correct index with the exact sentinel value.
+
+        Mutation caught: including zero-value slots in the result fails assertion (a);
+        returning the sentinel at the wrong index or with the wrong value fails (b).
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
             main_thread_tid: Windows thread id of the first thread enumerated in the current process.
         """
-        result = await attached_bridge.get_tls_values(main_thread_tid)
-        assert isinstance(result, list)
+        k32 = ctypes.windll.kernel32
+        k32.TlsAlloc.restype = wintypes.DWORD
+        k32.TlsFree.restype = wintypes.BOOL
+        k32.TlsSetValue.restype = wintypes.BOOL
+
+        slot: int = k32.TlsAlloc()
+        if slot == 0xFFFFFFFF:
+            pytest.skip("TlsAlloc failed — TLS slot exhaustion or API unavailable")
+        sentinel: int = 0xDEADC0DE
+        k32.TlsSetValue(slot, ctypes.c_void_p(sentinel))
+        try:
+            result = await attached_bridge.get_tls_values(main_thread_tid)
+            assert isinstance(result, list)
+            for entry in result:
+                entry_val: object = entry.get("value")
+                assert isinstance(entry_val, int), (
+                    f"TLS entry value must be int, got {type(entry_val).__name__}"
+                )
+                assert entry_val != 0, (
+                    f"zero-value TLS slot at index {entry.get('index')} must be excluded from result; "
+                    f"bridge is returning all slots instead of only non-zero slots"
+                )
+            found = next((e for e in result if e.get("index") == slot), None)
+            assert found is not None, (
+                f"allocated TLS slot {slot} with sentinel {sentinel:#010x} not found in result "
+                f"(result has {len(result)} entries, indices: {[e.get('index') for e in result[:10]]})"
+            )
+            assert found["value"] == sentinel, (
+                f"TLS slot {slot}: expected sentinel {sentinel:#010x}, got {found['value']:#010x}"
+            )
+        finally:
+            k32.TlsFree(slot)
 
 
 class TestStaticHelpers:
