@@ -21,9 +21,8 @@ import ctypes
 import math
 import os
 import sys
-from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Final
+from typing import Any, Final, cast
 
 import pefile
 import pytest
@@ -33,19 +32,14 @@ from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.core.types import MemoryRegion, ToolError
 
 
-_coerce_address: Callable[[object], int | None] = vars(_x64dbg_module)["_coerce_address"]
-_x64dbg_error_code: Callable[[ToolError], str | None] = vars(_x64dbg_module)["_x64dbg_error_code"]
+_coerce_address: Any = vars(_x64dbg_module)["_coerce_address"]
+_x64dbg_error_code: Any = vars(_x64dbg_module)["_x64dbg_error_code"]
 
 _NTDLL_PATH: Final[Path] = Path(r"C:\Windows\System32\ntdll.dll")
 _BOGUS_PRIV: Final[str] = "SeBogusInvalidPrivilegeWave5"
 
 _YARA_RULE: Final[str] = (
-    "rule IntellicrockTestPattern {\n"
-    "    strings:\n"
-    "        $a = { 49 4E 54 45 4C 4C 49 43 52 41 43 4B }\n"
-    "    condition:\n"
-    "        $a\n"
-    "}"
+    "rule IntellicrockTestPattern {\n    strings:\n        $a = { 49 4E 54 45 4C 4C 49 43 52 41 43 4B }\n    condition:\n        $a\n}"
 )
 _YARA_PATTERN: Final[bytes] = b"INTELLICRACK"
 
@@ -77,7 +71,8 @@ class TestCoerceAddress:
         Mutation caught: removing the bool guard and falling through to the
         int branch → returns 1 instead of None → assertion fails.
         """
-        assert _coerce_address(True) is None
+        bool_true: bool = True
+        assert _coerce_address(bool_true) is None
 
     def test_bool_false_returns_none(self) -> None:
         """``False`` is also rejected, not converted to 0.
@@ -85,7 +80,8 @@ class TestCoerceAddress:
         Oracle: x64dbg.py:408 ``if isinstance(value, bool): return None``.
         Mutation caught: removing the bool check → returns 0 → assertion fails.
         """
-        assert _coerce_address(False) is None
+        bool_false: bool = False
+        assert _coerce_address(bool_false) is None
 
     def test_plain_int_passthrough(self) -> None:
         """A plain ``int`` (non-bool) is returned unchanged.
@@ -154,7 +150,7 @@ class TestCoerceAddress:
         Mutation caught: adding a ``isinstance(value, float)`` branch that
         converts floats → returns an int → assertion fails.
         """
-        assert _coerce_address(3.14) is None
+        assert _coerce_address(math.pi) is None
 
 
 class TestX64dbgErrorCode:
@@ -221,9 +217,6 @@ class TestGetMemoryRegions:
         process is above VA 0; every committed region has non-zero size.
         Mutation caught: zeroing ``base_address`` or ``size`` in
         ``_append_committed_region`` → assertion fails.
-
-        Raises:
-            AssertionError: If no valid committed regions found.
         """
         bridge = X64DbgBridge()
         _attach_self(bridge)
@@ -239,9 +232,6 @@ class TestGetMemoryRegions:
         protection maps to ``'r'`` in the bridge's string encoding.
         Mutation caught: replacing all ``'r'`` chars with ``'-'`` in the
         protection string logic → no readable region found → assertion fails.
-
-        Raises:
-            AssertionError: If no readable regions found.
         """
         bridge = X64DbgBridge()
         _attach_self(bridge)
@@ -256,9 +246,6 @@ class TestGetMemoryRegions:
         dataclass instances with named fields.
         Mutation caught: returning raw dicts instead of dataclass instances →
         attribute access fails → assertion fails.
-
-        Raises:
-            AssertionError: If regions list is empty or wrong type.
         """
         bridge = X64DbgBridge()
         _attach_self(bridge)
@@ -302,7 +289,7 @@ class TestAnalyzeEntropy:
         block = results[0]
         assert block["readable"] is True
         assert block["size"] == 256
-        assert block["entropy"] == 0.0
+        assert block["entropy"] == pytest.approx(0.0)
 
     async def test_alternating_bytes_block_has_entropy_one(self) -> None:
         """A block with exactly 128 zeros and 128 0xFF bytes has entropy 1.0.
@@ -492,9 +479,11 @@ class TestGetResources:
         pe.parse_data_directories()
         pefile_type_ids: set[int] = set()
         if hasattr(pe, "DIRECTORY_ENTRY_RESOURCE"):
-            for entry in pe.DIRECTORY_ENTRY_RESOURCE.entries:
-                if hasattr(entry, "id") and entry.id is not None:
-                    pefile_type_ids.add(int(entry.id))
+            dir_res: Any = getattr(pe, "DIRECTORY_ENTRY_RESOURCE")
+            for entry in cast("list[Any]", getattr(dir_res, "entries", [])):
+                entry_id: Any = getattr(entry, "id", None)
+                if entry_id is not None:
+                    pefile_type_ids.add(int(entry_id))
         pe.close()
 
         bridge = X64DbgBridge()
@@ -506,22 +495,20 @@ class TestGetResources:
 
         bridge_type_ids: set[int] = {int(r["type_id"]) for r in resources if r.get("type_id") is not None}
         shared_ids: set[int] = pefile_type_ids & bridge_type_ids
-        assert len(shared_ids) > 0, (
-            f"No overlap between pefile type_ids {pefile_type_ids} and bridge type_ids {bridge_type_ids}"
-        )
+        assert len(shared_ids) > 0, f"No overlap between pefile type_ids {pefile_type_ids} and bridge type_ids {bridge_type_ids}"
 
         version_resources = [r for r in resources if r.get("type_id") == 16]
         assert len(version_resources) > 0, (
             "ntdll.dll must expose an RT_VERSION resource (type_id == 16); "
             f"bridge reported type_ids: {[r.get('type_id') for r in resources]}"
         )
-        assert 16 in pefile_type_ids, (
-            "pefile oracle must also report type_id 16 (RT_VERSION) in ntdll.dll"
-        )
+        assert 16 in pefile_type_ids, "pefile oracle must also report type_id 16 (RT_VERSION) in ntdll.dll"
         rv = version_resources[0]
         assert rv["type_id"] == 16
-        assert isinstance(rv["type_name"], str) and rv["type_name"] != ""
-        assert isinstance(rv["size"], int) and rv["size"] > 0
+        assert isinstance(rv["type_name"], str)
+        assert rv["type_name"]
+        assert isinstance(rv["size"], int)
+        assert rv["size"] > 0
 
     async def test_each_resource_entry_has_required_fields(self) -> None:
         """Every entry has ``type_id``, ``type_name``, ``id``, ``language``, ``rva``, ``size``.

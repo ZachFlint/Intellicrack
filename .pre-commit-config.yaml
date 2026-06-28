@@ -13,28 +13,28 @@ repos:
     hooks:
       - id: clean-nul-files
         name: Clean NUL Files (Windows artifact cleanup)
-        entry: pixi run python scripts/clean_nul.py
+        entry: bash -c '.pixi/envs/default/python.exe scripts/clean_nul.py'
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
       - id: generate-requirements
         name: Generate requirements.txt from pixi environment
-        entry: bash -c 'pixi run python scripts/generate_requirements.py && git add requirements.txt'
+        entry: bash -c '.pixi/envs/default/python.exe scripts/generate_requirements.py && git add requirements.txt'
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
       - id: generate-structure-files
         name: Generate Intellicrack Structure Files (HTA/TXT)
-        entry: bash -c 'pixi run python scripts/generate_tree.py'
+        entry: bash -c '.pixi/envs/default/python.exe scripts/generate_tree.py'
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-commit]
       - id: generate-knowledge-graph
         name: Generate Intellicrack Knowledge Graph
-        entry: bash -c 'pixi run python scripts/knowledge-graph/visualize_architecture.py --layout hierarchical'
+        entry: bash -c '.pixi/envs/default/python.exe scripts/knowledge-graph/visualize_architecture.py --layout hierarchical'
         language: system
         pass_filenames: false
         always_run: true

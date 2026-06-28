@@ -43,12 +43,8 @@ _CANNED_PID_INT: Final[int] = 0x1234
 class _FakePipeClient:
     """In-process substitute for ``NamedPipeClient``.
 
-    Records every ``(command, params)`` pair the bridge sends and returns
-    canned responses from the caller-supplied responder callable.
-
-    Attributes:
-        sent: Ordered list of ``(command, params)`` pairs recorded on each
-            ``send_command`` call.
+    Records every ``(command, params)`` pair the bridge sends in ``self.sent``
+    and returns canned responses from the caller-supplied responder callable.
     """
 
     def __init__(
@@ -141,6 +137,7 @@ def _load_responder(
     Returns:
         dict[str, Any]: Canned success response.
     """
+    del params
     if command == "reg_get":
         return {"success": True, "result": _CANNED_PID_HEX}
     return {"success": True, "result": ""}
@@ -161,7 +158,8 @@ class TestInitialize:
     """Gate ``initialize`` — path storage and connection-state logic."""
 
     async def test_none_path_leaves_x64dbg_path_none(
-        self, bridge: X64DbgBridge
+        self,
+        bridge: X64DbgBridge,
     ) -> None:
         """``initialize(None)`` stores ``None`` and leaves state.connected=False.
 
@@ -178,7 +176,8 @@ class TestInitialize:
         assert bridge.state.connected is False
 
     async def test_nonexistent_dir_stores_path_but_stays_disconnected(
-        self, bridge: X64DbgBridge
+        self,
+        bridge: X64DbgBridge,
     ) -> None:
         """A directory without x64dbg.exe stores the path but does not connect.
 
@@ -203,7 +202,8 @@ class TestLoad:
     """Gate ``load`` — InitDebug command framing and state update."""
 
     async def test_nonexistent_file_raises_tool_error_containing_not_found(
-        self, bridge: X64DbgBridge
+        self,
+        bridge: X64DbgBridge,
     ) -> None:
         """``load`` with a non-existent path raises ``ToolError`` before the pipe.
 
@@ -219,7 +219,8 @@ class TestLoad:
             await bridge.load(Path("C:/no_such_binary_wave5_test.exe"))
 
     async def test_sends_initdebug_with_exact_posix_path(
-        self, bridge: X64DbgBridge
+        self,
+        bridge: X64DbgBridge,
     ) -> None:
         """``load`` sends the exact ``InitDebug "…"`` command through the pipe.
 
@@ -237,7 +238,8 @@ class TestLoad:
         assert ("exec", {"command": expected_cmd}) in fake.sent
 
     async def test_sets_binary_loaded_state_after_success(
-        self, bridge: X64DbgBridge
+        self,
+        bridge: X64DbgBridge,
     ) -> None:
         """After a successful ``load`` the bridge sets ``state.binary_loaded``.
 
@@ -262,7 +264,8 @@ class TestAttach:
     """Gate ``attach`` — architecture detection and ToolError for PID 0."""
 
     async def test_pid_zero_raises_cannot_detect_architecture(
-        self, bridge: X64DbgBridge
+        self,
+        bridge: X64DbgBridge,
     ) -> None:
         """``attach(0)`` raises ``ToolError`` because OpenProcess(pid=0) always fails.
 
@@ -284,7 +287,8 @@ class TestDetach:
     """Gate ``detach`` — send detach command and clear attached-pid state."""
 
     async def test_sends_detach_command_and_clears_attached_pid(
-        self, bridge: X64DbgBridge
+        self,
+        bridge: X64DbgBridge,
     ) -> None:
         """``detach`` sends ``("exec", {"command": "detach"})`` and clears the pid.
 
@@ -299,8 +303,10 @@ class TestDetach:
         bridge.attached_pid = 9999
 
         def _simple_responder(
-            command: str, _params: dict[str, Any] | None
+            command: str,
+            _params: dict[str, Any] | None,
         ) -> dict[str, Any]:
+            del command
             return {"success": True, "result": ""}
 
         fake = _install_fake_pipe(bridge, _simple_responder)
@@ -317,7 +323,8 @@ class TestSpawn:
     """Gate ``spawn`` — delegates to load with correct args, returns PID."""
 
     async def test_sends_initdebug_with_quoted_args_and_returns_pid(
-        self, bridge: X64DbgBridge
+        self,
+        bridge: X64DbgBridge,
     ) -> None:
         """``spawn`` builds the command line correctly and returns the parsed PID.
 
@@ -359,7 +366,8 @@ class TestShutdown:
         assert bridge.attached_pid is None
 
     async def test_oserror_in_close_propagates_but_attached_pid_is_still_cleared(
-        self, bridge: X64DbgBridge
+        self,
+        bridge: X64DbgBridge,
     ) -> None:
         """A ``close()`` error propagates AND ``attached_pid`` is still cleared.
 
@@ -384,11 +392,15 @@ class TestShutdown:
                 return True
 
             async def close(self) -> None:
-                raise OSError("pipe close failed")
+                msg = "pipe close failed"
+                raise OSError(msg)
 
             async def send_command(
-                self, command: str, params: dict[str, Any] | None = None
+                self,
+                command: str,
+                params: dict[str, Any] | None = None,
             ) -> dict[str, Any]:
+                del command, params
                 return {"success": True, "result": ""}
 
         setattr(bridge, "_pipe_client", _ErrorPipeClient())

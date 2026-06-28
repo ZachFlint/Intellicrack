@@ -34,13 +34,18 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import pefile
 import pytest
 
-from intellicrack.bridges.base import StackFrame
 from intellicrack.bridges.x64dbg import X64DbgBridge
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from intellicrack.bridges.base import StackFrame
 
 
 _SCRIPT_PATH: Final[str] = "/scripts/analysis.x64dbg"
@@ -54,15 +59,11 @@ class _FakePipeClient:
 
     Records every ``(command, params)`` pair the bridge sends and returns
     canned responses from the caller-supplied responder callable.
-
-    Attributes:
-        sent: Ordered list of ``(command, params)`` pairs recorded on each
-            ``send_command`` call.
     """
 
     def __init__(
         self,
-        responder: Any,
+        responder: Callable[[str, dict[str, Any] | None], dict[str, Any]],
     ) -> None:
         """Initialise with a scripted responder callable.
 
@@ -111,7 +112,7 @@ class _PlaceholderProcess:
 
 def _install_fake_pipe(
     bridge: X64DbgBridge,
-    responder: Any,
+    responder: Callable[[str, dict[str, Any] | None], dict[str, Any]],
 ) -> _FakePipeClient:
     """Attach a fake pipe client to a bridge and mark the plugin as deployed.
 
@@ -129,7 +130,7 @@ def _install_fake_pipe(
     return fake
 
 
-def _success(result: Any = "") -> dict[str, Any]:
+def _success(result: object = "") -> dict[str, Any]:
     """Return a generic success response dict.
 
     Args:
@@ -464,7 +465,7 @@ class TestScriptLoad:
         assertion on result value fails.
         """
 
-        def _responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
+        def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "eval":
                 return _success(0)
             return _success("")
@@ -495,7 +496,7 @@ class TestScriptRun:
         assertion fails.
         """
 
-        def _responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
+        def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "eval":
                 return _success(0)
             return _success("")
@@ -524,7 +525,7 @@ class TestScriptCmd:
         result assertion fails.
         """
 
-        def _responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
+        def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "eval":
                 return _success(0)
             return _success("")
@@ -552,7 +553,7 @@ class TestScriptAbort:
         Mutation caught: omitting the eval query → assertion fails.
         """
 
-        def _responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
+        def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "eval":
                 return _success(0)
             return _success("")
@@ -618,7 +619,7 @@ class TestBreakOnTlsCallbacks:
             expected_count = 0
         pe.close()
 
-        def _responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
+        def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
             if command == "bp_list":
                 return {"success": False, "code": "unknown_command", "error": "unknown_command"}
             return {"success": True, "result": None}

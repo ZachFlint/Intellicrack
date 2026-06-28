@@ -186,8 +186,7 @@ def _as_r2pipe(recorder: _CommandRecorder) -> r2pipe.open:
 
 
 # ---------------------------------------------------------------------------
-# define_union semantics
-# GhidraBridge.create_data_type(category, name, "union", fields)
+# define_union semantics — GhidraBridge union branch of create_data_type
 # Mutation caught per test: stated in docstring.
 # ---------------------------------------------------------------------------
 
@@ -208,6 +207,11 @@ class TestDefineUnion:
         Mutation caught: changing type_kind == "union" to type_kind == "Union"
             in the production if/elif chain breaks the branch so UnionDataType
             is never constructed, and the assertion fails.
+
+        Red-by-design (PD-003): create_data_type's remote snippet ends in a
+        trailing if/else, so prepare_remote_script captures no sentinel and the
+        success dict is never returned; this gate stays red until PD-003 is
+        fixed.
         """
         bridge, fake = _make_ghidra_bridge()
         fake.eval_response = {"name": "MyUnion", "kind": "union", "size": 8, "success": True}
@@ -270,6 +274,10 @@ class TestDefineUnion:
         Mutation caught: if the bridge returns an empty fallback dict instead
             of forwarding eval_response, result["success"] is False and
             result["kind"] is absent, failing the assertion.
+
+        Red-by-design (PD-003): the production snippet's trailing if/else means
+        no result is captured, so this gate is currently red until PD-003 is
+        fixed.
         """
         bridge, fake = _make_ghidra_bridge()
         fake.eval_response = {"name": "RegUnion", "kind": "union", "size": 4, "success": True}
@@ -294,8 +302,7 @@ class TestDefineUnion:
 
 
 # ---------------------------------------------------------------------------
-# define_enum + add_enum_value semantics
-# GhidraBridge.create_data_type(category, name, "enum", fields)
+# define_enum + add_enum_value semantics — GhidraBridge enum branch
 # The "add_enum_value" finding maps to the per-field enum_dt.add() call;
 # the specific field name and numeric value must appear in the emitted script.
 # ---------------------------------------------------------------------------
@@ -378,7 +385,7 @@ class TestDefineEnum:
         assert "EC_OK" in script
         assert "EC_TIMEOUT" in script
         assert "EC_INVALID" in script
-        assert "\"value\": 0" in script or "'value': 0" in script or "0" in script
+        assert '"value": 0' in script or "'value': 0" in script or "0" in script
 
     def test_enum_disconnected_raises_tool_error(self) -> None:
         """create_data_type raises ToolError when the bridge is not connected.
@@ -393,8 +400,7 @@ class TestDefineEnum:
 
 
 # ---------------------------------------------------------------------------
-# create_typedef semantics
-# GhidraBridge.create_data_type(category, name, "typedef", [{type: base}])
+# create_typedef semantics — GhidraBridge typedef branch of create_data_type
 # ---------------------------------------------------------------------------
 
 
@@ -462,6 +468,9 @@ class TestCreateTypedef:
         Mutation caught: returning the fallback {"success": False} dict instead
             of forwarding eval_response makes result["success"] False and
             result["size"] == 0, failing both assertions.
+
+        Red-by-design (PD-003): create_data_type's trailing if/else prevents
+        result capture, so this gate is currently red until PD-003 is fixed.
         """
         bridge, fake = _make_ghidra_bridge()
         fake.eval_response = {"name": "HANDLE", "kind": "typedef", "size": 8, "success": True}
@@ -486,8 +495,8 @@ class TestCreateTypedef:
 
 
 # ---------------------------------------------------------------------------
-# CutterBridge: get_types
-# Method: cutter.py:3071 — issues "tj" and returns parsed list of type dicts.
+# CutterBridge get_types
+# Method at cutter.py:3071 — issues "tj" and returns parsed list of type dicts.
 # No prior test gate exists for this method.
 # ---------------------------------------------------------------------------
 
@@ -589,8 +598,8 @@ class TestGetTypes:
 
 
 # ---------------------------------------------------------------------------
-# CutterBridge: import_c_header
-# Method: cutter.py:3173 — writes header to temp .h file, issues "to <path>" cmd.
+# CutterBridge import_c_header
+# Method at cutter.py:3173 — writes header to temp .h file, issues "to <path>" cmd.
 # No prior test gate exists for this method.
 # ---------------------------------------------------------------------------
 

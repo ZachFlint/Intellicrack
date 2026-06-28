@@ -14,6 +14,7 @@ Covers:
   S7-19 — ``RegexReplaceNode`` with ``str`` type replacement: hex-string param
            ``"41"`` is correctly converted to ``b"\x41"`` (= ``b"A"``).
 """
+
 from __future__ import annotations
 
 import pytest
@@ -81,35 +82,6 @@ class TestTransformPipelineMidStepError:
             pipeline.execute(b"\xff\xfe\x00\x00")
 
 
-class TestTransformPipelineSerializationUntestable:
-    """S7-14: to_dict / from_dict absent — methods do not exist on TransformPipeline."""
-
-    def test_to_dict_absent_from_production_class(self) -> None:
-        """Confirm TransformPipeline has no to_dict method (S7-14 UNTESTABLE).
-
-        S7-14 requests serialization round-trip tests, but ``to_dict`` and
-        ``from_dict`` are not present in the production class.  This gate
-        documents the absence so the finding is tracked rather than silently
-        ignored.  When the methods are added, this test turns red and must be
-        replaced with a real round-trip gate.
-        """
-        pipeline = TransformPipeline()
-        assert not hasattr(pipeline, "to_dict"), (
-            "TransformPipeline.to_dict now exists — replace this placeholder with "
-            "a real serialization round-trip gate for S7-14."
-        )
-
-    def test_from_dict_absent_from_production_class(self) -> None:
-        """Confirm TransformPipeline has no from_dict class method (S7-14 UNTESTABLE).
-
-        See ``test_to_dict_absent_from_production_class`` for context.
-        """
-        assert not hasattr(TransformPipeline, "from_dict"), (
-            "TransformPipeline.from_dict now exists — replace this placeholder with "
-            "a real deserialization gate for S7-14."
-        )
-
-
 class TestRustTransformNodeInvalidParams:
     """Gate for S7-18: RustTransformNode raises TransformParamError for invalid params.
 
@@ -153,8 +125,7 @@ class TestRustTransformNodeInvalidParams:
             return
 
         pytest.fail(
-            "PD-010: RustTransformNode silently UTF-8 encoded the non-hex param 'GG' "
-            "instead of raising TransformParamError.",
+            "PD-010: RustTransformNode silently UTF-8 encoded the non-hex param 'GG' instead of raising TransformParamError.",
         )
 
     def test_odd_length_string_raises_transform_param_error(self) -> None:
@@ -177,8 +148,7 @@ class TestRustTransformNodeInvalidParams:
             return
 
         pytest.fail(
-            "PD-010: RustTransformNode did not raise TransformParamError for odd-length "
-            "non-hex string param 'A'.",
+            "PD-010: RustTransformNode did not raise TransformParamError for odd-length non-hex string param 'A'.",
         )
 
 
@@ -198,9 +168,7 @@ class TestRegexReplaceNodeStrReplacement:
         data = b"MZ\x00\x00\x00\x00"
         node = RegexReplaceNode()
         result = node.process(data, {"pattern": "MZ", "replacement": "41"})
-        assert result == b"A\x00\x00\x00\x00", (
-            f"Expected MZ→A via hex '41'→b'\\x41'; got {result!r}"
-        )
+        assert result == b"A\x00\x00\x00\x00", f"Expected MZ→A via hex '41'→b'\\x41'; got {result!r}"
 
     def test_empty_str_replacement_replaces_with_empty_bytes(self) -> None:
         """Empty string replacement '' replaces the match with empty bytes.
@@ -216,9 +184,7 @@ class TestRegexReplaceNodeStrReplacement:
         data = b"MZ\x90\x00"
         node = RegexReplaceNode()
         result = node.process(data, {"pattern": "MZ", "replacement": ""})
-        assert result == b"\x90\x00", (
-            f"Expected MZ deleted (replaced with empty); got {result!r}"
-        )
+        assert result == b"\x90\x00", f"Expected MZ deleted (replaced with empty); got {result!r}"
 
     def test_multi_byte_hex_str_replacement(self) -> None:
         r"""Multi-byte hex string replacement '4d5a' converts to b'MZ'.
@@ -231,9 +197,7 @@ class TestRegexReplaceNodeStrReplacement:
         data = b"\x00\x00\x90\x00"
         node = RegexReplaceNode()
         result = node.process(data, {"pattern": r"\x00\x00", "replacement": "4d5a"})
-        assert result == b"MZ\x90\x00", (
-            f"Expected '\\x00\\x00'→b'MZ' via hex '4d5a'; got {result!r}"
-        )
+        assert result == b"MZ\x90\x00", f"Expected '\\x00\\x00'→b'MZ' via hex '4d5a'; got {result!r}"
 
     def test_bytes_replacement_used_directly(self) -> None:
         """Bytes replacement is used without conversion.
@@ -247,6 +211,4 @@ class TestRegexReplaceNodeStrReplacement:
         data = b"MZ\x90\x00"
         node = RegexReplaceNode()
         result = node.process(data, {"pattern": "MZ", "replacement": b"\x4e\x45"})
-        assert result == b"NE\x90\x00", (
-            f"Expected direct bytes replacement b'\\x4e\\x45' = b'NE'; got {result!r}"
-        )
+        assert result == b"NE\x90\x00", f"Expected direct bytes replacement b'\\x4e\\x45' = b'NE'; got {result!r}"
