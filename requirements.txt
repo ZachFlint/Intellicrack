@@ -333,7 +333,7 @@ tokenizers==0.22.2
 tomli==2.4.1
 tomli-w==1.2.0
 tomlkit==0.15.0
-torch==2.10.0+xpu
+torch==2.12.1
 tornado==6.5.7
 tox==4.56.1
 tqdm==4.67.3
