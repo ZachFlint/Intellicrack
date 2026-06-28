@@ -342,15 +342,18 @@ class TestCreateNamespace:
 
     @pytest.mark.asyncio
     async def test_create_namespace_script_embeds_name_as_json_string(self) -> None:
-        """``create_namespace`` script must embed the name via ``json.dumps`` quoting.
+        """``create_namespace`` script must embed the name as a quoted string literal.
 
         The bridge uses ``json.dumps(name)`` to produce the Jython string
         literal, ensuring names with quotes or backslashes do not break the
-        Jython syntax.
+        Jython syntax. ``prepare_remote_script`` re-emits the script through
+        ``ast.unparse``, which normalises string literals to single quotes, so
+        the embedded form is ``'AnalysisHelpers'`` rather than the authored
+        double-quoted form.
 
-        Mutation caught: embedding the name unquoted → a name containing a
-        space or quote would produce a syntax error on the Jython side, or the
-        assertion on the quoted form would fail.
+        Mutation caught: embedding the name unquoted (as a bare identifier)
+        would leave the script without any quoted ``AnalysisHelpers`` literal,
+        failing the assertion.
         """
         name = "AnalysisHelpers"
         response: dict[str, Any] = {"name": name, "path": name, "success": True}
@@ -360,7 +363,7 @@ class TestCreateNamespace:
 
         assert len(fake.exec_calls) >= 1
         script = fake.exec_calls[0]
-        assert f'"{name}"' in script
+        assert f"'{name}'" in script or f'"{name}"' in script
 
     @pytest.mark.asyncio
     async def test_create_namespace_returns_name_path_success_from_remote(self) -> None:

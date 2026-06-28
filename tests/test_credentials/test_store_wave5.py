@@ -50,14 +50,55 @@ def _make_keyring_free_store(env_entries: dict[str, str] | None = None) -> Crede
     return store
 
 
+def _make_keyring_available_store(env_entries: dict[str, str] | None = None) -> CredentialStore:
+    """Create a CredentialStore reporting keyring as available, with controlled env.
+
+    The store's keyring presence guard is satisfied (so keyring-gated branches
+    execute) while its env fallback contains only the injected entries.
+
+    Args:
+        env_entries: Variable-name-to-value pairs injected into the fallback
+            CredentialLoader without touching os.environ or disk.
+
+    Returns:
+        CredentialStore: A store whose keyring_available is always True,
+        falling back only to the injected env entries.
+    """
+    loader = CredentialLoader(env_path=Path("/__nonexistent_wave5_gate__/.env"))
+    if env_entries:
+        loader_any: Any = cast(Any, loader)
+        env_vars: dict[str, str] = loader_any._env_vars
+        env_vars.update(env_entries)
+    store = CredentialStore(fallback_loader=loader)
+    store_any: Any = cast(Any, store)
+    store_any._keyring_checked = True
+    store_any._keyring_available = True
+    return store
+
+
+def _clear_ollama_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Remove ambient OLLAMA credential variables from os.environ.
+
+    The test sandbox container ships provider keys in os.environ, and the
+    CredentialLoader falls back to os.environ; clearing OLLAMA_API_KEY makes
+    the "no credential" precondition genuinely hold.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture used to delete the variables.
+    """
+    monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
+    monkeypatch.delenv("OLLAMA_HOST", raising=False)
+
+
 def test_deserialize_metadata_corrupt_fallback() -> None:
     """_deserialize_metadata with corrupt JSON falls back to a default StoredCredential.
 
     Mutation: removing the except block and re-raising would change the outcome
     from a valid fallback StoredCredential to an uncaught exception.
     """
-    result: StoredCredential = CredentialStore._deserialize_metadata(
-        "not-valid-json{{{", ProviderName.ANTHROPIC
+    result: StoredCredential = cast(Any, CredentialStore)._deserialize_metadata(
+        "not-valid-json{{{",
+        ProviderName.ANTHROPIC,
     )
     assert result.provider is ProviderName.ANTHROPIC
     assert result.key_name == ProviderName.ANTHROPIC.value
@@ -73,7 +114,7 @@ def test_set_keyring_unavailable_raises() -> None:
     """
     store = _make_keyring_free_store()
     creds = ProviderCredentials(api_key="sk-ant-test-wave5")
-    with pytest.raises(KeyringUnavailableError, match="(?i)keyring.*not.*available|not available"):
+    with pytest.raises(KeyringUnavailableError, match=r"(?i)keyring.*not.*available|not available"):
         asyncio.run(store.set(ProviderName.ANTHROPIC, creds))
 
 
@@ -84,7 +125,7 @@ def test_delete_keyring_unavailable_raises() -> None:
     instead of raising would make this test pass vacuously.
     """
     store = _make_keyring_free_store()
-    with pytest.raises(KeyringUnavailableError, match="(?i)keyring.*not.*available|not available"):
+    with pytest.raises(KeyringUnavailableError, match=r"(?i)keyring.*not.*available|not available"):
         asyncio.run(store.delete(ProviderName.ANTHROPIC))
 
 
@@ -118,7 +159,7 @@ def test_list_providers_entry_content() -> None:
     the isinstance check green but fails this field-level assertion.
     """
     store = _make_keyring_free_store(
-        env_entries={"OLLAMA_API_KEY": "wave5-ollama-sentinel"}
+        env_entries={"OLLAMA_API_KEY": "wave5-ollama-sentinel"},
     )
 
     async def _run() -> list[StoredCredential]:
@@ -138,22 +179,29 @@ def test_migrate_from_env_keyring_unavailable_raises() -> None:
     would drop the error and make the test fail with DID NOT RAISE.
     """
     store = _make_keyring_free_store(
-        env_entries={"OLLAMA_API_KEY": "wave5-migrate-test"}
+        env_entries={"OLLAMA_API_KEY": "wave5-migrate-test"},
     )
     with pytest.raises(
         KeyringUnavailableError,
-        match="(?i)keyring.*not.*available|not available|migration",
+        match=r"(?i)keyring.*not.*available|not available|migration",
     ):
         asyncio.run(store.migrate_from_env([ProviderName.OLLAMA]))
 
 
-def test_migrate_from_env_missing_key_result_false() -> None:
+def test_migrate_from_env_missing_key_result_false(monkeypatch: pytest.MonkeyPatch) -> None:
     """migrate_from_env() maps a provider to False when its env var is absent.
+
+    Keyring is reported available so the missing-key branch (store.py:601) is
+    reached rather than the unavailable guard (store.py:593).
+
+    Args:
+        monkeypatch: pytest fixture used to clear ambient OLLAMA env vars.
 
     Mutation: defaulting missing providers to True instead of False turns
     the False assertion red.
     """
-    store = _make_keyring_free_store()
+    _clear_ollama_env(monkeypatch)
+    store = _make_keyring_available_store()
 
     async def _run() -> dict[ProviderName, bool]:
         return await store.migrate_from_env([ProviderName.OLLAMA])
@@ -162,11 +210,15 @@ def test_migrate_from_env_missing_key_result_false() -> None:
     assert result[ProviderName.OLLAMA] is False
 
 
-def test_validate_no_credentials_returns_false_with_message() -> None:
+def test_validate_no_credentials_returns_false_with_message(monkeypatch: pytest.MonkeyPatch) -> None:
     """validate() returns (False, non-empty message) when no credential exists.
+
+    Args:
+        monkeypatch: pytest fixture used to clear ambient OLLAMA env vars.
 
     Mutation: returning (True, None) unconditionally makes the False assertion red.
     """
+    _clear_ollama_env(monkeypatch)
     store = _make_keyring_free_store()
 
     async def _run() -> tuple[bool, str | None]:
@@ -178,12 +230,16 @@ def test_validate_no_credentials_returns_false_with_message() -> None:
     assert len(message) > 0
 
 
-def test_get_source_no_credential_returns_none() -> None:
+def test_get_source_no_credential_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
     """get_source() returns None when no credential exists anywhere.
+
+    Args:
+        monkeypatch: pytest fixture used to clear ambient OLLAMA env vars.
 
     Mutation: returning CredentialSource.KEYRING as a default turns the
     None assertion red.
     """
+    _clear_ollama_env(monkeypatch)
     store = _make_keyring_free_store()
 
     async def _run() -> CredentialSource | None:

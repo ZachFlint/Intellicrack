@@ -263,11 +263,13 @@ class _FakeDeviceW5:
 
         Args:
             pid: Process ID to resume.
+
+        Raises:
+            RuntimeError: If ``resume_raises`` was set during construction.
         """
         self.resume_calls.append(pid)
-        exc = self._resume_raises
-        if exc is not None:
-            raise exc
+        if self._resume_raises is not None:
+            raise RuntimeError(str(self._resume_raises))
 
     def inject_library_file(self, pid: int, path: str, entrypoint: str, data: str) -> int:
         """Record injection args and return the scripted ID.
@@ -597,7 +599,11 @@ def test_is_available_returns_true_when_device_accessible() -> None:
     ``is True`` assertion fails.
     """
     original = getattr(frida, "get_local_device")
-    setattr(frida, "get_local_device", lambda **_: object())
+
+    def _fake_local_device(**_: object) -> object:
+        return object()
+
+    setattr(frida, "get_local_device", _fake_local_device)
     try:
         bridge = FridaBridge()
         result = _run(bridge.is_available())
@@ -615,7 +621,8 @@ def test_is_available_returns_false_when_device_raises_oserror() -> None:
     original = getattr(frida, "get_local_device")
 
     def _raise(**_: object) -> object:
-        raise OSError("no device")
+        msg = "no device"
+        raise OSError(msg)
 
     setattr(frida, "get_local_device", _raise)
     try:
@@ -826,11 +833,9 @@ def test_eternalize_script_calls_eternalize_and_removes_from_registry() -> None:
     _index_set(bridge, "_scripts", script_id, fake_script)
     result = _run(bridge.eternalize_script(script_id))
     assert result is True, f"eternalize_script must return True, got {result!r}"
-    assert fake_script.eternalize_calls == 1, (
-        f"script.eternalize() must be called once, got {fake_script.eternalize_calls}"
-    )
+    assert fake_script.eternalize_calls == 1, f"script.eternalize() must be called once, got {fake_script.eternalize_calls}"
     scripts = _get_dict(bridge, "_scripts")
-    assert script_id not in scripts, f"script_id must be removed from _scripts after eternalize, still present"
+    assert script_id not in scripts, "script_id must be removed from _scripts after eternalize, still present"
 
 
 # ---------------------------------------------------------------------------
@@ -848,13 +853,10 @@ def test_create_cancellable_registers_token_in_cancellables() -> None:
     """
     bridge = FridaBridge()
     token_id = cast("str", _run(bridge.create_cancellable()))
-    assert isinstance(token_id, str) and len(token_id) > 0, (
-        f"create_cancellable must return non-empty str id, got {token_id!r}"
-    )
+    assert isinstance(token_id, str), f"create_cancellable must return str id, got {token_id!r}"
+    assert len(token_id) > 0, f"create_cancellable must return non-empty str id, got {token_id!r}"
     cancellables = _get_dict(bridge, "_cancellables")
-    assert token_id in cancellables, (
-        f"returned id {token_id!r} must be registered in _cancellables, keys={list(cancellables)!r}"
-    )
+    assert token_id in cancellables, f"returned id {token_id!r} must be registered in _cancellables, keys={list(cancellables)!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -911,20 +913,16 @@ def test_enumerate_symbols_embeds_module_name_and_parses_canned_symbols() -> Non
     bridge, _ = _build_attached_bridge()
     canned: dict[str, object] = {
         "data": [
-            {"name": _SYM_NAME, "address": "0x7ffe1234", "isGlobal": True, "type": _SYM_TYPE}
-        ]
+            {"name": _SYM_NAME, "address": "0x7ffe1234", "isGlobal": True, "type": _SYM_TYPE},
+        ],
     }
     captured = _patch_exec(bridge, canned)
     result = cast("list[SymbolInfo]", _run(bridge.enumerate_symbols(_MODULE_NAME)))
     assert len(captured) == 1, "exactly one script must be generated"
-    assert _MODULE_NAME in captured[0], (
-        f"module name {_MODULE_NAME!r} must appear in JS source; source={captured[0]!r}"
-    )
+    assert _MODULE_NAME in captured[0], f"module name {_MODULE_NAME!r} must appear in JS source; source={captured[0]!r}"
     assert len(result) == 1, f"must parse exactly 1 symbol, got {len(result)}"
     assert result[0].name == _SYM_NAME, f"symbol name mismatch: {result[0].name!r} != {_SYM_NAME!r}"
-    assert result[0].address == _SYM_ADDRESS, (
-        f"symbol address mismatch: {result[0].address:#x} != {_SYM_ADDRESS:#x}"
-    )
+    assert result[0].address == _SYM_ADDRESS, f"symbol address mismatch: {result[0].address:#x} != {_SYM_ADDRESS:#x}"
 
 
 # ---------------------------------------------------------------------------
@@ -951,16 +949,10 @@ def test_load_module_embeds_module_load_in_js_and_parses_result() -> None:
     }
     captured = _patch_exec(bridge, canned)
     result = cast("ModuleInfo", _run(bridge.load_module(_MODULE_PATH)))
-    assert "Module.load" in captured[0], (
-        f"'Module.load' must appear in JS; source={captured[0]!r}"
-    )
-    assert _MODULE_NAME in captured[0], (
-        f"module filename {_MODULE_NAME!r} must appear in JS path arg; source={captured[0]!r}"
-    )
+    assert "Module.load" in captured[0], f"'Module.load' must appear in JS; source={captured[0]!r}"
+    assert _MODULE_NAME in captured[0], f"module filename {_MODULE_NAME!r} must appear in JS path arg; source={captured[0]!r}"
     assert result.name == _MODULE_NAME, f"module name mismatch: {result.name!r} != {_MODULE_NAME!r}"
-    assert result.base_address == _MODULE_BASE, (
-        f"base address mismatch: {result.base_address:#x} != {_MODULE_BASE:#x}"
-    )
+    assert result.base_address == _MODULE_BASE, f"base address mismatch: {result.base_address:#x} != {_MODULE_BASE:#x}"
     assert result.size == _MODULE_SIZE, f"module size mismatch: {result.size} != {_MODULE_SIZE}"
 
 
@@ -988,14 +980,10 @@ def test_find_module_by_address_embeds_address_and_parses_module_info() -> None:
     }
     captured = _patch_exec(bridge, canned)
     result = cast("ModuleInfo | None", _run(bridge.find_module_by_address(_MODULE_BASE)))
-    assert str(_MODULE_BASE) in captured[0], (
-        f"address decimal {_MODULE_BASE} must appear in JS; source={captured[0]!r}"
-    )
+    assert str(_MODULE_BASE) in captured[0], f"address decimal {_MODULE_BASE} must appear in JS; source={captured[0]!r}"
     assert result is not None, "find_module_by_address must return ModuleInfo when found"
     assert result.name == _MODULE_NAME, f"module name mismatch: {result.name!r}"
-    assert result.base_address == _MODULE_BASE, (
-        f"base_address mismatch: {result.base_address:#x} != {_MODULE_BASE:#x}"
-    )
+    assert result.base_address == _MODULE_BASE, f"base_address mismatch: {result.base_address:#x} != {_MODULE_BASE:#x}"
 
 
 def test_find_module_by_address_returns_none_when_not_found() -> None:
@@ -1035,19 +1023,15 @@ def test_find_functions_matching_embeds_pattern_and_parses_addresses() -> None:
                 "moduleName": "kernel32.dll",
                 "fileName": None,
                 "lineNumber": None,
-            }
-        ]
+            },
+        ],
     }
     captured = _patch_exec(bridge, canned)
     result = cast("list[SymbolInfo]", _run(bridge.find_functions_matching(_FUNC_PATTERN)))
-    assert _FUNC_PATTERN in captured[0], (
-        f"pattern {_FUNC_PATTERN!r} must appear in JS; source={captured[0]!r}"
-    )
+    assert _FUNC_PATTERN in captured[0], f"pattern {_FUNC_PATTERN!r} must appear in JS; source={captured[0]!r}"
     assert len(result) == 1, f"must parse exactly 1 symbol, got {len(result)}"
     assert result[0].name == "CreateFileW", f"symbol name mismatch: {result[0].name!r}"
-    assert result[0].address == _FUNC_ADDR, (
-        f"address mismatch: {result[0].address:#x} != {_FUNC_ADDR:#x}"
-    )
+    assert result[0].address == _FUNC_ADDR, f"address mismatch: {result[0].address:#x} != {_FUNC_ADDR:#x}"
 
 
 # ---------------------------------------------------------------------------
@@ -1078,9 +1062,7 @@ def test_disassemble_instruction_parses_mnemonic_and_operands() -> None:
     }
     captured = _patch_exec(bridge, canned)
     result = cast("InstructionInfo", _run(bridge.disassemble_instruction(_INSN_ADDRESS)))
-    assert str(_INSN_ADDRESS) in captured[0], (
-        f"address decimal {_INSN_ADDRESS} must appear in JS; source={captured[0]!r}"
-    )
+    assert str(_INSN_ADDRESS) in captured[0], f"address decimal {_INSN_ADDRESS} must appear in JS; source={captured[0]!r}"
     assert result.mnemonic == _INSN_MNEMONIC, f"mnemonic mismatch: {result.mnemonic!r}"
     assert result.op_str == _INSN_OP_STR, f"op_str mismatch: {result.op_str!r}"
     assert result.address == _INSN_ADDRESS, f"address mismatch: {result.address:#x}"
@@ -1112,18 +1094,14 @@ def test_get_backtrace_embeds_backtracer_type_and_parses_frames() -> None:
                 "moduleName": "libfoo.dll",
                 "fileName": None,
                 "lineNumber": None,
-            }
-        ]
+            },
+        ],
     }
     captured = _patch_exec(bridge, canned)
     result = cast("list[SymbolInfo]", _run(bridge.get_backtrace(backtracer="fuzzy")))
-    assert "Backtracer.FUZZY" in captured[0], (
-        f"'Backtracer.FUZZY' must appear in JS for backtracer='fuzzy'; source={captured[0]!r}"
-    )
+    assert "Backtracer.FUZZY" in captured[0], f"'Backtracer.FUZZY' must appear in JS for backtracer='fuzzy'; source={captured[0]!r}"
     assert len(result) == 1, f"must parse 1 frame, got {len(result)}"
-    assert result[0].address == _BT_FRAME_ADDR, (
-        f"frame address mismatch: {result[0].address:#x} != {_BT_FRAME_ADDR:#x}"
-    )
+    assert result[0].address == _BT_FRAME_ADDR, f"frame address mismatch: {result[0].address:#x} != {_BT_FRAME_ADDR:#x}"
 
 
 # ---------------------------------------------------------------------------
@@ -1147,13 +1125,9 @@ def test_set_exception_handler_embeds_process_set_exception_handler_and_register
     result_id = cast("str", _run(bridge.set_exception_handler()))
     assert len(sess.sources) >= 1, "set_exception_handler must generate at least one script"
     first_source = sess.sources[0]
-    assert "Process.setExceptionHandler" in first_source, (
-        f"'Process.setExceptionHandler' must appear in JS; source={first_source!r}"
-    )
+    assert "Process.setExceptionHandler" in first_source, f"'Process.setExceptionHandler' must appear in JS; source={first_source!r}"
     exc_script = cast("str | None", _get(bridge, "_exception_handler_script"))
-    assert exc_script == result_id, (
-        f"_exception_handler_script must equal returned id; got {exc_script!r}"
-    )
+    assert exc_script == result_id, f"_exception_handler_script must equal returned id; got {exc_script!r}"
     scripts = _get_dict(bridge, "_scripts")
     assert result_id in scripts, f"script_id {result_id!r} must be in _scripts"
 
@@ -1173,9 +1147,7 @@ def test_revert_hook_embeds_interceptor_revert_in_js() -> None:
     bridge, _ = _build_attached_bridge()
     captured = _patch_exec(bridge, {"success": True})
     result = cast("bool", _run(bridge.revert_hook("0x10001000")))
-    assert "Interceptor.revert" in captured[0], (
-        f"'Interceptor.revert' must appear in JS; source={captured[0]!r}"
-    )
+    assert "Interceptor.revert" in captured[0], f"'Interceptor.revert' must appear in JS; source={captured[0]!r}"
     assert result is True, f"revert_hook must return True on success, got {result!r}"
 
 
@@ -1194,9 +1166,7 @@ def test_flush_interceptor_embeds_interceptor_flush_in_js() -> None:
     bridge, _ = _build_attached_bridge()
     captured = _patch_exec(bridge, {"success": True})
     result = cast("bool", _run(bridge.flush_interceptor()))
-    assert "Interceptor.flush()" in captured[0], (
-        f"'Interceptor.flush()' must appear in JS; source={captured[0]!r}"
-    )
+    assert "Interceptor.flush()" in captured[0], f"'Interceptor.flush()' must appear in JS; source={captured[0]!r}"
     assert result is True, f"flush_interceptor must return True on success, got {result!r}"
 
 
@@ -1229,17 +1199,11 @@ def test_call_system_function_embeds_system_function_and_parses_syscall_result()
     }
     captured = _patch_exec(bridge, canned)
     result = cast("SystemCallResult", _run(bridge.call_system_function(_CALL_FUNC_ADDRESS)))
-    assert "SystemFunction" in captured[0], (
-        f"'SystemFunction' must appear in JS; source={captured[0]!r}"
-    )
-    assert str(_CALL_FUNC_ADDRESS) in captured[0], (
-        f"address decimal {_CALL_FUNC_ADDRESS} must appear in JS; source={captured[0]!r}"
-    )
+    assert "SystemFunction" in captured[0], f"'SystemFunction' must appear in JS; source={captured[0]!r}"
+    assert str(_CALL_FUNC_ADDRESS) in captured[0], f"address decimal {_CALL_FUNC_ADDRESS} must appear in JS; source={captured[0]!r}"
     assert result.value == _SYSCALL_VALUE, f"value mismatch: {result.value} != {_SYSCALL_VALUE}"
     assert result.errno == _SYSCALL_ERRNO, f"errno mismatch: {result.errno} != {_SYSCALL_ERRNO}"
-    assert result.last_error == _SYSCALL_LAST_ERROR, (
-        f"last_error mismatch: {result.last_error} != {_SYSCALL_LAST_ERROR}"
-    )
+    assert result.last_error == _SYSCALL_LAST_ERROR, f"last_error mismatch: {result.last_error} != {_SYSCALL_LAST_ERROR}"
 
 
 # ---------------------------------------------------------------------------
@@ -1264,12 +1228,8 @@ def test_stalker_add_call_probe_embeds_add_call_probe_and_registers_probe() -> N
     result_id = cast("str", _run(bridge.stalker_add_call_probe(_PROBE_ADDRESS, _PROBE_CALLBACK)))
     assert len(sess.sources) >= 1, "stalker_add_call_probe must generate at least one script"
     source = sess.sources[0]
-    assert "Stalker.addCallProbe" in source, (
-        f"'Stalker.addCallProbe' must appear in JS; source={source!r}"
-    )
-    assert str(_PROBE_ADDRESS) in source, (
-        f"address decimal {_PROBE_ADDRESS} must appear in JS; source={source!r}"
-    )
+    assert "Stalker.addCallProbe" in source, f"'Stalker.addCallProbe' must appear in JS; source={source!r}"
+    assert str(_PROBE_ADDRESS) in source, f"address decimal {_PROBE_ADDRESS} must appear in JS; source={source!r}"
     probes = _get_dict(bridge, "_call_probes")
     assert result_id in probes, f"probe_id {result_id!r} must be in _call_probes, keys={list(probes)!r}"
 
@@ -1294,9 +1254,9 @@ def test_stalker_remove_call_probe_removes_probe_and_script_from_registries() ->
     result = cast("bool", _run(bridge.stalker_remove_call_probe(probe_id)))
     assert result is True, f"stalker_remove_call_probe must return True, got {result!r}"
     probes = _get_dict(bridge, "_call_probes")
-    assert probe_id not in probes, f"probe_id must be removed from _call_probes"
+    assert probe_id not in probes, "probe_id must be removed from _call_probes"
     scripts = _get_dict(bridge, "_scripts")
-    assert script_id not in scripts, f"script_id must be removed from _scripts after probe removal"
+    assert script_id not in scripts, "script_id must be removed from _scripts after probe removal"
 
 
 def test_stalker_remove_call_probe_unknown_id_returns_false() -> None:
@@ -1332,9 +1292,7 @@ def test_enumerate_applications_parses_identifier_name_and_pid() -> None:
     bridge, _, _ = _build_attached_bridge_with_device(dev)
     result = cast("list[FridaApplicationInfo]", _run(bridge.enumerate_applications()))
     assert len(result) == 1, f"must enumerate exactly 1 application, got {len(result)}"
-    assert result[0].identifier == _APP_IDENTIFIER, (
-        f"identifier mismatch: {result[0].identifier!r} != {_APP_IDENTIFIER!r}"
-    )
+    assert result[0].identifier == _APP_IDENTIFIER, f"identifier mismatch: {result[0].identifier!r} != {_APP_IDENTIFIER!r}"
     assert result[0].name == _APP_NAME, f"name mismatch: {result[0].name!r}"
     assert result[0].pid == _APP_PID, f"pid mismatch: {result[0].pid}"
 
@@ -1357,9 +1315,7 @@ def test_inject_library_file_passes_correct_args_to_device_and_returns_id() -> N
     bridge, _, _ = _build_attached_bridge_with_device(dev)
     result = cast("int", _run(bridge.inject_library_file(_INJECT_PID, _LIB_PATH, _LIB_ENTRYPOINT, _LIB_DATA)))
     assert result == _INJECT_RESULT, f"inject_id mismatch: {result} != {_INJECT_RESULT}"
-    assert len(dev.inject_file_calls) == 1, (
-        f"device.inject_library_file must be called once, got {len(dev.inject_file_calls)}"
-    )
+    assert len(dev.inject_file_calls) == 1, f"device.inject_library_file must be called once, got {len(dev.inject_file_calls)}"
     assert dev.inject_file_calls[0] == (_INJECT_PID, _LIB_PATH, _LIB_ENTRYPOINT, _LIB_DATA), (
         f"call args mismatch: {dev.inject_file_calls[0]!r}"
     )
@@ -1386,13 +1342,9 @@ def test_inject_library_blob_passes_decoded_bytes_to_device() -> None:
         _run(bridge.inject_library_blob(_INJECT_PID, _LIB_BLOB_HEX, _LIB_ENTRYPOINT, _LIB_DATA)),
     )
     assert result == _INJECT_BLOB_RESULT, f"inject_id mismatch: {result} != {_INJECT_BLOB_RESULT}"
-    assert len(dev.inject_blob_calls) == 1, (
-        f"device.inject_library_blob must be called once, got {len(dev.inject_blob_calls)}"
-    )
+    assert len(dev.inject_blob_calls) == 1, f"device.inject_library_blob must be called once, got {len(dev.inject_blob_calls)}"
     _, blob_bytes, ep, data = dev.inject_blob_calls[0]
-    assert blob_bytes == _LIB_BLOB_BYTES, (
-        f"blob bytes mismatch: {blob_bytes!r} != {_LIB_BLOB_BYTES!r}"
-    )
+    assert blob_bytes == _LIB_BLOB_BYTES, f"blob bytes mismatch: {blob_bytes!r} != {_LIB_BLOB_BYTES!r}"
     assert ep == _LIB_ENTRYPOINT, f"entrypoint mismatch: {ep!r}"
     assert data == _LIB_DATA, f"data mismatch: {data!r}"
 
@@ -1420,7 +1372,7 @@ def test_create_cmodule_embeds_new_cmodule_in_js_and_returns_registered_script_i
             str: The script_id returned by create_cmodule.
         """
         task: asyncio.Task[str] = asyncio.get_running_loop().create_task(
-            bridge.create_cmodule(_CMODULE_CODE, {_CMODULE_SYM_NAME: _CMODULE_SYM_ADDR})
+            bridge.create_cmodule(_CMODULE_CODE, {_CMODULE_SYM_NAME: _CMODULE_SYM_ADDR}),
         )
         for _ in range(200):
             await asyncio.sleep(0)
@@ -1431,20 +1383,13 @@ def test_create_cmodule_embeds_new_cmodule_in_js_and_returns_registered_script_i
         return await task
 
     script_id = cast("str", _run(driver()))
-    assert isinstance(script_id, str) and len(script_id) > 0, (
-        f"create_cmodule must return non-empty script_id, got {script_id!r}"
-    )
+    assert isinstance(script_id, str), f"create_cmodule must return str script_id, got {script_id!r}"
+    assert len(script_id) > 0, f"create_cmodule must return non-empty script_id, got {script_id!r}"
     assert len(sess.sources) >= 1, "create_cmodule must produce at least one JS source"
     source = sess.sources[0]
-    assert "new CModule" in source, (
-        f"'new CModule' must appear in JS; source={source!r}"
-    )
-    assert _CMODULE_SYM_NAME in source, (
-        f"symbol name {_CMODULE_SYM_NAME!r} must appear in JS; source={source!r}"
-    )
-    assert str(_CMODULE_SYM_ADDR) in source, (
-        f"symbol address {_CMODULE_SYM_ADDR} must appear in JS; source={source!r}"
-    )
+    assert "new CModule" in source, f"'new CModule' must appear in JS; source={source!r}"
+    assert _CMODULE_SYM_NAME in source, f"symbol name {_CMODULE_SYM_NAME!r} must appear in JS; source={source!r}"
+    assert str(_CMODULE_SYM_ADDR) in source, f"symbol address {_CMODULE_SYM_ADDR} must appear in JS; source={source!r}"
     scripts = _get_dict(bridge, "_scripts")
     assert script_id in scripts, f"script_id {script_id!r} must be registered in _scripts"
 
@@ -1510,15 +1455,9 @@ def test_cloak_add_range_embeds_cloak_add_range_with_address_and_size() -> None:
     bridge, _ = _build_attached_bridge()
     captured = _patch_exec(bridge, {"success": True})
     result = cast("bool", _run(bridge.cloak_add_range(_CLOAK_ADDRESS, _CLOAK_SIZE)))
-    assert "Cloak.addRange" in captured[0], (
-        f"'Cloak.addRange' must appear in JS; source={captured[0]!r}"
-    )
-    assert str(_CLOAK_ADDRESS) in captured[0], (
-        f"address decimal {_CLOAK_ADDRESS} must appear in JS; source={captured[0]!r}"
-    )
-    assert str(_CLOAK_SIZE) in captured[0], (
-        f"size decimal {_CLOAK_SIZE} must appear in JS; source={captured[0]!r}"
-    )
+    assert "Cloak.addRange" in captured[0], f"'Cloak.addRange' must appear in JS; source={captured[0]!r}"
+    assert str(_CLOAK_ADDRESS) in captured[0], f"address decimal {_CLOAK_ADDRESS} must appear in JS; source={captured[0]!r}"
+    assert str(_CLOAK_SIZE) in captured[0], f"size decimal {_CLOAK_SIZE} must appear in JS; source={captured[0]!r}"
     assert result is True, f"cloak_add_range must return True, got {result!r}"
 
 
@@ -1536,15 +1475,9 @@ def test_cloak_remove_range_embeds_cloak_remove_range_with_address_and_size() ->
     bridge, _ = _build_attached_bridge()
     captured = _patch_exec(bridge, {"success": True})
     result = cast("bool", _run(bridge.cloak_remove_range(_CLOAK_ADDRESS, _CLOAK_SIZE)))
-    assert "Cloak.removeRange" in captured[0], (
-        f"'Cloak.removeRange' must appear in JS; source={captured[0]!r}"
-    )
-    assert str(_CLOAK_ADDRESS) in captured[0], (
-        f"address decimal {_CLOAK_ADDRESS} must appear in JS; source={captured[0]!r}"
-    )
-    assert str(_CLOAK_SIZE) in captured[0], (
-        f"size decimal {_CLOAK_SIZE} must appear in JS; source={captured[0]!r}"
-    )
+    assert "Cloak.removeRange" in captured[0], f"'Cloak.removeRange' must appear in JS; source={captured[0]!r}"
+    assert str(_CLOAK_ADDRESS) in captured[0], f"address decimal {_CLOAK_ADDRESS} must appear in JS; source={captured[0]!r}"
+    assert str(_CLOAK_SIZE) in captured[0], f"size decimal {_CLOAK_SIZE} must appear in JS; source={captured[0]!r}"
     assert result is True, f"cloak_remove_range must return True, got {result!r}"
 
 
@@ -1582,20 +1515,13 @@ def test_monitor_path_registers_monitor_id_and_enables_monitoring() -> None:
     try:
         bridge, _ = _build_attached_bridge()
         monitor_id = cast("str", _run(bridge.monitor_path(_MONITOR_PATH)))
-        assert isinstance(monitor_id, str) and len(monitor_id) > 0, (
-            f"monitor_path must return non-empty id, got {monitor_id!r}"
-        )
+        assert isinstance(monitor_id, str), f"monitor_path must return str id, got {monitor_id!r}"
+        assert len(monitor_id) > 0, f"monitor_path must return non-empty id, got {monitor_id!r}"
         file_monitors = _get_dict(bridge, "_file_monitors")
-        assert monitor_id in file_monitors, (
-            f"monitor_id {monitor_id!r} must be in _file_monitors"
-        )
+        assert monitor_id in file_monitors, f"monitor_id {monitor_id!r} must be in _file_monitors"
         assert len(created_monitors) == 1, "exactly one FileMonitor must be created"
-        assert created_monitors[0].path == _MONITOR_PATH, (
-            f"FileMonitor path mismatch: {created_monitors[0].path!r}"
-        )
-        assert created_monitors[0].enable_calls == 1, (
-            f"FileMonitor.enable() must be called once, got {created_monitors[0].enable_calls}"
-        )
+        assert created_monitors[0].path == _MONITOR_PATH, f"FileMonitor path mismatch: {created_monitors[0].path!r}"
+        assert created_monitors[0].enable_calls == 1, f"FileMonitor.enable() must be called once, got {created_monitors[0].enable_calls}"
     finally:
         setattr(frida, "FileMonitor", original_fm)
 
@@ -1620,10 +1546,8 @@ def test_stop_monitor_calls_disable_and_removes_monitor_from_registry() -> None:
     result = cast("bool", _run(bridge.stop_monitor(_MONITOR_ID)))
     assert result is True, f"stop_monitor must return True, got {result!r}"
     file_monitors = _get_dict(bridge, "_file_monitors")
-    assert _MONITOR_ID not in file_monitors, f"monitor_id must be removed from _file_monitors"
-    assert fake_monitor.disable_calls == 1, (
-        f"monitor.disable() must be called once, got {fake_monitor.disable_calls}"
-    )
+    assert _MONITOR_ID not in file_monitors, "monitor_id must be removed from _file_monitors"
+    assert fake_monitor.disable_calls == 1, f"monitor.disable() must be called once, got {fake_monitor.disable_calls}"
 
 
 def test_stop_monitor_unknown_id_returns_false() -> None:
@@ -1694,30 +1618,18 @@ def test_stalker_follow_unfollow_collects_events_deterministically() -> None:
         Returns:
             StalkerTrace: The collected trace from stalker_unfollow.
         """
-        _trace_id = await bridge.stalker_follow(thread_id=_STALKER_TID, events="call", limit=500)
-        assert isinstance(_trace_id, str) and len(_trace_id) > 0, (
-            f"stalker_follow must return non-empty trace id"
-        )
+        trace_id = await bridge.stalker_follow(thread_id=_STALKER_TID, events="call", limit=500)
+        assert isinstance(trace_id, str), "stalker_follow must return str trace id"
+        assert len(trace_id) > 0, "stalker_follow must return non-empty trace id"
         return await bridge.stalker_unfollow(thread_id=_STALKER_TID)
 
     trace = cast("StalkerTrace", _run(driver()))
-    assert trace.thread_id == _STALKER_TID, (
-        f"trace.thread_id must be {_STALKER_TID}, got {trace.thread_id}"
-    )
-    assert trace.event_count == len(trace.events), (
-        f"event_count {trace.event_count} must equal len(events) {len(trace.events)}"
-    )
-    assert trace.event_count == 1, (
-        f"exactly 1 call event must be collected, got {trace.event_count}"
-    )
+    assert trace.thread_id == _STALKER_TID, f"trace.thread_id must be {_STALKER_TID}, got {trace.thread_id}"
+    assert trace.event_count == len(trace.events), f"event_count {trace.event_count} must equal len(events) {len(trace.events)}"
+    assert trace.event_count == 1, f"exactly 1 call event must be collected, got {trace.event_count}"
     evt = trace.events[0]
     assert evt.event_type == "call", f"event_type must be 'call', got {evt.event_type!r}"
-    assert evt.from_address == 0x7FFF1000, (
-        f"from_address must be 0x7fff1000, got {evt.from_address:#x}"
-    )
-    assert evt.to_address == 0x7FFF2000, (
-        f"to_address must be 0x7fff2000, got {evt.to_address!r}"
-    )
-    assert isinstance(trace.duration_ms, float) and trace.duration_ms >= 0.0, (
-        f"duration_ms must be non-negative float, got {trace.duration_ms!r}"
-    )
+    assert evt.from_address == 0x7FFF1000, f"from_address must be 0x7fff1000, got {evt.from_address:#x}"
+    assert evt.to_address == 0x7FFF2000, f"to_address must be 0x7fff2000, got {evt.to_address!r}"
+    assert isinstance(trace.duration_ms, float), f"duration_ms must be float, got {trace.duration_ms!r}"
+    assert trace.duration_ms >= 0.0, f"duration_ms must be non-negative, got {trace.duration_ms!r}"

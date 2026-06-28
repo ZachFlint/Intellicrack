@@ -308,6 +308,32 @@ here for later triage.
   and wire it into `generate_timeline` with the matching
   `if _should_include("resource"):` guard. No `src/` change was made.
 
+## PD-012 — `connect()` does not catch `httpx.ConnectError`; probe failure is exposed raw  ·  RED-BY-DESIGN
+
+- **Severity:** Medium (in a no-network environment `connect()` propagates a raw
+  `httpx.ConnectError` instead of the documented `ProviderError("Connection failed")`)
+- **Production symbol:** `GoogleProvider.connect`
+- **Location:** `src/intellicrack/providers/google.py` lines 137-144
+- **Mechanism:** `connect()` catches `(ConnectionError, TimeoutError, OSError,
+  ValueError, RuntimeError)` as its network-failure clause. `httpx.ConnectError`
+  MRO is `ConnectError -> NetworkError -> TransportError -> RequestError -> HTTPError
+  -> Exception`; it does not inherit from any of the caught types. When the
+  `models.list()` probe fails because no network is available, tenacity retries once
+  (default `retry_options=None` → `stop_after_attempt(1)`) and re-raises
+  `httpx.ConnectError` raw. The `finally` block still executes and restores
+  `GEMINI_API_KEY`, but the caller receives `httpx.ConnectError` rather than the
+  contracted `ProviderError`. With a live network and an invalid key the API returns
+  401 and the `except APIError` branch fires correctly.
+- **Gating test:** `tests/test_providers/test_google_offline_wave5.py::test_connect_gemini_api_key_restored_after_failure`
+  — the gate asserts env-var restoration (always correct) but does **not** assert the
+  exception type because the exception varies by environment (PD-012 only bites in
+  no-network contexts). The test is GREEN; the defect itself has no dedicated
+  RED-by-design gate because the wrong exception type is only observable offline.
+- **Correct fix (deferred):** add `httpx.ConnectError` and `httpx.TimeoutException`
+  to the second `except` tuple in `connect()`:
+  `except (ConnectionError, TimeoutError, OSError, ValueError, RuntimeError,
+  httpx.ConnectError, httpx.TimeoutException) as e:`. No `src/` change was made.
+
 ---
 
 ## Result
@@ -322,6 +348,7 @@ result-capture bugs), **PD-004** (FridaBridge objc/java hook structlog collision
 (`adjust_token_privilege`/`get_token_privileges`/`remove_privilege` no-pid
 OverflowError from un-typed `OpenProcessToken` argtypes), **PD-009**
 (`timeout_seconds` never enforced in agent loop), **PD-010**
-(`RustTransformNode` silently UTF-8 encodes non-hex string params), and **PD-011**
-(`generate_timeline` missing resource handler) as RED-BY-DESIGN gates, left unfixed
+(`RustTransformNode` silently UTF-8 encodes non-hex string params), **PD-011**
+(`generate_timeline` missing resource handler), and **PD-012**
+(`connect()` does not catch `httpx.ConnectError`) as RED-BY-DESIGN gates, left unfixed
 by design for user triage.

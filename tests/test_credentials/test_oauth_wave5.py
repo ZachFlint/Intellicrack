@@ -38,16 +38,17 @@ from intellicrack.credentials.oauth import (
     OAuthProvider,
     OAuthToken,
     OAuthTokenError,
-    OAuthTokenRefreshError,
-    _OAUTH_TO_PROVIDER_NAME,
-    _oauth_provider_to_name,
     authorize_google,
+    verify_pkce_pair,
 )
 from intellicrack.credentials.store import CredentialStore
 
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
+
+_OAUTH_TO_PROVIDER_NAME: dict[OAuthProvider, ProviderName] = cast(Any, _oauth_mod)._OAUTH_TO_PROVIDER_NAME
+_oauth_provider_to_name: Any = cast(Any, _oauth_mod)._oauth_provider_to_name
 
 
 # ---------------------------------------------------------------------------
@@ -65,9 +66,10 @@ def _loopback_tcp_available() -> bool:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("127.0.0.1", 0))
             s.listen(1)
-        return True
     except OSError:
         return False
+    else:
+        return True
 
 
 _requires_loopback = pytest.mark.skipif(
@@ -88,91 +90,75 @@ _TOKEN_200_BODY: Final[bytes] = json.dumps({
 }).encode("utf-8")
 
 
-class _Always200Handler(http.server.BaseHTTPRequestHandler):
+class _CannedPostHandler(http.server.BaseHTTPRequestHandler):
+    """Base handler that replies to any POST with a fixed status and JSON body.
+
+    Uses HTTP/1.1 so the response is framed by ``Content-Length`` rather than
+    by connection close, drains the request body before replying, and sends
+    ``Connection: close`` so the client tears the socket down cleanly. This
+    eliminates the intermittent ``httpcore.ReadError`` that arises when an
+    HTTP/1.0 handler closes the socket mid-body or leaves the request body
+    unread on a reused connection.
+
+    Attributes:
+        protocol_version: HTTP version advertised in the status line.
+        status_code: HTTP status code returned for every POST.
+        response_body: Raw JSON bytes returned for every POST.
+    """
+
+    protocol_version: str = "HTTP/1.1"
+    status_code: ClassVar[int] = 200
+    response_body: ClassVar[bytes] = b"{}"
+
+    def do_POST(self) -> None:
+        """Drain the request body and return the canned status and JSON body."""
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length > 0:
+            self.rfile.read(length)
+        self.send_response(self.status_code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(self.response_body)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(self.response_body)
+        self.wfile.flush()
+
+    def log_message(self, *args: object, **kwargs: object) -> None:
+        """Suppress HTTP access log.
+
+        Args:
+            *args: Unused positional arguments from stdlib signature.
+            **kwargs: Unused keyword arguments for forward compatibility.
+        """
+        del args, kwargs
+
+
+class _Always200Handler(_CannedPostHandler):
     """HTTP handler that returns 200 with a canned token JSON for any POST."""
 
-    def do_POST(self) -> None:
-        """Return 200 OK with canned token JSON body."""
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(_TOKEN_200_BODY)))
-        self.end_headers()
-        self.wfile.write(_TOKEN_200_BODY)
-
-    def log_message(self, *args: object, **kwargs: object) -> None:
-        """Suppress HTTP access log.
-
-        Args:
-            *args: Unused positional arguments from stdlib signature.
-            **kwargs: Unused keyword arguments for forward compatibility.
-        """
-        del args, kwargs
+    status_code: ClassVar[int] = 200
+    response_body: ClassVar[bytes] = _TOKEN_200_BODY
 
 
-class _Always400Handler(http.server.BaseHTTPRequestHandler):
+class _Always400Handler(_CannedPostHandler):
     """HTTP handler that returns 400 Bad Request for any POST."""
 
-    def do_POST(self) -> None:
-        """Return 400 Bad Request with JSON error body."""
-        body = b'{"error": "bad_request", "error_description": "invalid code"}'
-        self.send_response(400)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, *args: object, **kwargs: object) -> None:
-        """Suppress HTTP access log.
-
-        Args:
-            *args: Unused positional arguments from stdlib signature.
-            **kwargs: Unused keyword arguments for forward compatibility.
-        """
-        del args, kwargs
+    status_code: ClassVar[int] = 400
+    response_body: ClassVar[bytes] = b'{"error": "bad_request", "error_description": "invalid code"}'
 
 
-class _Always500Handler(http.server.BaseHTTPRequestHandler):
+class _Always500Handler(_CannedPostHandler):
     """HTTP handler that returns 500 Internal Server Error for any POST."""
 
-    def do_POST(self) -> None:
-        """Return 500 Internal Server Error with JSON body."""
-        body = b'{"error": "server_error"}'
-        self.send_response(500)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, *args: object, **kwargs: object) -> None:
-        """Suppress HTTP access log.
-
-        Args:
-            *args: Unused positional arguments from stdlib signature.
-            **kwargs: Unused keyword arguments for forward compatibility.
-        """
-        del args, kwargs
+    status_code: ClassVar[int] = 500
+    response_body: ClassVar[bytes] = b'{"error": "server_error"}'
 
 
-class _Always403Handler(http.server.BaseHTTPRequestHandler):
+class _Always403Handler(_CannedPostHandler):
     """HTTP handler that returns 403 Forbidden for any POST."""
 
-    def do_POST(self) -> None:
-        """Return 403 Forbidden with JSON error body."""
-        body = json.dumps({"error": "forbidden"}).encode("utf-8")
-        self.send_response(403)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self.wfile.write(body)
-
-    def log_message(self, *args: object, **kwargs: object) -> None:
-        """Suppress HTTP access log.
-
-        Args:
-            *args: Unused positional arguments from stdlib signature.
-            **kwargs: Unused keyword arguments for forward compatibility.
-        """
-        del args, kwargs
+    status_code: ClassVar[int] = 403
+    response_body: ClassVar[bytes] = b'{"error": "forbidden"}'
 
 
 # ---------------------------------------------------------------------------
@@ -197,10 +183,10 @@ class _FakeKeyringModule:
     delete_password work without touching the OS credential store.
 
     Attributes:
-        _passwords: Mapping of (service, username) -> password.
+        passwords: Mapping of (service, username) -> password.
     """
 
-    _passwords: ClassVar[dict[tuple[str, str], str]] = {}
+    passwords: ClassVar[dict[tuple[str, str], str]] = {}
 
     @classmethod
     def get_keyring(cls) -> _FakeKeyringGoodBackend:
@@ -222,7 +208,7 @@ class _FakeKeyringModule:
         Returns:
             str | None: Stored value or None if absent.
         """
-        return cls._passwords.get((service, username))
+        return cls.passwords.get((service, username))
 
     @classmethod
     def set_password(cls, service: str, username: str, password: str) -> None:
@@ -233,7 +219,7 @@ class _FakeKeyringModule:
             username: Keyring username / key.
             password: Value to store.
         """
-        cls._passwords[(service, username)] = password
+        cls.passwords[service, username] = password
 
     @classmethod
     def delete_password(cls, service: str, username: str) -> None:
@@ -243,7 +229,7 @@ class _FakeKeyringModule:
             service: Keyring service name.
             username: Keyring username / key.
         """
-        cls._passwords.pop((service, username), None)
+        cls.passwords.pop((service, username), None)
 
 
 class FailKeyring:
@@ -273,12 +259,12 @@ class _FailKeyringModule:
         return FailKeyring()
 
     @classmethod
-    def get_password(cls, service: str, username: str) -> str | None:
+    def get_password(cls, _service: str, _username: str) -> str | None:
         """Return None (never used when check fails).
 
         Args:
-            service: Keyring service name.
-            username: Keyring username / key.
+            _service: Keyring service name (unused; interface compliance only).
+            _username: Keyring username / key (unused; interface compliance only).
 
         Returns:
             str | None: Always None.
@@ -328,12 +314,12 @@ class _ZeroPriorityModule:
         return _ZeroPriorityBackend()
 
     @classmethod
-    def get_password(cls, service: str, username: str) -> str | None:
+    def get_password(cls, _service: str, _username: str) -> str | None:
         """Return None.
 
         Args:
-            service: Keyring service name.
-            username: Keyring username / key.
+            _service: Keyring service name (unused; interface compliance only).
+            _username: Keyring username / key (unused; interface compliance only).
 
         Returns:
             str | None: Always None.
@@ -501,7 +487,7 @@ def _start_server(handler_cls: type[http.server.BaseHTTPRequestHandler]) -> tupl
     return server, f"http://127.0.0.1:{port}", thread
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_200_server() -> Iterator[str]:
     """Yield base URL of an in-process server returning 200 with token JSON.
 
@@ -517,7 +503,7 @@ def mock_200_server() -> Iterator[str]:
         thread.join(timeout=2.0)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_400_server() -> Iterator[str]:
     """Yield base URL of an in-process server returning 400 Bad Request.
 
@@ -533,7 +519,7 @@ def mock_400_server() -> Iterator[str]:
         thread.join(timeout=2.0)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_500_server() -> Iterator[str]:
     """Yield base URL of an in-process server returning 500 Internal Server Error.
 
@@ -549,7 +535,7 @@ def mock_500_server() -> Iterator[str]:
         thread.join(timeout=2.0)
 
 
-@pytest.fixture()
+@pytest.fixture
 def mock_403_server() -> Iterator[str]:
     """Yield base URL of an in-process server returning 403 Forbidden.
 
@@ -565,8 +551,8 @@ def mock_403_server() -> Iterator[str]:
         thread.join(timeout=2.0)
 
 
-@pytest.fixture()
-def _with_fake_keyring(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+@pytest.fixture
+def with_fake_keyring(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Monkeypatch _store_mod._keyring_module with _FakeKeyringModule.
 
     Clears the in-memory password store before and after the test.
@@ -577,10 +563,10 @@ def _with_fake_keyring(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     Yields:
         None: Nothing; effect is the monkeypatched module attribute.
     """
-    _FakeKeyringModule._passwords.clear()
+    _FakeKeyringModule.passwords.clear()
     monkeypatch.setattr(_store_mod, "_keyring_module", _FakeKeyringModule)
     yield
-    _FakeKeyringModule._passwords.clear()
+    _FakeKeyringModule.passwords.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -627,9 +613,7 @@ def test_oauth_provider_to_name_all_enum_members_have_mapping() -> None:
     cause this coverage-invariant test to fail and expose the dead KeyError branch.
     """
     for provider in OAuthProvider:
-        assert provider in _OAUTH_TO_PROVIDER_NAME, (
-            f"OAuthProvider.{provider.name} has no entry in _OAUTH_TO_PROVIDER_NAME"
-        )
+        assert provider in _OAUTH_TO_PROVIDER_NAME, f"OAuthProvider.{provider.name} has no entry in _OAUTH_TO_PROVIDER_NAME"
 
 
 def test_oauth_provider_to_name_raises_key_error_for_unmapped_provider(
@@ -646,9 +630,7 @@ def test_oauth_provider_to_name_raises_key_error_for_unmapped_provider(
     Args:
         monkeypatch: Pytest fixture used to replace the mapping dict temporarily.
     """
-    reduced: dict[OAuthProvider, ProviderName] = {
-        k: v for k, v in _OAUTH_TO_PROVIDER_NAME.items() if k != OAuthProvider.HUGGINGFACE
-    }
+    reduced: dict[OAuthProvider, ProviderName] = {k: v for k, v in _OAUTH_TO_PROVIDER_NAME.items() if k != OAuthProvider.HUGGINGFACE}
     monkeypatch.setattr(_oauth_mod, "_OAUTH_TO_PROVIDER_NAME", reduced)
 
     with pytest.raises(KeyError, match="No provider name mapping"):
@@ -740,8 +722,7 @@ def test_callback_server_start_raises_callback_error_when_port_occupied() -> Non
     """
     port = _find_free_port()
     holder = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    _SO_EXCLUSIVEADDRUSE: Final[int] = 12
-    holder.setsockopt(socket.SOL_SOCKET, _SO_EXCLUSIVEADDRUSE, 1)
+    holder.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
     try:
         holder.bind(("127.0.0.1", port))
         holder.listen(1)
@@ -895,8 +876,6 @@ def test_build_authorization_url_pkce_enabled_includes_s256_challenge() -> None:
     Mutation: omitting code_challenge when use_pkce=True would fail the
     ``in params`` assertion; setting method to plain instead of S256 would also fail.
     """
-    from intellicrack.credentials.oauth import verify_pkce_pair
-
     config = OAuthConfig(
         provider=OAuthProvider.GOOGLE,
         client_id="pkce-on-client",
@@ -940,7 +919,7 @@ def test_exchange_code_for_token_http_error_raises_oauth_token_error(
     async def go() -> None:
         try:
             with pytest.raises(OAuthTokenError, match=r"400|[Ee]xchange"):
-                await manager._exchange_code_for_token(config, "some_auth_code", None)
+                await cast(Any, manager)._exchange_code_for_token(config, "some_auth_code", None)
         finally:
             await manager.close()
 
@@ -976,7 +955,7 @@ def test_exchange_code_for_token_network_error_raises_oauth_token_error() -> Non
     async def go() -> None:
         try:
             with pytest.raises(OAuthTokenError, match=r"[Ff]ailed|[Cc]onnect"):
-                await manager._exchange_code_for_token(config, "code", None)
+                await cast(Any, manager)._exchange_code_for_token(config, "code", None)
         finally:
             await manager.close()
 
@@ -1008,7 +987,7 @@ def test_store_token_keyring_unavailable_returns_without_raising() -> None:
     )
 
     async def go() -> None:
-        await manager._store_token(OAuthProvider.ANTHROPIC, token)
+        await cast(Any, manager)._store_token(OAuthProvider.ANTHROPIC, token)
 
     asyncio.run(go())
 
@@ -1022,19 +1001,15 @@ def test_store_token_keyring_unavailable_returns_without_raising() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_store_token_keyring_available_serializes_exact_json(
-    _with_fake_keyring: None,
-) -> None:
+@pytest.mark.usefixtures("with_fake_keyring")
+def test_store_token_keyring_available_serializes_exact_json() -> None:
     """_store_token must serialize the token as JSON and write it to the keyring.
 
     Oracle: the exact ``access_token`` field from the stored JSON read back
-    from _FakeKeyringModule._passwords matches the original token's access_token.
+    from _FakeKeyringModule.passwords matches the original token's access_token.
 
     Mutation: serialising the wrong field (e.g. refresh_token) would make the
     read-back access_token value differ.
-
-    Args:
-        _with_fake_keyring: Fixture that monkeypatches the keyring module.
     """
     store = _make_store_with_fake_keyring()
     manager = OAuthManager(credential_store=store)
@@ -1047,12 +1022,12 @@ def test_store_token_keyring_available_serializes_exact_json(
 
     async def go() -> None:
         _ = store.keyring_available
-        await manager._store_token(OAuthProvider.GOOGLE, token)
+        await cast(Any, manager)._store_token(OAuthProvider.GOOGLE, token)
 
     asyncio.run(go())
 
-    keyring_key = f"intellicrack_google"
-    raw = _FakeKeyringModule._passwords.get(("intellicrack", keyring_key))
+    keyring_key = "intellicrack_google"
+    raw = _FakeKeyringModule.passwords.get(("intellicrack", keyring_key))
     assert raw is not None, "keyring entry was not written"
     outer = json.loads(raw)
     inner_api_key: str = outer["api_key"]
@@ -1067,9 +1042,8 @@ def test_store_token_keyring_available_serializes_exact_json(
 # ---------------------------------------------------------------------------
 
 
-def test_load_token_from_store_returns_correct_token_when_present(
-    _with_fake_keyring: None,
-) -> None:
+@pytest.mark.usefixtures("with_fake_keyring")
+def test_load_token_from_store_returns_correct_token_when_present() -> None:
     """_load_token_from_store must deserialise and return the stored token.
 
     Oracle: access_token read back from the returned OAuthToken matches the
@@ -1077,9 +1051,6 @@ def test_load_token_from_store_returns_correct_token_when_present(
 
     Mutation: returning None for all keys would fail the ``assert token is not None``
     check and the access_token assertion.
-
-    Args:
-        _with_fake_keyring: Fixture that monkeypatches the keyring module.
     """
     token = OAuthToken(
         access_token="from_store_acc",
@@ -1089,22 +1060,23 @@ def test_load_token_from_store_returns_correct_token_when_present(
     )
     inner_json = json.dumps(token.to_dict())
     outer_json = _make_outer_cred_json(inner_json)
-    _FakeKeyringModule._passwords[("intellicrack", "intellicrack_google")] = outer_json
+    _FakeKeyringModule.passwords["intellicrack", "intellicrack_google"] = outer_json
 
     store = _make_store_with_fake_keyring()
     manager = OAuthManager(credential_store=store)
 
     async def go() -> OAuthToken | None:
         _ = store.keyring_available
-        return await manager._load_token_from_store(OAuthProvider.GOOGLE)
+        return await cast(Any, manager)._load_token_from_store(OAuthProvider.GOOGLE)
 
     result = asyncio.run(go())
     assert result is not None
     assert result.access_token == "from_store_acc"
 
 
+@pytest.mark.usefixtures("with_fake_keyring")
 def test_load_token_from_store_returns_none_when_absent(
-    _with_fake_keyring: None,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """_load_token_from_store must return None when no credential is stored.
 
@@ -1114,14 +1086,17 @@ def test_load_token_from_store_returns_none_when_absent(
     ``result is None`` assertion.
 
     Args:
-        _with_fake_keyring: Fixture that monkeypatches the keyring module.
+        monkeypatch: pytest fixture used to clear ambient GOOGLE env vars so
+            the store's env fallback does not surface a container-provided key.
     """
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
     store = _make_store_with_fake_keyring()
     manager = OAuthManager(credential_store=store)
 
     async def go() -> OAuthToken | None:
         _ = store.keyring_available
-        return await manager._load_token_from_store(OAuthProvider.GOOGLE)
+        return await cast(Any, manager)._load_token_from_store(OAuthProvider.GOOGLE)
 
     result = asyncio.run(go())
     assert result is None
@@ -1132,9 +1107,8 @@ def test_load_token_from_store_returns_none_when_absent(
 # ---------------------------------------------------------------------------
 
 
-def test_load_token_cache_miss_falls_through_to_keyring(
-    _with_fake_keyring: None,
-) -> None:
+@pytest.mark.usefixtures("with_fake_keyring")
+def test_load_token_cache_miss_falls_through_to_keyring() -> None:
     """_load_token must load from the credential store when the in-memory cache misses.
 
     Oracle: no pre-seeded cache entry; fake keyring has a stored token; the
@@ -1142,9 +1116,6 @@ def test_load_token_cache_miss_falls_through_to_keyring(
 
     Mutation: short-circuiting the store lookup after a cache miss (returning
     None unconditionally) would fail the access_token assertion.
-
-    Args:
-        _with_fake_keyring: Fixture that monkeypatches the keyring module.
     """
     token = OAuthToken(
         access_token="cache_miss_loaded",
@@ -1153,14 +1124,14 @@ def test_load_token_cache_miss_falls_through_to_keyring(
         expires_at=None,
     )
     inner_json = json.dumps(token.to_dict())
-    _FakeKeyringModule._passwords[("intellicrack", "intellicrack_google")] = _make_outer_cred_json(inner_json)
+    _FakeKeyringModule.passwords["intellicrack", "intellicrack_google"] = _make_outer_cred_json(inner_json)
 
     store = _make_store_with_fake_keyring()
     manager = OAuthManager(credential_store=store)
 
     async def go() -> OAuthToken | None:
         _ = store.keyring_available
-        return await manager._load_token(OAuthProvider.GOOGLE)
+        return await cast(Any, manager)._load_token(OAuthProvider.GOOGLE)
 
     result = asyncio.run(go())
     assert result is not None
@@ -1172,9 +1143,8 @@ def test_load_token_cache_miss_falls_through_to_keyring(
 # ---------------------------------------------------------------------------
 
 
-def test_load_token_json_decode_error_returns_none(
-    _with_fake_keyring: None,
-) -> None:
+@pytest.mark.usefixtures("with_fake_keyring")
+def test_load_token_json_decode_error_returns_none() -> None:
     """_load_token must return None when the stored token blob is not valid JSON.
 
     The fake keyring stores a valid outer ProviderCredentials JSON whose
@@ -1183,19 +1153,16 @@ def test_load_token_json_decode_error_returns_none(
 
     Mutation: not catching json.JSONDecodeError in _load_token would propagate
     the exception to the caller instead of returning None.
-
-    Args:
-        _with_fake_keyring: Fixture that monkeypatches the keyring module.
     """
     malformed_token_json = "NOT_VALID_JSON{{{"
-    _FakeKeyringModule._passwords[("intellicrack", "intellicrack_google")] = _make_outer_cred_json(malformed_token_json)
+    _FakeKeyringModule.passwords["intellicrack", "intellicrack_google"] = _make_outer_cred_json(malformed_token_json)
 
     store = _make_store_with_fake_keyring()
     manager = OAuthManager(credential_store=store)
 
     async def go() -> OAuthToken | None:
         _ = store.keyring_available
-        return await manager._load_token(OAuthProvider.GOOGLE)
+        return await cast(Any, manager)._load_token(OAuthProvider.GOOGLE)
 
     result = asyncio.run(go())
     assert result is None
@@ -1457,9 +1424,8 @@ def test_refresh_token_500_raises_oauth_token_error(
 # ---------------------------------------------------------------------------
 
 
-def test_revoke_token_no_revoke_url_calls_credential_store_delete(
-    _with_fake_keyring: None,
-) -> None:
+@pytest.mark.usefixtures("with_fake_keyring")
+def test_revoke_token_no_revoke_url_calls_credential_store_delete() -> None:
     """revoke_token with no revoke_url must delete the token from the credential store.
 
     ANTHROPIC has revoke_url=None in OAUTH_CONFIGS; only the keyring-delete
@@ -1468,12 +1434,9 @@ def test_revoke_token_no_revoke_url_calls_credential_store_delete(
 
     Mutation: removing ``await self._credential_store.delete(provider_name)``
     would leave the sentinel data in the fake keyring.
-
-    Args:
-        _with_fake_keyring: Fixture that monkeypatches the keyring module.
     """
     credential_key = ("intellicrack", "intellicrack_anthropic")
-    _FakeKeyringModule._passwords[credential_key] = "sentinel_to_be_deleted"
+    _FakeKeyringModule.passwords[credential_key] = "sentinel_to_be_deleted"
 
     store = _make_store_with_fake_keyring()
     manager = OAuthManager(credential_store=store)
@@ -1495,7 +1458,7 @@ def test_revoke_token_no_revoke_url_calls_credential_store_delete(
     result = asyncio.run(go())
 
     assert result is True
-    assert credential_key not in _FakeKeyringModule._passwords
+    assert credential_key not in _FakeKeyringModule.passwords
 
 
 # ---------------------------------------------------------------------------
@@ -1655,10 +1618,10 @@ def test_run_authorization_flow_returns_token_from_fake_server(
         parsed = urllib.parse.urlparse(url)
         params = urllib.parse.parse_qs(parsed.query)
         state_val = params["state"][0]
+        safe_state = urllib.parse.quote(state_val, safe="")
 
         def _send() -> None:
             try:
-                safe_state = urllib.parse.quote(state_val, safe="")
                 conn = http.client.HTTPConnection("127.0.0.1", callback_port, timeout=5.0)
                 conn.request("GET", f"/callback?code=test_auth_code&state={safe_state}")
                 resp = conn.getresponse()
@@ -1708,7 +1671,7 @@ def test_authorize_google_returns_provider_credentials_with_access_token(
     callback_port = _find_free_port()
     controlled_manager = OAuthManager(credential_store=None, callback_port=callback_port)
 
-    monkeypatch.setattr(_oauth_mod._OAuthManagerHolder, "instance", controlled_manager)
+    monkeypatch.setattr(cast(Any, _oauth_mod)._OAuthManagerHolder, "instance", controlled_manager)
 
     google_config_patched = OAuthConfig(
         provider=OAuthProvider.GOOGLE,
@@ -1726,10 +1689,10 @@ def test_authorize_google_returns_provider_credentials_with_access_token(
         parsed = urllib.parse.urlparse(url)
         params = urllib.parse.parse_qs(parsed.query)
         state_val = params["state"][0]
+        safe_state = urllib.parse.quote(state_val, safe="")
 
         def _send() -> None:
             try:
-                safe_state = urllib.parse.quote(state_val, safe="")
                 conn = http.client.HTTPConnection("127.0.0.1", callback_port, timeout=5.0)
                 conn.request("GET", f"/callback?code=google_auth_code&state={safe_state}")
                 resp = conn.getresponse()
@@ -1773,7 +1736,7 @@ def test_check_keyring_library_not_installed_returns_false(
     """
     monkeypatch.setattr(_store_mod, "_keyring_module", None)
     store = CredentialStore()
-    result = store._check_keyring()
+    result = cast(Any, store)._check_keyring()
     assert result is False
 
 
@@ -1798,7 +1761,7 @@ def test_check_keyring_fail_keyring_backend_returns_false(
     """
     monkeypatch.setattr(_store_mod, "_keyring_module", _FailKeyringModule)
     store = CredentialStore()
-    result = store._check_keyring()
+    result = cast(Any, store)._check_keyring()
     assert result is False
 
 
@@ -1816,6 +1779,7 @@ def test_check_keyring_null_keyring_name_returns_false(
     Args:
         monkeypatch: Pytest fixture used to inject a NullKeyring-named module.
     """
+
     class NullKeyring:
         """Fake backend with NullKeyring name and positive priority."""
 
@@ -1827,7 +1791,7 @@ def test_check_keyring_null_keyring_name_returns_false(
             return NullKeyring()
 
         @classmethod
-        def get_password(cls, service: str, username: str) -> str | None:
+        def get_password(cls, _service: str, _username: str) -> str | None:
             return None
 
         @classmethod
@@ -1840,7 +1804,7 @@ def test_check_keyring_null_keyring_name_returns_false(
 
     monkeypatch.setattr(_store_mod, "_keyring_module", _NullKeyringModule)
     store = CredentialStore()
-    result = store._check_keyring()
+    result = cast(Any, store)._check_keyring()
     assert result is False
 
 
@@ -1865,7 +1829,7 @@ def test_check_keyring_zero_priority_backend_returns_false(
     """
     monkeypatch.setattr(_store_mod, "_keyring_module", _ZeroPriorityModule)
     store = CredentialStore()
-    result = store._check_keyring()
+    result = cast(Any, store)._check_keyring()
     assert result is False
 
 
@@ -1877,6 +1841,7 @@ def test_check_keyring_negative_priority_backend_returns_false(
     Args:
         monkeypatch: Pytest fixture used to inject a negative-priority module.
     """
+
     class _NegPriorityBackend:
         priority: ClassVar[float] = -2.5
 
@@ -1886,7 +1851,7 @@ def test_check_keyring_negative_priority_backend_returns_false(
             return _NegPriorityBackend()
 
         @classmethod
-        def get_password(cls, service: str, username: str) -> str | None:
+        def get_password(cls, _service: str, _username: str) -> str | None:
             return None
 
         @classmethod
@@ -1899,5 +1864,5 @@ def test_check_keyring_negative_priority_backend_returns_false(
 
     monkeypatch.setattr(_store_mod, "_keyring_module", _NegPriorityModule)
     store = CredentialStore()
-    result = store._check_keyring()
+    result = cast(Any, store)._check_keyring()
     assert result is False

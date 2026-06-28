@@ -108,7 +108,9 @@ class TestAdjustTokenPrivilegeSuccess:
         """
         priv_name = "SeChangeNotifyPrivilege"
         success = await process_bridge.adjust_token_privilege(
-            priv_name, enable=True, pid=os.getpid(),
+            priv_name,
+            enable=True,
+            pid=os.getpid(),
         )
         assert success is True, "adjust_token_privilege should return True on success"
 
@@ -118,8 +120,7 @@ class TestAdjustTokenPrivilegeSuccess:
 
         entry = matches[0]
         assert entry.get("enabled") is True, (
-            f"Expected enabled=True for {priv_name}, got enabled={entry.get('enabled')}; "
-            f"attributes={entry.get('attributes')}"
+            f"Expected enabled=True for {priv_name}, got enabled={entry.get('enabled')}; attributes={entry.get('attributes')}"
         )
 
     async def test_adjust_token_privilege_returns_true_on_success(
@@ -132,7 +133,9 @@ class TestAdjustTokenPrivilegeSuccess:
             process_bridge: Initialized ProcessBridge.
         """
         result = await process_bridge.adjust_token_privilege(
-            "SeChangeNotifyPrivilege", enable=True, pid=os.getpid(),
+            "SeChangeNotifyPrivilege",
+            enable=True,
+            pid=os.getpid(),
         )
         assert result is True
 
@@ -155,18 +158,6 @@ class TestRemovePrivilegePostState:
     that it is absent or carries the removed flag would fail.
     """
 
-    async def test_remove_privilege_returns_bool(
-        self,
-        process_bridge: ProcessBridge,
-    ) -> None:
-        """Call remove_privilege on our own pid and assert it returns a bool.
-
-        Args:
-            process_bridge: Initialized ProcessBridge.
-        """
-        result = await process_bridge.remove_privilege(os.getpid(), "SeChangeNotifyPrivilege")
-        assert isinstance(result, bool)
-
     async def test_remove_privilege_privilege_no_longer_enabled_in_token(
         self,
         process_bridge: ProcessBridge,
@@ -188,8 +179,7 @@ class TestRemovePrivilegePostState:
             enabled_bit_set: bool = bool(attrs & SE_PRIVILEGE_ENABLED)
             removed_bit_set: bool = bool(attrs & SE_PRIVILEGE_REMOVED)
             assert removed_bit_set or not enabled_bit_set, (
-                f"Expected {priv_name} to be removed/disabled after remove_privilege; "
-                f"attributes={attrs:#010x}"
+                f"Expected {priv_name} to be removed/disabled after remove_privilege; attributes={attrs:#010x}"
             )
 
 
@@ -218,7 +208,7 @@ class TestPipeWriteRoundTrip:
         Args:
             process_bridge: Initialized ProcessBridge.
         """
-        payload: bytes = b"INTELLICRACK_WAVE5_PIPE_SENTINEL_\xDE\xAD\xBE\xEF"
+        payload: bytes = b"INTELLICRACK_WAVE5_PIPE_SENTINEL_\xde\xad\xbe\xef"
         pipe_name: str = rf"\\.\pipe\IntellicrackWave5PipeTest_{os.getpid()}"
         k32 = ctypes.windll.kernel32
 
@@ -268,9 +258,7 @@ class TestPipeWriteRoundTrip:
         try:
             client_handle = await process_bridge.pipe_connect(pipe_name, timeout_ms=5000)
             written: int = await process_bridge.pipe_write(client_handle, payload)
-            assert written == len(payload), (
-                f"pipe_write returned {written} but expected {len(payload)}"
-            )
+            assert written == len(payload), f"pipe_write returned {written} but expected {len(payload)}"
         finally:
             if client_handle is not None:
                 await process_bridge.pipe_close(client_handle)
@@ -279,9 +267,7 @@ class TestPipeWriteRoundTrip:
         assert not t.is_alive(), "Server thread did not complete within timeout"
         assert not server_error, f"Server-side errors: {server_error}"
         assert received_data, "Server received no data"
-        assert received_data[0] == payload, (
-            f"Round-trip mismatch: sent {payload!r}, received {received_data[0]!r}"
-        )
+        assert received_data[0] == payload, f"Round-trip mismatch: sent {payload!r}, received {received_data[0]!r}"
 
         k32.CloseHandle(server_handle)
 
@@ -349,20 +335,12 @@ class TestStackWalkSuccessPath:
             event_stop.set()
             t.join(timeout=5.0)
 
-        assert len(result) >= 1, (
-            f"stack_walk returned an empty list for thread {tid_container[0]}"
-        )
+        assert len(result) >= 1, f"stack_walk returned an empty list for thread {tid_container[0]}"
         first_frame = result[0]
-        assert "address" in first_frame, (
-            f"First frame missing 'address' key; keys present: {list(first_frame.keys())!r}"
-        )
+        assert "address" in first_frame, f"First frame missing 'address' key; keys present: {list(first_frame.keys())!r}"
         addr_val = first_frame["address"]
-        assert isinstance(addr_val, int), (
-            f"'address' must be an int, got {type(addr_val)}"
-        )
-        assert addr_val > 0, (
-            f"Expected non-zero address in first stack frame, got {addr_val:#x}"
-        )
+        assert isinstance(addr_val, int), f"'address' must be an int, got {type(addr_val)}"
+        assert addr_val > 0, f"Expected non-zero address in first stack frame, got {addr_val:#x}"
 
 
 class TestInjectDllSuccessPath:
@@ -413,8 +391,7 @@ class TestInjectDllSuccessPath:
         modules = await attached_bridge.get_modules()
         module_names = [m.name.lower() for m in modules]
         assert any("version" in name for name in module_names), (
-            f"version.dll not found in get_modules() after injection; "
-            f"modules: {module_names[:20]}"
+            f"version.dll not found in get_modules() after injection; modules: {module_names[:20]}"
         )
 
 
@@ -453,9 +430,9 @@ class TestAdjustTokenPrivilegeNoPidDefect:
             process_bridge: Initialized ProcessBridge.
         """
         result = await process_bridge.adjust_token_privilege(
-            "SeChangeNotifyPrivilege", enable=True,
+            "SeChangeNotifyPrivilege",
+            enable=True,
         )
         assert result is True, (
-            "PD-008: adjust_token_privilege(no pid) should return True "
-            "but raises OverflowError in production (un-typed argtypes)"
+            "PD-008: adjust_token_privilege(no pid) should return True but raises OverflowError in production (un-typed argtypes)"
         )
