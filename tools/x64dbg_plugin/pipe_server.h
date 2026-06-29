@@ -43,7 +43,7 @@ struct PipeResponse {
     std::string error;
 };
 
-using CommandHandler = std::function<PipeResponse(const PipeMessage&)>;
+using PipeCommandHandler = std::function<PipeResponse(const PipeMessage&)>;
 
 class PipeServer {
 public:
@@ -59,7 +59,7 @@ public:
     void stop();
     bool is_running() const;
 
-    void set_command_handler(CommandHandler handler);
+    void set_command_handler(PipeCommandHandler handler);
 
     bool send_event(const std::string& event_type, const std::string& data);
     bool broadcast_event(const std::string& event_json);
@@ -71,7 +71,7 @@ private:
     std::atomic<bool> m_running;
     std::atomic<bool> m_client_connected;
     std::mutex m_pipe_mutex;
-    CommandHandler m_command_handler;
+    PipeCommandHandler m_command_handler;
 
     static DWORD WINAPI server_thread_proc(LPVOID param);
     void server_loop();

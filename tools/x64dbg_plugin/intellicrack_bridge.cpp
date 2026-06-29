@@ -263,7 +263,7 @@ DLL_EXPORT void CBCREATEPROCESS(CBTYPE cbType, PLUG_CB_CREATEPROCESS* info) {
     (void)cbType;
     if (info && info->fdProcessInfo) {
         intellicrack::on_process_start(
-            info->modInfo ? info->modInfo->name : nullptr,
+            info->DebugFileName ? info->DebugFileName : nullptr,
             info->fdProcessInfo->dwProcessId
         );
     }
@@ -279,7 +279,10 @@ DLL_EXPORT void CBEXITPROCESS(CBTYPE cbType, PLUG_CB_EXITPROCESS* info) {
 DLL_EXPORT void CBLOADDLL(CBTYPE cbType, PLUG_CB_LOADDLL* info) {
     (void)cbType;
     if (info && info->modInfo) {
-        intellicrack::on_dll_load(info->modInfo->name, info->modInfo->base);
+        intellicrack::on_dll_load(
+            info->modname ? info->modname : "unknown",
+            static_cast<uint64_t>(info->modInfo->BaseOfImage)
+        );
     }
 }
 

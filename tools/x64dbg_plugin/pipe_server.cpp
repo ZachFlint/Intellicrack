@@ -84,7 +84,7 @@ bool PipeServer::is_running() const {
     return m_running.load();
 }
 
-void PipeServer::set_command_handler(CommandHandler handler) {
+void PipeServer::set_command_handler(PipeCommandHandler handler) {
     m_command_handler = std::move(handler);
 }
 

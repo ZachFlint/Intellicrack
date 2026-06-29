@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="D:\Intellicrack\tools\x64dbg_plugin\build_x32\CMakeFiles\f2e107653f699b7ed32bed04d40c1700\generate.stamp.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{F8F7836C-73E1-348E-8269-CBB55731973A}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

@@ -358,7 +358,7 @@ PipeResponse CommandHandler::cmd_bp_list(const PipeMessage& msg) {
     bool first_entry = true;
 
     struct BpTypeInfo {
-        BP_TYPE type;
+        BPXTYPE type;
         const char* type_str;
     };
     BpTypeInfo bp_types[] = {
@@ -565,7 +565,7 @@ PipeResponse CommandHandler::cmd_reg_all(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    REGDUMP regdump;
+    REGDUMP_AVX512 regdump;
     if (!DbgGetRegDumpEx(&regdump, sizeof(regdump))) {
         response.success = false;
         response.error = "Failed to get register dump";
@@ -778,7 +778,7 @@ PipeResponse CommandHandler::cmd_mem_map(const PipeMessage& msg) {
     for (int i = 0; i < memmap.count; i++) {
         if (i > 0) ss << ",";
         ss << "{";
-        ss << "\"base\":\"" << format_address(memmap.page[i].mbi.BaseAddress) << "\",";
+        ss << "\"base\":\"" << format_address(reinterpret_cast<uintptr_t>(memmap.page[i].mbi.BaseAddress)) << "\",";
         ss << "\"size\":" << memmap.page[i].mbi.RegionSize << ",";
         ss << "\"protect\":" << memmap.page[i].mbi.Protect << ",";
         ss << "\"type\":" << memmap.page[i].mbi.Type;
@@ -874,8 +874,15 @@ PipeResponse CommandHandler::cmd_mod_exports(const PipeMessage& msg) {
         return response;
     }
 
+    Script::Module::ModuleInfo modInfo = {};
+    if (!Script::Module::InfoFromAddr(base, &modInfo)) {
+        response.success = false;
+        response.error = "Failed to get module info";
+        return response;
+    }
+
     ListInfo export_list = {};
-    if (!Script::Module::GetExports(&export_list, base)) {
+    if (!Script::Module::GetExports(&modInfo, &export_list)) {
         response.success = true;
         response.result = "[]";
         return response;
@@ -932,8 +939,15 @@ PipeResponse CommandHandler::cmd_mod_imports(const PipeMessage& msg) {
         return response;
     }
 
+    Script::Module::ModuleInfo modInfo = {};
+    if (!Script::Module::InfoFromAddr(base, &modInfo)) {
+        response.success = false;
+        response.error = "Failed to get module info";
+        return response;
+    }
+
     ListInfo import_list = {};
-    if (!Script::Module::GetImports(&import_list, base)) {
+    if (!Script::Module::GetImports(&modInfo, &import_list)) {
         response.success = true;
         response.result = "[]";
         return response;
@@ -1001,7 +1015,8 @@ PipeResponse CommandHandler::cmd_disasm(const PipeMessage& msg) {
     duint current = static_cast<duint>(address);
     for (int i = 0; i < count; i++) {
         DISASM_INSTR instr;
-        if (!DbgDisasmAt(current, &instr)) {
+        DbgDisasmAt(current, &instr);
+        if (instr.instr_size == 0) {
             break;
         }
 
@@ -1373,7 +1388,8 @@ PipeResponse CommandHandler::cmd_cfg(const PipeMessage& msg) {
 
         for (int i = 0; i < 1000; i++) {
             DISASM_INSTR instr;
-            if (!DbgDisasmAt(current, &instr)) break;
+            DbgDisasmAt(current, &instr);
+            if (instr.instr_size == 0) break;
             instr_count++;
             block_end = current + instr.instr_size;
 
@@ -1797,8 +1813,8 @@ PipeResponse CommandHandler::cmd_thread_detail(const PipeMessage& msg) {
            << "\"threadId\":" << threadList.list[i].BasicInfo.ThreadId << ","
            << "\"name\":\"" << escape_json(threadList.list[i].BasicInfo.threadName) << "\","
            << "\"rip\":\"" << format_address(threadList.list[i].BasicInfo.ThreadStartAddress) << "\","
-           << "\"suspended\":" << (threadList.list[i].BasicInfo.SuspendCount > 0 ? "true" : "false") << ","
-           << "\"priority\":" << threadList.list[i].BasicInfo.Priority
+           << "\"suspended\":" << (threadList.list[i].SuspendCount > 0 ? "true" : "false") << ","
+           << "\"priority\":" << static_cast<int>(threadList.list[i].Priority)
            << "}";
     }
     ss << "]";
