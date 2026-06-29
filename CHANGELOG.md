@@ -322,6 +322,14 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
 
+- Integrate workspace agents and update x64dbg plugin build (``)
+Introduce workspace-scoped agent and skill configurations generated from markdown sources, and update the x64dbg plugin build pipeline to support automated x32/x64 compilation and deployment. Dependency configurations are updated to exclude vendor directories and include PyInstaller and PyTorch.
+- Add `generate_agent_jsons.py` to compile agent JSON specs from markdown frontmatter
+- Update `install-x64dbg-plugin.ps1` to auto-detect CMake from Visual Studio and support x32/x64 build targets
+- Include pre-built x32/x64 x64dbg bridge plugins and MSVC build artifacts
+- Update `pyproject.toml` and lockfiles to add `pyinstaller` and `torch` while excluding `vendor/` from linters and coverage
+- Fix regex escape sequence in `lint_report.py` and refine assertion in `test_domain_pattern.py`
+
 
 ### Changed
 
@@ -887,6 +895,9 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **core:** Resolve socket leak in connection pool shutdown (`501e32d`)
+Ensure active connections are explicitly drained and closed during pool termination to prevent resource exhaustion. Previously, orphaned sockets remained in a TIME_WAIT state under high-throughput teardown scenarios.
 
 - Resolve PE checksum offset defect and harden test suite (`28bf02e`)
 Derive the PE checksum field offset dynamically from `e_lfanew` instead of using a hardcoded constant, ensuring correct notification coordinates during repairs. Additionally, integrate comprehensive audit documentation and significantly expand the test suite with robust, deterministic, and falsifiable test cases across all core components and tool bridges.
@@ -3388,8 +3399,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- **core:** Resolve socket leak in connection pool shutdown (``)
-Ensure active connections are explicitly drained and closed during pool termination to prevent resource exhaustion. Previously, orphaned sockets remained in a TIME_WAIT state under high-throughput teardown scenarios.
 
 

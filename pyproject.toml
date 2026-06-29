@@ -105,6 +105,7 @@ optional-dependencies.dev = [
   "pydoclint",
   "pydocstyle",
   "pygount",
+  "pyinstaller",
   "pylint",
   "pyproject-fmt",
   "pyroma",
@@ -112,7 +113,6 @@ optional-dependencies.dev = [
   "radon",
   "rope",
   "ruff",
-  "safety",
   "sourcery",
   "twine",
   "ty",
@@ -224,6 +224,7 @@ dev = [
   "pydoclint",
   "pydocstyle",
   "pygount",
+  "pyinstaller",
   "pylint",
   "pyproject-fmt",
   "pyroma",
@@ -231,7 +232,6 @@ dev = [
   "radon",
   "rope",
   "ruff",
-  "safety",
   "skylos",
   "sourcery",
   "twine",
@@ -309,6 +309,7 @@ exclude_dirs = [
   ".github",
   ".pixi",
   "node_modules",
+  "vendor",
   "CLI Coding",
   "Screenshots",
 ]
@@ -341,6 +342,7 @@ extend-exclude = '''/(
   | tools
   | docs
   | node_modules
+  | vendor
   | CLI\ Coding
   | Screenshots
 )/
@@ -366,6 +368,7 @@ run.omit = [
   "*/Screenshots/*",
   "*/tests/*",
   "*/tools/*",
+  "*/vendor/*",
 ]
 run.source = ["src/intellicrack"]
 report.exclude_lines = [
@@ -385,7 +388,7 @@ html.directory = "coverage_html_report"
 html.title = "Intellicrack Coverage Report"
 
 [tool.deadcode]
-exclude = ["tests", "tools", "docs", ".git", ".pixi", "node_modules", "CLI Coding", "Screenshots"]
+exclude = ["tests", "tools", "docs", ".git", ".pixi", "node_modules", "vendor", "CLI Coding", "Screenshots"]
 ignore-names = [
   "argtypes",
   "restype",
@@ -667,6 +670,7 @@ exclude = [
   "build",
   "dist",
   "node_modules",
+  "vendor",
   "CLI Coding",
   "Screenshots",
   "typings",
@@ -707,6 +711,7 @@ exclude = [
   "^\\.idea/",
   "^\\.vscode/",
   "^node_modules/",
+  "^vendor/",
   "^CLI Coding/",
   "^Screenshots/",
 ]
@@ -727,6 +732,7 @@ follow_imports = "skip"
 
 [tool.pixi]
 dependencies.python = "3.13.*"
+dependencies.setuptools = "<82"
 dependencies.git = ">=2.54.0,<3"
 dependencies.just = ">=1.54.0,<2"
 dependencies.shellcheck = ">=0.11.0,<0.12"
@@ -818,13 +824,14 @@ pypi-dependencies.skylos = ">=4.26.1, <5"
 pypi-dependencies.uncalled = ">=0.1.8, <0.2"
 pypi-dependencies.deadcode = ">=2.4.1, <3"
 pypi-dependencies.pygount = ">=3.2.0, <4"
+pypi-dependencies.pyinstaller = ">=6.12.0, <7"
 pypi-dependencies.pytest-deadfixtures = ">=3.1.0, <4"
 pypi-dependencies.basedpyright = ">=1.39.8, <2"
 pypi-dependencies.monkeytype = ">=23.3.0, <24"
 pypi-dependencies.ty = ">=0.0.54, <0.0.55"
 pypi-dependencies.mccabe = ">=0.7.0, <0.8"
 pypi-dependencies.xenon = ">=0.9.3, <0.10"
-pypi-dependencies.safety = ">=3.8.1, <4"
+pypi-dependencies.torch = ">=2.12.1"
 pypi-dependencies.yamllint = ">=1.38.0, <2"
 pypi-dependencies.jsonlint = ">=0.1, <0.2"
 pypi-dependencies.pytest-cov = ">=7.1.0, <8"
@@ -919,7 +926,7 @@ allow-init-docstring = true
 
 [tool.pydocstyle]
 convention = "google"
-match-dir = "(?!tests|docs|tools|build|dist|node_modules|\\.).*"
+match-dir = "(?!tests|docs|tools|build|dist|node_modules|vendor|\\.).*"
 
 [tool.pytest]
 ini_options.addopts = ["-ra", "--strict-markers"]
@@ -1133,7 +1140,7 @@ enabled = true
 enabled = true
 
 [tool.ty.src]
-exclude = ["notebooks/"]
+exclude = ["notebooks/", "vendor/"]
 
 [tool.vulture]
 min_confidence = 80
@@ -1167,6 +1174,7 @@ exclude = [
   "tools/",
   "docs/",
   "node_modules/",
+  "vendor/",
   "CLI Coding/",
   "Screenshots/",
   "typings/",

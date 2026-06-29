@@ -1,0 +1,10 @@
+^D:\INTELLICRACK\TOOLS\X64DBG_PLUGIN\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\Microsoft Visual Studio\18\Enterprise\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe" -SD:/Intellicrack/tools/x64dbg_plugin -BD:/Intellicrack/tools/x64dbg_plugin/build_x32 --check-stamp-file D:/Intellicrack/tools/x64dbg_plugin/build_x32/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

@@ -55,6 +55,7 @@ add_library(${TARGET_NAME} SHARED ${SOURCES} ${HEADERS})
 target_include_directories(${TARGET_NAME} PRIVATE
     ${X64DBG_SDK_PATH}
     ${X64DBG_SDK_PATH}/_scriptapi
+    ${X64DBG_SDK_PATH}/..
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

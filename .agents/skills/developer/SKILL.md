@@ -1,0 +1,1 @@
+D:/Intellicrack/.claude/agents/developer.md
