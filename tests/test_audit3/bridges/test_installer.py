@@ -1261,11 +1261,13 @@ class TestRegistryCoversAllEnumMembers:
         assert any("qemu" in exe.lower() or "docker" in exe.lower() for exe in info.executables)
 
     @staticmethod
-    def test_hex_editor_lists_hxd() -> None:
-        """HEX_EDITOR entry lists HxD executables (F-0037)."""
+    def test_hex_editor_is_builtin() -> None:
+        """HEX_EDITOR is a builtin tool with no HxD executables (F-0037)."""
         info = TOOL_REGISTRY[ToolName.HEX_EDITOR]
-        assert info.executables
-        assert any("hxd" in exe.lower() for exe in info.executables)
+        assert info.kind == "builtin"
+        assert info.executables == []
+        assert info.common_paths == []
+        assert not any("hxd" in exe.lower() for exe in info.executables)
 
 
 # --------------------------------------------------------------------------
@@ -1342,7 +1344,7 @@ class TestTypeDataclassesSanity:
         The oracle value is the OSError message raised at the copy seam.
         """
         x64dbg = _make_x64dbg_tree(tmp_path)
-        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", b"\xDE\xAD" * 16)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x64.dp64", b"\xde\xad" * 16)
 
         oracle_error = "synthetic permission denied at x64"
         original_copy = shutil.copy2
@@ -1389,13 +1391,9 @@ class TestTypeDataclassesSanity:
             is_admin_fn = getattr(shell32, "IsUserAnAdmin", None)
             assert is_admin_fn is not None, "IsUserAnAdmin not found in shell32"
             oracle: bool = bool(is_admin_fn())
-            assert result is oracle, (
-                f"is_user_admin() returned {result!r} but ctypes oracle says {oracle!r}"
-            )
+            assert result is oracle, f"is_user_admin() returned {result!r} but ctypes oracle says {oracle!r}"
         else:
-            assert result is True, (
-                f"is_user_admin() must return True on non-Windows; got {result!r}"
-            )
+            assert result is True, f"is_user_admin() must return True on non-Windows; got {result!r}"
 
 
 # --------------------------------------------------------------------------

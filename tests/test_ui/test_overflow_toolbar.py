@@ -51,7 +51,7 @@ def toolbar_window(qapp: QApplication) -> Generator[tuple[QMainWindow, OverflowT
     provider_combo.addItems(["Anthropic", "OpenAI", "Local"])
     provider_combo.setMinimumWidth(120)
     toolbar.addWidget(provider_combo)
-    for label in ("x64dbg", "Cutter", "HxD", "Hex Editor", "Ghidra", "Frida", "Process", "Sandbox"):
+    for label in ("x64dbg", "Cutter", "Hex Editor", "Ghidra", "Frida", "Process", "Sandbox"):
         btn = QPushButton(label)
         btn.setMinimumWidth(80)
         toolbar.addWidget(btn)

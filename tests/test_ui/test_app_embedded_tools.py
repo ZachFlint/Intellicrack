@@ -5,8 +5,8 @@
 
 """Tests for embedded tools UI integration in MainWindow.
 
-Tests the menu actions, toolbar buttons, and handlers for x64dbg,
-Cutter, and HxD embedded tool integration.
+Tests the menu actions, toolbar buttons, and handlers for x64dbg
+and Cutter embedded tool integration.
 """
 
 from __future__ import annotations
@@ -192,7 +192,7 @@ class TestToolbarButtonsIntegration:
     def test_toolbar_has_tool_buttons(
         patched_window: MainWindow,
     ) -> None:
-        """Verify x64dbg, Cutter, and HxD buttons exist in toolbar.
+        """Verify x64dbg and Cutter buttons exist in toolbar.
 
         Args:
             patched_window: MainWindow fixture with SandboxManager patched out.
@@ -200,19 +200,15 @@ class TestToolbarButtonsIntegration:
         window = patched_window
         assert hasattr(window, "x64dbg_btn"), "x64dbg button not found"
         assert hasattr(window, "cutter_btn"), "Cutter button not found"
-        assert hasattr(window, "hxd_btn"), "HxD button not found"
 
         x64dbg_btn: object = window.x64dbg_btn
         cutter_btn: object = window.cutter_btn
-        hxd_btn: object = window.hxd_btn
 
         assert isinstance(x64dbg_btn, QPushButton)
         assert isinstance(cutter_btn, QPushButton)
-        assert isinstance(hxd_btn, QPushButton)
 
         assert x64dbg_btn.text() == "x64dbg"
         assert cutter_btn.text() == "Cutter"
-        assert hxd_btn.text() == "HxD"
 
     @staticmethod
     def test_toolbar_button_tooltips(
@@ -227,15 +223,12 @@ class TestToolbarButtonsIntegration:
 
         x64dbg_btn: object = window.x64dbg_btn
         cutter_btn: object = window.cutter_btn
-        hxd_btn: object = window.hxd_btn
 
         assert isinstance(x64dbg_btn, QPushButton)
         assert isinstance(cutter_btn, QPushButton)
-        assert isinstance(hxd_btn, QPushButton)
 
         assert "x64dbg" in x64dbg_btn.toolTip()
         assert "Cutter" in cutter_btn.toolTip()
-        assert "HxD" in hxd_btn.toolTip()
 
 
 class TestEmbeddedToolHandlers:
