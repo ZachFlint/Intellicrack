@@ -366,15 +366,13 @@ TOOL_REGISTRY: dict[ToolName, ToolInfo] = {
     ),
     ToolName.HEX_EDITOR: ToolInfo(
         name=ToolName.HEX_EDITOR,
-        display_name="HxD",
-        common_paths=[
-            Path(_env_program_files()) / "HxD",
-            Path(_env_local_appdata() or _env_program_files()) / "Programs" / "HxD",
-        ],
-        executables=["HxD.exe", "HxD32.exe"],
+        display_name="Hex Editor",
+        common_paths=[],
+        executables=[],
         download_url="",
         version_command=[],
         min_version="",
+        kind="builtin",
     ),
 }
 

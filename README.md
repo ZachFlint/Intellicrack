@@ -80,7 +80,8 @@ PyQt6-based GUI featuring:
 - Chat interface for natural language interaction
 - Tool output panels with disassembly/decompilation viewing
 - Provider/model selection and configuration dialogs
-- Embedded tool widgets (x64dbg, Cutter, HxD)
+- Embedded tool widgets (x64dbg, Cutter, Ghidra, Frida)
+- Built-in native hex editor (HexEditorBridge)
 - Session management for saving/loading analysis sessions
 - Protection analysis panel displaying detected algorithms, validation
   routines, and crypto usage

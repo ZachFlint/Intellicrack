@@ -75,7 +75,6 @@ from intellicrack.ui.panels.async_bridge import (
     run_bridge_coroutine_async,
     run_bridge_coroutine_logged,
 )
-from intellicrack.ui.panels.hxd_panel import HxDPanel, find_hxd_executable
 from intellicrack.ui.provider_config import ModelRefreshWorker, ModelSelectionDialog, ProviderConfigDialog
 from intellicrack.ui.resources import FontManager, IconManager, ThemeManager
 from intellicrack.ui.sandbox_config import SandboxConfigDialog, SandboxMonitorWidget
@@ -262,7 +261,6 @@ class MainWindow(QMainWindow):
         self._script_generator: ScriptGenerator | None = None
         self.template_manager: TemplateManager | None = None
         self.model_discovery: ModelDiscovery | None = None
-        self._hxd_panel: HxDPanel | None = None
         self._sandbox_monitor_wired_widgets: weakref.WeakSet[QObject] = weakref.WeakSet()
         self._process_attached_wired: weakref.WeakSet[QObject] = weakref.WeakSet()
         self._status_failure_count: int = 0
@@ -294,8 +292,6 @@ class MainWindow(QMainWindow):
 
         _logger.info("ui_init_setup_ui")
         self._setup_ui()
-        _logger.info("ui_init_register_hxd_panel")
-        self._register_hxd_panel_if_available()
         _logger.info("ui_init_setup_menus")
         self._setup_menus()
         _logger.info("ui_init_setup_toolbar")
@@ -537,45 +533,6 @@ class MainWindow(QMainWindow):
         self._splitter.setSizes([500, 900])
 
         layout.addWidget(self._splitter)
-
-    @property
-    def hxd_panel(self) -> HxDPanel | None:
-        """Return the registered ``HxDPanel`` instance, if any.
-
-        Returns:
-            HxDPanel | None: The pre-registered ``HxDPanel`` instance, or
-            ``None`` when HxD.exe was not locatable at MainWindow init time.
-        """
-        return self._hxd_panel
-
-    def _register_hxd_panel_if_available(self) -> None:
-        """Register HxDPanel as a docked tab next to HexEditorPanel when HxD.exe is reachable.
-
-        Looks up the HxD executable using the shared finder. If found, instantiates ``HxDPanel`` and attaches it as a tab in the tool
-        panel's ``QTabWidget`` so it sits alongside the built-in hex editor. If HxD is not installed, logs a debug record and returns
-        silently without attaching anything.
-        """
-        if find_hxd_executable() is None:
-            _logger.debug("hxd_panel_skipped_executable_not_found")
-            return
-
-        try:
-            panel = HxDPanel()
-        except (RuntimeError, OSError) as exc:
-            _logger.warning("hxd_panel_construction_failed", error=str(exc))
-            return
-
-        try:
-            self.tool_panel.tab_widget.addTab(panel, "HxD")
-            self.tool_panel.embedded_tools["hxd"] = panel
-        except (RuntimeError, AttributeError) as exc:
-            _logger.warning("hxd_panel_tab_register_failed", error=str(exc))
-            panel.cleanup()
-            panel.deleteLater()
-            return
-
-        self._hxd_panel = panel
-        _logger.info("hxd_panel_registered", tab="HxD")
 
     def _add_menu_action(
         self,
@@ -861,14 +818,6 @@ class MainWindow(QMainWindow):
         self.cutter_btn.setEnabled(False)
         self._binary_dependent_buttons.append(self.cutter_btn)
         toolbar.addWidget(self.cutter_btn)
-
-        self.hxd_btn = QPushButton("HxD")
-        self.hxd_btn.setObjectName("tool_button")
-        self.hxd_btn.setToolTip("Open HxD Hex Editor")
-        self.hxd_btn.clicked.connect(self._on_open_hxd)
-        self.hxd_btn.setEnabled(False)
-        self._binary_dependent_buttons.append(self.hxd_btn)
-        toolbar.addWidget(self.hxd_btn)
 
         self._hex_editor_btn = QPushButton("Hex Editor")
         self._hex_editor_btn.setObjectName("tool_button")
@@ -2835,41 +2784,6 @@ class MainWindow(QMainWindow):
             _logger.exception("tool_open_failed", tool_name="Cutter")
             self._show_tool_error("Cutter", f"Failed to open Cutter panel: {e}")
 
-    def on_open_hxd(self) -> None:
-        """Open the HxD hex editor panel (public wrapper for external callers)."""
-        self._on_open_hxd()
-
-    def _open_hxd_impl(self) -> None:
-        """Activate the HxD hex editor panel, registering it late when needed."""
-        if self._hxd_panel is None:
-            self._register_hxd_panel_if_available()
-
-        widget: HxDPanel | None = self._hxd_panel
-        if widget is None:
-            self._show_tool_error(
-                "HxD",
-                "HxD executable not found. Install HxD and restart Intellicrack to use this tab.",
-            )
-            return
-
-        tab_idx = self.tool_panel.tab_widget.indexOf(widget)
-        if tab_idx >= 0:
-            self.tool_panel.tab_widget.setCurrentIndex(tab_idx)
-        widget.start_tool()
-
-    def _on_open_hxd(self) -> None:
-        """Open the HxD hex editor panel.
-
-        Prefers the pre-registered ``HxDPanel`` instance attached to the tool panel during MainWindow initialization. If HxD was installed
-        after launch and no panel was pre-registered, attempts late registration via :meth:`_register_hxd_panel_if_available` before opening
-        the tab.
-        """
-        try:
-            self._open_hxd_impl()
-        except (RuntimeError, ImportError, AttributeError) as e:
-            _logger.exception("tool_open_failed", tool_name="HxD")
-            self._show_tool_error("HxD", f"Failed to open HxD panel: {e}")
-
     def _on_open_hex_editor(self) -> None:
         """Open hex editor panel."""
         try:
@@ -3315,13 +3229,6 @@ class MainWindow(QMainWindow):
             _logger.warning("process_manager_shutdown_failed", error=str(e))
 
         self.tool_panel.close_embedded_tools()
-
-        if self._hxd_panel is not None:
-            try:
-                self._hxd_panel.cleanup()
-            except (RuntimeError, OSError) as e:
-                _logger.warning("hxd_panel_cleanup_failed", error=str(e))
-            self._hxd_panel = None
 
         try:
             run_bridge_coroutine(self.sandbox_manager.destroy_all())
