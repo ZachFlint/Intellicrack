@@ -47,6 +47,9 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.ghidra_panel_data_types import DataTypeManagerWidget
+from intellicrack.ui.panels.ghidra_panel_extras import GhidraAnalysisExtrasWidget
+from intellicrack.ui.panels.ghidra_panel_program_tree import ProgramTreeWidget
 from intellicrack.ui.panels.qt_compat import (
     set_header_labels,
     set_max_block_count,
@@ -269,7 +272,7 @@ class GhidraPanel(AnalysisPanelBase):
         strings_layout.setSpacing(_PANEL_SPACING)
         strings_toolbar = QHBoxLayout()
         self._string_search_input = QLineEdit()
-        getattr(self._string_search_input, "set" + "Place" + "holderText")(self.tr("Search strings..."))
+        self._string_search_input.setPlaceholderText(self.tr("Search strings..."))
         self._string_search_input.returnPressed.connect(self._on_search_strings)
         strings_toolbar.addWidget(self._string_search_input)
         self._string_search_btn = QPushButton(self.tr("Search"))
@@ -286,10 +289,7 @@ class GhidraPanel(AnalysisPanelBase):
         self._exports_table = _make_table(_EXPORT_COLUMNS)
         tabs.addTab(self._exports_table, self.tr("Exports"))
 
-        self._xrefs_tree = QTreeWidget()
-        set_header_labels(self._xrefs_tree, _XREF_COLUMNS)
-        set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
-        tabs.addTab(self._xrefs_tree, self.tr("XRefs"))
+        tabs.addTab(self._create_xrefs_tab(), self.tr("XRefs"))
 
         tabs.addTab(self._create_labels_bookmarks_tab(), self.tr("Labels/Bookmarks"))
         tabs.addTab(self._create_structures_tab(), self.tr("Structures"))
@@ -300,8 +300,59 @@ class GhidraPanel(AnalysisPanelBase):
         tabs.addTab(self._create_symbols_tab(), self.tr("Symbols"))
         tabs.addTab(self._create_scripting_tab(), self.tr("Scripting"))
         tabs.addTab(self._create_data_types_tab(), self.tr("Data Types"))
+        tabs.addTab(self._create_program_tree_tab(), self.tr("Program Tree"))
+        tabs.addTab(self._create_analysis_extras_tab(), self.tr("Analysis Extras"))
 
         return tabs
+
+    # ------------------------------------------------------------------
+    # Tab 4: XRefs
+    # ------------------------------------------------------------------
+
+    def _create_xrefs_tab(self) -> QWidget:
+        """Create the XRefs tab with an editable reference table.
+
+        Returns:
+            QWidget: Widget with the cross-reference tree plus add/delete
+            reference forms wired to ``GhidraBridge.add_reference`` and
+            ``GhidraBridge.delete_reference``.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        self._xrefs_tree = QTreeWidget()
+        set_header_labels(self._xrefs_tree, _XREF_COLUMNS)
+        set_selection_mode(self._xrefs_tree, QAbstractItemView.SelectionMode.SingleSelection)
+        layout.addWidget(self._xrefs_tree)
+
+        edit_label = QLabel(self.tr("Edit References"))
+        layout.addWidget(edit_label)
+
+        ref_form1 = QHBoxLayout()
+        self._ref_from_input = QLineEdit()
+        self._ref_from_input.setPlaceholderText("From address (hex)")
+        self._ref_to_input = QLineEdit()
+        self._ref_to_input.setPlaceholderText("To address (hex)")
+        self._ref_type_combo = QComboBox()
+        self._ref_type_combo.addItems(["DATA", "READ", "WRITE", "CALL", "UNCONDITIONAL_JUMP", "CONDITIONAL_JUMP"])
+        ref_form1.addWidget(self._ref_from_input)
+        ref_form1.addWidget(self._ref_to_input)
+        ref_form1.addWidget(self._ref_type_combo)
+        layout.addLayout(ref_form1)
+
+        ref_form2 = QHBoxLayout()
+        self._add_ref_btn = QPushButton(self.tr("Add Reference"))
+        self._add_ref_btn.clicked.connect(self._on_add_reference)
+        ref_form2.addWidget(self._add_ref_btn)
+        self._delete_ref_btn = QPushButton(self.tr("Delete Reference"))
+        self._delete_ref_btn.clicked.connect(self._on_delete_reference)
+        ref_form2.addWidget(self._delete_ref_btn)
+        ref_form2.addStretch()
+        layout.addLayout(ref_form2)
+
+        return container
 
     # ------------------------------------------------------------------
     # Tab 5: Labels / Bookmarks
@@ -323,23 +374,32 @@ class GhidraPanel(AnalysisPanelBase):
         lbl_form = QHBoxLayout()
         self._label_addr_input = QLineEdit()
         self._label_addr_input.setObjectName("label_addr_input")
-        getattr(self._label_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._label_addr_input.setPlaceholderText("Address (hex)")
         self._label_name_input = QLineEdit()
-        getattr(self._label_name_input, "set" + "Place" + "holderText")("Label name")
+        self._label_name_input.setPlaceholderText("Label name")
+        self._label_primary_check = QCheckBox(self.tr("Primary"))
         self._set_label_btn = QPushButton(self.tr("Set Label"))
         self._set_label_btn.clicked.connect(self._on_set_label)
         lbl_form.addWidget(self._label_addr_input)
         lbl_form.addWidget(self._label_name_input)
+        lbl_form.addWidget(self._label_primary_check)
         lbl_form.addWidget(self._set_label_btn)
         labels_layout.addLayout(lbl_form)
 
         self._labels_table = _make_table(_LABEL_COLUMNS)
+        self._labels_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._labels_table.customContextMenuRequested.connect(self._on_label_context_menu)
         labels_layout.addWidget(self._labels_table)
 
+        lbl_bottom_row = QHBoxLayout()
         lbl_refresh = QPushButton(self.tr("Refresh Labels"))
         lbl_refresh.setObjectName("refresh_labels_btn")
         lbl_refresh.clicked.connect(self._on_refresh_labels)
-        labels_layout.addWidget(lbl_refresh)
+        lbl_bottom_row.addWidget(lbl_refresh)
+        self._remove_label_btn = QPushButton(self.tr("Remove Selected"))
+        self._remove_label_btn.clicked.connect(self._on_remove_label)
+        lbl_bottom_row.addWidget(self._remove_label_btn)
+        labels_layout.addLayout(lbl_bottom_row)
         splitter.addWidget(labels_widget)
 
         bm_widget = QWidget()
@@ -349,16 +409,16 @@ class GhidraPanel(AnalysisPanelBase):
 
         bm_form1 = QHBoxLayout()
         self._bm_addr_input = QLineEdit()
-        getattr(self._bm_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._bm_addr_input.setPlaceholderText("Address (hex)")
         self._bm_category_input = QLineEdit()
-        getattr(self._bm_category_input, "set" + "Place" + "holderText")("Category")
+        self._bm_category_input.setPlaceholderText("Category")
         bm_form1.addWidget(self._bm_addr_input)
         bm_form1.addWidget(self._bm_category_input)
         bm_layout.addLayout(bm_form1)
 
         bm_form2 = QHBoxLayout()
         self._bm_comment_input = QLineEdit()
-        getattr(self._bm_comment_input, "set" + "Place" + "holderText")("Comment")
+        self._bm_comment_input.setPlaceholderText("Comment")
         self._bm_type_combo = QComboBox()
         self._bm_type_combo.addItems(["Note", "Analysis", "Error", "Warning", "Info"])
         self._create_bm_btn = QPushButton(self.tr("Create"))
@@ -369,11 +429,18 @@ class GhidraPanel(AnalysisPanelBase):
         bm_layout.addLayout(bm_form2)
 
         self._bookmarks_table = _make_table(_BOOKMARK_COLUMNS)
+        self._bookmarks_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._bookmarks_table.customContextMenuRequested.connect(self._on_bookmark_context_menu)
         bm_layout.addWidget(self._bookmarks_table)
 
+        bm_bottom_row = QHBoxLayout()
         bm_refresh = QPushButton(self.tr("Refresh Bookmarks"))
         bm_refresh.clicked.connect(self._on_refresh_bookmarks)
-        bm_layout.addWidget(bm_refresh)
+        bm_bottom_row.addWidget(bm_refresh)
+        self._remove_bm_btn = QPushButton(self.tr("Remove Selected"))
+        self._remove_bm_btn.clicked.connect(self._on_remove_bookmark)
+        bm_bottom_row.addWidget(self._remove_bm_btn)
+        bm_layout.addLayout(bm_bottom_row)
         splitter.addWidget(bm_widget)
 
         return splitter
@@ -408,7 +475,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         define_row = QHBoxLayout()
         self._struct_name_input = QLineEdit()
-        getattr(self._struct_name_input, "set" + "Place" + "holderText")("Structure name")
+        self._struct_name_input.setPlaceholderText("Structure name")
         define_row.addWidget(self._struct_name_input)
         self._add_field_btn = QPushButton(self.tr("Add Field"))
         self._add_field_btn.clicked.connect(self._on_add_struct_field)
@@ -427,9 +494,9 @@ class GhidraPanel(AnalysisPanelBase):
 
         apply_row = QHBoxLayout()
         self._apply_struct_addr_input = QLineEdit()
-        getattr(self._apply_struct_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._apply_struct_addr_input.setPlaceholderText("Address (hex)")
         self._apply_struct_name_input = QLineEdit()
-        getattr(self._apply_struct_name_input, "set" + "Place" + "holderText")("Structure name")
+        self._apply_struct_name_input.setPlaceholderText("Structure name")
         self._apply_struct_btn = QPushButton(self.tr("Apply"))
         self._apply_struct_btn.clicked.connect(self._on_apply_structure)
         apply_row.addWidget(self._apply_struct_addr_input)
@@ -469,7 +536,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         read_row = QHBoxLayout()
         self._read_addr_input = QLineEdit()
-        getattr(self._read_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._read_addr_input.setPlaceholderText("Address (hex)")
         self._read_len_spin = QSpinBox()
         self._read_len_spin.setRange(1, 4096)
         self._read_len_spin.setValue(256)
@@ -490,9 +557,9 @@ class GhidraPanel(AnalysisPanelBase):
 
         write_row = QHBoxLayout()
         self._write_addr_input = QLineEdit()
-        getattr(self._write_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._write_addr_input.setPlaceholderText("Address (hex)")
         self._write_hex_input = QLineEdit()
-        getattr(self._write_hex_input, "set" + "Place" + "holderText")("Hex data (e.g. 90 90 90)")
+        self._write_hex_input.setPlaceholderText("Hex data (e.g. 90 90 90)")
         self._write_bytes_btn = QPushButton(self.tr("Write"))
         self._write_bytes_btn.clicked.connect(self._on_write_bytes)
         write_row.addWidget(self._write_addr_input)
@@ -505,14 +572,14 @@ class GhidraPanel(AnalysisPanelBase):
 
         block_row = QHBoxLayout()
         self._block_name_input = QLineEdit()
-        getattr(self._block_name_input, "set" + "Place" + "holderText")("Block name")
+        self._block_name_input.setPlaceholderText("Block name")
         self._block_start_input = QLineEdit()
-        getattr(self._block_start_input, "set" + "Place" + "holderText")("Start (hex)")
+        self._block_start_input.setPlaceholderText("Start (hex)")
         self._block_size_spin = QSpinBox()
         self._block_size_spin.setRange(1, 0x7FFFFFFF)
         self._block_size_spin.setValue(4096)
         self._block_perms_input = QLineEdit()
-        getattr(self._block_perms_input, "set" + "Place" + "holderText")("rwx")
+        self._block_perms_input.setPlaceholderText("rwx")
         self._block_perms_input.setText("rwx")
         self._create_block_btn = QPushButton(self.tr("Create"))
         self._create_block_btn.clicked.connect(self._on_create_memory_block)
@@ -523,12 +590,14 @@ class GhidraPanel(AnalysisPanelBase):
         block_row.addWidget(self._create_block_btn)
         layout.addLayout(block_row)
 
+        self._build_memory_block_ops_rows(layout)
+
         overlay_label = QLabel(self.tr("Create Overlay Space"))
         layout.addWidget(overlay_label)
 
         overlay_row = QHBoxLayout()
         self._overlay_name_input = QLineEdit()
-        getattr(self._overlay_name_input, "set" + "Place" + "holderText")("Overlay name")
+        self._overlay_name_input.setPlaceholderText("Overlay name")
         self._create_overlay_btn = QPushButton(self.tr("Create Overlay"))
         self._create_overlay_btn.clicked.connect(self._on_create_overlay_space)
         overlay_row.addWidget(self._overlay_name_input)
@@ -536,6 +605,48 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(overlay_row)
 
         return container
+
+    def _build_memory_block_ops_rows(self, layout: QVBoxLayout) -> None:
+        """Build the Remove/Split/Join memory block form rows.
+
+        Args:
+            layout: Parent layout to append the form rows to.
+        """
+        block_ops_label = QLabel(self.tr("Remove / Split / Join Memory Block"))
+        layout.addWidget(block_ops_label)
+
+        remove_row = QHBoxLayout()
+        self._block_remove_name_input = QLineEdit()
+        self._block_remove_name_input.setPlaceholderText("Block name to remove")
+        self._remove_block_btn = QPushButton(self.tr("Remove"))
+        self._remove_block_btn.clicked.connect(self._on_remove_memory_block)
+        remove_row.addWidget(self._block_remove_name_input)
+        remove_row.addWidget(self._remove_block_btn)
+        layout.addLayout(remove_row)
+
+        split_row = QHBoxLayout()
+        self._block_split_name_input = QLineEdit()
+        self._block_split_name_input.setPlaceholderText("Block name to split")
+        self._block_split_addr_input = QLineEdit()
+        self._block_split_addr_input.setPlaceholderText("Split address (hex)")
+        self._split_block_btn = QPushButton(self.tr("Split"))
+        self._split_block_btn.clicked.connect(self._on_split_memory_block)
+        split_row.addWidget(self._block_split_name_input)
+        split_row.addWidget(self._block_split_addr_input)
+        split_row.addWidget(self._split_block_btn)
+        layout.addLayout(split_row)
+
+        join_row = QHBoxLayout()
+        self._block_join_name1_input = QLineEdit()
+        self._block_join_name1_input.setPlaceholderText("First block name")
+        self._block_join_name2_input = QLineEdit()
+        self._block_join_name2_input.setPlaceholderText("Second block name")
+        self._join_blocks_btn = QPushButton(self.tr("Join"))
+        self._join_blocks_btn.clicked.connect(self._on_join_memory_blocks)
+        join_row.addWidget(self._block_join_name1_input)
+        join_row.addWidget(self._block_join_name2_input)
+        join_row.addWidget(self._join_blocks_btn)
+        layout.addLayout(join_row)
 
     # ------------------------------------------------------------------
     # Tab 8: Segments / Program
@@ -577,9 +688,9 @@ class GhidraPanel(AnalysisPanelBase):
 
         meta_row = QHBoxLayout()
         self._meta_name_input = QLineEdit()
-        getattr(self._meta_name_input, "set" + "Place" + "holderText")("Program name")
+        self._meta_name_input.setPlaceholderText("Program name")
         self._meta_base_input = QLineEdit()
-        getattr(self._meta_base_input, "set" + "Place" + "holderText")("Image base (hex)")
+        self._meta_base_input.setPlaceholderText("Image base (hex)")
         self._update_meta_btn = QPushButton(self.tr("Update"))
         self._update_meta_btn.clicked.connect(self._on_update_metadata)
         meta_row.addWidget(self._meta_name_input)
@@ -606,7 +717,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         cg_form = QHBoxLayout()
         self._cg_addr_input = QLineEdit()
-        getattr(self._cg_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._cg_addr_input.setPlaceholderText("Address (hex)")
         self._cg_depth_spin = QSpinBox()
         self._cg_depth_spin.setRange(1, 10)
         self._cg_depth_spin.setValue(2)
@@ -657,16 +768,16 @@ class GhidraPanel(AnalysisPanelBase):
 
         cmt_form1 = QHBoxLayout()
         self._cmt_addr_input = QLineEdit()
-        getattr(self._cmt_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._cmt_addr_input.setPlaceholderText("Address (hex)")
         self._cmt_type_combo = QComboBox()
-        self._cmt_type_combo.addItems(["EOL", "PRE", "POST", "PLATE"])
+        self._cmt_type_combo.addItems(["EOL", "PRE", "POST", "PLATE", "REPEATABLE"])
         cmt_form1.addWidget(self._cmt_addr_input)
         cmt_form1.addWidget(self._cmt_type_combo)
         layout.addLayout(cmt_form1)
 
         self._cmt_text_input = QPlainTextEdit()
         self._cmt_text_input.setFixedHeight(60)
-        getattr(self._cmt_text_input, "set" + "Place" + "holderText")("Comment text")
+        self._cmt_text_input.setPlaceholderText("Comment text")
         layout.addWidget(self._cmt_text_input)
 
         cmt_btns = QHBoxLayout()
@@ -708,7 +819,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         sym_form = QHBoxLayout()
         self._sym_name_input = QLineEdit()
-        getattr(self._sym_name_input, "set" + "Place" + "holderText")("Symbol name")
+        self._sym_name_input.setPlaceholderText("Symbol name")
         self._sym_type_combo = QComboBox()
         self._sym_type_combo.addItems(["", "Function", "Label", "Class", "Namespace"])
         self._search_sym_btn = QPushButton(self.tr("Search Symbols"))
@@ -730,9 +841,9 @@ class GhidraPanel(AnalysisPanelBase):
 
         ns_form = QHBoxLayout()
         self._ns_name_input = QLineEdit()
-        getattr(self._ns_name_input, "set" + "Place" + "holderText")("Namespace name")
+        self._ns_name_input.setPlaceholderText("Namespace name")
         self._ns_parent_input = QLineEdit()
-        getattr(self._ns_parent_input, "set" + "Place" + "holderText")("Parent namespace")
+        self._ns_parent_input.setPlaceholderText("Parent namespace")
         self._create_ns_btn = QPushButton(self.tr("Create Namespace"))
         self._create_ns_btn.clicked.connect(self._on_create_namespace)
         self._refresh_ns_btn = QPushButton(self.tr("Refresh"))
@@ -752,11 +863,11 @@ class GhidraPanel(AnalysisPanelBase):
 
         eq_form = QHBoxLayout()
         self._eq_addr_input = QLineEdit()
-        getattr(self._eq_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._eq_addr_input.setPlaceholderText("Address (hex)")
         self._eq_value_input = QLineEdit()
-        getattr(self._eq_value_input, "set" + "Place" + "holderText")("Value")
+        self._eq_value_input.setPlaceholderText("Value")
         self._eq_name_input = QLineEdit()
-        getattr(self._eq_name_input, "set" + "Place" + "holderText")("Equate name")
+        self._eq_name_input.setPlaceholderText("Equate name")
         self._create_eq_btn = QPushButton(self.tr("Create Equate"))
         self._create_eq_btn.clicked.connect(self._on_create_equate)
         self._refresh_eq_btn = QPushButton(self.tr("Refresh"))
@@ -787,11 +898,11 @@ class GhidraPanel(AnalysisPanelBase):
 
         ext_form = QHBoxLayout()
         self._ext_lib_input = QLineEdit()
-        getattr(self._ext_lib_input, "set" + "Place" + "holderText")("Library name")
+        self._ext_lib_input.setPlaceholderText("Library name")
         self._ext_func_input = QLineEdit()
-        getattr(self._ext_func_input, "set" + "Place" + "holderText")("Function name")
+        self._ext_func_input.setPlaceholderText("Function name")
         self._ext_addr_input = QLineEdit()
-        getattr(self._ext_addr_input, "set" + "Place" + "holderText")("Address (hex)")
+        self._ext_addr_input.setPlaceholderText("Address (hex)")
         self._add_ext_btn = QPushButton(self.tr("Add External"))
         self._add_ext_btn.clicked.connect(self._on_add_external_function)
         ext_form.addWidget(self._ext_lib_input)
@@ -832,7 +943,7 @@ class GhidraPanel(AnalysisPanelBase):
         params_row = QHBoxLayout()
         params_lbl = QLabel(self.tr("Params (JSON):"))
         self._script_params_input = QLineEdit()
-        getattr(self._script_params_input, "set" + "Place" + "holderText")('{"key": "value"}')
+        self._script_params_input.setPlaceholderText('{"key": "value"}')
         params_row.addWidget(params_lbl)
         params_row.addWidget(self._script_params_input)
         layout.addLayout(params_row)
@@ -860,7 +971,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         decomp_row = QHBoxLayout()
         self._decomp_simplification_input = QLineEdit()
-        getattr(self._decomp_simplification_input, "set" + "Place" + "holderText")("Simplification style")
+        self._decomp_simplification_input.setPlaceholderText("Simplification style")
         self._decomp_max_inst_spin = QSpinBox()
         self._decomp_max_inst_spin.setRange(1, 100000)
         self._decomp_max_inst_spin.setValue(2000)
@@ -876,7 +987,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         analysis_row = QHBoxLayout()
         self._analyzer_name_input = QLineEdit()
-        getattr(self._analyzer_name_input, "set" + "Place" + "holderText")("Analyzer name")
+        self._analyzer_name_input.setPlaceholderText("Analyzer name")
         self._analyzer_enabled_check = QCheckBox(self.tr("Enabled"))
         self._analyzer_enabled_check.setChecked(True)
         self._configure_analysis_btn = QPushButton(self.tr("Configure Analysis"))
@@ -887,7 +998,7 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(analysis_row)
 
         self._analyzer_options_input = QPlainTextEdit()
-        getattr(self._analyzer_options_input, "set" + "Place" + "holderText")(
+        self._analyzer_options_input.setPlaceholderText(
             'Analyzer options as JSON, e.g. {"aggressive": true, "timeout_s": 120}',
         )
         self._analyzer_options_input.setFixedHeight(72)
@@ -921,7 +1032,7 @@ class GhidraPanel(AnalysisPanelBase):
         get_row.addWidget(get_addr_label)
         self._dt_get_addr_input = QLineEdit()
         self._dt_get_addr_input.setMaximumWidth(_MAIN_SPLIT_RATIO_RIGHT)
-        getattr(self._dt_get_addr_input, "set" + "Place" + "holderText")("0x...")
+        self._dt_get_addr_input.setPlaceholderText("0x...")
         get_row.addWidget(self._dt_get_addr_input)
         self._dt_get_btn = QPushButton(self.tr("Get"))
         self._dt_get_btn.setObjectName("tool_button")
@@ -946,7 +1057,7 @@ class GhidraPanel(AnalysisPanelBase):
         set_row.addWidget(set_addr_label)
         self._dt_set_addr_input = QLineEdit()
         self._dt_set_addr_input.setMaximumWidth(_MAIN_SPLIT_RATIO_RIGHT)
-        getattr(self._dt_set_addr_input, "set" + "Place" + "holderText")("0x...")
+        self._dt_set_addr_input.setPlaceholderText("0x...")
         set_row.addWidget(self._dt_set_addr_input)
 
         type_label = QLabel(self.tr("Type:"))
@@ -954,7 +1065,7 @@ class GhidraPanel(AnalysisPanelBase):
         set_row.addWidget(type_label)
         self._dt_type_input = QLineEdit()
         self._dt_type_input.setMaximumWidth(_CODE_SPLIT_RATIO_BOTTOM)
-        getattr(self._dt_type_input, "set" + "Place" + "holderText")("e.g. dword, byte[16], char*")
+        self._dt_type_input.setPlaceholderText("e.g. dword, byte[16], char*")
         set_row.addWidget(self._dt_type_input)
 
         self._dt_set_btn = QPushButton(self.tr("Apply"))
@@ -964,7 +1075,51 @@ class GhidraPanel(AnalysisPanelBase):
         set_row.addStretch()
         layout.addLayout(set_row)
 
+        self._data_type_manager = DataTypeManagerWidget()
+        if self._bridge is not None:
+            self._data_type_manager.set_bridge(self._bridge)
+        layout.addWidget(self._data_type_manager)
+
         layout.addStretch()
+        return container
+
+    def _create_program_tree_tab(self) -> QWidget:
+        """Create the Program Tree tab.
+
+        Returns:
+            QWidget: Widget wrapping the module/fragment hierarchy browser
+            and editor.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        self._program_tree = ProgramTreeWidget()
+        if self._bridge is not None:
+            self._program_tree.set_bridge(self._bridge)
+        layout.addWidget(self._program_tree)
+
+        return container
+
+    def _create_analysis_extras_tab(self) -> QWidget:
+        """Create the Analysis Extras tab.
+
+        Returns:
+            QWidget: Widget wrapping instruction-flow/register lookup,
+            thunk management, external references, properties, and the
+            bidirectional call graph controls.
+        """
+        container = QWidget()
+        layout = QVBoxLayout(container)
+        layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        layout.setSpacing(_PANEL_SPACING)
+
+        self._analysis_extras = GhidraAnalysisExtrasWidget()
+        if self._bridge is not None:
+            self._analysis_extras.set_bridge(self._bridge)
+        layout.addWidget(self._analysis_extras)
+
         return container
 
     def _on_get_data_type(self) -> None:
@@ -1110,9 +1265,19 @@ class GhidraPanel(AnalysisPanelBase):
         layout.addLayout(header)
 
         self._func_filter = QLineEdit()
-        getattr(self._func_filter, "set" + "Place" + "holderText")(self.tr("Filter functions..."))
+        self._func_filter.setPlaceholderText(self.tr("Filter functions..."))
         self._func_filter.textChanged.connect(self._on_filter_changed)
         layout.addWidget(self._func_filter)
+
+        goto_row = QHBoxLayout()
+        self._goto_func_addr = QLineEdit()
+        self._goto_func_addr.setPlaceholderText(self.tr("Go to address (hex)"))
+        self._goto_func_addr.returnPressed.connect(self._on_goto_function)
+        goto_row.addWidget(self._goto_func_addr)
+        self._goto_func_btn = QPushButton(self.tr("Go"))
+        self._goto_func_btn.clicked.connect(self._on_goto_function)
+        goto_row.addWidget(self._goto_func_btn)
+        layout.addLayout(goto_row)
 
         self._func_tree = QTreeWidget()
         set_header_labels(self._func_tree, _FUNC_COLUMNS)
@@ -1125,9 +1290,9 @@ class GhidraPanel(AnalysisPanelBase):
 
         create_layout = QHBoxLayout()
         self._create_func_addr = QLineEdit()
-        getattr(self._create_func_addr, "set" + "Place" + "holderText")("Address (hex)")
+        self._create_func_addr.setPlaceholderText("Address (hex)")
         self._create_func_name = QLineEdit()
-        getattr(self._create_func_name, "set" + "Place" + "holderText")("Name (optional)")
+        self._create_func_name.setPlaceholderText("Name (optional)")
         self._create_func_btn = QPushButton(self.tr("Create"))
         self._create_func_btn.clicked.connect(self._on_create_function)
         create_layout.addWidget(self._create_func_addr)
@@ -1169,6 +1334,9 @@ class GhidraPanel(AnalysisPanelBase):
             bridge: The GhidraBridge to use.
         """
         self._bridge = bridge
+        self._data_type_manager.set_bridge(bridge)
+        self._program_tree.set_bridge(bridge)
+        self._analysis_extras.set_bridge(bridge)
         _logger.info("ghidra_bridge_set", bridge_type=type(bridge).__name__)
         self._sync_toolbar_state()
 
@@ -1696,6 +1864,53 @@ class GhidraPanel(AnalysisPanelBase):
         """
         self._on_refresh_functions()
 
+    def _on_goto_function(self) -> None:
+        """Look up the function at the entered address and load its code views."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        address = self._parse_address(self._goto_func_addr.text())
+        if address is None:
+            self._set_status("Invalid address for go to function")
+            return
+        self._goto_func_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            bridge.get_function(address),
+            on_success=lambda r, addr=address: self._apply_goto_function(r, addr),
+            on_error=self._on_goto_function_error,
+            parent=self,
+            event="ghidra_get_function",
+            logger=_logger,
+            address=hex(address),
+        )
+
+    def _apply_goto_function(self, result: object, address: int) -> None:
+        """Load the resolved function's code views, or report that none was found.
+
+        Args:
+            result: FunctionInfo from the bridge, or None if no function
+                exists at the requested address.
+            address: The address that was looked up.
+        """
+        self._goto_func_btn.setEnabled(True)
+        if result is None:
+            self._set_status(f"No function found at 0x{address:X}")
+            return
+        func_name = getattr(result, "name", "")
+        func_addr = getattr(result, "address", address)
+        self._set_status(f"Found function '{func_name}' at 0x{func_addr:X}")
+        self._load_function_at_address(func_addr)
+
+    def _on_goto_function_error(self, exc: object) -> None:
+        """Handle a go-to-function lookup failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._goto_func_btn.setEnabled(True)
+        self._set_status(f"Go to function failed: {exc}")
+        _logger.warning("ghidra_goto_function_failed", error=str(exc))
+
     def _on_function_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
         """Handle function tree item click to show decompilation, disassembly, PCode, and CFG.
 
@@ -1706,6 +1921,14 @@ class GhidraPanel(AnalysisPanelBase):
         address = tree_item_data(item, 0, Qt.ItemDataRole.UserRole)
         if not isinstance(address, int):
             return
+        self._load_function_at_address(address)
+
+    def _load_function_at_address(self, address: int) -> None:
+        """Load decompilation, disassembly, PCode, CFG, and xrefs for a function address.
+
+        Args:
+            address: Function address to load.
+        """
         bridge = self._require_connected()
         if bridge is None:
             return
@@ -2384,12 +2607,69 @@ class GhidraPanel(AnalysisPanelBase):
             ])
             self._xrefs_tree.addTopLevelItem(item)
 
+    def _on_add_reference(self) -> None:
+        """Add a manual memory reference between the two entered addresses."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        from_addr = self._parse_address(self._ref_from_input.text())
+        if from_addr is None:
+            self._set_status("Invalid from-address for add reference")
+            return
+        to_addr = self._parse_address(self._ref_to_input.text())
+        if to_addr is None:
+            self._set_status("Invalid to-address for add reference")
+            return
+        ref_type = self._ref_type_combo.currentText()
+        run_bridge_coroutine_logged(
+            bridge.add_reference(from_addr, to_addr, ref_type),
+            on_success=lambda _, addr=from_addr: self.show_xrefs(addr),
+            on_error=lambda e: self._set_status(f"Add reference failed: {e}"),
+            parent=self,
+            event="ghidra_add_reference",
+            logger=_logger,
+            level="info",
+            from_addr=hex(from_addr),
+            to_addr=hex(to_addr),
+            ref_type=ref_type,
+        )
+
+    def _on_delete_reference(self) -> None:
+        """Delete the memory reference between the two entered addresses."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        from_addr = self._parse_address(self._ref_from_input.text())
+        if from_addr is None:
+            self._set_status("Invalid from-address for delete reference")
+            return
+        to_addr = self._parse_address(self._ref_to_input.text())
+        if to_addr is None:
+            self._set_status("Invalid to-address for delete reference")
+            return
+        run_bridge_coroutine_logged(
+            bridge.delete_reference(from_addr, to_addr),
+            on_success=lambda _, addr=from_addr: self.show_xrefs(addr),
+            on_error=lambda e: self._set_status(f"Delete reference failed: {e}"),
+            parent=self,
+            event="ghidra_delete_reference",
+            logger=_logger,
+            level="info",
+            from_addr=hex(from_addr),
+            to_addr=hex(to_addr),
+        )
+
     # ------------------------------------------------------------------
     # Labels / Bookmarks
     # ------------------------------------------------------------------
 
     def _on_set_label(self) -> None:
-        """Set a label at the specified address."""
+        """Set a label at the specified address.
+
+        Routes through ``add_label`` when the Primary checkbox is checked,
+        since that is the only bridge method exposing the primary-label
+        flag; otherwise uses the plain ``set_label`` create-or-modify path.
+        """
         bridge = self._require_connected()
         if bridge is None:
             return
@@ -2401,6 +2681,22 @@ class GhidraPanel(AnalysisPanelBase):
         if not name:
             self._set_status("Label name required")
             return
+
+        if self._label_primary_check.isChecked():
+            run_bridge_coroutine_logged(
+                bridge.add_label(addr, name, primary=True),
+                on_success=lambda _: self._on_refresh_labels(),
+                on_error=lambda e: self._set_status(f"Add label failed: {e}"),
+                parent=self,
+                event="ghidra_add_label",
+                logger=_logger,
+                level="info",
+                address=hex(addr),
+                name=name,
+                primary=True,
+            )
+            return
+
         run_bridge_coroutine_logged(
             bridge.set_label(addr, name),
             on_success=lambda _: self._on_refresh_labels(),
@@ -2455,6 +2751,68 @@ class GhidraPanel(AnalysisPanelBase):
             addr = int(cast("int", lbl.get("address", 0)))
             self._labels_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}"))
             self._labels_table.setItem(row, 2, QTableWidgetItem(str(lbl.get("type", ""))))
+
+    def _selected_label_row(self) -> tuple[int, str] | None:
+        """Read the address and name of the selected labels-table row.
+
+        Returns:
+            tuple[int, str] | None: A tuple of (address, name) for the
+            currently selected row, or None if no row is selected or the
+            address cell cannot be parsed.
+        """
+        row = self._labels_table.currentRow()
+        if row < 0:
+            self._set_status("Select a label row first")
+            return None
+        addr_item = self._labels_table.item(row, 1)
+        name_item = self._labels_table.item(row, 0)
+        addr = self._parse_address(addr_item.text()) if addr_item is not None else None
+        if addr is None:
+            self._set_status("Selected label row has an invalid address")
+            return None
+        name = name_item.text() if name_item is not None else ""
+        return addr, name
+
+    def _on_remove_label(self) -> None:
+        """Remove the label selected in the labels table."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        selected = self._selected_label_row()
+        if selected is None:
+            return
+        addr, name = selected
+        run_bridge_coroutine_logged(
+            bridge.remove_label(addr, name),
+            on_success=lambda _: self._on_refresh_labels(),
+            on_error=lambda e: self._set_status(f"Remove label failed: {e}"),
+            parent=self,
+            event="ghidra_remove_label",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            name=name,
+        )
+
+    def _on_label_context_menu(self, pos: QPoint) -> None:
+        """Show a context menu with a Remove Label action for the labels table.
+
+        Args:
+            pos: Position where the right-click occurred, in table viewport coordinates.
+        """
+        item = self._labels_table.itemAt(pos)
+        if item is None:
+            return
+        self._labels_table.setCurrentCell(item.row(), 0)
+
+        menu = QMenu(self)
+        remove_action = menu.addAction(self.tr("Remove Label"))
+        if remove_action is None:
+            return
+
+        chosen = menu.exec(self._labels_table.mapToGlobal(pos))
+        if chosen is remove_action:
+            self._on_remove_label()
 
     def _on_create_bookmark(self) -> None:
         """Create a bookmark at the specified address."""
@@ -2514,6 +2872,71 @@ class GhidraPanel(AnalysisPanelBase):
             self._bookmarks_table.setItem(row, 1, QTableWidgetItem(str(bm.get("category", ""))))
             self._bookmarks_table.setItem(row, 2, QTableWidgetItem(str(bm.get("comment", ""))))
             self._bookmarks_table.setItem(row, 3, QTableWidgetItem(str(bm.get("type", ""))))
+
+    def _selected_bookmark_row(self) -> tuple[int, str, str] | None:
+        """Read the address, category, and type of the selected bookmarks-table row.
+
+        Returns:
+            tuple[int, str, str] | None: A tuple of (address, category, bookmark_type)
+            for the currently selected row, or None if no row is selected or the
+            address cell cannot be parsed.
+        """
+        row = self._bookmarks_table.currentRow()
+        if row < 0:
+            self._set_status("Select a bookmark row first")
+            return None
+        addr_item = self._bookmarks_table.item(row, 0)
+        category_item = self._bookmarks_table.item(row, 1)
+        type_item = self._bookmarks_table.item(row, 3)
+        addr = self._parse_address(addr_item.text()) if addr_item is not None else None
+        if addr is None:
+            self._set_status("Selected bookmark row has an invalid address")
+            return None
+        category = category_item.text() if category_item is not None else ""
+        bookmark_type = type_item.text() if type_item is not None else ""
+        return addr, category, bookmark_type
+
+    def _on_remove_bookmark(self) -> None:
+        """Remove the bookmark selected in the bookmarks table."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        selected = self._selected_bookmark_row()
+        if selected is None:
+            return
+        addr, category, bookmark_type = selected
+        run_bridge_coroutine_logged(
+            bridge.remove_bookmark(addr, category or None, bookmark_type or None),
+            on_success=lambda _: self._on_refresh_bookmarks(),
+            on_error=lambda e: self._set_status(f"Remove bookmark failed: {e}"),
+            parent=self,
+            event="ghidra_remove_bookmark",
+            logger=_logger,
+            level="info",
+            address=hex(addr),
+            category=category,
+            bookmark_type=bookmark_type,
+        )
+
+    def _on_bookmark_context_menu(self, pos: QPoint) -> None:
+        """Show a context menu with a Remove Bookmark action for the bookmarks table.
+
+        Args:
+            pos: Position where the right-click occurred, in table viewport coordinates.
+        """
+        item = self._bookmarks_table.itemAt(pos)
+        if item is None:
+            return
+        self._bookmarks_table.setCurrentCell(item.row(), 0)
+
+        menu = QMenu(self)
+        remove_action = menu.addAction(self.tr("Remove Bookmark"))
+        if remove_action is None:
+            return
+
+        chosen = menu.exec(self._bookmarks_table.mapToGlobal(pos))
+        if chosen is remove_action:
+            self._on_remove_bookmark()
 
     # ------------------------------------------------------------------
     # Structures
@@ -2771,6 +3194,73 @@ class GhidraPanel(AnalysisPanelBase):
             start=hex(start),
             size=size,
             permissions=perms,
+        )
+
+    def _on_remove_memory_block(self) -> None:
+        """Remove a memory block from the program."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._block_remove_name_input.text().strip()
+        if not name:
+            self._set_status("Block name required for remove")
+            return
+        run_bridge_coroutine_logged(
+            bridge.remove_memory_block(name),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Remove memory block failed: {e}"),
+            parent=self,
+            event="ghidra_remove_memory_block",
+            logger=_logger,
+            level="info",
+            name=name,
+        )
+
+    def _on_split_memory_block(self) -> None:
+        """Split a memory block into two blocks at an address."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name = self._block_split_name_input.text().strip()
+        if not name:
+            self._set_status("Block name required for split")
+            return
+        split_address = self._parse_address(self._block_split_addr_input.text())
+        if split_address is None:
+            self._set_status("Invalid split address for memory block")
+            return
+        run_bridge_coroutine_logged(
+            bridge.split_memory_block(name, split_address),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Split memory block failed: {e}"),
+            parent=self,
+            event="ghidra_split_memory_block",
+            logger=_logger,
+            level="info",
+            name=name,
+            split_address=hex(split_address),
+        )
+
+    def _on_join_memory_blocks(self) -> None:
+        """Join two contiguous memory blocks into one."""
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        name1 = self._block_join_name1_input.text().strip()
+        name2 = self._block_join_name2_input.text().strip()
+        if not name1 or not name2:
+            self._set_status("Both block names required for join")
+            return
+        run_bridge_coroutine_logged(
+            bridge.join_memory_blocks(name1, name2),
+            on_success=lambda _: self._on_refresh_memory_map(),
+            on_error=lambda e: self._set_status(f"Join memory blocks failed: {e}"),
+            parent=self,
+            event="ghidra_join_memory_blocks",
+            logger=_logger,
+            level="info",
+            name1=name1,
+            name2=name2,
         )
 
     # ------------------------------------------------------------------

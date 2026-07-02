@@ -288,7 +288,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
 
     @property
     def ghidra_path(self) -> Path | None:
-        """Get the Ghidra installation path.
+        """The Ghidra installation path.
 
         Returns:
             Path | None: Path to Ghidra installation, or None if not set.
@@ -307,7 +307,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
 
     @property
     def project_path(self) -> Path | None:
-        """Get the active Ghidra project path.
+        """The active Ghidra project path.
 
         Returns:
             Path | None: Path to the active Ghidra project, or None if no project is open.
@@ -316,7 +316,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """Tool name identifier.
 
         Returns:
             ToolName: ToolName.GHIDRA
@@ -325,7 +325,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """Tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.
@@ -454,7 +454,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                             name="hex_pattern",
                             type="string",
                             description="Hex string pattern (e.g., '48 8B 05 ?? ?? ?? ??')",
-                            required=True,
+                            required=False,
                         ),
                     ],
                     returns="List of addresses where pattern found",
@@ -1051,8 +1051,14 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                             description="Maximum instructions per function",
                             required=False,
                         ),
+                        ToolParameter(
+                            name="extra",
+                            type="object",
+                            description="Additional key/value decompiler options merged into the persisted configuration",
+                            required=False,
+                        ),
                     ],
-                    returns="Dict with simplification, max_instructions, and success",
+                    returns="Dict with simplification, max_instructions, extra, and success",
                 ),
                 ToolFunction(
                     name="ghidra.create_memory_block",
@@ -1070,6 +1076,37 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                         ),
                     ],
                     returns="Dict with name, start, size, permissions, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.remove_memory_block",
+                    description="Remove a memory block from the program",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Name of the memory block to remove", required=True),
+                    ],
+                    returns="Dict with name and success",
+                ),
+                ToolFunction(
+                    name="ghidra.split_memory_block",
+                    description="Split a memory block into two blocks at an address",
+                    parameters=[
+                        ToolParameter(name="name", type="string", description="Name of the memory block to split", required=True),
+                        ToolParameter(
+                            name="split_address",
+                            type="integer",
+                            description="Address at which to split the block (start of the new second block)",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with name, split_address, and success",
+                ),
+                ToolFunction(
+                    name="ghidra.join_memory_blocks",
+                    description="Join two contiguous memory blocks into one",
+                    parameters=[
+                        ToolParameter(name="name1", type="string", description="Name of the first (lower-addressed) block", required=True),
+                        ToolParameter(name="name2", type="string", description="Name of the second (higher-addressed) block", required=True),
+                    ],
+                    returns="Dict with the joined block name and success",
                 ),
                 ToolFunction(
                     name="ghidra.get_comments",
@@ -1097,6 +1134,33 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     description="Get the program tree module/fragment hierarchy",
                     parameters=[],
                     returns="Dict with trees list containing module and fragment names",
+                ),
+                ToolFunction(
+                    name="ghidra.edit_program_tree",
+                    description="Create a module/fragment in a program tree, or move an existing child under a new parent",
+                    parameters=[
+                        ToolParameter(name="tree_name", type="string", description="Name of the program tree to modify", required=True),
+                        ToolParameter(
+                            name="operation",
+                            type="string",
+                            description="Operation to perform",
+                            required=True,
+                            enum=["create_module", "create_fragment", "move_child"],
+                        ),
+                        ToolParameter(
+                            name="parent_module",
+                            type="string",
+                            description="Name of the module that will contain the child",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="child_name",
+                            type="string",
+                            description="Name of the module/fragment to create or move",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dict with tree_name, operation, child_name, and success",
                 ),
                 ToolFunction(
                     name="ghidra.get_properties",
@@ -1829,7 +1893,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
 
     @property
     def bridge_script_path(self) -> Path | None:
-        """Get the current bridge script path.
+        """The current bridge script path.
 
         Returns:
             Path | None: Path to the bridge script or None.
@@ -3019,8 +3083,13 @@ metadata
             "PRE": "CodeUnit.PRE_COMMENT",
             "POST": "CodeUnit.POST_COMMENT",
             "PLATE": "CodeUnit.PLATE_COMMENT",
+            "REPEATABLE": "CodeUnit.REPEATABLE_COMMENT",
         }
-        ghidra_type = comment_map.get(comment_type, "CodeUnit.EOL_COMMENT")
+        ghidra_type = comment_map.get(comment_type)
+        if ghidra_type is None:
+            _logger.error("ghidra_unknown_comment_type", address=hex(address), comment_type=comment_type)
+            error_message = f"Unknown comment_type {comment_type!r}: must be one of {sorted(comment_map)}"
+            raise ToolError(error_message)
 
         try:
             await self._execute_remote(
@@ -5876,10 +5945,12 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                     func_def = FunctionDefinitionDataType(cat_path, {json.dumps(name)})
                     created = dtm.addDataType(func_def, None)
 
+                result_dict = None
                 if created is not None:
-                    {{'name': created.getName(), 'kind': type_kind, 'size': int(created.getLength()), 'success': True}}
+                    result_dict = {{'name': created.getName(), 'kind': type_kind, 'size': int(created.getLength()), 'success': True}}
                 else:
-                    {{'name': {json.dumps(name)}, 'kind': type_kind, 'size': 0, 'success': False}}
+                    result_dict = {{'name': {json.dumps(name)}, 'kind': type_kind, 'size': 0, 'success': False}}
+                result_dict
             """)
             return (
                 cast("dict[str, Any]", result)
@@ -5925,14 +5996,16 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                 dtm = currentProgram.getDataTypeManager()
                 parser = DataTypeParser(dtm)
                 parsed = parser.parse({json.dumps(data_type)})
+                result_dict = None
                 if parsed is None:
-                    {{'address': {address}, 'type': {json.dumps(data_type)}, 'size': 0, 'success': False}}
+                    result_dict = {{'address': {address}, 'type': {json.dumps(data_type)}, 'size': 0, 'success': False}}
                 else:
                     existing = listing.getDataAt(addr)
                     if existing is not None:
                         listing.clearCodeUnits(addr, addr.add(parsed.getLength() - 1), False)
                     created = listing.createData(addr, parsed)
-                    {{'address': addr.getOffset(), 'type': {json.dumps(data_type)}, 'size': int(created.getLength()), 'success': True}}
+                    result_dict = {{'address': addr.getOffset(), 'type': {json.dumps(data_type)}, 'size': int(created.getLength()), 'success': True}}
+                result_dict
             """)
             return (
                 cast("dict[str, Any]", result)
@@ -6112,7 +6185,7 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
 
     @property
     def decompiler_options(self) -> dict[str, Any]:
-        """Get the persisted decompiler options configured on this bridge.
+        """The persisted decompiler options configured on this bridge.
 
         Returns:
             dict[str, Any]: Dict with simplification, max_instructions,
@@ -6171,6 +6244,170 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
             _logger.warning("ghidra_create_memory_block_failed", block_name=name, start=hex(start), error=str(e))
             error_message = f"Create memory block failed: {e}"
             raise ToolError(error_message) from e
+
+    async def remove_memory_block(self, name: str) -> dict[str, Any]:
+        """Remove a memory block from the program.
+
+        Args:
+            name: Name of the memory block to remove.
+
+        Returns:
+            dict[str, Any]: Dict with name and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, no block with
+                ``name`` exists, or the removal fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("memory_block_removing", block_name=name)
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                block = memory.getBlock({json.dumps(name)})
+                found = block is not None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.remove_memory_block')
+                try:
+                    if found:
+                        memory.removeBlock(block, monitor)
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found': found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_remove_memory_block_failed", block_name=name)
+            msg = f"Remove memory block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"Memory block not found: {name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Remove memory block failed: {name!r}"
+            raise ToolError(msg)
+        return {"name": name, "success": True}
+
+    async def split_memory_block(self, name: str, split_address: int) -> dict[str, Any]:
+        """Split a memory block into two blocks at an address.
+
+        The original block is truncated to end just before
+        ``split_address``, and a new block covering the remainder is
+        created by Ghidra's ``Memory.split``.
+
+        Args:
+            name: Name of the memory block to split.
+            split_address: Address at which to split the block. This
+                address becomes the start of the new (second) block.
+
+        Returns:
+            dict[str, Any]: Dict with name, split_address, and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, no block with
+                ``name`` exists, ``split_address`` is not inside the
+                block, or the split fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("memory_block_splitting", block_name=name, split_address=hex(split_address))
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                block = memory.getBlock({json.dumps(name)})
+                found = block is not None
+                in_range = found and block.contains(toAddr({split_address}))
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.split_memory_block')
+                try:
+                    if in_range:
+                        memory.split(block, toAddr({split_address}))
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found': found, 'in_range': in_range, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_split_memory_block_failed", block_name=name, split_address=hex(split_address))
+            msg = f"Split memory block failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found", False)):
+            msg = f"Memory block not found: {name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("in_range", False)):
+            msg = f"Split address {hex(split_address)} is not inside block {name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Split memory block failed: {name!r} at {hex(split_address)}"
+            raise ToolError(msg)
+        return {"name": name, "split_address": hex(split_address), "success": True}
+
+    async def join_memory_blocks(self, name1: str, name2: str) -> dict[str, Any]:
+        """Join two contiguous memory blocks into one.
+
+        Args:
+            name1: Name of the first (lower-addressed) memory block.
+            name2: Name of the second (higher-addressed) memory block.
+
+        Returns:
+            dict[str, Any]: Dict with the joined block name and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, either block does
+                not exist, or the join fails (e.g. blocks are not
+                contiguous or compatible).
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        _logger.info("memory_blocks_joining", block_name_1=name1, block_name_2=name2)
+        try:
+            result = await self._execute_remote(f"""
+                memory = currentProgram.getMemory()
+                block1 = memory.getBlock({json.dumps(name1)})
+                block2 = memory.getBlock({json.dumps(name2)})
+                found1 = block1 is not None
+                found2 = block2 is not None
+                joined_name = None
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.join_memory_blocks')
+                try:
+                    if found1 and found2:
+                        joined = memory.join(block1, block2)
+                        joined_name = joined.getName()
+                        ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'found1': found1, 'found2': found2, 'joined_name': joined_name, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception("ghidra_join_memory_blocks_failed", block_name_1=name1, block_name_2=name2)
+            msg = f"Join memory blocks failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("found1", False)):
+            msg = f"Memory block not found: {name1!r}"
+            raise ToolError(msg)
+        if not bool(info.get("found2", False)):
+            msg = f"Memory block not found: {name2!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Join memory blocks failed: {name1!r} + {name2!r}"
+            raise ToolError(msg)
+        return {"name": info.get("joined_name", name1), "success": True}
 
     async def get_comments(self, address: int, range_size: int = 0x100) -> list[dict[str, Any]]:
         """Get all comments in an address range.
@@ -6379,6 +6616,117 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
         if isinstance(result, dict):
             return cast("dict[str, Any]", result)
         return {"trees": []}
+
+    async def edit_program_tree(
+        self,
+        tree_name: str,
+        operation: str,
+        parent_module: str,
+        child_name: str,
+    ) -> dict[str, Any]:
+        """Create or reparent a module/fragment in a program tree.
+
+        Wraps ``ProgramModule.createModule``, ``ProgramModule.createFragment``,
+        and ``ProgramModule.moveChild`` to give write access to the
+        program tree hierarchy that :meth:`get_program_tree` only reads.
+
+        Args:
+            tree_name: Name of the program tree to modify (as returned
+                by ``get_program_tree``'s ``trees[].name``).
+            operation: One of ``create_module``, ``create_fragment``,
+                or ``move_child``. ``create_module``/``create_fragment``
+                create ``child_name`` as a new child of
+                ``parent_module``. ``move_child`` moves the existing
+                child named ``child_name`` so it becomes a direct
+                child of ``parent_module`` (removed from its previous
+                parent).
+            parent_module: Name of the existing module that will
+                contain (or already contains, for ``move_child``) the
+                child.
+            child_name: Name of the module/fragment to create or move.
+
+        Returns:
+            dict[str, Any]: Dict with tree_name, operation, child_name,
+            and success.
+
+        Raises:
+            ToolError: If Ghidra is not connected, ``operation`` is
+                unrecognized, the tree or parent module does not
+                exist, or the mutation fails.
+        """
+        if self._bridge is None:
+            raise ToolError(_ERR_NOT_CONNECTED)
+
+        valid_operations = {"create_module", "create_fragment", "move_child"}
+        if operation not in valid_operations:
+            msg = f"Unknown operation {operation!r}: must be one of {sorted(valid_operations)}"
+            raise ToolError(msg)
+
+        _logger.info(
+            "program_tree_editing",
+            tree_name=tree_name,
+            operation=operation,
+            parent_module=parent_module,
+            child_name=child_name,
+        )
+        try:
+            result = await self._execute_remote(f"""
+                listing = currentProgram.getListing()
+                root = listing.getRootModule({json.dumps(tree_name)})
+                tree_found = root is not None
+                parent = None
+                if tree_found:
+                    parent = root if root.getName() == {json.dumps(parent_module)} else root.getModule({json.dumps(parent_module)})
+                parent_found = parent is not None
+                operation = {json.dumps(operation)}
+                ok = False
+                tx_id = currentProgram.startTransaction('intellicrack.edit_program_tree')
+                try:
+                    if parent_found:
+                        if operation == 'create_module':
+                            parent.createModule({json.dumps(child_name)})
+                            ok = True
+                        elif operation == 'create_fragment':
+                            parent.createFragment({json.dumps(child_name)})
+                            ok = True
+                        elif operation == 'move_child':
+                            child = root.getModule({json.dumps(child_name)})
+                            if child is None:
+                                child = root.getFragment({json.dumps(child_name)})
+                            if child is not None:
+                                parent.moveChild({json.dumps(child_name)}, 0)
+                                ok = True
+                finally:
+                    currentProgram.endTransaction(tx_id, ok)
+                {{'tree_found': tree_found, 'parent_found': parent_found, 'ok': ok}}
+            """)
+        except ToolError:
+            raise
+        except Exception as exc:
+            _logger.exception(
+                "ghidra_edit_program_tree_failed",
+                tree_name=tree_name,
+                operation=operation,
+            )
+            msg = f"Edit program tree failed: {exc}"
+            raise ToolError(msg) from exc
+
+        info = cast("dict[str, Any]", result) if isinstance(result, dict) else {}
+        if not bool(info.get("tree_found", False)):
+            msg = f"Program tree not found: {tree_name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("parent_found", False)):
+            msg = f"Parent module not found: {parent_module!r} in tree {tree_name!r}"
+            raise ToolError(msg)
+        if not bool(info.get("ok", False)):
+            msg = f"Edit program tree failed: {operation} {child_name!r} under {parent_module!r}"
+            raise ToolError(msg)
+        return {
+            "tree_name": tree_name,
+            "operation": operation,
+            "child_name": child_name,
+            "success": True,
+        }
 
     async def get_properties(self, address: int) -> dict[str, Any]:
         """Get user-defined properties stored at an address.

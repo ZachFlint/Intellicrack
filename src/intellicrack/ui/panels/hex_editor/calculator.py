@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import struct
-from typing import Final
+from typing import Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -25,6 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 
 
 _logger = get_logger(__name__)
@@ -47,6 +48,7 @@ class CalculatorMixin:
     _calc_results_tree: QTreeWidget | None
     _calc_float32_label: QLabel | None
     _calc_float64_label: QLabel | None
+    _bridge: Any | None
 
     def _create_calculator_tab(self) -> QWidget:
         """Create the base conversion calculator side panel tab.
@@ -98,7 +100,18 @@ class CalculatorMixin:
         return container
 
     def _on_convert(self) -> None:
-        """Parse the input value and populate all base/type representations."""
+        """Parse the input value and populate all base/type representations.
+
+        Dispatches to :meth:`HexEditorBridge.base_convert` so the value
+        parsing and canonical decimal/hex/octal/binary/little-endian
+        representations come from the same code path the AI-callable
+        tool uses. The big-endian sized-integer and IEEE 754 views (not
+        produced by the bridge, which is little-endian only) are derived
+        locally from the bridge's returned decimal value once it is back
+        on the Qt main thread. Falls back to an entirely local, synchronous
+        computation when no bridge is attached (e.g. headless / test
+        harnesses that drive the calculator tab directly).
+        """
         if self._calc_input is None or self._calc_results_tree is None:
             return
 
@@ -107,17 +120,41 @@ class CalculatorMixin:
             return
 
         self._calc_results_tree.clear()
+        big_endian = self._calc_endian_combo is not None and self._calc_endian_combo.currentText() == "Big Endian"
 
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            self._convert_local(text, big_endian=big_endian)
+            return
+
+        run_bridge_coroutine_logged(
+            bridge.base_convert(text, from_base="auto"),
+            on_success=lambda result: self._on_convert_success(result, big_endian=big_endian),
+            on_error=self._on_convert_error,
+            parent=self if isinstance(self, QWidget) else None,
+            event="hex_editor_base_convert",
+            logger=_logger,
+            input_value=text,
+        )
+
+    def _convert_local(self, text: str, *, big_endian: bool) -> None:
+        """Parse ``text`` and populate representations without the bridge.
+
+        Local fallback used only when no bridge is attached to this
+        mixin, preserving the exact parsing and rendering behaviour the
+        panel has always produced.
+
+        Args:
+            text: Raw input string, optionally prefixed with 0x, 0b, or 0o.
+            big_endian: Whether the endianness combo was set to "Big Endian".
+        """
         try:
             value = self._parse_input_value(text)
         except ValueError as exc:
             _logger.warning("calc_input_parse_failed", text=text, error=str(exc))
-            self._calc_results_tree.addTopLevelItem(
-                QTreeWidgetItem(["Error", str(exc)]),
-            )
+            self._add_result("Error", str(exc))
             return
 
-        big_endian = self._calc_endian_combo is not None and self._calc_endian_combo.currentText() == "Big Endian"
         byte_order = ">" if big_endian else "<"
         order_label = "BE" if big_endian else "LE"
 
@@ -126,49 +163,9 @@ class CalculatorMixin:
         self._add_result("Octal", f"0o{value & _MAX_UINT64:o}")
         self._add_result("Binary", f"0b{value & _MAX_UINT64:b}")
 
-        int_formats: list[tuple[str, str, int]] = [
-            ("int8", "b", 1),
-            ("uint8", "B", 1),
-            (f"int16_{order_label}", f"{byte_order}h", 2),
-            (f"uint16_{order_label}", f"{byte_order}H", 2),
-            (f"int32_{order_label}", f"{byte_order}i", 4),
-            (f"uint32_{order_label}", f"{byte_order}I", 4),
-            (f"int64_{order_label}", f"{byte_order}q", 8),
-            (f"uint64_{order_label}", f"{byte_order}Q", 8),
-        ]
-
-        for label, fmt, size in int_formats:
-            try:
-                mask = (1 << (size * _BITS_PER_BYTE)) - 1
-                packed = struct.pack(fmt, value & mask if fmt[-1].isupper() else self._to_signed(value, size))
-                unpacked = struct.unpack(fmt, packed)[0]
-                self._add_result(label, str(unpacked))
-            except (struct.error, OverflowError) as exc:
-                _logger.warning("calc_int_overflow", label=label, value=value, error=str(exc))
-                self._add_result(label, "overflow")
-
-        for label, fmt in [(f"float32_{order_label}", f"{byte_order}f"), (f"float64_{order_label}", f"{byte_order}d")]:
-            size = _IEEE_FLOAT32_BYTES if "32" in label else _IEEE_FLOAT64_BYTES
-            mask = (1 << (size * _BITS_PER_BYTE)) - 1
-            try:
-                packed = struct.pack(f"{byte_order}{'I' if size == _IEEE_FLOAT32_BYTES else 'Q'}", value & mask)
-                float_val = struct.unpack(fmt, packed)[0]
-                self._add_result(label, f"{float_val}")
-            except (struct.error, OverflowError) as exc:
-                _logger.warning("calc_float_pack_failed", label=label, error=str(exc))
-                self._add_result(label, "N/A")
-
+        self._add_sized_int_results(value, byte_order, order_label)
+        self._add_float_results(value, byte_order, order_label)
         self._update_ieee754_display(value, byte_order)
-
-    def _add_result(self, label: str, value: str) -> None:
-        """Add a row to the results tree.
-
-        Args:
-            label: Representation name.
-            value: Converted value string.
-        """
-        if self._calc_results_tree is not None:
-            self._calc_results_tree.addTopLevelItem(QTreeWidgetItem([label, value]))
 
     @staticmethod
     def _parse_input_value(text: str) -> int:
@@ -192,6 +189,133 @@ class CalculatorMixin:
         if lower.startswith("0b"):
             return int(lower, 2)
         return int(lower, 8) if lower.startswith("0o") else int(text, 10)
+
+    def _on_convert_success(self, result: object, *, big_endian: bool) -> None:
+        """Render the bridge's base-conversion representations into the results tree.
+
+        Args:
+            result: ``dict[str, str]`` payload returned by
+                :meth:`HexEditorBridge.base_convert`, keyed by
+                representation name (``decimal``, ``hex``, ``octal``,
+                ``binary``, ``uint8``, ``int8``, ``uint16_le``,
+                ``int16_le``, ``uint32_le``, ``int32_le``, ``uint64_le``,
+                ``int64_le``, ``float32_le``, ``float64_le``).
+            big_endian: Whether the endianness combo was set to "Big
+                Endian" when the request was dispatched; controls
+                whether the locally-derived big-endian sized-integer
+                and IEEE 754 rows are shown instead of the bridge's
+                little-endian ones.
+        """
+        if self._calc_results_tree is None:
+            return
+        if not isinstance(result, dict):
+            _logger.warning("base_convert_unexpected_result_type", result_type=type(result).__name__)
+            return
+        typed_result = cast("dict[str, str]", result)
+
+        self._calc_results_tree.clear()
+        self._add_result("Decimal", typed_result.get("decimal", ""))
+        self._add_result("Hex", typed_result.get("hex", ""))
+        self._add_result("Octal", typed_result.get("octal", ""))
+        self._add_result("Binary", typed_result.get("binary", ""))
+
+        try:
+            value = int(typed_result.get("decimal", "0"))
+        except ValueError:
+            _logger.warning("base_convert_decimal_parse_failed", decimal=typed_result.get("decimal"))
+            return
+
+        byte_order = ">" if big_endian else "<"
+        order_label = "BE" if big_endian else "LE"
+
+        if big_endian:
+            self._add_sized_int_results(value, byte_order, order_label)
+            self._add_float_results(value, byte_order, order_label)
+        else:
+            self._add_result("uint8", typed_result.get("uint8", "overflow"))
+            self._add_result("int8", typed_result.get("int8", "overflow"))
+            self._add_result("uint16_LE", typed_result.get("uint16_le", "overflow"))
+            self._add_result("int16_LE", typed_result.get("int16_le", "overflow"))
+            self._add_result("uint32_LE", typed_result.get("uint32_le", "overflow"))
+            self._add_result("int32_LE", typed_result.get("int32_le", "overflow"))
+            self._add_result("uint64_LE", typed_result.get("uint64_le", "overflow"))
+            self._add_result("int64_LE", typed_result.get("int64_le", "overflow"))
+            self._add_result("float32_LE", typed_result.get("float32_le", "N/A"))
+            self._add_result("float64_LE", typed_result.get("float64_le", "N/A"))
+
+        self._update_ieee754_display(value, byte_order)
+
+    def _on_convert_error(self, exc: object) -> None:
+        """Render a base-conversion failure raised by the bridge.
+
+        Args:
+            exc: Exception raised by :meth:`HexEditorBridge.base_convert`,
+                typically :class:`ValueError` for an unparsable input.
+        """
+        _logger.warning("base_convert_failed", error=str(exc))
+        if self._calc_results_tree is not None:
+            self._calc_results_tree.clear()
+            self._calc_results_tree.addTopLevelItem(
+                QTreeWidgetItem(["Error", str(exc)]),
+            )
+
+    def _add_sized_int_results(self, value: int, byte_order: str, order_label: str) -> None:
+        """Add signed/unsigned 8-64 bit representations for the given byte order.
+
+        Args:
+            value: Parsed integer value.
+            byte_order: Struct byte-order character ('>' or '<').
+            order_label: Display suffix for the byte order ('BE' or 'LE').
+        """
+        int_formats: list[tuple[str, str, int]] = [
+            ("int8", "b", 1),
+            ("uint8", "B", 1),
+            (f"int16_{order_label}", f"{byte_order}h", 2),
+            (f"uint16_{order_label}", f"{byte_order}H", 2),
+            (f"int32_{order_label}", f"{byte_order}i", 4),
+            (f"uint32_{order_label}", f"{byte_order}I", 4),
+            (f"int64_{order_label}", f"{byte_order}q", 8),
+            (f"uint64_{order_label}", f"{byte_order}Q", 8),
+        ]
+
+        for label, fmt, size in int_formats:
+            try:
+                mask = (1 << (size * _BITS_PER_BYTE)) - 1
+                packed = struct.pack(fmt, value & mask if fmt[-1].isupper() else self._to_signed(value, size))
+                unpacked = struct.unpack(fmt, packed)[0]
+                self._add_result(label, str(unpacked))
+            except (struct.error, OverflowError) as exc:
+                _logger.warning("calc_int_overflow", label=label, value=value, error=str(exc))
+                self._add_result(label, "overflow")
+
+    def _add_float_results(self, value: int, byte_order: str, order_label: str) -> None:
+        """Add IEEE 754 float32/float64 representations for the given byte order.
+
+        Args:
+            value: Parsed integer value whose bit pattern is reinterpreted as a float.
+            byte_order: Struct byte-order character ('>' or '<').
+            order_label: Display suffix for the byte order ('BE' or 'LE').
+        """
+        for label, fmt in [(f"float32_{order_label}", f"{byte_order}f"), (f"float64_{order_label}", f"{byte_order}d")]:
+            size = _IEEE_FLOAT32_BYTES if "32" in label else _IEEE_FLOAT64_BYTES
+            mask = (1 << (size * _BITS_PER_BYTE)) - 1
+            try:
+                packed = struct.pack(f"{byte_order}{'I' if size == _IEEE_FLOAT32_BYTES else 'Q'}", value & mask)
+                float_val = struct.unpack(fmt, packed)[0]
+                self._add_result(label, f"{float_val}")
+            except (struct.error, OverflowError) as exc:
+                _logger.warning("calc_float_pack_failed", label=label, error=str(exc))
+                self._add_result(label, "N/A")
+
+    def _add_result(self, label: str, value: str) -> None:
+        """Add a row to the results tree.
+
+        Args:
+            label: Representation name.
+            value: Converted value string.
+        """
+        if self._calc_results_tree is not None:
+            self._calc_results_tree.addTopLevelItem(QTreeWidgetItem([label, value]))
 
     @staticmethod
     def _to_signed(value: int, size: int) -> int:

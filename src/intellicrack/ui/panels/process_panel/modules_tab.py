@@ -116,8 +116,7 @@ class ModulesTab(QWidget):
         toolbar.addWidget(refresh_btn)
 
         self._mod_filter = QLineEdit()
-        set_hint = getattr(self._mod_filter, "set" + "Place" + "holderText")
-        set_hint("Filter modules...")
+        self._mod_filter.setPlaceholderText("Filter modules...")
         self._mod_filter.setMaximumWidth(200)
         self._mod_filter.textChanged.connect(self._on_filter_modules)
         toolbar.addWidget(self._mod_filter)

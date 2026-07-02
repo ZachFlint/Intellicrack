@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Protocol, cast, runtime_checkable
 
 from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QTreeWidgetItem, QWidget
@@ -16,13 +15,13 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor.base import (
     PREVIEW_BYTES,
-    DataReaderCls,
-    PatternRegistryCls,
     hexpat_interpreter_available,
 )
 
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
@@ -40,6 +39,7 @@ _FORMAT_TO_TEMPLATE: Final[dict[str, tuple[str, str]]] = {
     "zip": ("ZIP", "ZIP_LOCAL_FILE_HEADER"),
 }
 """Map :func:`detect_format` results to ``(display_name, template_id)`` for the templates panel."""
+
 
 @runtime_checkable
 class _StringsSource(Protocol):
@@ -442,31 +442,51 @@ class SectionsMixin:
         self._try_pattern_registry_match()
 
     def _try_pattern_registry_match(self) -> None:
-        """Attempt to match the open file against .hexpat patterns via magic bytes."""
-        if self.document is None or not hexpat_interpreter_available or PatternRegistryCls is None or DataReaderCls is None:
+        """Attempt to match the open file against .hexpat patterns via ``HexEditorBridge.auto_detect_pattern``.
+
+        Routes through the bridge's own pattern registry instead of
+        instantiating a second, GUI-local ``PatternRegistry`` so the
+        AI-callable tool and the auto-detect-on-open feature share a
+        single source of truth for pattern matching.
+        """
+        if self.document is None or not hexpat_interpreter_available:
             return
 
-        if self._pattern_registry is None:
-            project_root = Path(__file__).resolve().parents[4]
-            patterns_dir = project_root / "vendor" / "community-patterns" / "patterns"
-            pattern_dirs: list[Path] = []
-            if patterns_dir.exists():
-                pattern_dirs.append(patterns_dir)
-            if not pattern_dirs:
-                return
-            self._pattern_registry = PatternRegistryCls(pattern_dirs)
-
-        registry = self._pattern_registry
-        if registry is None:
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            _logger.warning("pattern_auto_detect_bridge_unavailable")
             return
 
-        try:
-            data_reader = DataReaderCls.from_document(self.document)
-            matches = registry.match_file(data_reader)
-        except (AttributeError, ValueError):
-            _logger.exception("pattern_registry_match_failed")
-            return
+        run_bridge_coroutine_logged(
+            bridge.auto_detect_pattern(),
+            on_success=self._on_pattern_auto_detect_ready,
+            on_error=self._on_pattern_auto_detect_failed,
+            parent=self if isinstance(self, QWidget) else None,
+            event="hex_editor_auto_detect_pattern",
+            logger=_logger,
+        )
 
-        if matches and self._pattern_status_label is not None:
-            names = ", ".join(m.name for m in matches[:3])
-            self._pattern_status_label.setText(f"Detected patterns: {names}")
+    def _on_pattern_auto_detect_ready(self, result: object) -> None:
+        """Render the bridge's matched-pattern names into the status label.
+
+        Args:
+            result: ``list[dict]`` payload returned by
+                :meth:`HexEditorBridge.auto_detect_pattern`. Each dict
+                exposes ``name``, ``description``, and ``category`` keys.
+        """
+        if not isinstance(result, list) or self._pattern_status_label is None:
+            return
+        matches = cast("list[dict[str, Any]]", result)
+        if not matches:
+            return
+        names = ", ".join(str(m.get("name", "")) for m in matches[:3])
+        self._pattern_status_label.setText(f"Detected patterns: {names}")
+
+    @staticmethod
+    def _on_pattern_auto_detect_failed(exc: object) -> None:
+        """Log a pattern auto-detect failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        _logger.warning("pattern_auto_detect_failed", error_type=type(exc).__name__, error=str(exc))

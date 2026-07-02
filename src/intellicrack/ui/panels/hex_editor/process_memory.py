@@ -80,13 +80,18 @@ class ProcessMemoryDialog(QDialog):
     ``region_selected`` holds the chosen ``(pid, base, size)`` tuple or ``None`` when no region was picked.
     """
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, bridge: HexEditorBridge | None = None) -> None:
         """Initialize the ProcessMemoryDialog.
 
         Args:
             parent: Parent widget.
+            bridge: Hex editor bridge used to enumerate process memory
+                regions via :meth:`HexEditorBridge.list_process_regions`
+                on Windows. When ``None`` (or on non-Windows platforms)
+                the dialog falls back to a local enumeration path.
         """
         super().__init__(parent)
+        self._bridge: HexEditorBridge | None = bridge
         self.setWindowTitle("Open Process Memory")
         self.setMinimumWidth(500)
         self.setMinimumHeight(400)
@@ -129,7 +134,15 @@ class ProcessMemoryDialog(QDialog):
         layout.addWidget(buttons)
 
     def _on_list_regions(self) -> None:
-        """Query memory regions for the specified PID and populate the table."""
+        """Query memory regions for the specified PID and populate the table.
+
+        On Windows with an attached bridge, dispatches to
+        :meth:`HexEditorBridge.list_process_regions` via
+        :func:`run_bridge_coroutine_logged` so the AI-callable tool and
+        the GUI share the same enumeration path. Falls back to the local
+        ctypes (Windows, no bridge) or ``/proc`` (non-Windows) paths
+        otherwise, since the bridge method is Windows-only.
+        """
         pid = self._pid_spin.value()
         self._regions_table.setRowCount(0)
 
@@ -140,50 +153,70 @@ class ProcessMemoryDialog(QDialog):
             platform=sys.platform,
         )
 
-        if hexcore_available and hexcore is not None:
-            try:
-                handled = self._list_regions_hexcore(pid)
-            except (OSError, RuntimeError, ValueError):
-                _logger.exception("process_regions_hexcore_failed", pid=pid)
-            else:
-                if handled:
-                    return
+        if sys.platform == "win32" and self._bridge is not None:
+            self._status_label.setText("Listing regions...")
+            run_bridge_coroutine_logged(
+                self._bridge.list_process_regions(pid),
+                on_success=lambda result: self._on_list_regions_success(result, pid),
+                on_error=lambda exc: self._on_list_regions_error(exc, pid),
+                parent=self,
+                event="hex_editor_list_process_regions",
+                logger=_logger,
+                pid=pid,
+            )
+            return
 
         if sys.platform == "win32":
             self._list_regions_ctypes(pid)
         else:
             self._list_regions_procfs(pid)
 
-    def _list_regions_hexcore(self, pid: int) -> bool:
-        """Attempt to enumerate process memory regions via the hexcore backend.
+    def _on_list_regions_success(self, result: object, pid: int) -> None:
+        """Render the bridge's enumerated process memory regions into the table.
 
         Args:
-            pid: Process ID to query.
-
-        Returns:
-            bool: ``True`` if the hexcore backend handled the request and the
-                regions were populated; ``False`` if the backend is missing the
-                required entrypoint.
+            result: ``list[dict]`` payload returned by
+                :meth:`HexEditorBridge.list_process_regions`. Each dict
+                exposes ``base_address``, ``size``, ``protection``, and
+                ``state`` keys.
+            pid: Process ID that was queried (for logging).
         """
-        if hexcore is None:
-            return False
-        list_fn = getattr(hexcore.HexDocument, "list_process_memory_regions", None)
-        if not callable(list_fn):
-            return False
-        raw_regions = list_fn(pid)
-        regions: list[tuple[int, int, int, int]] = cast(
-            "list[tuple[int, int, int, int]]",
-            raw_regions,
-        )
+        if not isinstance(result, list):
+            _logger.warning("process_regions_unexpected_result_type", result_type=type(result).__name__)
+            return
+        entries = cast("list[dict[str, int]]", result)
+        regions: list[tuple[int, int, int, int]] = [
+            (
+                int(entry.get("base_address", 0)),
+                int(entry.get("size", 0)),
+                int(entry.get("protection", 0)),
+                int(entry.get("state", 0)),
+            )
+            for entry in entries
+        ]
         self._populate_regions(regions)
         self._status_label.setText(f"{len(regions)} region(s) found")
         _logger.info(
             "process_memory_list_regions_complete",
             pid=pid,
-            backend="hexcore",
+            backend="bridge",
             region_count=len(regions),
         )
-        return True
+
+    def _on_list_regions_error(self, exc: object, pid: int) -> None:
+        """Fall back to the local enumeration path when the bridge call fails.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+            pid: Process ID that was being queried.
+        """
+        _logger.warning(
+            "process_regions_bridge_failed",
+            pid=pid,
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
+        self._list_regions_ctypes(pid)
 
     def _list_regions_ctypes_impl(self, pid: int, access_mask: int) -> None:
         """Run the Win32 region enumeration loop for ``_list_regions_ctypes``.
@@ -193,14 +226,28 @@ class ProcessMemoryDialog(QDialog):
             access_mask: OpenProcess access mask to request.
         """
         kernel32 = ctypes.windll.kernel32
+        kernel32.OpenProcess.argtypes = (
+            ctypes.wintypes.DWORD,
+            ctypes.wintypes.BOOL,
+            ctypes.wintypes.DWORD,
+        )
+        kernel32.OpenProcess.restype = ctypes.wintypes.HANDLE
+        kernel32.VirtualQueryEx.argtypes = (
+            ctypes.wintypes.HANDLE,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+        )
+        kernel32.VirtualQueryEx.restype = ctypes.c_size_t
+        kernel32.CloseHandle.argtypes = (ctypes.wintypes.HANDLE,)
+        kernel32.CloseHandle.restype = ctypes.wintypes.BOOL
 
-        no_inherit: int = 0
-        inherit_handle = ctypes.c_bool(no_inherit)
+        inherit_handle: int = 0
         _logger.info(
             "win32_open_process_call",
             pid=pid,
             access_mask=access_mask,
-            inherit_handle=False,
+            inherit_handle=bool(inherit_handle),
         )
         handle = kernel32.OpenProcess(
             access_mask,
@@ -418,7 +465,7 @@ class ProcessMemoryMixin:
             )
             return
 
-        dlg = ProcessMemoryDialog(parent)
+        dlg = ProcessMemoryDialog(parent, bridge=bridge)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         if dlg.region_selected is None:

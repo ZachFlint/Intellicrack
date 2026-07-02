@@ -800,6 +800,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         self._attached_pid: int | None = None
         self._port: int = self.DEFAULT_PORT
         self._binary_path: Path | None = None
+        self._launch_args: str | None = None
         self._is_64bit: bool = True
         self._breakpoints: dict[int, BreakpointInfo] = {}
         self._next_bp_id: int = 1
@@ -813,6 +814,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         self._step_waiters: list[asyncio.Future[int]] = []
         self._step_waiters_lock: threading.Lock = threading.Lock()
         self._capabilities = BridgeCapabilities(
+            supports_static_analysis=True,
             supports_debugging=True,
             supports_dynamic_analysis=True,
             supports_patching=True,
@@ -1073,6 +1075,12 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Stop status",
                 ),
                 ToolFunction(
+                    name="x64dbg.restart",
+                    description="Restart the currently loaded debuggee (native Ctrl+F2 semantics)",
+                    parameters=[],
+                    returns="Restart status",
+                ),
+                ToolFunction(
                     name="x64dbg.step_into",
                     description="Single step into",
                     parameters=[],
@@ -1194,7 +1202,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Success status",
                 ),
                 ToolFunction(
-                    name="x64dbg.disassemble",
+                    name="x64dbg.disassemble_at",
                     description="Disassemble at address",
                     parameters=[
                         ToolParameter(
@@ -2746,6 +2754,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
             raise ToolError(msg)
 
         self._binary_path = await asyncio.to_thread(path.resolve)
+        self._launch_args = args
 
         is_64bit = self._detect_architecture(path)
 
@@ -7791,6 +7800,84 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
                 },
             )
         return {"success": True, "verified": True}
+
+    async def restart(self) -> dict[str, Any]:
+        """Restart the currently loaded debuggee (native Ctrl+F2 semantics).
+
+        Re-issues ``InitDebug`` against the same binary path and launch
+        arguments most recently passed to :meth:`load`, without
+        requiring the caller to resupply them or re-run architecture
+        detection. This mirrors x64dbg's own "restart" toolbar action,
+        which restarts the current debug session on the already-loaded
+        target rather than starting a fresh session from scratch. After
+        queuing the command, polls ``status`` to confirm the debugger
+        actually reached a paused state at the new entry point before
+        reporting success, rather than claiming success immediately
+        after queuing the command.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``path`` (the
+            restarted binary's path as a string), and ``verified``.
+            ``verified`` is ``True`` when ``status`` confirmed the
+            debugger returned to a paused state; ``False`` only when
+            the plugin lacks the ``status`` RPC.
+
+        Raises:
+            ToolError: If no binary has previously been loaded via
+                :meth:`load`, or if ``status`` reports the debugger
+                never returned to a paused state within the
+                verification window.
+        """
+        if self._binary_path is None:
+            msg = "x64dbg cannot restart: no binary has been loaded via load()"
+            raise ToolError(msg, tool_name="x64dbg")
+
+        path = self._binary_path
+        _logger.info("x64dbg_restart_queueing", path=path.name)
+
+        cmd = f'InitDebug "{path.as_posix()}"'
+        if self._launch_args:
+            cmd += f', "{self._launch_args}"'
+        await self._send_command(cmd)
+
+        try:
+            pid_result = await self._send_pipe_command("reg_get", {"name": "$pid"})
+        except ToolError as exc:
+            if not self._is_recoverable_pipe_error(exc):
+                raise
+            _logger.warning("pid_capture_after_restart_failed", error=str(exc))
+        else:
+            if isinstance(pid_result, str):
+                pid_val = int(pid_result, 0)
+                if pid_val > 0:
+                    self._attached_pid = pid_val
+                    self._state.target_pid = pid_val
+                    self._state.process_attached = True
+
+        observed, rpc_available = await self._wait_for_running_state(expected=False)
+        self._state.connected = True
+        self._state.tool_running = True
+        self._state.binary_loaded = True
+        self._state.target_path = path
+        self._publish_tool_state()
+
+        if not rpc_available:
+            _logger.info("x64dbg_restarted", path=path.name, verified=False)
+            return {"success": True, "path": str(path), "verified": False}
+        if observed is True:
+            msg = f"restart verification failed: debugger still running after InitDebug re-issue, never returned to paused within {self.VERIFY_TIMEOUT}s"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_TIMEOUT,
+                    "path": str(path),
+                    "expected_running": False,
+                    "observed_running": True,
+                },
+            )
+        _logger.info("x64dbg_restarted", path=path.name, verified=True)
+        return {"success": True, "path": str(path), "verified": True}
 
 
 class _X64DbgScriptingMixin(_X64DbgTraceMixin):

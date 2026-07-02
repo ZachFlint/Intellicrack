@@ -18,6 +18,7 @@ from PyQt6.QtGui import QAction, QClipboard
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QApplication,
+    QComboBox,
     QFileDialog,
     QHBoxLayout,
     QHeaderView,
@@ -42,9 +43,14 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import AssemblySyntaxHighlighter, CSyntaxHighlighter
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.cutter_debugger_tab import DebuggerTab
+from intellicrack.ui.panels.cutter_project_tab import ProjectTab
+from intellicrack.ui.panels.cutter_search_tab import SearchTab
+from intellicrack.ui.panels.cutter_static_extra_tab import StaticAnalysisExtrasTab
 from intellicrack.ui.panels.cutter_tabs import (
     AllStringsTab,
     CommentsTab,
+    ConfigTab,
     ESILConsoleTab,
     FlagsTab,
     HeadersTab,
@@ -81,6 +87,9 @@ _OUTER_SPLIT_MID: Final[int] = 250
 _OUTER_SPLIT_BOT: Final[int] = 150
 _INNER_SPLIT_LEFT: Final[int] = 250
 _INNER_SPLIT_RIGHT: Final[int] = 600
+
+_ANALYSIS_LEVELS: Final[list[str]] = ["quick", "normal", "deep"]
+_DEFAULT_ANALYSIS_LEVEL: Final[str] = "normal"
 
 _FUNC_COLUMNS = ["Name", "Address", "Size"]
 _IMPORT_COLUMNS = ["DLL", "Function", "Address"]
@@ -130,6 +139,13 @@ class CutterPanel(AnalysisPanelBase):
             toolbar: The toolbar to populate.
         """
         self._load_btn = self._add_tool_button(toolbar, "Load Binary...", self._on_load_binary)
+
+        self._analysis_level_combo = QComboBox()
+        self._analysis_level_combo.addItems(_ANALYSIS_LEVELS)
+        self._analysis_level_combo.setCurrentText(_DEFAULT_ANALYSIS_LEVEL)
+        self._analysis_level_combo.setToolTip("Analysis depth: quick (aa), normal (aaa), deep (aaaa)")
+        toolbar.addWidget(self._analysis_level_combo)
+
         self._analyze_btn = self._add_tool_button(toolbar, "Analyze", self._on_analyze)
         self._decompile_btn = self._add_tool_button(toolbar, "Decompile", self._on_decompile_selected)
         self._graph_btn = self._add_tool_button(toolbar, "Graph", self._on_graph_selected)
@@ -214,8 +230,7 @@ class CutterPanel(AnalysisPanelBase):
         layout.addLayout(header)
 
         self._func_filter = QLineEdit()
-        set_hint = getattr(self._func_filter, "set" + "Place" + "holderText")
-        set_hint("Filter functions...")
+        self._func_filter.setPlaceholderText("Filter functions...")
         self._func_filter.textChanged.connect(self._on_filter_changed)
         layout.addWidget(self._func_filter)
 
@@ -274,8 +289,7 @@ class CutterPanel(AnalysisPanelBase):
 
         strings_toolbar = QHBoxLayout()
         self._string_search_input = QLineEdit()
-        set_hint = getattr(self._string_search_input, "set" + "Place" + "holderText")
-        set_hint("Search strings...")
+        self._string_search_input.setPlaceholderText("Search strings...")
         self._string_search_input.returnPressed.connect(self._on_search_strings)
         strings_toolbar.addWidget(self._string_search_input)
 
@@ -366,6 +380,21 @@ class CutterPanel(AnalysisPanelBase):
         self._esil_tab = ESILConsoleTab()
         tabs.addTab(self._esil_tab, "ESIL Console")
 
+        self._debugger_tab = DebuggerTab()
+        tabs.addTab(self._debugger_tab, "Debugger")
+
+        self._project_tab = ProjectTab()
+        tabs.addTab(self._project_tab, "Project")
+
+        self._search_tab = SearchTab()
+        tabs.addTab(self._search_tab, "Advanced Search")
+
+        self._static_extras_tab = StaticAnalysisExtrasTab()
+        tabs.addTab(self._static_extras_tab, "Static Analysis Extras")
+
+        self._config_tab = ConfigTab()
+        tabs.addTab(self._config_tab, "Config")
+
         return tabs
 
     def _create_console(self) -> QWidget:
@@ -392,8 +421,7 @@ class CutterPanel(AnalysisPanelBase):
 
         input_row = QHBoxLayout()
         self._console_input = QLineEdit()
-        set_hint = getattr(self._console_input, "set" + "Place" + "holderText")
-        set_hint("r2 command...")
+        self._console_input.setPlaceholderText("r2 command...")
         self._console_input.returnPressed.connect(self._on_run_command)
         input_row.addWidget(self._console_input)
 
@@ -412,6 +440,9 @@ class CutterPanel(AnalysisPanelBase):
             bridge: The CutterBridge to use.
         """
         self._bridge = bridge
+        self._debugger_tab.set_bridge(bridge)
+        self._project_tab.set_bridge(bridge)
+        self._search_tab.set_bridge(bridge)
         _logger.info("cutter_bridge_set", bridge_type=type(bridge).__name__)
 
     def get_bridge(self) -> CutterBridge | None:
@@ -545,17 +576,19 @@ class CutterPanel(AnalysisPanelBase):
             self._set_status("No binary loaded - load a binary first")
             return
 
-        self._set_status("Analyzing...")
+        level = self._analysis_level_combo.currentText() or _DEFAULT_ANALYSIS_LEVEL
+        self._set_status(f"Analyzing ({level})...")
         self._analyze_btn.setEnabled(False)
 
         run_bridge_coroutine_logged(
-            self._bridge.analyze(),
+            self._bridge.analyze(level),
             on_success=lambda _: self._on_analysis_complete(),
             on_error=self._on_analysis_error,
             parent=self,
             event="cutter_analyze",
             logger=_logger,
             level="info",
+            analysis_level=level,
         )
 
     def _on_analysis_complete(self) -> None:
@@ -684,6 +717,7 @@ class CutterPanel(AnalysisPanelBase):
         )
 
         self._show_xrefs(address)
+        self._static_extras_tab.show_function(address)
 
     def _on_decompile_selected(self) -> None:
         """Decompile the currently selected function and switch to Decompiler tab."""
@@ -1137,6 +1171,9 @@ class CutterPanel(AnalysisPanelBase):
         self._type_browser_tab.refresh(self._bridge, run_fn)
         self._hexdump_tab.refresh(self._bridge, run_fn)
         self._esil_tab.refresh(self._bridge, run_fn)
+        self._project_tab.refresh(self._bridge, run_fn)
+        self._static_extras_tab.refresh(self._bridge)
+        self._config_tab.refresh(self._bridge, run_fn)
 
     def _on_save_binary(self) -> None:
         """Save the binary with cached patches via file dialog."""

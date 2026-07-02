@@ -514,6 +514,13 @@ def _build_tool_functions() -> list[ToolFunction]:
             "Load a binary file into Cutter/Rizin",
             [
                 _tp("path", "string", "Path to the binary file"),
+                _tp(
+                    "debug",
+                    "boolean",
+                    "Open in rizin's debug-attach mode for dynamic analysis instead of read-only static analysis",
+                    required=False,
+                    default=False,
+                ),
             ],
             "BinaryInfo object with file details",
         ),
@@ -607,6 +614,14 @@ def _build_tool_functions() -> list[ToolFunction]:
             [
                 _tp("address", "integer", "Address for comment"),
                 _tp("comment", "string", "Comment text"),
+                _tp(
+                    "comment_type",
+                    "string",
+                    "Type of comment",
+                    required=False,
+                    enum=["EOL", "function", "unique"],
+                    default="EOL",
+                ),
             ],
             "Success status",
         ),
@@ -1326,7 +1341,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """Tool name identifier.
 
         Returns:
             ToolName: ToolName.CUTTER
@@ -1335,7 +1350,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """Tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.
@@ -2736,7 +2751,7 @@ class CutterMetadataMixin(CutterCommandMixin):
             _logger.warning("get_relocations_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
-        relocs = await self._cmd_json("iRj")
+        relocs = await self._cmd_json("irj")
         result: list[RelocationInfo] = [
             RelocationInfo(
                 name=_get_str(r, "name"),
@@ -2752,7 +2767,7 @@ class CutterMetadataMixin(CutterCommandMixin):
     async def get_resources(self) -> list[ResourceInfo]:
         """Get embedded resources from the binary.
 
-        Resource enumeration is performed via rizin's ``irj`` command.
+        Resource enumeration is performed via rizin's ``iRj`` command.
         Errors raised by the underlying command (timeouts, JSON parse
         failures, missing-binary checks) are propagated to the caller
         as ``ToolError`` rather than being swallowed and reported as
@@ -2763,14 +2778,14 @@ class CutterMetadataMixin(CutterCommandMixin):
             list[ResourceInfo]: List of resource information.
 
         Raises:
-            ToolError: If no binary is loaded or the ``irj`` command
+            ToolError: If no binary is loaded or the ``iRj`` command
                 fails.
         """
         if self._r2 is None:
             _logger.warning("get_resources_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
-        resources = await self._cmd_json("irj")
+        resources = await self._cmd_json("iRj")
         result: list[ResourceInfo] = [
             ResourceInfo(
                 name=_get_str(r, "name"),

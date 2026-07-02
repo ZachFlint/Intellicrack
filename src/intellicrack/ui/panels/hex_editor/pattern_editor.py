@@ -62,6 +62,8 @@ def _get_default_pattern_field_color() -> str:
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from intellicrack.bridges.hex_state import HexDocumentState
 
 
@@ -89,6 +91,7 @@ class PatternEditorMixin:
     _templates_tree: QTreeWidget | None
     _template_combo: QComboBox | None
     _state_holder: HexDocumentState | None
+    _populate_template_combo: Callable[[], None]
 
     def _populate_template_tree(self, fields: list[dict[str, object]]) -> None:
         """Populate the template preview tree from decoded structure fields.
@@ -134,30 +137,6 @@ class PatternEditorMixin:
                 highlights.append((offset_raw, size_raw, color))
         if highlights:
             highlight_fn(highlights, "pattern")
-
-    def _populate_template_combo(self) -> None:
-        """Populate the template selector combo with available structures."""
-        if self._template_combo is None:
-            return
-        self._template_combo.clear()
-        if self.document is None:
-            return
-        list_fn = getattr(self.document, "list_templates", None)
-        if not callable(list_fn):
-            return
-        try:
-            templates_raw: object = list_fn()
-        except (AttributeError, ValueError, RuntimeError):
-            _logger.exception("populate_template_combo_failed")
-            return
-        if not isinstance(templates_raw, list):
-            return
-        for entry in cast("list[object]", templates_raw):
-            if isinstance(entry, (tuple, list)) and len(cast("tuple[object, ...]", entry)) > 0:
-                first = cast("tuple[object, ...]", entry)[0]
-                self._template_combo.addItem(str(first))
-            elif isinstance(entry, str):
-                self._template_combo.addItem(entry)
 
     def _build_pattern_editor(self) -> QFrame:
         """Build the collapsible pattern editor panel.

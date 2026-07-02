@@ -14,6 +14,7 @@ from collections.abc import Callable, Coroutine
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
+    QComboBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -35,8 +36,11 @@ from intellicrack.ui.resources.font_manager import FontManager
 
 
 _HEXDUMP_AUTO_BYTES: Final[int] = 256
+_HEXDUMP_MODE_BYTES: Final[str] = "Bytes (px)"
+_HEXDUMP_MODE_WORDS: Final[str] = "Words (pxw)"
 _ESIL_WELCOME: Final[str] = (
-    "[ESIL] console ready. Commands: 'Eval' runs 'ae <expr>', 'Step' runs 'aes', 'Init Mem' runs 'aeim'.\n"
+    "[ESIL] console ready. Commands: 'Eval' runs 'ae <expr>', 'Step' runs 'aes', 'Init Mem' runs 'aeim',\n"
+    "[ESIL] 'Emulate Function' runs 'aef @ <address>', 'Set PC' runs 'aepc <address>'.\n"
     "[ESIL] Emulation memory will be initialised automatically."
 )
 
@@ -435,19 +439,56 @@ class CommentsTab(QWidget):
 
 
 class FlagsTab(QWidget):
-    """Tab showing all flags/labels."""
+    """Tab showing all flags/labels, with controls to add a flag and resolve one from an address."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the FlagsTab with a table for flag display.
+        """Initialize the FlagsTab with add/resolve controls and a table for flag display.
 
         Args:
             parent: Parent widget.
         """
         super().__init__(parent)
+        self._bridge: CutterBridge | None = None
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+
+        add_row = QHBoxLayout()
+        add_row.addWidget(QLabel("Name:"))
+        self._add_name_input = QLineEdit()
+        add_row.addWidget(self._add_name_input)
+        add_row.addWidget(QLabel("Size:"))
+        self._add_size_input = QLineEdit("1")
+        self._add_size_input.setMaximumWidth(60)
+        add_row.addWidget(self._add_size_input)
+        add_row.addWidget(QLabel("Address:"))
+        self._add_addr_input = QLineEdit()
+        self._add_addr_input.setPlaceholderText("0x401000")
+        add_row.addWidget(self._add_addr_input)
+        self._add_btn = QPushButton("Add Flag")
+        self._add_btn.setObjectName("tool_button")
+        add_row.addWidget(self._add_btn)
+        layout.addLayout(add_row)
+
+        resolve_row = QHBoxLayout()
+        resolve_row.addWidget(QLabel("Resolve Address:"))
+        self._resolve_addr_input = QLineEdit()
+        self._resolve_addr_input.setPlaceholderText("0x401000")
+        resolve_row.addWidget(self._resolve_addr_input)
+        self._resolve_btn = QPushButton("Resolve Flag")
+        self._resolve_btn.setObjectName("tool_button")
+        resolve_row.addWidget(self._resolve_btn)
+        self._resolve_result_label = QLabel("")
+        resolve_row.addWidget(self._resolve_result_label)
+        resolve_row.addStretch()
+        layout.addLayout(resolve_row)
+
         self._table = _make_table(["Name", "Address", "Size"])
         layout.addWidget(self._table)
+
+        self._add_btn.clicked.connect(self._on_add_flag)
+        self._resolve_btn.clicked.connect(self._on_resolve_flag)
+        self._resolve_addr_input.returnPressed.connect(self._on_resolve_flag)
 
     def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Refresh data from the bridge.
@@ -456,8 +497,15 @@ class FlagsTab(QWidget):
             bridge: CutterBridge instance.
             _run_async: Deprecated parameter, retained for backward compatibility.
         """
+        self._bridge = bridge
+        self._fetch_flags()
+
+    def _fetch_flags(self) -> None:
+        """Query the bridge for the current flag list and populate the table."""
+        if self._bridge is None:
+            return
         run_bridge_coroutine_logged(
-            bridge.get_flags(),
+            self._bridge.get_flags(),
             on_success=self._apply_data,
             on_error=_log_tab_error(type(self).__name__, "get_flags"),
             parent=self,
@@ -480,6 +528,108 @@ class FlagsTab(QWidget):
             self._table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(f, 'address', 0):X}"))
             self._table.setItem(row, 2, QTableWidgetItem(str(getattr(f, "size", 0))))
 
+    @staticmethod
+    def _parse_address(text: str) -> int | None:
+        """Parse an address string in hex (``0x`` prefix) or decimal form.
+
+        Args:
+            text: User-supplied address string.
+
+        Returns:
+            int | None: The parsed integer address, or None on invalid/empty input.
+        """
+        stripped = text.strip()
+        if not stripped:
+            return None
+        try:
+            return int(stripped, 16) if stripped.lower().startswith("0x") else int(stripped)
+        except ValueError:
+            return None
+
+    def _on_add_flag(self) -> None:
+        """Add a named flag at the address given in the add-flag inputs."""
+        if self._bridge is None:
+            return
+        name = self._add_name_input.text().strip()
+        address = self._parse_address(self._add_addr_input.text())
+        if not name or address is None:
+            self._resolve_result_label.setText("Enter a name and a valid address")
+            return
+        try:
+            size = int(self._add_size_input.text().strip() or "1")
+        except ValueError:
+            self._resolve_result_label.setText("Invalid size")
+            return
+
+        self._add_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.add_flag(name, size, address),
+            on_success=lambda _: self._on_add_flag_success(),
+            on_error=self._on_add_flag_error,
+            parent=self,
+            event="cutter_add_flag",
+            logger=_logger,
+            level="info",
+            flag_name=name,
+            address=hex(address),
+        )
+
+    def _on_add_flag_success(self) -> None:
+        """Handle successful flag addition and refresh the flag table."""
+        self._add_btn.setEnabled(True)
+        self._add_name_input.clear()
+        self._add_addr_input.clear()
+        self._fetch_flags()
+
+    def _on_add_flag_error(self, exc: object) -> None:
+        """Handle flag addition failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._add_btn.setEnabled(True)
+        _logger.warning("cutter_add_flag_failed", error=str(exc))
+        self._resolve_result_label.setText(f"Add failed: {exc}")
+
+    def _on_resolve_flag(self) -> None:
+        """Resolve the nearest flag name for the address given in the resolve input."""
+        if self._bridge is None:
+            return
+        address = self._parse_address(self._resolve_addr_input.text())
+        if address is None:
+            self._resolve_result_label.setText("Invalid address")
+            return
+
+        self._resolve_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.resolve_flag(address),
+            on_success=self._on_resolve_flag_success,
+            on_error=self._on_resolve_flag_error,
+            parent=self,
+            event="cutter_resolve_flag",
+            logger=_logger,
+            address=hex(address),
+        )
+
+    def _on_resolve_flag_success(self, result: object) -> None:
+        """Display the resolved flag name.
+
+        Args:
+            result: Flag name string or None from the bridge.
+        """
+        self._resolve_btn.setEnabled(True)
+        self._resolve_result_label.setText(str(result) if result else "(no flag found)")
+
+    def _on_resolve_flag_error(self, exc: object) -> None:
+        """Handle flag resolution failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._resolve_btn.setEnabled(True)
+        _logger.warning("cutter_resolve_flag_failed", error=str(exc))
+        self._resolve_result_label.setText(f"Resolve failed: {exc}")
+
 
 class ROPGadgetsTab(QWidget):
     """Tab showing ROP gadget search results with pattern input."""
@@ -496,8 +646,7 @@ class ROPGadgetsTab(QWidget):
 
         toolbar = QHBoxLayout()
         self._pattern_input = QLineEdit()
-        set_hint = getattr(self._pattern_input, "set" + "Place" + "holderText")
-        set_hint("ROP pattern (empty=all)...")
+        self._pattern_input.setPlaceholderText("ROP pattern (empty=all)...")
         toolbar.addWidget(self._pattern_input)
 
         self._search_btn = QPushButton("Search")
@@ -578,14 +727,18 @@ class HexdumpTab(QWidget):
         toolbar.addWidget(QLabel("Address:"))
         self._addr_input = QLineEdit()
         self._addr_input.setMaximumWidth(150)
-        set_hint = getattr(self._addr_input, "set" + "Place" + "holderText")
-        set_hint("0x401000")
+        self._addr_input.setPlaceholderText("0x401000")
         toolbar.addWidget(self._addr_input)
 
         toolbar.addWidget(QLabel("Length:"))
         self._len_input = QLineEdit("256")
         self._len_input.setMaximumWidth(80)
         toolbar.addWidget(self._len_input)
+
+        toolbar.addWidget(QLabel("Mode:"))
+        self._mode_combo = QComboBox()
+        self._mode_combo.addItems([_HEXDUMP_MODE_BYTES, _HEXDUMP_MODE_WORDS])
+        toolbar.addWidget(self._mode_combo)
 
         self._dump_btn = QPushButton("Dump")
         self._dump_btn.setObjectName("tool_button")
@@ -641,19 +794,10 @@ class HexdumpTab(QWidget):
             return
         self._addr_input.setText(f"0x{chosen.virtual_address:X}")
         self._len_input.setText(str(_HEXDUMP_AUTO_BYTES))
-        run_bridge_coroutine_logged(
-            self._bridge.hexdump(chosen.virtual_address, _HEXDUMP_AUTO_BYTES),
-            on_success=self._apply_data,
-            on_error=lambda e: self._output.setPlainText(f"[error] {e}"),
-            parent=self,
-            event="cutter_hexdump",
-            logger=_logger,
-            address=hex(chosen.virtual_address),
-            length=_HEXDUMP_AUTO_BYTES,
-        )
+        self._dump(chosen.virtual_address, _HEXDUMP_AUTO_BYTES)
 
     def _on_dump(self) -> None:
-        """Trigger hexdump with current address and length inputs."""
+        """Trigger hexdump with current address, length, and mode inputs."""
         if self._bridge is None:
             return
         addr_text = self._addr_input.text().strip()
@@ -670,12 +814,25 @@ class HexdumpTab(QWidget):
             )
             self._output.setPlainText("[error] Invalid address or length")
             return
+        self._dump(address, length)
+
+    def _dump(self, address: int, length: int) -> None:
+        """Issue a byte- or word-mode hexdump based on the mode combo box selection.
+
+        Args:
+            address: Start address to dump from.
+            length: Number of bytes to dump.
+        """
+        if self._bridge is None:
+            return
+        word_mode = self._mode_combo.currentText() == _HEXDUMP_MODE_WORDS
+        coro = self._bridge.hexdump_words(address, length) if word_mode else self._bridge.hexdump(address, length)
         run_bridge_coroutine_logged(
-            self._bridge.hexdump(address, length),
+            coro,
             on_success=self._apply_data,
             on_error=lambda e: self._output.setPlainText(f"[error] {e}"),
             parent=self,
-            event="cutter_hexdump",
+            event="cutter_hexdump_words" if word_mode else "cutter_hexdump",
             logger=_logger,
             address=hex(address),
             length=length,
@@ -711,8 +868,7 @@ class ESILConsoleTab(QWidget):
 
         input_row = QHBoxLayout()
         self._expr_input = QLineEdit()
-        set_hint = getattr(self._expr_input, "set" + "Place" + "holderText")
-        set_hint("ESIL expression...")
+        self._expr_input.setPlaceholderText("ESIL expression...")
         input_row.addWidget(self._expr_input)
 
         self._eval_btn = QPushButton("Eval")
@@ -728,12 +884,30 @@ class ESILConsoleTab(QWidget):
         input_row.addWidget(self._init_btn)
         layout.addLayout(input_row)
 
+        addr_row = QHBoxLayout()
+        addr_row.addWidget(QLabel("Address:"))
+        self._addr_input = QLineEdit()
+        self._addr_input.setPlaceholderText("0x401000")
+        addr_row.addWidget(self._addr_input)
+
+        self._emulate_btn = QPushButton("Emulate Function")
+        self._emulate_btn.setObjectName("tool_button")
+        addr_row.addWidget(self._emulate_btn)
+
+        self._set_pc_btn = QPushButton("Set PC")
+        self._set_pc_btn.setObjectName("tool_button")
+        addr_row.addWidget(self._set_pc_btn)
+        layout.addLayout(addr_row)
+
         self._bridge: CutterBridge | None = None
         self._esil_initialised: bool = False
         self._eval_btn.clicked.connect(self._on_eval)
         self._expr_input.returnPressed.connect(self._on_eval)
         self._step_btn.clicked.connect(self._on_step)
         self._init_btn.clicked.connect(self._on_init_mem)
+        self._emulate_btn.clicked.connect(self._on_emulate_function)
+        self._set_pc_btn.clicked.connect(self._on_set_pc)
+        self._addr_input.returnPressed.connect(self._on_emulate_function)
 
     def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
         """Store bridge reference, emit a welcome banner and auto-initialise ESIL memory.
@@ -832,6 +1006,153 @@ class ESILConsoleTab(QWidget):
         """
         if result is not None and (text := str(result).rstrip()):
             self._output.appendPlainText(text)
+
+    def _read_address_input(self) -> int | None:
+        """Parse the address input as hex (``0x`` prefix) or decimal.
+
+        Returns:
+            int | None: The parsed address, or None if the input is empty or invalid.
+        """
+        addr_text = self._addr_input.text().strip()
+        if not addr_text:
+            return None
+        try:
+            return int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text)
+        except ValueError:
+            _logger.warning("cutter_esil_invalid_address", address_text=addr_text)
+            self._output.appendPlainText(f"[error] Invalid address: {addr_text}")
+            return None
+
+    def _on_emulate_function(self) -> None:
+        """Emulate the function at the address input using ESIL."""
+        if self._bridge is None:
+            return
+        address = self._read_address_input()
+        if address is None:
+            return
+        self._output.appendPlainText(f"> aef @ 0x{address:X}")
+        run_bridge_coroutine_logged(
+            self._bridge.esil_emulate_function(address),
+            on_success=self._apply_result,
+            on_error=lambda e: self._output.appendPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_esil_emulate_function",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+    def _on_set_pc(self) -> None:
+        """Set the ESIL program counter to the address input."""
+        if self._bridge is None:
+            return
+        address = self._read_address_input()
+        if address is None:
+            return
+        self._output.appendPlainText(f"> aepc 0x{address:X}")
+        run_bridge_coroutine_logged(
+            self._bridge.esil_set_pc(address),
+            on_success=lambda _: self._output.appendPlainText(f"[ok] PC set to 0x{address:X}"),
+            on_error=lambda e: self._output.appendPlainText(f"[error] {e}"),
+            parent=self,
+            event="cutter_esil_set_pc",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+
+class ConfigTab(QWidget):
+    """Tab providing get/set access to Rizin configuration variables (``e`` command)."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the ConfigTab with get/set controls and a result display.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        fm = FontManager.get_instance()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        get_row = QHBoxLayout()
+        get_row.addWidget(QLabel("Key:"))
+        self._get_key_input = QLineEdit()
+        self._get_key_input.setPlaceholderText("asm.arch")
+        get_row.addWidget(self._get_key_input)
+        self._get_btn = QPushButton("Get")
+        self._get_btn.setObjectName("tool_button")
+        get_row.addWidget(self._get_btn)
+        layout.addLayout(get_row)
+
+        set_row = QHBoxLayout()
+        set_row.addWidget(QLabel("Key:"))
+        self._set_key_input = QLineEdit()
+        set_row.addWidget(self._set_key_input)
+        set_row.addWidget(QLabel("Value:"))
+        self._set_value_input = QLineEdit()
+        set_row.addWidget(self._set_value_input)
+        self._set_btn = QPushButton("Set")
+        self._set_btn.setObjectName("tool_button")
+        set_row.addWidget(self._set_btn)
+        layout.addLayout(set_row)
+
+        self._output = QPlainTextEdit()
+        self._output.setFont(fm.get_code_font(9))
+        self._output.setReadOnly(True)
+        layout.addWidget(self._output)
+
+        self._bridge: CutterBridge | None = None
+        self._get_btn.clicked.connect(self._on_get)
+        self._get_key_input.returnPressed.connect(self._on_get)
+        self._set_btn.clicked.connect(self._on_set)
+
+    def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:
+        """Store the bridge reference.
+
+        Args:
+            bridge: CutterBridge instance.
+            _run_async: Deprecated parameter, retained for backward compatibility.
+        """
+        self._bridge = bridge
+
+    def _on_get(self) -> None:
+        """Get the current value of the configuration key in the get-key input."""
+        if self._bridge is None:
+            return
+        key = self._get_key_input.text().strip()
+        if not key:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.get_config(key),
+            on_success=lambda result: self._output.appendPlainText(f"{key} = {result}"),
+            on_error=lambda e: self._output.appendPlainText(f"[error] get {key}: {e}"),
+            parent=self,
+            event="cutter_get_config",
+            logger=_logger,
+            key=key,
+        )
+
+    def _on_set(self) -> None:
+        """Set the configuration key/value pair in the set inputs."""
+        if self._bridge is None:
+            return
+        key = self._set_key_input.text().strip()
+        value = self._set_value_input.text().strip()
+        if not key:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.set_config(key, value),
+            on_success=lambda _: self._output.appendPlainText(f"[ok] {key} = {value}"),
+            on_error=lambda e: self._output.appendPlainText(f"[error] set {key}: {e}"),
+            parent=self,
+            event="cutter_set_config",
+            logger=_logger,
+            level="info",
+            key=key,
+            value=value,
+        )
 
 
 class TypeBrowserTab(QWidget):

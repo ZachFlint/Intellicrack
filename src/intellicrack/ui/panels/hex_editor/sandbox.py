@@ -6,7 +6,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import posixpath
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -29,7 +28,7 @@ from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 
 
 if TYPE_CHECKING:
-    from intellicrack.bridges.sandbox_bridge import SandboxBridge
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 _logger = get_logger(__name__)
@@ -47,6 +46,7 @@ class SandboxMixin:
 
     document: Any | None
     file_path: Path | None
+    _bridge: HexEditorBridge | None
     _sandbox_type_combo: QComboBox | None
     _sandbox_instance_combo: QComboBox | None
     _sandbox_dest_input: QLineEdit | None
@@ -54,16 +54,6 @@ class SandboxMixin:
     _sandbox_timeout_spin: QSpinBox | None
     _sandbox_output: QPlainTextEdit | None
     _sandbox_status: QLabel | None
-    _sandbox_bridge: SandboxBridge | None
-
-    def set_sandbox_bridge(self, bridge: SandboxBridge) -> None:
-        """Attach a SandboxBridge to this mixin for all sandbox operations.
-
-        Args:
-            bridge: SandboxBridge instance whose ``copy_to`` and ``execute``
-                methods will be called for save and test operations.
-        """
-        self._sandbox_bridge = bridge
 
     def _create_sandbox_tab(self) -> QWidget:
         """Create the Sandbox side panel tab widget.
@@ -89,7 +79,9 @@ class SandboxMixin:
         self._sandbox_instance_combo = QComboBox()
         self._sandbox_instance_combo.setEditable(True)
         self._sandbox_instance_combo.setInsertPolicy(QComboBox.InsertPolicy.InsertAtTop)
-        self._sandbox_instance_combo.setToolTip("Active sandbox instance ID (from SandboxBridge)")
+        self._sandbox_instance_combo.setToolTip(
+            "Sandbox instance ID auto-provisioned by the hex editor bridge for the last save/test operation",
+        )
         layout.addWidget(self._sandbox_instance_combo)
 
         layout.addWidget(QLabel("Destination path:"))
@@ -129,130 +121,94 @@ class SandboxMixin:
         self._sandbox_output.setFont(out_font)
         layout.addWidget(self._sandbox_output)
 
-        self._sandbox_bridge = None
         return container
 
     def _on_save_to_sandbox(self) -> None:
-        """Copy the current file to the selected sandbox environment."""
-        if self.file_path is None:
+        """Save the current document into a sandbox via ``HexEditorBridge.save_to_sandbox``.
+
+        Routes through the hex-editor bridge instead of a generic sandbox
+        bridge call so the bridge's auto-provisioning of a sandbox
+        instance, orphan-instance cleanup on failure, and unsaved/
+        in-memory document handling all apply here too. The bridge
+        provisions its own instance, so no pre-existing Instance ID is
+        required; the field is populated with the auto-created instance
+        ID once the save completes.
+        """
+        if self.document is None:
             parent = self if isinstance(self, QWidget) else None
             QMessageBox.warning(parent, "Sandbox", "No file is loaded.")
             return
 
-        bridge = getattr(self, "_sandbox_bridge", None)
-        if bridge is None or not hasattr(bridge, "copy_to"):
+        bridge = self._bridge
+        if bridge is None:
             parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(parent, "Sandbox", "No sandbox bridge is attached.")
+            QMessageBox.warning(parent, "Sandbox", "Hex editor bridge is not attached.")
             return
 
-        instance_id = self._sandbox_instance_combo.currentText().strip() if self._sandbox_instance_combo else ""
-        if not instance_id:
-            parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(parent, "Sandbox", "No sandbox instance ID specified.")
-            return
-
-        file_path = Path(self.file_path)
-        src = str(file_path)
+        sandbox_type = self._sandbox_type_combo.currentText().strip() if self._sandbox_type_combo else "windows"
+        default_name = Path(self.file_path).name if self.file_path is not None else "document.bin"
         dest_path = (self._sandbox_dest_input.text().strip() if self._sandbox_dest_input else "") or posixpath.join(
             _CONTAINER_TMP_PREFIX,
-            file_path.name,
+            default_name,
         )
-        timeout = self._sandbox_timeout_spin.value() if self._sandbox_timeout_spin else _DEFAULT_TIMEOUT
 
         if self._sandbox_status is not None:
             self._sandbox_status.setText("Saving to sandbox...")
 
-        _logger.info("sandbox_save_dispatched", instance_id=instance_id, source=src, dest=dest_path)
+        _logger.info("sandbox_save_dispatched", sandbox_type=sandbox_type, dest=dest_path)
 
-        copy_to_fn: SandboxBridge = cast("SandboxBridge", bridge)
         run_bridge_coroutine_logged(
-            self._copy_to_with_timeout(copy_to_fn, instance_id, src, dest_path, timeout),
+            bridge.save_to_sandbox(dest_path, sandbox_type=sandbox_type),
             on_success=self._on_sandbox_finished_obj,
             on_error=self._on_sandbox_error_obj,
             parent=self if isinstance(self, QWidget) else None,
-            event="hex_editor_sandbox_copy_to",
+            event="hex_editor_sandbox_save",
             logger=_logger,
             level="info",
-            instance_id=instance_id,
-            source=src,
+            sandbox_type=sandbox_type,
             dest=dest_path,
-            timeout_s=timeout,
         )
-
-    @staticmethod
-    async def _copy_to_with_timeout(
-        bridge: SandboxBridge,
-        instance_id: str,
-        source: str,
-        dest: str,
-        time_limit: int,
-    ) -> dict[str, Any]:
-        """Invoke ``SandboxBridge.copy_to`` under an ``asyncio.timeout`` deadline.
-
-        ``SandboxBridge.copy_to`` does not expose a timeout parameter, so the
-        user-supplied limit from the hex editor's Sandbox panel is enforced
-        at this call site to prevent indefinitely hanging copy operations.
-
-        Args:
-            bridge: SandboxBridge instance providing the ``copy_to`` coroutine.
-            instance_id: ID of the sandbox instance to copy into.
-            source: Local source file path.
-            dest: Destination path inside the sandbox.
-            time_limit: Maximum number of seconds the copy may take before
-                the deadline is exceeded and the operation is cancelled.
-
-        Returns:
-            dict[str, Any]: Success confirmation returned by ``copy_to``.
-        """
-        async with asyncio.timeout(time_limit):
-            return await bridge.copy_to(instance_id, source, dest)
 
     def _on_test_in_sandbox(self) -> None:
-        """Execute the current binary in the sandbox and display output."""
+        """Execute the current document in a sandbox via ``HexEditorBridge.test_in_sandbox``.
+
+        Routes through the hex-editor bridge instead of a generic sandbox
+        bridge call so the bridge's end-to-end ``run_binary`` orchestration
+        (instance creation, file copy, execution) is used instead of a
+        raw ``execute`` call against a pre-selected instance. Requires the
+        document to already be saved to a file on disk, matching the
+        bridge method's own requirement.
+        """
         if self.file_path is None:
             parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(parent, "Sandbox", "No file is loaded.")
+            QMessageBox.warning(parent, "Sandbox", "No file is loaded. Save the document before testing in a sandbox.")
             return
 
-        bridge = getattr(self, "_sandbox_bridge", None)
-        if bridge is None or not hasattr(bridge, "execute"):
+        bridge = self._bridge
+        if bridge is None:
             parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(parent, "Sandbox", "No sandbox bridge is attached.")
+            QMessageBox.warning(parent, "Sandbox", "Hex editor bridge is not attached.")
             return
 
-        instance_id = self._sandbox_instance_combo.currentText().strip() if self._sandbox_instance_combo else ""
-        if not instance_id:
-            parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(parent, "Sandbox", "No sandbox instance ID specified.")
-            return
-
-        dest_path = (self._sandbox_dest_input.text().strip() if self._sandbox_dest_input else "") or posixpath.join(
-            _CONTAINER_TMP_PREFIX,
-            self.file_path.name,
-        )
+        sandbox_type = self._sandbox_type_combo.currentText().strip() if self._sandbox_type_combo else "windows"
         command_args = self._sandbox_args_input.text().strip() if self._sandbox_args_input else ""
         timeout = self._sandbox_timeout_spin.value() if self._sandbox_timeout_spin else _DEFAULT_TIMEOUT
-
-        command = dest_path
-        if command_args:
-            command = f"{dest_path} {command_args}"
 
         if self._sandbox_status is not None:
             self._sandbox_status.setText("Testing in sandbox...")
 
-        _logger.info("sandbox_test_dispatched", instance_id=instance_id, command=command)
+        _logger.info("sandbox_test_dispatched", sandbox_type=sandbox_type, args=command_args, timeout_s=timeout)
 
-        execute_fn: SandboxBridge = cast("SandboxBridge", bridge)
         run_bridge_coroutine_logged(
-            execute_fn.execute(instance_id, command, time_limit=timeout),
+            bridge.test_in_sandbox(command_args, sandbox_type=sandbox_type, time_limit=timeout),
             on_success=self._on_sandbox_finished_obj,
             on_error=self._on_sandbox_error_obj,
             parent=self if isinstance(self, QWidget) else None,
-            event="hex_editor_sandbox_execute",
+            event="hex_editor_sandbox_test",
             logger=_logger,
             level="info",
-            instance_id=instance_id,
-            command=command,
+            sandbox_type=sandbox_type,
+            args=command_args,
             timeout_s=timeout,
         )
 
@@ -285,6 +241,12 @@ class SandboxMixin:
         if self._sandbox_output is not None:
             lines: list[str] = [f"{key}: {val}" for key, val in result.items()]
             self._sandbox_output.setPlainText("\n".join(lines))
+
+        instance_id = result.get("instance_id")
+        if isinstance(instance_id, str) and instance_id and self._sandbox_instance_combo is not None:
+            if self._sandbox_instance_combo.findText(instance_id) < 0:
+                self._sandbox_instance_combo.insertItem(0, instance_id)
+            self._sandbox_instance_combo.setCurrentText(instance_id)
 
         _logger.info("sandbox_operation_complete", result_keys=list(result.keys()))
 

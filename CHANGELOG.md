@@ -9,6 +9,14 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Integrate workspace agents and update x64dbg plugin build (`e8de94e`)
+Introduce workspace-scoped agent and skill configurations generated from markdown sources, and update the x64dbg plugin build pipeline to support automated x32/x64 compilation and deployment. Dependency configurations are updated to exclude vendor directories and include PyInstaller and PyTorch.
+- Add `generate_agent_jsons.py` to compile agent JSON specs from markdown frontmatter
+- Update `install-x64dbg-plugin.ps1` to auto-detect CMake from Visual Studio and support x32/x64 build targets
+- Include pre-built x32/x64 x64dbg bridge plugins and MSVC build artifacts
+- Update `pyproject.toml` and lockfiles to add `pyinstaller` and `torch` while excluding `vendor/` from linters and coverage
+- Fix regex escape sequence in `lint_report.py` and refine assertion in `test_domain_pattern.py`
+
 - **api:** Implement exponential backoff for rate-limited requests (`7e6a923`)
 Introduce an exponential backoff jitter algorithm when encountering HTTP 429 status codes. This prevents thundering herd problems on the upstream service and ensures transient rate limits are handled gracefully without failing the entire request pipeline.
 
@@ -322,16 +330,32 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
 
-- Integrate workspace agents and update x64dbg plugin build (``)
-Introduce workspace-scoped agent and skill configurations generated from markdown sources, and update the x64dbg plugin build pipeline to support automated x32/x64 compilation and deployment. Dependency configurations are updated to exclude vendor directories and include PyInstaller and PyTorch.
-- Add `generate_agent_jsons.py` to compile agent JSON specs from markdown frontmatter
-- Update `install-x64dbg-plugin.ps1` to auto-detect CMake from Visual Studio and support x32/x64 build targets
-- Include pre-built x32/x64 x64dbg bridge plugins and MSVC build artifacts
-- Update `pyproject.toml` and lockfiles to add `pyinstaller` and `torch` while excluding `vendor/` from linters and coverage
-- Fix regex escape sequence in `lint_report.py` and refine assertion in `test_domain_pattern.py`
+- Complete tool bridge capabilities and integrate UI controls (``)
+This update resolves gaps between the LLM-callable tool bridges and the Qt GUI panels across Cutter, Frida, Ghidra, Hex Editor, Process, and Sandbox tools. By routing GUI actions through the unified bridge layer, we eliminate duplicate implementations, ensure consistent behavior, and expose previously headless capabilities directly to the user interface.
+- **Cutter/Rizin**: Added debugger, project, search, and static analysis tabs, corrected relocations/resources commands, and added ESIL/flag controls.
+- **Frida**: Added Stalker tuning, Interceptor lifecycle, call-probe, memory-patch, and system-function controls, and resolved the external detach state.
+- **Ghidra**: Added memory-block mutations, program-tree editing, data-type creation, and advanced analysis views (thunks, references, call graphs).
+- **Hex Editor**: Rerouted search, sandbox, memory, and template operations to the bridge, and added VA mapping and annotated report exports.
+- **Process & Sandbox**: Integrated decommit, token, privilege, and kernel-debug APIs, added sandbox VM pause/PCAP stop, and gated unattached tabs with overlays.
+- **Core**: Enhanced `ToolRegistry` with automatic hex-to-bytes argument coercion and dotted function-name capability resolution.
 
 
 ### Changed
+
+- Remove HxD integration; native hex editor is canonical (`10c3dc3`)
+HxD was an early external-tool embed (QProcess + Win32 reparenting) never
+bridged into the orchestrator/AI layer and redundant with the native
+HexEditorBridge (ToolName.HEX_EDITOR) + hex_editor/ UI package.
+- Delete hxd_panel.py, its tests, and vendored tools/hxd/ binaries
+- Remove all HxD code paths from MainWindow (import, panel field, property,
+late-register method, toolbar button, open handlers, closeEvent cleanup)
+- Drop HxDPanel from ui.panels package exports
+- Fix stale TOOL_REGISTRY[HEX_EDITOR] metadata: was mislabeled "HxD" with HxD
+executables; now kind="builtin" like ToolName.PROCESS (always-available,
+no filesystem path)
+- Update vulture whitelist, README, and affected tests
+Native hex editor stack (bridge, hex_editor/ package, MainWindow wiring)
+left intact.
 
 - Fix win32 bridge integrations and strengthen test gates (`161246c`)
 Resolve critical Win32 integration issues by configuring explicit ctypes prototypes for SCM and thread handles to prevent 64-bit truncation, and correct struct alignment calculations for symbol resolution. Additionally, update the test suites with robust independent oracles and falsifiability gates to guarantee assertion integrity across all core modules.

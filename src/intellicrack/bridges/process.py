@@ -552,6 +552,12 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         returns="List of dicts with pid, name, thread_count, architecture, memory_mb",
     ),
     ToolFunction(
+        name="process.enumerate_system_processes",
+        description="Enumerate all running processes as dict-formatted records (pid, name, parent_pid, thread_count)",
+        parameters=[],
+        returns="List of dicts with pid, name, parent_pid, and thread_count fields",
+    ),
+    ToolFunction(
         name="process.open",
         description="Open a process for manipulation",
         parameters=[
@@ -642,6 +648,16 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="protection", type="string", description="New protection (rwx, rw, rx, r)", required=True),
         ],
         returns="Previous protection",
+    ),
+    ToolFunction(
+        name="process.decommit_memory",
+        description="Decommit a region of committed memory in a process (VirtualFreeEx with MEM_DECOMMIT)",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID", required=True),
+            ToolParameter(name="address", type="integer", description="Base address of the region to decommit", required=True),
+            ToolParameter(name="size", type="integer", description="Size of the region in bytes", required=True),
+        ],
+        returns="True if decommit succeeded",
     ),
     ToolFunction(
         name="process.get_modules",
@@ -748,6 +764,22 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         returns="List of handle dicts with handle_value, type_index, type_name, granted_access, object_address fields",
     ),
     ToolFunction(
+        name="process.enumerate_handles",
+        description="Enumerate open handles system-wide via NtQuerySystemInformation, exposing the raw object_type_index",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID to filter on (returns all handles if not specified)", required=False),
+        ],
+        returns="List of handle dicts with pid, handle_value, object_type_index, granted_access, object_address fields",
+    ),
+    ToolFunction(
+        name="process.enum_handles",
+        description="Enumerate open handles system-wide, resolving type indices to human-readable type names",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID to filter on (returns all handles if not specified)", required=False),
+        ],
+        returns="List of handle dicts with pid, handle_value, type_name, granted_access, object_address fields",
+    ),
+    ToolFunction(
         name="process.get_windows",
         description="Enumerate windows belonging to a process",
         parameters=[
@@ -760,6 +792,14 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         description="List Windows services, optionally filtered by owning PID",
         parameters=[
             ToolParameter(name="filter_pid", type="integer", description="Filter to services owned by this PID", required=False),
+        ],
+        returns="List of service dicts",
+    ),
+    ToolFunction(
+        name="process.enumerate_services",
+        description="Enumerate Windows services filtered by active/inactive state rather than owning PID",
+        parameters=[
+            ToolParameter(name="active", type="boolean", description="Limit results to currently running services", required=False, default="false"),
         ],
         returns="List of service dicts",
     ),
@@ -827,6 +867,22 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="pid", type="integer", description="Process ID (uses current if not specified)", required=False),
         ],
         returns="Dict of policy name to enabled/flags",
+    ),
+    ToolFunction(
+        name="process.get_mitigation_policy",
+        description="Query process mitigation policies with a simplified flat key schema (dep, aslr, cfg, sehop_via_options_mask)",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID (uses current if not specified)", required=False),
+        ],
+        returns="Dict with dep, aslr, cfg, and sehop_via_options_mask keys",
+    ),
+    ToolFunction(
+        name="process.get_extension_policy",
+        description="Query the extension-point disable mitigation policy for a process",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID (uses current if not specified)", required=False),
+        ],
+        returns="Dict with disable_extension_points bool",
     ),
     ToolFunction(
         name="process.get_environment",
@@ -940,6 +996,21 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         returns="Dict with type and data fields",
     ),
     ToolFunction(
+        name="process.read_registry",
+        description="Read a registry value using explicit hive, key path, and value name, returning standard Windows REG_* type names",
+        parameters=[
+            ToolParameter(
+                name="hive",
+                type="string",
+                description="Registry hive abbreviation (HKLM, HKCU, HKCR, HKU, HKCC, or the corresponding HKEY_* long form)",
+                required=True,
+            ),
+            ToolParameter(name="key_path", type="string", description=r"Subkey path within the hive (e.g. SOFTWARE\Microsoft\Windows NT\CurrentVersion)", required=True),
+            ToolParameter(name="value_name", type="string", description="Name of the registry value to read", required=True),
+        ],
+        returns="Dict with type (Windows REG_* name string) and data fields",
+    ),
+    ToolFunction(
         name="process.reg_enum_keys",
         description="Enumerate subkeys of a registry key",
         parameters=[
@@ -1011,6 +1082,40 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="buffer_size", type="integer", description="Initial buffer size", required=False, default="65536"),
         ],
         returns="Hex string of raw output buffer",
+    ),
+    ToolFunction(
+        name="process.duplicate_token",
+        description="Duplicate the primary token of a process via DuplicateTokenEx (caller must close the returned handle)",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID whose token to duplicate", required=True),
+        ],
+        returns="Handle value of the duplicated token",
+    ),
+    ToolFunction(
+        name="process.remove_privilege",
+        description="Remove a privilege from the primary token of a process",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID", required=True),
+            ToolParameter(name="privilege_name", type="string", description="Name of the privilege to remove (e.g. SeShutdownPrivilege)", required=True),
+        ],
+        returns="True if the privilege was successfully removed",
+    ),
+    ToolFunction(
+        name="process.time_thread_wait",
+        description="Wait on a thread handle via WaitForSingleObject and measure elapsed time",
+        parameters=[
+            ToolParameter(name="tid", type="integer", description="Thread ID to wait on", required=True),
+            ToolParameter(name="timeout_ms", type="integer", description="Wait timeout in milliseconds (0 returns immediately)", required=False, default="0"),
+        ],
+        returns="Dict with result (signaled, timeout, failed, or other_<code>) and elapsed_us fields",
+    ),
+    ToolFunction(
+        name="process.detect_kernel_debugger",
+        description="Detect whether a kernel debugger port is attached to a process via NtQueryInformationProcess(ProcessDebugPort)",
+        parameters=[
+            ToolParameter(name="pid", type="integer", description="Process ID to query", required=True),
+        ],
+        returns="True if a kernel debugger port is detected",
     ),
 ]
 
@@ -1132,7 +1237,7 @@ class _ProcessBridgeBase(ToolBridgeBase):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """The tool's name.
 
         Returns:
             ToolName: ToolName.PROCESS
@@ -1141,7 +1246,7 @@ class _ProcessBridgeBase(ToolBridgeBase):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """Tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.

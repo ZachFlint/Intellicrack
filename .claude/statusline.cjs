@@ -18,7 +18,9 @@ process.stdin.on('end', () => {
         const yellow = '\x1b[1;93m';
         const brightRed = '\x1b[1;91m';
         const orangeGold = '\x1b[38;5;214m';
+        const dim = '\x1b[38;5;245m';
         const reset = '\x1b[0m';
+        const resetSymbol = '↻';
 
         const model = data.model?.display_name || 'Unknown';
         const modelId = data.model?.id || '';
@@ -51,10 +53,16 @@ process.stdin.on('end', () => {
         if (fiveHour) {
             rateLimitSegment +=
                 ` ${brightRed}|${reset} 5h: ${colorFor(fiveHour.color)}${fiveHour.text}${reset}`;
+            if (fiveHour.resetIn) {
+                rateLimitSegment += ` ${dim}${resetSymbol} ${fiveHour.resetIn}${reset}`;
+            }
         }
         if (sevenDay) {
             rateLimitSegment +=
                 ` ${brightRed}|${reset} 7d: ${colorFor(sevenDay.color)}${sevenDay.text}${reset}`;
+            if (sevenDay.resetIn) {
+                rateLimitSegment += ` ${dim}${resetSymbol} ${sevenDay.resetIn}${reset}`;
+            }
         }
 
         console.log(
@@ -361,6 +369,24 @@ function formatContextPercentage(percentage) {
     return { text: formatted, color };
 }
 
+function formatTimeUntil(epochSeconds) {
+    if (typeof epochSeconds !== 'number' || !isFinite(epochSeconds)) {
+        return null;
+    }
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const diffSeconds = epochSeconds - nowSeconds;
+
+    if (diffSeconds <= 0) return 'now';
+
+    const totalHours = Math.round(diffSeconds / 3600);
+    if (totalHours < 24) {
+        return `${Math.max(1, totalHours)}h`;
+    }
+
+    return `${Math.round(totalHours / 24)}d`;
+}
+
 function formatRateLimit(window) {
     if (!window || typeof window.used_percentage !== 'number') {
         return null;
@@ -376,5 +402,5 @@ function formatRateLimit(window) {
         color = 'yellow';
     }
 
-    return { text: formatted, color };
+    return { text: formatted, color, resetIn: formatTimeUntil(window.resets_at) };
 }

@@ -40,6 +40,16 @@ from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.highlighter import get_highlighter_for_language
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.frida_instrumentation_tab import (
+    CancellableControls,
+    InterceptorLifecycleControls,
+    MemoryPatchStringControls,
+    ScriptMessagingControls,
+    StalkerCallProbeControls,
+    StalkerConfigControls,
+    SymbolLookupControls,
+    SystemFunctionCallControls,
+)
 from intellicrack.ui.panels.qt_compat import edit_table_item, set_max_block_count
 from intellicrack.ui.resources.font_manager import FontManager
 
@@ -148,6 +158,7 @@ class FridaPanel(AnalysisPanelBase):
 
         self.run_btn = self._add_tool_button(toolbar, "Run Script", self._on_run_script)
         self._stop_btn = self._add_tool_button(toolbar, "Stop", self._on_stop_script, enabled=False)
+        self._stop_all_btn = self._add_danger_button(toolbar, "Stop All Scripts", self._on_stop_all_scripts, enabled=False)
         self._clear_btn = self._add_secondary_button(toolbar, "Clear Console", self._on_clear_console)
 
         toolbar.addSeparator()
@@ -337,6 +348,10 @@ class FridaPanel(AnalysisPanelBase):
         rename_shortcut.setContext(Qt.ShortcutContext.WidgetShortcut)
         rename_shortcut.activated.connect(self._on_hook_rename_shortcut)
         hooks_layout.addWidget(self._hooks_table)
+
+        self._interceptor_lifecycle = InterceptorLifecycleControls()
+        hooks_layout.addWidget(self._interceptor_lifecycle)
+
         return hooks_container
 
     def _on_hook_rename_shortcut(self) -> None:
@@ -457,6 +472,12 @@ class FridaPanel(AnalysisPanelBase):
         display_row.addStretch()
         layout.addLayout(display_row)
 
+        self._stalker_call_probes = StalkerCallProbeControls()
+        layout.addWidget(self._stalker_call_probes)
+
+        self._stalker_config = StalkerConfigControls()
+        layout.addWidget(self._stalker_config)
+
         layout.addStretch()
         return container
 
@@ -468,6 +489,14 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._bridge = bridge
         bridge.set_message_handler(self._frida_message_received.emit)
+        self._interceptor_lifecycle.set_bridge(bridge)
+        self._stalker_call_probes.set_bridge(bridge)
+        self._stalker_config.set_bridge(bridge)
+        self._mem_patch_string.set_bridge(bridge)
+        self._sym_lookup_extras.set_bridge(bridge)
+        self._syscall_controls.set_bridge(bridge)
+        self._script_messaging.set_bridge(bridge)
+        self._cancellable_controls.set_bridge(bridge)
         _logger.info("frida_bridge_set", bridge_type=type(bridge).__name__)
 
     def get_bridge(self) -> FridaBridge | None:
@@ -517,13 +546,14 @@ class FridaPanel(AnalysisPanelBase):
 
         _logger.debug("frida_attach_started", target=target)
         self._attach_btn.setEnabled(False)
+        cancellable_id = self._cancellable_controls.last_cancellable_id()
 
         try:
             pid = int(target)
         except ValueError:
             _logger.warning("frida_attach_by_name_fallback", target=target)
             run_bridge_coroutine_logged(
-                self._bridge.attach_by_name(target),
+                self._bridge.attach_by_name(target, cancellable_id=cancellable_id),
                 on_success=lambda _: self._on_attach_name_success(target),
                 on_error=lambda e: self._on_attach_failed(target, e),
                 parent=self,
@@ -531,11 +561,12 @@ class FridaPanel(AnalysisPanelBase):
                 logger=_logger,
                 level="info",
                 target=target,
+                cancellable_id=cancellable_id,
             )
             return
 
         run_bridge_coroutine_logged(
-            self._bridge.attach(pid),
+            self._bridge.attach(pid, cancellable_id=cancellable_id),
             on_success=lambda _: self._on_attach_pid_success(pid),
             on_error=lambda e: self._on_attach_failed(target, e),
             parent=self,
@@ -543,6 +574,7 @@ class FridaPanel(AnalysisPanelBase):
             logger=_logger,
             level="info",
             pid=pid,
+            cancellable_id=cancellable_id,
         )
 
     def _on_attach_pid_success(self, pid: int) -> None:
@@ -609,6 +641,10 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText("[+] Detached")
         _logger.info("frida_detached", pid=self._attached_pid)
         self._attached_pid = None
+        self._active_script_id = None
+        self.run_btn.setEnabled(True)
+        self._stop_btn.setEnabled(False)
+        self._stop_all_btn.setEnabled(False)
         self._set_status("Not attached")
         self._attach_btn.setEnabled(True)
         self._detach_btn.setEnabled(False)
@@ -681,6 +717,7 @@ class FridaPanel(AnalysisPanelBase):
             self._console.appendPlainText("[-] Unable to track script handle - persistent load aborted")
             self.run_btn.setEnabled(True)
             self._stop_btn.setEnabled(False)
+            self._stop_all_btn.setEnabled(False)
             _logger.error(
                 "frida_persistent_script_handle_missing",
                 result_type=type(result).__name__,
@@ -692,6 +729,8 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText("[+] Script loaded (persistent)")
         self.run_btn.setEnabled(False)
         self._stop_btn.setEnabled(True)
+        self._stop_all_btn.setEnabled(True)
+        self._script_messaging.set_active_script_id(result)
         self.script_executed.emit()
         _logger.info("frida_script_executed", script_size=script_size, script_id=result)
 
@@ -735,6 +774,8 @@ class FridaPanel(AnalysisPanelBase):
         """Handle successful script stop."""
         self._active_script_id = None
         self.run_btn.setEnabled(True)
+        self._stop_all_btn.setEnabled(False)
+        self._script_messaging.set_active_script_id(None)
         self._console.appendPlainText("[+] Script stopped")
 
     def _on_stop_script_error(self, exc: object) -> None:
@@ -746,6 +787,44 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText(f"[-] Stop failed: {exc}")
         _logger.warning("frida_script_stop_failed", error=str(exc))
         self._stop_btn.setEnabled(True)
+
+    def _on_stop_all_scripts(self) -> None:
+        """Unload every script the bridge currently has loaded."""
+        if self._bridge is None:
+            self._console.appendPlainText("[!] No Frida bridge available")
+            _logger.warning("frida_stop_all_scripts_failed_no_bridge", reason="bridge not set")
+            return
+
+        self._stop_all_btn.setEnabled(False)
+        self._stop_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.unload_all_scripts(),
+            on_success=lambda _: self._on_stop_all_scripts_success(),
+            on_error=self._on_stop_all_scripts_error,
+            parent=self,
+            event="frida_unload_all_scripts",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_stop_all_scripts_success(self) -> None:
+        """Handle successful bulk teardown of every active script."""
+        self._active_script_id = None
+        self.run_btn.setEnabled(True)
+        self._script_messaging.set_active_script_id(None)
+        self._console.appendPlainText("[+] All scripts stopped")
+        _logger.info("frida_all_scripts_stopped")
+
+    def _on_stop_all_scripts_error(self, exc: object) -> None:
+        """Handle bulk script teardown failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console.appendPlainText(f"[-] Stop all failed: {exc}")
+        _logger.warning("frida_stop_all_scripts_failed", error=str(exc))
+        self._stop_all_btn.setEnabled(self._active_script_id is not None)
+        self._stop_btn.setEnabled(self._active_script_id is not None)
 
     def _on_clear_console(self) -> None:
         """Clear the console output."""
@@ -1262,8 +1341,9 @@ class FridaPanel(AnalysisPanelBase):
             spawn_args = args_str.strip().split()
 
         self._spawn_btn.setEnabled(False)
+        cancellable_id = self._cancellable_controls.last_cancellable_id()
         run_bridge_coroutine_logged(
-            self._bridge.spawn(Path(path_str.strip()), spawn_args),
+            self._bridge.spawn(Path(path_str.strip()), spawn_args, cancellable_id=cancellable_id),
             on_success=lambda pid: self._on_spawn_success(int(pid) if isinstance(pid, (int, float)) else 0),
             on_error=self._on_spawn_error,
             parent=self,
@@ -1272,6 +1352,7 @@ class FridaPanel(AnalysisPanelBase):
             level="info",
             target_path=path_str.strip(),
             spawn_args=spawn_args,
+            cancellable_id=cancellable_id,
         )
 
     def _on_spawn_success(self, pid: int) -> None:
@@ -1507,6 +1588,19 @@ class FridaPanel(AnalysisPanelBase):
         self._module_detail_tabs.addTab(self._imports_table, "Imports")
         layout.addWidget(self._module_detail_tabs)
 
+        load_row = QHBoxLayout()
+        load_row.addWidget(QLabel("Load module path:"))
+        self._load_module_path_input = QLineEdit()
+        self._load_module_path_input.setPlaceholderText("C:\\path\\to\\library.dll")
+        load_row.addWidget(self._load_module_path_input)
+        self._load_module_btn = QPushButton("Load Module")
+        self._load_module_btn.setObjectName("tool_button")
+        self._load_module_btn.clicked.connect(self._on_load_module)
+        load_row.addWidget(self._load_module_btn)
+        self._load_module_result = QLabel("")
+        load_row.addWidget(self._load_module_result)
+        layout.addLayout(load_row)
+
         return container
 
     def _on_refresh_modules(self) -> None:
@@ -1554,6 +1648,51 @@ class FridaPanel(AnalysisPanelBase):
         """
         self._console.appendPlainText(f"[-] Modules operation failed: {exc}")
         self._refresh_modules_btn.setEnabled(True)
+
+    def _on_load_module(self) -> None:
+        """Load a shared library into the target process via ``Module.load``."""
+        if self._bridge is None:
+            self._load_module_result.setText("No bridge available")
+            _logger.warning("frida_load_module_failed_no_bridge")
+            return
+        path_str = self._load_module_path_input.text().strip()
+        if not path_str:
+            self._load_module_result.setText("Enter a module path")
+            return
+        self._load_module_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.load_module(path_str),
+            on_success=self._on_load_module_done,
+            on_error=self._on_load_module_error,
+            parent=self,
+            event="frida_load_module",
+            logger=_logger,
+            level="info",
+            path=path_str,
+        )
+
+    def _on_load_module_done(self, result: object) -> None:
+        """Handle a successful module load.
+
+        Args:
+            result: ModuleInfo for the loaded module returned by the bridge.
+        """
+        self._load_module_btn.setEnabled(True)
+        name = str(getattr(result, "name", ""))
+        base = getattr(result, "base_address", 0)
+        self._load_module_result.setText(f"Loaded {name} (base 0x{base:X})" if isinstance(base, int) else f"Loaded {name}")
+        self._console.appendPlainText(f"[+] Module loaded: {name}")
+        _logger.info("frida_module_loaded_via_gui", module_name=name)
+
+    def _on_load_module_error(self, exc: object) -> None:
+        """Handle a module load failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._load_module_btn.setEnabled(True)
+        self._load_module_result.setText(f"Load failed: {exc}")
+        _logger.warning("frida_load_module_failed", error=str(exc))
 
     def _on_show_exports(self) -> None:
         """Show exports for the selected module."""
@@ -1643,6 +1782,8 @@ class FridaPanel(AnalysisPanelBase):
         mem_tabs.addTab(self._create_memory_scan_tab(), "Scan")
         mem_tabs.addTab(self._create_memory_regions_tab(), "Regions")
         mem_tabs.addTab(self._create_memory_protect_tab(), "Protect")
+        self._mem_patch_string = MemoryPatchStringControls()
+        mem_tabs.addTab(self._mem_patch_string, "Patch / Alloc String")
 
         layout.addWidget(mem_tabs)
         return container
@@ -2101,6 +2242,10 @@ class FridaPanel(AnalysisPanelBase):
         if sa_h is not None:
             sa_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         sym_tabs.addTab(self._sym_api_table, "API Matches")
+
+        self._sym_lookup_extras = SymbolLookupControls()
+        sym_tabs.addTab(self._sym_lookup_extras, "Module Symbols / Reverse Lookup")
+
         layout.addWidget(sym_tabs)
 
         return container
@@ -2270,6 +2415,15 @@ class FridaPanel(AnalysisPanelBase):
         call_row2.addWidget(self._adv_cc)
         call_row2.addStretch()
         layout.addLayout(call_row2)
+
+        self._syscall_controls = SystemFunctionCallControls()
+        layout.addWidget(self._syscall_controls)
+
+        self._script_messaging = ScriptMessagingControls()
+        layout.addWidget(self._script_messaging)
+
+        self._cancellable_controls = CancellableControls()
+        layout.addWidget(self._cancellable_controls)
 
         child_title = QLabel("Child Gating")
         child_title.setFont(FontManager.get_instance().get_ui_font_bold(9))

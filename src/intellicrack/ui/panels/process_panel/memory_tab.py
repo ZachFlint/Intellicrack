@@ -133,8 +133,7 @@ class MemoryTab(QWidget):
         toolbar.addWidget(refresh_btn)
 
         self._region_filter = QLineEdit()
-        set_hint = getattr(self._region_filter, "set" + "Place" + "holderText")
-        set_hint("Filter regions...")
+        self._region_filter.setPlaceholderText("Filter regions...")
         self._region_filter.setMaximumWidth(200)
         self._region_filter.textChanged.connect(self._on_region_filter_changed)
         toolbar.addWidget(self._region_filter)
@@ -142,6 +141,19 @@ class MemoryTab(QWidget):
         self._region_count = QLabel("0 regions")
         self._region_count.setObjectName("toolbar_label")
         toolbar.addWidget(self._region_count)
+
+        toolbar.addSeparator()
+
+        working_set_btn = QPushButton("Working Set")
+        working_set_btn.setObjectName("tool_button")
+        working_set_btn.setToolTip("Query the attached process working-set size in megabytes")
+        working_set_btn.clicked.connect(self._on_working_set)
+        self._action_buttons.append(working_set_btn)
+        toolbar.addWidget(working_set_btn)
+
+        self._working_set_label = QLabel("Working set: --")
+        self._working_set_label.setObjectName("toolbar_label")
+        toolbar.addWidget(self._working_set_label)
 
         tab_layout.addWidget(toolbar)
 
@@ -174,8 +186,7 @@ class MemoryTab(QWidget):
         toolbar.addWidget(QLabel("Address:"))
         self._read_addr = QLineEdit()
         self._read_addr.setMaximumWidth(200)
-        set_hint_r = getattr(self._read_addr, "set" + "Place" + "holderText")
-        set_hint_r("0x...")
+        self._read_addr.setPlaceholderText("0x...")
         toolbar.addWidget(self._read_addr)
 
         toolbar.addWidget(QLabel("Size:"))
@@ -221,8 +232,7 @@ class MemoryTab(QWidget):
         toolbar.addWidget(QLabel("Address:"))
         self._write_addr = QLineEdit()
         self._write_addr.setMaximumWidth(200)
-        set_hint_w = getattr(self._write_addr, "set" + "Place" + "holderText")
-        set_hint_w("0x...")
+        self._write_addr.setPlaceholderText("0x...")
         toolbar.addWidget(self._write_addr)
 
         write_btn = QPushButton("Write")
@@ -238,8 +248,7 @@ class MemoryTab(QWidget):
         tab_layout.addWidget(toolbar)
 
         self._write_input = QPlainTextEdit()
-        set_hint_wi = getattr(self._write_input, "set" + "Place" + "holderText")
-        set_hint_wi("Enter hex bytes (e.g., 90 90 CC 48 8B 05)...")
+        self._write_input.setPlaceholderText("Enter hex bytes (e.g., 90 90 CC 48 8B 05)...")
         tab_layout.addWidget(self._write_input)
         return tab
 
@@ -279,8 +288,7 @@ class MemoryTab(QWidget):
         toolbar.addWidget(QLabel("Address:"))
         self._free_addr = QLineEdit()
         self._free_addr.setMaximumWidth(200)
-        set_hint_f = getattr(self._free_addr, "set" + "Place" + "holderText")
-        set_hint_f("0x...")
+        self._free_addr.setPlaceholderText("0x...")
         toolbar.addWidget(self._free_addr)
 
         free_btn = QPushButton("Free")
@@ -288,6 +296,20 @@ class MemoryTab(QWidget):
         free_btn.clicked.connect(self._on_free)
         self._action_buttons.append(free_btn)
         toolbar.addWidget(free_btn)
+        toolbar.addSeparator()
+
+        toolbar.addWidget(QLabel("Decommit Size:"))
+        self._decommit_size = QSpinBox()
+        self._decommit_size.setRange(1, 0x1000000)
+        self._decommit_size.setValue(4096)
+        toolbar.addWidget(self._decommit_size)
+
+        decommit_btn = QPushButton("Decommit")
+        decommit_btn.setObjectName("danger_button")
+        decommit_btn.setToolTip("Release physical storage for the region at the Address field above without releasing the address range")
+        decommit_btn.clicked.connect(self._on_decommit)
+        self._action_buttons.append(decommit_btn)
+        toolbar.addWidget(decommit_btn)
 
         tab_layout.addWidget(toolbar)
 
@@ -318,8 +340,7 @@ class MemoryTab(QWidget):
         toolbar.addWidget(QLabel("Address:"))
         self._prot_addr = QLineEdit()
         self._prot_addr.setMaximumWidth(200)
-        set_hint_p = getattr(self._prot_addr, "set" + "Place" + "holderText")
-        set_hint_p("0x7FF600000000")
+        self._prot_addr.setPlaceholderText("0x7FF600000000")
         toolbar.addWidget(self._prot_addr)
 
         toolbar.addWidget(QLabel("Size:"))
@@ -365,8 +386,7 @@ class MemoryTab(QWidget):
         toolbar.addWidget(QLabel("Pattern:"))
         self._search_pattern = QLineEdit()
         self._search_pattern.setMaximumWidth(400)
-        set_hint_s = getattr(self._search_pattern, "set" + "Place" + "holderText")
-        set_hint_s("48 8B ?? ?? 90 CC")
+        self._search_pattern.setPlaceholderText("48 8B ?? ?? 90 CC")
         toolbar.addWidget(self._search_pattern)
 
         search_btn = QPushButton("Search")
@@ -453,6 +473,33 @@ class MemoryTab(QWidget):
             parent=self,
             event="process_get_memory_map",
             logger=_logger,
+        )
+
+    def _on_working_set(self) -> None:
+        """Query the attached process working-set size and render it in megabytes."""
+        if self._bridge is None:
+            return
+        if self._attached_pid is None:
+            QMessageBox.warning(self, "Not Attached", _NOT_ATTACHED_MSG)
+            return
+        pid = self._attached_pid
+
+        def _on_success(result: object) -> None:
+            mb = float(result) if isinstance(result, (int, float)) else 0.0
+            self._working_set_label.setText(f"Working set: {mb:.2f} MB")
+
+        def _on_error(exc: object) -> None:
+            _logger.warning("memory_working_set_failed", error=str(exc))
+            QMessageBox.warning(self, "Working Set Error", str(exc))
+
+        run_bridge_coroutine_logged(
+            self._bridge.get_process_memory_mb(pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_process_memory_mb",
+            logger=_logger,
+            pid=pid,
         )
 
     def _on_read(self) -> None:
@@ -663,6 +710,67 @@ class MemoryTab(QWidget):
             logger=_logger,
             level="info",
             address=hex(addr),
+        )
+
+    def _on_decommit(self) -> None:
+        """Decommit a region of committed memory and remove the matching allocation row."""
+        if self._bridge is None:
+            return
+        if self._attached_pid is None:
+            QMessageBox.warning(self, "Not Attached", _NOT_ATTACHED_MSG)
+            return
+
+        raw_addr = self._free_addr.text().strip()
+        try:
+            addr = int(raw_addr, 16)
+        except ValueError:
+            _logger.warning("decommit_address_parse_failed", raw_addr=raw_addr)
+            QMessageBox.critical(self, "Invalid Address", f"Invalid address: {raw_addr}")
+            return
+
+        size = self._decommit_size.value()
+        pid = self._attached_pid
+
+        reply = QMessageBox.warning(
+            self,
+            "Decommit Memory",
+            f"Decommit {size} bytes at 0x{addr:X}? The address range remains reserved.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        target_text = f"0x{addr:X}"
+
+        def _on_success(_result: object) -> None:
+            for row in range(self._alloc_log.rowCount()):
+                item = self._alloc_log.item(row, 0)
+                action_item = self._alloc_log.item(row, 3)
+                if (
+                    item is not None
+                    and item.text().upper() == target_text.upper()
+                    and action_item is not None
+                    and action_item.text() == "Allocated"
+                ):
+                    self._alloc_log.removeRow(row)
+                    return
+
+        def _on_error(exc: object) -> None:
+            _logger.warning("memory_decommit_failed", error=str(exc))
+            QMessageBox.warning(self, "Decommit Error", str(exc))
+
+        run_bridge_coroutine_logged(
+            self._bridge.decommit_memory(pid, addr, size),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_decommit_memory",
+            logger=_logger,
+            level="info",
+            pid=pid,
+            address=hex(addr),
+            size=size,
         )
 
     def _on_protect(self) -> None:

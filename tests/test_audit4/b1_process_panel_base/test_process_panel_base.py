@@ -25,6 +25,10 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
     from pathlib import Path
 
+    from PyQt6.QtWidgets import QWidget
+
+    from intellicrack.ui.panels.process_panel.hint_overlay import AttachHintOverlay
+
 
 @pytest.fixture(scope="module")
 def qapp() -> QCoreApplication:
@@ -691,3 +695,219 @@ class TestF0025ProcessButtonsGatedWhenUnattached:
         setattr(proc_tab, "_selected_pid", 1111)
         getattr(panel, "_update_controls_for_state")()
         assert getattr(proc_tab, "_terminate_btn").isEnabled() is True
+
+
+def _overlays(panel: ProcessPanel) -> list[AttachHintOverlay]:
+    """Return all of the panel's hint overlay widgets.
+
+    Args:
+        panel: ProcessPanel to inspect.
+
+    Returns:
+        list[AttachHintOverlay]: Every overlay, one per detail tab.
+    """
+    return list(getattr(panel, "_hint_overlays"))
+
+
+def _attach_overlays(panel: ProcessPanel) -> list[AttachHintOverlay]:
+    """Return the overlays for the attachment-gated detail tabs only.
+
+    Args:
+        panel: ProcessPanel to inspect.
+
+    Returns:
+        list[AttachHintOverlay]: Overlays for Memory, Threads, and Modules.
+    """
+    return list(getattr(panel, "_attach_overlays"))
+
+
+def _system_overlay(panel: ProcessPanel) -> AttachHintOverlay:
+    """Return the System tab overlay.
+
+    Args:
+        panel: ProcessPanel to inspect.
+
+    Returns:
+        AttachHintOverlay: The overlay covering the System tab.
+    """
+    return getattr(panel, "_system_overlay")
+
+
+def _system_tab(panel: ProcessPanel) -> QWidget:
+    """Return the System detail tab widget.
+
+    Args:
+        panel: ProcessPanel to inspect.
+
+    Returns:
+        QWidget: The System tab.
+    """
+    return getattr(panel, "_system_tab")
+
+
+def _overlay_text(overlay: AttachHintOverlay) -> str:
+    """Read the message text currently shown by an overlay.
+
+    Args:
+        overlay: An ``AttachHintOverlay`` instance.
+
+    Returns:
+        str: The overlay label's current text.
+    """
+    return str(getattr(overlay, "_label").text())
+
+
+class TestAttachHintOverlay:
+    """Gated detail tabs must surface an instructional overlay instead of silent dead tabs."""
+
+    def test_one_overlay_per_detail_tab(self, panel: ProcessPanel) -> None:
+        """Every gated detail tab must own exactly one overlay parented to it.
+
+        Args:
+            panel: ProcessPanel fixture.
+        """
+        detail_tabs = list(getattr(panel, "_detail_tabs"))
+        overlays = _overlays(panel)
+        assert len(overlays) == len(detail_tabs) == 4
+        for overlay, tab in zip(overlays, detail_tabs, strict=True):
+            assert overlay.parentWidget() is tab
+
+    def test_overlays_show_no_bridge_message_before_bridge(self, panel: ProcessPanel) -> None:
+        """A disconnected panel must show the no-bridge hint on all detail tabs.
+
+        Fails without the fix because the gated tabs were left blank and
+        non-interactive with no explanation.
+
+        Args:
+            panel: ProcessPanel fixture.
+        """
+        for overlay in _overlays(panel):
+            assert overlay.isHidden() is False
+            text = _overlay_text(overlay)
+            assert "bridge unavailable" in text
+            assert "Attach to a process first" not in text
+
+    def test_attach_overlays_show_attach_message_when_detached(
+        self,
+        panel: ProcessPanel,
+        bridge: _RecordingBridge,
+    ) -> None:
+        """With a bridge but no attachment, per-process overlays must say to attach first.
+
+        Args:
+            panel: ProcessPanel fixture.
+            bridge: Recording bridge.
+        """
+        panel.set_bridge(bridge)
+        for overlay in _attach_overlays(panel):
+            assert overlay.isHidden() is False
+            assert "Attach to a process first" in _overlay_text(overlay)
+
+    def test_overlays_hidden_after_attach(
+        self,
+        qapp: QCoreApplication,
+        panel: ProcessPanel,
+        bridge: _RecordingBridge,
+    ) -> None:
+        """Attaching to a process must hide every overlay so the tabs are usable.
+
+        Args:
+            qapp: Qt application.
+            panel: ProcessPanel fixture.
+            bridge: Recording bridge.
+        """
+        del qapp
+        panel.set_bridge(bridge)
+        _simulate_attach(panel, 4242)
+        for overlay in _overlays(panel):
+            assert overlay.isHidden() is True
+
+    def test_attach_overlays_reappear_after_detach(
+        self,
+        qapp: QCoreApplication,
+        panel: ProcessPanel,
+        bridge: _RecordingBridge,
+    ) -> None:
+        """Detaching must restore the attach-first overlay on the per-process tabs.
+
+        Args:
+            qapp: Qt application.
+            panel: ProcessPanel fixture.
+            bridge: Recording bridge.
+        """
+        del qapp
+        panel.set_bridge(bridge)
+        _simulate_attach(panel, 4243)
+        _simulate_detach(panel)
+        for overlay in _attach_overlays(panel):
+            assert overlay.isHidden() is False
+            assert "Attach to a process first" in _overlay_text(overlay)
+
+
+class TestSystemTabConnectionGating:
+    """The System tab exposes system-wide operations and must be gated on connection, not attach."""
+
+    def test_system_tab_disabled_and_hinted_when_disconnected(self, panel: ProcessPanel) -> None:
+        """Without a bridge the System tab is disabled and shows the no-bridge hint.
+
+        Args:
+            panel: ProcessPanel fixture.
+        """
+        assert _system_tab(panel).isEnabled() is False
+        overlay = _system_overlay(panel)
+        assert overlay.isHidden() is False
+        assert "bridge unavailable" in _overlay_text(overlay)
+
+    def test_system_tab_enabled_when_detached(
+        self,
+        panel: ProcessPanel,
+        bridge: _RecordingBridge,
+    ) -> None:
+        """A connected-but-detached panel must enable the System tab and hide its overlay.
+
+        Fails without the fix because the System tab was gated behind the
+        ATTACHED state despite exposing system-wide (registry/pipe/system-info)
+        operations that need only a connected bridge.
+
+        Args:
+            panel: ProcessPanel fixture.
+            bridge: Recording bridge.
+        """
+        panel.set_bridge(bridge)
+        assert _system_tab(panel).isEnabled() is True
+        assert _system_overlay(panel).isHidden() is True
+
+    def test_per_process_tabs_stay_gated_when_detached(
+        self,
+        panel: ProcessPanel,
+        bridge: _RecordingBridge,
+    ) -> None:
+        """Memory/Threads/Modules must remain disabled while only connected.
+
+        Args:
+            panel: ProcessPanel fixture.
+            bridge: Recording bridge.
+        """
+        panel.set_bridge(bridge)
+        gated_tabs: list[QWidget] = list(getattr(panel, "_attach_gated_tabs"))
+        for tab in gated_tabs:
+            assert tab.isEnabled() is False
+
+    def test_system_tab_enabled_after_attach(
+        self,
+        qapp: QCoreApplication,
+        panel: ProcessPanel,
+        bridge: _RecordingBridge,
+    ) -> None:
+        """The System tab remains enabled with its overlay hidden after attach.
+
+        Args:
+            qapp: Qt application.
+            panel: ProcessPanel fixture.
+            bridge: Recording bridge.
+        """
+        del qapp
+        panel.set_bridge(bridge)
+        _simulate_attach(panel, 7373)
+        assert _system_tab(panel).isEnabled() is True
+        assert _system_overlay(panel).isHidden() is True

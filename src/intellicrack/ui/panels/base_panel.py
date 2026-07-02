@@ -231,8 +231,7 @@ class AnalysisPanelBase(QWidget):
             QLineEdit: The created line edit.
         """
         line_edit = QLineEdit()
-        set_hint = getattr(line_edit, "set" + "Place" + "holderText")
-        set_hint(hint_text)
+        line_edit.setPlaceholderText(hint_text)
         line_edit.setMaximumWidth(max_width)
         toolbar.addWidget(line_edit)
         return line_edit
