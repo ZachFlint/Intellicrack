@@ -17,7 +17,7 @@ import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
-from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtCore import QPoint, Qt, QTimer
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QCheckBox,
@@ -97,11 +97,14 @@ _RELOCATION_COLUMNS: Final[list[str]] = ["Address", "Type", "Symbol"]
 _ASCII_PRINTABLE_MIN: Final[int] = 32
 _ASCII_PRINTABLE_MAX: Final[int] = 127
 
+_FILTER_DEBOUNCE_MS: Final[int] = 250
+
 try:
-    from intellicrack.ui.panels.graph_view import CFGGraphView
+    from intellicrack.ui.panels.graph_view import CFGGraphView, NumericSortTreeItem
 except ImportError:
     _logger.debug("ghidra_cfg_graph_view_unavailable", exc_info=True)
     CFGGraphView = None
+    NumericSortTreeItem = QTreeWidgetItem
 
 try:
     from intellicrack.ui.highlighter import PythonSyntaxHighlighter
@@ -189,8 +192,10 @@ class GhidraPanel(AnalysisPanelBase):
             QWidget: Splitter with code tabs, data tabs, and function sidebar.
         """
         main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        main_splitter.setChildrenCollapsible(False)
 
         left_splitter = QSplitter(Qt.Orientation.Vertical)
+        left_splitter.setChildrenCollapsible(False)
         left_splitter.addWidget(self._create_code_tabs())
         left_splitter.addWidget(self._create_data_tabs())
         left_splitter.setSizes([_CODE_SPLIT_RATIO_TOP, _CODE_SPLIT_RATIO_BOTTOM])
@@ -242,7 +247,9 @@ class GhidraPanel(AnalysisPanelBase):
         tabs.addTab(self._pcode_view, self.tr("PCode"))
 
         if CFGGraphView is not None:
-            self._cfg_view: QWidget = CFGGraphView()
+            cfg_view = CFGGraphView()
+            cfg_view.block_clicked.connect(self._on_cfg_block_clicked)
+            self._cfg_view: QWidget = cfg_view
         else:
             cfg_fallback = QPlainTextEdit()
             cfg_fallback.setFont(fm.get_code_font(10))
@@ -250,6 +257,7 @@ class GhidraPanel(AnalysisPanelBase):
             self._cfg_view = cfg_fallback
         tabs.addTab(self._cfg_view, self.tr("CFG"))
 
+        self._code_tabs = tabs
         return tabs
 
     # ------------------------------------------------------------------
@@ -1264,6 +1272,11 @@ class GhidraPanel(AnalysisPanelBase):
         header.addWidget(self._refresh_funcs_btn)
         layout.addLayout(header)
 
+        self._filter_debounce = QTimer(self)
+        self._filter_debounce.setSingleShot(True)
+        self._filter_debounce.setInterval(_FILTER_DEBOUNCE_MS)
+        self._filter_debounce.timeout.connect(self._on_refresh_functions)
+
         self._func_filter = QLineEdit()
         self._func_filter.setPlaceholderText(self.tr("Filter functions..."))
         self._func_filter.textChanged.connect(self._on_filter_changed)
@@ -1838,7 +1851,7 @@ class GhidraPanel(AnalysisPanelBase):
         self._func_tree.clear()
 
         for func in functions:
-            item = QTreeWidgetItem([
+            item = NumericSortTreeItem([
                 getattr(func, "name", ""),
                 f"0x{getattr(func, 'address', 0):X}",
                 str(getattr(func, "size", 0)),
@@ -1857,12 +1870,12 @@ class GhidraPanel(AnalysisPanelBase):
         self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:
-        """Handle function filter text changes.
+        """Restart the debounce timer so filtering runs once typing pauses.
 
         Args:
-            _text: New filter text (unused, read from widget).
+            _text: New filter text (unused, read from the widget on refresh).
         """
-        self._on_refresh_functions()
+        self._filter_debounce.start()
 
     def _on_goto_function(self) -> None:
         """Look up the function at the entered address and load its code views."""
@@ -2052,6 +2065,7 @@ class GhidraPanel(AnalysisPanelBase):
         if CFGGraphView is not None and isinstance(self._cfg_view, CFGGraphView):
             scene = self._cfg_view.graph_scene()
             scene.load_graph(blocks_list)
+            self._cfg_view.fit_to_view()
         elif isinstance(self._cfg_view, QPlainTextEdit):
             lines2: list[str] = []
             for blk in blocks_list:
@@ -2067,6 +2081,27 @@ class GhidraPanel(AnalysisPanelBase):
                     dst_strs = [f"0x{d:X}" for d in dst_list]
                     lines2.append(f"  Destinations: {', '.join(dst_strs)}")
             self._cfg_view.setPlainText("\n".join(lines2))
+
+    def _on_cfg_block_clicked(self, address: int) -> None:
+        """Navigate to a CFG basic block by loading its disassembly.
+
+        Args:
+            address: Start address of the clicked basic block.
+        """
+        bridge = self._require_connected()
+        if bridge is None:
+            return
+        self._set_status(f"Block 0x{address:X}")
+        self._code_tabs.setCurrentWidget(self._disasm_view)
+        run_bridge_coroutine_logged(
+            bridge.disassemble(address),
+            on_success=self._apply_disassembly,
+            on_error=lambda e, addr=address: self._on_op_error("ghidra_disassemble_failed", "Disassemble", addr, e),
+            parent=self,
+            event="ghidra_disassemble",
+            logger=_logger,
+            address=hex(address),
+        )
 
     def _show_function_body_info(self, result: object) -> None:
         """Display function body info including thunk status.
@@ -2343,7 +2378,7 @@ class GhidraPanel(AnalysisPanelBase):
             reply = QMessageBox.question(
                 self,
                 self.tr("Delete Function"),
-                self.tr(f"Delete function '{func_name}' at 0x{address:X}?"),
+                self.tr("Delete function '{name}' at 0x{addr:X}?").format(name=func_name, addr=address),
             )
             if reply == QMessageBox.StandardButton.Yes:
                 run_bridge_coroutine_logged(
@@ -2666,8 +2701,7 @@ class GhidraPanel(AnalysisPanelBase):
     def _on_set_label(self) -> None:
         """Set a label at the specified address.
 
-        Routes through ``add_label`` when the Primary checkbox is checked,
-        since that is the only bridge method exposing the primary-label
+        Routes through ``add_label`` when the Primary checkbox is checked, since that is the only bridge method exposing the primary-label
         flag; otherwise uses the plain ``set_label`` create-or-modify path.
         """
         bridge = self._require_connected()

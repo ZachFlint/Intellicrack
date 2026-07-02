@@ -172,6 +172,7 @@ class SplashScreen(QSplashScreen):
 
         transparent_pixmap = QPixmap(scaled_w, scaled_h)
         transparent_pixmap.fill(QColor(0, 0, 0, 0))
+        transparent_pixmap.setDevicePixelRatio(dpi_scale)
         super().__init__(transparent_pixmap)
 
         self.setWindowFlags(
@@ -588,7 +589,9 @@ class SplashScreen(QSplashScreen):
         """
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
-        rect = QRectF(self.rect())
+        inverse_scale = 1.0 / self._dpi_scale
+        painter.scale(inverse_scale, inverse_scale)
+        rect = QRectF(0.0, 0.0, float(self.scaled_width), float(self.scaled_height))
         if rect.width() <= 0 or rect.height() <= 0:
             return
 
@@ -943,7 +946,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def progress(self) -> int:
-        """Get current progress value.
+        """Current progress value.
 
         Returns:
             int: Current progress (0-100).
@@ -952,7 +955,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def status(self) -> str:
-        """Get current status message.
+        """Current status message.
 
         Returns:
             str: Current status message.
@@ -961,7 +964,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def status_label(self) -> QLabel:
-        """Get the status label widget.
+        """Hidden status label widget retained for backward compatibility.
 
         Returns:
             QLabel: The hidden status label widget (retained for backward compatibility).
@@ -970,7 +973,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def dpi_scale(self) -> float:
-        """Get the DPI scale factor.
+        """DPI scale factor used for this splash screen.
 
         Returns:
             float: DPI scale factor used for this splash screen.
@@ -979,7 +982,7 @@ class SplashScreen(QSplashScreen):
 
     @property
     def version(self) -> str:
-        """Get the version string.
+        """Version string displayed on the splash screen.
 
         Returns:
             str: Version string displayed on the splash screen.

@@ -121,6 +121,7 @@ class FridaPanel(AnalysisPanelBase):
         self._bridge: FridaBridge | None = None
         self._attached_pid: int | None = None
         self._hook_ids: list[str] = []
+        self._pending_hook_seq: int = 0
         self._active_script_id: str | None = None
 
     @override
@@ -134,7 +135,7 @@ class FridaPanel(AnalysisPanelBase):
 
         self._device_combo = QComboBox()
         self._device_combo.setMinimumWidth(_DEVICE_COMBO_MIN_WIDTH)
-        self._device_combo.addItem("local")
+        self._device_combo.addItem("local", {"id": "local", "type": "local", "name": "local"})
         self._device_combo.currentTextChanged.connect(self._on_device_changed)
         toolbar.addWidget(self._device_combo)
 
@@ -708,9 +709,6 @@ class FridaPanel(AnalysisPanelBase):
         Args:
             script_size: Size of the executed script in characters.
             result: Script ID returned by the bridge.
-
-        Raises:
-            RuntimeError: If the bridge did not return a usable script handle.
         """
         if not isinstance(result, str) or not result:
             self._active_script_id = None
@@ -718,13 +716,12 @@ class FridaPanel(AnalysisPanelBase):
             self.run_btn.setEnabled(True)
             self._stop_btn.setEnabled(False)
             self._stop_all_btn.setEnabled(False)
-            _logger.error(
+            _logger.warning(
                 "frida_persistent_script_handle_missing",
                 result_type=type(result).__name__,
                 script_size=script_size,
             )
-            msg = "unable to track script handle"
-            raise RuntimeError(msg)
+            return
         self._active_script_id = result
         self._console.appendPlainText("[+] Script loaded (persistent)")
         self.run_btn.setEnabled(False)
@@ -846,6 +843,7 @@ class FridaPanel(AnalysisPanelBase):
 
         target = target.strip()
 
+        pending_key = self._next_pending_hook_key()
         row = self._hooks_table.rowCount()
         self._hooks_table.insertRow(row)
         self._hooks_table.setItem(row, _HOOK_COL_ADDRESS, QTableWidgetItem("Resolving..."))
@@ -853,7 +851,7 @@ class FridaPanel(AnalysisPanelBase):
         function_item = QTableWidgetItem(target)
         self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, function_item)
         self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Installing..."))
-        self._hook_ids.append("")
+        self._hook_ids.append(pending_key)
 
         self._hooks_table.setCurrentCell(row, _HOOK_COL_FUNCTION)
         edit_table_item(self._hooks_table, function_item)
@@ -861,8 +859,8 @@ class FridaPanel(AnalysisPanelBase):
         self._add_hook_btn.setEnabled(False)
         run_bridge_coroutine_logged(
             self._bridge.hook_function(target),
-            on_success=lambda result: self._on_hook_installed(row, target, result),
-            on_error=lambda exc: self._on_hook_install_error(row, exc),
+            on_success=lambda result: self._on_hook_installed(pending_key, target, result),
+            on_error=lambda exc: self._on_hook_install_error(pending_key, exc),
             parent=self,
             event="frida_hook_function",
             logger=_logger,
@@ -870,11 +868,41 @@ class FridaPanel(AnalysisPanelBase):
             target=target,
         )
 
-    def _on_hook_installed(self, row: int, target: str, result: object) -> None:
+    def _next_pending_hook_key(self) -> str:
+        """Generate a unique sentinel key for a pending hook row.
+
+        The key is stored in :attr:`_hook_ids` while a hook installation is in
+        flight so the eventual callback can locate its row by identity rather
+        than by a captured index that may have shifted.
+
+        Returns:
+            str: A process-unique pending hook key.
+        """
+        key = f"__pending_hook_{self._pending_hook_seq}__"
+        self._pending_hook_seq += 1
+        return key
+
+    def _find_hook_row(self, hook_key: str) -> int:
+        """Return the current hooks-table row whose stored key matches.
+
+        Args:
+            hook_key: The hook id or pending sentinel key to locate.
+
+        Returns:
+            int: The matching row index, or ``-1`` when no row holds the key.
+        """
+        if not hook_key:
+            return -1
+        return next(
+            (row for row, stored in enumerate(self._hook_ids) if stored == hook_key),
+            -1,
+        )
+
+    def _on_hook_installed(self, pending_key: str, target: str, result: object) -> None:
         """Handle successful hook installation.
 
         Args:
-            row: Table row index for the hook.
+            pending_key: Sentinel key stored in the pending hook row.
             target: The original hook target string.
             result: HookInfo from the bridge.
         """
@@ -889,6 +917,14 @@ class FridaPanel(AnalysisPanelBase):
             module_str = parts[0]
             func_str = parts[1]
 
+        self._add_hook_btn.setEnabled(True)
+        row = self._find_hook_row(pending_key)
+        if row < 0:
+            self._console.appendPlainText(f"[+] Hook installed: {target} at {addr_str} (row refreshed)")
+            self.hook_added.emit(addr_str)
+            _logger.info("frida_hook_installed_row_missing", target=target, hook_id=hook_id)
+            return
+
         addr_item = self._hooks_table.item(row, _HOOK_COL_ADDRESS)
         if addr_item is not None:
             addr_item.setText(addr_str)
@@ -902,27 +938,23 @@ class FridaPanel(AnalysisPanelBase):
         if status_item is not None:
             status_item.setText("Active")
 
-        if row < len(self._hook_ids):
-            self._hook_ids[row] = hook_id
-        else:
-            self._hook_ids.append(hook_id)
-        self._add_hook_btn.setEnabled(True)
+        self._hook_ids[row] = hook_id
         self._console.appendPlainText(f"[+] Hook installed: {target} at {addr_str}")
         self.hook_added.emit(addr_str)
         _logger.info("frida_hook_installed", target=target, hook_id=hook_id)
 
-    def _on_hook_install_error(self, row: int, exc: object) -> None:
+    def _on_hook_install_error(self, pending_key: str, exc: object) -> None:
         """Handle hook installation failure by removing the pending row.
 
         Args:
-            row: Table row for the failed hook.
+            pending_key: Sentinel key stored in the pending hook row.
             exc: The exception that occurred.
         """
-        if row < self._hooks_table.rowCount():
-            self._hooks_table.removeRow(row)
-        if row < len(self._hook_ids):
-            self._hook_ids.pop(row)
         self._add_hook_btn.setEnabled(True)
+        row = self._find_hook_row(pending_key)
+        if 0 <= row < self._hooks_table.rowCount():
+            self._hooks_table.removeRow(row)
+            self._hook_ids.pop(row)
         self._console.appendPlainText(f"[-] Hook installation failed: {exc}")
         _logger.warning("frida_hook_install_failed", error=str(exc))
 
@@ -937,7 +969,7 @@ class FridaPanel(AnalysisPanelBase):
             self._remove_hook_btn.setEnabled(False)
             run_bridge_coroutine_logged(
                 self._bridge.remove_hook(hook_id),
-                on_success=lambda _: self._on_hook_removed(selected, hook_id),
+                on_success=lambda _: self._on_hook_removed(hook_id),
                 on_error=lambda e: self._on_hook_remove_error(hook_id, e),
                 parent=self,
                 event="frida_remove_hook",
@@ -949,18 +981,18 @@ class FridaPanel(AnalysisPanelBase):
 
         self._hooks_table.removeRow(selected)
 
-    def _on_hook_removed(self, row_index: int, hook_id: str) -> None:
+    def _on_hook_removed(self, hook_id: str) -> None:
         """Handle successful hook removal.
 
         Args:
-            row_index: Table row to remove.
             hook_id: The removed hook identifier.
         """
         self._console.appendPlainText(f"[+] Removed hook {hook_id}")
         _logger.info("frida_hook_removed", hook_id=hook_id)
-        if row_index < len(self._hook_ids):
-            self._hook_ids.pop(row_index)
-        self._hooks_table.removeRow(row_index)
+        row = self._find_hook_row(hook_id)
+        if row >= 0:
+            self._hook_ids.pop(row)
+            self._hooks_table.removeRow(row)
         self._remove_hook_btn.setEnabled(True)
 
     def _on_hook_remove_error(self, hook_id: str, exc: object) -> None:
@@ -1001,22 +1033,56 @@ class FridaPanel(AnalysisPanelBase):
         self.hook_added.emit(address)
         _logger.debug("frida_hook_entry_added", address=address, target_module=module, function=function)
 
+    @staticmethod
+    def _resolve_device_selection(user_data: object, device_text: str) -> tuple[str, str | None]:
+        """Resolve the bridge device type and host from a combo selection.
+
+        The enumerated device combo stores the authoritative device id and
+        Frida device type in each item's ``userData``. That mapping is the
+        source of truth; the display text is only used as a fallback for the
+        initial ``local`` entry or manually configured ``usb`` /
+        ``remote:<host>`` entries.
+
+        Args:
+            user_data: The selected combo item's ``userData``, expected to be a
+                mapping carrying ``id`` and ``type`` keys for enumerated
+                devices.
+            device_text: Display text of the selected entry, used as a fallback
+                source when ``user_data`` lacks a usable device type.
+
+        Returns:
+            tuple[str, str | None]: The bridge device type (``"local"``,
+            ``"usb"``, or ``"remote"``) and the remote host, which is ``None``
+            for non-remote devices.
+        """
+        if isinstance(user_data, dict):
+            data = cast("dict[str, object]", user_data)
+            device_type = str(data.get("type", "")).strip().lower()
+            device_id = str(data.get("id", "")).strip()
+            if device_type in {"local", "usb", "remote"}:
+                host: str | None = None
+                if device_type == "remote" and device_id:
+                    host = device_id.split("@", 1)[1] if "@" in device_id else device_id
+                return device_type, host
+
+        text = device_text.strip()
+        if text.startswith("remote:"):
+            remote_host = text.split(":", 1)[1].strip()
+            return "remote", remote_host or None
+        if text == "usb":
+            return "usb", None
+        return "local", None
+
     def _on_device_changed(self, device_text: str) -> None:
         """Handle device selector change.
 
         Args:
-            device_text: Selected device identifier text.
+            device_text: Display text of the newly selected device entry.
         """
         if self._bridge is None:
             return
 
-        device_type = "local"
-        host: str | None = None
-        if device_text.startswith("remote:"):
-            device_type = "remote"
-            host = device_text.split(":", 1)[1].strip()
-        elif device_text == "usb":
-            device_type = "usb"
+        device_type, host = self._resolve_device_selection(self._device_combo.currentData(), device_text)
 
         self._console.appendPlainText(f"[*] Switching to {device_type} device...")
         run_bridge_coroutine_logged(
@@ -1308,7 +1374,7 @@ class FridaPanel(AnalysisPanelBase):
                     dev_name = str(getattr(device_obj, "name", dev_id))
                     dev_type = str(getattr(device_obj, "device_type", ""))
                     display = f"{dev_name} ({dev_type})" if dev_type else dev_name
-                    self._device_combo.addItem(display, dev_id)
+                    self._device_combo.addItem(display, {"id": dev_id, "type": dev_type, "name": dev_name})
             idx = self._device_combo.findText(current)
             if idx >= 0:
                 self._device_combo.setCurrentIndex(idx)

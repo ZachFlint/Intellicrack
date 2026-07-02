@@ -18,6 +18,7 @@ from PyQt6.QtCore import QPointF, QRectF, Qt, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
     QColor,
+    QFontMetricsF,
     QMouseEvent,
     QPainter,
     QPainterPath,
@@ -32,6 +33,7 @@ from PyQt6.QtWidgets import (
     QGraphicsScene,
     QGraphicsView,
     QStyleOptionGraphicsItem,
+    QTreeWidgetItem,
     QWidget,
 )
 
@@ -145,9 +147,16 @@ class BasicBlockItem(QGraphicsRectItem):
         self._header_font = fm.get_code_font_bold(8)
         self._colors = _get_graph_colors()
 
-        text_width = max(len(op.get("disasm", "")) for op in ops) * 7 if ops else 10
-        width = max(_BLOCK_MIN_WIDTH, text_width + _BLOCK_PADDING * 2)
-        height = _HEADER_HEIGHT + len(ops) * _LINE_HEIGHT + _BLOCK_PADDING
+        body_metrics = QFontMetricsF(self._font)
+        header_metrics = QFontMetricsF(self._header_font)
+        text_width = max(
+            (body_metrics.horizontalAdvance(str(op.get("disasm", ""))) for op in ops),
+            default=0.0,
+        )
+        header_width = header_metrics.horizontalAdvance(f"0x{block_address:X}")
+        content_width = max(text_width, header_width)
+        width = max(float(_BLOCK_MIN_WIDTH), content_width + _BLOCK_PADDING * 2)
+        height = float(_HEADER_HEIGHT + len(ops) * _LINE_HEIGHT + _BLOCK_PADDING)
 
         super().__init__(0, 0, width, height, parent)
         self.setPen(QPen(self._colors["block_border"], 1.5))
@@ -319,12 +328,14 @@ class CFGGraphScene(QGraphicsScene):
         self.block_items.clear()
 
         if not blocks:
+            self.setSceneRect(QRectF())
             return
 
         block_map = self._build_block_map(blocks)
         layers = self._compute_layers(block_map)
         self._position_layers(layers)
         self._create_edges(block_map)
+        self.setSceneRect(self.itemsBoundingRect())
         _logger.debug("graph_loaded", blocks=len(self.block_items), layers=len(layers))
 
     def _build_block_map(self, blocks: list[dict[str, Any]]) -> dict[int, dict[str, Any]]:
@@ -555,3 +566,57 @@ class CFGGraphView(QGraphicsView):
         item = self.itemAt(event.pos())
         if isinstance(item, BasicBlockItem):
             self.block_clicked.emit(item.block_address)
+
+
+def _parse_sort_value(text: str) -> int | None:
+    """Parse a table cell as an integer for numeric sorting.
+
+    Hexadecimal strings (``0x``/``0X`` prefixed, optionally negative) are parsed
+    in base 16; all other non-empty strings are parsed in base 10.
+
+    Args:
+        text: The cell text to interpret.
+
+    Returns:
+        int | None: The parsed integer value, or None when the text is empty or
+        cannot be parsed as an integer.
+    """
+    stripped = text.strip()
+    if not stripped:
+        return None
+    try:
+        if stripped.lower().removeprefix("-").startswith("0x"):
+            return int(stripped, 16)
+        return int(stripped)
+    except ValueError:
+        return None
+
+
+class NumericSortTreeItem(QTreeWidgetItem):
+    """QTreeWidgetItem that orders columns by numeric value when possible.
+
+    Function listings render addresses as hexadecimal strings and sizes as decimal strings. The default QTreeWidgetItem comparison is
+    lexicographic, so ``0x9`` sorts after ``0x1000`` and ``"100"`` sorts before ``"20"``. This subclass parses both cells of the active sort
+    column as integers (base 16 for ``0x`` prefixed text, base 10 otherwise) and compares them numerically, falling back to case-insensitive
+    string comparison when either cell is not numeric.
+    """
+
+    @override
+    def __lt__(self, other: QTreeWidgetItem) -> bool:
+        """Compare this item to another by the active sort column.
+
+        Args:
+            other: The item to compare against.
+
+        Returns:
+            bool: True if this item orders before ``other``.
+        """
+        tree = self.treeWidget()
+        column = tree.sortColumn() if tree is not None else 0
+        left_text = self.text(column)
+        right_text = other.text(column)
+        left_value = _parse_sort_value(left_text)
+        right_value = _parse_sort_value(right_text)
+        if left_value is not None and right_value is not None:
+            return left_value < right_value
+        return left_text.casefold() < right_text.casefold()

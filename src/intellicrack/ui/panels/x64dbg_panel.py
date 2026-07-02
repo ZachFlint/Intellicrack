@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
-from PyQt6.QtCore import QRegularExpression, QSignalBlocker, Qt, QTimer
+from PyQt6.QtCore import QRegularExpression, QSignalBlocker, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -42,7 +42,7 @@ from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
 from intellicrack.ui.panels.x64dbg_advanced_tab import X64DbgAdvancedTab
 from intellicrack.ui.resources.font_manager import FontManager
-from intellicrack.ui.win32_embed import poll_and_embed
+from intellicrack.ui.win32_embed import embed_window, find_window_by_pid
 
 
 if TYPE_CHECKING:
@@ -77,27 +77,42 @@ _MEMMAP_COLUMNS = ["Base", "Size", "Protection", "State", "Type", "Module"]
 _ADDR_RANGE_END_64: Final[int] = 0xFFFFFFFFFFFFFFFF
 _ADDR_RANGE_END_32: Final[int] = 0xFFFFFFFF
 
-_GENERAL_REGS_64 = [
-    "rax",
-    "rbx",
-    "rcx",
-    "rdx",
-    "rsi",
-    "rdi",
-    "rbp",
-    "rsp",
-    "rip",
-    "r8",
-    "r9",
-    "r10",
-    "r11",
-    "r12",
-    "r13",
-    "r14",
-    "r15",
+_GENERAL_REGS_64: Final[list[tuple[str, str]]] = [
+    ("rax", "rax"),
+    ("rbx", "rbx"),
+    ("rcx", "rcx"),
+    ("rdx", "rdx"),
+    ("rsi", "rsi"),
+    ("rdi", "rdi"),
+    ("rbp", "rbp"),
+    ("rsp", "rsp"),
+    ("rip", "rip"),
+    ("r8", "r8"),
+    ("r9", "r9"),
+    ("r10", "r10"),
+    ("r11", "r11"),
+    ("r12", "r12"),
+    ("r13", "r13"),
+    ("r14", "r14"),
+    ("r15", "r15"),
 ]
-_FLAG_REG = "rflags"
-_SEGMENT_REGS = ["cs", "ds", "es", "fs", "gs", "ss"]
+_GENERAL_REGS_32: Final[list[tuple[str, str]]] = [
+    ("eax", "rax"),
+    ("ebx", "rbx"),
+    ("ecx", "rcx"),
+    ("edx", "rdx"),
+    ("esi", "rsi"),
+    ("edi", "rdi"),
+    ("ebp", "rbp"),
+    ("esp", "rsp"),
+    ("eip", "rip"),
+]
+_FLAG_REG_64: Final[tuple[str, str]] = ("rflags", "rflags")
+_FLAG_REG_32: Final[tuple[str, str]] = ("eflags", "rflags")
+_SEGMENT_REGS: Final[list[str]] = ["cs", "ds", "es", "fs", "gs", "ss"]
+
+_EMBED_POLL_INTERVAL_MS: Final[int] = 500
+_EMBED_MAX_RETRIES: Final[int] = 20
 
 
 class X64DbgPanel(AnalysisPanelBase):
@@ -105,7 +120,12 @@ class X64DbgPanel(AnalysisPanelBase):
 
     Displays disassembly, registers, breakpoints, memory dumps, stack traces, and a command console for controlling x64dbg via the
     X64DbgBridge backend.
+
+    The private ``_debug_event_received`` signal is emitted from the bridge event thread carrying the debug event type and is connected to a
+    GUI-thread slot so the auto-refresh runs on the Qt event loop rather than the caller thread.
     """
+
+    _debug_event_received: pyqtSignal = pyqtSignal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the X64DbgPanel widget.
@@ -117,7 +137,11 @@ class X64DbgPanel(AnalysisPanelBase):
         self._is_64bit: bool = True
         self._modules: list[ModuleInfo] = []
         self.embedded_container: QWidget | None = None
+        self._embed_cancelled: bool = False
+        self._embed_timer: QTimer | None = None
+        self._embed_attempts: int = 0
         super().__init__(parent)
+        self._debug_event_received.connect(self._on_debug_event_refresh)
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
@@ -252,6 +276,8 @@ class X64DbgPanel(AnalysisPanelBase):
     @override
     def _cleanup(self) -> None:
         """Unregister event callback and stop the x64dbg bridge."""
+        self._embed_cancelled = True
+        self._stop_embed_timer()
         if self.embedded_container is not None:
             self.embedded_container.setParent(None)
             self.embedded_container = None
@@ -1110,7 +1136,11 @@ class X64DbgPanel(AnalysisPanelBase):
         self._try_embed_debugger_window()
 
     def _try_embed_debugger_window(self) -> None:
-        """Attempt to capture and embed the x64dbg window into the panel."""
+        """Attempt to capture and embed the x64dbg window into the panel.
+
+        Starts a panel-owned polling timer so the retry loop can be cancelled during teardown. Without an owned timer the poll callback
+        could fire against an already-destroyed ``embed_host`` if the panel closes inside the embed window.
+        """
         if self._bridge is None:
             return
 
@@ -1119,26 +1149,67 @@ class X64DbgPanel(AnalysisPanelBase):
             _logger.debug("x64dbg_embed_skipped_no_pid", reason="debugger_pid is None")
             return
 
-        def _on_embedded(container: QWidget) -> None:
-            layout = self.embed_host.layout()
-            if layout is not None:
-                while layout.count():
-                    item = layout.takeAt(0)
-                    widget = item.widget() if item is not None else None
-                    if widget is not None:
-                        widget.setParent(None)
-                layout.addWidget(container)
-            self.embedded_container = container
-            self._main_tabs.setCurrentWidget(self.embed_host)
-            _logger.info("x64dbg_window_embedded", pid=pid)
+        self._stop_embed_timer()
+        self._embed_cancelled = False
+        self._embed_attempts = 0
 
-        poll_and_embed(
-            pid=pid,
-            parent=self.embed_host,
-            callback=_on_embedded,
-            max_retries=20,
-            interval_ms=500,
-        )
+        timer = QTimer(self)
+        timer.setInterval(_EMBED_POLL_INTERVAL_MS)
+        timer.timeout.connect(lambda: self._poll_embed_tick(pid))
+        self._embed_timer = timer
+        timer.start()
+
+    def _poll_embed_tick(self, pid: int) -> None:
+        """Poll once for the debugger window and embed it when found.
+
+        Args:
+            pid: Process ID of the x64dbg instance whose window to capture.
+        """
+        if self._embed_cancelled:
+            self._stop_embed_timer()
+            return
+
+        self._embed_attempts += 1
+        hwnd = find_window_by_pid(pid)
+        if hwnd is not None:
+            container = embed_window(hwnd, self.embed_host)
+            if container is not None:
+                self._stop_embed_timer()
+                self._embed_window_ready(container, pid)
+                return
+
+        if self._embed_attempts >= _EMBED_MAX_RETRIES:
+            self._stop_embed_timer()
+            _logger.warning("x64dbg_embed_polling_exhausted", pid=pid, attempts=self._embed_attempts)
+
+    def _embed_window_ready(self, container: QWidget, pid: int) -> None:
+        """Install the embedded debugger window container into the embed host.
+
+        Args:
+            container: The Qt container wrapping the captured x64dbg window.
+            pid: Process ID of the embedded x64dbg instance.
+        """
+        if self._embed_cancelled:
+            container.setParent(None)
+            return
+
+        layout = self.embed_host.layout()
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget() if item is not None else None
+                if widget is not None:
+                    widget.setParent(None)
+            layout.addWidget(container)
+        self.embedded_container = container
+        self._main_tabs.setCurrentWidget(self.embed_host)
+        _logger.info("x64dbg_window_embedded", pid=pid)
+
+    def _stop_embed_timer(self) -> None:
+        """Stop and discard the embed polling timer if one is running."""
+        if self._embed_timer is not None:
+            self._embed_timer.stop()
+            self._embed_timer = None
 
     def _on_load_error(self, file_path: Path, exc: object) -> None:
         """Handle file load failure.
@@ -1154,15 +1225,28 @@ class X64DbgPanel(AnalysisPanelBase):
     def _on_debug_event(self, event_type: str, _message: dict[str, object]) -> None:
         """Handle debug events from the bridge for auto-refresh.
 
-        Called from the bridge event thread; schedules a refresh
-        on the Qt main thread via ``QTimer.singleShot``.
+        Invoked on the bridge event thread, which has no Qt event loop. The
+        event is marshalled onto the GUI thread by emitting a queued signal
+        rather than mutating widgets or scheduling a timer from this thread.
 
         Args:
             event_type: Type of debug event.
             _message: Event payload (unused).
         """
         if event_type in {"breakpoint", "watchpoint", "step"}:
-            QTimer.singleShot(0, self._refresh_state)
+            self._debug_event_received.emit(event_type)
+
+    def _on_debug_event_refresh(self, _event_type: str) -> None:
+        """Refresh debugger state on the GUI thread after a debug event.
+
+        Connected to ``_debug_event_received`` so the refresh always runs on
+        the thread that owns the Qt widgets, regardless of which thread emitted
+        the signal.
+
+        Args:
+            _event_type: The debug event type that triggered the refresh (unused).
+        """
+        self._refresh_state()
 
     def _on_load(self) -> None:
         """Open file dialog and load selected executable."""
@@ -2072,24 +2156,38 @@ class X64DbgPanel(AnalysisPanelBase):
     def _apply_registers(self, result: object) -> None:
         """Apply register data to the table.
 
+        Selects the 32-bit or 64-bit register-name set from ``self._is_64bit``
+        so x86 targets show ``eax``..``esp``/``eip``/``eflags`` (read from the
+        normalised low-word register values) and never render bogus
+        ``r8``..``r15`` rows. On an empty result the table is cleared rather
+        than left showing stale register values.
+
         Args:
             result: Register state from the bridge.
         """
         if result is None:
+            with QSignalBlocker(self._reg_table):
+                self._reg_table.setRowCount(0)
             return
 
         regs = result
+        if self._is_64bit:
+            general_regs = _GENERAL_REGS_64
+            flag_reg = _FLAG_REG_64
+        else:
+            general_regs = _GENERAL_REGS_32
+            flag_reg = _FLAG_REG_32
+        display_regs: list[tuple[str, str]] = [*general_regs, flag_reg, *((name, name) for name in _SEGMENT_REGS)]
+
         with QSignalBlocker(self._reg_table):
             self._reg_table.setRowCount(0)
 
-            all_regs = [*_GENERAL_REGS_64, _FLAG_REG, *_SEGMENT_REGS]
-
-            for reg_name in all_regs:
-                value = getattr(regs, reg_name, 0)
+            for display_name, attr_name in display_regs:
+                value = getattr(regs, attr_name, 0)
                 row = self._reg_table.rowCount()
                 self._reg_table.insertRow(row)
 
-                name_item = QTableWidgetItem(reg_name)
+                name_item = QTableWidgetItem(display_name)
                 name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 self._reg_table.setItem(row, 0, name_item)
 
@@ -2122,10 +2220,15 @@ class X64DbgPanel(AnalysisPanelBase):
     def _apply_disassembly(self, result: object) -> None:
         """Apply disassembly data to the view.
 
+        On an empty result the view is cleared rather than left showing stale
+        disassembly (for example after stepping onto an invalid instruction
+        pointer that yields no decode).
+
         Args:
             result: Disassembly lines from the bridge.
         """
         if not result:
+            self._disasm_view.clear()
             return
 
         lines: list[object] = [*result] if isinstance(result, list) else []

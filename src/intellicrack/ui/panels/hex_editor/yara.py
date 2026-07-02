@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Final, cast
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -61,12 +62,34 @@ class YaraMixin:
     _yara_results_tree: QTreeWidget | None
     _bridge: HexEditorBridge | None
 
-    def goto_offset(self, offset: int) -> None:
-        """Navigate the hex widget to the given byte offset.
+    def goto_offset(self, offset: int, length: int = 0) -> None:
+        """Navigate the hex widget to a byte offset and optionally select a span.
+
+        Moves the hex view cursor to ``offset`` (scrolling it into view) and,
+        when ``length`` is positive, selects the ``length``-byte span starting
+        at ``offset`` so a double-clicked match is highlighted in the editor.
+        The cursor is moved first because the widget clears any active
+        selection when the caret moves, so the selection must be applied
+        afterwards and the widget repainted to render it.
 
         Args:
             offset: Absolute byte offset within the active document.
+            length: Number of bytes to select starting at ``offset``. When zero
+                or negative only the cursor is moved and no selection is made.
         """
+        hex_widget = getattr(self, "_hex_widget", None)
+        if hex_widget is None:
+            return
+        goto_fn = getattr(hex_widget, "goto_offset", None)
+        if callable(goto_fn):
+            goto_fn(offset)
+        if length > 0:
+            select_fn = getattr(hex_widget, "set_selection_range", None)
+            if callable(select_fn):
+                select_fn(offset, offset + length - 1)
+            update_fn = getattr(hex_widget, "update", None)
+            if callable(update_fn):
+                update_fn()
 
     def _create_yara_tab(self) -> QWidget:
         """Create the YARA scanner side panel tab widget.
@@ -223,6 +246,7 @@ class YaraMixin:
             data_hex = str(entry.get("data", ""))
             preview = data_hex[:preview_chars]
             match_hex = " ".join(preview[i : i + 2].upper() for i in range(0, len(preview), 2))
+            match_length = len(data_hex) // 2
             child = QTreeWidgetItem(
                 [
                     "",
@@ -231,8 +255,9 @@ class YaraMixin:
                     match_hex,
                 ],
             )
+            child.setData(1, Qt.ItemDataRole.UserRole, match_length)
             rule_item.addChild(child)
-            offsets.append((offset_int, len(data_hex) // 2))
+            offsets.append((offset_int, match_length))
         return offsets
 
     def _on_yara_scan_success(self, result: object) -> None:
@@ -296,4 +321,6 @@ class YaraMixin:
         except ValueError:
             _logger.warning("hex_editor_yara_result_invalid_offset", input_text=offset_text)
         else:
-            self.goto_offset(offset)
+            length_data: Any = item.data(1, Qt.ItemDataRole.UserRole)
+            length = length_data if isinstance(length_data, int) and length_data > 0 else 0
+            self.goto_offset(offset, length)

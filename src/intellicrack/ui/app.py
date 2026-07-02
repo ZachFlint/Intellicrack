@@ -230,6 +230,7 @@ class MainWindow(QMainWindow):
     stream_chunk_received = pyqtSignal(str)
     status_update = pyqtSignal(str)
     bridge_analysis_received = pyqtSignal(object)
+    confirmation_requested = pyqtSignal(object)
 
     def __init__(
         self,
@@ -264,6 +265,8 @@ class MainWindow(QMainWindow):
         self._sandbox_monitor_wired_widgets: weakref.WeakSet[QObject] = weakref.WeakSet()
         self._process_attached_wired: weakref.WeakSet[QObject] = weakref.WeakSet()
         self._status_failure_count: int = 0
+        self._status_refresh_in_flight: bool = False
+        self._pending_model_restore: str = ""
         self._session_token_total: int = 0
         self._binary_dependent_buttons: list[QPushButton] = []
         self._initial_discovery_triggered: bool = False
@@ -531,6 +534,7 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self.tool_panel)
 
         self._splitter.setSizes([500, 900])
+        self._splitter.setChildrenCollapsible(False)
 
         layout.addWidget(self._splitter)
 
@@ -919,37 +923,35 @@ class MainWindow(QMainWindow):
     def _refresh_system_status(self) -> None:
         """Periodically refresh the system status display.
 
-        Tracks consecutive failures of the orchestrator status fetch and stops the periodic timer after
-        :data:`_STATUS_REFRESH_FAILURE_THRESHOLD` consecutive errors so the status bar does not silently mask a broken orchestrator with
-        debug logs forever.
+        Dispatches the orchestrator status fetch on the async bridge worker so the 30-second GUI timer never blocks the Qt event loop
+        waiting on a slow or hung orchestrator. Overlapping ticks are skipped while a fetch is in flight. Results and errors are marshalled
+        back to the GUI thread via the worker's queued signals.
         """
-        if self._shutting_down:
+        if self._shutting_down or self._status_refresh_in_flight:
             return
 
-        async def fetch_status() -> dict[str, object]:
-            return await self._orchestrator.get_system_status()
+        self._status_refresh_in_flight = True
+        run_bridge_coroutine_logged(
+            self._orchestrator.get_system_status(),
+            on_success=self._on_system_status_fetched,
+            on_error=self._on_system_status_error,
+            parent=self,
+            event="system_status_refresh",
+            logger=_logger,
+        )
 
-        try:
-            status = run_bridge_coroutine(fetch_status())
-        except (RuntimeError, AttributeError, OSError) as exc:
-            self._status_failure_count += 1
-            _logger.warning(
-                "system_status_refresh_failed",
-                error=str(exc),
-                failure_count=self._status_failure_count,
-                threshold=_STATUS_REFRESH_FAILURE_THRESHOLD,
-            )
-            if self._status_failure_count >= _STATUS_REFRESH_FAILURE_THRESHOLD:
-                self._status_timer.stop()
-                _logger.exception(
-                    "system_status_timer_stopped",
-                    consecutive_failures=self._status_failure_count,
-                )
-                self.status_label.setText("Status refresh disabled (see logs)")
-            return
+    def _on_system_status_fetched(self, result: object) -> None:
+        """Apply a fetched system-status payload to the status bar.
 
+        Runs on the GUI thread via the bridge worker's queued signal.
+
+        Args:
+            result: The status mapping returned by the orchestrator.
+        """
+        self._status_refresh_in_flight = False
         self._status_failure_count = 0
-        if status is not None:
+        if isinstance(result, dict):
+            status = cast("dict[str, object]", result)
             state = status.get("state", "unknown")
             session_id = status.get("session_id")
             session_text = f" | Session: {session_id}" if session_id else ""
@@ -960,10 +962,36 @@ class MainWindow(QMainWindow):
                 total_tokens_obj: object = metrics_dict.get("provider_total_tokens", 0)
                 if isinstance(total_tokens_obj, int) and total_tokens_obj > 0 and total_tokens_obj != self._session_token_total:
                     self._session_token_total = total_tokens_obj
-                    self._token_label.setText(f"Tokens: {self._session_token_total:,}")
+                    self._set_status_label(self._token_label, f"Tokens: {self._session_token_total:,}")
 
         self._refresh_memory_status()
         self._refresh_model_discovery_status()
+
+    def _on_system_status_error(self, exc: object) -> None:
+        """Handle a failed system-status fetch on the GUI thread.
+
+        Increments the consecutive-failure counter and stops the periodic timer
+        once :data:`_STATUS_REFRESH_FAILURE_THRESHOLD` consecutive failures are
+        reached so a broken orchestrator is surfaced rather than masked.
+
+        Args:
+            exc: The exception object raised by the status fetch.
+        """
+        self._status_refresh_in_flight = False
+        self._status_failure_count += 1
+        _logger.warning(
+            "system_status_refresh_failed",
+            error=str(exc),
+            failure_count=self._status_failure_count,
+            threshold=_STATUS_REFRESH_FAILURE_THRESHOLD,
+        )
+        if self._status_failure_count >= _STATUS_REFRESH_FAILURE_THRESHOLD:
+            self._status_timer.stop()
+            _logger.error(
+                "system_status_timer_stopped",
+                consecutive_failures=self._status_failure_count,
+            )
+            self.status_label.setText("Status refresh disabled (see logs)")
 
     @staticmethod
     def _compute_memory_label_text() -> str:
@@ -980,16 +1008,31 @@ class MainWindow(QMainWindow):
             return f"Cache: {mb:.0f}MB"
         return ""
 
+    @staticmethod
+    def _set_status_label(label: QLabel, text: str) -> None:
+        """Set a status-bar label's text and mirror it into its tooltip.
+
+        Status-bar labels have no eliding and silently clip long values (binary
+        paths, model IDs, discovery strings). Mirroring the text into the
+        tooltip keeps the full value reachable on hover.
+
+        Args:
+            label: The status-bar label to update.
+            text: The full text to display and expose as the tooltip.
+        """
+        label.setText(text)
+        label.setToolTip(text)
+
     def _refresh_memory_status(self) -> None:
         """Update the memory usage display in the status bar."""
         if get_global_model_cache is None:
-            self._memory_label.setText("")
+            self._set_status_label(self._memory_label, "")
             return
         try:
-            self._memory_label.setText(self._compute_memory_label_text())
+            self._set_status_label(self._memory_label, self._compute_memory_label_text())
         except (RuntimeError, AttributeError, ValueError):
             _logger.debug("memory_label_update_failed", exc_info=True)
-            self._memory_label.setText("")
+            self._set_status_label(self._memory_label, "")
 
     def _refresh_model_discovery_status(self) -> None:
         """Update the model discovery status in the status bar."""
@@ -1002,7 +1045,7 @@ class MainWindow(QMainWindow):
                 events,
                 active_provider=active_provider,
             )
-            self.model_status_label.setText(status_text)
+            self._set_status_label(self.model_status_label, status_text)
         except (RuntimeError, AttributeError, ValueError):
             _logger.debug("model_discovery_status_refresh_failed", exc_info=True)
 
@@ -1018,7 +1061,9 @@ class MainWindow(QMainWindow):
         self.tool_panel.hex_context_ready.connect(self._on_hex_context_ready)
         self.tool_panel.embedded_tool_started.connect(self._on_embedded_tool_started)
         self.tool_panel.embedded_tool_closed.connect(self._on_embedded_tool_closed)
+        self.bridge_analysis_received.connect(self._on_bridge_analysis_displayed)
         self.bridge_analysis_received.connect(self._on_bridge_analysis_activated)
+        self.confirmation_requested.connect(self._show_confirmation_dialog)
 
     def _on_embedded_tool_started(self, tool_id: str) -> None:
         """Handle embedded-tool start broadcast from ``ToolOutputPanel``.
@@ -1046,10 +1091,6 @@ class MainWindow(QMainWindow):
         self._orchestrator.set_stream_callback(self.stream_chunk_received.emit)
         self._orchestrator.set_async_confirmation_callback(self._request_tool_confirmation)
         self._orchestrator.set_bridge_analysis_callback(self._on_bridge_analysis_received)
-        self._orchestrator.configure_hooks(
-            on_bridge_analysis=self._on_bridge_analysis_received,
-            on_confirmation=None,
-        )
         self.bridge_analysis_received.connect(self.tool_panel.update_bridge_analysis)
 
         try:
@@ -1082,6 +1123,22 @@ class MainWindow(QMainWindow):
             )
         except OSError:
             _logger.warning("tool_installer_init_skipped")
+
+        self._apply_restored_auto_approve()
+
+    def _apply_restored_auto_approve(self) -> None:
+        """Propagate the restored auto-approve toggle state to the orchestrator.
+
+        The toolbar restores the persisted toggle with ``setChecked`` before its ``toggled`` signal is connected, so
+        ``_on_auto_approve_toggled`` never fires during startup and the orchestrator keeps its default confirmation level. This applies the
+        button's current state once the orchestrator exists so a restored "Auto-approve: ON" actually suppresses prompts.
+        """
+        types_module = importlib.import_module("intellicrack.core.types")
+        if self._auto_approve_btn.isChecked():
+            self._orchestrator.set_confirmation_level(types_module.ConfirmationLevel.NONE)
+        else:
+            self._orchestrator.set_confirmation_level(types_module.ConfirmationLevel.DESTRUCTIVE)
+        _logger.info("auto_approve_restored", enabled=self._auto_approve_btn.isChecked())
 
     async def _refresh_tool_status(self) -> dict[str, ToolStatusEntry]:
         """Refresh tool installation status asynchronously.
@@ -1123,16 +1180,27 @@ class MainWindow(QMainWindow):
         """Handle bridge analysis completion from orchestrator.
 
         Marshals the analysis data to the Qt main thread via signal emission.
-        This callback is invoked from an async worker thread, so direct UI
-        updates are unsafe.
+        This callback is invoked from an async worker thread, so it performs no
+        direct UI updates; all widget mutation happens in GUI-thread slots
+        connected to ``bridge_analysis_received`` (Qt auto-queues the delivery).
 
         Args:
             analysis: The BridgeAnalysisSummary result from the orchestrator.
         """
         _logger.debug("bridge_analysis_received", analysis_type=type(analysis).__name__)
+        self.bridge_analysis_received.emit(analysis)
+
+    def _on_bridge_analysis_displayed(self, analysis: object) -> None:
+        """Render bridge analysis text into the analysis tab on the GUI thread.
+
+        Connected to ``bridge_analysis_received`` so the tab clear/redisplay runs
+        on the Qt main thread regardless of which thread produced the analysis.
+
+        Args:
+            analysis: The BridgeAnalysisSummary result from the orchestrator.
+        """
         self.tool_panel.clear_analysis_tab("analysis")
         self.tool_panel.display_analysis_result("analysis", str(analysis))
-        self.bridge_analysis_received.emit(analysis)
 
     def _on_bridge_analysis_activated(self, _analysis: object) -> None:
         """Activate the analysis tab after bridge analysis completes.
@@ -1145,28 +1213,44 @@ class MainWindow(QMainWindow):
     def _request_tool_confirmation(self, call: ToolCall) -> asyncio.Future[bool]:
         """Request user confirmation for a tool call.
 
+        Invoked from the orchestrator's asyncio loop thread, which has no Qt
+        event loop. The dialog is therefore shown by emitting a queued signal to
+        the GUI thread (``confirmation_requested``) rather than scheduling a
+        ``QTimer.singleShot`` on the current thread, which would never fire and
+        would hang the awaiting coroutine. The returned future is created on the
+        calling loop and resolved back on that loop thread-safely.
+
         Args:
             call: The tool call requiring confirmation.
 
         Returns:
             asyncio.Future[bool]: Future that resolves to True if approved, False otherwise.
         """
-        confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
-
-        future: asyncio.Future[bool] = asyncio.get_event_loop().create_future()
-
-        def show_dialog() -> None:
-            dialog = confirmation_module.ToolConfirmationDialog(call, self)
-            dialog.exec()
-            self._orchestrator.resolve_confirmation(approved=dialog.approved)
-            try:
-                future.set_result(dialog.approved)
-            except asyncio.InvalidStateError:
-                _logger.debug("confirmation_dialog_state_error", exc_info=True)
-
-        QTimer.singleShot(0, show_dialog)
-
+        loop = asyncio.get_event_loop()
+        future: asyncio.Future[bool] = loop.create_future()
+        self.confirmation_requested.emit((call, future, loop))
         return future
+
+    def _show_confirmation_dialog(self, payload: object) -> None:
+        """Show the tool-confirmation dialog on the GUI thread and resolve the future.
+
+        Args:
+            payload: Tuple of ``(ToolCall, asyncio.Future[bool],
+                asyncio.AbstractEventLoop)`` emitted by
+                :meth:`_request_tool_confirmation`.
+        """
+        call, future, loop = cast("tuple[ToolCall, asyncio.Future[bool], asyncio.AbstractEventLoop]", payload)
+        confirmation_module = importlib.import_module(".confirmation_dialog", "intellicrack.ui")
+        dialog = confirmation_module.ToolConfirmationDialog(call, self)
+        dialog.exec()
+        approved: bool = bool(dialog.approved)
+        self._orchestrator.resolve_confirmation(approved=approved)
+
+        def _resolve() -> None:
+            if not future.done():
+                future.set_result(approved)
+
+        loop.call_soon_threadsafe(_resolve)
 
     def _on_user_message(self, text: str) -> None:
         """Handle user message submission.
@@ -1393,7 +1477,7 @@ class MainWindow(QMainWindow):
         if delta <= 0:
             return
         self._session_token_total += delta
-        self._token_label.setText(f"Tokens: {self._session_token_total:,}")
+        self._set_status_label(self._token_label, f"Tokens: {self._session_token_total:,}")
 
     def _run_async(self, coro: Coroutine[object, object, object]) -> None:
         """Run an async operation in a worker thread.
@@ -1481,7 +1565,7 @@ class MainWindow(QMainWindow):
         """
         _logger.info("binary_loaded", path=str(path), binary_name=path.name)
         self.current_binary = path
-        self._binary_label.setText(f"Binary: {path.name}")
+        self._set_status_label(self._binary_label, f"Binary: {path.name}")
         for button in self._binary_dependent_buttons:
             button.setEnabled(True)
         binary_name = path.name
@@ -2184,14 +2268,12 @@ class MainWindow(QMainWindow):
             has_credentials=bool(api_key),
         )
         self.status_update.emit("Refreshing models...")
+        self._pending_model_restore = self.model_combo.currentText().strip()
         self.model_combo.clear()
         self.model_combo.setEnabled(False)
 
         if self.model_discovery is not None:
-            try:
-                run_bridge_coroutine(self.model_discovery.discover_all())
-            except (RuntimeError, OSError):
-                _logger.debug("model_discovery_refresh_failed", exc_info=True)
+            run_bridge_coroutine_async(self.model_discovery.discover_all(), parent=self)
 
         self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, parent=self)
 
@@ -2211,7 +2293,8 @@ class MainWindow(QMainWindow):
         """
         self.model_combo.setEnabled(True)
         if success and models:
-            previous_model = self.model_combo.currentText().strip()
+            previous_model = self._pending_model_restore
+            self._pending_model_restore = ""
             with QSignalBlocker(self.model_combo):
                 self.model_combo.clear()
                 self.model_combo.addItems(models)
@@ -2674,7 +2757,7 @@ class MainWindow(QMainWindow):
 
     @property
     def log_viewer_window(self) -> LogViewerWindow | None:
-        """Return the live Log Viewer instance, if one has been opened.
+        """The live Log Viewer instance, if one has been opened.
 
         Returns:
             LogViewerWindow | None: The cached viewer instance, or
@@ -2896,7 +2979,9 @@ class MainWindow(QMainWindow):
         table.setHorizontalHeaderLabels(["Base Address", "Size", "Protection", "State"])
         header = table.horizontalHeader()
         if header is not None:
-            header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            for col in range(table.columnCount()):
+                header.setSectionResizeMode(col, QHeaderView.ResizeMode.ResizeToContents)
+            header.setStretchLastSection(True)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
 

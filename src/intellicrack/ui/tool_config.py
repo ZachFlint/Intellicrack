@@ -1163,6 +1163,9 @@ class ToolSettingsWidget(QFrame):
     def _check_status(self) -> None:
         """Check the tool installation status."""
         _logger.debug("tool_status_check_requested", tool_id=self._tool_id)
+        if self._status_worker is not None and self._status_worker.isRunning():
+            _logger.debug("tool_status_check_skipped", tool_id=self._tool_id, reason="check_in_progress")
+            return
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_loading", 16))
         self.status_label.setText("Checking...")
@@ -1200,6 +1203,15 @@ class ToolSettingsWidget(QFrame):
 
     def _install_tool(self) -> None:
         """Install the tool."""
+        if self._install_worker is not None and self._install_worker.isRunning():
+            _logger.debug("tool_install_skipped", tool_id=self._tool_id, reason="install_in_progress")
+            show_info(
+                self,
+                "Installation",
+                f"{self._display_name} installation is already in progress.",
+            )
+            return
+
         if self._tool_id in _BUILTIN_TOOL_IDS:
             show_info(
                 self,
@@ -1224,10 +1236,12 @@ class ToolSettingsWidget(QFrame):
             )
             return
 
-        install_path = Path(self._path_input.text().strip())
-        if not install_path:
+        path_text = self._path_input.text().strip()
+        if not path_text:
             install_path = self._tools_directory / self._tool_id
             self._path_input.setText(str(install_path))
+        else:
+            install_path = Path(path_text)
 
         reply = QMessageBox.question(
             self,

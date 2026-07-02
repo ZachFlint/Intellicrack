@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Final, override
 
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -469,7 +469,16 @@ class ChatPanel(QFrame):
         self._input.set_enabled(enabled=enabled)
 
     def _scroll_to_bottom(self) -> None:
-        """Scroll the message area to the bottom."""
+        """Scroll the message area to the bottom.
+
+        The scroll is deferred to the next GUI event-loop iteration so the layout can recompute the scrollbar's maximum after a freshly
+        inserted message bubble is laid out; scrolling synchronously would use a stale maximum and leave the newest bubble partially off-
+        screen.
+        """
+        QTimer.singleShot(0, self._apply_scroll_to_bottom)
+
+    def _apply_scroll_to_bottom(self) -> None:
+        """Move the vertical scrollbar to its current maximum."""
         scrollbar = self._scroll_area.verticalScrollBar()
         if scrollbar is not None:
             scrollbar.setValue(scrollbar.maximum())

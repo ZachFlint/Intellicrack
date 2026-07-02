@@ -13,7 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, override
 
-from PyQt6.QtCore import QPoint, Qt
+from PyQt6.QtCore import QPoint, Qt, QTimer
 from PyQt6.QtGui import QAction, QClipboard
 from PyQt6.QtWidgets import (
     QAbstractItemView,
@@ -63,7 +63,7 @@ from intellicrack.ui.panels.cutter_tabs import (
     SymbolsTab,
     TypeBrowserTab,
 )
-from intellicrack.ui.panels.graph_view import CFGGraphView
+from intellicrack.ui.panels.graph_view import CFGGraphView, NumericSortTreeItem
 from intellicrack.ui.panels.qt_compat import (
     set_header_labels,
     set_max_block_count,
@@ -82,6 +82,7 @@ _logger = get_logger(__name__)
 
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
+_FILTER_DEBOUNCE_MS: Final[int] = 250
 _OUTER_SPLIT_TOP: Final[int] = 400
 _OUTER_SPLIT_MID: Final[int] = 250
 _OUTER_SPLIT_BOT: Final[int] = 150
@@ -174,6 +175,7 @@ class CutterPanel(AnalysisPanelBase):
             QWidget: Vertical splitter with code zone, data tabs, and console.
         """
         outer = QSplitter(Qt.Orientation.Vertical)
+        outer.setChildrenCollapsible(False)
 
         outer.addWidget(self._create_code_zone())
         outer.addWidget(self._create_data_tabs())
@@ -198,6 +200,7 @@ class CutterPanel(AnalysisPanelBase):
             QSplitter: Horizontal splitter with sidebar on the left and code tabs on the right.
         """
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
 
         splitter.addWidget(self._create_functions_sidebar())
         splitter.addWidget(self._create_code_tabs())
@@ -228,6 +231,11 @@ class CutterPanel(AnalysisPanelBase):
         self._refresh_funcs_btn.clicked.connect(self._on_refresh_functions)
         header.addWidget(self._refresh_funcs_btn)
         layout.addLayout(header)
+
+        self._filter_debounce = QTimer(self)
+        self._filter_debounce.setSingleShot(True)
+        self._filter_debounce.setInterval(_FILTER_DEBOUNCE_MS)
+        self._filter_debounce.timeout.connect(self._on_refresh_functions)
 
         self._func_filter = QLineEdit()
         self._func_filter.setPlaceholderText("Filter functions...")
@@ -269,6 +277,7 @@ class CutterPanel(AnalysisPanelBase):
         tabs.addTab(self._decompiled_view, "Decompiler")
 
         self._cfg_view = CFGGraphView()
+        self._cfg_view.block_clicked.connect(self._on_cfg_block_clicked)
         tabs.addTab(self._cfg_view, "CFG")
 
         self._code_tabs = tabs
@@ -538,6 +547,7 @@ class CutterPanel(AnalysisPanelBase):
         """
         self._set_status(f"Loaded: {binary_path.name}")
         _logger.info("cutter_binary_loaded", path=binary_path.name)
+        self._esil_tab.reset_esil_state()
         self._load_btn.setEnabled(True)
         self._on_analyze()
 
@@ -642,7 +652,7 @@ class CutterPanel(AnalysisPanelBase):
         self._func_tree.clear()
 
         for func in functions:
-            item = QTreeWidgetItem([
+            item = NumericSortTreeItem([
                 getattr(func, "name", ""),
                 f"0x{getattr(func, 'address', 0):X}",
                 str(getattr(func, "size", 0)),
@@ -661,12 +671,12 @@ class CutterPanel(AnalysisPanelBase):
         self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:
-        """Handle function filter text changes.
+        """Restart the debounce timer so filtering runs once typing pauses.
 
         Args:
-            _text: New filter text (unused, read from widget).
+            _text: New filter text (unused, read from the widget on refresh).
         """
-        self._on_refresh_functions()
+        self._filter_debounce.start()
 
     def _on_function_clicked(self, item: QTreeWidgetItem, _column: int) -> None:
         """Handle function tree item click to load disassembly, decompilation, and xrefs.
@@ -844,6 +854,26 @@ class CutterPanel(AnalysisPanelBase):
         blocks: list[dict[str, Any]] = [*result] if isinstance(result, list) else []
         self._cfg_view.graph_scene().load_graph(blocks)
         self._cfg_view.fit_to_view()
+
+    def _on_cfg_block_clicked(self, address: int) -> None:
+        """Navigate to a CFG basic block by seeking and loading its disassembly.
+
+        Args:
+            address: Start address of the clicked basic block.
+        """
+        if self._bridge is None:
+            self._set_status("No bridge configured")
+            return
+        self._code_tabs.setCurrentWidget(self._disasm_view)
+        run_bridge_coroutine_logged(
+            self._bridge.seek(address),
+            on_success=lambda _: self._on_goto_complete(address),
+            on_error=lambda e: self._set_status(f"Seek failed: {e}"),
+            parent=self,
+            event="cutter_seek",
+            logger=_logger,
+            address=hex(address),
+        )
 
     def _refresh_imports(self) -> None:
         """Refresh the imports table from bridge."""

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import struct
+import threading
 import zlib
 from importlib import import_module
 from importlib.util import find_spec
@@ -225,6 +226,8 @@ class RFBClient:
         self._connected: bool = False
         self._fb_lock: asyncio.Lock = asyncio.Lock()
         self._fb_dirty: bool = False
+        self._publish_lock: threading.Lock = threading.Lock()
+        self._front_buffer: QImage | None = None
         self.width = 0
         self.height = 0
         self.server_name = ""
@@ -261,6 +264,35 @@ class RFBClient:
         dirty = self._fb_dirty
         self._fb_dirty = False
         return dirty
+
+    def publish_frame(self) -> None:
+        """Publish the current back buffer as an immutable front-buffer snapshot.
+
+        Builds a standalone deep copy of the framebuffer on the calling (bridge-loop) thread, where all pixel writes are serialised, and
+        swaps that copy into the front buffer under :attr:`_publish_lock`. The copy is never mutated after publication, so a consumer that
+        reads the reference under the same lock always observes a fully formed frame and can never see a partially written scanline.
+        """
+        source = self.framebuffer
+        if source is None:
+            return
+        published = source.copy()
+        with self._publish_lock:
+            self._front_buffer = published
+
+    def snapshot_frame(self) -> QImage | None:
+        """Return the most recently published framebuffer snapshot.
+
+        The reference is read under :attr:`_publish_lock` so it can never be
+        observed mid-swap. Because :meth:`publish_frame` always installs a fresh
+        copy and never mutates a buffer after publication, the returned image is
+        safe to read and scale on the Qt GUI thread without further locking.
+
+        Returns:
+            QImage | None: A stable, fully formed frame published by the bridge
+            loop, or ``None`` when no frame has been published yet.
+        """
+        with self._publish_lock:
+            return self._front_buffer
 
     async def _open_and_handshake(
         self,
@@ -327,9 +359,7 @@ class RFBClient:
                 return False
         except (TimeoutError, OSError, struct.error) as exc:
             win_err = getattr(exc, "winerror", None)
-            hint = None
-            if win_err is not None:
-                hint = NamedPipeClient.format_error_hint(win_err)
+            hint = None if win_err is None else NamedPipeClient.format_error_hint(win_err)
             _logger.exception("vnc_connect_failed", host=host, port=port, error_hint=hint)
             return False
 
@@ -1746,6 +1776,7 @@ class VNCWidget(QWidget):
 
     connection_status_changed: pyqtSignal = pyqtSignal(bool)
     framebuffer_updated: pyqtSignal = pyqtSignal()
+    _connect_finished: pyqtSignal = pyqtSignal(bool)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the VNCWidget instance.
@@ -1759,18 +1790,23 @@ class VNCWidget(QWidget):
         _ = self.update_timer.timeout.connect(self._on_update_tick)
         self._pump_loop: asyncio.AbstractEventLoop | None = None
         self._pump_task_ref: asyncio.Task[None] | None = None
+        self._pending_connect: tuple[str, int] = ("", 0)
         _ = self.framebuffer_updated.connect(self.update)
+        _ = self._connect_finished.connect(self._on_connect_finished)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(320, 240)
 
     def connect_to_server(self, host: str, port: int, password: str | None = None) -> None:
-        """Initiate connection to a VNC server.
+        """Initiate an asynchronous connection to a VNC server.
 
-        Connection is performed synchronously so the caller can observe the
-        outcome via the ``connection_status_changed`` signal. Once connected,
-        a background asyncio task is started on the shared bridge event loop
-        to pump framebuffer updates without blocking the Qt main thread.
+        The connect handshake is dispatched onto the shared bridge event loop
+        through the async worker path so the Qt main thread is never blocked -
+        even when the target port is unreachable and the TCP connection stalls
+        until the connect timeout elapses. The outcome is delivered back on the
+        Qt thread via ``connection_status_changed``; on success the background
+        framebuffer pump and the repaint timer are started before the signal
+        fires. See :meth:`_on_connect_finished` for the completion handler.
 
         Args:
             host: Server hostname or IP.
@@ -1778,37 +1814,61 @@ class VNCWidget(QWidget):
             password: Optional password for VNC Authentication. Required when
                 the server negotiates RFB security type 2.
         """
-        connected: bool = False
-        try:
-            connected = self._run_connect_and_start_pump(host, port, password)
-        except (OSError, struct.error, RuntimeError) as exc:
-            win_err = getattr(exc, "winerror", None)
-            hint = None
-            if win_err is not None:
-                hint = NamedPipeClient.format_error_hint(win_err)
-            _logger.exception("vnc_widget_connect_error", host=host, port=port, error_hint=hint)
-        self.connection_status_changed.emit(connected)
+        self._pending_connect = (host, port)
+        run_bridge_coroutine_logged(
+            self.client.connect(host, port, password=password),
+            on_success=self._emit_connect_result,
+            on_error=self._emit_connect_failure,
+            parent=self,
+            event="vnc_widget_connect",
+            logger=_logger,
+            level="info",
+            host=host,
+            port=port,
+        )
 
-    def _run_connect_and_start_pump(self, host: str, port: int, password: str | None) -> bool:
-        """Run the connect coroutine, start the pump, and emit status logs.
+    def _emit_connect_result(self, result: object) -> None:
+        """Marshal a successful connect coroutine result onto the Qt thread.
 
         Args:
-            host: Server hostname or IP.
-            port: Server port number.
-            password: Optional password for VNC Authentication.
-
-        Returns:
-            bool: ``True`` when the connection succeeded and the pump was started.
+            result: Boolean-like handshake outcome returned by ``RFBClient.connect``.
         """
-        result = run_bridge_coroutine(self.client.connect(host, port, password=password))
-        connected = bool(result)
-        if connected:
+        self._connect_finished.emit(bool(result))
+
+    def _emit_connect_failure(self, exc: object) -> None:
+        """Marshal a failed connect attempt onto the Qt thread.
+
+        Args:
+            exc: Exception object raised while attempting the connection.
+        """
+        win_err = getattr(exc, "winerror", None)
+        hint = NamedPipeClient.format_error_hint(win_err) if win_err is not None else None
+        _logger.warning("vnc_widget_connect_error", error=str(exc), error_hint=hint)
+        failed: bool = False
+        self._connect_finished.emit(failed)
+
+    def _on_connect_finished(self, connected: int) -> None:
+        """Complete the connect sequence on the Qt GUI thread.
+
+        Runs as a queued-signal slot on the GUI thread once the background
+        connect worker reports its outcome, so the repaint timer and pump task -
+        both of which must be manipulated from their owning thread - are started
+        safely. The result is then surfaced through ``connection_status_changed``.
+
+        Args:
+            connected: Handshake outcome delivered by the ``_connect_finished``
+                signal as an integer truth value (``1`` on success, ``0`` on
+                failure).
+        """
+        succeeded = bool(connected)
+        host, port = self._pending_connect
+        if succeeded:
             self._start_pump_task()
             self.update_timer.start(_REPAINT_INTERVAL_MS)
             _logger.info("vnc_widget_connected", host=host, port=port)
         else:
             _logger.warning("vnc_widget_connect_failed", host=host, port=port)
-        return connected
+        self.connection_status_changed.emit(succeeded)
 
     def disconnect_from_server(self) -> None:
         """Disconnect from the VNC server and stop the pump task."""
@@ -1866,6 +1926,7 @@ class VNCWidget(QWidget):
                 break
 
             if self.client.take_dirty_flag():
+                self.client.publish_frame()
                 self.framebuffer_updated.emit()
 
             if not handled:
@@ -1909,8 +1970,9 @@ class VNCWidget(QWidget):
             a0: Paint event.
         """
         painter = QPainter(self)
-        if self.client.framebuffer is not None:
-            scaled = self.client.framebuffer.scaled(
+        snapshot = self.client.snapshot_frame()
+        if snapshot is not None:
+            scaled = snapshot.scaled(
                 self.size(),
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,

@@ -101,8 +101,8 @@ def _parse_address(text: str) -> int | None:
 class DebuggerTab(QWidget):
     """Tab exposing the full native rizin debugger session against an attached process.
 
-    Provides attach/detach, breakpoint management, stepping/continue execution control, register inspection and editing, memory
-    read/write, memory-region enumeration, and thread/module listings, all driven by the ``CutterBridge`` debug methods.
+    Provides attach/detach, breakpoint management, stepping/continue execution control, register inspection and editing, memory read/write,
+    memory-region enumeration, and thread/module listings, all driven by the ``CutterBridge`` debug methods.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -160,6 +160,7 @@ class DebuggerTab(QWidget):
         layout.addLayout(attach_row)
 
         top_split = QSplitter(Qt.Orientation.Horizontal)
+        top_split.setChildrenCollapsible(False)
         top_split.addWidget(self._create_registers_group())
         top_split.addWidget(self._create_bottom_tabs())
         top_split.setSizes([_TOP_SPLIT_LEFT, _TOP_SPLIT_RIGHT])

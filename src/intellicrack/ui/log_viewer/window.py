@@ -75,6 +75,9 @@ _DETAILS_DIALOG_HEIGHT: Final[int] = 480
 _MIN_ROWS: Final[int] = 1_000
 _MAX_ROWS: Final[int] = 500_000
 
+_TIME_COLUMN: Final[int] = 0
+_LEVEL_COLUMN: Final[int] = 1
+
 
 def _resolve_log_path(config: Config) -> Path:
     """Resolve the active log file path from configuration.
@@ -127,9 +130,7 @@ def _coerce_bool(value: object) -> bool | None:
         lowered = value.strip().lower()
         if lowered in _TRUTHY_STRINGS:
             return True
-        if lowered in _FALSY_STRINGS:
-            return False
-        return None
+        return False if lowered in _FALSY_STRINGS else None
     return None
 
 
@@ -200,7 +201,7 @@ class LogRecordDetailsDialog(QDialog):
 
     @property
     def text(self) -> str:
-        """Return the JSON text currently displayed in the dialog.
+        """The JSON text currently displayed in the dialog.
 
         Returns:
             str: Pretty-printed JSON for the record.
@@ -240,8 +241,10 @@ class _LogTableView(QTableView):
             vertical_header.setDefaultSectionSize(18)
         horizontal_header = self.horizontalHeader()
         if horizontal_header is not None:
-            horizontal_header.setStretchLastSection(True)
             horizontal_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+            horizontal_header.setStretchLastSection(True)
+            horizontal_header.setSectionResizeMode(_TIME_COLUMN, QHeaderView.ResizeMode.ResizeToContents)
+            horizontal_header.setSectionResizeMode(_LEVEL_COLUMN, QHeaderView.ResizeMode.ResizeToContents)
         self.doubleClicked.connect(self._on_double_clicked)
         _logger.debug("log_viewer_table_view_initialized")
 
@@ -323,7 +326,7 @@ class LogViewerWindow(QMainWindow):
 
     @property
     def model(self) -> LogRecordTableModel:
-        """Return the underlying log-record table model.
+        """The underlying log-record table model.
 
         Returns:
             LogRecordTableModel: The source model backing the table.
@@ -332,7 +335,7 @@ class LogViewerWindow(QMainWindow):
 
     @property
     def proxy(self) -> LogFilterProxyModel:
-        """Return the filter proxy connected between model and view.
+        """The filter proxy connected between model and view.
 
         Returns:
             LogFilterProxyModel: The active proxy model.
@@ -341,7 +344,7 @@ class LogViewerWindow(QMainWindow):
 
     @property
     def pause_action(self) -> QAction | None:
-        """Return the toolbar Pause action when the toolbar is built.
+        """The toolbar Pause action, available once the toolbar is built.
 
         Returns:
             QAction | None: The Pause :class:`QAction`, or ``None`` if
@@ -651,6 +654,7 @@ class LogViewerWindow(QMainWindow):
     def _on_reload_from_disk(self) -> None:
         """Replace the model contents with a fresh tail of the log file."""
         self._tail_reader.stop()
+        self._tail_reader.deleteLater()
         self._model.clear()
         new_reader = LogFileTailReader(self.log_path, parent=self)
         new_reader.record_emitted.connect(self._model.append_record)

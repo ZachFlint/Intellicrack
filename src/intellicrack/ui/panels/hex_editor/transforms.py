@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from typing import Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -40,7 +40,42 @@ from intellicrack.ui.panels.hex_editor.base import (
 )
 
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
 _logger = get_logger(__name__)
+
+
+def _parse_block_dialog_values[DialogValuesT](
+    get_values: Callable[[], DialogValuesT],
+    title: str,
+    parent: QWidget | None,
+) -> DialogValuesT | None:
+    """Parse block-dialog inputs, surfacing malformed values as a warning.
+
+    The block dialogs parse their text fields with ``int(text, 0)`` and
+    ``bytes.fromhex`` inside ``get_values``; malformed input such as ``"0xZZ"``
+    or ``"GG"`` raises ``ValueError``. Calling ``get_values`` directly from a Qt
+    slot would let that exception escape into the event loop and abort the
+    application, so the parse is performed here and any ``ValueError`` is
+    reported to the user instead of propagating.
+
+    Args:
+        get_values: Bound ``get_values`` method of the dialog to invoke.
+        title: Message-box title identifying the operation.
+        parent: Parent widget for the warning dialog, or ``None``.
+
+    Returns:
+        DialogValuesT | None: The parsed values on success, or ``None`` when
+            the input could not be parsed.
+    """
+    try:
+        return get_values()
+    except ValueError as exc:
+        _logger.warning("hex_editor_block_dialog_invalid_input", dialog=title, error=str(exc))
+        QMessageBox.warning(parent, title, f"Invalid input: {exc}")
+        return None
 
 
 _LAYOUT_MARGIN: Final[int] = 2
@@ -848,7 +883,10 @@ class TransformsMixin:
         dlg = _BlockFillDialog(self._hex_widget, parent)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
-        offset, length, pattern = dlg.get_values()
+        values = _parse_block_dialog_values(dlg.get_values, "Fill Block", parent)
+        if values is None:
+            return
+        offset, length, pattern = values
         if not pattern:
             return
         _logger.info("block_fill_invoke", offset=offset, length=length, pattern_size=len(pattern))
@@ -871,7 +909,10 @@ class TransformsMixin:
         dlg = _BlockCopyMoveDialog("Copy Block", parent)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
-        src, length, dst = dlg.get_values()
+        values = _parse_block_dialog_values(dlg.get_values, "Copy Block", parent)
+        if values is None:
+            return
+        src, length, dst = values
         _logger.info("block_copy_started", src=src, length=length, dst=dst)
         try:
             self.document.copy_block(src, length, dst)
@@ -892,7 +933,10 @@ class TransformsMixin:
         dlg = _BlockCopyMoveDialog("Move Block", parent)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
-        src, length, dst = dlg.get_values()
+        values = _parse_block_dialog_values(dlg.get_values, "Move Block", parent)
+        if values is None:
+            return
+        src, length, dst = values
         try:
             self.document.move_block(src, length, dst)
         except (RuntimeError, OSError, ValueError, AttributeError):
@@ -911,7 +955,10 @@ class TransformsMixin:
         dlg = _BlockSwapDialog(parent)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
-        off_a, len_a, off_b, len_b = dlg.get_values()
+        values = _parse_block_dialog_values(dlg.get_values, "Swap Blocks", parent)
+        if values is None:
+            return
+        off_a, len_a, off_b, len_b = values
         try:
             self.document.swap_blocks(off_a, len_a, off_b, len_b)
         except (RuntimeError, OSError, ValueError, AttributeError):

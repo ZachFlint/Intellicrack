@@ -21,6 +21,7 @@ from PyQt6.QtGui import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger(__name__)
@@ -28,7 +29,10 @@ _logger = get_logger(__name__)
 _BLOCK_STATE_NORMAL = 0
 _BLOCK_STATE_DOUBLE_QUOTE = 1
 _BLOCK_STATE_SINGLE_QUOTE = 2
+_BLOCK_STATE_BLOCK_COMMENT = 1
 _DELIM_STATE_MAP = (_BLOCK_STATE_DOUBLE_QUOTE, _BLOCK_STATE_SINGLE_QUOTE)
+
+_STRING_DELIMITERS: tuple[str, ...] = ('"', "'", "`")
 
 
 class HighlightRule:
@@ -47,7 +51,223 @@ class HighlightRule:
         self.format = text_format
 
 
-class CSyntaxHighlighter(QSyntaxHighlighter):
+class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
+    """Base highlighter that resolves token colors from the active theme.
+
+    Subclasses declare their language rules in :meth:`_setup_rules` using semantic token roles (``keyword``, ``string``, ``operator`` and so
+    on) rather than hard-coded hex colors. The concrete color for each role is pulled from :meth:`ThemeManager.get_analysis_colors`, so
+    tokens stay readable in both the light and dark themes. The highlighter subscribes to :attr:`ThemeManager.theme_changed` and re-resolves
+    its palette and re-highlights the document whenever the theme switches.
+    """
+
+    _ROLE_KEYS: ClassVar[dict[str, str]] = {
+        "keyword": "mnemonic_jump",
+        "type": "operand_register",
+        "string": "mnemonic_ret",
+        "number": "operand_immediate",
+        "function": "mnemonic_call",
+        "comment": "muted",
+        "meta": "warning",
+        "operator": "foreground",
+        "variable": "operand_memory",
+    }
+
+    def __init__(self, parent: QTextDocument | None = None) -> None:
+        """Initialize the themed highlighter and subscribe to theme changes.
+
+        Args:
+            parent: Parent QTextDocument to highlight.
+        """
+        super().__init__(parent)
+        self._rules: list[HighlightRule] = []
+        self._rule_specs: list[tuple[str, str, bool, bool]] = []
+        self._comment_role: str | None = None
+        self._string_role: str | None = None
+        self._multi_line_comment_format = QTextCharFormat()
+        self._triple_quote_format = QTextCharFormat()
+        self._comment_start = QRegularExpression(r"/\*")
+        self._comment_end = QRegularExpression(r"\*/")
+        self._theme_manager = ThemeManager.get_instance()
+        self._palette: dict[str, QColor] = self._resolve_palette()
+        self._theme_manager.theme_changed.connect(self._on_theme_changed)
+
+    def _resolve_palette(self) -> dict[str, QColor]:
+        """Resolve the semantic token palette from the active theme.
+
+        Returns:
+            dict[str, QColor]: Mapping of token role names to the theme's
+                current QColor for that role.
+        """
+        colors = self._theme_manager.get_analysis_colors()
+        return {role: QColor(colors[key]) for role, key in self._ROLE_KEYS.items()}
+
+    def token_color(self, role: str) -> QColor:
+        """Return the resolved foreground color for a semantic token role.
+
+        Args:
+            role: Token role name (e.g. ``"operator"`` or ``"number"``).
+
+        Returns:
+            QColor: The theme-resolved color currently used for that role.
+        """
+        return self._palette[role]
+
+    def _create_format(
+        self,
+        role: str,
+        *,
+        bold: bool = False,
+        italic: bool = False,
+    ) -> QTextCharFormat:
+        """Create a text format for a semantic token role.
+
+        Args:
+            role: Token role name resolved through the active theme palette.
+            bold: Whether to use bold font.
+            italic: Whether to use italic font.
+
+        Returns:
+            QTextCharFormat: Configured text format.
+        """
+        text_format = QTextCharFormat()
+        text_format.setForeground(self._palette[role])
+        if bold:
+            text_format.setFontWeight(QFont.Weight.Bold)
+        if italic:
+            text_format.setFontItalic(True)
+        return text_format
+
+    def _setup_rules(self) -> None:
+        """Rebuild highlighting rules and multi-line formats from the palette.
+
+        Converts the language rule specifications collected in
+        ``self._rule_specs`` into :class:`HighlightRule` objects using the
+        current theme palette, and refreshes the multi-line comment and
+        triple-quoted-string formats when the subclass declares those roles.
+        """
+        self._rules = [
+            HighlightRule(pattern, self._create_format(role, bold=bold, italic=italic)) for pattern, role, bold, italic in self._rule_specs
+        ]
+        if self._comment_role is not None:
+            self._multi_line_comment_format = self._create_format(self._comment_role, italic=True)
+        if self._string_role is not None:
+            self._triple_quote_format = self._create_format(self._string_role)
+
+    def _on_theme_changed(self, _theme_name: str) -> None:
+        """Re-resolve the palette and re-highlight after a theme switch.
+
+        Args:
+            _theme_name: Resolved theme name emitted by :class:`ThemeManager`
+                (unused; colors are pulled from the manager directly).
+        """
+        self._palette = self._resolve_palette()
+        self._setup_rules()
+        self.rehighlight()
+
+    def _apply_rules(self, text: str) -> None:
+        """Apply every single-line highlighting rule to a block of text.
+
+        Args:
+            text: The text block to highlight.
+        """
+        for rule in self._rules:
+            iterator = rule.pattern.globalMatch(text)
+            while iterator.hasNext():
+                match = iterator.next()
+                self.setFormat(match.capturedStart(), match.capturedLength(), rule.format)
+
+    @staticmethod
+    def _line_comment_start_index(text: str) -> int:
+        """Return the index of the first ``//`` line comment outside any string.
+
+        Scans the text tracking single, double, and backtick string literals
+        (honoring backslash escapes) so a ``//`` inside a string is not treated
+        as a comment.
+
+        Args:
+            text: The text block to scan.
+
+        Returns:
+            int: Index of the opening ``//``, or ``-1`` when the line has no
+                line comment outside a string literal.
+        """
+        in_string: str | None = None
+        index = 0
+        length = len(text)
+        while index < length:
+            char = text[index]
+            if in_string is not None:
+                if char == "\\":
+                    index += 2
+                    continue
+                if char == in_string:
+                    in_string = None
+                index += 1
+                continue
+            if char in _STRING_DELIMITERS:
+                in_string = char
+                index += 1
+                continue
+            if char == "/" and index + 1 < length and text[index + 1] == "/":
+                return index
+            index += 1
+        return -1
+
+    @staticmethod
+    def _guard_block_start(start_index: int, line_comment_index: int) -> int:
+        """Discard a block-comment start that falls inside a line comment.
+
+        Args:
+            start_index: Candidate index of a ``/*`` block-comment opener, or
+                ``-1`` when none was found.
+            line_comment_index: Index of the line's ``//`` comment, or ``-1``.
+
+        Returns:
+            int: ``start_index`` when it precedes any line comment, otherwise
+                ``-1`` so the ``/*`` inside a ``//`` comment is ignored.
+        """
+        if start_index >= 0 and 0 <= line_comment_index <= start_index:
+            return -1
+        return start_index
+
+    def _scan_block_comments(self, text: str) -> None:
+        """Highlight ``/* */`` block comments spanning one or more blocks.
+
+        A ``/*`` that appears after a ``//`` line comment on the same line is
+        ignored so a commented-out ``/*`` does not start a spurious multi-line
+        block comment.
+
+        Args:
+            text: The text block to highlight.
+        """
+        self.setCurrentBlockState(_BLOCK_STATE_NORMAL)
+        line_comment_index = self._line_comment_start_index(text)
+
+        if self.previousBlockState() == _BLOCK_STATE_BLOCK_COMMENT:
+            start_index = 0
+        else:
+            match = self._comment_start.match(text)
+            candidate = match.capturedStart() if match.hasMatch() else -1
+            start_index = self._guard_block_start(candidate, line_comment_index)
+
+        while start_index >= 0:
+            end_match = self._comment_end.match(text, start_index)
+            if end_match.hasMatch():
+                end_index = end_match.capturedEnd()
+                comment_length = end_index - start_index
+                self.setCurrentBlockState(_BLOCK_STATE_NORMAL)
+            else:
+                self.setCurrentBlockState(_BLOCK_STATE_BLOCK_COMMENT)
+                comment_length = len(text) - start_index
+
+            self.setFormat(start_index, comment_length, self._multi_line_comment_format)
+
+            next_match = self._comment_start.match(text, start_index + comment_length)
+            candidate = next_match.capturedStart() if next_match.hasMatch() else -1
+            start_index = self._guard_block_start(candidate, line_comment_index)
+
+
+class CSyntaxHighlighter(_ThemedSyntaxHighlighter):
     """Syntax highlighter for C/C++ code.
 
     Highlights keywords, types, strings, numbers, comments,
@@ -154,70 +374,21 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
             parent: Parent QTextDocument to highlight.
         """
         super().__init__(parent)
-        self._rules: list[HighlightRule] = []
-        self._multi_line_comment_format = QTextCharFormat()
-        self._comment_start = QRegularExpression(r"/\*")
-        self._comment_end = QRegularExpression(r"\*/")
+        self._comment_role = "comment"
+        self._rule_specs = [
+            *((rf"\b{keyword}\b", "keyword", True, False) for keyword in self.KEYWORDS),
+            *((rf"\b{type_name}\b", "type", False, False) for type_name in self.TYPES),
+            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False),
+            (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
+            (r"\b0b[01]+\b", "number", False, False),
+            (r"\b\d+\.?\d*[fFlL]?\b", "number", False, False),
+            (r"\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()", "function", False, False),
+            (r"//[^\n]*", "comment", False, True),
+            (r"#\s*\w+", "meta", False, False),
+            (r"[+\-*/%&|^~<>=!]+", "operator", False, False),
+        ]
         self._setup_rules()
-
-    @staticmethod
-    def _create_format(
-        color: str,
-        *,
-        bold: bool = False,
-        italic: bool = False,
-    ) -> QTextCharFormat:
-        """Create a text format with specified style.
-
-        Args:
-            color: Hex color string.
-            bold: Whether to use bold font.
-            italic: Whether to use italic font.
-
-        Returns:
-            QTextCharFormat: Configured text format.
-        """
-        text_format = QTextCharFormat()
-        text_format.setForeground(QColor(color))
-        if bold:
-            text_format.setFontWeight(QFont.Weight.Bold)
-        if italic:
-            text_format.setFontItalic(True)
-        return text_format
-
-    def _setup_rules(self) -> None:
-        """Set up all highlighting rules."""
-        keyword_format = CSyntaxHighlighter._create_format("#569CD6", bold=True)
-        for keyword in self.KEYWORDS:
-            pattern = rf"\b{keyword}\b"
-            self._rules.append(HighlightRule(pattern, keyword_format))
-
-        type_format = CSyntaxHighlighter._create_format("#4EC9B0")
-        for type_name in self.TYPES:
-            pattern = rf"\b{type_name}\b"
-            self._rules.append(HighlightRule(pattern, type_format))
-
-        string_format = CSyntaxHighlighter._create_format("#CE9178")
-        self._rules.append(HighlightRule(r'"[^"\\]*(\\.[^"\\]*)*"', string_format))
-        self._rules.append(HighlightRule(r"'[^'\\]*(\\.[^'\\]*)*'", string_format))
-
-        number_format = CSyntaxHighlighter._create_format("#B5CEA8")
-        self._rules.append(HighlightRule(r"\b0x[0-9A-Fa-f]+\b", number_format))
-        self._rules.append(HighlightRule(r"\b0b[01]+\b", number_format))
-        self._rules.append(HighlightRule(r"\b\d+\.?\d*[fFlL]?\b", number_format))
-
-        function_format = CSyntaxHighlighter._create_format("#DCDCAA")
-        self._rules.append(HighlightRule(r"\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()", function_format))
-
-        comment_format = CSyntaxHighlighter._create_format("#6A9955", italic=True)
-        self._rules.append(HighlightRule(r"//[^\n]*", comment_format))
-        self._multi_line_comment_format = comment_format
-
-        preprocessor_format = CSyntaxHighlighter._create_format("#C586C0")
-        self._rules.append(HighlightRule(r"#\s*\w+", preprocessor_format))
-
-        operator_format = CSyntaxHighlighter._create_format("#D4D4D4")
-        self._rules.append(HighlightRule(r"[+\-*/%&|^~<>=!]+", operator_format))
 
     @override
     def highlightBlock(self, text: str | None) -> None:
@@ -228,44 +399,11 @@ class CSyntaxHighlighter(QSyntaxHighlighter):
         """
         if text is None:
             return
-        for rule in self._rules:
-            iterator = rule.pattern.globalMatch(text)
-            while iterator.hasNext():
-                match = iterator.next()
-                self.setFormat(
-                    match.capturedStart(),
-                    match.capturedLength(),
-                    rule.format,
-                )
-
-        self.setCurrentBlockState(0)
-
-        start_index = 0
-        if self.previousBlockState() != 1:
-            match = self._comment_start.match(text)
-            start_index = match.capturedStart() if match.hasMatch() else -1
-
-        while start_index >= 0:
-            end_match = self._comment_end.match(text, start_index)
-            if end_match.hasMatch():
-                end_index = end_match.capturedEnd()
-                comment_length = end_index - start_index
-                self.setCurrentBlockState(0)
-            else:
-                self.setCurrentBlockState(1)
-                comment_length = len(text) - start_index
-
-            self.setFormat(
-                start_index,
-                comment_length,
-                self._multi_line_comment_format,
-            )
-
-            next_match = self._comment_start.match(text, start_index + comment_length)
-            start_index = next_match.capturedStart() if next_match.hasMatch() else -1
+        self._apply_rules(text)
+        self._scan_block_comments(text)
 
 
-class AssemblySyntaxHighlighter(QSyntaxHighlighter):
+class AssemblySyntaxHighlighter(_ThemedSyntaxHighlighter):
     """Syntax highlighter for x86/x64 assembly.
 
     Highlights instructions, registers, addresses, and comments
@@ -640,71 +778,21 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
             parent: Parent QTextDocument to highlight.
         """
         super().__init__(parent)
-        self._rules: list[HighlightRule] = []
+        self._rule_specs = [
+            *((rf"\b{instr}\b", "keyword", True, False) for instr in self.INSTRUCTIONS),
+            *((rf"\b{reg}\b", "variable", False, False) for reg in self.REGISTERS),
+            *((rf"\b{mem_kw}\b", "type", False, False) for mem_kw in self.MEMORY_KEYWORDS),
+            (r"^\s*\.(text|data|bss|section|globl?|extern)\b", "meta", False, False),
+            (r"\b(db|dw|dd|dq|resb|resw|resd|resq)\b", "meta", False, False),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
+            (r"\b[0-9A-Fa-f]+h\b", "number", False, False),
+            (r"\b\d+\b", "number", False, False),
+            (r"^[A-Za-z_][A-Za-z0-9_]*:", "function", False, False),
+            (r";.*$", "comment", False, True),
+            (r'"[^"]*"', "string", False, False),
+            (r"'[^']*'", "string", False, False),
+        ]
         self._setup_rules()
-
-    @staticmethod
-    def _create_format(
-        color: str,
-        *,
-        bold: bool = False,
-        italic: bool = False,
-    ) -> QTextCharFormat:
-        """Create a text format with specified style.
-
-        Args:
-            color: Hex color string.
-            bold: Whether to use bold font.
-            italic: Whether to use italic font.
-
-        Returns:
-            QTextCharFormat: Configured text format.
-        """
-        text_format = QTextCharFormat()
-        text_format.setForeground(QColor(color))
-        if bold:
-            text_format.setFontWeight(QFont.Weight.Bold)
-        if italic:
-            text_format.setFontItalic(True)
-        return text_format
-
-    def _setup_rules(self) -> None:
-        """Set up assembly highlighting rules."""
-        instr_format = AssemblySyntaxHighlighter._create_format("#569CD6", bold=True)
-        for instr in self.INSTRUCTIONS:
-            pattern = rf"\b{instr}\b"
-            self._rules.append(HighlightRule(pattern, instr_format))
-
-        reg_format = AssemblySyntaxHighlighter._create_format("#9CDCFE")
-        for reg in self.REGISTERS:
-            pattern = rf"\b{reg}\b"
-            self._rules.append(HighlightRule(pattern, reg_format))
-
-        mem_format = AssemblySyntaxHighlighter._create_format("#4EC9B0")
-        for mem_kw in self.MEMORY_KEYWORDS:
-            pattern = rf"\b{mem_kw}\b"
-            self._rules.append(HighlightRule(pattern, mem_format))
-
-        directive_format = AssemblySyntaxHighlighter._create_format("#C586C0")
-        self._rules.append(HighlightRule(r"^\s*\.(text|data|bss|section|globl?|extern)\b", directive_format))
-        self._rules.append(HighlightRule(r"\b(db|dw|dd|dq|resb|resw|resd|resq)\b", directive_format))
-
-        addr_format = AssemblySyntaxHighlighter._create_format("#B5CEA8")
-        self._rules.append(HighlightRule(r"\b0x[0-9A-Fa-f]+\b", addr_format))
-        self._rules.append(HighlightRule(r"\b[0-9A-Fa-f]+h\b", addr_format))
-
-        number_format = AssemblySyntaxHighlighter._create_format("#B5CEA8")
-        self._rules.append(HighlightRule(r"\b\d+\b", number_format))
-
-        label_format = AssemblySyntaxHighlighter._create_format("#DCDCAA")
-        self._rules.append(HighlightRule(r"^[A-Za-z_][A-Za-z0-9_]*:", label_format))
-
-        comment_format = AssemblySyntaxHighlighter._create_format("#6A9955", italic=True)
-        self._rules.append(HighlightRule(r";.*$", comment_format))
-
-        string_format = AssemblySyntaxHighlighter._create_format("#CE9178")
-        self._rules.append(HighlightRule(r'"[^"]*"', string_format))
-        self._rules.append(HighlightRule(r"'[^']*'", string_format))
 
     @override
     def highlightBlock(self, text: str | None) -> None:
@@ -715,18 +803,10 @@ class AssemblySyntaxHighlighter(QSyntaxHighlighter):
         """
         if text is None:
             return
-        for rule in self._rules:
-            iterator = rule.pattern.globalMatch(text)
-            while iterator.hasNext():
-                match = iterator.next()
-                self.setFormat(
-                    match.capturedStart(),
-                    match.capturedLength(),
-                    rule.format,
-                )
+        self._apply_rules(text)
 
 
-class PythonSyntaxHighlighter(QSyntaxHighlighter):
+class PythonSyntaxHighlighter(_ThemedSyntaxHighlighter):
     """Syntax highlighter for Python code.
 
     Highlights Python keywords, built-ins, strings, numbers,
@@ -850,71 +930,24 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
             parent: Parent QTextDocument to highlight.
         """
         super().__init__(parent)
-        self._rules: list[HighlightRule] = []
-        self._triple_quote_format = QTextCharFormat()
+        self._string_role = "string"
+        self._rule_specs = [
+            *((rf"\b{keyword}\b", "keyword", True, False) for keyword in self.KEYWORDS),
+            *((rf"\b{builtin}\b", "type", False, False) for builtin in self.BUILTINS),
+            (r"\bdef\s+([A-Za-z_][A-Za-z0-9_]*)", "function", False, False),
+            (r"\bclass\s+([A-Za-z_][A-Za-z0-9_]*)", "function", False, False),
+            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False),
+            (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
+            (r"\b0b[01]+\b", "number", False, False),
+            (r"\b0o[0-7]+\b", "number", False, False),
+            (r"\b\d+\.?\d*\b", "number", False, False),
+            (r"#[^\n]*", "comment", False, True),
+            (r"@[A-Za-z_][A-Za-z0-9_]*", "meta", False, False),
+            (r"\bself\b", "variable", False, False),
+            (r"\bcls\b", "variable", False, False),
+        ]
         self._setup_rules()
-
-    @staticmethod
-    def _create_format(
-        color: str,
-        *,
-        bold: bool = False,
-        italic: bool = False,
-    ) -> QTextCharFormat:
-        """Create a text format with specified style.
-
-        Args:
-            color: Hex color string.
-            bold: Whether to use bold font.
-            italic: Whether to use italic font.
-
-        Returns:
-            QTextCharFormat: Configured text format.
-        """
-        text_format = QTextCharFormat()
-        text_format.setForeground(QColor(color))
-        if bold:
-            text_format.setFontWeight(QFont.Weight.Bold)
-        if italic:
-            text_format.setFontItalic(True)
-        return text_format
-
-    def _setup_rules(self) -> None:
-        """Set up Python highlighting rules."""
-        keyword_format = PythonSyntaxHighlighter._create_format("#569CD6", bold=True)
-        for keyword in self.KEYWORDS:
-            pattern = rf"\b{keyword}\b"
-            self._rules.append(HighlightRule(pattern, keyword_format))
-
-        builtin_format = PythonSyntaxHighlighter._create_format("#4EC9B0")
-        for builtin in self.BUILTINS:
-            pattern = rf"\b{builtin}\b"
-            self._rules.append(HighlightRule(pattern, builtin_format))
-
-        function_format = PythonSyntaxHighlighter._create_format("#DCDCAA")
-        self._rules.append(HighlightRule(r"\bdef\s+([A-Za-z_][A-Za-z0-9_]*)", function_format))
-        self._rules.append(HighlightRule(r"\bclass\s+([A-Za-z_][A-Za-z0-9_]*)", function_format))
-
-        string_format = PythonSyntaxHighlighter._create_format("#CE9178")
-        self._rules.append(HighlightRule(r'"[^"\\]*(\\.[^"\\]*)*"', string_format))
-        self._rules.append(HighlightRule(r"'[^'\\]*(\\.[^'\\]*)*'", string_format))
-        self._triple_quote_format = string_format
-
-        number_format = PythonSyntaxHighlighter._create_format("#B5CEA8")
-        self._rules.append(HighlightRule(r"\b0x[0-9A-Fa-f]+\b", number_format))
-        self._rules.append(HighlightRule(r"\b0b[01]+\b", number_format))
-        self._rules.append(HighlightRule(r"\b0o[0-7]+\b", number_format))
-        self._rules.append(HighlightRule(r"\b\d+\.?\d*\b", number_format))
-
-        comment_format = PythonSyntaxHighlighter._create_format("#6A9955", italic=True)
-        self._rules.append(HighlightRule(r"#[^\n]*", comment_format))
-
-        decorator_format = PythonSyntaxHighlighter._create_format("#C586C0")
-        self._rules.append(HighlightRule(r"@[A-Za-z_][A-Za-z0-9_]*", decorator_format))
-
-        self_format = PythonSyntaxHighlighter._create_format("#9CDCFE")
-        self._rules.append(HighlightRule(r"\bself\b", self_format))
-        self._rules.append(HighlightRule(r"\bcls\b", self_format))
 
     @override
     def highlightBlock(self, text: str | None) -> None:
@@ -925,16 +958,7 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
         """
         if text is None:
             return
-        for rule in self._rules:
-            iterator = rule.pattern.globalMatch(text)
-            while iterator.hasNext():
-                match = iterator.next()
-                self.setFormat(
-                    match.capturedStart(),
-                    match.capturedLength(),
-                    rule.format,
-                )
-
+        self._apply_rules(text)
         self._highlight_triple_quotes(text)
 
     def _highlight_triple_quotes(self, text: str) -> None:
@@ -1003,7 +1027,7 @@ class PythonSyntaxHighlighter(QSyntaxHighlighter):
             offset = nearest_pos + length
 
 
-class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
+class JavaScriptSyntaxHighlighter(_ThemedSyntaxHighlighter):
     """Syntax highlighter for JavaScript code.
 
     Highlights JavaScript/Frida script keywords, functions,
@@ -1091,64 +1115,19 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
             parent: Parent QTextDocument to highlight.
         """
         super().__init__(parent)
-        self._rules: list[HighlightRule] = []
-        self._multi_line_comment_format = QTextCharFormat()
-        self._comment_start = QRegularExpression(r"/\*")
-        self._comment_end = QRegularExpression(r"\*/")
+        self._comment_role = "comment"
+        self._rule_specs = [
+            *((rf"\b{keyword}\b", "keyword", True, False) for keyword in self.KEYWORDS),
+            *((rf"\b{frida_global}\b", "type", True, False) for frida_global in self.FRIDA_GLOBALS),
+            (r"\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()", "function", False, False),
+            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False),
+            (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False),
+            (r"`[^`\\]*(\\.[^`\\]*)*`", "string", False, False),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
+            (r"\b\d+\.?\d*\b", "number", False, False),
+            (r"//[^\n]*", "comment", False, True),
+        ]
         self._setup_rules()
-
-    @staticmethod
-    def _create_format(
-        color: str,
-        *,
-        bold: bool = False,
-        italic: bool = False,
-    ) -> QTextCharFormat:
-        """Create a text format with specified style.
-
-        Args:
-            color: Hex color string.
-            bold: Whether to use bold font.
-            italic: Whether to use italic font.
-
-        Returns:
-            QTextCharFormat: Configured text format.
-        """
-        text_format = QTextCharFormat()
-        text_format.setForeground(QColor(color))
-        if bold:
-            text_format.setFontWeight(QFont.Weight.Bold)
-        if italic:
-            text_format.setFontItalic(True)
-        return text_format
-
-    def _setup_rules(self) -> None:
-        """Set up JavaScript highlighting rules."""
-        keyword_format = JavaScriptSyntaxHighlighter._create_format("#569CD6", bold=True)
-        for keyword in self.KEYWORDS:
-            pattern = rf"\b{keyword}\b"
-            self._rules.append(HighlightRule(pattern, keyword_format))
-
-        frida_format = JavaScriptSyntaxHighlighter._create_format("#4EC9B0", bold=True)
-        for frida_global in self.FRIDA_GLOBALS:
-            pattern = rf"\b{frida_global}\b"
-            self._rules.append(HighlightRule(pattern, frida_format))
-
-        function_format = JavaScriptSyntaxHighlighter._create_format("#DCDCAA")
-        self._rules.append(HighlightRule(r"\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()", function_format))
-
-        string_format = JavaScriptSyntaxHighlighter._create_format("#CE9178")
-        self._rules.append(HighlightRule(r'"[^"\\]*(\\.[^"\\]*)*"', string_format))
-        self._rules.append(HighlightRule(r"'[^'\\]*(\\.[^'\\]*)*'", string_format))
-        self._rules.append(HighlightRule(r"`[^`\\]*(\\.[^`\\]*)*`", string_format))
-
-        number_format = JavaScriptSyntaxHighlighter._create_format("#B5CEA8")
-        self._rules.append(HighlightRule(r"\b0x[0-9A-Fa-f]+\b", number_format))
-        self._rules.append(HighlightRule(r"\b\d+\.?\d*\b", number_format))
-
-        comment_format = JavaScriptSyntaxHighlighter._create_format("#6A9955", italic=True)
-        self._rules.append(HighlightRule(r"//[^\n]*", comment_format))
-        self._multi_line_comment_format = comment_format
 
     @override
     def highlightBlock(self, text: str | None) -> None:
@@ -1159,44 +1138,11 @@ class JavaScriptSyntaxHighlighter(QSyntaxHighlighter):
         """
         if text is None:
             return
-        for rule in self._rules:
-            iterator = rule.pattern.globalMatch(text)
-            while iterator.hasNext():
-                match = iterator.next()
-                self.setFormat(
-                    match.capturedStart(),
-                    match.capturedLength(),
-                    rule.format,
-                )
-
-        self.setCurrentBlockState(0)
-
-        start_index = 0
-        if self.previousBlockState() != 1:
-            match = self._comment_start.match(text)
-            start_index = match.capturedStart() if match.hasMatch() else -1
-
-        while start_index >= 0:
-            end_match = self._comment_end.match(text, start_index)
-            if end_match.hasMatch():
-                end_index = end_match.capturedEnd()
-                comment_length = end_index - start_index
-                self.setCurrentBlockState(0)
-            else:
-                self.setCurrentBlockState(1)
-                comment_length = len(text) - start_index
-
-            self.setFormat(
-                start_index,
-                comment_length,
-                self._multi_line_comment_format,
-            )
-
-            next_match = self._comment_start.match(text, start_index + comment_length)
-            start_index = next_match.capturedStart() if next_match.hasMatch() else -1
+        self._apply_rules(text)
+        self._scan_block_comments(text)
 
 
-class HexPatSyntaxHighlighter(QSyntaxHighlighter):
+class HexPatSyntaxHighlighter(_ThemedSyntaxHighlighter):
     """Syntax highlighter for the HexPat pattern definition language.
 
     Highlights keywords (structural, control flow, namespace), primitive types
@@ -1270,81 +1216,22 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
             parent: Parent QTextDocument to highlight.
         """
         super().__init__(parent)
-        self._rules: list[HighlightRule] = []
-        self._multi_line_comment_format = QTextCharFormat()
-        self._comment_start = QRegularExpression(r"/\*")
-        self._comment_end = QRegularExpression(r"\*/")
+        self._comment_role = "comment"
+        self._rule_specs = [
+            *((rf"\b{keyword}\b", "keyword", True, False) for keyword in self.KEYWORDS),
+            *((rf"\b{type_name}\b", "type", False, False) for type_name in self.TYPES),
+            *((rf"\b{endian_kw}\b", "meta", False, False) for endian_kw in self.ENDIANNESS),
+            *((rf"\b{builtin_name}\b", "function", False, False) for builtin_name in self.BUILTINS),
+            (r"\$", "function", False, False),
+            (r"\[\[.*?\]\]", "meta", False, False),
+            *((rf"\b{attr_kw}\b", "variable", False, False) for attr_kw in ("color", "validate", "description", "min", "max")),
+            (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False),
+            (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
+            (r"\b\d+\b", "number", False, False),
+            (r"//[^\n]*", "comment", False, True),
+            (r"[+\-*/%&|^~<>=!]+", "operator", False, False),
+        ]
         self._setup_rules()
-
-    @staticmethod
-    def _create_format(
-        color: str,
-        *,
-        bold: bool = False,
-        italic: bool = False,
-    ) -> QTextCharFormat:
-        """Create a text format with specified style.
-
-        Args:
-            color: Hex color string.
-            bold: Whether to use bold font.
-            italic: Whether to use italic font.
-
-        Returns:
-            QTextCharFormat: Configured text format.
-        """
-        text_format = QTextCharFormat()
-        text_format.setForeground(QColor(color))
-        if bold:
-            text_format.setFontWeight(QFont.Weight.Bold)
-        if italic:
-            text_format.setFontItalic(True)
-        return text_format
-
-    def _setup_rules(self) -> None:
-        """Set up HexPat highlighting rules."""
-        keyword_format = HexPatSyntaxHighlighter._create_format("#569CD6", bold=True)
-        for keyword in self.KEYWORDS:
-            pattern = rf"\b{keyword}\b"
-            self._rules.append(HighlightRule(pattern, keyword_format))
-
-        type_format = HexPatSyntaxHighlighter._create_format("#4EC9B0")
-        for type_name in self.TYPES:
-            pattern = rf"\b{type_name}\b"
-            self._rules.append(HighlightRule(pattern, type_format))
-
-        endian_format = HexPatSyntaxHighlighter._create_format("#C586C0")
-        for endian_kw in self.ENDIANNESS:
-            pattern = rf"\b{endian_kw}\b"
-            self._rules.append(HighlightRule(pattern, endian_format))
-
-        builtin_format = HexPatSyntaxHighlighter._create_format("#DCDCAA")
-        for builtin_name in self.BUILTINS:
-            pattern = rf"\b{builtin_name}\b"
-            self._rules.append(HighlightRule(pattern, builtin_format))
-        self._rules.append(HighlightRule(r"\$", builtin_format))
-
-        annotation_format = HexPatSyntaxHighlighter._create_format("#D7BA7D")
-        self._rules.append(HighlightRule(r"\[\[.*?\]\]", annotation_format))
-
-        attr_keyword_format = HexPatSyntaxHighlighter._create_format("#9CDCFE")
-        for attr_kw in ("color", "validate", "description", "min", "max"):
-            pattern = rf"\b{attr_kw}\b"
-            self._rules.append(HighlightRule(pattern, attr_keyword_format))
-
-        string_format = HexPatSyntaxHighlighter._create_format("#CE9178")
-        self._rules.append(HighlightRule(r'"[^"\\]*(\\.[^"\\]*)*"', string_format))
-
-        number_format = HexPatSyntaxHighlighter._create_format("#B5CEA8")
-        self._rules.append(HighlightRule(r"\b0x[0-9A-Fa-f]+\b", number_format))
-        self._rules.append(HighlightRule(r"\b\d+\b", number_format))
-
-        comment_format = HexPatSyntaxHighlighter._create_format("#6A9955", italic=True)
-        self._rules.append(HighlightRule(r"//[^\n]*", comment_format))
-        self._multi_line_comment_format = comment_format
-
-        operator_format = HexPatSyntaxHighlighter._create_format("#D4D4D4")
-        self._rules.append(HighlightRule(r"[+\-*/%&|^~<>=!]+", operator_format))
 
     @override
     def highlightBlock(self, text: str | None) -> None:
@@ -1355,41 +1242,8 @@ class HexPatSyntaxHighlighter(QSyntaxHighlighter):
         """
         if text is None:
             return
-        for rule in self._rules:
-            iterator = rule.pattern.globalMatch(text)
-            while iterator.hasNext():
-                match = iterator.next()
-                self.setFormat(
-                    match.capturedStart(),
-                    match.capturedLength(),
-                    rule.format,
-                )
-
-        self.setCurrentBlockState(0)
-
-        start_index = 0
-        if self.previousBlockState() != 1:
-            match = self._comment_start.match(text)
-            start_index = match.capturedStart() if match.hasMatch() else -1
-
-        while start_index >= 0:
-            end_match = self._comment_end.match(text, start_index)
-            if end_match.hasMatch():
-                end_index = end_match.capturedEnd()
-                comment_length = end_index - start_index
-                self.setCurrentBlockState(0)
-            else:
-                self.setCurrentBlockState(1)
-                comment_length = len(text) - start_index
-
-            self.setFormat(
-                start_index,
-                comment_length,
-                self._multi_line_comment_format,
-            )
-
-            next_match = self._comment_start.match(text, start_index + comment_length)
-            start_index = next_match.capturedStart() if next_match.hasMatch() else -1
+        self._apply_rules(text)
+        self._scan_block_comments(text)
 
 
 def get_highlighter_for_language(

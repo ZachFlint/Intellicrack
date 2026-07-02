@@ -230,12 +230,17 @@ def execute_numeric_search(
     signed: bool,
     big_endian: bool,
     is_range: bool,
+    is_float: bool,
 ) -> list[tuple[int, int]]:
     """Run a numeric value search using native FFI when available.
 
-    Dispatches to the document's ``search_numeric_range`` or
-    ``search_numeric`` FFI methods when ``use_native`` is true and they
-    are available, otherwise falls back to a chunked Python scan.
+    Integer searches dispatch to the document's ``search_numeric_range`` or
+    ``search_numeric`` FFI methods when ``use_native`` is true and they are
+    available. Single-value float/double searches dispatch to the native
+    ``search_numeric_float`` method (which matches the IEEE-754 byte pattern
+    exactly rather than truncating the value to an integer); float range
+    searches, and any case where the required native method is missing, fall
+    back to the chunked Python scan using the ``struct`` format ``fmt``.
 
     Args:
         document: Hex document object.
@@ -250,12 +255,25 @@ def execute_numeric_search(
         signed: Whether to interpret values as signed.
         big_endian: Whether to use big-endian byte order.
         is_range: Whether to search for a range of values.
+        is_float: Whether the values are IEEE-754 floating point rather than
+            integers. Float values must never be coerced with ``int()``.
 
     Returns:
         list[tuple[int, int]]: List of ``(offset, byte_width)`` match tuples.
     """
     doc: Any = document
-    if use_native:
+    if use_native and is_float:
+        if not is_range and hasattr(doc, "search_numeric_float"):
+            raw = doc.search_numeric_float(
+                float(min_val),
+                size,
+                big_endian,
+                0.0,
+                alignment,
+                max_results,
+            )
+            return [(r[0], byte_width) for r in raw]
+    elif use_native:
         if is_range and hasattr(doc, "search_numeric_range"):
             raw = doc.search_numeric_range(
                 (int(min_val), int(max_val)),
@@ -380,10 +398,7 @@ class SearchMixin:
         if self._search_worker is not None and self._search_worker.isRunning():
             return
 
-        encoding = "utf-8"
-        if self._encoding_combo is not None:
-            enc_text = self._encoding_combo.currentText()
-            encoding = enc_text.lower().replace("-", "")
+        encoding = self._selected_search_encoding()
 
         self._search_input.setEnabled(False)
 
@@ -752,6 +767,7 @@ class SearchMixin:
             signed=fmt_info.is_signed,
             big_endian=fmt_info.big_endian,
             is_range=(params.range_mode and bool(params.max_text)),
+            is_float=fmt_info.is_float,
         )
         _: object = self._numeric_search_worker.call_finished.connect(self._on_numeric_search_finished_obj)
         _ = self._numeric_search_worker.call_error.connect(self._on_numeric_search_error)
@@ -813,16 +829,33 @@ class SearchMixin:
         parent = self if isinstance(self, QWidget) else None
         QMessageBox.warning(parent, "Numeric Search", f"Search failed:\n{exc}")
 
-    def _replace_encoding(self) -> str:
-        """Return the Python codec name selected in the toolbar encoding combo.
+    def _selected_search_encoding(self) -> str:
+        """Resolve the hexcore codec name selected in the toolbar encoding combo.
+
+        The codec name is stored as each item's user data (e.g. ``"ascii"``)
+        while the display text is a human-readable label (e.g.
+        ``"ASCII (7-bit)"``). Reading the label instead of the user data
+        yields an invalid codec such as ``"ascii (7bit)"`` that raises
+        ``LookupError`` when passed to ``bytes.decode`` or the Rust backend,
+        so the codec is always taken from ``currentData``.
 
         Returns:
-            str: Lower-cased, hyphen-stripped codec name (e.g. ``"utf8"``),
-                defaulting to ``"utf-8"`` when the combo is unavailable.
+            str: The selected codec name, or ``"utf-8"`` when the combo is
+                unavailable or carries no codec user data.
         """
         if self._encoding_combo is None:
             return "utf-8"
-        return self._encoding_combo.currentText().lower().replace("-", "")
+        data = self._encoding_combo.currentData()
+        return data if isinstance(data, str) and data else "utf-8"
+
+    def _replace_encoding(self) -> str:
+        """Return the hexcore codec name selected in the toolbar encoding combo.
+
+        Returns:
+            str: The selected codec name, or ``"utf-8"`` when the combo is
+                unavailable or carries no codec user data.
+        """
+        return self._selected_search_encoding()
 
     def _resolve_hex_replace_pair(self, mode: str, query: str, replace_text: str) -> tuple[str, str] | None:
         """Resolve the find/replace pair into hex-string byte patterns for ``replace_bytes``.
@@ -857,6 +890,15 @@ class SearchMixin:
         if mode == "Hex":
             return query.replace(" ", ""), replace_text.replace(" ", "")
 
+        if mode == "Numeric":
+            value_text = query.strip()
+            replace_value_text = replace_text.strip()
+            params = self._read_numeric_search_params(value_text)
+            fmt_info = _resolve_numeric_search_format(params)
+            pattern_bytes = pack_numeric_value(value_text, fmt_info)
+            replacement_bytes = pack_numeric_value(replace_value_text, fmt_info)
+            return pattern_bytes.hex(), replacement_bytes.hex()
+
         if mode == "Text":
             bridge = getattr(self, "_bridge", None)
             if bridge is None:
@@ -869,15 +911,6 @@ class SearchMixin:
                 msg = "encode_text did not return a hex string"
                 raise RuntimeError(msg)
             return pattern_hex, replacement_hex
-
-        if mode == "Numeric":
-            value_text = query.strip()
-            replace_value_text = replace_text.strip()
-            params = self._read_numeric_search_params(value_text)
-            fmt_info = _resolve_numeric_search_format(params)
-            pattern_bytes = pack_numeric_value(value_text, fmt_info)
-            replacement_bytes = pack_numeric_value(replace_value_text, fmt_info)
-            return pattern_bytes.hex(), replacement_bytes.hex()
 
         return None
 
@@ -903,23 +936,16 @@ class SearchMixin:
                 return None
             query = self._search_input.text().strip()
             replace_text = self._replace_input.text()
-        if not query:
-            return None
-        return query, replace_text
+        return (query, replace_text) if query else None
 
     def _on_replace_all(self) -> None:
         """Replace every occurrence of the current find pattern with the replace value.
 
-        Hex, Text, and Numeric modes resolve the find/replace pair into
-        fixed-width byte patterns and dispatch a single
-        ``HexEditorBridge.replace_bytes`` call, which replaces every
-        occurrence in one native pass. Regex mode has no fixed-width byte
-        pattern to hand the bridge, so it instead replaces every cached
-        search-result offset directly via ``document.write_bytes`` --
-        this requires the replacement to be the exact same byte length
-        as each match (a genuine constraint of in-place replacement,
-        since resizing per-match would invalidate subsequent offsets),
-        and the user is warned and the operation aborted if it is not.
+        Hex, Text, and Numeric modes resolve the find/replace pair into fixed-width byte patterns and dispatch a single
+        ``HexEditorBridge.replace_bytes`` call, which replaces every occurrence in one native pass. Regex mode has no fixed-width byte
+        pattern to hand the bridge, so it instead replaces every cached search-result offset directly via ``document.write_bytes`` -- this
+        requires the replacement to be the exact same byte length as each match (a genuine constraint of in-place replacement, since
+        resizing per-match would invalidate subsequent offsets), and the user is warned and the operation aborted if it is not.
         """
         document: Any = getattr(self, "document", None)
         if document is None or self._search_mode_combo is None:
@@ -1005,8 +1031,7 @@ class SearchMixin:
                 self._search_status_label.setText("No results found")
             return
 
-        mismatched = [length for _offset, length in matches if length != len(replacement_bytes)]
-        if mismatched:
+        if mismatched := [length for _offset, length in matches if length != len(replacement_bytes)]:
             show_warning(
                 parent,
                 "Replace All",
@@ -1102,12 +1127,9 @@ class SearchMixin:
     def _on_replace(self) -> None:
         """Replace only the currently-selected search result with the replace value.
 
-        Advances through :attr:`_search_results` the same way
-        :meth:`_on_find_next` does, but instead of merely navigating,
-        overwrites the bytes at the current match offset with the
-        encoded replacement value via ``document.write_bytes``. The
-        replacement must be the same byte length as the match (an
-        in-place, non-resizing write); the user is warned otherwise.
+        Advances through :attr:`_search_results` the same way :meth:`_on_find_next` does, but instead of merely navigating, overwrites the
+        bytes at the current match offset with the encoded replacement value via ``document.write_bytes``. The replacement must be the same
+        byte length as the match (an in-place, non-resizing write); the user is warned otherwise.
         """
         document: Any = getattr(self, "document", None)
         if document is None or self._search_mode_combo is None:

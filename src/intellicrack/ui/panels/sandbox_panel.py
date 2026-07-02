@@ -19,6 +19,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QHBoxLayout,
+    QHeaderView,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -65,6 +66,23 @@ _TIMEOUT_DEFAULT_SECONDS: Final[int] = 300
 _MEMORY_MIN_MB: Final[int] = 128
 _MEMORY_MAX_MB: Final[int] = 131072
 _MEMORY_DEFAULT_MB: Final[int] = 2048
+
+
+def _configure_result_columns(tree: QTreeWidget) -> None:
+    """Size a result tree's columns to their content so long values are not clipped.
+
+    Applies ``ResizeToContents`` to every column so long file paths, registry
+    keys and API argument blobs are shown in full instead of being truncated
+    with no way to read them, and elides overflow in the middle when a value is
+    still wider than the available space.
+
+    Args:
+        tree: The result tree widget to configure.
+    """
+    header = tree.header()
+    if header is not None:
+        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+    tree.setTextElideMode(Qt.TextElideMode.ElideMiddle)
 
 
 class _SandboxCreateConfig(TypedDict):
@@ -475,6 +493,25 @@ class SandboxPanel(AnalysisPanelBase):
         self._instances_tree = QTreeWidget()
         set_header_labels(self._instances_tree, ["ID", "Type", "Status", "Created", "Last Used", "Binary"])
         output_tabs.addTab(self._instances_tree, "Instances")
+
+        for result_tree in (
+            self._file_changes_tree,
+            self._registry_changes_tree,
+            self._network_tree,
+            self._snapshots_tree,
+            self._api_calls_tree,
+            self._dll_loads_tree,
+            self._services_tree,
+            self._kernel_objects_tree,
+            self._injections_tree,
+            self._resources_tree,
+            self._clipboard_tree,
+            self._timeline_tree,
+            self._iocs_tree,
+            self._behaviors_tree,
+            self._instances_tree,
+        ):
+            _configure_result_columns(result_tree)
 
         main_splitter.addWidget(output_tabs)
 

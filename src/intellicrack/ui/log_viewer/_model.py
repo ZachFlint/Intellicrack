@@ -17,6 +17,7 @@ from PyQt6.QtCore import QAbstractTableModel, QModelIndex, Qt, QTimer
 from PyQt6.QtGui import QColor
 
 from intellicrack.ui.log_viewer._record import LogRecordDict, extras_to_compact_json
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 if TYPE_CHECKING:
@@ -41,19 +42,11 @@ _COLUMN_COUNT: Final[int] = 6
 
 _HEADERS: Final[tuple[str, ...]] = ("Time", "Level", "Logger", "Function:Line", "Event", "Extras")
 
-_LEVEL_COLORS: Final[dict[str, QColor]] = {
-    "DEBUG": QColor(120, 120, 120),
-    "INFO": QColor(220, 220, 220),
-    "WARNING": QColor(255, 200, 0),
-    "ERROR": QColor(255, 90, 90),
-    "CRITICAL": QColor(255, 50, 200),
-}
-
-_LEVEL_BACKGROUNDS: Final[dict[str, QColor]] = {
-    "WARNING": QColor(60, 48, 16),
-    "ERROR": QColor(70, 24, 24),
-    "CRITICAL": QColor(70, 16, 56),
-}
+_TINT_ALPHA: Final[int] = 48
+_LUMINANCE_MIDPOINT: Final[float] = 0.5
+_LUMINANCE_RED_WEIGHT: Final[float] = 0.299
+_LUMINANCE_GREEN_WEIGHT: Final[float] = 0.587
+_LUMINANCE_BLUE_WEIGHT: Final[float] = 0.114
 
 
 def _flatten_for_display(text: str) -> str:
@@ -106,15 +99,115 @@ class LogRecordTableModel(QAbstractTableModel):
         self._drain_timer.setInterval(_COALESCE_INTERVAL_MS)
         self._drain_timer.timeout.connect(self._drain_pending)
         self._total_received: int = 0
+        self._theme_manager = ThemeManager.get_instance()
+        self._level_foregrounds: dict[str, QColor] = {}
+        self._level_backgrounds: dict[str, QColor] = {}
+        self._resolve_level_colors()
+        self._theme_manager.theme_changed.connect(self._on_theme_changed)
 
     @property
     def total_received(self) -> int:
-        """Return the total number of records ever appended.
+        """Total number of records ever appended.
 
         Returns:
             int: Cumulative count, including evicted records.
         """
         return self._total_received
+
+    @staticmethod
+    def _contrasting_text_color(background: QColor) -> QColor:
+        """Return black or white, whichever contrasts better with a background.
+
+        Args:
+            background: Solid background color a badge-style cell paints text over.
+
+        Returns:
+            QColor: Black for light backgrounds, white for dark ones, chosen by
+                perceived (Rec. 601) relative luminance.
+        """
+        luminance = (
+            _LUMINANCE_RED_WEIGHT * background.red()
+            + _LUMINANCE_GREEN_WEIGHT * background.green()
+            + _LUMINANCE_BLUE_WEIGHT * background.blue()
+        ) / 255.0
+        if luminance > _LUMINANCE_MIDPOINT:
+            return QColor(0, 0, 0)
+        return QColor(255, 255, 255)
+
+    def _resolve_level_colors(self) -> None:
+        """Resolve per-level foreground and background colors from the active theme.
+
+        DEBUG and INFO map to the theme's muted and primary foreground so both stay readable against the active background (fixing white-on-
+        white INFO text under the light theme). WARNING and ERROR keep their semantic hue with a faint tint, while CRITICAL renders as a
+        solid badge with a contrast-picked foreground so the three severities remain distinguishable in both light and dark themes.
+        """
+        colors = self._theme_manager.get_analysis_colors()
+        foreground = colors["foreground"]
+        muted = colors["muted"]
+        warning = colors["warning"]
+        error = colors["error"]
+
+        critical_background = QColor(error)
+        self._level_foregrounds = {
+            "DEBUG": QColor(muted),
+            "INFO": QColor(foreground),
+            "WARNING": QColor(warning),
+            "ERROR": QColor(error),
+            "CRITICAL": self._contrasting_text_color(critical_background),
+        }
+
+        warning_background = QColor(warning)
+        warning_background.setAlpha(_TINT_ALPHA)
+        error_background = QColor(error)
+        error_background.setAlpha(_TINT_ALPHA)
+        self._level_backgrounds = {
+            "WARNING": warning_background,
+            "ERROR": error_background,
+            "CRITICAL": critical_background,
+        }
+
+    def level_foreground(self, level: str) -> QColor | None:
+        """Return the resolved foreground color for a log level.
+
+        Args:
+            level: Log level name (e.g. ``"INFO"``).
+
+        Returns:
+            QColor | None: The theme-resolved foreground color, or ``None`` when
+                the level has no dedicated color.
+        """
+        return self._level_foregrounds.get(level)
+
+    def level_background(self, level: str) -> QColor | None:
+        """Return the resolved background color for a log level.
+
+        Args:
+            level: Log level name (e.g. ``"CRITICAL"``).
+
+        Returns:
+            QColor | None: The theme-resolved background color, or ``None`` when
+                the level has no background override.
+        """
+        return self._level_backgrounds.get(level)
+
+    def _on_theme_changed(self, _theme_name: str) -> None:
+        """Re-resolve level colors and repaint existing rows after a theme switch.
+
+        Args:
+            _theme_name: Resolved theme name emitted by :class:`ThemeManager`
+                (unused; colors are pulled from the manager directly).
+        """
+        self._resolve_level_colors()
+        row_count = len(self._records)
+        if row_count == 0:
+            return
+        top_left = self.index(0, 0)
+        bottom_right = self.index(row_count - 1, _COLUMN_COUNT - 1)
+        self.dataChanged.emit(
+            top_left,
+            bottom_right,
+            [Qt.ItemDataRole.ForegroundRole, Qt.ItemDataRole.BackgroundRole],
+        )
 
     def append_record(self, record: dict[str, object]) -> None:
         """Queue a record for the next coalesced insert.
@@ -208,9 +301,7 @@ class LogRecordTableModel(QAbstractTableModel):
             LogRecordDict | None: The record, or ``None`` when out of
                 range.
         """
-        if 0 <= row < len(self._records):
-            return self._records[row]
-        return None
+        return self._records[row] if 0 <= row < len(self._records) else None
 
     def all_records(self) -> Iterable[LogRecordDict]:
         """Iterate over all stored records.
@@ -231,9 +322,7 @@ class LogRecordTableModel(QAbstractTableModel):
         Returns:
             int: Row count.
         """
-        if parent is not None and parent.isValid():
-            return 0
-        return len(self._records)
+        return 0 if parent is not None and parent.isValid() else len(self._records)
 
     @override
     def columnCount(self, parent: QModelIndex | None = None) -> int:
@@ -246,9 +335,7 @@ class LogRecordTableModel(QAbstractTableModel):
         Returns:
             int: Fixed column count.
         """
-        if parent is not None and parent.isValid():
-            return 0
-        return _COLUMN_COUNT
+        return 0 if parent is not None and parent.isValid() else _COLUMN_COUNT
 
     @override
     def headerData(
@@ -271,9 +358,7 @@ class LogRecordTableModel(QAbstractTableModel):
             return None
         if orientation != Qt.Orientation.Horizontal:
             return None
-        if 0 <= section < _COLUMN_COUNT:
-            return _HEADERS[section]
-        return None
+        return _HEADERS[section] if 0 <= section < _COLUMN_COUNT else None
 
     @override
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> object:
@@ -299,9 +384,9 @@ class LogRecordTableModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.UserRole:
             return record
         if role == Qt.ItemDataRole.ForegroundRole:
-            return _LEVEL_COLORS.get(record["level"])
+            return self._level_foregrounds.get(record["level"])
         if role == Qt.ItemDataRole.BackgroundRole:
-            return _LEVEL_BACKGROUNDS.get(record["level"])
+            return self._level_backgrounds.get(record["level"])
         if role not in {Qt.ItemDataRole.DisplayRole, Qt.ItemDataRole.ToolTipRole}:
             return None
 
@@ -314,10 +399,8 @@ class LogRecordTableModel(QAbstractTableModel):
         if column == _COLUMN_LOCATION:
             func = record["function"]
             line = record["line_number"]
-            if func and line:
-                return f"{func}:{line}"
             if func:
-                return func
+                return f"{func}:{line}" if line else func
             if line:
                 return str(line)
             return record["module"]

@@ -9,6 +9,7 @@ Provides a live-updating dialog displaying Intel XPU device status, memory utili
 
 from __future__ import annotations
 
+import html
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Final, override
 
@@ -491,9 +492,7 @@ class XPUStatusDialog(QDialog):
         """
         if is_xpu_available is None or get_xpu_memory_info is None:
             return None
-        if not is_xpu_available():
-            return None
-        return get_xpu_memory_info(0)
+        return get_xpu_memory_info(0) if is_xpu_available() else None
 
     def _refresh_memory(self) -> None:
         """Update memory usage bar and text."""
@@ -623,7 +622,7 @@ class XPUStatusDialog(QDialog):
 
         lines = [
             f'<span style="color: {warning_hex}; font-weight: bold;">Warnings:</span><ul>',
-            *[f"<li>{w}</li>" for w in result.warnings],
+            *[f"<li>{html.escape(w)}</li>" for w in result.warnings],
             "</ul>",
         ]
         self.requirements_text.setHtml("".join(lines))

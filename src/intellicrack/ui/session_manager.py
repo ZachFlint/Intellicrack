@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Final, cast, override
 
 from PyQt6.QtCore import QRect, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QFontMetrics
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -512,7 +513,7 @@ class SessionManagerDialog(QDialog):
             sm_v_header.setVisible(False)
         header = self._session_table.horizontalHeader()
         if header is not None:
-            header.setStretchLastSection(True)
+            header.setStretchLastSection(False)
             header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
             header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
             header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
@@ -585,6 +586,27 @@ class SessionManagerDialog(QDialog):
                 session_id=session.id,
                 error=str(exc),
             )
+
+    @staticmethod
+    def _set_elided_detail(label: QLabel, text: str) -> None:
+        """Set a detail label's text with a full-text tooltip and elision.
+
+        The full value is always preserved as the label's tooltip so long
+        provider names or model identifiers remain discoverable, while the
+        displayed text is right-elided to the label's current width to avoid
+        silently clipping without an ellipsis indicator.
+
+        Args:
+            label: Detail label to update.
+            text: Full text value to display and expose as the tooltip.
+        """
+        label.setToolTip(text)
+        width = label.width()
+        if width > 0:
+            metrics = QFontMetrics(label.font())
+            label.setText(metrics.elidedText(text, Qt.TextElideMode.ElideRight, width))
+        else:
+            label.setText(text)
 
     def _create_details_group(self) -> QGroupBox:
         """Create the session details group box.
@@ -862,9 +884,9 @@ class SessionManagerDialog(QDialog):
             self._modified_label.setText("-")
 
         provider_val = session.get("provider")
-        self._provider_label.setText(str(provider_val) if isinstance(provider_val, str) else "-")
+        self._set_elided_detail(self._provider_label, str(provider_val) if isinstance(provider_val, str) else "-")
         model_val = session.get("model")
-        self._model_label.setText(str(model_val) if isinstance(model_val, str) else "-")
+        self._set_elided_detail(self._model_label, str(model_val) if isinstance(model_val, str) else "-")
         self._messages_label.setText(str(session.get("message_count", 0)))
 
         binaries_raw = session.get("binaries")

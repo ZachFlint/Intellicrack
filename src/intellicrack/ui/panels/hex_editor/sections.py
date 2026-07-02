@@ -444,10 +444,8 @@ class SectionsMixin:
     def _try_pattern_registry_match(self) -> None:
         """Attempt to match the open file against .hexpat patterns via ``HexEditorBridge.auto_detect_pattern``.
 
-        Routes through the bridge's own pattern registry instead of
-        instantiating a second, GUI-local ``PatternRegistry`` so the
-        AI-callable tool and the auto-detect-on-open feature share a
-        single source of truth for pattern matching.
+        Routes through the bridge's own pattern registry instead of instantiating a second, GUI-local ``PatternRegistry`` so the AI-callable
+        tool and the auto-detect-on-open feature share a single source of truth for pattern matching.
         """
         if self.document is None or not hexpat_interpreter_available:
             return

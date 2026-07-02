@@ -101,6 +101,16 @@ _STATS_MARGIN: Final[int] = 2
 _STATS_SPACING: Final[int] = 4
 _HASH_MARGIN: Final[int] = 4
 _HASH_SPACING: Final[int] = 6
+_WORKER_SHUTDOWN_WAIT_MS: Final[int] = 2000
+_PENDING_WORKER_ATTRS: Final[tuple[str, ...]] = (
+    "_statistics_worker",
+    "_search_worker",
+    "_numeric_search_worker",
+    "_diff_worker",
+    "_strings_worker",
+    "_sig_worker",
+    "_script_worker",
+)
 
 
 class HexEditorPanel(
@@ -847,17 +857,33 @@ class HexEditorPanel(
         else:
             goto_fn(offset)
 
-    def goto_offset(self, offset: int) -> None:
-        """Navigate the hex widget to a specific offset.
+    def goto_offset(self, offset: int, length: int = 0) -> None:
+        """Navigate the hex widget to an offset and optionally select a span.
+
+        Moves the hex view cursor to ``offset`` (scrolling it into view) and,
+        when ``length`` is positive, selects the ``length``-byte span starting
+        at ``offset``. The cursor is moved first because the widget clears any
+        active selection when the caret moves, so the selection is applied
+        afterwards and the widget repainted to render it.
 
         Args:
             offset: Target byte offset.
+            length: Number of bytes to select starting at ``offset``. When zero
+                or negative only the cursor is moved and no selection is made.
         """
-        _logger.info("panel_goto_offset", offset=offset)
-        if self._hex_widget is not None:
-            goto_fn = getattr(self._hex_widget, "goto_offset", None)
-            if callable(goto_fn):
-                goto_fn(offset)
+        _logger.info("panel_goto_offset", offset=offset, length=length)
+        if self._hex_widget is None:
+            return
+        goto_fn = getattr(self._hex_widget, "goto_offset", None)
+        if callable(goto_fn):
+            goto_fn(offset)
+        if length > 0:
+            select_fn = getattr(self._hex_widget, "set_selection_range", None)
+            if callable(select_fn):
+                select_fn(offset, offset + length - 1)
+            update_fn = getattr(self._hex_widget, "update", None)
+            if callable(update_fn):
+                update_fn()
 
     def _on_cursor_moved(self, offset: int) -> None:
         """Handle cursor movement to update side panels.
@@ -1305,15 +1331,29 @@ class HexEditorPanel(
         except (AttributeError, ValueError):
             _logger.debug("panel_refresh_bookmarks_list_failed", exc_info=True)
 
-    def _cleanup(self) -> None:
-        """Release resources when the panel is closed."""
-        for worker in (self._statistics_worker, self._search_worker, self._numeric_search_worker):
+    def _stop_pending_workers(self) -> None:
+        """Interrupt and join every background worker thread owned by the panel.
+
+        Each hex-editor side panel dispatches long-running hexcore RPCs on its
+        own ``GenericCallableWorker`` ``QThread`` that is parented only by a
+        Python attribute rather than by a ``QObject``. Tearing the panel down
+        while any of those threads is still running would destroy a live
+        ``QThread`` and abort the process, so every known worker attribute is
+        requested to interrupt and then joined with a bounded wait before its
+        reference is cleared.
+        """
+        for attr in _PENDING_WORKER_ATTRS:
+            worker: Any = getattr(self, attr, None)
             if worker is not None and worker.isRunning():
                 worker.requestInterruption()
-                worker.wait(2000)
-        self._statistics_worker = None
-        self._search_worker = None
-        self._numeric_search_worker = None
+                worker.wait(_WORKER_SHUTDOWN_WAIT_MS)
+            setattr(self, attr, None)
+
+    def _cleanup(self) -> None:
+        """Release resources when the panel is closed."""
+        self._stop_pending_workers()
+        if getattr(self, "_diff_temp_path", None) is not None:
+            self._cleanup_diff_temp()
 
         if self.state_holder is not None and self._state_callback is not None:
             self.state_holder.unregister_callback(self._state_callback)

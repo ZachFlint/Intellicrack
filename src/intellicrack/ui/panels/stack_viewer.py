@@ -29,12 +29,14 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 if TYPE_CHECKING:
+    from collections.abc import Coroutine
+
     from PyQt6.QtGui import QCloseEvent
 
     from intellicrack.bridges.frida_bridge import FridaBridge
@@ -124,6 +126,28 @@ class StackDataSource(Protocol):
         _logger.debug("stack_source_default_get_stack_frames", source=type(self).__name__)
         return []
 
+    def get_stack_coroutine(self) -> Coroutine[object, object, object] | None:
+        """Get the awaitable bridge coroutine that fetches raw stack data.
+
+        Returns:
+            Coroutine[object, object, object] | None: A coroutine awaiting the
+            bridge's raw stack response, or None when no bridge is attached.
+        """
+        _logger.debug("stack_source_default_get_stack_coroutine", source=type(self).__name__)
+        return None
+
+    def frames_from_raw(self, raw: object) -> list[StackFrame]:
+        """Convert a raw bridge stack response into StackFrame objects.
+
+        Args:
+            raw: The raw value returned by the bridge stack coroutine.
+
+        Returns:
+            list[StackFrame]: Parsed StackFrame objects from the raw response.
+        """
+        _logger.debug("stack_source_default_frames_from_raw", source=type(self).__name__, raw_type=type(raw).__name__)
+        return []
+
     def is_connected(self) -> bool:
         """Check if the data source is connected.
 
@@ -162,21 +186,25 @@ class X64DbgStackSource:
         """
         self._bridge = bridge
 
-    def get_stack_frames(self) -> list[StackFrame]:
-        """Get stack frames from x64dbg via the async bridge.
+    def get_stack_coroutine(self) -> Coroutine[object, object, object] | None:
+        """Get the x64dbg bridge coroutine that fetches the raw stack trace.
 
         Returns:
-            list[StackFrame]: List of StackFrame objects.
+            Coroutine[object, object, object] | None: The bridge
+            ``get_stack_trace`` coroutine, or None when no bridge is attached.
         """
-        if self._bridge is None:
-            return []
+        return None if self._bridge is None else self._bridge.get_stack_trace()
 
-        try:
-            raw = run_bridge_coroutine(self._bridge.get_stack_trace())
-        except (RuntimeError, ConnectionError, OSError):
-            _logger.exception("x64dbg_stack_frames_failed", bridge_type="x64dbg")
-            return []
+    @staticmethod
+    def frames_from_raw(raw: object) -> list[StackFrame]:
+        """Convert a raw x64dbg stack response into StackFrame objects.
 
+        Args:
+            raw: The raw value returned by ``get_stack_trace``.
+
+        Returns:
+            list[StackFrame]: Parsed StackFrame objects from the raw response.
+        """
         frames: list[StackFrame] = []
         if not isinstance(raw, list):
             return frames
@@ -194,6 +222,27 @@ class X64DbgStackSource:
             for i, item in enumerate(raw_list)
         )
         return frames
+
+    def get_stack_frames(self) -> list[StackFrame]:
+        """Get stack frames from x64dbg via the blocking async bridge.
+
+        Blocks the calling thread on the bridge round-trip and must not be
+        called from the GUI thread. The GUI refresh path uses
+        :meth:`get_stack_coroutine` with :meth:`frames_from_raw` instead.
+
+        Returns:
+            list[StackFrame]: List of StackFrame objects.
+        """
+        if self._bridge is None:
+            return []
+
+        try:
+            raw = run_bridge_coroutine(self._bridge.get_stack_trace())
+        except (RuntimeError, ConnectionError, OSError):
+            _logger.exception("x64dbg_stack_frames_failed", bridge_type="x64dbg")
+            return []
+
+        return self.frames_from_raw(raw)
 
     def is_connected(self) -> bool:
         """Check if x64dbg bridge is connected.
@@ -239,22 +288,28 @@ class FridaStackSource:
         """
         self._bridge = bridge
 
-    def get_stack_frames(self) -> list[StackFrame]:
-        """Get stack frames from Frida via the async bridge.
+    def get_stack_coroutine(self) -> Coroutine[object, object, object] | None:
+        """Get the Frida bridge coroutine that fetches the raw backtrace.
 
         Returns:
-            list[StackFrame]: List of StackFrame objects derived from the bridge's
-            SymbolInfo backtrace entries.
+            Coroutine[object, object, object] | None: The bridge
+            ``get_backtrace`` coroutine, or None when no bridge is attached.
         """
-        if self._bridge is None:
-            return self._cached_frames
+        return None if self._bridge is None else self._bridge.get_backtrace()
 
-        try:
-            raw = run_bridge_coroutine(self._bridge.get_backtrace())
-        except (RuntimeError, ConnectionError, OSError):
-            _logger.exception("frida_stack_frames_failed", bridge_type="frida")
-            return self._cached_frames
+    def frames_from_raw(self, raw: object) -> list[StackFrame]:
+        """Convert a raw Frida backtrace response into StackFrame objects.
 
+        Successfully parsed frames are cached so the panel can fall back to the
+        last known stack when a later refresh yields no data.
+
+        Args:
+            raw: The raw value returned by ``get_backtrace``.
+
+        Returns:
+            list[StackFrame]: Parsed StackFrame objects, or the cached frames
+            when the raw response is not a list.
+        """
         if not isinstance(raw, list):
             return self._cached_frames
 
@@ -270,6 +325,28 @@ class FridaStackSource:
         ]
         self._cached_frames = frames
         return frames
+
+    def get_stack_frames(self) -> list[StackFrame]:
+        """Get stack frames from Frida via the blocking async bridge.
+
+        Blocks the calling thread on the bridge round-trip and must not be
+        called from the GUI thread. The GUI refresh path uses
+        :meth:`get_stack_coroutine` with :meth:`frames_from_raw` instead.
+
+        Returns:
+            list[StackFrame]: List of StackFrame objects derived from the bridge's
+            SymbolInfo backtrace entries.
+        """
+        if self._bridge is None:
+            return self._cached_frames
+
+        try:
+            raw = run_bridge_coroutine(self._bridge.get_backtrace())
+        except (RuntimeError, ConnectionError, OSError):
+            _logger.exception("frida_stack_frames_failed", bridge_type="frida")
+            return self._cached_frames
+
+        return self.frames_from_raw(raw)
 
     def is_connected(self) -> bool:
         """Check if Frida bridge is connected.
@@ -445,6 +522,7 @@ class StackViewerPanel(QWidget):
         self._sources: dict[str, X64DbgStackSource | FridaStackSource] = {}
         self._active_source: str | None = None
         self.refresh_timer: QTimer | None = None
+        self._refresh_in_flight: bool = False
         self._setup_ui()
         self._setup_default_sources()
 
@@ -583,7 +661,11 @@ class StackViewerPanel(QWidget):
             style.polish(self.status_label)
 
     def refresh(self) -> None:
-        """Refresh the stack frames from the active source."""
+        """Refresh the stack frames from the active source.
+
+        Dispatches the bridge round-trip through the off-GUI-thread async worker so the 500ms auto-refresh timer never blocks the Qt event
+        loop. Overlapping refreshes are skipped while one is already in flight.
+        """
         if not self._active_source:
             return
 
@@ -593,7 +675,52 @@ class StackViewerPanel(QWidget):
 
         self._update_status()
 
-        frames = source.get_stack_frames()
+        if self._refresh_in_flight:
+            _logger.debug("stack_refresh_skipped_in_flight", source=self._active_source)
+            return
+
+        coro = source.get_stack_coroutine()
+        if coro is None:
+            self._render_frames([])
+            return
+
+        self._refresh_in_flight = True
+        run_bridge_coroutine_logged(
+            coro,
+            on_success=lambda raw: self._on_frames_loaded(source, raw),
+            on_error=self._on_frames_error,
+            parent=self,
+            event="stack_refresh",
+            logger=_logger,
+            source=self._active_source,
+        )
+
+    def _on_frames_loaded(self, source: X64DbgStackSource | FridaStackSource, raw: object) -> None:
+        """Render stack frames parsed from a completed bridge round-trip.
+
+        Args:
+            source: The stack data source that produced the raw response.
+            raw: The raw stack response returned by the bridge coroutine.
+        """
+        self._refresh_in_flight = False
+        frames = source.frames_from_raw(raw)
+        self._render_frames(frames)
+
+    def _on_frames_error(self, exc: object) -> None:
+        """Handle a failed stack refresh round-trip.
+
+        Args:
+            exc: The exception raised by the bridge coroutine.
+        """
+        self._refresh_in_flight = False
+        _logger.warning("stack_refresh_failed", source=self._active_source, error=str(exc))
+
+    def _render_frames(self, frames: list[StackFrame]) -> None:
+        """Populate the frame table and update the info labels.
+
+        Args:
+            frames: The stack frames to display.
+        """
         self._frame_table.set_frames(frames)
         _logger.debug("stack_frames_refreshed", source=self._active_source, frame_count=len(frames))
 

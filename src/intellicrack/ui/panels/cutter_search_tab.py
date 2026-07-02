@@ -4,16 +4,11 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Advanced search/compare tab for the Cutter/Rizin analysis panel.
 
-Provides a self-contained Qt widget exposing every native rizin search and
-byte/disassembly comparison capability that is not already covered by the
-regex string-search box or the ROP-gadget search tab: byte pattern search
-(``/xj``), wildcard byte pattern search (``/xj`` with ``..`` wildcards),
-literal string search (``/xj`` on UTF-8-encoded text), assembly instruction
-pattern search (``/aj``), cryptographic constant search (``/cj``), magic
-signature search (``/mj``), numeric value search (``/vj``), byte comparison
-(``c``), and disassembly comparison against another file (``cD``/``cCj``),
-all driven by the ``CutterBridge`` search surface
-(``cutter.py:2150-2200,3684-3862``).
+Provides a self-contained Qt widget exposing every native rizin search and byte/disassembly comparison capability that is not already
+covered by the regex string-search box or the ROP-gadget search tab: byte pattern search (``/xj``), wildcard byte pattern search (``/xj``
+with ``..`` wildcards), literal string search (``/xj`` on UTF-8-encoded text), assembly instruction pattern search (``/aj``), cryptographic
+constant search (``/cj``), magic signature search (``/mj``), numeric value search (``/vj``), byte comparison (``c``), and disassembly
+comparison against another file (``cD``/``cCj``), all driven by the ``CutterBridge`` search surface (``cutter.py:2150-2200,3684-3862``).
 """
 
 from __future__ import annotations
@@ -119,6 +114,7 @@ class SearchTab(QWidget):
         layout.setSpacing(_PANEL_SPACING)
 
         split = QSplitter(Qt.Orientation.Horizontal)
+        split.setChildrenCollapsible(False)
         split.addWidget(self._build_search_panel(fm))
         split.addWidget(self._build_compare_panel(fm))
         split.setSizes([_TOP_SPLIT_LEFT, _TOP_SPLIT_RIGHT])
@@ -361,9 +357,9 @@ class SearchTab(QWidget):
             self._search_status_label.setText(self.tr("Invalid numeric value"))
             self._search_btn.setEnabled(True)
             return
-        size = int(self._value_size_combo.currentText())
         if self._bridge is None:
             return
+        size = int(self._value_size_combo.currentText())
         run_bridge_coroutine_logged(
             self._bridge.search_value(value, size),
             on_success=self._apply_addresses,

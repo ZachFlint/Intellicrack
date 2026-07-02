@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, cast
 
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import QSignalBlocker, Qt, QTimer
 from PyQt6.QtWidgets import (
     QComboBox,
     QHeaderView,
@@ -99,14 +99,27 @@ class ThreadsTab(QWidget):
     def update_thread_list(self, threads: list[ThreadInfo]) -> None:
         """Update the thread list and combo boxes with new data.
 
+        Each thread selector's current selection is preserved across the
+        rebuild so the periodic auto-refresh does not reset the user's chosen
+        thread back to the first entry. When the previously selected thread is
+        no longer present the selector falls back to the first available
+        thread. Signals are blocked during the rebuild to avoid emitting
+        spurious ``currentIndexChanged`` notifications.
+
         Args:
             threads: List of ThreadInfo from the bridge.
         """
         self._threads = threads
         for combo in (self._reg_combo, self._stack_combo, self._seh_combo, self._fiber_combo, self._tls_thread_combo):
-            combo.clear()
-            for t in threads:
-                combo.addItem(f"TID {t.tid}", t.tid)
+            previous_tid: object = combo.currentData()
+            with QSignalBlocker(combo):
+                combo.clear()
+                for t in threads:
+                    combo.addItem(f"TID {t.tid}", t.tid)
+                if previous_tid is not None:
+                    restore_index = combo.findData(previous_tid)
+                    if restore_index >= 0:
+                        combo.setCurrentIndex(restore_index)
 
     def _setup_ui(self) -> None:
         """Build the threads tab layout."""

@@ -930,6 +930,15 @@ class ESILConsoleTab(QWidget):
                 level="info",
             )
 
+    def reset_esil_state(self) -> None:
+        """Clear the ESIL initialisation latch for a newly loaded binary.
+
+        The next :meth:`refresh` call re-runs ``aeim`` so ESIL memory is initialised against the new binary's layout instead of reusing the
+        previous binary's initialised state.
+        """
+        self._esil_initialised = False
+        _logger.info("esil_state_reset", reason="new_binary_loaded")
+
     def _on_auto_init_success(self, _result: object) -> None:
         """Handle success of the automatic ``aeim`` initialisation.
 
@@ -1121,18 +1130,18 @@ class ConfigTab(QWidget):
         """Get the current value of the configuration key in the get-key input."""
         if self._bridge is None:
             return
-        key = self._get_key_input.text().strip()
-        if not key:
+        if key := self._get_key_input.text().strip():
+            run_bridge_coroutine_logged(
+                self._bridge.get_config(key),
+                on_success=lambda result: self._output.appendPlainText(f"{key} = {result}"),
+                on_error=lambda e: self._output.appendPlainText(f"[error] get {key}: {e}"),
+                parent=self,
+                event="cutter_get_config",
+                logger=_logger,
+                key=key,
+            )
+        else:
             return
-        run_bridge_coroutine_logged(
-            self._bridge.get_config(key),
-            on_success=lambda result: self._output.appendPlainText(f"{key} = {result}"),
-            on_error=lambda e: self._output.appendPlainText(f"[error] get {key}: {e}"),
-            parent=self,
-            event="cutter_get_config",
-            logger=_logger,
-            key=key,
-        )
 
     def _on_set(self) -> None:
         """Set the configuration key/value pair in the set inputs."""

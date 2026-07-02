@@ -58,7 +58,7 @@ class ToolWidget(Protocol):
 
     @property
     def tool_started(self) -> pyqtBoundSignal:
-        """Get the signal emitted when the tool process starts.
+        """The signal emitted when the tool process starts.
 
         Returns:
             pyqtBoundSignal: The tool-started signal.
@@ -68,7 +68,7 @@ class ToolWidget(Protocol):
 
     @property
     def tool_closed(self) -> pyqtBoundSignal:
-        """Get the signal emitted when the tool process closes.
+        """The signal emitted when the tool process closes.
 
         Returns:
             pyqtBoundSignal: The tool-closed signal.
@@ -249,7 +249,7 @@ class ProcessPanelProtocol(ToolWidget, Protocol):
 
     @property
     def process_attached(self) -> pyqtBoundSignal:
-        """Get the signal emitted with PID when a process is attached.
+        """The signal emitted with PID when a process is attached.
 
         Returns:
             pyqtBoundSignal: The process-attached signal.
@@ -259,7 +259,7 @@ class ProcessPanelProtocol(ToolWidget, Protocol):
 
     @property
     def process_detached(self) -> pyqtBoundSignal:
-        """Get the signal emitted when a process is detached.
+        """The signal emitted when a process is detached.
 
         Returns:
             pyqtBoundSignal: The process-detached signal.
@@ -1919,8 +1919,8 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
             SandboxPanelProtocol | None: The created SandboxPanel, or None when sandbox is unavailable.
         """
         sandbox_config_mod = importlib.import_module(".sandbox_config", "intellicrack.ui")
-        dialog_cls = getattr(sandbox_config_mod, "SandboxConfigDialog", None)
-        if dialog_cls is not None and not dialog_cls().is_sandbox_available():
+        availability_check = getattr(sandbox_config_mod, "is_windows_sandbox_available", None)
+        if callable(availability_check) and not availability_check():
             _logger.info("sandbox_not_available_skipping_tab", tab="Sandbox")
             return None
 

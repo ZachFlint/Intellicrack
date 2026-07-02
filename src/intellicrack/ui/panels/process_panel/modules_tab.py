@@ -219,6 +219,12 @@ class ModulesTab(QWidget):
         self._handle_table = QTableWidget(0, len(columns))
         self._handle_table.setHorizontalHeaderLabels(columns)
         self._handle_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        handle_header = self._handle_table.horizontalHeader()
+        if handle_header is not None:
+            handle_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            handle_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            handle_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            handle_header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._handle_table)
         return tab
 
@@ -396,6 +402,22 @@ class ModulesTab(QWidget):
             dll_path=path,
         )
 
+    def _set_handle_cell(self, row: int, column: int, text: str) -> None:
+        """Populate a handle table cell with text and a full-value tooltip.
+
+        The tooltip mirrors the cell text so that wide values such as the
+        granted-access mask and object address remain readable when the
+        column is too narrow to show them in full.
+
+        Args:
+            row: Zero-based table row index.
+            column: Zero-based table column index.
+            text: Cell display text, also used as the tooltip.
+        """
+        item = QTableWidgetItem(text)
+        item.setToolTip(text)
+        self._handle_table.setItem(row, column, item)
+
     def _refresh_handles(self) -> None:
         """Refresh handle list from bridge."""
         if self._bridge is None or self._attached_pid is None:
@@ -414,16 +436,16 @@ class ModulesTab(QWidget):
                 self._handle_table.insertRow(row)
                 hv_raw = typed_h.get("handle_value", 0)
                 hv = hv_raw if isinstance(hv_raw, int) else 0
-                self._handle_table.setItem(row, 0, QTableWidgetItem(f"0x{hv:X}"))
+                self._set_handle_cell(row, 0, f"0x{hv:X}")
                 type_name_raw = typed_h.get("type_name")
                 type_label = type_name_raw if isinstance(type_name_raw, str) and type_name_raw else str(typed_h.get("type_index", 0))
-                self._handle_table.setItem(row, 1, QTableWidgetItem(type_label))
+                self._set_handle_cell(row, 1, type_label)
                 ga_raw = typed_h.get("granted_access", 0)
                 ga = ga_raw if isinstance(ga_raw, int) else 0
-                self._handle_table.setItem(row, 2, QTableWidgetItem(f"0x{ga:X}"))
+                self._set_handle_cell(row, 2, f"0x{ga:X}")
                 oa_raw = typed_h.get("object_address", 0)
                 oa = oa_raw if isinstance(oa_raw, int) else 0
-                self._handle_table.setItem(row, 3, QTableWidgetItem(f"0x{oa:X}"))
+                self._set_handle_cell(row, 3, f"0x{oa:X}")
             self._handle_count.setText(f"{len(typed_result)} handles")
 
         def _on_error(exc: object) -> None:

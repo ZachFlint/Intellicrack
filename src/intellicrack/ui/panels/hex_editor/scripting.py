@@ -447,7 +447,7 @@ class _DocAPI:
 
     @property
     def file_path(self) -> str | None:
-        """Get the path of the currently loaded file.
+        """The path of the currently loaded file.
 
         Returns:
             str | None: File path string or None.
@@ -456,7 +456,7 @@ class _DocAPI:
 
     @property
     def cursor(self) -> int:
-        """Get the current cursor offset.
+        """The current cursor offset.
 
         Returns:
             int: Cursor byte offset.
@@ -479,7 +479,7 @@ class _DocAPI:
 
     @property
     def selection(self) -> tuple[int, int] | None:
-        """Get the current selection range.
+        """The current selection range.
 
         Returns:
             tuple[int, int] | None: (start, end) tuple or None.
@@ -677,7 +677,7 @@ class _ReadOnlyDocAPI:
 
     @property
     def file_path(self) -> str | None:
-        """Get the path of the currently loaded file.
+        """The path of the currently loaded file.
 
         Returns:
             str | None: File path string or None.
@@ -686,7 +686,7 @@ class _ReadOnlyDocAPI:
 
     @property
     def cursor(self) -> int:
-        """Get the current cursor offset.
+        """The current cursor offset.
 
         Returns:
             int: Cursor byte offset.
@@ -704,7 +704,7 @@ class _ReadOnlyDocAPI:
 
     @property
     def selection(self) -> tuple[int, int] | None:
-        """Get the current selection range.
+        """The current selection range.
 
         Returns:
             tuple[int, int] | None: (start, end) tuple or None.

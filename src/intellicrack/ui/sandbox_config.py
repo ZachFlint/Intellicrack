@@ -15,8 +15,9 @@ import json
 import os
 import sys
 import tempfile
+import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Final
+from typing import TYPE_CHECKING, ClassVar, Final, cast
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
@@ -46,7 +47,7 @@ from intellicrack.core.subprocess_compat import CREATE_NO_WINDOW, PIPE, Popen, S
 from intellicrack.sandbox.base import SandboxConfig
 
 from .dialogs_helpers import show_info, show_warning
-from .panels.async_bridge import run_bridge_coroutine
+from .panels.async_bridge import WORKER_DEFAULT_EXCEPTIONS, GenericCallableWorker, run_bridge_coroutine
 from .resources import IconManager
 
 
@@ -64,6 +65,7 @@ _DEFAULT_CONFIG_ATTR: Final[str] = "_default_config"
 _SANDBOX_FEATURE_NAME: Final[str] = "Containers-DisposableClientVM"
 _SANDBOX_INSTALL_STATE_ENABLED: Final[str] = "1"
 _SANDBOX_AVAILABILITY_TIMEOUT_SECONDS: Final[int] = 10
+_AVAILABILITY_RESULT_LEN: Final[int] = 2
 
 
 def _windows_sandbox_binary_path() -> Path:
@@ -74,6 +76,162 @@ def _windows_sandbox_binary_path() -> Path:
     """
     system_root = os.environ.get("SYSTEMROOT", r"C:\Windows")
     return Path(system_root) / "System32" / "WindowsSandbox.exe"
+
+
+class _AvailabilityCache:
+    """Process-wide cache for the Windows Sandbox availability probe result.
+
+    The probe may spawn a bounded PowerShell subprocess, so its ``(available, reason)`` result is memoised here to avoid repeating the work
+    on every caller (for example each time the Sandbox tab is constructed).
+    """
+
+    value: ClassVar[tuple[bool, str] | None] = None
+    lock: ClassVar[threading.Lock] = threading.Lock()
+
+
+def _query_sandbox_optional_feature() -> tuple[str, int]:
+    """Query the CIM optional-feature install state for Windows Sandbox.
+
+    Uses a ``Win32_OptionalFeature`` CIM query which - unlike
+    ``Get-WindowsOptionalFeature -Online`` - reports ``InstallState`` without
+    requiring administrator elevation. Propagates ``TimeoutExpired`` when the
+    PowerShell probe exceeds its timeout, ``FileNotFoundError`` when the
+    PowerShell executable cannot be located, and ``OSError`` when the operating
+    system rejects the process launch; callers wrap the call in an exception
+    handler.
+
+    Returns:
+        tuple[str, int]: ``(install_state, returncode)`` where ``install_state``
+        is the trimmed ``InstallState`` value reported by CIM and ``returncode``
+        is the PowerShell process exit code.
+    """
+    ps_command = f"(Get-CimInstance -ClassName Win32_OptionalFeature -Filter \"Name='{_SANDBOX_FEATURE_NAME}'\").InstallState"
+    process_manager = ProcessManager.get_instance()
+    result = process_manager.run_tracked(
+        [
+            "powershell",
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            ps_command,
+        ],
+        name="powershell-sandbox-check",
+        check=False,
+        timeout=_SANDBOX_AVAILABILITY_TIMEOUT_SECONDS,
+        creationflags=CREATE_NO_WINDOW,
+    )
+    return (result.stdout or "").strip(), result.returncode
+
+
+def _probe_windows_sandbox() -> tuple[bool, str]:
+    r"""Probe Windows for the Containers-DisposableClientVM optional feature.
+
+    Runs two unelevated detection paths in sequence so the result is accurate
+    when Intellicrack is launched from a standard (non-admin) session:
+
+    1. Presence of ``WindowsSandbox.exe`` under ``%SystemRoot%\System32``. DISM
+       only installs this binary when the optional feature is enabled, so a hit
+       is definitive and avoids spawning a subprocess entirely.
+    2. A CIM ``Win32_OptionalFeature`` query for the install state.
+
+    Returns:
+        tuple[bool, str]: ``(available, reason)`` where ``available`` is ``True``
+        with an empty ``reason`` when Windows Sandbox can be launched, or
+        ``False`` with a human-readable explanation otherwise.
+    """
+    if not _IS_WIN32:
+        _logger.info(
+            "sandbox_config_validated",
+            valid=False,
+            reason="non_windows_platform",
+            platform=sys.platform,
+        )
+        return False, "Windows Sandbox is only available on Windows"
+
+    sandbox_binary = _windows_sandbox_binary_path()
+    if sandbox_binary.is_file():
+        _logger.info(
+            "sandbox_config_validated",
+            valid=True,
+            sandbox_available=True,
+            detection="windows_sandbox_binary",
+            binary_path=str(sandbox_binary),
+        )
+        return True, ""
+
+    try:
+        install_state, returncode = _query_sandbox_optional_feature()
+    except TimeoutExpired:
+        _logger.exception("sandbox_config_error", operation="availability_check", failure_reason="timeout")
+        return False, "Timeout checking Windows Sandbox status"
+    except FileNotFoundError:
+        _logger.exception("sandbox_config_error", operation="availability_check", failure_reason="powershell_not_found")
+        return False, "PowerShell not found"
+    except OSError as exc:
+        _logger.exception("sandbox_config_error", operation="availability_check", failure_reason="os_error")
+        return False, f"Could not determine Windows Sandbox status: {exc}"
+
+    if install_state == _SANDBOX_INSTALL_STATE_ENABLED:
+        _logger.info(
+            "sandbox_config_validated",
+            valid=True,
+            sandbox_available=True,
+            detection="cim_optional_feature",
+            install_state=install_state,
+        )
+        return True, ""
+
+    _logger.info(
+        "sandbox_config_validated",
+        valid=False,
+        reason="feature_not_enabled",
+        detection="cim_optional_feature",
+        install_state=install_state or "unknown",
+        returncode=returncode,
+    )
+    return False, "Windows Sandbox feature is not enabled"
+
+
+def check_windows_sandbox_availability(*, use_cache: bool = True) -> tuple[bool, str]:
+    """Return the Windows Sandbox availability probe result, optionally cached.
+
+    Args:
+        use_cache: When ``True`` (default) return a previously computed result
+            if one exists and store freshly computed results for reuse. When
+            ``False`` always run the probe and refresh the cache.
+
+    Returns:
+        tuple[bool, str]: ``(available, reason)`` as documented on
+        :func:`_probe_windows_sandbox`.
+    """
+    if use_cache:
+        with _AvailabilityCache.lock:
+            cached = _AvailabilityCache.value
+        if cached is not None:
+            return cached
+    result = _probe_windows_sandbox()
+    with _AvailabilityCache.lock:
+        _AvailabilityCache.value = result
+    return result
+
+
+def is_windows_sandbox_available(*, use_cache: bool = True) -> bool:
+    """Return whether Windows Sandbox is available without constructing any UI.
+
+    This standalone entry point lets callers determine sandbox availability
+    without instantiating - and leaking - a :class:`SandboxConfigDialog` purely
+    to read its instance ``is_sandbox_available()``.
+
+    Args:
+        use_cache: Whether to reuse a cached probe result. See
+            :func:`check_windows_sandbox_availability`.
+
+    Returns:
+        bool: ``True`` when Windows Sandbox can be launched on this host.
+    """
+    available, _reason = check_windows_sandbox_availability(use_cache=use_cache)
+    return available
 
 
 class SandboxTestWorker(QThread):
@@ -374,9 +532,10 @@ class SandboxConfigDialog(QDialog):
         self._is_available = False
         self._test_worker: SandboxTestWorker | None = None
         self._progress_dialog: QProgressDialog | None = None
+        self._availability_worker: GenericCallableWorker | None = None
 
         self._setup_ui()
-        self._check_availability()
+        self._start_availability_check()
         self._load_settings()
 
         self.setWindowTitle("Sandbox Settings")
@@ -489,105 +648,64 @@ class SandboxConfigDialog(QDialog):
 
         layout.addLayout(button_layout)
 
-    def _run_sandbox_availability_check(self) -> None:
-        r"""Probe Windows for the Containers-DisposableClientVM feature.
+    def _start_availability_check(self) -> None:
+        """Probe Windows Sandbox availability off the GUI thread and update status.
 
-        Uses two unelevated detection paths in sequence so the dialog stays
-        functional when launched from a standard (non-admin) Intellicrack
-        session:
-
-        1. Presence of ``WindowsSandbox.exe`` under ``%SystemRoot%\System32``.
-           DISM only installs this binary when the optional feature is
-           enabled, so a hit is a definitive signal.
-        2. CIM ``Win32_OptionalFeature`` query, which - unlike
-           ``Get-WindowsOptionalFeature -Online`` - returns the
-           ``InstallState`` without requiring administrator elevation.
+        Dispatches the (potentially subprocess-spawning) probe to a background :class:`GenericCallableWorker` so the dialog constructor
+        never blocks the Qt main thread. The status widgets are refreshed on the GUI thread via :meth:`_on_availability_checked` once the
+        worker completes, so the dialog still shows an accurate result when it is actually opened.
         """
-        sandbox_binary = _windows_sandbox_binary_path()
-        if sandbox_binary.is_file():
-            _logger.info(
-                "sandbox_config_validated",
-                valid=True,
-                sandbox_available=True,
-                detection="windows_sandbox_binary",
-                binary_path=str(sandbox_binary),
-            )
-            self._set_available()
-            return
-
-        ps_command = f"(Get-CimInstance -ClassName Win32_OptionalFeature -Filter \"Name='{_SANDBOX_FEATURE_NAME}'\").InstallState"
-        process_manager = ProcessManager.get_instance()
-        result = process_manager.run_tracked(
-            [
-                "powershell",
-                "-NoLogo",
-                "-NoProfile",
-                "-NonInteractive",
-                "-Command",
-                ps_command,
-            ],
-            name="powershell-sandbox-check",
-            check=False,
-            timeout=_SANDBOX_AVAILABILITY_TIMEOUT_SECONDS,
-            creationflags=CREATE_NO_WINDOW,
+        _logger.debug("sandbox_availability_check_started")
+        worker = GenericCallableWorker(
+            check_windows_sandbox_availability,
+            exceptions=WORKER_DEFAULT_EXCEPTIONS,
+            parent=self,
         )
-        install_state = (result.stdout or "").strip()
-        if install_state == _SANDBOX_INSTALL_STATE_ENABLED:
-            _logger.info(
-                "sandbox_config_validated",
-                valid=True,
-                sandbox_available=True,
-                detection="cim_optional_feature",
-                install_state=install_state,
-            )
+        self._availability_worker = worker
+        _ = worker.call_finished.connect(self._on_availability_checked)
+        _ = worker.call_error.connect(self._on_availability_error)
+        worker.start()
+
+    @staticmethod
+    def _coerce_availability_result(result: object) -> tuple[bool, str]:
+        """Normalise a probe worker payload into an ``(available, reason)`` pair.
+
+        Args:
+            result: Value emitted by the availability worker; expected to be a
+                two-element ``(available, reason)`` tuple.
+
+        Returns:
+            tuple[bool, str]: Coerced availability flag and reason string, with a
+            safe fallback when the payload does not match the expected shape.
+        """
+        if isinstance(result, tuple):
+            typed = cast("tuple[object, ...]", result)
+            if len(typed) == _AVAILABILITY_RESULT_LEN:
+                return bool(typed[0]), str(typed[1])
+        return False, "Could not determine Windows Sandbox status"
+
+    def _on_availability_checked(self, result: object) -> None:
+        """Apply an availability probe result to the dialog status widgets.
+
+        Args:
+            result: ``(available, reason)`` tuple emitted by the probe worker.
+        """
+        self._availability_worker = None
+        available, reason = self._coerce_availability_result(result)
+        if available:
             self._set_available()
         else:
-            _logger.info(
-                "sandbox_config_validated",
-                valid=False,
-                reason="feature_not_enabled",
-                detection="cim_optional_feature",
-                install_state=install_state or "unknown",
-                returncode=result.returncode,
-            )
-            self._set_unavailable("Windows Sandbox feature is not enabled")
+            self._set_unavailable(reason)
 
-    def _check_availability(self) -> None:
-        """Check if Windows Sandbox is available."""
-        if not _IS_WIN32:
-            _logger.info(
-                "sandbox_config_validated",
-                valid=False,
-                reason="non_windows_platform",
-                platform=sys.platform,
-            )
-            self._set_unavailable("Windows Sandbox is only available on Windows")
-            return
+    def _on_availability_error(self, exc: object) -> None:
+        """Handle an unexpected failure of the availability probe worker.
 
-        _logger.debug("sandbox_availability_check_started")
-        try:
-            self._run_sandbox_availability_check()
-        except TimeoutExpired:
-            _logger.exception(
-                "sandbox_config_error",
-                operation="availability_check",
-                failure_reason="timeout",
-            )
-            self._set_unavailable("Timeout checking Windows Sandbox status")
-        except FileNotFoundError:
-            _logger.exception(
-                "sandbox_config_error",
-                operation="availability_check",
-                failure_reason="powershell_not_found",
-            )
-            self._set_unavailable("PowerShell not found")
-        except OSError as e:
-            _logger.exception(
-                "sandbox_config_error",
-                operation="availability_check",
-                failure_reason="os_error",
-            )
-            self._set_unavailable(f"Could not determine Windows Sandbox status: {e}")
+        Args:
+            exc: Exception object emitted by the worker.
+        """
+        self._availability_worker = None
+        _logger.warning("sandbox_availability_check_error", error=str(exc))
+        self._set_unavailable("Could not determine Windows Sandbox status")
 
     def _set_available(self) -> None:
         """Update UI for sandbox available state."""

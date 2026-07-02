@@ -16,15 +16,17 @@ from typing import Any
 
 import pytest
 from PyQt6.QtCore import QPointF
-from PyQt6.QtGui import QPainter, QTransform
+from PyQt6.QtGui import QFontMetricsF, QPainter, QTransform
 from PyQt6.QtWidgets import QGraphicsItem, QGraphicsView
 
 from intellicrack.ui.panels.graph_view import (
+    _BLOCK_PADDING,
     BasicBlockItem,
     CFGGraphScene,
     CFGGraphView,
     EdgeItem,
 )
+from intellicrack.ui.resources.font_manager import FontManager
 
 
 BLOCK_ADDR_ENTRY = 0x401000
@@ -123,14 +125,14 @@ class TestBasicBlockItem:
 
     @staticmethod
     def test_width_grows_for_long_instructions() -> None:
-        """Verify width grows beyond minimum to accommodate long disassembly text.
+        """Verify width grows to fit long disassembly measured by real font metrics.
 
-        The production formula is: text_width = max_disasm_chars * 7,
-        width = max(BLOCK_MIN_WIDTH, text_width + BLOCK_PADDING * 2).
-        For a 47-character instruction: text_width=329, width=349.
-        For a 3-character "nop": text_width=21, width=200 (clamped to minimum).
-        The long-instruction item must be strictly wider than both the minimum
-        and the short-instruction item, proving the scaling path is active.
+        Width is computed as max(BLOCK_MIN_WIDTH, content_advance + BLOCK_PADDING * 2)
+        where content_advance is the QFontMetricsF.horizontalAdvance of the widest
+        line (body font) or the address header (bold font), whichever is wider.
+        A long instruction must exceed both the minimum and the short-instruction
+        item, and must match the advance recomputed with the same fonts, proving
+        the fixed len*7 estimate is no longer used.
         """
         long_disasm = "mov rax, qword ptr [rbx + rcx*8 + 0x12345678]"
         short_disasm = "nop"
@@ -139,19 +141,15 @@ class TestBasicBlockItem:
         long_item = BasicBlockItem(LAYOUT_BLOCK_ADDR_A, long_ops)
         short_item = BasicBlockItem(LAYOUT_BLOCK_ADDR_A, short_ops)
 
-        long_char_count = len(long_disasm)
-        short_char_count = len(short_disasm)
-        chars_per_pixel: int = 7
-        block_padding: int = 10
+        fm = FontManager.get_instance()
+        body_metrics = QFontMetricsF(fm.get_code_font(8))
+        header_metrics = QFontMetricsF(fm.get_code_font_bold(8))
+        header_text = f"0x{LAYOUT_BLOCK_ADDR_A:X}"
+        long_content = max(body_metrics.horizontalAdvance(long_disasm), header_metrics.horizontalAdvance(header_text))
+        expected_long_width = max(float(BLOCK_MIN_WIDTH), long_content + _BLOCK_PADDING * 2)
 
-        expected_long_width = max(BLOCK_MIN_WIDTH, long_char_count * chars_per_pixel + block_padding * 2)
-        expected_short_width = max(BLOCK_MIN_WIDTH, short_char_count * chars_per_pixel + block_padding * 2)
-
-        assert long_item.rect().width() == expected_long_width, (
-            f"long instruction width {long_item.rect().width()} != expected {expected_long_width}"
-        )
-        assert short_item.rect().width() == expected_short_width, (
-            f"short instruction width {short_item.rect().width()} != expected {expected_short_width}"
+        assert long_item.rect().width() == pytest.approx(expected_long_width), (
+            f"long instruction width {long_item.rect().width()} != font-metric width {expected_long_width}"
         )
         assert long_item.rect().width() > BLOCK_MIN_WIDTH, (
             f"long instruction width {long_item.rect().width()} must exceed BLOCK_MIN_WIDTH={BLOCK_MIN_WIDTH}"
@@ -159,6 +157,12 @@ class TestBasicBlockItem:
         assert long_item.rect().width() > short_item.rect().width(), (
             f"long width {long_item.rect().width()} must exceed short width {short_item.rect().width()}"
         )
+
+        # The pre-fix code sized the block as a raw ``len(disasm) * 7`` estimate
+        # with no padding; the metric-based width adds ``_BLOCK_PADDING * 2``, so
+        # the two differ font-independently even when the fallback advance is 7px.
+        legacy_long_width = len(long_disasm) * 7
+        assert long_item.rect().width() != pytest.approx(float(legacy_long_width)), "width must not use the raw len*7 estimate"
 
     @staticmethod
     def test_empty_ops_handled() -> None:

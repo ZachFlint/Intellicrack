@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -335,11 +336,11 @@ class GenericCallableWorker(_RetainedWorker):
 
 
 @overload
-def run_bridge_coroutine[T](coro: Coroutine[object, object, T], /) -> T | None: ...
+def run_bridge_coroutine[T](coro: Coroutine[object, object, T], /, *, timeout_s: float | None = None) -> T | None: ...
 
 
 @overload
-def run_bridge_coroutine[T](*, coro: Coroutine[object, object, T]) -> T | None: ...
+def run_bridge_coroutine[T](*, coro: Coroutine[object, object, T], timeout_s: float | None = None) -> T | None: ...
 
 
 def run_bridge_coroutine(
@@ -347,6 +348,7 @@ def run_bridge_coroutine(
     /,
     *,
     coro: Coroutine[object, object, object] | None = None,
+    timeout_s: float | None = None,
 ) -> object | None:
     """Run an async bridge coroutine from a synchronous Qt context.
 
@@ -362,6 +364,12 @@ def run_bridge_coroutine(
     Args:
         _coro_positional: Coroutine passed positionally.
         coro: Coroutine passed by keyword.
+        timeout_s: Optional wall-clock ceiling, in seconds, for the blocking
+            wait on the background loop. When the coroutine does not complete
+            in time a :class:`TimeoutError` is raised (the coroutine keeps
+            running on the loop and is not cancelled) so a slow or hung backend
+            cannot freeze the caller indefinitely. ``None`` waits forever
+            (legacy behaviour).
 
     Returns:
         object | None: Coroutine result when executed synchronously, or
@@ -369,6 +377,7 @@ def run_bridge_coroutine(
 
     Raises:
         TypeError: If neither a positional nor keyword coroutine is given.
+        TimeoutError: If ``timeout_s`` elapses before the coroutine completes.
     """
     resolved_coro = _coro_positional if _coro_positional is not None else coro
     if resolved_coro is None:
@@ -390,7 +399,13 @@ def run_bridge_coroutine(
 
     loop = _ensure_loop()
     future = asyncio.run_coroutine_threadsafe(resolved_coro, loop)
-    return future.result()
+    try:
+        return future.result(timeout=timeout_s)
+    except FuturesTimeoutError as exc:
+        _logger.warning("bridge_coroutine_timed_out", timeout_s=timeout_s)
+        _ = future.cancel()
+        msg = f"bridge coroutine did not complete within {timeout_s}s"
+        raise TimeoutError(msg) from exc
 
 
 def _discard_pending_task(task: asyncio.Task[object]) -> None:

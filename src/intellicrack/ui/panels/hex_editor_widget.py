@@ -45,7 +45,8 @@ if TYPE_CHECKING:
 _logger = get_logger(__name__)
 
 _BYTES_PER_ROW = 16
-_OFFSET_CHARS = 10
+_OFFSET_MIN_HEX_DIGITS = 8
+_OFFSET_PREFIX_CHARS = 2
 _GAP_PX = 12
 _MARGIN_PX = 4
 _SCROLL_LINES = 3
@@ -55,6 +56,8 @@ _MINIMAP_WIDTH = 32
 
 _ENTROPY_LOW_THRESH = 3.5
 _ENTROPY_HIGH_THRESH = 6.5
+_ENTROPY_MIN_BLOCK = 256
+_ENTROPY_TARGET_BUCKETS = 2048
 
 _ERR_UNKNOWN_MODE = "Unknown display mode"
 
@@ -385,6 +388,9 @@ class HexEditorWidget(QAbstractScrollArea):
         self._nibble_index: int = 0
         self._pending_nibble: int = 0
         self._modified_offsets: set[int] = set()
+        self._marks_undo: list[set[int]] = []
+        self._marks_redo: list[set[int]] = []
+        self._offset_hex_digits: int = _OFFSET_MIN_HEX_DIGITS
         self._highlights: list[tuple[int, int, str]] = []
         self._highlight_sources: dict[str, list[tuple[int, int, str]]] = {}
         self._selecting: bool = False
@@ -419,6 +425,8 @@ class HexEditorWidget(QAbstractScrollArea):
         self._minimap.hide()
 
         self.data_changed.connect(self._invalidate_color_caches)
+        self.data_changed.connect(self._refresh_minimap_if_visible)
+        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
 
     def _setup_font(self) -> None:
         """Configure monospace font for rendering."""
@@ -436,6 +444,20 @@ class HexEditorWidget(QAbstractScrollArea):
         self._minimap.refresh_colors()
         self._update_viewport()
 
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Re-resolve cached theme colors when the active theme changes.
+
+        Connected to :attr:`ThemeManager.theme_changed` so the custom-painted
+        offset, separator, selection, and minimap colors track live theme
+        switches without relying on the host to call
+        :meth:`refresh_colors` manually.
+
+        Args:
+            resolved_theme: The concrete theme now active ("dark" or "light").
+        """
+        _ = resolved_theme
+        self.refresh_colors()
+
     def _get_mode_params(self) -> tuple[int, int]:
         """Return (group_size, chars_per_group) for the current display mode.
 
@@ -451,7 +473,7 @@ class HexEditorWidget(QAbstractScrollArea):
         groups_per_row = max(1, _BYTES_PER_ROW // group_size)
 
         self._offset_col_x: int = _MARGIN_PX
-        self._offset_col_width: int = _OFFSET_CHARS * cw
+        self._offset_col_width: int = (self._offset_hex_digits + _OFFSET_PREFIX_CHARS) * cw
         self._hex_col_x: int = self._offset_col_x + self._offset_col_width + _GAP_PX
         self._hex_col_width: int = (groups_per_row * (chars_per_group + 1) - 1) * cw
         self._ascii_col_x: int = self._hex_col_x + self._hex_col_width + _GAP_PX
@@ -509,23 +531,60 @@ class HexEditorWidget(QAbstractScrollArea):
         self._entropy_cache = []
         self._content_class_cache = []
 
+    def _entropy_block_size(self) -> int:
+        """Choose an entropy block size bounding the bucket count for any file.
+
+        Uses a fixed minimum block for small documents (fine detail) and grows
+        the block size for large documents so the returned entropy list never
+        exceeds :data:`_ENTROPY_TARGET_BUCKETS` entries, keeping the minimap
+        render cost bounded regardless of file size.
+
+        Returns:
+            int: Block size in bytes for ``document.entropy_map``.
+        """
+        doc_len = self._doc_length()
+        if doc_len <= 0:
+            return _ENTROPY_MIN_BLOCK
+        return max(_ENTROPY_MIN_BLOCK, math.ceil(doc_len / _ENTROPY_TARGET_BUCKETS))
+
     def _ensure_entropy_cache(self) -> list[float]:
         """Populate the entropy cache lazily from the current document.
 
         Returns:
-            list[float]: Per-bucket entropy values (empty when unavailable).
+            list[float]: Per-block entropy values (empty when unavailable).
         """
         if self._entropy_cache or self._document is None:
             return self._entropy_cache
         entropy_fn = getattr(self._document, "entropy_map", None)
         if callable(entropy_fn):
             try:
-                raw_ent: Any = entropy_fn(256)
+                raw_ent: Any = entropy_fn(self._entropy_block_size())
                 self._entropy_cache = [float(v) for v in raw_ent]
             except (ValueError, TypeError, AttributeError) as exc:
                 _logger.warning("entropy_map_failed", error=str(exc))
                 self._entropy_cache = []
         return self._entropy_cache
+
+    def _refresh_minimap_entropy(self) -> None:
+        """Compute file entropy and push it to the entropy minimap.
+
+        Populates the entropy cache from the current document, forwards the per-block Shannon entropy values together with the document
+        length to the minimap so it renders entropy bars sized to the whole file, then syncs the viewport indicator to the current scroll
+        position.
+        """
+        doc_len = self._doc_length()
+        if self._document is None or doc_len == 0:
+            self._minimap.set_entropy_data([], 0)
+            return
+        values = self._ensure_entropy_cache()
+        self._minimap.set_entropy_data(values, doc_len)
+        vbar = self.verticalScrollBar()
+        self._on_scroll_changed(vbar.value() if vbar is not None else 0)
+
+    def _refresh_minimap_if_visible(self) -> None:
+        """Recompute and push entropy to the minimap when it is visible."""
+        if self._minimap.isVisible():
+            self._refresh_minimap_entropy()
 
     def _ensure_content_class_cache(self) -> list[int]:
         """Populate the content-classification cache lazily from the current document.
@@ -591,10 +650,15 @@ class HexEditorWidget(QAbstractScrollArea):
         self._selection_start = -1
         self._selection_end = -1
         self._modified_offsets.clear()
+        self._marks_undo.clear()
+        self._marks_redo.clear()
         self._highlights.clear()
         self._highlight_sources.clear()
         self._nibble_index = 0
         self._invalidate_color_caches()
+
+        self._offset_hex_digits = self._compute_offset_digits()
+        self._calculate_layout()
 
         total = self._total_rows()
         vbar = self.verticalScrollBar()
@@ -606,7 +670,27 @@ class HexEditorWidget(QAbstractScrollArea):
         vp = self.viewport()
         if vp is not None:
             vp.update()
+        if self._minimap.isVisible():
+            self._refresh_minimap_entropy()
+            self._position_minimap()
         _logger.debug("document_set", doc_length=self._doc_length())
+
+    def _compute_offset_digits(self) -> int:
+        """Compute the hex-digit width needed to render the largest offset.
+
+        Sizes the offset column to the current document length so offsets in
+        files larger than 4 GiB (which need more than eight hex digits) render
+        fully instead of overrunning into the hex column.
+
+        Returns:
+            int: Number of hex digits, at least :data:`_OFFSET_MIN_HEX_DIGITS`.
+        """
+        doc_len = self._doc_length()
+        if doc_len <= 0:
+            return _OFFSET_MIN_HEX_DIGITS
+        max_offset = doc_len - 1
+        needed = (max_offset.bit_length() + 3) // 4
+        return max(_OFFSET_MIN_HEX_DIGITS, needed)
 
     def _on_scroll_changed(self, value: int) -> None:
         """Update the minimap viewport indicator on scroll.
@@ -696,8 +780,8 @@ class HexEditorWidget(QAbstractScrollArea):
             bytes_in_row = min(self._bytes_per_row, doc_len - row_offset)
             row_data = self._read_row_data(read_fn, row_offset, bytes_in_row)
 
-            painter.setPen(QPen(self._colors["selection_bg"]))
-            painter.drawText(self._offset_col_x, y, f"0x{row_offset:08X}")
+            painter.setPen(QPen(self._colors["offset_text"]))
+            painter.drawText(self._offset_col_x, y, f"0x{row_offset:0{self._offset_hex_digits}X}")
 
             self._paint_row_hex_groups(
                 painter,
@@ -941,8 +1025,34 @@ class HexEditorWidget(QAbstractScrollArea):
         is_cursor = group_offset <= self._cursor_offset < group_offset + group_size
         if is_cursor and self._active_column == "hex" and self.hasFocus():
             painter.setPen(QPen(self._colors["cursor_text"]))
-            nibble_x = hex_x + self._nibble_index * self._char_width
-            painter.drawRect(nibble_x - 1, row_idx * self._line_height, self._char_width, self._line_height - 1)
+            caret_x, caret_w = self._hex_caret_geometry(hex_x, group_size, chars_per_group, group_offset)
+            painter.drawRect(caret_x - 1, row_idx * self._line_height, caret_w, self._line_height - 1)
+
+    def _hex_caret_geometry(self, hex_x: int, group_size: int, chars_per_group: int, group_offset: int) -> tuple[int, int]:
+        """Compute the hex-column caret x-position and width for the cursor byte.
+
+        For single-byte modes the caret tracks the active nibble. For
+        multi-byte modes (16/32/64-bit hex, decimal and float) it tracks the
+        cursor's byte position within the group, sized proportionally to the
+        group's character width so the caret follows ``_cursor_offset`` instead
+        of pinning to the group's first glyph.
+
+        Args:
+            hex_x: X coordinate of the group's first glyph.
+            group_size: Bytes per display group for the current mode.
+            chars_per_group: Character width of the group's formatted text.
+            group_offset: Absolute byte offset of the group's first byte.
+
+        Returns:
+            tuple[int, int]: The caret x-position and width in pixels.
+        """
+        if group_size <= 1:
+            return hex_x + self._nibble_index * self._char_width, self._char_width
+        byte_in_group = max(0, min(group_size - 1, self._cursor_offset - group_offset))
+        chars_per_byte = chars_per_group / group_size
+        caret_x = hex_x + round(byte_in_group * chars_per_byte * self._char_width)
+        caret_w = max(self._char_width, round(chars_per_byte * self._char_width))
+        return caret_x, caret_w
 
     @staticmethod
     def _is_group_selected(group_offset: int, actual_size: int, sel_start: int, sel_end: int) -> bool:
@@ -1415,6 +1525,72 @@ class HexEditorWidget(QAbstractScrollArea):
         self.cursor_moved.emit(new_offset)
         self._update_viewport()
 
+    def _push_marks_undo(self) -> None:
+        """Snapshot the current modified-byte marks before a fresh edit.
+
+        Pushes a copy of the current marks onto the undo stack and clears the redo stack, mirroring the document's own undo history so a
+        later undo can restore exactly the marks that preceded this edit.
+        """
+        self._marks_undo.append(set(self._modified_offsets))
+        self._marks_redo.clear()
+
+    def _restore_marks_undo(self) -> None:
+        """Revert the modified-byte marks to the state before the last edit.
+
+        Restores the snapshot recorded by :meth:`_push_marks_undo`, pushing the current marks onto the redo stack. Falls back to clearing
+        all marks when no snapshot exists (edits made before mark tracking began).
+        """
+        if self._marks_undo:
+            self._marks_redo.append(set(self._modified_offsets))
+            self._modified_offsets = self._marks_undo.pop()
+        else:
+            self._modified_offsets.clear()
+
+    def _restore_marks_redo(self) -> None:
+        """Reapply the modified-byte marks removed by the last undo.
+
+        Restores the snapshot recorded on the redo stack by
+        :meth:`_restore_marks_undo`, pushing the current marks back onto the
+        undo stack. Falls back to clearing all marks when no snapshot exists.
+        """
+        if self._marks_redo:
+            self._marks_undo.append(set(self._modified_offsets))
+            self._modified_offsets = self._marks_redo.pop()
+        else:
+            self._modified_offsets.clear()
+
+    def _shift_modified_offsets_for_insert(self, offset: int, count: int) -> None:
+        """Shift modified-byte marks to track an insertion.
+
+        Args:
+            offset: Byte offset where bytes were inserted.
+            count: Number of bytes inserted.
+        """
+        if count <= 0 or not self._modified_offsets:
+            return
+        self._modified_offsets = {o + count if o >= offset else o for o in self._modified_offsets}
+
+    def _shift_modified_offsets_for_delete(self, offset: int, count: int) -> None:
+        """Shift modified-byte marks to track a deletion.
+
+        Marks within the deleted range are dropped and marks after it move
+        left by the deleted byte count so highlights keep tracking the correct
+        bytes.
+
+        Args:
+            offset: First deleted byte offset.
+            count: Number of bytes deleted.
+        """
+        if count <= 0 or not self._modified_offsets:
+            return
+        remapped: set[int] = set()
+        for o in self._modified_offsets:
+            if o < offset:
+                remapped.add(o)
+            elif o >= offset + count:
+                remapped.add(o - count)
+        self._modified_offsets = remapped
+
     def _handle_hex_input(self, char: str) -> None:
         """Process a hex digit input character.
 
@@ -1441,6 +1617,7 @@ class HexEditorWidget(QAbstractScrollArea):
                 if callable(write_fn):
                     try:
                         write_fn(self._cursor_offset, data)
+                        self._push_marks_undo()
                         self._modified_offsets.add(self._cursor_offset)
                         _logger.info("hex_editor_overwrite_completed", offset=self._cursor_offset)
                     except (RuntimeError, ValueError, IndexError, OSError):
@@ -1450,6 +1627,8 @@ class HexEditorWidget(QAbstractScrollArea):
                 if callable(insert_fn):
                     try:
                         insert_fn(self._cursor_offset, data)
+                        self._push_marks_undo()
+                        self._shift_modified_offsets_for_insert(self._cursor_offset, len(data))
                         self._modified_offsets.add(self._cursor_offset)
                         _logger.debug("hex_editor_insert_completed", offset=self._cursor_offset)
                     except (RuntimeError, ValueError, IndexError, OSError):
@@ -1478,6 +1657,7 @@ class HexEditorWidget(QAbstractScrollArea):
             if callable(write_fn):
                 try:
                     write_fn(self._cursor_offset, data)
+                    self._push_marks_undo()
                     self._modified_offsets.add(self._cursor_offset)
                     _logger.info("hex_editor_ascii_overwrite_completed", offset=self._cursor_offset)
                 except (RuntimeError, ValueError, IndexError, OSError):
@@ -1487,6 +1667,8 @@ class HexEditorWidget(QAbstractScrollArea):
             if callable(insert_fn):
                 try:
                     insert_fn(self._cursor_offset, data)
+                    self._push_marks_undo()
+                    self._shift_modified_offsets_for_insert(self._cursor_offset, len(data))
                     self._modified_offsets.add(self._cursor_offset)
                     _logger.debug("hex_editor_ascii_insert_completed", offset=self._cursor_offset)
                 except (RuntimeError, ValueError, IndexError, OSError):
@@ -1504,11 +1686,27 @@ class HexEditorWidget(QAbstractScrollArea):
             length: Number of bytes to delete.
         """
         delete_fn(start, length)
+        self._push_marks_undo()
+        self._shift_modified_offsets_for_delete(start, length)
         self._selection_start = -1
         self._selection_end = -1
         self.data_changed.emit()
         self._move_cursor(start)
         _logger.info("hex_editor_delete_selection_completed", start=start, length=length)
+
+    def _delete_byte_impl(self, delete_fn: Callable[[int, int], object], offset: int) -> None:
+        """Delete a single byte at ``offset`` and refresh cursor and mark state.
+
+        Args:
+            delete_fn: The document's ``delete_bytes`` callable.
+            offset: The byte offset to delete.
+        """
+        delete_fn(offset, 1)
+        self._push_marks_undo()
+        self._shift_modified_offsets_for_delete(offset, 1)
+        self.data_changed.emit()
+        self._move_cursor(offset)
+        _logger.info("hex_editor_delete_byte_completed", offset=offset)
 
     def _do_delete(self, *, backspace: bool) -> None:
         """Delete byte(s) at cursor or selection.
@@ -1541,10 +1739,7 @@ class HexEditorWidget(QAbstractScrollArea):
             _logger.info("hex_editor_delete_byte_started", offset=offset, backspace=backspace)
             self.about_to_modify.emit(offset)
             try:
-                delete_fn(offset, 1)
-                self.data_changed.emit()
-                self._move_cursor(offset)
-                _logger.info("hex_editor_delete_byte_completed", offset=offset)
+                self._delete_byte_impl(delete_fn, offset)
             except (RuntimeError, ValueError, IndexError, OSError):
                 _logger.warning("hex_editor_delete_byte_failed", offset=offset, exc_info=True)
 
@@ -1558,7 +1753,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if callable(undo_fn):
             _logger.info("hex_editor_undo_started")
             if undo_fn():
-                self._modified_offsets.clear()
+                self._restore_marks_undo()
                 self.data_changed.emit()
                 self._update_viewport()
                 _logger.info("hex_editor_undo_completed")
@@ -1573,7 +1768,7 @@ class HexEditorWidget(QAbstractScrollArea):
         if callable(redo_fn):
             _logger.info("hex_editor_redo_started")
             if redo_fn():
-                self._modified_offsets.clear()
+                self._restore_marks_redo()
                 self.data_changed.emit()
                 self._update_viewport()
                 _logger.info("hex_editor_redo_completed")
@@ -1624,6 +1819,7 @@ class HexEditorWidget(QAbstractScrollArea):
             if callable(write_fn):
                 try:
                     write_fn(self._cursor_offset, data)
+                    self._push_marks_undo()
                     for i in range(len(data)):
                         self._modified_offsets.add(self._cursor_offset + i)
                     _logger.info("hex_editor_paste_overwrite_completed", offset=self._cursor_offset, length=len(data))
@@ -1634,6 +1830,8 @@ class HexEditorWidget(QAbstractScrollArea):
             if callable(insert_fn):
                 try:
                     insert_fn(self._cursor_offset, data)
+                    self._push_marks_undo()
+                    self._shift_modified_offsets_for_insert(self._cursor_offset, len(data))
                     for i in range(len(data)):
                         self._modified_offsets.add(self._cursor_offset + i)
                     _logger.debug("hex_editor_paste_insert_completed", offset=self._cursor_offset, length=len(data))
@@ -1746,28 +1944,38 @@ class HexEditorWidget(QAbstractScrollArea):
         self._position_minimap()
 
     def _position_minimap(self) -> None:
-        """Position the entropy minimap to the right of the vertical scrollbar."""
-        vbar = self.verticalScrollBar()
+        """Position the entropy minimap inside the reserved right viewport margin.
+
+        The minimap occupies the margin carved by :meth:`show_minimap` between the viewport's right edge and the vertical scrollbar, so it
+        stays within the widget bounds instead of being clipped past the scrollbar.
+        """
         vp = self.viewport()
-        if vbar is None or vp is None:
+        if vp is None or not self._minimap.isVisible():
             return
-        vbar_geom = vbar.geometry()
-        mm_x = vbar_geom.right() + 1
-        mm_y = vp.geometry().top()
-        mm_h = vp.geometry().height()
-        self._minimap.setGeometry(mm_x, mm_y, _MINIMAP_WIDTH, mm_h)
+        vp_geom = vp.geometry()
+        mm_x = vp_geom.right() + 1
+        self._minimap.setGeometry(mm_x, vp_geom.top(), _MINIMAP_WIDTH, vp_geom.height())
 
     def show_minimap(self, *, visible: bool = True) -> None:
         """Show or hide the entropy minimap.
+
+        When shown, reserves a right viewport margin the width of the minimap
+        so it renders within the widget, computes and pushes file entropy into
+        it, then positions it. When hidden, the reserved margin is released.
 
         Args:
             visible: True to show the minimap, False to hide it.
         """
         if visible:
+            self.setViewportMargins(0, 0, _MINIMAP_WIDTH, 0)
             self._minimap.show()
+            self._refresh_minimap_entropy()
             self._position_minimap()
         else:
             self._minimap.hide()
+            self.setViewportMargins(0, 0, 0, 0)
+        self._update_scrollbar()
+        self._update_viewport()
 
     def _update_scrollbar(self) -> None:
         """Update scrollbar range based on document size and viewport."""
@@ -1853,12 +2061,30 @@ class HexEditorWidget(QAbstractScrollArea):
     def set_selection_range(self, start: int, end: int) -> None:
         """Set the selection range programmatically.
 
+        Clamps both offsets to the document range and emits
+        :attr:`selection_changed` so downstream consumers (data inspector,
+        selection hash, scripting API, bridge) stay in sync instead of holding
+        stale or out-of-range values. When the document is empty the selection
+        is cleared and a cleared range is emitted.
+
         Args:
             start: Start byte offset of the selection.
             end: End byte offset of the selection.
         """
-        self._selection_start = start
-        self._selection_end = end
+        doc_len = self._doc_length()
+        if doc_len <= 0:
+            self._selection_start = -1
+            self._selection_end = -1
+            self.selection_changed.emit(-1, -1)
+            self._update_viewport()
+            return
+        max_offset = doc_len - 1
+        clamped_start = max(0, min(start, max_offset))
+        clamped_end = max(0, min(end, max_offset))
+        self._selection_start = clamped_start
+        self._selection_end = clamped_end
+        self.selection_changed.emit(min(clamped_start, clamped_end), max(clamped_start, clamped_end))
+        self._update_viewport()
 
     def get_selection_bytes(self) -> bytes:
         """Get the bytes in the current selection.

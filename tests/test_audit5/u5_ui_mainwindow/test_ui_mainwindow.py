@@ -98,9 +98,7 @@ def qapp() -> QCoreApplication:
         QCoreApplication: The running application instance.
     """
     existing = QApplication.instance()
-    if existing is not None:
-        return existing
-    return QApplication([])
+    return existing if existing is not None else QApplication([])
 
 
 def _no_exec(_self: object) -> int:
@@ -210,6 +208,7 @@ class _DummyHolder:
         self._orchestrator: object = None
         self._shutting_down: bool = False
         self._status_failure_count: int = 0
+        self._status_refresh_in_flight: bool = False
         self._status_timer: _TimerDouble | None = None
         self.status_label: _StatusLabelDouble | None = None
         self._refresh_memory_status: object = None
@@ -313,6 +312,20 @@ class _DummyHolder:
             _StatusLabelDouble | None: The label double.
         """
         return self.status_label
+
+    def _on_system_status_fetched(self, _result: object) -> None:
+        """No-op success slot referenced by ``_refresh_system_status`` dispatch.
+
+        Args:
+            _result: The status payload (ignored by the dispatch gate).
+        """
+
+    def _on_system_status_error(self, _exc: object) -> None:
+        """No-op error slot referenced by ``_refresh_system_status`` dispatch.
+
+        Args:
+            _exc: The error object (ignored by the dispatch gate).
+        """
 
 
 class _RecordingMessageBoxInfo:
@@ -1023,8 +1036,8 @@ class TestOpenSandboxAvoidsDialogProbe:
         getattr(MainWindow, "_on_open_sandbox")(cast("MainWindow", _OpenSandboxHolder()))
 
         assert is_available_calls == [1], f"_on_open_sandbox must await bridge.is_available exactly once; got {is_available_calls}"
-        assert create_calls == [], f"create must not run when the sandbox is unavailable; got {create_calls}"
-        assert sandbox_dialog_constructed == [], "SandboxConfigDialog must never be constructed as an availability probe"
+        assert not create_calls, f"create must not run when the sandbox is unavailable; got {create_calls}"
+        assert not sandbox_dialog_constructed, "SandboxConfigDialog must never be constructed as an availability probe"
         assert any("No sandbox" in body or "sandbox environment" in body for body in warnings), (
             f"expected the unavailable-sandbox warning to fire; got {warnings}"
         )
@@ -1884,25 +1897,19 @@ class TestRefreshSystemStatusFailureThreshold:
     """``_refresh_system_status`` stops the timer after repeated failures."""
 
     @staticmethod
-    def test_threshold_exceeded_stops_timer(monkeypatch: pytest.MonkeyPatch) -> None:
-        """Successive failures stop the timer once the threshold is reached.
+    def test_threshold_exceeded_stops_timer() -> None:
+        """Successive error callbacks stop the timer once the threshold is reached.
 
-        Args:
-            monkeypatch: Pytest monkeypatch fixture.
+        Drives the GUI-thread error slot ``_on_system_status_error`` (M2 moved
+        the failure accounting off the blocking timer path into this slot).
         """
-
-        def _raise(_coro: object) -> object:
-            msg = "forced"
-            raise RuntimeError(msg)
-
-        monkeypatch.setattr(app_module, "run_bridge_coroutine", _raise)
-
         holder = _build_refresh_holder(failure_count=0)
         threshold: int = getattr(app_module, "_STATUS_REFRESH_FAILURE_THRESHOLD")
         for _ in range(threshold):
-            getattr(MainWindow, "_refresh_system_status")(cast("MainWindow", holder))
+            getattr(MainWindow, "_on_system_status_error")(cast("MainWindow", holder), RuntimeError("forced"))
 
         assert getattr(holder, "_status_failure_count") == threshold
+        assert getattr(holder, "_status_refresh_in_flight") is False
         timer = getattr(holder, "_status_timer")
         assert timer is not None
         assert cast("_TimerDouble", timer).stopped == 1
@@ -1910,33 +1917,48 @@ class TestRefreshSystemStatusFailureThreshold:
         assert "disabled" in holder.status_label.text.lower()
 
     @staticmethod
-    def test_successful_refresh_resets_failure_count(
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """A successful coroutine result resets the failure counter to zero.
+    def test_successful_refresh_resets_failure_count() -> None:
+        """A fetched status payload resets the failure counter to zero.
 
-        Args:
-            monkeypatch: Pytest monkeypatch fixture.
+        Drives the GUI-thread success slot ``_on_system_status_fetched``.
         """
-
-        def _fake_run_bridge(_coro: object) -> dict[str, str]:
-            """Return a fixed status dict for the coroutine stub.
-
-            Args:
-                _coro: Coroutine passed by the caller (unused).
-
-            Returns:
-                dict[str, str]: A minimal status dict.
-            """
-            return {"state": "running", "session_id": "sess-1"}
-
-        monkeypatch.setattr(app_module, "run_bridge_coroutine", _fake_run_bridge)
-
         holder = _build_refresh_holder(failure_count=3)
-        getattr(MainWindow, "_refresh_system_status")(cast("MainWindow", holder))
+        getattr(MainWindow, "_on_system_status_fetched")(
+            cast("MainWindow", holder),
+            {"state": "running", "session_id": "sess-1"},
+        )
         assert getattr(holder, "_status_failure_count") == 0
+        assert getattr(holder, "_status_refresh_in_flight") is False
         assert holder.status_label is not None
         assert "running" in holder.status_label.text
+
+    @staticmethod
+    def test_refresh_dispatches_async_and_never_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
+        """M2 gate: the 30s timer path uses the async worker, never the blocking runner.
+
+        Fails against the pre-fix code, which called the blocking
+        ``run_bridge_coroutine`` on the GUI/timer thread.
+        """
+        dispatched: list[str] = []
+
+        def _fail_blocking(*_args: object, **_kwargs: object) -> object:
+            dispatched.append("blocking")
+            msg = "blocking run_bridge_coroutine must not run on the status timer"
+            raise AssertionError(msg)
+
+        def _record_logged(coro: object, *_args: object, **_kwargs: object) -> None:
+            dispatched.append("logged")
+            if asyncio.iscoroutine(coro):
+                coro.close()
+
+        monkeypatch.setattr(app_module, "run_bridge_coroutine", _fail_blocking)
+        monkeypatch.setattr(app_module, "run_bridge_coroutine_logged", _record_logged)
+
+        holder = _build_refresh_holder(failure_count=0)
+        getattr(MainWindow, "_refresh_system_status")(cast("MainWindow", holder))
+
+        assert dispatched == ["logged"]
+        assert getattr(holder, "_status_refresh_in_flight") is True
 
 
 # ---------------------------------------------------------------------------

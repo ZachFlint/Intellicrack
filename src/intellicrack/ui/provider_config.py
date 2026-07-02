@@ -853,10 +853,11 @@ class ModelRefreshWorker(QThread):
         Returns:
             tuple[bool, list[str], str]: Tuple of (success, model_list, message).
         """
-        model_ids = sorted({str(entry["model_id"]) for entry in _recommended_local_models if "model_id" in entry})
-        if not model_ids:
-            return False, [], "No local Transformers models available"
-        return True, model_ids, f"Found {len(model_ids)} local models"
+        if model_ids := sorted(
+            {str(entry["model_id"]) for entry in _recommended_local_models if "model_id" in entry},
+        ):
+            return True, model_ids, f"Found {len(model_ids)} local models"
+        return False, [], "No local Transformers models available"
 
     def _fetch_anthropic_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
         """Fetch Anthropic models from the /v1/models API with pagination.
@@ -964,10 +965,10 @@ class ModelRefreshWorker(QThread):
 
             if not data.get("has_more", False):
                 break
-            last_id = data.get("last_id")
-            if not last_id:
+            if last_id := data.get("last_id"):
+                after_id = last_id
+            else:
                 break
-            after_id = last_id
         return "ok", "", page_count
 
     def _fetch_openai_models(self, timeout: httpx.Timeout) -> tuple[bool, list[str], str]:
@@ -2597,8 +2598,9 @@ class ProviderSettingsWidget(QFrame):
         if loop is not None and loop.is_running():
             return ""
 
-        recommended = asyncio.run(discovery.get_recommended_model(self.provider_id))
-        if recommended:
+        if recommended := asyncio.run(
+            discovery.get_recommended_model(self.provider_id),
+        ):
             return f"Recommended: {recommended.name}"
         return ""
 
@@ -2734,6 +2736,9 @@ class ProviderSettingsWidget(QFrame):
     def _refresh_models(self) -> None:
         """Refresh the model list from the provider API."""
         _logger.debug("model_refresh_started", provider=self.provider_id)
+        if self._refresh_worker is not None and self._refresh_worker.isRunning():
+            _logger.debug("model_refresh_skipped", provider=self.provider_id, reason="refresh_in_progress")
+            return
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_loading", 16))
         self._status_label.setText("Refreshing models...")
@@ -2819,6 +2824,10 @@ class ProviderSettingsWidget(QFrame):
             "provider_connection_test_started",
             provider=self.provider_id,
         )
+
+        if self._test_worker is not None and self._test_worker.isRunning():
+            _logger.debug("provider_connection_test_skipped", provider=self.provider_id, reason="test_in_progress")
+            return
 
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_loading", 16))
@@ -3277,7 +3286,6 @@ class ModelSelectionDialog(QDialog):
         self._discovery_status_label = QLabel()
         self._discovery_status_label.setWordWrap(True)
         self._discovery_status_label.setObjectName("discovery_status_label")
-        self._discovery_status_label.setObjectName("hint_label")
         layout.addWidget(self._discovery_status_label)
 
         self._model_list.currentRowChanged.connect(self._on_model_selected)
