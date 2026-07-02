@@ -85,6 +85,7 @@ TOOL_CAPABILITY_MAP: dict[str, str] = {
     "run": "debugging",
     "pause": "debugging",
     "stop": "debugging",
+    "restart": "debugging",
     "step_into": "debugging",
     "step_over": "debugging",
     "step_out": "debugging",
@@ -148,15 +149,28 @@ TOOL_CAPABILITY_MAP: dict[str, str] = {
     "kernel_write": "memory_access",
     "kernel_alloc": "memory_access",
     "kernel_protect": "memory_access",
+    "sandbox.stop": "dynamic_analysis",
+    "frida.attach": "dynamic_analysis",
+    "frida.detach": "dynamic_analysis",
+    "frida.disassemble_instruction": "dynamic_analysis",
+    "ghidra.get_memory_map": "static_analysis",
+    "ghidra.write_bytes": "static_analysis",
+    "hex_editor.run_python_script": "static_analysis",
+    "process.get_modules": "memory_access",
+    "process.get_threads": "memory_access",
 }
-"""Mapping from bridge tool-function short names to required capability.
+"""Mapping from bridge tool-function name to required capability.
 
-Each key is the unqualified method/tool name exposed by a bridge (the ``name`` field of its ``ToolFunction`` entries with the ``<bridge>.``
-prefix stripped). Each value is the capability name that would appear in ``BridgeCapabilities`` as ``supports_<value>``. ``ToolRegistry``
-consults this mapping in ``execute_tool_call`` to raise ``ToolError`` when a bridge is asked to execute a tool whose required capability it
-does not advertise. The mapping lives in ``bridges.base`` so that bridge implementations and the registry share a single source of truth,
-and ``intellicrack.core.tools`` imports it from here.
+Each key is either the unqualified method/tool name exposed by a bridge (the ``name`` field of its ``ToolFunction`` entries with the
+``<bridge>.`` prefix stripped) or a fully-qualified ``<bridge>.<method>`` name. Each value is the capability name that would appear in
+``BridgeCapabilities`` as ``supports_<value>``. ``ToolRegistry`` consults this mapping in ``execute_tool_call`` and prefers a
+fully-qualified match over the short-name match, so a bridge whose method name collides with an unrelated bridge's (for example the
+sandbox's ``stop`` versus a debugger's ``stop``) can require the capability that actually fits its own operation instead of inheriting the
+short name's capability. It raises ``ToolError`` when a bridge is asked to execute a tool whose required capability it does not advertise.
+The mapping lives in ``bridges.base`` so that bridge implementations and the registry share a single source of truth, and
+``intellicrack.core.tools`` imports it from here.
 """
+
 
 @dataclass
 class DisassemblyLine:
@@ -356,7 +370,7 @@ class ToolBridgeBase(ABC):
     @property
     @abstractmethod
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """Tool name enum value.
 
         Returns:
             ToolName: The tool's name enum value.
@@ -364,7 +378,7 @@ class ToolBridgeBase(ABC):
 
     @property
     def state(self) -> BridgeState:
-        """Get current bridge state.
+        """Current bridge state.
 
         Returns:
             BridgeState: Current BridgeState instance.
@@ -446,7 +460,7 @@ class ToolBridgeBase(ABC):
 
     @property
     def capabilities(self) -> BridgeCapabilities:
-        """Get bridge capabilities.
+        """Bridge capabilities.
 
         Returns:
             BridgeCapabilities: BridgeCapabilities describing what this tool can do.
@@ -456,7 +470,7 @@ class ToolBridgeBase(ABC):
     @property
     @abstractmethod
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """Tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: Tool definition with available functions.

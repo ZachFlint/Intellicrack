@@ -11,10 +11,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast, override
+from typing import TYPE_CHECKING, Any, Final, TypedDict, cast, override
 
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFileDialog,
     QHBoxLayout,
@@ -23,6 +24,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
+    QSpinBox,
     QSplitter,
     QTabWidget,
     QToolBar,
@@ -56,6 +58,27 @@ _EXEC_MARGIN: Final[int] = 4
 _EXEC_SPACING: Final[int] = 4
 _SPLIT_LEFT: Final[int] = 200
 _SPLIT_RIGHT: Final[int] = 400
+
+_TIMEOUT_MIN_SECONDS: Final[int] = 1
+_TIMEOUT_MAX_SECONDS: Final[int] = 86400
+_TIMEOUT_DEFAULT_SECONDS: Final[int] = 300
+_MEMORY_MIN_MB: Final[int] = 128
+_MEMORY_MAX_MB: Final[int] = 131072
+_MEMORY_DEFAULT_MB: Final[int] = 2048
+
+
+class _SandboxCreateConfig(TypedDict):
+    """Keyword arguments for ``SandboxBridge.create`` read from the toolbar.
+
+    Attributes:
+        timeout_seconds: Execution timeout in seconds.
+        network_enabled: Whether network access is enabled.
+        memory_limit_mb: Memory limit in megabytes.
+    """
+
+    timeout_seconds: int
+    network_enabled: bool
+    memory_limit_mb: int
 
 
 class SandboxPanel(AnalysisPanelBase):
@@ -168,6 +191,135 @@ class SandboxPanel(AnalysisPanelBase):
             enabled=False,
         )
 
+    def _build_config_row(self, exec_layout: QVBoxLayout, fm: FontManager) -> None:
+        """Build the sandbox VM/environment configuration row.
+
+        Adds the timeout, memory-limit, and network-access controls that
+        feed ``SandboxBridge.create``'s ``timeout_seconds``,
+        ``memory_limit_mb``, and ``network_enabled`` parameters.
+
+        Args:
+            exec_layout: Layout to append the configuration header and row to.
+            fm: Font manager used for consistent heading styling.
+        """
+        config_header = QLabel("Sandbox Configuration")
+        config_header.setFont(fm.get_heading_font(10))
+        exec_layout.addWidget(config_header)
+
+        config_row = QHBoxLayout()
+        timeout_label = QLabel("Timeout (s):")
+        timeout_label.setObjectName("toolbar_label")
+        config_row.addWidget(timeout_label)
+
+        self._timeout_spin = QSpinBox()
+        self._timeout_spin.setRange(_TIMEOUT_MIN_SECONDS, _TIMEOUT_MAX_SECONDS)
+        self._timeout_spin.setValue(_TIMEOUT_DEFAULT_SECONDS)
+        self._timeout_spin.setToolTip("Sandbox execution timeout in seconds")
+        config_row.addWidget(self._timeout_spin)
+
+        memory_label = QLabel("Memory (MB):")
+        memory_label.setObjectName("toolbar_label")
+        config_row.addWidget(memory_label)
+
+        self._memory_limit_spin = QSpinBox()
+        self._memory_limit_spin.setRange(_MEMORY_MIN_MB, _MEMORY_MAX_MB)
+        self._memory_limit_spin.setValue(_MEMORY_DEFAULT_MB)
+        self._memory_limit_spin.setToolTip("Sandbox memory limit in megabytes")
+        config_row.addWidget(self._memory_limit_spin)
+
+        self._network_enabled_check = QCheckBox("Network Enabled")
+        self._network_enabled_check.setChecked(False)
+        self._network_enabled_check.setToolTip("Allow the sandbox instance to access the network")
+        config_row.addWidget(self._network_enabled_check)
+
+        config_row.addStretch(1)
+        exec_layout.addLayout(config_row)
+
+    def _build_analysis_controls(self, exec_layout: QVBoxLayout, fm: FontManager) -> None:
+        """Build the L3 instance-management and analysis control rows.
+
+        Adds the controls that drive ``SandboxBridge.list`` (refresh the
+        Instances tab), ``snapshot_list`` (refresh the Snapshots tab),
+        ``get_pending_messages`` (guest-agent inbox), ``anti_evasion``
+        (with a profile field), ``detect_c2``, and ``diff`` (two
+        instance-id fields plus a Compare action).
+
+        Args:
+            exec_layout: Layout to append the analysis control header and rows to.
+            fm: Font manager used for consistent heading and input styling.
+        """
+        controls_header = QLabel("Instances & Analysis")
+        controls_header.setFont(fm.get_heading_font(10))
+        exec_layout.addWidget(controls_header)
+
+        instances_row = QHBoxLayout()
+
+        self._refresh_instances_btn = QPushButton("Refresh Instances")
+        self._refresh_instances_btn.setObjectName("tool_button")
+        self._refresh_instances_btn.clicked.connect(self._on_refresh_instances)
+        instances_row.addWidget(self._refresh_instances_btn)
+
+        self._refresh_snapshots_btn = QPushButton("Refresh Snapshots")
+        self._refresh_snapshots_btn.setObjectName("tool_button")
+        self._refresh_snapshots_btn.setEnabled(False)
+        self._refresh_snapshots_btn.clicked.connect(self._on_refresh_snapshots)
+        instances_row.addWidget(self._refresh_snapshots_btn)
+
+        self._pending_messages_btn = QPushButton("Pending Messages")
+        self._pending_messages_btn.setObjectName("tool_button")
+        self._pending_messages_btn.setEnabled(False)
+        self._pending_messages_btn.clicked.connect(self._on_pending_messages)
+        instances_row.addWidget(self._pending_messages_btn)
+
+        self._detect_c2_btn = QPushButton("Detect C2")
+        self._detect_c2_btn.setObjectName("tool_button")
+        self._detect_c2_btn.setEnabled(False)
+        self._detect_c2_btn.clicked.connect(self._on_detect_c2)
+        instances_row.addWidget(self._detect_c2_btn)
+
+        instances_row.addStretch(1)
+        exec_layout.addLayout(instances_row)
+
+        evasion_row = QHBoxLayout()
+        evasion_label = QLabel("Anti-Evasion Profile:")
+        evasion_label.setObjectName("toolbar_label")
+        evasion_row.addWidget(evasion_label)
+
+        self._anti_evasion_profile_input = QLineEdit()
+        self._anti_evasion_profile_input.setFont(fm.get_code_font(9))
+        self._anti_evasion_profile_input.setPlaceholderText("default")
+        self._anti_evasion_profile_input.setToolTip("Anti-evasion hardening profile name (QEMU only)")
+        evasion_row.addWidget(self._anti_evasion_profile_input)
+
+        self._anti_evasion_btn = QPushButton("Apply Anti-Evasion")
+        self._anti_evasion_btn.setObjectName("tool_button")
+        self._anti_evasion_btn.setEnabled(False)
+        self._anti_evasion_btn.clicked.connect(self._on_anti_evasion)
+        evasion_row.addWidget(self._anti_evasion_btn)
+        exec_layout.addLayout(evasion_row)
+
+        diff_row = QHBoxLayout()
+        diff_label = QLabel("Diff Instances:")
+        diff_label.setObjectName("toolbar_label")
+        diff_row.addWidget(diff_label)
+
+        self._diff_instance_a_input = QLineEdit()
+        self._diff_instance_a_input.setFont(fm.get_code_font(9))
+        self._diff_instance_a_input.setPlaceholderText("Instance A ID")
+        diff_row.addWidget(self._diff_instance_a_input)
+
+        self._diff_instance_b_input = QLineEdit()
+        self._diff_instance_b_input.setFont(fm.get_code_font(9))
+        self._diff_instance_b_input.setPlaceholderText("Instance B ID")
+        diff_row.addWidget(self._diff_instance_b_input)
+
+        self._diff_btn = QPushButton("Compare")
+        self._diff_btn.setObjectName("tool_button")
+        self._diff_btn.setEnabled(False)
+        self._diff_btn.clicked.connect(self._on_diff)
+        diff_row.addWidget(self._diff_btn)
+        exec_layout.addLayout(diff_row)
+
     @override
     def _create_content(self) -> QWidget:
         """Create the sandbox management content area.
@@ -182,6 +334,8 @@ class SandboxPanel(AnalysisPanelBase):
         exec_layout = QVBoxLayout(exec_container)
         exec_layout.setContentsMargins(_EXEC_MARGIN, _EXEC_MARGIN, _EXEC_MARGIN, _EXEC_MARGIN)
         exec_layout.setSpacing(_EXEC_SPACING)
+
+        self._build_config_row(exec_layout, fm)
 
         exec_header = QLabel("Binary Execution")
         exec_header.setFont(fm.get_heading_font(10))
@@ -234,6 +388,8 @@ class SandboxPanel(AnalysisPanelBase):
         self._exec_cmd_btn.clicked.connect(self._on_execute_command)
         cmd_row.addWidget(self._exec_cmd_btn)
         exec_layout.addLayout(cmd_row)
+
+        self._build_analysis_controls(exec_layout, fm)
 
         main_splitter.addWidget(exec_container)
 
@@ -504,6 +660,11 @@ class SandboxPanel(AnalysisPanelBase):
         self.pause_btn.setEnabled(active)
         self.delete_snap_btn.setEnabled(active)
         self._exec_cmd_btn.setEnabled(active)
+        self._refresh_snapshots_btn.setEnabled(active)
+        self._pending_messages_btn.setEnabled(active)
+        self._detect_c2_btn.setEnabled(active)
+        self._anti_evasion_btn.setEnabled(active)
+        self._diff_btn.setEnabled(active)
 
     def _selected_sandbox_type(self) -> SandboxType:
         """Get the sandbox type from the combo box selection.
@@ -514,6 +675,21 @@ class SandboxPanel(AnalysisPanelBase):
         combo_text = self.sandbox_type_combo.currentText()
         return "qemu" if combo_text == "QEMU" else "windows"
 
+    def _sandbox_create_config(self) -> _SandboxCreateConfig:
+        """Read the VM/environment configuration controls for sandbox creation.
+
+        Returns:
+            _SandboxCreateConfig: Keyword arguments for
+            ``SandboxBridge.create``: ``timeout_seconds``,
+            ``network_enabled``, and ``memory_limit_mb`` reflecting the
+            current toolbar widget values.
+        """
+        return {
+            "timeout_seconds": self._timeout_spin.value(),
+            "network_enabled": self._network_enabled_check.isChecked(),
+            "memory_limit_mb": self._memory_limit_spin.value(),
+        }
+
     def _on_create(self) -> None:
         """Create a new sandbox environment."""
         if self._bridge is None:
@@ -522,10 +698,11 @@ class SandboxPanel(AnalysisPanelBase):
             return
 
         sandbox_type = self._selected_sandbox_type()
-        _logger.debug("sandbox_create_via_bridge", sandbox_type=sandbox_type)
+        config = self._sandbox_create_config()
+        _logger.debug("sandbox_create_via_bridge", sandbox_type=sandbox_type, **config)
         self.create_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.create(sandbox_type=sandbox_type),
+            self._bridge.create(sandbox_type=sandbox_type, **config),
             on_success=self._on_bridge_create_success,
             on_error=self._on_create_error,
             parent=self,
@@ -533,6 +710,7 @@ class SandboxPanel(AnalysisPanelBase):
             logger=_logger,
             level="info",
             sandbox_type=sandbox_type,
+            **config,
         )
 
     def _on_bridge_create_success(self, result: object) -> None:
@@ -557,6 +735,7 @@ class SandboxPanel(AnalysisPanelBase):
         if self.sandbox_id is None:
             self.sandbox_id = "active"
         self._log("[+] Sandbox created")
+        self._diff_instance_a_input.setText(self.sandbox_id)
         self._status_indicator.setText("Active")
         self._set_sandbox_controls_active(active=True)
         self.create_btn.setEnabled(False)
@@ -653,8 +832,9 @@ class SandboxPanel(AnalysisPanelBase):
             return
 
         sandbox_type = self._selected_sandbox_type()
+        config = self._sandbox_create_config()
         run_bridge_coroutine_logged(
-            self._bridge.create(sandbox_type=sandbox_type),
+            self._bridge.create(sandbox_type=sandbox_type, **config),
             on_success=self._on_restart_create_success,
             on_error=self._on_restart_error,
             parent=self,
@@ -662,6 +842,7 @@ class SandboxPanel(AnalysisPanelBase):
             logger=_logger,
             level="info",
             sandbox_type=sandbox_type,
+            **config,
         )
 
     def _on_restart_create_success(self, result: object) -> None:
@@ -1798,6 +1979,317 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._log(f"[-] Command execution failed: {exc}")
         self._exec_cmd_btn.setEnabled(True)
+
+    def _on_refresh_instances(self) -> None:
+        """Refresh the Instances tab from the bridge instance list."""
+        if self._bridge is None:
+            self._log("[!] No sandbox bridge configured")
+            _logger.warning("sandbox_refresh_instances_no_bridge")
+            return
+
+        self._refresh_instances_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.list(),
+            on_success=self._on_refresh_instances_success,
+            on_error=self._on_refresh_instances_error,
+            parent=self,
+            event="sandbox_list_instances",
+            logger=_logger,
+        )
+
+    def _on_refresh_instances_success(self, result: object) -> None:
+        """Handle successful instance list refresh.
+
+        Args:
+            result: List of per-instance dictionaries from the bridge.
+        """
+        if isinstance(result, list):
+            instances = cast("list[object]", result)
+            self._populate_instances_tree(instances)
+            self._log(f"[+] Instances refreshed: {len(instances)} active")
+        else:
+            self._log("[+] Instances refreshed")
+        self._refresh_instances_btn.setEnabled(True)
+
+    def _on_refresh_instances_error(self, exc: object) -> None:
+        """Handle instance list refresh failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Instance refresh failed: {exc}")
+        self._refresh_instances_btn.setEnabled(True)
+
+    def _on_refresh_snapshots(self) -> None:
+        """Refresh the Snapshots tab for the current QEMU sandbox instance."""
+        if self._bridge is None or self.sandbox_id is None:
+            self._log("[!] No active sandbox instance")
+            return
+
+        self._refresh_snapshots_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.snapshot_list(self.sandbox_id),
+            on_success=self._on_refresh_snapshots_success,
+            on_error=self._on_refresh_snapshots_error,
+            parent=self,
+            event="sandbox_snapshot_list",
+            logger=_logger,
+            sandbox_id=self.sandbox_id,
+        )
+
+    def _on_refresh_snapshots_success(self, result: object) -> None:
+        """Handle successful snapshot list refresh.
+
+        Args:
+            result: Dictionary with instance_id, snapshots (list of names), and count.
+        """
+        self._snapshots_tree.clear()
+        count = 0
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            raw_snapshots = typed.get("snapshots", [])
+            if isinstance(raw_snapshots, list):
+                for raw_name in cast("list[object]", raw_snapshots):
+                    name = str(raw_name)
+                    self._snapshots_tree.addTopLevelItem(QTreeWidgetItem([name, name, ""]))
+                    count += 1
+        self._log(f"[+] Snapshots refreshed: {count}")
+        self._refresh_snapshots_btn.setEnabled(True)
+
+    def _on_refresh_snapshots_error(self, exc: object) -> None:
+        """Handle snapshot list refresh failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Snapshot list failed: {exc}")
+        self._refresh_snapshots_btn.setEnabled(True)
+
+    def _on_pending_messages(self) -> None:
+        """Retrieve pending guest-agent messages for the current QEMU sandbox."""
+        if self._bridge is None or self.sandbox_id is None:
+            self._log("[!] No active sandbox instance")
+            return
+
+        self._pending_messages_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.get_pending_messages(self.sandbox_id),
+            on_success=self._on_pending_messages_success,
+            on_error=self._on_pending_messages_error,
+            parent=self,
+            event="sandbox_pending_messages",
+            logger=_logger,
+            sandbox_id=self.sandbox_id,
+        )
+
+    def _on_pending_messages_success(self, result: object) -> None:
+        """Handle successful pending-messages retrieval.
+
+        Args:
+            result: Dictionary with messages (list) and count from the bridge.
+        """
+        count = 0
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            raw_messages = typed.get("messages", [])
+            if isinstance(raw_messages, list):
+                typed_messages = cast("list[object]", raw_messages)
+                count = len(typed_messages)
+                for raw_message in typed_messages:
+                    if isinstance(raw_message, dict):
+                        message = cast("dict[str, object]", raw_message)
+                        self._console_output.appendPlainText(
+                            f"[guest-agent] {message.get('type', 'unknown')}: {message.get('data', {})}",
+                        )
+                    else:
+                        self._console_output.appendPlainText(f"[guest-agent] {raw_message}")
+        self._log(f"[+] Pending messages retrieved: {count}")
+        self._pending_messages_btn.setEnabled(True)
+
+    def _on_pending_messages_error(self, exc: object) -> None:
+        """Handle pending-messages retrieval failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Pending messages retrieval failed: {exc}")
+        self._pending_messages_btn.setEnabled(True)
+
+    def _on_anti_evasion(self) -> None:
+        """Apply anti-evasion hardening to the current QEMU sandbox instance."""
+        if self._bridge is None or self.sandbox_id is None:
+            self._log("[!] No active sandbox instance")
+            return
+
+        profile = self._anti_evasion_profile_input.text().strip() or "default"
+        self._anti_evasion_btn.setEnabled(False)
+        self._log(f"[*] Applying anti-evasion profile: {profile}")
+        run_bridge_coroutine_logged(
+            self._bridge.anti_evasion(self.sandbox_id, profile=profile),
+            on_success=self._on_anti_evasion_success,
+            on_error=self._on_anti_evasion_error,
+            parent=self,
+            event="sandbox_anti_evasion",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
+            profile=profile,
+        )
+
+    def _on_anti_evasion_success(self, result: object) -> None:
+        """Handle successful anti-evasion application.
+
+        Args:
+            result: Dictionary with profile and applied techniques from the bridge.
+        """
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            profile = str(typed.get("profile", ""))
+            self._log(f"[+] Anti-evasion applied (profile: {profile})")
+            self._render_techniques(typed.get("techniques"))
+        else:
+            self._log("[+] Anti-evasion applied")
+        self._anti_evasion_btn.setEnabled(True)
+
+    def _on_anti_evasion_error(self, exc: object) -> None:
+        """Handle anti-evasion application failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Anti-evasion failed: {exc}")
+        self._anti_evasion_btn.setEnabled(True)
+
+    def _render_techniques(self, techniques: object) -> None:
+        """Render applied anti-evasion techniques to the console output.
+
+        Args:
+            techniques: Techniques payload returned by the bridge, either a
+                list of entries or a mapping of technique name to detail.
+        """
+        if isinstance(techniques, list):
+            for raw in cast("list[object]", techniques):
+                self._console_output.appendPlainText(f"[anti-evasion] {raw}")
+        elif isinstance(techniques, dict):
+            for key, value in cast("dict[object, object]", techniques).items():
+                self._console_output.appendPlainText(f"[anti-evasion] {key}: {value}")
+
+    def _on_detect_c2(self) -> None:
+        """Detect C2 communication patterns for the current sandbox instance."""
+        if self._bridge is None or self.sandbox_id is None:
+            self._log("[!] No active sandbox instance")
+            return
+
+        self._detect_c2_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.detect_c2(self.sandbox_id),
+            on_success=self._on_detect_c2_success,
+            on_error=self._on_detect_c2_error,
+            parent=self,
+            event="sandbox_detect_c2",
+            logger=_logger,
+            level="info",
+            sandbox_id=self.sandbox_id,
+        )
+
+    def _on_detect_c2_success(self, result: object) -> None:
+        """Handle successful C2 pattern detection.
+
+        Args:
+            result: Dictionary with patterns (list) and count from the bridge.
+        """
+        count = 0
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            raw_patterns = typed.get("patterns", [])
+            if isinstance(raw_patterns, list):
+                typed_patterns = cast("list[object]", raw_patterns)
+                count = len(typed_patterns)
+                for raw_pattern in typed_patterns:
+                    if isinstance(raw_pattern, dict):
+                        pattern = cast("dict[str, object]", raw_pattern)
+                        summary = ", ".join(f"{key}={value}" for key, value in pattern.items())
+                        self._console_output.appendPlainText(f"[C2] {summary}")
+                    else:
+                        self._console_output.appendPlainText(f"[C2] {raw_pattern}")
+        self._log(f"[+] C2 detection complete: {count} patterns")
+        self._detect_c2_btn.setEnabled(True)
+
+    def _on_detect_c2_error(self, exc: object) -> None:
+        """Handle C2 pattern detection failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] C2 detection failed: {exc}")
+        self._detect_c2_btn.setEnabled(True)
+
+    def _on_diff(self) -> None:
+        """Compare two sandbox instances' execution reports."""
+        if self._bridge is None:
+            self._log("[!] No sandbox bridge configured")
+            return
+
+        instance_a = self._diff_instance_a_input.text().strip() or (self.sandbox_id or "")
+        instance_b = self._diff_instance_b_input.text().strip()
+        if not instance_a or not instance_b:
+            self._log("[!] Both instance IDs are required for diff")
+            return
+
+        self._diff_btn.setEnabled(False)
+        self._log(f"[*] Comparing instances: {instance_a} vs {instance_b}")
+        run_bridge_coroutine_logged(
+            self._bridge.diff(instance_a, instance_b),
+            on_success=self._on_diff_success,
+            on_error=self._on_diff_error,
+            parent=self,
+            event="sandbox_diff",
+            logger=_logger,
+            level="info",
+            instance_id_a=instance_a,
+            instance_id_b=instance_b,
+        )
+
+    def _on_diff_success(self, result: object) -> None:
+        """Handle successful instance report comparison.
+
+        Args:
+            result: Dictionary with instance_id_a, instance_id_b, and diff mapping.
+        """
+        if isinstance(result, dict):
+            typed = cast("dict[str, object]", result)
+            instance_a = str(typed.get("instance_id_a", ""))
+            instance_b = str(typed.get("instance_id_b", ""))
+            self._log(f"[+] Diff complete: {instance_a} vs {instance_b}")
+            diff_data = typed.get("diff")
+            if isinstance(diff_data, dict):
+                self._render_diff(cast("dict[str, object]", diff_data))
+        else:
+            self._log("[+] Diff complete")
+        self._diff_btn.setEnabled(True)
+
+    def _render_diff(self, diff_data: dict[str, object]) -> None:
+        """Render a per-field report comparison to the console output.
+
+        Args:
+            diff_data: Mapping of report field name to its comparison result.
+        """
+        for field, value in diff_data.items():
+            self._console_output.appendPlainText(f"[diff] {field}:")
+            if isinstance(value, dict):
+                for sub_key, sub_value in cast("dict[str, object]", value).items():
+                    self._console_output.appendPlainText(f"    {sub_key}: {sub_value}")
+            else:
+                self._console_output.appendPlainText(f"    {value}")
+
+    def _on_diff_error(self, exc: object) -> None:
+        """Handle instance report comparison failure.
+
+        Args:
+            exc: The exception from the failed operation.
+        """
+        self._log(f"[-] Diff failed: {exc}")
+        self._diff_btn.setEnabled(True)
 
     def _poll_status(self) -> None:
         """Poll the sandbox status periodically."""

@@ -27,6 +27,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ToolError
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.process_panel.hint_overlay import AttachHintOverlay
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
 from intellicrack.ui.panels.process_panel.modules_tab import ModulesTab
 from intellicrack.ui.panels.process_panel.process_tab import ProcessTab
@@ -44,6 +45,12 @@ _logger = get_logger(__name__)
 _MARGIN: Final[int] = 4
 _SPACING: Final[int] = 4
 _STATUS_HEIGHT: Final[int] = 24
+
+_HINT_NO_BRIDGE: Final[str] = "Process bridge unavailable\nConnect a process bridge to use this tab"
+_HINT_ATTACH_FIRST: Final[str] = (
+    "Attach to a process first\n"
+    "Select a process on the Processes tab and click Attach to enable this tab"
+)
 
 
 class _PanelState(enum.Enum):
@@ -81,6 +88,9 @@ class ProcessPanel(AnalysisPanelBase):
         self._state = _PanelState.DISCONNECTED
         self._attached_pid: int | None = None
         self._detail_tabs: list[QWidget] = []
+        self._attach_gated_tabs: list[QWidget] = []
+        self._attach_overlays: list[AttachHintOverlay] = []
+        self._hint_overlays: list[AttachHintOverlay] = []
         super().__init__(parent)
 
     def set_bridge(self, bridge: ProcessBridge) -> None:
@@ -166,6 +176,16 @@ class ProcessPanel(AnalysisPanelBase):
             self._modules_tab,
             self._system_tab,
         ]
+        self._attach_gated_tabs = [
+            self._memory_tab,
+            self._threads_tab,
+            self._modules_tab,
+        ]
+        self._attach_overlays = [
+            AttachHintOverlay(tab, _HINT_ATTACH_FIRST) for tab in self._attach_gated_tabs
+        ]
+        self._system_overlay = AttachHintOverlay(self._system_tab, _HINT_NO_BRIDGE)
+        self._hint_overlays = [*self._attach_overlays, self._system_overlay]
 
         layout.addWidget(self._tab_widget)
 
@@ -338,24 +358,37 @@ class ProcessPanel(AnalysisPanelBase):
         _logger.info("panel_process_detached")
 
     def _update_controls_for_state(self) -> None:
-        """Enable/disable tab widgets and Process tab buttons based on panel state."""
+        """Enable/disable tab widgets and Process tab buttons based on panel state.
+
+        The per-process detail tabs (Memory, Threads, Modules) require an
+        attached target and stay gated behind the ``ATTACHED`` state. The
+        System tab exposes system-wide operations (registry, named pipes, raw
+        system-info query) that only need a connected bridge, so it is gated
+        on connection instead; its per-process sub-actions guard themselves.
+        """
         attached = self._state == _PanelState.ATTACHED
+        connected = self._state != _PanelState.DISCONNECTED
+
+        self._system_tab.setEnabled(connected)
+        for tab in self._attach_gated_tabs:
+            tab.setEnabled(attached)
 
         if self._state == _PanelState.DISCONNECTED:
             self._status_state.setText("Disconnected")
             self._status_bridge.setText("Bridge: Disconnected")
-            for tab in self._detail_tabs:
-                tab.setEnabled(False)
+            self._show_attach_overlays(_HINT_NO_BRIDGE)
+            self._system_overlay.set_message(_HINT_NO_BRIDGE)
+            self._system_overlay.setVisible(True)
         elif self._state == _PanelState.DETACHED:
             self._status_state.setText("Detached")
             self._status_bridge.setText("Bridge: Connected")
-            for tab in self._detail_tabs:
-                tab.setEnabled(False)
+            self._show_attach_overlays(_HINT_ATTACH_FIRST)
+            self._system_overlay.setVisible(False)
         elif attached:
             self._status_state.setText("Attached")
             self._status_bridge.setText("Bridge: Connected")
-            for tab in self._detail_tabs:
-                tab.setEnabled(True)
+            self._show_attach_overlays(None)
+            self._system_overlay.setVisible(False)
 
         proc_tab = self._process_tab
         has_selection = proc_tab.get_selected_pid() is not None
@@ -367,6 +400,18 @@ class ProcessPanel(AnalysisPanelBase):
             terminate=has_selection,
             inject=attached,
         )
+
+    def _show_attach_overlays(self, message: str | None) -> None:
+        """Show or hide the attach-hint overlays on the per-process detail tabs.
+
+        Args:
+            message: Instructional text to display, or None to hide overlays.
+        """
+        visible = message is not None
+        for overlay in self._attach_overlays:
+            if message is not None:
+                overlay.set_message(message)
+            overlay.setVisible(visible)
 
     @override
     def _cleanup(self) -> None:

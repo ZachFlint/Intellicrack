@@ -16,6 +16,7 @@ import asyncio
 import importlib
 import inspect
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
@@ -48,6 +49,9 @@ _ERR_UNKNOWN_FUNC = "unknown function"
 _ERR_NOT_CALLABLE = "not callable"
 _ERR_CALL_FAILED = "call failed"
 _ERR_MISSING_CAPABILITY = "missing capability"
+_ERR_INVALID_HEX_ARGUMENT = "invalid hex string argument"
+
+_BridgeMethod = Callable[..., Any]
 
 _LOCAL_INIT_TOOLS: frozenset[ToolName] = frozenset(
     {
@@ -58,6 +62,74 @@ _LOCAL_INIT_TOOLS: frozenset[ToolName] = frozenset(
         ToolName.CUTTER,
     },
 )
+
+
+def _is_bytes_annotation(annotation: object) -> bool:
+    """Determine whether a parameter annotation requires ``bytes``.
+
+    Matches the bare ``bytes`` annotation as well as ``bytes | None``
+    (or ``Optional[bytes]``) unions used by optional bytes parameters.
+    Annotations that also accept ``str`` (e.g. ``bytes | str``) are
+    intentionally excluded: those methods already decode hex strings
+    internally, so re-encoding them here would be redundant and would
+    discard the method's own string-handling semantics (such as
+    wildcard patterns).
+
+    Args:
+        annotation: The ``inspect.Parameter.annotation`` value to inspect.
+
+    Returns:
+        bool: True if the annotation is ``bytes`` or a union of
+        ``bytes`` with only ``None``.
+    """
+    if annotation is bytes:
+        return True
+    annotation_str = str(annotation)
+    tokens = {token.strip() for token in annotation_str.split("|")}
+    return "bytes" in tokens and tokens <= {"bytes", "None"}
+
+
+def _coerce_hex_string_arguments(method: _BridgeMethod, arguments: dict[str, Any]) -> dict[str, Any]:
+    """Decode hex-string arguments into ``bytes`` for byte-typed parameters.
+
+    Tool definitions expose binary payloads to LLM callers as JSON
+    strings containing hex-encoded bytes (JSON has no native binary
+    type). The underlying bridge methods, however, declare those
+    parameters as ``bytes`` so GUI callers can pass real byte objects
+    directly. This inspects ``method``'s real signature and decodes any
+    argument bound to a ``bytes``-annotated parameter from a hex string
+    before dispatch, leaving all other arguments untouched.
+
+    Args:
+        method: The resolved bridge method about to be invoked.
+        arguments: Raw arguments supplied by the tool caller.
+
+    Returns:
+        dict[str, Any]: A copy of ``arguments`` with hex-string values
+        for ``bytes``-typed parameters decoded into ``bytes``.
+
+    Raises:
+        ToolError: If a value bound to a ``bytes``-typed parameter is a
+            string that is not valid hex.
+    """
+    try:
+        signature = inspect.signature(method)
+    except (TypeError, ValueError):
+        return arguments
+
+    coerced = dict(arguments)
+    for name, value in arguments.items():
+        parameter = signature.parameters.get(name)
+        if parameter is None or not isinstance(value, str):
+            continue
+        if not _is_bytes_annotation(parameter.annotation):
+            continue
+        try:
+            coerced[name] = bytes.fromhex(value.replace(" ", ""))
+        except ValueError as exc:
+            raise ToolError(_ERR_INVALID_HEX_ARGUMENT) from exc
+
+    return coerced
 
 
 @dataclass
@@ -126,7 +198,7 @@ class ToolRegistry:
 
     @property
     def tools_directory(self) -> Path:
-        """Get the tools directory.
+        """The tools directory.
 
         Returns:
             Path: Path to tools directory.
@@ -604,7 +676,7 @@ class ToolRegistry:
             raise ToolError(_ERR_NOT_CALLABLE)
 
         caps = getattr(bridge, "capabilities", None)
-        required_capability = TOOL_CAPABILITY_MAP.get(attr_name)
+        required_capability = TOOL_CAPABILITY_MAP.get(function_name) or TOOL_CAPABILITY_MAP.get(attr_name)
         if caps is not None and required_capability is not None:
             has_cap = caps.has_capability(required_capability)
             _logger.debug(
@@ -624,18 +696,21 @@ class ToolRegistry:
                 missing_message = f"{_ERR_MISSING_CAPABILITY}: {tool_enum.value} lacks supports_{required_capability}"
                 raise ToolError(missing_message)
 
+        dispatch_arguments = _coerce_hex_string_arguments(method, arguments)
+
         start = time.monotonic()
         result: object = None
         success = True
         try:
             if inspect.iscoroutinefunction(method):
-                result = await method(**arguments)
+                result = await method(**dispatch_arguments)
             else:
-                result = await asyncio.to_thread(method, **arguments)
+                result = await asyncio.to_thread(method, **dispatch_arguments)
         except (OSError, RuntimeError, ValueError, TypeError, ToolError, KeyError, AttributeError) as e:
             success = False
             _logger.warning("tool_call_failed", tool_name=tool_name, function_name=function_name, error=str(e))
-            raise ToolError(_ERR_CALL_FAILED) from e
+            msg = f"{_ERR_CALL_FAILED}: {e}"
+            raise ToolError(msg) from e
         finally:
             elapsed_ms = (time.monotonic() - start) * 1000
             log_tool_call(

@@ -40,12 +40,14 @@ from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
+from intellicrack.ui.panels.x64dbg_advanced_tab import X64DbgAdvancedTab
 from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.win32_embed import poll_and_embed
 
 
 if TYPE_CHECKING:
     from intellicrack.bridges.x64dbg import BreakpointType, MemoryProtection, X64DbgBridge
+    from intellicrack.core.types import ModuleInfo
 
 _logger = get_logger(__name__)
 
@@ -65,11 +67,15 @@ _THREAD_COLUMNS = ["TID", "Priority", "State"]
 _BP_COLUMNS = ["Address", "Type", "Condition", "Hits", "Enabled"]
 
 _WP_COLUMNS = ["Address", "Size", "Type", "Enabled", "Hits"]
+_PATCH_COLUMNS = ["Address", "Old Byte", "New Byte"]
 _SEARCH_COLUMNS = ["#", "Address", "Match", "Context"]
 _SECTION_DETAIL_COLUMNS = ["Name", "Address", "Size", "Characteristics"]
 _EXPORT_DETAIL_COLUMNS = ["Name", "Ordinal", "Address"]
 _ANNOT_COLUMNS = ["Address", "Text", "Module"]
 _MEMMAP_COLUMNS = ["Base", "Size", "Protection", "State", "Type", "Module"]
+
+_ADDR_RANGE_END_64: Final[int] = 0xFFFFFFFFFFFFFFFF
+_ADDR_RANGE_END_32: Final[int] = 0xFFFFFFFF
 
 _GENERAL_REGS_64 = [
     "rax",
@@ -109,6 +115,7 @@ class X64DbgPanel(AnalysisPanelBase):
         """
         self._bridge: X64DbgBridge | None = None
         self._is_64bit: bool = True
+        self._modules: list[ModuleInfo] = []
         self.embedded_container: QWidget | None = None
         super().__init__(parent)
 
@@ -134,12 +141,21 @@ class X64DbgPanel(AnalysisPanelBase):
         self._run_btn = self._add_tool_button(toolbar, "Run", self._on_run)
         self._pause_btn = self._add_tool_button(toolbar, "Pause", self._on_pause)
         self._stop_btn = self._add_tool_button(toolbar, "Stop", self._on_stop)
+        self._restart_btn = self._add_tool_button(toolbar, "Restart", self._on_restart)
 
         toolbar.addSeparator()
 
         self._step_into_btn = self._add_tool_button(toolbar, "Step Into", self._on_step_into)
         self._step_over_btn = self._add_tool_button(toolbar, "Step Over", self._on_step_over)
         self._step_out_btn = self._add_tool_button(toolbar, "Step Out", self._on_step_out)
+
+        toolbar.addSeparator()
+        self._add_toolbar_label(toolbar, "Steps:")
+        self._step_count_input = self._add_toolbar_input(toolbar, "N", max_width=60)
+        self._step_count_input.setValidator(QIntValidator(1, 1_000_000, self._step_count_input))
+        self._step_count_btn = self._add_tool_button(toolbar, "Step N", self._on_step_count)
+        self._animate_start_btn = self._add_tool_button(toolbar, "Animate Start", self._on_animate_start)
+        self._animate_stop_btn = self._add_tool_button(toolbar, "Animate Stop", self._on_animate_stop)
 
         toolbar.addSeparator()
         self._detach_btn = self._add_tool_button(toolbar, "Detach", self._on_detach)
@@ -157,6 +173,7 @@ class X64DbgPanel(AnalysisPanelBase):
         toolbar.addSeparator()
         self._save_db_btn = self._add_tool_button(toolbar, "Save DB", self._on_save_db)
         self._load_db_btn = self._add_tool_button(toolbar, "Load DB", self._on_load_db)
+        self._clear_db_btn = self._add_tool_button(toolbar, "Clear DB", self._on_clear_db)
 
         toolbar.addSeparator()
 
@@ -176,9 +193,13 @@ class X64DbgPanel(AnalysisPanelBase):
             self._run_btn,
             self._pause_btn,
             self._stop_btn,
+            self._restart_btn,
             self._step_into_btn,
             self._step_over_btn,
             self._step_out_btn,
+            self._step_count_btn,
+            self._animate_start_btn,
+            self._animate_stop_btn,
             self._detach_btn,
             self._spawn_btn,
             self._run_to_btn,
@@ -187,6 +208,7 @@ class X64DbgPanel(AnalysisPanelBase):
             self._set_ip_btn,
             self._save_db_btn,
             self._load_db_btn,
+            self._clear_db_btn,
         ]
         self._update_controls_state()
 
@@ -349,6 +371,14 @@ class X64DbgPanel(AnalysisPanelBase):
         self._switch_thread_btn.setObjectName("tool_button")
         self._switch_thread_btn.clicked.connect(self._on_switch_thread)
         thread_btn_row.addWidget(self._switch_thread_btn)
+        self._thread_name_input = QLineEdit()
+        self._thread_name_input.setMaximumWidth(120)
+        self._thread_name_input.setPlaceholderText(self.tr("New name"))
+        thread_btn_row.addWidget(self._thread_name_input)
+        self._rename_thread_btn = QPushButton(self.tr("Rename"))
+        self._rename_thread_btn.setObjectName("tool_button")
+        self._rename_thread_btn.clicked.connect(self._on_rename_thread)
+        thread_btn_row.addWidget(self._rename_thread_btn)
         thread_btn_row.addStretch()
         thread_vlayout.addLayout(thread_btn_row)
         tabs.addTab(thread_container, self.tr("Threads"))
@@ -390,9 +420,12 @@ class X64DbgPanel(AnalysisPanelBase):
         tabs.addTab(self._build_console_tab(hex_validator), self.tr("Console"))
         tabs.addTab(self._build_wp_tab(hex_validator), self.tr("Watchpoints"))
         tabs.addTab(self._build_search_tab(), self.tr("Search"))
-        tabs.addTab(self._build_trace_tab(), self.tr("Trace"))
+        tabs.addTab(self._build_trace_tab(hex_validator), self.tr("Trace"))
         tabs.addTab(self._build_annot_tab(hex_validator), self.tr("Annotations"))
         tabs.addTab(self._build_mmap_tab(hex_validator), self.tr("Memory Map"))
+        tabs.addTab(self._build_patches_tab(), self.tr("Patches"))
+        self._advanced_tab = X64DbgAdvancedTab()
+        tabs.addTab(self._advanced_tab, self.tr("Advanced"))
         return tabs
 
     def _build_bp_tab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
@@ -424,6 +457,13 @@ class X64DbgPanel(AnalysisPanelBase):
         self._bp_type_combo = QComboBox()
         self._bp_type_combo.addItems(["software", "hardware", "memory"])
         bp_toolbar.addWidget(self._bp_type_combo)
+        bp_cond_label = QLabel(self.tr("Condition:"))
+        bp_cond_label.setFont(fm.get_ui_font(9))
+        bp_toolbar.addWidget(bp_cond_label)
+        self._bp_cond_input = QLineEdit()
+        self._bp_cond_input.setMaximumWidth(150)
+        self._bp_cond_input.setPlaceholderText(self.tr("optional, e.g. eax == 1"))
+        bp_toolbar.addWidget(self._bp_cond_input)
         self._add_bp_btn = QPushButton(self.tr("Add BP"))
         self._add_bp_btn.setObjectName("tool_button")
         self._add_bp_btn.clicked.connect(self._on_add_breakpoint)
@@ -525,6 +565,10 @@ class X64DbgPanel(AnalysisPanelBase):
         self._asm_btn.setObjectName("tool_button")
         self._asm_btn.clicked.connect(self._on_assemble)
         mem_toolbar.addWidget(self._asm_btn)
+        self._asm_preview_btn = QPushButton(self.tr("Preview"))
+        self._asm_preview_btn.setObjectName("tool_button")
+        self._asm_preview_btn.clicked.connect(self._on_assemble_preview)
+        mem_toolbar.addWidget(self._asm_preview_btn)
         self._nop_size_input = QLineEdit()
         self._nop_size_input.setMaximumWidth(50)
         self._nop_size_input.setValidator(QIntValidator(1, 4096, self))
@@ -658,6 +702,41 @@ class X64DbgPanel(AnalysisPanelBase):
         wp_layout.addWidget(self._wp_table)
         return wp_container
 
+    def _build_patches_tab(self) -> QWidget:
+        """Build the Patches tab widget.
+
+        Returns:
+            QWidget: Patches tab container.
+        """
+        patch_container = QWidget()
+        patch_layout = QVBoxLayout(patch_container)
+        patch_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
+        patch_layout.setSpacing(_PANEL_SPACING)
+        patch_toolbar = QHBoxLayout()
+        self._patch_refresh_btn = QPushButton(self.tr("Refresh"))
+        self._patch_refresh_btn.setObjectName("tool_button")
+        self._patch_refresh_btn.clicked.connect(self._on_refresh_patches)
+        patch_toolbar.addWidget(self._patch_refresh_btn)
+        self._patch_restore_btn = QPushButton(self.tr("Restore Selected"))
+        self._patch_restore_btn.setObjectName("tool_button")
+        self._patch_restore_btn.clicked.connect(self._on_restore_patch)
+        patch_toolbar.addWidget(self._patch_restore_btn)
+        self._patch_export_btn = QPushButton(self.tr("Export..."))
+        self._patch_export_btn.setObjectName("tool_button")
+        self._patch_export_btn.clicked.connect(self._on_export_patches)
+        patch_toolbar.addWidget(self._patch_export_btn)
+        patch_toolbar.addStretch()
+        patch_layout.addLayout(patch_toolbar)
+        self._patch_table = QTableWidget(0, len(_PATCH_COLUMNS))
+        self._patch_table.setHorizontalHeaderLabels(_PATCH_COLUMNS)
+        self._patch_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._patch_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        patch_h = self._patch_table.horizontalHeader()
+        if patch_h is not None:
+            patch_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        patch_layout.addWidget(self._patch_table)
+        return patch_container
+
     def _build_search_tab(self) -> QWidget:
         """Build the Search tab widget.
 
@@ -698,8 +777,11 @@ class X64DbgPanel(AnalysisPanelBase):
         search_layout.addWidget(self._search_table)
         return search_container
 
-    def _build_trace_tab(self) -> QWidget:
+    def _build_trace_tab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
         """Build the Trace tab widget.
+
+        Args:
+            hex_validator: Validator for hex address inputs.
 
         Returns:
             QWidget: Trace tab container.
@@ -740,6 +822,21 @@ class X64DbgPanel(AnalysisPanelBase):
         trace_toolbar.addWidget(self._trace_over_btn)
         trace_toolbar.addStretch()
         trace_layout.addLayout(trace_toolbar)
+        trace_record_toolbar = QHBoxLayout()
+        trace_record_label = QLabel(self.tr("Query Address:"))
+        trace_record_label.setFont(fm.get_ui_font(9))
+        trace_record_toolbar.addWidget(trace_record_label)
+        self._trace_record_addr_input = QLineEdit()
+        self._trace_record_addr_input.setMaximumWidth(_ADDR_INPUT_MAX_WIDTH)
+        self._trace_record_addr_input.setValidator(hex_validator)
+        self._trace_record_addr_input.setPlaceholderText("0x...")
+        trace_record_toolbar.addWidget(self._trace_record_addr_input)
+        self._trace_record_btn = QPushButton(self.tr("Get Trace Record"))
+        self._trace_record_btn.setObjectName("tool_button")
+        self._trace_record_btn.clicked.connect(self._on_get_trace_record)
+        trace_record_toolbar.addWidget(self._trace_record_btn)
+        trace_record_toolbar.addStretch()
+        trace_layout.addLayout(trace_record_toolbar)
         self._trace_output = QPlainTextEdit()
         self._trace_output.setFont(fm.get_code_font(9))
         self._trace_output.setReadOnly(True)
@@ -796,11 +893,17 @@ class X64DbgPanel(AnalysisPanelBase):
         self._set_lbl_btn.setObjectName("tool_button")
         self._set_lbl_btn.clicked.connect(self._on_set_label)
         lbl_toolbar.addWidget(self._set_lbl_btn)
+        self._lbl_refresh_btn = QPushButton(self.tr("Refresh"))
+        self._lbl_refresh_btn.setObjectName("tool_button")
+        self._lbl_refresh_btn.clicked.connect(self._on_refresh_labels)
+        lbl_toolbar.addWidget(self._lbl_refresh_btn)
         lbl_toolbar.addStretch()
         lbl_layout.addLayout(lbl_toolbar)
         self._lbl_table = QTableWidget(0, len(_ANNOT_COLUMNS))
         self._lbl_table.setHorizontalHeaderLabels(_ANNOT_COLUMNS)
         self._lbl_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._lbl_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self._lbl_table.cellClicked.connect(self._on_label_row_selected)
         lbl_h = self._lbl_table.horizontalHeader()
         if lbl_h is not None:
             lbl_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -838,11 +941,17 @@ class X64DbgPanel(AnalysisPanelBase):
         self._set_cmt_btn.setObjectName("tool_button")
         self._set_cmt_btn.clicked.connect(self._on_set_comment_btn)
         cmt_toolbar.addWidget(self._set_cmt_btn)
+        self._cmt_refresh_btn = QPushButton(self.tr("Refresh"))
+        self._cmt_refresh_btn.setObjectName("tool_button")
+        self._cmt_refresh_btn.clicked.connect(self._on_refresh_comments)
+        cmt_toolbar.addWidget(self._cmt_refresh_btn)
         cmt_toolbar.addStretch()
         cmt_layout.addLayout(cmt_toolbar)
         self._cmt_table = QTableWidget(0, len(_ANNOT_COLUMNS))
         self._cmt_table.setHorizontalHeaderLabels(_ANNOT_COLUMNS)
         self._cmt_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._cmt_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self._cmt_table.cellClicked.connect(self._on_comment_row_selected)
         cmt_h = self._cmt_table.horizontalHeader()
         if cmt_h is not None:
             cmt_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -926,6 +1035,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._bridge = bridge
         if hasattr(bridge, "register_event_callback"):
             bridge.register_event_callback(self._on_debug_event)
+        self._advanced_tab.set_bridge(bridge)
         _logger.info("x64dbg_bridge_set", bridge_type=type(bridge).__name__)
         self._update_controls_state()
 
@@ -1218,6 +1328,52 @@ class X64DbgPanel(AnalysisPanelBase):
         _logger.warning("x64dbg_stop_failed", error=str(exc))
         self._stop_btn.setEnabled(True)
 
+    def _on_restart(self) -> None:
+        """Restart the currently loaded debuggee."""
+        if self._bridge is None:
+            return
+
+        self._restart_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.restart(),
+            on_success=self._on_restart_success,
+            on_error=self._on_restart_error,
+            parent=self,
+            event="x64dbg_restart",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_restart_success(self, result: object) -> None:
+        """Handle successful restart.
+
+        Args:
+            result: Restart result dict from the bridge, containing
+                ``path`` and ``verified`` keys.
+        """
+        path = ""
+        verified = False
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            path = str(r.get("path", ""))
+            verified = bool(r.get("verified", False))
+        self._set_status(f"Restarted: {path}" if path else "Restarted")
+        suffix = "" if verified else " (unverified)"
+        self._console_output.appendPlainText(f"[+] Debuggee restarted{suffix}")
+        self._restart_btn.setEnabled(True)
+        self._update_controls_state()
+        self._refresh_state()
+
+    def _on_restart_error(self, exc: object) -> None:
+        """Handle restart failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Restart failed: {exc}")
+        _logger.warning("x64dbg_restart_failed", error=str(exc))
+        self._restart_btn.setEnabled(True)
+
     def _on_step_into(self) -> None:
         """Single step into."""
         if self._bridge is None:
@@ -1293,6 +1449,137 @@ class X64DbgPanel(AnalysisPanelBase):
         self._step_over_btn.setEnabled(True)
         self._step_out_btn.setEnabled(True)
 
+    def _on_step_count(self) -> None:
+        """Execute a fixed number of single steps via the Step N control."""
+        if self._bridge is None:
+            return
+
+        count_text = self._step_count_input.text().strip()
+        try:
+            count = int(count_text)
+        except ValueError:
+            _logger.warning("invalid_step_count", input_text=count_text)
+            self._console_output.appendPlainText(f"[!] Invalid step count: {count_text}")
+            return
+        if count <= 0:
+            self._console_output.appendPlainText("[!] Step count must be positive")
+            return
+
+        self._step_count_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.step_count(count, step_type="into"),
+            on_success=self._on_step_count_success,
+            on_error=self._on_step_count_error,
+            parent=self,
+            event="x64dbg_step_count",
+            logger=_logger,
+            level="info",
+            count=count,
+        )
+
+    def _on_step_count_success(self, result: object) -> None:
+        """Handle successful completion of a Step N operation.
+
+        Args:
+            result: Result dict from the bridge, containing ``count``,
+                ``step_type``, and ``verified`` keys.
+        """
+        count = 0
+        verified = False
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            count = int(cast("int", r.get("count", 0)))
+            verified = bool(r.get("verified", False))
+        suffix = "" if verified else " (unverified)"
+        self._console_output.appendPlainText(f"[+] Stepped {count} time(s){suffix}")
+        self._step_count_btn.setEnabled(True)
+        self._refresh_state()
+
+    def _on_step_count_error(self, exc: object) -> None:
+        """Handle Step N failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Step N failed: {exc}")
+        _logger.warning("x64dbg_step_count_failed", error=str(exc))
+        self._step_count_btn.setEnabled(True)
+
+    def _on_animate_start(self) -> None:
+        """Start animated (continuous) step-into execution."""
+        if self._bridge is None:
+            return
+
+        self._animate_start_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.animate_start(step_type="into"),
+            on_success=self._on_animate_start_success,
+            on_error=self._on_animate_start_error,
+            parent=self,
+            event="x64dbg_animate_start",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_animate_start_success(self, result: object) -> None:
+        """Handle successful animation start.
+
+        Args:
+            result: Result dict from the bridge, containing ``verified``.
+        """
+        verified = bool(cast("dict[str, object]", result).get("verified", False)) if isinstance(result, dict) else False
+        suffix = "" if verified else " (unverified)"
+        self._console_output.appendPlainText(f"[+] Animation started{suffix}")
+        self._animate_start_btn.setEnabled(True)
+
+    def _on_animate_start_error(self, exc: object) -> None:
+        """Handle animation-start failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Animate start failed: {exc}")
+        _logger.warning("x64dbg_animate_start_failed", error=str(exc))
+        self._animate_start_btn.setEnabled(True)
+
+    def _on_animate_stop(self) -> None:
+        """Stop animated step execution."""
+        if self._bridge is None:
+            return
+
+        self._animate_stop_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.animate_stop(),
+            on_success=self._on_animate_stop_success,
+            on_error=self._on_animate_stop_error,
+            parent=self,
+            event="x64dbg_animate_stop",
+            logger=_logger,
+            level="info",
+        )
+
+    def _on_animate_stop_success(self, result: object) -> None:
+        """Handle successful animation stop.
+
+        Args:
+            result: Result dict from the bridge, containing ``verified``.
+        """
+        verified = bool(cast("dict[str, object]", result).get("verified", False)) if isinstance(result, dict) else False
+        suffix = "" if verified else " (unverified)"
+        self._console_output.appendPlainText(f"[+] Animation stopped{suffix}")
+        self._animate_stop_btn.setEnabled(True)
+        self._refresh_state()
+
+    def _on_animate_stop_error(self, exc: object) -> None:
+        """Handle animation-stop failure.
+
+        Args:
+            exc: The exception that occurred.
+        """
+        self._console_output.appendPlainText(f"[-] Animate stop failed: {exc}")
+        _logger.warning("x64dbg_animate_stop_failed", error=str(exc))
+        self._animate_stop_btn.setEnabled(True)
+
     def _sync_64bit_toggle(self) -> None:
         """Sync the 64-bit checkbox with the bridge's detected architecture."""
         if self._bridge is None:
@@ -1332,9 +1619,10 @@ class X64DbgPanel(AnalysisPanelBase):
             "BreakpointType",
             bp_type_text if bp_type_text in {"software", "hardware", "memory"} else "software",
         )
+        condition = self._bp_cond_input.text().strip() or None
         self._add_bp_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.set_breakpoint(address, bp_type=bp_type),
+            self._bridge.set_breakpoint(address, bp_type=bp_type, condition=condition),
             on_success=lambda r: self._on_bp_added(address, r),
             on_error=self._on_bp_add_error,
             parent=self,
@@ -1343,6 +1631,7 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
             address=hex(address),
             bp_type=bp_type,
+            condition=condition,
         )
 
     def _on_bp_added(self, address: int, result: object) -> None:
@@ -1941,6 +2230,7 @@ class X64DbgPanel(AnalysisPanelBase):
             result: Module list from the bridge.
         """
         modules: list[object] = [*result] if isinstance(result, list) else []
+        self._modules = [cast("ModuleInfo", mod) for mod in modules]
 
         self._module_table.setRowCount(0)
         for mod in modules:
@@ -2186,6 +2476,20 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
         )
 
+    def _on_clear_db(self) -> None:
+        """Clear the x64dbg persistent analysis database."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.clear_database(),
+            on_success=lambda _: self._console_output.appendPlainText("[+] Database cleared"),
+            on_error=lambda e: self._on_generic_error("Clear DB", e),
+            parent=self,
+            event="x64dbg_clear_database",
+            logger=_logger,
+            level="info",
+        )
+
     def _on_add_watchpoint(self) -> None:
         """Add a watchpoint at the specified address."""
         if self._bridge is None:
@@ -2385,6 +2689,48 @@ class X64DbgPanel(AnalysisPanelBase):
             condition=condition,
         )
 
+    def _on_get_trace_record(self) -> None:
+        """Query the trace-record hit count at the specified address."""
+        if self._bridge is None:
+            return
+
+        addr_text = self._trace_record_addr_input.text().strip()
+        if not addr_text:
+            return
+
+        try:
+            address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
+        except ValueError:
+            _logger.warning("invalid_trace_record_address", input_text=addr_text)
+            self._trace_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+
+        self._trace_record_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.get_trace_record(address),
+            on_success=lambda r: self._on_get_trace_record_success(address, r),
+            on_error=lambda e: self._on_generic_error("Get Trace Record", e, self._trace_record_btn),
+            parent=self,
+            event="x64dbg_get_trace_record",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+    def _on_get_trace_record_success(self, address: int, result: object) -> None:
+        """Handle a successful trace-record query.
+
+        Args:
+            address: The queried address.
+            result: Result dict from the bridge, containing ``hitCount``.
+        """
+        hit_count = 0
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            hit_count = int(cast("int", r.get("hitCount", 0)))
+        self._trace_output.appendPlainText(f"[+] Trace record 0x{address:X}: hitCount={hit_count}")
+        self._trace_record_btn.setEnabled(True)
+
     def _on_set_label(self) -> None:
         """Set a label at the specified address."""
         if self._bridge is None:
@@ -2405,7 +2751,7 @@ class X64DbgPanel(AnalysisPanelBase):
             return
         run_bridge_coroutine_logged(
             self._bridge.set_label(address, label_text),
-            on_success=lambda _: self._console_output.appendPlainText(f"[+] Label set at {hex(address)}"),
+            on_success=lambda _: self._on_label_set(address),
             on_error=lambda e: self._on_generic_error("Set Label", e),
             parent=self,
             event="x64dbg_set_label",
@@ -2414,6 +2760,64 @@ class X64DbgPanel(AnalysisPanelBase):
             address=hex(address),
             label=label_text,
         )
+
+    def _on_label_set(self, address: int) -> None:
+        """Handle successful label assignment by logging and refreshing the labels table.
+
+        Args:
+            address: Address the label was set at.
+        """
+        self._console_output.appendPlainText(f"[+] Label set at {hex(address)}")
+        self._on_refresh_labels()
+
+    def _on_refresh_labels(self) -> None:
+        """Refresh the labels table from the bridge across the full address range."""
+        if self._bridge is None:
+            return
+        end = _ADDR_RANGE_END_64 if self._is_64bit else _ADDR_RANGE_END_32
+        run_bridge_coroutine_logged(
+            self._bridge.get_labels(0, end),
+            on_success=self._apply_labels,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_labels_failed"),
+            parent=self,
+            event="x64dbg_get_labels",
+            logger=_logger,
+        )
+
+    def _apply_labels(self, result: object) -> None:
+        """Apply label data to the labels table.
+
+        Args:
+            result: Label dict list from the bridge.
+        """
+        raw_labels: list[object] = [*result] if isinstance(result, list) else []
+        labels: list[dict[str, object]] = [cast("dict[str, object]", entry) for entry in raw_labels if isinstance(entry, dict)]
+        self._lbl_table.setRowCount(0)
+        for entry in labels:
+            row = self._lbl_table.rowCount()
+            self._lbl_table.insertRow(row)
+            address = self._parse_annot_address(entry.get("address"))
+            addr_item = QTableWidgetItem(f"0x{address:X}")
+            addr_item.setData(Qt.ItemDataRole.UserRole, address)
+            self._lbl_table.setItem(row, 0, addr_item)
+            self._lbl_table.setItem(row, 1, QTableWidgetItem(str(entry.get("text", ""))))
+            self._lbl_table.setItem(row, 2, QTableWidgetItem(self._module_name_for_address(address)))
+
+    def _on_label_row_selected(self, row: int, column: int) -> None:
+        """Populate the label edit fields from the selected table row.
+
+        Args:
+            row: Table row index that was clicked.
+            column: Table column index that was clicked (unused).
+        """
+        del column
+        addr_item = self._lbl_table.item(row, 0)
+        text_item = self._lbl_table.item(row, 1)
+        if addr_item is None or text_item is None:
+            return
+        address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
+        self._lbl_addr_input.setText(f"0x{address:X}")
+        self._lbl_text_input.setText(text_item.text())
 
     def _on_set_comment_btn(self) -> None:
         """Set a comment at the specified address."""
@@ -2435,7 +2839,7 @@ class X64DbgPanel(AnalysisPanelBase):
             return
         run_bridge_coroutine_logged(
             self._bridge.set_comment(address, comment_text),
-            on_success=lambda _: self._console_output.appendPlainText(f"[+] Comment set at {hex(address)}"),
+            on_success=lambda _: self._on_comment_set(address),
             on_error=lambda e: self._on_generic_error("Set Comment", e),
             parent=self,
             event="x64dbg_set_comment",
@@ -2444,6 +2848,99 @@ class X64DbgPanel(AnalysisPanelBase):
             address=hex(address),
             comment_length=len(comment_text),
         )
+
+    def _on_comment_set(self, address: int) -> None:
+        """Handle successful comment assignment by logging and refreshing the comments table.
+
+        Args:
+            address: Address the comment was set at.
+        """
+        self._console_output.appendPlainText(f"[+] Comment set at {hex(address)}")
+        self._on_refresh_comments()
+
+    def _on_refresh_comments(self) -> None:
+        """Refresh the comments table from the bridge across the full address range."""
+        if self._bridge is None:
+            return
+        end = _ADDR_RANGE_END_64 if self._is_64bit else _ADDR_RANGE_END_32
+        run_bridge_coroutine_logged(
+            self._bridge.get_comments(0, end),
+            on_success=self._apply_comments,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_comments_failed"),
+            parent=self,
+            event="x64dbg_get_comments",
+            logger=_logger,
+        )
+
+    def _apply_comments(self, result: object) -> None:
+        """Apply comment data to the comments table.
+
+        Args:
+            result: Comment dict list from the bridge.
+        """
+        raw_comments: list[object] = [*result] if isinstance(result, list) else []
+        comments: list[dict[str, object]] = [cast("dict[str, object]", entry) for entry in raw_comments if isinstance(entry, dict)]
+        self._cmt_table.setRowCount(0)
+        for entry in comments:
+            row = self._cmt_table.rowCount()
+            self._cmt_table.insertRow(row)
+            address = self._parse_annot_address(entry.get("address"))
+            addr_item = QTableWidgetItem(f"0x{address:X}")
+            addr_item.setData(Qt.ItemDataRole.UserRole, address)
+            self._cmt_table.setItem(row, 0, addr_item)
+            self._cmt_table.setItem(row, 1, QTableWidgetItem(str(entry.get("text", ""))))
+            self._cmt_table.setItem(row, 2, QTableWidgetItem(self._module_name_for_address(address)))
+
+    def _on_comment_row_selected(self, row: int, column: int) -> None:
+        """Populate the comment edit fields from the selected table row.
+
+        Args:
+            row: Table row index that was clicked.
+            column: Table column index that was clicked (unused).
+        """
+        del column
+        addr_item = self._cmt_table.item(row, 0)
+        text_item = self._cmt_table.item(row, 1)
+        if addr_item is None or text_item is None:
+            return
+        address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
+        self._cmt_addr_input.setText(f"0x{address:X}")
+        self._cmt_text_input.setText(text_item.text())
+
+    @staticmethod
+    def _parse_annot_address(raw_address: object) -> int:
+        """Parse an address value returned by the labels/comments bridge calls.
+
+        Args:
+            raw_address: Address value from a label or comment dict, typically a hex string.
+
+        Returns:
+            int: Parsed address, or 0 if the value could not be parsed.
+        """
+        if isinstance(raw_address, int):
+            return raw_address
+        if isinstance(raw_address, str) and raw_address:
+            try:
+                return int(raw_address, 0)
+            except ValueError:
+                return 0
+        return 0
+
+    def _module_name_for_address(self, address: int) -> str:
+        """Resolve the module containing an address using the last-fetched module list.
+
+        Args:
+            address: Address to resolve against the cached module base/size ranges.
+
+        Returns:
+            str: Module name containing the address, or an empty string if unresolved.
+        """
+        for mod in self._modules:
+            base = getattr(mod, "base_address", 0)
+            size = getattr(mod, "size", 0)
+            if base <= address < base + size:
+                return getattr(mod, "name", "")
+        return ""
 
     def _on_refresh_memmap(self) -> None:
         """Refresh the memory map table."""
@@ -2563,6 +3060,100 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
             address=hex(address),
         )
+
+    def _on_refresh_patches(self) -> None:
+        """Refresh the patches table from the bridge."""
+        if self._bridge is None:
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.get_patches(),
+            on_success=self._apply_patches,
+            on_error=lambda _: _logger.warning("x64dbg_refresh_patches_failed"),
+            parent=self,
+            event="x64dbg_get_patches",
+            logger=_logger,
+        )
+
+    def _apply_patches(self, result: object) -> None:
+        """Apply patch data to the patches table.
+
+        Args:
+            result: Patch dict list from the bridge.
+        """
+        raw_patches: list[object] = [*result] if isinstance(result, list) else []
+        patches: list[dict[str, object]] = [cast("dict[str, object]", p) for p in raw_patches if isinstance(p, dict)]
+        self._patch_table.setRowCount(0)
+        for entry in patches:
+            row = self._patch_table.rowCount()
+            self._patch_table.insertRow(row)
+            address = entry.get("address", 0)
+            address_int = address if isinstance(address, int) else int(str(address), 0) if address else 0
+            addr_item = QTableWidgetItem(f"0x{address_int:X}")
+            addr_item.setData(Qt.ItemDataRole.UserRole, address_int)
+            self._patch_table.setItem(row, 0, addr_item)
+            self._patch_table.setItem(row, 1, QTableWidgetItem(str(entry.get("oldByte", ""))))
+            self._patch_table.setItem(row, 2, QTableWidgetItem(str(entry.get("newByte", ""))))
+
+    def _on_restore_patch(self) -> None:
+        """Restore the original bytes for the selected patch."""
+        if self._bridge is None:
+            return
+        row = self._patch_table.currentRow()
+        if row < 0:
+            return
+        addr_item = self._patch_table.item(row, 0)
+        if addr_item is None:
+            return
+        address = cast("int", addr_item.data(Qt.ItemDataRole.UserRole))
+        self._patch_restore_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.restore_patch(address),
+            on_success=lambda _: self._on_patch_restored(address),
+            on_error=lambda e: self._on_generic_error("Restore Patch", e, self._patch_restore_btn),
+            parent=self,
+            event="x64dbg_restore_patch",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+        )
+
+    def _on_patch_restored(self, address: int) -> None:
+        """Handle successful patch restoration.
+
+        Args:
+            address: Address of the restored patch.
+        """
+        self._console_output.appendPlainText(f"[+] Patch restored at 0x{address:X}")
+        self._patch_restore_btn.setEnabled(True)
+        self._on_refresh_patches()
+
+    def _on_export_patches(self) -> None:
+        """Export all applied patches to a file chosen by the user."""
+        if self._bridge is None:
+            return
+        path, _ = QFileDialog.getSaveFileName(self, "Export Patches", "", "Patch Files (*.1337);;All Files (*)")
+        if not path:
+            return
+        self._patch_export_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.export_patches(path),
+            on_success=lambda _: self._on_patches_exported(path),
+            on_error=lambda e: self._on_generic_error("Export Patches", e, self._patch_export_btn),
+            parent=self,
+            event="x64dbg_export_patches",
+            logger=_logger,
+            level="info",
+            path=path,
+        )
+
+    def _on_patches_exported(self, path: str) -> None:
+        """Handle successful patch export.
+
+        Args:
+            path: File path the patches were exported to.
+        """
+        self._console_output.appendPlainText(f"[+] Patches exported to {path}")
+        self._patch_export_btn.setEnabled(True)
 
     def _on_refresh_procinfo(self) -> None:
         """Refresh process information."""
@@ -2710,6 +3301,47 @@ class X64DbgPanel(AnalysisPanelBase):
             instruction=instr,
         )
 
+    def _on_assemble_preview(self) -> None:
+        """Assemble an instruction into bytes without writing it to memory."""
+        if self._bridge is None:
+            return
+        addr_text = self._mem_addr_input.text().strip()
+        instr = self._asm_instr_input.text().strip()
+        if not addr_text or not instr:
+            return
+        try:
+            address = int(addr_text, 0)
+        except ValueError:
+            self._invalid_input(
+                "x64dbg_assemble_preview_invalid_address",
+                input_text=addr_text,
+                console_msg=f"[!] Invalid address: {addr_text}",
+                logger=_logger,
+            )
+            return
+        run_bridge_coroutine_logged(
+            self._bridge.assemble_at(address, instr),
+            on_success=lambda result: self._on_assemble_preview_success(address, instr, result),
+            on_error=lambda e: self._on_generic_error("Assemble Preview", e),
+            parent=self,
+            event="x64dbg_assemble_at",
+            logger=_logger,
+            address=hex(address),
+            instruction=instr,
+        )
+
+    def _on_assemble_preview_success(self, address: int, instr: str, result: object) -> None:
+        """Display the assembled byte encoding for an instruction preview.
+
+        Args:
+            address: Address the instruction was assembled for.
+            instr: Instruction text that was assembled.
+            result: Assembled bytes returned by the bridge.
+        """
+        encoded = result if isinstance(result, bytes) else b""
+        hex_bytes = encoded.hex(" ")
+        self._console_output.appendPlainText(f"[+] '{instr}' at {hex(address)} -> {hex_bytes}")
+
     def _on_nop_range(self) -> None:
         """NOP a range of bytes at the current address."""
         if self._bridge is None:
@@ -2817,6 +3449,49 @@ class X64DbgPanel(AnalysisPanelBase):
             level="info",
             tid=tid,
         )
+
+    def _on_rename_thread(self) -> None:
+        """Rename the selected thread and refresh the thread table."""
+        if self._bridge is None:
+            return
+        row = self._thread_table.currentRow()
+        if row < 0:
+            return
+        tid_item = self._thread_table.item(row, 0)
+        if tid_item is None:
+            return
+        try:
+            tid = int(tid_item.text())
+        except ValueError:
+            _logger.warning("x64dbg_rename_thread_invalid_tid", input_text=tid_item.text())
+            return
+        name = self._thread_name_input.text().strip()
+        if not name:
+            return
+        self._rename_thread_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_thread_name(tid, name),
+            on_success=lambda _: self._on_rename_thread_success(tid, name),
+            on_error=lambda e: self._on_generic_error("Rename Thread", e, self._rename_thread_btn),
+            parent=self,
+            event="x64dbg_set_thread_name",
+            logger=_logger,
+            level="info",
+            tid=tid,
+            name=name,
+        )
+
+    def _on_rename_thread_success(self, tid: int, name: str) -> None:
+        """Handle successful thread rename by logging and refreshing thread state.
+
+        Args:
+            tid: Thread ID that was renamed.
+            name: New thread name.
+        """
+        self._rename_thread_btn.setEnabled(True)
+        self._thread_name_input.clear()
+        self._console_output.appendPlainText(f"[+] Thread {tid} renamed to {name!r}")
+        self._refresh_state()
 
     def _on_eval_expression(self) -> None:
         """Evaluate an expression."""

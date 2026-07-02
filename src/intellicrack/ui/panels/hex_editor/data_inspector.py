@@ -33,6 +33,8 @@ _logger = get_logger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from intellicrack.bridges.hex_editor import HexEditorBridge
+
 
 _BIT_COUNT: int = 8
 _BIT_BUTTON_WIDTH: int = 28
@@ -188,9 +190,15 @@ class DataInspectorMixin:
     def _on_bit_toggled(self, bit_index: int, *, checked: bool) -> None:
         """Handle a bit toggle button click.
 
-        Delegates the single-bit write to ``document.set_bit`` so the
-        hexcore backend performs the read-modify-write atomically and
-        records it in the undo history. The button is re-synced from
+        When the document's current bit differs from the button's new
+        ``checked`` state (the expected case, since the button always
+        starts synced to the document), the write is delegated to the
+        bridge's atomic :meth:`HexEditorBridge.toggle_bit` so the
+        AI-callable tool and this button share the same flip
+        implementation. When no bridge is attached, or the document's
+        current bit already equals ``checked`` (a no-op flip, which
+        ``toggle_bit`` cannot express), falls back to
+        ``document.set_bit`` directly. The button is re-synced from
         ``document.get_bit`` after the write to avoid drift if the
         backend clamps or rejects the value.
 
@@ -203,27 +211,95 @@ class DataInspectorMixin:
 
         offset = self._bit_editor_offset if hasattr(self, "_bit_editor_offset") else 0
         _logger.info("bit_write_requested", offset=offset, bit=bit_index, checked=checked)
+
+        bridge = getattr(self, "_bridge", None)
+        if bridge is not None and self._toggle_bit_via_bridge(bridge, offset, bit_index, checked=checked):
+            self._notify_bit_written(offset)
+            self._sync_bit_button(bit_index, offset, fallback=checked)
+            self._refresh_hex_viewport()
+            return
+
         try:
             self.document.set_bit(offset, bit_index, checked)
         except (AttributeError, ValueError, OverflowError):
             _logger.exception("bit_write_failed", offset=offset, bit=bit_index)
             return
 
+        self._notify_bit_written(offset)
+        self._sync_bit_button(bit_index, offset, fallback=checked)
+        self._refresh_hex_viewport()
+
+    def _toggle_bit_via_bridge(self, bridge: HexEditorBridge, offset: int, bit_index: int, *, checked: bool) -> bool:
+        """Flip a bit through the bridge's atomic ``toggle_bit`` when it matches the requested state.
+
+        ``toggle_bit`` unconditionally flips the current bit and cannot
+        express "set to this exact value", so this helper first confirms
+        the document's current bit differs from ``checked`` (the normal
+        case, since the button was synced from the document before the
+        click) before dispatching the flip.
+
+        Args:
+            bridge: Attached ``HexEditorBridge`` instance.
+            offset: Byte offset of the bit editor.
+            bit_index: Bit position (0=LSB, 7=MSB).
+            checked: Desired new bit value.
+
+        Returns:
+            bool: ``True`` if the bridge performed the write, ``False``
+                if the caller must fall back to ``document.set_bit``
+                (bridge unavailable, current bit already matches
+                ``checked``, or the bridge call failed).
+        """
+        document = self.document
+        if document is None:
+            return False
+        try:
+            current = bool(document.get_bit(offset, bit_index))
+        except (AttributeError, ValueError, OverflowError):
+            _logger.exception("bit_read_before_toggle_failed", offset=offset, bit=bit_index)
+            return False
+        if current == checked:
+            return False
+
+        try:
+            run_bridge_coroutine(bridge.toggle_bit(offset, bit_index))
+        except (AttributeError, ValueError, OverflowError, RuntimeError):
+            _logger.exception("bit_toggle_bridge_failed", offset=offset, bit=bit_index)
+            return False
+        return True
+
+    def _notify_bit_written(self, offset: int) -> None:
+        """Forward a single-byte bit write to the shared state holder if attached.
+
+        Args:
+            offset: Byte offset that was written.
+        """
         state_holder = getattr(self, "state_holder", None)
         if state_holder is not None:
             notify = getattr(state_holder, "notify_data_modified", None)
             if callable(notify):
                 notify(offset, 1, source="hex-editor.data_inspector.bit")
 
+    def _sync_bit_button(self, bit_index: int, offset: int, *, fallback: bool) -> None:
+        """Re-sync the bit toggle button from the authoritative document state.
+
+        Args:
+            bit_index: Bit position (0=LSB, 7=MSB) that was written.
+            offset: Byte offset that was written.
+            fallback: Value to display if the post-write read fails.
+        """
         btn_idx = 7 - bit_index
         if 0 <= btn_idx < len(self._bit_buttons):
+            document = self.document
             try:
-                is_set = bool(self.document.get_bit(offset, bit_index))
+                is_set = fallback if document is None else bool(document.get_bit(offset, bit_index))
             except (AttributeError, ValueError, OverflowError):
-                is_set = checked
+                is_set = fallback
             self._bit_buttons[btn_idx].setChecked(is_set)
             self._bit_buttons[btn_idx].setText("1" if is_set else "0")
 
+    def _refresh_hex_viewport(self) -> None:
+        """Trigger a hex-widget viewport repaint if a hex widget is attached."""
         if self._hex_widget is not None:
             update_fn = getattr(self._hex_widget, "_update_viewport", None)
             if callable(update_fn):

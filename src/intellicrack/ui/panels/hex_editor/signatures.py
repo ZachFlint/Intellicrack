@@ -10,7 +10,7 @@ import hashlib
 import json
 import mmap
 from pathlib import Path
-from typing import Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -26,7 +26,11 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.yara_scanner import YaraScanner
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 _logger = get_logger(__name__)
@@ -500,6 +504,7 @@ class SignaturesMixin:
     _sig_results_tree: QTreeWidget | None
     _sig_worker: GenericCallableWorker | None
     _sig_db_path: str
+    _bridge: Any | None
 
     def goto_offset(self, offset: int) -> None:
         """Navigate the hex widget to a specific offset.
@@ -568,7 +573,16 @@ class SignaturesMixin:
                 self._sig_db_path_label.setText(name)
 
     def _on_scan_signatures(self) -> None:
-        """Start scanning the document against the selected signature database."""
+        """Start scanning the document against the selected signature database.
+
+        DIE, ClamAV, and custom-JSON databases are dispatched through
+        the matching ``HexEditorBridge.scan_*_signatures`` method so the
+        AI-callable tool and this toolbar action share a single scanner
+        implementation (the audit's highest drift-risk item: nontrivial
+        parsing logic most likely to drift between two independent
+        copies). YARA has no bridge equivalent and continues to run via
+        the local :class:`YaraScanner`-backed worker.
+        """
         if self.document is None or not self._sig_db_path:
             return
 
@@ -590,6 +604,12 @@ class SignaturesMixin:
             file_path=fp_str,
             has_document=self.document is not None,
         )
+
+        bridge = getattr(self, "_bridge", None)
+        if db_type != "yara" and bridge is not None:
+            self._scan_signatures_via_bridge(bridge, db_type)
+            return
+
         worker = GenericCallableWorker(
             execute_signature_scan_from_source,
             fp_str,
@@ -601,6 +621,51 @@ class SignaturesMixin:
         _ = worker.call_error.connect(self._on_sig_scan_error_obj)
         self._sig_worker = worker
         worker.start()
+
+    def _scan_signatures_via_bridge(self, bridge: HexEditorBridge, db_type: str) -> None:
+        """Dispatch a DIE/ClamAV/custom signature scan to the matching bridge method.
+
+        Args:
+            bridge: Attached ``HexEditorBridge`` instance.
+            db_type: Selected database format (``"die"``, ``"clamav"``, or ``"custom"``).
+        """
+        coro = {
+            "die": bridge.scan_die_signatures,
+            "clamav": bridge.scan_clamav_signatures,
+            "custom": bridge.scan_custom_signatures,
+        }[db_type](self._sig_db_path)
+
+        run_bridge_coroutine_logged(
+            coro,
+            on_success=self._on_sig_scan_bridge_success,
+            on_error=self._on_sig_scan_bridge_error,
+            parent=self if isinstance(self, QWidget) else None,
+            event=f"hex_editor_scan_{db_type}_signatures",
+            logger=_logger,
+            db_type=db_type,
+            db_path=self._sig_db_path,
+        )
+
+    def _on_sig_scan_bridge_success(self, result: object) -> None:
+        """Forward a successful bridge scan result to the results-tree renderer.
+
+        Args:
+            result: ``list[dict]`` payload returned by the bridge's
+                ``scan_die_signatures``, ``scan_clamav_signatures``, or
+                ``scan_custom_signatures`` method.
+        """
+        if not isinstance(result, list):
+            _logger.warning("sig_scan_bridge_unexpected_result_type", result_type=type(result).__name__)
+            return
+        self._on_sig_scan_finished(cast("list[object]", result))
+
+    def _on_sig_scan_bridge_error(self, exc: object) -> None:
+        """Forward a bridge signature-scan failure to the error handler.
+
+        Args:
+            exc: Exception raised by the bridge's scan method.
+        """
+        self._on_sig_scan_error(str(exc))
 
     def _on_sig_scan_finished_obj(self, results: object) -> None:
         """Forward worker results to the typed signature scan handler.

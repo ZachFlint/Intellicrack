@@ -481,7 +481,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool name.
+        """The tool name.
 
         Returns:
             ToolName: ToolName.HEX_EDITOR enum value.
@@ -490,7 +490,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """Tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all hex editor functions.
@@ -783,6 +783,8 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                             name="fmt",
                             type="string",
                             description="Output format.",
+                            required=False,
+                            default="hex",
                             enum=[
                                 "hex",
                                 "c_array",
@@ -881,6 +883,13 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                             description="Number of bytes around cursor to include.",
                             required=False,
                             default=256,
+                        ),
+                        ToolParameter(
+                            name="bookmark_limit",
+                            type="integer",
+                            description="Maximum number of bookmark entries to include in the AI context.",
+                            required=False,
+                            default=_AI_CONTEXT_BOOKMARK_LIMIT,
                         ),
                     ],
                     returns="Dict with document info, bytes at cursor, inspections, bookmarks",
@@ -1195,6 +1204,8 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                             name="patch_format",
                             type="string",
                             description="Patch format.",
+                            required=False,
+                            default="ips",
                             enum=["ips", "ips32", "bps", "ups"],
                         ),
                         ToolParameter(
@@ -1225,7 +1236,13 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                     description="Search for a numeric value in the document.",
                     parameters=[
                         ToolParameter(name="value", type="number", description="Value to search for."),
-                        ToolParameter(name="size", type="integer", description="Byte size: 1, 2, 4, or 8."),
+                        ToolParameter(
+                            name="size",
+                            type="integer",
+                            description="Byte size: 1, 2, 4, or 8.",
+                            required=False,
+                            default=4,
+                        ),
                         ToolParameter(
                             name="value_type",
                             type="string",
@@ -1536,7 +1553,13 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                     name="hex_editor.set_alignment_grid",
                     description="Set the alignment grid size for visual display.",
                     parameters=[
-                        ToolParameter(name="size", type="integer", description="Grid size in bytes (0 to disable)."),
+                        ToolParameter(
+                            name="size",
+                            type="integer",
+                            description="Grid size in bytes (0 to disable).",
+                            required=False,
+                            default=512,
+                        ),
                     ],
                     returns="True",
                 ),
@@ -3185,6 +3208,9 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         """
         e_lfanew = struct.unpack_from("<I", self._read_doc_bytes(_PE_LFANEW_OFFSET, 4), 0)[0]
         self._add_bm(bookmarks, added_indices, 0, _DOS_HEADER_SIZE, "DOS Header", colors[0])
+        if self._read_doc_bytes(e_lfanew, 4) != b"PE\x00\x00":
+            _logger.info("pe_structure_bookmarked_dos_only", bookmark_count=len(bookmarks), e_lfanew=e_lfanew)
+            return
         self._add_bm(bookmarks, added_indices, e_lfanew, 4, "PE Signature", colors[1])
 
         coff_offset = e_lfanew + 4

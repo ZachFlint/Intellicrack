@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import struct
 from dataclasses import dataclass
-from typing import Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtCore import QRegularExpression
 from PyQt6.QtGui import QRegularExpressionValidator
@@ -26,9 +26,14 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.dialogs_helpers import show_warning
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine
 from intellicrack.ui.panels.hex_editor.base import MAX_SEARCH_RESULTS
 from intellicrack.ui.resources.theme_manager import ThemeManager
+
+
+if TYPE_CHECKING:
+    from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
 _logger = get_logger(__name__)
@@ -130,6 +135,27 @@ def _resolve_numeric_search_format(params: _NumericSearchParams) -> _NumericSear
         is_float=is_float,
         big_endian=big_endian,
     )
+
+
+def pack_numeric_value(value_text: str, fmt_info: _NumericSearchFormat) -> bytes:
+    """Pack a numeric-search text value into raw bytes for byte-pattern replacement.
+
+    Args:
+        value_text: Decimal (``"255"``) or hex-prefixed (``"0xFF"``) numeric
+            literal to encode.
+        fmt_info: Resolved struct format describing the target size, sign,
+            float-ness, and byte order.
+
+    Returns:
+        bytes: The packed byte representation of ``value_text``.
+
+    Note:
+        Callers should be prepared to handle ``ValueError`` (unparseable
+        ``value_text``) and ``struct.error`` (parsed value out of range for
+        the resolved format) propagating from this call.
+    """
+    value: float = float(value_text) if fmt_info.is_float else int(value_text, 0)
+    return struct.pack(fmt_info.fmt, value)
 
 
 def _get_highlight_color() -> str:
@@ -330,6 +356,11 @@ class SearchMixin:
     _numeric_align_spin: QSpinBox | None
     _numeric_range_check: QCheckBox | None
     _numeric_max_input: QLineEdit | None
+    _replace_input: QLineEdit | None
+    _numeric_replace_input: QLineEdit | None
+    _bridge: HexEditorBridge | None
+    document: Any | None
+    state_holder: Any | None
 
     def _on_search(self) -> None:
         """Execute a search based on current mode and input."""
@@ -517,6 +548,23 @@ class SearchMixin:
         search_btn = QPushButton("Search")
         search_btn.clicked.connect(self._on_numeric_search)
         layout.addWidget(search_btn)
+
+        layout.addWidget(QLabel("Replace With:"))
+        self._numeric_replace_input = QLineEdit()
+        self._numeric_replace_input.setToolTip("Decimal (255) or hex (0xFF) numeric value to write in place of matches")
+        self._numeric_replace_input.setFixedWidth(_VALUE_INPUT_WIDTH)
+        self._numeric_replace_input.setValidator(
+            QRegularExpressionValidator(
+                QRegularExpression(r"-?(?:0[xX][0-9a-fA-F]+|\d+(?:\.\d*)?)"),
+                frame,
+            ),
+        )
+        layout.addWidget(self._numeric_replace_input)
+
+        numeric_replace_btn = QPushButton("Replace All")
+        numeric_replace_btn.clicked.connect(self._on_replace_all)
+        layout.addWidget(numeric_replace_btn)
+
         layout.addStretch()
         return frame
 
@@ -586,6 +634,8 @@ class SearchMixin:
                 self._search_input.setValidator(hex_validator)
             else:
                 self._search_input.setValidator(None)
+        if self._replace_input is not None:
+            self._replace_input.setEnabled(not show_numeric)
 
     @staticmethod
     def _parse_numeric_search_bounds(value_text: str, max_text: str, *, is_float: bool) -> tuple[float, float]:
@@ -762,3 +812,340 @@ class SearchMixin:
         )
         parent = self if isinstance(self, QWidget) else None
         QMessageBox.warning(parent, "Numeric Search", f"Search failed:\n{exc}")
+
+    def _replace_encoding(self) -> str:
+        """Return the Python codec name selected in the toolbar encoding combo.
+
+        Returns:
+            str: Lower-cased, hyphen-stripped codec name (e.g. ``"utf8"``),
+                defaulting to ``"utf-8"`` when the combo is unavailable.
+        """
+        if self._encoding_combo is None:
+            return "utf-8"
+        return self._encoding_combo.currentText().lower().replace("-", "")
+
+    def _resolve_hex_replace_pair(self, mode: str, query: str, replace_text: str) -> tuple[str, str] | None:
+        """Resolve the find/replace pair into hex-string byte patterns for ``replace_bytes``.
+
+        Hex mode uses the raw hex-digit inputs directly. Text mode encodes
+        both strings through the hex-editor bridge's ``encode_text`` so
+        codecs the Rust backend understands (e.g. Shift-JIS, EBCDIC) are
+        honored. Numeric mode packs both values using the numeric-search
+        panel's resolved struct format so the replacement matches the
+        found value's byte width, sign, and endianness.
+
+        Args:
+            mode: Search mode label (``"Hex"``, ``"Text"``, ``"Numeric"``).
+                Regex mode is not supported by this resolver and returns
+                ``None``.
+            query: The search/find field text.
+            replace_text: The replacement field text.
+
+        Returns:
+            tuple[str, str] | None: ``(pattern_hex, replacement_hex)`` pair,
+                or ``None`` when ``mode`` has no byte-pattern equivalent.
+
+        Raises:
+            RuntimeError: If text-mode encoding fails because the hex
+                editor bridge is unavailable or returns an unexpected type.
+
+        Note:
+            Numeric mode may additionally propagate ``ValueError`` or
+            ``struct.error`` from :func:`pack_numeric_value` when a value
+            cannot be parsed for, or does not fit, the resolved format.
+        """
+        if mode == "Hex":
+            return query.replace(" ", ""), replace_text.replace(" ", "")
+
+        if mode == "Text":
+            bridge = getattr(self, "_bridge", None)
+            if bridge is None:
+                msg = "hex editor bridge not available"
+                raise RuntimeError(msg)
+            encoding = self._replace_encoding()
+            pattern_hex = run_bridge_coroutine(bridge.encode_text(query, encoding))
+            replacement_hex = run_bridge_coroutine(bridge.encode_text(replace_text, encoding))
+            if not isinstance(pattern_hex, str) or not isinstance(replacement_hex, str):
+                msg = "encode_text did not return a hex string"
+                raise RuntimeError(msg)
+            return pattern_hex, replacement_hex
+
+        if mode == "Numeric":
+            value_text = query.strip()
+            replace_value_text = replace_text.strip()
+            params = self._read_numeric_search_params(value_text)
+            fmt_info = _resolve_numeric_search_format(params)
+            pattern_bytes = pack_numeric_value(value_text, fmt_info)
+            replacement_bytes = pack_numeric_value(replace_value_text, fmt_info)
+            return pattern_bytes.hex(), replacement_bytes.hex()
+
+        return None
+
+    def _replace_query_and_value(self, mode: str) -> tuple[str, str] | None:
+        """Read the raw find/replace text for the given search mode.
+
+        Args:
+            mode: Search mode label (``"Hex"``, ``"Text"``, ``"Regex"``,
+                ``"Numeric"``).
+
+        Returns:
+            tuple[str, str] | None: ``(query, replace_text)`` pair, or
+                ``None`` when the required input widgets are unavailable
+                or empty.
+        """
+        if mode == "Numeric":
+            if self._numeric_value_input is None or self._numeric_replace_input is None:
+                return None
+            query = self._numeric_value_input.text().strip()
+            replace_text = self._numeric_replace_input.text().strip()
+        else:
+            if self._search_input is None or self._replace_input is None:
+                return None
+            query = self._search_input.text().strip()
+            replace_text = self._replace_input.text()
+        if not query:
+            return None
+        return query, replace_text
+
+    def _on_replace_all(self) -> None:
+        """Replace every occurrence of the current find pattern with the replace value.
+
+        Hex, Text, and Numeric modes resolve the find/replace pair into
+        fixed-width byte patterns and dispatch a single
+        ``HexEditorBridge.replace_bytes`` call, which replaces every
+        occurrence in one native pass. Regex mode has no fixed-width byte
+        pattern to hand the bridge, so it instead replaces every cached
+        search-result offset directly via ``document.write_bytes`` --
+        this requires the replacement to be the exact same byte length
+        as each match (a genuine constraint of in-place replacement,
+        since resizing per-match would invalidate subsequent offsets),
+        and the user is warned and the operation aborted if it is not.
+        """
+        document: Any = getattr(self, "document", None)
+        if document is None or self._search_mode_combo is None:
+            return
+
+        parent = self if isinstance(self, QWidget) else None
+        mode = self._search_mode_combo.currentText()
+
+        if mode == "Regex":
+            self._replace_all_regex_matches(parent)
+            return
+
+        query_pair = self._replace_query_and_value(mode)
+        if query_pair is None:
+            return
+        query, replace_text = query_pair
+
+        try:
+            hex_pair = self._resolve_hex_replace_pair(mode, query, replace_text)
+        except (ValueError, struct.error, RuntimeError, OverflowError) as exc:
+            _logger.warning("replace_all_resolve_failed", mode=mode, error=str(exc))
+            show_warning(parent, "Replace All", f"Could not resolve replacement: {exc}")
+            return
+        if hex_pair is None:
+            return
+        pattern_hex, replacement_hex = hex_pair
+
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            show_warning(parent, "Replace All", "Hex editor bridge not available.")
+            return
+
+        _logger.info("replace_all_started", mode=mode, pattern_length=len(pattern_hex) // 2)
+        try:
+            count = run_bridge_coroutine(bridge.replace_bytes(pattern_hex, replacement_hex))
+        except (RuntimeError, ValueError, OverflowError) as exc:
+            _logger.warning("replace_all_failed", mode=mode, error=str(exc))
+            show_warning(parent, "Replace All", f"Replace failed: {exc}")
+            return
+
+        replaced = count if isinstance(count, int) else 0
+        _logger.info("replace_all_completed", mode=mode, replaced=replaced)
+        self._reset_search_state()
+        if self._search_status_label is not None:
+            self._search_status_label.setText(f"Replaced {replaced} occurrence(s)")
+
+    def _replace_all_regex_matches(self, parent: QWidget | None) -> None:
+        """Replace every cached regex search-result offset with fixed-length replacement bytes.
+
+        Args:
+            parent: Parent widget for warning dialogs, or ``None``.
+        """
+        document: Any = getattr(self, "document", None)
+        if document is None:
+            return
+        if self._search_input is None or self._replace_input is None:
+            return
+        query = self._search_input.text().strip()
+        if not query:
+            return
+        replace_text = self._replace_input.text()
+
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            show_warning(parent, "Replace All", "Hex editor bridge not available.")
+            return
+
+        encoding = self._replace_encoding()
+        try:
+            replacement_hex = run_bridge_coroutine(bridge.encode_text(replace_text, encoding))
+        except RuntimeError as exc:
+            _logger.warning("replace_all_regex_encode_failed", error=str(exc))
+            show_warning(parent, "Replace All", f"Could not encode replacement text: {exc}")
+            return
+        if not isinstance(replacement_hex, str):
+            show_warning(parent, "Replace All", "encode_text did not return a hex string.")
+            return
+        replacement_bytes = bytes.fromhex(replacement_hex)
+
+        matches: list[tuple[int, int]] = document.search_regex(query, MAX_SEARCH_RESULTS)
+        if not matches:
+            if self._search_status_label is not None:
+                self._search_status_label.setText("No results found")
+            return
+
+        mismatched = [length for _offset, length in matches if length != len(replacement_bytes)]
+        if mismatched:
+            show_warning(
+                parent,
+                "Replace All",
+                "Regex replace requires the replacement text to be the same byte "
+                f"length as every match ({len(replacement_bytes)} bytes); "
+                f"{len(mismatched)} of {len(matches)} match(es) differ in length.",
+            )
+            return
+
+        _logger.info("replace_all_regex_started", match_count=len(matches))
+        for offset, _length in matches:
+            document.write_bytes(offset, replacement_bytes)
+
+        state_holder = getattr(self, "state_holder", None)
+        if state_holder is not None:
+            notify = getattr(state_holder, "notify_data_modified", None)
+            if callable(notify):
+                for offset, _length in matches:
+                    notify(offset, len(replacement_bytes), source="hex-editor.search.replace_regex")
+
+        if self._hex_widget is not None:
+            update_fn = getattr(self._hex_widget, "_update_viewport", None)
+            if callable(update_fn):
+                update_fn()
+
+        _logger.info("replace_all_regex_completed", replaced=len(matches))
+        self._reset_search_state()
+        if self._search_status_label is not None:
+            self._search_status_label.setText(f"Replaced {len(matches)} occurrence(s)")
+
+    def _resolve_single_replacement_bytes(self, mode: str, replace_text: str, parent: QWidget | None) -> bytes | None:
+        """Resolve the raw replacement bytes for a single-match replace in the given mode.
+
+        Args:
+            mode: Search mode label (``"Hex"``, ``"Text"``, ``"Regex"``, ``"Numeric"``).
+            replace_text: The replacement field text.
+            parent: Parent widget for warning dialogs, or ``None``.
+
+        Returns:
+            bytes | None: The resolved replacement bytes, or ``None`` when
+                resolution failed and a warning was already shown to the user.
+
+        Note:
+            Numeric mode may propagate ``ValueError`` or ``struct.error``
+            from :func:`pack_numeric_value`, and Hex mode may propagate
+            ``ValueError`` from :func:`bytes.fromhex`, when the replacement
+            text cannot be parsed for the active mode.
+        """
+        if mode == "Numeric":
+            if self._numeric_value_input is None:
+                return None
+            params = self._read_numeric_search_params(self._numeric_value_input.text().strip())
+            fmt_info = _resolve_numeric_search_format(params)
+            return pack_numeric_value(replace_text.strip(), fmt_info)
+        if mode == "Hex":
+            return bytes.fromhex(replace_text.replace(" ", ""))
+
+        bridge = getattr(self, "_bridge", None)
+        if bridge is None:
+            show_warning(parent, "Replace", "Hex editor bridge not available.")
+            return None
+        encoding = self._replace_encoding()
+        replacement_hex = run_bridge_coroutine(bridge.encode_text(replace_text, encoding))
+        if not isinstance(replacement_hex, str):
+            show_warning(parent, "Replace", "encode_text did not return a hex string.")
+            return None
+        return bytes.fromhex(replacement_hex)
+
+    def _apply_single_replacement(self, document: object, offset: int, length: int, replacement_bytes: bytes) -> None:
+        """Write ``replacement_bytes`` at ``offset`` and propagate the change to the GUI.
+
+        Args:
+            document: The active hex document exposing ``write_bytes``.
+            offset: Byte offset of the match being replaced.
+            length: Byte length of the match (equal to ``len(replacement_bytes)``).
+            replacement_bytes: The bytes to write in place of the match.
+        """
+        write_fn = getattr(document, "write_bytes", None)
+        if callable(write_fn):
+            write_fn(offset, replacement_bytes)
+
+        state_holder = getattr(self, "state_holder", None)
+        if state_holder is not None:
+            notify = getattr(state_holder, "notify_data_modified", None)
+            if callable(notify):
+                notify(offset, length, source="hex-editor.search.replace")
+
+        if self._hex_widget is not None:
+            update_fn = getattr(self._hex_widget, "_update_viewport", None)
+            if callable(update_fn):
+                update_fn()
+
+    def _on_replace(self) -> None:
+        """Replace only the currently-selected search result with the replace value.
+
+        Advances through :attr:`_search_results` the same way
+        :meth:`_on_find_next` does, but instead of merely navigating,
+        overwrites the bytes at the current match offset with the
+        encoded replacement value via ``document.write_bytes``. The
+        replacement must be the same byte length as the match (an
+        in-place, non-resizing write); the user is warned otherwise.
+        """
+        document: Any = getattr(self, "document", None)
+        if document is None or self._search_mode_combo is None:
+            return
+        if not self._search_results:
+            return
+
+        parent = self if isinstance(self, QWidget) else None
+        mode = self._search_mode_combo.currentText()
+        offset, length = self._search_results[self._search_index]
+
+        query_pair = self._replace_query_and_value(mode)
+        if query_pair is None:
+            return
+        _query, replace_text = query_pair
+
+        try:
+            replacement_bytes = self._resolve_single_replacement_bytes(mode, replace_text, parent)
+        except (ValueError, struct.error, OverflowError) as exc:
+            _logger.warning("replace_single_resolve_failed", mode=mode, error=str(exc))
+            show_warning(parent, "Replace", f"Could not resolve replacement: {exc}")
+            return
+        if replacement_bytes is None:
+            return
+
+        if len(replacement_bytes) != length:
+            show_warning(
+                parent,
+                "Replace",
+                f"Replacement is {len(replacement_bytes)} byte(s) but the match is {length} byte(s). "
+                "Use Replace All for variable-length replacement via the byte-pattern engine.",
+            )
+            return
+
+        self._apply_single_replacement(document, offset, length, replacement_bytes)
+
+        _logger.info("replace_single_completed", mode=mode, offset=offset, length=length)
+        if self._search_status_label is not None:
+            self._search_status_label.setText(f"Replaced match at 0x{offset:08X}")
+
+        self._on_find_next()

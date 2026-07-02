@@ -508,3 +508,6 @@ terminals/
 
 # MCP server tool-definition schema dumps (regenerable cache, never tracked)
 mcps/
+
+# Local prompt scratch (orchestration prompts, never tracked)
+prompts/

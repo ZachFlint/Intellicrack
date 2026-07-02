@@ -749,7 +749,7 @@ class LargeFileSettingsDialog(QDialog):
 
     @property
     def chunk_size_kb(self) -> int:
-        """Get the selected chunk size in kilobytes.
+        """Selected chunk size in kilobytes.
 
         Returns:
             int: Chunk size in KB.
@@ -758,7 +758,7 @@ class LargeFileSettingsDialog(QDialog):
 
     @property
     def memory_budget_mb(self) -> int:
-        """Get the selected memory budget in megabytes.
+        """Selected memory budget in megabytes.
 
         Returns:
             int: Memory budget in MB.
@@ -767,7 +767,7 @@ class LargeFileSettingsDialog(QDialog):
 
     @property
     def prefetch_on_scroll(self) -> bool:
-        """Get the prefetch on scroll setting.
+        """Selected prefetch-on-scroll setting.
 
         Returns:
             bool: True if prefetch on scroll is enabled.

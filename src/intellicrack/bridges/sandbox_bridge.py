@@ -295,7 +295,7 @@ class SandboxBridge(ToolBridgeBase):
 
     @property
     def manager(self) -> SandboxManager | None:
-        """Return the underlying ``SandboxManager`` instance, if initialized.
+        """The underlying ``SandboxManager`` instance, if initialized.
 
         Returns:
             SandboxManager | None: Active manager, or ``None`` if the bridge
@@ -305,7 +305,7 @@ class SandboxBridge(ToolBridgeBase):
 
     @property
     def manager_destroyed(self) -> bool:
-        """Return whether the manager has been shut down.
+        """Whether the manager has been shut down.
 
         Returns:
             bool: ``True`` if :meth:`shutdown` has been called and the manager
@@ -369,7 +369,7 @@ class SandboxBridge(ToolBridgeBase):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """The tool's name.
 
         Returns:
             ToolName: ToolName.SANDBOX.
@@ -378,7 +378,7 @@ class SandboxBridge(ToolBridgeBase):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """Tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all sandbox functions.
@@ -656,6 +656,19 @@ class SandboxBridge(ToolBridgeBase):
                     returns="Success confirmation",
                 ),
                 ToolFunction(
+                    name="sandbox.stop",
+                    description="Pause execution of a running QEMU sandbox VM.",
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the QEMU sandbox instance",
+                            required=True,
+                        ),
+                    ],
+                    returns="Command response from QEMU monitor",
+                ),
+                ToolFunction(
                     name="sandbox.cont",
                     description=("Resume execution of a paused QEMU sandbox VM. Use after breakpoints or manual pauses."),
                     parameters=[
@@ -719,6 +732,22 @@ class SandboxBridge(ToolBridgeBase):
                         ),
                     ],
                     returns="Dictionary with pcap file path",
+                ),
+                ToolFunction(
+                    name="sandbox.stop_pcap",
+                    description=(
+                        "Stop any active PCAP capture for a sandbox instance without requiring the original "
+                        "capture_id. Cleanup-friendly variant of pcap_stop; a no-op if no capture is active."
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance whose PCAP capture should be stopped",
+                            required=True,
+                        ),
+                    ],
+                    returns="Dictionary with instance_id, stopped flag, and capture_id/pcap_path if a capture was active",
                 ),
                 ToolFunction(
                     name="sandbox.screenshot",

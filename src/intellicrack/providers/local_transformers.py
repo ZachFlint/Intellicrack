@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import gc
 import json
+import os
 import re
 import time
 import uuid
@@ -115,20 +116,67 @@ _VISION_ARCHITECTURE_KEYWORDS: frozenset[str] = frozenset({
 
 _HF_CONFIG_URL = "https://huggingface.co/{model_id}/resolve/main/config.json"
 
+_HF_TOKEN_ENV_VARS: tuple[str, ...] = (
+    "LOCAL_TRANSFORMERS_HF_TOKEN",
+    "HUGGINGFACE_API_TOKEN",
+    "HF_TOKEN",
+    "HUGGINGFACE_HUB_TOKEN",
+)
 
-async def _fetch_model_config(model_id: str) -> dict[str, Any]:
+
+def _resolve_hf_token(explicit_token: str | None = None) -> str | None:
+    """Resolve a HuggingFace access token from an explicit value or the environment.
+
+    Prefers a token supplied by the caller (typically the provider's
+    configured credentials). When none is given, the standard HuggingFace
+    environment variables are consulted in priority order so that gated
+    repositories remain reachable even when only the Hub-native variables
+    are set.
+
+    Args:
+        explicit_token: Token supplied by the caller, or None to fall back to the environment.
+
+    Returns:
+        str | None: The first non-empty token found, or None when no token is available.
+    """
+    if explicit_token:
+        return explicit_token
+    for var in _HF_TOKEN_ENV_VARS:
+        value = os.environ.get(var)
+        if value:
+            return value
+    return None
+
+
+async def _fetch_model_config(model_id: str, token: str | None = None) -> dict[str, Any]:
     """Fetch model config.json from HuggingFace Hub.
+
+    Redirects are followed so that the Hub's ``307`` hand-off to its
+    resolve-cache CDN succeeds, and a bearer token is attached when one is
+    available so that gated repositories can be read.
 
     Args:
         model_id: HuggingFace model identifier (e.g. "microsoft/Phi-3-mini-4k-instruct").
+        token: Optional HuggingFace access token; falls back to the environment when None.
 
     Returns:
         dict[str, Any]: Parsed config dict, or empty dict on failure.
     """
     url = _HF_CONFIG_URL.format(model_id=model_id)
-    _logger.debug("huggingface_config_fetch_started", model_id=model_id, url=url)
+    resolved_token = _resolve_hf_token(token)
+    headers: dict[str, str] = {"Authorization": f"Bearer {resolved_token}"} if resolved_token else {}
+    _logger.debug(
+        "huggingface_config_fetch_started",
+        model_id=model_id,
+        url=url,
+        authenticated=bool(resolved_token),
+    )
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(10.0)) as client:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(10.0),
+            follow_redirects=True,
+            headers=headers,
+        ) as client:
             response = await client.get(url)
             response.raise_for_status()
             result: dict[str, Any] = response.json()
@@ -472,8 +520,9 @@ class LocalTransformersProvider(LLMProviderBase):
 
             eligible_models.append(model_id)
 
+        hf_token = self._credentials.api_key if self._credentials else None
         configs = await asyncio.gather(
-            *(_fetch_model_config(mid) for mid in eligible_models),
+            *(_fetch_model_config(mid, token=hf_token) for mid in eligible_models),
             return_exceptions=True,
         )
 

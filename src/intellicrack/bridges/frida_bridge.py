@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import re
 import string
 import tempfile
 import threading
@@ -183,17 +184,39 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
     ),
     ToolFunction(
         name="frida.attach",
-        description="Attach Frida to a running process",
+        description="Attach Frida to a running process by PID or process name",
         parameters=[
-            ToolParameter(name="target", type="string", description="Process name or PID", required=True),
+            ToolParameter(
+                name="pid",
+                type="string",
+                description="Process ID or process name (numeric strings are treated as a PID)",
+                required=True,
+            ),
             ToolParameter(name="cancellable_id", type="string", description="Cancellation token from create_cancellable", required=False),
         ],
-        returns="Session information",
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.attach_by_name",
+        description="Attach Frida to a running process resolved by process name",
+        parameters=[
+            ToolParameter(name="name", type="string", description="Process name to attach to", required=True),
+            ToolParameter(name="cancellable_id", type="string", description="Cancellation token from create_cancellable", required=False),
+        ],
+        returns="Success status",
     ),
     ToolFunction(
         name="frida.detach",
         description="Detach Frida from current process",
-        parameters=[],
+        parameters=[
+            ToolParameter(
+                name="kill_spawned",
+                type="boolean",
+                description="If True and the process was spawned by Frida, kill it on detach",
+                required=False,
+                default=True,
+            ),
+        ],
         returns="Success status",
     ),
     ToolFunction(
@@ -278,9 +301,9 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         parameters=[
             ToolParameter(name="address", type="integer", description="Memory address to write", required=True),
             ToolParameter(
-                name="hex_data",
+                name="data",
                 type="string",
-                description="Hex string of data to write",
+                description="Hex data to write",
                 required=True,
             ),
         ],
@@ -317,6 +340,28 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
             ToolParameter(name="script", type="string", description="JavaScript code to execute", required=True),
         ],
         returns="Script execution result",
+    ),
+    ToolFunction(
+        name="frida.execute_persistent_script",
+        description="Execute a Frida script that persists until explicitly unloaded (for Interceptor.attach-style hooks)",
+        parameters=[
+            ToolParameter(name="script_code", type="string", description="JavaScript code to execute", required=True),
+        ],
+        returns="Script ID for later unloading via unload_script",
+    ),
+    ToolFunction(
+        name="frida.unload_script",
+        description="Unload a specific persistent script by ID",
+        parameters=[
+            ToolParameter(name="script_id", type="string", description="Script ID returned by execute_persistent_script", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.unload_all_scripts",
+        description="Unload every active persistent script",
+        parameters=[],
+        returns="Success status",
     ),
     ToolFunction(
         name="frida.intercept_return",
@@ -748,6 +793,43 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         returns="Success status",
     ),
     ToolFunction(
+        name="frida.stalker_exclude",
+        description="Exclude a memory range from Stalker instrumentation",
+        parameters=[
+            ToolParameter(name="base_address", type="integer", description="Start address of the range to exclude", required=True),
+            ToolParameter(name="size", type="integer", description="Size in bytes of the range to exclude", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.stalker_garbage_collect",
+        description="Reclaim Stalker resources for threads that have since terminated",
+        parameters=[],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.stalker_invalidate",
+        description="Invalidate cached Stalker instrumentation for an address so it is re-instrumented on next execution",
+        parameters=[
+            ToolParameter(name="address", type="integer", description="Address whose cached instrumentation should be dropped", required=True),
+            ToolParameter(
+                name="thread_id",
+                type="integer",
+                description="Thread ID whose Stalker session owns the cached instrumentation (defaults to the calling thread)",
+                required=False,
+            ),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
+        name="frida.stalker_set_trust_threshold",
+        description="Set Stalker's trust threshold for reusing cached instrumented code (-1 disables trust, 0 trusts immediately)",
+        parameters=[
+            ToolParameter(name="threshold", type="integer", description="New trust-threshold value", required=True),
+        ],
+        returns="Success status",
+    ),
+    ToolFunction(
         name="frida.enumerate_applications",
         description="List all installed applications on the device",
         parameters=[],
@@ -1095,6 +1177,31 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
 ]
 
 
+_RPC_CAMEL_BOUNDARY = re.compile(r"(?<!^)(?=[A-Z])")
+
+
+def _to_frida_export_attr(method_name: str) -> str:
+    """Convert an RPC export name to Frida's Python ``exports_sync`` attribute form.
+
+    Frida's Python bindings expose ``rpc.exports`` entries under snake_case
+    attribute names and re-derive the original camelCase JS key on dispatch
+    (``exports_sync.add_two`` invokes JS ``addTwo``). Accessing the raw
+    camelCase name instead (``exports_sync.addTwo``) mangles the lookup and
+    raises ``RPCException: unable to find method 'addtwo'``. Callers that pass
+    the JS export name verbatim are therefore normalised here so both a
+    camelCase JS name and an already-snake_case name resolve to the same
+    exported function.
+
+    Args:
+        method_name: RPC export name as written in the script (camelCase) or
+            already in snake_case.
+
+    Returns:
+        str: The snake_case attribute name Frida's ``exports_sync`` expects.
+    """
+    return _RPC_CAMEL_BOUNDARY.sub("_", method_name).lower()
+
+
 def _write_typescript_tempfile(source: str) -> Path:
     """Write TypeScript source to a temporary ``.ts`` file.
 
@@ -1167,7 +1274,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool's name.
+        """The tool's name.
 
         Returns:
             ToolName: ToolName.FRIDA
@@ -1176,7 +1283,7 @@ class _FridaBridgeBase(InstrumentationBridge):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get tool definition for LLM function calling.
+        """Tool definition for LLM function calling.
 
         Returns:
             ToolDefinition: ToolDefinition with all available functions.
@@ -1353,8 +1460,8 @@ class _FridaBridgeBase(InstrumentationBridge):
         else:
             return True
 
-    async def attach(self, pid: int, *, cancellable_id: str | None = None) -> None:
-        """Attach to a running process.
+    async def attach(self, pid: int | str, *, cancellable_id: str | None = None) -> None:
+        """Attach to a running process by PID or process name.
 
         The bridge must already be initialised via :meth:`initialize` (or
         another entry point that successfully resolves the Frida device)
@@ -1363,7 +1470,10 @@ class _FridaBridgeBase(InstrumentationBridge):
         relabelled as attach errors.
 
         Args:
-            pid: Process ID to attach to.
+            pid: Process ID to attach to, or a process name. A numeric
+                ``int``, or a ``str`` containing only digits, is treated as a
+                PID; any other ``str`` is resolved to a PID by process name
+                via :meth:`attach_by_name`.
             cancellable_id: Optional cancellation token identifier returned by
                 :meth:`create_cancellable`. When supplied, the token is passed
                 through to the underlying Frida call so callers can abort the
@@ -1373,6 +1483,12 @@ class _FridaBridgeBase(InstrumentationBridge):
             ToolError: If the bridge is not initialised or the attachment
                 itself fails.
         """
+        if isinstance(pid, str) and not pid.strip().lstrip("+-").isdigit():
+            await self.attach_by_name(pid, cancellable_id=cancellable_id)
+            return
+
+        resolved_pid = int(pid)
+
         device = self._device
         if device is None:
             raise ToolError(
@@ -1383,19 +1499,19 @@ class _FridaBridgeBase(InstrumentationBridge):
         cancellable = self._resolve_cancellable(cancellable_id)
 
         try:
-            await self._perform_attach(device, pid, cancellable)
+            await self._perform_attach(device, resolved_pid, cancellable)
         except frida.ProcessNotFoundError as e:
-            _logger.warning("frida_process_not_found", pid=pid, error=str(e))
+            _logger.warning("frida_process_not_found", pid=resolved_pid, error=str(e))
             self.state.last_error = str(e)
             self._publish_tool_state()
             raise ToolError(
                 _ERR_PROCESS_NOT_FOUND,
-                details=self._frida_error_details(e, pid=pid),
+                details=self._frida_error_details(e, pid=resolved_pid),
             ) from e
         except (frida.PermissionDeniedError, frida.TransportError, frida.InvalidArgumentError, OSError) as e:
             _logger.warning(
                 "frida_attach_failed",
-                pid=pid,
+                pid=resolved_pid,
                 error=str(e),
                 error_type=type(e).__name__,
             )
@@ -1403,8 +1519,58 @@ class _FridaBridgeBase(InstrumentationBridge):
             self._publish_tool_state()
             raise ToolError(
                 _ERR_ATTACH_FAILED,
-                details=self._frida_error_details(e, pid=pid),
+                details=self._frida_error_details(e, pid=resolved_pid),
             ) from e
+
+    def _register_session_detached_handler(self, session: frida.core.Session, pid: int) -> None:
+        """Register Frida's async ``session.on("detached", ...)`` signal.
+
+        Without this listener the bridge only learns about a torn-down
+        session through its own explicit :meth:`detach` call, so an
+        externally terminated target (crash, ``kill -9`` from outside,
+        device loss) left ``self.state.process_attached`` stale until the
+        user manually detached. This registers a handler that fires on
+        Frida's internal callback thread, resets the bridge's per-attach
+        bookkeeping, and publishes a ``session_detached`` message so
+        subscribers observe the event as soon as it happens.
+
+        Args:
+            session: The session just established by an attach/spawn call.
+            pid: Process ID the session is attached to, recorded for the
+                published event and structured logging.
+        """
+
+        def on_detached(
+            reason: str,
+            crash: object | None,
+        ) -> None:
+            """Reset attach state and publish a message when Frida detaches the session.
+
+            Args:
+                reason: Frida-reported detach reason (e.g.
+                    ``"process-terminated"``, ``"application-requested"``).
+                crash: Crash details when ``reason`` is a crash-triggered
+                    detach, otherwise ``None``.
+            """
+            _logger.warning("frida_session_detached", pid=pid, reason=reason, has_crash=crash is not None)
+            self._session = None
+            self._pid = None
+            self.state.process_attached = False
+            self.state.target_pid = None
+            if reason != "application-requested":
+                self.state.last_error = f"session detached: {reason}"
+            self._publish_tool_state()
+            if reason != "application-requested":
+                self._dispatch_message({
+                    "type": "send",
+                    "payload": {
+                        "type": "session_detached",
+                        "pid": pid,
+                        "reason": reason,
+                    },
+                })
+
+        session.on("detached", on_detached)
 
     async def _perform_attach(
         self,
@@ -1432,6 +1598,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             pid,
             cancellable,
         )
+        self._register_session_detached_handler(self._session, pid)
         self._pid = pid
         self.state.connected = True
         self.state.tool_running = True
@@ -1511,6 +1678,7 @@ class _FridaBridgeBase(InstrumentationBridge):
                 details=self._frida_error_details(e, process_name=name, pid=target_pid),
             ) from e
 
+        self._register_session_detached_handler(self._session, target_pid)
         self._pid = target_pid
         self.state.connected = True
         self.state.tool_running = True
@@ -1627,6 +1795,7 @@ class _FridaBridgeBase(InstrumentationBridge):
             pid,
             cancellable,
         )
+        self._register_session_detached_handler(self._session, pid)
         self._pid = pid
         self._spawned_pid = pid
 
@@ -4501,7 +4670,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
 
         script = self._scripts[script_id]
         args_list = list(args) if args else []
-        rpc_method: object = getattr(script.exports_sync, method_name)
+        rpc_method: object = getattr(script.exports_sync, _to_frida_export_attr(method_name))
         if not callable(rpc_method):
             raise ToolError(_ERR_RPC_FAILED, details={"reason": f"'{method_name}' is not callable"})
         try:
@@ -5067,6 +5236,11 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
+        matching_hooks = [info for info in self._hooks.values() if info.target == target and info.active]
+        if not matching_hooks:
+            _logger.warning("frida_revert_hook_no_active_hook", target=target)
+            raise ToolError(_ERR_HOOK_FAILED)
+
         addr_resolve = self._resolve_target_js(target)
         script_code = f"""
         try {{
@@ -5082,6 +5256,8 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
         if "error" in result or not result.get("success", False):
             raise ToolError(_ERR_HOOK_FAILED)
 
+        for info in matching_hooks:
+            info.active = False
         _logger.info("hook_reverted", target=target)
         return True
 
@@ -5279,6 +5455,140 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
 
         await self._unload_script(script_id)
         _logger.info("call_probe_removed", probe_id=probe_id)
+        return True
+
+    async def stalker_exclude(self, base_address: int, size: int) -> bool:
+        """Exclude a memory range from Stalker instrumentation.
+
+        Ranges added with ``Stalker.exclude`` are skipped by the code
+        transformer, which speeds up tracing by leaving noisy or
+        uninteresting modules (e.g. the C runtime) uninstrumented.
+
+        Args:
+            base_address: Start address of the range to exclude.
+            size: Size in bytes of the range to exclude.
+
+        Returns:
+            bool: True if the range was excluded successfully.
+
+        Raises:
+            ToolError: If not attached or the operation fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        validated_base = self._validate_js_int(base_address, name="base_address")
+        validated_size = self._validate_js_int(size, name="size")
+
+        _logger.debug("stalker_exclude_requested", base_address=hex(validated_base), size=validated_size)
+        script_code = f"""
+        Stalker.exclude({{ base: ptr({validated_base}), size: {validated_size} }});
+        send({{ type: 'stalker_excluded' }});
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+        if "error" in result:
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(result.get("error", ""))})
+
+        _logger.info("stalker_range_excluded", base_address=hex(validated_base), size=validated_size)
+        return True
+
+    async def stalker_garbage_collect(self) -> bool:
+        """Reclaim Stalker resources for threads that have since terminated.
+
+        Returns:
+            bool: True if garbage collection completed successfully.
+
+        Raises:
+            ToolError: If not attached or the operation fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        _logger.debug("stalker_garbage_collect_requested")
+        script_code = """
+        Stalker.garbageCollect();
+        send({ type: 'stalker_gc_done' });
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+        if "error" in result:
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(result.get("error", ""))})
+
+        _logger.info("stalker_garbage_collected")
+        return True
+
+    async def stalker_invalidate(self, address: int, thread_id: int | None = None) -> bool:
+        """Invalidate cached Stalker instrumentation for an address.
+
+        Forces Stalker to re-instrument the code starting at ``address``
+        the next time it is executed, picking up changes made after the
+        original instrumentation (e.g. a subsequent ``patch_code`` call).
+
+        Args:
+            address: Address whose cached instrumentation should be dropped.
+            thread_id: Thread ID whose Stalker session owns the cached
+                instrumentation. None invalidates for the calling thread.
+
+        Returns:
+            bool: True if invalidation completed successfully.
+
+        Raises:
+            ToolError: If not attached or the operation fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        validated_address = self._validate_js_int(address, name="address")
+        tid_js = str(self._validate_js_int(thread_id, name="thread_id")) if thread_id is not None else "Process.getCurrentThreadId()"
+
+        _logger.debug("stalker_invalidate_requested", address=hex(validated_address), thread_id=thread_id)
+        script_code = f"""
+        Stalker.invalidate({tid_js}, ptr({validated_address}));
+        send({{ type: 'stalker_invalidated' }});
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+        if "error" in result:
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(result.get("error", ""))})
+
+        _logger.info("stalker_invalidated", address=hex(validated_address), thread_id=thread_id)
+        return True
+
+    async def stalker_set_trust_threshold(self, threshold: int) -> bool:
+        """Set Stalker's trust threshold for reusing cached instrumented code.
+
+        Controls how many times Stalker observes a block executing
+        unmodified before trusting its cached instrumented version.
+        ``-1`` disables the trust mechanism entirely (always
+        re-instrument), ``0`` trusts immediately, and higher values
+        require progressively more repeated observations.
+
+        Args:
+            threshold: New trust-threshold value.
+
+        Returns:
+            bool: True if the threshold was applied successfully.
+
+        Raises:
+            ToolError: If not attached or the operation fails.
+        """
+        if self._session is None:
+            raise ToolError(_ERR_NOT_ATTACHED)
+
+        validated_threshold = self._validate_js_int(threshold, name="threshold")
+
+        _logger.debug("stalker_trust_threshold_setting", threshold=validated_threshold)
+        script_code = f"""
+        Stalker.trustThreshold = {validated_threshold};
+        send({{ type: 'stalker_trust_threshold_set', threshold: {validated_threshold} }});
+        """
+
+        result = await self._execute_script_and_wait(script_code)
+        if "error" in result:
+            raise ToolError(_ERR_STALKER_FAILED, details={"reason": str(result.get("error", ""))})
+
+        _logger.info("stalker_trust_threshold_updated", threshold=validated_threshold)
         return True
 
     async def enumerate_applications(self) -> list[FridaApplicationInfo]:

@@ -29,6 +29,7 @@ from intellicrack.bridges.pe_format import (
     unpack_coff_header,
 )
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
@@ -66,6 +67,7 @@ class TemplatesMixin:
     _templates_tree: QTreeWidget | None
     state_holder: Any | None
     _user_notifier: UserNotifier | None
+    _bridge: Any | None
 
     def _notify_user(self, title: str, message: str, level: NotificationLevel) -> None:
         """Surface a user-facing notification through the injected reporter or a dialog.
@@ -286,10 +288,36 @@ class TemplatesMixin:
                 TemplatesMixin._collect_field_highlights(children, highlights)
 
     def _populate_template_combo(self) -> None:
-        """Populate the template combo box with available templates."""
+        """Populate the template combo box with available templates.
+
+        Routes through :meth:`HexEditorBridge.list_templates_detailed`
+        instead of the document's plain ``list_templates()`` so the
+        combo is populated from the same richer (name, description,
+        category, field_count) metadata the AI-callable tool sees, even
+        though only the name is currently rendered into the widget.
+        """
         if self._template_combo is None or self.document is None:
             return
 
+        bridge = self._bridge
+        if bridge is None:
+            _logger.warning("template_combo_bridge_unavailable")
+            self._populate_template_combo_fallback()
+            return
+
+        run_bridge_coroutine_logged(
+            bridge.list_templates_detailed(),
+            on_success=self._on_templates_detailed_ready,
+            on_error=self._on_templates_detailed_failed,
+            parent=self if isinstance(self, QWidget) else None,
+            event="hex_editor_list_templates_detailed",
+            logger=_logger,
+        )
+
+    def _populate_template_combo_fallback(self) -> None:
+        """Populate the template combo directly from the document when no bridge is attached."""
+        if self._template_combo is None or self.document is None:
+            return
         self._template_combo.clear()
         try:
             templates: list[tuple[str, str]] = self.document.list_templates()
@@ -298,6 +326,35 @@ class TemplatesMixin:
             templates = []
         for name, _description in templates:
             self._template_combo.addItem(str(name))
+
+    def _on_templates_detailed_ready(self, result: object) -> None:
+        """Render the bridge's detailed template metadata into the combo box.
+
+        Args:
+            result: ``list[dict]`` payload returned by
+                :meth:`HexEditorBridge.list_templates_detailed`. Each
+                dict exposes ``name``, ``description``, ``category``,
+                and ``field_count`` keys.
+        """
+        if self._template_combo is None:
+            return
+        if not isinstance(result, list):
+            _logger.warning("templates_detailed_unexpected_result_type", result_type=type(result).__name__)
+            return
+        typed_result = cast("list[dict[str, Any]]", result)
+        self._template_combo.clear()
+        for entry in typed_result:
+            self._template_combo.addItem(str(entry.get("name", "")))
+
+    @staticmethod
+    def _on_templates_detailed_failed(exc: object) -> None:
+        """Log a detailed-template listing failure raised by the bridge.
+
+        Args:
+            exc: Exception raised by
+                :meth:`HexEditorBridge.list_templates_detailed`.
+        """
+        _logger.warning("templates_detailed_failed", error=str(exc))
 
     def _select_template(self, template_name: str) -> None:
         """Select a template by name in the combo box.
@@ -438,12 +495,85 @@ class TemplatesMixin:
             _logger.info("template_removed", template_name=name)
 
     def _on_auto_bookmark_structure(self) -> None:
-        """Automatically create bookmarks for PE/ELF structure regions."""
+        """Automatically create bookmarks for PE/ELF/Mach-O structure regions.
+
+        Routes through :meth:`HexEditorBridge.generate_structure_bookmarks`
+        so the AI-callable tool and the toolbar action share a single
+        detection-and-bookmark implementation (which also covers Mach-O,
+        not handled by the local fallback). Falls back to the local
+        PE/ELF-only walk when no bridge is attached, matching the local
+        implementation's format support and error handling exactly.
+        """
         if self.document is None:
             return
 
+        bridge = getattr(self, "_bridge", None)
+        if bridge is not None:
+            run_bridge_coroutine_logged(
+                bridge.generate_structure_bookmarks(),
+                on_success=self._on_structure_bookmarks_ready,
+                on_error=self._on_structure_bookmarks_failed,
+                parent=self if isinstance(self, QWidget) else None,
+                event="hex_editor_generate_structure_bookmarks",
+                logger=_logger,
+                level="info",
+            )
+            return
+
+        self._auto_bookmark_structure_local()
+        self._refresh_bookmarks()
+
+    def _on_structure_bookmarks_ready(self, result: object) -> None:
+        """Refresh the bookmarks tree after the bridge created structure bookmarks.
+
+        The bridge itself calls ``document.add_bookmark`` for each
+        detected region, so this handler only needs to refresh the
+        GUI's bookmarks tree and surface the "unsupported format"
+        notice when the bridge detected neither PE, ELF, nor Mach-O
+        structure.
+
+        Args:
+            result: ``list[dict]`` payload returned by
+                :meth:`HexEditorBridge.generate_structure_bookmarks`.
+        """
+        if not isinstance(result, list):
+            _logger.warning("structure_bookmarks_unexpected_result_type", result_type=type(result).__name__)
+            return
+        typed_result = cast("list[dict[str, Any]]", result)
+        if not typed_result:
+            self._notify_user(
+                "Auto Bookmark",
+                "Unsupported file format (PE, ELF, and Mach-O supported).",
+                "info",
+            )
+            return
+        self._refresh_bookmarks()
+        _logger.info("structure_bookmarked", bookmark_count=len(typed_result))
+
+    @staticmethod
+    def _on_structure_bookmarks_failed(exc: object) -> None:
+        """Log a structure-bookmark generation failure raised by the bridge.
+
+        Args:
+            exc: Exception raised by
+                :meth:`HexEditorBridge.generate_structure_bookmarks`.
+        """
+        _logger.warning("structure_bookmarks_failed", error=str(exc))
+
+    def _auto_bookmark_structure_local(self) -> None:
+        """Create PE/ELF structure bookmarks directly against the document.
+
+        Local fallback used only when no bridge is attached to this
+        mixin (e.g. headless / test harnesses that drive the document
+        directly), preserving the exact PE/ELF detection and bookmark
+        regions the panel has always produced.
+        """
+        document = self.document
+        if document is None:
+            return
+
         try:
-            magic_raw: object = self.document.read(0, 4)
+            magic_raw: object = document.read(0, 4)
         except (AttributeError, ValueError) as exc:
             _logger.warning(
                 "auto_bookmark_magic_read_failed",

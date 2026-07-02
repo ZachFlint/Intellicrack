@@ -158,8 +158,7 @@ class ProcessTab(QWidget):
         toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
 
         self._search_input = QLineEdit()
-        set_hint = getattr(self._search_input, "set" + "Place" + "holderText")
-        set_hint("Filter by name or PID...")
+        self._search_input.setPlaceholderText("Filter by name or PID...")
         self._search_input.setMaximumWidth(_SEARCH_MAX_WIDTH)
         self._search_input.textChanged.connect(self._on_filter_changed)
         toolbar.addWidget(self._search_input)

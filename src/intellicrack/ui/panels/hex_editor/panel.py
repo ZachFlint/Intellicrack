@@ -55,6 +55,7 @@ from intellicrack.ui.panels.hex_editor.calculator import CalculatorMixin
 from intellicrack.ui.panels.hex_editor.comparison import ComparisonMixin
 from intellicrack.ui.panels.hex_editor.data_inspector import DataInspectorMixin
 from intellicrack.ui.panels.hex_editor.disassembly import DisassemblyMixin
+from intellicrack.ui.panels.hex_editor.export_report import ExportReportMixin
 from intellicrack.ui.panels.hex_editor.hashing import HashingMixin
 from intellicrack.ui.panels.hex_editor.highlighting import HighlightingMixin
 from intellicrack.ui.panels.hex_editor.patches import PatchesMixin
@@ -68,6 +69,7 @@ from intellicrack.ui.panels.hex_editor.signatures import SignaturesMixin
 from intellicrack.ui.panels.hex_editor.statistics import StatisticsMixin
 from intellicrack.ui.panels.hex_editor.templates import TemplatesMixin
 from intellicrack.ui.panels.hex_editor.transforms import TransformsMixin
+from intellicrack.ui.panels.hex_editor.va_mapping import VaMappingMixin
 from intellicrack.ui.panels.hex_editor.widgets import (
     ByteDistributionWidget,
     EntropyGraphWidget,
@@ -121,6 +123,8 @@ class HexEditorPanel(
     SandboxMixin,
     ComparisonMixin,
     ProcessMemoryMixin,
+    VaMappingMixin,
+    ExportReportMixin,
     AnalysisPanelBase,
 ):
     """Hex editor panel with integrated side panels.
@@ -156,6 +160,8 @@ class HexEditorPanel(
         self._template_combo: QComboBox | None = None
         self._patches_tree: QTreeWidget | None = None
         self._search_input: QLineEdit | None = None
+        self._replace_input: QLineEdit | None = None
+        self._numeric_replace_input: QLineEdit | None = None
         self._search_mode_combo: QComboBox | None = None
         self._offset_input: QLineEdit | None = None
         self._mode_label: QLabel | None = None
@@ -239,6 +245,13 @@ class HexEditorPanel(
         self._arith_key_edit: QLineEdit | None = None
         self._arith_count_spin: QSpinBox | None = None
 
+        self._va_mappings_tree: QTreeWidget | None = None
+        self._va_file_offset_edit: QLineEdit | None = None
+        self._va_address_edit: QLineEdit | None = None
+        self._va_length_edit: QLineEdit | None = None
+        self._va_goto_edit: QLineEdit | None = None
+        self._va_status_label: QLabel | None = None
+
         super().__init__(parent)
 
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
@@ -271,6 +284,12 @@ class HexEditorPanel(
         self._add_secondary_button(toolbar, "Find", self._on_search)
         self._find_next_btn = self._add_secondary_button(toolbar, "Next", self._on_find_next)
         self._find_prev_btn = self._add_secondary_button(toolbar, "Prev", self._on_find_prev)
+        toolbar.addSeparator()
+
+        self._replace_input = self._add_toolbar_input(toolbar, "Replace with...", max_width=180)
+        self._add_secondary_button(toolbar, "Replace", self._on_replace)
+        self._add_secondary_button(toolbar, "Replace All", self._on_replace_all)
+
         self._search_status_label = QLabel("")
         self._search_status_label.setObjectName("search_status_label")
         toolbar.addWidget(self._search_status_label)
@@ -288,6 +307,14 @@ class HexEditorPanel(
         self._add_secondary_button(toolbar, "Send to AI", self._on_send_to_ai)
         toolbar.addSeparator()
         self._add_secondary_button(toolbar, "Pattern Editor", self._toggle_pattern_editor)
+        toolbar.addSeparator()
+
+        export_report_btn = QPushButton("Export Report")
+        export_report_menu_obj = self._build_export_report_menu()
+        export_set_menu_fn = getattr(export_report_btn, "setMenu", None)
+        if callable(export_set_menu_fn):
+            export_set_menu_fn(export_report_menu_obj)
+        toolbar.addWidget(export_report_btn)
         toolbar.addSeparator()
 
         self._display_mode_combo = QComboBox()
@@ -435,6 +462,7 @@ class HexEditorPanel(
         self._side_tabs.addTab(self._create_signatures_tab(), "Signatures")
         self._side_tabs.addTab(self._create_sandbox_tab(), "Sandbox")
         self._side_tabs.addTab(self._create_comparison_tab(), "Diff")
+        self._side_tabs.addTab(self._create_va_mapping_tab(), "VA Mapping")
 
     def _build_inspector_tab(self) -> QWidget:
         """Build the inspector side-tab widget.
@@ -1112,6 +1140,21 @@ class HexEditorPanel(
             set_mode_fn = getattr(self._hex_widget, "set_display_mode", None)
             if callable(set_mode_fn):
                 set_mode_fn(mode)
+
+    def _build_export_report_menu(self) -> QMenu:
+        """Build a popup menu for the Export Report button.
+
+        Returns:
+            QMenu: QMenu widget offering the annotated HTML and PDF export actions.
+        """
+        menu = QMenu(self)
+        html_action = menu.addAction("Annotated HTML...")
+        if html_action is not None:
+            html_action.triggered.connect(self._on_export_annotated_html)
+        pdf_action = menu.addAction("Annotated PDF...")
+        if pdf_action is not None:
+            pdf_action.triggered.connect(self._on_export_annotated_pdf)
+        return menu
 
     def _build_copy_as_menu(self) -> QMenu:
         """Build a popup menu for the Copy As button.

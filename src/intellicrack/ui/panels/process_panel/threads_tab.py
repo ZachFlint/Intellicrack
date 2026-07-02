@@ -164,6 +164,12 @@ class ThreadsTab(QWidget):
         resume_btn.clicked.connect(self._on_resume_thread)
         toolbar.addWidget(resume_btn)
 
+        wait_btn = QPushButton("Time Wait")
+        wait_btn.setObjectName("tool_button")
+        wait_btn.setToolTip("Wait on the selected thread via WaitForSingleObject and measure elapsed time")
+        wait_btn.clicked.connect(self._on_time_thread_wait)
+        toolbar.addWidget(wait_btn)
+
         self._thread_count = QLabel("0 threads")
         self._thread_count.setObjectName("toolbar_label")
         toolbar.addWidget(self._thread_count)
@@ -179,6 +185,10 @@ class ThreadsTab(QWidget):
         if th is not None:
             th.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         tab_layout.addWidget(self._thread_table)
+
+        self._wait_status = QLabel("")
+        self._wait_status.setObjectName("toolbar_label")
+        tab_layout.addWidget(self._wait_status)
         return tab
 
     def _build_registers(self) -> QWidget:
@@ -476,6 +486,37 @@ class ThreadsTab(QWidget):
             logger=_logger,
             level="info",
             pid=pid,
+        )
+
+    def _on_time_thread_wait(self) -> None:
+        """Wait on the selected thread and display the elapsed time."""
+        if self._bridge is None:
+            return
+        tid = self._get_selected_tid()
+        if tid is None:
+            QMessageBox.warning(self, "Time Wait", "No thread selected")
+            return
+
+        def _on_success(result: object) -> None:
+            if not isinstance(result, dict):
+                return
+            typed_result = cast("dict[str, object]", result)
+            wait_result = typed_result.get("result", "unknown")
+            elapsed_us = typed_result.get("elapsed_us", 0)
+            self._wait_status.setText(f"TID {tid}: {wait_result} ({elapsed_us} us)")
+
+        def _on_error(exc: object) -> None:
+            _logger.warning("time_thread_wait_failed", tid=tid, error=str(exc))
+            self._wait_status.setText(f"Wait failed: {exc}")
+
+        run_bridge_coroutine_logged(
+            self._bridge.time_thread_wait(tid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_time_thread_wait",
+            logger=_logger,
+            tid=tid,
         )
 
     def _refresh_registers(self) -> None:
