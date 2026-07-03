@@ -153,6 +153,19 @@ jobs:
         timeout-minutes: 15
       - name: Install package in editable mode
         run: pixi run pip install -e .
+      - name: Build and install native hexcore module
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          pixi run maturin build --release --manifest-path src/intellicrack-hexcore/Cargo.toml --out target/wheels
+          if ($LASTEXITCODE -ne 0) { throw 'maturin build failed' }
+          $wheel = Get-ChildItem target/wheels/intellicrack_hexcore-*.whl | Select-Object -First 1
+          if (-not $wheel) { throw 'intellicrack_hexcore wheel not produced' }
+          pixi run pip install --no-deps --force-reinstall $wheel.FullName
+          if ($LASTEXITCODE -ne 0) { throw 'intellicrack_hexcore wheel install failed' }
+          pixi run python -c "import intellicrack_hexcore"
+          if ($LASTEXITCODE -ne 0) { throw 'intellicrack_hexcore import verification failed' }
+        timeout-minutes: 20
       - name: Test with pytest
         run: |
           pixi run pytest tests/ -v --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
@@ -178,3 +191,70 @@ jobs:
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  x64dbg-plugin-build:
+    runs-on: windows-latest
+    needs: [setup]
+    if: success() || failure()
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+      - name: Build x64 bridge plugin
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S tools/x64dbg_plugin -B tools/x64dbg_plugin/build_x64 -A x64 -DBUILD_X64=ON
+          if ($LASTEXITCODE -ne 0) { throw 'x64 CMake configure failed' }
+          cmake --build tools/x64dbg_plugin/build_x64 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x64 plugin build failed' }
+          cmake --install tools/x64dbg_plugin/build_x64 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x64 plugin install failed' }
+        timeout-minutes: 15
+      - name: Build x32 bridge plugin
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S tools/x64dbg_plugin -B tools/x64dbg_plugin/build_x86 -A Win32 -DBUILD_X64=OFF
+          if ($LASTEXITCODE -ne 0) { throw 'x32 CMake configure failed' }
+          cmake --build tools/x64dbg_plugin/build_x86 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x32 plugin build failed' }
+          cmake --install tools/x64dbg_plugin/build_x86 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x32 plugin install failed' }
+        timeout-minutes: 15
+      - name: Verify plugin artifacts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $x64 = 'tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64'
+          $x32 = 'tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32'
+          foreach ($p in @($x64, $x32)) {
+            if (-not (Test-Path $p)) { throw "expected plugin artifact missing: $p" }
+            if ((Get-Item $p).Length -eq 0) { throw "plugin artifact is empty: $p" }
+            Write-Host "built $p ($((Get-Item $p).Length) bytes)"
+          }
+      - name: Upload plugin artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: x64dbg-bridge-plugins
+          path: |
+            tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64
+            tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32
+      - name: Commit refreshed plugin binaries
+        if: github.event_name == 'push'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64 `
+                  tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m "chore(ci): rebuild x64dbg bridge plugins from source [skip ci]"
+            git push origin "HEAD:${{ github.ref_name }}"
+          } else {
+            Write-Host "Plugin binaries unchanged; nothing to commit."
+          }
