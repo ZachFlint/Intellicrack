@@ -80,7 +80,7 @@ SCOPE - Read and analyze these files in full:
 4. src/intellicrack/ui/tools.py — the X64DbgWidgetProtocol and add_x64dbg_tab() wiring
 5. src/intellicrack/core/tools.py — ToolRegistry registration and get_x64dbg_bridge()
 6. src/intellicrack/ui/panels/stack_viewer.py — stack viewer that wires to x64dbg bridge
-7. tools/x64dbg_plugin/ — the ENTIRE C++ plugin source (intellicrack_bridge.cpp/.h, pipe_server.cpp/.h, command_handler.cpp/.h, and any CMakeLists.txt or build files)
+7. src/x64dbg-plugin/ — the ENTIRE C++ plugin source (intellicrack_bridge.cpp/.h, pipe_server.cpp/.h, command_handler.cpp/.h, and any CMakeLists.txt or build files)
 8. src/intellicrack/ui/tool_config.py — tool configuration/discovery
 9. src/intellicrack/core/orchestrator.py — orchestrator methods invoking x64dbg
 10. src/intellicrack/ui/app.py — how the x64dbg tab gets created
@@ -88,7 +88,7 @@ SCOPE - Read and analyze these files in full:
 
 WHAT TO CHECK at each layer:
 
-C++ PLUGIN (tools/x64dbg_plugin/):
+C++ PLUGIN (src/x64dbg-plugin/):
 - Does the plugin compile correctly for x64dbg's plugin SDK?
 - Does the named pipe server start and accept connections?
 - Does the command handler parse and respond to all commands the Python bridge sends?

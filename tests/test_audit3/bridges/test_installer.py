@@ -224,15 +224,15 @@ def _make_plugin_source(
     """Write a plugin binary into the plugin source tree.
 
     Args:
-        tools_dir: Tools directory containing ``x64dbg_plugin/``.
+        tools_dir: Source root directory containing ``x64dbg-plugin/``.
         filename: Plugin filename.
         content: Bytes to write.
-        subdir: Sub-directory within ``x64dbg_plugin``.
+        subdir: Sub-directory within ``x64dbg-plugin``.
 
     Returns:
         Path: Path to the written file.
     """
-    plugin_dir = tools_dir / "x64dbg_plugin" / subdir
+    plugin_dir = tools_dir / "x64dbg-plugin" / subdir
     plugin_dir.mkdir(parents=True, exist_ok=True)
     binary = plugin_dir / filename
     binary.write_bytes(content)

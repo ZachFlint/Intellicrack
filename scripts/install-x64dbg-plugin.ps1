@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $startTime = Get-Date
 Write-Banner "x64dbg Bridge Plugin"
 
-$pluginDir = "tools/x64dbg_plugin"
+$pluginDir = "src/x64dbg-plugin"
 $buildDir = "$pluginDir/build"
 $buildDir32 = "$pluginDir/build_x32"
 $binDir = "$pluginDir/bin"

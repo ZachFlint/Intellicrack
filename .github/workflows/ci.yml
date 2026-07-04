@@ -205,22 +205,22 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          cmake -S tools/x64dbg_plugin -B tools/x64dbg_plugin/build_x64 -A x64 -DBUILD_X64=ON
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x64 -A x64 -DBUILD_X64=ON
           if ($LASTEXITCODE -ne 0) { throw 'x64 CMake configure failed' }
-          cmake --build tools/x64dbg_plugin/build_x64 --config Release
+          cmake --build src/x64dbg-plugin/build_x64 --config Release
           if ($LASTEXITCODE -ne 0) { throw 'x64 plugin build failed' }
-          cmake --install tools/x64dbg_plugin/build_x64 --config Release
+          cmake --install src/x64dbg-plugin/build_x64 --config Release
           if ($LASTEXITCODE -ne 0) { throw 'x64 plugin install failed' }
         timeout-minutes: 15
       - name: Build x32 bridge plugin
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          cmake -S tools/x64dbg_plugin -B tools/x64dbg_plugin/build_x86 -A Win32 -DBUILD_X64=OFF
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x86 -A Win32 -DBUILD_X64=OFF
           if ($LASTEXITCODE -ne 0) { throw 'x32 CMake configure failed' }
-          cmake --build tools/x64dbg_plugin/build_x86 --config Release
+          cmake --build src/x64dbg-plugin/build_x86 --config Release
           if ($LASTEXITCODE -ne 0) { throw 'x32 plugin build failed' }
-          cmake --install tools/x64dbg_plugin/build_x86 --config Release
+          cmake --install src/x64dbg-plugin/build_x86 --config Release
           if ($LASTEXITCODE -ne 0) { throw 'x32 plugin install failed' }
         timeout-minutes: 15
       - name: Verify plugin artifacts

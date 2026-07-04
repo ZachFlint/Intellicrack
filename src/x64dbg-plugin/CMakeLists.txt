@@ -6,12 +6,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_X64 "Build 64-bit plugin" ON)
 
-set(X64DBG_SDK_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../x64dbg/pluginsdk" CACHE PATH "Path to x64dbg plugin SDK")
+set(X64DBG_SDK_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/x64dbg/pluginsdk" CACHE PATH "Path to x64dbg plugin SDK")
 
 if(NOT EXISTS "${X64DBG_SDK_PATH}")
     message(WARNING "x64dbg plugin SDK not found at ${X64DBG_SDK_PATH}")
     message(STATUS "Attempting to find SDK in release directory...")
-    set(X64DBG_SDK_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../x64dbg/release/pluginsdk")
+    set(X64DBG_SDK_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/x64dbg/release/pluginsdk")
 endif()
 
 if(NOT EXISTS "${X64DBG_SDK_PATH}")
@@ -104,7 +104,7 @@ foreach(OUTPUTCONFIG IN ITEMS DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
     )
 endforeach()
 
-set(PLUGIN_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../x64dbg/release/${ARCH_DIR}/plugins")
+set(PLUGIN_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/x64dbg/release/${ARCH_DIR}/plugins")
 
 install(TARGETS ${TARGET_NAME}
     RUNTIME DESTINATION "${PLUGIN_INSTALL_DIR}"
