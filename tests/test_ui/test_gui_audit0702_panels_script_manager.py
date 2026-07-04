@@ -163,9 +163,7 @@ def test_l14_display_text_is_actually_elided_at_narrow_width(qapp: QApplication)
         assert viewport is not None
         available_width = viewport.width()
 
-        assert full_width > available_width, (
-            "test premise: the full item text must be wider than the visible row to prove elision occurs"
-        )
+        assert full_width > available_width, "test premise: the full item text must be wider than the visible row to prove elision occurs"
     finally:
         widget.deleteLater()
 
