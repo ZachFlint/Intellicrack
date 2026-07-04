@@ -1,2 +1,0 @@
-tests/test_providers/test_huggingface_provider.py
-tests/test_sandbox/test_realcov_12b_analysis_real.py

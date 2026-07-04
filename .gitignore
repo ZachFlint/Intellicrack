@@ -511,3 +511,9 @@ mcps/
 
 # Local prompt scratch (orchestration prompts, never tracked)
 prompts/
+
+# Audit workspace (agent reports, remediation trackers, scratch JSON - local only)
+/audit/
+
+# Ad-hoc captured diff fragments (regenerable scratch, never tracked)
+/diff_ghidra.txt

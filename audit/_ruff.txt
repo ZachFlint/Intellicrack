@@ -1,4 +1,0 @@
-tests\test_audit4\b2_process_tab\test_process_tab.py:386:19: error[F821] Undefined name `Coroutine`
-tests\test_audit4\b2_process_tab\test_process_tab.py:416:19: error[F821] Undefined name `Coroutine`
-tests\test_audit4\b2_process_tab\test_process_tab.py:459:19: error[F821] Undefined name `Coroutine`
-Found 3 errors.

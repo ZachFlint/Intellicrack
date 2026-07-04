@@ -1,1 +1,0 @@
-tests/test_core/test_logging.py::test_log_provider_response_minimal tests/test_providers/test_provider_bugfixes.py::TestHuggingFaceJsonDecode::test_html_503_body_falls_back_to_loading_message tests/test_bridges/test_win32_types.py::TestStructureFieldVerification::test_memory_basic_information_layout

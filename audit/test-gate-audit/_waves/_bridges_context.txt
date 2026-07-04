@@ -1,7 +1,0 @@
-Tool-bridge tests (debuggers, disassemblers, hex editors, sandboxes, instrumentation). Important context:
-
-- A bridge that integrates an EXTERNAL tool (x64dbg, Frida, Ghidra, radare2/cutter, QEMU, a system service, an admin/elevation-only API) legitimately SKIPS when that tool/binary/service/privilege is not present in the sandbox. KEEP those environment-capability skips; do not convert them to hard failures and do not delete the skip guard.
-
-- For bridge logic that does NOT need the external tool (request/response serialization, command construction, parsing of real tool output, state machines, registries), drive the REAL bridge object end-to-end and assert the concrete produced effect against an independent oracle (parse a real captured tool-output fixture and assert the decoded fields; recompute an expected command string; verify the registry/dispatch maps to the real method). Never assert only not-None/isinstance/that-a-method-was-called.
-
-- Doubles are allowed ONLY at the external transport boundary (the tool's stdout/stderr, a pipe, a socket, a subprocess). Never mock the bridge class under test. Prefer real captured tool output over synthetic strings where a fixture exists.

@@ -1,7 +1,0 @@
-Provider tests. Important context:
-
-- Live-cloud provider tests that require real API billing/credentials, and Intel-XPU / CUDA-GPU tests, legitimately SKIP when the capability or credentials are absent. The repo's conftest converts live-cloud-without-billing into a skip. KEEP those as skips - they are acceptable environment-capability skips; do NOT convert them into hard failures and do NOT delete the skip guard.
-
-- For tests that actually load a local model (transformers / torch), the real model load and inference IS the behavior under test: assert concrete properties of the real output against an independent oracle (e.g. the generated token ids decode to a non-empty string, the response role/structure matches the provider API contract, token counts equal an independent tokenizer count) - never just assert the result is not None.
-
-- The external transport boundary (HTTP to the cloud provider, the model weight files) is the ONLY place a double is allowed. Never mock the provider class or the unit under test itself. Prefer driving the real provider object against a real local model or a recorded/real transport response.
