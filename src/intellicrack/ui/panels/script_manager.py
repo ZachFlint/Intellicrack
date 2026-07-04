@@ -201,7 +201,7 @@ public class LicenseAnalyzer extends GhidraScript {
                         /c cmp
                         """
 
-   ,
+                           ,
         },
         "x64dbg": {
             "display": "x64dbg",

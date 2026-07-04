@@ -572,9 +572,7 @@ def test_m7_import_patches_returns_before_delayed_bridge_call_completes(
         )
         assert completed, "the import never completed after pumping the Qt event loop"
 
-        assert bytes(document.read(_PATCH_OFFSET, 1)) == _PATCH_BYTE, (
-            "the import did not apply the patch to the document"
-        )
+        assert bytes(document.read(_PATCH_OFFSET, 1)) == _PATCH_BYTE, "the import did not apply the patch to the document"
         assert dialogs.calls
         assert dialogs.calls[-1] == ("Import Patches", "Applied 1 patch record(s).")
         assert dialogs.thread_idents[-1] == gui_thread, "the completion dialog was not shown from the GUI thread"

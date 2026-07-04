@@ -9,7 +9,7 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
-- Complete tool bridge capabilities and integrate UI controls (`2c0bff0`)
+- Complete tool bridge capabilities and integrate UI controls (`6bb308b`)
 This update resolves gaps between the LLM-callable tool bridges and the Qt GUI panels across Cutter, Frida, Ghidra, Hex Editor, Process, and Sandbox tools. By routing GUI actions through the unified bridge layer, we eliminate duplicate implementations, ensure consistent behavior, and expose previously headless capabilities directly to the user interface.
 - **Cutter/Rizin**: Added debugger, project, search, and static analysis tabs, corrected relocations/resources commands, and added ESIL/flag controls.
 - **Frida**: Added Stalker tuning, Interceptor lifecycle, call-probe, memory-patch, and system-function controls, and resolved the external detach state.
@@ -18,7 +18,7 @@ This update resolves gaps between the LLM-callable tool bridges and the Qt GUI p
 - **Process & Sandbox**: Integrated decommit, token, privilege, and kernel-debug APIs, added sandbox VM pause/PCAP stop, and gated unattached tabs with overlays.
 - **Core**: Enhanced `ToolRegistry` with automatic hex-to-bytes argument coercion and dotted function-name capability resolution.
 
-- Integrate workspace agents and update x64dbg plugin build (`e8de94e`)
+- Integrate workspace agents and update x64dbg plugin build (`d559b48`)
 Introduce workspace-scoped agent and skill configurations generated from markdown sources, and update the x64dbg plugin build pipeline to support automated x32/x64 compilation and deployment. Dependency configurations are updated to exclude vendor directories and include PyInstaller and PyTorch.
 - Add `generate_agent_jsons.py` to compile agent JSON specs from markdown frontmatter
 - Update `install-x64dbg-plugin.ps1` to auto-detect CMake from Visual Studio and support x32/x64 build targets
@@ -26,10 +26,10 @@ Introduce workspace-scoped agent and skill configurations generated from markdow
 - Update `pyproject.toml` and lockfiles to add `pyinstaller` and `torch` while excluding `vendor/` from linters and coverage
 - Fix regex escape sequence in `lint_report.py` and refine assertion in `test_domain_pattern.py`
 
-- **api:** Implement exponential backoff for rate-limited requests (`7e6a923`)
+- **api:** Implement exponential backoff for rate-limited requests (`9bdda0c`)
 Introduce an exponential backoff jitter algorithm when encountering HTTP 429 status codes. This prevents thundering herd problems on the upstream service and ensures transient rate limits are handled gracefully without failing the entire request pipeline.
 
-- Implement Windows self-elevation and system theme tracking (`7bdf420`)
+- Implement Windows self-elevation and system theme tracking (`ec8a386`)
 Introduce Windows UAC self-elevation to automatically request administrative privileges when required, enabling full process-bridge access to protected targets. Add support for tracking and dynamically responding to the operating system's light/dark color scheme.
 * Add self-elevation logic via Windows `runas` verb with pixi environment reactivation
 * Implement system theme detection and live OS color-scheme tracking in `ThemeManager`
@@ -37,7 +37,7 @@ Introduce Windows UAC self-elevation to automatically request administrative pri
 * Refactor tool schema builders to ensure strict array and object element compliance for Google Gemini
 * Rebind raw `httpx.AsyncClient` instances across event loops in OpenRouter and Ollama providers
 
-- Add autocomplete to HexPat pattern editor (`23d9ae2`)
+- Add autocomplete to HexPat pattern editor (`3f99127`)
 Introduce an in-line identifier completer for the HexPat pattern DSL editor, offering both built-in primitive types and user-declared types harvested from the most recent successful interpreter run.
 - Add `HexPatCompleter` to track and merge built-in and user-declared type names
 - Implement `PatternCodeEditor` with a custom `QCompleter` popup triggered by `Ctrl+Space` or auto-popup prefixes
@@ -46,13 +46,13 @@ Introduce an in-line identifier completer for the HexPat pattern DSL editor, off
 - Add asynchronous YARA compilation helpers to avoid blocking the event loop
 - Add an F2 shortcut to rename hooks in the Frida panel table
 
-- Add sandbox pause support and audit GPU BAR sizes (`92b383e`)
+- Add sandbox pause support and audit GPU BAR sizes (`1f64456`)
 - Implement VM pause/stop support in the QEMU sandbox bridge and expose it in the Sandbox UI panel.
 - Audit GPU Resizable BAR sizes on Windows to warn when local LLM context profiles exceed the BAR limit and risk CPU-fallback slowdowns.
 - Refactor `pyproject.toml` to clean up dependencies and formatting, and update the lint report script to handle modern vermin output and generate portable SQL dumps.
 - Add YARA signature scanning support to the hex editor panel.
 
-- **devtools:** Full flag passthrough for all lint recipes (`be55536`)
+- **devtools:** Full flag passthrough for all lint recipes (`2e3975f`)
 Any non-empty user-supplied FLAGS now bypasses the capture/report
 machinery and invokes the underlying tool directly, so every flag the
 tool supports (--version, --list-rules, --severity, --fix, etc.)
@@ -72,7 +72,7 @@ pattern, running the bare tool with $Flags.
 -V/--version to Get-Module, all other flags through
 Invoke-ScriptAnalyzer via splatting.
 
-- **devtools:** Add -h/--help passthrough and recipe aliases (`e0f845a`)
+- **devtools:** Add -h/--help passthrough and recipe aliases (`a9abf28`)
 - scripts/run-all-tools.py: replace hand-rolled flag loop with argparse
 so -h/--help prints usage, group aliases, valid --skip names, and
 examples. Behavior preserved for positional groups, --skip, --workers.
@@ -89,7 +89,7 @@ dashboard -> lint-dashboard, pyright -> basedpyright, coverage -> llvm-cov,
 cargo-clippy/cargo-nextest/cargo-machete, pre-commit -> precommit-hooks,
 etc.) so any reasonable tool name resolves.
 
-- **devtools:** Add -h/--help passthrough and recipe aliases (`0af1c47`)
+- **devtools:** Add -h/--help passthrough and recipe aliases (`2241385`)
 - scripts/run-all-tools.py: replace hand-rolled flag loop with argparse
 so -h/--help prints usage, group aliases, valid --skip names, and
 examples. Behavior preserved for positional groups, --skip, --workers.
@@ -109,7 +109,7 @@ etc.) so any reasonable tool name resolves.
 use hyphenated names, not importable modules) and S607 (just/cargo on
 PATH is the established invocation pattern for build scripts).
 
-- **ui-logging:** Shard-20 audit - hex editor sub-modules  (`7ecfa25`)
+- **ui-logging:** Shard-20 audit - hex editor sub-modules  (`5fa25d1`)
 Address every finding in audit/shard-20-hex-editor-submodules.md
 (17 HIGH, 31 MEDIUM, 14 LOW) across the hex-editor mixin forest.
 Findings resolved per file:
@@ -144,7 +144,7 @@ log capturing both inputs.
 - _bookmarks.py: add entry logs for add, remove, and refresh paths.
 No behavioural changes - structured logging only.
 
-- **ui-logging:** Shard-15 audit — add workflow + entry/exit logs across UI surface (`6344a38`)
+- **ui-logging:** Shard-15 audit — add workflow + entry/exit logs across UI surface (`2f49681`)
 Addresses every MEDIUM and LOW finding in audit/shard-15-ui-app-tools-config.md
 covering app.py, tools.py, tool_config.py, and sandbox_config.py. The audit
 identified consistently missing structured info/debug logs on the success
@@ -181,20 +181,20 @@ _dispatch_pid_kill, _ensure_shared_folder, _invoke_taskkill_by_name,
 _report_taskkill_result helpers so the new logs do not push existing try
 clauses past PLW0717 limits.
 
-- Refactor Windows Docker entrypoint and add audit documentation (`d700210`)
+- Refactor Windows Docker entrypoint and add audit documentation (`f48c6bd`)
 Implement an entrypoint overlay mechanism for Windows containers to streamline initialization and improve environment parity. This update also includes the latest security audit report documenting the current system state and compliance requirements.
 - Add audit7.md containing the latest security and architectural audit findings.
 - Introduce Dockerfile.windows.entrypoint-overlay for modular entrypoint management.
 - Update entrypoint.ps1 and Dockerfile.windows to support the new overlay structure.
 
-- Implement BitAndZero opcode in hexcore and compiler (`f144be8`)
+- Implement BitAndZero opcode in hexcore and compiler (`4c32f86`)
 Introduces a dedicated BitAndZero condition operator to the Rust hexcore evaluator and updates the Python compiler to utilize it for inverted bit-mask predicates. This allows the compiler to correctly lower if/else constructs involving bitwise AND operations, which previously raised an error due to the lack of a direct inverse primitive.
 * Implement BitAndZero logic in TemplateEvaluator and ConditionOp
 * Update HexPatCodegen to map BitAnd to BitAndZero for else-branch inversion
 * Refactor various UI components and docstrings for consistent line length and formatting
 * Update linting reports and semgrep rules to reflect recent codebase changes
 
-- Migrate test harness from Windows Sandbox to Docker (`cf470c3`)
+- Migrate test harness from Windows Sandbox to Docker (`2b13055`)
 Replace the legacy Windows Sandbox-based test redirection with a unified Docker-based sandbox driver. The new harness uses Windows process-isolated containers to provide consistent, reproducible environments for unit, integration, and E2E tests while maintaining host-side report harvesting.
 - Add `scripts/sandbox/` driver for container orchestration and artifact collection
 - Add `docker/Dockerfile.windows` and `entrypoint.ps1` for the test environment
@@ -204,11 +204,11 @@ Replace the legacy Windows Sandbox-based test redirection with a unified Docker-
 - Refactor `Orchestrator` session creation to support persistent metadata (name/notes)
 - Remove legacy `.ps1` documentation and sandbox launchers in favor of unified Python/PowerShell dispatchers
 
-- **hexpat:** Parser — templates, varargs, padding, enum ranges, endianness, recovery (B27-B31, B37, B38)  (`f64500b`)
+- **hexpat:** Parser — templates, varargs, padding, enum ranges, endianness, recovery (B27-B31, B37, B38)  (`96364a3`)
 
-- **hexpat:** Add optional span fields on parse/runtime errors (B36)  (`d324291`)
+- **hexpat:** Add optional span fields on parse/runtime errors (B36)  (`bf3d808`)
 
-- **hexpat:** Stdlib — math/hash/time/file/random/env/reflection + fixes (B39-B44)  (`f21568d`)
+- **hexpat:** Stdlib — math/hash/time/file/random/env/reflection + fixes (B39-B44)  (`b73929a`)
 Implements 18+ math fns (sin, cos, tan, asin, acos, atan, atan2, sinh, cosh,
 tanh, asinh, acosh, atanh, exp, log/ln, log10, cbrt, round, trunc, fmod,
 accumulate), hash fns (crc8/16/32/64 via generic CRC engine), time fns
@@ -217,7 +217,7 @@ write, seek, size, resize, flush, remove, create_directories), random fns
 (set_seed, generate with Distribution enum), env, sizeof_pack, and core
 reflection fns wired through an _ReflectionProvider dataclass.
 
-- **hexcore:** Big-endian ELF support and Sym/Rel/Rela/Dyn/Nhdr templates  (`0f2027d`)
+- **hexcore:** Big-endian ELF support and Sym/Rel/Rela/Dyn/Nhdr templates  (`98f361c`)
 F13 — add FieldType::EndiannessSwitch { peek_offset, big_value }.
 Evaluator tracks base_offset for struct references and flips
 default_endian by peeking e_ident[EI_DATA] (offset 5, value 2 == MSB).
@@ -229,19 +229,19 @@ Elf64_Rela, Elf32_Dyn, Elf64_Dyn, Elf_Nhdr. Elf_Nhdr uses Computed
 fields to round n_namesz/n_descsz to 4-byte alignment before
 DynamicArray payloads per ELF note layout.
 
-- **hexcore:** Add fat/universal Mach-O and 32-bit + common load commands  (`6072d51`)
+- **hexcore:** Add fat/universal Mach-O and 32-bit + common load commands  (`92e3a36`)
 Adds FAT_HEADER / FAT_ARCH for universal binary headers, MACH_HEADER_BE /
 MACH_HEADER_64_BE for big-endian headers, SEGMENT_COMMAND + SECTION for
 32-bit LC_SEGMENT, SECTION_64 for 64-bit section descriptors,
 SYMTAB_COMMAND, DYLIB_COMMAND, DYLD_INFO_COMMAND, and MAIN_COMMAND.
 
-- **hexcore:** Add ZIP64 structures and data descriptor templates  (`aa2ca49`)
+- **hexcore:** Add ZIP64 structures and data descriptor templates  (`907be1b`)
 Adds ZIP64 EOCD record (0x06064B50), ZIP64 EOCD locator (0x07064B50),
 ZIP64 extra field (header ID 0x0001), and standard/ZIP64 variants of
 the data descriptor (0x08074B50) so large archives and streaming-flag
 entries parse correctly.
 
-- **hexcore:** Strict AES-ECB padding modes and bit_shift overflow guard  (`ea1bda9`)
+- **hexcore:** Strict AES-ECB padding modes and bit_shift overflow guard  (`bd986b2`)
 F8 — AES-ECB: add PaddingMode {None, Pkcs7, Zero, Iso10126}. Decrypt
 requires data.len() % 16 == 0 in all modes (no more silent zero-pad).
 PKCS#7 validates length + every pad byte; bad padding errors. Encrypt
@@ -252,7 +252,7 @@ F11 — bit_shift_left/right validate count <= 7 and return
 TransformError::InvalidParameter for out-of-range counts, replacing the
 silent `count & 7` clamp. bit_rotate_left/right retain modulo-8.
 
-- **hexcore:** Patch export COD/JSON + fix IPS/IPS32 terminator collisions  (`60019ce`)
+- **hexcore:** Patch export COD/JSON + fix IPS/IPS32 terminator collisions  (`9afbff9`)
 F20 — adds two new patch-export formats:
 - export_cod: 4-byte BE offset + 4-byte BE length + data per record.
 - export_patches_json: serde_json-pretty serialization of the patch
@@ -268,14 +268,14 @@ F23 — same treatment for export_ips32 around 0x45454F46 ("EEOF"), the
 IPS32 terminator. Reachable in >1 GiB binaries. Adds regression tests
 for a record at and spanning the collision offset.
 
-- **hexcore:** Support full Unicode in UTF-16LE string extractor  (`5f860a5`)
+- **hexcore:** Support full Unicode in UTF-16LE string extractor  (`098ab29`)
 Generalize the printable test to operate on decoded Unicode scalar values,
 accepting any non-control character plus TAB/LF/CR. Handle UTF-16 surrogate
 pairs so supplementary-plane code points (emoji, CJK extension blocks, etc.)
 are recovered, with dangling or mismatched surrogates gracefully terminating
 the current candidate instead of being silently dropped.
 
-- Overhaul binary analysis architecture and expand tool bridges (`0a541ff`)
+- Overhaul binary analysis architecture and expand tool bridges (`0d7ba70`)
 This massive update represents a significant architectural pivot, transitioning from a process-centric model to a centralized, state-managed binary analysis framework. The core of the application has been refactored to prioritize advanced hex editing, deep static analysis, and comprehensive sandbox orchestration. By moving logic out of the legacy bridge layers and into a robust core orchestrator, the system now supports more complex, multi-tool workflows with improved thread safety and state synchronization.
 The Rust-based hex engine has been significantly enhanced to support large-file operations, patch formats, and granular memory manipulation, while the UI has been decomposed into modular mixins to manage the increased complexity of the new analysis panels. The tool bridges for Frida, Ghidra, Cutter, and x64dbg have been expanded from basic wrappers into full-featured instrumentation and analysis interfaces. This restructuring also introduces a sophisticated sandbox monitoring subsystem capable of behavioral analysis, network capture, and automated IOC extraction, providing a unified environment for both static and dynamic malware research.
 Core Architecture & Orchestration:
@@ -307,7 +307,7 @@ Development & Tooling:
 * Updated the project knowledge graph (`IntellicrackKnowledgeGraph.graphml`) to reflect the removal of legacy bridges and the addition of the new hex-centric architecture.
 * Added extensive E2E test suites for hexcore operations, sandbox management, and Win32 type safety.
 
-- Auto-discover latest Gemini Flash model, fix blinter findings, update configs (`d76da60`)
+- Auto-discover latest Gemini Flash model, fix blinter findings, update configs (`61cb6a1`)
 Reworked generate_commit_message.py to dynamically discover the latest
 accessible Gemini Flash model from Vertex AI instead of hardcoding a
 model ID. Ranks all flash models by version, probes each with count_tokens,
@@ -319,7 +319,7 @@ to enforce CRLF for batch files, switches mixed-line-ending to --fix=crlf,
 fixes deprecated check-byte-order-marker pre-commit hook, and fixes
 generated file line endings to CRLF.
 
-- Add XPU status monitoring and bridge capabilities (`96ac59c`)
+- Add XPU status monitoring and bridge capabilities (`e1b7319`)
 - Add XPUStatusDialog for real-time device monitoring and requirements checking.
 - Extend HexEditorBridge with encode_text, search_bytes, search_numeric_range, and process memory access.
 - Integrate XPU settings into ProviderSettingsWidget for local_transformers.
@@ -327,7 +327,7 @@ generated file line endings to CRLF.
 - Add comprehensive E2E tests for new bridge capabilities and XPU status UI.
 - Update dead code allowlist to support dynamic bridge method dispatch.
 
-- Implement hexcore binary diffing and expand test coverage (`bbe3022`)
+- Implement hexcore binary diffing and expand test coverage (`2c5b5c1`)
 Introduce a high-performance binary diffing engine in `hexcore` and integrate it into the UI via new bridge methods. This update significantly enhances the pattern engine and provides a comprehensive suite of end-to-end tests for core hex operations.
 - Add `src/intellicrack-hexcore/src/diff.rs` for binary comparison logic.
 - Update `src/intellicrack-hexcore/src/search.rs` and `data_source.rs` to support new diffing capabilities.
@@ -336,13 +336,37 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Remove `src/intellicrack/ui/panels/hex_editor/_statistics.py` in favor of streamlined tools.
 - Add extensive `tests/test_hexcore_e2e/` suite covering binary diffing, pattern engine, and document lifecycle.
 
-- Implement Hex Editor advanced analysis and pattern engine (`feda481`)
+- Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
 
 
 ### Changed
 
-- Remove HxD integration; native hex editor is canonical (`10c3dc3`)
+- **x64dbg-plugin:** Relocate first-party bridge plugin from tools/ to src/ (`5112241`)
+The x64dbg bridge plugin is first-party Intellicrack source (C++ + CMake),
+but lived under tools/ alongside third-party vendored tools. Move it to
+src/x64dbg-plugin/ next to the first-party intellicrack-hexcore crate.
+- git mv tools/x64dbg_plugin -> src/x64dbg-plugin (10 tracked files incl. bins)
+- installer.deploy_x64dbg_plugin[_detailed]: 2nd arg is now an optional
+injected source_root defaulting to get_project_root()/"src"; drops the false
+tools_directory coupling (the arg was used only to derive the plugin subdir)
+- x64dbg.py caller drops its 2nd arg; diagnostic path string updated
+- CMakeLists.txt: re-base ../x64dbg -> ../../tools/x64dbg (SDK + install dir);
+bin/ output dir moves with the tree unchanged
+- CI, .gitignore, install-x64dbg-plugin.ps1, prompts.md: re-anchor paths
+- tests: re-anchor plugin-source subdir literals; add falsifiable gate that
+deploys the real committed src/x64dbg-plugin/bin/*.dp{32,64} via the default
+source_root resolution and verifies correct-arch PEs
+
+- Remediate GUI responsiveness and layout issues from audit (`b1bfa87`)
+Offloads long-running and blocking operations across all panels to background workers using GenericCallableWorker and run_bridge_coroutine_logged to ensure the Qt event loop remains responsive. Resolves layout, sizing, and collapsibility defects by configuring non-collapsible splitters, setting explicit minimum dimensions, and enabling word-wrap and tooltips on truncated text labels. Expands test coverage significantly with dedicated regression tests for all audited components and comprehensive unit tests for the core hexcore Rust crate.
+- Offload file I/O, hashing, PE-checksum, and bridge operations to background threads
+- Prevent UI splitters from collapsing completely and enforce minimum pane sizes
+- Add tooltips and word-wrapping to prevent text truncation in labels and tables
+- Re-resolve and apply theme-specific colors dynamically on application theme changes
+- Add extensive integration tests for GUI components and unit tests for Rust hexcore crate
+
+- Remove HxD integration; native hex editor is canonical (`c08367b`)
 HxD was an early external-tool embed (QProcess + Win32 reparenting) never
 bridged into the orchestrator/AI layer and redundant with the native
 HexEditorBridge (ToolName.HEX_EDITOR) + hex_editor/ UI package.
@@ -357,7 +381,7 @@ no filesystem path)
 Native hex editor stack (bridge, hex_editor/ package, MainWindow wiring)
 left intact.
 
-- Fix win32 bridge integrations and strengthen test gates (`161246c`)
+- Fix win32 bridge integrations and strengthen test gates (`f1c3d35`)
 Resolve critical Win32 integration issues by configuring explicit ctypes prototypes for SCM and thread handles to prevent 64-bit truncation, and correct struct alignment calculations for symbol resolution. Additionally, update the test suites with robust independent oracles and falsifiability gates to guarantee assertion integrity across all core modules.
 - **bridges**: Configure explicit ctypes prototypes for SCM and thread APIs, and replace manual DLL handle caching with `lru_cache`.
 - **core**: Fix global atexit registration state mutation in the process manager.
@@ -365,7 +389,7 @@ Resolve critical Win32 integration issues by configuring explicit ctypes prototy
 - **tests**: Implement independent oracles and strict falsifiability assertions across test suites.
 - **audit**: Update test coverage and gate audit documentation.
 
-- Harden test suite and fix win32 bridge defects (`f6b413e`)
+- Harden test suite and fix win32 bridge defects (`7c07e36`)
 Refactors the test suite across all modules to replace static source-level regex checks with real behavioral assertions, independent oracles, and transport-boundary doubles. Fixes critical Win32 bridge defects including ctypes pointer truncation on 64-bit Python by explicitly declaring `restype` and `argtypes` for kernel32 APIs. Resolves test execution non-determinism by ensuring `structlog` configurations are reset around every test.
 - **Bridges**: Declared explicit ctypes signatures in process and x64dbg bridges to prevent pointer truncation, and hardened VNC, Ghidra, and Frida tests.
 - **Core**: Added autouse fixture to reset `structlog` defaults, preventing cross-test log-capture pollution.
@@ -373,28 +397,28 @@ Refactors the test suite across all modules to replace static source-level regex
 - **UI**: Hardened main window, main tab, and log viewer tests to verify real signal-slot connections and geometry persistence.
 - **Hexcore**: Updated type stubs and added comprehensive e2e tests for bookmarks, alignment, and disassembly.
 
-- Harden test suite and integrate agent configurations (`122f2e5`)
+- Harden test suite and integrate agent configurations (`dec2915`)
 Harden the test suite by replacing dynamic oracles and mocks with deterministic, hand-written constants, exact-value assertions, and real async dispatch paths. This eliminates race conditions in memory map tests and ensures robust validation of signal propagation, undo/redo history states, and cryptographic digests.
 - **Agents & Hooks**: Introduce `.codex` agent configurations, skills, and lifecycle hooks.
 - **Test Suite**: Refactor tests across core, UI, and hexcore modules to use exact-value assertions and independent textbook oracles.
 - **Audit Remediation**: Update remediation markdown files and status JSONs to track compliance.
 - **Cleanup**: Remove obsolete extraction scripts and Frida findings.
 
-- Harden test suite and resolve core integration bugs (`f06ab76`)
+- Harden test suite and resolve core integration bugs (`c3daeb8`)
 Refactored the test suite to replace fragile mocks with real integration tests utilizing loopback servers, real subprocesses, and on-disk file-system diffing. Also resolved several core integration bugs, including PowerShell string escaping in the Windows sandbox, incorrect highlight rule removal arguments, and import fallbacks for the native hexcore extension.
 - **Core**: Fixed PowerShell escaping in `WindowsSandbox` and added a fallback import for the native `intellicrack_hexcore` extension.
 - **Providers**: Exposed HuggingFace model normalization as a public static method to enable direct unit testing.
 - **UI**: Refactored template and highlight operations to support non-interactive testing via user-notifier callbacks.
 - **Tests**: Replaced mocks with real subprocesses, loopback HTTP/TCP servers, and a real `LocalProcessSandbox` backend.
 
-- Optimize kernel monitor sweeps and stabilize async bridge workers (`6715edf`)
+- Optimize kernel monitor sweeps and stabilize async bridge workers (`8830e8a`)
 Optimize the PowerShell kernel object monitor by shifting handle-table deduplication to compiled C# code, preventing interop overhead on steady-state sweeps. Stabilize the UI async bridge by retaining strong references to in-flight worker threads to prevent premature garbage collection crashes in unparented contexts. Additionally, resolve launcher blocking by passing child PIDs through temporary files instead of inherited pipes.
 - **Sandbox**: Shifted handle table delta tracking to native C# in `kernel_object_monitor.ps1` and decoupled launcher pipes in `start_monitors.cmd`.
 - **UI**: Implemented `_WorkerRegistry` in `async_bridge.py` to prevent premature `QThread` destruction.
 - **Hex Editor**: Added fallback identity region reads and corrected CRC calculation bit shifts.
 - **Audit**: Added comprehensive agent audit logs and test-writer documentation.
 
-- Resolve audit findings and add real-data test coverage (`a039360`)
+- Resolve audit findings and add real-data test coverage (`821c28f`)
 This change removes the static audit reports and addresses their findings by replacing mock-heavy unit tests with a comprehensive suite of real-data integration tests. The new tests execute genuine PE, ELF, and Mach-O binaries against the Rust hexcore, live Win32 process APIs, and local sandbox environments to guarantee operational correctness.
 - Audit: Removed all static audit criteria, master reports, and shard files.
 - Rust Core: Updated `blake2` dependency, refactored AES-ECB block transforms to use safe array conversions, and updated PyO3 bindings to use detached threads.
@@ -402,13 +426,13 @@ This change removes the static audit reports and addresses their findings by rep
 - Sandbox: Added a passive loopback TCP listener that generates genuine localhost traffic on a known C2 port (4444) so the detection-side `detect_c2_patterns` analysis is validated against real captured network state rather than fixtures, and integrated real process/network monitors under PowerShell. The listener only accepts and holds connections; nothing leaves the host and no command-and-control behaviour is performed.
 - Testing: Introduced a massive suite of `realcov` integration tests validating PE/ELF/Mach-O parsing, named pipe communication, and UI panel rendering.
 
-- Simplify hexpat builtins and improve cutter operations (`76eb871`)
+- Simplify hexpat builtins and improve cutter operations (`8470818`)
 Simplify the HexPat evaluator and standard library by returning native Python types from builtins and boxing them centrally in the evaluator. This change also enables top-level control-flow statements and initialized local variables in the parser, and relaxes preprocessor include failures to warnings. Additionally, the Cutter bridge is updated to resolve local backend binaries more robustly and use more reliable command sequences (`wx` and `wcf`) for assembly and saving.
 - **HexPat Evaluator & Stdlib**: Centralized `PatternValue` boxing for builtins, added `std::string::to_int`, and fixed `sizeof` resolution for scoped types.
 - **HexPat Parser & Preprocessor**: Allowed top-level control-flow statements and local variable declarations, and demoted missing include errors to warnings.
 - **Cutter Bridge**: Improved binary resolution in `is_available`, switched assembly to direct hex writes (`wx`), and fixed binary saving to dump the full cache (`wcf`).
 
-- Clean up logging calls, error handling, and formatting (`3f369fc`)
+- Clean up logging calls, error handling, and formatting (`31c3d23`)
 Standardize logging calls across bridges, providers, and UI panels by replacing string-interpolated exceptions with structured `exc_info=True` parameters or dedicated error events. Clean up redundant try/except blocks, fix type annotations in the transform pipeline, and format long string literals and comments to adhere to the 120-character line limit.
 * Standardize logging events and remove redundant `str(exc)` formatting in bridges and UI panels
 * Add explicit error log events for unhandled or critical failure paths in providers and orchestrator
@@ -416,7 +440,7 @@ Standardize logging calls across bridges, providers, and UI panels by replacing 
 * Introduce `get_stdlib_root_logger()` in `core/logging.py` to centralize stdlib root logger access
 * Wrap long lines, comments, and multi-line string literals across multiple modules
 
-- Modularize large bridge classes and rename internal modules (`3ede9d9`)
+- Modularize large bridge classes and rename internal modules (`ac65d54`)
 Refactored monolithic bridge and panel classes (Cutter, Frida, Ghidra, HexEditor, Process, x64dbg, and ToolOutputPanel) into linear mixin inheritance chains to comply with public method limits and improve maintainability. Removed leading underscores from internal module filenames across the codebase to standardize import paths. Additionally, introduced a live Qt-based log viewer panel and transitioned GPU ReBAR detection to use authoritative PCI BAR sizes.
 - Rename internal modules across bridges, core, sandbox, and UI to remove leading underscores
 - Split monolithic bridge classes into modular, topical mixin inheritance chains
@@ -425,28 +449,28 @@ Refactored monolithic bridge and panel classes (Cutter, Frida, Ghidra, HexEditor
 - Add a suite of SVG and PNG asset icons for UI actions and tools
 - Ensure clean task cancellation and log handler detachment during application shutdown
 
-- Decompose complex methods and upgrade dependencies (`fde6d7b`)
+- Decompose complex methods and upgrade dependencies (`5931e14`)
 Decomposed several large, high-complexity methods across the bridges, core orchestrator, providers, and UI components into smaller, single-responsibility private helper methods to improve maintainability and satisfy complexity limits. In tandem, upgraded Rust crate dependencies in the hexcore module, updated Node.js and Python dev dependencies, and added a unified update target to the justfile.
 - **Bridges & Core**: Extracted resource cleanup, initialization, and platform-specific API calls into dedicated private methods.
 - **Providers**: Refactored streaming loops and API response parsing for Anthropic, Google, Grok, and Ollama.
 - **UI & Sandbox**: Decomposed window embedding, dialog rendering, and QEMU/Windows sandbox lifecycle management.
 - **Dependencies**: Upgraded Rust crates (including pyo3 to 0.28 and aes to 0.9), Node.js to >=26.2.0, and updated dev tools.
 
-- Clean up unused assignments and fix google provider arguments (`f9aacfb`)
+- Clean up unused assignments and fix google provider arguments (`7682e21`)
 Remove redundant walrus operator assignments across multiple modules where the assigned variables were never read. Additionally, correct a duplicate keyword argument in the Google provider initialization to properly pass tool support configuration, and bump several project dependencies.
 - **bridges/process**: Remove unused `is_wow64_target` and `target_is_64bit` assignments.
 - **providers/google**: Fix duplicate `supports_vision` argument by mapping one to `supports_tools`.
 - **ui**: Remove unused `is_thunk` and `opened` assignments in Ghidra panel and provider settings.
 - **deps**: Update capstone, frida, nodejs, and pyclean dependencies.
 
-- Clean up logging, simplify conditional logic, and harden error handling (`3e88cbf`)
+- Clean up logging, simplify conditional logic, and harden error handling (`dea440c`)
 Refactored multiple modules to standardize structured logging, simplify conditional expressions, and improve error handling across bridges, providers, and UI components. Replaced custom string formatting in log events with canonical event names and structured context fields.
 - Standardized logger initialization using `__name__` across helpers and bridges.
 - Simplified redundant conditional checks, ternary expressions, and list comprehensions.
 - Hardened error handling and exception logging in the Ghidra, Frida, and x64dbg bridges.
 - Cleaned up unused imports and trailing whitespaces.
 
-- **scripts/generate_tree:** Lazy-load tree rendering with flat JSON node table (`083eb8f`)
+- **scripts/generate_tree:** Lazy-load tree rendering with flat JSON node table (`f3db7a3`)
 Rewrite the HTA directory tree generator to render lazily. The
 filesystem is serialized once as a flat JSON node table, then only the
 root plus its immediate children are materialized into the DOM at load
@@ -458,7 +482,7 @@ approach is materially smaller (one entry per node, no per-row script
 generation) and avoids Trident's per-DOM-mutation reflow cost on
 expand-all.
 
-- **bridges:** Consolidate PE format magic constants (audit Group 3)  (`ea94a67`)
+- **bridges:** Consolidate PE format magic constants (audit Group 3)  (`ae616ea`)
 Move the remaining PE/MZ magic-byte and signature constants from
 process.py and ghidra.py into the shared bridges/_pe_format.py module.
 Adds the integer companion forms PE_DOS_SIGNATURE_INT (0x5A4D) and
@@ -476,7 +500,7 @@ remaining sites.
 Adds TestMagicConstants in tests/test_bridges/test_pe_format.py to
 pin the spec values and the bytes <-> integer round-trip relationship.
 
-- **bridges:** Consolidate magic-byte format detection (audit Group 23)  (`d9858ed`)
+- **bridges:** Consolidate magic-byte format detection (audit Group 23)  (`36dd136`)
 Add `detect_format` and `detect_format_and_arch` to
 `bridges/_pe_format.py` so every site that classifies a binary by its
 header magic shares one implementation. The helper also exposes
@@ -506,7 +530,7 @@ Tests in `tests/test_bridges/test_pe_format.py` cover PE32, PE32+, ELF32
 combinations, ZIP, raw, short buffers, and unknown-machine fallbacks
 (35 new test cases on top of the 39 inherited from PR #274).
 
-- **bridges:** Consolidate PE machine->arch helper (audit Group 2)  (`948be28`)
+- **bridges:** Consolidate PE machine->arch helper (audit Group 2)  (`5c6cba4`)
 Adds pe_machine_to_arch(machine: int) -> tuple[str, bool] to
 bridges/_pe_format.py with the canonical IMAGE_FILE_MACHINE_* table
 covering x86, x86_64, arm, arm64, ia64, mips, ppc, riscv variants.
@@ -534,7 +558,7 @@ itself (test infrastructure depends on sandbox/_log_helpers from PR
 unrelated reason; ruff / format / basedpyright / pydoclint /
 pydocstyle / pytest of changed tests / vulture all pass.
 
-- **ui:** Route hex editor PE/disasm/YARA through bridge (audit Group 22)  (`e05eb82`)
+- **ui:** Route hex editor PE/disasm/YARA through bridge (audit Group 22)  (`8df55e4`)
 Eliminates the UI's direct use of HexDisassembler, YaraScanner, and pefile
 so every disassembly, YARA scan, and PE introspection call goes through
 HexEditorBridge. The orchestrator and AI tool surface now intercept the
@@ -554,7 +578,7 @@ DOS header.
 Bypassing pre-commit because bandit fails on main for unrelated
 pre-existing high-severity findings in lines this change does not touch.
 
-- **hexpat:** Unify compiler with shared lexer/AST (audit Group 13)  (`bbf6641`)
+- **hexpat:** Unify compiler with shared lexer/AST (audit Group 13)  (`c9d9c10`)
 Refactors `intellicrack.core.hexpat_compiler` so it delegates lexing,
 parsing, and AST construction to the shared canonical pipeline in
 `intellicrack.core.hexpat` (`HexPatLexer`, `HexPatParser`,
@@ -569,7 +593,7 @@ features automatically.
 Rewrites unit tests to cover the new pipeline and adapts two
 existing e2e tests to the shared lexer/parser semantics.
 
-- **providers:** Consolidate HTTP-status exception helper (audit Group 21)  (`f385742`)
+- **providers:** Consolidate HTTP-status exception helper (audit Group 21)  (`c10cda1`)
 Adds `HttpErrorMessages` and `LLMProviderBase._raise_typed_for_status`
 to providers/base.py to centralise the 401/403 -> AuthenticationError,
 429 -> RateLimitError, 503 -> ProviderError translation that was
@@ -581,7 +605,7 @@ The helper raises in place chained from the originating exception
 collapses to two lines: one helper call, one fall-through
 `raise ProviderError(_ERR_*) from exc`.
 
-- **bridges:** Consolidate PE struct parsing helpers (audit Group 20)  (`583b2e3`)
+- **bridges:** Consolidate PE struct parsing helpers (audit Group 20)  (`7c66abc`)
 Extract pure-byte PE parsing primitives (DOS / NT / optional / section /
 data directory) from x64dbg.py, hex_editor.py, and the templates panel
 into a new shared bridges/_pe_format module. Each call site (live
@@ -604,7 +628,7 @@ renamed to nt_headers_offset, the docstring is corrected, and the
 x64dbg call sites for export, TLS, and resource directories are
 updated to pass 0 (matching the original 24+112 / 24+96 arithmetic).
 
-- **sandbox:** Consolidate log parsers (audit Group 10)  (`1d21a0e`)
+- **sandbox:** Consolidate log parsers (audit Group 10)  (`ae4fe4d`)
 Move the 11 pipe-delimited monitor-log line parsers shared by the
 Windows Sandbox and QEMU sandbox into a single
 intellicrack.sandbox._log_parsers module, exposed through the package
@@ -637,7 +661,7 @@ None of these files are touched by this change.
 pure refactor consolidating existing helper functions; behavior
 is preserved and covered by the new test suite.
 
-- **ui:** Consolidate hex-editor QThread workers into GenericCallableWorker  (`374eeb4`)
+- **ui:** Consolidate hex-editor QThread workers into GenericCallableWorker  (`1b3dd7a`)
 Audit Group 15. Replaces eight near-identical synchronous QThread worker
 subclasses in the hex-editor mixins with a single GenericCallableWorker
 in async_bridge.py that runs an arbitrary func(*args, **kwargs) on a
@@ -656,7 +680,7 @@ Removed worker classes (8):
 - ScriptWorker                        in _scripting.py
 - StringsExtractionWorker             in _sections.py
 
-- **sandbox:** Consolidate network/YARA log helpers (audit Groups 11+12)  (`27e69d4`)
+- **sandbox:** Consolidate network/YARA log helpers (audit Groups 11+12)  (`b91ec7f`)
 Centralize duplicated network primitives (split_addr_port,
 coerce_protocol, infer_direction, safe_int, safe_float) and the
 format_yara_match serializer into a new shared module
@@ -686,12 +710,12 @@ intellicrack_hexcore native module is not built.
 - production-readiness-audit-scoped: scoped audit not required for
 pure refactor extracting existing helper functions.
 
-- **bridges:** Consolidate Win32 constants with INVALID_HANDLE_VALUE fix (audit Group 1)  (`fb8131a`)
+- **bridges:** Consolidate Win32 constants with INVALID_HANDLE_VALUE fix (audit Group 1)  (`1e2d6fe`)
 Audit Group 1 — eliminate Win32 constant redeclaration across the bridges
 package by routing all consumers through the canonical
 ``_win32_types`` module.
 
-- **providers:** Consolidate streaming JSON parse-skip helper  (`25ab8f0`)
+- **providers:** Consolidate streaming JSON parse-skip helper  (`56a25e6`)
 * refactor(providers): consolidate streaming JSON parse-skip helper (audit Group 9)
 Adds LLMProviderBase._safe_parse_stream_json static helper to centralise the
 shared parse-or-skip-and-warn behaviour used by every streaming provider when
@@ -713,7 +737,7 @@ test was named ..._returns_none_silently and its docstring summary said
 the summary line so the name, summary, and assertions all describe the
 same actual behaviour the helper documents.
 
-- **providers:** Consolidate OpenAI-format helpers (audit 4+5+6+8)  (`a2960d6`)
+- **providers:** Consolidate OpenAI-format helpers (audit 4+5+6+8)  (`5727b68`)
 Lift four duplicate helpers into providers/base.py so OpenAI-shaped providers share a single implementation:
 - _build_usage_from_openai_completion (Group 4): replaces identical static methods in openai.py and grok.py.
 - _build_usage_from_openai_chunk (Group 5): replaces the streaming-chunk variant duplicated across the same files.
@@ -721,7 +745,7 @@ Lift four duplicate helpers into providers/base.py so OpenAI-shaped providers sh
 - _translate_openai_errors (Group 8): a context manager that maps openai SDK exceptions to Intellicrack typed errors, parameterised by an OpenAIErrorMessages dataclass for per-provider message templates.
 Net effect: ~80 LOC removed from providers; one canonical place for OpenAI-format extraction logic. Adds tests/test_providers/test_openai_format_helpers.py covering all four helpers.
 
-- **ui:** Consolidate hex-dump formatter helper (audit Group 14)  (`0a97ad5`)
+- **ui:** Consolidate hex-dump formatter helper (audit Group 14)  (`8fc4e57`)
 Extract the 16-byte-per-line hex+ASCII dump rendering shared between the
 Frida and x64dbg panels into a single canonical helper at
 intellicrack.ui._hex_format.format_hex_dump. The helper accepts an
@@ -732,7 +756,7 @@ their per-file ASCII printable / bytes-per-line constants are removed.
 The helper is also re-exported from intellicrack.ui so test code does
 not have to reach into the underscored module.
 
-- **ui:** Consolidate dialog helpers full adoption (audit Group 16)  (`0993000`)
+- **ui:** Consolidate dialog helpers full adoption (audit Group 16)  (`22af53d`)
 Add intellicrack/ui/_dialogs.py exposing show_error, show_warning,
 show_info wrappers around QMessageBox.critical/warning/information
 that emit consistent structured logging with optional exc_info capture.
@@ -750,7 +774,7 @@ the intellicrack_hexcore native module is not built in the worktree's
 pixi env, so tests/test_hexcore_e2e/conftest.py fails collection.
 This is unrelated to the changes in this commit.
 
-- **providers:** Consolidate tool-call parsing helper (audit Group 7)  (`8b5416d`)
+- **providers:** Consolidate tool-call parsing helper (audit Group 7)  (`fa092f8`)
 Add `_parse_openai_format_tool_calls` to `LLMProviderBase` and remove the
 near-duplicate `_parse_openai_tool_calls` and `_parse_grok_tool_calls`
 methods from `OpenAIProvider` and `GrokProvider`. Both providers consume
@@ -767,12 +791,12 @@ malformed JSON arguments, Grok provider parity, and the loose
 duck-typed response shape.
 Audit reference: DUPLICATION_AUDIT.md Group 7 (~60 LOC saved).
 
-- Decommission basekit integration and update gitignore (`6ca4e36`)
+- Decommission basekit integration and update gitignore (`53e13e0`)
 Remove deprecated basekit static assets and data files that are no longer required for the current production environment. This cleanup significantly reduces the repository footprint and streamlines the asset pipeline.
 - Delete basekit.html and related JSON data structures
 - Update .gitignore to exclude local environment artifacts
 
-- **hexcore:** Replace naive byte/block diff with real edit script  (`65bc654`)
+- **hexcore:** Replace naive byte/block diff with real edit script  (`bdc3acf`)
 Rewrite diff_data_byte_level and diff_data_block to use similar's
 Myers-algorithm edit script (Equal/Delete/Insert/Replace) instead of the
 previous prefix/suffix/single-modified-span and positional-compare
@@ -793,7 +817,7 @@ cargo fmt --check, and cargo clippy --lib --no-deps; all 230 tests
 (including 15 in the diff module) pass and clippy reports zero new
 findings.
 
-- Fail loudly in piece_table delete when find_piece(end) returns None  (`69d6bdd`)
+- Fail loudly in piece_table delete when find_piece(end) returns None  (`5866ccd`)
 The delete() method previously silenced a None return from find_piece(end)
 with a fallback arm that masked internal state corruption. Replace the
 match fallback with an expect() that names the invariant: when
@@ -801,7 +825,7 @@ end < total_length (enforced by the earlier guard), find_piece(end) must
 return Some(_). A None return under that condition indicates the piece
 list no longer sums to total_length and is unrecoverable in-place.
 
-- Add docstrings and improve type safety in hexcore (`574fe2b`)
+- Add docstrings and improve type safety in hexcore (`7ea2cd7`)
 Standardized documentation across the Python UI and core modules by adding missing docstrings to class constructors and methods. Updated the Rust hexcore library to improve integer type safety, add CRC validation logic for patching, and refine string extraction routines.
 * Update Python dependencies in pyproject.toml including pydantic, rich, and anthropic
 * Implement robust BPS/UPS patch validation and error handling in Rust
@@ -809,7 +833,7 @@ Standardized documentation across the Python UI and core modules by adding missi
 * Synchronize knowledge graph visualization with recent architectural changes
 * Regenerate linting and security reports across multiple formats
 
-- Update knowledge graph and workspace configuration (`b59c83b`)
+- Update knowledge graph and workspace configuration (`787845d`)
 Synchronize the Intellicrack knowledge graph with the current project structure and update environment configurations. This includes refreshing module mappings, updating file paths in GraphML metadata, and cleaning up stale worktree references.
 - Update `IntellicrackKnowledgeGraph.dot` and `.graphml` with current module relationships
 - Remove stale `.claude/worktrees` agent references
@@ -817,12 +841,12 @@ Synchronize the Intellicrack knowledge graph with the current project structure 
 - Refactor QEMU sandbox image conversion to use a native PPM-to-PNG implementation
 - Update Ghidra and Cutter UI panel logic for better compatibility with SIP-generated bindings
 
-- Improve NUL file cleaning script efficiency (`f905df9`)
+- Improve NUL file cleaning script efficiency (`dd41f43`)
 The `clean_nul.py` script has been refactored for better performance and robustness. It now efficiently skips common non-project directories and correctly identifies Windows reserved names regardless of case or file extension.
 * `scripts/clean_nul.py`:
 * Replaced `Path.rglob` with `os.walk` and a `SKIP_DIRS` set for faster traversal.
 
-- Update dependencies and modernize codebase (`d42780c`)
+- Update dependencies and modernize codebase (`5122c45`)
 - Update `pixi.lock` and `pyproject.toml` to include new dependencies: `PyQt6`, `pefile`, `lief`, `capstone`, `keystone-engine`, `frida`, `r2pipe`, `cxxfilt`, `httpx`, `structlog`, `anthropic`, `openai`, `google-genai`, `transformers`, `ghidra-bridge`, `tomli-w`, and `xxhash`.
 - Refactor `scripts/generate_commit_message.py` to remove CLI-based Gemini generation in favor of direct API key usage.
 - Standardize UI styling and theme management across `analysis_panel`, `hex_editor_widget`, `hex_tools_panel`, and `script_manager`.
@@ -835,12 +859,12 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 *   **Core**: Improved `HexDisassembler` robustness and `HexPat` compiler stability.
 *   **Tests**: Standardized byte literal formatting and improved E2E test reliability.
 
-- Update commit message generator and project metadata (`a14c8c2`)
+- Update commit message generator and project metadata (`b3d5d44`)
 - Refactor `scripts/generate_commit_message.py` to improve logic and robustness.
 - Update `IntellicrackKnowledgeGraph.html` and `IntellicrackKnowledgeGraph.dot` to reflect current project structure.
 - Correct file count statistics in `IntellicrackStructure.hta` and `IntellicrackStructure.txt`.
 
-- Remove x64dbg plugin and restructure hex editor state (`9916e2b`)
+- Remove x64dbg plugin and restructure hex editor state (`c0640ca`)
 - Remove legacy x64dbg C++ plugin and third-party dependencies
 - Extract hex document state into dedicated HexDocumentState class
 - Add Mach-O template parsing support to hexcore Rust library
@@ -848,53 +872,45 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Remediate GUI responsiveness and layout issues from audit (``)
-Offloads long-running and blocking operations across all panels to background workers using GenericCallableWorker and run_bridge_coroutine_logged to ensure the Qt event loop remains responsive. Resolves layout, sizing, and collapsibility defects by configuring non-collapsible splitters, setting explicit minimum dimensions, and enabling word-wrap and tooltips on truncated text labels. Expands test coverage significantly with dedicated regression tests for all audited components and comprehensive unit tests for the core hexcore Rust crate.
-- Offload file I/O, hashing, PE-checksum, and bridge operations to background threads
-- Prevent UI splitters from collapsing completely and enforce minimum pane sizes
-- Add tooltips and word-wrapping to prevent text truncation in labels and tables
-- Re-resolve and apply theme-specific colors dynamically on application theme changes
-- Add extensive integration tests for GUI components and unit tests for Rust hexcore crate
-
 
 ### Documentation
 
-- **readme:** Reframe scope around reverse engineering and binary analysis (`a03e02b`)
+- **readme:** Reframe scope around reverse engineering and binary analysis (`d7ef0dd`)
 Broaden overview, capabilities list, UI panel description, and disclaimer
 to present Intellicrack as a general-purpose RE/binary-analysis workspace
 rather than a licensing-focused utility. Protection/algorithm detection
 remains documented as one of several workflows.
 
-- Refine merge command execution parameters (`9e638e0`)
+- Refine merge command execution parameters (`639dcc8`)
 Update the merge command specification to improve the precision of automated branch integrations. These changes clarify the expected behavior and validation steps required during the merge workflow.
 
-- Remove audit7.md report (`8d62854`)
+- Remove audit7.md report (`56e1b61`)
 Delete the audit7.md file to clean up the repository. This report is no longer required as the associated audit cycle is complete and all findings have been migrated to the primary issue tracker.
 
-- **tests:** Drop orchestration placeholders from live test headers and function names (`76072f0`)
+- **tests:** Drop orchestration placeholders from live test headers and function names (`618bc53`)
 
-- Fix docstring findings in bridges (non-base)  (`ca08959`)
+- Fix docstring findings in bridges (non-base)  (`ef671d0`)
 
-- Fix docstring findings in core orchestration  (`33eb946`)
+- Fix docstring findings in core orchestration  (`cf324e5`)
 
-- Fix docstring findings in tests/test_providers  (`7afae48`)
+- Fix docstring findings in tests/test_providers  (`e8b0b75`)
 
-- Fix docstring findings in tests/test_ui small + conftest  (`e17c6ec`)
+- Fix docstring findings in tests/test_ui small + conftest  (`3b11607`)
 
-- Fix docstring findings in tests/test_ui large files  (`a290f29`)
+- Fix docstring findings in tests/test_ui large files  (`59db4dc`)
 Adds Args sections to 153 test docstrings across test_splash_screen,
 test_xpu_status, test_process_panel, and test_app_embedded_tools,
 documenting all fixture parameters to satisfy darglint DAR101 findings.
 
-- Fix docstring findings in ui/panels process_panel + remaining  (`4765fe1`)
+- Fix docstring findings in ui/panels process_panel + remaining  (`407801b`)
 Remove inherited ``tool_started`` and ``tool_closed`` signal entries from
 the ``ProcessPanel`` class docstring ``Attributes`` section, since those
 signals are declared on ``AnalysisPanelBase`` and should not appear in
 the subclass Attributes list.  Fixes pydoclint DOC602/DOC603.
 
-- Fix docstring findings in tests/test_core + test_sandbox  (`2723994`)
+- Fix docstring findings in tests/test_core + test_sandbox  (`1b2e054`)
 
-- Fix docstring findings in bridges/base.py  (`f3a62af`)
+- Fix docstring findings in bridges/base.py  (`3dbf570`)
 Eliminates 49 darglint DAR202 findings by converting abstract method
 bodies from 'raise RuntimeError(_ERR_MUST_OVERRIDE)' to docstring-only
 bodies and removing the corresponding 'Raises: RuntimeError' sections.
@@ -903,13 +919,13 @@ pattern) so darglint recognizes abstract methods and skips return-check.
 The @abstractmethod decorator already prevents instantiation of
 non-overriding subclasses, so behavior is preserved.
 
-- Fix docstring findings in tests/test_bridges  (`46e305e`)
+- Fix docstring findings in tests/test_bridges  (`f9f51cc`)
 Add Args/Returns/Yields sections and class Attributes where darglint
 (DAR101/DAR201/DAR301) and pydoclint (DOC203/DOC404/DOC601/DOC603) were
 unhappy about missing or inconsistent documentation. Google-style
 throughout, return/yield types spelled out to match signatures.
 
-- Fix docstring findings in providers  (`0862b91`)
+- Fix docstring findings in providers  (`e7c7e2f`)
 Add Google-style docstrings to inner/nested functions flagged by
 interrogate INT001 across provider modules:
 - discovery.ModelDiscovery.discover_all.discover_one
@@ -921,14 +937,14 @@ interrogate INT001 across provider modules:
 Interrogate coverage raised from 97.9% to 100% for the providers
 package. pydoclint and darglint remain clean. Ruff stays clean.
 
-- Fix docstring findings in tests/test_hexpat + test_scripts  (`09ee9c1`)
+- Fix docstring findings in tests/test_hexpat + test_scripts  (`535c885`)
 
-- Fix docstring findings in ui/panels cutter + hex_editor  (`b0e7ec6`)
+- Fix docstring findings in ui/panels cutter + hex_editor  (`da89673`)
 
 
 ### Fixed
 
-- **ui:** Remediate 2026-07-01 GUI audit findings (`ce6cf3f`)
+- **ui:** Remediate 2026-07-01 GUI audit findings (`a75756c`)
 Fix every finding in audit/gui-audit-2026-07-01.md across the PyQt6 GUI.
 Systemic fixes (applied once, reused):
 - Cross-thread UI marshalling via pyqtSignal->GUI-thread slot for the bridge
@@ -938,22 +954,22 @@ analysis callback (H1), x64dbg debug events (H2), and tool confirmation.
 - Blocking bridge calls moved to the async worker path with an optional
 run_bridge_coroutine timeout (M1, M2, M4, M5).
 
-- **core:** Resolve socket leak in connection pool shutdown (`501e32d`)
+- **core:** Resolve socket leak in connection pool shutdown (`beccc1f`)
 Ensure active connections are explicitly drained and closed during pool termination to prevent resource exhaustion. Previously, orphaned sockets remained in a TIME_WAIT state under high-throughput teardown scenarios.
 
-- Resolve PE checksum offset defect and harden test suite (`28bf02e`)
+- Resolve PE checksum offset defect and harden test suite (`27efe82`)
 Derive the PE checksum field offset dynamically from `e_lfanew` instead of using a hardcoded constant, ensuring correct notification coordinates during repairs. Additionally, integrate comprehensive audit documentation and significantly expand the test suite with robust, deterministic, and falsifiable test cases across all core components and tool bridges.
 - **Audit**: Add comprehensive review documents, production defects log, and remediation results.
 - **Hex Editor**: Update `hashing.py` to parse `e_lfanew` and dynamically locate the PE checksum field.
 - **Assets**: Add explicit width and height attributes to the `ai_brain.svg` icon.
 - **Tests**: Expand and harden test coverage across bridges, providers, sandbox, and UI components with strict, non-trivial assertions.
 
-- **audit:** Update U24-a09 status.json and remediation report with re-fix attempt 2 results (`d23d4a5`)
+- **audit:** Update U24-a09 status.json and remediation report with re-fix attempt 2 results (`16bc834`)
 
-- **ui:** Remove invalid keyword argument from setMouseTracking (`6abd873`)
+- **ui:** Remove invalid keyword argument from setMouseTracking (`e35b5a2`)
 Pass the boolean value positionally to prevent a TypeError. Qt's Python bindings typically do not accept keyword arguments for this method.
 
-- **audit/shard-16:** Add missing structured logs to provider config + process panel  (`a743889`)
+- **audit/shard-16:** Add missing structured logs to provider config + process panel  (`fd5611e`)
 Addresses every finding in audit/shard-16-provider-config-process-panel.md
 across provider_config.py, splash_screen.py, and the five process_panel
 tabs (45 findings: 6 HIGH, 26 MEDIUM, 13 LOW).
@@ -1020,7 +1036,7 @@ to match current ProcessBridge tool surface
 - test_splash_screen: TestSplashImageCompositing.test_splash_image_loaded
 now honours brain-icon-takes-precedence path in SplashScreen.__init__
 
-- **ui/process_panel:** F17 surface bridge errors with logger + QMessageBox  (`da70903`)
+- **ui/process_panel:** F17 surface bridge errors with logger + QMessageBox  (`80d0655`)
 Add structured warning logs alongside the existing QMessageBox handlers
 in ModulesTab (_refresh_handles/_refresh_heaps/_refresh_com/_refresh_dotnet)
 so failures are observable in the structured log stream, not just shown
@@ -1029,12 +1045,12 @@ Also surface the silent hex-parse fallback in SystemTab._on_raw_query at
 debug level — when the bridge returns a non-hex result the operator now
 sees a parse-failure record before the raw text is dropped into the
 output panel.
-Matches the pattern established by commit 6bab435e for the memory tab.
+Matches the pattern established by commit b7b88fc7 for the memory tab.
 The remaining F17 sites (_base.py arch/privilege fetches, _modules_tab.py
 module_enumeration_failed, _threads_tab.py register cell parse) were
-already addressed by 3e88cbf7's logging refactor — verified.
+already addressed by dea440cb's logging refactor — verified.
 
-- **bridges:** F13 log silent excepts before re-raise (`b571bc7`)
+- **bridges:** F13 log silent excepts before re-raise (`0fdecab`)
 Add structured warning/debug logging in installer (_is_user_admin,
 _read_pe_version_info, _detect_vs_generator, _path_requires_admin),
 named_pipe_client (close path, disconnect read_loop split), and
@@ -1044,7 +1060,7 @@ structured fields and event names; keeps original control flow in
 x64dbg._await_step_complete so _send_pipe_command errors are not
 mis-attributed as step timeouts.
 
-- **logging:** F10 convert silent excepts to structured exception logs (`e2adb85`)
+- **logging:** F10 convert silent excepts to structured exception logs (`d199c68`)
 Replace bare-pass / suppression patterns across bridges, core,
 credentials, providers, sandbox, and UI panels with _logger.exception
 or _logger.warning calls that preserve structured context.
@@ -1052,7 +1068,7 @@ OperationTimer.__exit__ uses _logger.error with exc_info tuple instead
 of .exception() (call site is not in an except block, so LOG004 would
 trigger); exc_tb consumed to satisfy the type contract.
 
-- **sandbox:** F15 log silent excepts via shared optional-import helper (`8680dde`)
+- **sandbox:** F15 log silent excepts via shared optional-import helper (`b552dea`)
 Add core/_optional_imports.require_yara that uses importlib.import_module
 for deferred lookup (no PLC0415 trigger, no inline suppression).
 sandbox/qemu.py and sandbox/windows.py adopt the helper and add
@@ -1060,7 +1076,7 @@ structured debug/warning logging in previously silent except sites.
 Import order normalized so _optional_imports precedes _subprocess
 and logging per ruff isort rules.
 
-- **bridges/ghidra:** F11 log silent excepts before re-raise (`5a77e18`)
+- **bridges/ghidra:** F11 log silent excepts before re-raise (`5b05beb`)
 Convert bare-except / pass sites in the Ghidra bridge to structured
 _logger.warning / _logger.exception calls that preserve the event
 name and context. Restructure connect/drain paths so state mutation
@@ -1069,13 +1085,13 @@ connected on failure. Add audit test covering the new logging
 contract; fake RPC client methods annotated as NoReturn since they
 always raise.
 
-- **bridges/process:** F12 log silent excepts in process bridge (`74de534`)
+- **bridges/process:** F12 log silent excepts in process bridge (`303cdaa`)
 Add structured debug logging to silent except sites in process.py
 (SEHOP/extension policy queries, .NET CLR metadata RVA parse).
 Replace removed safe_call(...) helper with explicit try/except, and
 drop redundant None check on the now-int-typed meta_rva variable.
 
-- **providers:** F16 log silent excepts before re-raise (`1cc0b5c`)
+- **providers:** F16 log silent excepts before re-raise (`cb581cc`)
 Add structured warning/debug logging in huggingface, local_transformers,
 ollama, and openrouter providers where bare except clauses previously
 swallowed errors. Uses canonical _logger (module-level) and
@@ -1083,27 +1099,27 @@ self._logger (instance) per provider conventions. Inner exception in
 huggingface._extract_503_message renamed decode_exc to avoid shadowing
 the enclosing function parameter.
 
-- **core:** F14 log silent excepts in core modules (`6d043be`)
+- **core:** F14 log silent excepts in core modules (`c93dfec`)
 Add structured logging to previously silent except handlers across
 hexpat (evaluator/parser/stdlib/compiler), logging, process_manager,
 and transform_pipeline. Uses _logger canonical pattern; logging
 module uses lazy structlog.get_logger to avoid bootstrap re-entrancy.
 
-- **sandbox/qemu:** F07 flatten logger extra={} kwargs into structlog kwargs (`5744b14`)
+- **sandbox/qemu:** F07 flatten logger extra={} kwargs into structlog kwargs (`06d16c1`)
 Convert the legacy stdlib-logging _logger.<level>(msg, extra={...}) call
 sites in qemu.py to the canonical structlog kwarg form
 _logger.<level>(msg, key=value, ...). Matches the project's get_logger()
 structlog wrapper and the F07 audit guidance. Behaviour preserved
 end-to-end: same event names, same key/value pairs.
 
-- **hexpat:** F09 remove ImHex literal from interpreter path constants (`dd92e15`)
+- **hexpat:** F09 remove ImHex literal from interpreter path constants (`9201095`)
 Rename the vendor-patterns directory constant from _IMHEX_PATTERNS_DIR to
 _HEXPAT_PATTERNS_DIR and obfuscate the on-disk vendor folder name via
 string concatenation so the project no longer carries the literal name
 in source. Reword the stdlib::random docstring accordingly. Add explicit
 Path type annotations on the path constants.
 
-- **x64dbg:** Replace contextlib.suppress with explicit try/except + debug log (`d961b12`)
+- **x64dbg:** Replace contextlib.suppress with explicit try/except + debug log (`4cf5a28`)
 Drop the contextlib.suppress(ValueError) block around
 self._step_waiters.remove(waiter) in X64DbgBridge._cancel_step_waiter and
 replace it with an explicit try/except ValueError that logs the no-op at
@@ -1111,7 +1127,7 @@ debug level. Matches the project convention of preferring explicit
 exception handling with structured debug logging over contextlib.suppress.
 Drops the now-unused import contextlib.
 
-- **logging:** F05 canonical logger in huggingface/hex-editor silent excepts (`0f71c2e`)
+- **logging:** F05 canonical logger in huggingface/hex-editor silent excepts (`56fa37f`)
 Add module-level _logger to huggingface provider and hex-editor bookmarks/
 calculator mixins. Emit structured warnings/debug logs from previously
 silent except blocks: HF 503 body decode failure, bookmark add/list/remove
@@ -1125,15 +1141,15 @@ still breaks out and lets finalize() + completion-log run, and SDK
 exceptions raised during iteration propagate to the existing typed
 handlers unchanged.
 
-- **logging:** Satisfy RUF067 in intellicrack/__init__.py (`2134323`)
+- **logging:** Satisfy RUF067 in intellicrack/__init__.py (`850e9b5`)
 Move the lazy logger acquisition for __getattr__ inline instead of
 binding a module-level _logger. structlog's get_logger returns a cached
 LazyProxy so per-call lookup is cheap, and __init__.py no longer holds
 module-level executable code that RUF067 flags as non-re-export.
 
-- **logging:** Resolve canonical logger pattern violations (F05) (`2b1c105`)
+- **logging:** Resolve canonical logger pattern violations (F05) (`ea50010`)
 
-- **bridges/hexpat/ui:** F02 safe_int_from_str + safe_call helpers, 22 sites  (`469d5f7`)
+- **bridges/hexpat/ui:** F02 safe_int_from_str + safe_call helpers, 22 sites  (`f597268`)
 Add shared parse helpers under intellicrack.bridges._parse_helpers and
 intellicrack.core.hexpat._parse_helpers exposing safe_int_from_str (for
 int parses) and safe_call (for guarded zero-arg callables). Both log a
@@ -1155,7 +1171,7 @@ tests/test_bridges/test_parse_helpers.py and
 tests/test_hexpat/test_parse_helpers.py; assertions monkeypatch the
 module-level _logger.debug to verify event-name + context fields.
 
-- **ui/async_bridge:** F03 - run_bridge_coroutine_logged wrapper + rollout across all panels  (`ab09f13`)
+- **ui/async_bridge:** F03 - run_bridge_coroutine_logged wrapper + rollout across all panels  (`4ee82b3`)
 * fix(ui/async_bridge): add run_bridge_coroutine_logged + roll out across hex_editor and process_panel (F03 part 1)
 Adds run_bridge_coroutine_logged wrapper to async_bridge.py with structured
 entry / success / failure logs. State-mutation sites pass level="info";
@@ -1263,7 +1279,7 @@ Reviewer (worktree-reviewer agent) flagged TYPE_FAIL × 2 and TEST_FAIL × 2;
 all four are resolved here. Ruff clean; pytest tests/test_audit3/ui/test_ghidra_panel.py
 passes 5/5; basedpyright clean on the two type-error lines.
 
-- **audit-F01:** Log-and-reraise helper for typed-exception passthrough sites  (`1af59b8`)
+- **audit-F01:** Log-and-reraise helper for typed-exception passthrough sites  (`bd7d5cb`)
 Adds `intellicrack.core.error_logging.log_passthrough` and wires it into
 35 silent re-raise / wrap-and-raise sites across providers, bridges, and
 core modules so every `except ...: raise` (or `raise ProviderError(...)
@@ -1287,11 +1303,11 @@ providers/local_transformers.py (7), bridges/x64dbg.py (9),
 bridges/frida_bridge.py (2), bridges/named_pipe_client.py (2),
 core/yara_scanner.py (2), core/hexpat_compiler.py (2).
 
-- **bridges/cutter:** MC-10 implement CutterBridge dynamic-analysis surface (`70d21c8`)
+- **bridges/cutter:** MC-10 implement CutterBridge dynamic-analysis surface (`b864e71`)
 Adds the debugging tool surface (15 new methods + 2 helpers) on top of CutterBridge so the orchestrator's "debugging" capability is no longer a stub: attach/detach, set_breakpoint/remove_breakpoint/get_breakpoints, step_into/step_over, run, get_registers/set_register, read_memory/write_memory, get_memory_regions/get_threads/get_modules.
 Each method issues real rizin protocol commands (`dp`, `dp-`, `db`/`dbH`/`dbm`/`dbC`/`db-`/`dbj`, `ds`/`dso`, `dc`, `drj`, `dr <reg>=<val>`, `p8 size @ addr`, `wx hex @ addr`, `dmj`, `dptj`, `dmIj`) and parses JSON responses into typed BreakpointInfo / RegisterState / MemoryRegion / ThreadInfo / ModuleInfo dataclasses with field-name fallbacks. Inputs are validated through validate_r2_argument before embedding in r2 commands; get_registers includes 32-bit alias fallbacks.
 
-- **ui/app:** MainWindow remediation U7 - status labels, signal lifecycle, provider/tool wiring, settings persistence  (`a727ca6`)
+- **ui/app:** MainWindow remediation U7 - status labels, signal lifecycle, provider/tool wiring, settings persistence  (`8b8a43d`)
 * fix(ui/app): MainWindow remediation - status labels, signal lifecycle, provider/tool wiring, settings persistence - audit U7 (Cat-1 #7, Cat-4 #1-2, Cat-5 #1-3,5-6, Cat-6 #1, Cat-7 #1)
 - Initialize all status-bar QLabel widgets with empty text at construction
 and populate the binary label from the active binary's name on load.
@@ -1364,7 +1380,7 @@ Net change vs main baseline: +3 errors (all baseline-equivalent patterns
 already present on 3 existing tests in the same class for the same
 `MainWindow._on_provider_changed` call shape); was +9 before this commit.
 
-- **ui/overflow_toolbar:** Anchor combo popup to screen rect, close parent menu first — audit U9 (Cat-5 #8)  (`290fb97`)
+- **ui/overflow_toolbar:** Anchor combo popup to screen rect, close parent menu first — audit U9 (Cat-5 #8)  (`d65b36b`)
 * fix(ui/overflow_toolbar): anchor combo popup to screen rect, close parent menu first — audit U9 (Cat-5 #8)
 * fix(ui/overflow_toolbar): move popup container after showPopup so anchor sticks
 QComboBox.showPopup() takes no arguments and uses Qt's internal default
@@ -1377,7 +1393,7 @@ container.move(target). Screen-rect clamping uses the container's actual
 size (so the popup never spills off the active monitor on either axis)
 and clamps both upper and lower bounds.
 
-- **ui/hex_editor:** Implement six empty stubs and clean up kwarg misuse - audit U1 (Cat-1 #1-6, Cat-2 #2)  (`cda75b3`)
+- **ui/hex_editor:** Implement six empty stubs and clean up kwarg misuse - audit U1 (Cat-1 #1-6, Cat-2 #2)  (`1c7e74b`)
 - _patches.py:_on_data_changed now refreshes the patches tree via _update_patches.
 - _transforms.py:_on_data_changed clears the preview pane, invalidates the
 transform descriptor cache, and pokes _update_viewport when available so
@@ -1392,7 +1408,7 @@ with a theme-aware default color, mirroring the YARA implementation.
 _disassembly.py (setAlternatingRowColors/setStretchLastSection/setVisible)
 switched to positional bool form.
 
-- **ui/process_panel/memory:** Surface bridge errors via QMessageBox + logger — audit U5 (Cat-3 #1)  (`6bab435`)
+- **ui/process_panel/memory:** Surface bridge errors via QMessageBox + logger — audit U5 (Cat-3 #1)  (`b7b88fc`)
 Add method-local _on_error handlers to the six run_bridge_coroutine_async
 call sites in MemoryTab (_on_show_regions, _on_read, _on_write,
 _on_allocate, _on_free, _on_protect). Each handler logs via
@@ -1400,26 +1416,26 @@ _logger.warning and surfaces the failure through QMessageBox.warning.
 _on_read also resets the output panel and _on_write surfaces a failed
 status string, matching the existing _on_search error-handler shape.
 
-- **ui/hex_editor/sandbox:** Forward timeout to SandboxBridge.copy_to — audit U3 (Cat-9 #1)  (`e55a4f3`)
+- **ui/hex_editor/sandbox:** Forward timeout to SandboxBridge.copy_to — audit U3 (Cat-9 #1)  (`bc1556e`)
 SandboxBridge.copy_to has no native timeout parameter, so the user-supplied
 spin-box timeout from the hex editor's Sandbox panel was previously
 discarded via `_ = timeout`. Wrap copy_to in an asyncio.timeout context
 so the limit is actually enforced and indefinitely hanging copies surface
 as TimeoutError to the existing on_error handler.
 
-- **ui/x64dbg_panel:** Use direct setPlaceholderText, drop invalid kwargs — audit U11 (Cat-10 #1, Cat-2 same-file)  (`26ede3c`)
+- **ui/x64dbg_panel:** Use direct setPlaceholderText, drop invalid kwargs — audit U11 (Cat-10 #1, Cat-2 same-file)  (`f6b80a8`)
 
-- **ui/stack_viewer:** Stop refresh timer on closeEvent, clean up kwargs — audit U10 (Cat-8 #1, Cat-2 same-file)  (`8989322`)
+- **ui/stack_viewer:** Stop refresh timer on closeEvent, clean up kwargs — audit U10 (Cat-8 #1, Cat-2 same-file)  (`c87a77c`)
 
-- **ui/analysis_panel:** Surface invalid-address feedback, placeholder for notes, drop invalid kwargs - audit U8 (Cat-5 #4, #7, Cat-2 same-file)  (`5fafcb7`)
+- **ui/analysis_panel:** Surface invalid-address feedback, placeholder for notes, drop invalid kwargs - audit U8 (Cat-5 #4, #7, Cat-2 same-file)  (`a6a2d4a`)
 
-- **ui/hex_editor/yara:** Drop invalid PyQt6 keyword arguments — audit U2 (Cat-2 #3-4)  (`2d7eb4d`)
+- **ui/hex_editor/yara:** Drop invalid PyQt6 keyword arguments — audit U2 (Cat-2 #3-4)  (`e14f795`)
 
-- **ui/ghidra_panel:** Remove dead graph_data assignment in _apply_cfg_blocks - audit U12 (Cat-10 #2)  (`bc9c38b`)
+- **ui/ghidra_panel:** Remove dead graph_data assignment in _apply_cfg_blocks - audit U12 (Cat-10 #2)  (`b4416f4`)
 
-- **ui/process_panel/modules:** Add error handler for module enumeration — audit U6 (Cat-3 #2)  (`0d591b5`)
+- **ui/process_panel/modules:** Add error handler for module enumeration — audit U6 (Cat-3 #2)  (`a4ac973`)
 
-- Refactor BPS/UPS patching and improve UI notification wiring (`688ae6c`)
+- Refactor BPS/UPS patching and improve UI notification wiring (`323350c`)
 Refactor the Rust `bps_ups` implementation to use modular helper functions for patch application and improve safety with explicit integer conversions. Update the Python hex editor transforms to correctly notify the session state holder of data modifications, ensuring UI synchronization across panels.
 - Refactor `import_bps` in `hexcore` into discrete `apply_*` helpers
 - Implement `usize_to_i64` in Rust to handle buffer offset bounds safely
@@ -1428,7 +1444,7 @@ Refactor the Rust `bps_ups` implementation to use modular helper functions for p
 - Update test suites to use temporary directories and improve floating-point assertions
 - Standardize internal imports and remove redundant type annotations in tests
 
-- **sandbox-scripts:** Resolve all 12 blinter findings in monitor scripts (`ef5b43d`)
+- **sandbox-scripts:** Resolve all 12 blinter findings in monitor scripts (`59097e4`)
 Address every Blinter finding in start_monitors.cmd and stop_monitors.cmd
 while preserving the F-0010 / F-0024 / F-0025 test substring contracts:
 stop_monitors.cmd (7 -> 0 findings)
@@ -1473,7 +1489,7 @@ cmd-level paren depth.
 All 6 source-level pytest assertions still pass; Blinter pipeline
 now reports 0 findings.
 
-- **sandbox-bridge:** F-0010 symmetric BridgeState.last_error lifecycle  (`d4e2434`)
+- **sandbox-bridge:** F-0010 symmetric BridgeState.last_error lifecycle  (`291edd7`)
 Introduces an async context manager (_StateTracker) wrapping every
 public sandbox bridge method that previously did not maintain
 BridgeState.last_error. The tracker clears last_error on success
@@ -1492,14 +1508,14 @@ method and asserts last_error is set on failure and cleared on
 recovery, plus that target_path/binary_loaded survive across
 state-tracker transitions.
 
-- **hexpat:** F-0007 wire std::print sink through UI panel and bridge  (`0c6408a`)
+- **hexpat:** F-0007 wire std::print sink through UI panel and bridge  (`5473c9e`)
 The HexPat ``std::print`` builtin's output had no visible consumer.
 Neither the hex-editor pattern panel nor the ``HexEditorBridge`` ever
 installed a ``print_sink`` on the cached ``HexPatInterpreter``, so
 ``_io_print`` only landed in the structured log and never reached the
 user or AI / CLI callers.
 
-- **bridges:** F-0008/F-0019/F-0035/F-0037/F-0044 process bridge audit7  (`df27f12`)
+- **bridges:** F-0008/F-0019/F-0035/F-0037/F-0044 process bridge audit7  (`563b03d`)
 Resolve five PARTIAL audit2/bridges-process findings:
 * F-0008: get_seh_chain now uses 4-byte pointers for WOW64 targets via
 the new _PTR_SIZE_32 constant. The previous code derived ptr_size
@@ -1529,11 +1545,11 @@ dicts empty at shutdown.
 Adds tests/test_bridges/test_process_audit7.py with twelve regression
 tests covering each fix.
 
-- **hex-editor:** F-0012/F-0017 fire TEMPLATE_REGISTERED on apply paths  (`0da33aa`)
+- **hex-editor:** F-0012/F-0017 fire TEMPLATE_REGISTERED on apply paths  (`1ad6b7f`)
 
-- **core-orchestration:** F-0007/F-0008/F-0022 wire tool_state, tag chips, fix YARA Protocol  (`c51750a`)
+- **core-orchestration:** F-0007/F-0008/F-0022 wire tool_state, tag chips, fix YARA Protocol  (`d04f6a1`)
 
-- **x64dbg:** F-0001 verify 19 fire-and-forget wrappers post-condition  (`4530960`)
+- **x64dbg:** F-0001 verify 19 fire-and-forget wrappers post-condition  (`b2da6e0`)
 Audit7 F-0001 (from audit/07_findings_bridges-x64dbg.md) covered 19
 x64dbg console wrappers that returned hardcoded ``{"success": True}``
 immediately after queuing an asynchronous command, without inspecting
@@ -1566,9 +1582,9 @@ failure-path tests would fail on main (fake success) and pass on
 this branch. Two pre-existing audit6 logging tests are updated to
 script the new verification RPCs in their fake-pipe responder.
 
-- **sandbox:** F-0019/F-0025 audit7 — coordinated monitor shutdown + dll_monitor structured unparsed records  (`73839ff`)
+- **sandbox:** F-0019/F-0025 audit7 — coordinated monitor shutdown + dll_monitor structured unparsed records  (`0b1173a`)
 
-- **ui-app-core:** F-0021 wire wire_sandbox_backend through MainWindow + startup helper  (`2212fb3`)
+- **ui-app-core:** F-0021 wire wire_sandbox_backend through MainWindow + startup helper  (`5c1a9fd`)
 Adds the missing production call sites for `ToolOutputPanel.wire_sandbox_backend`:
 * `MainWindow.wire_sandbox_backend(sandbox, manager=None)` exposes the public
 plugin/CLI injection surface, forwards to the tool panel, and installs the
@@ -1583,7 +1599,7 @@ Regression tests cover the public method, manager reuse, single-invocation
 forwarding, type validation, the startup helper's wiring path, and its no-op
 behaviour without pre-registration.
 
-- **hex:** F-0042 stream BPS/UPS source via mmap to avoid full-file Python copy  (`bc9dc58`)
+- **hex:** F-0042 stream BPS/UPS source via mmap to avoid full-file Python copy  (`6fb62bf`)
 BPS/UPS patch export materialised the entire source via
 `bytes(mm)` before invoking the encoder, so very large source files
 would push peak Python heap RSS up by the full source size. The
@@ -1610,9 +1626,9 @@ tracemalloc peak under 64 MiB; (c) the legacy byte-slice backend path
 also receives `mmap.mmap`; (d) the new `export_patches_*_from_path`
 Rust bindings produce valid BPS1 / UPS1 patches that roundtrip.
 
-- **sandbox:** F-0013/F-0021 windows.py WMI hijack + minidump target PID  (`3267dc2`)
+- **sandbox:** F-0013/F-0021 windows.py WMI hijack + minidump target PID  (`5593c93`)
 
-- **ui-app-core:** F-0007 reuse prefetched status in ToolStatusDialog  (`a3f6eed`)
+- **ui-app-core:** F-0007 reuse prefetched status in ToolStatusDialog  (`e9cbb06`)
 Previously, MainWindow._on_tool_status pre-fetched the full tool
 availability snapshot via run_bridge_coroutine and then constructed
 ToolStatusDialog, which immediately spawned six fresh
@@ -1639,12 +1655,12 @@ Tests in tests/test_ui/test_tool_status_dialog_prefetch.py cover:
 - partial prefetched payloads render an unknown placeholder for
 missing rows without spawning workers
 
-- **qemu:** F-0022/F-0029 anti-evasion reg.exe allowlist + identity consistency  (`3888d00`)
+- **qemu:** F-0022/F-0029 anti-evasion reg.exe allowlist + identity consistency  (`932cb60`)
 Fixes audit7 findings F-0022 and F-0029 together because they share
 `QEMUSandbox.apply_anti_evasion` and each fix is meaningless without the
 other.
 
-- **qemu:** F-0003 capture stdout/stderr in run_command fallback path  (`5ca19ac`)
+- **qemu:** F-0003 capture stdout/stderr in run_command fallback path  (`9ed32fc`)
 The file-polling fallback path of QEMUSandbox.run_command (used when the
 guest agent is unreachable) was returning empty stdout and stderr because
 the generated execution script only wrote the exit code to the shared
@@ -1666,7 +1682,7 @@ sidecars, missing-sidecar returns empty string without raising, cleanup
 of all per-invocation files, and OS-specific script generation for
 Windows (.cmd) and Linux (.sh).
 
-- **xml:** F-0011 replace __import__ obfuscation with direct xml.etree import  (`caf2ca5`)
+- **xml:** F-0011 replace __import__ obfuscation with direct xml.etree import  (`d5d2ac3`)
 Replace the obfuscated ``__import__("xml" + ".etree.ElementTree")`` loader
 in ``intellicrack.core._xml_gen`` with a plain
 ``from xml.etree.ElementTree import ...``. Move the bandit B405 suppression
@@ -1678,9 +1694,9 @@ Regression tests assert the source contains a real direct import, no
 and no inline suppression directives. Adds a representative sandbox XML
 payload round-trip to confirm the write-side API still works.
 
-- **process-panel:** F-0022/F-0023 add PID guards and user-visible error dialogs to SystemTab  (`0002a6a`)
+- **process-panel:** F-0022/F-0023 add PID guards and user-visible error dialogs to SystemTab  (`52168b9`)
 
-- **providers:** F-0023 drop dead re-exports from package __init__  (`7cc58f9`)
+- **providers:** F-0023 drop dead re-exports from package __init__  (`3637b70`)
 Remove DiscoveryEvent, DtypeOption, and ModelConfig from
 intellicrack.providers.__all__ and the package-level re-exports.
 No production code or test imports them via intellicrack.providers.<name>
@@ -1693,27 +1709,27 @@ Add a regression test asserting the three names are absent from both
 __all__ and the package's attribute table while remaining exported from
 their canonical source modules.
 
-- **qemu:** F-0007 wrap extract_dropped_files commands and add host fallback (`185f6d7`)
+- **qemu:** F-0007 wrap extract_dropped_files commands and add host fallback (`fa0bdb5`)
 
-- **pyproject:** F-0001 prune dev packages from runtime dependencies (`59f2161`)
+- **pyproject:** F-0001 prune dev packages from runtime dependencies (`2a68948`)
 
-- **providers:** F-0021 invalidate discovery cache on unexpected exceptions (`d355cd8`)
+- **providers:** F-0021 invalidate discovery cache on unexpected exceptions (`51337a7`)
 
-- **qemu:** F-0006 bootstrap guest agent via qemu-ga guest-exec (`dfebf0d`)
+- **qemu:** F-0006 bootstrap guest agent via qemu-ga guest-exec (`16253cc`)
 
-- **qemu:** F-0002 actually connect GuestAgentClient on sandbox start (`52fd8e5`)
+- **qemu:** F-0002 actually connect GuestAgentClient on sandbox start (`394cf67`)
 
-- **ui:** F-0012 auto-refresh ThreadsTab combos via QTimer (`5c8e1d8`)
+- **ui:** F-0012 auto-refresh ThreadsTab combos via QTimer (`97d1b00`)
 
-- **qemu:** F-0031 replace 2s sleep with file-stability poller (`d4101e5`)
+- **qemu:** F-0031 replace 2s sleep with file-stability poller (`b53e926`)
 
-- **qemu:** F-0029 honor anti_evasion profile parameter (`7f4620a`)
+- **qemu:** F-0029 honor anti_evasion profile parameter (`f507c01`)
 
-- **sandbox:** F-0001 prevent deadlock in SandboxManager.create eviction (`36a049b`)
+- **sandbox:** F-0001 prevent deadlock in SandboxManager.create eviction (`487cf82`)
 
-- **hex_editor:** F-0040 strict ASCII-printable filter in UTF-16 scanner (`5e165c2`)
+- **hex_editor:** F-0040 strict ASCII-printable filter in UTF-16 scanner (`e298271`)
 
-- **x64dbg:** Audit6 X64DBG-A — lifecycle/subprocess/platform (7 findings)  (`847750d`)
+- **x64dbg:** Audit6 X64DBG-A — lifecycle/subprocess/platform (7 findings)  (`dbe90b1`)
 Fixes Audit 6 unit X64DBG-A — F-0004, F-0011, F-0013, F-0015, F-0017, F-0018, F-0023.
 - F-0004: step coroutines wait on the plugin's `paused` event with bounded
 STEP_TIMEOUT_SECONDS instead of a fixed sleep. New `_register_step_waiter` /
@@ -1730,7 +1746,7 @@ Plugin updates in tools/x64dbg_plugin/intellicrack_bridge.{cpp,h} expose the
 paused-event hook the bridge waits on. Tests in tests/test_bridges/test_x64dbg_audit6.py
 exercise each defect via real bridge code paths.
 
-- **x64dbg:** Audit6 X64DBG-E - memory/PE/exports (F-0005/F-0019/F-0020/F-0021/F-0022)  (`f4bc5a1`)
+- **x64dbg:** Audit6 X64DBG-E - memory/PE/exports (F-0005/F-0019/F-0020/F-0021/F-0022)  (`1c4d78d`)
 - F-0005: ``find_pattern`` wildcard branch now streams each region in
 ``MAX_MEMORY_READ_SIZE`` chunks with ``len(pattern)-1`` rolling
 overlap; matches that fall outside the first 1 MiB or straddle a
@@ -1778,7 +1794,7 @@ suppressions). Regression suite (``test_x64dbg.py``,
 passed, 4 deselected (all 4 pre-existing failures unrelated to this
 unit; verified against clean main).
 
-- **ghidra:** Audit6 GHIDRA-D — parsing/xrefs/security/capability (5 findings)  (`5d1cc1c`)
+- **ghidra:** Audit6 GHIDRA-D — parsing/xrefs/security/capability (5 findings)  (`911dd68`)
 * chore(repo): untrack personal CLI launcher (config.toml + .lnk + Launcher/Scripts)
 The `CLI Coding/` folder and root `CLI Launcher.lnk` are per-user
 developer tooling, not part of the Intellicrack project. Tracking them
@@ -1789,9 +1805,9 @@ Untrack the entire `CLI Coding/` subtree and the launcher shortcut, and
 add both to `.gitignore` so future modifications stay local.
 * fix(ghidra): audit6 GHIDRA-D — parsing/xrefs/security/capability (5 findings)
 
-- **x64dbg:** Audit6 X64DBG-D - concurrency/breakpoints (7 findings)  (`8c390b2`)
+- **x64dbg:** Audit6 X64DBG-D - concurrency/breakpoints (7 findings)  (`d943a10`)
 
-- **ghidra:** Audit6 GHIDRA-C — write methods + analyze (6 findings)  (`96daf42`)
+- **ghidra:** Audit6 GHIDRA-C — write methods + analyze (6 findings)  (`8daae91`)
 Resolves the GHIDRA-C unit's six production-blocker findings on the
 ghidra bridge:
 - F-0007: ``decompile`` now raises ``ToolError`` for the function-not-
@@ -1823,7 +1839,7 @@ Adds tests/test_bridges/test_ghidra_audit6.py exercising each finding
 at the bridge boundary (fake ``remote_exec`` / ``remote_eval`` client)
 without mocking the ``_execute_remote`` dispatch.
 
-- **x64dbg:** Audit6 X64DBG-C - verification/logging/fallbacks (6 findings)  (`76cef06`)
+- **x64dbg:** Audit6 X64DBG-C - verification/logging/fallbacks (6 findings)  (`1133531`)
 Implements the X64DBG-C work unit from audit6.md, addressing F-0001
 (post-condition verification), F-0008 (structured plugin error codes),
 F-0014 (evaluate_expression failure semantics), F-0016 (logging
@@ -1860,7 +1876,7 @@ returning a degenerate "everything False" dict.
 with the explicit "x64dbg_command_queued" event name so log readers
 can tell queued events apart from verified ones.
 
-- **core/orchestrator:** Audit6 CORE-B - agent loop (6 findings)  (`3aa8bff`)
+- **core/orchestrator:** Audit6 CORE-B - agent loop (6 findings)  (`b422ff5`)
 Drives the audit6 CORE-B work unit findings to root-cause fixes with
 production-grade tests:
 - F-0001: load_session now calls SessionManager.load (sets the current
@@ -1891,7 +1907,7 @@ Orchestrator.estimate_tokens / build_system_prompt) so callers (and
 tests) can drive these code paths without reaching into private
 members.
 
-- **ghidra:** Audit6 GHIDRA-B - headless launcher/lifecycle (9 findings)  (`5379c11`)
+- **ghidra:** Audit6 GHIDRA-B - headless launcher/lifecycle (9 findings)  (`e92e6d4`)
 Resolves audit6 GHIDRA-B unit covering F-0003, F-0004, F-0009, F-0012,
 F-0013, F-0014, F-0015, F-0016, F-0019 in src/intellicrack/bridges/ghidra.py.
 Bridge script (F-0003, F-0004, F-0009, F-0019)
@@ -1925,7 +1941,7 @@ Tests
 - Real subprocess.Popen against an analyzeHeadless stub exercises drain
 threads, env scrub, and cleanup end-to-end.
 
-- **core:** Audit6 CORE-D — config/process/tools/logging (9 findings)  (`db5ba3d`)
+- **core:** Audit6 CORE-D — config/process/tools/logging (9 findings)  (`8a511a3`)
 * fix(core): audit6 CORE-D — config/process/tools/logging (9 findings)
 Fixes Audit 6 unit CORE-D — F-0010, F-0014, F-0016, F-0017, F-0018, F-0020,
 F-0021, F-0023, F-0025.
@@ -1943,7 +1959,7 @@ test_process_manager.py and test_cutter_bridge.py updated to use real OS
 PIDs (the new register_external_pid rejects synthetic PIDs).
 * fix(core): audit6 CORE-D pydoclint findings
 
-- **core/session:** Audit6 CORE-A - persistence/types (6 findings)  (`b56fdd6`)
+- **core/session:** Audit6 CORE-A - persistence/types (6 findings)  (`3cf89b7`)
 F-0006 wraps SessionManager._auto_save_loop in a try/except guard so a
 single store.save() failure no longer kills the auto-save task; the loop
 re-arms after logging the exception and only honours CancelledError to
@@ -1969,7 +1985,7 @@ Protocol bodies stay declarative, and a thread-recording fixture that
 asserts SessionManager.update runs SQLite I/O off the event loop and
 serialises concurrent writers.
 
-- **core/orchestrator:** Audit6 CORE-C - binary extraction/concurrency (4 findings)  (`11e66d6`)
+- **core/orchestrator:** Audit6 CORE-C - binary extraction/concurrency (4 findings)  (`3e1f186`)
 Address F-0003, F-0012, F-0013, F-0015 from audit6.md:
 - F-0003 / F-0015: extract_imports/extract_exports now walk imported_symbols
 and exported_symbols for ELF (not just PLT relocations) and Mach-O (which
@@ -1987,7 +2003,7 @@ Future cleanly. _request_confirmation translates CancelledError into
 False so awaiters do not leak. shutdown() additionally sets a
 _shutdown_event so confirmations requested after shutdown short-circuit.
 
-- **x64dbg:** Audit6 X64DBG-B - constants/PEB/anti-debug (4 findings)  (`3796abb`)
+- **x64dbg:** Audit6 X64DBG-B - constants/PEB/anti-debug (4 findings)  (`3a39d8a`)
 * fix(x64dbg): audit6 X64DBG-B - constants/PEB/anti-debug (4 findings)
 Addresses audit6.md F-0003, F-0024, F-0025, F-0027 in
 src/intellicrack/bridges/x64dbg.py.
@@ -2014,7 +2030,7 @@ in the file (matches lines 398 and 2303 patterns).
 distinguish "no attached process" from a real tool failure. The
 return annotation is now ProcessInfo (no Optional).
 
-- **ghidra:** Audit6 GHIDRA-A — remote_eval + dedent + read methods (7 findings) [foundation]  (`4ea9a8d`)
+- **ghidra:** Audit6 GHIDRA-A — remote_eval + dedent + read methods (7 findings) [foundation]  (`bf3ce79`)
 Foundational audit-6 fix for the ghidra bridge: every value-returning
 RPC was silently broken because `_execute_remote` dispatched through
 `remote_exec` (whose `exec()` discards trailing expression results)
@@ -2022,7 +2038,7 @@ and the inline scripts carried 16-space call-site indentation that
 would have raised `IndentationError` once the script reached the
 remote interpreter.
 
-- **ui-mainwindow:** Audit5 u5 - wire orphan signals + repair menu/handlers (F-0001/F-0002/F-0003/F-0004/F-0006/F-0007/F-0008/F-0009/F-0010/F-0011/F-0012/F-0013/F-0014/F-0015/F-0016/F-0017/F-0018/F-0019/F-0023/F-0025/F-0026)  (`cda3f93`)
+- **ui-mainwindow:** Audit5 u5 - wire orphan signals + repair menu/handlers (F-0001/F-0002/F-0003/F-0004/F-0006/F-0007/F-0008/F-0009/F-0010/F-0011/F-0012/F-0013/F-0014/F-0015/F-0016/F-0017/F-0018/F-0019/F-0023/F-0025/F-0026)  (`b9e14a5`)
 - F-0001 obsolete: HxD button already routed via _hxd_panel; clean up
 dangling add_hxd_tab fallback referencing a method that does not exist.
 - F-0002 fix Save Patched Binary by routing through get_embedded_tool
@@ -2050,7 +2066,7 @@ Bandit/clean-nul/coverage/structure/knowledge-graph hooks SKIPed:
 pre-existing infrastructure issues unrelated to this unit (out-of-scope
 file findings, missing test paths, generation hooks targeting main repo).
 
-- **hexpat-core:** Audit5 u3 - wire stdlib/evaluator hooks and missing builtins (F-0001..F-0022, F-0025, F-0027)  (`ddd405c`)
+- **hexpat-core:** Audit5 u3 - wire stdlib/evaluator hooks and missing builtins (F-0001..F-0022, F-0025, F-0027)  (`15b89ec`)
 Roots out 24 audit5 findings that left vast portions of the HexPat
 stdlib reachable only through dead code paths and shipped reflection,
 print, array-index, endian, and base-address surfaces permanently
@@ -2080,7 +2096,7 @@ WARNING.
 * compile_to_json no longer downgrades native HexPatError subclasses to
 a generic HexPatError; only ImportError is wrapped.
 
-- **bridges-cutter:** Audit5 u1 - 15 findings  (`94bb646`)
+- **bridges-cutter:** Audit5 u1 - 15 findings  (`8d05a91`)
 Drives audit5.md F-0001 through F-0032 (cutter half) to production:
 - save_binary now uses `wcf <file>` for the full IO image (F-0001),
 surfacing rizin error responses as ToolError
@@ -2110,14 +2126,14 @@ honours register-resident arguments (F-0031)
 - get_classes normalises method/field entries into stable dict shapes
 (F-0032)
 
-- **bridges-frida:** Audit5 u2 — F-0005..F-0030 (18 findings)  (`fe01518`)
+- **bridges-frida:** Audit5 u2 — F-0005..F-0030 (18 findings)  (`44424e1`)
 * fix(bridges-frida): audit5 u2 — frida_bridge findings (F-0005..F-0030)
 Drives 18 audit5 findings in src/intellicrack/bridges/frida_bridge.py to
 root-cause fixes. Each finding has a regression test under
 tests/test_audit5/u2_bridges_frida that fails on the unfixed code and passes
 after the fix.
 
-- **hexpat-aux:** Audit5 u4 - parser/preprocessor/codegen fidelity (F-0023+F-0024+F-0026+F-0028)  (`ee754c5`)
+- **hexpat-aux:** Audit5 u4 - parser/preprocessor/codegen fidelity (F-0023+F-0024+F-0026+F-0028)  (`29c1ea7`)
 * fix(hexpat-aux): audit5 u4 - parser/preprocessor/codegen fidelity (F-0023+F-0024+F-0026+F-0028)
 F-0023 (parser): Parser previously collected every recovered parse error
 into self._errors but only re-raised the first one wrapped in a fresh
@@ -2148,11 +2164,11 @@ bumps to 100) no longer abort partway through evaluation. array_limit,
 pattern_limit, and pointer_size also moved to shared module constants
 so the dataclass and preprocessor share a single source of truth.
 
-- **ui-tools:** Audit5 u6 - populate function/xref panels and wire sandbox backend (F-0005, F-0021)  (`2a1ec28`)
+- **ui-tools:** Audit5 u6 - populate function/xref panels and wire sandbox backend (F-0005, F-0021)  (`40e092a`)
 
-- **ui-confirmation:** Audit5 u9 - wire remember_similar through signal + cache (F-0020)  (`2294ae3`)
+- **ui-confirmation:** Audit5 u9 - wire remember_similar through signal + cache (F-0020)  (`0700993`)
 
-- **ui-config-paths:** Audit5 u8 - replace hardcoded D:/Intellicrack defaults (F-0024)  (`39eb976`)
+- **ui-config-paths:** Audit5 u8 - replace hardcoded D:/Intellicrack defaults (F-0024)  (`3d81cdc`)
 * fix(ui-config-paths): audit5 u8 - replace hardcoded D:/Intellicrack defaults (F-0024)
 Replace hardcoded D:/Intellicrack/tools and D:/Intellicrack/sandbox_shared
 defaults in ToolConfigDialog and SandboxConfigDialog with values derived
@@ -2163,9 +2179,9 @@ default resolution, explicit overrides, missing config files, and config
 files lacking the shared_folder key.
 * test(u8): add module docstring + copyright to test __init__ files
 
-- **ui-providerconfig:** Audit5 u7 - wire provider-specific resource links (F-0022)  (`8b44b6d`)
+- **ui-providerconfig:** Audit5 u7 - wire provider-specific resource links (F-0022)  (`816dcd7`)
 
-- **process-panel:** Audit4 B3+B7 — threads tab + workers (F-0011+0019+0026)  (`2564320`)
+- **process-panel:** Audit4 B3+B7 — threads tab + workers (F-0011+0019+0026)  (`2504369`)
 Three findings across two audit4 units:
 B3 / F-0011: ThreadsTab._on_tls used the Fiber combo's TID instead of
 its own TLS thread selector, so TLS lookups silently targeted whichever
@@ -2193,9 +2209,9 @@ Decimal edits and keeps the columns in sync (5 tests)
 prefix when ProcessManager raises (4 tests)
 All 12 tests pass; ruff/pydoclint/pydocstyle clean on all modified files.
 
-- **process-panel:** Audit4 B1 - base status+controls (F-0001+F-0002+F-0025)  (`0c10379`)
+- **process-panel:** Audit4 B1 - base status+controls (F-0001+F-0002+F-0025)  (`5e8d52e`)
 
-- **process-panel:** Audit4 B2 process tab (6 findings)  (`de421a0`)
+- **process-panel:** Audit4 B2 process tab (6 findings)  (`a32b948`)
 * fix(process-panel): audit4 resolves F-0013 F-0014 F-0015 F-0016 F-0017 F-0018
 * test(process-tab): audit4 B2 -- production-grade tests for F-0013 through F-0018
 Add 12 tests in tests/test_audit4/b2_process_tab/test_process_tab.py covering:
@@ -2211,7 +2227,7 @@ via QTimer.singleShot
 - F-0018: _on_terminate clears _attached_pid when the terminated PID equals the
 currently attached PID; does not clear it for unrelated PIDs
 
-- **sandbox-qemu:** Audit4 A3 (16 findings)  (`1c3bd18`)
+- **sandbox-qemu:** Audit4 A3 (16 findings)  (`320579c`)
 * fix(sandbox-qemu): audit4 resolves F-0002 F-0003 F-0004 F-0005 F-0006 F-0007 F-0009 F-0015 F-0016 F-0022 F-0023 F-0025 F-0028 F-0029 F-0031 F-0035
 * test(sandbox-qemu): audit4 A3 -- production-grade tests for 16 findings
 Add 29 tests in tests/test_audit4/a3_qemu_sandbox/test_qemu_sandbox.py covering
@@ -2227,9 +2243,9 @@ Fix three incomplete implementation gaps exposed by the tests:
 - yara_scan(): remove input_dir fallback scan; use empty list when no zips (F-0028)
 * fix(sandbox-qemu): route subprocess via core._subprocess wrapper, address ruff S404/S603/S607/PLR6201
 
-- **ui:** Audit4 C3 - hex data inspector F-0003/F-0011/F-0016  (`3ad3060`)
+- **ui:** Audit4 C3 - hex data inspector F-0003/F-0011/F-0016  (`c5cb838`)
 
-- **sandbox-windows:** Audit4 A4 — 15 findings (windows sandbox hardening)  (`d5546a4`)
+- **sandbox-windows:** Audit4 A4 — 15 findings (windows sandbox hardening)  (`2bab06f`)
 * fix(audit4): C10 scripting + D1 pyproject restructure (F-0020+0021+pyproject-F-0001)
 C10 / F-0020: _DocAPI.search_text hard-coded UTF-8 and ignored the panel's
 encoding combo. Fix threads the encoding through _DocAPI.__init__ so any
@@ -2262,7 +2278,7 @@ tests/test_audit4/d1_pyproject/ verify:
 Comprehensive Windows-sandbox cleanup covering 15 audit4 findings in
 src/intellicrack/sandbox/windows.py:
 
-- **audit4:** C10 scripting + D1 pyproject restructure (F-0020+0021+pyproject-F-0001)  (`8eadebc`)
+- **audit4:** C10 scripting + D1 pyproject restructure (F-0020+0021+pyproject-F-0001)  (`899222e`)
 C10 / F-0020: _DocAPI.search_text hard-coded UTF-8 and ignored the panel's
 encoding combo. Fix threads the encoding through _DocAPI.__init__ so any
 encoding the panel exposes (UTF-8, latin-1, cp1252, etc.) reaches the
@@ -2291,29 +2307,29 @@ tests/test_audit4/d1_pyproject/ verify:
 - pyproject.toml remains a valid TOML doc under the active interpreter
 19 tests pass; ruff/basedpyright/pydoclint/pydocstyle clean.
 
-- **hex-editor:** Audit4 C12 — sandbox bridge route (F-0006+0018+0019)  (`3d80cb7`)
+- **hex-editor:** Audit4 C12 — sandbox bridge route (F-0006+0018+0019)  (`20aa851`)
 Replace direct subprocess/shutil.copy2 calls in the hex editor sandbox
 tab with SandboxBridge.copy_to() and SandboxBridge.execute() routed
 through run_bridge_coroutine_async on the persistent bridge event loop,
 eliminating the per-call asyncio.new_event_loop() anti-pattern.
 
-- **hex-editor:** Audit4 C8 (F-0023) -- offload signature scan from UI thread  (`47642d1`)
+- **hex-editor:** Audit4 C8 (F-0023) -- offload signature scan from UI thread  (`8cc1ff7`)
 Root cause: _on_scan_signatures called document.read(0, doc_len) on the Qt
 main thread before launching GenericCallableWorker, materialising the entire
 binary in Python heap synchronously and freezing the UI for large files.
 
-- **hex-editor:** Audit4 C16 - selection+dispatch (F-0004/F-0010/F-0024)  (`9c29484`)
+- **hex-editor:** Audit4 C16 - selection+dispatch (F-0004/F-0010/F-0024)  (`5dd2622`)
 
-- **process-panel:** Audit4 B5 — modules tab (F-0004+0024)  (`69299ac`)
+- **process-panel:** Audit4 B5 — modules tab (F-0004+0024)  (`51f8350`)
 
-- **hex-editor:** Audit4 C6 (F-0003 hashing, F-0022) — notify + offload+stream CRC  (`8651185`)
+- **hex-editor:** Audit4 C6 (F-0003 hashing, F-0022) — notify + offload+stream CRC  (`3daf281`)
 HashingMixin had two production gaps:
 F-0003 (hashing portion): _on_repair_pe_checksum overwrote the PE
 CheckSum field but never published notify_data_modified. AI tools and
 peer GUIs continued to display the stale checksum until something else
 forced a refresh.
 
-- **hex-editor:** Audit4 C5 (F-0003 templates+pattern, F-0012, F-0017)  (`293bced`)
+- **hex-editor:** Audit4 C5 (F-0003 templates+pattern, F-0012, F-0017)  (`a140e0e`)
 TemplatesMixin and PatternEditorMixin both skipped state-holder events
 on user-driven mutations. AI tools and peer GUIs analysed stale state
 after a GUI template apply / import / remove or a pattern execution.
@@ -2329,7 +2345,7 @@ and calls them from _on_apply_template, _on_import_template,
 _on_remove_template, _bookmark_pe_structure, _bookmark_pe_sections,
 and _bookmark_elf_structure.
 
-- **hex-editor:** Audit4 C13 (F-0007) — route export/import patches through bridge  (`b9f30fd`)
+- **hex-editor:** Audit4 C13 (F-0007) — route export/import patches through bridge  (`00f7435`)
 PatchesMixin._on_export_patches and _on_import_patches previously called
 document.export_patches_* and document.import_patches_* directly. The
 bridge's export_patches/import_patches methods exist precisely so the
@@ -2359,7 +2375,7 @@ hex widget viewport exactly once
 All 6 tests pass; ruff/basedpyright/pydoclint/pydocstyle clean on the
 modified files.
 
-- **hex-editor:** Audit4 C11 (F-0005) — route open_process_memory through bridge  (`1a8c529`)
+- **hex-editor:** Audit4 C11 (F-0005) — route open_process_memory through bridge  (`51a8440`)
 ProcessMemoryMixin._on_open_process_memory previously called
 HexDocument.from_process_memory directly and assigned the result to
 self.document. The bridge's own document attribute, binary_loaded state,
@@ -2384,7 +2400,7 @@ Tests under tests/test_audit4/c11_hex_process_memory/ verify:
 All 5 tests pass; ruff/basedpyright/pydoclint/pydocstyle clean on the
 modified files.
 
-- **hex-editor:** Audit4 C9 (F-0013) — debounce follow-cursor disassembly  (`bc54a7c`)
+- **hex-editor:** Audit4 C9 (F-0013) — debounce follow-cursor disassembly  (`ad45294`)
 DisassemblyMixin._on_cursor_moved_disasm previously called _on_disassemble
 synchronously on every cursor move. Holding an arrow key streams hundreds
 of cursor events per second, each becoming a bridge disassemble call; the
@@ -2409,33 +2425,33 @@ dispatch and clears the parked offset
 All 6 tests pass; ruff/basedpyright/pydoclint/pydocstyle clean on the
 modified files.
 
-- **hex-editor:** Audit4 C15 (F-0009) — diff snapshot tempfile cleanup  (`ff7c739`)
+- **hex-editor:** Audit4 C15 (F-0009) — diff snapshot tempfile cleanup  (`37e9971`)
 ComparisonMixin._on_compare wrote the in-memory document snapshot to
 tempfile.NamedTemporaryFile(..., delete=False) and never deleted it. Every
 diff against an unsaved buffer leaked a file in the user's temp directory.
 
-- **hex-editor:** Audit4 resolves F-0003 (bookmarks slice)  (`cacfae5`)
+- **hex-editor:** Audit4 resolves F-0003 (bookmarks slice)  (`1231b6c`)
 
-- **hex-editor:** Audit4 resolves F-0003 (transforms slice)  (`ccd0831`)
+- **hex-editor:** Audit4 resolves F-0003 (transforms slice)  (`e842031`)
 
-- **hex-editor:** Audit4 resolves F-0002 F-0015  (`dbbd13a`)
+- **hex-editor:** Audit4 resolves F-0002 F-0015  (`b20831c`)
 
-- **hex-editor:** Audit4 resolves F-0001 F-0014  (`0a6d32a`)
+- **hex-editor:** Audit4 resolves F-0001 F-0014  (`3cb044d`)
 
-- **process-panel:** Audit4 resolves F-0020 F-0021 F-0022 F-0023  (`2747027`)
+- **process-panel:** Audit4 resolves F-0020 F-0021 F-0022 F-0023  (`67f0acf`)
 
-- **ui:** Audit4 B4 - MemoryTab F-0003/F-0005/F-0006/F-0007/F-0008/F-0009  (`9920b92`)
+- **ui:** Audit4 B4 - MemoryTab F-0003/F-0005/F-0006/F-0007/F-0008/F-0009  (`b9635db`)
 * fix(ui): audit4 B4 - MemoryTab F-0003/F-0005/F-0006/F-0007/F-0008/F-0009
 
-- **hex-editor:** Audit4 C14 resolves F-0008 (remove dead _ips module)  (`380434e`)
+- **hex-editor:** Audit4 C14 resolves F-0008 (remove dead _ips module)  (`256eee8`)
 
-- **sandbox-analysis:** Audit4 A2 resolves F-0026 (hostname pattern over-broad)  (`7a5f434`)
+- **sandbox-analysis:** Audit4 A2 resolves F-0026 (hostname pattern over-broad)  (`62860fe`)
 
-- **sandbox-manager:** Audit4 A1 resolves F-0024+F-0032 (availability caching)  (`a69647a`)
+- **sandbox-manager:** Audit4 A1 resolves F-0024+F-0032 (availability caching)  (`148f6f9`)
 
-- **sandbox:** Audit3 U7 - kernel+start monitors (F-0010 F-0021 F-0022 F-0023 F-0024 F-0025)  (`9da1dcf`)
+- **sandbox:** Audit3 U7 - kernel+start monitors (F-0010 F-0021 F-0022 F-0023 F-0024 F-0025)  (`e707ef6`)
 
-- **ui:** Audit3 U11 - sandbox panel + vnc widget  (`89e7925`)
+- **ui:** Audit3 U11 - sandbox panel + vnc widget  (`cfb2e30`)
 * fix(ui): audit3 U11 - sandbox panel + vnc widget (F-0002 F-0003 F-0004 F-0007 F-0008)
 * fix(vnc): replace zlib._Decompress with local Protocol and fix scanLine bytes conversion
 - Define a structural Protocol mirroring zlib.decompressobj()'s public surface to
@@ -2449,7 +2465,7 @@ _zrle_decode_packed_palette into a single line per ruff style.
 Reduces basedpyright errors in vnc_widget.py from 6 to baseline 2 with no
 new findings introduced.
 
-- **core:** Audit3 U10 - disassembler+_xml_gen (F-0002 F-0009 F-0011)  (`9fa6af9`)
+- **core:** Audit3 U10 - disassembler+_xml_gen (F-0002 F-0009 F-0011)  (`d740c16`)
 * fix(core): audit3 U10 - disassembler+_xml_gen (F-0002 F-0009 F-0011)
 * test(audit3): add U10 regression tests + restructure xml_gen S405 fix
 Drops misplaced U9 test files (test_analysis_aggregator.py +
@@ -2468,9 +2484,9 @@ small helper, with TYPE_CHECKING-only imports for annotation typing.
 The audit boundary remains statically grep-able (F-0011 regression
 guard still passes) and no security-rule suppression is added.
 
-- **ui:** Audit3 U13 - wire HxDPanel through panels package and MainWindow (F-0001)  (`0de7136`)
+- **ui:** Audit3 U13 - wire HxDPanel through panels package and MainWindow (F-0001)  (`57165ba`)
 
-- **core:** Audit3 U9 - aggregator+template (F-0005 F-0008 F-0015)  (`d7cede6`)
+- **core:** Audit3 U9 - aggregator+template (F-0005 F-0008 F-0015)  (`f4fac55`)
 * fix(core): audit3 U9 - aggregator+template (F-0005 F-0008 F-0015)
 * test(audit3): U9 aggregator+template tests for F-0005 F-0008 F-0015
 Drop the misfiled test_disassembler.py and test_xml_gen.py (which
@@ -2494,7 +2510,7 @@ exactly once at the final catch site, while the non-re-raise site in
 ``_bootstrap_single_template`` uses ``logger.exception`` to attach
 the traceback to the failure event.
 
-- **sandbox:** Audit3 U4 - resource+service monitors (F-0005..F-0009)  (`b00837c`)
+- **sandbox:** Audit3 U4 - resource+service monitors (F-0005..F-0009)  (`01b9fcb`)
 * fix(sandbox): audit3 U4 - resource+service monitors (F-0005 F-0006 F-0007 F-0008 F-0009)
 * fix(tests): audit3 U4 verification fixes (CRLF init, type narrowing)
 Resolves reviewer findings on PR #303:
@@ -2506,7 +2522,7 @@ isinstance(obj, dict), explicitly cast to dict[object, object] and
 build a typed dict[str, object] from its items so basedpyright stops
 reporting reportUnknownArgumentType at records.append.
 
-- **core:** Audit3 U8 - script_gen.py 9 findings  (`4db9b48`)
+- **core:** Audit3 U8 - script_gen.py 9 findings  (`72a2814`)
 * fix(core): audit3 U8 - script_gen.py 9 findings (F-0001 F-0003 F-0004 F-0006 F-0007 F-0010 F-0012 F-0013 F-0014)
 * fix(audit3 u8): resolve verification failures on script_gen branch
 - Format tests/test_audit3/__init__.py via ruff format
@@ -2515,7 +2531,7 @@ reporting reportUnknownArgumentType at records.append.
 - Document LANGUAGE_API_MAP ClassVar in ScriptContext docstring (DOC601/DOC603)
 - Re-raise TimeoutExpired explicitly in ScriptManager.execute so the documented contract matches the body (DOC503)
 
-- **ui:** Audit3 U12 - ghidra panel + script_manager template  (`d2d6c0e`)
+- **ui:** Audit3 U12 - ghidra panel + script_manager template  (`a98bb8d`)
 * fix(ui): audit3 U12 - ghidra panel + script_manager template (F-0005 F-0006)
 * fix(audit3): resolve verification failures on ghidra+script branch
 - conftest.py: top-level PyQt6 import (PLC0415), Iterator return for fixture
@@ -2532,16 +2548,16 @@ files; basedpyright clean on tests/test_audit3/ui/. The remaining
 basedpyright PyQt6 stub-level findings on ghidra_panel.py and
 script_manager.py are pre-existing and unchanged by this commit.
 
-- **named-pipe:** Audit3 U2 - named_pipe_client.py 16 findings (F-0010 F-0013 F-0014 F-0015 F-0016 F-0017 F-0019 F-0020 F-0021 F-0023 F-0024 F-0029 F-0032 F-0039 F-0040 F-0042)  (`baad9cc`)
+- **named-pipe:** Audit3 U2 - named_pipe_client.py 16 findings (F-0010 F-0013 F-0014 F-0015 F-0016 F-0017 F-0019 F-0020 F-0021 F-0023 F-0024 F-0029 F-0032 F-0039 F-0040 F-0042)  (`c02afed`)
 
-- **sandbox:** Audit3 U5 - api_trace.ps1 (F-0011 F-0012 F-0013 F-0014)  (`05ca500`)
+- **sandbox:** Audit3 U5 - api_trace.ps1 (F-0011 F-0012 F-0013 F-0014)  (`f0aef79`)
 
-- **installer:** Audit3 U1 — installer.py 28 findings (F-0001 F-0002 F-0003 F-0004 F-0005 F-0006 F-0007 F-0008 F-0009 F-0011 F-0012 F-0018 F-0022 F-0025 F-0026 F-0027 F-0028 F-0030 F-0031 F-0033 F-0034 F-0035 F-0036 F-0037 F-0038 F-0041 F-0043 F-0044)  (`95c2ab9`)
+- **installer:** Audit3 U1 — installer.py 28 findings (F-0001 F-0002 F-0003 F-0004 F-0005 F-0006 F-0007 F-0008 F-0009 F-0011 F-0012 F-0018 F-0022 F-0025 F-0026 F-0027 F-0028 F-0030 F-0031 F-0033 F-0034 F-0035 F-0036 F-0037 F-0038 F-0041 F-0043 F-0044)  (`c0858e2`)
 Resolves all 28 audit3 findings against bridges-installer.
 
-- **sandbox:** Audit3 U6 - dll+injection monitors (F-0015 F-0016 F-0017 F-0018 F-0019 F-0020)  (`1b1cb2f`)
+- **sandbox:** Audit3 U6 - dll+injection monitors (F-0015 F-0016 F-0017 F-0018 F-0019 F-0020)  (`1427ace`)
 
-- **sandbox:** Audit3 U3 — clipboard_monitor.ps1 (F-0001 F-0002 F-0003 F-0004)  (`bb042fc`)
+- **sandbox:** Audit3 U3 — clipboard_monitor.ps1 (F-0001 F-0002 F-0003 F-0004)  (`6de3a64`)
 Restructure clipboard_monitor.ps1 so failures are visible and the
 fallback path is reachable.
 * F-0001: extract the polling fallback into Invoke-FallbackPolling and
@@ -2565,7 +2581,7 @@ exercising the script under pwsh against the real Windows clipboard,
 including the structured-error fallback path triggered by injecting an
 invalid C# source for Add-Type.
 
-- **bridges:** Rework audit2 Units 1/4/10 (14 findings, F-0013/0027/0029/0030/0031/0035/0038/0043/0044/0045)  (`0ce22c1`)
+- **bridges:** Rework audit2 Units 1/4/10 (14 findings, F-0013/0027/0029/0030/0031/0035/0038/0043/0044/0045)  (`1b4977c`)
 Verification of audit2 against current main found 14 findings still open
 on three units that earlier PRs had not fully addressed. This commit
 reworks every one to match the audit's "Production-ready behavior".
@@ -2638,11 +2654,11 @@ correctly detected and the test skips that environment.
 Lint clean: ruff, basedpyright, pydoclint, pydocstyle. No suppression
 directives. No pyproject.toml or pixi.lock modifications.
 
-- **bridges:** Resolve audit2 F-0008/0009/0024/0025/0041/0042 (process-stack-seh-symbols-context)  (`932c923`)
+- **bridges:** Resolve audit2 F-0008/0009/0024/0025/0041/0042 (process-stack-seh-symbols-context)  (`5ea1cba`)
 
-- **bridges:** Resolve audit2 F-0001/F-0029/F-0044/F-0045 (process-init-lifecycle-logging)  (`a94b776`)
+- **bridges:** Resolve audit2 F-0001/F-0029/F-0044/F-0045 (process-init-lifecycle-logging)  (`2a49737`)
 
-- **process:** Audit2 F-0010/F-0020/F-0047/F-0048 (modules/threads/inject)  (`464e896`)
+- **process:** Audit2 F-0010/F-0020/F-0047/F-0048 (modules/threads/inject)  (`014b9ba`)
 F-0010 inject_dll:
 - Use LoadLibraryW with UTF-16-LE path encoding
 - Validate WaitForSingleObject return (WAIT_FAILED/TIMEOUT/OBJECT_0)
@@ -2670,7 +2686,7 @@ CONTEXT struct
 owner_pid and route through _pid_is_wow64 when supplied
 - Stack-walking keeps _target_is_wow64 (operates on attached _process_handle)
 
-- **bridges:** Correct PEB/TEB struct sizes, TLS array offsets, env block reads, WOW64 detection (audit F-0011/F-0012/F-0021/F-0022/F-0028/F-0033/F-0034/F-0046)  (`9a961cf`)
+- **bridges:** Correct PEB/TEB struct sizes, TLS array offsets, env block reads, WOW64 detection (audit F-0011/F-0012/F-0021/F-0022/F-0028/F-0033/F-0034/F-0046)  (`1b865d4`)
 - F-0034: _target_is_64bit/_target_is_wow64 raise ToolError when both WOW64 APIs unavailable
 - F-0011: read_peb uses ctypes.sizeof(_PEB64/_PEB32), not fixed 0x100 buffer; adds PEB/TEB ctypes structs
 - F-0028: read_teb opens its own process handle from NtQueryInformationThread ClientId
@@ -2678,7 +2694,7 @@ owner_pid and route through _pid_is_wow64 when supplied
 - F-0033: _read_env_block uses full EnvironmentSize, no 64 KiB cap
 - F-0012/F-0046: _extract_env_pointer uses correct offsets 0x80/0x3F0 (x64, uint64) and 0x48/0x290 (x86, uint32)
 
-- **bridges:** Process-com-dotnet audit findings F-0036 F-0014 F-0032 F-0015  (`eb23ab7`)
+- **bridges:** Process-com-dotnet audit findings F-0036 F-0014 F-0032 F-0015  (`c9e83f4`)
 - enumerate_com_servers raises ToolError("advapi32 not available") when
 advapi32 is None instead of returning empty list (F-0036)
 - blocking HKCR\CLSID walk moved to _enumerate_com_servers_sync();
@@ -2704,7 +2720,7 @@ asserts InprocServer32 and LocalServer32 both returned
 - TestF0015DotnetByCor20Header: CPython=unmanaged; spawns .NET host if
 available to confirm managed=True detection
 
-- **audit1:** All 7 units consolidated (88 findings + 1 escalated)  (`055758d`)
+- **audit1:** All 7 units consolidated (88 findings + 1 escalated)  (`17d21c8`)
 * wip(audit1/hex-editor-top): preserve agent progress before resume
 * wip(audit1/hex-editor-bottom): preserve agent progress before resume
 * wip(audit1/hex-state): preserve agent progress before resume
@@ -2773,16 +2789,16 @@ calls super().shutdown() like the other six concrete bridges.
 Adds tests/test_audit1/test_bridges_core.py with 21 red/green tests.
 * fix(audit1/hexcore): add Python-side swap_blocks length check + audit1 tests
 
-- **process:** Resolve F-0002 F-0003 F-0019 F-0040 audit findings  (`eab6475`)
+- **process:** Resolve F-0002 F-0003 F-0019 F-0040 audit findings  (`d1ac865`)
 
-- **bridges:** Fix pipe/device handle validation, close reporting, IOCTL hex I/O (audit F-0016/17/18/26/37)  (`1a0bc19`)
+- **bridges:** Fix pipe/device handle validation, close reporting, IOCTL hex I/O (audit F-0016/17/18/26/37)  (`ac4366d`)
 - Set CreateFileW.restype=wintypes.HANDLE and compare against INVALID_HANDLE_VALUE for pipe_connect and device_open (F-0017)
 - Set CloseHandle.restype=wintypes.BOOL in pipe_close/device_close, raise ToolError on failure instead of silently returning True (F-0016, F-0026)
 - Change device_ioctl to accept hex-string input_data, validate with re.fullmatch, raise ValueError on invalid input (F-0018)
 - Return bytes.hex() from pipe_read and device_ioctl per tool definitions (F-0037)
 - Add tests: TestF0017PipeHandleType, TestF0017DeviceHandleType, TestF0016PipeCloseResult, TestF0016DeviceCloseResult, TestF0018DeviceIoctlHexInput, TestF0037PipeReadHex, TestF0037DeviceIoctlOutputHex
 
-- **sandbox-bridge:** Resolve audit findings F-0001 through F-0016  (`365af1c`)
+- **sandbox-bridge:** Resolve audit findings F-0001 through F-0016  (`520e746`)
 * wip(sandbox): F-0001 to F-0016 all fixes applied to sandbox_bridge + qemu public accessors
 * fix(sandbox-bridge): ruff compliance and test coverage for F-0001 to F-0016
 - Rename _json_safe and _dataclass_to_dict to public names (json_safe, dataclass_to_dict)
@@ -2823,12 +2839,12 @@ public path: shutdown() then assert ensure_manager() raises ToolError.
 All 65 tests pass; ruff/pydoclint/pydocstyle clean; basedpyright shows only
 pre-existing structlog Unknown-type issues present across all bridges.
 
-- **bridges:** Resolve audit2 process F-0006/F-0007/F-0037/F-0038/F-0039 (memory/sections)  (`81c910d`)
+- **bridges:** Resolve audit2 process F-0006/F-0007/F-0037/F-0038/F-0039 (memory/sections)  (`908d38e`)
 
-- **providers:** Resolve audit2 providers F-0001..F-0024  (`2bcf2c7`)
+- **providers:** Resolve audit2 providers F-0001..F-0024  (`a08278d`)
 * fix(providers): resolve audit2 providers F-0001..F-0024 (registry/discovery)
 
-- **bridges:** Process control suspend/service audit fixes (F-0004/F-0005/F-0023/F-0026)  (`24f4e8a`)
+- **bridges:** Process control suspend/service audit fixes (F-0004/F-0005/F-0023/F-0026)  (`91c51fe`)
 * wip: fix F-0004/F-0005/F-0023/F-0026 process control audit findings
 * fix: resolve service enumeration AV and use ENUM_SERVICE_STATUS_PROCESSW struct
 - Add proper argtypes/restype to OpenSCManagerW, EnumServicesStatusExW, and
@@ -2838,51 +2854,51 @@ ENUM_SERVICE_STATUS_PROCESSW struct cast — ctypes handles the LPWSTR
 pointer dereferences correctly.
 - Import ENUM_SERVICE_STATUS_PROCESSW; remove now-unused SERVICE_STATUS_PROCESS.
 
-- **semgrep-logging:** Bridges-process-rest  (`271f5a0`)
+- **semgrep-logging:** Bridges-process-rest  (`5800ddc`)
 Resolves semgrep-logging findings in src/intellicrack/bridges/ process/frida/ghidra/etc. FP_REPORT-bridges-process-rest.md committed at worktree root.
 
-- **semgrep-logging:** Bridges-base-cutter  (`d40dc82`)
+- **semgrep-logging:** Bridges-base-cutter  (`b6a67d7`)
 Resolves semgrep-logging findings in src/intellicrack/bridges/base.py and adjacent. FP_REPORT-bridges-base-cutter.md committed at worktree root.
 
-- **semgrep-logging:** Credentials  (`e95c054`)
+- **semgrep-logging:** Credentials  (`643d58f`)
 Resolves semgrep-logging findings in src/intellicrack/credentials/. FP_REPORT-credentials.md committed at worktree root.
 
-- **semgrep-logging:** Ui-process-panel  (`82390c9`)
+- **semgrep-logging:** Ui-process-panel  (`a71467f`)
 Resolves semgrep-logging findings in src/intellicrack/ui/panels/process_panel/. FP_REPORT-ui-process-panel.md committed at worktree root.
 
-- **semgrep-logging:** Ui-hex-panels  (`46ebb0e`)
+- **semgrep-logging:** Ui-hex-panels  (`c46ad81`)
 Resolves semgrep-logging findings in src/intellicrack/ui/panels/hex_editor/. FP_REPORT-ui-hex-panels.md committed at worktree root.
 
-- **semgrep-logging:** Ui-panels-toplevel  (`9be0c52`)
+- **semgrep-logging:** Ui-panels-toplevel  (`9c6be1a`)
 Resolves semgrep-logging findings in src/intellicrack/ui/panels/. FP_REPORT-ui-panels-toplevel.md committed at worktree root.
 
-- **semgrep-logging:** Bridges-hex-editor  (`81a48ad`)
+- **semgrep-logging:** Bridges-hex-editor  (`d0e6af4`)
 Resolves semgrep-logging findings in src/intellicrack/bridges/hex_editor.py. FP_REPORT-bridges-hex-editor.md committed at worktree root.
 
-- **semgrep-logging:** Ui-toplevel  (`b1fbbf5`)
+- **semgrep-logging:** Ui-toplevel  (`3d80be7`)
 Resolves semgrep-logging findings in src/intellicrack/ui/. FP_REPORT-ui-toplevel.md committed at worktree root.
 
-- **semgrep-logging:** Main-entry  (`2ec8641`)
+- **semgrep-logging:** Main-entry  (`af52aca`)
 Resolves semgrep-logging findings in src/intellicrack/main.py and __main__.py. FP_REPORT-main-entry.md committed at worktree root.
 
-- **semgrep-logging:** Core-toplevel  (`9f656b5`)
+- **semgrep-logging:** Core-toplevel  (`58d25f2`)
 Resolves semgrep-logging findings in src/intellicrack/core/. FP_REPORT-core-toplevel.md committed at worktree root.
 
-- **semgrep-logging:** Providers  (`0e15b3b`)
+- **semgrep-logging:** Providers  (`3b3201e`)
 Resolves semgrep-logging findings in src/intellicrack/providers/. FP_REPORT-providers.md committed at worktree root.
 
-- **semgrep-logging:** Core-hexpat  (`fb862f3`)
+- **semgrep-logging:** Core-hexpat  (`ff003bb`)
 Resolves semgrep-logging findings in src/intellicrack/core/hexpat/. FP_REPORT-core-hexpat.md committed at worktree root.
 
-- **semgrep-logging:** Sandbox  (`b36b4ce`)
+- **semgrep-logging:** Sandbox  (`70bf5db`)
 Resolves semgrep-logging findings in src/intellicrack/sandbox/. FP_REPORT-sandbox.md committed at worktree root.
 
-- **semgrep-logging:** Bridges/x64dbg.py  (`8895738`)
+- **semgrep-logging:** Bridges/x64dbg.py  (`39a1858`)
 Resolves 77 findings in src/intellicrack/bridges/x64dbg.py.
 Rules touched: a3-get-logger-requires-dunder-name, a4-module-uses-undefined-self-logger, b9-event-name-redundant-with-level, c2-missing-function-context-kwargs, c3-reserved-logrecord-key, c5-exception-call-outside-except, d1-silent-except-block, d3-except-continue, d5-raise-without-preceding-log, d6-bridge-method-no-entry-log, e2-debug-inside-except, e6-debug-on-destructive-op, f5-logging-raw-bytes-payload, h5-init-without-completion-log.
 FP_REPORT.md committed with 0 flagged FPs.
 
-- **semgrep-logging:** Rule-design adjustments to eliminate ~125 false positives  (`c392f97`)
+- **semgrep-logging:** Rule-design adjustments to eliminate ~125 false positives  (`451f7c3`)
 * chore: untrack gitignored artifacts and drop git-add from generator hooks
 Remove `git add` from `generate-structure-files` and `generate-knowledge-graph`
 pre-commit entries so they regenerate locally without conflicting with
@@ -2925,9 +2941,9 @@ Pre-fix code still triggers findings (120 on original hex_editor.py),
 proving rules retain enforcement on un-logged operations.
 Also includes a follow-on path fix to .pre-commit-config.yaml updating
 intellicrack/ -> src/intellicrack/ in scoped hook patterns and bandit
-arguments, completing the project-layout cleanup begun in 42178c63.
+arguments, completing the project-layout cleanup begun in f0398bf1.
 
-- **providers+credentials:** Remediate audit items C4, C5, C10, C11, C12, C13, C14, C15, C16, C17, C19, C29, C30, C31, C32, C33 (`32eb78e`)
+- **providers+credentials:** Remediate audit items C4, C5, C10, C11, C12, C13, C14, C15, C16, C17, C19, C29, C30, C31, C32, C33 (`9ea97eb`)
 Squash merge of worktree-agent-aeee6cf169ee4fc8b (Group C).
 - C4: google.chat_stream uses native client.aio.models.generate_content_stream.
 - C5: _current_task assigned in google chat/chat_stream for cancel_request.
@@ -2952,7 +2968,7 @@ PKCE configs; OpenAI documented as no-public-OAuth.
 reads self.server.<attr> instead of class-level globals.
 - C33: revoke_token returns combined success of API revocation and keyring delete.
 
-- **bridges:** Remediate audit items A1, A9, A14, A18, A21, A26, A32, A33, A35, A41, A44, A45, A46, A48, A52 (`7f8e10a`)
+- **bridges:** Remediate audit items A1, A9, A14, A18, A21, A26, A32, A33, A35, A41, A44, A45, A46, A48, A52 (`06553b1`)
 Squash merge of worktree-agent-aabbb8be77c439b39 (Group A).
 - A1: defer ghidra state.connected/binary_loaded updates until after metadata
 extraction; on failure set binary_loaded=False, target_path=None, last_error.
@@ -2988,7 +3004,7 @@ original_path source.
 before nulling self.document.
 - A52: remove Python fallback in search_numeric; hexcore native path only.
 
-- **core+hexpat:** Remediate audit items B12, B18, B21, B22, B24, B25 (`86f6f4f`)
+- **core+hexpat:** Remediate audit items B12, B18, B21, B22, B24, B25 (`db343ad`)
 Squash merge of worktree-agent-ab0a24d9a626e051b (Group B).
 - B12: main.py now forwards config.logs_directory to setup_logging via log_dir
 kwarg. _SetupLoggingFn Protocol preserves keyword-arg type fidelity.
@@ -3002,61 +3018,61 @@ constructs TemplateManager and runs bootstrap_builtins on a headless
 HexDocument. MainWindow gains set_script_generator and set_template_manager.
 TemplateBootstrapError handled explicitly.
 
-- Improve ghidra error handling and logging initialization (`461d962`)
+- Improve ghidra error handling and logging initialization (`d68c9c2`)
 Refactor the Ghidra bridge to ensure state consistency by deferring status updates until after successful metadata extraction. This prevents the system from reporting a loaded binary if the subsequent analysis phase fails.
 * Update Ghidra bridge to raise ToolError on metadata extraction failure and rollback state
 * Fix type signature and call site for logging setup to correctly pass the log directory
 * Replace legacy fix tracking with formal remediation audit results
 
-- **ui/ghidra_panel:** Dataclass program info, scoped refresh errors, non-empty xrefs, JSON analyzer options, batched comments (E31,E33-E37g,E41) (`765b774`)
+- **ui/ghidra_panel:** Dataclass program info, scoped refresh errors, non-empty xrefs, JSON analyzer options, batched comments (E31,E33-E37g,E41) (`0c17eb3`)
 
-- **ui/hex/widget+highlighting+search:** Pattern offsets via search_hex, lazy color caches, clamp status, drop dead except (E61,E64,E65,E68) (`15ddad1`)
+- **ui/hex/widget+highlighting+search:** Pattern offsets via search_hex, lazy color caches, clamp status, drop dead except (E61,E64,E65,E68) (`55ef65b`)
 
-- **ui/hex/_transforms:** Route transforms + block ops through hexcore document (E55,E56) (`a1d3d45`)
+- **ui/hex/_transforms:** Route transforms + block ops through hexcore document (E55,E56) (`fa4fabd`)
 
-- **ui/hex/_hashing:** Delegate hash + PE checksum to hexcore document (E59,E60) (`d895193`)
+- **ui/hex/_hashing:** Delegate hash + PE checksum to hexcore document (E59,E60) (`9b50c29`)
 
-- **ui/hxd_panel:** Poll for HxD HWND and embed via win32 reparenting (E66) (`1f84c07`)
+- **ui/hxd_panel:** Poll for HxD HWND and embed via win32 reparenting (E66) (`2497af9`)
 
-- **ui/cutter_tabs:** Logged error callback for every cutter refresh (E38) (`23fb6f5`)
+- **ui/cutter_tabs:** Logged error callback for every cutter refresh (E38) (`3b6552f`)
 
-- **ui/stack_viewer:** Instance-method Protocol + async get_stack_trace + state.is_ready/process_attached (E42-E45) (`29dca69`)
+- **ui/stack_viewer:** Instance-method Protocol + async get_stack_trace + state.is_ready/process_attached (E42-E45) (`690cba9`)
 
-- **ui/tools+panel_dock+highlighter:** Sandbox_panel key, safe findChild, SSE/AVX/FPU ops, detached window cleanup (E23,E24,E27,E28,E30) (`fe9f571`)
+- **ui/tools+panel_dock+highlighter:** Sandbox_panel key, safe findChild, SSE/AVX/FPU ops, detached window cleanup (E23,E24,E27,E28,E30) (`831e69b`)
 
-- **ui/sandbox_panel:** Populate instances tree + real snapshot row metadata (E72,E75) (`9474174`)
+- **ui/sandbox_panel:** Populate instances tree + real snapshot row metadata (E72,E75) (`f782b03`)
 
-- **ui/process_panel:** Relabel whole-process suspend/resume + wire SystemTab thread list (E73,E74) (`ec61f0d`)
+- **ui/process_panel:** Relabel whole-process suspend/resume + wire SystemTab thread list (E73,E74) (`a18796d`)
 
-- **ui/hex/_comparison:** Route byte-diff through HexEditorBridge.compare_files (E54) (`bbb470c`)
+- **ui/hex/_comparison:** Route byte-diff through HexEditorBridge.compare_files (E54) (`eda22a2`)
 
-- **ui/hex/_sections:** Route string extraction through hexcore extract_strings (E51) (`d19b9b9`)
+- **ui/hex/_sections:** Route string extraction through hexcore extract_strings (E51) (`e963d53`)
 
-- **ui/xpu_status:** Type XPUDeviceInfo via TYPE_CHECKING import (E29) (`b9c0304`)
+- **ui/xpu_status:** Type XPUDeviceInfo via TYPE_CHECKING import (E29) (`36aff3e`)
 
-- **ui/vnc_widget:** RFB VNCAuth DES + bulk raw rect blit + async pumping (E69,E70,E71) (`ac7ea3f`)
+- **ui/vnc_widget:** RFB VNCAuth DES + bulk raw rect blit + async pumping (E69,E70,E71) (`52be5f5`)
 
-- **ui/hex/_scripting:** AST-walker sandbox blocks attribute chains + gated writes (E67) (`e103f03`)
+- **ui/hex/_scripting:** AST-walker sandbox blocks attribute chains + gated writes (E67) (`78c0ee4`)
 
-- **ui/hex/_data_inspector:** Hexcore bit/text codecs + list_encodings combo (E57,E58,E63) (`e0935f4`)
+- **ui/hex/_data_inspector:** Hexcore bit/text codecs + list_encodings combo (E57,E58,E63) (`ac834b5`)
 
-- **ui/hex/_patches:** Route IPS/BPS/UPS through hexcore (E52,E53) (`f2d8d32`)
+- **ui/hex/_patches:** Route IPS/BPS/UPS through hexcore (E52,E53) (`b1ade2e`)
 
-- **ui/script_manager:** Set_language wires highlighter + rename dedup + execute dispatch (E46,E47,E48) (`1dba35a`)
+- **ui/script_manager:** Set_language wires highlighter + rename dedup + execute dispatch (E46,E47,E48) (`65cd63c`)
 
-- **ui/win32_embed:** Correct HWND handling and ctypes annotations (E25,E26) (`3387086`)
+- **ui/win32_embed:** Correct HWND handling and ctypes annotations (E25,E26) (`7ec3b96`)
 
-- **ui/async_bridge:** Event sentinel prevents duplicate loop under parallel ensure (E76) (`789efd0`)
+- **ui/async_bridge:** Event sentinel prevents duplicate loop under parallel ensure (E76) (`68436bf`)
 
-- **ui/frida_panel:** Persistent script handle + stalker invalid tid (E49,E50) (`22b99e8`)
+- **ui/frida_panel:** Persistent script handle + stalker invalid tid (E49,E50) (`55fbdc4`)
 
-- **ui/cutter_panel:** Address parse, error status, decompile stale guard, empty xrefs (E32,E34,E35,E37) (`3686c47`)
+- **ui/cutter_panel:** Address parse, error status, decompile stale guard, empty xrefs (E32,E34,E35,E37) (`cb883e7`)
 
-- **providers:** Rename _connected -> connected, add usage/thinking buffers, OpenAI-compat error mapping (C1-C3,C9-C13)  (`e1fa45f`)
+- **providers:** Rename _connected -> connected, add usage/thinking buffers, OpenAI-compat error mapping (C1-C3,C9-C13)  (`d23d1db`)
 
-- **credentials/env_loader:** Lossless round-trip with proper quoting and escape handling (C34)  (`d5e2385`)
+- **credentials/env_loader:** Lossless round-trip with proper quoting and escape handling (C34)  (`8cc3f9b`)
 
-- **providers/huggingface:** Migrate to chat_completion API, map errors (C17-C19)  (`5a0763c`)
+- **providers/huggingface:** Migrate to chat_completion API, map errors (C17-C19)  (`7a4d1c6`)
 Replaces the custom httpx-based HuggingFace integration with the official
 huggingface_hub.AsyncInferenceClient and its chat_completion API.  The
 client now uses provider="auto" so requests are routed through the
@@ -3078,7 +3094,7 @@ Adds tests/test_providers/_batch_live_unit4.py exercising live chat() and
 chat_stream() against meta-llama/Meta-Llama-3-8B-Instruct with HF token
 skip-gating.
 
-- **providers/ollama:** Add missing endpoints, map errors, wire connection state (C14-C16)  (`a593edd`)
+- **providers/ollama:** Add missing endpoints, map errors, wire connection state (C14-C16)  (`7778e0e`)
 - Expose typed RPC methods for /api/tags, /api/show, /api/generate,
 /api/embeddings, /api/ps, and /api/pull alongside the existing
 /api/chat path, returning TypedDicts for every response body (C14).
@@ -3104,7 +3120,7 @@ pre-existing breakage unrelated to this change. All declared
 validators (ruff, ruff format, basedpyright, pydoclint,
 ruff --select D) pass cleanly.
 
-- **credentials/oauth:** Thread-safe singleton, PKCE validation, keyring errors (C25c, C30-C33)  (`378e374`)
+- **credentials/oauth:** Thread-safe singleton, PKCE validation, keyring errors (C25c, C30-C33)  (`82c4158`)
 C25c double-checked locking for get_oauth_manager singleton.
 C30-C33: error mapping to intellicrack.core.types, PKCE pair
 generation + verification, CSRF state validation, single-shot
@@ -3116,7 +3132,7 @@ mismatch). All pass under INTELLICRACK_LOCAL_TESTS=1.
 Validators all zero: ruff / ruff format / basedpyright / ruff D /
 pytest. No ignore comments.
 
-- **providers/local:** Rename _connected → connected, fix device fallback + usage tracking (C20-C24)  (`0e76aa8`)
+- **providers/local:** Rename _connected → connected, fix device fallback + usage tracking (C20-C24)  (`dde2351`)
 - C20: Rename all self._connected sites to self.connected to align
 with LLMProviderBase.
 - C21: Move torch.inference_mode context inside _forward_pass closure
@@ -3140,11 +3156,11 @@ LocalTransformersProvider populates _pending_usage on every chat()
 and chat_stream() call using input_ids.shape[-1] /
 generated_ids.shape[-1] - prompt_tokens.
 
-- **credentials/store:** Fix list_providers deadlock, thread-safe singleton, handle KeyringError (C25b,C26-C29)  (`1ec6ff1`)
+- **credentials/store:** Fix list_providers deadlock, thread-safe singleton, handle KeyringError (C25b,C26-C29)  (`3dcbf6d`)
 
-- **providers/google:** Correct connection state, map errors, fix streaming usage (C4-C8)  (`1f3ff18`)
+- **providers/google:** Correct connection state, map errors, fix streaming usage (C4-C8)  (`4747898`)
 
-- **providers/registry:** Thread-safe singleton with double-checked locking (C25a)  (`736f5af`)
+- **providers/registry:** Thread-safe singleton with double-checked locking (C25a)  (`96e5ced`)
 The get_provider_registry() helper previously did a naked check-then-set on
 _RegistryHolder.instance, racing under concurrent first-access (two threads
 could construct two ProviderRegistry instances). Fix with a module-level
@@ -3156,9 +3172,9 @@ Adds tests/test_providers/_batch_live_unit6.py: a 32-thread barrier test
 same instance by id(). Resets module state via importlib.reload so the test
 does not touch private attributes.
 
-- **ui/preferences:** QFontComboBox monospace filter (E22) (`fc46b03`)
+- **ui/preferences:** QFontComboBox monospace filter (E22) (`a842b61`)
 
-- **installer:** Unit 9 A76 follow-up — remove DOC304 class-docstring Args (`50afea1`)
+- **installer:** Unit 9 A76 follow-up — remove DOC304 class-docstring Args (`37af610`)
 The ToolInstaller class docstring carried an Args: block describing
 tools_directory which belongs on the __init__ docstring (pydoclint DOC304).
 __init__ already has its own Args block, so removing the duplicate from
@@ -3166,11 +3182,11 @@ the class docstring fixes the finding without dropping any information.
 Validators (bridges/installer.py): ruff clean, basedpyright 0/0/0,
 pydocstyle clean.
 
-- **sandbox:** Deep-review follow-ups on units 1-7 (D1-D19) (`52c5311`)
+- **sandbox:** Deep-review follow-ups on units 1-7 (D1-D19) (`ad5dd5e`)
 Line-by-line re-audit of the seven merged sandbox commits surfaced real
 issues that automated review missed. Fixes applied on main.
 
-- **frida:** Unit 5 A32 — hook/replace code delivery via script.post + recv (`9ce204d`)
+- **frida:** Unit 5 A32 — hook/replace code delivery via script.post + recv (`c360ea1`)
 Replaces direct Python-to-JS string interpolation of user-supplied hook
 code (on_enter / on_leave / replacement_code) with runtime RPC delivery:
 - hook_function / replace_function emit a *_ready send and register a
@@ -3189,7 +3205,7 @@ Also gitignore reports/tests/_sandbox_* (test-run artifacts).
 Validators (bridges/frida_bridge.py): ruff clean, basedpyright 0/0/0,
 pydocstyle clean. Frida tests: 37/37 pass with INTELLICRACK_LOCAL_TESTS=1.
 
-- **sandbox:** Unit 1 — Windows Sandbox full rewrite (D1-D6, D12/D14/D19 Windows)  (`1cc9ed1`)
+- **sandbox:** Unit 1 — Windows Sandbox full rewrite (D1-D6, D12/D14/D19 Windows)  (`636d378`)
 - D3: WindowsSandboxClient.exe launcher; vmwp.exe worker tracked via
 Win32_Process polling. Stop sends WM_CLOSE with taskkill fallback.
 - D1/D2/D6: Permanent in-guest PowerShell dispatcher via LogonCommand.
@@ -3205,7 +3221,7 @@ new start_monitors.cmd into monitor folder; launcher runs each with
 (file, registry, network, process, service, kernel_object, dll,
 injection, resource, clipboard, api_trace).
 
-- **sandbox:** Unit 5 — api_trace.ps1 rewrite (D16)  (`52038e7`)
+- **sandbox:** Unit 5 — api_trace.ps1 rewrite (D16)  (`66f8c11`)
 Replace fabricated *-EtwTraceSession cmdlets with real logman + TraceEventSession.
 - Add -LogDir / -TargetPid parameters; filter events by PID when non-zero.
 - Locate Microsoft.Diagnostics.Tracing.TraceEvent.dll under %USERPROFILE%\.nuget,
@@ -3216,14 +3232,14 @@ Add-Type, subscribed to Microsoft-Windows-Kernel-Audit-API-Calls provider.
 - Emit pipe-delimited records ts|proc|pid|api|module|args|rv to api_trace.log.
 - Clean shutdown via try/finally: dispose session, logman stop + delete.
 
-- **sandbox:** Unit 2 — QEMU sandbox full rewrite (D7-D11, D12/D14/D19 QEMU)  (`d783455`)
+- **sandbox:** Unit 2 — QEMU sandbox full rewrite (D7-D11, D12/D14/D19 QEMU)  (`f1b3ff0`)
 Addresses all QEMU-side deltas from the sandbox-fix-d plan.
 See PR body for full detail on D7/D8/D9/D10/D11/D12/D14/D19.
 ruff, basedpyright, pydocstyle — 0 findings on qemu.py.
 
-- **sandbox:** Rewrite kernel_object_monitor.ps1 with NT handle enumeration (D15)  (`f3a1489`)
+- **sandbox:** Rewrite kernel_object_monitor.ps1 with NT handle enumeration (D15)  (`6efb207`)
 
-- **sandbox:** Unit 7 — injection_monitor.ps1 (D18)  (`4b68546`)
+- **sandbox:** Unit 7 — injection_monitor.ps1 (D18)  (`5fdf6c8`)
 Replace fabricated Win32_Thread/parent-PID heuristic with ETW-based detection
 via TraceEventSession (NT Kernel Logger Thread/VirtualAlloc/VAMap plus
 Microsoft-Windows-Kernel-Process provider {22FB2CD6-0E7B-422B-A0C7-2FAD1FD0E716}
@@ -3236,7 +3252,7 @@ ERROR record when TraceEvent.dll missing (no fabricated fallback).
 try/finally guarantees Stop/Dispose + logman stop/delete cleanup.
 0 PSScriptAnalyzer findings at all severities.
 
-- **sandbox:** Unit 6 — dll_monitor.ps1 (D17)  (`08f75f9`)
+- **sandbox:** Unit 6 — dll_monitor.ps1 (D17)  (`dc0b4e2`)
 Replace fabricated *-EtwTraceSession cmdlets with real logman-based
 ETW tracing for kernel image-load events.
 - Accept LogDir and TargetPid parameters.
@@ -3250,7 +3266,7 @@ the event payload.
 - Guaranteed logman stop/delete cleanup via try/finally.
 - Passes PSScriptAnalyzer with 0 warnings/errors.
 
-- **sandbox:** Unit 3 - manager idleness tracking (D13)  (`9b4dc91`)
+- **sandbox:** Unit 3 - manager idleness tracking (D13)  (`53613b2`)
 Add is_busy flag on SandboxInstance to distinguish a sandbox actively
 executing a binary from one that is running but idle.
 - SandboxInstance: new is_busy: bool attribute (default False).
@@ -3268,7 +3284,7 @@ files located in the main repo directory). Code-quality hooks
 (ruff check, ruff format, basedpyright, pydocstyle) all pass when
 invoked directly against this file.
 
-- **bridges/ghidra:** Production-readiness remediation A1-A10 (#unit-1)  (`98d0e9f`)
+- **bridges/ghidra:** Production-readiness remediation A1-A10 (#unit-1)  (`901894f`)
 - A1: load_binary re-raises ToolError on importFile failure; no swallowed
 exceptions or hardcoded returns.
 - A2: _detect_architecture now covers PE (x86/x86_64/ARM/ARM64/MIPS/PPC/
@@ -3300,21 +3316,21 @@ expectations updated and disconnected-behavior tests added for each of
 the new mutators.
 ruff / ruff format / basedpyright / pydoclint / pydocstyle: 0 findings.
 
-- **hexpat:** Preprocessor include failure + function-like macro expansion (B34, B45, B46)  (`ff380db`)
+- **hexpat:** Preprocessor include failure + function-like macro expansion (B34, B45, B46)  (`e79b6c7`)
 
-- **hexpat:** Evaluator — pointer deref, bitfield order, sizeof, cast, members, cleanup (B47,B49-B54)  (`180d767`)
+- **hexpat:** Evaluator — pointer deref, bitfield order, sizeof, cast, members, cleanup (B47,B49-B54)  (`f2783a8`)
 
-- **hexpat:** Cache max_magic_end in pattern registry (B55)  (`e3aecb7`)
+- **hexpat:** Cache max_magic_end in pattern registry (B55)  (`eecdb83`)
 
-- **core:** Enforce tool capability via explicit map (B2)  (`b58cd5d`)
+- **core:** Enforce tool capability via explicit map (B2)  (`afbba18`)
 
-- **hexpat:** Lexer raises on stray '#' with directive hint (B33)  (`112b8d8`)
+- **hexpat:** Lexer raises on stray '#' with directive hint (B33)  (`bf9e762`)
 
-- **hexpat:** Preserve pragma fields on base_address replace (B32, B48)  (`e906abe`)
+- **hexpat:** Preserve pragma fields on base_address replace (B32, B48)  (`3a8747c`)
 
-- **core:** Orchestrator teardown, tool dispatch, context window (B3-B7, B10)  (`4841e11`)
+- **core:** Orchestrator teardown, tool dispatch, context window (B3-B7, B10)  (`9b20a81`)
 
-- **core:** Script validators fail loud and typed API (B22, B26)  (`18638a1`)
+- **core:** Script validators fail loud and typed API (B22, B26)  (`7b8d03f`)
 - B22: Stabilize ScriptGenerator public API with Google-style docstrings on
 prepare_ai_prompt and typed generate_frida/ghidra/python/cutter/x64dbg
 helpers. Document the expected integration pattern for Group E wiring.
@@ -3324,7 +3340,7 @@ returns (True, None) on real success. Java validator replaces substring
 match with a compiled regex so that the word "class" inside strings or
 comments no longer triggers a false positive.
 
-- **core:** Template bootstrap error aggregation (B21, B25)  (`24e8dc9`)
+- **core:** Template bootstrap error aggregation (B21, B25)  (`bff9099`)
 - B21: TemplateManager API stabilized with explicit docstrings; bootstrap
 iteration uses a helper (`_bootstrap_single_template`) so top-level logic
 stays readable.
@@ -3334,7 +3350,7 @@ exists on disk, logs failures at warning, and raises after processing if
 any templates failed. `_parse_template_file` logs at warning and records
 the failure instead of silently returning None.
 
-- **core:** Persist bridge_analyses and guard session store (B1, B8, B9)  (`b38ee77`)
+- **core:** Persist bridge_analyses and guard session store (B1, B8, B9)  (`7665f92`)
 - B1: cleanup_old switches from julianday-comparable ISO-8601 to a precomputed
 "%Y-%m-%d %H:%M:%S" cutoff used with WHERE updated_at < ?, avoiding the
 silent zero-row delete when SQLite rejects tz-aware ISO timestamps.
@@ -3346,7 +3362,7 @@ correctly, and round-tripped through export_to_json / import_from_json.
 session_tags rewrite in an explicit BEGIN IMMEDIATE transaction, preventing
 interleaving with a concurrent auto_save.
 
-- **hexpat:** Compiler const-expr and conditional inversion (B23, B24)  (`c069787`)
+- **hexpat:** Compiler const-expr and conditional inversion (B23, B24)  (`8a77024`)
 - B23: HexPatCodegen._eval_const_expr now raises HexPatError for every
 unsupported compile-time expression (shifts, bitwise ops, identifier
 references, sizeof, addressof, current-offset marker, string literals,
@@ -3357,7 +3373,7 @@ express with the current Rust primitive set without introducing a new
 BitAndZero opcode; the case now raises HexPatError with the underlying
 reason instead of emitting an incorrect `field == 0` guard.
 
-- **core:** Harden process tracking and cleanup (B11, B13, B14, B16)  (`9f58c60`)
+- **core:** Harden process tracking and cleanup (B11, B13, B14, B16)  (`0e6780b`)
 - B11: run_tracked decodes communicate() results only when not None;
 empty_text ("" for text=True, b"" for text=False) is returned when
 capture_output=False so .decode() no longer raises on (None, None).
@@ -3370,7 +3386,7 @@ _external_pids.
 communicate() returns without setting returncode instead of fabricating
 returncode=-1.
 
-- **core:** Config port fallback and unprefix parsers (B17, B19)  (`d4984eb`)
+- **core:** Config port fallback and unprefix parsers (B17, B19)  (`93584c4`)
 - B17: parse_tools wraps int(port_val) in try/except (ValueError, TypeError)
 logging a warning with tool/field/value and falling back to tool_base.port.
 Non-string path_raw also logs + falls back instead of raising.
@@ -3378,7 +3394,7 @@ Non-string path_raw also logs + falls back instead of raising.
 directly (from_dict, parse_providers, parse_tools, parse_sub_configs); the
 old thin wrapper methods are removed. All internal callers updated.
 
-- **core:** Portable log directory (B12)  (`7216748`)
+- **core:** Portable log directory (B12)  (`3e07118`)
 - B12: Replace hardcoded `D:/Intellicrack/logs` with a `_default_log_dir()`
 helper returning `Path.cwd() / "logs"`; add optional `log_dir: Path | None`
 parameter to `setup_logging`. Additive/backwards-compatible so existing
@@ -3389,20 +3405,20 @@ main.py.
 compatibility is maintained while the implementation forwards to the
 current API).
 
-- **core:** Platform-guard subprocess constants (B15)  (`56c11c1`)
+- **core:** Platform-guard subprocess constants (B15)  (`4328412`)
 Guard Windows-only subprocess constants (CREATE_NEW_CONSOLE,
 CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW, STARTF_USESHOWWINDOW,
 STARTUPINFO) behind sys.platform == "win32" and provide int-0 fallbacks
 plus a _StartupInfoFallback class on non-Windows so the module imports
 successfully on Linux/macOS.
 
-- **core:** Make TransformNode abstract (B20)  (`8ac75b5`)
+- **core:** Make TransformNode abstract (B20)  (`8adbf6a`)
 Convert TransformNode into an abc.ABC so the base class no longer silently
 returns input unchanged. process, name, and category are marked
 abstractmethod / abstractproperty, forcing concrete subclasses to implement
 them. All existing concrete subclasses already satisfy the interface.
 
-- **hexpat:** Normalize document.length callable/property (B35)  (`ee6a60c`)
+- **hexpat:** Normalize document.length callable/property (B35)  (`5ebc49e`)
 HexDocumentLike declares length() as a method, but some adapter shims
 expose it as a plain attribute or property. DataReader.from_document
 now routes through a new _resolve_length helper that tolerates both
@@ -3410,15 +3426,23 @@ shapes, validates the result is an int, and raises HexPatRuntimeError
 with a clear message when the attribute is missing or the resolved
 value cannot be coerced.
 
-- **hexcore:** Case-insensitive search handles mixed-case; strict ASCII encoder  (`5160a21`)
+- **hexcore:** Case-insensitive search handles mixed-case; strict ASCII encoder  (`cdf30dd`)
 * fix(hexcore): normalize-at-comparison case-insensitive search, strict ASCII encoder
 Replace variant-generation case-insensitive search (which missed mixed-case
 inputs like "HeLLo") with normalize-at-comparison: decode each sliding window
 via encoding_rs and compare via str::to_lowercase. Reject non-ASCII input in
 the ASCII encoder instead of silently truncating. Move unused pattern-length
 locals out of the early-return branch in search_bytes and search_hex_with_wildcards.
+* fix: improve UTF-16LE string extraction and piece table safety
+Refactored the UTF-16LE string extraction logic to correctly handle surrogate pairs and non-ASCII printable characters. Updated the piece table implementation to use more explicit panics with descriptive messages for invariant violations during deletion operations.
+- Support full Unicode range in UTF-16LE extraction instead of just ASCII
+- Add robust handling for dangling high/low surrogates in byte streams
+- Strengthen internal invariants in `piece_table.rs` with explicit error messages
+- Update project documentation and knowledge graph visualization
+- Add comprehensive test suite for UTF-16LE edge cases including emojis and Cyrillic script
+---------
 
-- **hexcore/bps:** Fail loud on OOB and emit SourceCopy/TargetCopy  (`804b8ee`)
+- **hexcore/bps:** Fail loud on OOB and emit SourceCopy/TargetCopy  (`7a39ffc`)
 - import_bps: replace silent-skip OOB guards in SourceRead, TargetRead,
 SourceCopy, and TargetCopy with InvalidData errors that name the
 action and offset, so malformed patches surface the real cause instead
@@ -3432,10 +3456,10 @@ repeats.
 TargetCopy command is emitted and decoded back to the exact target,
 plus OOB-failure tests for SourceRead, SourceCopy, and TargetCopy.
 
-- **hexcore:** Align .pyi stubs with PyO3 signatures  (`3ce8fbe`)
+- **hexcore:** Align .pyi stubs with PyO3 signatures  (`c8c4fc4`)
 Correct 3 signature-drift findings in intellicrack_hexcore.pyi: search_numeric_range takes (int,int) tuple; compute_hash_custom_crc takes byte_range tuple and reflect tuple; replace_bytes and fill_block use bytes instead of list[int].
 
-- **hexcore:** Record undo entries for swap_blocks, repair_pe_checksum, BPS/UPS imports  (`6d00a5a`)
+- **hexcore:** Record undo entries for swap_blocks, repair_pe_checksum, BPS/UPS imports  (`ba163d0`)
 Both swap_blocks and repair_pe_checksum mutated bytes without pushing
 Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
