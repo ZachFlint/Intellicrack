@@ -530,3 +530,5 @@ prompts/
 
 # Ad-hoc captured diff fragments (regenerable scratch, never tracked)
 /diff_ghidra.txt
+
+prompts.md
