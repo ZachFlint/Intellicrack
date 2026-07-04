@@ -898,7 +898,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
             diagnostic = (
                 "x64dbg bridge plugin not installed. Ensure Visual Studio and"
                 " CMake are installed for automatic build, or manually build"
-                " from tools/x64dbg_plugin/"
+                " from src/x64dbg-plugin/"
             )
         elif not pipe_connected:
             diagnostic = (
@@ -2080,10 +2080,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 self._state.connected = True
                 self._publish_tool_state()
                 _logger.info("x64dbg_found", path=str(tool_path))
-                self._plugin_deployed = deploy_x64dbg_plugin(
-                    tool_path,
-                    tool_path.parent,
-                )
+                self._plugin_deployed = deploy_x64dbg_plugin(tool_path)
                 if not self._plugin_deployed:
                     diag = str(self.plugin_status.get("diagnostic", ""))
                     _logger.warning(

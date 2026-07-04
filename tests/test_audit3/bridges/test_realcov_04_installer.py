@@ -676,7 +676,7 @@ class TestDeployDetailedRealTree:
         (x64dbg / "release" / "x64" / "plugins").mkdir(parents=True)
         (x64dbg / "release" / "x32" / "plugins").mkdir(parents=True)
 
-        plugin_src_dir = tmp_path / "x64dbg_plugin" / "bin"
+        plugin_src_dir = tmp_path / "x64dbg-plugin" / "bin"
         plugin_src_dir.mkdir(parents=True)
         (plugin_src_dir / "intellicrack_bridge_x64.dp64").write_bytes(_PE_BYTES)
 
@@ -695,7 +695,7 @@ class TestDeployDetailedRealTree:
 
     @staticmethod
     def test_missing_plugin_dir_reports_failure(tmp_path: Path) -> None:
-        """A missing x64dbg_plugin source tree yields an unsuccessful result.
+        """A missing x64dbg-plugin source tree yields an unsuccessful result.
 
         Args:
             tmp_path: Pytest temporary directory.

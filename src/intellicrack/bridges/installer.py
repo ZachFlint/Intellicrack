@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import httpx
 
+from intellicrack.core.config import get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.subprocess_compat import (
@@ -1529,7 +1530,6 @@ class ToolInstaller:
             temp_path: Destination path on disk for the downloaded bytes.
             filename: Display name used in progress and completion logs.
         """
-
         async with client.stream("GET", url) as response:
             response.raise_for_status()
             total = int(response.headers.get("content-length", 0))
@@ -2051,7 +2051,7 @@ def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
     defaults to 1800 s and respects ``INTELLICRACK_BUILD_TIMEOUT``.
 
     Args:
-        plugin_dir: Root of the ``x64dbg_plugin`` source tree containing
+        plugin_dir: Root of the ``x64dbg-plugin`` source tree containing
             ``CMakeLists.txt``.
         x64dbg_path: Path to the x64dbg installation (passed to CMake
             as a hint for SDK headers).
@@ -2204,7 +2204,7 @@ def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
     """Locate a pre-built plugin binary in known build output locations.
 
     Args:
-        plugin_dir: Root of the x64dbg_plugin source tree.
+        plugin_dir: Root of the x64dbg-plugin source tree.
         filename: Plugin filename to search for (e.g. ``intellicrack_bridge_x64.dp64``).
 
     Returns:
@@ -2221,7 +2221,7 @@ def _find_plugin_source(plugin_dir: Path, filename: str) -> Path | None:
     return next((candidate for candidate in candidates if candidate.is_file()), None)
 
 
-def deploy_x64dbg_plugin_detailed(x64dbg_path: Path, tools_directory: Path) -> DeployResult:
+def deploy_x64dbg_plugin_detailed(x64dbg_path: Path, source_root: Path | None = None) -> DeployResult:
     """Deploy the Intellicrack bridge plugin into x64dbg's plugins directories.
 
     Copies pre-built ``.dp64`` / ``.dp32`` binaries from the plugin source tree
@@ -2231,14 +2231,16 @@ def deploy_x64dbg_plugin_detailed(x64dbg_path: Path, tools_directory: Path) -> D
 
     Args:
         x64dbg_path: Path to the x64dbg installation root.
-        tools_directory: Path to the tools directory containing ``x64dbg_plugin/``.
+        source_root: Optional root directory containing the ``x64dbg-plugin/``
+            source folder. Defaults to ``<project_root>/src`` when omitted.
 
     Returns:
         DeployResult: Aggregated per-arch outcome. ``success`` is True only
         when every arch with a source binary either deployed cleanly or
         was already up-to-date AND at least one arch was actually present.
     """
-    plugin_dir = tools_directory / "x64dbg_plugin"
+    base = source_root if source_root is not None else get_project_root() / "src"
+    plugin_dir = base / "x64dbg-plugin"
     if not plugin_dir.is_dir():
         _logger.debug(
             "plugin_source_dir_missing",
@@ -2378,18 +2380,19 @@ def deploy_x64dbg_plugin_detailed(x64dbg_path: Path, tools_directory: Path) -> D
     return DeployResult(success=overall_success, per_arch=per_arch)
 
 
-def deploy_x64dbg_plugin(x64dbg_path: Path, tools_directory: Path) -> bool:
+def deploy_x64dbg_plugin(x64dbg_path: Path, source_root: Path | None = None) -> bool:
     """Backwards-compatible wrapper around :func:`deploy_x64dbg_plugin_detailed`.
 
     Args:
         x64dbg_path: Path to the x64dbg installation root.
-        tools_directory: Path to the tools directory containing ``x64dbg_plugin/``.
+        source_root: Optional root directory containing the ``x64dbg-plugin/``
+            source folder. Defaults to ``<project_root>/src`` when omitted.
 
     Returns:
         bool: True when every arch with a source binary deployed cleanly
         (or was already up-to-date); False otherwise.
     """
-    return deploy_x64dbg_plugin_detailed(x64dbg_path, tools_directory).success
+    return deploy_x64dbg_plugin_detailed(x64dbg_path, source_root).success
 
 
 def _path_requires_admin(target: Path) -> bool:

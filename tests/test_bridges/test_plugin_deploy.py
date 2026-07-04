@@ -26,7 +26,11 @@ from typing import TYPE_CHECKING
 
 import pefile
 
-from intellicrack.bridges.installer import deploy_x64dbg_plugin
+from intellicrack.bridges.installer import (
+    deploy_x64dbg_plugin,
+    deploy_x64dbg_plugin_detailed,
+)
+from intellicrack.core.config import get_project_root
 
 
 if TYPE_CHECKING:
@@ -170,15 +174,15 @@ def _make_plugin_source(
     """Write a fake plugin binary into the plugin source tree.
 
     Args:
-        tools_dir: Tools directory that contains ``x64dbg_plugin/``.
+        tools_dir: Source root directory that contains ``x64dbg-plugin/``.
         filename: Plugin filename (e.g. ``intellicrack_bridge_x64.dp64``).
         content: Binary content to write.
-        subdir: Sub-directory within x64dbg_plugin.
+        subdir: Sub-directory within x64dbg-plugin.
 
     Returns:
         Path: Path to the written file.
     """
-    plugin_dir = tools_dir / "x64dbg_plugin" / subdir
+    plugin_dir = tools_dir / "x64dbg-plugin" / subdir
     plugin_dir.mkdir(parents=True, exist_ok=True)
     binary = plugin_dir / filename
     binary.write_bytes(content)
@@ -298,7 +302,7 @@ class TestFindPluginSourceViaDeployment:
         """Prefer the committed bin/ x32 plugin over a stale build_x32 output.
 
         This gates the exact layout the repository ships: the current plugin
-        lives in ``x64dbg_plugin/bin`` while a regenerable ``build_x32`` tree
+        lives in ``x64dbg-plugin/bin`` while a regenerable ``build_x32`` tree
         may still hold an older compile. Deployment must select the ``bin``
         binary (a valid I386 PE) and never the stale build-tree copy.
 
@@ -326,7 +330,7 @@ class TestDeployX64dbgPlugin:
 
     @staticmethod
     def test_returns_false_when_plugin_dir_missing(tmp_path: Path) -> None:
-        """Return False when x64dbg_plugin directory does not exist.
+        """Return False when x64dbg-plugin directory does not exist.
 
         Args:
             tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
@@ -342,7 +346,7 @@ class TestDeployX64dbgPlugin:
             tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
         """
         x64dbg = _make_x64dbg_tree(tmp_path)
-        (tmp_path / "x64dbg_plugin").mkdir()
+        (tmp_path / "x64dbg-plugin").mkdir()
         assert deploy_x64dbg_plugin(x64dbg, tmp_path) is False
 
     @staticmethod
@@ -485,3 +489,38 @@ class TestDeployX64dbgPlugin:
 
         result = deploy_x64dbg_plugin(x64dbg, tmp_path)
         assert result is False
+
+
+class TestDefaultSourceRootResolution:
+    """Gate the default ``source_root`` resolution against committed binaries."""
+
+    @staticmethod
+    def test_deploys_committed_binaries_from_src_by_default(tmp_path: Path) -> None:
+        """Omitting ``source_root`` deploys the real committed ``src/x64dbg-plugin`` PEs.
+
+        When ``deploy_x64dbg_plugin_detailed`` is called with no explicit
+        source root, it must resolve the plugin source to
+        ``<project_root>/src/x64dbg-plugin`` and copy the byte-identical,
+        correct-architecture ``.dp64``/``.dp32`` binaries committed there into
+        the x64dbg tree. This fails if the default resolution regresses (wrong
+        base directory), or if a committed binary goes missing or carries the
+        wrong ``IMAGE_FILE_MACHINE``.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to host a fake x64dbg tree.
+        """
+        plugin_bin = get_project_root() / "src" / "x64dbg-plugin" / "bin"
+        source64 = plugin_bin / "intellicrack_bridge_x64.dp64"
+        source32 = plugin_bin / "intellicrack_bridge_x32.dp32"
+        assert source64.is_file(), f"committed x64 plugin missing: {source64}"
+        assert source32.is_file(), f"committed x32 plugin missing: {source32}"
+
+        x64dbg = _make_x64dbg_tree(tmp_path)
+
+        result = deploy_x64dbg_plugin_detailed(x64dbg)
+
+        assert result.success is True
+        target64 = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64"
+        target32 = x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge_x32.dp32"
+        _assert_deployed_pe(target64, source64.read_bytes(), _IMAGE_FILE_MACHINE_AMD64)
+        _assert_deployed_pe(target32, source32.read_bytes(), _IMAGE_FILE_MACHINE_I386)
