@@ -459,7 +459,7 @@ class TestActionsDisabledHandlerNoDispatch:
         _line_edit(tab, "_read_addr").setText("0x1000")
         _invoke(tab, "_on_read")
 
-        assert dispatch_calls == [], (
+        assert not dispatch_calls, (
             f"run_bridge_coroutine_logged must not be called when _attached_pid is None; got {len(dispatch_calls)} call(s)"
         )
         assert warning_calls, "_on_read must show QMessageBox.warning when not attached"
@@ -539,7 +539,7 @@ class TestActionsDisabledHandlerNoDispatch:
         _plain_text(tab, "_write_input").setPlainText("90 90")
         _invoke(tab, "_on_write")
 
-        assert dispatch_calls == [], (
+        assert not dispatch_calls, (
             f"run_bridge_coroutine_logged must not be called when _attached_pid is None; got {len(dispatch_calls)} call(s)"
         )
         assert warning_calls, "_on_write must show QMessageBox.warning when not attached"
@@ -619,7 +619,7 @@ class TestActionsDisabledHandlerNoDispatch:
         _line_edit(tab, "_search_pattern").setText("90 90")
         _invoke(tab, "_on_search")
 
-        assert dispatch_calls == [], (
+        assert not dispatch_calls, (
             f"run_bridge_coroutine_logged must not be called when _attached_pid is None; got {len(dispatch_calls)} call(s)"
         )
         assert warning_calls, "_on_search must show QMessageBox.warning when not attached"

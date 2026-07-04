@@ -116,7 +116,7 @@ class TestAdjustTokenPrivilegeSuccess:
 
         privs = await process_bridge.get_token_privileges(os.getpid())
         matches: list[dict[str, object]] = [p for p in privs if p.get("name") == priv_name]
-        assert len(matches) >= 1, f"{priv_name} not found in token privileges after enabling"
+        assert matches, f"{priv_name} not found in token privileges after enabling"
 
         entry = matches[0]
         assert entry.get("enabled") is True, (
@@ -171,8 +171,7 @@ class TestRemovePrivilegePostState:
         await process_bridge.remove_privilege(os.getpid(), priv_name)
 
         privs = await process_bridge.get_token_privileges(os.getpid())
-        matches: list[dict[str, object]] = [p for p in privs if p.get("name") == priv_name]
-        if matches:
+        if matches := [p for p in privs if p.get("name") == priv_name]:
             entry = matches[0]
             attrs = entry.get("attributes", 0)
             assert isinstance(attrs, int)

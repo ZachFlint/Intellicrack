@@ -12,6 +12,7 @@ Covers:
             RED-BY-DESIGN): a ``ResourceSample`` in the report does not
             produce a ``"resource"``-category event in the timeline.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -115,14 +116,9 @@ class TestExtractIocsSha1:
         iocs = extract_iocs(report)
         sha1_iocs = [i for i in iocs if i["ioc_type"] == "sha1"]
 
-        assert len(sha1_iocs) >= 1, (
-            f"Expected at least one 'sha1' IOC for path containing {_SHA1_KNOWN!r}; "
-            f"got {iocs!r}"
-        )
+        assert len(sha1_iocs) >= 1, f"Expected at least one 'sha1' IOC for path containing {_SHA1_KNOWN!r}; got {iocs!r}"
         sha1_values = [i["value"] for i in sha1_iocs]
-        assert _SHA1_KNOWN in sha1_values, (
-            f"SHA1 value {_SHA1_KNOWN!r} not found; got sha1 values {sha1_values!r}"
-        )
+        assert _SHA1_KNOWN in sha1_values, f"SHA1 value {_SHA1_KNOWN!r} not found; got sha1 values {sha1_values!r}"
 
     def test_sha1_source_field_is_file_changes(self) -> None:
         """IOC extracted from a file_change path has source='file_changes'.
@@ -145,9 +141,7 @@ class TestExtractIocsSha1:
         iocs = extract_iocs(report)
         sha1_iocs = [i for i in iocs if i["ioc_type"] == "sha1" and i["value"] == _SHA1_KNOWN]
         assert len(sha1_iocs) == 1, f"Expected exactly one sha1 IOC; got {sha1_iocs!r}"
-        assert sha1_iocs[0]["source"] == "file_changes", (
-            f"Expected source='file_changes'; got {sha1_iocs[0]['source']!r}"
-        )
+        assert sha1_iocs[0]["source"] == "file_changes", f"Expected source='file_changes'; got {sha1_iocs[0]['source']!r}"
 
     def test_sha1_deduplicated_when_same_hash_in_two_paths(self) -> None:
         """The same SHA1 hash from two different file paths appears only once.
@@ -176,9 +170,7 @@ class TestExtractIocsSha1:
 
         iocs = extract_iocs(report)
         sha1_iocs = [i for i in iocs if i["ioc_type"] == "sha1"]
-        assert len(sha1_iocs) == 1, (
-            f"SHA1 hash from two paths must be deduplicated; got {sha1_iocs!r}"
-        )
+        assert len(sha1_iocs) == 1, f"SHA1 hash from two paths must be deduplicated; got {sha1_iocs!r}"
 
     def test_sha1_not_emitted_when_same_prefix_already_classified_as_sha256(self) -> None:
         """SHA1 is suppressed when the 64-char SHA256 with that prefix is already seen.
@@ -207,13 +199,8 @@ class TestExtractIocsSha1:
         sha256_found = [i for i in iocs if i["ioc_type"] == "sha256"]
         sha1_found = [i for i in iocs if i["ioc_type"] == "sha1" and i["value"] == sha1_prefix]
 
-        assert len(sha256_found) >= 1, (
-            f"SHA256 IOC should be extracted for 64-char hex; got {iocs!r}"
-        )
-        assert len(sha1_found) == 0, (
-            f"SHA1 should be suppressed when SHA256 with same prefix is already seen; "
-            f"got {sha1_found!r}"
-        )
+        assert sha256_found, f"SHA256 IOC should be extracted for 64-char hex; got {iocs!r}"
+        assert not sha1_found, f"SHA1 should be suppressed when SHA256 with same prefix is already seen; got {sha1_found!r}"
 
 
 class TestGenerateTimelineResourceCategory:
@@ -256,11 +243,8 @@ class TestGenerateTimelineResourceCategory:
         events = generate_timeline(report)
         resource_events = [e for e in events if e["category"] == "resource"]
 
-        assert len(resource_events) >= 1, (
-            "PD-011: generate_timeline has no 'resource' handler. "
-            "A ResourceSample in the report must produce at least one "
-            "TimelineEvent with category='resource'; got events="
-            f"{[e['category'] for e in events]!r}"
+        assert resource_events, (
+            f"PD-011: generate_timeline has no 'resource' handler. A ResourceSample in the report must produce at least one TimelineEvent with category='resource'; got events={[e['category'] for e in events]!r}"
         )
 
     def test_resource_event_timestamp_matches_sample_timestamp(self) -> None:
@@ -288,12 +272,9 @@ class TestGenerateTimelineResourceCategory:
         events = generate_timeline(report)
         resource_events = [e for e in events if e["category"] == "resource"]
 
-        assert len(resource_events) >= 1, (
-            "PD-011: No 'resource' category events produced by generate_timeline."
-        )
+        assert resource_events, "PD-011: No 'resource' category events produced by generate_timeline."
         assert resource_events[0]["timestamp"] == ts, (
-            f"Resource event timestamp must match sample timestamp {ts!r}; "
-            f"got {resource_events[0]['timestamp']!r}"
+            f"Resource event timestamp must match sample timestamp {ts!r}; got {resource_events[0]['timestamp']!r}"
         )
 
     def test_resource_category_filter_returns_only_resource_events(self) -> None:
@@ -331,13 +312,11 @@ class TestGenerateTimelineResourceCategory:
         events = generate_timeline(report, categories=["resource"])
         non_resource = [e for e in events if e["category"] != "resource"]
 
-        assert len(non_resource) == 0, (
-            f"Category filter=['resource'] must suppress non-resource events; "
-            f"got non-resource events: {non_resource!r}"
+        assert not non_resource, (
+            f"Category filter=['resource'] must suppress non-resource events; got non-resource events: {non_resource!r}"
         )
         assert len(events) >= 1, (
-            "PD-011: Category filter=['resource'] returned no events because "
-            "no 'resource' handler exists in generate_timeline."
+            "PD-011: Category filter=['resource'] returned no events because no 'resource' handler exists in generate_timeline."
         )
 
 
@@ -374,7 +353,4 @@ def test_hash_ioc_types_are_distinct(ioc_type: str, hash_value: str) -> None:
     iocs = extract_iocs(report)
     typed_iocs = [i for i in iocs if i["ioc_type"] == ioc_type and i["value"] == hash_value]
 
-    assert len(typed_iocs) >= 1, (
-        f"Expected at least one '{ioc_type}' IOC with value {hash_value!r}; "
-        f"got {iocs!r}"
-    )
+    assert len(typed_iocs) >= 1, f"Expected at least one '{ioc_type}' IOC with value {hash_value!r}; got {iocs!r}"

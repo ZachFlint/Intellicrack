@@ -133,6 +133,7 @@ _LIST_MAX_WIDTH: Final[int] = 250
 _KEY_INPUT_MIN_WIDTH: Final[int] = 280
 _SHOW_KEY_MAX_WIDTH: Final[int] = 60
 _MODEL_COMBO_MIN_WIDTH: Final[int] = 250
+_LOOKUP_FAILED: Final[bool] = False
 
 
 def _get_source_colors() -> dict[str, QColor]:
@@ -1339,7 +1340,14 @@ class ProviderConfigDialog(QDialog):
             )
 
     def _refresh_credential_overview(self) -> None:
-        """Populate ``_credential_overview`` and log the credential store snapshot."""
+        """Populate ``_credential_overview`` and log the credential store snapshot.
+
+        The env/`.env`-backed overview is computed synchronously (in-memory,
+        no I/O). The keyring/file-backed credential-store enumeration is
+        dispatched on the persistent bridge event loop via
+        ``run_bridge_coroutine_async`` so a slow keyring backend cannot
+        freeze the GUI thread while the dialog is constructed or refreshed.
+        """
         loader = get_credential_loader()
         configured = loader.list_configured_providers()
         missing = loader.list_missing_providers()
@@ -1366,11 +1374,21 @@ class ProviderConfigDialog(QDialog):
                 )
             return len(store_providers)
 
-        result = run_bridge_coroutine(_load_store_credentials())
-        store_count = result if isinstance(result, int) else 0
-        _logger.info(
-            "credential_store_loaded",
-            store_provider_count=store_count,
+        def _on_store_loaded(result: object) -> None:
+            store_count = result if isinstance(result, int) else 0
+            _logger.info(
+                "credential_store_loaded",
+                store_provider_count=store_count,
+            )
+
+        def _on_store_load_error(exc: object) -> None:
+            _logger.warning("credential_store_load_failed", error=str(exc))
+
+        run_bridge_coroutine_async(
+            _load_store_credentials(),
+            on_success=_on_store_loaded,
+            on_error=_on_store_load_error,
+            parent=self,
         )
 
     def _setup_ui(self) -> None:
@@ -1380,6 +1398,7 @@ class ProviderConfigDialog(QDialog):
         splitter = QSplitter(Qt.Orientation.Horizontal)
 
         left_panel = QWidget()
+        left_panel.setMinimumWidth(_LIST_MIN_WIDTH)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -1449,6 +1468,7 @@ class ProviderConfigDialog(QDialog):
         splitter.addWidget(left_panel)
         splitter.addWidget(self._settings_stack)
         splitter.setSizes([220, 580])
+        splitter.setChildrenCollapsible(False)
 
         main_layout.addWidget(splitter, stretch=1)
 
@@ -1720,7 +1740,6 @@ class ProviderConfigDialog(QDialog):
         """Discover models for the currently selected provider."""
         if self._current_provider is not None:
             self.discover_single_provider(self._current_provider)
-            self._refresh_provider_status()
 
     def _on_start_oauth(self) -> None:
         """Start OAuth flow for the currently selected provider."""
@@ -1771,47 +1790,72 @@ class ProviderConfigDialog(QDialog):
         self._load_credential_overview()
 
     def migrate_credentials(self) -> None:
-        """Migrate credentials from env files to credential store."""
+        """Migrate credentials from env files to credential store.
+
+        The store write runs on the persistent bridge event loop via
+        ``run_bridge_coroutine_async`` so the keyring/file I/O performed for
+        every provider found in the environment cannot freeze the GUI
+        thread; the credential overview is reloaded once migration
+        completes, whether it succeeded or failed.
+        """
         _logger.info("credential_migration_starting", source=".env")
-        try:
-            store = CredentialStore()
-            run_bridge_coroutine(store.migrate_from_env())
+        store = CredentialStore()
+
+        def _on_success(_result: object) -> None:
             _logger.info("credentials_migrated_from_env", source=".env")
-        except (RuntimeError, OSError, ValueError) as exc:
+            self._load_credential_overview()
+
+        def _on_error(exc: object) -> None:
             _logger.warning("credential_migration_failed", error=str(exc))
-        self._load_credential_overview()
+            self._load_credential_overview()
+
+        run_bridge_coroutine_async(
+            store.migrate_from_env(),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+        )
 
     def discover_single_provider(self, provider_name: str) -> None:
         """Discover models for a specific provider.
 
+        The network round-trip to the provider's model-listing API runs on
+        the persistent bridge event loop via ``run_bridge_coroutine_async``
+        so it cannot freeze the GUI thread; provider status is refreshed
+        once discovery completes.
+
         Args:
             provider_name: Name of the provider to discover models for.
         """
-        if self._discovery is not None:
-            discovery = self._discovery
-            try:
-                pname = ProviderName(provider_name)
-            except ValueError:
-                _logger.warning("unknown_provider_for_discovery", provider=provider_name)
-                return
+        if self._discovery is None:
+            return
+        discovery = self._discovery
+        try:
+            pname = ProviderName(provider_name)
+        except ValueError:
+            _logger.warning("unknown_provider_for_discovery", provider=provider_name)
+            return
 
-            async def _discover() -> None:
-                await discovery.discover_provider(pname)
+        async def _discover() -> None:
+            await discovery.discover_provider(pname)
 
-            try:
-                run_bridge_coroutine(_discover())
-            except (RuntimeError, OSError, ValueError):
-                _logger.exception(
-                    "provider_discovery_failed",
-                    provider=provider_name,
-                )
-
+        def _on_success(_result: object) -> None:
             events = discovery.get_discovery_events()
             _logger.debug(
                 "provider_discovery_events",
                 provider=provider_name,
                 event_count=len(events),
             )
+            self._refresh_provider_status()
+
+        def _on_error(exc: object) -> None:
+            _logger.warning(
+                "provider_discovery_failed",
+                provider=provider_name,
+                error=str(exc),
+            )
+
+        run_bridge_coroutine_async(_discover(), on_success=_on_success, on_error=_on_error, parent=self)
 
     def start_oauth_flow(self, provider_id: str) -> None:
         """Start an OAuth authorization flow for a provider.
@@ -1831,11 +1875,7 @@ class ProviderConfigDialog(QDialog):
             return
 
         _logger.info("oauth_flow_starting", provider=provider_id)
-        try:
-            self._run_oauth_flow(provider_id, oauth_provider, oauth_config)
-        except (RuntimeError, OSError, ValueError) as exc:
-            _logger.warning("oauth_flow_failed", provider=provider_id, error=str(exc))
-        self._load_credential_overview()
+        self._run_oauth_flow(provider_id, oauth_provider, oauth_config)
 
     def _run_oauth_flow(
         self,
@@ -1844,6 +1884,12 @@ class ProviderConfigDialog(QDialog):
         oauth_config: OAuthConfig,
     ) -> None:
         """Execute the OAuth authorization flow and persist obtained credentials.
+
+        The flow opens the user's browser and waits for the OAuth callback,
+        a human-timescale wait. It is dispatched on the persistent bridge
+        event loop via ``run_bridge_coroutine_async`` so the wait cannot
+        freeze the GUI thread; the credential overview is reloaded once the
+        flow completes, whether it succeeded or failed.
 
         Args:
             provider_id: The provider identifier used for logging and widget lookup.
@@ -1856,18 +1902,30 @@ class ProviderConfigDialog(QDialog):
             await manager.run_authorization_flow(oauth_config)
             return await manager.to_provider_credentials(oauth_provider)
 
-        creds = run_bridge_coroutine(_run_oauth())
-        if creds is not None and creds.api_key:
-            _logger.info("oauth_credentials_obtained", provider=provider_id)
-            widget = self._provider_widgets.get(provider_id)
-            if widget is not None:
-                widget.set_api_key(creds.api_key)
-        else:
-            _logger.warning("oauth_credentials_missing", provider=provider_id)
+        def _on_success(result: object) -> None:
+            creds = result if isinstance(result, ProviderCredentials) else None
+            if creds is not None and creds.api_key:
+                _logger.info("oauth_credentials_obtained", provider=provider_id)
+                widget = self._provider_widgets.get(provider_id)
+                if widget is not None:
+                    widget.set_api_key(creds.api_key)
+            else:
+                _logger.warning("oauth_credentials_missing", provider=provider_id)
+            self._load_credential_overview()
 
-    @staticmethod
-    def _do_revoke_oauth_token(provider_id: str) -> None:
+        def _on_error(exc: object) -> None:
+            _logger.warning("oauth_flow_failed", provider=provider_id, error=str(exc))
+            self._load_credential_overview()
+
+        run_bridge_coroutine_async(_run_oauth(), on_success=_on_success, on_error=_on_error, parent=self)
+
+    def _do_revoke_oauth_token(self, provider_id: str) -> None:
         """Resolve the OAuth provider and revoke its current token.
+
+        The revoke network call is dispatched on the persistent bridge
+        event loop via ``run_bridge_coroutine_async`` so it cannot freeze
+        the GUI thread; the credential overview is reloaded once the
+        revoke completes, whether it succeeded or failed.
 
         Args:
             provider_id: The provider whose token to revoke.
@@ -1878,8 +1936,21 @@ class ProviderConfigDialog(QDialog):
         except ValueError:
             _logger.warning("unknown_oauth_provider", provider=provider_id)
             return
-        run_bridge_coroutine(manager.revoke_token(oauth_provider))
-        _logger.info("oauth_token_revoked", provider=provider_id)
+
+        def _on_success(_result: object) -> None:
+            _logger.info("oauth_token_revoked", provider=provider_id)
+            self._load_credential_overview()
+
+        def _on_error(exc: object) -> None:
+            _logger.warning("oauth_revoke_failed", provider=provider_id, error=str(exc))
+            self._load_credential_overview()
+
+        run_bridge_coroutine_async(
+            manager.revoke_token(oauth_provider),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+        )
 
     def revoke_oauth_token(self, provider_id: str) -> None:
         """Revoke an OAuth token for a provider.
@@ -1888,11 +1959,7 @@ class ProviderConfigDialog(QDialog):
             provider_id: The provider whose token to revoke.
         """
         _logger.info("oauth_revoke_starting", provider=provider_id)
-        try:
-            self._do_revoke_oauth_token(provider_id)
-        except (RuntimeError, OSError, ValueError):
-            _logger.exception("oauth_revoke_failed", provider=provider_id)
-        self._load_credential_overview()
+        self._do_revoke_oauth_token(provider_id)
 
 
 class ProviderSettingsWidget(QFrame):
@@ -1907,11 +1974,14 @@ class ProviderSettingsWidget(QFrame):
             with ``(model_name, status)``.
         ollama_pull_finished: Signal emitted on ``pull_model`` completion with
             ``(success, model_name, message)``.
+        generation_lookup_finished: Signal emitted on OpenRouter generation
+            cost lookup completion with ``(success, generation_id, message)``.
     """
 
     connection_tested: ClassVar[pyqtSignal] = pyqtSignal(bool, str)
     ollama_pull_progress: ClassVar[pyqtSignal] = pyqtSignal(str, str)
     ollama_pull_finished: ClassVar[pyqtSignal] = pyqtSignal(bool, str, str)
+    generation_lookup_finished: ClassVar[pyqtSignal] = pyqtSignal(bool, str, str)
 
     def __init__(
         self,
@@ -2514,20 +2584,33 @@ class ProviderSettingsWidget(QFrame):
         gen_id = gen_input.text().strip()
         if not gen_id:
             return
-        result = self.get_openrouter_generation(gen_id)
-        if result is not None:
-            _logger.info("generation_lookup", id=gen_id)
-            cost_lines = [f"{k}: {v}" for k, v in result.items()]
+        try:
+            self.generation_lookup_finished.disconnect(self._on_generation_lookup_finished)
+        except (TypeError, RuntimeError):
+            _logger.debug("generation_lookup_finished_slot_not_connected", provider=self.provider_id)
+        self.generation_lookup_finished.connect(self._on_generation_lookup_finished)
+        self.get_openrouter_generation(gen_id)
+
+    def _on_generation_lookup_finished(self, success: object, generation_id: str, message: str) -> None:
+        """Display the outcome of an OpenRouter generation cost lookup.
+
+        Args:
+            success: Whether generation data was found (received as Qt ``object`` slot arg).
+            generation_id: The generation ID that was looked up.
+            message: Formatted cost lines on success, or a failure reason.
+        """
+        if bool(success):
+            _logger.info("generation_lookup", id=generation_id)
             show_info(
                 self,
                 "Generation Cost",
-                f"Generation: {gen_id}\n\n" + "\n".join(cost_lines),
+                f"Generation: {generation_id}\n\n{message}",
             )
         else:
             show_warning(
                 self,
                 "Lookup Failed",
-                f"No data found for generation ID: {gen_id}",
+                message or f"No data found for generation ID: {generation_id}",
             )
 
     def _get_display_name(self) -> str:
@@ -3160,43 +3243,41 @@ class ProviderSettingsWidget(QFrame):
         self._set_status(f"Pulling {model_name}...")
         run_bridge_coroutine_async(_pull(), on_success=_on_success, on_error=_on_error, parent=self)
 
-    def get_openrouter_generation(self, generation_id: str) -> dict[str, Any] | None:
-        """Get OpenRouter generation info for cost tracking.
+    def get_openrouter_generation(self, generation_id: str) -> None:
+        """Look up OpenRouter generation cost info for cost tracking.
+
+        The network round-trip is dispatched on the persistent bridge event
+        loop via ``run_bridge_coroutine_async`` so it cannot freeze the GUI
+        thread; the outcome is delivered through the
+        ``generation_lookup_finished`` signal.
 
         Args:
             generation_id: The generation ID to look up.
-
-        Returns:
-            dict[str, Any] | None: Generation info dict or None.
         """
         if self.provider_id != "openrouter":
-            return None
+            self.generation_lookup_finished.emit(_LOOKUP_FAILED, generation_id, "OpenRouter provider is not selected")
+            return
         if OpenRouterProvider is None:
-            return None
+            self.generation_lookup_finished.emit(_LOOKUP_FAILED, generation_id, "OpenRouter provider is unavailable")
+            return
         api_key = self._api_key_input.text().strip()
         if not api_key:
-            return None
-        try:
-            return self._fetch_openrouter_generation(OpenRouterProvider, api_key, generation_id)
-        except (RuntimeError, OSError, ValueError):
-            _logger.debug("openrouter_generation_fetch_failed", exc_info=True, generation_id=generation_id)
-            return None
+            self.generation_lookup_finished.emit(_LOOKUP_FAILED, generation_id, "No OpenRouter API key configured")
+            return
+        self._fetch_openrouter_generation(OpenRouterProvider, api_key, generation_id)
 
-    @staticmethod
     def _fetch_openrouter_generation(
+        self,
         provider_cls: type[_OpenRouterProviderType],
         api_key: str,
         generation_id: str,
-    ) -> dict[str, Any] | None:
-        """Run the OpenRouter generation lookup coroutine.
+    ) -> None:
+        """Run the OpenRouter generation lookup coroutine without blocking the GUI thread.
 
         Args:
             provider_cls: ``OpenRouterProvider`` class to instantiate.
             api_key: OpenRouter API key to authenticate the request.
             generation_id: The generation ID to look up.
-
-        Returns:
-            dict[str, Any] | None: Generation info dict, or ``None`` when no data was returned.
         """
         provider = provider_cls()
         creds = ProviderCredentials(api_key=api_key)
@@ -3208,7 +3289,20 @@ class ProviderSettingsWidget(QFrame):
             finally:
                 await provider.disconnect()
 
-        return run_bridge_coroutine(_fetch())
+        def _on_success(result: object) -> None:
+            found = isinstance(result, dict)
+            if found:
+                generation_data = cast("dict[str, Any]", result)
+                message = "\n".join(f"{k}: {v}" for k, v in generation_data.items())
+            else:
+                message = f"No data found for generation ID: {generation_id}"
+            self.generation_lookup_finished.emit(found, generation_id, message)
+
+        def _on_error(exc: object) -> None:
+            _logger.debug("openrouter_generation_fetch_failed", generation_id=generation_id, error=str(exc))
+            self.generation_lookup_finished.emit(_LOOKUP_FAILED, generation_id, f"No data found for generation ID: {generation_id}")
+
+        run_bridge_coroutine_async(_fetch(), on_success=_on_success, on_error=_on_error, parent=self)
 
     def get_xpu_optimal_dtype(self) -> str | None:
         """Get optimal dtype for XPU inference.

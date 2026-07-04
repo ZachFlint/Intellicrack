@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ToolError
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.process_panel.hint_overlay import AttachHintOverlay
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
@@ -45,12 +45,10 @@ _logger = get_logger(__name__)
 _MARGIN: Final[int] = 4
 _SPACING: Final[int] = 4
 _STATUS_HEIGHT: Final[int] = 24
+_SHUTDOWN_TIMEOUT_S: Final[float] = 10.0
 
 _HINT_NO_BRIDGE: Final[str] = "Process bridge unavailable\nConnect a process bridge to use this tab"
-_HINT_ATTACH_FIRST: Final[str] = (
-    "Attach to a process first\n"
-    "Select a process on the Processes tab and click Attach to enable this tab"
-)
+_HINT_ATTACH_FIRST: Final[str] = "Attach to a process first\nSelect a process on the Processes tab and click Attach to enable this tab"
 
 
 class _PanelState(enum.Enum):
@@ -77,6 +75,7 @@ class ProcessPanel(AnalysisPanelBase):
     process_selected: pyqtSignal = pyqtSignal(int)
     process_attached: pyqtSignal = pyqtSignal(int)
     process_detached: pyqtSignal = pyqtSignal()
+    _privileges_changed_signal: pyqtSignal = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the ProcessPanel.
@@ -92,6 +91,7 @@ class ProcessPanel(AnalysisPanelBase):
         self._attach_overlays: list[AttachHintOverlay] = []
         self._hint_overlays: list[AttachHintOverlay] = []
         super().__init__(parent)
+        self._privileges_changed_signal.connect(self._on_privileges_changed)
 
     def set_bridge(self, bridge: ProcessBridge) -> None:
         """Set the process bridge for all tabs.
@@ -100,14 +100,15 @@ class ProcessPanel(AnalysisPanelBase):
             bridge: ProcessBridge instance.
         """
         if self._bridge is not None:
-            self._bridge.remove_privileges_changed_callback(self._on_privileges_changed)
+            self._bridge.remove_privileges_changed_callback(self._emit_privileges_changed)
+            self._shutdown_bridge_resources()
         self._bridge = bridge
         self._process_tab.set_bridge(bridge)
         self._memory_tab.set_bridge(bridge)
         self._threads_tab.set_bridge(bridge)
         self._modules_tab.set_bridge(bridge)
         self._system_tab.set_bridge(bridge)
-        bridge.add_privileges_changed_callback(self._on_privileges_changed)
+        bridge.add_privileges_changed_callback(self._emit_privileges_changed)
         self._state = _PanelState.DETACHED
         self._update_controls_for_state()
         _logger.info("process_bridge_set", bridge_type=type(bridge).__name__)
@@ -181,9 +182,7 @@ class ProcessPanel(AnalysisPanelBase):
             self._threads_tab,
             self._modules_tab,
         ]
-        self._attach_overlays = [
-            AttachHintOverlay(tab, _HINT_ATTACH_FIRST) for tab in self._attach_gated_tabs
-        ]
+        self._attach_overlays = [AttachHintOverlay(tab, _HINT_ATTACH_FIRST) for tab in self._attach_gated_tabs]
         self._system_overlay = AttachHintOverlay(self._system_tab, _HINT_NO_BRIDGE)
         self._hint_overlays = [*self._attach_overlays, self._system_overlay]
 
@@ -336,6 +335,18 @@ class ProcessPanel(AnalysisPanelBase):
             pid=pid,
         )
 
+    def _emit_privileges_changed(self) -> None:
+        """Relay a bridge privileges-changed notification onto the GUI thread.
+
+        Registered with :meth:`ProcessBridge.add_privileges_changed_callback`,
+        which may invoke this from the bridge's background event-loop thread.
+        Only a Qt signal is emitted here; because the receiving slot lives on
+        the GUI thread, Qt's automatic connection type queues the actual
+        handling on the GUI thread instead of running it on the caller's
+        thread.
+        """
+        self._privileges_changed_signal.emit()
+
     def _on_privileges_changed(self) -> None:
         """Handle bridge notification that token privileges have changed."""
         self._refresh_privilege_label()
@@ -360,11 +371,9 @@ class ProcessPanel(AnalysisPanelBase):
     def _update_controls_for_state(self) -> None:
         """Enable/disable tab widgets and Process tab buttons based on panel state.
 
-        The per-process detail tabs (Memory, Threads, Modules) require an
-        attached target and stay gated behind the ``ATTACHED`` state. The
-        System tab exposes system-wide operations (registry, named pipes, raw
-        system-info query) that only need a connected bridge, so it is gated
-        on connection instead; its per-process sub-actions guard themselves.
+        The per-process detail tabs (Memory, Threads, Modules) require an attached target and stay gated behind the ``ATTACHED`` state. The
+        System tab exposes system-wide operations (registry, named pipes, raw system-info query) that only need a connected bridge, so it is
+        gated on connection instead; its per-process sub-actions guard themselves.
         """
         attached = self._state == _PanelState.ATTACHED
         connected = self._state != _PanelState.DISCONNECTED
@@ -413,11 +422,31 @@ class ProcessPanel(AnalysisPanelBase):
                 overlay.set_message(message)
             overlay.setVisible(visible)
 
+    def _shutdown_bridge_resources(self) -> None:
+        """Release device, pipe, and section handles tracked by the current bridge.
+
+        Blocks briefly on :meth:`ProcessBridge.shutdown` so kernel-object handles, named-pipe connections, and mapped section views opened
+        through the System tab are guaranteed to be released before the panel is torn down or the bridge is replaced, instead of leaking for
+        the remaining lifetime of the bridge.
+
+        ``ProcessBridge.shutdown`` closes whatever handles it tracks unconditionally and is a no-op when nothing was ever opened, so this
+        only needs to confirm a bridge instance exists -- gating on :attr:`ProcessBridge.state` (``BridgeState.is_ready`` requires both
+        ``connected`` and ``tool_running``) would skip the call for bridges that opened System-tab device/pipe/section handles without ever
+        attaching to a target process, leaking those handles.
+        """
+        if self._bridge is None:
+            return
+        try:
+            run_bridge_coroutine(self._bridge.shutdown(), timeout_s=_SHUTDOWN_TIMEOUT_S)
+        except (RuntimeError, ConnectionError, OSError):
+            _logger.exception("process_bridge_shutdown_failed", bridge_type="process")
+
     @override
     def _cleanup(self) -> None:
-        """Stop timers and cancel pending workers."""
+        """Stop timers, cancel pending workers, and release bridge-tracked OS handles."""
         self._process_tab.cleanup()
         self._threads_tab.cleanup()
+        self._shutdown_bridge_resources()
 
     @override
     def start_tool(self) -> bool:

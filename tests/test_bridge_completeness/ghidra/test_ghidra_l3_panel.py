@@ -1052,7 +1052,7 @@ class TestDataTypeManagerCreateTypeWiring:
         priv(data_type_widget, "_base_type_input", QLineEdit).setText("")
         priv(data_type_widget, "_create_btn", QPushButton).click()
 
-        assert calls == []
+        assert not calls
 
     @staticmethod
     def test_create_union_calls_bridge_with_union_kind(
@@ -1222,7 +1222,7 @@ class TestProgramTreeWiring:
         priv(program_tree_widget, "_child_name_input", QLineEdit).setText("X")
         priv(program_tree_widget, "_apply_btn", QPushButton).click()
 
-        assert calls == []
+        assert not calls
 
 
 # ---------------------------------------------------------------------------
@@ -1503,4 +1503,4 @@ class TestAnalysisExtrasWiring:
         priv(extras_widget, "_flow_addr_input", QLineEdit).setText("not-an-address")
         priv(extras_widget, "_flow_btn", QPushButton).click()
 
-        assert calls == []
+        assert not calls

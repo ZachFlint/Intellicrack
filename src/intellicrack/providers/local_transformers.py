@@ -142,8 +142,7 @@ def _resolve_hf_token(explicit_token: str | None = None) -> str | None:
     if explicit_token:
         return explicit_token
     for var in _HF_TOKEN_ENV_VARS:
-        value = os.environ.get(var)
-        if value:
+        if value := os.environ.get(var):
             return value
     return None
 
@@ -1301,8 +1300,10 @@ class LocalTransformersProvider(LLMProviderBase):
                     dim=-1,
                 )
 
-            token_text = tokenizer.decode(next_token[0], skip_special_tokens=True)
-            if token_text:
+            if token_text := tokenizer.decode(
+                next_token[0],
+                skip_special_tokens=True,
+            ):
                 yield token_text
 
     @override

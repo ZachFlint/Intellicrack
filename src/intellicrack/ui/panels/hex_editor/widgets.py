@@ -449,6 +449,8 @@ class CustomCrcDialog(QDialog):
         layout.addLayout(form)
 
         self._result_label = QLabel("Result: \u2014")
+        self._result_label.setWordWrap(True)
+        self._result_label.setToolTip("Result: \u2014")
         layout.addWidget(self._result_label)
 
         calc_btn = QPushButton("Calculate")
@@ -488,13 +490,16 @@ class CustomCrcDialog(QDialog):
             width, poly, init, ref_in, ref_out, xor_out = self._read_crc_inputs()
         except ValueError as exc:
             _logger.warning("custom_crc_invalid_input", error=str(exc))
-            self._result_label.setText(f"Error: {exc}")
+            error_text = f"Error: {exc}"
+            self._result_label.setText(error_text)
+            self._result_label.setToolTip(error_text)
             return
 
         if self._worker is not None and self._worker.isRunning():
             return
 
         self._result_label.setText("Computing\u2026")
+        self._result_label.setToolTip("Computing\u2026")
         worker = GenericCallableWorker(
             _stream_crc_from_source,
             self._file_path,
@@ -521,12 +526,16 @@ class CustomCrcDialog(QDialog):
         """
         self._worker = None
         if not isinstance(result, int):
-            self._result_label.setText("Error: worker returned non-integer result")
+            error_text = "Error: worker returned non-integer result"
+            self._result_label.setText(error_text)
+            self._result_label.setToolTip(error_text)
             _logger.warning("custom_crc_unexpected_result_type", result_type=type(result).__name__)
             return
         width = self._width_spin.value()
         hex_digits = (width + 3) // 4
-        self._result_label.setText(f"Result: 0x{result:0{hex_digits}X}")
+        result_text = f"Result: 0x{result:0{hex_digits}X}"
+        self._result_label.setText(result_text)
+        self._result_label.setToolTip(result_text)
         self.crc_computed.emit(result)
 
     def _on_worker_error(self, exc: object) -> None:
@@ -536,7 +545,9 @@ class CustomCrcDialog(QDialog):
             exc: Exception object the worker raised.
         """
         self._worker = None
-        self._result_label.setText(f"Error: {exc}")
+        error_text = f"Error: {exc}"
+        self._result_label.setText(error_text)
+        self._result_label.setToolTip(error_text)
         _logger.error(
             "custom_crc_worker_failed",
             error_type=type(exc).__name__,

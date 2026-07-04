@@ -113,6 +113,9 @@ _SEGMENT_REGS: Final[list[str]] = ["cs", "ds", "es", "fs", "gs", "ss"]
 
 _EMBED_POLL_INTERVAL_MS: Final[int] = 500
 _EMBED_MAX_RETRIES: Final[int] = 20
+_CLEANUP_STOP_TIMEOUT_S: Final[float] = 5.0
+_MIN_PANE_WIDTH: Final[int] = 150
+_MIN_PANE_HEIGHT: Final[int] = 80
 
 
 class X64DbgPanel(AnalysisPanelBase):
@@ -212,7 +215,7 @@ class X64DbgPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._status_label = self._add_toolbar_label(toolbar, "Not loaded")
+        self.status_label = self._add_toolbar_label(toolbar, "Not loaded")
         self._debug_buttons: list[QPushButton] = [
             self._run_btn,
             self._pause_btn,
@@ -250,14 +253,22 @@ class X64DbgPanel(AnalysisPanelBase):
         native_layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
 
         main_splitter = QSplitter(Qt.Orientation.Vertical)
+        main_splitter.setChildrenCollapsible(False)
 
         top_splitter = QSplitter(Qt.Orientation.Horizontal)
-        top_splitter.addWidget(self._create_disasm_section())
-        top_splitter.addWidget(self._create_inspect_tabs())
+        top_splitter.setChildrenCollapsible(False)
+        disasm_section = self._create_disasm_section()
+        disasm_section.setMinimumWidth(_MIN_PANE_WIDTH)
+        inspect_tabs = self._create_inspect_tabs()
+        inspect_tabs.setMinimumWidth(_MIN_PANE_WIDTH)
+        top_splitter.addWidget(disasm_section)
+        top_splitter.addWidget(inspect_tabs)
         top_splitter.setSizes([_TOP_SPLIT_LEFT, _TOP_SPLIT_RIGHT])
         main_splitter.addWidget(top_splitter)
 
-        main_splitter.addWidget(self._create_bottom_tabs())
+        bottom_tabs = self._create_bottom_tabs()
+        bottom_tabs.setMinimumHeight(_MIN_PANE_HEIGHT)
+        main_splitter.addWidget(bottom_tabs)
         main_splitter.setSizes([_MAIN_SPLIT_TOP, _MAIN_SPLIT_BOTTOM])
 
         native_layout.addWidget(main_splitter)
@@ -286,7 +297,7 @@ class X64DbgPanel(AnalysisPanelBase):
                 self._bridge.unregister_event_callback(self._on_debug_event)
             if self._bridge.state.is_ready():
                 try:
-                    run_bridge_coroutine(self._bridge.stop())
+                    run_bridge_coroutine(self._bridge.stop(), timeout_s=_CLEANUP_STOP_TIMEOUT_S)
                 except (RuntimeError, ConnectionError, OSError):
                     _logger.exception("x64dbg_stop_failed", bridge_type="x64dbg")
 
@@ -350,7 +361,8 @@ class X64DbgPanel(AnalysisPanelBase):
         self._module_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         mod_h = self._module_table.horizontalHeader()
         if mod_h is not None:
-            mod_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            mod_h.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            mod_h.setSectionResizeMode(_MODULE_COLUMNS.index("Path"), QHeaderView.ResizeMode.Stretch)
         mod_vlayout.addWidget(self._module_table)
         mod_btn_row = QHBoxLayout()
         self._mod_sections_btn = QPushButton(self.tr("Sections"))
@@ -367,9 +379,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._mod_detail_table.setHorizontalHeaderLabels(_SECTION_DETAIL_COLUMNS)
         self._mod_detail_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._mod_detail_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
-        detail_h = self._mod_detail_table.horizontalHeader()
-        if detail_h is not None:
-            detail_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._apply_mod_detail_resize_mode()
         mod_vlayout.addWidget(self._mod_detail_table)
         tabs.addTab(mod_container, self.tr("Modules"))
 
@@ -416,7 +426,9 @@ class X64DbgPanel(AnalysisPanelBase):
         self._procinfo_pid = QLabel("--")
         self._procinfo_name = QLabel("--")
         self._procinfo_path = QLabel("--")
+        self._procinfo_path.setWordWrap(True)
         self._procinfo_cmdline = QLabel("--")
+        self._procinfo_cmdline.setWordWrap(True)
         self._procinfo_ppid = QLabel("--")
         self._procinfo_form.addRow(self.tr("PID:"), self._procinfo_pid)
         self._procinfo_form.addRow(self.tr("Name:"), self._procinfo_name)
@@ -1886,7 +1898,9 @@ class X64DbgPanel(AnalysisPanelBase):
         if not module_name:
             return
 
+        self._mod_detail_table.setColumnCount(len(_SECTION_DETAIL_COLUMNS))
         self._mod_detail_table.setHorizontalHeaderLabels(_SECTION_DETAIL_COLUMNS)
+        self._apply_mod_detail_resize_mode()
         self._mod_sections_btn.setEnabled(False)
         run_bridge_coroutine_logged(
             self._bridge.get_module_sections(module_name),
@@ -1930,7 +1944,9 @@ class X64DbgPanel(AnalysisPanelBase):
         if not module_name:
             return
 
+        self._mod_detail_table.setColumnCount(len(_EXPORT_DETAIL_COLUMNS))
         self._mod_detail_table.setHorizontalHeaderLabels(_EXPORT_DETAIL_COLUMNS)
+        self._apply_mod_detail_resize_mode()
         self._mod_exports_btn.setEnabled(False)
         run_bridge_coroutine_logged(
             self._bridge.get_module_exports(module_name),
@@ -1958,6 +1974,12 @@ class X64DbgPanel(AnalysisPanelBase):
             self._mod_detail_table.setItem(row, 0, QTableWidgetItem(str(exp.get("name", ""))))
             self._mod_detail_table.setItem(row, 1, QTableWidgetItem(str(exp.get("ordinal", ""))))
             self._mod_detail_table.setItem(row, 2, QTableWidgetItem(str(exp.get("address", ""))))
+
+    def _apply_mod_detail_resize_mode(self) -> None:
+        """Apply uniform stretch resizing to the module detail table's current columns."""
+        detail_h = self._mod_detail_table.horizontalHeader()
+        if detail_h is not None:
+            detail_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
     def _on_mod_detail_error(self, detail_type: str, exc: object) -> None:
         """Handle module detail retrieval failure.
@@ -2342,7 +2364,10 @@ class X64DbgPanel(AnalysisPanelBase):
             self._module_table.setItem(row, 0, QTableWidgetItem(getattr(mod, "name", "")))
             self._module_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(mod, 'base_address', 0):X}"))
             self._module_table.setItem(row, 2, QTableWidgetItem(f"0x{getattr(mod, 'size', 0):X}"))
-            self._module_table.setItem(row, 3, QTableWidgetItem(str(getattr(mod, "path", ""))))
+            path_text = str(getattr(mod, "path", ""))
+            path_item = QTableWidgetItem(path_text)
+            path_item.setToolTip(path_text)
+            self._module_table.setItem(row, 3, path_item)
 
     def _refresh_threads(self) -> None:
         """Refresh the threads table from bridge."""
@@ -3282,8 +3307,12 @@ class X64DbgPanel(AnalysisPanelBase):
         self._procinfo_pid.setText(str(getattr(result, "pid", "--")))
         self._procinfo_name.setText(str(getattr(result, "name", "--")))
         path = getattr(result, "path", None)
-        self._procinfo_path.setText(str(path) if path else "--")
-        self._procinfo_cmdline.setText(str(getattr(result, "command_line", None) or "--"))
+        path_text = str(path) if path else "--"
+        self._procinfo_path.setText(path_text)
+        self._procinfo_path.setToolTip(path_text)
+        cmdline_text = str(getattr(result, "command_line", None) or "--")
+        self._procinfo_cmdline.setText(cmdline_text)
+        self._procinfo_cmdline.setToolTip(cmdline_text)
         self._procinfo_ppid.setText(str(getattr(result, "parent_pid", "--")))
 
     def _on_set_api_bp(self) -> None:

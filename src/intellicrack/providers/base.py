@@ -347,9 +347,7 @@ class LLMProviderBase(ABC):
             client is still valid for the running loop.
         """
         running = asyncio.get_running_loop()
-        if bound_loop is running:
-            return None
-        return running
+        return None if bound_loop is running else running
 
     @abstractmethod
     async def connect(self, credentials: ProviderCredentials) -> None:

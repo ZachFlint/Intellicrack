@@ -1192,7 +1192,7 @@ def test_write_sync_logs_routine_chunk_at_debug_not_info(
     assert chunk_records, "routine write must emit a pipe_write_chunk progress record"
     assert all(entry.get("log_level") == "debug" for entry in chunk_records)
     info_events = {str(entry.get("event", "")) for entry in captured if entry.get("log_level") == "info"}
-    assert info_events == set(), f"routine write must not log at INFO, saw {info_events}"
+    assert not info_events, f"routine write must not log at INFO, saw {info_events}"
 
 
 @pytest.mark.asyncio

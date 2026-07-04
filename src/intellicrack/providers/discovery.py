@@ -81,7 +81,7 @@ def format_discovery_status(
             latest_by_provider[event.provider] = event
 
     total = len(latest_by_provider)
-    ok_count = sum(1 for event in latest_by_provider.values() if event.success)
+    ok_count = sum(bool(event.success) for event in latest_by_provider.values())
     summary = f"Discovery: {ok_count}/{total} providers OK"
 
     if active_provider is None:

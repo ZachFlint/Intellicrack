@@ -52,7 +52,7 @@ _ADDR_INPUT_MAX_WIDTH: Final[int] = 160
 _NATIVE_TYPES: Final[list[str]] = ["pointer", "int", "uint", "void", "float", "double", "int32", "uint32", "int64", "uint64"]
 _CALLING_CONVENTIONS: Final[list[str]] = ["default", "sysv", "stdcall", "thiscall", "fastcall", "mscdecl", "win64"]
 _STRING_ENCODINGS: Final[list[str]] = ["utf8", "ansi", "utf16"]
-_SYMBOL_COLUMNS: Final[list[str]] = ["Name", "Address", "Is Global", "Type"]
+_SYMBOL_COLUMNS: Final[list[str]] = ["Name", "Address", "Module", "Source"]
 _PROBE_COLUMNS: Final[list[str]] = ["Probe ID", "Address"]
 _TRUST_THRESHOLD_MIN: Final[int] = -1
 _TRUST_THRESHOLD_MAX: Final[int] = 1000
@@ -77,12 +77,30 @@ def _parse_hex_address(text: str) -> int | None:
         return None
 
 
+def _format_symbol_source(sym: object) -> str:
+    """Format a resolved symbol's source-file location for display.
+
+    Args:
+        sym: A ``SymbolInfo``-like object with optional ``file_name``/``line_number`` attributes.
+
+    Returns:
+        str: ``"file:line"`` when both the file name and line number are known, the bare file name
+        when only the file name is known, or an empty string when no source information was resolved.
+    """
+    file_name = getattr(sym, "file_name", None)
+    line_number = getattr(sym, "line_number", None)
+    if isinstance(file_name, str) and file_name:
+        if isinstance(line_number, int):
+            return f"{file_name}:{line_number}"
+        return file_name
+    return ""
+
+
 class InterceptorLifecycleControls(QWidget):
     """Revert/flush controls for the ``Interceptor`` hook lifecycle.
 
-    Exposes ``Interceptor.revert`` (undo a single hook/replacement by target) and ``Interceptor.flush``
-    (apply pending inline-cache changes for all active hooks) alongside the existing Add/Remove/Refresh
-    hook controls in the Hooks section.
+    Exposes ``Interceptor.revert`` (undo a single hook/replacement by target) and ``Interceptor.flush`` (apply pending inline-cache changes
+    for all active hooks) alongside the existing Add/Remove/Refresh hook controls in the Hooks section.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -210,9 +228,8 @@ class InterceptorLifecycleControls(QWidget):
 class StalkerCallProbeControls(QWidget):
     """Add/remove controls and a live table for ``Stalker`` call probes.
 
-    Exposes ``Stalker.addCallProbe`` (fires a JS callback whenever a specific address is called) and
-    ``Stalker.removeCallProbe``, distinct from the full-trace Start/Stop Trace controls already present
-    in the Stalker tab.
+    Exposes ``Stalker.addCallProbe`` (fires a JS callback whenever a specific address is called) and ``Stalker.removeCallProbe``, distinct
+    from the full-trace Start/Stop Trace controls already present in the Stalker tab.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -555,9 +572,9 @@ class MemoryPatchStringControls(QWidget):
 class SymbolLookupControls(QWidget):
     """Module-symbol dump, address-to-module, and glob function-search controls for the Symbols section.
 
-    Exposes ``Module.enumerateSymbols`` (full symbol dump for a named module), ``Process.findModuleByAddress``
-    (reverse address-to-module lookup), and ``DebugSymbol.findFunctionsMatching`` (glob-pattern function search),
-    complementing the existing find-base/resolve/find-named/API controls already in the Symbols tab.
+    Exposes ``Module.enumerateSymbols`` (full symbol dump for a named module), ``Process.findModuleByAddress`` (reverse address-to-module
+    lookup), and ``DebugSymbol.findFunctionsMatching`` (glob-pattern function search), complementing the existing find-base/resolve/find-
+    named/API controls already in the Symbols tab.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -619,7 +636,10 @@ class SymbolLookupControls(QWidget):
         self._symbols_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         sym_h = self._symbols_table.horizontalHeader()
         if sym_h is not None:
-            sym_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            sym_h.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            sym_h.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            sym_h.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            sym_h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         layout.addWidget(self._symbols_table)
 
         self._status_label = QLabel("")
@@ -647,7 +667,7 @@ class SymbolLookupControls(QWidget):
         run_bridge_coroutine_logged(
             self._bridge.enumerate_symbols(module_name),
             on_success=self._populate_symbols_from_module,
-            on_error=lambda e: self._on_symbol_lookup_error("Enumerate symbols", e),
+            on_error=lambda e: self._on_symbol_lookup_error("Enumerate symbols", e, self._enum_symbols_btn),
             parent=self,
             event="frida_enumerate_symbols",
             logger=_logger,
@@ -666,12 +686,16 @@ class SymbolLookupControls(QWidget):
             for sym in cast("list[object]", result):
                 name = str(getattr(sym, "name", ""))
                 addr = getattr(sym, "address", 0)
+                module = str(getattr(sym, "module_name", "") or "")
+                source = _format_symbol_source(sym)
                 row = self._symbols_table.rowCount()
                 self._symbols_table.insertRow(row)
-                self._symbols_table.setItem(row, 0, QTableWidgetItem(name))
+                name_item = QTableWidgetItem(name)
+                name_item.setToolTip(name)
+                self._symbols_table.setItem(row, 0, name_item)
                 self._symbols_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
-                self._symbols_table.setItem(row, 2, QTableWidgetItem(""))
-                self._symbols_table.setItem(row, 3, QTableWidgetItem(""))
+                self._symbols_table.setItem(row, 2, QTableWidgetItem(module))
+                self._symbols_table.setItem(row, 3, QTableWidgetItem(source))
             self._status_label.setText(f"{self._symbols_table.rowCount()} symbols found")
         _logger.info("frida_symbols_enumerated_via_gui", count=self._symbols_table.rowCount())
 
@@ -689,7 +713,7 @@ class SymbolLookupControls(QWidget):
         run_bridge_coroutine_logged(
             self._bridge.find_module_by_address(addr),
             on_success=self._on_find_module_by_address_done,
-            on_error=lambda e: self._on_symbol_lookup_error("Find module by address", e),
+            on_error=lambda e: self._on_symbol_lookup_error("Find module by address", e, self._find_module_btn),
             parent=self,
             event="frida_find_module_by_address",
             logger=_logger,
@@ -725,7 +749,7 @@ class SymbolLookupControls(QWidget):
         run_bridge_coroutine_logged(
             self._bridge.find_functions_matching(pattern),
             on_success=self._populate_symbols_from_matching,
-            on_error=lambda e: self._on_symbol_lookup_error("Find functions matching", e),
+            on_error=lambda e: self._on_symbol_lookup_error("Find functions matching", e, self._find_matching_btn),
             parent=self,
             event="frida_find_functions_matching",
             logger=_logger,
@@ -745,25 +769,27 @@ class SymbolLookupControls(QWidget):
                 name = str(getattr(sym, "name", ""))
                 addr = getattr(sym, "address", 0)
                 module = str(getattr(sym, "module_name", "") or "")
+                source = _format_symbol_source(sym)
                 row = self._symbols_table.rowCount()
                 self._symbols_table.insertRow(row)
-                self._symbols_table.setItem(row, 0, QTableWidgetItem(name))
+                name_item = QTableWidgetItem(name)
+                name_item.setToolTip(name)
+                self._symbols_table.setItem(row, 0, name_item)
                 self._symbols_table.setItem(row, 1, QTableWidgetItem(f"0x{addr:X}" if isinstance(addr, int) else str(addr)))
                 self._symbols_table.setItem(row, 2, QTableWidgetItem(module))
-                self._symbols_table.setItem(row, 3, QTableWidgetItem(""))
+                self._symbols_table.setItem(row, 3, QTableWidgetItem(source))
             self._status_label.setText(f"{self._symbols_table.rowCount()} functions matched")
         _logger.info("frida_find_functions_matching_completed_via_gui", count=self._symbols_table.rowCount())
 
-    def _on_symbol_lookup_error(self, operation: str, exc: object) -> None:
+    def _on_symbol_lookup_error(self, operation: str, exc: object, button: QPushButton) -> None:
         """Handle a symbol/module lookup failure.
 
         Args:
             operation: Human-readable name of the failed operation.
             exc: The exception that occurred.
+            button: The button belonging to the failed operation, to re-enable.
         """
-        self._enum_symbols_btn.setEnabled(True)
-        self._find_module_btn.setEnabled(True)
-        self._find_matching_btn.setEnabled(True)
+        button.setEnabled(True)
         self._status_label.setText(f"{operation} failed: {exc}")
         _logger.warning("frida_symbol_lookup_failed", operation=operation, error=str(exc))
 
@@ -771,8 +797,8 @@ class SymbolLookupControls(QWidget):
 class SystemFunctionCallControls(QWidget):
     """Errno/``GetLastError``-capturing native call controls for the Advanced section.
 
-    Exposes ``call_system_function`` (backed by Frida's ``SystemFunction`` class) as a distinct call path from
-    the plain ``NativeFunction``-based Call button already present in the Advanced tab's Function Calling block.
+    Exposes ``call_system_function`` (backed by Frida's ``SystemFunction`` class) as a distinct call path from the plain
+    ``NativeFunction``-based Call button already present in the Advanced tab's Function Calling block.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -917,11 +943,10 @@ class SystemFunctionCallControls(QWidget):
 class StalkerConfigControls(QWidget):
     """Exclude/garbage-collect/invalidate/trust-threshold controls for the Stalker tuning API.
 
-    Exposes ``Stalker.exclude`` (skip a memory range during code tracing), ``Stalker.garbageCollect``
-    (reclaim resources for terminated threads), ``Stalker.invalidate`` (drop cached instrumentation for
-    an address so it is re-instrumented on next execution), and ``Stalker.trustThreshold`` (control cached
-    instrumented-code reuse), distinct from the full-trace Start/Stop Trace and call-probe controls already
-    present in the Stalker tab.
+    Exposes ``Stalker.exclude`` (skip a memory range during code tracing), ``Stalker.garbageCollect`` (reclaim resources for terminated
+    threads), ``Stalker.invalidate`` (drop cached instrumentation for an address so it is re-instrumented on next execution), and
+    ``Stalker.trustThreshold`` (control cached instrumented-code reuse), distinct from the full-trace Start/Stop Trace and call-probe
+    controls already present in the Stalker tab.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -1159,10 +1184,9 @@ class StalkerConfigControls(QWidget):
 class ScriptMessagingControls(QWidget):
     """RPC-export invocation, raw message posting, and eternalization controls for a running script.
 
-    Exposes ``rpc_call`` (invoke a ``rpc.exports``-declared function in the target script), ``post_message``
-    (send a raw JSON message into the script's ``recv`` handler), and ``eternalize_script`` (detach the script
-    from its Python handle so it survives process detach), operating on the currently active persistent
-    script tracked by the owning panel.
+    Exposes ``rpc_call`` (invoke a ``rpc.exports``-declared function in the target script), ``post_message`` (send a raw JSON message into
+    the script's ``recv`` handler), and ``eternalize_script`` (detach the script from its Python handle so it survives process detach),
+    operating on the currently active persistent script tracked by the owning panel.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -1209,6 +1233,7 @@ class ScriptMessagingControls(QWidget):
         layout.addLayout(rpc_row)
 
         self._rpc_result_label = QLabel("")
+        self._rpc_result_label.setWordWrap(True)
         layout.addWidget(self._rpc_result_label)
 
         message_row = QHBoxLayout()
@@ -1297,7 +1322,9 @@ class ScriptMessagingControls(QWidget):
             result: Return value from the RPC-exported function.
         """
         self._rpc_call_btn.setEnabled(True)
-        self._rpc_result_label.setText(f"Result: {result}")
+        result_text = str(result)
+        self._rpc_result_label.setText(f"Result: {result_text}")
+        self._rpc_result_label.setToolTip(result_text)
         _logger.info("frida_rpc_call_completed_via_gui", result_type=type(result).__name__)
 
     def _on_post_message(self) -> None:
@@ -1391,10 +1418,9 @@ class ScriptMessagingControls(QWidget):
 class CancellableControls(QWidget):
     """Cancellation-token lifecycle controls for long-running Frida operations.
 
-    Exposes ``create_cancellable`` (mint a new ``frida.Cancellable`` token) and ``cancel`` (trigger a
-    previously created token), giving the GUI a way to abort long-running bridge calls that accept an
-    optional ``cancellable_id``. The most recently created token ID is surfaced via
-    :meth:`last_cancellable_id` so other controls (e.g. Attach/Spawn) can opt into passing it.
+    Exposes ``create_cancellable`` (mint a new ``frida.Cancellable`` token) and ``cancel`` (trigger a previously created token), giving the
+    GUI a way to abort long-running bridge calls that accept an optional ``cancellable_id``. The most recently created token ID is surfaced
+    via :meth:`last_cancellable_id` so other controls (e.g. Attach/Spawn) can opt into passing it.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

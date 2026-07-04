@@ -130,7 +130,7 @@ class TestCustomExpressionNode:
         node = CustomExpressionNode()
         data = bytes([0, 1, 10])
         result = node.process(data, {"expression": "b - 1"})
-        assert result == bytes([(value - 1) & 0xFF for value in data])
+        assert result == bytes((value - 1) & 0xFF for value in data)
         assert result[0] == 0xFF
 
     def test_conditional_expression(self) -> None:

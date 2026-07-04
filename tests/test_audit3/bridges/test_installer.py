@@ -94,10 +94,7 @@ def _system_pe_for_version_probe() -> Path | None:
         Path(os.environ.get("WINDIR", r"C:\Windows")) / "notepad.exe",
         Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "cmd.exe",
     ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return candidate
-    return None
+    return next((candidate for candidate in candidates if candidate.is_file()), None)
 
 
 def _pe_string_table_version(pe: object) -> tuple[int, int, int] | None:
@@ -190,15 +187,13 @@ def _pe_version_oracle(pefile_mod: types.ModuleType, exe_path: Path) -> tuple[in
     except pefile_mod.PEFormatError:
         return None
 
-    resource_id = pefile_mod.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]
     parse_dirs = getattr(pe, "parse_data_directories", None)
     if parse_dirs is not None:
+        resource_id = pefile_mod.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_RESOURCE"]
         cast(Callable[..., object], parse_dirs)(directories=[resource_id])
     try:
         result = _pe_string_table_version(pe)
-        if result is not None:
-            return result
-        return _pe_fixed_file_info_version(pe)
+        return result if result is not None else _pe_fixed_file_info_version(pe)
     finally:
         close_fn = getattr(pe, "close", None)
         if close_fn is not None:
@@ -318,9 +313,7 @@ def _install_pm_substitute(
             captured.append(list(cmd))
             if handler is not None:
                 outcome = handler(cmd)
-                if asyncio.iscoroutine(outcome):
-                    return await outcome
-                return outcome
+                return await outcome if asyncio.iscoroutine(outcome) else outcome
             try:
                 outcome_iter = next(iterator)
             except StopIteration as exc:
@@ -1267,7 +1260,7 @@ class TestRegistryCoversAllEnumMembers:
         assert info.kind == "builtin"
         assert info.executables == []
         assert info.common_paths == []
-        assert not any("hxd" in exe.lower() for exe in info.executables)
+        assert all("hxd" not in exe.lower() for exe in info.executables)
 
 
 # --------------------------------------------------------------------------

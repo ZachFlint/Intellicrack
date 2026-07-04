@@ -603,7 +603,7 @@ class TestProcessListing:
         assert self_proc is not None, f"current process (pid={os.getpid()}) must appear in list_processes_detailed"
         arch = self_proc["architecture"]
         assert isinstance(arch, str), f"architecture must be str, got {type(arch).__name__}"
-        expected_arch = "x86_64" if struct.calcsize("P") * 8 == 64 else "x86"
+        expected_arch = "x86_64" if struct.calcsize("P") == 8 else "x86"
         assert arch == expected_arch, (
             f"bridge reported architecture {arch!r} for the current process, "
             f"but struct.calcsize('P')*8=={struct.calcsize('P') * 8} requires {expected_arch!r}"
@@ -629,7 +629,7 @@ class TestProcessListing:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         arch = await process_bridge.detect_architecture(os.getpid())
-        expected = "x86_64" if struct.calcsize("P") * 8 == 64 else "x86"
+        expected = "x86_64" if struct.calcsize("P") == 8 else "x86"
         assert arch == expected
 
     async def test_detect_architecture_invalid_pid(self, process_bridge: ProcessBridge) -> None:
@@ -1042,7 +1042,10 @@ class TestWindowEnumeration:
             "STATIC",
             expected_title,
             0,
-            0, 0, 1, 1,
+            0,
+            0,
+            1,
+            1,
             None,
             None,
             hinstance,
@@ -1067,12 +1070,8 @@ class TestWindowEnumeration:
             assert matched["class_name"] == expected_class, (
                 f"class_name mismatch: bridge={matched['class_name']!r}, oracle={expected_class!r}"
             )
-            assert matched["title"] == expected_title, (
-                f"title mismatch: bridge={matched['title']!r}, oracle={expected_title!r}"
-            )
-            assert matched["visible"] is expected_visible, (
-                f"visible mismatch: bridge={matched['visible']!r}, oracle={expected_visible!r}"
-            )
+            assert matched["title"] == expected_title, f"title mismatch: bridge={matched['title']!r}, oracle={expected_title!r}"
+            assert matched["visible"] is expected_visible, f"visible mismatch: bridge={matched['visible']!r}, oracle={expected_visible!r}"
         finally:
             user32.DestroyWindow(hwnd)
 
@@ -1189,7 +1188,7 @@ class TestThreadContext:
             secondary_thread: Windows thread id of a parked worker thread used for context queries.
         """
         ctx = await attached_bridge.get_thread_context(secondary_thread)
-        if struct.calcsize("P") * 8 == 64:
+        if struct.calcsize("P") == 8:
             assert "rip" in ctx
             assert "rsp" in ctx
             assert ctx["rip"] != 0
@@ -1368,9 +1367,7 @@ class TestJobGuiCom:
         assert "in_job" in info
         in_job_val: object = info["in_job"]
         assert isinstance(in_job_val, bool), f"in_job must be bool, got {type(in_job_val).__name__}"
-        assert in_job_val is expected_in_job, (
-            f"bridge in_job={in_job_val!r} does not match IsProcessInJob oracle={expected_in_job!r}"
-        )
+        assert in_job_val is expected_in_job, f"bridge in_job={in_job_val!r} does not match IsProcessInJob oracle={expected_in_job!r}"
 
     async def test_get_gui_resources_has_counts(self, attached_bridge: ProcessBridge) -> None:
         """Verify GUI resources has non-negative counts.
@@ -1438,8 +1435,7 @@ class TestKernelDebuggerDetection:
 
         result: bool = await process_bridge.detect_kernel_debugger(os.getpid())
         assert result is expected, (
-            f"bridge returned {result!r} but NtQueryInformationProcess oracle says {expected!r} "
-            f"for ProcessDebugPort on pid={os.getpid()}"
+            f"bridge returned {result!r} but NtQueryInformationProcess oracle says {expected!r} for ProcessDebugPort on pid={os.getpid()}"
         )
         assert result is False, (
             "test process must not have a kernel debugger port attached; "
@@ -1480,7 +1476,7 @@ class TestRegistry:
         value_type = result["type"]
         assert isinstance(value_type, str)
         assert value_type == "string"
-        assert len(str(result["data"])) > 0
+        assert str(result["data"]) != ""
 
     async def test_reg_enum_keys_microsoft(self, process_bridge: ProcessBridge) -> None:
         r"""Verify enumerating HKLM\\SOFTWARE\\Microsoft returns non-empty list.
@@ -1537,7 +1533,7 @@ class TestSectionMapping:
             addr: int = await process_bridge.map_section(handle, 4096)
             assert addr > 0
             ok: bool = await process_bridge.unmap_section(addr)
-            assert ok is True
+            assert ok
         finally:
             section_handles = _get_section_handles(process_bridge)
             if handle in section_handles:
@@ -1582,7 +1578,7 @@ class TestSehFiberTls:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
             main_thread_tid: Windows thread id of the first thread enumerated in the current process.
         """
-        if struct.calcsize("P") * 8 == 64:
+        if struct.calcsize("P") == 8:
             with pytest.raises(ToolError, match="SEH chain not applicable to x64 target"):
                 await attached_bridge.get_seh_chain(main_thread_tid)
         else:
@@ -1593,18 +1589,12 @@ class TestSehFiberTls:
                 assert "address" in entry, f"SEH entry missing 'address' key: {entry}"
                 assert "handler_address" in entry, f"SEH entry missing 'handler_address' key: {entry}"
                 assert "next" in entry, f"SEH entry missing 'next' key: {entry}"
-                assert isinstance(entry["address"], int), (
-                    f"address must be int, got {type(entry['address']).__name__}"
-                )
+                assert isinstance(entry["address"], int), f"address must be int, got {type(entry['address']).__name__}"
                 assert isinstance(entry["handler_address"], int), (
                     f"handler_address must be int, got {type(entry['handler_address']).__name__}"
                 )
-                assert isinstance(entry["next"], int), (
-                    f"next must be int, got {type(entry['next']).__name__}"
-                )
-                assert entry["address"] > 0, (
-                    f"SEH frame address {entry['address']:#x} must be positive (valid pointer)"
-                )
+                assert isinstance(entry["next"], int), f"next must be int, got {type(entry['next']).__name__}"
+                assert entry["address"] > 0, f"SEH frame address {entry['address']:#x} must be positive (valid pointer)"
                 assert entry["handler_address"] > 0, (
                     f"SEH handler_address {entry['handler_address']:#x} must be positive (valid function pointer)"
                 )
@@ -1635,15 +1625,9 @@ class TestSehFiberTls:
         fiber_data_val: object = result["fiber_data"]
         has_fiber_val: object = result["has_fiber"]
 
-        assert isinstance(fiber_data_val, int), (
-            f"fiber_data must be int, got {type(fiber_data_val).__name__}"
-        )
-        assert isinstance(has_fiber_val, bool), (
-            f"has_fiber must be bool, got {type(has_fiber_val).__name__}"
-        )
-        assert has_fiber_val is False, (
-            f"has_fiber must be False for a non-fiber Python thread, got {has_fiber_val!r}"
-        )
+        assert isinstance(fiber_data_val, int), f"fiber_data must be int, got {type(fiber_data_val).__name__}"
+        assert isinstance(has_fiber_val, bool), f"has_fiber must be bool, got {type(has_fiber_val).__name__}"
+        assert has_fiber_val is False, f"has_fiber must be False for a non-fiber Python thread, got {has_fiber_val!r}"
 
     async def test_get_tls_values_returns_list(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
         """Verify get_tls_values excludes zero-value slots and returns exact sentinel at correct index.
@@ -1675,9 +1659,7 @@ class TestSehFiberTls:
             assert isinstance(result, list)
             for entry in result:
                 entry_val: object = entry.get("value")
-                assert isinstance(entry_val, int), (
-                    f"TLS entry value must be int, got {type(entry_val).__name__}"
-                )
+                assert isinstance(entry_val, int), f"TLS entry value must be int, got {type(entry_val).__name__}"
                 assert entry_val != 0, (
                     f"zero-value TLS slot at index {entry.get('index')} must be excluded from result; "
                     f"bridge is returning all slots instead of only non-zero slots"
@@ -1687,9 +1669,7 @@ class TestSehFiberTls:
                 f"allocated TLS slot {slot} with sentinel {sentinel:#010x} not found in result "
                 f"(result has {len(result)} entries, indices: {[e.get('index') for e in result[:10]]})"
             )
-            assert found["value"] == sentinel, (
-                f"TLS slot {slot}: expected sentinel {sentinel:#010x}, got {found['value']:#010x}"
-            )
+            assert found["value"] == sentinel, f"TLS slot {slot}: expected sentinel {sentinel:#010x}, got {found['value']:#010x}"
         finally:
             k32.TlsFree(slot)
 
@@ -1934,7 +1914,7 @@ class TestF0023ServiceParseUnicode:
         """
         services = await process_bridge.list_services()
         non_empty = [s for s in services if isinstance(s.get("name"), str) and s.get("name")]
-        assert len(non_empty) > 0, "All service names are empty"
+        assert non_empty, "All service names are empty"
 
 
 class TestF0026NoFakeSuccess:
@@ -2267,7 +2247,7 @@ class TestF0039UnmapSection:
         assert addr in _get_section_views(process_bridge)
 
         ok: bool = await process_bridge.unmap_section(addr)
-        assert ok is True
+        assert ok
 
         assert addr not in _get_section_views(process_bridge)
         assert handle not in _get_section_handles(process_bridge)
@@ -2333,7 +2313,7 @@ def _create_named_pipe_server(pipe_name: str) -> int:
         0,
         None,
     )
-    return int(server_handle)
+    return server_handle
 
 
 def _open_phys_drive_or_skip() -> int:
@@ -2427,7 +2407,7 @@ class TestF0016PipeCloseResult:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         k32 = ctypes.windll.kernel32
-        server_handle = _create_named_pipe_server(_PIPE_NAME_AUDIT2 + "_close")
+        server_handle = _create_named_pipe_server(f"{_PIPE_NAME_AUDIT2}_close")
         assert server_handle != -1
 
         connected = threading.Event()
@@ -2440,7 +2420,7 @@ class TestF0016PipeCloseResult:
         t = threading.Thread(target=_srv, daemon=True)
         t.start()
 
-        client_handle = await process_bridge.pipe_connect(_PIPE_NAME_AUDIT2 + "_close", 5000)
+        client_handle = await process_bridge.pipe_connect(f"{_PIPE_NAME_AUDIT2}_close", 5000)
         connected.wait(timeout=5.0)
         result = await process_bridge.pipe_close(client_handle)
         assert result is True
@@ -2524,7 +2504,7 @@ class TestF0037PipeReadHex:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
         k32 = ctypes.windll.kernel32
-        server_handle = _create_named_pipe_server(_PIPE_NAME_AUDIT2 + "_read")
+        server_handle = _create_named_pipe_server(f"{_PIPE_NAME_AUDIT2}_read")
         assert server_handle != -1
 
         known_bytes = b"\xde\xad\xbe\xef"
@@ -2540,7 +2520,7 @@ class TestF0037PipeReadHex:
         t = threading.Thread(target=_srv, daemon=True)
         t.start()
 
-        client_handle = await process_bridge.pipe_connect(_PIPE_NAME_AUDIT2 + "_read", 5000)
+        client_handle = await process_bridge.pipe_connect(f"{_PIPE_NAME_AUDIT2}_read", 5000)
         write_done.wait(timeout=5.0)
 
         try:
@@ -2664,7 +2644,7 @@ class TestF0019HandleTypeNames:
         assert len(handles) > 0, "current process must have open handles"
         for entry in handles:
             type_name = entry.get("type_name")
-            assert isinstance(type_name, str), "type_name must be str, got " + type(type_name).__name__
+            assert isinstance(type_name, str), f"type_name must be str, got {type(type_name).__name__}"
             assert type_name, "type_name must not be empty"
 
     async def test_enum_handles_includes_known_types(self, process_bridge: ProcessBridge) -> None:
@@ -2677,7 +2657,7 @@ class TestF0019HandleTypeNames:
         type_names = {str(h.get("type_name", "")) for h in handles}
         known_types = {"Process", "Thread", "Event", "File", "Section", "Directory"}
         found = type_names & known_types
-        assert found, "no known type names found; got: " + str(sorted(type_names)[:20])
+        assert found, f"no known type names found; got: {str(sorted(type_names)[:20])}"
 
     async def test_enum_handles_type_name_never_int(self, process_bridge: ProcessBridge) -> None:
         """type_name field in enum_handles output must never be a bare integer.
@@ -2688,7 +2668,7 @@ class TestF0019HandleTypeNames:
         handles = await process_bridge.enum_handles(os.getpid())
         for entry in handles:
             type_name = entry.get("type_name")
-            assert not isinstance(type_name, int), "type_name should not be int, got " + repr(type_name)
+            assert not isinstance(type_name, int), f"type_name should not be int, got {repr(type_name)}"
 
     async def test_enum_handles_no_pid_returns_multiple_pids(self, process_bridge: ProcessBridge) -> None:
         """enum_handles without a pid filter returns handles from multiple PIDs.
@@ -3478,11 +3458,9 @@ class TestF0047ModuleEntryPoint:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
         """
         modules = await attached_bridge.get_modules(os.getpid())
-        found = False
-        for mod in modules:
-            if mod.entry_point != 0 and mod.size > 0 and mod.base_address <= mod.entry_point < mod.base_address + mod.size:
-                found = True
-                break
+        found = any(
+            mod.entry_point != 0 and mod.size > 0 and mod.base_address <= mod.entry_point < mod.base_address + mod.size for mod in modules
+        )
         assert found, "No module has entry_point within its base_address..base_address+size range"
 
 
@@ -3518,7 +3496,7 @@ class TestF0048ThreadCurrentPC:
         threads = await attached_bridge.get_threads(os.getpid())
         modules = await attached_bridge.get_modules(os.getpid())
         nonzero_pcs = [t.current_pc for t in threads if t.current_pc != 0]
-        assert len(nonzero_pcs) > 0
+        assert nonzero_pcs
         found = False
         for pc in nonzero_pcs:
             for mod in modules:
@@ -3679,7 +3657,7 @@ class TestF0009ContextWow64:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
             secondary_thread: Windows thread id of a parked worker thread used for context queries.
         """
-        if struct.calcsize("P") * 8 != 64:
+        if struct.calcsize("P") != 8:
             pytest.skip("requires 64-bit host")
 
         ctx = await attached_bridge.get_thread_context(secondary_thread)
@@ -3699,7 +3677,7 @@ class TestF0009ContextWow64:
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        if struct.calcsize("P") * 8 != 64:
+        if struct.calcsize("P") != 8:
             pytest.skip("requires 64-bit host")
 
         wow64_notepad = r"C:\Windows\SysWOW64\notepad.exe"
@@ -3772,7 +3750,7 @@ class TestF0008SehChainX64Raises:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
             secondary_thread: Windows thread id of a parked worker thread used for context queries.
         """
-        if struct.calcsize("P") * 8 != 64:
+        if struct.calcsize("P") != 8:
             pytest.skip("requires 64-bit native process")
 
         with pytest.raises(ToolError, match="SEH chain not applicable to x64 target"):
@@ -4028,7 +4006,7 @@ class TestF0042SymbolBufferAllocation:
             if name:
                 resolved.append(name)
 
-        if len(resolved) == 0:
+        if not resolved:
             pytest.skip("no symbols resolved — PDB/symbol server not configured")
         for name in resolved:
             assert isinstance(name, str)

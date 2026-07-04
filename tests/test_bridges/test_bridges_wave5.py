@@ -172,10 +172,7 @@ class _LogSink:
             bool: True if a matching record exists.
         """
         with self._lock:
-            return any(
-                r[1] == event and (level is None or r[0] == level)
-                for r in self.records
-            )
+            return any(r[1] == event and (level is None or r[0] == level) for r in self.records)
 
 
 def _run[T](coro: Coroutine[object, object, T]) -> T:
@@ -823,9 +820,7 @@ class TestValidateToolParameterUnrecognizedItemsType:
         )
         errors = validate_tool_parameter(param, "test_func")
         messages = [e.message for e in errors]
-        assert any("unrecognized items_type" in m for m in messages), (
-            f"Expected 'unrecognized items_type' error; got: {messages}"
-        )
+        assert any("unrecognized items_type" in m for m in messages), f"Expected 'unrecognized items_type' error; got: {messages}"
 
     def test_array_with_custom_items_type_error_is_warning(self) -> None:
         """The unrecognized items_type error must have severity 'warning'.
@@ -860,7 +855,7 @@ class TestValidateToolParameterUnrecognizedItemsType:
         )
         errors = validate_tool_parameter(param, "test_func")
         items_errors = [e for e in errors if "unrecognized items_type" in e.message]
-        assert items_errors == []
+        assert not items_errors
 
 
 # ---------------------------------------------------------------------------
@@ -891,9 +886,7 @@ class TestValidateToolParameterArrayObjectsNoItemProperties:
         )
         errors = validate_tool_parameter(param, "test_func")
         messages = [e.message for e in errors]
-        assert any("requires item_properties" in m for m in messages), (
-            f"Expected 'requires item_properties' error; got: {messages}"
-        )
+        assert any("requires item_properties" in m for m in messages), f"Expected 'requires item_properties' error; got: {messages}"
 
     def test_array_of_objects_no_item_properties_error_is_error_severity(self) -> None:
         """The item_properties error must have severity 'error'.
@@ -930,7 +923,7 @@ class TestValidateToolParameterArrayObjectsNoItemProperties:
         )
         errors = validate_tool_parameter(param, "test_func")
         ip_errors = [e for e in errors if "requires item_properties" in e.message]
-        assert ip_errors == []
+        assert not ip_errors
 
 
 # ---------------------------------------------------------------------------
@@ -1092,9 +1085,7 @@ class TestCancelIOLogEmission:
         client = NamedPipeClient(config=PipeConfig())
         getattr(client, "_cancel_io")()
 
-        assert not sink.has_event("pipe_cancelling_io"), (
-            "No log events should be emitted when _handle is None"
-        )
+        assert not sink.has_event("pipe_cancelling_io"), "No log events should be emitted when _handle is None"
 
     def test_cancel_io_log_carries_handle_value(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """The pipe_cancelling_io log must carry the handle value as a field.
@@ -1139,7 +1130,7 @@ class TestBridgesPackageDirSortedUnion:
         """
         dir_result = dir(bridges_pkg)
         missing = [name for name in _bridges_all if name not in dir_result]
-        assert missing == [], f"Names from __all__ missing from dir(): {missing}"
+        assert not missing, f"Names from __all__ missing from dir(): {missing}"
 
     def test_lazy_exports_appear_in_dir(self) -> None:
         """Every key in LAZY_EXPORTS must appear in dir(bridges_pkg).
@@ -1150,7 +1141,7 @@ class TestBridgesPackageDirSortedUnion:
         """
         dir_result = dir(bridges_pkg)
         missing = [name for name in LAZY_EXPORTS if name not in dir_result]
-        assert missing == [], f"LAZY_EXPORTS keys missing from dir(): {missing}"
+        assert not missing, f"LAZY_EXPORTS keys missing from dir(): {missing}"
 
     def test_dir_result_is_sorted(self) -> None:
         """dir(bridges_pkg) must return a sorted list.

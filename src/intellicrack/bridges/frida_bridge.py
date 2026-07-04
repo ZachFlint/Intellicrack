@@ -811,7 +811,12 @@ _FRIDA_FUNCTIONS: list[ToolFunction] = [
         name="frida.stalker_invalidate",
         description="Invalidate cached Stalker instrumentation for an address so it is re-instrumented on next execution",
         parameters=[
-            ToolParameter(name="address", type="integer", description="Address whose cached instrumentation should be dropped", required=True),
+            ToolParameter(
+                name="address",
+                type="integer",
+                description="Address whose cached instrumentation should be dropped",
+                required=True,
+            ),
             ToolParameter(
                 name="thread_id",
                 type="integer",

@@ -169,11 +169,7 @@ class _ConcreteSearch(SearchMixin):
             hex_widget: Hex widget for highlight tracking.
         """
         app = QApplication.instance()
-        if app is None:
-            self._owned_app: QApplication | None = QApplication([])
-        else:
-            self._owned_app = None
-
+        self._owned_app = QApplication([]) if app is None else None
         self.document: _FakeDocument | None = document
         self._hex_widget: _TrackingHexWidget = hex_widget
         self._search_results: list[tuple[int, int]] = []
@@ -300,9 +296,7 @@ def qapp() -> QApplication:
         QApplication: Active QApplication instance.
     """
     existing = QApplication.instance()
-    if isinstance(existing, QApplication):
-        return existing
-    return QApplication([])
+    return existing if isinstance(existing, QApplication) else QApplication([])
 
 
 class TestSearchUsesDocument:
@@ -427,7 +421,7 @@ class TestSearchResultsClearedOnModeChange:
         mixin.search_mode_combo.setCurrentText("Hex")
         mixin.do_search_mode_changed("Hex")
 
-        assert mixin.search_results == [], "_search_results must be cleared when mode changes"
+        assert not mixin.search_results, "_search_results must be cleared when mode changes"
         assert mixin.search_index == 0, "_search_index must reset to 0"
 
     @staticmethod
@@ -482,7 +476,7 @@ class TestSearchResultsClearedOnModeChange:
 
         mixin.do_reset_search_state()
 
-        assert mixin.search_results == []
+        assert not mixin.search_results
         assert mixin.search_index == 0
         assert not mixin.search_status_label.text()
         assert "search" in widget.clear_calls
@@ -508,4 +502,4 @@ class TestSearchResultsClearedOnModeChange:
 
         mixin.search_input.setText("new query")
 
-        assert mixin.search_results == [], "Changing search input text must clear _search_results"
+        assert not mixin.search_results, "Changing search input text must clear _search_results"

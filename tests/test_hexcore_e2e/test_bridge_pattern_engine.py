@@ -325,7 +325,7 @@ class TestListAndAutoDetect:
             bridge: An initialized HexEditorBridge fixture.
         """
         result: list[dict[str, str]] = _run(bridge.list_hexpat_patterns())
-        assert len(result) > 0, "pattern catalog must not be empty; vendor patterns directory not scanned"
+        assert result, "pattern catalog must not be empty; vendor patterns directory not scanned"
         pattern_names: set[str] = {entry["name"] for entry in result}
         assert "pe" in pattern_names, "built-in 'pe' pattern must be present in the catalog"
         for entry in result:

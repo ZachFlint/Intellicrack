@@ -38,12 +38,14 @@ Do not write an end-to-end test where a unit test would prove the same property 
 ## Test Writing Standards
 
 ### No Mocks or Stubs
+
 - Use real data and actual operations in all tests
 - Create minimal test binaries programmatically when needed (real valid binaries, not fake byte sequences)
 - Never simulate bridge responses or mock external tool interactions
 - No `unittest.mock`, `MagicMock`, `patch`, or simulated responses
 
 ### Bridge Coverage Tests
+
 - Test that bridges correctly pass all inputs to external tools without loss
 - Test that bridges faithfully return all outputs from external tools without silent transformation
 - Test bridge coverage of the external tool's full capability surface
@@ -51,24 +53,29 @@ Do not write an end-to-end test where a unit test would prove the same property 
 - Test that bridge methods handle the full range of data types the external tool produces
 
 ### Orchestration and Integration Tests
+
 - Test session and context management across tool switches
 - Test AI provider connectivity and context routing
 - Test GUI workspace integration points
 - Test cross-bridge workflows where output from one tool feeds into another
 
 ### Assertion Quality
+
 - Every test must assert on the meaning of the output, not merely its existence. `assert result` / `assert result is not None` / `assert len(x) > 0` are never sufficient on their own.
 - Assert exact values and full structure: field-by-field on parsed records, exact bytes on patches/transforms, exact addresses/mnemonics on disassembly, exact verdict and indicators on detections.
 - When a function returns a rich object, validate the parts that would silently regress, not just that an object came back.
 - Expected values must be independently justified (a known-correct constant, a value computed by a *different* trusted oracle), never the implementation's own output captured and frozen, and never the test re-implementing the production logic to compare against itself.
 
 ### Mandatory Coverage Dimensions
+
 For each unit of behavior, cover - not just the happy path:
+
 - **Edge inputs**: empty, maximal/oversized, boundary values, and the real-world complexity Intellicrack targets (packed, obfuscated, truncated, malformed, adversarially-crafted binaries).
 - **Error paths**: external tool unavailable/misconfigured/timed-out/returning errors; assert the specific exception type and that failures are surfaced, not swallowed.
 - **Determinism**: if the behavior touches threads, processes, sockets, or timing, synchronize explicitly and assert a stable result; never rely on test ordering or a bare sleep as the correctness mechanism.
 
 ### Test Organization
+
 - Place tests in appropriate `tests/` subdirectory mirroring source module structure
 - Use descriptive test names that convey what is being validated
 - Proper test isolation without sacrificing real-data requirements
@@ -76,11 +83,13 @@ For each unit of behavior, cover - not just the happy path:
 ## Code Quality Requirements
 
 ### Linting and Formatting
+
 - Zero ruff findings in all test files
 - Format all test code with ruff format
 - Line length limit: 140 characters
 
 ### Type Safety
+
 - All test functions, fixtures, and variables must have explicit type hints/annotations
 - All test code must be fully basedpyright compliant with zero findings
 - Use `X | None` for nullable types and `X | Y` for unions (PEP 604 syntax exclusively)
@@ -88,6 +97,7 @@ For each unit of behavior, cover - not just the happy path:
 - NEVER edit the `[tool.basedpyright]` section in `pyproject.toml`
 
 ### Docstrings
+
 - Google-style docstrings on test classes and complex test functions
 - Docstrings must exactly match signatures where present
 - Zero pydoclint and pydocstyle findings

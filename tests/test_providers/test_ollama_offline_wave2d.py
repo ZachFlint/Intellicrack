@@ -157,9 +157,7 @@ class _CapturingStubHTTPServer(ThreadingHTTPServer):
             bytes: The captured body bytes, or empty bytes if not found.
         """
         entries = self.captured_bodies.get((method, path), [])
-        if index < len(entries):
-            return entries[index]
-        return b""
+        return entries[index] if index < len(entries) else b""
 
 
 class _CapturingStubHandler(BaseHTTPRequestHandler):

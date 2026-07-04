@@ -27,6 +27,7 @@ __all__ = [
     "BridgeCallWorker",
     "GenericCallableWorker",
     "cancel_pending_main_loop_tasks",
+    "drain_bridge_workers",
     "run_bridge_coroutine",
     "run_bridge_coroutine_async",
     "run_bridge_coroutine_logged",
@@ -145,6 +146,9 @@ class _RetainedWorker(QThread):
 
 
 _LOOP_READY_TIMEOUT: float = 2.0
+
+_WORKER_DRAIN_TIMEOUT_MS: int = 5000
+"""Default per-worker wait, in milliseconds, applied by :func:`drain_bridge_workers`."""
 
 
 class _PendingTaskTracker:
@@ -524,6 +528,38 @@ def run_bridge_coroutine_logged(
             on_error(exc)
 
     run_bridge_coroutine_async(coro, _logged_success, _logged_error, parent)
+
+
+def drain_bridge_workers(timeout_ms: int = _WORKER_DRAIN_TIMEOUT_MS) -> int:
+    """Block until every retained background worker thread has finished.
+
+    Each :func:`run_bridge_coroutine_async` / :func:`run_bridge_coroutine_logged`
+    call starts a :class:`BridgeCallWorker` ``QThread`` that is pinned in
+    :class:`_WorkerRegistry` for the lifetime of its OS thread. While the Qt
+    event loop is spinning, each worker's ``finished`` signal fires its
+    ``deleteLater`` slot and the thread is reaped normally. During application
+    shutdown - and between unit tests, where no event loop is running - a worker
+    whose OS thread is still executing would be destroyed mid-flight, aborting
+    the whole process with ``QThread: Destroyed while thread is still running``.
+    Draining first waits for each such worker to finish so teardown is clean.
+
+    Args:
+        timeout_ms: Maximum number of milliseconds to wait for each individual
+            worker thread to finish before moving on to the next one.
+
+    Returns:
+        int: The number of retained workers confirmed finished (or already gone).
+    """
+    with _WorkerRegistry.lock:
+        snapshot = list(_WorkerRegistry.workers)
+    drained = 0
+    for worker in snapshot:
+        try:
+            if not worker.isRunning() or worker.wait(timeout_ms):
+                drained += 1
+        except RuntimeError:
+            drained += 1
+    return drained
 
 
 def shutdown_bridge_loop() -> None:

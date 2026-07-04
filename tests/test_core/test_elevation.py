@@ -72,7 +72,7 @@ class TestPlatformHelpers:
             expected: bool = bool(is_admin_fn())
             assert result is expected
         else:
-            assert result is False
+            assert not result
 
 
 class TestBuildRelaunchCommand:
@@ -205,7 +205,7 @@ class TestMaybeElevate:
             working_dir=".",
             relauncher=_must_not_be_called,
         )
-        assert result is False
+        assert not result
 
     def test_disabled_never_calls_relauncher(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """The ``--no-elevate`` guard short-circuits before the relauncher.
@@ -233,7 +233,7 @@ class TestMaybeElevate:
             working_dir="D:/work",
             relauncher=_must_not_be_called,
         )
-        assert result is False
+        assert not result
 
     def test_already_attempted_never_calls_relauncher(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A child flagged ``already_attempted`` continues without calling the relauncher.
@@ -262,7 +262,7 @@ class TestMaybeElevate:
             working_dir="D:/work",
             relauncher=_must_not_be_called,
         )
-        assert result is False
+        assert not result
 
     def test_already_elevated_never_calls_relauncher(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """An already-elevated process short-circuits without calling the relauncher.
@@ -290,7 +290,7 @@ class TestMaybeElevate:
             working_dir=".",
             relauncher=_must_not_be_called,
         )
-        assert result is False
+        assert not result
 
     def test_relaunch_receives_exact_original_args_and_working_dir(
         self,
@@ -330,7 +330,7 @@ class TestMaybeElevate:
             relauncher=_recording_relauncher,
         )
 
-        assert result is True
+        assert result
         assert len(captured) == 1, f"relauncher must be called exactly once; called {len(captured)} time(s)"
         received_args, received_working_dir = captured[0]
         assert received_args == expected_args
@@ -371,5 +371,5 @@ class TestMaybeElevate:
             working_dir=".",
             relauncher=_declining_relauncher,
         )
-        assert result is False
+        assert not result
         assert call_count == [True], "relauncher must have been invoked exactly once"

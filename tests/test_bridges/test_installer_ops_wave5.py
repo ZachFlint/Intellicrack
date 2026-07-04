@@ -54,7 +54,8 @@ _parse_version_fn: Callable[[str], ToolVersion | None] = cast(
     getattr(_tool_installer_version_cls, "parse"),
 )
 _probe_version_command_fn: Callable[
-    [ToolName, Path, ToolInfo], Awaitable[ToolVersion | None],
+    [ToolName, Path, ToolInfo],
+    Awaitable[ToolVersion | None],
 ] = cast(
     Callable[[ToolName, Path, ToolInfo], Awaitable[ToolVersion | None]],
     getattr(ToolInstaller, "_probe_version_command"),
@@ -145,19 +146,12 @@ class TestProbeVersionCommandRealBinary:
             tool_info,
         )
 
-        assert version is not None, (
-            f"_probe_version_command returned None; frida.__version__={oracle_raw!r}"
-        )
+        assert version is not None, f"_probe_version_command returned None; frida.__version__={oracle_raw!r}"
         assert version.major == oracle_parsed.major, (
-            f"major mismatch: SUT={version.major}, oracle={oracle_parsed.major} "
-            f"(raw={version.raw!r})"
+            f"major mismatch: SUT={version.major}, oracle={oracle_parsed.major} (raw={version.raw!r})"
         )
-        assert version.minor == oracle_parsed.minor, (
-            f"minor mismatch: SUT={version.minor}, oracle={oracle_parsed.minor}"
-        )
-        assert version.raw == oracle_raw, (
-            f"raw version mismatch: SUT returned {version.raw!r}, oracle is {oracle_raw!r}"
-        )
+        assert version.minor == oracle_parsed.minor, f"minor mismatch: SUT={version.minor}, oracle={oracle_parsed.minor}"
+        assert version.raw == oracle_raw, f"raw version mismatch: SUT returned {version.raw!r}, oracle is {oracle_raw!r}"
 
 
 class TestDetectVsGenerator:
@@ -197,9 +191,7 @@ class TestDetectVsGenerator:
 
         result: str | None = _detect_vs_generator_fn(Path(r"C:\fake\cmake.exe"))
 
-        assert result == "Visual Studio 17 2022", (
-            f"Expected 'Visual Studio 17 2022', got {result!r}"
-        )
+        assert result == "Visual Studio 17 2022", f"Expected 'Visual Studio 17 2022', got {result!r}"
 
     def test_returns_none_when_no_vs_generators_present(
         self,
@@ -251,12 +243,8 @@ class TestFindCmakePathDiscovery:
         result: Path | None = _find_cmake_fn()
 
         assert result is not None, "_find_cmake returned None; expected to find cmake.exe stub"
-        assert result.stem.lower() == "cmake", (
-            f"Found executable has wrong stem: {result.stem!r}"
-        )
-        assert result.resolve().parent.resolve() == tmp_path.resolve(), (
-            f"Found cmake not in expected temp dir: {result}"
-        )
+        assert result.stem.lower() == "cmake", f"Found executable has wrong stem: {result.stem!r}"
+        assert result.resolve().parent.resolve() == tmp_path.resolve(), f"Found cmake not in expected temp dir: {result}"
 
     def test_find_cmake_returns_none_when_not_on_path_and_no_vswhere(
         self,
@@ -274,9 +262,7 @@ class TestFindCmakePathDiscovery:
 
         result: Path | None = _find_cmake_fn()
 
-        assert result is None, (
-            f"Expected None when cmake is absent, got {result!r}"
-        )
+        assert result is None, f"Expected None when cmake is absent, got {result!r}"
 
 
 class TestBuildX64dbgPluginCommandConstruction:
@@ -325,42 +311,31 @@ class TestBuildX64dbgPluginCommandConstruction:
 
         captured_calls: list[list[str]] = fake_run.captured_calls
 
-        assert result is True, (
-            f"build_x64dbg_plugin returned False; captured calls: {captured_calls}"
-        )
+        assert result is True, f"build_x64dbg_plugin returned False; captured calls: {captured_calls}"
 
         configure_calls = [c for c in captured_calls if str(plugin_dir) in c]
-        assert len(configure_calls) >= 1, (
-            f"No cmake configure calls found; all calls: {captured_calls}"
-        )
+        assert configure_calls, f"No cmake configure calls found; all calls: {captured_calls}"
 
         x64_configure = next(
             (c for c in configure_calls if "-DBUILD_X64=ON" in c),
             None,
         )
-        assert x64_configure is not None, (
-            f"No configure call with -DBUILD_X64=ON found; configure calls: {configure_calls}"
-        )
+        assert x64_configure is not None, f"No configure call with -DBUILD_X64=ON found; configure calls: {configure_calls}"
 
         assert "-G" in x64_configure, f"Missing -G flag in configure call: {x64_configure}"
         g_idx = x64_configure.index("-G")
         assert g_idx + 1 < len(x64_configure), "No generator string follows -G"
         assert x64_configure[g_idx + 1] == expected_generator, (
-            f"Generator mismatch: expected {expected_generator!r}, "
-            f"got {x64_configure[g_idx + 1]!r}"
+            f"Generator mismatch: expected {expected_generator!r}, got {x64_configure[g_idx + 1]!r}"
         )
 
         assert "-A" in x64_configure, f"Missing -A flag in configure call: {x64_configure}"
         a_idx = x64_configure.index("-A")
         assert a_idx + 1 < len(x64_configure), "No architecture string follows -A"
-        assert x64_configure[a_idx + 1] == "x64", (
-            f"Architecture mismatch: expected 'x64', got {x64_configure[a_idx + 1]!r}"
-        )
+        assert x64_configure[a_idx + 1] == "x64", f"Architecture mismatch: expected 'x64', got {x64_configure[a_idx + 1]!r}"
 
         expected_x64dbg_flag = f"-DX64DBG_PATH={x64dbg_path}"
-        assert expected_x64dbg_flag in x64_configure, (
-            f"-DX64DBG_PATH not set correctly in configure call: {x64_configure}"
-        )
+        assert expected_x64dbg_flag in x64_configure, f"-DX64DBG_PATH not set correctly in configure call: {x64_configure}"
 
     def test_cmake_build_command_uses_release_config(
         self,
@@ -393,17 +368,13 @@ class TestBuildX64dbgPluginCommandConstruction:
         assert result is True
 
         build_calls = [c for c in captured_calls if "--build" in c]
-        assert len(build_calls) >= 1, (
-            f"No cmake --build calls found; all calls: {captured_calls}"
-        )
+        assert build_calls, f"No cmake --build calls found; all calls: {captured_calls}"
 
         build_cmd = build_calls[0]
         assert "--build" in build_cmd
         assert "--config" in build_cmd
         config_idx = build_cmd.index("--config")
-        assert build_cmd[config_idx + 1] == "Release", (
-            f"Expected --config Release, got {build_cmd[config_idx + 1]!r}"
-        )
+        assert build_cmd[config_idx + 1] == "Release", f"Expected --config Release, got {build_cmd[config_idx + 1]!r}"
 
 
 # UNTESTABLE finding annotation

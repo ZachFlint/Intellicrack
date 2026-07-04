@@ -9,6 +9,15 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Complete tool bridge capabilities and integrate UI controls (`2c0bff0`)
+This update resolves gaps between the LLM-callable tool bridges and the Qt GUI panels across Cutter, Frida, Ghidra, Hex Editor, Process, and Sandbox tools. By routing GUI actions through the unified bridge layer, we eliminate duplicate implementations, ensure consistent behavior, and expose previously headless capabilities directly to the user interface.
+- **Cutter/Rizin**: Added debugger, project, search, and static analysis tabs, corrected relocations/resources commands, and added ESIL/flag controls.
+- **Frida**: Added Stalker tuning, Interceptor lifecycle, call-probe, memory-patch, and system-function controls, and resolved the external detach state.
+- **Ghidra**: Added memory-block mutations, program-tree editing, data-type creation, and advanced analysis views (thunks, references, call graphs).
+- **Hex Editor**: Rerouted search, sandbox, memory, and template operations to the bridge, and added VA mapping and annotated report exports.
+- **Process & Sandbox**: Integrated decommit, token, privilege, and kernel-debug APIs, added sandbox VM pause/PCAP stop, and gated unattached tabs with overlays.
+- **Core**: Enhanced `ToolRegistry` with automatic hex-to-bytes argument coercion and dotted function-name capability resolution.
+
 - Integrate workspace agents and update x64dbg plugin build (`e8de94e`)
 Introduce workspace-scoped agent and skill configurations generated from markdown sources, and update the x64dbg plugin build pipeline to support automated x32/x64 compilation and deployment. Dependency configurations are updated to exclude vendor directories and include PyInstaller and PyTorch.
 - Add `generate_agent_jsons.py` to compile agent JSON specs from markdown frontmatter
@@ -329,15 +338,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`feda481`)
 Introduces a comprehensive Hex Editor
-
-- Complete tool bridge capabilities and integrate UI controls (``)
-This update resolves gaps between the LLM-callable tool bridges and the Qt GUI panels across Cutter, Frida, Ghidra, Hex Editor, Process, and Sandbox tools. By routing GUI actions through the unified bridge layer, we eliminate duplicate implementations, ensure consistent behavior, and expose previously headless capabilities directly to the user interface.
-- **Cutter/Rizin**: Added debugger, project, search, and static analysis tabs, corrected relocations/resources commands, and added ESIL/flag controls.
-- **Frida**: Added Stalker tuning, Interceptor lifecycle, call-probe, memory-patch, and system-function controls, and resolved the external detach state.
-- **Ghidra**: Added memory-block mutations, program-tree editing, data-type creation, and advanced analysis views (thunks, references, call graphs).
-- **Hex Editor**: Rerouted search, sandbox, memory, and template operations to the bridge, and added VA mapping and annotated report exports.
-- **Process & Sandbox**: Integrated decommit, token, privilege, and kernel-debug APIs, added sandbox VM pause/PCAP stop, and gated unattached tabs with overlays.
-- **Core**: Enhanced `ToolRegistry` with automatic hex-to-bytes argument coercion and dotted function-name capability resolution.
 
 
 ### Changed
@@ -848,6 +848,14 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
+- Remediate GUI responsiveness and layout issues from audit (``)
+Offloads long-running and blocking operations across all panels to background workers using GenericCallableWorker and run_bridge_coroutine_logged to ensure the Qt event loop remains responsive. Resolves layout, sizing, and collapsibility defects by configuring non-collapsible splitters, setting explicit minimum dimensions, and enabling word-wrap and tooltips on truncated text labels. Expands test coverage significantly with dedicated regression tests for all audited components and comprehensive unit tests for the core hexcore Rust crate.
+- Offload file I/O, hashing, PE-checksum, and bridge operations to background threads
+- Prevent UI splitters from collapsing completely and enforce minimum pane sizes
+- Add tooltips and word-wrapping to prevent text truncation in labels and tables
+- Re-resolve and apply theme-specific colors dynamically on application theme changes
+- Add extensive integration tests for GUI components and unit tests for Rust hexcore crate
+
 
 ### Documentation
 
@@ -919,6 +927,16 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **ui:** Remediate 2026-07-01 GUI audit findings (`ce6cf3f`)
+Fix every finding in audit/gui-audit-2026-07-01.md across the PyQt6 GUI.
+Systemic fixes (applied once, reused):
+- Cross-thread UI marshalling via pyqtSignal->GUI-thread slot for the bridge
+analysis callback (H1), x64dbg debug events (H2), and tool confirmation.
+- Theme-aware colour resolution + theme_changed subscription for the log model
+(H4) and syntax highlighters, plus hex-editor offset/minimap colours (M20/M21).
+- Blocking bridge calls moved to the async worker path with an optional
+run_bridge_coroutine timeout (M1, M2, M4, M5).
 
 - **core:** Resolve socket leak in connection pool shutdown (`501e32d`)
 Ensure active connections are explicitly drained and closed during pool termination to prevent resource exhaustion. Previously, orphaned sockets remained in a TIME_WAIT state under high-throughput teardown scenarios.

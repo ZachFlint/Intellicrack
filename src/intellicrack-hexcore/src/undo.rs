@@ -463,4 +463,44 @@ mod tests {
         assert_eq!(patches[0], (0usize, vec![0u8; 4]));
         assert_eq!(patches[1], (16usize, vec![0xAA, 0xBB, 0xCC, 0xDD]));
     }
+
+    #[test]
+    fn test_clear_resets_stacks_and_saved_state() {
+        let mut doc = MmapDocument::from_bytes(b"AB");
+        let mut um = UndoManager::new();
+        doc.apply_insert(2, b"C");
+        um.record(Operation::Insert { offset: 2, data: vec![b'C'] });
+        um.undo(&mut doc);
+        assert!(um.can_redo());
+
+        um.clear();
+        assert!(!um.can_undo());
+        assert!(!um.can_redo());
+        assert!(!um.is_modified());
+    }
+
+    #[test]
+    fn test_default_matches_new() {
+        let um = UndoManager::default();
+        assert!(!um.can_undo());
+        assert!(!um.can_redo());
+        assert!(!um.is_modified());
+    }
+
+    #[test]
+    fn test_get_overwrite_patches_skips_insert_and_delete() {
+        let mut um = UndoManager::new();
+        um.record(Operation::Insert { offset: 0, data: vec![0x11] });
+        um.record(Operation::Overwrite {
+            offset: 4,
+            old_data: vec![0x00],
+            new_data: vec![0xEE],
+        });
+        um.record(Operation::Delete { offset: 8, deleted_data: vec![0x22] });
+
+        let patches = um.get_overwrite_patches();
+        // Only the Overwrite contributes a patch; Insert/Delete are no-ops here.
+        assert_eq!(patches.len(), 1);
+        assert_eq!(patches[0], (4usize, vec![0xEE]));
+    }
 }

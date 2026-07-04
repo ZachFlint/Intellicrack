@@ -83,7 +83,7 @@ def test_setup_logging_writes_real_json_event_to_file(tmp_path: Path) -> None:
     assert log_file.is_file()
     content = log_file.read_text(encoding="utf-8")
     lines = [line for line in content.splitlines() if "realcov_logging_event" in line]
-    assert len(lines) >= 1
+    assert lines
 
     payload = json.loads(lines[-1])
     assert payload["event"] == "realcov_logging_event"

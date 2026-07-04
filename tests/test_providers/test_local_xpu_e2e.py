@@ -976,7 +976,7 @@ class TestStreamingInference:
 
         assert len(chunks) >= 2, f"expected the stream to yield multiple chunks, got {len(chunks)}"
         assert all(isinstance(chunk, str) for chunk in chunks), "every streamed chunk must be a str"
-        assert all(chunk for chunk in chunks), "the stream must not yield empty chunks"
+        assert all(chunks), "the stream must not yield empty chunks"
 
         chunks_with_letters = [chunk for chunk in chunks if any(char.isalpha() for char in chunk)]
         assert len(chunks_with_letters) >= 4, f"expected >= 4 chunks containing letters, got {len(chunks_with_letters)}"
@@ -1017,7 +1017,7 @@ class TestStreamingInference:
             )
         ]
         assert all(isinstance(chunk, str) for chunk in chunks), "every streamed chunk must be a str"
-        assert all(chunk for chunk in chunks), "the stream must not yield empty chunks"
+        assert all(chunks), "the stream must not yield empty chunks"
 
         full_text = "".join(chunks).strip()
         assert full_text, "stream produced no text"

@@ -4,340 +4,339 @@ Generated from the 10 group verification reports. 309 findings with no real gate
 
 ## Group 01 — §1/§5/§6 Bridge·Hex·HexPat (17 open)
 
-- `TOOL_CAPABILITY_MAP` scripting family (base.py:74-82) :: 
-- `TOOL_CAPABILITY_MAP` decompilation family (base.py:62) :: 
-- `BinaryOperationsBridge.__init__` capability values (base.py:1046-1054) :: 
-- `resolve()` warning log on unknown attribute (lazy.py:60) :: 
-- `resolve()` TypeError for non-bridge/non-installer (lazy.py:68-71) :: 
-- `build_schema_property` array+object recursive branch (schemas.py:258-267) :: 
-- `validate_tool_parameter` array with unrecognized items_type (schemas.py:419-422) :: 
-- `validate_tool_parameter` array of objects without item_properties (schemas.py:427-434) :: 
-- `_assert_never` (schemas.py:28-48) :: 
-- `_read_exact` timeout raises ToolError (npc.py:597-605) :: 
-- `_cancel_io` (npc.py:869-882) :: 
-- `bridges/__init__.py __dir__` (\_\_init\_\_.py:90-96) :: 
-- `get_selection` exact tuple at bridge level (hex_editor.py:5928) :: 
-- `HexPatError.__str__` exact format (errors.py:44-45) :: 
-- `_process_source` `import mod;` directive — NO (preprocessor.py:220) :: 
-- `_resolve_include` circular import prevention — NO (preprocessor.py:290) :: 
-- `_process_defines` 64-pass limit — PARTIAL (preprocessor.py:320) :: 
+- `TOOL_CAPABILITY_MAP` scripting family (base.py:74-82) ::
+- `TOOL_CAPABILITY_MAP` decompilation family (base.py:62) ::
+- `BinaryOperationsBridge.__init__` capability values (base.py:1046-1054) ::
+- `resolve()` warning log on unknown attribute (lazy.py:60) ::
+- `resolve()` TypeError for non-bridge/non-installer (lazy.py:68-71) ::
+- `build_schema_property` array+object recursive branch (schemas.py:258-267) ::
+- `validate_tool_parameter` array with unrecognized items_type (schemas.py:419-422) ::
+- `validate_tool_parameter` array of objects without item_properties (schemas.py:427-434) ::
+- `_assert_never` (schemas.py:28-48) ::
+- `_read_exact` timeout raises ToolError (npc.py:597-605) ::
+- `_cancel_io` (npc.py:869-882) ::
+- `bridges/__init__.py __dir__` (\_\_init\_\_.py:90-96) ::
+- `get_selection` exact tuple at bridge level (hex_editor.py:5928) ::
+- `HexPatError.__str__` exact format (errors.py:44-45) ::
+- `_process_source` `import mod;` directive — NO (preprocessor.py:220) ::
+- `_resolve_include` circular import prevention — NO (preprocessor.py:290) ::
+- `_process_defines` 64-pass limit — PARTIAL (preprocessor.py:320) ::
 
 ## Group 02 — §2/§15 Disassembler·UIPanels (50 open)
 
-- `decompile(address)` (cutter.py:~650) :: 
-- `search_crypto_constants()` (cutter.py:3735) :: 
-- `search_magic()` (cutter.py:3752) :: 
-- `search_value(value, size)` (cutter.py:3769) :: 
-- `compare_bytes(hex_data, address)` (cutter.py:3791) :: 
-- `compare_disassembly(file_path, address)` (cutter.py:3812) :: 
-- `get_segments()` (cutter.py:3852) :: 
-- `hexdump_words(address, length)` (cutter.py:3900) :: 
-- `disassemble_function(address)` (cutter.py:3921) :: 
-- `analyze` (ghidra.py) :: 
-- `get_xrefs_from(address)` (ghidra.py) :: 
-- `get_sections()` (ghidra.py) :: 
-- `get_classes()` (ghidra.py) :: 
-- `get_vtables()` (ghidra.py) :: 
-- `get_syscalls()` (ghidra.py) :: 
-- `get_callgraph(address, depth)` (ghidra.py) :: 
-- `get_resources()` (ghidra.py) :: 
-- `get_symbols()` (ghidra.py) :: 
-- `get_flags()` (ghidra.py) :: 
-- `add_flag(address, name, size)` (ghidra.py) :: 
-- `get_types()` (ghidra.py) :: 
-- `get_function_graph(address)` (ghidra.py) :: 
-- `get_function_address(name)` (ghidra.py) :: 
-- `get_all_strings()` (ghidra.py) :: 
-- `get_libraries()` (ghidra.py) :: 
-- `get_headers()` (ghidra.py) :: 
-- `get_debug_info()` (ghidra.py) :: 
-- `get_comment(address)` (ghidra.py — singular) :: 
-- `get_namespace(name)` (ghidra.py — singular) :: 
-- `set_namespace(address, namespace)` (ghidra.py) :: 
-- `get_data_references(address)` (ghidra.py) :: 
-- `get_instruction_at(address)` (ghidra.py) :: 
-- `get_bytes_at(address, length)` (ghidra.py) :: 
-- `patch_bytes(address, data)` (ghidra.py) :: 
-- `get_register_values()` (ghidra.py — plural) :: 
-- `emulate_function(address)` (ghidra.py) :: 
-- `get_stack_trace()` (ghidra.py) :: 
-- `get_local_variables(address)` (ghidra.py) :: 
-- `get_function_comments(address)` (ghidra.py) :: 
-- `import_c_header(path)` (ghidra.py) :: 
-- `define_union(name, fields)` (ghidra.py) :: 
-- `define_enum(name, base_type)` (ghidra.py) :: 
-- `add_enum_value(enum_name, value_name, value)` (ghidra.py) :: 
-- `get_typedef(name)` (ghidra.py) :: 
-- `create_typedef(name, base_type)` (ghidra.py) :: 
-- `delete_data_type(name)` (ghidra.py) :: 
-- `stack_viewer.py` — all operations (ui/panels/stack_viewer.py) :: 
-- `test_sandbox_panel_fixes.py` — combo + routing tests (tests/test_ui/test_sandbox_panel_fixes.py) :: 
-- `async_bridge.py` — `cancel_pending_main_loop_tasks` + `shutdown_bridge_loop` (ui/panels/async_bridge.py) :: 
-- Total findings :: 
+- `decompile(address)` (cutter.py:~650) ::
+- `search_crypto_constants()` (cutter.py:3735) ::
+- `search_magic()` (cutter.py:3752) ::
+- `search_value(value, size)` (cutter.py:3769) ::
+- `compare_bytes(hex_data, address)` (cutter.py:3791) ::
+- `compare_disassembly(file_path, address)` (cutter.py:3812) ::
+- `get_segments()` (cutter.py:3852) ::
+- `hexdump_words(address, length)` (cutter.py:3900) ::
+- `disassemble_function(address)` (cutter.py:3921) ::
+- `analyze` (ghidra.py) ::
+- `get_xrefs_from(address)` (ghidra.py) ::
+- `get_sections()` (ghidra.py) ::
+- `get_classes()` (ghidra.py) ::
+- `get_vtables()` (ghidra.py) ::
+- `get_syscalls()` (ghidra.py) ::
+- `get_callgraph(address, depth)` (ghidra.py) ::
+- `get_resources()` (ghidra.py) ::
+- `get_symbols()` (ghidra.py) ::
+- `get_flags()` (ghidra.py) ::
+- `add_flag(address, name, size)` (ghidra.py) ::
+- `get_types()` (ghidra.py) ::
+- `get_function_graph(address)` (ghidra.py) ::
+- `get_function_address(name)` (ghidra.py) ::
+- `get_all_strings()` (ghidra.py) ::
+- `get_libraries()` (ghidra.py) ::
+- `get_headers()` (ghidra.py) ::
+- `get_debug_info()` (ghidra.py) ::
+- `get_comment(address)` (ghidra.py — singular) ::
+- `get_namespace(name)` (ghidra.py — singular) ::
+- `set_namespace(address, namespace)` (ghidra.py) ::
+- `get_data_references(address)` (ghidra.py) ::
+- `get_instruction_at(address)` (ghidra.py) ::
+- `get_bytes_at(address, length)` (ghidra.py) ::
+- `patch_bytes(address, data)` (ghidra.py) ::
+- `get_register_values()` (ghidra.py — plural) ::
+- `emulate_function(address)` (ghidra.py) ::
+- `get_stack_trace()` (ghidra.py) ::
+- `get_local_variables(address)` (ghidra.py) ::
+- `get_function_comments(address)` (ghidra.py) ::
+- `import_c_header(path)` (ghidra.py) ::
+- `define_union(name, fields)` (ghidra.py) ::
+- `define_enum(name, base_type)` (ghidra.py) ::
+- `add_enum_value(enum_name, value_name, value)` (ghidra.py) ::
+- `get_typedef(name)` (ghidra.py) ::
+- `create_typedef(name, base_type)` (ghidra.py) ::
+- `delete_data_type(name)` (ghidra.py) ::
+- `stack_viewer.py` — all operations (ui/panels/stack_viewer.py) ::
+- `test_sandbox_panel_fixes.py` — combo + routing tests (tests/test_ui/test_sandbox_panel_fixes.py) ::
+- `async_bridge.py` — `cancel_pending_main_loop_tasks` + `shutdown_bridge_loop` (ui/panels/async_bridge.py) ::
+- Total findings ::
 
 ## Group 03 — §3 X64Dbg (29 open)
 
-- `initialize(tool_path)` (x64dbg.py:2051) :: 
-- `load(path, args)` (x64dbg.py:2734) :: 
-- `attach(pid)` (x64dbg.py:2849) :: 
-- `detach()` (x64dbg.py:2974) :: 
-- `spawn(path, args)` (x64dbg.py:4400) :: 
-- `shutdown()` (x64dbg.py:9169) :: 
-- `get_memory_regions()` (x64dbg.py:3881) :: 
-- `get_stack_trace()` (x64dbg.py:4173) :: 
-- `get_labels(start, end)` (x64dbg.py:6064) :: 
-- `get_comments(start, end)` (x64dbg.py:6142) :: 
-- `set_exception_config(code, handling)` (x64dbg.py:6754) :: 
-- `find_references(address)` (x64dbg.py:6918) :: 
-- `find_string_references(module)` (x64dbg.py:6936) :: 
-- `get_function_cfg(address, max_blocks)` (x64dbg.py:6972) :: 
-- `clear_database()` (x64dbg.py:7030) :: 
-- `remove_watch(index)` (x64dbg.py:7439) :: 
-- `get_watches()` (x64dbg.py:7461) :: 
-- `analyze_entropy(address, size, block_size)` (x64dbg.py:7808) :: 
-- `yara_scan(rule_text, rule_path)` (x64dbg.py:7899) :: 
-- `script_load(path)` (x64dbg.py:7997) :: 
-- `script_run()` (x64dbg.py:8038) :: 
-- `script_cmd(line)` (x64dbg.py:8074) :: 
-- `script_abort()` (x64dbg.py:8114) :: 
-- `close_handle(handle)` (x64dbg.py:8377) :: 
-- `break_on_tls_callbacks(module_name)` (x64dbg.py:8708) :: 
-- `get_resources(module_name)` (x64dbg.py:8726) :: 
-- `adjust_privilege(name, enable)` (x64dbg.py:9034) :: 
-- `_coerce_address(value)` (x64dbg.py:392-416) :: 
-- `_x64dbg_error_code(exc)` (x64dbg.py:378-389) :: 
+- `initialize(tool_path)` (x64dbg.py:2051) ::
+- `load(path, args)` (x64dbg.py:2734) ::
+- `attach(pid)` (x64dbg.py:2849) ::
+- `detach()` (x64dbg.py:2974) ::
+- `spawn(path, args)` (x64dbg.py:4400) ::
+- `shutdown()` (x64dbg.py:9169) ::
+- `get_memory_regions()` (x64dbg.py:3881) ::
+- `get_stack_trace()` (x64dbg.py:4173) ::
+- `get_labels(start, end)` (x64dbg.py:6064) ::
+- `get_comments(start, end)` (x64dbg.py:6142) ::
+- `set_exception_config(code, handling)` (x64dbg.py:6754) ::
+- `find_references(address)` (x64dbg.py:6918) ::
+- `find_string_references(module)` (x64dbg.py:6936) ::
+- `get_function_cfg(address, max_blocks)` (x64dbg.py:6972) ::
+- `clear_database()` (x64dbg.py:7030) ::
+- `remove_watch(index)` (x64dbg.py:7439) ::
+- `get_watches()` (x64dbg.py:7461) ::
+- `analyze_entropy(address, size, block_size)` (x64dbg.py:7808) ::
+- `yara_scan(rule_text, rule_path)` (x64dbg.py:7899) ::
+- `script_load(path)` (x64dbg.py:7997) ::
+- `script_run()` (x64dbg.py:8038) ::
+- `script_cmd(line)` (x64dbg.py:8074) ::
+- `script_abort()` (x64dbg.py:8114) ::
+- `close_handle(handle)` (x64dbg.py:8377) ::
+- `break_on_tls_callbacks(module_name)` (x64dbg.py:8708) ::
+- `get_resources(module_name)` (x64dbg.py:8726) ::
+- `adjust_privilege(name, enable)` (x64dbg.py:9034) ::
+- `_coerce_address(value)` (x64dbg.py:392-416) ::
+- `_x64dbg_error_code(exc)` (x64dbg.py:378-389) ::
 
 ## Group 04 — §3 Frida (35 open)
 
-- `is_available()` frida_bridge.py:1342 :: 
-- `detach(kill_spawned)` frida_bridge.py:1674 :: 
-- `get_hooks()` frida_bridge.py:2290 :: 
-- `execute_script(script)` frida_bridge.py:2301 :: 
-- `unload_all_scripts()` frida_bridge.py:2716 :: 
-- `set_message_handler(handler)` frida_bridge.py:2722 :: 
-- `resume_child(pid)` frida_bridge.py:4229 :: 
-- `post_message(script_id, message)` frida_bridge.py:4428 :: 
-- `eternalize_script(script_id)` frida_bridge.py:4455 :: 
-- `create_cancellable()` frida_bridge.py:4516 :: 
-- `cancel(cancellable_id)` frida_bridge.py:4528 :: 
-- `enumerate_symbols(module_name)` frida_bridge.py:4655 :: 
-- `load_module(path)` frida_bridge.py:4716 :: 
-- `find_module_by_address(address)` frida_bridge.py:4760 :: 
-- `find_functions_matching(pattern)` frida_bridge.py:4807 :: 
-- `disassemble_instruction(address)` frida_bridge.py:4865 :: 
-- `get_backtrace(context_address, backtracer)` frida_bridge.py:4922 :: 
-- `set_exception_handler()` frida_bridge.py:4994 :: 
-- `revert_hook(target)` frida_bridge.py:5054 :: 
-- `flush_interceptor()` frida_bridge.py:5088 :: 
-- `call_system_function(address, ...)` frida_bridge.py:5113 :: 
-- `stalker_add_call_probe(address, callback_code)` frida_bridge.py:5208 :: 
-- `stalker_remove_call_probe(probe_id)` frida_bridge.py:5267 :: 
-- `enumerate_applications()` frida_bridge.py:5284 :: 
-- `inject_library_file(pid, path, ...)` frida_bridge.py:5313 :: 
-- `inject_library_blob(pid, blob_hex, ...)` frida_bridge.py:5347 :: 
-- `create_cmodule(code, symbols)` frida_bridge.py:5957 :: 
-- `cloak_add_thread(thread_id)` frida_bridge.py:6819 :: 
-- `cloak_remove_thread(thread_id)` frida_bridge.py:6848 :: 
-- `cloak_add_range(address, size)` frida_bridge.py:6877 :: 
-- `cloak_remove_range(address, size)` frida_bridge.py:6908 :: 
-- `monitor_path(path)` frida_bridge.py:7077 :: 
-- `stop_monitor(monitor_id)` frida_bridge.py:7129 :: 
-- O-06: `enumerate_exports` module-not-found error path test_realcov_03a_frida_modules.py:169-177 :: 
-- O-07: `stalker_follow`/`stalker_unfollow` test_frida_bridge.py:567-618, 1274-1303 :: 
+- `is_available()` frida_bridge.py:1342 ::
+- `detach(kill_spawned)` frida_bridge.py:1674 ::
+- `get_hooks()` frida_bridge.py:2290 ::
+- `execute_script(script)` frida_bridge.py:2301 ::
+- `unload_all_scripts()` frida_bridge.py:2716 ::
+- `set_message_handler(handler)` frida_bridge.py:2722 ::
+- `resume_child(pid)` frida_bridge.py:4229 ::
+- `post_message(script_id, message)` frida_bridge.py:4428 ::
+- `eternalize_script(script_id)` frida_bridge.py:4455 ::
+- `create_cancellable()` frida_bridge.py:4516 ::
+- `cancel(cancellable_id)` frida_bridge.py:4528 ::
+- `enumerate_symbols(module_name)` frida_bridge.py:4655 ::
+- `load_module(path)` frida_bridge.py:4716 ::
+- `find_module_by_address(address)` frida_bridge.py:4760 ::
+- `find_functions_matching(pattern)` frida_bridge.py:4807 ::
+- `disassemble_instruction(address)` frida_bridge.py:4865 ::
+- `get_backtrace(context_address, backtracer)` frida_bridge.py:4922 ::
+- `set_exception_handler()` frida_bridge.py:4994 ::
+- `revert_hook(target)` frida_bridge.py:5054 ::
+- `flush_interceptor()` frida_bridge.py:5088 ::
+- `call_system_function(address, ...)` frida_bridge.py:5113 ::
+- `stalker_add_call_probe(address, callback_code)` frida_bridge.py:5208 ::
+- `stalker_remove_call_probe(probe_id)` frida_bridge.py:5267 ::
+- `enumerate_applications()` frida_bridge.py:5284 ::
+- `inject_library_file(pid, path, ...)` frida_bridge.py:5313 ::
+- `inject_library_blob(pid, blob_hex, ...)` frida_bridge.py:5347 ::
+- `create_cmodule(code, symbols)` frida_bridge.py:5957 ::
+- `cloak_add_thread(thread_id)` frida_bridge.py:6819 ::
+- `cloak_remove_thread(thread_id)` frida_bridge.py:6848 ::
+- `cloak_add_range(address, size)` frida_bridge.py:6877 ::
+- `cloak_remove_range(address, size)` frida_bridge.py:6908 ::
+- `monitor_path(path)` frida_bridge.py:7077 ::
+- `stop_monitor(monitor_id)` frida_bridge.py:7129 ::
+- O-06: `enumerate_exports` module-not-found error path test_realcov_03a_frida_modules.py:169-177 ::
+- O-07: `stalker_follow`/`stalker_unfollow` test_frida_bridge.py:567-618, 1274-1303 ::
 
 ## Group 05 — §4/§13 PE·Process·Rust (20 open)
 
-- `PROCESSENTRY32` struct layout (win32_types.py:~200) :: 
-- `MODULEENTRY32` struct layout (win32_types.py:~250) :: 
-- `TOKEN_PRIVILEGES` / `LUID_AND_ATTRIBUTES` layout (win32_types.py:~600) :: 
-- `STACKFRAME64`, `SYMBOL_INFO` layout (win32_types.py:~1000) :: 
-- `SERVICE_STATUS_PROCESS` struct (win32_types.py:~1050) :: 
-- `JOBOBJECT_EXTENDED_LIMIT_INFORMATION` struct (win32_types.py:~1100) :: 
-- `PROCESS_MITIGATION_*` structs (win32_types.py:~1120) :: 
-- `inject_dll` (process.py:3616) :: 
-- `adjust_token_privilege` (process.py:3970) :: 
-- `stack_walk` (process.py:5682) :: 
-- `remove_privilege` (process.py:6826) :: 
-- `pipe_write` (process.py:7509) :: 
-- `_install_frida` (installer.py:~700) :: 
-- `_probe_version_command` (installer.py:~800) :: 
-- `build_x64dbg_plugin` (installer.py:~1900) :: 
-- `_find_cmake` (installer.py:~2000) :: 
-- `_detect_vs_generator` (installer.py:~2050) :: 
-- `parse_json_template` empty name validation (templates/json_schema.rs:13) :: 
-- `DynamicArray::count_field` empty validation (templates/json_schema.rs:41) :: 
-- `Conditional::condition_field` empty validation (templates/json_schema.rs:53) :: 
+- `PROCESSENTRY32` struct layout (win32_types.py:~200) ::
+- `MODULEENTRY32` struct layout (win32_types.py:~250) ::
+- `TOKEN_PRIVILEGES` / `LUID_AND_ATTRIBUTES` layout (win32_types.py:~600) ::
+- `STACKFRAME64`, `SYMBOL_INFO` layout (win32_types.py:~1000) ::
+- `SERVICE_STATUS_PROCESS` struct (win32_types.py:~1050) ::
+- `JOBOBJECT_EXTENDED_LIMIT_INFORMATION` struct (win32_types.py:~1100) ::
+- `PROCESS_MITIGATION_*` structs (win32_types.py:~1120) ::
+- `inject_dll` (process.py:3616) ::
+- `adjust_token_privilege` (process.py:3970) ::
+- `stack_walk` (process.py:5682) ::
+- `remove_privilege` (process.py:6826) ::
+- `pipe_write` (process.py:7509) ::
+- `_install_frida` (installer.py:~700) ::
+- `_probe_version_command` (installer.py:~800) ::
+- `build_x64dbg_plugin` (installer.py:~1900) ::
+- `_find_cmake` (installer.py:~2000) ::
+- `_detect_vs_generator` (installer.py:~2050) ::
+- `parse_json_template` empty name validation (templates/json_schema.rs:13) ::
+- `DynamicArray::count_field` empty validation (templates/json_schema.rs:41) ::
+- `Conditional::condition_field` empty validation (templates/json_schema.rs:53) ::
 
 ## Group 06 — §7/§8/§12 Orch·Infra·Sandbox (26 open)
 
-- Orchestrator agent loop max_iterations guard — orchestrator.py ~1050 :: 
-- Orchestrator agent loop timeout guard — orchestrator.py ~1060 :: 
-- Confirmation gate — ConfirmationLevel.ALL vs DESTRUCTIVE in live agent loop — orchestrator.py ~1200 :: 
-- `ProcessManager.run_tracked` ProcessStateError (returncode is None) — process_manager.py ~240 :: 
-- `ProcessManager._pid_exists_windows` kernel32→psutil fallback — process_manager.py ~420 :: 
-- `AnalysisAggregator.aggregate` with Cutter bridge — analysis_aggregator.py ~90 :: 
-- `AnalysisAggregator.aggregate` with both Ghidra + Cutter bridges — analysis_aggregator.py ~90 :: 
-- `TransformPipeline` mid-pipeline step error propagation — transform_pipeline.py ~560 :: 
-- `TransformPipeline.to_dict` / `from_dict` serialization — transform_pipeline.py :: 
-- `initialize_tool(GHIDRA)` / `initialize_tool(X64DBG)` installer path — tools.py ~140 :: 
-- `ToolRegistry` typed getters ToolError on absence — tools.py ~300 :: 
-- `RustTransformNode` param coercion with invalid params — transform_pipeline.py ~650 :: 
-- `RegexReplaceNode` with `str` type replacement — transform_pipeline.py ~400 :: 
-- `ConfirmationLevel` enum — types.py ~800 :: 
-- `ToolChoiceMode` enum — types.py ~820 :: 
-- `_relaunch_elevated` — elevation.py ~130 :: 
-- `build_execute_command` for r2/Cutter script type — script_gen.py ~600 :: 
-- `TemplateBootstrapError` — template_manager.py ~30 :: 
-- SHA1 hash extraction in `extract_iocs` — analysis.py :: 
-- `generate_timeline` resource category — analysis.py :: 
-- `_StateTracker` clears `last_error` on success — sandbox_bridge.py :: 
-- `tests/test_bridges/test_sandbox_bridge.py` — FAKE GATE :: 
-- `_ppm_p6_to_png` / `_parse_ppm_p6` in `qemu.py` — qemu.py :: 
-- QEMU PCAP capture (real `tshark` subprocess) — qemu.py :: 
-- QEMU memory dump — process memory path — qemu.py :: 
-- `_collect_logs` / log collection path — qemu.py :: 
+- Orchestrator agent loop max_iterations guard — orchestrator.py ~1050 ::
+- Orchestrator agent loop timeout guard — orchestrator.py ~1060 ::
+- Confirmation gate — ConfirmationLevel.ALL vs DESTRUCTIVE in live agent loop — orchestrator.py ~1200 ::
+- `ProcessManager.run_tracked` ProcessStateError (returncode is None) — process_manager.py ~240 ::
+- `ProcessManager._pid_exists_windows` kernel32→psutil fallback — process_manager.py ~420 ::
+- `AnalysisAggregator.aggregate` with Cutter bridge — analysis_aggregator.py ~90 ::
+- `AnalysisAggregator.aggregate` with both Ghidra + Cutter bridges — analysis_aggregator.py ~90 ::
+- `TransformPipeline` mid-pipeline step error propagation — transform_pipeline.py ~560 ::
+- `TransformPipeline.to_dict` / `from_dict` serialization — transform_pipeline.py ::
+- `initialize_tool(GHIDRA)` / `initialize_tool(X64DBG)` installer path — tools.py ~140 ::
+- `ToolRegistry` typed getters ToolError on absence — tools.py ~300 ::
+- `RustTransformNode` param coercion with invalid params — transform_pipeline.py ~650 ::
+- `RegexReplaceNode` with `str` type replacement — transform_pipeline.py ~400 ::
+- `ConfirmationLevel` enum — types.py ~800 ::
+- `ToolChoiceMode` enum — types.py ~820 ::
+- `_relaunch_elevated` — elevation.py ~130 ::
+- `build_execute_command` for r2/Cutter script type — script_gen.py ~600 ::
+- `TemplateBootstrapError` — template_manager.py ~30 ::
+- SHA1 hash extraction in `extract_iocs` — analysis.py ::
+- `generate_timeline` resource category — analysis.py ::
+- `_StateTracker` clears `last_error` on success — sandbox_bridge.py ::
+- `tests/test_bridges/test_sandbox_bridge.py` — FAKE GATE ::
+- `_ppm_p6_to_png` / `_parse_ppm_p6` in `qemu.py` — qemu.py ::
+- QEMU PCAP capture (real `tshark` subprocess) — qemu.py ::
+- QEMU memory dump — process memory path — qemu.py ::
+- `_collect_logs` / log collection path — qemu.py ::
 
 ## Group 07 — §9 CloudProviders (34 open)
 
-- `get_pending_tool_calls` :: 
-- `get_pending_thinking` :: 
-- `disconnect` :: 
-- `chat` (non-streaming response parsing) :: 
-- `chat_stream` (text accumulation) :: 
-- `cancel_request` (cancellation behaviour) :: 
-- `_finalize_anthropic_stream` :: 
-- `connect` :: 
-- `disconnect` :: 
-- `_infer_supports_vision` :: 
-- `connect` (full flow) :: 
-- `chat_stream` (text accumulation) :: 
-- `_parse_response` :: 
-- `_extract_function_calls` :: 
-- `_extract_visible_chunk_text` :: 
-- `_extract_thinking_text` :: 
-- `_create_config` :: 
-- `_extract_usage` :: 
-- `_convert_messages_to_provider_format` :: 
-- `chat_stream` (accumulation) :: 
-- `_open_grok_stream` :: 
-- `chat` (enable_cache wiring) :: 
-- `chat_stream` (accumulation) :: 
-- `get_generation` :: 
-- `_parse_tool_calls_from_response` :: 
-- `_raise_for_stream_status` :: 
-- `_build_usage_from_data` :: 
-- `list_tags` :: 
-- `list_running_models` :: 
-- `show_model` :: 
-- `chat` (local NDJSON path) :: 
-- `chat` (cloud OpenAI path) :: 
-- `chat_stream` :: 
-- `_get_client_and_model` :: 
+- `get_pending_tool_calls` ::
+- `get_pending_thinking` ::
+- `disconnect` ::
+- `chat` (non-streaming response parsing) ::
+- `chat_stream` (text accumulation) ::
+- `cancel_request` (cancellation behaviour) ::
+- `_finalize_anthropic_stream` ::
+- `connect` ::
+- `disconnect` ::
+- `_infer_supports_vision` ::
+- `connect` (full flow) ::
+- `chat_stream` (text accumulation) ::
+- `_parse_response` ::
+- `_extract_function_calls` ::
+- `_extract_visible_chunk_text` ::
+- `_extract_thinking_text` ::
+- `_create_config` ::
+- `_extract_usage` ::
+- `_convert_messages_to_provider_format` ::
+- `chat_stream` (accumulation) ::
+- `_open_grok_stream` ::
+- `chat` (enable_cache wiring) ::
+- `chat_stream` (accumulation) ::
+- `get_generation` ::
+- `_parse_tool_calls_from_response` ::
+- `_raise_for_stream_status` ::
+- `_build_usage_from_data` ::
+- `list_tags` ::
+- `list_running_models` ::
+- `show_model` ::
+- `chat` (local NDJSON path) ::
+- `chat` (cloud OpenAI path) ::
+- `chat_stream` ::
+- `_get_client_and_model` ::
 
 ## Group 08 — §10/§14 LocalAI·UIShell (45 open)
 
-- `_hf_status_code(exc)` (huggingface.py:57) :: 
-- `_close_client()` (huggingface.py:202) :: 
-- `disconnect()` (huggingface.py:211) :: 
-- `_prepare_request_payload(messages,tools,tool_choice)` (huggingface.py:378) :: 
-- `_consume_stream_chunks(raw_stream,model,tc_buffer)` (huggingface.py:542) :: 
-- `chat_stream(messages,model,…)` HuggingFaceProvider (huggingface.py:619) :: 
-- `cancel_request()` HuggingFaceProvider (huggingface.py:676) :: 
-- `_convert_messages_to_provider_format(messages)` (huggingface.py:690) :: 
-- `_convert_tools_to_provider_format(tools)` HuggingFaceProvider (huggingface.py:725) :: 
-- `_fetch_model_config(model_id)` (local_transformers.py:119) :: 
-- `_release_device_caches()` (local_transformers.py:397) :: 
-- `list_models()` LocalTransformersProvider (local_transformers.py:415) :: 
-- `_run_local_chat(…)` (local_transformers.py:565) :: 
-- `_iter_local_stream(…)` (local_transformers.py:680) :: 
-- `_config_device_for(device)` (local_transformers.py:828) :: 
-- `_load_for_device(device,config)` (local_transformers.py:840) :: 
-- `_load_model_for_cuda(config)` (local_transformers.py:880) :: 
-- `_iter_local_generation_loop(…)` (local_transformers.py:1100) :: 
-- `_convert_tools_to_provider_format(tools)` LocalTransformers (local_transformers.py:1227) :: 
-- `ModelCache._make_key(model_id,dtype,device_type)` (model_loader.py:175) :: 
-- `_free_model_resources(loaded_model)` (model_loader.py:213) :: 
-- `_unload_model(loaded_model)` (model_loader.py:231) :: 
-- `_load_xpu_model_impl(config,cache,device,dtype)` (model_loader.py:486) :: 
-- `load_model_for_cpu(config,cache)` (model_loader.py:577) :: 
-- `_load_cpu_model_impl(config,cache,device,dtype)` (model_loader.py:638) :: 
-- `_locate_devnode(cfg,device_id)` (gpu_pci_resources.py:87) :: 
-- `_read_descriptor_bytes(cfg,res_des)` (gpu_pci_resources.py:112) :: 
-- `_enumerate_bars_for_log_conf(cfg,log_conf)` (gpu_pci_resources.py:197) :: 
-- `_get_device_name_from_sycl(device_index)` (xpu_utils.py:100) :: 
-- `_query_windows_gpus()` (xpu_utils.py:128) :: 
-- `_extract_torch_xpu_properties(torch,device_index,device_name)` (xpu_utils.py:242) :: 
-- `_enrich_from_windows_gpus(device_name,driver_version,device_id)` (xpu_utils.py:282) :: 
-- `_build_xpu_device_info(torch,device_index)` (xpu_utils.py:336) :: 
-- `clear_xpu_cache()` (xpu_utils.py:584) :: 
-- `_pick_primary_arc_gpu(gpus)` (xpu_utils.py:656) :: 
-- `_check_intel_driver(gpus)` (xpu_utils.py:687) :: 
-- `_validate_xpu_device(torch_mod,device)` (xpu_utils.py:514) :: 
-- `_query_xpu_memory(torch,device_index)` (xpu_utils.py:537) :: 
-- `show_info()` structured log (dialogs_helpers.py:28) :: 
-- `AppearanceSettingsWidget.get_settings()` (preferences.py:278) :: 
-- `SessionSettingsWidget.get_settings()` (preferences.py:349) :: 
-- `_FlowLayout` tag-chip flow wrapping (session_manager.py:64) :: 
-- `XPUStatusDialog` construction group-box existence checks (xpu_status.py:~122) :: 
-- `main.py` bootstrap — arg parsing, logging setup, bridge init (main.py) :: 
-- `__main__.py` entry point (__main__.py) :: 
+- `_hf_status_code(exc)` (huggingface.py:57) ::
+- `_close_client()` (huggingface.py:202) ::
+- `disconnect()` (huggingface.py:211) ::
+- `_prepare_request_payload(messages,tools,tool_choice)` (huggingface.py:378) ::
+- `_consume_stream_chunks(raw_stream,model,tc_buffer)` (huggingface.py:542) ::
+- `chat_stream(messages,model,…)` HuggingFaceProvider (huggingface.py:619) ::
+- `cancel_request()` HuggingFaceProvider (huggingface.py:676) ::
+- `_convert_messages_to_provider_format(messages)` (huggingface.py:690) ::
+- `_convert_tools_to_provider_format(tools)` HuggingFaceProvider (huggingface.py:725) ::
+- `_fetch_model_config(model_id)` (local_transformers.py:119) ::
+- `_release_device_caches()` (local_transformers.py:397) ::
+- `list_models()` LocalTransformersProvider (local_transformers.py:415) ::
+- `_run_local_chat(…)` (local_transformers.py:565) ::
+- `_iter_local_stream(…)` (local_transformers.py:680) ::
+- `_config_device_for(device)` (local_transformers.py:828) ::
+- `_load_for_device(device,config)` (local_transformers.py:840) ::
+- `_load_model_for_cuda(config)` (local_transformers.py:880) ::
+- `_iter_local_generation_loop(…)` (local_transformers.py:1100) ::
+- `_convert_tools_to_provider_format(tools)` LocalTransformers (local_transformers.py:1227) ::
+- `ModelCache._make_key(model_id,dtype,device_type)` (model_loader.py:175) ::
+- `_free_model_resources(loaded_model)` (model_loader.py:213) ::
+- `_unload_model(loaded_model)` (model_loader.py:231) ::
+- `_load_xpu_model_impl(config,cache,device,dtype)` (model_loader.py:486) ::
+- `load_model_for_cpu(config,cache)` (model_loader.py:577) ::
+- `_load_cpu_model_impl(config,cache,device,dtype)` (model_loader.py:638) ::
+- `_locate_devnode(cfg,device_id)` (gpu_pci_resources.py:87) ::
+- `_read_descriptor_bytes(cfg,res_des)` (gpu_pci_resources.py:112) ::
+- `_enumerate_bars_for_log_conf(cfg,log_conf)` (gpu_pci_resources.py:197) ::
+- `_get_device_name_from_sycl(device_index)` (xpu_utils.py:100) ::
+- `_query_windows_gpus()` (xpu_utils.py:128) ::
+- `_extract_torch_xpu_properties(torch,device_index,device_name)` (xpu_utils.py:242) ::
+- `_enrich_from_windows_gpus(device_name,driver_version,device_id)` (xpu_utils.py:282) ::
+- `_build_xpu_device_info(torch,device_index)` (xpu_utils.py:336) ::
+- `clear_xpu_cache()` (xpu_utils.py:584) ::
+- `_pick_primary_arc_gpu(gpus)` (xpu_utils.py:656) ::
+- `_check_intel_driver(gpus)` (xpu_utils.py:687) ::
+- `_validate_xpu_device(torch_mod,device)` (xpu_utils.py:514) ::
+- `_query_xpu_memory(torch,device_index)` (xpu_utils.py:537) ::
+- `show_info()` structured log (dialogs_helpers.py:28) ::
+- `AppearanceSettingsWidget.get_settings()` (preferences.py:278) ::
+- `SessionSettingsWidget.get_settings()` (preferences.py:349) ::
+- `_FlowLayout` tag-chip flow wrapping (session_manager.py:64) ::
+- `XPUStatusDialog` construction group-box existence checks (xpu_status.py:~122) ::
+- `main.py` bootstrap — arg parsing, logging setup, bridge init (main.py) ::
+- `__main__.py` entry point (__main__.py) ::
 
 ## Group 09 — §11 Creds #1-64 (31 open)
 
-- `_oauth_provider_to_name` happy path (oauth.py:109) :: 
-- `_oauth_provider_to_name` KeyError path (oauth.py:121) :: 
-- `OAuthCallbackHandler.do_GET` error in params (oauth.py:402) :: 
-- `OAuthCallbackHandler.do_GET` missing code/state (oauth.py:419) :: 
-- `OAuthCallbackServer.start` OSError on bind (oauth.py:510) :: 
-- `OAuthCallbackServer.wait_for_callback` timeout (oauth.py:543) :: 
-- `OAuthCallbackServer.wait_for_callback` denied (oauth.py:556) :: 
-- `OAuthCallbackServer.wait_for_callback` missing code/state (oauth.py:566) :: 
-- `OAuthManager.build_authorization_url` PKCE disabled (oauth.py:701) :: 
-- `OAuthManager._exchange_code_for_token` HTTP error (oauth.py:901) :: 
-- `OAuthManager._exchange_code_for_token` network error (oauth.py:906) :: 
-- `OAuthManager._store_token` keyring unavailable (oauth.py:924) :: 
-- `OAuthManager._store_token` keyring success (oauth.py:935) :: 
-- `OAuthManager._load_token_from_store` (oauth.py:953) :: 
-- `OAuthManager._load_token` cache miss, keyring load (oauth.py:1006) :: 
-- `OAuthManager._load_token` JSON decode error (oauth.py:1020) :: 
-- `OAuthManager.get_token` needs_refresh, auto_refresh=True (oauth.py:1052) :: 
-- `OAuthManager.get_token` OAuthTokenRefreshError path (oauth.py:1056) :: 
-- `OAuthManager.get_token` OAuthTokenError, not expired (oauth.py:1059) :: 
-- `OAuthManager.get_token` expired after failed refresh (oauth.py:1062, line 1090) :: 
-- `OAuthManager._post_token_refresh` happy path (oauth.py:816) :: 
-- `OAuthManager.refresh_token` other HTTP error (oauth.py:1181) :: 
-- `OAuthManager.revoke_token` no revoke_url (oauth.py:1213) :: 
-- `OAuthManager.revoke_token` with revoke_url, success (oauth.py:1218) :: 
-- `OAuthManager.revoke_token` revoke HTTP error (oauth.py:1230) :: 
-- `OAuthManager.to_provider_credentials` (oauth.py:1268) :: 
-- `OAuthManager.run_authorization_flow` (oauth.py:1290) :: 
-- `authorize_google` (oauth.py:1368) :: 
-- `CredentialStore._check_keyring` library not installed (store.py:147) :: 
-- `CredentialStore._check_keyring` fail/null backend (store.py:161) :: 
-- `CredentialStore._check_keyring` priority <= 0 (store.py:169) :: 
+- `_oauth_provider_to_name` happy path (oauth.py:109) ::
+- `_oauth_provider_to_name` KeyError path (oauth.py:121) ::
+- `OAuthCallbackHandler.do_GET` error in params (oauth.py:402) ::
+- `OAuthCallbackHandler.do_GET` missing code/state (oauth.py:419) ::
+- `OAuthCallbackServer.start` OSError on bind (oauth.py:510) ::
+- `OAuthCallbackServer.wait_for_callback` timeout (oauth.py:543) ::
+- `OAuthCallbackServer.wait_for_callback` denied (oauth.py:556) ::
+- `OAuthCallbackServer.wait_for_callback` missing code/state (oauth.py:566) ::
+- `OAuthManager.build_authorization_url` PKCE disabled (oauth.py:701) ::
+- `OAuthManager._exchange_code_for_token` HTTP error (oauth.py:901) ::
+- `OAuthManager._exchange_code_for_token` network error (oauth.py:906) ::
+- `OAuthManager._store_token` keyring unavailable (oauth.py:924) ::
+- `OAuthManager._store_token` keyring success (oauth.py:935) ::
+- `OAuthManager._load_token_from_store` (oauth.py:953) ::
+- `OAuthManager._load_token` cache miss, keyring load (oauth.py:1006) ::
+- `OAuthManager._load_token` JSON decode error (oauth.py:1020) ::
+- `OAuthManager.get_token` needs_refresh, auto_refresh=True (oauth.py:1052) ::
+- `OAuthManager.get_token` OAuthTokenRefreshError path (oauth.py:1056) ::
+- `OAuthManager.get_token` OAuthTokenError, not expired (oauth.py:1059) ::
+- `OAuthManager.get_token` expired after failed refresh (oauth.py:1062, line 1090) ::
+- `OAuthManager._post_token_refresh` happy path (oauth.py:816) ::
+- `OAuthManager.refresh_token` other HTTP error (oauth.py:1181) ::
+- `OAuthManager.revoke_token` no revoke_url (oauth.py:1213) ::
+- `OAuthManager.revoke_token` with revoke_url, success (oauth.py:1218) ::
+- `OAuthManager.revoke_token` revoke HTTP error (oauth.py:1230) ::
+- `OAuthManager.to_provider_credentials` (oauth.py:1268) ::
+- `OAuthManager.run_authorization_flow` (oauth.py:1290) ::
+- `authorize_google` (oauth.py:1368) ::
+- `CredentialStore._check_keyring` library not installed (store.py:147) ::
+- `CredentialStore._check_keyring` fail/null backend (store.py:161) ::
+- `CredentialStore._check_keyring` priority <= 0 (store.py:169) ::
 
 ## Group 10 — §11 Creds #65-127 (22 open)
 
-- `CredentialStore._deserialize_metadata` — corrupted fallback (store.py:282) :: 
-- `CredentialStore.set` — keyring unavailable (store.py:485) :: 
-- `CredentialStore.delete` — keyring unavailable (store.py:508) :: 
-- `CredentialStore.delete` — credential not found (store.py:518) :: 
-- `CredentialStore.list_providers` — WEAK (store.py:536) :: 
-- `CredentialStore.migrate_from_env` — keyring unavailable (store.py:591) :: 
-- `CredentialStore.migrate_from_env` — env missing key (store.py:601) :: 
-- `CredentialStore.validate` — no credentials (store.py:637) :: 
-- `CredentialStore.get_source` — no credential returns None (store.py:689) :: 
-- `_decode_double_quoted` — unknown escape pass-through (env_loader.py:69) :: 
-- `CredentialLoader._load_env_file` — file missing (env_loader.py:348) :: 
-- `CredentialLoader._load_env_file` — read error (env_loader.py:357) :: 
-- `CredentialLoader.get_credentials` — alias lookup (env_loader.py:406) :: 
-- `CredentialLoader.get_credentials` — unknown provider (env_loader.py:396) :: 
-- `CredentialLoader.save_to_env_file` — read error (env_loader.py:602) :: 
-- `CredentialLoader.save_to_env_file` — write error (env_loader.py:642) :: 
-- `get_api_key_env_var_mapping` (env_loader.py:655) :: 
-- `create_env_template` (env_loader.py:667) :: 
-- `get_credential_loader` — singleton/lru_cache (env_loader.py:710) :: 
-- `CredentialStore.list_providers` (op #79) :: 
-- `CredentialLoader.reload` (op #108; table says REAL) :: 
-- `CredentialLoader.list_configured_providers` (op #116; table says REAL) :: 
-
+- `CredentialStore._deserialize_metadata` — corrupted fallback (store.py:282) ::
+- `CredentialStore.set` — keyring unavailable (store.py:485) ::
+- `CredentialStore.delete` — keyring unavailable (store.py:508) ::
+- `CredentialStore.delete` — credential not found (store.py:518) ::
+- `CredentialStore.list_providers` — WEAK (store.py:536) ::
+- `CredentialStore.migrate_from_env` — keyring unavailable (store.py:591) ::
+- `CredentialStore.migrate_from_env` — env missing key (store.py:601) ::
+- `CredentialStore.validate` — no credentials (store.py:637) ::
+- `CredentialStore.get_source` — no credential returns None (store.py:689) ::
+- `_decode_double_quoted` — unknown escape pass-through (env_loader.py:69) ::
+- `CredentialLoader._load_env_file` — file missing (env_loader.py:348) ::
+- `CredentialLoader._load_env_file` — read error (env_loader.py:357) ::
+- `CredentialLoader.get_credentials` — alias lookup (env_loader.py:406) ::
+- `CredentialLoader.get_credentials` — unknown provider (env_loader.py:396) ::
+- `CredentialLoader.save_to_env_file` — read error (env_loader.py:602) ::
+- `CredentialLoader.save_to_env_file` — write error (env_loader.py:642) ::
+- `get_api_key_env_var_mapping` (env_loader.py:655) ::
+- `create_env_template` (env_loader.py:667) ::
+- `get_credential_loader` — singleton/lru_cache (env_loader.py:710) ::
+- `CredentialStore.list_providers` (op #79) ::
+- `CredentialLoader.reload` (op #108; table says REAL) ::
+- `CredentialLoader.list_configured_providers` (op #116; table says REAL) ::

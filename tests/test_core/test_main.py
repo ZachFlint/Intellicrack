@@ -15,7 +15,10 @@ Tests validate:
 
 from __future__ import annotations
 
+import asyncio
+import importlib
 import sqlite3
+import time
 from collections.abc import Callable
 from contextlib import AbstractContextManager
 from typing import TYPE_CHECKING, cast
@@ -23,6 +26,9 @@ from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from PyQt6.QtWidgets import QApplication
+    from structlog.stdlib import BoundLogger
 
 import pytest
 
@@ -33,6 +39,20 @@ from intellicrack.core.session import Session, SessionManager, SessionStore
 from intellicrack.core.template_manager import TemplateManager
 from intellicrack.core.types import ProviderName
 from intellicrack.main import init_script_engine, init_template_manager
+from intellicrack.ui.panels.async_bridge import BridgeCallWorker, ensure_loop
+
+
+_drain_and_stop_bridge_loop = cast(
+    "Callable[[BoundLogger], None]",
+    importlib.import_module("intellicrack.main")._drain_and_stop_bridge_loop,
+)
+"""Production shutdown helper resolved through :func:`importlib.import_module`.
+
+Imported via the module object rather than ``from intellicrack.main import X``
+because ``intellicrack.__init__`` ships a lazy ``__getattr__`` that aliases
+``intellicrack.main`` to the ``main()`` function during collection-time
+``from``-imports, hiding the underscored helpers.
+"""
 
 
 def _store_connection(store: SessionStore) -> AbstractContextManager[sqlite3.Connection]:
@@ -452,3 +472,55 @@ class TestStartupWiring:
         assert templates_dir.is_dir()
         assert (templates_dir / "builtin").is_dir()
         assert (templates_dir / "user").is_dir()
+
+
+@pytest.mark.usefixtures("qapp")
+class TestBridgeLoopShutdownDrain:
+    """Gate: application shutdown drains in-flight bridge workers before stopping the loop."""
+
+    @staticmethod
+    def test_drain_and_stop_waits_for_running_worker_then_stops_loop(qapp: QApplication) -> None:
+        """``_drain_and_stop_bridge_loop`` must drain a live worker before tearing down the loop.
+
+        Reproduces the real shutdown-crash path: a ``BridgeCallWorker`` is still
+        executing a coroutine on the persistent bridge loop when the application
+        begins shutting down. The fixed ``_drain_and_stop_bridge_loop`` first
+        drains the worker (waiting for its OS thread to finish) and only then
+        stops the loop, so no ``QThread`` is destroyed mid-flight. Were the drain
+        step removed, ``shutdown_bridge_loop`` would stop the loop while the
+        coroutine was still suspended in ``asyncio.sleep``; the worker's blocking
+        ``future.result()`` would then never return, leaving ``worker.isRunning()``
+        True after the call - which this test asserts against.
+
+        Args:
+            qapp: Qt application fixture ensuring a QApplication exists for QThread management.
+        """
+        _ = qapp
+        loop = ensure_loop()
+        assert loop.is_running(), "bridge loop must be running before the shutdown drain"
+
+        async def _timed() -> str:
+            await asyncio.sleep(0.3)
+            return "shutdown_ok"
+
+        worker = BridgeCallWorker(_timed())
+        worker.start()
+
+        start_deadline = time.monotonic() + 3.0
+        while not worker.isRunning() and time.monotonic() < start_deadline:
+            time.sleep(0.01)
+        assert worker.isRunning(), "worker thread never started; test premise not established"
+
+        logger = get_logger("test")
+        try:
+            _drain_and_stop_bridge_loop(logger)
+
+            assert not worker.isRunning(), (
+                "_drain_and_stop_bridge_loop returned while the bridge worker was still running; "
+                "stopping the loop without draining destroys the thread mid-flight and aborts shutdown"
+            )
+            assert not loop.is_running(), "the persistent bridge loop was not stopped during the shutdown drain"
+        finally:
+            if worker.isRunning():
+                worker.terminate()
+                _ = worker.wait(2000)

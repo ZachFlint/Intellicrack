@@ -36,9 +36,7 @@ def qapp() -> QApplication:
         QApplication: The Qt application instance.
     """
     existing = QApplication.instance()
-    if isinstance(existing, QApplication):
-        return existing
-    return QApplication([])
+    return existing if isinstance(existing, QApplication) else QApplication([])
 
 
 class _ProbeEditor(PatternCodeEditor):

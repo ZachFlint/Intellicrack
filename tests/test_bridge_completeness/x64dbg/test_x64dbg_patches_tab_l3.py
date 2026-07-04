@@ -261,9 +261,7 @@ class TestRestorePatchDrivesRestorePatchRpc:
             patch_refresh_btn.click()
             pump_until(qapp, lambda: patch_table.rowCount() >= 2)
 
-            target_row = next(
-                r for r in range(patch_table.rowCount()) if _cell_text(patch_table, r, 0) == f"0x{_PATCH_ADDR_2:X}"
-            )
+            target_row = next(r for r in range(patch_table.rowCount()) if _cell_text(patch_table, r, 0) == f"0x{_PATCH_ADDR_2:X}")
             patch_table.setCurrentCell(target_row, 0)
             patch_restore_btn.click()
 

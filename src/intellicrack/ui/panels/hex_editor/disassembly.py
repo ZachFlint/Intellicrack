@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QHBoxLayout,
+    QHeaderView,
     QPushButton,
     QSpinBox,
     QTableWidget,
@@ -126,6 +127,9 @@ class DisassemblyMixin:
         self._disasm_table.setFont(table_font)
         h_header = self._disasm_table.horizontalHeader()
         if h_header is not None:
+            h_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            h_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            h_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
             h_header.setStretchLastSection(True)
         v_header = self._disasm_table.verticalHeader()
         if v_header is not None:
@@ -264,7 +268,9 @@ class DisassemblyMixin:
             row = self._disasm_table.rowCount()
             self._disasm_table.insertRow(row)
             self._disasm_table.setItem(row, 0, QTableWidgetItem(f"0x{address_int:08X}"))
-            self._disasm_table.setItem(row, 1, QTableWidgetItem(hex_str))
+            hex_item = QTableWidgetItem(hex_str)
+            hex_item.setToolTip(hex_str)
+            self._disasm_table.setItem(row, 1, hex_item)
             self._disasm_table.setItem(row, 2, QTableWidgetItem(mnemonic))
             self._disasm_table.setItem(row, 3, QTableWidgetItem(operands))
 

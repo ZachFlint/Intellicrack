@@ -4,14 +4,10 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Advanced static-analysis tab for the Cutter/Rizin analysis panel.
 
-Provides a self-contained Qt widget exposing the native rizin static-analysis
-capabilities that have no GUI presence elsewhere in the panel: debug
-information (``iDj``), classes/RTTI enumeration (``icj``), the global call
-graph (``agcj``), virtual-function table detection (``avj``), syscall
-enumeration (``asj``), the four zignature/FLIRT-equivalent operations
-(``zj``/``zg``/``za``/``z/j``), per-function basic-block listing (``afbj``),
-and linear whole-function disassembly text (``pdf``), all driven by the
-``CutterBridge`` static-analysis surface
+Provides a self-contained Qt widget exposing the native rizin static-analysis capabilities that have no GUI presence elsewhere in the panel:
+debug information (``iDj``), classes/RTTI enumeration (``icj``), the global call graph (``agcj``), virtual-function table detection
+(``avj``), syscall enumeration (``asj``), the four zignature/FLIRT-equivalent operations (``zj``/``zg``/``za``/``z/j``), per-function basic-
+block listing (``afbj``), and linear whole-function disassembly text (``pdf``), all driven by the ``CutterBridge`` static-analysis surface
 (``cutter.py:2630-2901,3329-3403,3936-3984``).
 """
 
@@ -221,6 +217,12 @@ class ClassesTab(QWidget):
         layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         self._tree = QTreeWidget()
         self._tree.setHeaderLabels(_CLASS_COLUMNS)
+        tree_header = self._tree.header()
+        if tree_header is not None:
+            tree_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            tree_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            tree_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            tree_header.setStretchLastSection(True)
         layout.addWidget(self._tree)
 
     def refresh(self, bridge: CutterBridge) -> None:
@@ -257,6 +259,7 @@ class ClassesTab(QWidget):
                 str(len(cls.methods)),
                 str(len(cls.fields)),
             ])
+            top.setToolTip(0, cls.name)
             methods_node = QTreeWidgetItem(top, [f"Methods ({len(cls.methods)})", "", "", ""])
             for method in cls.methods:
                 QTreeWidgetItem(
@@ -295,6 +298,11 @@ class CallGraphTab(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(_PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN, _PANEL_MARGIN)
         self._table = _make_table(["Caller", "Callee", "Address"])
+        callgraph_header = self._table.horizontalHeader()
+        if callgraph_header is not None:
+            callgraph_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            callgraph_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            callgraph_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         layout.addWidget(self._table)
 
     def refresh(self, bridge: CutterBridge) -> None:
@@ -439,8 +447,7 @@ class SyscallsTab(QWidget):
 class ZignaturesTab(QWidget):
     """Tab exposing the four native rizin zignature (FLIRT-equivalent) operations.
 
-    Provides list/generate/add/search actions for function signatures, all
-    driven by the ``CutterBridge`` zignature methods.
+    Provides list/generate/add/search actions for function signatures, all driven by the ``CutterBridge`` zignature methods.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -869,8 +876,7 @@ class FunctionDisasmTab(QWidget):
 class StaticAnalysisExtrasTab(QWidget):
     """Composite tab hosting the remaining native static-analysis views.
 
-    Groups classes/RTTI, call graph, vtables, syscalls, zignatures,
-    basic-block listing, and linear function disassembly into a single
+    Groups classes/RTTI, call graph, vtables, syscalls, zignatures, basic-block listing, and linear function disassembly into a single
     nested tab widget, following the ``DebuggerTab`` sub-tab convention.
     """
 

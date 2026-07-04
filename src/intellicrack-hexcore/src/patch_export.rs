@@ -420,7 +420,7 @@ mod tests {
             offset: 0x0100_0000,
             data: vec![0x00],
         }];
-        assert!(export_ips(&patches).is_err());
+        assert!(matches!(export_ips(&patches), Err(PatchError::PatchTooLarge)));
     }
 
     #[test]
@@ -433,7 +433,8 @@ mod tests {
 
     #[test]
     fn test_invalid_header() {
-        assert!(import_ips(b"NOTIP").is_err());
+        let err = import_ips(b"NOTIP").unwrap_err();
+        assert!(matches!(&err, PatchError::InvalidIps(m) if m.contains("invalid header")));
     }
 
     #[test]
@@ -450,6 +451,10 @@ mod tests {
         let ops = vec![(10, vec![0x41]), (20, vec![0x42])];
         let merged = extract_patches_from_overwrites(&ops);
         assert_eq!(merged.len(), 2);
+        assert_eq!(merged[0].offset, 10);
+        assert_eq!(merged[0].data, vec![0x41]);
+        assert_eq!(merged[1].offset, 20);
+        assert_eq!(merged[1].data, vec![0x42]);
     }
 
     #[test]
@@ -525,6 +530,10 @@ mod tests {
         }];
         let json = export_patches_json(&patches).unwrap();
         assert!(json.contains('\n'));
+        let parsed: Vec<JsonPatchEntry> = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed[0].offset, 1);
+        assert_eq!(parsed[0].data, "01");
     }
 
     #[test]
@@ -601,6 +610,103 @@ mod tests {
             &reconstructed[IPS32_TERMINATOR_OFFSET..IPS32_TERMINATOR_OFFSET + 4],
             &[0xDE, 0xAD, 0xBE, 0xEF]
         );
+    }
+
+    #[test]
+    fn test_import_ips_rle_record() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"PATCH");
+        buf.extend_from_slice(&[0x00, 0x00, 0x10]); // offset 0x10
+        buf.extend_from_slice(&[0x00, 0x00]); // size 0 -> RLE
+        buf.extend_from_slice(&[0x00, 0x04, 0xAB]); // count 4, value 0xAB
+        buf.extend_from_slice(b"EOF");
+        let records = import_ips(&buf).unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].offset, 0x10);
+        assert_eq!(records[0].data, vec![0xAB; 4]);
+    }
+
+    #[test]
+    fn test_import_ips32_rle_record() {
+        let mut buf = Vec::new();
+        buf.extend_from_slice(b"IPS32");
+        buf.extend_from_slice(&[0x00, 0x00, 0x00, 0x10]); // offset 0x10
+        buf.extend_from_slice(&[0x00, 0x00]); // size 0 -> RLE
+        buf.extend_from_slice(&[0x00, 0x03, 0xCC]); // count 3, value 0xCC
+        buf.extend_from_slice(b"EEOF");
+        let records = import_ips(&buf).unwrap();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].offset, 0x10);
+        assert_eq!(records[0].data, vec![0xCC; 3]);
+    }
+
+    #[test]
+    fn test_import_ips_truncation_errors() {
+        assert!(import_ips(b"AB").unwrap_err().to_string().contains("data too short"));
+        assert!(import_ips(b"PATCH\x00\x00").unwrap_err().to_string().contains("unexpected end of data"));
+        assert!(import_ips(b"PATCH\x00\x00\x10").unwrap_err().to_string().contains("truncated record header"));
+        // size 0 RLE with fewer than 3 trailing bytes
+        let rle = [b'P', b'A', b'T', b'C', b'H', 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00];
+        assert!(import_ips(&rle).unwrap_err().to_string().contains("truncated RLE record"));
+        // size 3 with only 1 data byte
+        let dat = [b'P', b'A', b'T', b'C', b'H', 0x00, 0x00, 0x10, 0x00, 0x03, 0xAA];
+        assert!(import_ips(&dat).unwrap_err().to_string().contains("truncated record data"));
+    }
+
+    #[test]
+    fn test_import_ips32_truncation_errors() {
+        assert!(import_ips(b"IPS32\x00\x00").unwrap_err().to_string().contains("unexpected end of IPS32 data"));
+        let hdr = [b'I', b'P', b'S', b'3', b'2', 0x00, 0x00, 0x00, 0x10];
+        assert!(import_ips(&hdr).unwrap_err().to_string().contains("truncated IPS32 record header"));
+        let rle = [b'I', b'P', b'S', b'3', b'2', 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00];
+        assert!(import_ips(&rle).unwrap_err().to_string().contains("truncated IPS32 RLE record"));
+        let dat = [b'I', b'P', b'S', b'3', b'2', 0x00, 0x00, 0x00, 0x10, 0x00, 0x03, 0xAA];
+        assert!(import_ips(&dat).unwrap_err().to_string().contains("truncated IPS32 record data"));
+    }
+
+    #[test]
+    fn test_export_ips_midloop_offset_overflow() {
+        // offset itself is <= 0xFFFFFF, but the data pushes current_offset past it mid-loop.
+        let patches = vec![PatchRecord {
+            offset: 0x00FF_FFFE,
+            data: vec![0xAB; 0x10000],
+        }];
+        let err = export_ips(&patches).unwrap_err();
+        assert!(matches!(err, PatchError::PatchTooLarge), "got {err:?}");
+    }
+
+    #[test]
+    fn test_export_ips_multi_chunk_single_patch_roundtrip() {
+        // data > 0xFFFF forces the chunk loop to iterate more than once.
+        let original = vec![0xABu8; 0x10000];
+        let patches = vec![PatchRecord { offset: 0x100, data: original.clone() }];
+        let exported = export_ips(&patches).unwrap();
+        let imported = import_ips(&exported).unwrap();
+        assert!(imported.len() >= 2, "expected multiple chunk records");
+        let mut recon = vec![0u8; 0x100 + original.len()];
+        for r in &imported {
+            recon[r.offset..r.offset + r.data.len()].copy_from_slice(&r.data);
+        }
+        assert_eq!(&recon[0x100..0x100 + original.len()], original.as_slice());
+    }
+
+    #[test]
+    fn test_export_cod_offset_truncated_to_u32_max() {
+        let records = vec![PatchRecord { offset: 0x1_0000_0000, data: vec![0xAA] }];
+        let out = export_cod(&records);
+        assert_eq!(&out[0..4], &[0xFF, 0xFF, 0xFF, 0xFF]);
+        assert_eq!(&out[4..8], &[0x00, 0x00, 0x00, 0x01]);
+        assert_eq!(out[8], 0xAA);
+    }
+
+    #[test]
+    fn test_extract_patches_within_existing_no_extend() {
+        // Second op is fully inside the first record: overwrite in place, no extension.
+        let ops = vec![(10, vec![0x41, 0x42, 0x43, 0x44]), (11, vec![0xFF])];
+        let merged = extract_patches_from_overwrites(&ops);
+        assert_eq!(merged.len(), 1);
+        assert_eq!(merged[0].offset, 10);
+        assert_eq!(merged[0].data, vec![0x41, 0xFF, 0x43, 0x44]);
     }
 
     fn contains_header_with_offset_3(body: &[u8], offset: usize) -> bool {

@@ -389,7 +389,22 @@ class StackFrameTable(QTableWidget):
             parent: Parent widget.
         """
         super().__init__(parent=parent)
+        self._frames: list[StackFrame] = []
         self._setup_ui()
+        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
+
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Re-render stack frame colors when the active theme changes.
+
+        Connected to :attr:`ThemeManager.theme_changed` so the directly-painted
+        ``QTableWidgetItem`` foreground colors track live theme switches
+        without requiring a manual refresh or source reselection.
+
+        Args:
+            resolved_theme: The concrete theme now active ("dark" or "light").
+        """
+        _ = resolved_theme
+        self.set_frames(self._frames)
 
     def _setup_ui(self) -> None:
         """Set up the table UI."""
@@ -450,6 +465,7 @@ class StackFrameTable(QTableWidget):
         Args:
             frames: List of StackFrame objects.
         """
+        self._frames = frames
         self.setRowCount(len(frames))
 
         fm = FontManager.get_instance()
@@ -739,6 +755,8 @@ class StackViewerPanel(QWidget):
         if isinstance(source, X64DbgStackSource):
             source.set_bridge(bridge)
             _logger.info("bridge_attached", source="x64dbg", component="stack_viewer")
+            if self._active_source == "x64dbg":
+                self.refresh()
 
     def set_frida_bridge(self, bridge: FridaBridge) -> None:
         """Set the Frida bridge for stack retrieval.
@@ -750,6 +768,8 @@ class StackViewerPanel(QWidget):
         if isinstance(source, FridaStackSource):
             source.set_bridge(bridge)
             _logger.info("bridge_attached", source="frida", component="stack_viewer")
+            if self._active_source == "Frida":
+                self.refresh()
 
     def add_source(self, name: str, source: X64DbgStackSource | FridaStackSource) -> None:
         """Add a custom stack data source.

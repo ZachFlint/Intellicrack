@@ -214,9 +214,7 @@ def _extract_destination(inner_command: str) -> str | None:
     quote = '"'
     parts = inner_command.split(quote)
     quoted = [p for p in parts[1::2] if p]
-    if len(quoted) < 2:
-        return None
-    return quoted[1]
+    return None if len(quoted) < 2 else quoted[1]
 
 
 def _guest_to_host(
@@ -463,7 +461,7 @@ class TestScenarioCEmptyFailure:
             _run(_go())
 
         leftover = list((shared / "output").glob("dropped_*"))
-        assert leftover == [], f"empty staging dirs must be cleaned up; found {leftover}"
+        assert not leftover, f"empty staging dirs must be cleaned up; found {leftover}"
 
     def test_disconnected_agent_falls_back_to_host(self, tmp_path: Path) -> None:
         """An agent reporting ``is_connected == False`` must trigger host fallback.

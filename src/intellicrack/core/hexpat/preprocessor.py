@@ -157,8 +157,7 @@ class HexPatPreprocessor:
                 magic_list.append((offset_val, magic_bytes))
                 continue
 
-            m = _PRAGMA_BASE_RE.match(stripped)
-            if m:
+            if m := _PRAGMA_BASE_RE.match(stripped):
                 base_address = _parse_int_value(m.group(1))
                 continue
 
@@ -769,8 +768,7 @@ def extract_pragmas_fast(source: str) -> PragmaInfo:
             magic_list.append((offset_val, magic_bytes))
             continue
 
-        m = _PRAGMA_BASE_RE.match(stripped)
-        if m:
+        if m := _PRAGMA_BASE_RE.match(stripped):
             base_address = _parse_int_value(m.group(1))
             continue
 

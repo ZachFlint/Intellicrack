@@ -95,9 +95,7 @@ def _coerce_line_number(value: object) -> int:
     """
     if isinstance(value, int):
         return value
-    if isinstance(value, str) and value.isdigit():
-        return int(value)
-    return 0
+    return int(value) if isinstance(value, str) and value.isdigit() else 0
 
 
 def _safe_str(value: object, *, default: str = "") -> str:
@@ -110,9 +108,7 @@ def _safe_str(value: object, *, default: str = "") -> str:
     Returns:
         str: The string representation of ``value`` or ``default``.
     """
-    if value is None:
-        return default
-    return str(value)
+    return default if value is None else str(value)
 
 
 def parse_json_line(line: str) -> LogRecordDict | None:
@@ -171,9 +167,7 @@ def _structlog_event_dict(record: logging.LogRecord) -> dict[str, object] | None
     if isinstance(msg, dict):
         return cast("dict[str, object]", msg)
     legacy = getattr(record, "_record", None)
-    if isinstance(legacy, dict):
-        return cast("dict[str, object]", legacy)
-    return None
+    return cast("dict[str, object]", legacy) if isinstance(legacy, dict) else None
 
 
 def _extract_event_text(record: logging.LogRecord) -> str:

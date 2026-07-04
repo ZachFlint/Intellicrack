@@ -65,9 +65,6 @@ def test_get_provider_registry_thread_safe_singleton() -> None:
     first_id = id(results[0])
     for instance in results:
         assert id(instance) == first_id, (
-            f"all 32 threads must receive the same singleton instance; "
-            f"expected id {first_id}, got id {id(instance)}"
+            f"all 32 threads must receive the same singleton instance; expected id {first_id}, got id {id(instance)}"
         )
-        assert isinstance(instance, ProviderRegistry), (
-            f"every returned instance must be a ProviderRegistry, got {type(instance)}"
-        )
+        assert isinstance(instance, ProviderRegistry), f"every returned instance must be a ProviderRegistry, got {type(instance)}"

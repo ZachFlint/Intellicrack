@@ -162,9 +162,9 @@ class TestByteTypeDistribution:
         null_c, printable_c, _control_c, high_c = result.type_dist[:4]
         assert sum(result.type_dist) == len(data)
         assert null_c == data.count(0)
-        ref_printable = sum(1 for b in data if _PRINTABLE_MIN <= b <= _PRINTABLE_MAX)
+        ref_printable = sum(bool(_PRINTABLE_MIN <= b <= _PRINTABLE_MAX) for b in data)
         assert printable_c == ref_printable
-        assert high_c == sum(1 for b in data if b >= 0x80)
+        assert high_c == sum(bool(b >= 0x80) for b in data)
 
 
 class TestPerBlockAnalysis:

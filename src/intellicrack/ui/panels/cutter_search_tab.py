@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
@@ -175,6 +176,10 @@ class SearchTab(QWidget):
         self._results_table.setHorizontalHeaderLabels(_RESULT_COLUMNS)
         self._results_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._results_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        results_header = self._results_table.horizontalHeader()
+        if results_header is not None:
+            results_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            results_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
         vlayout.addWidget(self._results_table)
 
         self._on_mode_changed(self._mode_combo.currentText())
@@ -409,7 +414,9 @@ class SearchTab(QWidget):
             self._results_table.insertRow(row)
             addr_text = f"0x{offset:X}" if isinstance(offset, int) else str(offset)
             self._results_table.setItem(row, 0, QTableWidgetItem(addr_text))
-            self._results_table.setItem(row, 1, QTableWidgetItem(detail))
+            detail_item = QTableWidgetItem(detail)
+            detail_item.setToolTip(detail)
+            self._results_table.setItem(row, 1, detail_item)
         self._search_status_label.setText(f"{len(entries)} match(es)")
         self._search_btn.setEnabled(True)
 

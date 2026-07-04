@@ -204,7 +204,7 @@ class TestVendorPatternLexing:
         assert tokens[-1].type == TokenType.EOF
         # A real format description declares many structs; the keyword must be
         # recognised, not lexed as a bare identifier.
-        struct_keywords = sum(1 for tok in tokens if tok.type == TokenType.STRUCT)
+        struct_keywords = sum(bool(tok.type == TokenType.STRUCT) for tok in tokens)
         assert struct_keywords >= 3
 
 
@@ -222,7 +222,7 @@ class TestVendorPatternParsing:
         tokens = HexPatLexer(processed, str(path)).tokenize()
         ast: list[DeclNode | StmtNode] = HexPatParser(tokens, str(path)).parse()
 
-        assert len(ast) >= 1
+        assert ast
         struct_names = {node.name for node in ast if isinstance(node, StructDecl)}
         enum_names = {node.name for node in ast if isinstance(node, EnumDecl)}
 

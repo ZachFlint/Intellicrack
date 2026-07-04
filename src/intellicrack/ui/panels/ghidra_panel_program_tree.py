@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Program Tree widget for the Ghidra panel.
 
-Renders the module/fragment hierarchy returned by ``GhidraBridge.get_program_tree``
-in a ``QTreeWidget`` and provides a write form for ``GhidraBridge.edit_program_tree``
-(create module, create fragment, move child) without leaving the GUI.
+Renders the module/fragment hierarchy returned by ``GhidraBridge.get_program_tree`` in a ``QTreeWidget`` and provides a write form for
+``GhidraBridge.edit_program_tree`` (create module, create fragment, move child) without leaving the GUI.
 """
 
 from __future__ import annotations
@@ -45,8 +44,7 @@ _OPERATIONS: Final[list[str]] = ["create_module", "create_fragment", "move_child
 class ProgramTreeWidget(QWidget):
     """Program Tree browser and editor for the Ghidra Program Tree tab.
 
-    Owns its own bridge reference (set via ``set_bridge``) so it stays
-    self-contained and reusable independently of the host panel.
+    Owns its own bridge reference (set via ``set_bridge``) so it stays self-contained and reusable independently of the host panel.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

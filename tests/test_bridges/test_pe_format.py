@@ -105,7 +105,7 @@ def _build_dos_header(e_lfanew: int) -> bytes:
         bytes: DOS header buffer of exactly ``PE_DOS_HEADER_SIZE`` bytes.
     """
     buf = bytearray(PE_DOS_HEADER_SIZE)
-    buf[0:2] = PE_DOS_SIGNATURE
+    buf[:2] = PE_DOS_SIGNATURE
     struct.pack_into("<I", buf, PE_DOS_LFANEW_OFFSET, e_lfanew)
     return bytes(buf)
 
@@ -351,7 +351,7 @@ class TestGetDataDirectoryOffset:
 
     def test_tls_directory_index_9(self) -> None:
         """Verify TLS directory (entry index 9) computation matches legacy arithmetic."""
-        legacy_pe64 = 24 + (1 * 112 + (1 - 1) * 96) + 72
+        legacy_pe64 = 24 + (1 * 112 + 0 * 96) + 72
         helper_pe64 = get_data_directory_offset(0, is_pe64=True, entry_index=9)
         assert helper_pe64 == legacy_pe64
 
@@ -361,7 +361,7 @@ class TestGetDataDirectoryOffset:
 
     def test_resource_directory_index_2(self) -> None:
         """Verify Resource directory (entry index 2) computation matches legacy arithmetic."""
-        legacy_pe64 = 24 + (1 * 112 + (1 - 1) * 96) + 16
+        legacy_pe64 = 24 + (1 * 112 + 0 * 96) + 16
         helper_pe64 = get_data_directory_offset(0, is_pe64=True, entry_index=2)
         assert helper_pe64 == legacy_pe64
 
@@ -526,7 +526,7 @@ class TestIterateSectionHeaders:
             raw_offset=0x400,
             characteristics=0,
         )
-        assert list(iterate_section_headers(sec, 0, 0)) == []
+        assert not list(iterate_section_headers(sec, 0, 0))
 
     def test_negative_count_yields_nothing(self) -> None:
         """Verify a negative count produces no entries."""
@@ -538,7 +538,7 @@ class TestIterateSectionHeaders:
             raw_offset=0,
             characteristics=0,
         )
-        assert list(iterate_section_headers(sec, 0, -1)) == []
+        assert not list(iterate_section_headers(sec, 0, -1))
 
     def test_truncated_buffer_stops_early(self) -> None:
         """Verify the iterator stops when the buffer is too short."""
@@ -551,7 +551,7 @@ class TestIterateSectionHeaders:
             characteristics=0,
         )
         truncated = sec[:30]
-        assert list(iterate_section_headers(truncated, 0, 1)) == []
+        assert not list(iterate_section_headers(truncated, 0, 1))
 
     def test_partial_truncation(self) -> None:
         """Verify only the fully-parseable entries are emitted."""
@@ -989,7 +989,7 @@ def _build_elf_header(
             ``e_machine`` at the canonical offset.
     """
     buf = bytearray(64)
-    buf[0:4] = ELF_MAGIC
+    buf[:4] = ELF_MAGIC
     buf[ELF_EI_CLASS_OFFSET] = ELF_CLASS_64 if is_64 else 1
     buf[ELF_EI_DATA_OFFSET] = 2 if big_endian else 1
     fmt = ">H" if big_endian else "<H"
@@ -1012,7 +1012,7 @@ def _build_macho_header(*, magic: bytes, cpu_type: int) -> bytes:
             ``cpu_type`` packed in the matching byte order.
     """
     buf = bytearray(32)
-    buf[0:4] = magic
+    buf[:4] = magic
     big_endian = magic in {MACHO_MAGIC_BE32, MACHO_MAGIC_BE64}
     fmt = ">I" if big_endian else "<I"
     struct.pack_into(fmt, buf, 4, cpu_type)
@@ -1117,7 +1117,7 @@ class TestDetectFormatAndArch:
     def test_pe_dos_only_returns_unknown_arch(self) -> None:
         """Verify a bare-DOS ``MZ`` buffer returns ``("pe", "unknown", False)``."""
         buf = bytearray(PE_DOS_HEADER_SIZE)
-        buf[0:2] = PE_DOS_SIGNATURE
+        buf[:2] = PE_DOS_SIGNATURE
         struct.pack_into("<I", buf, PE_DOS_LFANEW_OFFSET, 0)
         result = detect_format_and_arch(bytes(buf))
         assert result == ("pe", "unknown", False)
@@ -1125,7 +1125,7 @@ class TestDetectFormatAndArch:
     def test_pe_invalid_signature_returns_unknown_arch(self) -> None:
         """Verify a PE buffer with a corrupted NT signature reports ``arch="unknown"``."""
         buf = bytearray(PE_DOS_HEADER_SIZE + 32)
-        buf[0:2] = PE_DOS_SIGNATURE
+        buf[:2] = PE_DOS_SIGNATURE
         struct.pack_into("<I", buf, PE_DOS_LFANEW_OFFSET, PE_DOS_HEADER_SIZE)
         buf[PE_DOS_HEADER_SIZE : PE_DOS_HEADER_SIZE + 4] = b"XX\x00\x00"
         result = detect_format_and_arch(bytes(buf))

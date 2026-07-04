@@ -799,7 +799,7 @@ class TestF0003PollForResult:
         )
         assert script_name.endswith(".sh"), f"Linux script name must end in .sh; got {script_name}"
 
-        host_prefix = out_dir.as_posix() + "/"
+        host_prefix = f"{out_dir.as_posix()}/"
         runnable = script_content.replace("/mnt/shared/output/", host_prefix)
         script_path = tmp_path / script_name
         script_path.write_text(runnable, encoding="utf-8", newline="\n")

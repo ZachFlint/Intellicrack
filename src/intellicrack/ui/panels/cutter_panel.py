@@ -88,6 +88,7 @@ _OUTER_SPLIT_MID: Final[int] = 250
 _OUTER_SPLIT_BOT: Final[int] = 150
 _INNER_SPLIT_LEFT: Final[int] = 250
 _INNER_SPLIT_RIGHT: Final[int] = 600
+_SHUTDOWN_TIMEOUT_S: Final[float] = 10.0
 
 _ANALYSIS_LEVELS: Final[list[str]] = ["quick", "normal", "deep"]
 _DEFAULT_ANALYSIS_LEVEL: Final[str] = "normal"
@@ -189,7 +190,7 @@ class CutterPanel(AnalysisPanelBase):
         """Shut down the Cutter bridge if active."""
         if self._bridge is not None and self._bridge.state.is_ready():
             try:
-                run_bridge_coroutine(self._bridge.shutdown())
+                run_bridge_coroutine(self._bridge.shutdown(), timeout_s=_SHUTDOWN_TIMEOUT_S)
             except (RuntimeError, ConnectionError, OSError):
                 _logger.exception("cutter_shutdown_failed", bridge_type="cutter")
 
@@ -246,6 +247,12 @@ class CutterPanel(AnalysisPanelBase):
         set_header_labels(self._func_tree, _FUNC_COLUMNS)
         set_sorting_enabled(self._func_tree, enable=True)
         set_selection_mode(self._func_tree, QAbstractItemView.SelectionMode.SingleSelection)
+        func_header = self._func_tree.header()
+        if func_header is not None:
+            func_header.setStretchLastSection(False)
+            func_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            func_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            func_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self._func_tree.itemClicked.connect(self._on_function_clicked)
         self._func_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._func_tree.customContextMenuRequested.connect(self._on_func_context_menu)
@@ -652,11 +659,13 @@ class CutterPanel(AnalysisPanelBase):
         self._func_tree.clear()
 
         for func in functions:
+            name = getattr(func, "name", "")
             item = NumericSortTreeItem([
-                getattr(func, "name", ""),
+                name,
                 f"0x{getattr(func, 'address', 0):X}",
                 str(getattr(func, "size", 0)),
             ])
+            item.setToolTip(0, name)
             tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, getattr(func, "address", 0))
             self._func_tree.addTopLevelItem(item)
 

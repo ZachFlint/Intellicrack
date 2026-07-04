@@ -9,7 +9,6 @@ This module provides the UI for configuring Windows Sandbox settings, including 
 
 from __future__ import annotations
 
-import asyncio
 import inspect
 import json
 import os
@@ -17,9 +16,9 @@ import sys
 import tempfile
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Final, cast
+from typing import TYPE_CHECKING, ClassVar, Final, cast, override
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal
+from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -43,15 +42,22 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.config import get_config_dir, get_config_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
-from intellicrack.core.subprocess_compat import CREATE_NO_WINDOW, PIPE, Popen, SubprocessError, TimeoutExpired
+from intellicrack.core.subprocess_compat import CREATE_NO_WINDOW, PIPE, CompletedProcess, Popen, SubprocessError, TimeoutExpired
 from intellicrack.sandbox.base import SandboxConfig
 
 from .dialogs_helpers import show_info, show_warning
-from .panels.async_bridge import WORKER_DEFAULT_EXCEPTIONS, GenericCallableWorker, run_bridge_coroutine
+from .panels.async_bridge import (
+    WORKER_DEFAULT_EXCEPTIONS,
+    GenericCallableWorker,
+    run_bridge_coroutine,
+    run_bridge_coroutine_async,
+)
 from .resources import IconManager
 
 
 if TYPE_CHECKING:
+    from PyQt6.QtGui import QCloseEvent
+
     from intellicrack.sandbox.manager import SandboxManager
 
 
@@ -255,7 +261,7 @@ class SandboxTestWorker(QThread):
         memory_limit_mb: int = 2048,
         shared_folder: str | None = None,
         read_only: bool = False,
-        parent: QThread | None = None,
+        parent: QObject | None = None,
     ) -> None:
         """Initialize the SandboxTestWorker with sandbox configuration.
 
@@ -264,7 +270,7 @@ class SandboxTestWorker(QThread):
             memory_limit_mb: Memory limit in MB for the sandbox.
             shared_folder: Path to the host-side shared folder.
             read_only: Whether the shared folder is read-only.
-            parent: Parent QThread.
+            parent: Parent QObject that owns this worker thread.
         """
         super().__init__(parent)
         self._network_enabled = network_enabled
@@ -553,8 +559,9 @@ class SandboxConfigDialog(QDialog):
         status_layout.addWidget(self._status_icon)
 
         self._status_label = QLabel("Checking Windows Sandbox availability...")
-        status_layout.addWidget(self._status_label)
-        status_layout.addStretch()
+        self._status_label.setWordWrap(True)
+        self._status_label.setToolTip("Checking Windows Sandbox availability...")
+        status_layout.addWidget(self._status_label, 1)
 
         layout.addWidget(self._status_frame)
 
@@ -713,6 +720,7 @@ class SandboxConfigDialog(QDialog):
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_success", 16))
         self._status_label.setText("Windows Sandbox is available")
+        self._status_label.setToolTip("Windows Sandbox is available")
         self._status_label.setProperty("status", "success")
         style = self._status_label.style()
         if style is not None:
@@ -734,7 +742,9 @@ class SandboxConfigDialog(QDialog):
         self._is_available = False
         icon_manager = IconManager.get_instance()
         self._status_icon.setPixmap(icon_manager.get_pixmap("status_error", 16))
-        self._status_label.setText(f"Windows Sandbox unavailable: {reason}")
+        unavailable_text = f"Windows Sandbox unavailable: {reason}"
+        self._status_label.setText(unavailable_text)
+        self._status_label.setToolTip(unavailable_text)
         self._status_label.setProperty("status", "error")
         style = self._status_label.style()
         if style is not None:
@@ -865,6 +875,7 @@ class SandboxConfigDialog(QDialog):
             memory_limit_mb=self._memory_spin.value(),
             shared_folder=self._shared_folder_input.text(),
             read_only=self._read_only_checkbox.isChecked(),
+            parent=self,
         )
 
         def _test_finished_slot(s: int, m: str) -> None:
@@ -935,6 +946,22 @@ class SandboxConfigDialog(QDialog):
         """Handle apply button click."""
         _logger.info("sandbox_config_dialog_apply")
         self._save_settings()
+
+    @override
+    def closeEvent(self, a0: QCloseEvent | None) -> None:
+        """Cancel any in-flight sandbox test before the dialog closes.
+
+        Args:
+            a0: The close event.
+        """
+        self._cancel_test()
+        super().closeEvent(a0)
+
+    @override
+    def reject(self) -> None:
+        """Cancel any in-flight sandbox test before rejecting the dialog."""
+        self._cancel_test()
+        super().reject()
 
     def _save_settings(self) -> None:
         """Save current settings to config file and apply to the sandbox manager."""
@@ -1267,7 +1294,13 @@ class SandboxMonitorWidget(QFrame):
         self._output_text.append(text)
 
     def _stop_sandbox(self) -> None:
-        """Stop the running sandbox."""
+        """Stop the running sandbox without blocking the GUI thread.
+
+        Disables the stop button immediately to prevent a second dispatch while the (async or worker-thread) teardown is in flight. The
+        running indicator is cleared and :attr:`sandbox_stopped` is emitted only once the dispatched teardown actually completes, via
+        :meth:`_finish_stop_sandbox`.
+        """
+        self._stop_btn.setEnabled(False)
         if self._manager is not None:
             self._stop_via_manager()
         elif self._sandbox_pid is not None:
@@ -1275,107 +1308,166 @@ class SandboxMonitorWidget(QFrame):
         else:
             self._terminate_sandbox_by_name()
 
+    def _finish_stop_sandbox(self) -> None:
+        """Clear the running indicator and notify listeners that the sandbox stopped."""
         self.set_running(is_running=False)
         self.sandbox_stopped.emit()
 
     def _stop_via_manager(self) -> None:
         """Stop the sandbox by delegating to the attached ``SandboxManager``.
 
-        Runs :meth:`SandboxManager.destroy_all` synchronously via :func:`asyncio.run` so the UI thread blocks until cleanup completes. Logs
-        the start, completion, and any errors as structured events.
+        Dispatches :meth:`SandboxManager.destroy_all` to the persistent
+        background bridge event loop via :func:`run_bridge_coroutine_async`
+        so the GUI thread never blocks on VM/container teardown latency.
+        Completion is handled on the GUI thread by
+        :meth:`_on_manager_stop_succeeded` / :meth:`_on_manager_stop_failed`.
         """
         if self._manager is None:
+            self._finish_stop_sandbox()
             return
         _logger.info("sandbox_stop_started", method="manager")
-        try:
-            asyncio.run(self._manager.destroy_all())
-        except (RuntimeError, OSError) as e:
-            _logger.exception("sandbox_stop_error", method="manager")
-            self.append_output(f"[Error stopping sandbox: {e}]")
-            return
+        run_bridge_coroutine_async(
+            self._manager.destroy_all(),
+            self._on_manager_stop_succeeded,
+            self._on_manager_stop_failed,
+            self,
+        )
+
+    def _on_manager_stop_succeeded(self, _result: object) -> None:
+        """Handle successful completion of a manager-based sandbox stop.
+
+        Args:
+            _result: Unused return value from ``SandboxManager.destroy_all``.
+        """
         _logger.info("sandbox_stop_completed", method="manager")
         self.append_output("[Sandbox stopped via manager]")
+        self._finish_stop_sandbox()
+
+    def _on_manager_stop_failed(self, exc: object) -> None:
+        """Handle a failure raised while stopping the sandbox via the manager.
+
+        Args:
+            exc: Exception raised by ``SandboxManager.destroy_all``.
+        """
+        _logger.warning("sandbox_stop_error", method="manager", error=str(exc))
+        self.append_output(f"[Error stopping sandbox: {exc}]")
+        self._finish_stop_sandbox()
 
     def _stop_via_pid(self, pid: int) -> None:
         """Stop the sandbox by terminating the registered process by PID.
 
-        On Windows this delegates to ``taskkill /F /PID``; on other platforms it
-        sends ``SIGKILL`` via :func:`os.kill`.
+        On Windows this dispatches ``taskkill /F /PID`` to a background
+        worker thread via :class:`GenericCallableWorker` so the bounded
+        (10 second) ``taskkill`` subprocess never blocks the GUI thread. On
+        other platforms it sends ``SIGKILL`` via :func:`os.kill`, which is a
+        non-blocking signal delivery and does not need dispatch.
 
         Args:
             pid: Process identifier of the running sandbox process.
         """
         _logger.info("sandbox_stop_started", method="pid_kill", pid=pid)
-        try:
-            self._dispatch_pid_kill(pid)
-        except (TimeoutExpired, OSError) as e:
-            _logger.exception("sandbox_stop_error", method="pid_kill", pid=pid)
-            self.append_output(f"[Error terminating sandbox: {e}]")
+        if not _IS_WIN32:
+            try:
+                os.kill(pid, 9)
+            except OSError as e:
+                _logger.exception("sandbox_stop_error", method="pid_kill", pid=pid)
+                self.append_output(f"[Error terminating sandbox: {e}]")
+                self._finish_stop_sandbox()
+                return
+            _logger.info("sandbox_stop_completed", method="pid_kill", pid=pid)
+            self.append_output(f"[Sandbox process {pid} killed]")
+            self._finish_stop_sandbox()
             return
-        _logger.info("sandbox_stop_completed", method="pid_kill", pid=pid)
 
-    def _dispatch_pid_kill(self, pid: int) -> None:
-        """Issue the platform-specific kill command for ``pid``.
+        process_manager = ProcessManager.get_instance()
+        worker = GenericCallableWorker(
+            process_manager.run_tracked,
+            ["taskkill", "/F", "/PID", str(pid)],
+            name="taskkill-sandbox-pid",
+            check=False,
+            timeout=10,
+            creationflags=CREATE_NO_WINDOW,
+            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
+            parent=self,
+        )
 
-        Propagates ``TimeoutExpired`` from the Windows ``taskkill`` invocation
-        and ``OSError`` from the underlying OS API to the caller, which is
-        expected to wrap the call in an exception handler.
+        def _pid_kill_finished_slot(_result: object) -> None:
+            self._on_pid_kill_succeeded(pid)
+
+        def _pid_kill_error_slot(exc: object) -> None:
+            self._on_pid_kill_failed(pid, exc)
+
+        _ = worker.call_finished.connect(_pid_kill_finished_slot)
+        _ = worker.call_error.connect(_pid_kill_error_slot)
+        worker.start()
+
+    def _on_pid_kill_succeeded(self, pid: int) -> None:
+        """Handle successful completion of a PID-based ``taskkill``.
 
         Args:
-            pid: Process identifier to terminate.
+            pid: Process identifier that was terminated.
         """
-        if _IS_WIN32:
-            process_manager = ProcessManager.get_instance()
-            process_manager.run_tracked(
-                ["taskkill", "/F", "/PID", str(pid)],
-                name="taskkill-sandbox-pid",
-                check=False,
-                timeout=10,
-                creationflags=CREATE_NO_WINDOW,
-            )
-            self.append_output(f"[Sandbox process {pid} terminated]")
-        else:
-            os.kill(pid, 9)
-            self.append_output(f"[Sandbox process {pid} killed]")
+        _logger.info("sandbox_stop_completed", method="pid_kill", pid=pid)
+        self.append_output(f"[Sandbox process {pid} terminated]")
+        self._finish_stop_sandbox()
+
+    def _on_pid_kill_failed(self, pid: int, exc: object) -> None:
+        """Handle a failure raised while terminating the sandbox by PID.
+
+        Args:
+            pid: Process identifier that was targeted for termination.
+            exc: Exception raised by the ``taskkill`` worker.
+        """
+        _logger.warning("sandbox_stop_error", method="pid_kill", pid=pid, error=str(exc))
+        self.append_output(f"[Error terminating sandbox: {exc}]")
+        self._finish_stop_sandbox()
 
     def _terminate_sandbox_by_name(self) -> None:
-        """Terminate Windows Sandbox by process name."""
+        """Terminate Windows Sandbox by process name without blocking the GUI thread.
+
+        Dispatches ``taskkill /F /IM WindowsSandbox.exe`` to a background worker thread via :class:`GenericCallableWorker` so the bounded
+        (10 second) subprocess call never blocks the GUI thread.
+        """
         if not _IS_WIN32:
             self.append_output("[Cannot terminate sandbox on non-Windows platform]")
+            self._finish_stop_sandbox()
             return
 
         _logger.info("sandbox_terminate_by_name_started")
-        try:
-            returncode = self._invoke_taskkill_by_name()
-        except (TimeoutExpired, OSError) as e:
-            _logger.exception("sandbox_stop_error", method="name_kill")
-            self.append_output(f"[Error: {e}]")
-            return
-        self._report_taskkill_result(returncode)
-
-    @staticmethod
-    def _invoke_taskkill_by_name() -> int:
-        """Run ``taskkill /F /IM WindowsSandbox.exe`` through the process manager.
-
-        Propagates ``TimeoutExpired`` from ``process_manager.run_tracked`` if the
-        invocation exceeds the configured timeout, and ``OSError`` if the
-        operating system rejects the request. Callers wrap the call in an
-        exception handler.
-
-        Returns:
-            int: The exit code reported by ``taskkill``. ``0`` indicates a
-            running Windows Sandbox process was terminated; non-zero typically
-            means no matching process was found.
-        """
         process_manager = ProcessManager.get_instance()
-        result = process_manager.run_tracked(
+        worker = GenericCallableWorker(
+            process_manager.run_tracked,
             ["taskkill", "/F", "/IM", "WindowsSandbox.exe"],
             name="taskkill-sandbox-name",
             check=False,
             timeout=10,
             creationflags=CREATE_NO_WINDOW,
+            exceptions=(*WORKER_DEFAULT_EXCEPTIONS, TimeoutExpired),
+            parent=self,
         )
-        return result.returncode
+        _ = worker.call_finished.connect(self._on_name_kill_succeeded)
+        _ = worker.call_error.connect(self._on_name_kill_failed)
+        worker.start()
+
+    def _on_name_kill_succeeded(self, result: object) -> None:
+        """Handle successful completion of the name-based ``taskkill``.
+
+        Args:
+            result: ``CompletedProcess`` emitted by the ``taskkill`` worker.
+        """
+        returncode = result.returncode if isinstance(result, CompletedProcess) else 1
+        self._report_taskkill_result(returncode)
+        self._finish_stop_sandbox()
+
+    def _on_name_kill_failed(self, exc: object) -> None:
+        """Handle a failure raised while terminating the sandbox by name.
+
+        Args:
+            exc: Exception raised by the ``taskkill`` worker.
+        """
+        _logger.warning("sandbox_stop_error", method="name_kill", error=str(exc))
+        self.append_output(f"[Error: {exc}]")
+        self._finish_stop_sandbox()
 
     def _report_taskkill_result(self, returncode: int) -> None:
         """Surface the outcome of the name-based taskkill in the output panel.

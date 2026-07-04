@@ -602,9 +602,6 @@ class TestBookmarksModuleSourceContainsNotifyMarkers:
             "hex-editor.bookmarks.remove",
         ]
         missing = [needle for needle in required_substrings if needle not in source]
-        assert missing == [], (
-            f"Bookmarks mixin must publish DATA_MODIFIED for every mutation; "
-            f"missing notify markers: {missing}. "
-            "Both _on_add_bookmark and _on_remove_bookmark must call "
-            "self._notify_state_data_modified(offset, length, source=...)."
+        assert not missing, (
+            f"Bookmarks mixin must publish DATA_MODIFIED for every mutation; missing notify markers: {missing}. Both _on_add_bookmark and _on_remove_bookmark must call self._notify_state_data_modified(offset, length, source=...)."
         )

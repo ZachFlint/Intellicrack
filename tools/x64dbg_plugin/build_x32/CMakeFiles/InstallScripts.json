@@ -1,7 +1,6 @@
 {
-	"InstallScripts" : 
-	[
-		"D:/Intellicrack/tools/x64dbg_plugin/build_x32/cmake_install.cmake"
-	],
-	"Parallel" : false
+  "InstallScripts": [
+    "D:/Intellicrack/tools/x64dbg_plugin/build_x32/cmake_install.cmake"
+  ],
+  "Parallel": false
 }

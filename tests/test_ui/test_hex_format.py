@@ -52,7 +52,7 @@ class TestFormatHexDumpBasic:
         separator = "  "
         expected_hex = " ".join(f"{b:02X}" for b in data)
         expected_ascii = "A"
-        expected = f"{'00000000'}{separator}{expected_hex:<{hex_field_width}s}{separator}{expected_ascii}"
+        expected = f"00000000{separator}{expected_hex:<{hex_field_width}s}{separator}{expected_ascii}"
         assert result == expected
         assert result.startswith("00000000  ")
         assert result.endswith("  A")

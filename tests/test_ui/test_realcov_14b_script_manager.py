@@ -344,6 +344,6 @@ class TestScriptManagerRealExecution:
 
         panel._on_execute()
 
-        assert executor_calls == []
+        assert not executor_calls
         assert not panel._result_pane.toPlainText()
         assert warnings, "empty-script execution must surface a warning"

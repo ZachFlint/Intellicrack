@@ -585,7 +585,7 @@ mod tests {
     fn test_apply_nonexistent() {
         let reg = TemplateRegistry::new();
         let result = reg.apply("NONEXISTENT", &[0u8; 100], 0);
-        assert!(result.is_err());
+        assert!(matches!(result, Err(TemplateError::NotFound(n)) if n == "NONEXISTENT"));
     }
 
     #[test]
@@ -599,16 +599,14 @@ mod tests {
         let fields = reg.apply("IMAGE_DOS_HEADER", &data, 0).unwrap();
         assert!(!fields.is_empty());
         assert_eq!(fields[0].name, "e_magic");
-        assert!(
-            fields[0].display_value.contains("23117") || fields[0].display_value.contains("5A4D")
-        );
+        assert_eq!(fields[0].display_value, "23117 (0x5A4D)");
     }
 
     #[test]
     fn test_insufficient_data() {
         let reg = TemplateRegistry::new();
         let result = reg.apply("IMAGE_DOS_HEADER", &[0u8; 10], 0);
-        assert!(result.is_err());
+        assert!(matches!(result, Err(TemplateError::InsufficientData { .. })));
     }
 
     #[test]
@@ -673,8 +671,9 @@ mod tests {
     fn test_export_json() {
         let reg = TemplateRegistry::new();
         let json = reg.export_json("IMAGE_DOS_HEADER").unwrap();
-        assert!(json.contains("IMAGE_DOS_HEADER"));
-        assert!(json.contains("e_magic"));
+        let parsed: serde_json::Value = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed["name"].as_str(), Some("IMAGE_DOS_HEADER"));
+        assert_eq!(parsed["fields"][0]["name"].as_str(), Some("e_magic"));
     }
 
     #[test]
@@ -720,5 +719,314 @@ mod tests {
         // e_csum, e_ip, e_cs, e_lfarlc, e_ovno, e_res[4], e_oemid, e_oeminfo, e_res2[10],
         // e_lfanew.  Deleting any field registration changes this count and fails the gate.
         assert_eq!(dos.3, 19, "IMAGE_DOS_HEADER must expose exactly 19 fields in list_detailed");
+    }
+
+    #[test]
+    fn test_format_field_value_integers_little_endian() {
+        assert_eq!(format_field_value(&FieldType::UInt8, &[0x2A], Endianness::Little), "42 (0x2A)");
+        assert_eq!(format_field_value(&FieldType::Int8, &[0xFF], Endianness::Little), "-1 (0xFF)");
+        assert_eq!(format_field_value(&FieldType::Bool, &[0x01], Endianness::Little), "true");
+        assert_eq!(format_field_value(&FieldType::Bool, &[0x00], Endianness::Little), "false");
+        assert_eq!(format_field_value(&FieldType::Char, &[0x41], Endianness::Little), "'A' (0x41)");
+        assert_eq!(format_field_value(&FieldType::Char, &[0x01], Endianness::Little), "0x01");
+        assert_eq!(
+            format_field_value(&FieldType::UInt16, &[0x34, 0x12], Endianness::Little),
+            "4660 (0x1234)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Int16, &[0xFF, 0xFF], Endianness::Little),
+            "-1 (0xFFFF)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::UInt32, &[0x78, 0x56, 0x34, 0x12], Endianness::Little),
+            "305419896 (0x12345678)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Int32, &[0xFF, 0xFF, 0xFF, 0xFF], Endianness::Little),
+            "-1 (0xFFFFFFFF)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::UInt64, &[1, 0, 0, 0, 0, 0, 0, 0], Endianness::Little),
+            "1 (0x0000000000000001)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Int64, &[0xFF; 8], Endianness::Little),
+            "-1 (0xFFFFFFFFFFFFFFFF)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Float32, &1.5f32.to_le_bytes(), Endianness::Little),
+            "1.5"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Float64, &2.5f64.to_le_bytes(), Endianness::Little),
+            "2.5"
+        );
+    }
+
+    #[test]
+    fn test_format_field_value_integers_big_endian() {
+        assert_eq!(
+            format_field_value(&FieldType::UInt16, &[0x12, 0x34], Endianness::Big),
+            "4660 (0x1234)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Int16, &[0xFF, 0xFF], Endianness::Big),
+            "-1 (0xFFFF)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::UInt32, &[0x12, 0x34, 0x56, 0x78], Endianness::Big),
+            "305419896 (0x12345678)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Int32, &[0xFF, 0xFF, 0xFF, 0xFF], Endianness::Big),
+            "-1 (0xFFFFFFFF)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::UInt64, &[0, 0, 0, 0, 0, 0, 0, 1], Endianness::Big),
+            "1 (0x0000000000000001)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Int64, &[0xFF; 8], Endianness::Big),
+            "-1 (0xFFFFFFFFFFFFFFFF)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Float32, &1.5f32.to_be_bytes(), Endianness::Big),
+            "1.5"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Float64, &2.5f64.to_be_bytes(), Endianness::Big),
+            "2.5"
+        );
+    }
+
+    #[test]
+    fn test_format_composite_value_all_variants() {
+        assert_eq!(
+            format_field_value(&FieldType::Bytes(3), &[0xAA, 0xBB, 0xCC], Endianness::Little),
+            "AA BB CC"
+        );
+        // Null-truncation + non-graphic byte -> '.'.
+        assert_eq!(
+            format_field_value(&FieldType::FixedString(4), &[0x41, 0x01, 0x42, 0x00], Endianness::Little),
+            "\"A.B\""
+        );
+        assert_eq!(
+            format_field_value(
+                &FieldType::Array { element_type: Box::new(FieldType::UInt8), count: 4 },
+                &[],
+                Endianness::Little
+            ),
+            "[4 x uint8]"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Padding(8), &[], Endianness::Little),
+            "padding[8]"
+        );
+        assert_eq!(
+            format_field_value(
+                &FieldType::DynamicArray { element_type: Box::new(FieldType::UInt8), count_field: "count".to_string() },
+                &[],
+                Endianness::Little
+            ),
+            "[dyn count x uint8]"
+        );
+        assert_eq!(
+            format_field_value(
+                &FieldType::Bitfield { bit_width: 3, backing_type: Box::new(FieldType::UInt8), flags: None },
+                &[],
+                Endianness::Little
+            ),
+            "bitfield<uint8:3>"
+        );
+        assert_eq!(
+            format_field_value(
+                &FieldType::Union {
+                    variants: vec![
+                        FieldDefinition {
+                            name: "a".to_string(),
+                            field_type: FieldType::UInt8,
+                            endianness: None,
+                            description: String::new(),
+                            color: None,
+                            validation: None,
+                        },
+                        FieldDefinition {
+                            name: "b".to_string(),
+                            field_type: FieldType::UInt16,
+                            endianness: None,
+                            description: String::new(),
+                            color: None,
+                            validation: None,
+                        },
+                    ],
+                },
+                &[],
+                Endianness::Little
+            ),
+            "union<2 variants>"
+        );
+    }
+
+    #[test]
+    fn test_format_composite_value_reference_variants() {
+        assert_eq!(
+            format_field_value(
+                &FieldType::Enum { backing_type: Box::new(FieldType::UInt16), values: vec![] },
+                &[],
+                Endianness::Little
+            ),
+            "enum<uint16>"
+        );
+        assert_eq!(
+            format_field_value(
+                &FieldType::Pointer { pointer_type: Box::new(FieldType::UInt32), target_template: "FOO".to_string() },
+                &[],
+                Endianness::Little
+            ),
+            "*FOO"
+        );
+        assert_eq!(
+            format_field_value(
+                &FieldType::Conditional {
+                    condition_field: "flag".to_string(),
+                    condition_value: 1,
+                    condition_op: ConditionOp::Eq,
+                    fields: vec![],
+                },
+                &[],
+                Endianness::Little
+            ),
+            "if(flag)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::StructRef("BAR".to_string()), &[], Endianness::Little),
+            "struct BAR"
+        );
+        assert_eq!(
+            format_field_value(
+                &FieldType::Computed { expression: "a+b".to_string(), display_type: Box::new(FieldType::UInt32) },
+                &[],
+                Endianness::Little
+            ),
+            "= a+b"
+        );
+        assert_eq!(
+            format_field_value(
+                &FieldType::EndiannessSwitch { peek_offset: 4, big_value: 0xAB },
+                &[],
+                Endianness::Little
+            ),
+            "endianness_switch(peek+4==0xAB)"
+        );
+    }
+
+    #[test]
+    fn test_read_numeric_value_all_types_both_endian() {
+        assert_eq!(read_numeric_value(&FieldType::UInt8, &[0x2A], Endianness::Little), 42);
+        assert_eq!(read_numeric_value(&FieldType::Bool, &[0x01], Endianness::Little), 1);
+        assert_eq!(read_numeric_value(&FieldType::Char, &[0x41], Endianness::Little), 65);
+        assert_eq!(read_numeric_value(&FieldType::Int8, &[0xFF], Endianness::Little), -1);
+        assert_eq!(read_numeric_value(&FieldType::UInt16, &[0x34, 0x12], Endianness::Little), 4660);
+        assert_eq!(read_numeric_value(&FieldType::UInt16, &[0x12, 0x34], Endianness::Big), 4660);
+        assert_eq!(read_numeric_value(&FieldType::Int16, &[0xFF, 0xFF], Endianness::Little), -1);
+        assert_eq!(read_numeric_value(&FieldType::Int16, &[0xFF, 0xFF], Endianness::Big), -1);
+        assert_eq!(
+            read_numeric_value(&FieldType::UInt32, &[0x78, 0x56, 0x34, 0x12], Endianness::Little),
+            0x1234_5678
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::UInt32, &[0x12, 0x34, 0x56, 0x78], Endianness::Big),
+            0x1234_5678
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::Int32, &[0xFF, 0xFF, 0xFF, 0xFF], Endianness::Little),
+            -1
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::Int32, &[0xFF, 0xFF, 0xFF, 0xFF], Endianness::Big),
+            -1
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::UInt64, &[1, 0, 0, 0, 0, 0, 0, 0], Endianness::Little),
+            1
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::UInt64, &[0, 0, 0, 0, 0, 0, 0, 1], Endianness::Big),
+            1
+        );
+        assert_eq!(read_numeric_value(&FieldType::Int64, &[0xFF; 8], Endianness::Little), -1);
+        assert_eq!(read_numeric_value(&FieldType::Int64, &[0xFF; 8], Endianness::Big), -1);
+        // Non-numeric (float/composite) types fall through to 0.
+        assert_eq!(read_numeric_value(&FieldType::Float32, &[0; 4], Endianness::Little), 0);
+        assert_eq!(read_numeric_value(&FieldType::Bytes(2), &[0; 2], Endianness::Little), 0);
+    }
+
+    #[test]
+    fn test_field_type_name_every_variant() {
+        assert_eq!(field_type_name(&FieldType::UInt8), "uint8");
+        assert_eq!(field_type_name(&FieldType::Int8), "int8");
+        assert_eq!(field_type_name(&FieldType::UInt16), "uint16");
+        assert_eq!(field_type_name(&FieldType::Int16), "int16");
+        assert_eq!(field_type_name(&FieldType::UInt32), "uint32");
+        assert_eq!(field_type_name(&FieldType::Int32), "int32");
+        assert_eq!(field_type_name(&FieldType::UInt64), "uint64");
+        assert_eq!(field_type_name(&FieldType::Int64), "int64");
+        assert_eq!(field_type_name(&FieldType::Float32), "float32");
+        assert_eq!(field_type_name(&FieldType::Float64), "float64");
+        assert_eq!(field_type_name(&FieldType::Bytes(1)), "bytes");
+        assert_eq!(field_type_name(&FieldType::FixedString(1)), "string");
+        assert_eq!(field_type_name(&FieldType::Array { element_type: Box::new(FieldType::UInt8), count: 1 }), "array");
+        assert_eq!(field_type_name(&FieldType::Bool), "bool");
+        assert_eq!(field_type_name(&FieldType::Char), "char");
+        assert_eq!(field_type_name(&FieldType::Padding(1)), "padding");
+    }
+
+    #[test]
+    fn test_field_type_name_composite_variants() {
+        assert_eq!(
+            field_type_name(&FieldType::DynamicArray { element_type: Box::new(FieldType::UInt8), count_field: "c".to_string() }),
+            "dynamic_array"
+        );
+        assert_eq!(
+            field_type_name(&FieldType::Bitfield { bit_width: 1, backing_type: Box::new(FieldType::UInt8), flags: None }),
+            "bitfield"
+        );
+        assert_eq!(field_type_name(&FieldType::Union { variants: vec![] }), "union");
+        assert_eq!(
+            field_type_name(&FieldType::Enum { backing_type: Box::new(FieldType::UInt8), values: vec![] }),
+            "enum"
+        );
+        assert_eq!(
+            field_type_name(&FieldType::Pointer { pointer_type: Box::new(FieldType::UInt8), target_template: "t".to_string() }),
+            "pointer"
+        );
+        assert_eq!(
+            field_type_name(&FieldType::Conditional {
+                condition_field: "f".to_string(),
+                condition_value: 0,
+                condition_op: ConditionOp::Eq,
+                fields: vec![],
+            }),
+            "conditional"
+        );
+        assert_eq!(field_type_name(&FieldType::StructRef("s".to_string())), "struct_ref");
+        assert_eq!(
+            field_type_name(&FieldType::Computed { expression: "e".to_string(), display_type: Box::new(FieldType::UInt8) }),
+            "computed"
+        );
+        assert_eq!(
+            field_type_name(&FieldType::EndiannessSwitch { peek_offset: 0, big_value: 0 }),
+            "endianness_switch"
+        );
+    }
+
+    #[test]
+    fn test_export_json_not_found() {
+        let reg = TemplateRegistry::new();
+        let err = reg.export_json("NO_SUCH_TEMPLATE").unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::NotFound(n) if n == "NO_SUCH_TEMPLATE"),
+            "got {err:?}"
+        );
     }
 }

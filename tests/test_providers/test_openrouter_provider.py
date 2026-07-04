@@ -182,18 +182,10 @@ class TestOpenRouterModelListing:
         assert matching, f"Expected to find '{known_id}' in OpenRouter model listing, got {[m.id for m in models[:10]]}"
 
         model = matching[0]
-        assert model.provider == ProviderName.OPENROUTER, (
-            f"Expected provider OPENROUTER, got {model.provider}"
-        )
-        assert model.supports_tools is True, (
-            f"Expected {known_id} to have supports_tools=True (gpt-family + documented tool support)"
-        )
-        assert model.supports_streaming is True, (
-            f"Expected {known_id} to have supports_streaming=True (OpenRouter universal streaming)"
-        )
-        assert model.context_window > 0, (
-            f"Expected {known_id} to have positive context_window, got {model.context_window}"
-        )
+        assert model.provider == ProviderName.OPENROUTER, f"Expected provider OPENROUTER, got {model.provider}"
+        assert model.supports_tools is True, f"Expected {known_id} to have supports_tools=True (gpt-family + documented tool support)"
+        assert model.supports_streaming is True, f"Expected {known_id} to have supports_streaming=True (OpenRouter universal streaming)"
+        assert model.context_window > 0, f"Expected {known_id} to have positive context_window, got {model.context_window}"
 
     @pytest.mark.asyncio
     @staticmethod

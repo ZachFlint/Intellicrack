@@ -95,7 +95,7 @@ def _build_minimal_pe() -> bytes:
         bytes: PE-shaped payload large enough to bookmark.
     """
     body = bytearray(b"\x00" * 0x800)
-    body[0:2] = b"MZ"
+    body[:2] = b"MZ"
     struct.pack_into("<I", body, 0x3C, _PE_LFANEW)
     body[_PE_LFANEW : _PE_LFANEW + 4] = b"PE\x00\x00"
     coff_offset = _PE_LFANEW + 4
@@ -117,7 +117,7 @@ def _build_minimal_elf64() -> bytes:
         bytes: ELF64-shaped payload large enough to bookmark.
     """
     body = bytearray(b"\x00" * 0x400)
-    body[0:4] = b"\x7fELF"
+    body[:4] = b"\x7fELF"
     body[4] = 2  # ELFCLASS64
     struct.pack_into("<Q", body, 32, _ELF64_PHOFF)  # e_phoff
     struct.pack_into("<Q", body, 40, _ELF64_SHOFF)  # e_shoff

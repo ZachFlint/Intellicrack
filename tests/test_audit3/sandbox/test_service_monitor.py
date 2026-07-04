@@ -446,11 +446,10 @@ def _build_dedup_harness(log_dir: Path) -> str:
 
     lines = script_text.splitlines()
     for func_name in func_names:
-        start_idx: int | None = None
-        for i, line in enumerate(lines):
-            if line.strip().startswith(f"function {func_name}"):
-                start_idx = i
-                break
+        start_idx: int | None = next(
+            (i for i, line in enumerate(lines) if line.strip().startswith(f"function {func_name}")),
+            None,
+        )
         assert start_idx is not None, f"function {func_name} not found in {_SCRIPT_PATH}"
 
         brace_depth = 0

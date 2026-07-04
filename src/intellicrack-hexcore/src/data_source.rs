@@ -425,4 +425,159 @@ mod tests {
         let src = BufferDataSource::new(vec![], false);
         assert_eq!(src.source_type(), "buffer");
     }
+
+    #[test]
+    fn test_datasource_error_io_from_std_io_error_preserves_message() {
+        // Covers the `#[from] std::io::Error` conversion on DataSourceError::Io.
+        // Mutation caught: dropping the `#[from]` attribute breaks the `?`/`.into()` path;
+        // altering the Display format string fails the prefix/content assertions.
+        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "mapped view failed");
+        let ds_err: DataSourceError = io_err.into();
+        assert!(
+            matches!(ds_err, DataSourceError::Io(ref e) if e.kind() == std::io::ErrorKind::PermissionDenied),
+            "expected Io(PermissionDenied), got {ds_err:?}"
+        );
+        assert_eq!(ds_err.to_string(), "I/O error: mapped view failed");
+    }
+}
+
+#[cfg(all(test, windows))]
+mod process_tests {
+    use super::{DataSource, DataSourceError, MemoryRegion, ProcessDataSource};
+
+    #[test]
+    fn test_memory_region_debug_and_clone_roundtrip() {
+        // Exercises the derived Debug + Clone on MemoryRegion.
+        // Mutation caught: dropping a field from Clone changes the cloned value; a broken
+        // Debug impl fails the substring check.
+        let region = MemoryRegion {
+            base_address: 0x0001_0000,
+            size: 0x2000,
+            protection: 0x20,
+            state: 0x1000,
+            region_type: 0x2_0000,
+        };
+        let cloned = region.clone();
+        assert_eq!(cloned.base_address, 0x0001_0000);
+        assert_eq!(cloned.size, 0x2000);
+        assert_eq!(cloned.protection, 0x20);
+        assert_eq!(cloned.state, 0x1000);
+        assert_eq!(cloned.region_type, 0x2_0000);
+        let dbg = format!("{region:?}");
+        assert!(dbg.contains("MemoryRegion"), "unexpected Debug: {dbg}");
+        assert!(dbg.contains("65536"), "base_address missing from Debug: {dbg}");
+    }
+
+    #[test]
+    fn test_attach_readonly_sets_access_flags_and_metadata() {
+        // read_only=true takes the PROCESS_VM_READ|PROCESS_QUERY_INFORMATION access branch.
+        // Mutation caught: setting writable:!read_only wrong flips is_writable().
+        let src =
+            ProcessDataSource::attach(std::process::id(), 0, 4096, true).expect("self-attach failed");
+        assert!(!src.is_writable());
+        assert_eq!(src.length(), 4096);
+        assert_eq!(src.source_type(), "process");
+    }
+
+    #[test]
+    fn test_attach_writable_sets_writable_true() {
+        // read_only=false takes the VM_WRITE|VM_OPERATION access branch and sets writable:true.
+        // Mutation caught: swapping the two access-flag branches would still open, but
+        // is_writable() would be false here.
+        let src = ProcessDataSource::attach(std::process::id(), 0, 8, false)
+            .expect("self-attach (writable) failed");
+        assert!(src.is_writable());
+        assert_eq!(src.source_type(), "process");
+    }
+
+    #[test]
+    fn test_attach_invalid_pid_returns_process_error() {
+        // u32::MAX is odd; Windows kernel PIDs are multiples of 4, so it never names a live
+        // process and OpenProcess returns NULL.
+        // Mutation caught: removing the `handle.is_null()` guard returns Ok with a null handle.
+        let Err(err) = ProcessDataSource::attach(u32::MAX, 0, 16, true) else {
+            panic!("expected attach to an invalid pid to fail");
+        };
+        assert!(
+            matches!(err, DataSourceError::ProcessError(_)),
+            "expected ProcessError, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_read_own_memory_returns_exact_bytes() {
+        // Real ReadProcessMemory against our own committed heap: read back a known payload.
+        // Mutation caught: an off-by-one on `base_address + offset` returns shifted bytes.
+        let payload: Vec<u8> = vec![0xDE, 0xAD, 0xBE, 0xEF];
+        let base = payload.as_ptr() as usize;
+        let src = ProcessDataSource::attach(std::process::id(), base, payload.len(), true)
+            .expect("self-attach failed");
+        assert_eq!(src.read(0, 4).unwrap(), vec![0xDE, 0xAD, 0xBE, 0xEF]);
+        assert_eq!(src.read(1, 2).unwrap(), vec![0xAD, 0xBE]);
+        // Keep payload alive until after the reads complete.
+        assert_eq!(payload.len(), 4);
+    }
+
+    #[test]
+    fn test_read_zero_length_returns_empty_without_syscall() {
+        // length==0 early-return path.
+        // Mutation caught: removing the guard issues ReadProcessMemory(len=0) which fails -> Err.
+        let src = ProcessDataSource::attach(std::process::id(), 0, 16, true).expect("attach failed");
+        assert_eq!(src.read(0, 0).unwrap(), Vec::<u8>::new());
+    }
+
+    #[test]
+    fn test_write_readonly_source_returns_read_only() {
+        // Writable guard fires before any WriteProcessMemory call.
+        // Mutation caught: removing the `!self.writable` guard attempts the syscall.
+        let mut src =
+            ProcessDataSource::attach(std::process::id(), 0, 16, true).expect("attach failed");
+        let err = src.write(0, &[0xFF]).unwrap_err();
+        assert!(
+            matches!(err, DataSourceError::ReadOnly),
+            "expected ReadOnly, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_write_empty_data_is_noop_ok() {
+        // data.is_empty() early-return on a writable source.
+        // Mutation caught: removing the guard issues WriteProcessMemory(len=0) -> Err.
+        let mut src =
+            ProcessDataSource::attach(std::process::id(), 0, 16, false).expect("attach failed");
+        assert!(src.write(0, &[]).is_ok());
+    }
+
+    #[test]
+    fn test_write_own_memory_mutates_target_bytes() {
+        // Real WriteProcessMemory against our own writable heap buffer.
+        // Mutation caught: writing to base_address without `+ offset` corrupts the wrong index.
+        let payload: Vec<u8> = vec![0u8; 4];
+        let base = payload.as_ptr() as usize;
+        let mut src = ProcessDataSource::attach(std::process::id(), base, payload.len(), false)
+            .expect("self-attach (writable) failed");
+        src.write(1, &[0xAB, 0xCD]).expect("WriteProcessMemory failed");
+        assert_eq!(payload, vec![0x00, 0xAB, 0xCD, 0x00]);
+    }
+
+    #[test]
+    fn test_list_regions_returns_contiguous_walk() {
+        // VirtualQueryEx enumeration: every pushed region begins exactly where the previous
+        // one ends (address = base + size). A real process has many regions.
+        // Mutation caught: a wrong address advance breaks contiguity or truncates the walk.
+        let src = ProcessDataSource::attach(std::process::id(), 0, 0, true).expect("attach failed");
+        let regions = src.list_regions().expect("list_regions failed");
+        assert!(
+            regions.len() > 5,
+            "expected many regions in own process, got {}",
+            regions.len()
+        );
+        for pair in regions.windows(2) {
+            assert_eq!(
+                pair[1].base_address,
+                pair[0].base_address + pair[0].size,
+                "regions must be contiguous"
+            );
+        }
+    }
 }

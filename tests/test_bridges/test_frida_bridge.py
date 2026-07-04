@@ -203,7 +203,7 @@ def test_symbol_info_bridge_parses_find_functions_named(self_attached_bridge: Fr
         self_attached_bridge: Bridge fixture attached to the current test process.
     """
     results: list[SymbolInfo] = _run_async(self_attached_bridge.find_functions_named("NtCreateFile"))
-    assert len(results) >= 1, "NtCreateFile must exist in ntdll on every supported Windows system"
+    assert results, "NtCreateFile must exist in ntdll on every supported Windows system"
     _assert_symbol_info_nt_create_file(results[0])
 
 
@@ -227,8 +227,8 @@ def test_symbol_info_address_hex_decimal_parsing(self_attached_bridge: FridaBrid
     """
     nt_results: list[SymbolInfo] = _run_async(self_attached_bridge.find_functions_named("NtCreateFile"))
     rtl_results: list[SymbolInfo] = _run_async(self_attached_bridge.find_functions_named("RtlInitUnicodeString"))
-    assert len(nt_results) >= 1, "NtCreateFile must be resolvable"
-    assert len(rtl_results) >= 1, "RtlInitUnicodeString must be resolvable"
+    assert nt_results, "NtCreateFile must be resolvable"
+    assert rtl_results, "RtlInitUnicodeString must be resolvable"
     nt_sym = nt_results[0]
     rtl_sym = rtl_results[0]
     assert nt_sym.address >= _NTDLL_BASE_MIN, f"NtCreateFile address 0x{nt_sym.address:X} below system DLL range 0x{_NTDLL_BASE_MIN:X}"
@@ -664,7 +664,7 @@ def test_enumerate_devices_returns_frida_device_info_with_correct_fields(
         unattached_bridge: Initialized bridge not attached to a process.
     """
     devices: list[FridaDeviceInfo] = _run_async(unattached_bridge.enumerate_devices())
-    assert len(devices) >= 1, "must enumerate at least the local device"
+    assert devices, "must enumerate at least the local device"
     local_device: FridaDeviceInfo | None = None
     for dev in devices:
         assert isinstance(dev.id, str), f"device id must be str, got {type(dev.id)}"
@@ -698,7 +698,7 @@ def test_resolve_api_returns_api_resolver_match_with_int_address(frida_bridge: F
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
     results: list[ApiResolverMatch] = _run_async(frida_bridge.resolve_api("exports:*!CreateFileW"))
-    assert len(results) >= 1, "resolve_api for CreateFileW must return at least one match"
+    assert results, "resolve_api for CreateFileW must return at least one match"
     found_match: ApiResolverMatch | None = None
     for api_match in results:
         assert isinstance(api_match.name, str), f"name must be str, got {type(api_match.name)}"
@@ -966,7 +966,7 @@ def test_enumerate_processes(unattached_bridge: FridaBridge) -> None:
         unattached_bridge: Bridge fixture created without a process attached.
     """
     result: list[FridaProcessEntry] = _run_async(unattached_bridge.enumerate_processes())
-    assert len(result) > 0, "enumerate_processes must return at least one running process"
+    assert result, "enumerate_processes must return at least one running process"
     for proc in result:
         assert proc.pid > 0, f"process entry has invalid pid: {proc.pid}"
         assert proc.name, f"process entry with pid={proc.pid} has empty name"
@@ -988,7 +988,7 @@ def test_enumerate_devices(unattached_bridge: FridaBridge) -> None:
         unattached_bridge: Bridge fixture created without a process attached.
     """
     result: list[FridaDeviceInfo] = _run_async(unattached_bridge.enumerate_devices())
-    assert len(result) >= 1, "enumerate_devices must return at least the local device"
+    assert result, "enumerate_devices must return at least the local device"
     local_found = False
     for dev in result:
         assert dev.id, f"device has empty id: {dev!r}"
@@ -1142,7 +1142,7 @@ def test_resolve_api_createfile(frida_bridge: FridaBridge) -> None:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
     result: list[ApiResolverMatch] = _run_async(frida_bridge.resolve_api("exports:*!CreateFileW"))
-    assert len(result) >= 1, "resolve_api for CreateFileW must return at least one match"
+    assert result, "resolve_api for CreateFileW must return at least one match"
     found = False
     for api_match in result:
         if "CreateFileW" in api_match.name:
@@ -1164,7 +1164,7 @@ def test_resolve_symbol(frida_bridge: FridaBridge) -> None:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
     matches: list[ApiResolverMatch] = _run_async(frida_bridge.resolve_api("exports:ntdll.dll!NtCreateFile"))
-    assert len(matches) >= 1, "NtCreateFile must exist in ntdll"
+    assert matches, "NtCreateFile must exist in ntdll"
     func_addr = matches[0].address
     result: SymbolInfo = _run_async(frida_bridge.resolve_symbol(func_addr))
     assert result.address == func_addr, f"resolved address 0x{result.address:X} must match query 0x{func_addr:X}"
@@ -1186,7 +1186,7 @@ def test_find_functions_named(frida_bridge: FridaBridge) -> None:
         frida_bridge: Bridge fixture attached to the spawned notepad process.
     """
     result: list[SymbolInfo] = _run_async(frida_bridge.find_functions_named("NtCreateFile"))
-    assert len(result) >= 1, "NtCreateFile must exist in ntdll on every Windows system"
+    assert result, "NtCreateFile must exist in ntdll on every Windows system"
     sym = result[0]
     assert sym.address >= _NTDLL_BASE_MIN, f"NtCreateFile address 0x{sym.address:X} should be in system DLL range"
     assert sym.name, "resolved symbol must have a name"
@@ -1224,7 +1224,7 @@ def test_protect_memory(frida_bridge: FridaBridge) -> None:
     """
     addr: int = _run_async(frida_bridge.allocate_memory(_ALLOC_SIZE))
     result: bool = _run_async(frida_bridge.protect_memory(addr, _ALLOC_SIZE, "rwx"))
-    assert result is True, f"protect_memory('rwx') should return True, got {result}"
+    assert result, f"protect_memory('rwx') should return True, got {result}"
     sentinel = bytes([0xCA, 0xFE, 0xBA, 0xBE])
     _run_async(frida_bridge.write_memory(addr, sentinel))
     readback: bytes = _run_async(frida_bridge.read_memory(addr, len(sentinel)))
@@ -1267,7 +1267,7 @@ def test_hook_and_remove(frida_bridge: FridaBridge) -> None:
     assert hook.active, f"hook must be active after creation, got active={hook.active}"
     assert hook.target == "kernel32.dll!GetTickCount", f"hook target mismatch: expected 'kernel32.dll!GetTickCount', got {hook.target!r}"
     removed: bool = _run_async(frida_bridge.remove_hook(hook.id))
-    assert removed is True, f"remove_hook must return True, got {removed}"
+    assert removed, f"remove_hook must return True, got {removed}"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
@@ -1356,7 +1356,7 @@ def test_get_pending_children_empty(frida_bridge: FridaBridge) -> None:
 
     children: list[ChildProcessInfo] = _run_async(frida_bridge.get_pending_children())
     assert isinstance(children, list), f"get_pending_children must return a list, got {type(children)}"
-    assert len(children) == 0, f"live notepad bridge must have 0 gated children, got {len(children)}: {children!r}"
+    assert not children, f"live notepad bridge must have 0 gated children, got {len(children)}: {children!r}"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")
@@ -1397,7 +1397,7 @@ def test_crash_reporting_lifecycle(frida_bridge: FridaBridge) -> None:
     _run_async(frida_bridge.enable_crash_reporting())
     crashes: list[CrashInfo] = _run_async(frida_bridge.get_crashes())
     assert isinstance(crashes, list), f"get_crashes must return a list, got {type(crashes)}"
-    assert len(crashes) == 0, f"no crashes should have occurred on healthy notepad, got {len(crashes)}: {crashes!r}"
+    assert not crashes, f"no crashes should have occurred on healthy notepad, got {len(crashes)}: {crashes!r}"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows-only e2e tests")

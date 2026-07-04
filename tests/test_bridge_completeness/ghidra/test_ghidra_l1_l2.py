@@ -521,7 +521,13 @@ class TestGetInstructionFlow:
         registered per the audit; removing the ToolFunction entry
         would raise ToolError here.
         """
-        fake.eval_response = {"address": _TEST_ADDR, "mnemonic": "NOP", "flow_type": "FALL_THROUGH", "fall_through": _TEST_ADDR, "flows": []}
+        fake.eval_response = {
+            "address": _TEST_ADDR,
+            "mnemonic": "NOP",
+            "flow_type": "FALL_THROUGH",
+            "fall_through": _TEST_ADDR,
+            "flows": [],
+        }
         result = cast(
             "dict[str, Any]",
             run_async(registry.execute_tool_call("ghidra", "ghidra.get_instruction_flow", {"address": _TEST_ADDR})),

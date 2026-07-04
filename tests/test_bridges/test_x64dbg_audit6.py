@@ -232,7 +232,7 @@ def _build_params_buffer(
     maximum_length = maximum_length_override if maximum_length_override is not None else len(encoded) + 2
 
     ustr_bytes = bytearray(ustr_size)
-    ustr_bytes[0:2] = length.to_bytes(2, "little")
+    ustr_bytes[:2] = length.to_bytes(2, "little")
     ustr_bytes[2:4] = maximum_length.to_bytes(2, "little")
     ustr_bytes[8:16] = cmd_buffer_addr.to_bytes(8, "little")
 
@@ -1570,7 +1570,7 @@ class TestLoggingDowngrade:
         with events.recording():
             await bridge.suspend_thread(tid)
         assert any(name == "x64dbg_command_queued" for name, _level, _ in events.records)
-        assert not any(name == "thread_suspending" for name, _level, _ in events.records)
+        assert all(name != "thread_suspending" for name, _level, _ in events.records)
 
     async def test_script_load_logs_at_debug(
         self,
@@ -1592,7 +1592,7 @@ class TestLoggingDowngrade:
         with events.recording():
             await bridge.script_load("foo.txt")
         assert any(name == "x64dbg_command_queued" for name, level, _ in events.records if level == "debug")
-        assert not any(name == "script_loading" for name, _level, _ in events.records)
+        assert all(name != "script_loading" for name, _level, _ in events.records)
 
 
 # ---------------------------------------------------------------------------
@@ -1767,8 +1767,7 @@ class _FakePipeClientD:
             ToolError: If no response is queued for ``command``.
         """
         self.calls.append((command, params))
-        queue = self._responses.get(command, [])
-        if queue:
+        if queue := self._responses.get(command, []):
             return queue.pop(0)
         if command in self._default_responses:
             return self._default_responses[command]
@@ -2079,7 +2078,7 @@ def _build_pe_header(*, magic: int, optional_header_size: int) -> bytes:
         after ``read_dos_e_lfanew``).
     """
     buf = bytearray(NT_HEADERS_OPTIONAL_OFFSET + max(optional_header_size, PE32PLUS_OPTIONAL_HEADER_SIZE) + 0x100)
-    buf[0:4] = PE_SIGNATURE
+    buf[:4] = PE_SIGNATURE
     struct.pack_into("<H", buf, 4, 0x8664)
     struct.pack_into("<H", buf, 6, 1)
     struct.pack_into("<I", buf, 8, 0)
@@ -2894,7 +2893,7 @@ class TestApiBreakpointResolution:
         assert result["resolution_method"] == "bpx"
         assert result["resolved_address"] is None
         assert called_set_bp["n"] == 0, "set_breakpoint must not run when address is 0"
-        assert len(sent_commands) > 0
+        assert sent_commands
         first_cmd, first_params = sent_commands[0]
         assert first_cmd == "exec"
         assert first_params is not None
@@ -2981,7 +2980,7 @@ def _build_pe_bytes_a(machine: int, *, e_lfanew: int = _DEFAULT_PE_OFFSET_A) -> 
         ``X64DbgBridge._detect_architecture``.
     """
     buf = bytearray(0x200)
-    buf[0:2] = b"MZ"
+    buf[:2] = b"MZ"
     struct.pack_into("<I", buf, _PE_HEADER_OFFSET_A, e_lfanew)
     buf[e_lfanew : e_lfanew + 4] = b"PE\x00\x00"
     struct.pack_into("<H", buf, e_lfanew + 4, machine)
@@ -3223,7 +3222,7 @@ class TestArchitectureTriState:
             tmp_path: Per-test temp directory provided by pytest.
         """
         buf = bytearray(0x200)
-        buf[0:2] = b"MZ"
+        buf[:2] = b"MZ"
         struct.pack_into("<I", buf, _PE_HEADER_OFFSET_A, _DEFAULT_PE_OFFSET_A)
         buf[_DEFAULT_PE_OFFSET_A : _DEFAULT_PE_OFFSET_A + 4] = b"NOPE"
         path = tmp_path / "no_pe.exe"
@@ -3331,7 +3330,7 @@ class TestPipeReadyPlatformRefusal:
                 await _wait_for_pipe_ready_a(bridge)
 
         asyncio.run(runner())
-        assert sleep_called is False
+        assert not sleep_called
 
 
 class TestSubprocessStreamDrain:
@@ -3436,7 +3435,7 @@ class TestPluginRequiredStartGate:
         with pytest.raises(ToolError, match="plugin"):
             asyncio.run(runner())
 
-        assert popen_called is False
+        assert not popen_called
         assert _process_a(bridge) is None
 
 

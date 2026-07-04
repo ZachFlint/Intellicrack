@@ -183,7 +183,7 @@ class TestGhidraPanelRefreshLabels:
         _click_refresh_labels(panel)
 
         assert bridge.calls == []
-        assert captured == []
+        assert not captured
 
     @staticmethod
     def test_empty_address_sets_status_error(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -224,7 +224,7 @@ class TestGhidraPanelRefreshLabels:
         _click_refresh_labels(panel)
 
         assert bridge.calls == []
-        assert captured == []
+        assert not captured
         assert panel.status_label is not None
         assert "invalid" in panel.status_label.text().lower()
 

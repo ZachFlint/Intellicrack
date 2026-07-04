@@ -315,7 +315,7 @@ class TestDetectC2PatternsThresholds:
         activity = [_net(remote_address=self._C2_IP, remote_port=8080, ts_sec=i * 15, bytes_sent=128, bytes_received=48) for i in range(3)]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
-        assert len(beacon) >= 1, "Exactly 3 regular connections must trigger beaconing"
+        assert beacon, "Exactly 3 regular connections must trigger beaconing"
         assert beacon[0]["confidence"] > 0.0
 
     def test_beaconing_exactly_one_below_min_connections(self) -> None:
@@ -323,7 +323,7 @@ class TestDetectC2PatternsThresholds:
         activity = [_net(remote_address=self._C2_IP, remote_port=8080, ts_sec=i * 15, bytes_sent=128, bytes_received=48) for i in range(2)]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
-        assert len(beacon) == 0, "2 connections must not trigger beaconing (below threshold of 3)"
+        assert not beacon, "2 connections must not trigger beaconing (below threshold of 3)"
 
     def test_exfil_exactly_at_byte_threshold(self) -> None:
         """A connection with exactly _EXFIL_THRESHOLD_BYTES (1 MiB) sent triggers exfil detection.
@@ -335,7 +335,7 @@ class TestDetectC2PatternsThresholds:
         activity = [_net(remote_address=self._C2_IP, remote_port=443, ts_sec=0, bytes_sent=1_048_576, bytes_received=104)]
         patterns = detect_c2_patterns(activity)
         exfil = [p for p in patterns if p["pattern_type"] == "data_exfiltration"]
-        assert len(exfil) >= 1, "1 MiB sent with >10x ratio must trigger exfiltration detection"
+        assert exfil, "1 MiB sent with >10x ratio must trigger exfiltration detection"
 
     def test_exfil_below_byte_threshold_not_detected(self) -> None:
         """A connection with exactly 1 byte below threshold must NOT trigger exfil.
@@ -346,7 +346,7 @@ class TestDetectC2PatternsThresholds:
         activity = [_net(remote_address=self._C2_IP, remote_port=443, ts_sec=0, bytes_sent=1_048_575, bytes_received=104)]
         patterns = detect_c2_patterns(activity)
         exfil = [p for p in patterns if p["pattern_type"] == "data_exfiltration"]
-        assert len(exfil) == 0, "1 MiB - 1 byte sent must not trigger exfiltration (below byte threshold)"
+        assert not exfil, "1 MiB - 1 byte sent must not trigger exfiltration (below byte threshold)"
 
     def test_high_freq_443_at_exact_threshold(self) -> None:
         """Exactly _HIGH_FREQ_HTTPS_THRESHOLD == 10 connections on port 443 triggers detection.
@@ -358,7 +358,7 @@ class TestDetectC2PatternsThresholds:
         activity_10 = [_net(remote_address=self._CDN_IP, remote_port=443, ts_sec=i, bytes_sent=512, bytes_received=4096) for i in range(10)]
         patterns = detect_c2_patterns(activity_10)
         hf = [p for p in patterns if p["pattern_type"] == "high_frequency_443"]
-        assert len(hf) >= 1, "Exactly 10 connections on port 443 must trigger high-frequency detection (threshold>=10)"
+        assert hf, "Exactly 10 connections on port 443 must trigger high-frequency detection (threshold>=10)"
 
     def test_high_freq_443_one_below_threshold_not_triggered(self) -> None:
         """_HIGH_FREQ_HTTPS_THRESHOLD - 1 == 9 connections on port 443 must NOT trigger.
@@ -369,7 +369,7 @@ class TestDetectC2PatternsThresholds:
         activity_9 = [_net(remote_address=self._CDN_IP, remote_port=443, ts_sec=i, bytes_sent=512, bytes_received=4096) for i in range(9)]
         patterns = detect_c2_patterns(activity_9)
         hf = [p for p in patterns if p["pattern_type"] == "high_frequency_443"]
-        assert len(hf) == 0, "9 connections on port 443 must NOT trigger (threshold is >= 10)"
+        assert not hf, "9 connections on port 443 must NOT trigger (threshold is >= 10)"
 
     def test_dga_domain_at_entropy_boundary(self) -> None:
         """Domain with entropy just above _DGA_ENTROPY_THRESHOLD (3.5) is flagged.
@@ -381,7 +381,7 @@ class TestDetectC2PatternsThresholds:
         activity = [_net(remote_address=high_entropy_domain, remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
-        assert len(dga) >= 1, f"Domain {high_entropy_domain!r} with entropy >3.5 must be flagged as DGA"
+        assert dga, f"Domain {high_entropy_domain!r} with entropy >3.5 must be flagged as DGA"
 
     def test_dga_domain_below_entropy_threshold_not_flagged(self) -> None:
         """Domain with entropy well below _DGA_ENTROPY_THRESHOLD (3.5) is not flagged.
@@ -391,7 +391,7 @@ class TestDetectC2PatternsThresholds:
         activity = [_net(remote_address="apple.com", remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
-        assert len(dga) == 0, "'apple.com' must not be flagged as DGA"
+        assert not dga, "'apple.com' must not be flagged as DGA"
 
 
 class TestDetectC2Patterns:
@@ -448,14 +448,14 @@ class TestDetectC2Patterns:
         activity = [_net(remote_address=self._IRREGULAR_C2_IP, remote_port=8443, ts_sec=s) for s in [0, 5, 47, 48, 99]]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
-        assert len(beacon) == 0, f"Irregular intervals must not trigger beaconing; got patterns: {patterns}"
+        assert not beacon, f"Irregular intervals must not trigger beaconing; got patterns: {patterns}"
 
     def test_beaconing_too_few_connections(self) -> None:
         """Fewer than 3 connections to a real C2 IP do not trigger beaconing."""
         activity = [_net(remote_address=self._BEACONING_C2_IP, remote_port=8443, ts_sec=i * 60) for i in range(2)]
         patterns = detect_c2_patterns(activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
-        assert len(beacon) == 0, f"2 connections must not trigger beaconing (threshold is 3); got: {patterns}"
+        assert not beacon, f"2 connections must not trigger beaconing (threshold is 3); got: {patterns}"
 
     def test_dga_high_entropy_detected_structure(self) -> None:
         """High-entropy DGA domain triggers detection with correct structural output.
@@ -473,7 +473,7 @@ class TestDetectC2Patterns:
         assert _DGA_FULL in d["remote_addresses"], "DGA domain must appear in remote_addresses"
         assert any(_DGA_FULL in ind for ind in d["indicators"]), "DGA domain must appear in indicators"
         entropy_indicators = [ind for ind in d["indicators"] if "entropy" in ind.lower()]
-        assert len(entropy_indicators) >= 1, "At least one entropy indicator must be present"
+        assert entropy_indicators, "At least one entropy indicator must be present"
         entropy_value = float(entropy_indicators[0].split(":")[-1].strip())
         assert entropy_value > 3.5, f"Reported entropy {entropy_value} must exceed DGA threshold 3.5"
 
@@ -486,14 +486,14 @@ class TestDetectC2Patterns:
         activity = [_net(remote_address="google.com", remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
-        assert len(dga) == 0, "Low-entropy domain 'google.com' must not trigger DGA detection"
+        assert not dga, "Low-entropy domain 'google.com' must not trigger DGA detection"
 
     def test_dga_ip_not_flagged(self) -> None:
         """A plain public IP address is not flagged as a DGA domain."""
         activity = [_net(remote_address=_REAL_C2_IP, remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         dga = [p for p in patterns if p["pattern_type"] == "dga_domain"]
-        assert len(dga) == 0, f"IP address {_REAL_C2_IP!r} must never be flagged as DGA"
+        assert not dga, f"IP address {_REAL_C2_IP!r} must never be flagged as DGA"
 
     def test_dga_duplicate_counted_once(self) -> None:
         """Two connections to the same DGA domain produce exactly one DGA detection."""
@@ -539,7 +539,7 @@ class TestDetectC2Patterns:
         activity = [_net(remote_address=_REAL_C2_IP, remote_port=80, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         c2 = [p for p in patterns if p["pattern_type"] == "known_c2_port"]
-        assert len(c2) == 0, f"Port 80 must not trigger C2 port detection; got {patterns}"
+        assert not c2, f"Port 80 must not trigger C2 port detection; got {patterns}"
 
     def test_high_freq_443_detected_structure(self) -> None:
         """12 connections on port 443 to a real CDN IP triggers high-frequency HTTPS detection.
@@ -555,7 +555,7 @@ class TestDetectC2Patterns:
         assert math.isclose(h["confidence"], 0.24, abs_tol=1e-3), f"Expected confidence 0.24 for 12 connections, got {h['confidence']}"
         assert _REAL_CDN_IP in h["remote_addresses"], "CDN IP must appear in remote_addresses"
         count_inds = [ind for ind in h["indicators"] if "Connection count" in ind]
-        assert len(count_inds) >= 1, f"Connection count indicator must be present; got {count_inds}"
+        assert count_inds, f"Connection count indicator must be present; got {count_inds}"
         assert "12" in count_inds[0], f"Connection count indicator must record 12; got {count_inds}"
 
     def test_high_freq_443_too_few(self) -> None:
@@ -563,7 +563,7 @@ class TestDetectC2Patterns:
         activity = [_net(remote_address=_REAL_CDN_IP, remote_port=_HTTPS_PORT, ts_sec=i) for i in range(5)]
         patterns = detect_c2_patterns(activity)
         hf = [p for p in patterns if p["pattern_type"] == "high_frequency_443"]
-        assert len(hf) == 0, f"5 connections on port 443 must not trigger detection; got {patterns}"
+        assert not hf, f"5 connections on port 443 must not trigger detection; got {patterns}"
 
     def test_exfil_detected_structure(self) -> None:
         """5 MiB outbound with tiny inbound to a real routable IP triggers exfil detection.
@@ -586,7 +586,7 @@ class TestDetectC2Patterns:
         assert any(str(_EXFIL_SENT) in ind for ind in e["indicators"]), "Bytes sent must appear in indicators"
         assert any(str(_EXFIL_RECV) in ind for ind in e["indicators"]), "Bytes received must appear in indicators"
         ratio_inds = [ind for ind in e["indicators"] if "Ratio" in ind]
-        assert len(ratio_inds) >= 1, "Ratio indicator must be present"
+        assert ratio_inds, "Ratio indicator must be present"
         ratio_value = float(ratio_inds[0].split(":")[1].split(":")[0].strip())
         assert ratio_value >= 10.0, f"Reported ratio must exceed 10x threshold; got {ratio_value}"
 
@@ -613,7 +613,7 @@ class TestDetectC2Patterns:
         activity = [_net(remote_address=_REAL_C2_IP, bytes_sent=500, bytes_received=500, ts_sec=0)]
         patterns = detect_c2_patterns(activity)
         exfil = [p for p in patterns if p["pattern_type"] == "data_exfiltration"]
-        assert len(exfil) == 0, f"Balanced traffic must not trigger exfil detection; got {patterns}"
+        assert not exfil, f"Balanced traffic must not trigger exfil detection; got {patterns}"
 
     def test_normal_traffic_empty(self) -> None:
         """A single normal HTTP connection to example.com produces no C2 patterns."""
@@ -770,7 +770,7 @@ class TestExtractIOCs:
         )
         iocs = extract_iocs(report)
         ips = [i for i in iocs if i["ioc_type"] == "ipv4" and i["value"] == "10.0.0.1"]
-        assert len(ips) == 0
+        assert not ips
 
     def test_filters_private_172(self) -> None:
         """172.16.x.x IPs are filtered out."""
@@ -779,7 +779,7 @@ class TestExtractIOCs:
         )
         iocs = extract_iocs(report)
         ips = [i for i in iocs if i["ioc_type"] == "ipv4" and i["value"] == "172.16.0.1"]
-        assert len(ips) == 0
+        assert not ips
 
     def test_filters_private_192(self) -> None:
         """192.168.x.x IPs are filtered out."""
@@ -788,7 +788,7 @@ class TestExtractIOCs:
         )
         iocs = extract_iocs(report)
         ips = [i for i in iocs if i["ioc_type"] == "ipv4" and i["value"] == "192.168.1.1"]
-        assert len(ips) == 0
+        assert not ips
 
     def test_filters_invalid_ip(self) -> None:
         """Invalid IPs (999.999.999.999) are filtered out."""
@@ -805,7 +805,7 @@ class TestExtractIOCs:
         )
         iocs = extract_iocs(report)
         ips = [i for i in iocs if i["ioc_type"] == "ipv4" and i["value"] == "999.999.999.999"]
-        assert len(ips) == 0
+        assert not ips
 
     def test_deduplication(self) -> None:
         """Two connections to the same real public IP produce exactly one IOC entry.
@@ -1216,7 +1216,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         t1543 = [m for m in matches if m["mitre_attack_id"] == "T1543"]
-        assert len(t1543) >= 1
+        assert t1543
 
     def test_run_key_persistence(self) -> None:
         """Run key modification triggers T1547 persistence match."""
@@ -1234,7 +1234,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         t1547 = [m for m in matches if m["mitre_attack_id"] == "T1547"]
-        assert len(t1547) >= 1
+        assert t1547
 
     def test_schtasks_persistence(self) -> None:
         """schtasks.exe execution triggers scheduled task persistence match."""
@@ -1254,7 +1254,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         sched = [m for m in matches if m["signature_name"] == "Scheduled Task Creation"]
-        assert len(sched) >= 1
+        assert sched
 
     def test_at_exe_persistence(self) -> None:
         """at.exe execution triggers scheduled task persistence match."""
@@ -1274,7 +1274,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         sched = [m for m in matches if m["signature_name"] == "Scheduled Task Creation"]
-        assert len(sched) >= 1
+        assert sched
 
     def test_injection_evasion(self) -> None:
         """Process injection triggers T1055 with critical severity."""
@@ -1293,7 +1293,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         inj = [m for m in matches if m["mitre_attack_id"] == "T1055"]
-        assert len(inj) >= 1
+        assert inj
         assert inj[0]["severity"] == "critical"
 
     def test_anti_debug_evasion(self) -> None:
@@ -1313,7 +1313,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         t1497 = [m for m in matches if m["mitre_attack_id"] == "T1497"]
-        assert len(t1497) >= 1
+        assert t1497
 
     def test_sleep_evasion(self) -> None:
         """Sleep > 60000ms triggers sandbox evasion match."""
@@ -1332,7 +1332,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         sleep = [m for m in matches if m["signature_name"] == "Sleep Acceleration Evasion"]
-        assert len(sleep) >= 1
+        assert sleep
 
     def test_beaconing_c2(self, sample_network_activity: list[NetworkActivity]) -> None:
         """Beaconing pattern in network data triggers C2 match.
@@ -1343,7 +1343,7 @@ class TestMatchBehaviors:
         report = make_sample_report(network_activity=sample_network_activity)
         matches = match_behaviors(report)
         c2 = [m for m in matches if m["category"] == "Command and Control"]
-        assert len(c2) >= 1
+        assert c2
 
     def test_doh_c2(self) -> None:
         """Connection to 1.1.1.1:443 triggers DoH/T1573 match."""
@@ -1352,7 +1352,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         t1573 = [m for m in matches if m["mitre_attack_id"] == "T1573"]
-        assert len(t1573) >= 1
+        assert t1573
 
     def test_large_outbound_exfil(self) -> None:
         """Large outbound transfer triggers T1041 exfiltration match."""
@@ -1367,7 +1367,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         t1041 = [m for m in matches if m["mitre_attack_id"] == "T1041"]
-        assert len(t1041) >= 1
+        assert t1041
 
     def test_clipboard_read_exfil(self) -> None:
         """Clipboard read triggers T1115 exfiltration match."""
@@ -1386,7 +1386,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         t1115 = [m for m in matches if m["mitre_attack_id"] == "T1115"]
-        assert len(t1115) >= 1
+        assert t1115
 
     def test_whoami_discovery(self) -> None:
         """whoami.exe triggers T1082 discovery match."""
@@ -1406,7 +1406,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         t1082 = [m for m in matches if m["mitre_attack_id"] == "T1082"]
-        assert len(t1082) >= 1
+        assert t1082
 
     def test_systeminfo_discovery(self) -> None:
         """systeminfo.exe triggers T1082 discovery match."""
@@ -1426,7 +1426,7 @@ class TestMatchBehaviors:
         )
         matches = match_behaviors(report)
         t1082 = [m for m in matches if m["mitre_attack_id"] == "T1082"]
-        assert len(t1082) >= 1
+        assert t1082
 
     def test_custom_rule_registry_match(self) -> None:
         """Custom rule with registry_patterns matches."""
@@ -1454,7 +1454,7 @@ class TestMatchBehaviors:
         ]
         matches = match_behaviors(report, custom_rules=rules)
         custom = [m for m in matches if m["mitre_attack_id"] == "T9999"]
-        assert len(custom) >= 1
+        assert custom
 
     def test_custom_rule_process_match(self) -> None:
         """Custom rule with process_names matches."""
@@ -1529,7 +1529,7 @@ class TestMatchBehaviors:
             },
         ]
         matches = match_behaviors(report, custom_rules=rules)
-        assert not any(m["signature_name"] == "No Match" for m in matches)
+        assert all(m["signature_name"] != "No Match" for m in matches)
 
     def test_full_sample_report(self, sample_report: ExecutionReport) -> None:
         """Full sample report matches all five MITRE behavioral categories.
@@ -1816,9 +1816,8 @@ class TestRealWorldSandboxReport:
         report = _build_emotet_like_report()
         patterns = detect_c2_patterns(report.network_activity)
         beacon = [p for p in patterns if p["pattern_type"] == "beaconing"]
-        assert len(beacon) >= 1, (
-            f"Emotet-like uniform C2 beaconing (5 conns at 20s intervals) must trigger "
-            f"beaconing detection; got pattern_types={[p['pattern_type'] for p in patterns]}"
+        assert beacon, (
+            f"Emotet-like uniform C2 beaconing (5 conns at 20s intervals) must trigger beaconing detection; got pattern_types={[p['pattern_type'] for p in patterns]}"
         )
         assert beacon[0]["confidence"] > 0.9, f"CV=0.0 beaconing must yield confidence > 0.9, got {beacon[0]['confidence']}"
         assert "185.220.101.45" in beacon[0]["remote_addresses"], (
@@ -1835,9 +1834,8 @@ class TestRealWorldSandboxReport:
         report = _build_emotet_like_report()
         patterns = detect_c2_patterns(report.network_activity)
         exfil = [p for p in patterns if p["pattern_type"] == "data_exfiltration"]
-        assert len(exfil) >= 1, (
-            f"Emotet-like 2 MiB exfil with >10x ratio must trigger exfiltration detection; "
-            f"got pattern_types={[p['pattern_type'] for p in patterns]}"
+        assert exfil, (
+            f"Emotet-like 2 MiB exfil with >10x ratio must trigger exfiltration detection; got pattern_types={[p['pattern_type'] for p in patterns]}"
         )
         assert math.isclose(exfil[0]["confidence"], 1.0, abs_tol=1e-9), (
             f"2 MiB exfil confidence must clamp to 1.0, got {exfil[0]['confidence']}"
@@ -1856,7 +1854,7 @@ class TestRealWorldSandboxReport:
         report = _build_emotet_like_report()
         patterns = detect_c2_patterns(report.network_activity)
         c2 = [p for p in patterns if p["pattern_type"] == "known_c2_port"]
-        assert len(c2) >= 1, (
+        assert c2, (
             f"Emotet-like connection on port 4444 must trigger C2 port detection; got pattern_types={[p['pattern_type'] for p in patterns]}"
         )
         assert math.isclose(c2[0]["confidence"], 0.55, abs_tol=1e-9), (
@@ -1890,9 +1888,7 @@ class TestRealWorldSandboxReport:
         report = _build_emotet_like_report()
         matches = match_behaviors(report)
         t1547 = [m for m in matches if m["mitre_attack_id"] == "T1547"]
-        assert len(t1547) >= 1, (
-            f"Emotet HKCU Run-key persistence must be matched as T1547; got MITRE IDs={[m['mitre_attack_id'] for m in matches]}"
-        )
+        assert t1547, f"Emotet HKCU Run-key persistence must be matched as T1547; got MITRE IDs={[m['mitre_attack_id'] for m in matches]}"
 
     @staticmethod
     def test_emotet_multiple_pattern_types_detected() -> None:

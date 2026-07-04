@@ -811,7 +811,7 @@ class TestConvertMessagesToProviderFormat:
 
         result: list[dict[str, object]] = provider.convert_messages_to_provider_format(messages)
 
-        assert result == [], f"Tool message with no results must be dropped, got {result}"
+        assert not result, f"Tool message with no results must be dropped, got {result}"
 
 
 class TestConvertToolsToProviderFormat:
@@ -990,9 +990,9 @@ class TestAnthropicModelListing:
         """
         models: list[ModelInfo] = await anthropic_provider.list_models()
 
-        assert len(models) > 0, "Anthropic API must return at least one model"
+        assert models, "Anthropic API must return at least one model"
         non_claude: list[str] = [m.id for m in models if not m.id.startswith(_KNOWN_CLAUDE_PREFIX)]
-        assert non_claude == [], f"All model IDs must start with '{_KNOWN_CLAUDE_PREFIX}', but these do not: {non_claude}"
+        assert not non_claude, f"All model IDs must start with '{_KNOWN_CLAUDE_PREFIX}', but these do not: {non_claude}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1027,7 +1027,7 @@ class TestAnthropicModelListing:
         returned_ids: set[str] = {m.id for m in models}
 
         matching: set[str] = returned_ids & known_claude_models
-        assert len(matching) > 0, (
+        assert matching, (
             f"At least one known production model must appear in the API response. Known: {known_claude_models}. Got: {returned_ids}"
         )
 
@@ -1047,9 +1047,9 @@ class TestAnthropicModelListing:
         """
         models: list[ModelInfo] = await anthropic_provider.list_models()
 
-        assert len(models) > 0
+        assert models
         wrong_window: list[tuple[str, int]] = [(m.id, m.context_window) for m in models if m.context_window != _CONTEXT_WINDOW_200K]
-        assert wrong_window == [], f"All models must report {_CONTEXT_WINDOW_200K} context_window, but these do not: {wrong_window}"
+        assert not wrong_window, f"All models must report {_CONTEXT_WINDOW_200K} context_window, but these do not: {wrong_window}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -1067,7 +1067,7 @@ class TestAnthropicModelListing:
         """
         models: list[ModelInfo] = await anthropic_provider.list_models()
 
-        assert len(models) > 0
+        assert models
         for model in models:
             assert model.supports_tools is True, f"Model {model.id!r} must have supports_tools=True"
             assert model.supports_vision is True, f"Model {model.id!r} must have supports_vision=True"
@@ -1085,7 +1085,7 @@ class TestAnthropicModelListing:
         """
         models: list[ModelInfo] = await anthropic_provider.list_models()
 
-        assert len(models) > 0
+        assert models
         for model in models:
             assert model.provider is ProviderName.ANTHROPIC, f"Model {model.id!r} must have provider=ANTHROPIC, got {model.provider}"
 
@@ -1101,9 +1101,9 @@ class TestAnthropicModelListing:
         """
         models: list[ModelInfo] = await anthropic_provider.list_models()
 
-        assert len(models) > 0
+        assert models
         empty_name: list[str] = [m.id for m in models if not m.name]
-        assert empty_name == [], f"These models have empty names: {empty_name}"
+        assert not empty_name, f"These models have empty names: {empty_name}"
 
     @pytest.mark.asyncio
     @staticmethod

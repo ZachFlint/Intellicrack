@@ -34,6 +34,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import GenericCallableWorker
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 _logger = get_logger(__name__)
@@ -346,7 +347,9 @@ if TYPE_CHECKING:
 class _PythonSyntaxHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for Python source code in the scripting editor.
 
-    Highlights keywords, built-in names, strings, comments, numbers, and decorators using distinct color formats.
+    Highlights keywords, built-in names, strings, comments, numbers, and decorators using distinct color formats resolved from the active
+    theme's analysis color palette via :class:`ThemeManager`, so tokens stay readable in both the light and dark themes. The highlighter
+    subscribes to :attr:`ThemeManager.theme_changed` and rebuilds its formats and re-highlights the document whenever the theme switches.
     """
 
     def __init__(self, parent: QTextDocument) -> None:
@@ -357,42 +360,65 @@ class _PythonSyntaxHighlighter(QSyntaxHighlighter):
         """
         super().__init__(parent)
         self._rules: list[tuple[str, QTextCharFormat]] = []
+        self._theme_manager: ThemeManager = ThemeManager.get_instance()
         self._build_rules()
+        self._theme_manager.theme_changed.connect(self._on_theme_changed)
 
     def _build_rules(self) -> None:
-        """Construct regex-based highlighting rules."""
+        """Construct regex-based highlighting rules from the active theme palette."""
+        colors = self._theme_manager.get_analysis_colors()
+        rules: list[tuple[str, QTextCharFormat]] = []
+
         kw_fmt = QTextCharFormat()
-        kw_fmt.setForeground(QColor("#569CD6"))
+        kw_fmt.setForeground(QColor(colors["mnemonic_jump"]))
         kw_fmt.setFontWeight(QFont.Weight.Bold)
-        for kw in _PYTHON_KEYWORDS:
-            self._rules.append((rf"\b{kw}\b", kw_fmt))
+        rules.extend((rf"\b{kw}\b", kw_fmt) for kw in _PYTHON_KEYWORDS)
 
         builtin_fmt = QTextCharFormat()
-        builtin_fmt.setForeground(QColor("#4EC9B0"))
-        for bn in _BUILTIN_NAMES:
-            self._rules.append((rf"\b{bn}\b", builtin_fmt))
+        builtin_fmt.setForeground(QColor(colors["operand_register"]))
+        rules.extend((rf"\b{bn}\b", builtin_fmt) for bn in _BUILTIN_NAMES)
 
         number_fmt = QTextCharFormat()
-        number_fmt.setForeground(QColor("#B5CEA8"))
-        self._rules.append((r"\b0[xX][0-9a-fA-F]+\b", number_fmt))
-        self._rules.append((r"\b0[bB][01]+\b", number_fmt))
-        self._rules.append((r"\b0[oO][0-7]+\b", number_fmt))
-        self._rules.append((r"\b\d+\.?\d*(?:[eE][+-]?\d+)?\b", number_fmt))
+        number_fmt.setForeground(QColor(colors["operand_immediate"]))
+        rules.extend(
+            [
+                (r"\b0[xX][0-9a-fA-F]+\b", number_fmt),
+                (r"\b0[bB][01]+\b", number_fmt),
+                (r"\b0[oO][0-7]+\b", number_fmt),
+                (r"\b\d+\.?\d*(?:[eE][+-]?\d+)?\b", number_fmt),
+            ],
+        )
 
         decorator_fmt = QTextCharFormat()
-        decorator_fmt.setForeground(QColor("#C586C0"))
-        self._rules.append((r"@\w+", decorator_fmt))
+        decorator_fmt.setForeground(QColor(colors["warning"]))
+        rules.append((r"@\w+", decorator_fmt))
 
         string_fmt = QTextCharFormat()
-        string_fmt.setForeground(QColor("#CE9178"))
-        self._rules.append((r'""".*?"""', string_fmt))
-        self._rules.append((r"'''.*?'''", string_fmt))
-        self._rules.append((r'"[^"\\]*(\\.[^"\\]*)*"', string_fmt))
-        self._rules.append((r"'[^'\\]*(\\.[^'\\]*)*'", string_fmt))
+        string_fmt.setForeground(QColor(colors["mnemonic_ret"]))
+        rules.extend(
+            [
+                (r'""".*?"""', string_fmt),
+                (r"'''.*?'''", string_fmt),
+                (r'"[^"\\]*(\\.[^"\\]*)*"', string_fmt),
+                (r"'[^'\\]*(\\.[^'\\]*)*'", string_fmt),
+            ],
+        )
 
         comment_fmt = QTextCharFormat()
-        comment_fmt.setForeground(QColor("#6A9955"))
-        self._rules.append((r"#[^\n]*", comment_fmt))
+        comment_fmt.setForeground(QColor(colors["muted"]))
+        rules.append((r"#[^\n]*", comment_fmt))
+
+        self._rules = rules
+
+    def _on_theme_changed(self, _theme_name: str) -> None:
+        """Rebuild highlighting formats from the new theme palette and re-highlight.
+
+        Args:
+            _theme_name: Resolved theme name emitted by :class:`ThemeManager`
+                (unused; colors are re-queried from the manager directly).
+        """
+        self._build_rules()
+        self.rehighlight()
 
     @override
     def highlightBlock(self, text: str | None) -> None:

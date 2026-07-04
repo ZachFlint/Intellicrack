@@ -348,7 +348,7 @@ class TestGetXrefsFromScriptAndParsing:
 
         refs: list[CrossReference] = await bridge.get_xrefs_from(_FROM_ADDR)
 
-        assert refs == []
+        assert not refs
 
     @pytest.mark.asyncio
     async def test_get_xrefs_from_raises_when_not_connected(self) -> None:

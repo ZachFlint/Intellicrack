@@ -1,8 +1,8 @@
 # Group 03 Verification Report — X64DbgBridge
 
-**Auditor:** GROUP 03 adversarial verifier  
-**Source:** `audit/test-coverage-audit/section-03-debugger-bridges.md`, X64DbgBridge subsystem only (lines ~22–144)  
-**Scope:** Every non-REAL row in the X64Dbg Operation Inventory table (§1). FridaBridge is excluded (GROUP 04).  
+**Auditor:** GROUP 03 adversarial verifier
+**Source:** `audit/test-coverage-audit/section-03-debugger-bridges.md`, X64DbgBridge subsystem only (lines ~22–144)
+**Scope:** Every non-REAL row in the X64Dbg Operation Inventory table (§1). FridaBridge is excluded (GROUP 04).
 **Method:** Enumerate independently from the table; search `tests/` for new gates; apply the three-part rubric strictly.
 
 ---

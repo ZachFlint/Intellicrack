@@ -107,10 +107,10 @@ class CommandRecorder:
         self.commands.append(command)
         if command in self.responses:
             return self.responses[command]
-        for prefix, response in self.responses.items():
-            if command.startswith(prefix):
-                return response
-        return ""
+        return next(
+            (response for prefix, response in self.responses.items() if command.startswith(prefix)),
+            "",
+        )
 
     def quit(self) -> None:
         """No-op ``quit`` for test cleanup."""

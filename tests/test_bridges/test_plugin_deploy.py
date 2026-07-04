@@ -75,7 +75,7 @@ def _build_real_pe(machine: int) -> bytes:
     """
     is_64 = machine == _IMAGE_FILE_MACHINE_AMD64
     mz = bytearray(_DOS_HEADER_SIZE)
-    mz[0:2] = b"MZ"
+    mz[:2] = b"MZ"
     struct.pack_into("<I", mz, _E_LFANEW_OFFSET, _DOS_HEADER_SIZE)
 
     coff = struct.pack(

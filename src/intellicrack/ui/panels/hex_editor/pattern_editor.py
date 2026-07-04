@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
@@ -15,6 +16,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QFrame,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QPlainTextEdit,
     QPushButton,
@@ -29,6 +31,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.hexpat.completer import HexPatCompleter
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import HexPatSyntaxHighlighter
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 from intellicrack.ui.panels.hex_editor.base import (
     SPLITTER_MAIN_RATIO,
     SPLITTER_PATTERN_RATIO,
@@ -92,6 +95,8 @@ class PatternEditorMixin:
     _template_combo: QComboBox | None
     _state_holder: HexDocumentState | None
     _populate_template_combo: Callable[[], None]
+    _pattern_apply_worker: GenericCallableWorker | None
+    _pattern_print_buffer: list[str] | None
 
     def _populate_template_tree(self, fields: list[dict[str, object]]) -> None:
         """Populate the template preview tree from decoded structure fields.
@@ -152,7 +157,11 @@ class PatternEditorMixin:
 
         self._pattern_library_tree = QTreeWidget()
         self._pattern_library_tree.setHeaderLabels(["Templates"])
-        self._pattern_library_tree.setMaximumWidth(200)
+        self._pattern_library_tree.setMinimumWidth(150)
+        library_header = self._pattern_library_tree.header()
+        if library_header is not None:
+            library_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        self._pattern_library_tree.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._pattern_library_tree.itemClicked.connect(self._on_pattern_library_clicked)
         editor_splitter.addWidget(self._pattern_library_tree)
 
@@ -391,7 +400,21 @@ class PatternEditorMixin:
         self._pattern_print_output.appendPlainText(line)
 
     def _apply_via_interpreter(self, source: str, offset: int) -> None:
-        """Execute HexPat source directly via the interpreter.
+        """Execute HexPat source via the interpreter on a background worker thread.
+
+        Dispatches ``HexPatInterpreter.execute`` to a :class:`GenericCallableWorker`
+        so a pattern with large or deeply nested arrays cannot freeze the Qt
+        event loop. ``HexPatInterpreter.execute`` invokes its print sink
+        synchronously, mid-evaluation, for every ``std::print``/``std::warning``
+        call in the pattern; since the interpreter now runs on the worker
+        thread, the sink installed here only appends to
+        :attr:`_pattern_print_buffer` instead of mutating
+        :attr:`_pattern_print_output` directly. The buffer is flushed to the
+        widget on the GUI thread by :meth:`_flush_pattern_print_buffer` once
+        the worker signals completion (success or failure). Results and
+        errors are delivered back to the GUI thread via the worker's signals
+        and applied by :meth:`_on_interpreter_apply_finished` /
+        :meth:`_on_interpreter_apply_error`.
 
         Args:
             source: HexPat DSL source code.
@@ -400,62 +423,142 @@ class PatternEditorMixin:
         if self.document is None or HexPatInterpreter_cls is None:
             return
 
+        active_worker = getattr(self, "_pattern_apply_worker", None)
+        if active_worker is not None and active_worker.isRunning():
+            _logger.warning("pattern_interpreter_apply_skipped", reason="worker active")
+            return
+
         if self._pattern_print_output is not None:
             self._pattern_print_output.clear()
 
+        print_buffer: list[str] = []
+        self._pattern_print_buffer = print_buffer
+
+        def _buffer_print_line(line: str) -> None:
+            """Buffer a ``std::print``/``std::warning`` line from the worker thread.
+
+            The interpreter invokes this sink synchronously while
+            ``execute`` runs on the background worker thread, so it must
+            not touch any :class:`QWidget`; the buffered lines are later
+            appended to :attr:`_pattern_print_output` on the GUI thread by
+            :meth:`_flush_pattern_print_buffer`.
+
+            Args:
+                line: Formatted message emitted by the interpreter's print sink.
+            """
+            print_buffer.append(line)
+
         if self._interpreter is None:
-            self._interpreter = HexPatInterpreter_cls(print_sink=self._append_pattern_print_line)
+            self._interpreter = HexPatInterpreter_cls(print_sink=_buffer_print_line)
         else:
             set_sink = getattr(self._interpreter, "set_print_sink", None)
             if callable(set_sink):
-                set_sink(self._append_pattern_print_line)
+                set_sink(_buffer_print_line)
         interpreter = self._interpreter
         if interpreter is None:
             return
 
-        try:
-            fields: list[dict[str, Any]] = interpreter.execute(source, self.document, offset)
-        except (ValueError, TypeError, AttributeError) as exc:
-            if self._pattern_error_display is not None:
-                err_msg = str(exc)
-                line_num = getattr(exc, "line", None)
-                col_num = getattr(exc, "column", None)
-                if line_num is not None and col_num is not None:
-                    err_msg = f"Line {line_num}, Col {col_num}: {err_msg}"
-                self._pattern_error_display.setPlainText(err_msg)
-            if self._pattern_status_label is not None:
-                self._pattern_status_label.setText("Execution failed")
-            _logger.exception("pattern_interpreter_failed")
-        else:
-            self._refresh_pattern_completer()
-            if self._pattern_error_display is not None:
-                self._pattern_error_display.clear()
+        if self._pattern_status_label is not None:
+            self._pattern_status_label.setText("Executing...")
 
-            if self._templates_tree is not None:
-                self._templates_tree.clear()
-                typed_fields = cast("list[dict[str, object]]", fields)
-                self._populate_template_tree(typed_fields)
-                self._highlight_template_fields(typed_fields)
+        parent = self if isinstance(self, QWidget) else None
+        worker = GenericCallableWorker(
+            interpreter.execute,
+            source,
+            self.document,
+            offset,
+            exceptions=(ValueError, TypeError, AttributeError),
+            parent=parent,
+        )
 
-            if self._pattern_status_label is not None:
-                self._pattern_status_label.setText(f"Executed at offset {offset} ({len(fields)} fields)")
+        _: object = worker.call_finished.connect(partial(self._on_interpreter_apply_finished, offset))
+        _ = worker.call_error.connect(self._on_interpreter_apply_error)
+        self._pattern_apply_worker = worker
+        _logger.info("pattern_interpreter_worker_starting", offset=offset)
+        worker.start()
 
-            if self.state_holder is not None:
-                register_fn = getattr(self.state_holder, "notify_template_registered", None)
-                if callable(register_fn):
-                    register_fn(
-                        "<inline>",
-                        source="hex-editor.pattern_editor.apply.interpreter.register",
-                    )
-                pattern_executed = getattr(self.state_holder, "notify_pattern_executed", None)
-                if callable(pattern_executed):
-                    pattern_executed(
-                        "<inline>",
-                        len(fields),
-                        source="hex-editor.pattern_editor.apply.interpreter",
-                    )
+    def _flush_pattern_print_buffer(self) -> None:
+        """Append buffered ``std::print``/``std::warning`` output to the GUI widget.
 
-            _logger.info("pattern_executed_via_interpreter", field_count=len(fields))
+        The interpreter's print sink installed by :meth:`_apply_via_interpreter`
+        runs on the background worker thread and only appends to
+        :attr:`_pattern_print_buffer`; this method performs the actual
+        :class:`QPlainTextEdit` mutation and must only be called from the GUI
+        thread, after the worker has signalled completion.
+        """
+        buffer = self._pattern_print_buffer
+        self._pattern_print_buffer = None
+        if not buffer:
+            return
+        for line in buffer:
+            self._append_pattern_print_line(line)
+
+    def _on_interpreter_apply_finished(self, offset: int, result: object) -> None:
+        """Apply the interpreter's decoded fields to the UI on the GUI thread.
+
+        Called on the main thread when the background worker started by
+        :meth:`_apply_via_interpreter` completes successfully.
+
+        Args:
+            offset: Byte offset the pattern was applied at.
+            result: Field list returned by ``HexPatInterpreter.execute``.
+        """
+        self._flush_pattern_print_buffer()
+        fields = cast("list[dict[str, Any]]", result)
+        self._refresh_pattern_completer()
+        if self._pattern_error_display is not None:
+            self._pattern_error_display.clear()
+
+        if self._templates_tree is not None:
+            self._templates_tree.clear()
+            typed_fields = cast("list[dict[str, object]]", fields)
+            self._populate_template_tree(typed_fields)
+            self._highlight_template_fields(typed_fields)
+
+        if self._pattern_status_label is not None:
+            self._pattern_status_label.setText(f"Executed at offset {offset} ({len(fields)} fields)")
+
+        if self.state_holder is not None:
+            register_fn = getattr(self.state_holder, "notify_template_registered", None)
+            if callable(register_fn):
+                register_fn(
+                    "<inline>",
+                    source="hex-editor.pattern_editor.apply.interpreter.register",
+                )
+            pattern_executed = getattr(self.state_holder, "notify_pattern_executed", None)
+            if callable(pattern_executed):
+                pattern_executed(
+                    "<inline>",
+                    len(fields),
+                    source="hex-editor.pattern_editor.apply.interpreter",
+                )
+
+        _logger.info("pattern_executed_via_interpreter", field_count=len(fields))
+
+    def _on_interpreter_apply_error(self, exc: object) -> None:
+        """Surface a HexPat interpreter execution failure on the GUI thread.
+
+        Called on the main thread when the background worker started by
+        :meth:`_apply_via_interpreter` raises during execution.
+
+        Args:
+            exc: The exception raised by the interpreter on the worker thread.
+        """
+        self._flush_pattern_print_buffer()
+        if self._pattern_error_display is not None:
+            err_msg = str(exc)
+            line_num = getattr(exc, "line", None)
+            col_num = getattr(exc, "column", None)
+            if line_num is not None and col_num is not None:
+                err_msg = f"Line {line_num}, Col {col_num}: {err_msg}"
+            self._pattern_error_display.setPlainText(err_msg)
+        if self._pattern_status_label is not None:
+            self._pattern_status_label.setText("Execution failed")
+        _logger.warning(
+            "pattern_interpreter_failed",
+            error=str(exc),
+            error_type=type(exc).__name__,
+        )
 
     def _on_pattern_save(self) -> None:
         """Save the current pattern to a file."""
@@ -559,6 +662,9 @@ class PatternEditorMixin:
         """Load the selected template from the library into the editors.
 
         Handles both built-in JSON templates and .hexpat pattern files.
+        Root and category folder nodes (identified by having child items)
+        toggle their expansion state instead of being treated as loadable
+        templates.
 
         Args:
             item: The clicked tree widget item.
@@ -566,6 +672,10 @@ class PatternEditorMixin:
         """
         _ = column
         if self.document is None:
+            return
+
+        if item.childCount() > 0:
+            item.setExpanded(not item.isExpanded())
             return
 
         parent_item = item.parent()
@@ -627,7 +737,7 @@ class PatternEditorMixin:
         self._pattern_library_tree.clear()
 
         try:
-            templates = self.document.list_templates()
+            templates_detailed: list[tuple[str, str, str, int]] = self.document.list_templates_detailed()
         except (AttributeError, ValueError):
             _logger.exception("pattern_library_populate_failed")
             return
@@ -640,31 +750,24 @@ class PatternEditorMixin:
         user_root = QTreeWidgetItem(["User"])
         self._pattern_library_tree.addTopLevelItem(user_root)
 
-        for tpl_entry in templates:
+        for tpl_entry in templates_detailed:
             name_val = str(tpl_entry[0])
             desc_val = str(tpl_entry[1])
-            name_upper = name_val.upper()
-            if any(name_upper.startswith(p) for p in ("ELF", "ELF32", "ELF64")):
-                category = "ELF"
-            elif any(name_upper.startswith(p) for p in ("MACH", "LOAD_COMMAND", "SEGMENT")):
-                category = "Mach-O"
-            elif name_upper.startswith("ZIP"):
-                category = "ZIP"
-            elif name_upper in {"GUID", "FILETIME"}:
-                category = "Common"
-            elif name_upper.startswith(("IMAGE", "PE", "DOS")):
-                category = "PE"
-            else:
-                category = "Other"
-
-            if category not in categories:
-                cat_item = QTreeWidgetItem([category])
-                builtin_root.addChild(cat_item)
-                categories[category] = cat_item
+            category_val = str(tpl_entry[2])
 
             template_item = QTreeWidgetItem([name_val])
-            template_item.setToolTip(0, desc_val)
-            categories[category].addChild(template_item)
+            template_item.setToolTip(0, desc_val or name_val)
+
+            if not category_val:
+                user_root.addChild(template_item)
+                continue
+
+            if category_val not in categories:
+                cat_item = QTreeWidgetItem([category_val])
+                builtin_root.addChild(cat_item)
+                categories[category_val] = cat_item
+
+            categories[category_val].addChild(template_item)
 
         builtin_root.setExpanded(True)
 
@@ -703,7 +806,7 @@ class PatternEditorMixin:
             hexpat_root.addChild(cat_item)
             for pattern in patterns:
                 p_item = QTreeWidgetItem([pattern.name])
-                tooltip = pattern.description or ""
+                tooltip = pattern.description or pattern.name
                 p_item.setToolTip(0, tooltip)
                 p_item.setData(0, Qt.ItemDataRole.UserRole, str(pattern.file_path))
                 cat_item.addChild(p_item)

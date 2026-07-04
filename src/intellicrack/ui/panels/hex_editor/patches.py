@@ -15,7 +15,7 @@ from PyQt6.QtWidgets import QFileDialog, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_info, show_warning
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 
 
 if TYPE_CHECKING:
@@ -44,6 +44,11 @@ class PatchesMixin:
     _original_data_cache: dict[int, int]
     _bridge: HexEditorBridge | None
     file_path: Path | None
+    _pending_export_patches_path: str | None
+    _pending_export_patches_count: int
+    _pending_export_patches_format: str | None
+    _pending_import_patches_path: str | None
+    _pending_import_patches_suffix: str | None
 
     def _on_data_changed(self) -> None:
         """Handle document data-change signals by refreshing derived views."""
@@ -114,7 +119,9 @@ class PatchesMixin:
 
         Routes through the bridge so the GUI, AI tools, and the CLI all produce identical patch wire-format bytes — including the bridge's
         Python-only fallback for hexcore builds without a native exporter. Panel-side ``document.export_patches_*`` calls bypassed that
-        fallback and returned different bytes when the native build was missing.
+        fallback and returned different bytes when the native build was missing. Dispatches through :func:`run_bridge_coroutine_logged` so
+        BPS/UPS full-file diff/rebuild work does not block the Qt main thread; the returned payload is decoded and written to disk by
+        :meth:`_on_export_patches_success`, which runs on the main thread once the bridge call completes.
         """
         if self._patches_tree is None or self.document is None:
             return
@@ -160,20 +167,44 @@ class PatchesMixin:
                 return
             original_path = str(self.file_path)
 
-        try:
-            patch_b64 = run_bridge_coroutine(bridge.export_patches(patch_format, original_path))
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("patches_export_failed", patch_format=patch_format)
-            show_warning(parent, "Export Patches", f"Export failed:\n{exc}")
+        self._pending_export_patches_path = save_path
+        self._pending_export_patches_count = patch_count
+        self._pending_export_patches_format = patch_format
+        run_bridge_coroutine_logged(
+            bridge.export_patches(patch_format, original_path),
+            on_success=self._on_export_patches_success,
+            on_error=self._on_export_patches_error,
+            parent=parent,
+            event="hex_editor_export_patches",
+            logger=_logger,
+            level="info",
+            patch_format=patch_format,
+            path=save_path,
+            count=patch_count,
+        )
+
+    def _on_export_patches_success(self, result: object) -> None:
+        """Decode and write the bridge-produced patch payload to disk.
+
+        Args:
+            result: Base64-encoded patch bytes returned by :meth:`HexEditorBridge.export_patches`.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        save_path = self._pending_export_patches_path
+        patch_count = self._pending_export_patches_count
+        patch_format = self._pending_export_patches_format
+        self._pending_export_patches_path = None
+        self._pending_export_patches_format = None
+        if save_path is None or patch_format is None:
             return
 
-        if not isinstance(patch_b64, str):
-            _logger.error("patches_export_unexpected_type", actual=type(patch_b64).__name__)
+        if not isinstance(result, str):
+            _logger.error("patches_export_unexpected_type", actual=type(result).__name__)
             show_warning(parent, "Export Patches", "Bridge returned an unexpected payload type.")
             return
 
         try:
-            patch_data = base64.b64decode(patch_b64.encode("ascii"))
+            patch_data = base64.b64decode(result.encode("ascii"))
         except (ValueError, TypeError) as exc:
             _logger.exception("patches_export_b64_decode_failed", patch_format=patch_format)
             show_warning(parent, "Export Patches", f"Bridge returned invalid base64:\n{exc}")
@@ -202,12 +233,25 @@ class PatchesMixin:
         )
         show_info(parent, "Export Patches", f"Exported {patch_count} patch(es).")
 
+    def _on_export_patches_error(self, exc: object) -> None:
+        """Report a patch export failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        self._pending_export_patches_path = None
+        self._pending_export_patches_format = None
+        show_warning(parent, "Export Patches", f"Export failed:\n{exc}")
+
     def _on_import_patches(self) -> None:
         """Import patches via :meth:`HexEditorBridge.import_patches`.
 
         The bridge inspects the patch magic bytes and dispatches to the correct format handler so IPS/IPS32/BPS/UPS all work through one
         API. For BPS/UPS the bridge requires the original unmodified source file so it can rebuild the target deterministically; the panel
-        passes ``self.file_path`` when available.
+        passes ``self.file_path`` when available. Dispatches through :func:`run_bridge_coroutine_logged` so BPS/UPS full-file diff/rebuild
+        work does not block the Qt main thread; the returned patch count is applied and the derived views refreshed by
+        :meth:`_on_import_patches_success`, which runs on the main thread once the bridge call completes.
         """
         if self.document is None:
             return
@@ -248,15 +292,36 @@ class PatchesMixin:
             original_path = str(self.file_path)
 
         patch_b64 = base64.b64encode(patch_bytes).decode("ascii")
-        try:
-            applied = run_bridge_coroutine(bridge.import_patches(patch_b64, original_path))
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("patches_import_failed", suffix=suffix)
-            show_warning(parent, "Import Patches", f"Import failed:\n{exc}")
+        self._pending_import_patches_path = file_path_str
+        self._pending_import_patches_suffix = suffix
+        run_bridge_coroutine_logged(
+            bridge.import_patches(patch_b64, original_path),
+            on_success=self._on_import_patches_success,
+            on_error=self._on_import_patches_error,
+            parent=parent,
+            event="hex_editor_import_patches",
+            logger=_logger,
+            level="info",
+            path=file_path_str,
+            suffix=suffix,
+        )
+
+    def _on_import_patches_success(self, result: object) -> None:
+        """Apply the bridge-reported patch count and refresh derived hex-editor views.
+
+        Args:
+            result: Number of patch records applied, returned by :meth:`HexEditorBridge.import_patches`.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        file_path_str = self._pending_import_patches_path
+        suffix = self._pending_import_patches_suffix
+        self._pending_import_patches_path = None
+        self._pending_import_patches_suffix = None
+        if file_path_str is None:
             return
 
-        if not isinstance(applied, int):
-            _logger.error("patches_import_unexpected_type", actual=type(applied).__name__)
+        if not isinstance(result, int):
+            _logger.error("patches_import_unexpected_type", actual=type(result).__name__)
             show_warning(parent, "Import Patches", "Bridge returned an unexpected payload type.")
             return
 
@@ -265,5 +330,17 @@ class PatchesMixin:
             if callable(update_fn):
                 update_fn()
         self._on_data_changed()
-        _logger.info("patches_imported", path=file_path_str, count=applied, suffix=suffix)
-        show_info(parent, "Import Patches", f"Applied {applied} patch record(s).")
+        _logger.info("patches_imported", path=file_path_str, count=result, suffix=suffix)
+        show_info(parent, "Import Patches", f"Applied {result} patch record(s).")
+
+    def _on_import_patches_error(self, exc: object) -> None:
+        """Report a patch import failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        file_path_str = self._pending_import_patches_path
+        self._pending_import_patches_path = None
+        self._pending_import_patches_suffix = None
+        show_warning(parent, "Import Patches", f"Import failed to {file_path_str}:\n{exc}")

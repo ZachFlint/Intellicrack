@@ -2,12 +2,47 @@
 # Copyright (C) 2026 Zachary Flint
 #
 # This file is part of Intellicrack. See LICENSE for details.
-"""Highlight rule management mixin for the hex editor panel."""
+"""Highlight rule management mixin for the hex editor panel.
+
+Every background pattern-highlight ``search_hex`` scan started in this
+module disables the entire ``HexEditorPanel`` instance for its duration
+(see :meth:`HighlightingMixin._begin_pattern_search_busy`), not just the
+embedded :attr:`HighlightingMixin._hex_widget`. ``HexEditorPanel`` mixes in
+:class:`HighlightingMixin` alongside every other hex-editor mixin
+(``SearchMixin``, ``TransformsMixin``, ``ScriptingMixin``, etc.) as a single
+``QWidget``, and Qt's disabled-widget propagation blocks input delivery to
+every descendant of a disabled widget. Disabling the panel therefore also
+blocks the "Replace All", "Apply Transform", and "Run Script" controls owned
+by those sibling mixins -- not only the hex view's own key/mouse handlers --
+so no GUI-thread click can start a concurrent ``write_bytes``,
+``insert_bytes``, or ``delete_bytes`` call against the same document while a
+background pattern search's native borrow is in flight. hexcore's
+``search_hex`` holds a PyO3 shared borrow on the ``HexDocument`` for the
+entire duration of the call, including the GIL-released whole-document scan;
+a concurrent exclusive borrow taken by a document-mutating call while a
+background ``search_hex`` is in flight raises ``PyBorrowMutError``, which
+pyo3 surfaces to Python as ``RuntimeError``.
+
+The panel-wide disable only blocks *new* GUI-thread-initiated mutations
+while a search is in flight; it cannot retroactively serialise a
+document-mutating background worker that was already running before the
+search started (e.g. a script already executing via
+``ScriptingMixin._script_worker``), nor any mutation triggered
+programmatically (AI/bridge-driven) rather than through a disabled control.
+This module also exposes :data:`DOCUMENT_MUTATION_LOCK` for those
+remaining call sites: every native-document-mutating call site elsewhere in
+the hex editor (``hex_editor_widget.py``, ``search.py``, ``transforms.py``,
+``scripting.py``) must acquire this lock instance around each
+``write_bytes``/``insert_bytes``/``delete_bytes`` call, regardless of
+whether it is reached via a UI control or a programmatic/bridge call, so
+their exclusive borrows never overlap with an in-flight shared-borrow
+search on a background thread.
+"""
 
 from __future__ import annotations
 
 import json
-import uuid
+import threading
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
@@ -28,7 +63,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor_widget import HighlightRule
 
 
@@ -39,8 +74,17 @@ _DEFAULT_HIGHLIGHT_COLOR: Final[str] = "#FFFF00"
 _BYTE_MAX: Final[int] = 255
 _HIGHLIGHT_PATTERN_MAX_MATCHES: Final[int] = 10000
 
+DOCUMENT_MUTATION_LOCK: Final[threading.Lock] = threading.Lock()
+"""Serialises native ``HexDocument`` access across mutation and search.
+
+Every background ``search_hex`` dispatch in this module acquires this lock for the duration of the call. Any other module that mutates the
+active document's underlying bytes (``write_bytes``, ``insert_bytes``, block operations, etc.) must acquire the same lock instance around
+each mutating call so those exclusive borrows never overlap with an in-flight shared- borrow search on a background thread.
+"""
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from intellicrack.bridges.hex_editor import HexEditorBridge
 
 
@@ -59,6 +103,13 @@ class HighlightingMixin:
     _highlight_rules_list: QListWidget | None
     _active_highlight_ids: list[str]
     _bridge: HexEditorBridge | None
+    _pattern_rule_worker: GenericCallableWorker | None
+    _pending_pattern_add_bridge: HexEditorBridge | None
+    _pending_pattern_add_pattern: str
+    _pending_pattern_add_color: str
+    _pattern_refresh_worker: GenericCallableWorker | None
+    _pattern_refresh_pending: bool
+    _pattern_search_busy_count: int
 
     def _create_highlighting_controls(self) -> QGroupBox:
         """Create the highlight rules management group box.
@@ -147,7 +198,39 @@ class HighlightingMixin:
         layout.addLayout(btn_row)
 
         self._active_highlight_ids = []
+        self._pattern_rule_worker = None
+        self._pending_pattern_add_bridge = None
+        self._pending_pattern_add_pattern = ""
+        self._pending_pattern_add_color = _DEFAULT_HIGHLIGHT_COLOR
+        self._pattern_refresh_worker = None
+        self._pattern_refresh_pending = False
+        self._pattern_search_busy_count = 0
         return box
+
+    def _begin_pattern_search_busy(self) -> None:
+        """Register an in-flight background pattern search and lock out document mutation.
+
+        Increments the shared busy counter and, the first time it moves off zero,
+        disables the whole panel widget (``self``, the ``HexEditorPanel`` instance
+        that mixes in :class:`HighlightingMixin` alongside every sibling
+        document-mutating mixin) so that no descendant control -- the hex view's
+        own keyboard/mouse handlers, "Replace All", "Apply Transform", or "Run
+        Script" -- can start a document-mutating call while a background
+        ``search_hex`` scan holds a native shared borrow on the same document.
+        """
+        self._pattern_search_busy_count += 1
+        if self._pattern_search_busy_count == 1 and isinstance(self, QWidget):
+            self.setEnabled(False)
+
+    def _end_pattern_search_busy(self) -> None:
+        """Retire an in-flight background pattern search and restore document mutation.
+
+        Decrements the shared busy counter and, only once it returns to zero, re-enables the panel widget so overlapping refresh and add-
+        rule searches cannot re-enable mutation while a sibling background search is still running.
+        """
+        self._pattern_search_busy_count = max(0, self._pattern_search_busy_count - 1)
+        if self._pattern_search_busy_count == 0 and isinstance(self, QWidget):
+            self.setEnabled(True)
 
     def _on_highlight_condition_changed(self, index: int) -> None:
         """Switch the parameter input page for the selected condition type.
@@ -165,44 +248,6 @@ class HighlightingMixin:
         if color.isValid() and self._highlight_color_edit is not None:
             self._highlight_color_edit.setText(color.name())
 
-    def _resolve_pattern_rule(self, rule_id: str, color: str) -> tuple[str, dict[str, Any], str] | None:
-        """Resolve a ``pattern``-type highlight rule via hexcore ``search_hex``.
-
-        Args:
-            rule_id: Stable identifier for the rule being built.
-            color: Hex colour string used in the display label.
-
-        Returns:
-            tuple[str, dict[str, Any], str] | None: (condition_type, params, label) tuple
-            if the pattern is usable; ``None`` when the pattern is empty or the search RPC fails.
-        """
-        pattern = self._highlight_pattern_edit.text().strip() if self._highlight_pattern_edit else ""
-        parent = self if isinstance(self, QWidget) else None
-        if not pattern:
-            QMessageBox.warning(parent, "Highlight", "Pattern cannot be empty.")
-            return None
-        document = getattr(self, "document", None)
-        offsets: set[int] = set()
-        if document is not None and hasattr(document, "search_hex"):
-            try:
-                matches = document.search_hex(pattern, _HIGHLIGHT_PATTERN_MAX_MATCHES)
-            except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-                _logger.exception("highlight_search_failed", pattern=pattern)
-                QMessageBox.warning(parent, "Highlight", f"Pattern search failed: {exc}")
-                return None
-            if isinstance(matches, list):
-                entries: list[Any] = cast("list[Any]", matches)
-                for entry in entries:
-                    if isinstance(entry, tuple):
-                        entry_tuple: tuple[Any, ...] = cast("tuple[Any, ...]", entry)
-                        if entry_tuple and isinstance(entry_tuple[0], int):
-                            offsets.add(entry_tuple[0])
-                    elif isinstance(entry, int):
-                        offsets.add(entry)
-        params: dict[str, Any] = {"pattern": pattern, "offsets": list(offsets)}
-        label = f"[{rule_id}] Pattern {pattern}  ({len(offsets)} hits, {color})"
-        return "pattern", params, label
-
     def _on_add_highlight_rule(self) -> None:
         """Create a highlight rule via the bridge and update the widget on confirmation."""
         if self._highlight_condition_combo is None:
@@ -215,26 +260,107 @@ class HighlightingMixin:
 
         condition_idx = self._highlight_condition_combo.currentIndex()
         color = self._highlight_color_edit.text().strip() if self._highlight_color_edit else _DEFAULT_HIGHLIGHT_COLOR
-        rule_id = str(uuid.uuid4())[:8]
-
-        condition_type: str
-        params: dict[str, Any]
 
         if condition_idx == 0:
             value = self._highlight_byte_value_spin.value() if self._highlight_byte_value_spin else 0
-            condition_type = "byte_value"
-            params = {"value": value}
-        elif condition_idx == 1:
+            self._dispatch_add_highlight_rule(bridge, "byte_value", {"value": value}, color)
+            return
+        if condition_idx == 1:
             min_val = self._highlight_range_min_spin.value() if self._highlight_range_min_spin else 0
             max_val = self._highlight_range_max_spin.value() if self._highlight_range_max_spin else _BYTE_MAX
-            condition_type = "byte_range"
-            params = {"min": min_val, "max": max_val}
-        else:
-            pattern_result = self._resolve_pattern_rule(rule_id, color)
-            if pattern_result is None:
-                return
-            condition_type, params, _ = pattern_result
+            self._dispatch_add_highlight_rule(bridge, "byte_range", {"min": min_val, "max": max_val}, color)
+            return
 
+        self._on_add_pattern_highlight_rule(bridge, color)
+
+    def _on_add_pattern_highlight_rule(self, bridge: HexEditorBridge, color: str) -> None:
+        """Resolve a ``pattern``-type highlight rule's offsets off the GUI thread, then dispatch it.
+
+        The native ``search_hex`` whole-document scan runs on a background
+        :class:`~intellicrack.ui.panels.async_bridge.GenericCallableWorker` thread so the
+        'Add Rule' click never blocks the Qt event loop while the pattern is resolved.
+
+        Args:
+            bridge: Connected hex editor bridge used to persist the rule.
+            color: Hex colour string selected for the new rule.
+        """
+        pattern = self._highlight_pattern_edit.text().strip() if self._highlight_pattern_edit else ""
+        parent = self if isinstance(self, QWidget) else None
+        if not pattern:
+            QMessageBox.warning(parent, "Highlight", "Pattern cannot be empty.")
+            return
+
+        document = getattr(self, "document", None)
+        search_fn = getattr(document, "search_hex", None) if document is not None else None
+        if not callable(search_fn):
+            self._dispatch_add_highlight_rule(bridge, "pattern", {"pattern": pattern, "offsets": []}, color)
+            return
+
+        existing_worker = getattr(self, "_pattern_rule_worker", None)
+        if existing_worker is not None and existing_worker.isRunning():
+            return
+
+        self._pending_pattern_add_bridge = bridge
+        self._pending_pattern_add_pattern = pattern
+        self._pending_pattern_add_color = color
+        self._pattern_rule_worker = GenericCallableWorker(
+            _locked_search_hex,
+            search_fn,
+            pattern,
+            _HIGHLIGHT_PATTERN_MAX_MATCHES,
+        )
+        _ = self._pattern_rule_worker.call_finished.connect(self._on_pattern_rule_search_finished)
+        _ = self._pattern_rule_worker.call_error.connect(self._on_pattern_rule_search_error)
+        self._begin_pattern_search_busy()
+        self._pattern_rule_worker.start()
+
+    def _on_pattern_rule_search_finished(self, matches: object) -> None:
+        """Dispatch the pending pattern highlight rule once its offsets resolve.
+
+        Args:
+            matches: Raw match list returned by the background ``search_hex`` call.
+        """
+        self._pattern_rule_worker = None
+        self._end_pattern_search_busy()
+        bridge = getattr(self, "_pending_pattern_add_bridge", None)
+        pattern = getattr(self, "_pending_pattern_add_pattern", "")
+        color = getattr(self, "_pending_pattern_add_color", _DEFAULT_HIGHLIGHT_COLOR)
+        self._pending_pattern_add_bridge = None
+        if bridge is None:
+            return
+        offsets = _parse_pattern_matches(matches)
+        params: dict[str, Any] = {"pattern": pattern, "offsets": sorted(offsets)}
+        self._dispatch_add_highlight_rule(bridge, "pattern", params, color)
+
+    def _on_pattern_rule_search_error(self, exc: object) -> None:
+        """Handle a background pattern-highlight search failure.
+
+        Args:
+            exc: Exception raised by the background ``search_hex`` call.
+        """
+        self._pattern_rule_worker = None
+        self._end_pattern_search_busy()
+        pattern = getattr(self, "_pending_pattern_add_pattern", "")
+        self._pending_pattern_add_bridge = None
+        _logger.warning("highlight_rule_pattern_search_failed", pattern=pattern, error=str(exc), error_type=type(exc).__name__)
+        parent = self if isinstance(self, QWidget) else None
+        QMessageBox.warning(parent, "Highlight", f"Pattern search failed: {exc}")
+
+    def _dispatch_add_highlight_rule(
+        self,
+        bridge: HexEditorBridge,
+        condition_type: str,
+        params: dict[str, Any],
+        color: str,
+    ) -> None:
+        """Send an ``add_highlight_rule`` bridge RPC for a fully-resolved condition.
+
+        Args:
+            bridge: Connected hex editor bridge used to persist the rule.
+            condition_type: One of ``"byte_value"``, ``"byte_range"``, or ``"pattern"``.
+            params: Condition parameters dict for the new rule.
+            color: Hex colour string selected for the new rule.
+        """
         params_json = json.dumps(params)
         parent_obj = self if isinstance(self, QWidget) else None
         run_bridge_coroutine_logged(
@@ -464,6 +590,11 @@ class HighlightingMixin:
         Called by the hex editor panel whenever the active document's byte content changes (``HexEditorWidget.data_changed``) so that
         pattern-based highlight rules stay consistent with the underlying document.  Byte-value and byte-range rules do not need to be
         refreshed because their match logic is re-evaluated per-paint from the raw byte value.
+
+        The native ``search_hex`` whole-document scan for every active pattern rule runs on a background
+        :class:`~intellicrack.ui.panels.async_bridge.GenericCallableWorker` thread so a byte edit never blocks the Qt event loop while
+        offsets are recomputed.  A refresh requested while one is already in flight is coalesced into a single follow-up pass once the
+        in-flight worker completes, so rapid successive edits never queue an unbounded number of background scans.
         """
         if self._hex_widget is None:
             return
@@ -474,39 +605,149 @@ class HighlightingMixin:
         search_fn = getattr(document, "search_hex", None) if document is not None else None
         if not callable(search_fn):
             return
+
+        specs: list[tuple[str, str]] = []
         for rule in cast("list[Any]", rules_attr):
-            condition_type = getattr(rule, "condition_type", None)
-            if condition_type != "pattern":
+            if getattr(rule, "condition_type", None) != "pattern":
                 continue
+            rule_id = getattr(rule, "rule_id", None)
             params_attr: object = getattr(rule, "condition_params", None)
-            if not isinstance(params_attr, dict):
+            if not isinstance(rule_id, str) or not isinstance(params_attr, dict):
                 continue
-            params_dict = cast("dict[str, Any]", params_attr)
-            pattern_raw: object = params_dict.get("pattern")
-            if not isinstance(pattern_raw, str) or not pattern_raw:
-                continue
-            offsets: set[int] = set()
-            try:
-                matches = search_fn(pattern_raw, _HIGHLIGHT_PATTERN_MAX_MATCHES)
-            except (RuntimeError, OSError, ValueError, AttributeError):
-                _logger.exception(
-                    "highlight_pattern_refresh_failed",
-                    pattern=pattern_raw,
-                )
-                continue
-            if isinstance(matches, list):
-                entries: list[Any] = cast("list[Any]", matches)
-                for entry in entries:
-                    if isinstance(entry, tuple):
-                        tup = cast("tuple[Any, ...]", entry)
-                        if tup and isinstance(tup[0], int):
-                            offsets.add(tup[0])
-                    elif isinstance(entry, int):
-                        offsets.add(entry)
-            params_dict["offsets"] = offsets
-        update_fn = getattr(self._hex_widget, "update", None)
-        if callable(update_fn):
-            update_fn()
+            pattern_raw: object = cast("dict[str, Any]", params_attr).get("pattern")
+            if isinstance(pattern_raw, str) and pattern_raw:
+                specs.append((rule_id, pattern_raw))
+        if not specs:
+            return
+
+        existing_worker = getattr(self, "_pattern_refresh_worker", None)
+        if existing_worker is not None and existing_worker.isRunning():
+            self._pattern_refresh_pending = True
+            return
+
+        self._pattern_refresh_pending = False
+        self._pattern_refresh_worker = GenericCallableWorker(_resolve_pattern_offsets, search_fn, specs)
+        _ = self._pattern_refresh_worker.call_finished.connect(self._on_pattern_refresh_finished)
+        _ = self._pattern_refresh_worker.call_error.connect(self._on_pattern_refresh_error)
+        self._begin_pattern_search_busy()
+        self._pattern_refresh_worker.start()
+
+    def _on_pattern_refresh_finished(self, result: object) -> None:
+        """Apply resolved pattern-highlight offsets from the background refresh worker.
+
+        Args:
+            result: Mapping of rule ID to offset list returned by ``_resolve_pattern_offsets``.
+        """
+        self._pattern_refresh_worker = None
+        self._end_pattern_search_busy()
+        if self._hex_widget is not None and isinstance(result, dict):
+            resolved = cast("dict[str, list[int]]", result)
+            rules_attr = getattr(self._hex_widget, "_highlight_rules", None)
+            if isinstance(rules_attr, list):
+                for rule in cast("list[Any]", rules_attr):
+                    rule_id = getattr(rule, "rule_id", None)
+                    if not isinstance(rule_id, str) or rule_id not in resolved:
+                        continue
+                    params_attr: object = getattr(rule, "condition_params", None)
+                    if isinstance(params_attr, dict):
+                        cast("dict[str, Any]", params_attr)["offsets"] = set(resolved[rule_id])
+            update_fn = getattr(self._hex_widget, "update", None)
+            if callable(update_fn):
+                update_fn()
+        if getattr(self, "_pattern_refresh_pending", False):
+            self._pattern_refresh_pending = False
+            self.refresh_pattern_highlights()
+
+    def _on_pattern_refresh_error(self, exc: object) -> None:
+        """Handle a background pattern-highlight refresh failure.
+
+        Args:
+            exc: Exception raised inside the background refresh worker.
+        """
+        self._pattern_refresh_worker = None
+        self._end_pattern_search_busy()
+        _logger.warning("highlight_pattern_refresh_batch_failed", error=str(exc), error_type=type(exc).__name__)
+        if getattr(self, "_pattern_refresh_pending", False):
+            self._pattern_refresh_pending = False
+            self.refresh_pattern_highlights()
+
+
+def _parse_pattern_matches(matches: object) -> set[int]:
+    """Extract match offsets from a raw ``search_hex`` result.
+
+    Args:
+        matches: Raw return value from ``HexDocument.search_hex``: expected to be a list of
+            ``(offset, length)`` tuples or bare integer offsets, but treated defensively since it
+            crosses the native FFI boundary.
+
+    Returns:
+        set[int]: Set of integer byte offsets extracted from ``matches``.
+    """
+    offsets: set[int] = set()
+    if isinstance(matches, list):
+        entries: list[Any] = cast("list[Any]", matches)
+        for entry in entries:
+            if isinstance(entry, tuple):
+                entry_tuple: tuple[Any, ...] = cast("tuple[Any, ...]", entry)
+                if entry_tuple and isinstance(entry_tuple[0], int):
+                    offsets.add(entry_tuple[0])
+            elif isinstance(entry, int):
+                offsets.add(entry)
+    return offsets
+
+
+def _locked_search_hex(
+    search_fn: Callable[[str, int], object],
+    pattern: str,
+    max_matches: int,
+) -> object:
+    """Invoke a document's ``search_hex`` while holding the shared document lock.
+
+    Acquires :data:`DOCUMENT_MUTATION_LOCK` for the duration of the call so
+    the shared PyO3 borrow ``search_hex`` holds across its whole-document
+    scan never overlaps with a concurrent exclusive borrow taken by a
+    document-mutating call elsewhere in the hex editor.
+
+    Args:
+        search_fn: The document's bound ``search_hex(pattern, max_matches)`` method.
+        pattern: Hex pattern string to search for.
+        max_matches: Maximum number of matches to return.
+
+    Returns:
+        object: Raw match list returned by ``search_fn``.
+    """
+    with DOCUMENT_MUTATION_LOCK:
+        return search_fn(pattern, max_matches)
+
+
+def _resolve_pattern_offsets(
+    search_fn: Callable[[str, int], object],
+    specs: list[tuple[str, str]],
+) -> dict[str, list[int]]:
+    """Resolve match offsets for a batch of pattern-type highlight rules.
+
+    Intended to run on a background :class:`~intellicrack.ui.panels.async_bridge.GenericCallableWorker`
+    thread so the native whole-document ``search_hex`` scan for every active pattern rule never blocks
+    the Qt event loop. A search failure for one rule is logged and skipped rather than aborting the
+    remaining rules in the batch.
+
+    Args:
+        search_fn: The document's bound ``search_hex(pattern, max_matches)`` method.
+        specs: List of ``(rule_id, pattern)`` tuples to resolve.
+
+    Returns:
+        dict[str, list[int]]: Mapping of rule ID to its sorted list of matching offsets. Rule IDs
+        whose search failed are omitted.
+    """
+    resolved: dict[str, list[int]] = {}
+    for rule_id, pattern in specs:
+        try:
+            matches = _locked_search_hex(search_fn, pattern, _HIGHLIGHT_PATTERN_MAX_MATCHES)
+        except (RuntimeError, OSError, ValueError, AttributeError):
+            _logger.exception("highlight_pattern_refresh_failed", pattern=pattern, rule_id=rule_id)
+            continue
+        resolved[rule_id] = sorted(_parse_pattern_matches(matches))
+    return resolved
 
 
 def build_rule_label(rule_id: str, condition_type: str, params: dict[str, Any], color: str) -> str:

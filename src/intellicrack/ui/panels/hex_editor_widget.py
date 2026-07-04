@@ -33,13 +33,14 @@ from PyQt6.QtGui import (
 from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QMenu, QWidget
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 from intellicrack.ui.panels.qt_compat import key_event_key, qt_key_page_down, qt_key_page_up, wheel_angle_delta_y
 from intellicrack.ui.resources.font_manager import FontManager
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
 
 _logger = get_logger(__name__)
@@ -65,6 +66,49 @@ _SIGNED_BYTE_THRESHOLD = 128
 _MIN_RGB_BYTES = 3
 _MIN_RGBA_BYTES = 4
 _ASCII_MAX = 0x7F
+_MAX_BYTE_VALUE = 255
+
+_CONTENT_CLASS_BLOCK_SIZE = 256
+
+_CONTENT_CLASS_COLOR_KEYS: dict[int, str] = {
+    0: "content_null",
+    1: "content_text",
+    2: "content_generic",
+    3: "content_compressed",
+    4: "content_code",
+}
+
+
+def _entropy_value_to_color(
+    entropy: float,
+    low_color: QColor,
+    mid_color: QColor,
+    high_color: QColor,
+) -> QColor:
+    """Interpolate an entropy value to a color between low, mid, and high.
+
+    Args:
+        entropy: Shannon entropy value (0.0-8.0).
+        low_color: Color for low entropy regions.
+        mid_color: Color for mid entropy regions.
+        high_color: Color for high entropy regions.
+
+    Returns:
+        QColor: Interpolated color for the given entropy value.
+    """
+    if entropy < _ENTROPY_LOW_THRESH:
+        return low_color
+    if entropy < _ENTROPY_HIGH_THRESH:
+        t = (entropy - _ENTROPY_LOW_THRESH) / (_ENTROPY_HIGH_THRESH - _ENTROPY_LOW_THRESH)
+        r = int(low_color.red() + t * (mid_color.red() - low_color.red()))
+        g = int(low_color.green() + t * (mid_color.green() - low_color.green()))
+        b = int(low_color.blue() + t * (mid_color.blue() - low_color.blue()))
+        return QColor(r, g, b)
+    t = min(1.0, (entropy - _ENTROPY_HIGH_THRESH) / (8.0 - _ENTROPY_HIGH_THRESH))
+    r = int(mid_color.red() + t * (high_color.red() - mid_color.red()))
+    g = int(mid_color.green() + t * (high_color.green() - mid_color.green()))
+    b = int(mid_color.blue() + t * (high_color.blue() - mid_color.blue()))
+    return QColor(r, g, b)
 
 
 def _get_hex_editor_colors() -> dict[str, QColor]:
@@ -91,6 +135,12 @@ def _get_hex_editor_colors() -> dict[str, QColor]:
             "ascii_printable": QColor(180, 200, 180),
             "ascii_nonprintable": QColor(80, 80, 80),
             "cursor_text": QColor(255, 255, 255),
+            "alignment_grid": QColor(120, 120, 200, 140),
+            "content_null": QColor(90, 90, 90),
+            "content_text": QColor(66, 165, 245),
+            "content_generic": QColor(171, 71, 188),
+            "content_code": QColor(255, 202, 40),
+            "content_compressed": QColor(239, 83, 80),
         }
     return {
         "minimap_bg": QColor(245, 245, 245),
@@ -109,6 +159,12 @@ def _get_hex_editor_colors() -> dict[str, QColor]:
         "ascii_printable": QColor(46, 125, 50),
         "ascii_nonprintable": QColor(180, 180, 180),
         "cursor_text": QColor(0, 0, 0),
+        "alignment_grid": QColor(80, 80, 170, 140),
+        "content_null": QColor(158, 158, 158),
+        "content_text": QColor(21, 101, 192),
+        "content_generic": QColor(106, 27, 154),
+        "content_code": QColor(245, 127, 23),
+        "content_compressed": QColor(183, 28, 28),
     }
 
 
@@ -247,40 +303,8 @@ class EntropyMiniMap(QWidget):
             y0 = int(i * h / count)
             y1 = int((i + 1) * h / count)
             segment_h = max(1, y1 - y0)
-            color = self._entropy_to_color(entropy, entropy_low, entropy_mid, entropy_high)
+            color = _entropy_value_to_color(entropy, entropy_low, entropy_mid, entropy_high)
             painter.fillRect(QRect(0, y0, w, segment_h), color)
-
-    @staticmethod
-    def _entropy_to_color(
-        entropy: float,
-        low_color: QColor,
-        mid_color: QColor,
-        high_color: QColor,
-    ) -> QColor:
-        """Interpolate an entropy value to a color between low, mid, and high.
-
-        Args:
-            entropy: Shannon entropy value (0.0-8.0).
-            low_color: Color for low entropy regions.
-            mid_color: Color for mid entropy regions.
-            high_color: Color for high entropy regions.
-
-        Returns:
-            QColor: Interpolated color for the given entropy value.
-        """
-        if entropy < _ENTROPY_LOW_THRESH:
-            return low_color
-        if entropy < _ENTROPY_HIGH_THRESH:
-            t = (entropy - _ENTROPY_LOW_THRESH) / (_ENTROPY_HIGH_THRESH - _ENTROPY_LOW_THRESH)
-            r = int(low_color.red() + t * (mid_color.red() - low_color.red()))
-            g = int(low_color.green() + t * (mid_color.green() - low_color.green()))
-            b = int(low_color.blue() + t * (mid_color.blue() - low_color.blue()))
-            return QColor(r, g, b)
-        t = min(1.0, (entropy - _ENTROPY_HIGH_THRESH) / (8.0 - _ENTROPY_HIGH_THRESH))
-        r = int(mid_color.red() + t * (high_color.red() - mid_color.red()))
-        g = int(mid_color.green() + t * (high_color.green() - mid_color.green()))
-        b = int(mid_color.blue() + t * (high_color.blue() - mid_color.blue()))
-        return QColor(r, g, b)
 
     def _draw_viewport_indicator(
         self,
@@ -403,6 +427,12 @@ class HexEditorWidget(QAbstractScrollArea):
         self._show_va: bool = False
         self._entropy_cache: list[float] = []
         self._content_class_cache: list[int] = []
+        self._entropy_scan_active: bool = False
+        self._entropy_scan_generation: int = 0
+        self._entropy_scan_request_generation: int = -1
+        self._content_class_scan_active: bool = False
+        self._content_class_scan_generation: int = 0
+        self._content_class_scan_request_generation: int = -1
 
         self._setup_font()
         self._colors = _get_hex_editor_colors()
@@ -515,8 +545,10 @@ class HexEditorWidget(QAbstractScrollArea):
         """Change the byte color-mapping mode.
 
         Invalidates any cached per-byte colour data so that the next paint
-        recomputes from the current document. The actual recomputation is
-        lazy and happens inside paint handlers when the mode requires it.
+        recomputes from the current document. Entropy and content-type data
+        are recomputed lazily on a background worker thread the first time a
+        paint handler needs them for the newly selected mode, so switching
+        modes never blocks the GUI thread.
 
         Args:
             mode: Color mode string (``"none"``, ``"entropy"``,
@@ -527,9 +559,15 @@ class HexEditorWidget(QAbstractScrollArea):
         self.update()
 
     def _invalidate_color_caches(self) -> None:
-        """Drop cached entropy/content-type data computed from the document."""
+        """Drop cached entropy/content-type data and invalidate in-flight scans.
+
+        Bumps the entropy and content-class scan generation counters so a background scan already running for now-stale data is discarded
+        (and automatically retried) when it completes, instead of overwriting the cache with values computed before this edit.
+        """
         self._entropy_cache = []
         self._content_class_cache = []
+        self._entropy_scan_generation += 1
+        self._content_class_scan_generation += 1
 
     def _entropy_block_size(self) -> int:
         """Choose an entropy block size bounding the bucket count for any file.
@@ -548,22 +586,68 @@ class HexEditorWidget(QAbstractScrollArea):
         return max(_ENTROPY_MIN_BLOCK, math.ceil(doc_len / _ENTROPY_TARGET_BUCKETS))
 
     def _ensure_entropy_cache(self) -> list[float]:
-        """Populate the entropy cache lazily from the current document.
+        """Return the cached entropy values, starting a background scan if empty.
 
         Returns:
-            list[float]: Per-block entropy values (empty when unavailable).
+            list[float]: Per-block entropy values currently cached. May be
+            empty immediately after an edit while a background scan
+            (started by this call when needed) is still computing; the
+            scan's completion callback triggers a follow-up repaint once
+            real data is available.
         """
-        if self._entropy_cache or self._document is None:
-            return self._entropy_cache
-        entropy_fn = getattr(self._document, "entropy_map", None)
-        if callable(entropy_fn):
-            try:
-                raw_ent: Any = entropy_fn(self._entropy_block_size())
-                self._entropy_cache = [float(v) for v in raw_ent]
-            except (ValueError, TypeError, AttributeError) as exc:
-                _logger.warning("entropy_map_failed", error=str(exc))
-                self._entropy_cache = []
+        if not self._entropy_cache:
+            self._request_entropy_scan()
         return self._entropy_cache
+
+    def _request_entropy_scan(self) -> None:
+        """Start a background worker that populates the entropy cache.
+
+        No-ops when no document is attached, the cache is already populated, or a scan is already in flight. Running
+        ``document.entropy_map`` on a :class:`GenericCallableWorker` background thread keeps a full-document entropy scan from blocking the
+        GUI thread on every edit while the entropy minimap or the entropy color mode is active.
+        """
+        if self._document is None or self._entropy_cache or self._entropy_scan_active:
+            return
+        entropy_fn = getattr(self._document, "entropy_map", None)
+        if not callable(entropy_fn):
+            return
+        self._entropy_scan_active = True
+        self._entropy_scan_request_generation = self._entropy_scan_generation
+        worker = GenericCallableWorker(entropy_fn, self._entropy_block_size(), parent=self)
+        _: object = worker.call_finished.connect(self._on_entropy_scan_finished)
+        _ = worker.call_error.connect(self._on_entropy_scan_failed)
+        worker.start()
+
+    def _on_entropy_scan_finished(self, result: object) -> None:
+        """Store a completed background entropy scan and refresh dependent views.
+
+        Discards the result and immediately re-requests a fresh scan when
+        the document was edited (generation bumped) while this scan was
+        running, so the cache never settles on stale pre-edit data.
+
+        Args:
+            result: Per-block entropy values returned by the worker.
+        """
+        self._entropy_scan_active = False
+        if self._entropy_scan_request_generation != self._entropy_scan_generation:
+            self._request_entropy_scan()
+            return
+        try:
+            self._entropy_cache = [float(v) for v in cast("Iterable[float]", result)]
+        except (TypeError, ValueError):
+            self._entropy_cache = []
+        self._refresh_minimap_if_visible()
+        self._update_viewport()
+
+    def _on_entropy_scan_failed(self, exc: object) -> None:
+        """Log a failed background entropy scan and reset scan state.
+
+        Args:
+            exc: Exception raised on the worker thread.
+        """
+        self._entropy_scan_active = False
+        _logger.warning("entropy_map_failed", error=str(exc))
+        self._entropy_cache = []
 
     def _refresh_minimap_entropy(self) -> None:
         """Compute file entropy and push it to the entropy minimap.
@@ -587,22 +671,148 @@ class HexEditorWidget(QAbstractScrollArea):
             self._refresh_minimap_entropy()
 
     def _ensure_content_class_cache(self) -> list[int]:
-        """Populate the content-classification cache lazily from the current document.
+        """Return the cached content-class codes, starting a background scan if empty.
 
         Returns:
-            list[int]: Per-bucket content-class codes (empty when unavailable).
+            list[int]: Per-bucket content-class codes currently cached. May
+            be empty immediately after an edit while a background scan
+            (started by this call when needed) is still computing.
         """
-        if self._content_class_cache or self._document is None:
-            return self._content_class_cache
-        class_fn = getattr(self._document, "content_classification", None)
-        if callable(class_fn):
-            try:
-                raw_cls: Any = class_fn(256)
-                self._content_class_cache = [int(v) for v in raw_cls]
-            except (ValueError, TypeError, AttributeError) as exc:
-                _logger.warning("content_classification_failed", error=str(exc))
-                self._content_class_cache = []
+        if not self._content_class_cache:
+            self._request_content_class_scan()
         return self._content_class_cache
+
+    def _request_content_class_scan(self) -> None:
+        """Start a background worker that populates the content-class cache.
+
+        No-ops when no document is attached, the cache is already populated, or a scan is already in flight. Running
+        ``document.content_classification`` on a :class:`GenericCallableWorker` background thread keeps a full-document classification scan
+        from blocking the GUI thread.
+        """
+        if self._document is None or self._content_class_cache or self._content_class_scan_active:
+            return
+        class_fn = getattr(self._document, "content_classification", None)
+        if not callable(class_fn):
+            return
+        self._content_class_scan_active = True
+        self._content_class_scan_request_generation = self._content_class_scan_generation
+        worker = GenericCallableWorker(class_fn, _CONTENT_CLASS_BLOCK_SIZE, parent=self)
+        _: object = worker.call_finished.connect(self._on_content_class_scan_finished)
+        _ = worker.call_error.connect(self._on_content_class_scan_failed)
+        worker.start()
+
+    def _on_content_class_scan_finished(self, result: object) -> None:
+        """Store a completed background content-classification scan.
+
+        Discards the result and immediately re-requests a fresh scan when
+        the document was edited (generation bumped) while this scan was
+        running, so the cache never settles on stale pre-edit data.
+
+        Args:
+            result: Per-block content-class codes returned by the worker.
+        """
+        self._content_class_scan_active = False
+        if self._content_class_scan_request_generation != self._content_class_scan_generation:
+            self._request_content_class_scan()
+            return
+        try:
+            self._content_class_cache = [int(v) for v in cast("Iterable[int]", result)]
+        except (TypeError, ValueError):
+            self._content_class_cache = []
+        self._update_viewport()
+
+    def _on_content_class_scan_failed(self, exc: object) -> None:
+        """Log a failed background content-classification scan and reset scan state.
+
+        Args:
+            exc: Exception raised on the worker thread.
+        """
+        self._content_class_scan_active = False
+        _logger.warning("content_classification_failed", error=str(exc))
+        self._content_class_cache = []
+
+    def _color_mode_background(self, offset: int, byte_val: int) -> QColor | None:
+        """Resolve the color-mode background for a byte at the given offset.
+
+        Args:
+            offset: Absolute byte offset used to index the block-level
+                entropy and content-classification caches.
+            byte_val: Raw byte value used by the byte-value heat map.
+
+        Returns:
+            QColor | None: Background color for the active color mode, or
+            ``None`` when color mode is disabled or the relevant cached
+            data is not yet available for this offset.
+        """
+        if self._color_mode == "entropy":
+            return self._entropy_color_at(offset)
+        if self._color_mode == "byte_value":
+            return self._byte_value_color(byte_val)
+        if self._color_mode == "content_type":
+            return self._content_class_color_at(offset)
+        return None
+
+    def _entropy_color_at(self, offset: int) -> QColor | None:
+        """Look up the entropy heat-map color for the block containing ``offset``.
+
+        Args:
+            offset: Absolute byte offset to resolve.
+
+        Returns:
+            QColor | None: Interpolated entropy color, or ``None`` when the
+            entropy cache has no data for this offset yet.
+        """
+        values = self._ensure_entropy_cache()
+        if not values:
+            return None
+        index = offset // self._entropy_block_size()
+        if index >= len(values):
+            return None
+        return _entropy_value_to_color(
+            values[index],
+            self._colors["entropy_low"],
+            self._colors["entropy_mid"],
+            self._colors["entropy_high"],
+        )
+
+    def _byte_value_color(self, byte_val: int) -> QColor:
+        """Map a raw byte value onto the low/mid/high entropy heat-map gradient.
+
+        Args:
+            byte_val: Raw byte value in the range 0-255.
+
+        Returns:
+            QColor: Heat-map color proportional to the byte's magnitude.
+        """
+        pseudo_entropy = (byte_val / _MAX_BYTE_VALUE) * 8.0
+        return _entropy_value_to_color(
+            pseudo_entropy,
+            self._colors["entropy_low"],
+            self._colors["entropy_mid"],
+            self._colors["entropy_high"],
+        )
+
+    def _content_class_color_at(self, offset: int) -> QColor | None:
+        """Look up the content-classification color for the block containing ``offset``.
+
+        Args:
+            offset: Absolute byte offset to resolve.
+
+        Returns:
+            QColor | None: Color for the block's classified content type,
+            or ``None`` when the classification cache has no data for this
+            offset yet or the class code is unrecognised.
+        """
+        values = self._ensure_content_class_cache()
+        if not values:
+            return None
+        index = offset // _CONTENT_CLASS_BLOCK_SIZE
+        if index >= len(values):
+            return None
+        color_key = _CONTENT_CLASS_COLOR_KEYS.get(values[index])
+        if color_key is None:
+            return None
+        return self._colors[color_key]
 
     def _visible_row_count(self) -> int:
         """Calculate the number of rows visible in the viewport.
@@ -742,7 +952,36 @@ class HexEditorWidget(QAbstractScrollArea):
 
         self._paint_separators(painter, clip_rect.height())
         self._paint_data_rows(painter, first_row, visible_rows)
+        self._paint_alignment_grid(painter, first_row, visible_rows)
         self._paint_highlight_overlays(painter, first_row, visible_rows)
+
+    def _paint_alignment_grid(self, painter: QPainter, first_row: int, visible_rows: int) -> None:
+        """Draw dashed marker lines at alignment-grid byte boundaries.
+
+        No-ops when the alignment grid is disabled (size 0). Draws one
+        dashed horizontal line across the offset, hex, and ASCII columns
+        at the top of every visible row whose starting byte offset falls
+        on an alignment-grid boundary.
+
+        Args:
+            painter: Active QPainter instance.
+            first_row: First visible row index from scrollbar.
+            visible_rows: Number of visible rows in the viewport.
+        """
+        grid_size = self._alignment_grid_size
+        if grid_size <= 0:
+            return
+        doc_len = self._doc_length()
+        right_edge = self._ascii_col_x + self._ascii_col_width
+        painter.setPen(QPen(self._colors["alignment_grid"], 1, Qt.PenStyle.DashLine))
+        for row_idx in range(visible_rows + 1):
+            row_offset = (first_row + row_idx) * self._bytes_per_row
+            if row_offset > doc_len:
+                break
+            if row_offset % grid_size != 0:
+                continue
+            y = row_idx * self._line_height
+            painter.drawLine(self._offset_col_x, y, right_edge, y)
 
     def _paint_separators(self, painter: QPainter, vp_height: int) -> None:
         """Draw column separator lines.
@@ -1009,6 +1248,7 @@ class HexEditorWidget(QAbstractScrollArea):
             group_bytes,
             actual_size,
             highlight_color,
+            group_offset,
             any_selected=any_selected,
         )
         self._set_hex_group_pen(
@@ -1106,10 +1346,11 @@ class HexEditorWidget(QAbstractScrollArea):
         group_bytes: bytes,
         actual_size: int,
         highlight_color: str | None,
+        group_offset: int,
         *,
         any_selected: bool,
     ) -> None:
-        """Paint RGBA, highlight, and selection backgrounds for a hex group.
+        """Paint RGBA, color-mode, highlight, and selection backgrounds for a hex group.
 
         Args:
             painter: Active QPainter instance.
@@ -1117,6 +1358,7 @@ class HexEditorWidget(QAbstractScrollArea):
             group_bytes: Raw bytes for the group.
             actual_size: Number of valid bytes in the group.
             highlight_color: Optional hex color string from highlight rules.
+            group_offset: Absolute byte offset of the first byte in the group.
             any_selected: Whether any byte in the group is selected.
         """
         if self._display_mode == "rgba8" and actual_size >= _MIN_RGB_BYTES:
@@ -1125,6 +1367,10 @@ class HexEditorWidget(QAbstractScrollArea):
             b_ch = group_bytes[2]
             a_ch = group_bytes[3] if actual_size >= _MIN_RGBA_BYTES else 255
             painter.fillRect(cell_rect, QColor(r_ch, g_ch, b_ch, max(40, a_ch)))
+        elif actual_size > 0:
+            mode_color = self._color_mode_background(group_offset, group_bytes[0])
+            if mode_color is not None:
+                painter.fillRect(cell_rect, mode_color)
 
         if highlight_color is not None:
             hc_obj = QColor(highlight_color)
@@ -1276,24 +1522,24 @@ class HexEditorWidget(QAbstractScrollArea):
         """
         ascii_x = self._ascii_col_x + col * self._char_width
         is_selected = sel_start >= 0 and sel_start <= byte_offset <= sel_end
+        cell_rect = QRect(ascii_x - 1, row_idx * self._line_height, self._char_width + 1, self._line_height)
 
         highlight_color: str | None = None
         if not is_selected:
             highlight_color = self._get_highlight_color(byte_val, byte_offset)
 
+        if not is_selected and highlight_color is None:
+            mode_color = self._color_mode_background(byte_offset, byte_val)
+            if mode_color is not None:
+                painter.fillRect(cell_rect, mode_color)
+
         if highlight_color is not None:
             hc_obj = QColor(highlight_color)
             hc_obj.setAlpha(120)
-            painter.fillRect(
-                QRect(ascii_x - 1, row_idx * self._line_height, self._char_width + 1, self._line_height),
-                hc_obj,
-            )
+            painter.fillRect(cell_rect, hc_obj)
 
         if is_selected:
-            painter.fillRect(
-                QRect(ascii_x - 1, row_idx * self._line_height, self._char_width + 1, self._line_height),
-                self._colors["selection_bg"],
-            )
+            painter.fillRect(cell_rect, self._colors["selection_bg"])
             painter.setPen(QPen(self._colors["cursor_text"]))
         elif byte_offset in self._modified_offsets:
             painter.setPen(QPen(self._colors["hex_modified"]))

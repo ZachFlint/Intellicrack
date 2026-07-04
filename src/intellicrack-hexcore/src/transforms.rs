@@ -835,4 +835,169 @@ mod tests {
         let rotated = apply_transform("bit_rotate_left", &data, &params).unwrap();
         assert_eq!(rotated, vec![0b0000_0011]);
     }
+
+    #[test]
+    fn test_bit_rotate_right() {
+        // 0b0000_0011 rotate_right 1 -> 0b1000_0001
+        let data = [0b0000_0011u8];
+        let params = make_params(&[("count", &[1])]);
+        let rotated = apply_transform("bit_rotate_right", &data, &params).unwrap();
+        assert_eq!(rotated, vec![0b1000_0001]);
+    }
+
+    #[test]
+    fn test_byte_swap_32() {
+        let data = [0x01, 0x02, 0x03, 0x04, 0xAA, 0xBB, 0xCC, 0xDD];
+        let empty = HashMap::new();
+        let swapped = apply_transform("byte_swap_32", &data, &empty).unwrap();
+        assert_eq!(swapped, vec![0x04, 0x03, 0x02, 0x01, 0xDD, 0xCC, 0xBB, 0xAA]);
+    }
+
+    #[test]
+    fn test_byte_swap_64() {
+        let data = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
+        let empty = HashMap::new();
+        let swapped = apply_transform("byte_swap_64", &data, &empty).unwrap();
+        assert_eq!(swapped, vec![0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]);
+    }
+
+    #[test]
+    fn test_mask_or() {
+        let data = [0x01, 0x02];
+        let params = make_params(&[("pattern", &[0xF0])]);
+        let result = apply_transform("mask_or", &data, &params).unwrap();
+        assert_eq!(result, vec![0xF1, 0xF2]);
+    }
+
+    #[test]
+    fn test_mask_xor() {
+        let data = [0xFF, 0x0F];
+        let params = make_params(&[("pattern", &[0x0F])]);
+        let result = apply_transform("mask_xor", &data, &params).unwrap();
+        assert_eq!(result, vec![0xF0, 0x00]);
+    }
+
+    #[test]
+    fn test_mask_missing_pattern_errors() {
+        let empty = HashMap::new();
+        let err = apply_transform("mask_and", &[0x01], &empty).unwrap_err();
+        assert!(err.to_string().contains("missing parameter: pattern"), "got {err}");
+    }
+
+    #[test]
+    fn test_mask_empty_pattern_errors() {
+        let params = make_params(&[("pattern", &[])]);
+        let err = apply_transform("mask_or", &[0x01], &params).unwrap_err();
+        assert!(err.to_string().contains("pattern must not be empty"), "got {err}");
+    }
+
+    #[test]
+    fn test_xor_repeating_empty_key_errors() {
+        let params = make_params(&[("key", &[])]);
+        let err = apply_transform("xor_repeating", b"data", &params).unwrap_err();
+        assert!(err.to_string().contains("key must not be empty"), "got {err}");
+    }
+
+    #[test]
+    fn test_xor_rolling_default_increment() {
+        // No "increment" param -> defaults to 1.
+        let data = b"\x00\x00\x00";
+        let params = make_params(&[("key", &[0x10])]);
+        let result = apply_transform("xor_rolling", data, &params).unwrap();
+        assert_eq!(result, vec![0x10, 0x11, 0x12]);
+    }
+
+    #[test]
+    fn test_get_param_u8_empty_bytes_errors() {
+        // xor_single reads its key via get_param_u8; an empty value hits the empty guard.
+        let params = make_params(&[("key", &[])]);
+        let err = apply_transform("xor_single", b"data", &params).unwrap_err();
+        assert!(err.to_string().contains("key must not be empty"), "got {err}");
+    }
+
+    #[test]
+    fn test_base64_decode_failure() {
+        let empty = HashMap::new();
+        let err = apply_transform("base64_decode", b"@@@@", &empty).unwrap_err();
+        assert!(err.to_string().contains("base64 decode"), "got {err}");
+    }
+
+    #[test]
+    fn test_zlib_inflate_failure() {
+        let empty = HashMap::new();
+        let err = apply_transform("zlib_inflate", b"this is not zlib data", &empty).unwrap_err();
+        assert!(err.to_string().contains("zlib inflate"), "got {err}");
+    }
+
+    #[test]
+    fn test_aes_invalid_key_length_errors() {
+        let params = make_params(&[("key", &[0u8; 10]), ("padding", b"none")]);
+        let err = apply_transform("aes_ecb_encrypt", &[0u8; 16], &params).unwrap_err();
+        assert!(
+            err.to_string().contains("AES key must be 16, 24, or 32 bytes"),
+            "got {err}"
+        );
+    }
+
+    #[test]
+    fn test_aes192_roundtrip() {
+        // 24-byte key exercises the Aes192 dispatch arm.
+        let key = [0x44u8; 24];
+        let plaintext = b"AES-192 ECB payload across two blocks!";
+        let params = make_params(&[("key", &key), ("padding", b"pkcs7")]);
+        let ciphertext = apply_transform("aes_ecb_encrypt", plaintext, &params).unwrap();
+        assert!(ciphertext.len().is_multiple_of(16));
+        let decrypted = apply_transform("aes_ecb_decrypt", &ciphertext, &params).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_strip_plaintext_empty_buffer_pkcs7_and_iso() {
+        let key = [0u8; 16];
+        // Empty ciphertext is a multiple of 16; strip must reject empty plaintext.
+        let pkcs7 = make_params(&[("key", &key), ("padding", b"pkcs7")]);
+        let err = apply_transform("aes_ecb_decrypt", &[], &pkcs7).unwrap_err();
+        assert!(err.to_string().contains("PKCS#7 padding requires non-empty"), "got {err}");
+
+        let iso = make_params(&[("key", &key), ("padding", b"iso10126")]);
+        let err2 = apply_transform("aes_ecb_decrypt", &[], &iso).unwrap_err();
+        assert!(err2.to_string().contains("ISO 10126 padding requires non-empty"), "got {err2}");
+    }
+
+    #[test]
+    fn test_strip_plaintext_iso10126_invalid_length() {
+        // Encrypt a full 16-byte block of 0x41 with no padding, then decrypt it as
+        // iso10126: the last plaintext byte is 0x41 (65) -> invalid padding length.
+        let key = [0u8; 16];
+        let none = make_params(&[("key", &key), ("padding", b"none")]);
+        let ciphertext = apply_transform("aes_ecb_encrypt", &[0x41u8; 16], &none).unwrap();
+        let iso = make_params(&[("key", &key), ("padding", b"iso10126")]);
+        let err = apply_transform("aes_ecb_decrypt", &ciphertext, &iso).unwrap_err();
+        assert!(err.to_string().contains("invalid ISO 10126 padding length"), "got {err}");
+    }
+
+    #[test]
+    fn test_pad_zero_exact_multiple_adds_no_padding() {
+        // 16-byte input under zero padding -> pad_len == 0 branch.
+        let key = [0u8; 16];
+        let params = make_params(&[("key", &key), ("padding", b"zero")]);
+        let plaintext = [0x37u8; 16];
+        let ciphertext = apply_transform("aes_ecb_encrypt", &plaintext, &params).unwrap();
+        assert_eq!(ciphertext.len(), 16);
+        let decrypted = apply_transform("aes_ecb_decrypt", &ciphertext, &params).unwrap();
+        assert_eq!(decrypted, plaintext.to_vec());
+    }
+
+    #[test]
+    fn test_pad_iso10126_single_byte_padding() {
+        // 15-byte plaintext -> pad_len == 1 (skips the filler-extend branch).
+        let key = [0x33u8; 16];
+        let params = make_params(&[("key", &key), ("padding", b"iso10126")]);
+        let plaintext = b"fifteen bytes..";
+        assert_eq!(plaintext.len(), 15);
+        let ciphertext = apply_transform("aes_ecb_encrypt", plaintext, &params).unwrap();
+        assert_eq!(ciphertext.len(), 16);
+        let decrypted = apply_transform("aes_ecb_decrypt", &ciphertext, &params).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
 }

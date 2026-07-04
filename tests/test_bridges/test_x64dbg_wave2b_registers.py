@@ -895,7 +895,7 @@ def _build_synthetic_handle_buffer(
     ptr_width = ctypes.sizeof(ctypes.c_void_p)
 
     buf = bytearray(entries_offset + 2 * entry_size)
-    buf[0:ptr_width] = (2).to_bytes(ptr_width, "little")
+    buf[:ptr_width] = (2).to_bytes(ptr_width, "little")
 
     e0 = SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX()
     e0.Object = object_addr

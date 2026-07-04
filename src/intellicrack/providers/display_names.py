@@ -25,9 +25,7 @@ NO_API_KEY_PROVIDERS: frozenset[ProviderName] = frozenset({
     ProviderName.LOCAL_TRANSFORMERS,
 })
 
-NO_API_KEY_PROVIDER_IDS: frozenset[str] = frozenset(
-    provider.value for provider in NO_API_KEY_PROVIDERS
-)
+NO_API_KEY_PROVIDER_IDS: frozenset[str] = frozenset(provider.value for provider in NO_API_KEY_PROVIDERS)
 
 
 def provider_display_name(provider: ProviderName | str) -> str:

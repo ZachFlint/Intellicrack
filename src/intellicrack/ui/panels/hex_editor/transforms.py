@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor.base import (
     DESCRIPTION_TRUNCATE_LEN,
     HEX_ROW_WIDTH,
@@ -1023,22 +1023,51 @@ class TransformsMixin:
 
         bridge = self._bridge
         bridge_end = sel_end - 1
-        try:
-            run_bridge_coroutine(bridge.select_range(sel_start, bridge_end))
-            run_bridge_coroutine(
-                bridge.apply_arithmetic_to_selection(op_short, key_hex=key_hex, count=count),
-            )
-        except (RuntimeError, OSError, ValueError, TypeError, AttributeError) as exc:
-            _logger.exception(
-                "arithmetic_bridge_failed",
-                operation=op_short,
-                selection_start=sel_start,
-                selection_end=bridge_end,
-            )
-            parent = self if isinstance(self, QWidget) else None
-            QMessageBox.warning(parent, "Arithmetic", f"Arithmetic operation failed: {exc}")
-            return
+        parent = self if isinstance(self, QWidget) else None
+
+        async def _apply_chain() -> None:
+            """Synchronise the bridge selection, then apply the arithmetic transform in order."""
+            await bridge.select_range(sel_start, bridge_end)
+            await bridge.apply_arithmetic_to_selection(op_short, key_hex=key_hex, count=count)
+
+        run_bridge_coroutine_logged(
+            _apply_chain(),
+            on_success=self._on_arithmetic_applied,
+            on_error=self._on_arithmetic_failed,
+            parent=parent,
+            event="hex_editor_apply_arithmetic",
+            logger=_logger,
+            level="info",
+            operation=op_short,
+            selection_start=sel_start,
+            selection_end=bridge_end,
+        )
+
+    def _on_arithmetic_applied(self, result: object) -> None:
+        """Refresh the hex widget once the background arithmetic chain succeeds.
+
+        Args:
+            result: Result of the apply coroutine (unused; the transform mutates
+                the shared document in place on the background bridge loop).
+        """
+        del result
         self._refresh_widget()
+
+    def _on_arithmetic_failed(self, exc: object) -> None:
+        """Surface a failure from the background arithmetic chain to the user.
+
+        The chain (``select_range`` followed by
+        ``apply_arithmetic_to_selection``) runs on the background bridge loop;
+        this callback is delivered back on the GUI thread, so the warning
+        dialog is shown safely and no widget refresh is performed for a failed
+        operation.
+
+        Args:
+            exc: Exception raised while running the select/apply chain.
+        """
+        _logger.warning("arithmetic_bridge_failed", error=str(exc))
+        parent = self if isinstance(self, QWidget) else None
+        QMessageBox.warning(parent, "Arithmetic", f"Arithmetic operation failed: {exc}")
 
     def _refresh_widget(self) -> None:
         """Refresh the hex widget viewport and trigger data changed."""

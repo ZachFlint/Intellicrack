@@ -45,7 +45,7 @@ def test_uninstall_removes_from_root() -> None:
     uninstall_qt_log_handler()
     assert get_qt_log_handler() is None
     qt_handlers = [h for h in logging.getLogger().handlers if isinstance(h, QtSignalingHandler)]
-    assert qt_handlers == []
+    assert not qt_handlers
 
 
 def test_record_dispatched_with_event_and_extras(qtbot: QtBot, configured_logging: Path) -> None:
@@ -135,7 +135,7 @@ def test_reentrancy_guard_drops_inner_emit(qtbot: QtBot, configured_logging: Pat
     finally:
         handler.record_received.disconnect(on_record)
     assert any(r["event"] == "outer_event" for r in received)
-    assert not any(r["event"] == "inner_event" for r in received)
+    assert all(r["event"] != "inner_event" for r in received)
 
 
 def test_pause_suppresses_signal_but_disk_unaffected(
@@ -159,7 +159,7 @@ def test_pause_suppresses_signal_but_disk_unaffected(
         qtbot.wait(100)
     finally:
         handler.record_received.disconnect(received.append)
-    assert received == []
+    assert not received
 
     for handler_obj in logging.getLogger().handlers:
         handler_obj.flush()

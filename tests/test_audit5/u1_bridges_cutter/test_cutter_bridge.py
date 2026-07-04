@@ -70,10 +70,10 @@ class _RecordingR2:
             str: Canned response string (empty when no prefix matches).
         """
         self.commands.append(command)
-        for prefix, response in self._responses.items():
-            if command.startswith(prefix):
-                return response
-        return ""
+        return next(
+            (response for prefix, response in self._responses.items() if command.startswith(prefix)),
+            "",
+        )
 
     def quit(self) -> None:
         """Record a quit invocation for shutdown-order assertions."""
@@ -764,8 +764,8 @@ class TestF0024ShutdownAlwaysRunsSuper:
         loop.run_until_complete(bridge.shutdown())
 
         assert bridge.r2 is None
-        assert bridge.state.connected is False
-        assert bridge.state.binary_loaded is False
+        assert not bridge.state.connected
+        assert not bridge.state.binary_loaded
 
 
 # ---------------------------------------------------------------------------

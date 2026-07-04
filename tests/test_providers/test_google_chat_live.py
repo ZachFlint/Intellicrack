@@ -110,7 +110,7 @@ async def _run_stream_and_verify(provider: GoogleProvider) -> None:
     except RateLimitError:
         pytest.skip("Google API rate limit hit (transient)")
 
-    assert len(collected) >= 1, "Streaming must yield at least one chunk"
+    assert collected, "Streaming must yield at least one chunk"
     full_text = "".join(collected)
     assert "ready" in full_text.strip().lower(), f"Deterministic streamed prompt must elicit 'ready'; got {full_text!r}"
 

@@ -81,7 +81,7 @@ class TestBridgeExportPatches:
         assert decoded[:5] == b"IPS32"
         assert decoded[-4:] == b"EEOF"
         body = decoded[5:-4]
-        offset = int.from_bytes(body[0:4], "big")
+        offset = int.from_bytes(body[:4], "big")
         size = int.from_bytes(body[4:6], "big")
         data = body[6 : 6 + size]
         assert offset == 0

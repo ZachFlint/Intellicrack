@@ -209,7 +209,7 @@ class TestCheckStartupHealth:
         probe.process = None
         await probe.run_startup_health()
 
-        assert detector_calls == [], "detector must not be called when process is None; the None-guard should have returned early"
+        assert not detector_calls, "detector must not be called when process is None; the None-guard should have returned early"
         assert probe.process is None
         assert probe.state.status == "stopped"
         assert probe.state.pid is None

@@ -73,10 +73,10 @@ class _CommandRecorder:
             an empty string when no configured prefix matches.
         """
         self.commands.append(command)
-        for prefix, response in self.responses.items():
-            if command == prefix or command.startswith(prefix):
-                return response
-        return ""
+        return next(
+            (response for prefix, response in self.responses.items() if command == prefix or command.startswith(prefix)),
+            "",
+        )
 
     def quit(self) -> None:
         """No-op quit matching the r2pipe.open interface."""
@@ -378,7 +378,7 @@ class TestSearchValue:
     @pytest.mark.asyncio
     async def test_empty_response_yields_empty_list(self) -> None:
         """search_value returns [] when rizin finds no matches."""
-        rec = _CommandRecorder({f"/vj4 {0x1234}": ""})
+        rec = _CommandRecorder({"/vj4 4660": ""})
         bridge = CutterBridge()
         bridge.r2 = _as_r2pipe(rec)
         result = await bridge.search_value(0x1234)
@@ -649,7 +649,7 @@ class TestHexdumpWords:
         pxw_commands: list[str] = [c for c in rec.commands if c.startswith("pxw")]
         px_only_commands: list[str] = [c for c in rec.commands if c.startswith("px ") or c == "px"]
         assert len(pxw_commands) == 1
-        assert len(px_only_commands) == 0
+        assert not px_only_commands
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:

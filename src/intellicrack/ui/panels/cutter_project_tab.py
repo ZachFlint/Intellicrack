@@ -4,11 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Project/session management tab for the Cutter/Rizin analysis panel.
 
-Provides a self-contained Qt widget exposing rizin's native project persistence
-commands (``Ps``/``Po``/``Pl``) via the ``CutterBridge`` project surface
-(``cutter.py:3412-3468``), allowing the user to save the current analysis
-session as a named project, reopen a previously saved project, and browse the
-list of projects available to the currently loaded binary.
+Provides a self-contained Qt widget exposing rizin's native project persistence commands (``Ps``/``Po``/``Pl``) via the ``CutterBridge``
+project surface (``cutter.py:3412-3468``), allowing the user to save the current analysis session as a named project, reopen a previously
+saved project, and browse the list of projects available to the currently loaded binary.
 """
 
 from __future__ import annotations
@@ -50,10 +48,8 @@ RunAsyncFn = Callable[
 class ProjectTab(QWidget):
     """Tab exposing rizin project save/open/list session management.
 
-    Provides a project-name input with Save/Open buttons, a Refresh button
-    that lists all projects known to the currently loaded binary, and a
-    list widget where double-clicking an entry opens that project, all
-    driven by the ``CutterBridge`` project methods.
+    Provides a project-name input with Save/Open buttons, a Refresh button that lists all projects known to the currently loaded binary, and
+    a list widget where double-clicking an entry opens that project, all driven by the ``CutterBridge`` project methods.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

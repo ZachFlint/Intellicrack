@@ -20,10 +20,11 @@ from PyQt6.QtWidgets import (
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
+    QWidget,
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor.base import hexcore, hexcore_available
 
 
@@ -195,12 +196,13 @@ class DataInspectorMixin:
         starts synced to the document), the write is delegated to the
         bridge's atomic :meth:`HexEditorBridge.toggle_bit` so the
         AI-callable tool and this button share the same flip
-        implementation. When no bridge is attached, or the document's
-        current bit already equals ``checked`` (a no-op flip, which
-        ``toggle_bit`` cannot express), falls back to
-        ``document.set_bit`` directly. The button is re-synced from
-        ``document.get_bit`` after the write to avoid drift if the
-        backend clamps or rejects the value.
+        implementation. The bridge call is dispatched through
+        :func:`run_bridge_coroutine_logged` on the persistent background
+        event loop so the Qt main thread stays responsive while the
+        round trip completes. When no bridge is attached, or the
+        document's current bit already equals ``checked`` (a no-op
+        flip, which ``toggle_bit`` cannot express), the write falls
+        back to ``document.set_bit`` directly.
 
         Args:
             bit_index: Bit position (0=LSB, 7=MSB).
@@ -213,14 +215,36 @@ class DataInspectorMixin:
         _logger.info("bit_write_requested", offset=offset, bit=bit_index, checked=checked)
 
         bridge = getattr(self, "_bridge", None)
-        if bridge is not None and self._toggle_bit_via_bridge(bridge, offset, bit_index, checked=checked):
-            self._notify_bit_written(offset)
-            self._sync_bit_button(bit_index, offset, fallback=checked)
-            self._refresh_hex_viewport()
-            return
+        if bridge is not None:
+            try:
+                current = bool(self.document.get_bit(offset, bit_index))
+            except (AttributeError, ValueError, OverflowError):
+                _logger.exception("bit_read_before_toggle_failed", offset=offset, bit=bit_index)
+            else:
+                if current != checked:
+                    self._toggle_bit_via_bridge(bridge, offset, bit_index, checked=checked)
+                    return
 
+        self._write_bit_directly(offset, bit_index, checked=checked)
+
+    def _write_bit_directly(self, offset: int, bit_index: int, *, checked: bool) -> None:
+        """Write a bit through ``document.set_bit`` and re-sync the UI.
+
+        Used when no bridge is attached, when the document's current bit
+        already equals ``checked`` (a no-op flip that ``toggle_bit``
+        cannot express), or as the failure fallback for a bridge-based
+        toggle.
+
+        Args:
+            offset: Byte offset of the bit editor.
+            bit_index: Bit position (0=LSB, 7=MSB).
+            checked: Desired new bit value.
+        """
+        document = self.document
+        if document is None:
+            return
         try:
-            self.document.set_bit(offset, bit_index, checked)
+            document.set_bit(offset, bit_index, checked)
         except (AttributeError, ValueError, OverflowError):
             _logger.exception("bit_write_failed", offset=offset, bit=bit_index)
             return
@@ -229,44 +253,50 @@ class DataInspectorMixin:
         self._sync_bit_button(bit_index, offset, fallback=checked)
         self._refresh_hex_viewport()
 
-    def _toggle_bit_via_bridge(self, bridge: HexEditorBridge, offset: int, bit_index: int, *, checked: bool) -> bool:
-        """Flip a bit through the bridge's atomic ``toggle_bit`` when it matches the requested state.
+    def _toggle_bit_via_bridge(self, bridge: HexEditorBridge, offset: int, bit_index: int, *, checked: bool) -> None:
+        """Flip a bit through the bridge's atomic ``toggle_bit`` without blocking the Qt main thread.
 
-        ``toggle_bit`` unconditionally flips the current bit and cannot
-        express "set to this exact value", so this helper first confirms
-        the document's current bit differs from ``checked`` (the normal
-        case, since the button was synced from the document before the
-        click) before dispatching the flip.
+        Dispatches ``bridge.toggle_bit`` on the persistent background
+        event loop via :func:`run_bridge_coroutine_logged`. On success
+        the bit button is re-synced from the authoritative document
+        state and the shared state holder is notified; on failure the
+        write falls back to ``document.set_bit`` directly so the click
+        still takes effect.
 
         Args:
             bridge: Attached ``HexEditorBridge`` instance.
             offset: Byte offset of the bit editor.
             bit_index: Bit position (0=LSB, 7=MSB).
             checked: Desired new bit value.
-
-        Returns:
-            bool: ``True`` if the bridge performed the write, ``False``
-                if the caller must fall back to ``document.set_bit``
-                (bridge unavailable, current bit already matches
-                ``checked``, or the bridge call failed).
         """
-        document = self.document
-        if document is None:
-            return False
-        try:
-            current = bool(document.get_bit(offset, bit_index))
-        except (AttributeError, ValueError, OverflowError):
-            _logger.exception("bit_read_before_toggle_failed", offset=offset, bit=bit_index)
-            return False
-        if current == checked:
-            return False
+        parent = self if isinstance(self, QWidget) else None
 
-        try:
-            run_bridge_coroutine(bridge.toggle_bit(offset, bit_index))
-        except (AttributeError, ValueError, OverflowError, RuntimeError):
-            _logger.exception("bit_toggle_bridge_failed", offset=offset, bit=bit_index)
-            return False
-        return True
+        def _on_toggle_success(_result: object) -> None:
+            self._notify_bit_written(offset)
+            self._sync_bit_button(bit_index, offset, fallback=checked)
+            self._refresh_hex_viewport()
+
+        def _on_toggle_error(exc: object) -> None:
+            _logger.warning(
+                "bit_toggle_bridge_failed",
+                offset=offset,
+                bit=bit_index,
+                error=str(exc),
+                error_type=type(exc).__name__,
+            )
+            self._write_bit_directly(offset, bit_index, checked=checked)
+
+        run_bridge_coroutine_logged(
+            bridge.toggle_bit(offset, bit_index),
+            on_success=_on_toggle_success,
+            on_error=_on_toggle_error,
+            parent=parent,
+            event="hex_editor_toggle_bit",
+            logger=_logger,
+            level="info",
+            offset=offset,
+            bit_index=bit_index,
+        )
 
     def _notify_bit_written(self, offset: int) -> None:
         """Forward a single-byte bit write to the shared state holder if attached.
@@ -455,8 +485,9 @@ class DataInspectorMixin:
     def _on_encode_text(self) -> None:
         """Encode text input to hex using the bridge's encode_text path.
 
-        Routes the encode operation through the bridge so the Rust codec registry handles encodings that lack a Python stdlib codec (e.g.
-        EBCDIC). When no document is open the status label is set to "No document open" and no bytes are produced.
+        Routes the encode operation through :meth:`HexEditorBridge.encode_text` via :func:`run_bridge_coroutine_logged` so the Rust codec
+        registry handles encodings that lack a Python stdlib codec (e.g. EBCDIC) without blocking the Qt main thread. When no document is
+        open the status label is set to "No document open" and no bytes are produced.
         """
         if self._encode_input is None or self._encode_output is None:
             return
@@ -476,27 +507,27 @@ class DataInspectorMixin:
 
         encoding = self._selected_encoding(self._encode_combo)
 
-        _logger.info(
-            "encode_text_started",
+        def _on_encode_success(hex_str: object) -> None:
+            if self._encode_output is None:
+                return
+            if hex_str is None:
+                self._encode_output.setText("Error: encode operation did not return a result")
+                return
+            spaced = " ".join(str(hex_str)[i : i + 2].upper() for i in range(0, len(str(hex_str)), 2))
+            self._encode_output.setText(spaced)
+
+        def _on_encode_error(exc: object) -> None:
+            if self._encode_output is not None:
+                self._encode_output.setText(f"Error: {exc}")
+
+        run_bridge_coroutine_logged(
+            bridge.encode_text(text, encoding),
+            on_success=_on_encode_success,
+            on_error=_on_encode_error,
+            parent=self if isinstance(self, QWidget) else None,
+            event="hex_editor_encode_text",
+            logger=_logger,
+            level="info",
             encoding=encoding,
             text_length=len(text),
         )
-
-        try:
-            hex_str = run_bridge_coroutine(bridge.encode_text(text, encoding))
-        except (AttributeError, ValueError, OverflowError, RuntimeError) as exc:
-            _logger.exception(
-                "encode_text_bridge_failed",
-                encoding=encoding,
-                text_length=len(text),
-                error_type=type(exc).__name__,
-            )
-            self._encode_output.setText(f"Error: {exc}")
-            return
-
-        if hex_str is None:
-            self._encode_output.setText("Error: encode operation did not return a result")
-            return
-
-        spaced = " ".join(str(hex_str)[i : i + 2].upper() for i in range(0, len(str(hex_str)), 2))
-        self._encode_output.setText(spaced)

@@ -685,5 +685,5 @@ class TestCountTokensThrottle:
         client = _StubGeminiClient(lambda _model, _contents: _CountTokensResponse(11))
         assert _count_tokens(client, "no throttle") == 11
 
-        assert slept == []
+        assert not slept
         assert abs(last_count_time[0] - 2000.0) < 1e-9

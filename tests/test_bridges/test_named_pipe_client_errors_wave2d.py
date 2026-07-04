@@ -575,7 +575,7 @@ async def test_reader_loop_response_missing_id_logs_warning(
 
     assert ok, "pipe_response_missing_id was never logged within 3 seconds"
     matching = [r for r in sink.records if r[1] == "pipe_response_missing_id"]
-    assert len(matching) >= 1
+    assert matching
     assert matching[0][0] == "warning"
     assert matching[0][2].get("msg_type") == "response"
 
@@ -622,6 +622,6 @@ async def test_reader_loop_no_waiter_for_id_logs_debug(
 
     assert ok, "pipe_response_no_waiter was never logged within 3 seconds"
     matching = [r for r in sink.records if r[1] == "pipe_response_no_waiter"]
-    assert len(matching) >= 1
+    assert matching
     assert matching[0][0] == "debug"
     assert matching[0][2].get("request_id") == 77777

@@ -216,7 +216,7 @@ def _build_pe_image_with_two_sections(*, is_pe64: bool) -> bytes:
     )
 
     dos_header = bytearray(PE_DOS_HEADER_SIZE)
-    dos_header[0:2] = PE_DOS_SIGNATURE
+    dos_header[:2] = PE_DOS_SIGNATURE
     struct.pack_into("<I", dos_header, PE_DOS_LFANEW_OFFSET, e_lfanew)
 
     nt_headers = PE_SIGNATURE + coff_header + optional_header + text_section + rdata_section

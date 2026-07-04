@@ -234,7 +234,7 @@ class TestDocumentInfoWithFile:
         _run(bridge.write_bytes(0, "AA"))
         assert _run(bridge.get_document_info())["modified"] is True
         undone: bool = _run(bridge.undo())
-        assert undone is True
+        assert undone
         after_undo_hex: str = _run(bridge.read_bytes(0, 1))
         assert after_undo_hex == original_byte_hex
         assert _run(bridge.get_document_info())["modified"] is False

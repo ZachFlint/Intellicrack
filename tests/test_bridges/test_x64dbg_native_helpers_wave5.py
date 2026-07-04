@@ -251,7 +251,7 @@ class TestGetMemoryRegions:
         _attach_self(bridge)
         regions: list[MemoryRegion] = await bridge.get_memory_regions()
 
-        assert len(regions) > 0
+        assert regions
         r0 = regions[0]
         assert isinstance(r0, MemoryRegion)
         assert hasattr(r0, "base_address")
@@ -491,16 +491,15 @@ class TestGetResources:
 
         resources: list[dict[str, Any]] = await bridge.get_resources("ntdll.dll")
 
-        assert len(resources) > 0, "ntdll.dll should expose at least one resource entry"
+        assert resources, "ntdll.dll should expose at least one resource entry"
 
         bridge_type_ids: set[int] = {int(r["type_id"]) for r in resources if r.get("type_id") is not None}
         shared_ids: set[int] = pefile_type_ids & bridge_type_ids
-        assert len(shared_ids) > 0, f"No overlap between pefile type_ids {pefile_type_ids} and bridge type_ids {bridge_type_ids}"
+        assert shared_ids, f"No overlap between pefile type_ids {pefile_type_ids} and bridge type_ids {bridge_type_ids}"
 
         version_resources = [r for r in resources if r.get("type_id") == 16]
-        assert len(version_resources) > 0, (
-            "ntdll.dll must expose an RT_VERSION resource (type_id == 16); "
-            f"bridge reported type_ids: {[r.get('type_id') for r in resources]}"
+        assert version_resources, (
+            f"ntdll.dll must expose an RT_VERSION resource (type_id == 16); bridge reported type_ids: {[r.get('type_id') for r in resources]}"
         )
         assert 16 in pefile_type_ids, "pefile oracle must also report type_id 16 (RT_VERSION) in ntdll.dll"
         rv = version_resources[0]

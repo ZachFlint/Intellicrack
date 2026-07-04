@@ -38,9 +38,7 @@ def qapp() -> QCoreApplication:
         QCoreApplication: The running application instance.
     """
     existing = QApplication.instance()
-    if existing is not None:
-        return existing
-    return QApplication([])
+    return existing if existing is not None else QApplication([])
 
 
 def _pump_until(predicate: Callable[[], bool], qapp: QCoreApplication, timeout_ms: int = 5000) -> bool:
@@ -142,9 +140,8 @@ class TestTrackedRefreshWorkerError:
         worker.start()
         _pump_until(lambda: not worker.isRunning(), qapp)
 
-        assert len(finished_payloads) == 0, (
-            "refresh_finished was emitted on failure — empty list is indistinguishable "
-            f"from a real empty result; got payloads: {finished_payloads}"
+        assert not finished_payloads, (
+            f"refresh_finished was emitted on failure — empty list is indistinguishable from a real empty result; got payloads: {finished_payloads}"
         )
         worker.deleteLater()
 

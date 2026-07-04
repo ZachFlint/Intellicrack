@@ -42,7 +42,7 @@ pytestmark = pytest.mark.usefixtures("qapp")
 _MIN_CONTRAST_RATIO: float = 3.0
 _SRGB_LINEAR_THRESHOLD: float = 0.03928
 _INVISIBLE_ON_LIGHT: QColor = QColor(0xD4, 0xD4, 0xD4)
-_BLOCK_COMMENT_STATE: int = getattr(highlighter_module, "_BLOCK_STATE_BLOCK_COMMENT")
+_BLOCK_COMMENT_FLAG: int = getattr(highlighter_module, "_BLOCK_COMMENT_FLAG")
 
 
 def _linearize(value: int) -> float:
@@ -177,8 +177,8 @@ def test_line_comment_hides_block_comment_open(
 
     first_block = document.findBlockByNumber(0)
     second_block = document.findBlockByNumber(1)
-    assert first_block.userState() != _BLOCK_COMMENT_STATE
-    assert second_block.userState() != _BLOCK_COMMENT_STATE
+    assert (first_block.userState() & _BLOCK_COMMENT_FLAG) == 0
+    assert (second_block.userState() & _BLOCK_COMMENT_FLAG) == 0
 
 
 def test_real_block_comment_still_spans_lines(theme_manager: ThemeManager) -> None:
@@ -197,5 +197,5 @@ def test_real_block_comment_still_spans_lines(theme_manager: ThemeManager) -> No
 
     first_block = document.findBlockByNumber(0)
     second_block = document.findBlockByNumber(1)
-    assert first_block.userState() == _BLOCK_COMMENT_STATE
-    assert second_block.userState() == _BLOCK_COMMENT_STATE
+    assert (first_block.userState() & _BLOCK_COMMENT_FLAG) != 0
+    assert (second_block.userState() & _BLOCK_COMMENT_FLAG) != 0

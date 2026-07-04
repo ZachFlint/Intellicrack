@@ -252,7 +252,7 @@ class TestMemoryTabDecommitWiringL3:
 
         _invoke(memory_tab, "_on_decommit")
 
-        assert dispatch_calls == [], "decommit_memory must not be dispatched without an attached pid"
+        assert not dispatch_calls, "decommit_memory must not be dispatched without an attached pid"
         assert warning_calls, "_on_decommit must warn the user when unattached"
 
 
@@ -343,7 +343,7 @@ class TestSystemTabPipeReadWriteWiringL3:
 
         _invoke(system_tab, "_on_pipe_read")
 
-        assert dispatch_calls == [], "pipe_read must not be dispatched without a selected pipe row"
+        assert not dispatch_calls, "pipe_read must not be dispatched without a selected pipe row"
         assert warning_calls, "_on_pipe_read must warn the user when no pipe is selected"
 
     def test_on_pipe_write_dispatches_with_selected_handle_and_parsed_hex_bytes(
@@ -411,7 +411,7 @@ class TestSystemTabPipeReadWriteWiringL3:
 
         _invoke(system_tab, "_on_pipe_write")
 
-        assert dispatch_calls == [], "pipe_write must not be dispatched with invalid hex input"
+        assert not dispatch_calls, "pipe_write must not be dispatched with invalid hex input"
         status_label = cast("QLabel", _get_private(system_tab, "_pipe_io_status"))
         assert "Invalid hex data" in status_label.text()
 
@@ -511,7 +511,7 @@ class TestSystemTabTokenControlsWiringL3:
 
         _invoke(system_tab, "_on_remove_privilege")
 
-        assert dispatch_calls == [], "remove_privilege must not be dispatched with a blank privilege name"
+        assert not dispatch_calls, "remove_privilege must not be dispatched with a blank privilege name"
 
 
 class TestSystemTabDetectKernelDebuggerWiringL3:
@@ -650,7 +650,7 @@ class TestThreadsTabTimeWaitWiringL3:
 
         _invoke(threads_tab, "_on_time_thread_wait")
 
-        assert dispatch_calls == [], "time_thread_wait must not be dispatched without a selected thread"
+        assert not dispatch_calls, "time_thread_wait must not be dispatched without a selected thread"
         assert warning_calls, "_on_time_thread_wait must warn the user when no thread is selected"
 
     def test_success_callback_renders_wait_result(

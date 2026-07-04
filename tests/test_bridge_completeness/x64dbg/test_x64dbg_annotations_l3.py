@@ -450,9 +450,7 @@ class TestConditionalBreakpointGuiWiring:
         assert first_bp_set.get("condition") == condition_text, (
             f"bp_set must carry the entered condition; got {first_bp_set.get('condition')!r}"
         )
-        exec_commands = [
-            params.get("command") for command, params in fake.sent if command == "exec" and params is not None
-        ]
+        exec_commands = [params.get("command") for command, params in fake.sent if command == "exec" and params is not None]
         assert f'bpcond {hex(addr)}, "{condition_text}"' in exec_commands, (
             "expected a bpcond exec carrying the entered condition to be dispatched"
         )
@@ -504,8 +502,6 @@ class TestConditionalBreakpointGuiWiring:
             add_bp_btn.click()
             pump_until(qapp, lambda: "Breakpoint" in console_output.toPlainText())
 
-            assert not any(cmd == "exec" for cmd, _ in fake.sent), (
-                "no bpcond exec command must be sent when the condition field is blank"
-            )
+            assert all(cmd != "exec" for cmd, _ in fake.sent), "no bpcond exec command must be sent when the condition field is blank"
         finally:
             panel.deleteLater()

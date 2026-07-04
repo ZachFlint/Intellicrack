@@ -681,7 +681,7 @@ class TestRemoveWatchpoint:
         result = await bridge.remove_watchpoint(9999)
 
         assert result is False
-        assert commands_sent == [], "no RPC must be sent when the watchpoint id is unknown"
+        assert not commands_sent, "no RPC must be sent when the watchpoint id is unknown"
 
 
 @pytest.mark.asyncio
@@ -1025,7 +1025,7 @@ class TestConfigureBreakpoint:
         _install_fake_pipe(bridge, responder)
         result = await bridge.configure_breakpoint(_BP_ADDR)
 
-        assert commands_sent == [], f"no exec commands must be sent when no options are provided; got {commands_sent!r}"
+        assert not commands_sent, f"no exec commands must be sent when no options are provided; got {commands_sent!r}"
         assert result["success"] is True
         assert result["address"] == hex(_BP_ADDR)
 

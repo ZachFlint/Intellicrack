@@ -20,6 +20,7 @@ import pytest
 from intellicrack.ui.panels import async_bridge as async_bridge_mod
 from intellicrack.ui.panels.async_bridge import (
     BridgeCallWorker,
+    drain_bridge_workers,
     run_bridge_coroutine,
     shutdown_bridge_loop,
 )
@@ -247,6 +248,79 @@ class TestBridgeCallWorker:
 
         assert len(errors) == 1
         assert isinstance(errors[0], RuntimeError)
+
+
+@pytest.mark.usefixtures("qapp")
+class TestDrainBridgeWorkers:
+    """Tests for ``drain_bridge_workers``, the shutdown-safety worker drain."""
+
+    @staticmethod
+    def test_drain_blocks_until_a_running_worker_finishes(qapp: QApplication) -> None:
+        """drain_bridge_workers must wait for a still-running worker to finish.
+
+        Starts a real ``BridgeCallWorker`` whose coroutine occupies its worker
+        thread on the persistent bridge loop, so the OS thread is genuinely
+        mid-flight when the drain begins. ``drain_bridge_workers`` must block
+        until that thread has finished; that finished state is the precondition
+        which prevents ``QThread: Destroyed while thread is still running`` at
+        application shutdown. Were the drain to return without waiting, the
+        worker would still report ``isRunning()`` immediately afterwards, so
+        this assertion is falsified by removing the wait.
+
+        Args:
+            qapp: Qt application fixture used to pump queued signals.
+        """
+        completed: list[object] = []
+        coro_seconds = 0.25
+
+        async def _timed() -> str:
+            await asyncio.sleep(coro_seconds)
+            return "drained"
+
+        worker = BridgeCallWorker(_timed())
+        _ = worker.call_finished.connect(completed.append)
+        worker.start()
+
+        start_deadline = time.monotonic() + MAX_WAIT_MS / 1000
+        while not worker.isRunning() and time.monotonic() < start_deadline:
+            time.sleep(POLL_INTERVAL_MS / 1000)
+        assert worker.isRunning(), "worker thread never started; test premise not established"
+
+        drained = drain_bridge_workers(timeout_ms=MAX_WAIT_MS)
+
+        assert not worker.isRunning(), (
+            "drain_bridge_workers returned while the worker thread was still running; a QThread "
+            "destroyed in this state aborts the process at shutdown"
+        )
+        assert drained >= 1, "drain_bridge_workers did not count the retained in-flight worker"
+
+        qapp.processEvents()
+        assert completed == ["drained"], "worker did not run its coroutine to completion before the drain returned"
+
+    @staticmethod
+    def test_drain_counts_already_finished_worker(qapp: QApplication) -> None:
+        """A worker that has already finished is counted, exercising the non-running branch.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+        """
+
+        async def _quick() -> int:
+            await asyncio.sleep(0)
+            return 7
+
+        worker = BridgeCallWorker(_quick())
+        worker.start()
+
+        deadline = time.monotonic() + MAX_WAIT_MS / 1000
+        while worker.isRunning() and time.monotonic() < deadline:
+            qapp.processEvents()
+            time.sleep(POLL_INTERVAL_MS / 1000)
+        assert not worker.isRunning(), "worker did not finish within the wait budget"
+
+        drained = drain_bridge_workers(timeout_ms=MAX_WAIT_MS)
+
+        assert drained >= 1, "drain_bridge_workers failed to count an already-finished retained worker"
 
 
 class TestEnsureLoop:

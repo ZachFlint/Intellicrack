@@ -118,8 +118,8 @@ class TestVendorIncludeFlattening:
         # and verified by independently reading std/io.pat above.
         tokens = HexPatLexer(processed).tokenize()
         assert tokens[-1].type is TokenType.EOF, "tokenizer did not reach EOF on flattened output"
-        fn_count: int = sum(1 for t in tokens if t.type is TokenType.FN)
-        ns_count: int = sum(1 for t in tokens if t.type is TokenType.NAMESPACE)
+        fn_count: int = sum(bool(t.type is TokenType.FN) for t in tokens)
+        ns_count: int = sum(bool(t.type is TokenType.NAMESPACE) for t in tokens)
         assert fn_count == 4, f"expected 4 fn definitions from std/io.pat inlining, got {fn_count}"
         assert ns_count == 1, f"expected 1 namespace block from std/io.pat inlining, got {ns_count}"
 

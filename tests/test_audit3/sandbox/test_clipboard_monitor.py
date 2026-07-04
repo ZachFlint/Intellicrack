@@ -282,10 +282,10 @@ def _find_unused_drive_letter() -> str | None:
         not in use, or ``None`` if every letter from ``Z`` down to ``E``
         is mounted.
     """
-    for letter in "ZYXWVUTSRQPONMLKJIHGFE":
-        if not Path(f"{letter}:\\").exists():
-            return letter
-    return None
+    return next(
+        (letter for letter in "ZYXWVUTSRQPONMLKJIHGFE" if not Path(f"{letter}:\\").exists()),
+        None,
+    )
 
 
 def test_script_emits_structured_error_when_logdir_is_unwritable() -> None:

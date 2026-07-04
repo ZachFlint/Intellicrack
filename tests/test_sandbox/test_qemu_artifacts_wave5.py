@@ -11,6 +11,7 @@ Covers:
   S12-07  — QEMU memory dump (UNTESTABLE: requires running QEMU guest).
   S12-08  — ``_collect_monitoring_logs`` missing-file and None shared-folder paths.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -165,9 +166,7 @@ class TestPpmP6ToPng:
         assert png_path.exists(), "PNG output file was not created"
         png_bytes = png_path.read_bytes()
 
-        assert png_bytes[:8] == _PNG_SIGNATURE, (
-            f"PNG signature mismatch: {png_bytes[:8]!r} != {_PNG_SIGNATURE!r}"
-        )
+        assert png_bytes[:8] == _PNG_SIGNATURE, f"PNG signature mismatch: {png_bytes[:8]!r} != {_PNG_SIGNATURE!r}"
 
         width, height = struct.unpack(">II", png_bytes[16:24])
         assert width == 1, f"IHDR width={width}, expected 1"
@@ -205,9 +204,7 @@ class TestPpmP6ToPng:
         byte in _PNG_SIGNATURE breaks this assertion.
         """
         expected: bytes = b"\x89PNG\r\n\x1a\n"
-        assert expected == _PNG_SIGNATURE, (
-            f"_PNG_SIGNATURE={_PNG_SIGNATURE!r} != PNG spec magic {expected!r}"
-        )
+        assert expected == _PNG_SIGNATURE, f"_PNG_SIGNATURE={_PNG_SIGNATURE!r} != PNG spec magic {expected!r}"
 
 
 class TestCollectMonitoringLogs:
@@ -228,23 +225,13 @@ class TestCollectMonitoringLogs:
         result = asyncio.run(sandbox.collect_monitoring_logs())
 
         assert result.file_changes == [], f"file_changes must be empty; got {result.file_changes!r}"
-        assert result.network_activity == [], (
-            f"network_activity must be empty; got {result.network_activity!r}"
-        )
-        assert result.registry_changes == [], (
-            f"registry_changes must be empty; got {result.registry_changes!r}"
-        )
-        assert result.process_activity == [], (
-            f"process_activity must be empty; got {result.process_activity!r}"
-        )
+        assert result.network_activity == [], f"network_activity must be empty; got {result.network_activity!r}"
+        assert result.registry_changes == [], f"registry_changes must be empty; got {result.registry_changes!r}"
+        assert result.process_activity == [], f"process_activity must be empty; got {result.process_activity!r}"
         assert result.api_calls == [], f"api_calls must be empty; got {result.api_calls!r}"
         assert result.dll_loads == [], f"dll_loads must be empty; got {result.dll_loads!r}"
-        assert result.injection_events == [], (
-            f"injection_events must be empty; got {result.injection_events!r}"
-        )
-        assert result.resource_samples == [], (
-            f"resource_samples must be empty; got {result.resource_samples!r}"
-        )
+        assert result.injection_events == [], f"injection_events must be empty; got {result.injection_events!r}"
+        assert result.resource_samples == [], f"resource_samples must be empty; got {result.resource_samples!r}"
 
     def test_missing_log_dir_returns_empty_collections(self, tmp_path: Path) -> None:
         """_collect_monitoring_logs with no log files present returns all-empty lists.
@@ -263,12 +250,8 @@ class TestCollectMonitoringLogs:
         result = asyncio.run(sandbox.collect_monitoring_logs())
 
         assert result.file_changes == [], f"file_changes must be empty; got {result.file_changes!r}"
-        assert result.network_activity == [], (
-            f"network_activity must be empty; got {result.network_activity!r}"
-        )
-        assert result.registry_changes == [], (
-            f"registry_changes must be empty; got {result.registry_changes!r}"
-        )
+        assert result.network_activity == [], f"network_activity must be empty; got {result.network_activity!r}"
+        assert result.registry_changes == [], f"registry_changes must be empty; got {result.registry_changes!r}"
         assert result.api_calls == [], f"api_calls must be empty; got {result.api_calls!r}"
 
 

@@ -439,13 +439,19 @@ mod tests {
     #[test]
     fn test_sha384_abc() {
         let result = compute_hash(b"abc", "sha384").unwrap();
-        assert!(result.hex_digest.starts_with("cb00753f45a35e8b"));
+        assert_eq!(
+            result.hex_digest,
+            "cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7"
+        );
     }
 
     #[test]
     fn test_sha512_abc() {
         let result = compute_hash(b"abc", "sha512").unwrap();
-        assert!(result.hex_digest.starts_with("ddaf35a193617aba"));
+        assert_eq!(
+            result.hex_digest,
+            "ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f"
+        );
     }
 
     #[test]
@@ -460,13 +466,20 @@ mod tests {
     #[test]
     fn test_sha3_512_empty() {
         let result = compute_hash(b"", "sha3-512").unwrap();
-        assert!(result.hex_digest.starts_with("a69f73cca23a9ac5"));
+        assert_eq!(
+            result.hex_digest,
+            "a69f73cca23a9ac5c8b567dc185a756e97c982164fe25859e0d1dcc1475c80a615b2123af1f5f94c11e3e9402c3ac558f500199d95b6d3e301758586281dcd26"
+        );
     }
 
     #[test]
     fn test_blake2b_empty() {
         let result = compute_hash(b"", "blake2b").unwrap();
-        assert_eq!(result.hex_digest.len(), 64);
+        // BLAKE2b-256 KAT for empty input (independent oracle: Python hashlib.blake2b digest_size=32)
+        assert_eq!(
+            result.hex_digest,
+            "0e5751c026e543b2e8ab2eb06099daa1d1e5df47778f7787faab45cdf12fe3a8"
+        );
     }
 
     #[test]
@@ -528,7 +541,8 @@ mod tests {
     #[test]
     fn test_crc16() {
         let result = compute_hash(b"123456789", "crc16").unwrap();
-        assert_eq!(result.hex_digest.len(), 4);
+        // CRC-16/IBM-SDLC (X-25) check value for "123456789" per the CRC catalogue
+        assert_eq!(result.hex_digest, "906e");
     }
 
     #[test]
@@ -620,5 +634,153 @@ mod tests {
     fn test_custom_crc_invalid_width() {
         let result = compute_crc_custom(b"test", 12, 0, 0, false, false, 0);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_custom_crc8_smbus_no_reflection() {
+        // width 8, refin=false, refout=false -> matches the CRC-8/SMBUS catalogue check.
+        let result = compute_crc_custom(b"123456789", 8, 0x07, 0x00, false, false, 0x00).unwrap();
+        assert_eq!(result, "f4");
+    }
+
+    #[test]
+    fn test_custom_crc16_xmodem_no_reflection() {
+        // CRC-16/XMODEM catalogue check value is 0x31C3.
+        let result =
+            compute_crc_custom(b"123456789", 16, 0x1021, 0x0000, false, false, 0x0000).unwrap();
+        assert_eq!(result, "31c3");
+    }
+
+    #[test]
+    fn test_custom_crc64_ecma_full_mask() {
+        // width 64 exercises the `w >= 64 -> u64::MAX` mask branch and the 64-bit format arm.
+        let result = compute_crc_custom(
+            b"123456789",
+            64,
+            0x42F0_E1EB_A9EA_3693,
+            0x0000_0000_0000_0000,
+            false,
+            false,
+            0x0000_0000_0000_0000,
+        )
+        .unwrap();
+        assert_eq!(result, "6c40df5f0b497347");
+    }
+
+    #[test]
+    fn test_fnv1_and_fnv1a_nonempty_published_vectors() {
+        // Non-empty input drives the FNV loop bodies; canonical published vectors for "a".
+        assert_eq!(compute_hash(b"a", "fnv1-32").unwrap().hex_digest, "050c5d7e");
+        assert_eq!(compute_hash(b"a", "fnv1a-32").unwrap().hex_digest, "e40c292c");
+        assert_eq!(
+            compute_hash(b"a", "fnv1-64").unwrap().hex_digest,
+            "af63bd4c8601b7be"
+        );
+        assert_eq!(
+            compute_hash(b"a", "fnv1a-64").unwrap().hex_digest,
+            "af63dc4c8601ec8c"
+        );
+    }
+
+    #[test]
+    fn test_compute_hash_range_start_greater_than_end() {
+        // Isolates the `start > end` sub-condition (end is within bounds).
+        let err = compute_hash_range(b"ABCDE", 4, 2, "md5").unwrap_err();
+        assert!(
+            matches!(err, HashError::InvalidRange { start: 4, end: 2, data_len: 5 }),
+            "expected InvalidRange{{4,2,5}}, got {err:?}"
+        );
+    }
+
+    fn build_pe(e_lfanew: usize, stored_checksum: u32, total: usize) -> Vec<u8> {
+        let mut d = vec![0u8; total];
+        d[0..2].copy_from_slice(b"MZ");
+        d[0x3C..0x40].copy_from_slice(&u32::try_from(e_lfanew).unwrap().to_le_bytes());
+        d[e_lfanew..e_lfanew + 4].copy_from_slice(b"PE\x00\x00");
+        let co = e_lfanew + 0x58;
+        d[co..co + 4].copy_from_slice(&stored_checksum.to_le_bytes());
+        d
+    }
+
+    #[test]
+    fn test_verify_pe_too_short() {
+        let err = verify_pe_checksum(&[0u8; 0x20]).unwrap_err();
+        assert!(
+            matches!(&err, HashError::UnsupportedAlgorithm(m) if m.contains("too short")),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_verify_pe_bad_mz_signature() {
+        let mut d = vec![0u8; 0x100];
+        d[0] = b'X';
+        let err = verify_pe_checksum(&d).unwrap_err();
+        assert!(
+            matches!(&err, HashError::UnsupportedAlgorithm(m) if m.contains("MZ")),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_verify_pe_checksum_offset_beyond_bounds() {
+        // Valid MZ, but e_lfanew points far past the buffer so checksum_offset+4 > len.
+        let mut d = vec![0u8; 0x80];
+        d[0..2].copy_from_slice(b"MZ");
+        d[0x3C..0x40].copy_from_slice(&0x0000_0400u32.to_le_bytes());
+        let err = verify_pe_checksum(&d).unwrap_err();
+        assert!(
+            matches!(&err, HashError::UnsupportedAlgorithm(m) if m.contains("beyond file bounds")),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_verify_pe_invalid_pe_signature() {
+        // MZ + in-bounds checksum offset, but the PE\0\0 magic is absent.
+        let mut d = vec![0u8; 0x100];
+        d[0..2].copy_from_slice(b"MZ");
+        d[0x3C..0x40].copy_from_slice(&0x0000_0080u32.to_le_bytes());
+        let err = verify_pe_checksum(&d).unwrap_err();
+        assert!(
+            matches!(&err, HashError::UnsupportedAlgorithm(m) if m.contains("invalid PE signature")),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_verify_pe_valid_and_mismatch() {
+        let e_lfanew = 0x80usize;
+        let co = e_lfanew + 0x58;
+        // Fill the header region with varied bytes so the checksum sum is non-trivial.
+        let mut d = build_pe(e_lfanew, 0, 0x100);
+        for (i, b) in d.iter_mut().enumerate().skip(0x40) {
+            if !(co..co + 4).contains(&i) && !(e_lfanew..e_lfanew + 4).contains(&i) {
+                *b = u8::try_from(i & 0xFF).unwrap();
+            }
+        }
+        let calc = compute_pe_checksum(&d, co);
+        d[co..co + 4].copy_from_slice(&calc.to_le_bytes());
+        let ok = verify_pe_checksum(&d).unwrap();
+        assert_eq!(ok.offset, co);
+        assert_eq!(ok.stored, calc);
+        assert_eq!(ok.calculated, calc);
+        assert!(ok.valid);
+
+        // Corrupt the stored checksum -> valid must become false, calculated unchanged.
+        d[co..co + 4].copy_from_slice(&calc.wrapping_add(1).to_le_bytes());
+        let bad = verify_pe_checksum(&d).unwrap();
+        assert_eq!(bad.calculated, calc);
+        assert_eq!(bad.stored, calc.wrapping_add(1));
+        assert!(!bad.valid);
+    }
+
+    #[test]
+    fn test_compute_pe_checksum_odd_length_trailing_byte() {
+        // Odd length drives the trailing-byte branch; checksum_offset far away -> no skip.
+        // Hand-traced: words 0x0201+0x0403+0x0605 = 3081, + trailing 7 = 3088, + len 7 = 3095.
+        assert_eq!(compute_pe_checksum(&[1, 2, 3, 4, 5, 6, 7], 1000), 3095);
+        // Flipping the trailing byte must change the result (byte is not ignored).
+        assert_eq!(compute_pe_checksum(&[1, 2, 3, 4, 5, 6, 8], 1000), 3096);
     }
 }

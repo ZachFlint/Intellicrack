@@ -727,27 +727,18 @@ def test_get_schema_for_provider_all(provider: ProviderName) -> None:
     schema = result[0]
 
     if provider == ProviderName.ANTHROPIC:
-        assert "input_schema" in schema, (
-            f"ANTHROPIC must use Anthropic format with 'input_schema' key; "
-            f"got keys: {list(schema.keys())}"
-        )
-        assert schema.get("type") != "function", (
-            "ANTHROPIC format must NOT have type='function' at top level"
-        )
+        assert "input_schema" in schema, f"ANTHROPIC must use Anthropic format with 'input_schema' key; got keys: {list(schema.keys())}"
+        assert schema.get("type") != "function", "ANTHROPIC format must NOT have type='function' at top level"
     elif provider == ProviderName.GOOGLE:
         params: dict[str, Any] = cast(dict[str, Any], schema.get("parameters") or {})
-        assert params.get("type") == "OBJECT", (
-            f"GOOGLE must have parameters.type='OBJECT' (uppercase); "
-            f"got {params.get('type')!r}"
-        )
+        assert params.get("type") == "OBJECT", f"GOOGLE must have parameters.type='OBJECT' (uppercase); got {params.get('type')!r}"
         assert "input_schema" not in schema, "GOOGLE must NOT use Anthropic input_schema format"
     else:
         assert provider in _OPENAI_FORMAT_PROVIDERS, (
             f"Unhandled provider {provider!r}; add it to _OPENAI_FORMAT_PROVIDERS or a dedicated branch"
         )
         assert schema.get("type") == "function", (
-            f"{provider.value!r} must use OpenAI format with type='function'; "
-            f"got type={schema.get('type')!r}"
+            f"{provider.value!r} must use OpenAI format with type='function'; got type={schema.get('type')!r}"
         )
         assert "input_schema" not in schema, (
             f"{provider.value!r} must NOT use Anthropic format ('input_schema' found); "

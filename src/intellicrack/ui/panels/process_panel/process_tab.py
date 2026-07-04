@@ -47,6 +47,7 @@ _TOOLBAR_HEIGHT: Final[int] = 32
 _SEARCH_MAX_WIDTH: Final[int] = 250
 _SPLIT_LEFT: Final[int] = 500
 _SPLIT_RIGHT: Final[int] = 300
+_SPLIT_MIN_HEIGHT: Final[int] = 80
 _FILTER_DEBOUNCE_MS: Final[int] = 200
 
 _PROC_COLUMNS: Final[list[str]] = ["PID", "Name", "Parent PID", "Architecture", "Memory (MB)", "Threads"]
@@ -293,9 +294,11 @@ class ProcessTab(QWidget):
         tab_layout.setSpacing(_SPACING)
 
         splitter = QSplitter(Qt.Orientation.Vertical)
+        splitter.setChildrenCollapsible(False)
 
         self._info_tree = QTreeWidget()
         self._info_tree.setHeaderLabels(["Field", "Value"])
+        self._info_tree.setMinimumHeight(_SPLIT_MIN_HEIGHT)
         info_h = self._info_tree.header()
         if info_h is not None:
             info_h.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
@@ -303,6 +306,7 @@ class ProcessTab(QWidget):
         splitter.addWidget(self._info_tree)
 
         env_widget = QWidget()
+        env_widget.setMinimumHeight(_SPLIT_MIN_HEIGHT)
         env_layout = QVBoxLayout(env_widget)
         env_layout.setContentsMargins(0, 0, 0, 0)
         env_layout.addWidget(QLabel("Environment Variables"))

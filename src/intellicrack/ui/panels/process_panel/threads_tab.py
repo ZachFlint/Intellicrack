@@ -201,6 +201,7 @@ class ThreadsTab(QWidget):
 
         self._wait_status = QLabel("")
         self._wait_status.setObjectName("toolbar_label")
+        self._wait_status.setWordWrap(True)
         tab_layout.addWidget(self._wait_status)
         return tab
 
@@ -516,11 +517,16 @@ class ThreadsTab(QWidget):
             typed_result = cast("dict[str, object]", result)
             wait_result = typed_result.get("result", "unknown")
             elapsed_us = typed_result.get("elapsed_us", 0)
-            self._wait_status.setText(f"TID {tid}: {wait_result} ({elapsed_us} us)")
+            message = f"TID {tid}: {wait_result} ({elapsed_us} us)"
+            self._wait_status.setText(message)
+            self._wait_status.setToolTip(message)
 
         def _on_error(exc: object) -> None:
             _logger.warning("time_thread_wait_failed", tid=tid, error=str(exc))
-            self._wait_status.setText(f"Wait failed: {exc}")
+            message = f"Wait failed: {exc}"
+            self._wait_status.setText(message)
+            self._wait_status.setToolTip(message)
+            QMessageBox.warning(self, "Time Wait Error", str(exc))
 
         run_bridge_coroutine_logged(
             self._bridge.time_thread_wait(tid),
@@ -549,7 +555,9 @@ class ThreadsTab(QWidget):
                 int_val = value if isinstance(value, int) else 0
                 row = self._reg_table.rowCount()
                 self._reg_table.insertRow(row)
-                self._reg_table.setItem(row, 0, QTableWidgetItem(str(reg_name)))
+                name_item = QTableWidgetItem(str(reg_name))
+                name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                self._reg_table.setItem(row, 0, name_item)
                 self._reg_table.setItem(row, 1, QTableWidgetItem(f"0x{int_val:X}"))
                 self._reg_table.setItem(row, 2, QTableWidgetItem(str(int_val)))
 

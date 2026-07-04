@@ -71,7 +71,7 @@ def _assert_handler_wired(handler: QtSignalingHandler) -> None:
     handler.bridge.record_received.connect(_append_record)
     test_logger = logging.getLogger("intellicrack.test_app_integration_probe")
     test_logger.warning("__test_handler_wiring_probe__")
-    assert len(received) >= 1, "at least one record must have reached the handler after root-logger emission"
+    assert received, "at least one record must have reached the handler after root-logger emission"
     messages = [str(r) for r in received]
     assert any("__test_handler_wiring_probe__" in msg for msg in messages), (
         "the specific test probe message must appear in the handler's received records"

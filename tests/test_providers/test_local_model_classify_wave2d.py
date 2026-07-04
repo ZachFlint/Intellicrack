@@ -163,30 +163,21 @@ class TestRecommendedModelsB580:
     @staticmethod
     def test_mistral_7b_uses_int8_dtype() -> None:
         """Mistral-7B must specify int8 so it fits within 12 GB VRAM."""
-        entries = [
-            e for e in RECOMMENDED_MODELS_B580
-            if str(e["model_id"]) == "mistralai/Mistral-7B-Instruct-v0.3"
-        ]
+        entries = [e for e in RECOMMENDED_MODELS_B580 if str(e["model_id"]) == "mistralai/Mistral-7B-Instruct-v0.3"]
         assert entries, "Mistral entry is missing"
         assert str(entries[0]["recommended_dtype"]) == "int8"
 
     @staticmethod
     def test_tinyllama_uses_float16() -> None:
         """TinyLlama must use float16, not a quantized dtype."""
-        entries = [
-            e for e in RECOMMENDED_MODELS_B580
-            if str(e["model_id"]) == "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-        ]
+        entries = [e for e in RECOMMENDED_MODELS_B580 if str(e["model_id"]) == "TinyLlama/TinyLlama-1.1B-Chat-v1.0"]
         assert entries, "TinyLlama entry is missing"
         assert str(entries[0]["recommended_dtype"]) == "float16"
 
     @staticmethod
     def test_phi3_mini_memory_is_below_12gb() -> None:
         """Phi-3-mini-4k estimated memory must fit within 12 GB B580 VRAM."""
-        entries = [
-            e for e in RECOMMENDED_MODELS_B580
-            if str(e["model_id"]) == "microsoft/Phi-3-mini-4k-instruct"
-        ]
+        entries = [e for e in RECOMMENDED_MODELS_B580 if str(e["model_id"]) == "microsoft/Phi-3-mini-4k-instruct"]
         assert entries, "Phi-3-mini entry is missing"
         memory_gb = float(str(entries[0]["estimated_memory_gb"]))
         assert memory_gb < 12.0, f"Phi-3-mini estimated memory {memory_gb} GB exceeds B580 VRAM"
@@ -360,9 +351,7 @@ class TestClassifyVisionSupport:
             arch_name: Architecture class name string from config.json.
             matched_keyword: The vision keyword that must appear in arch_name.lower().
         """
-        assert matched_keyword in arch_name.lower(), (
-            f"Test construction error: {matched_keyword!r} not in {arch_name!r}"
-        )
+        assert matched_keyword in arch_name.lower(), f"Test construction error: {matched_keyword!r} not in {arch_name!r}"
         config: dict[str, Any] = {
             "architectures": [arch_name],
             "max_position_embeddings": 4096,
@@ -461,7 +450,7 @@ class TestStripPwshPayload:
     @staticmethod
     def test_bom_and_surrounding_whitespace_both_removed() -> None:
         """BOM prefix plus whitespace padding must all be stripped."""
-        raw = _BOM + "  " + '{"key": 1}' + "\n  "
+        raw = f"{_BOM}  " + '{"key": 1}' + "\n  "
         result = _strip_pwsh_payload(raw)
         assert result == '{"key": 1}'
 
@@ -510,11 +499,7 @@ class TestStripPwshPayload:
     @staticmethod
     def test_real_powershell_gpu_json_array_with_bom() -> None:
         """A realistic PowerShell GPU JSON array preceded by BOM is cleaned correctly."""
-        raw = (
-            _BOM
-            + '[{"Name":"Intel Arc B580","PNPDeviceID":'
-            + '"PCI\\\\VEN_8086&DEV_E20B","DriverVersion":"31.0.101.5522"}]'
-        )
+        raw = _BOM + '[{"Name":"Intel Arc B580","PNPDeviceID":' + '"PCI\\\\VEN_8086&DEV_E20B","DriverVersion":"31.0.101.5522"}]'
         result = _strip_pwsh_payload(raw)
         assert result.startswith("[{")
         assert _BOM not in result
@@ -522,7 +507,7 @@ class TestStripPwshPayload:
     @staticmethod
     def test_stripped_result_is_valid_json() -> None:
         """After stripping, the result must be parseable by json.loads."""
-        raw = _BOM + "  " + '{"gpu": "Intel Arc B580", "vram_gb": 12}' + "\n"
+        raw = f"{_BOM}  " + '{"gpu": "Intel Arc B580", "vram_gb": 12}' + "\n"
         result = _strip_pwsh_payload(raw)
         parsed: dict[str, object] = json.loads(result)
         assert parsed["gpu"] == "Intel Arc B580"

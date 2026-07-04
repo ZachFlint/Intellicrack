@@ -64,8 +64,7 @@ def _empty_report(**kwargs: object) -> ExecutionReport:
         "injection_events": [],
         "resource_samples": [],
         "clipboard_events": [],
-    }
-    defaults.update(kwargs)
+    } | kwargs
     return ExecutionReport(**defaults)
 
 
@@ -321,7 +320,7 @@ class TestExtractIocsIntegration:
         )
         iocs = extract_iocs(report)
         domain_values = [ioc["value"] for ioc in iocs if ioc["ioc_type"] == "domain"]
-        assert any(val == "update.example.com" for val in domain_values), "update.example.com was not extracted as a domain IOC"
+        assert "update.example.com" in domain_values, "update.example.com was not extracted as a domain IOC"
 
     def test_txt_filename_in_command_line_not_extracted(self) -> None:
         """Text filenames in command lines must not produce domain IOCs."""

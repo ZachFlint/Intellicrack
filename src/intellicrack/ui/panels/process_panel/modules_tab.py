@@ -129,6 +129,13 @@ class ModulesTab(QWidget):
 
         self._mod_tree = QTreeWidget()
         set_header_labels(self._mod_tree, ["Module", "Base Address", "Size", "Path", "Entry Point"])
+        mod_header = self._mod_tree.header()
+        if mod_header is not None:
+            mod_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            mod_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            mod_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            mod_header.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+            mod_header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._mod_tree)
         return tab
 
@@ -186,6 +193,8 @@ class ModulesTab(QWidget):
         ilh = self._inject_log.horizontalHeader()
         if ilh is not None:
             ilh.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            ilh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            ilh.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         tab_layout.addWidget(self._inject_log)
         return tab
 
@@ -289,7 +298,9 @@ class ModulesTab(QWidget):
         self._com_table.setHorizontalHeaderLabels(["CLSID", "DLL Path", "Loaded Path"])
         ch = self._com_table.horizontalHeader()
         if ch is not None:
+            ch.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
             ch.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            ch.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         tab_layout.addWidget(self._com_table)
 
         tab_layout.addWidget(QLabel(".NET CLR Detection"))
@@ -318,7 +329,7 @@ class ModulesTab(QWidget):
                 mod_path = str(getattr(mod, "path", ""))
                 ep_raw: object = getattr(mod, "entry_point", 0)
                 entry_pt = ep_raw if isinstance(ep_raw, int) else 0
-                QTreeWidgetItem(
+                mod_item = QTreeWidgetItem(
                     self._mod_tree,
                     [
                         mod_name,
@@ -328,6 +339,7 @@ class ModulesTab(QWidget):
                         f"0x{entry_pt:X}",
                     ],
                 )
+                mod_item.setToolTip(3, mod_path)
             self._mod_count.setText(f"{len(typed_result)} modules")
 
         def _on_error(exc: object) -> None:
@@ -374,7 +386,7 @@ class ModulesTab(QWidget):
             _logger.info("dll_injected", path=path, pid=self._attached_pid)
             row = self._inject_log.rowCount()
             self._inject_log.insertRow(row)
-            self._inject_log.setItem(row, 0, QTableWidgetItem(path))
+            self._inject_log.setItem(row, 0, self._tooltip_item(path))
             self._inject_log.setItem(row, 1, QTableWidgetItem("Success"))
             self._inject_log.setItem(row, 2, QTableWidgetItem(""))
 
@@ -387,9 +399,9 @@ class ModulesTab(QWidget):
             )
             row = self._inject_log.rowCount()
             self._inject_log.insertRow(row)
-            self._inject_log.setItem(row, 0, QTableWidgetItem(path))
+            self._inject_log.setItem(row, 0, self._tooltip_item(path))
             self._inject_log.setItem(row, 1, QTableWidgetItem("Failed"))
-            self._inject_log.setItem(row, 2, QTableWidgetItem(str(exc)))
+            self._inject_log.setItem(row, 2, self._tooltip_item(str(exc)))
 
         run_bridge_coroutine_logged(
             self._bridge.inject_dll(path),
@@ -401,6 +413,21 @@ class ModulesTab(QWidget):
             level="info",
             dll_path=path,
         )
+
+    @staticmethod
+    def _tooltip_item(text: str) -> QTableWidgetItem:
+        """Build a table item whose tooltip mirrors its display text.
+
+        Args:
+            text: Cell display text, also used as the tooltip so that
+                values wider than the column remain readable on hover.
+
+        Returns:
+            QTableWidgetItem: Item populated with text and a matching tooltip.
+        """
+        item = QTableWidgetItem(text)
+        item.setToolTip(text)
+        return item
 
     def _set_handle_cell(self, row: int, column: int, text: str) -> None:
         """Populate a handle table cell with text and a full-value tooltip.
@@ -513,8 +540,8 @@ class ModulesTab(QWidget):
                 row = self._com_table.rowCount()
                 self._com_table.insertRow(row)
                 self._com_table.setItem(row, 0, QTableWidgetItem(str(typed_srv.get("clsid", ""))))
-                self._com_table.setItem(row, 1, QTableWidgetItem(str(typed_srv.get("dll_path", ""))))
-                self._com_table.setItem(row, 2, QTableWidgetItem(str(typed_srv.get("loaded_path", ""))))
+                self._com_table.setItem(row, 1, self._tooltip_item(str(typed_srv.get("dll_path", ""))))
+                self._com_table.setItem(row, 2, self._tooltip_item(str(typed_srv.get("loaded_path", ""))))
 
         def _on_error(exc: object) -> None:
             _logger.warning("com_enumerate_failed", pid=self._attached_pid, error=str(exc))

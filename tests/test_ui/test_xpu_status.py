@@ -157,8 +157,7 @@ class TestXPUStatusDialogConstruction:
         xpu_result = is_xpu_available()
         expected_status = "XPU Active" if xpu_result else "CPU Only"
         assert xpu_dialog.status_label.text() == expected_status, (
-            f"status_label must be exactly {expected_status!r} when is_xpu_available()={xpu_result}, "
-            f"got {xpu_dialog.status_label.text()!r}"
+            f"status_label must be exactly {expected_status!r} when is_xpu_available()={xpu_result}, got {xpu_dialog.status_label.text()!r}"
         )
 
     @staticmethod
@@ -185,18 +184,13 @@ class TestXPUStatusDialogConstruction:
                 expected_pct = int((allocated / total) * 100)
                 actual_pct = xpu_dialog.memory_bar.value()
                 assert abs(actual_pct - expected_pct) <= 2, (
-                    f"memory_bar value {actual_pct} must be within 2 pp of oracle {expected_pct} "
-                    f"(allocated={allocated}, total={total})"
+                    f"memory_bar value {actual_pct} must be within 2 pp of oracle {expected_pct} (allocated={allocated}, total={total})"
                 )
             else:
-                assert xpu_dialog.memory_bar.value() == 0, (
-                    "memory_bar must be 0 when total VRAM is reported as 0"
-                )
+                assert xpu_dialog.memory_bar.value() == 0, "memory_bar must be 0 when total VRAM is reported as 0"
         else:
             refresh_mem()
-            assert xpu_dialog.memory_bar.value() == 0, (
-                "memory_bar must be 0 when no XPU device is available"
-            )
+            assert xpu_dialog.memory_bar.value() == 0, "memory_bar must be 0 when no XPU device is available"
 
     @staticmethod
     def test_dialog_contains_model_cache_group(xpu_dialog: XPUStatusDialog) -> None:
@@ -219,17 +213,15 @@ class TestXPUStatusDialogConstruction:
         refresh_cache = getattr(xpu_dialog, "_refresh_cache")
         refresh_cache()
         label_text = xpu_dialog.cache_usage_label.text()
-        valid_stubs = {"Model cache not available", "Error reading cache"}
-        is_mb_value = label_text.endswith(" MB") and label_text[:-3].replace(".", "", 1).isdigit()
-        if is_mb_value:
+        if is_mb_value := label_text.endswith(" MB") and label_text[:-3].replace(".", "", 1).isdigit():
             actual_mb = float(label_text[:-3])
             assert abs(actual_mb - expected_mb) <= 0.5, (
                 f"cache_usage_label must show {expected_mb:.1f} MB from global cache, got {label_text!r}"
             )
         else:
+            valid_stubs = {"Model cache not available", "Error reading cache"}
             assert label_text in valid_stubs, (
-                f"cache_usage_label must be '<N> MB', 'Model cache not available', or "
-                f"'Error reading cache'; got {label_text!r}"
+                f"cache_usage_label must be '<N> MB', 'Model cache not available', or 'Error reading cache'; got {label_text!r}"
             )
 
     @staticmethod
@@ -250,18 +242,11 @@ class TestXPUStatusDialogConstruction:
         assert "System Requirements" in titles
         text = xpu_dialog.requirements_text.toPlainText()
         assert text, "requirements_text must not be empty after construction"
-        assert text != "--", (
-            "requirements_text must not remain at the '--' placeholder; _refresh_requirements must have run"
-        )
+        assert text != "--", "requirements_text must not remain at the '--' placeholder; _refresh_requirements must have run"
         known_stubs = {"Requirements check not available.", "Checking system requirements..."}
-        has_real_content = (
-            "requirements met" in text.lower()
-            or "warning" in text.lower()
-            or "failed" in text.lower()
-        )
+        has_real_content = "requirements met" in text.lower() or "warning" in text.lower() or "failed" in text.lower()
         assert text in known_stubs or has_real_content, (
-            f"requirements_text must be a known construction-time stub or rendered requirements result; "
-            f"got {text[:80]!r}"
+            f"requirements_text must be a known construction-time stub or rendered requirements result; got {text[:80]!r}"
         )
 
     @staticmethod
@@ -279,9 +264,7 @@ class TestXPUStatusDialogConstruction:
         titles = [g.title() for g in groups]
         assert len(groups) == 4, f"expected exactly 4 group boxes, got {len(groups)}: {titles}"
         expected_order = ["Device Status", "Memory Usage", "Model Cache", "System Requirements"]
-        assert titles == expected_order, (
-            f"group boxes must appear in construction order {expected_order!r}, got {titles!r}"
-        )
+        assert titles == expected_order, f"group boxes must appear in construction order {expected_order!r}, got {titles!r}"
 
     @staticmethod
     def test_dialog_has_refresh_button(xpu_dialog: XPUStatusDialog) -> None:
@@ -359,8 +342,7 @@ class TestXPUStatusDialogConstruction:
                 expected_pct = int((allocated / total) * 100)
                 actual_pct = bar.value()
                 assert abs(actual_pct - expected_pct) <= 2, (
-                    f"memory_bar value {actual_pct} must be within 2 pp of oracle {expected_pct} "
-                    f"(allocated={allocated}, total={total})"
+                    f"memory_bar value {actual_pct} must be within 2 pp of oracle {expected_pct} (allocated={allocated}, total={total})"
                 )
             else:
                 assert bar.value() == 0, "memory_bar must be 0 when total VRAM is reported as 0"
@@ -387,18 +369,11 @@ class TestXPUStatusDialogConstruction:
         assert edit.isReadOnly()
         text = edit.toPlainText()
         assert text, "requirements_text must not be empty after construction"
-        assert text != "--", (
-            "requirements_text must not remain at the '--' placeholder; _refresh_requirements must have run"
-        )
+        assert text != "--", "requirements_text must not remain at the '--' placeholder; _refresh_requirements must have run"
         known_stubs = {"Requirements check not available.", "Checking system requirements..."}
-        has_real_content = (
-            "requirements met" in text.lower()
-            or "warning" in text.lower()
-            or "failed" in text.lower()
-        )
+        has_real_content = "requirements met" in text.lower() or "warning" in text.lower() or "failed" in text.lower()
         assert text in known_stubs or has_real_content, (
-            f"requirements_text must be a known construction-time stub or rendered requirements result; "
-            f"got {text[:80]!r}"
+            f"requirements_text must be a known construction-time stub or rendered requirements result; got {text[:80]!r}"
         )
 
 
@@ -613,9 +588,9 @@ class TestXPUStatusDialogMemory:
             text,
         )
         assert match is not None, f"memory_text must match '<alloc> GB / <total> GB (<pct>%)' format; got {text!r}"
-        actual_alloc_gb = float(match.group(1))
-        actual_total_gb = float(match.group(2))
-        actual_pct = int(match.group(3))
+        actual_alloc_gb = float(match[1])
+        actual_total_gb = float(match[2])
+        actual_pct = int(match[3])
 
         assert abs(actual_alloc_gb - expected_alloc_gb) <= 1.0, (
             f"memory_text allocated GB {actual_alloc_gb:.2f} must be within 1 GB of oracle "

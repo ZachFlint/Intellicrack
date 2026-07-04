@@ -42,7 +42,7 @@ def _make_keyring_free_store(env_entries: dict[str, str] | None = None) -> Crede
     if env_entries:
         loader_any: Any = cast(Any, loader)
         env_vars: dict[str, str] = loader_any._env_vars
-        env_vars.update(env_entries)
+        env_vars |= env_entries
     store = CredentialStore(fallback_loader=loader)
     store_any: Any = cast(Any, store)
     store_any._keyring_checked = True
@@ -68,7 +68,7 @@ def _make_keyring_available_store(env_entries: dict[str, str] | None = None) -> 
     if env_entries:
         loader_any: Any = cast(Any, loader)
         env_vars: dict[str, str] = loader_any._env_vars
-        env_vars.update(env_entries)
+        env_vars |= env_entries
     store = CredentialStore(fallback_loader=loader)
     store_any: Any = cast(Any, store)
     store_any._keyring_checked = True

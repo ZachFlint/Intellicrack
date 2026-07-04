@@ -98,10 +98,10 @@ def _find_group(widget: ProviderSettingsWidget, title: str) -> QGroupBox | None:
     Returns:
         QGroupBox | None: The matching group box, or ``None`` if absent.
     """
-    for child in widget.findChildren(QGroupBox):
-        if child.title() == title:
-            return child
-    return None
+    return next(
+        (child for child in widget.findChildren(QGroupBox) if child.title() == title),
+        None,
+    )
 
 
 @pytest.mark.parametrize("provider_id", _PREVIOUSLY_UNWIRED_PROVIDERS)

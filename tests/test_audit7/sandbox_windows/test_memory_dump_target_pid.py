@@ -95,7 +95,7 @@ def _make_minidump_bytes(pid: int) -> bytes:
         bytes: 64-byte minidump-shaped stub beginning with ``MDMP``.
     """
     header = bytearray(64)
-    header[0:4] = b"MDMP"
+    header[:4] = b"MDMP"
     header[4:6] = b"\xa7\x93"
     # ProcessId at offset 32 (0x20)
     struct.pack_into("<I", header, 32, pid)
@@ -168,9 +168,7 @@ class _RecordingSandbox(WindowsSandbox):
         """
         del time_limit, working_directory
         self.commands.append(command)
-        if self._handler is None:
-            return (0, "", "")
-        return self._handler(command)
+        return (0, "", "") if self._handler is None else self._handler(command)
 
 
 def _make_recording_sandbox(tmp_path: Path) -> _RecordingSandbox:
@@ -234,7 +232,7 @@ def _make_dump_handler(
         if match_path:
             shared = sb.get_shared_folder()
             assert shared is not None
-            filename = Path(match_path.group(1)).name
+            filename = Path(match_path[1]).name
             (shared / "output" / filename).write_bytes(_make_minidump_bytes(pid_to_embed))
         return (0, "", "")
 
@@ -571,7 +569,7 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         assert script_pid_match is not None, (
             f"production script must contain '$targetPid = <N>;' assignment; script: {fixed_dispatched[:300]!r}"
         )
-        script_injected_pid = int(script_pid_match.group(1))
+        script_injected_pid = int(script_pid_match[1])
         assert script_injected_pid == target_pid, (
             f"production code must inject target_pid={target_pid} into the script; script contains $targetPid={script_injected_pid}"
         )
@@ -650,11 +648,11 @@ class TestF0021DumpMemoryProducesPIDMatchingMinidump:
         # production f-string actually emitted.
         script_pid_match_a = re.search(r"\$targetPid = (\d+);", dispatched_a)
         assert script_pid_match_a is not None, f"first dispatched script must contain '$targetPid = <N>;'; script: {dispatched_a[:300]!r}"
-        script_pid_a = int(script_pid_match_a.group(1))
+        script_pid_a = int(script_pid_match_a[1])
 
         script_pid_match_b = re.search(r"\$targetPid = (\d+);", dispatched_b)
         assert script_pid_match_b is not None, f"second dispatched script must contain '$targetPid = <N>;'; script: {dispatched_b[:300]!r}"
-        script_pid_b = int(script_pid_match_b.group(1))
+        script_pid_b = int(script_pid_match_b[1])
 
         # The PID the production code injected must match the independently known target_pid.
         assert script_pid_a == pid_a, f"first script must embed pid_a={pid_a}; production code injected {script_pid_a}"

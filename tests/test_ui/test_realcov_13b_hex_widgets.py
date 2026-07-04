@@ -57,9 +57,7 @@ def qapp() -> QApplication:
         QApplication: The Qt application instance.
     """
     existing = QApplication.instance()
-    if isinstance(existing, QApplication):
-        return existing
-    return QApplication([])
+    return existing if isinstance(existing, QApplication) else QApplication([])
 
 
 def _count_foreground_colors(widget: QWidget, width: int, height: int) -> int:
@@ -87,7 +85,7 @@ def _count_foreground_colors(widget: QWidget, width: int, height: int) -> int:
     if not samples:
         return 0
     background = max(set(samples), key=samples.count)
-    return sum(1 for value in samples if value != background)
+    return sum(bool(value != background) for value in samples)
 
 
 class TestEntropyGraphWidget:

@@ -86,9 +86,7 @@ def _env_truthy(name: str) -> bool:
             or ``on`` (case-insensitive). ``False`` when unset or any other value.
     """
     raw = os.environ.get(name)
-    if raw is None:
-        return False
-    return raw.strip().lower() in _TRUTHY_VALUES
+    return False if raw is None else raw.strip().lower() in _TRUTHY_VALUES
 
 
 def is_sandboxed() -> bool:

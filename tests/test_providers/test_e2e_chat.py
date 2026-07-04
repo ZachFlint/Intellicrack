@@ -220,7 +220,7 @@ def _readable_ratio(text: str) -> float:
     """
     if not text:
         return 0.0
-    readable = sum(1 for ch in text if ch.isalnum() or ch.isspace() or ch in ".,!?'\"-:;()")
+    readable = sum(bool(ch.isalnum() or ch.isspace() or ch in ".,!?'\"-:;()") for ch in text)
     return readable / len(text)
 
 
@@ -247,7 +247,7 @@ def _assert_coherent_stream(chunks: list[str], provider_name: str) -> str:
     Returns:
         str: The reassembled stream text.
     """
-    assert len(chunks) >= 1, f"{provider_name} yielded no streaming chunks"
+    assert chunks, f"{provider_name} yielded no streaming chunks"
     assert all(isinstance(chunk, str) for chunk in chunks), f"{provider_name} yielded a non-string chunk"
     full_text = "".join(chunks)
     assert full_text.strip(), f"{provider_name} stream reassembled to empty text"
@@ -333,7 +333,7 @@ def _assert_model_listing(
         required_model: A model id that must appear in the listing (the
             configured chat-model constant), or ``None`` to skip the check.
     """
-    assert len(models) > 0, f"{provider.value} returned an empty model listing"
+    assert models, f"{provider.value} returned an empty model listing"
     ids: list[str] = []
     for model in models:
         assert isinstance(model, ModelInfo), f"{provider.value} returned a non-ModelInfo entry"
@@ -1268,7 +1268,7 @@ class TestCrossProviderConsistency:
         messages = _make_messages("Say hello.")
         for provider_name, model_id, provider in available_providers:
             chunks = [chunk async for chunk in provider.chat_stream(messages=messages, model=model_id, max_tokens=32)]
-            assert len(chunks) >= 1, f"{provider_name} yielded no chunks"
+            assert chunks, f"{provider_name} yielded no chunks"
             joined = "".join(chunks)
             assert joined.strip(), f"{provider_name} streamed empty text"
             assert _readable_ratio(joined) >= _MIN_READABLE_RATIO, f"{provider_name} streamed unreadable text: {joined!r}"

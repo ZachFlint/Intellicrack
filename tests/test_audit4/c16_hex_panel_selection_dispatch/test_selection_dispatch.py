@@ -147,10 +147,7 @@ class _StubBridge:
             start: Selection start offset, or -1 to clear.
             end: Selection end offset, or -1 to clear.
         """
-        if start >= 0 and end >= 0:
-            self._selection = (start, end)
-        else:
-            self._selection = None
+        self._selection = (start, end) if start >= 0 and end >= 0 else None
 
     def get_selection(self) -> tuple[int, int] | None:
         """Return the current selection stored by the panel's write.

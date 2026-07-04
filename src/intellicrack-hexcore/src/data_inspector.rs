@@ -595,7 +595,7 @@ mod tests {
         let mut data = [0u8; 4];
         data[..2].copy_from_slice(&bytes);
         let result = inspect_at(&data, 0);
-        assert!(result.values.contains_key("float16_le"));
+        assert_eq!(result.values.get("float16_le").unwrap(), "1.5");
     }
 
     #[test]
@@ -618,7 +618,8 @@ mod tests {
     fn test_inspect_rgb565() {
         let data = [0x00, 0xF8, 0x00, 0x00];
         let result = inspect_at(&data, 0);
-        assert!(result.values.contains_key("rgb565"));
+        // le_val 0xF800 -> R=31,G=0,B=0 scaled to 8-bit -> pure red.
+        assert_eq!(result.values.get("rgb565").unwrap(), "R:255 G:0 B:0");
     }
 
     #[test]
@@ -666,5 +667,131 @@ mod tests {
         data.push(0);
         let result = inspect_at(&data, 0);
         assert_eq!(result.values.get("wide_string").unwrap(), "Hi");
+    }
+
+    #[test]
+    fn test_to_map_returns_values_reference() {
+        let result = inspect_at(&[0x41u8], 0);
+        let map = result.to_map();
+        assert_eq!(map.get("uint8").map(String::as_str), Some("65"));
+        assert_eq!(map.len(), result.values.len());
+    }
+
+    #[test]
+    fn test_is_leap_year_century_and_400_rules() {
+        assert!(is_leap_year(2000)); // divisible by 400
+        assert!(!is_leap_year(1900)); // divisible by 100, not 400
+        assert!(is_leap_year(2004)); // divisible by 4, not 100
+        assert!(!is_leap_year(2001)); // not divisible by 4
+    }
+
+    #[test]
+    fn test_decode_uleb128_overflow_returns_none() {
+        // 10 continuation bytes push shift past 63 with no terminator.
+        assert!(decode_uleb128(&[0x80; 10], 0).is_none());
+    }
+
+    #[test]
+    fn test_decode_sleb128_overflow_returns_none() {
+        assert!(decode_sleb128(&[0x80; 10], 0).is_none());
+    }
+
+    #[test]
+    fn test_sign_extend_48_negative() {
+        // Bit 47 set -> value is sign-extended negative.
+        assert_eq!(sign_extend_48(0x0000_8000_0000_0000), -140_737_488_355_328);
+        assert_eq!(sign_extend_48(1), 1);
+    }
+
+    #[test]
+    fn test_inspect_filetime_valid() {
+        // FILETIME for 2024-01-01 00:00:00 UTC.
+        let filetime: u64 = 133_485_408_000_000_000;
+        let data = filetime.to_le_bytes();
+        let result = inspect_at(&data, 0);
+        assert!(result.values.get("filetime").unwrap().starts_with("2024-01-01"));
+    }
+
+    #[test]
+    fn test_inspect_unix_timestamp_disabled_for_out_of_range() {
+        // Zero -> not > 0, so no unix_timestamp key.
+        let result0 = inspect_at(&0u32.to_le_bytes(), 0);
+        assert!(!result0.values.contains_key("unix_timestamp"));
+        // Far future -> >= 4_102_444_800, also skipped.
+        let result_max = inspect_at(&u32::MAX.to_le_bytes(), 0);
+        assert!(!result_max.values.contains_key("unix_timestamp"));
+    }
+
+    #[test]
+    fn test_inspect_float16_infinity_skipped() {
+        // f16 +inf little-endian bytes.
+        let data = half::f16::INFINITY.to_le_bytes();
+        let result = inspect_at(&data, 0);
+        assert!(!result.values.contains_key("float16_le"));
+    }
+
+    #[test]
+    fn test_inspect_float32_infinity_skipped() {
+        let data = f32::INFINITY.to_le_bytes();
+        let result = inspect_at(&data, 0);
+        assert!(!result.values.contains_key("float32_le"));
+    }
+
+    #[test]
+    fn test_inspect_float64_infinity_skipped() {
+        let data = f64::INFINITY.to_le_bytes();
+        let result = inspect_at(&data, 0);
+        assert!(!result.values.contains_key("float64_le"));
+    }
+
+    #[test]
+    fn test_inspect_dos_date_valid_and_invalid() {
+        // 0x50CF encodes 2020-06-15 (valid date) and 10:06:30 (valid time).
+        let result = inspect_at(&0x50CFu16.to_le_bytes(), 0);
+        assert_eq!(result.values.get("dos_date").unwrap(), "2020-06-15");
+        // 0xFFFF: hour 31 and month 15 -> both invalid, neither key present.
+        let bad = inspect_at(&0xFFFFu16.to_le_bytes(), 0);
+        assert!(!bad.values.contains_key("dos_time"));
+        assert!(!bad.values.contains_key("dos_date"));
+    }
+
+    #[test]
+    fn test_inspect_wide_string_empty_first_unit() {
+        let result = inspect_at(&[0x00, 0x00, 0x00, 0x00], 0);
+        assert!(!result.values.contains_key("wide_string"));
+    }
+
+    #[test]
+    fn test_inspect_wide_string_caps_at_32_chars() {
+        let data: Vec<u8> = std::iter::repeat_n([0x41u8, 0x00], 40).flatten().collect();
+        let result = inspect_at(&data, 0);
+        assert_eq!(result.values.get("wide_string").unwrap(), &"A".repeat(32));
+    }
+
+    #[test]
+    fn test_inspect_wide_string_invalid_utf16_skipped() {
+        // Lone high surrogate 0xD800 then terminator.
+        let result = inspect_at(&[0x00, 0xD8, 0x00, 0x00], 0);
+        assert!(!result.values.contains_key("wide_string"));
+    }
+
+    #[test]
+    fn test_inspect_wide_string_control_char_skipped() {
+        // "A" then U+0001 control char.
+        let result = inspect_at(&[0x41, 0x00, 0x01, 0x00, 0x00, 0x00], 0);
+        assert!(!result.values.contains_key("wide_string"));
+    }
+
+    #[test]
+    fn test_inspect_8bit_space_char() {
+        let result = inspect_at(&[0x20u8], 0);
+        assert_eq!(result.values.get("ascii_char").unwrap(), " ");
+    }
+
+    #[test]
+    fn test_inspect_8bit_multibyte_utf8_char() {
+        // UTF-8 encoding of 'é' (U+00E9).
+        let result = inspect_at(&[0xC3, 0xA9], 0);
+        assert_eq!(result.values.get("utf8_char").unwrap(), "é");
     }
 }

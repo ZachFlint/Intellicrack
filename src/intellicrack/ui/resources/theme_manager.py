@@ -855,6 +855,11 @@ QComboBox::drop-down {
     width: 20px;
 }
 
+QComboBox::down-arrow {
+    width: 12px;
+    height: 12px;
+}
+
 QComboBox QAbstractItemView {
     background-color: #ffffff;
     color: #1a1d21;
@@ -894,6 +899,16 @@ QTextEdit, QPlainTextEdit {
 
 QTextEdit:focus, QPlainTextEdit:focus {
     border-color: #0067c0;
+}
+
+/* Scroll Area */
+QScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollArea > QWidget > QWidget {
+    background-color: transparent;
 }
 
 /* Scroll Bar */
@@ -986,6 +1001,56 @@ QListWidget::item:hover:!selected, QListView::item:hover:!selected {
     background-color: #e3e6eb;
 }
 
+/* Tree Widget */
+QTreeWidget, QTreeView {
+    background-color: #ffffff;
+    color: #1a1d21;
+    border: 1px solid #c2c8d0;
+    border-radius: 4px;
+    outline: none;
+}
+
+QTreeWidget::item, QTreeView::item {
+    padding: 4px 8px;
+}
+
+QTreeWidget::item:selected, QTreeView::item:selected {
+    background-color: #0067c0;
+    color: #ffffff;
+}
+
+QTreeWidget::item:hover:!selected, QTreeView::item:hover:!selected {
+    background-color: #e3e6eb;
+}
+
+/* Table Widget */
+QTableWidget, QTableView {
+    background-color: #ffffff;
+    alternate-background-color: #f5f6f8;
+    color: #1a1d21;
+    border: 1px solid #c2c8d0;
+    gridline-color: #c2c8d0;
+    outline: none;
+}
+
+QTableWidget::item, QTableView::item {
+    padding: 4px;
+}
+
+QTableWidget::item:selected, QTableView::item:selected {
+    background-color: #0067c0;
+    color: #ffffff;
+}
+
+QHeaderView::section {
+    background-color: #ffffff;
+    color: #1a1d21;
+    padding: 6px;
+    border: none;
+    border-right: 1px solid #c2c8d0;
+    border-bottom: 1px solid #c2c8d0;
+}
+
 /* Group Box */
 QGroupBox {
     background-color: #ffffff;
@@ -1025,10 +1090,69 @@ QCheckBox::indicator:hover {
     border-color: #0067c0;
 }
 
+/* Radio Button */
+QRadioButton {
+    color: #1a1d21;
+    spacing: 8px;
+}
+
+QRadioButton::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #c2c8d0;
+    border-radius: 8px;
+    background-color: #ffffff;
+}
+
+QRadioButton::indicator:checked {
+    background-color: #0067c0;
+    border-color: #0067c0;
+}
+
+QRadioButton::indicator:hover {
+    border-color: #0067c0;
+}
+
+/* Spin Box */
+QSpinBox, QDoubleSpinBox {
+    background-color: #ffffff;
+    color: #1a1d21;
+    border: 1px solid #c2c8d0;
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+QSpinBox:focus, QDoubleSpinBox:focus {
+    border-color: #0067c0;
+}
+
+/* Slider */
+QSlider::groove:horizontal {
+    background-color: #c2c8d0;
+    height: 4px;
+    border-radius: 2px;
+}
+
+QSlider::handle:horizontal {
+    background-color: #0067c0;
+    width: 16px;
+    height: 16px;
+    margin: -6px 0;
+    border-radius: 8px;
+}
+
+QSlider::handle:horizontal:hover {
+    background-color: #1378d4;
+}
+
 /* Status Bar */
 QStatusBar {
     background-color: #0067c0;
     color: #ffffff;
+    border: none;
+}
+
+QStatusBar::item {
     border: none;
 }
 
@@ -1055,10 +1179,25 @@ QSplitter::handle:hover {
     background-color: #0067c0;
 }
 
+/* Frame */
+QFrame[frameShape="4"], QFrame[frameShape="5"] {
+    color: #c2c8d0;
+}
+
 /* Label */
 QLabel {
     color: #1a1d21;
     background-color: transparent;
+}
+
+QLabel[heading="true"] {
+    font-size: 12pt;
+    font-weight: bold;
+}
+
+QLabel[subheading="true"] {
+    font-size: 10pt;
+    color: #5a6370;
 }
 
 QLabel[success="true"] {
@@ -1294,9 +1433,7 @@ class ThemeManager:
         """
         if theme == THEME_SYSTEM:
             return cls.detect_system_theme()
-        if theme in {THEME_DARK, THEME_LIGHT}:
-            return theme
-        return DEFAULT_THEME
+        return theme if theme in {THEME_DARK, THEME_LIGHT} else DEFAULT_THEME
 
     def apply_theme(self, theme: str = DEFAULT_THEME) -> bool:
         r"""Apply a theme to the application.
@@ -1441,7 +1578,7 @@ class ThemeManager:
 
     @property
     def current_theme(self) -> str:
-        """Get the resolved theme name currently rendered.
+        """The resolved theme name currently rendered.
 
         Returns:
             str: The concrete theme being displayed (:data:`THEME_DARK` or
@@ -1451,7 +1588,7 @@ class ThemeManager:
 
     @property
     def requested_theme(self) -> str:
-        """Get the theme the user requested.
+        """The theme the user requested.
 
         Returns:
             str: The requested theme name, which may be ``"system"`` when the

@@ -142,15 +142,15 @@ events:
       - "CMakeLists.txt:2 (project)"
     message: |
       Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
-      Compiler:  
-      Build flags: 
-      Id flags:  
-      
+      Compiler:
+      Build flags:
+      Id flags:
+
       The output was:
       0
       MSBuild version 18.7.8+1ac568fee for .NET Framework
       Build started 6/28/2026 12:22:42 AM.
-      
+
       Project "D:\\Intellicrack\\tools\\x64dbg_plugin\\build_x32\\CMakeFiles\\4.3.1-msvc1\\CompilerIdCXX\\CompilerIdCXX.vcxproj" on node 1 (default targets).
       PrepareForBuild:
         Creating directory "Debug\\".
@@ -173,21 +173,21 @@ events:
         Deleting file "Debug\\CompilerIdCXX.tlog\\unsuccessfulbuild".
         Touching "Debug\\CompilerIdCXX.tlog\\CompilerIdCXX.lastbuildstate".
       Done Building Project "D:\\Intellicrack\\tools\\x64dbg_plugin\\build_x32\\CMakeFiles\\4.3.1-msvc1\\CompilerIdCXX\\CompilerIdCXX.vcxproj" (default targets).
-      
+
       Build succeeded.
           0 Warning(s)
           0 Error(s)
-      
+
       Time Elapsed 00:00:01.53
-      
-      
+
+
       Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
-      
+
       Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.vcxproj"
-      
+
       The CXX compiler identification is MSVC, found in:
         D:/Intellicrack/tools/x64dbg_plugin/build_x32/CMakeFiles/4.3.1-msvc1/CompilerIdCXX/CompilerIdCXX.exe
-      
+
   -
     kind: "find-v1"
     backtrace:
@@ -2382,11 +2382,11 @@ events:
       cached: true
       stdout: |
         Change Dir: 'D:/Intellicrack/tools/x64dbg_plugin/build_x32/CMakeFiles/CMakeScratch/TryCompile-v7bxul'
-        
+
         Run Build Command(s): "C:/Program Files/Microsoft Visual Studio/18/Enterprise/MSBuild/Current/Bin/amd64/MSBuild.exe" cmTC_e895d.vcxproj /p:Configuration=Debug /p:Platform=Win32 /p:VisualStudioVersion=17.0 /v:n
         MSBuild version 18.7.8+1ac568fee for .NET Framework
         Build started 6/28/2026 12:22:44 AM.
-        
+
         Project "D:\\Intellicrack\\tools\\x64dbg_plugin\\build_x32\\CMakeFiles\\CMakeScratch\\TryCompile-v7bxul\\cmTC_e895d.vcxproj" on node 1 (default targets).
         PrepareForBuild:
           Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
@@ -2408,13 +2408,13 @@ events:
           Deleting file "cmTC_e895d.dir\\Debug\\cmTC_e895d.tlog\\unsuccessfulbuild".
           Touching "cmTC_e895d.dir\\Debug\\cmTC_e895d.tlog\\cmTC_e895d.lastbuildstate".
         Done Building Project "D:\\Intellicrack\\tools\\x64dbg_plugin\\build_x32\\CMakeFiles\\CMakeScratch\\TryCompile-v7bxul\\cmTC_e895d.vcxproj" (default targets).
-        
+
         Build succeeded.
             0 Warning(s)
             0 Error(s)
-        
+
         Time Elapsed 00:00:00.93
-        
+
       exitCode: 0
   -
     kind: "message-v1"
@@ -2431,8 +2431,8 @@ events:
         implicit objs: []
         implicit dirs: []
         implicit fwks: []
-      
-      
+
+
   -
     kind: "message-v1"
     backtrace:

@@ -90,9 +90,7 @@ class TestOllamaModelListing:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
             assert model.id, f"ModelInfo.id must be non-empty, got empty string for {model!r}"
             assert model.name, f"ModelInfo.name must be non-empty, got empty string for {model!r}"
-            assert model.provider == ProviderName.OLLAMA, (
-                f"Expected provider OLLAMA, got {model.provider!r}"
-            )
+            assert model.provider == ProviderName.OLLAMA, f"Expected provider OLLAMA, got {model.provider!r}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -111,9 +109,7 @@ class TestOllamaModelListing:
         for model in installed_models:
             assert isinstance(model.id, str), f"Expected str id, got {type(model.id)}"
             assert len(model.id) > 0, "Model ID should not be empty"
-            assert model.id.startswith("local/"), (
-                f"Local model ID must start with 'local/' per bridge prefix rule, got {model.id!r}"
-            )
+            assert model.id.startswith("local/"), f"Local model ID must start with 'local/' per bridge prefix rule, got {model.id!r}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -147,9 +143,7 @@ class TestOllamaModelListing:
             installed_models: Non-empty list of models from the connected provider.
         """
         for model in installed_models:
-            assert model.provider == ProviderName.OLLAMA, (
-                f"Expected OLLAMA provider, got {model.provider}"
-            )
+            assert model.provider == ProviderName.OLLAMA, f"Expected OLLAMA provider, got {model.provider}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -166,12 +160,8 @@ class TestOllamaModelListing:
             installed_models: Non-empty list of models from the connected provider.
         """
         for model in installed_models:
-            assert isinstance(model.context_window, int), (
-                f"Expected int context_window, got {type(model.context_window)}"
-            )
-            assert model.context_window > 0, (
-                f"Model {model.id} has invalid context_window: {model.context_window}"
-            )
+            assert isinstance(model.context_window, int), f"Expected int context_window, got {type(model.context_window)}"
+            assert model.context_window > 0, f"Model {model.id} has invalid context_window: {model.context_window}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -188,18 +178,10 @@ class TestOllamaModelListing:
             installed_models: Non-empty list of models from the connected provider.
         """
         for model in installed_models:
-            assert isinstance(model.supports_tools, bool), (
-                f"Expected bool supports_tools, got {type(model.supports_tools)}"
-            )
-            assert isinstance(model.supports_vision, bool), (
-                f"Expected bool supports_vision, got {type(model.supports_vision)}"
-            )
-            assert isinstance(model.supports_streaming, bool), (
-                f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
-            )
-            assert model.supports_streaming is True, (
-                f"Ollama local models must always support streaming; got False for {model.id}"
-            )
+            assert isinstance(model.supports_tools, bool), f"Expected bool supports_tools, got {type(model.supports_tools)}"
+            assert isinstance(model.supports_vision, bool), f"Expected bool supports_vision, got {type(model.supports_vision)}"
+            assert isinstance(model.supports_streaming, bool), f"Expected bool supports_streaming, got {type(model.supports_streaming)}"
+            assert model.supports_streaming is True, f"Ollama local models must always support streaming; got False for {model.id}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -228,16 +210,12 @@ class TestOllamaModelListing:
         ids1 = {m.id for m in installed_models}
         ids2 = {m.id for m in models2}
 
-        assert len(ids1) > 0, "First call must return at least one model ID"
+        assert ids1, "First call must return at least one model ID"
 
         for mid in ids1:
-            assert mid.startswith("local/"), (
-                f"Local model ID must start with 'local/' per bridge contract, got {mid!r}"
-            )
-            suffix = mid[len("local/"):]
-            assert suffix, (
-                f"Model name suffix after 'local/' must be non-empty, got empty in {mid!r}"
-            )
+            assert mid.startswith("local/"), f"Local model ID must start with 'local/' per bridge contract, got {mid!r}"
+            suffix = mid[len("local/") :]
+            assert suffix, f"Model name suffix after 'local/' must be non-empty, got empty in {mid!r}"
 
         assert ids1 == ids2, "Model IDs must be identical across consecutive calls"
 

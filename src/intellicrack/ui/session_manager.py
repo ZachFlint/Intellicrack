@@ -44,7 +44,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.config import get_config_dir
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 
 
 _logger = get_logger(__name__)
@@ -57,6 +57,7 @@ _CONFIRM_DIALOG_WIDTH: Final[int] = 400
 _CONFIRM_DIALOG_HEIGHT: Final[int] = 200
 
 if TYPE_CHECKING:
+    from intellicrack.core.orchestrator import Orchestrator
     from intellicrack.core.session import Session, SessionManager, SessionMetadata
 
 MESSAGE_PREVIEW_MAX_LENGTH = 100
@@ -450,7 +451,11 @@ class SessionManagerDialog(QDialog):
 
         Args:
             session_manager: Session manager for loading and saving sessions.
-            current_session_id: ID of the currently active session.
+            current_session_id: ID of the currently active session. When
+                omitted but ``current_session`` is supplied, this is derived
+                from ``current_session.id`` so the active-session-protection
+                guard and the bold row highlighting always agree with the
+                session actually wired into the Tags panel.
             parent: Parent widget.
             current_session: Currently active in-memory ``Session``
                 instance, when known. When supplied, the tag chips
@@ -459,9 +464,26 @@ class SessionManagerDialog(QDialog):
         """
         super().__init__(parent)
         self._manager = session_manager
-        self._current_session_id = current_session_id
         self._current_session = current_session
+        self._current_session_id = (
+            current_session_id if current_session_id is not None else (current_session.id if current_session is not None else None)
+        )
         self._sessions: list[dict[str, object]] = []
+
+        if self._manager is None and self._current_session is None:
+            self._adopt_parent_orchestrator(parent)
+
+        if self._manager is None:
+            _logger.warning(
+                "session_manager_dialog_no_manager_wired",
+                message=(
+                    "SessionManagerDialog was constructed without a session_manager; falling back to the "
+                    "on-disk sidecar store at SESSIONS_DIR instead of the live SessionStore, and the tag "
+                    "editor will remain disabled unless current_session is also supplied."
+                ),
+                sessions_dir=str(self.SESSIONS_DIR),
+                current_session_supplied=self._current_session is not None,
+            )
 
         was_present = self.SESSIONS_DIR.exists()
         self.SESSIONS_DIR.mkdir(parents=True, exist_ok=True)
@@ -475,6 +497,81 @@ class SessionManagerDialog(QDialog):
 
         self.setWindowTitle("Session Manager")
         self.resize(_DIALOG_WIDTH, _DIALOG_HEIGHT)
+
+    @classmethod
+    def from_orchestrator(cls, orchestrator: Orchestrator, parent: QWidget | None = None) -> SessionManagerDialog:
+        """Build a dialog wired to ``orchestrator``'s live session manager and active session.
+
+        Reads the ``SessionManager`` and active ``Session`` off
+        ``orchestrator`` so callers do not need to reach into orchestrator
+        internals themselves. This keeps the dialog backed by the same
+        SQLite-backed ``SessionStore`` the rest of the application uses
+        instead of silently falling back to the on-disk sidecar store, and
+        ensures the active-session-protection guard and the tags editor are
+        wired to the true active session rather than being permanently
+        disabled.
+
+        Args:
+            orchestrator: Orchestrator instance whose session manager and
+                active session should be used to construct the dialog.
+            parent: Parent widget.
+
+        Returns:
+            SessionManagerDialog: Dialog instance wired to
+            ``orchestrator``'s live session manager and active session.
+        """
+        session_manager, current_session = cls._extract_orchestrator_state(orchestrator)
+        return cls(
+            session_manager=session_manager,
+            current_session_id=current_session.id if current_session is not None else None,
+            parent=parent,
+            current_session=current_session,
+        )
+
+    @staticmethod
+    def _extract_orchestrator_state(orchestrator: Orchestrator) -> tuple[SessionManager | None, Session | None]:
+        """Read the live session manager and active session off ``orchestrator``.
+
+        Args:
+            orchestrator: Orchestrator instance whose internal session
+                manager and active session should be read.
+
+        Returns:
+            tuple[SessionManager | None, Session | None]: The
+            orchestrator's internal ``SessionManager`` (when present) and
+            its current active ``Session``.
+        """
+        session_manager = cast("SessionManager | None", getattr(orchestrator, "_sessions", None))
+        return session_manager, orchestrator.current_session
+
+    def _adopt_parent_orchestrator(self, parent: QWidget | None) -> None:
+        """Wire this dialog to ``parent``'s live orchestrator, when available.
+
+        Production call sites that construct this dialog with only
+        ``SessionManagerDialog(parent=self)`` (for example
+        ``MainWindow._on_load_session``) rely on ``parent`` exposing the
+        application's ``Orchestrator`` through a private ``_orchestrator``
+        attribute, the pattern used throughout ``MainWindow``. When present,
+        this wires the dialog to the orchestrator's SQLite-backed
+        ``SessionManager`` and active ``Session`` instead of silently
+        falling back to the empty/stale on-disk sidecar store, so the
+        active-session-protection guard and the tags editor operate on the
+        real session state.
+
+        Args:
+            parent: Parent widget to inspect for an ``_orchestrator``
+                attribute. When ``None`` or the attribute is absent, this
+                is a no-op and the dialog keeps its disk-fallback
+                behaviour.
+        """
+        orchestrator = getattr(parent, "_orchestrator", None)
+        if orchestrator is None:
+            return
+        session_manager, current_session = self._extract_orchestrator_state(cast("Orchestrator", orchestrator))
+        self._manager = session_manager
+        self._current_session = current_session
+        if current_session is not None:
+            self._current_session_id = current_session.id
 
     def _setup_ui(self) -> None:
         """Set up the dialog UI layout."""
@@ -578,14 +675,16 @@ class SessionManagerDialog(QDialog):
         session = self._current_session
         if manager is None or session is None:
             return
-        try:
-            run_bridge_coroutine(manager.update(session))
-        except (OSError, RuntimeError) as exc:
-            _logger.warning(
-                "session_tag_persist_failed",
-                session_id=session.id,
-                error=str(exc),
-            )
+        run_bridge_coroutine_logged(
+            manager.update(session),
+            on_success=None,
+            on_error=None,
+            parent=self,
+            event="session_tag_persist",
+            logger=_logger,
+            level="info",
+            session_id=session.id,
+        )
 
     @staticmethod
     def _set_elided_detail(label: QLabel, text: str) -> None:
@@ -994,18 +1093,85 @@ class SessionManagerDialog(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
-        if reply == QMessageBox.StandardButton.Yes and self._delete_session_sync(session_id):
-            _logger.info("session_deleted", session_id=session_id)
-            self.session_deleted.emit(session_id)
-            self._load_sessions()
+        if reply != QMessageBox.StandardButton.Yes:
+            return
 
-    def _delete_session_sync(self, session_id: str) -> bool:
-        """Delete a session synchronously.
+        if self._manager is not None:
+            self._delete_session_via_manager(session_id)
+        elif self._delete_session_from_disk(session_id):
+            self._on_session_deleted(session_id)
 
-        When a session manager is available the deletion is routed through
-        ``SessionManager.delete`` via the shared bridge event loop so it is
-        reflected in the backing ``SessionStore``. When no manager is
-        provided, the on-disk sidecar fallback is used instead.
+    def _delete_session_via_manager(self, session_id: str) -> None:
+        """Delete a session through the session manager without blocking the GUI thread.
+
+        Routes the deletion through ``SessionManager.delete`` via the
+        non-blocking bridge worker so the Qt event loop stays responsive
+        while the backing ``SessionStore`` performs its SQLite write.
+
+        Args:
+            session_id: Session identifier.
+        """
+        manager = self._manager
+        if manager is None:
+            return
+        run_bridge_coroutine_logged(
+            manager.delete(session_id),
+            on_success=lambda result: self._on_delete_session_succeeded(session_id, result),
+            on_error=lambda exc: self._on_delete_session_failed(session_id, exc),
+            parent=self,
+            event="session_delete",
+            logger=_logger,
+            level="info",
+            session_id=session_id,
+        )
+
+    def _on_delete_session_succeeded(self, session_id: str, result: object) -> None:
+        """Handle a successful ``SessionManager.delete`` bridge call.
+
+        Args:
+            session_id: Identifier of the session that was requested for deletion.
+            result: Boolean-ish result returned by ``SessionManager.delete``.
+        """
+        deleted = True if result is None else bool(result)
+        if not deleted:
+            QMessageBox.warning(
+                self,
+                "Delete Failed",
+                "Session could not be deleted.",
+            )
+            return
+        self._on_session_deleted(session_id)
+
+    def _on_delete_session_failed(self, _session_id: str, exc: object) -> None:
+        """Handle a failed ``SessionManager.delete`` bridge call.
+
+        Args:
+            _session_id: Identifier of the session that was requested for
+                deletion (unused; retained for signature symmetry with
+                :meth:`_on_delete_session_succeeded`).
+            exc: Exception object emitted by the bridge worker on failure.
+        """
+        error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
+        QMessageBox.warning(
+            self,
+            "Delete Failed",
+            f"Failed to delete session:\n{error_obj}",
+        )
+
+    def _on_session_deleted(self, session_id: str) -> None:
+        """Finish a successful session deletion by refreshing the dialog state.
+
+        Args:
+            session_id: Identifier of the session that was deleted.
+        """
+        _logger.info("session_deleted", session_id=session_id)
+        self.session_deleted.emit(session_id)
+        self._load_sessions()
+
+    def _delete_session_from_disk(self, session_id: str) -> bool:
+        """Delete a session's on-disk sidecar JSON file.
+
+        Used only when no session manager has been wired into the dialog.
 
         Args:
             session_id: Session identifier.
@@ -1013,22 +1179,6 @@ class SessionManagerDialog(QDialog):
         Returns:
             bool: True if deleted successfully.
         """
-        if self._manager is not None:
-            try:
-                result = run_bridge_coroutine(self._manager.delete(session_id))
-            except (OSError, RuntimeError, ValueError) as e:
-                _logger.warning(
-                    "session_delete_failed",
-                    session_id=session_id,
-                    error=str(e),
-                )
-                QMessageBox.warning(
-                    self,
-                    "Delete Failed",
-                    f"Failed to delete session:\n{e}",
-                )
-                return False
-            return True if result is None else bool(result)
         session_file = self.SESSIONS_DIR / f"{session_id}.json"
         if session_file.exists():
             _logger.info("session_file_unlinking", session_id=session_id, path=str(session_file))
@@ -1228,24 +1378,47 @@ class SessionManagerDialog(QDialog):
                 return
             replace = True
 
-        try:
-            run_bridge_coroutine(manager.import_json(path, replace=replace))
-        except FileNotFoundError as e:
-            _logger.warning("session_import_file_missing", path=str(path), error=str(e))
-            QMessageBox.warning(self, "Import Failed", f"File not found:\n{path}")
-            return
-        except ValueError as e:
-            _logger.warning("session_import_invalid", path=str(path), error=str(e))
-            QMessageBox.warning(self, "Import Failed", f"Invalid session file:\n{e}")
-            return
-        except (OSError, RuntimeError) as e:
-            _logger.exception("session_import_failed", path=str(path))
-            QMessageBox.warning(self, "Import Failed", f"Failed to import session:\n{e}")
-            return
+        run_bridge_coroutine_logged(
+            manager.import_json(path, replace=replace),
+            on_success=lambda result: self._on_import_via_manager_succeeded(path, import_id, result),
+            on_error=lambda exc: self._on_import_via_manager_failed(path, exc),
+            parent=self,
+            event="session_import",
+            logger=_logger,
+            level="info",
+            path=str(path),
+            replace=replace,
+        )
 
+    def _on_import_via_manager_succeeded(self, path: Path, import_id: str | None, _result: object) -> None:
+        """Finish a successful ``SessionManager.import_json`` bridge call.
+
+        Args:
+            path: Path to the session JSON file that was imported.
+            import_id: Session identifier extracted from the file before
+                import, when one could be determined.
+            _result: Imported ``Session`` instance returned by the bridge
+                call (unused; the dialog reloads from ``list_sessions``
+                instead of trusting the raw bridge payload).
+        """
         _logger.info("session_imported", session_id=import_id, path=str(path))
         QMessageBox.information(self, "Import Complete", f"Session imported from:\n{path}")
         self._load_sessions()
+
+    def _on_import_via_manager_failed(self, path: Path, exc: object) -> None:
+        """Handle a failed ``SessionManager.import_json`` bridge call.
+
+        Args:
+            path: Path to the session JSON file that failed to import.
+            exc: Exception object emitted by the bridge worker on failure.
+        """
+        error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
+        if isinstance(error_obj, FileNotFoundError):
+            QMessageBox.warning(self, "Import Failed", f"File not found:\n{path}")
+        elif isinstance(error_obj, ValueError):
+            QMessageBox.warning(self, "Import Failed", f"Invalid session file:\n{error_obj}")
+        else:
+            QMessageBox.warning(self, "Import Failed", f"Failed to import session:\n{error_obj}")
 
     def _session_id_exists(self, session_id: str) -> bool:
         """Check whether a session ID is already present in the listed sessions.

@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QMessageBox,
     QPushButton,
@@ -123,6 +124,10 @@ class ProcessMemoryDialog(QDialog):
         ])
         self._regions_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._regions_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        regions_header = self._regions_table.horizontalHeader()
+        if regions_header is not None:
+            regions_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            regions_header.setStretchLastSection(True)
         layout.addWidget(self._regions_table)
 
         open_btn = QPushButton("Open Selected Region")
@@ -136,12 +141,9 @@ class ProcessMemoryDialog(QDialog):
     def _on_list_regions(self) -> None:
         """Query memory regions for the specified PID and populate the table.
 
-        On Windows with an attached bridge, dispatches to
-        :meth:`HexEditorBridge.list_process_regions` via
-        :func:`run_bridge_coroutine_logged` so the AI-callable tool and
-        the GUI share the same enumeration path. Falls back to the local
-        ctypes (Windows, no bridge) or ``/proc`` (non-Windows) paths
-        otherwise, since the bridge method is Windows-only.
+        On Windows with an attached bridge, dispatches to :meth:`HexEditorBridge.list_process_regions` via
+        :func:`run_bridge_coroutine_logged` so the AI-callable tool and the GUI share the same enumeration path. Falls back to the local
+        ctypes (Windows, no bridge) or ``/proc`` (non-Windows) paths otherwise, since the bridge method is Windows-only.
         """
         pid = self._pid_spin.value()
         self._regions_table.setRowCount(0)

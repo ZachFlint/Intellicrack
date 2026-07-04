@@ -10,7 +10,6 @@ import dataclasses
 import math
 from typing import TYPE_CHECKING, Any, cast
 
-from PyQt6.QtCore import QThread
 from PyQt6.QtWidgets import QLabel, QTreeWidget, QTreeWidgetItem, QWidget
 
 from intellicrack.core.logging import get_logger
@@ -181,6 +180,28 @@ def _compute_classification(document: object, block_size: int) -> list[int] | No
         return None
 
 
+def compute_digram_matrix(document: object) -> list[int]:
+    """Compute the flattened 256x256 byte digram frequency matrix.
+
+    Args:
+        document: Hex document object exposing a callable ``digram_matrix``
+            method returning the flattened byte-pair frequency counts.
+
+    Returns:
+        list[int]: Flattened 65536-element digram frequency matrix.
+
+    Raises:
+        TypeError: If the document does not expose a callable
+            ``digram_matrix`` method.
+    """
+    digram_fn: Any = getattr(document, "digram_matrix", None)
+    if not callable(digram_fn):
+        msg = "document does not expose a callable digram_matrix method"
+        raise TypeError(msg)
+    digram_result: Any = digram_fn()
+    return [int(v) for v in digram_result]
+
+
 class StatisticsMixin:
     """Mixin providing statistics and analysis for the hex editor panel."""
 
@@ -196,6 +217,7 @@ class StatisticsMixin:
     _high_pct_label: QLabel | None
     _classification_label: QLabel | None
     _statistics_worker: GenericCallableWorker | None
+    _digram_worker: GenericCallableWorker | None
 
     def _update_statistics(self) -> None:
         """Update the statistics tab with entropy graph, histogram, and byte tree.
@@ -237,7 +259,7 @@ class StatisticsMixin:
             block_size=ENTROPY_BLOCK_SIZE,
         )
 
-        parent_obj: QThread | None = self if isinstance(self, QThread) else None
+        parent_obj: QWidget | None = self if isinstance(self, QWidget) else None
         worker = GenericCallableWorker(
             compute_statistics,
             self.document,
@@ -419,7 +441,12 @@ class StatisticsMixin:
         self._update_statistics()
 
     def _on_show_digram_matrix(self) -> None:
-        """Open a dialog displaying the 256x256 byte digram matrix."""
+        """Launch a background worker to compute the 256x256 byte digram matrix.
+
+        The native scan and the subsequent element-by-element conversion are offloaded to a :class:`GenericCallableWorker` so the Qt event
+        loop is not blocked while the digram matrix is computed; the matrix dialog is opened from :meth:`_on_digram_matrix_computed` once
+        the worker finishes.
+        """
         if self.document is None:
             return
 
@@ -428,13 +455,48 @@ class StatisticsMixin:
             _logger.debug("digram_matrix_not_available")
             return
 
-        try:
-            digram_result: Any = digram_fn()
-            raw_matrix: list[int] = [int(v) for v in digram_result]
-        except (AttributeError, ValueError, TypeError):
-            _logger.exception("digram_matrix_failed")
+        worker_attr: GenericCallableWorker | None = getattr(self, "_digram_worker", None)
+        if worker_attr is not None and worker_attr.isRunning():
+            _logger.warning("digram_matrix_update_skipped", reason="worker active")
             return
 
+        if worker_attr is not None:
+            worker_attr.deleteLater()
+
+        parent_obj: QWidget | None = self if isinstance(self, QWidget) else None
+        worker = GenericCallableWorker(
+            compute_digram_matrix,
+            self.document,
+            parent=parent_obj,
+        )
+        _: object = worker.call_finished.connect(self._on_digram_matrix_computed)
+        _ = worker.call_error.connect(self._on_digram_matrix_error)
+        self._digram_worker = worker
+        worker.start()
+
+    def _on_digram_matrix_computed(self, result: object) -> None:
+        """Open the digram matrix dialog with the computed matrix.
+
+        Called on the main thread when the background worker completes
+        successfully.
+
+        Args:
+            result: The flattened digram matrix list from the background worker.
+        """
+        if not isinstance(result, list):
+            return
         parent = self if isinstance(self, QWidget) else None
-        dlg = DigramMatrixDialog(raw_matrix, parent)
+        dlg = DigramMatrixDialog(cast("list[int]", result), parent)
         dlg.exec()
+
+    def _on_digram_matrix_error(self, exc: object) -> None:
+        """Handle a digram matrix worker failure.
+
+        Called on the main thread when the background worker encounters
+        an error.
+
+        Args:
+            exc: The exception from the background worker.
+        """
+        self._digram_worker = None
+        _logger.warning("digram_matrix_failed", error=str(exc), error_type=type(exc).__name__)

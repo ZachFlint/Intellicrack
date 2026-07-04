@@ -40,6 +40,7 @@ Flag an end-to-end test where a unit test would prove the same property faster a
 ## Review Criteria
 
 ### No Mocks or Stubs
+
 - Tests must work with real data and perform actual operations
 - No `unittest.mock` usage, no `MagicMock`, no `patch`, no simulated responses
 - Minimal test binaries created programmatically are acceptable only if they are real, valid binaries - not fake byte sequences
@@ -48,6 +49,7 @@ Flag an end-to-end test where a unit test would prove the same property faster a
 - No placeholder or example tests
 
 ### Bridge Validation
+
 - Tests verify that bridges correctly pass all inputs to external tools without loss
 - Tests confirm bridges faithfully return all outputs from external tools without silent transformation or dropping
 - Tests confirm bridge coverage of the external tool's full capability surface
@@ -55,29 +57,35 @@ Flag an end-to-end test where a unit test would prove the same property faster a
 - Tests confirm bridge methods handle the full range of data types the external tool produces
 
 ### Orchestration and Integration Validation
+
 - Tests cover session and context management across tool switches
 - Tests cover AI provider connectivity and context routing
 - Tests cover GUI workspace integration points
 - Tests cover cross-bridge workflows where output from one tool feeds into another
 
 ### Assertion Quality
+
 - Every test must assert on the meaning of the output, not merely its existence. `assert result` / `assert result is not None` / `assert len(x) > 0` are never sufficient on their own - reject them as the sole check.
 - Assertions must check exact values and full structure: field-by-field on parsed records, exact bytes on patches/transforms, exact addresses/mnemonics on disassembly, exact verdict and indicators on detections.
 - When a function returns a rich object, the test must validate the parts that would silently regress, not just that an object came back.
 - Expected values must be independently justified (a known-correct constant, or a value computed by a *different* trusted oracle), never the implementation's own output captured and frozen, and never the test re-implementing the production logic to compare against itself.
 
 ### Mandatory Coverage Dimensions
+
 For each unit of behavior, confirm the tests cover more than the happy path:
+
 - **Edge inputs**: empty, maximal/oversized, boundary values, and the real-world complexity Intellicrack targets (packed, obfuscated, truncated, malformed, adversarially-crafted binaries).
 - **Error paths**: external tool unavailable/misconfigured/timed-out/returning errors; the test asserts the specific exception type and that failures are surfaced, not swallowed.
 - **Determinism**: where behavior touches threads, processes, sockets, or timing, the test synchronizes explicitly and asserts a stable result; it never relies on test ordering or a bare sleep as the correctness mechanism.
 
 ### Correct Organization
+
 - Tests placed in the appropriate `tests/` subdirectory mirroring the source module structure
 - Descriptive test names that convey what is being validated
 - Proper test isolation without sacrificing real-data requirements
 
 ### Code Quality
+
 - Zero ruff findings in all test files
 - Test code formatted with ruff format; line length limit 140 characters
 - All test functions, fixtures, and variables must have explicit type hints/annotations
@@ -89,6 +97,7 @@ For each unit of behavior, confirm the tests cover more than the happy path:
 - Zero pydoclint and pydocstyle findings
 
 ### Coverage
+
 - All tests must pass consistently and reproducibly
 - 85%+ code coverage target as a floor for reach
 - Coverage measures lines executed, not behavior verified; a high percentage achieved with weak or absent assertions is still a failing suite. Every covered line must also be a line whose behavior a real gate would catch breaking.

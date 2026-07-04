@@ -112,9 +112,7 @@ async def _query_provider_count(
             pytest.skip(f"{label}: network unreachable in this environment ({exc})")
         raise
     models: list[ModelInfo] = await provider.list_models()
-    assert len(models) > 0, (
-        f"{label} is configured and connected but list_models() returned an empty list"
-    )
+    assert models, f"{label} is configured and connected but list_models() returned an empty list"
     await provider.disconnect()
     return len(models)
 
@@ -142,7 +140,7 @@ class TestOllamaLocalModelListing:
         """
         models: list[ModelInfo] = await ollama_provider.list_models()
 
-        if len(models) == 0:
+        if not models:
             pytest.skip("No Ollama models installed; cannot assert model-record correctness")
 
         for model in models:
@@ -150,9 +148,7 @@ class TestOllamaLocalModelListing:
             assert model.provider == ProviderName.OLLAMA, (
                 f"Ollama model {model.id!r} must carry ProviderName.OLLAMA, got {model.provider!r}"
             )
-            assert model.context_window > 0, (
-                f"Ollama model {model.id!r} must have a positive context_window, got {model.context_window}"
-            )
+            assert model.context_window > 0, f"Ollama model {model.id!r} must have a positive context_window, got {model.context_window}"
 
 
 @pytest.mark.integration
@@ -195,32 +191,45 @@ class TestAllProvidersModelCount:
             has_anthropic_key: Whether an Anthropic API key is configured.
             has_ollama_available: Whether a local Ollama server is running.
         """
-        results: dict[str, int | str] = {}
-
-        if has_openai_key:
-            results["OpenAI"] = await _query_provider_count(
-                OpenAIProvider(), credential_loader, ProviderName.OPENAI, "OpenAI",
+        results: dict[str, int | str] = {
+            "OpenAI": (
+                await _query_provider_count(
+                    OpenAIProvider(),
+                    credential_loader,
+                    ProviderName.OPENAI,
+                    "OpenAI",
+                )
+                if has_openai_key
+                else "NOT CONFIGURED"
             )
-        else:
-            results["OpenAI"] = "NOT CONFIGURED"
+        }
 
         if has_google_key:
             results["Google"] = await _query_provider_count(
-                GoogleProvider(), credential_loader, ProviderName.GOOGLE, "Google",
+                GoogleProvider(),
+                credential_loader,
+                ProviderName.GOOGLE,
+                "Google",
             )
         else:
             results["Google"] = "NOT CONFIGURED"
 
         if has_openrouter_key:
             results["OpenRouter"] = await _query_provider_count(
-                OpenRouterProvider(), credential_loader, ProviderName.OPENROUTER, "OpenRouter",
+                OpenRouterProvider(),
+                credential_loader,
+                ProviderName.OPENROUTER,
+                "OpenRouter",
             )
         else:
             results["OpenRouter"] = "NOT CONFIGURED"
 
         if has_anthropic_key:
             results["Anthropic"] = await _query_provider_count(
-                AnthropicProvider(), credential_loader, ProviderName.ANTHROPIC, "Anthropic",
+                AnthropicProvider(),
+                credential_loader,
+                ProviderName.ANTHROPIC,
+                "Anthropic",
             )
         else:
             results["Anthropic"] = "NOT CONFIGURED"
@@ -251,6 +260,4 @@ class TestAllProvidersModelCount:
         if configured_count == 0:
             pytest.skip("No providers are configured; skipping cross-provider summary gate")
 
-        assert configured_count > 0, (
-            "At least one provider must be configured and return models"
-        )
+        assert configured_count > 0, "At least one provider must be configured and return models"

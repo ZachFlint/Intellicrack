@@ -948,4 +948,254 @@ mod tests {
             "expected TargetCopy OOB error, got: {msg}"
         );
     }
+
+    fn assemble_bps(source: &[u8], target: &[u8], metadata: &[u8], actions: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(b"BPS1");
+        body.extend_from_slice(&encode_var_int(source.len() as u64));
+        body.extend_from_slice(&encode_var_int(target.len() as u64));
+        body.extend_from_slice(&encode_var_int(metadata.len() as u64));
+        body.extend_from_slice(metadata);
+        body.extend_from_slice(actions);
+        body.extend_from_slice(&crc32_compute(source).to_le_bytes());
+        body.extend_from_slice(&crc32_compute(target).to_le_bytes());
+        let pc = crc32_compute(&body);
+        body.extend_from_slice(&pc.to_le_bytes());
+        body
+    }
+
+    #[test]
+    fn test_decode_var_int_unexpected_eof() {
+        // Empty input.
+        let err = decode_var_int(&[], &mut 0).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::UnexpectedEof);
+        // A continuation byte (no 0x80) at the end of the buffer.
+        let err2 = decode_var_int(&[0x00], &mut 0).unwrap_err();
+        assert_eq!(err2.kind(), io::ErrorKind::UnexpectedEof);
+    }
+
+    #[test]
+    fn test_validate_bps_too_short() {
+        let err = import_bps(&[0u8; 8], b"src").unwrap_err();
+        assert!(err.to_string().contains("too short"), "got {err}");
+    }
+
+    #[test]
+    fn test_validate_bps_bad_magic() {
+        let mut p = vec![0u8; 16];
+        p[..4].copy_from_slice(b"XPS1");
+        let err = import_bps(&p, b"src").unwrap_err();
+        assert!(err.to_string().contains("not a BPS1 patch"), "got {err}");
+    }
+
+    #[test]
+    fn test_validate_bps_patch_crc_mismatch() {
+        let mut p = export_bps(b"source", b"target").unwrap();
+        p[6] ^= 0xFF; // corrupt a body byte, leave the trailing patch CRC intact
+        let err = import_bps(&p, b"source").unwrap_err();
+        assert!(err.to_string().contains("patch CRC32 mismatch"), "got {err}");
+    }
+
+    #[test]
+    fn test_validate_bps_source_crc_mismatch() {
+        let p = export_bps(b"source", b"target").unwrap();
+        let err = import_bps(&p, b"a completely different source").unwrap_err();
+        assert!(err.to_string().contains("source CRC32 mismatch"), "got {err}");
+    }
+
+    #[test]
+    fn test_import_bps_target_crc_mismatch() {
+        let mut p = export_bps(b"source", b"target").unwrap();
+        let fs = p.len() - 12;
+        p[fs + 4] ^= 0xFF; // corrupt the stored target CRC
+        let body_len = p.len() - 4;
+        let new_crc = crc32_compute(&p[..body_len]);
+        p[body_len..].copy_from_slice(&new_crc.to_le_bytes());
+        let err = import_bps(&p, b"source").unwrap_err();
+        assert!(err.to_string().contains("target CRC32 mismatch"), "got {err}");
+    }
+
+    #[test]
+    fn test_import_bps_skips_nonzero_metadata() {
+        // TargetRead of the whole 5-byte target, behind 2 metadata bytes.
+        let target = b"HELLO";
+        let mut actions = Vec::new();
+        let action: u64 = ((5 - 1) << 2) | 1; // command 1 (TargetRead), length 5
+        actions.extend_from_slice(&encode_var_int(action));
+        actions.extend_from_slice(target);
+        let patch = assemble_bps(b"", target, &[0xAA, 0xBB], &actions);
+        let decoded = import_bps(&patch, b"").unwrap();
+        assert_eq!(decoded, target);
+    }
+
+    #[test]
+    fn test_apply_target_copy_self_referential_rle() {
+        // TargetRead one byte, then TargetCopy from offset 0 length 3 -> RLE fill.
+        let target = [0xABu8, 0xAB, 0xAB, 0xAB];
+        let mut actions = Vec::new();
+        actions.extend_from_slice(&encode_var_int(1)); // TargetRead len 1 -> action 1
+        actions.push(0xAB);
+        actions.extend_from_slice(&encode_var_int(((3 - 1) << 2) | 3)); // TargetCopy len 3
+        actions.extend_from_slice(&encode_var_int(encode_rel_offset(0))); // delta 0 -> tgt_start 0
+        let patch = assemble_bps(b"", &target, &[], &actions);
+        let decoded = import_bps(&patch, b"").unwrap();
+        assert_eq!(decoded, target);
+    }
+
+    #[test]
+    fn test_apply_source_copy_backward_negative_offset() {
+        // Two source copies: forward to offset 4, then a backward delta to offset 0.
+        let source = b"ABCDEFGH";
+        let target = b"EFGHABCD";
+        let mut actions = Vec::new();
+        actions.extend_from_slice(&encode_var_int(((4 - 1) << 2) | 2)); // SourceCopy len 4
+        actions.extend_from_slice(&encode_var_int(encode_rel_offset(4))); // +4
+        actions.extend_from_slice(&encode_var_int(((4 - 1) << 2) | 2)); // SourceCopy len 4
+        actions.extend_from_slice(&encode_var_int(encode_rel_offset(-8))); // -8 (backward)
+        let patch = assemble_bps(source, target, &[], &actions);
+        let decoded = import_bps(&patch, source).unwrap();
+        assert_eq!(&decoded, target);
+    }
+
+    #[test]
+    fn test_export_ups_unequal_lengths_roundtrip() {
+        // Source longer than target: target zero-fill branch.
+        let s1 = b"ABCDEFGH";
+        let t1 = b"XY";
+        let p1 = export_ups(s1, t1).unwrap();
+        assert_eq!(&import_ups(&p1, s1).unwrap(), t1);
+        // Target longer than source: source zero-fill branch.
+        let s2 = b"XY";
+        let t2 = b"ABCDEFGH";
+        let p2 = export_ups(s2, t2).unwrap();
+        assert_eq!(&import_ups(&p2, s2).unwrap(), t2);
+    }
+
+    #[test]
+    fn test_validate_ups_too_short() {
+        let err = import_ups(&[0u8; 10], b"src").unwrap_err();
+        assert!(err.to_string().contains("too short"), "got {err}");
+    }
+
+    #[test]
+    fn test_validate_ups_bad_magic() {
+        let mut p = vec![0u8; 20];
+        p[..4].copy_from_slice(b"XPS1");
+        let err = import_ups(&p, b"src").unwrap_err();
+        assert!(err.to_string().contains("not a UPS1 patch"), "got {err}");
+    }
+
+    #[test]
+    fn test_validate_ups_patch_crc_mismatch() {
+        let mut p = export_ups(b"ABCDEFGH", b"AbCdEfGh").unwrap();
+        p[6] ^= 0xFF;
+        let err = import_ups(&p, b"ABCDEFGH").unwrap_err();
+        assert!(err.to_string().contains("patch CRC32 mismatch"), "got {err}");
+    }
+
+    #[test]
+    fn test_validate_ups_source_crc_mismatch() {
+        let p = export_ups(b"ABCDEFGH", b"AbCdEfGh").unwrap();
+        let err = import_ups(&p, b"different source data here").unwrap_err();
+        assert!(err.to_string().contains("source CRC32 mismatch"), "got {err}");
+    }
+
+    #[test]
+    fn test_import_ups_target_crc_mismatch() {
+        let mut p = export_ups(b"ABCDEFGH", b"AbCdEfGh").unwrap();
+        let fs = p.len() - 12;
+        p[fs + 4] ^= 0xFF; // corrupt stored target CRC
+        let body_len = p.len() - 4;
+        let new_crc = crc32_compute(&p[..body_len]);
+        p[body_len..].copy_from_slice(&new_crc.to_le_bytes());
+        let err = import_ups(&p, b"ABCDEFGH").unwrap_err();
+        assert!(err.to_string().contains("target CRC32 mismatch"), "got {err}");
+    }
+
+    #[test]
+    fn test_apply_target_read_oob() {
+        // TargetRead length 5 but the reconstructed target is only 2 bytes.
+        let mut actions = Vec::new();
+        actions.extend_from_slice(&encode_var_int(((5 - 1) << 2) | 1)); // TargetRead len 5
+        actions.extend_from_slice(&[0x41; 5]);
+        let patch = assemble_bps(b"", b"AB", &[], &actions);
+        let err = import_bps(&patch, b"").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("TargetRead") && msg.contains("OOB"), "got {msg}");
+    }
+
+    #[test]
+    fn test_export_bps_source_shorter_than_match_window() {
+        // Source shorter than the 4-byte hash window -> build_hash_index returns empty early.
+        let patch = export_bps(b"ab", b"abcd").unwrap();
+        assert_eq!(import_bps(&patch, b"ab").unwrap(), b"abcd");
+    }
+
+    #[test]
+    fn test_export_ups_trailing_zero_matches_outer_loop() {
+        // Longer buffer's trailing bytes are zero and match the shorter one, so the outer
+        // loop (not the inner diff loop) reads past the shorter length via the zero-fill.
+        let src = [0x41u8, 0x42, 0x00, 0x00];
+        let tgt = [0x41u8, 0x42];
+        let p = export_ups(&src, &tgt).unwrap();
+        assert_eq!(import_ups(&p, &src).unwrap(), tgt.to_vec());
+
+        let src2 = [0x41u8, 0x42];
+        let tgt2 = [0x41u8, 0x42, 0x00, 0x00];
+        let p2 = export_ups(&src2, &tgt2).unwrap();
+        assert_eq!(import_ups(&p2, &src2).unwrap(), tgt2.to_vec());
+    }
+
+    #[test]
+    fn test_apply_source_copy_negative_rel_offset_underflow() {
+        // A backward delta drives source_rel_offset below zero, so usize::try_from fails.
+        let source = b"ABCDEFGH";
+        let mut actions = Vec::new();
+        actions.extend_from_slice(&encode_var_int(((4 - 1) << 2) | 2)); // SourceCopy len 4
+        actions.extend_from_slice(&encode_var_int(encode_rel_offset(-1)));
+        let patch = assemble_bps(source, &[0u8; 4], &[], &actions);
+        let err = import_bps(&patch, source).unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("SourceCopy") && msg.contains("OOB"), "got {msg}");
+    }
+
+    #[test]
+    fn test_apply_target_copy_negative_rel_offset_underflow() {
+        // A backward delta drives target_rel_offset below zero, so usize::try_from fails.
+        let mut actions = Vec::new();
+        actions.extend_from_slice(&encode_var_int(((4 - 1) << 2) | 3)); // TargetCopy len 4
+        actions.extend_from_slice(&encode_var_int(encode_rel_offset(-1)));
+        let patch = assemble_bps(b"", &[0u8; 4], &[], &actions);
+        let err = import_bps(&patch, b"").unwrap_err();
+        let msg = err.to_string();
+        assert!(msg.contains("TargetCopy") && msg.contains("OOB"), "got {msg}");
+    }
+
+    #[test]
+    fn test_export_bps_partial_key_match_diverges() {
+        // "WXYZ" is indexed at two source positions; both diverge on the next byte, so
+        // find_best_match evaluates the first candidate (improve, no break -> fall through
+        // line 157), then loops to the second candidate.
+        let mut source = b"WXYZ".to_vec();
+        source.extend(vec![0x11u8; 4]);
+        source.extend_from_slice(b"WXYZ");
+        source.extend(vec![0x33u8; 12]);
+        let mut target = b"WXYZ".to_vec();
+        target.extend(vec![0x22u8; 20]);
+        let patch = export_bps(&source, &target).unwrap();
+        assert_eq!(import_bps(&patch, &source).unwrap(), target);
+    }
+
+    #[test]
+    fn test_patch_contains_command_full_scan_source_read() {
+        // A near-identical file yields SourceRead/TargetRead commands; searching for an
+        // absent TargetCopy forces the helper to scan every record and return false.
+        let source = b"HELLO WORLD THIS IS A LONGER TEST BUFFER FOR BPS";
+        let mut target = source.to_vec();
+        target[10] = b'!';
+        let patch = export_bps(source, &target).unwrap();
+        assert!(!patch_contains_command(&patch, 3));
+        // Sanity: the patch still round-trips.
+        assert_eq!(import_bps(&patch, source).unwrap(), target);
+    }
 }

@@ -124,9 +124,7 @@ def qapp() -> QCoreApplication:
         QCoreApplication: The running application instance.
     """
     existing = QApplication.instance()
-    if existing is not None:
-        return existing
-    return QApplication([])
+    return existing if existing is not None else QApplication([])
 
 
 @pytest.fixture

@@ -44,7 +44,7 @@ class TestFixtureIntegrity:
         """
         assert sample_doc.length() == IDENTITY_LENGTH
         observed = sample_doc.read(0, IDENTITY_LENGTH)
-        assert observed == bytes(offset for offset in range(IDENTITY_LENGTH))
+        assert observed == bytes(range(IDENTITY_LENGTH))
         for offset in range(IDENTITY_LENGTH):
             assert sample_doc.read_byte(offset) == offset
 
@@ -56,7 +56,7 @@ class TestFixtureIntegrity:
         """
         assert sample_doc_from_bytes.length() == IDENTITY_LENGTH
         observed = sample_doc_from_bytes.read(0, IDENTITY_LENGTH)
-        assert observed == bytes(offset for offset in range(IDENTITY_LENGTH))
+        assert observed == bytes(range(IDENTITY_LENGTH))
         for offset in range(IDENTITY_LENGTH):
             assert sample_doc_from_bytes.read_byte(offset) == offset
 
@@ -118,11 +118,11 @@ class TestReadOps:
             sample_doc: HexDocument loaded from disk fixture.
         """
         boundary_low = sample_doc.read(126, 4)
-        assert boundary_low == bytes(offset for offset in range(126, 130))
+        assert boundary_low == bytes(range(126, 130))
         assert boundary_low == bytes([0x7E, 0x7F, 0x80, 0x81])
 
         boundary_high = sample_doc.read(253, 3)
-        assert boundary_high == bytes(offset for offset in range(253, 256))
+        assert boundary_high == bytes(range(253, 256))
         assert boundary_high == bytes([0xFD, 0xFE, 0xFF])
 
     def test_read_past_end_clamps_to_available_bytes(self, sample_doc: HexDocument) -> None:
@@ -132,7 +132,7 @@ class TestReadOps:
             sample_doc: HexDocument loaded from disk fixture.
         """
         result = sample_doc.read(250, 20)
-        assert result == bytes(offset for offset in range(250, 256))
+        assert result == bytes(range(250, 256))
         assert len(result) == 6
 
     def test_read_byte_out_of_bounds_raises_index_error(self, sample_doc: HexDocument) -> None:

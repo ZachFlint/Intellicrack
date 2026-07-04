@@ -641,7 +641,7 @@ class TestF0003DetectBehaviorsYAML:
 
         matches: list[dict[str, Any]] = cast("list[dict[str, Any]]", result["matches"])
         benign_matches = [m for m in matches if m.get("signature_name") == "BenignRule"]
-        assert len(benign_matches) == 0, (
+        assert not benign_matches, (
             f"Rule 'BenignRule' must not fire when 'benign.exe' is not in process_activity; found: {benign_matches!r}"
         )
 
@@ -729,7 +729,7 @@ class TestF0003DetectBehaviorsYAML:
         )
 
         non_matching_hits = [m for m in matches if m["signature_name"] == "NonMatchingRule"]
-        assert len(non_matching_hits) == 0, (
+        assert not non_matching_hits, (
             f"Rule 'NonMatchingRule' must not fire when 'absent.exe' not in process_activity; found: {non_matching_hits!r}"
         )
 

@@ -438,7 +438,9 @@ class TestOpenRouterPricingConversion:
         info = self._build_model_info(model_data)
 
         assert info.input_cost_per_1m_tokens is None, f"missing pricing must leave input cost None, got {info.input_cost_per_1m_tokens!r}"
-        assert info.output_cost_per_1m_tokens is None, f"missing pricing must leave output cost None, got {info.output_cost_per_1m_tokens!r}"
+        assert info.output_cost_per_1m_tokens is None, (
+            f"missing pricing must leave output cost None, got {info.output_cost_per_1m_tokens!r}"
+        )
 
     def test_zero_pricing_converts_to_zero(self) -> None:
         """Verify a free model with ``"0"`` pricing converts to ``0.0``.
@@ -456,8 +458,12 @@ class TestOpenRouterPricingConversion:
 
         assert info.input_cost_per_1m_tokens is not None, "'0' input must convert to a number, not None"
         assert info.output_cost_per_1m_tokens is not None, "'0' output must convert to a number, not None"
-        assert abs(info.input_cost_per_1m_tokens) < _FLOAT_TOLERANCE, f"'0' input must convert to 0.0, got {info.input_cost_per_1m_tokens!r}"
-        assert abs(info.output_cost_per_1m_tokens) < _FLOAT_TOLERANCE, f"'0' output must convert to 0.0, got {info.output_cost_per_1m_tokens!r}"
+        assert abs(info.input_cost_per_1m_tokens) < _FLOAT_TOLERANCE, (
+            f"'0' input must convert to 0.0, got {info.input_cost_per_1m_tokens!r}"
+        )
+        assert abs(info.output_cost_per_1m_tokens) < _FLOAT_TOLERANCE, (
+            f"'0' output must convert to 0.0, got {info.output_cost_per_1m_tokens!r}"
+        )
 
     def test_model_info_provider_is_openrouter(self) -> None:
         """Verify ``_build_model_info`` tags the model as the OpenRouter provider.

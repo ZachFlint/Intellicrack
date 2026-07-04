@@ -259,7 +259,7 @@ class TestF0013InjectRequiresAttachment:
             f"Warning message must contain 'Attach to a process before injecting a DLL'; got {actual_message!r}"
         )
 
-        assert len(bridge_dispatch_calls) == 0, (
+        assert not bridge_dispatch_calls, (
             "_on_inject_dll must not dispatch the bridge (run_bridge_coroutine_logged) when no process is attached"
         )
 
@@ -400,7 +400,7 @@ class TestF0015AttachSurfacesFailure:
         ):
             tab.invoke_on_attach()
 
-        assert len(warning_shown) > 0, "_on_attach error callback must show a QMessageBox warning on failure"
+        assert warning_shown, "_on_attach error callback must show a QMessageBox warning on failure"
 
     def test_attach_success_sets_attached_pid(self, tab: _TestProcessTab) -> None:
         """When the bridge succeeds, _attached_pid must be set to the target PID.
@@ -471,7 +471,7 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
         ):
             tab.invoke_on_suspend()
 
-        assert len(warning_shown) > 0, "_on_suspend must show a warning dialog when the bridge raises"
+        assert warning_shown, "_on_suspend must show a warning dialog when the bridge raises"
 
     def test_resume_error_callback_shows_warning(self, tab: _TestProcessTab) -> None:
         """_on_resume must pass an error callback that shows a warning dialog.
@@ -504,7 +504,7 @@ class TestF0016SuspendResumeHaveErrorCallbacks:
         ):
             tab.invoke_on_resume()
 
-        assert len(warning_shown) > 0, "_on_resume must show a warning dialog when the bridge raises"
+        assert warning_shown, "_on_resume must show a warning dialog when the bridge raises"
 
 
 # ---------------------------------------------------------------------------

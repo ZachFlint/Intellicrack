@@ -97,7 +97,7 @@ def test_returns_none_for_unmatched_status(status_code: int) -> None:
         extract_503_message=_probe_extract,
     )
     assert result is None
-    assert side_effect_log == [], f"extract_503_message was unexpectedly invoked for status {status_code}"
+    assert not side_effect_log, f"extract_503_message was unexpectedly invoked for status {status_code}"
 
 
 def test_returns_none_for_zero_sentinel_status() -> None:

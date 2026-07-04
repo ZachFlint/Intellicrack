@@ -650,9 +650,7 @@ def _compute_hash_impl(algo: str, data: bytes) -> str | None:
     if result is not None:
         return result
     result = _compute_hash_checksums(algo, data)
-    if result is not None:
-        return result
-    return _compute_hash_fnv(algo, data)
+    return result if result is not None else _compute_hash_fnv(algo, data)
 
 
 def compute_hash(algo: str, data: bytes) -> str:

@@ -228,9 +228,7 @@ class TestFindPattern:
         assert len(results) > 0, "find_pattern returned empty list; marker was not found in process"
 
         exact_matches = [r for r in results if r["offset"] == buf_addr]
-        assert len(exact_matches) >= 1, (
-            f"No result with offset == buf_addr {hex(buf_addr)}; offsets found: {[hex(r['offset']) for r in results]}"
-        )
+        assert exact_matches, f"No result with offset == buf_addr {hex(buf_addr)}; offsets found: {[hex(r['offset']) for r in results]}"
         match = exact_matches[0]
         assert match["address"] == hex(buf_addr), f"address field {match['address']!r} does not match hex(buf_addr) {hex(buf_addr)!r}"
 
@@ -299,9 +297,7 @@ class TestScanMemory:
             assert isinstance(result.matched_bytes, str), "MemorySearchResult.matched_bytes must be str"
 
         exact_matches = [r for r in results if r.address == buf_addr]
-        assert len(exact_matches) >= 1, (
-            f"No result with address == buf_addr {hex(buf_addr)}; addresses: {[hex(r.address) for r in results]}"
-        )
+        assert exact_matches, f"No result with address == buf_addr {hex(buf_addr)}; addresses: {[hex(r.address) for r in results]}"
         assert exact_matches[0].matched_bytes == expected_hex, (
             f"matched_bytes {exact_matches[0].matched_bytes!r} != expected {expected_hex!r}"
         )

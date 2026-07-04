@@ -178,35 +178,37 @@ public class LicenseAnalyzer extends GhidraScript {
             "display": "Cutter",
             "extension": ".r2",
             "language": "r2cmd",
-            "template": """# Cutter/Rizin script for license analysis
-# Target: {target}
+            "template": """# Cutter/Rizin script for license analysis # Target: {target}
 
-# Analyze all
-aaa
+                        # Analyze all
+                        aaa
 
-# Find license-related strings
-iz~licen
-iz~serial
-iz~regist
+                        # Find license-related strings
+                        iz~licen
+                        iz~serial
+                        iz~regist
 
-# Find crypto function references
-axt sym.imp.CryptAcquireContextW
+                        # Find crypto function references
+                        axt sym.imp.CryptAcquireContextW
 
-# Seek to main
-s main
+                        # Seek to main
+                        s main
 
-# Print disassembly
-pdf
+                        # Print disassembly
+                        pdf
 
-# Find comparison operations
-/c cmp
-""",
+                        # Find comparison operations
+                        /c cmp
+                        """
+
+   ,
         },
         "x64dbg": {
             "display": "x64dbg",
             "extension": ".txt",
             "language": "x64dbg",
-            "template": """// x64dbg script for license bypass
+            "template":\
+                        """// x64dbg script for license bypass
 // Target: {target}
 
 // Set an unconditional breakpoint at the validation function entry
@@ -227,7 +229,8 @@ run
             "display": "Python",
             "extension": ".py",
             "language": "python",
-            "template": '''"""
+            "template":\
+                        '''"""
 Python analysis script for license examination.
 Target: {target}
 """
@@ -416,8 +419,10 @@ class ScriptListWidget(QListWidget):
                 continue
 
             type_prefix = ScriptTypeInfo.get_display_name(info["type"])
-            item = QListWidgetItem(f"[{type_prefix}] {info['name']}")
+            item_text = f"[{type_prefix}] {info['name']}"
+            item = QListWidgetItem(item_text)
             item.setData(Qt.ItemDataRole.UserRole, script_id)
+            item.setToolTip(item_text)
             self.addItem(item)
 
     def get_selected_id(self) -> str | None:
@@ -554,6 +559,7 @@ class ScriptManagerPanel(QWidget):
         layout.setSpacing(0)
 
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
 
         left_panel = QFrame()
         left_layout = QVBoxLayout(left_panel)

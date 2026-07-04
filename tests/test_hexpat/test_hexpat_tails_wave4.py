@@ -181,12 +181,7 @@ class TestEvalDepthLimit:
         """eval_depth 1 is exceeded when Outer contains Inner, raising exact depth message."""
         interp = HexPatInterpreter()
         data = bytes(32)
-        source = (
-            "#pragma eval_depth 1\n"
-            "struct Inner { u8 x; };\n"
-            "struct Outer { Inner i; };\n"
-            "Outer o @ 0;"
-        )
+        source = "#pragma eval_depth 1\nstruct Inner { u8 x; };\nstruct Outer { Inner i; };\nOuter o @ 0;"
         with pytest.raises(HexPatRuntimeError, match="maximum evaluation depth 1 exceeded"):
             interp.execute_bytes(source, data)
 
@@ -194,12 +189,7 @@ class TestEvalDepthLimit:
         """eval_depth 3 does not raise for 2-level nesting; result contains the outer field."""
         interp = HexPatInterpreter()
         data = bytes(32)
-        source = (
-            "#pragma eval_depth 3\n"
-            "struct Inner { u8 x; };\n"
-            "struct Outer { Inner i; };\n"
-            "Outer o @ 0;"
-        )
+        source = "#pragma eval_depth 3\nstruct Inner { u8 x; };\nstruct Outer { Inner i; };\nOuter o @ 0;"
         results = interp.execute_bytes(source, data)
         assert len(results) == 1
         assert results[0]["name"] == "o"
@@ -208,14 +198,7 @@ class TestEvalDepthLimit:
         """eval_depth 2 is exceeded by D->C->B->A (third entry triggers depth 3 > 2)."""
         interp = HexPatInterpreter()
         data = bytes(32)
-        source = (
-            "#pragma eval_depth 2\n"
-            "struct A { u8 v; };\n"
-            "struct B { A a; };\n"
-            "struct C { B b; };\n"
-            "struct D { C c; };\n"
-            "D d @ 0;"
-        )
+        source = "#pragma eval_depth 2\nstruct A { u8 v; };\nstruct B { A a; };\nstruct C { B b; };\nstruct D { C c; };\nD d @ 0;"
         with pytest.raises(HexPatRuntimeError, match="maximum evaluation depth 2 exceeded"):
             interp.execute_bytes(source, data)
 
@@ -245,10 +228,7 @@ class TestPatternLimitError:
         """pattern_limit 3 is exceeded by the fourth placement with exact error message."""
         interp = HexPatInterpreter()
         data = bytes(16)
-        source = (
-            "#pragma pattern_limit 3\n"
-            "u8 a @ 0;\nu8 b @ 1;\nu8 c @ 2;\nu8 d @ 3;"
-        )
+        source = "#pragma pattern_limit 3\nu8 a @ 0;\nu8 b @ 1;\nu8 c @ 2;\nu8 d @ 3;"
         with pytest.raises(HexPatRuntimeError, match="pattern limit 3 exceeded"):
             interp.execute_bytes(source, data)
 
@@ -301,7 +281,7 @@ class TestCRCCompute:
 
     def test_crc32_iso_hdlc_matches_binascii_crc32_arbitrary_bytes(self) -> None:
         """_crc_compute with ISO-HDLC parameters matches binascii.crc32 for arbitrary data."""
-        data = b"\xDE\xAD\xBE\xEF\x00\x01\x02\x03"
+        data = b"\xde\xad\xbe\xef\x00\x01\x02\x03"
         expected = binascii.crc32(data) & 0xFFFFFFFF
         fn = getattr(_hexpat_stdlib, "_crc_compute")
         result = fn(
@@ -332,7 +312,7 @@ class TestCRCCompute:
 
     def test_crc32_iso_hdlc_single_byte_matches_binascii(self) -> None:
         """CRC-32/ISO-HDLC of a single byte matches binascii.crc32 for that byte."""
-        data = b"\xFF"
+        data = b"\xff"
         expected = binascii.crc32(data) & 0xFFFFFFFF
         fn = getattr(_hexpat_stdlib, "_crc_compute")
         result = fn(
@@ -408,7 +388,7 @@ class TestCRCCompute:
         """CRC-32 result is always masked to 32 bits (never exceeds 0xFFFFFFFF)."""
         fn = getattr(_hexpat_stdlib, "_crc_compute")
         result = fn(
-            b"\xFF" * 64,
+            b"\xff" * 64,
             _CRC32_ISO_INIT,
             _CRC32_ISO_POLY,
             _CRC32_ISO_XOROUT,
@@ -476,7 +456,7 @@ class TestCRCBuiltinMethods:
 
     def test_hash_crc16_method_bytes_payload(self) -> None:
         """_hash_crc16 with a bytes-value PatternValue matches _crc_compute for the same data."""
-        payload = b"\xAB\xCD\xEF"
+        payload = b"\xab\xcd\xef"
         stdlib = BuiltinFunctions(DataReader.from_bytes(b"\x00" * 8))
         pv = PatternValue(value=payload, offset=0, size=0)
         result = getattr(stdlib, "_hash_crc16")(

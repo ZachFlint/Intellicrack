@@ -228,11 +228,8 @@ class TestInvalidHandleValue:
         own mechanism) and assert equality.
         """
         void_ptr_size = ctypes.sizeof(ctypes.c_void_p)
-        if sys.platform == "win32":
-            if void_ptr_size == 8:
-                assert INVALID_HANDLE_VALUE == 0xFFFFFFFFFFFFFFFF
-            else:
-                assert INVALID_HANDLE_VALUE == 0xFFFFFFFF
+        if sys.platform == "win32" and void_ptr_size == 8:
+            assert INVALID_HANDLE_VALUE == 0xFFFFFFFFFFFFFFFF
         else:
             assert INVALID_HANDLE_VALUE == 0xFFFFFFFF
 

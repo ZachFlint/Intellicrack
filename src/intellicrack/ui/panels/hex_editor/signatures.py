@@ -16,6 +16,7 @@ from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QPushButton,
     QTreeWidget,
@@ -542,7 +543,9 @@ class SignaturesMixin:
         select_btn.clicked.connect(self._on_select_sig_db)
         db_row.addWidget(select_btn)
         self._sig_db_path_label = QLabel("(none)")
-        db_row.addWidget(self._sig_db_path_label)
+        self._sig_db_path_label.setWordWrap(True)
+        self._sig_db_path_label.setToolTip("(none)")
+        db_row.addWidget(self._sig_db_path_label, 1)
         layout.addLayout(db_row)
 
         scan_btn = QPushButton("Scan")
@@ -553,6 +556,10 @@ class SignaturesMixin:
         self._sig_results_tree.setHeaderLabels(["Name", "Type", "Version", "Offset", "Details"])
         self._sig_results_tree.setRootIsDecorated(False)
         self._sig_results_tree.setAlternatingRowColors(True)
+        results_header = self._sig_results_tree.header()
+        if results_header is not None:
+            results_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            results_header.setStretchLastSection(True)
         self._sig_results_tree.itemDoubleClicked.connect(self._on_sig_result_double_clicked)
         layout.addWidget(self._sig_results_tree)
 
@@ -571,6 +578,7 @@ class SignaturesMixin:
             if self._sig_db_path_label is not None:
                 name = Path(db_path).name
                 self._sig_db_path_label.setText(name)
+                self._sig_db_path_label.setToolTip(db_path)
 
     def _on_scan_signatures(self) -> None:
         """Start scanning the document against the selected signature database.
@@ -694,13 +702,17 @@ class SignaturesMixin:
         typed_results = cast("list[dict[str, Any]]", results)
         for match in typed_results:
             offset = match.get("offset", 0)
-            item = QTreeWidgetItem([
+            offset_text = f"0x{offset:08X}" if isinstance(offset, int) else str(offset)
+            values = [
                 str(match.get("name", "")),
                 str(match.get("type", "")),
                 str(match.get("version", "")),
-                f"0x{offset:08X}" if isinstance(offset, int) else str(offset),
+                offset_text,
                 str(match.get("details", "")),
-            ])
+            ]
+            item = QTreeWidgetItem(values)
+            for column, value in enumerate(values):
+                item.setToolTip(column, value)
             self._sig_results_tree.addTopLevelItem(item)
 
         _logger.info("sig_scan_complete", match_count=len(typed_results))

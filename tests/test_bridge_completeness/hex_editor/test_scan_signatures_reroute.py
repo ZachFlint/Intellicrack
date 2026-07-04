@@ -45,9 +45,7 @@ if TYPE_CHECKING:
 
 
 _DIE_MAGIC = bytes.fromhex("deadbeef")
-_DIE_DB_JSON = (
-    '[{"name": "gate-die-sig", "type": "packer", "version": "1.0", "patterns": [{"pattern": "DEADBEEF", "offset": "ep"}]}]'
-)
+_DIE_DB_JSON = '[{"name": "gate-die-sig", "type": "packer", "version": "1.0", "patterns": [{"pattern": "DEADBEEF", "offset": "ep"}]}]'
 _CUSTOM_DB_JSON = '[{"name": "gate-custom-sig", "type": "marker", "pattern": "deadbeef", "offset": "any"}]'
 _CLAMAV_NDB_DB = "gate-clamav-sig:0:*:DEADBEEF\n"
 

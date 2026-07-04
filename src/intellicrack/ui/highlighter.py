@@ -29,7 +29,8 @@ _logger = get_logger(__name__)
 _BLOCK_STATE_NORMAL = 0
 _BLOCK_STATE_DOUBLE_QUOTE = 1
 _BLOCK_STATE_SINGLE_QUOTE = 2
-_BLOCK_STATE_BLOCK_COMMENT = 1
+_BLOCK_COMMENT_FLAG = 1
+_TEMPLATE_LITERAL_FLAG = 2
 _DELIM_STATE_MAP = (_BLOCK_STATE_DOUBLE_QUOTE, _BLOCK_STATE_SINGLE_QUOTE)
 
 _STRING_DELIMITERS: tuple[str, ...] = ('"', "'", "`")
@@ -84,8 +85,7 @@ class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
         self._comment_role: str | None = None
         self._string_role: str | None = None
         self._multi_line_comment_format = QTextCharFormat()
-        self._triple_quote_format = QTextCharFormat()
-        self._comment_start = QRegularExpression(r"/\*")
+        self._multi_line_string_format = QTextCharFormat()
         self._comment_end = QRegularExpression(r"\*/")
         self._theme_manager = ThemeManager.get_instance()
         self._palette: dict[str, QColor] = self._resolve_palette()
@@ -151,7 +151,7 @@ class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
         if self._comment_role is not None:
             self._multi_line_comment_format = self._create_format(self._comment_role, italic=True)
         if self._string_role is not None:
-            self._triple_quote_format = self._create_format(self._string_role)
+            self._multi_line_string_format = self._create_format(self._string_role)
 
     def _on_theme_changed(self, _theme_name: str) -> None:
         """Re-resolve the palette and re-highlight after a theme switch.
@@ -177,22 +177,25 @@ class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
                 self.setFormat(match.capturedStart(), match.capturedLength(), rule.format)
 
     @staticmethod
-    def _line_comment_start_index(text: str) -> int:
-        """Return the index of the first ``//`` line comment outside any string.
+    def _find_token_outside_strings(text: str, token: str, offset: int = 0) -> int:
+        """Return the index of ``token`` outside any string literal.
 
-        Scans the text tracking single, double, and backtick string literals
-        (honoring backslash escapes) so a ``//`` inside a string is not treated
-        as a comment.
+        Scans ``text`` from ``offset`` tracking single, double, and backtick
+        string literals (honoring backslash escapes) so an occurrence of
+        ``token`` inside a string is not treated as a real token.
 
         Args:
             text: The text block to scan.
+            token: The literal substring to search for (e.g. ``"//"`` or
+                ``"/*"``).
+            offset: Index to start scanning from.
 
         Returns:
-            int: Index of the opening ``//``, or ``-1`` when the line has no
-                line comment outside a string literal.
+            int: Index of the first occurrence of ``token`` outside a string
+                literal, or ``-1`` when none is found.
         """
         in_string: str | None = None
-        index = 0
+        index = offset
         length = len(text)
         while index < length:
             char = text[index]
@@ -208,10 +211,62 @@ class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
                 in_string = char
                 index += 1
                 continue
-            if char == "/" and index + 1 < length and text[index + 1] == "/":
+            if text.startswith(token, index):
                 return index
             index += 1
         return -1
+
+    @staticmethod
+    def _find_unescaped_backtick(text: str, offset: int) -> int:
+        """Return the index of the next unescaped backtick from ``offset``.
+
+        Args:
+            text: The text block to scan.
+            offset: Index to start scanning from.
+
+        Returns:
+            int: Index of the next backtick not preceded by an odd number of
+                backslashes, or ``-1`` when none is found.
+        """
+        index = offset
+        length = len(text)
+        while index < length:
+            char = text[index]
+            if char == "\\":
+                index += 2
+                continue
+            if char == "`":
+                return index
+            index += 1
+        return -1
+
+    @staticmethod
+    def _line_comment_start_index(text: str) -> int:
+        """Return the index of the first ``//`` line comment outside any string.
+
+        Args:
+            text: The text block to scan.
+
+        Returns:
+            int: Index of the opening ``//``, or ``-1`` when the line has no
+                line comment outside a string literal.
+        """
+        return _ThemedSyntaxHighlighter._find_token_outside_strings(text, "//")
+
+    @staticmethod
+    def _block_comment_start_index(text: str, offset: int = 0) -> int:
+        """Return the index of the first ``/*`` block-comment opener outside any string.
+
+        Args:
+            text: The text block to scan.
+            offset: Index to start scanning from.
+
+        Returns:
+            int: Index of the opening ``/*``, or ``-1`` when the text has no
+                block-comment opener outside a string literal from ``offset``
+                onward.
+        """
+        return _ThemedSyntaxHighlighter._find_token_outside_strings(text, "/*", offset)
 
     @staticmethod
     def _guard_block_start(start_index: int, line_comment_index: int) -> int:
@@ -233,21 +288,39 @@ class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
     def _scan_block_comments(self, text: str) -> None:
         """Highlight ``/* */`` block comments spanning one or more blocks.
 
-        A ``/*`` that appears after a ``//`` line comment on the same line is
-        ignored so a commented-out ``/*`` does not start a spurious multi-line
-        block comment.
+        A ``/*`` that appears after a ``//`` line comment on the same line, or
+        inside a string literal, is ignored so it does not start a spurious
+        multi-line block comment. Any other block-state flags carried over
+        from the previous block are preserved rather than clobbered. When the
+        previous block ended inside an unterminated template literal, the
+        prefix of ``text`` still covered by that literal is skipped entirely
+        so a bare ``/*`` inside the literal's content is never mistaken for a
+        real block-comment opener.
 
         Args:
             text: The text block to highlight.
         """
-        self.setCurrentBlockState(_BLOCK_STATE_NORMAL)
-        line_comment_index = self._line_comment_start_index(text)
+        previous_state = self.previousBlockState()
+        if previous_state < 0:
+            previous_state = _BLOCK_STATE_NORMAL
+        preserved_flags = previous_state & ~_BLOCK_COMMENT_FLAG
+        self.setCurrentBlockState(preserved_flags)
 
-        if self.previousBlockState() == _BLOCK_STATE_BLOCK_COMMENT:
-            start_index = 0
+        scan_offset = 0
+        if previous_state & _TEMPLATE_LITERAL_FLAG:
+            literal_end = self._find_unescaped_backtick(text, 0)
+            if literal_end == -1:
+                return
+            scan_offset = literal_end + 1
+
+        line_comment_index = self._line_comment_start_index(text[scan_offset:])
+        if line_comment_index >= 0:
+            line_comment_index += scan_offset
+
+        if previous_state & _BLOCK_COMMENT_FLAG:
+            start_index = scan_offset
         else:
-            match = self._comment_start.match(text)
-            candidate = match.capturedStart() if match.hasMatch() else -1
+            candidate = self._block_comment_start_index(text, scan_offset)
             start_index = self._guard_block_start(candidate, line_comment_index)
 
         while start_index >= 0:
@@ -255,15 +328,14 @@ class _ThemedSyntaxHighlighter(QSyntaxHighlighter):
             if end_match.hasMatch():
                 end_index = end_match.capturedEnd()
                 comment_length = end_index - start_index
-                self.setCurrentBlockState(_BLOCK_STATE_NORMAL)
+                self.setCurrentBlockState(self.currentBlockState() & ~_BLOCK_COMMENT_FLAG)
             else:
-                self.setCurrentBlockState(_BLOCK_STATE_BLOCK_COMMENT)
+                self.setCurrentBlockState(self.currentBlockState() | _BLOCK_COMMENT_FLAG)
                 comment_length = len(text) - start_index
 
             self.setFormat(start_index, comment_length, self._multi_line_comment_format)
 
-            next_match = self._comment_start.match(text, start_index + comment_length)
-            candidate = next_match.capturedStart() if next_match.hasMatch() else -1
+            candidate = self._block_comment_start_index(text, start_index + comment_length)
             start_index = self._guard_block_start(candidate, line_comment_index)
 
 
@@ -982,20 +1054,20 @@ class PythonSyntaxHighlighter(_ThemedSyntaxHighlighter):
         if prev_state == _BLOCK_STATE_DOUBLE_QUOTE:
             end_idx = text.find('"""', offset)
             if end_idx == -1:
-                self.setFormat(0, len(text), self._triple_quote_format)
+                self.setFormat(0, len(text), self._multi_line_string_format)
                 self.setCurrentBlockState(_BLOCK_STATE_DOUBLE_QUOTE)
                 return
             length = end_idx + 3
-            self.setFormat(0, length, self._triple_quote_format)
+            self.setFormat(0, length, self._multi_line_string_format)
             offset = length
         elif prev_state == _BLOCK_STATE_SINGLE_QUOTE:
             end_idx = text.find("'''", offset)
             if end_idx == -1:
-                self.setFormat(0, len(text), self._triple_quote_format)
+                self.setFormat(0, len(text), self._multi_line_string_format)
                 self.setCurrentBlockState(_BLOCK_STATE_SINGLE_QUOTE)
                 return
             length = end_idx + 3
-            self.setFormat(0, length, self._triple_quote_format)
+            self.setFormat(0, length, self._multi_line_string_format)
             offset = length
 
         self.setCurrentBlockState(_BLOCK_STATE_NORMAL)
@@ -1017,13 +1089,13 @@ class PythonSyntaxHighlighter(_ThemedSyntaxHighlighter):
             end_idx = text.find(delim, nearest_pos + 3)
 
             if end_idx == -1:
-                self.setFormat(nearest_pos, len(text) - nearest_pos, self._triple_quote_format)
+                self.setFormat(nearest_pos, len(text) - nearest_pos, self._multi_line_string_format)
                 state_value = _DELIM_STATE_MAP[nearest_delim_idx]
                 self.setCurrentBlockState(state_value)
                 return
 
             length = end_idx - nearest_pos + 3
-            self.setFormat(nearest_pos, length, self._triple_quote_format)
+            self.setFormat(nearest_pos, length, self._multi_line_string_format)
             offset = nearest_pos + length
 
 
@@ -1116,13 +1188,13 @@ class JavaScriptSyntaxHighlighter(_ThemedSyntaxHighlighter):
         """
         super().__init__(parent)
         self._comment_role = "comment"
+        self._string_role = "string"
         self._rule_specs = [
             *((rf"\b{keyword}\b", "keyword", True, False) for keyword in self.KEYWORDS),
             *((rf"\b{frida_global}\b", "type", True, False) for frida_global in self.FRIDA_GLOBALS),
             (r"\b[A-Za-z_][A-Za-z0-9_]*(?=\s*\()", "function", False, False),
             (r'"[^"\\]*(\\.[^"\\]*)*"', "string", False, False),
             (r"'[^'\\]*(\\.[^'\\]*)*'", "string", False, False),
-            (r"`[^`\\]*(\\.[^`\\]*)*`", "string", False, False),
             (r"\b0x[0-9A-Fa-f]+\b", "number", False, False),
             (r"\b\d+\.?\d*\b", "number", False, False),
             (r"//[^\n]*", "comment", False, True),
@@ -1140,6 +1212,117 @@ class JavaScriptSyntaxHighlighter(_ThemedSyntaxHighlighter):
             return
         self._apply_rules(text)
         self._scan_block_comments(text)
+        self._highlight_template_literals(text)
+
+    @staticmethod
+    def _find_template_literal_start(
+        text: str,
+        offset: int,
+        *,
+        start_in_block_comment: bool,
+    ) -> int:
+        """Return the index of the next backtick that genuinely opens a template literal.
+
+        Scans ``text`` from ``offset`` treating ``//`` line comments, ``/*``
+        ``*/`` block comments, and double/single-quoted string literals
+        (honoring backslash escapes) as opaque, so a stray backtick already
+        claimed by one of those constructs is never mistaken for the start of
+        a template literal.
+
+        Args:
+            text: The text block to scan.
+            offset: Index to start scanning from.
+            start_in_block_comment: Whether ``offset`` begins inside a block
+                comment carried over from a previous block.
+
+        Returns:
+            int: Index of the next backtick that opens a template literal, or
+                ``-1`` when none is found.
+        """
+        index = offset
+        length = len(text)
+        in_block_comment = start_in_block_comment
+        quote_char: str | None = None
+        while index < length:
+            if in_block_comment:
+                if text.startswith("*/", index):
+                    in_block_comment = False
+                    index += 2
+                    continue
+                index += 1
+                continue
+            char = text[index]
+            if quote_char is not None:
+                if char == "\\":
+                    index += 2
+                    continue
+                if char == quote_char:
+                    quote_char = None
+                index += 1
+                continue
+            if text.startswith("//", index):
+                return -1
+            if text.startswith("/*", index):
+                in_block_comment = True
+                index += 2
+                continue
+            if char in {'"', "'"}:
+                quote_char = char
+                index += 1
+                continue
+            if char == "`":
+                return index
+            index += 1
+        return -1
+
+    def _highlight_template_literals(self, text: str) -> None:
+        """Highlight backtick template literals spanning one or more blocks.
+
+        JavaScript/Frida template literals routinely span multiple lines.
+        This tracks whether a block starts inside an unterminated template
+        literal (via :class:`QSyntaxHighlighter` block state) and applies the
+        string format to the full literal, overriding any keyword or operator
+        formatting that :meth:`_apply_rules` applied to tokens inside it. A
+        stray backtick already claimed by a ``//``/``/* */`` comment or by a
+        double/single-quoted string is never treated as opening a new
+        template literal.
+
+        Args:
+            text: The text block to highlight.
+        """
+        previous_state = self.previousBlockState()
+        if previous_state < 0:
+            previous_state = _BLOCK_STATE_NORMAL
+        offset = 0
+
+        if previous_state & _TEMPLATE_LITERAL_FLAG:
+            end_index = self._find_unescaped_backtick(text, 0)
+            if end_index == -1:
+                self.setFormat(0, len(text), self._multi_line_string_format)
+                self.setCurrentBlockState(self.currentBlockState() | _TEMPLATE_LITERAL_FLAG)
+                return
+            self.setFormat(0, end_index + 1, self._multi_line_string_format)
+            offset = end_index + 1
+
+        self.setCurrentBlockState(self.currentBlockState() & ~_TEMPLATE_LITERAL_FLAG)
+        start_in_block_comment = offset == 0 and bool(previous_state & _BLOCK_COMMENT_FLAG)
+
+        while True:
+            start_index = self._find_template_literal_start(
+                text,
+                offset,
+                start_in_block_comment=start_in_block_comment,
+            )
+            start_in_block_comment = False
+            if start_index == -1:
+                return
+            end_index = self._find_unescaped_backtick(text, start_index + 1)
+            if end_index == -1:
+                self.setFormat(start_index, len(text) - start_index, self._multi_line_string_format)
+                self.setCurrentBlockState(self.currentBlockState() | _TEMPLATE_LITERAL_FLAG)
+                return
+            self.setFormat(start_index, end_index - start_index + 1, self._multi_line_string_format)
+            offset = end_index + 1
 
 
 class HexPatSyntaxHighlighter(_ThemedSyntaxHighlighter):

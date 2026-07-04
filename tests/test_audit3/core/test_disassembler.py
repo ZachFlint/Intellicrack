@@ -65,7 +65,7 @@ def _make_elf64_header(*, e_machine: int, is_64bit: bool) -> bytes:
         bytes: A 64-byte ELF header prefix encoding the requested machine.
     """
     header = bytearray(64)
-    header[0:4] = b"\x7fELF"
+    header[:4] = b"\x7fELF"
     header[4] = 2 if is_64bit else 1
     header[5] = 1
     header[6] = 1

@@ -165,6 +165,54 @@ class FontManager:
 
         return False
 
+    def _config_font_candidates(self, category: str, hardcoded_defaults: list[str]) -> list[str]:
+        """Build a font candidate list from the loaded JSON config.
+
+        Args:
+            category: Top-level key in ``self._font_config`` holding
+                ``primary``/``fallback`` font name lists (e.g.
+                ``"monospace_fonts"`` or ``"ui_fonts"``).
+            hardcoded_defaults: Candidate list to use when the config does
+                not define a usable list for ``category``.
+
+        Returns:
+            list[str]: Combined ``primary`` and ``fallback`` font names in
+            priority order from the config, or ``hardcoded_defaults`` if the
+            config has no usable entry for ``category``.
+        """
+        raw_section = self._font_config.get(category)
+        if not isinstance(raw_section, dict):
+            return hardcoded_defaults
+        section = cast("dict[str, object]", raw_section)
+
+        candidates: list[str] = []
+        for key in ("primary", "fallback"):
+            raw_entries = section.get(key)
+            if isinstance(raw_entries, list):
+                entries = cast("list[object]", raw_entries)
+                candidates.extend(str(entry) for entry in entries if isinstance(entry, str))
+
+        return candidates or hardcoded_defaults
+
+    def _config_font_size(self, key: str, default: int) -> int:
+        """Resolve a font size in points from the loaded JSON config.
+
+        Args:
+            key: Key within the config's ``font_sizes`` mapping (e.g.
+                ``"ui_default"`` or ``"code_default"``).
+            default: Size to use when the config has no usable value for ``key``.
+
+        Returns:
+            int: The configured font size in points, or ``default``.
+        """
+        raw_sizes = self._font_config.get("font_sizes")
+        if isinstance(raw_sizes, dict):
+            sizes = cast("dict[str, object]", raw_sizes)
+            value = sizes.get(key)
+            if isinstance(value, int) and not isinstance(value, bool):
+                return value
+        return default
+
     def _setup_fonts_from_loaded(self) -> None:
         """Set up code and UI fonts from loaded font families."""
         for family in self._loaded_families:
@@ -176,15 +224,19 @@ class FontManager:
                 self._ui_font_family = family
 
         if not self._code_font_family:
-            self._code_font_family = FontManager._find_available_font(FALLBACK_CODE_FONTS)
+            code_candidates = self._config_font_candidates("monospace_fonts", FALLBACK_CODE_FONTS)
+            self._code_font_family = FontManager._find_available_font(code_candidates)
 
         if not self._ui_font_family:
-            self._ui_font_family = FontManager._find_available_font(FALLBACK_UI_FONTS)
+            ui_candidates = self._config_font_candidates("ui_fonts", FALLBACK_UI_FONTS)
+            self._ui_font_family = FontManager._find_available_font(ui_candidates)
 
     def _setup_fallback_fonts(self) -> None:
         """Set up fallback fonts when custom fonts are not available."""
-        self._code_font_family = FontManager._find_available_font(FALLBACK_CODE_FONTS)
-        ui_font = FontManager._find_available_font(FALLBACK_UI_FONTS)
+        code_candidates = self._config_font_candidates("monospace_fonts", FALLBACK_CODE_FONTS)
+        ui_candidates = self._config_font_candidates("ui_fonts", FALLBACK_UI_FONTS)
+        self._code_font_family = FontManager._find_available_font(code_candidates)
+        ui_font = FontManager._find_available_font(ui_candidates)
         self._ui_font_family = ui_font if ui_font != "sans-serif" else DEFAULT_UI_FONT
         _logger.warning(
             "using_fallback_fonts",
@@ -215,11 +267,13 @@ class FontManager:
 
         return candidates[-1] if candidates else "monospace"
 
-    def get_code_font(self, size: int = 10) -> QFont:
+    def get_code_font(self, size: int | None = None) -> QFont:
         """Get a font suitable for code display.
 
         Args:
-            size: Font size in points.
+            size: Font size in points, or ``None`` to use the
+                ``font_sizes.code_default`` value from ``font_config.json``
+                (falling back to ``10`` if unconfigured).
 
         Returns:
             QFont: QFont configured for code display.
@@ -227,17 +281,20 @@ class FontManager:
         if not self.fonts_loaded:
             self.load_fonts()
 
-        _logger.debug("get_code_font", family=self._code_font_family, size=size)
-        font = QFont(self._code_font_family, size)
+        resolved_size = size if size is not None else self._config_font_size("code_default", 10)
+        _logger.debug("get_code_font", family=self._code_font_family, size=resolved_size)
+        font = QFont(self._code_font_family, resolved_size)
         font.setStyleHint(QFont.StyleHint.Monospace)
         font.setFixedPitch(True)
         return font
 
-    def get_code_font_bold(self, size: int = 10) -> QFont:
+    def get_code_font_bold(self, size: int | None = None) -> QFont:
         """Get a bold font suitable for code display.
 
         Args:
-            size: Font size in points.
+            size: Font size in points, or ``None`` to use the
+                ``font_sizes.code_default`` value from ``font_config.json``
+                (falling back to ``10`` if unconfigured).
 
         Returns:
             QFont: QFont configured for bold code display.
@@ -246,11 +303,13 @@ class FontManager:
         font.setBold(True)
         return font
 
-    def get_ui_font(self, size: int = 9) -> QFont:
+    def get_ui_font(self, size: int | None = None) -> QFont:
         """Get a font suitable for UI elements.
 
         Args:
-            size: Font size in points.
+            size: Font size in points, or ``None`` to use the
+                ``font_sizes.ui_default`` value from ``font_config.json``
+                (falling back to ``9`` if unconfigured).
 
         Returns:
             QFont: QFont configured for UI display.
@@ -258,16 +317,19 @@ class FontManager:
         if not self.fonts_loaded:
             self.load_fonts()
 
-        _logger.debug("get_ui_font", family=self._ui_font_family, size=size)
-        font = QFont(self._ui_font_family, size)
+        resolved_size = size if size is not None else self._config_font_size("ui_default", 9)
+        _logger.debug("get_ui_font", family=self._ui_font_family, size=resolved_size)
+        font = QFont(self._ui_font_family, resolved_size)
         font.setStyleHint(QFont.StyleHint.SansSerif)
         return font
 
-    def get_ui_font_bold(self, size: int = 9) -> QFont:
+    def get_ui_font_bold(self, size: int | None = None) -> QFont:
         """Get a bold font suitable for UI elements.
 
         Args:
-            size: Font size in points.
+            size: Font size in points, or ``None`` to use the
+                ``font_sizes.ui_default`` value from ``font_config.json``
+                (falling back to ``9`` if unconfigured).
 
         Returns:
             QFont: QFont configured for bold UI display.
@@ -276,22 +338,27 @@ class FontManager:
         font.setBold(True)
         return font
 
-    def get_heading_font(self, size: int = 12) -> QFont:
+    def get_heading_font(self, size: int | None = None) -> QFont:
         """Get a font suitable for headings.
 
         Args:
-            size: Font size in points.
+            size: Font size in points, or ``None`` to use the
+                ``font_sizes.ui_large`` value from ``font_config.json``
+                (falling back to ``12`` if unconfigured).
 
         Returns:
             QFont: QFont configured for heading display.
         """
-        font = self.get_ui_font(size)
+        if not self.fonts_loaded:
+            self.load_fonts()
+        resolved_size = size if size is not None else self._config_font_size("ui_large", 12)
+        font = self.get_ui_font(resolved_size)
         font.setBold(True)
         return font
 
     @property
     def code_font_family(self) -> str:
-        """Get the current code font family name.
+        """The current code font family name.
 
         Returns:
             str: Code font family name.
@@ -302,7 +369,7 @@ class FontManager:
 
     @property
     def ui_font_family(self) -> str:
-        """Get the current UI font family name.
+        """The current UI font family name.
 
         Returns:
             str: UI font family name.
@@ -313,7 +380,7 @@ class FontManager:
 
     @property
     def loaded_families(self) -> list[str]:
-        """Get list of all loaded font families.
+        """List of all loaded font families.
 
         Returns:
             list[str]: List of loaded font family names.

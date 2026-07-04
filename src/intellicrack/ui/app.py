@@ -71,6 +71,7 @@ from intellicrack.ui.chat import ChatPanel
 from intellicrack.ui.log_viewer import LogViewerWindow, install_qt_log_handler
 from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import (
+    GenericCallableWorker,
     run_bridge_coroutine,
     run_bridge_coroutine_async,
     run_bridge_coroutine_logged,
@@ -116,6 +117,11 @@ if TYPE_CHECKING:
 _MAX_RESULT_DISPLAY_LEN = 500
 _STATUS_REFRESH_FAILURE_THRESHOLD = 5
 _SPLITTER_PANE_COUNT = 2
+_CHAT_PANEL_MIN_WIDTH = 400
+_TOOL_PANEL_MIN_WIDTH = 500
+_SPLITTER_HANDLE_WIDTH = 6
+_WINDOW_MIN_WIDTH = _CHAT_PANEL_MIN_WIDTH + _TOOL_PANEL_MIN_WIDTH + _SPLITTER_HANDLE_WIDTH
+_MEMORY_REGION_TUPLE_LEN = 4
 
 _original_excepthook = sys.excepthook
 
@@ -222,6 +228,7 @@ class MainWindow(QMainWindow):
         stream_chunk_received: Qt signal for stream chunk received.
         status_update: Qt signal for status update.
         bridge_analysis_received: Qt signal for bridge analysis received.
+        confirmation_requested: Qt signal for tool-confirmation dialog request.
     """
 
     message_received = pyqtSignal(Message)
@@ -264,6 +271,7 @@ class MainWindow(QMainWindow):
         self.model_discovery: ModelDiscovery | None = None
         self._sandbox_monitor_wired_widgets: weakref.WeakSet[QObject] = weakref.WeakSet()
         self._process_attached_wired: weakref.WeakSet[QObject] = weakref.WeakSet()
+        self._process_regions_worker: GenericCallableWorker | None = None
         self._status_failure_count: int = 0
         self._status_refresh_in_flight: bool = False
         self._pending_model_restore: str = ""
@@ -320,10 +328,11 @@ class MainWindow(QMainWindow):
         """Size and center the window based on available screen geometry.
 
         Detects the primary monitor's usable area (excluding taskbar) and sizes the window slightly smaller with a small margin. Caps at
-        1400x900 on large screens and floors at 800x600 minimum. Falls back to 1400x900 if screen detection fails.
+        1400x900 on large screens and floors at the splitter panes' combined minimum width (900px) by 600px minimum. Falls back to 1400x900
+        if screen detection fails.
         """
         max_w, max_h = 1400, 900
-        min_w, min_h = 800, 600
+        min_w, min_h = _WINDOW_MIN_WIDTH, 600
         margin_w, margin_h = 6, 8
 
         geometry = self._resolve_screen_geometry()
@@ -526,11 +535,11 @@ class MainWindow(QMainWindow):
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
 
         self._chat_panel = ChatPanel()
-        self._chat_panel.setMinimumWidth(400)
+        self._chat_panel.setMinimumWidth(_CHAT_PANEL_MIN_WIDTH)
         self._splitter.addWidget(self._chat_panel)
 
         self.tool_panel = ToolOutputPanel()
-        self.tool_panel.setMinimumWidth(500)
+        self.tool_panel.setMinimumWidth(_TOOL_PANEL_MIN_WIDTH)
         self._splitter.addWidget(self.tool_panel)
 
         self._splitter.setSizes([500, 900])
@@ -2504,7 +2513,10 @@ class MainWindow(QMainWindow):
         ``SandboxManager`` so subsequent sandboxes honour the new defaults.
         This is the documented fallback pattern used while
         ``SandboxManager.update_default_config`` is pending on the sandbox
-        back end (Group D scope).
+        back end (Group D scope). Teardown of live instances runs on the
+        background bridge worker so a slow Windows Sandbox/QEMU stop cannot
+        freeze the GUI thread; the manager rebuild and status update happen
+        once teardown completes (or fails) via the worker's queued signals.
 
         Args:
             settings: Sandbox settings dictionary produced by
@@ -2524,11 +2536,45 @@ class MainWindow(QMainWindow):
             if not isinstance(existing_cfg, SandboxConfig) or not self._sandbox_configs_match(existing_cfg, new_config):
                 stale_count += 1
 
-        try:
-            run_bridge_coroutine(self.sandbox_manager.destroy_all())
-        except (RuntimeError, OSError) as e:
-            _logger.warning("sandbox_manager_teardown_failed", error=str(e))
+        total_instances = len(instances)
 
+        def _on_teardown_succeeded(_result: object) -> None:
+            self._finish_sandbox_settings_apply(new_config, stale_count, total_instances)
+
+        def _on_teardown_failed(exc: object) -> None:
+            error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
+            _logger.warning("sandbox_manager_teardown_failed", error=str(error_obj))
+            self._finish_sandbox_settings_apply(new_config, stale_count, total_instances)
+
+        run_bridge_coroutine_logged(
+            self.sandbox_manager.destroy_all(),
+            on_success=_on_teardown_succeeded,
+            on_error=_on_teardown_failed,
+            parent=self,
+            event="sandbox_settings_teardown",
+            logger=_logger,
+            level="info",
+        )
+
+    def _finish_sandbox_settings_apply(
+        self,
+        new_config: SandboxConfig,
+        stale_count: int,
+        total_instances: int,
+    ) -> None:
+        """Rebuild the sandbox manager and report the outcome once teardown settles.
+
+        Runs on the GUI thread via the bridge worker's queued signal, after
+        :meth:`_apply_sandbox_settings` has torn down (or attempted to tear
+        down) every live sandbox instance.
+
+        Args:
+            new_config: Sandbox configuration to install as the new default.
+            stale_count: Number of prior instances whose configuration no
+                longer matched ``new_config``.
+            total_instances: Total number of prior instances that existed
+                before teardown was requested.
+        """
         self.sandbox_manager = SandboxManager(default_config=new_config)
         _logger.info(
             "sandbox_manager_rebuilt",
@@ -2536,11 +2582,11 @@ class MainWindow(QMainWindow):
             memory_limit_mb=new_config.memory_limit_mb,
             network_enabled=new_config.network_enabled,
             stale_instances=stale_count,
-            total_instances=len(instances),
+            total_instances=total_instances,
         )
-        if instances:
+        if total_instances:
             self.status_update.emit(
-                f"Sandbox settings applied ({stale_count} of {len(instances)} instance(s) had stale config)",
+                f"Sandbox settings applied ({stale_count} of {total_instances} instance(s) had stale config)",
             )
         else:
             self.status_update.emit("Sandbox settings applied")
@@ -2946,11 +2992,22 @@ class MainWindow(QMainWindow):
             self._process_attached_wired.add(panel_obj)
 
     def _on_process_attached(self, pid: int) -> None:
-        """Handle process attachment by showing a memory region picker.
+        """Handle process attachment by listing memory regions off the GUI thread.
 
-        When the user attaches to a process via the Process panel,
-        list its readable memory regions and let the user select one
-        to open in the hex editor.
+        When the user attaches to a process via the Process panel, the native
+        ``list_process_memory_regions`` FFI call is dispatched to a background
+        :class:`GenericCallableWorker` so that walking a large virtual address
+        space (e.g. a browser process) cannot block the Qt event loop. The
+        region-picker dialog is shown once the listing completes, via the
+        worker's queued ``call_finished``/``call_error`` signals.
+
+        The originating ``pid`` is captured per-dispatch by closure (rather
+        than stashed in a shared instance field) so that a later, faster
+        attach to a different process cannot overwrite the PID a still
+        in-flight worker's result belongs to. The dispatched worker is also
+        compared for identity against the most recently dispatched one when
+        its result arrives, so a stale worker superseded by a newer attach
+        before it completes is ignored instead of surfacing mismatched data.
 
         Args:
             pid: Process ID that was attached.
@@ -2959,12 +3016,67 @@ class MainWindow(QMainWindow):
             _logger.debug("hexcore_unavailable_for_process_memory", pid=pid)
             return
 
-        try:
-            regions: list[tuple[int, int, int, int]] = _hexcore.HexDocument.list_process_memory_regions(pid)
-        except (RuntimeError, OSError, ValueError) as exc:
-            _logger.warning("process_regions_list_failed", pid=pid, error=str(exc))
-            QMessageBox.warning(self, "Process Memory", f"Failed to list memory regions: {exc}")
-            return
+        worker = GenericCallableWorker(_hexcore.HexDocument.list_process_memory_regions, pid)
+        self._process_regions_worker = worker
+
+        def _on_finished(result: object) -> None:
+            if self._process_regions_worker is worker:
+                self._on_process_regions_listed(pid, result)
+
+        def _on_error(exc: object) -> None:
+            if self._process_regions_worker is worker:
+                self._on_process_regions_failed(pid, exc)
+
+        _ = worker.call_finished.connect(_on_finished)
+        _ = worker.call_error.connect(_on_error)
+        worker.start()
+
+    def _on_process_regions_failed(self, pid: int, exc: object) -> None:
+        """Report a failed process-memory-region listing to the user.
+
+        Runs on the GUI thread via the worker's queued signal.
+
+        Args:
+            pid: Process ID that the failed listing was for.
+            exc: Exception object emitted by ``GenericCallableWorker.call_error``.
+        """
+        _logger.warning("process_regions_list_failed", pid=pid, error=str(exc))
+        QMessageBox.warning(self, "Process Memory", f"Failed to list memory regions: {exc}")
+
+    @staticmethod
+    def _coerce_memory_region(entry: object) -> tuple[int, int, int, int] | None:
+        """Validate and narrow a raw worker-returned region tuple.
+
+        Args:
+            entry: Raw object from the ``list_process_memory_regions`` result
+                list; expected to be a 4-tuple of ``(base, size, protection,
+                state)`` integers.
+
+        Returns:
+            tuple[int, int, int, int] | None: The narrowed tuple when
+            ``entry`` has the expected shape, otherwise ``None``.
+        """
+        if not isinstance(entry, tuple):
+            return None
+        values: tuple[object, ...] = cast("tuple[object, ...]", entry)
+        if len(values) != _MEMORY_REGION_TUPLE_LEN or not all(isinstance(v, int) for v in values):
+            return None
+        return cast("tuple[int, int, int, int]", values)
+
+    def _on_process_regions_listed(self, pid: int, result: object) -> None:
+        """Show the memory-region picker once native enumeration completes.
+
+        Runs on the GUI thread via the worker's queued signal.
+
+        Args:
+            pid: Process ID the listed regions belong to.
+            result: Raw object emitted by ``GenericCallableWorker.call_finished``;
+                expected to be the ``list[tuple[int, int, int, int]]`` returned
+                by ``HexDocument.list_process_memory_regions``.
+        """
+        regions: list[tuple[int, int, int, int]] = []
+        if isinstance(result, list):
+            regions.extend(coerced for entry in cast("list[object]", result) if (coerced := self._coerce_memory_region(entry)) is not None)
 
         if not regions:
             QMessageBox.information(self, "Process Memory", f"No readable memory regions found for PID {pid}.")
@@ -3009,7 +3121,23 @@ class MainWindow(QMainWindow):
             return
 
         base_addr, region_size, _prot, _state = regions[selected]
+        self._open_process_memory(pid, base_addr, region_size)
 
+    def _open_process_memory(self, pid: int, base_addr: int, region_size: int) -> None:
+        """Open the selected process-memory region in the hex editor.
+
+        Dispatches ``HexBridge.open_process_memory`` through the persistent
+        background bridge worker (:func:`run_bridge_coroutine_logged`)
+        instead of scheduling the coroutine on the GUI-thread asyncio loop:
+        that loop never advances while ``app.exec()`` is blocking, so a task
+        scheduled via ``asyncio.ensure_future`` would sit dormant until
+        application shutdown.
+
+        Args:
+            pid: Process ID whose memory is being opened.
+            base_addr: Base address of the selected memory region.
+            region_size: Size, in bytes, of the selected memory region.
+        """
         hex_bridge = self._orchestrator.get_typed_bridge("hex_editor")
         if hex_bridge is None:
             _logger.debug("hex_bridge_unavailable_for_process_memory", pid=pid)
@@ -3023,17 +3151,25 @@ class MainWindow(QMainWindow):
         if not asyncio.iscoroutine(coro_result):
             return
 
-        task: asyncio.Task[dict[str, object]] = asyncio.ensure_future(coro_result)
+        def _on_open_succeeded(result: object) -> None:
+            length: object = None
+            if isinstance(result, dict):
+                length = cast("dict[str, object]", result).get("document_length")
+            _logger.info("process_memory_loaded", pid=pid, address=hex(base_addr), length=length)
 
-        def _on_done(fut: asyncio.Future[dict[str, object]]) -> None:
-            try:
-                result = fut.result()
-                _logger.info("process_memory_loaded", pid=pid, address=hex(base_addr), length=result.get("document_length"))
-            except (RuntimeError, OSError) as exc:
-                _logger.warning("process_memory_open_failed", pid=pid, error=str(exc))
-                QMessageBox.warning(self, "Process Memory", f"Failed to open memory: {exc}")
+        def _on_open_failed(exc: object) -> None:
+            _logger.warning("process_memory_open_failed", pid=pid, error=str(exc))
+            QMessageBox.warning(self, "Process Memory", f"Failed to open memory: {exc}")
 
-        task.add_done_callback(_on_done)
+        run_bridge_coroutine_logged(
+            coro_result,
+            on_success=_on_open_succeeded,
+            on_error=_on_open_failed,
+            parent=self,
+            event="process_memory_open",
+            logger=_logger,
+            level="info",
+        )
 
     def _on_open_sandbox_panel(self) -> None:
         """Open sandbox manager panel."""

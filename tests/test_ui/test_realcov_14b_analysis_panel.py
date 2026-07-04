@@ -297,7 +297,7 @@ class TestAnalysisPanelRendersRealImportsExports:
         rendered = {(item.text() if (item := table.item(row, 1)) is not None else "") for row in range(table.rowCount())}
         expected = {imp.function for imp in exe_summary.imports}
         assert rendered == expected
-        assert all(name for name in rendered), "real imports must have non-empty names"
+        assert all(rendered), "real imports must have non-empty names"
 
     @staticmethod
     def test_exports_table_contains_real_kernel32_symbols(
@@ -319,7 +319,7 @@ class TestAnalysisPanelRendersRealImportsExports:
         rendered = {(item.text() if (item := table.item(row, 0)) is not None else "") for row in range(table.rowCount())}
         expected = {exp.name for exp in dll_summary.exports}
         assert rendered == expected
-        assert all(name for name in rendered)
+        assert all(rendered)
 
 
 @pytest.mark.usefixtures("qapp")

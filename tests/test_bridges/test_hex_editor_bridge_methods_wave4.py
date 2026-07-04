@@ -56,7 +56,7 @@ _ORACLE_INT64_LE: int = struct.unpack("<q", _KNOWN_8[:8])[0]
 _ORACLE_UINT64_BE: int = struct.unpack(">Q", _KNOWN_8[:8])[0]
 _ORACLE_INT64_BE: int = struct.unpack(">q", _KNOWN_8[:8])[0]
 _ORACLE_IPV4: str = ".".join(str(b) for b in _KNOWN_8[:4])
-_ORACLE_RGBA8: str = "#" + _KNOWN_8[:4].hex()
+_ORACLE_RGBA8: str = f"#{_KNOWN_8[:4].hex()}"
 
 _STATS_DATA: bytes = b"\x41\x41\x41\x42\x42\x43"
 
@@ -379,9 +379,7 @@ class TestInspectDataAt:
         path = _open_doc(bridge, _DOC_DATA)
         try:
             result = _run(bridge.inspect_data_at(0))
-            assert all(isinstance(v, str) for v in result.values()), (
-                "Non-string value found in inspect_data_at result"
-            )
+            assert all(isinstance(v, str) for v in result.values()), "Non-string value found in inspect_data_at result"
         finally:
             _release_and_unlink(bridge, path)
 
@@ -467,9 +465,7 @@ class TestGetByteStatistics:
             histogram: dict[int, int] = {d["byte"]: d["count"] for d in result}
             for byte_val in range(256):
                 if byte_val not in {0x41, 0x42, 0x43}:
-                    assert histogram.get(byte_val, 0) == 0, (
-                        f"Expected count 0 for byte {byte_val:#04x}, got {histogram.get(byte_val)}"
-                    )
+                    assert histogram.get(byte_val, 0) == 0, f"Expected count 0 for byte {byte_val:#04x}, got {histogram.get(byte_val)}"
         finally:
             _release_and_unlink(bridge, path)
 
@@ -492,9 +488,7 @@ class TestGetByteStatistics:
             result = _run(bridge.get_byte_statistics())
             histogram: dict[int, int] = {d["byte"]: d["count"] for d in result}
             computed_h = _oracle_shannon_entropy(histogram)
-            assert abs(computed_h - oracle_h) < 1e-9, (
-                f"Entropy {computed_h} differs from oracle {oracle_h}"
-            )
+            assert abs(computed_h - oracle_h) < 1e-9, f"Entropy {computed_h} differs from oracle {oracle_h}"
         finally:
             _release_and_unlink(bridge, path)
 
@@ -508,7 +502,7 @@ class TestGetByteStatistics:
         Args:
             bridge: Fresh bridge fixture.
         """
-        data = b"\xAB" * 100
+        data = b"\xab" * 100
         path = _open_doc(bridge, data)
         try:
             result = _run(bridge.get_byte_statistics())

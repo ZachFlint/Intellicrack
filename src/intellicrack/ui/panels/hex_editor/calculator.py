@@ -102,14 +102,10 @@ class CalculatorMixin:
     def _on_convert(self) -> None:
         """Parse the input value and populate all base/type representations.
 
-        Dispatches to :meth:`HexEditorBridge.base_convert` so the value
-        parsing and canonical decimal/hex/octal/binary/little-endian
-        representations come from the same code path the AI-callable
-        tool uses. The big-endian sized-integer and IEEE 754 views (not
-        produced by the bridge, which is little-endian only) are derived
-        locally from the bridge's returned decimal value once it is back
-        on the Qt main thread. Falls back to an entirely local, synchronous
-        computation when no bridge is attached (e.g. headless / test
+        Dispatches to :meth:`HexEditorBridge.base_convert` so the value parsing and canonical decimal/hex/octal/binary/little-endian
+        representations come from the same code path the AI-callable tool uses. The big-endian sized-integer and IEEE 754 views (not
+        produced by the bridge, which is little-endian only) are derived locally from the bridge's returned decimal value once it is back on
+        the Qt main thread. Falls back to an entirely local, synchronous computation when no bridge is attached (e.g. headless / test
         harnesses that drive the calculator tab directly).
         """
         if self._calc_input is None or self._calc_results_tree is None:
@@ -121,15 +117,16 @@ class CalculatorMixin:
 
         self._calc_results_tree.clear()
         big_endian = self._calc_endian_combo is not None and self._calc_endian_combo.currentText() == "Big Endian"
+        signed_only = self._calc_signed_check is not None and self._calc_signed_check.isChecked()
 
         bridge = getattr(self, "_bridge", None)
         if bridge is None:
-            self._convert_local(text, big_endian=big_endian)
+            self._convert_local(text, big_endian=big_endian, signed_only=signed_only)
             return
 
         run_bridge_coroutine_logged(
             bridge.base_convert(text, from_base="auto"),
-            on_success=lambda result: self._on_convert_success(result, big_endian=big_endian),
+            on_success=lambda result: self._on_convert_success(result, big_endian=big_endian, signed_only=signed_only),
             on_error=self._on_convert_error,
             parent=self if isinstance(self, QWidget) else None,
             event="hex_editor_base_convert",
@@ -137,7 +134,7 @@ class CalculatorMixin:
             input_value=text,
         )
 
-    def _convert_local(self, text: str, *, big_endian: bool) -> None:
+    def _convert_local(self, text: str, *, big_endian: bool, signed_only: bool) -> None:
         """Parse ``text`` and populate representations without the bridge.
 
         Local fallback used only when no bridge is attached to this
@@ -147,6 +144,10 @@ class CalculatorMixin:
         Args:
             text: Raw input string, optionally prefixed with 0x, 0b, or 0o.
             big_endian: Whether the endianness combo was set to "Big Endian".
+            signed_only: Whether the "Signed" checkbox is checked. When
+                ``True`` only signed sized-integer representations are
+                shown; when ``False`` both signed and unsigned ones are
+                shown.
         """
         try:
             value = self._parse_input_value(text)
@@ -163,7 +164,7 @@ class CalculatorMixin:
         self._add_result("Octal", f"0o{value & _MAX_UINT64:o}")
         self._add_result("Binary", f"0b{value & _MAX_UINT64:b}")
 
-        self._add_sized_int_results(value, byte_order, order_label)
+        self._add_sized_int_results(value, byte_order, order_label, signed_only=signed_only)
         self._add_float_results(value, byte_order, order_label)
         self._update_ieee754_display(value, byte_order)
 
@@ -190,7 +191,7 @@ class CalculatorMixin:
             return int(lower, 2)
         return int(lower, 8) if lower.startswith("0o") else int(text, 10)
 
-    def _on_convert_success(self, result: object, *, big_endian: bool) -> None:
+    def _on_convert_success(self, result: object, *, big_endian: bool, signed_only: bool) -> None:
         """Render the bridge's base-conversion representations into the results tree.
 
         Args:
@@ -205,6 +206,10 @@ class CalculatorMixin:
                 whether the locally-derived big-endian sized-integer
                 and IEEE 754 rows are shown instead of the bridge's
                 little-endian ones.
+            signed_only: Whether the "Signed" checkbox was checked when
+                the request was dispatched. When ``True`` only signed
+                sized-integer representations are shown; when ``False``
+                both signed and unsigned representations are shown.
         """
         if self._calc_results_tree is None:
             return
@@ -229,17 +234,21 @@ class CalculatorMixin:
         order_label = "BE" if big_endian else "LE"
 
         if big_endian:
-            self._add_sized_int_results(value, byte_order, order_label)
+            self._add_sized_int_results(value, byte_order, order_label, signed_only=signed_only)
             self._add_float_results(value, byte_order, order_label)
         else:
-            self._add_result("uint8", typed_result.get("uint8", "overflow"))
             self._add_result("int8", typed_result.get("int8", "overflow"))
-            self._add_result("uint16_LE", typed_result.get("uint16_le", "overflow"))
+            if not signed_only:
+                self._add_result("uint8", typed_result.get("uint8", "overflow"))
             self._add_result("int16_LE", typed_result.get("int16_le", "overflow"))
-            self._add_result("uint32_LE", typed_result.get("uint32_le", "overflow"))
+            if not signed_only:
+                self._add_result("uint16_LE", typed_result.get("uint16_le", "overflow"))
             self._add_result("int32_LE", typed_result.get("int32_le", "overflow"))
-            self._add_result("uint64_LE", typed_result.get("uint64_le", "overflow"))
+            if not signed_only:
+                self._add_result("uint32_LE", typed_result.get("uint32_le", "overflow"))
             self._add_result("int64_LE", typed_result.get("int64_le", "overflow"))
+            if not signed_only:
+                self._add_result("uint64_LE", typed_result.get("uint64_le", "overflow"))
             self._add_result("float32_LE", typed_result.get("float32_le", "N/A"))
             self._add_result("float64_LE", typed_result.get("float64_le", "N/A"))
 
@@ -259,13 +268,17 @@ class CalculatorMixin:
                 QTreeWidgetItem(["Error", str(exc)]),
             )
 
-    def _add_sized_int_results(self, value: int, byte_order: str, order_label: str) -> None:
+    def _add_sized_int_results(self, value: int, byte_order: str, order_label: str, *, signed_only: bool) -> None:
         """Add signed/unsigned 8-64 bit representations for the given byte order.
 
         Args:
             value: Parsed integer value.
             byte_order: Struct byte-order character ('>' or '<').
             order_label: Display suffix for the byte order ('BE' or 'LE').
+            signed_only: Whether the "Signed" checkbox is checked. When
+                ``True`` only signed representations are added; when
+                ``False`` both signed and unsigned representations are
+                added.
         """
         int_formats: list[tuple[str, str, int]] = [
             ("int8", "b", 1),
@@ -277,6 +290,8 @@ class CalculatorMixin:
             (f"int64_{order_label}", f"{byte_order}q", 8),
             (f"uint64_{order_label}", f"{byte_order}Q", 8),
         ]
+        if signed_only:
+            int_formats = [(label, fmt, size) for label, fmt, size in int_formats if fmt[-1].islower()]
 
         for label, fmt, size in int_formats:
             try:

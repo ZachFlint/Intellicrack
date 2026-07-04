@@ -180,9 +180,7 @@ def _resolve_backend_for(binary: str) -> Path | None:
             ``None`` if the binary is not discoverable.
     """
     located = shutil.which(binary)
-    if located is None:
-        return None
-    return Path(located).resolve().parent
+    return None if located is None else Path(located).resolve().parent
 
 
 def _select_pipe_backend() -> _PipeBackend | None:

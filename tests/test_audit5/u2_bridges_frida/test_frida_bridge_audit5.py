@@ -950,7 +950,7 @@ def test_f0024_shutdown_calls_super_in_finally() -> None:
             return
 
     _run(driver())
-    assert bridge.state.connected is False, "super().shutdown() did not run after cleanup raised"
+    assert not bridge.state.connected, "super().shutdown() did not run after cleanup raised"
 
 
 def test_f0027_unload_script_clears_alloc_after_explicit_unload() -> None:
@@ -992,7 +992,7 @@ def test_f0030_attach_does_not_reinitialize_implicitly() -> None:
 
     with pytest.raises(ToolError) as excinfo:
         _run(driver())
-    assert init_calls == [], "attach() implicitly invoked initialize(); init errors will masquerade as attach errors"
+    assert not init_calls, "attach() implicitly invoked initialize(); init errors will masquerade as attach errors"
     details = excinfo.value.details
     assert details is not None
     assert "initialise" in str(details.get("reason", "")).lower()

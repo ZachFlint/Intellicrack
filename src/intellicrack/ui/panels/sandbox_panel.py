@@ -38,7 +38,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.logging import get_logger
 from intellicrack.sandbox.qemu import QEMUSandbox
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.qt_compat import (
     get_current_tree_item,
@@ -83,6 +83,31 @@ def _configure_result_columns(tree: QTreeWidget) -> None:
     if header is not None:
         header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
     tree.setTextElideMode(Qt.TextElideMode.ElideMiddle)
+
+
+def _format_file_change_detail(change: dict[str, object]) -> str:
+    """Build a human-readable detail string for a file-change row.
+
+    Describes a rename via its previous path when known, otherwise falls
+    back to the recorded file size so the "Details" column always shows
+    genuinely descriptive content rather than a mislabeled duplicate of
+    another field.
+
+    Args:
+        change: File-change mapping with optional ``old_path`` and ``size`` keys.
+
+    Returns:
+        str: ``"renamed from <old_path>"`` when a previous path is known,
+        ``"<size> bytes"`` when only a size is known, or an empty string
+        when neither is available.
+    """
+    old_path = change.get("old_path")
+    if isinstance(old_path, str) and old_path:
+        return f"renamed from {old_path}"
+    size = change.get("size")
+    if isinstance(size, int):
+        return f"{size} bytes"
+    return ""
 
 
 class _SandboxCreateConfig(TypedDict):
@@ -135,6 +160,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._pending_copy_in_source: str = ""
         self._pending_copy_out_source: str = ""
         self._pending_copy_out_dest: str = ""
+        self._restart_pending_destroy: bool = False
         self._status_poll_timer = QTimer(self)
         self._status_poll_timer.timeout.connect(self._poll_status)
 
@@ -347,6 +373,7 @@ class SandboxPanel(AnalysisPanelBase):
         """
         fm = FontManager.get_instance()
         main_splitter = QSplitter(Qt.Orientation.Vertical)
+        main_splitter.setChildrenCollapsible(False)
 
         exec_container = QWidget()
         exec_layout = QVBoxLayout(exec_container)
@@ -523,24 +550,46 @@ class SandboxPanel(AnalysisPanelBase):
         """Stop the status poll timer, disconnect VNC, halt PCAP, and shut down the sandbox."""
         self._disconnect_vnc_display()
         self._status_poll_timer.stop()
-        if self._bridge is not None and self.sandbox_id is not None:
-            try:
-                run_bridge_coroutine(self._bridge.stop_pcap(self.sandbox_id))
-            except (RuntimeError, ConnectionError, OSError):
-                _logger.warning(
-                    "sandbox_cleanup_pcap_stop_skipped",
-                    sandbox_id=self.sandbox_id,
-                    exc_info=True,
-                )
+        if self._bridge is None or self.sandbox_id is None:
+            return
+
+        bridge = self._bridge
+        sandbox_id = self.sandbox_id
+
+        def _log_destroy_error(exc: object) -> None:
+            _logger.warning(
+                "sandbox_cleanup_destroy_skipped",
+                sandbox_id=sandbox_id,
+                error=str(exc),
+            )
+
+        def _destroy_sandbox(_result: object) -> None:
             self._pcap_capture_id = None
-            try:
-                run_bridge_coroutine(self._bridge.destroy(self.sandbox_id))
-            except (RuntimeError, ConnectionError, OSError):
-                _logger.warning(
-                    "sandbox_cleanup_destroy_skipped",
-                    sandbox_id=self.sandbox_id,
-                    exc_info=True,
-                )
+            run_bridge_coroutine_logged(
+                bridge.destroy(sandbox_id),
+                on_success=None,
+                on_error=_log_destroy_error,
+                parent=self,
+                event="sandbox_cleanup_destroy",
+                logger=_logger,
+            )
+
+        def _log_stop_pcap_error(exc: object) -> None:
+            _logger.warning(
+                "sandbox_cleanup_pcap_stop_skipped",
+                sandbox_id=sandbox_id,
+                error=str(exc),
+            )
+            _destroy_sandbox(None)
+
+        run_bridge_coroutine_logged(
+            bridge.stop_pcap(sandbox_id),
+            on_success=_destroy_sandbox,
+            on_error=_log_stop_pcap_error,
+            parent=self,
+            event="sandbox_cleanup_stop_pcap",
+            logger=_logger,
+        )
 
     def set_bridge(self, bridge: SandboxBridge) -> None:
         """Set the sandbox bridge for all operations.
@@ -833,12 +882,9 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._log(f"[-] Failed to destroy sandbox: {exc}")
-        self.sandbox_id = None
-        self._status_indicator.setText("Inactive")
-        self._set_sandbox_controls_active(active=False)
-        self._status_poll_timer.stop()
-        self.tool_closed.emit()
+        self.destroy_btn.setEnabled(self.sandbox_id is not None)
         _logger.warning("sandbox_destroy_failed", error=str(exc))
+        self._poll_status()
 
     def _on_restart(self) -> None:
         """Restart the sandbox environment."""
@@ -847,6 +893,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         _logger.debug("sandbox_restart_started", sandbox_id=self.sandbox_id)
         self.restart_btn.setEnabled(False)
+        self._restart_pending_destroy = False
         run_bridge_coroutine_logged(
             self._bridge.destroy(self.sandbox_id),
             on_success=self._on_restart_destroy_success,
@@ -865,9 +912,11 @@ class SandboxPanel(AnalysisPanelBase):
             _result: Bridge call result (unused).
         """
         if self._bridge is None:
-            self.restart_btn.setEnabled(True)
+            self._restart_pending_destroy = False
+            self._finish_restart_after_destroy_only()
             return
 
+        self._restart_pending_destroy = True
         sandbox_type = self._selected_sandbox_type()
         config = self._sandbox_create_config()
         run_bridge_coroutine_logged(
@@ -888,6 +937,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             result: Dictionary with instance_id from bridge.
         """
+        self._restart_pending_destroy = False
         if isinstance(result, dict):
             typed = cast("dict[str, object]", result)
             self.sandbox_id = str(typed.get("instance_id", "active"))
@@ -903,8 +953,25 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._log(f"[-] Failed to restart sandbox: {exc}")
-        self.restart_btn.setEnabled(True)
         _logger.warning("sandbox_restart_failed", error=str(exc))
+        if self._restart_pending_destroy:
+            self._restart_pending_destroy = False
+            self._finish_restart_after_destroy_only()
+        else:
+            self.restart_btn.setEnabled(True)
+
+    def _finish_restart_after_destroy_only(self) -> None:
+        """Reflect UI state when a restart's destroy phase succeeded but create did not.
+
+        Applied when the old sandbox instance has already been torn down server-side but no replacement was created, so ``sandbox_id`` must
+        stop referring to the destroyed instance and every sandbox-active control must be disabled again.
+        """
+        self._disconnect_vnc_display()
+        self.sandbox_id = None
+        self._status_indicator.setText("Inactive")
+        self._set_sandbox_controls_active(active=False)
+        self._status_poll_timer.stop()
+        self.tool_closed.emit()
 
     def _on_browse_binary(self) -> None:
         """Browse for a binary to execute in the sandbox."""
@@ -1016,7 +1083,7 @@ class SandboxPanel(AnalysisPanelBase):
                 item = QTreeWidgetItem([
                     str(change.get("operation", "")),
                     str(change.get("path", "")),
-                    str(change.get("size", "")),
+                    _format_file_change_detail(change),
                 ])
                 self._file_changes_tree.addTopLevelItem(item)
 
@@ -1948,11 +2015,11 @@ class SandboxPanel(AnalysisPanelBase):
         """
         snapshot_name = self._pending_snapshot_id
         self._log(f"[+] Snapshot deleted: {snapshot_name}")
-        selected = get_current_tree_item(self._snapshots_tree)
-        if selected is not None:
-            idx = self._snapshots_tree.indexOfTopLevelItem(selected)
-            if idx >= 0:
+        for idx in range(self._snapshots_tree.topLevelItemCount()):
+            item = self._snapshots_tree.topLevelItem(idx)
+            if item is not None and item.text(0) == snapshot_name:
                 self._snapshots_tree.takeTopLevelItem(idx)
+                break
         self.delete_snap_btn.setEnabled(True)
 
     def _on_delete_snapshot_error(self, exc: object) -> None:
@@ -2506,27 +2573,31 @@ class SandboxPanel(AnalysisPanelBase):
 
         if hasattr(report, "file_changes"):
             for change in report.file_changes:
-                op = getattr(change, "operation", "unknown")
-                path = getattr(change, "path", "")
-                details = getattr(change, "details", "")
-                item = QTreeWidgetItem([str(op), str(path), str(details)])
+                change_map = cast("dict[str, object]", change)
+                op = change_map.get("operation", "unknown")
+                path = change_map.get("path", "")
+                detail = _format_file_change_detail(change_map)
+                item = QTreeWidgetItem([str(op), str(path), detail])
                 self._file_changes_tree.addTopLevelItem(item)
 
         if hasattr(report, "registry_changes"):
             for reg_change in report.registry_changes:
-                op = getattr(reg_change, "operation", "unknown")
-                key = getattr(reg_change, "key", "")
-                value = getattr(reg_change, "value", "")
+                reg_map = cast("dict[str, object]", reg_change)
+                op = reg_map.get("operation", "unknown")
+                key = reg_map.get("key", "")
+                value = reg_map.get("value_data", "")
                 item = QTreeWidgetItem([str(op), str(key), str(value)])
                 self._registry_changes_tree.addTopLevelItem(item)
 
         if hasattr(report, "network_activity"):
             for activity in report.network_activity:
-                proto = getattr(activity, "protocol", "unknown")
-                dest = getattr(activity, "destination", "")
-                port = getattr(activity, "port", 0)
-                size = getattr(activity, "data_size", 0)
-                item = QTreeWidgetItem([str(proto), str(dest), str(port), f"{size} bytes"])
+                act_map = cast("dict[str, object]", activity)
+                proto = act_map.get("protocol", "unknown")
+                dest = act_map.get("remote_address", "")
+                port = act_map.get("remote_port", 0)
+                sent = act_map.get("bytes_sent", 0)
+                recv = act_map.get("bytes_received", 0)
+                item = QTreeWidgetItem([str(proto), str(dest), str(port), f"{sent}/{recv} bytes"])
                 self._network_tree.addTopLevelItem(item)
 
         self._log(

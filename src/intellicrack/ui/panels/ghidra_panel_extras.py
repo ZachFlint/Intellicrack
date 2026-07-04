@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, cast
 from PyQt6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
@@ -70,8 +71,7 @@ def _parse_address(text: str) -> int | None:
 class GhidraAnalysisExtrasWidget(QWidget):
     """Analysis Extras tab for the remaining unwired Ghidra code-analysis controls.
 
-    Owns its own bridge reference (set via ``set_bridge``) so it stays
-    self-contained and reusable independently of the host panel.
+    Owns its own bridge reference (set via ``set_bridge``) so it stays self-contained and reusable independently of the host panel.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -449,6 +449,9 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._ext_refs_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._ext_refs_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._ext_refs_table.setFixedHeight(100)
+        ext_refs_header = self._ext_refs_table.horizontalHeader()
+        if ext_refs_header is not None:
+            ext_refs_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self._ext_refs_table)
 
     def _on_refresh_external_refs(self) -> None:
@@ -579,6 +582,9 @@ class GhidraAnalysisExtrasWidget(QWidget):
         self._properties_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._properties_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self._properties_table.setFixedHeight(90)
+        properties_header = self._properties_table.horizontalHeader()
+        if properties_header is not None:
+            properties_header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         layout.addWidget(self._properties_table)
 
     def _on_get_properties(self) -> None:

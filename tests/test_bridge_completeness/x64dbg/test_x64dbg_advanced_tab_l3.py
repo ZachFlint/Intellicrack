@@ -181,7 +181,7 @@ class TestModuleInfoDispatch:
 
         priv(tab, "_modinfo_imports_btn", QPushButton).click()
 
-        assert not any(name == "mod_imports" for name, _ in fake.sent)
+        assert all(name != "mod_imports" for name, _ in fake.sent)
 
     @staticmethod
     def test_pe_directories_button_dispatches_pe_directories_rpc(
@@ -239,7 +239,7 @@ class TestModuleInfoDispatch:
 
         priv(tab, "_modinfo_pedirs_btn", QPushButton).click()
 
-        assert not any(name == "pe_directories" for name, _ in fake.sent)
+        assert all(name != "pe_directories" for name, _ in fake.sent)
 
     @staticmethod
     def test_entry_point_button_dispatches_get_entry_point_with_module(
@@ -404,7 +404,7 @@ class TestProcessStructuresDispatch:
 
         priv(tab, "_teb_btn", QPushButton).click()
 
-        assert not any(name == "teb_read" for name, _ in fake.sent)
+        assert all(name != "teb_read" for name, _ in fake.sent)
 
     @staticmethod
     def test_seh_chain_button_dispatches_seh_chain_rpc(
@@ -533,7 +533,7 @@ class TestWatchesDispatch:
 
         priv(tab, "_watch_add_btn", QPushButton).click()
 
-        assert not any(name == "watch_add" for name, _ in fake.sent)
+        assert all(name != "watch_add" for name, _ in fake.sent)
 
     @staticmethod
     def test_remove_button_dispatches_watch_remove_rpc(
@@ -594,7 +594,7 @@ class TestWatchesDispatch:
 
         priv(tab, "_watch_remove_btn", QPushButton).click()
 
-        assert not any(name == "watch_remove" for name, _ in fake.sent)
+        assert all(name != "watch_remove" for name, _ in fake.sent)
 
 
 class TestBreakpointConfigDispatch:
@@ -666,7 +666,7 @@ class TestBreakpointConfigDispatch:
 
         priv(tab, "_bpcfg_apply_btn", QPushButton).click()
 
-        assert not any(name == "exec" for name, _ in fake.sent)
+        assert all(name != "exec" for name, _ in fake.sent)
 
     @staticmethod
     def test_logging_breakpoint_button_dispatches_bp_log_scripts(
@@ -729,7 +729,7 @@ class TestBreakpointConfigDispatch:
 
         priv(tab, "_bpcfg_logging_btn", QPushButton).click()
 
-        assert not any(name == "exec" for name, _ in fake.sent)
+        assert all(name != "exec" for name, _ in fake.sent)
 
     @staticmethod
     def test_dll_breakpoint_button_dispatches_librarian_script(
@@ -819,7 +819,7 @@ class TestBreakpointConfigDispatch:
 
         priv(tab, "_bpcfg_dll_btn", QPushButton).click()
 
-        assert not any(name == "exec" for name, _ in fake.sent)
+        assert all(name != "exec" for name, _ in fake.sent)
 
 
 class TestCrossReferencesDispatch:
@@ -881,7 +881,7 @@ class TestCrossReferencesDispatch:
 
         priv(tab, "_xref_find_btn", QPushButton).click()
 
-        assert not any(name == "ref_search" for name, _ in fake.sent)
+        assert all(name != "ref_search" for name, _ in fake.sent)
 
     @staticmethod
     def test_function_cfg_button_dispatches_cfg_rpc(
@@ -972,7 +972,7 @@ class TestCrossReferencesDispatch:
 
         priv(tab, "_xref_strings_btn", QPushButton).click()
 
-        assert not any(name == "ref_search" for name, _ in fake.sent)
+        assert all(name != "ref_search" for name, _ in fake.sent)
 
     @staticmethod
     def test_intermodular_calls_button_dispatches_intermodular_ref_search(
@@ -1101,7 +1101,7 @@ class TestHandlesDispatch:
 
         priv(tab, "_handles_close_btn", QPushButton).click()
 
-        assert not any(name == "exec" for name, _ in fake.sent)
+        assert all(name != "exec" for name, _ in fake.sent)
 
 
 class TestScriptEngineDispatch:
@@ -1164,7 +1164,7 @@ class TestScriptEngineDispatch:
 
         priv(tab, "_script_load_btn", QPushButton).click()
 
-        assert not any(name == "exec" for name, _ in fake.sent)
+        assert all(name != "exec" for name, _ in fake.sent)
 
     @staticmethod
     def test_run_button_dispatches_scriptrun(
@@ -1255,7 +1255,7 @@ class TestScriptEngineDispatch:
 
         priv(tab, "_script_cmd_btn", QPushButton).click()
 
-        assert not any(name == "exec" for name, _ in fake.sent)
+        assert all(name != "exec" for name, _ in fake.sent)
 
     @staticmethod
     def test_abort_button_dispatches_scriptabort(
@@ -1352,7 +1352,7 @@ class TestPluginManagerDispatch:
 
         priv(tab, "_plugin_load_btn", QPushButton).click()
 
-        assert not any(name == "exec" for name, _ in fake.sent)
+        assert all(name != "exec" for name, _ in fake.sent)
 
     @staticmethod
     def test_unload_button_dispatches_plugunload(
@@ -1410,7 +1410,7 @@ class TestPluginManagerDispatch:
 
         priv(tab, "_plugin_unload_btn", QPushButton).click()
 
-        assert not any(name == "exec" for name, _ in fake.sent)
+        assert all(name != "exec" for name, _ in fake.sent)
 
     @staticmethod
     def test_refresh_button_dispatches_plugin_list_rpc(

@@ -485,7 +485,7 @@ class TestAggregateBridgeFailureResilience:
         summary = asyncio.run(aggregator.aggregate(target.name, target))
 
         ghidra_failure_notes = [note for note in summary.analysis_notes if "ghidra" in note]
-        assert len(ghidra_failure_notes) >= 1, "every failed Ghidra collector must record a note"
+        assert ghidra_failure_notes, "every failed Ghidra collector must record a note"
         assert summary.format_info == "pe"
         section_names = {section.name for section in summary.sections}
         assert ".text" in section_names

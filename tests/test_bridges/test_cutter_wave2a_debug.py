@@ -81,10 +81,10 @@ class _CommandRecorder:
             string when no configured prefix matches.
         """
         self.commands.append(command)
-        for prefix, response in self.responses.items():
-            if command == prefix or command.startswith(prefix):
-                return response
-        return ""
+        return next(
+            (response for prefix, response in self.responses.items() if command == prefix or command.startswith(prefix)),
+            "",
+        )
 
     def quit(self) -> None:
         """No-op quit for test cleanup."""
@@ -127,9 +127,7 @@ def _get_breakpoints_cache(bridge: CutterBridge) -> dict[int, BreakpointInfo]:
         dict when the attribute is absent or has the wrong type.
     """
     raw: object = getattr(bridge, _ATTR_BREAKPOINTS)
-    if not isinstance(raw, dict):
-        return {}
-    return cast("dict[int, BreakpointInfo]", raw)
+    return cast("dict[int, BreakpointInfo]", raw) if isinstance(raw, dict) else {}
 
 
 def _get_threads_cache(bridge: CutterBridge) -> dict[int, ThreadInfo]:
@@ -143,9 +141,7 @@ def _get_threads_cache(bridge: CutterBridge) -> dict[int, ThreadInfo]:
         when the attribute is absent or has the wrong type.
     """
     raw: object = getattr(bridge, _ATTR_THREADS)
-    if not isinstance(raw, dict):
-        return {}
-    return cast("dict[int, ThreadInfo]", raw)
+    return cast("dict[int, ThreadInfo]", raw) if isinstance(raw, dict) else {}
 
 
 def _make_attached_bridge(recorder: _CommandRecorder, pid: int = _PID) -> CutterBridge:
@@ -806,7 +802,7 @@ class TestSetRegister:
         recorder = _CommandRecorder()
         bridge = _make_attached_bridge(recorder)
         asyncio.run(bridge.set_register("rax", 0xDEAD_BEEF))
-        assert f"dr rax={0xDEAD_BEEF}" in recorder.commands
+        assert f"dr rax=3735928559" in recorder.commands
 
     def test_set_register_returns_true(self) -> None:
         """set_register returns True on success.

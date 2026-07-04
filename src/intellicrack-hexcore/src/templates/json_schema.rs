@@ -98,6 +98,108 @@ fn validate_field_type(ft: &super::FieldType) -> Result<(), TemplateError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::templates::{ConditionOp, FieldDefinition, FieldType};
+
+    fn bad_ptr() -> FieldType {
+        // Pointer with an empty target_template is invalid.
+        FieldType::Pointer {
+            pointer_type: Box::new(FieldType::UInt32),
+            target_template: String::new(),
+        }
+    }
+
+    fn fdef(ft: FieldType) -> FieldDefinition {
+        FieldDefinition {
+            name: "inner".to_string(),
+            field_type: ft,
+            endianness: None,
+            description: String::new(),
+            color: None,
+            validation: None,
+        }
+    }
+
+    fn assert_bad_target(ft: &FieldType) {
+        let err = validate_field_type(ft).unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::InvalidFieldReference(m) if m.contains("target_template")),
+            "expected nested target_template error, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_validate_pointer_empty_target() {
+        let err = validate_field_type(&bad_ptr()).unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::InvalidFieldReference(m) if m.contains("target_template")),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_validate_struct_ref_empty_name() {
+        let err = validate_field_type(&FieldType::StructRef(String::new())).unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::InvalidFieldReference(m) if m.contains("StructRef name")),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_validate_nested_invalid_propagates_through_wrappers() {
+        // Array
+        assert_bad_target(&FieldType::Array {
+            element_type: Box::new(bad_ptr()),
+            count: 2,
+        });
+        // Bitfield backing type
+        assert_bad_target(&FieldType::Bitfield {
+            bit_width: 4,
+            backing_type: Box::new(bad_ptr()),
+            flags: None,
+        });
+        // Enum backing type
+        assert_bad_target(&FieldType::Enum {
+            backing_type: Box::new(bad_ptr()),
+            values: vec![],
+        });
+        // Union variant
+        assert_bad_target(&FieldType::Union {
+            variants: vec![fdef(bad_ptr())],
+        });
+        // Computed display type
+        assert_bad_target(&FieldType::Computed {
+            expression: "x".to_string(),
+            display_type: Box::new(bad_ptr()),
+        });
+        // DynamicArray element type (count_field non-empty so recursion is reached)
+        assert_bad_target(&FieldType::DynamicArray {
+            element_type: Box::new(bad_ptr()),
+            count_field: "n".to_string(),
+        });
+        // Conditional inner field
+        assert_bad_target(&FieldType::Conditional {
+            condition_field: "f".to_string(),
+            condition_value: 0,
+            condition_op: ConditionOp::Eq,
+            fields: vec![fdef(bad_ptr())],
+        });
+    }
+
+    #[test]
+    fn test_validate_valid_wrappers_ok() {
+        assert!(validate_field_type(&FieldType::UInt8).is_ok());
+        assert!(validate_field_type(&FieldType::Array {
+            element_type: Box::new(FieldType::UInt8),
+            count: 4,
+        })
+        .is_ok());
+        assert!(validate_field_type(&FieldType::Pointer {
+            pointer_type: Box::new(FieldType::UInt32),
+            target_template: "Valid".to_string(),
+        })
+        .is_ok());
+    }
 
     #[test]
     fn test_parse_simple_template() {
@@ -210,15 +312,15 @@ mod tests {
         assert!(result.is_err());
     }
 
-    /// Wave-5 gate: assert the exact error variant and message for an empty DynamicArray
-    /// count_field.
+    /// Wave-5 gate: assert the exact error variant and message for an empty `DynamicArray`
+    /// `count_field`.
     ///
     /// The weak gate above only asserts `is_err()`.  This test asserts the concrete
     /// `TemplateError::InvalidFieldReference` variant *and* that its message contains
-    /// "count_field".
+    /// `count_field`.
     ///
     /// Mutation caught: returning `TemplateError::JsonParse` instead of
-    /// `TemplateError::InvalidFieldReference`, or omitting "count_field" from
+    /// `TemplateError::InvalidFieldReference`, or omitting `count_field` from
     /// the message, fails the `matches!` predicate.
     #[test]
     fn test_invalid_dynamic_array_ref_exact_error_variant_and_message() {
@@ -252,7 +354,7 @@ mod tests {
     /// Oracle: the production source at line 53-56 returns
     ///   `TemplateError::InvalidFieldReference("Conditional condition_field cannot be empty")`
     /// when `condition_field.is_empty()`.  We assert exactly this variant and that
-    /// the message contains "condition_field".
+    /// the message contains `condition_field`.
     ///
     /// Mutation caught: removing or inverting the `is_empty()` guard would allow the
     /// call to proceed (returning `Ok`) instead of failing, causing `unwrap_err()` to

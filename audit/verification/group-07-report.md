@@ -1,7 +1,7 @@
 # Group 07 Verification Report
 
-**Assigned section:** `audit/test-coverage-audit/section-09-cloud-providers.md`  
-**Scope:** OpenAI, Ollama, Grok, Google, Anthropic, OpenRouter provider operations — full section A through I.  
+**Assigned section:** `audit/test-coverage-audit/section-09-cloud-providers.md`
+**Scope:** OpenAI, Ollama, Grok, Google, Anthropic, OpenRouter provider operations — full section A through I.
 **Verification date:** 2026-06-27
 
 ---

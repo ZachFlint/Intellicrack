@@ -249,9 +249,7 @@ class TestPatchInstructionFraming:
             del address
             await asyncio.sleep(0)
             call_count[0] += 1
-            if call_count[0] == 1:
-                return original_bytes[:size]
-            return patched_bytes[:size]
+            return original_bytes[:size] if call_count[0] == 1 else patched_bytes[:size]
 
         def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
             del params

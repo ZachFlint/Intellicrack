@@ -93,8 +93,7 @@ def _read_json_log_records(log_file: Path) -> list[dict[str, Any]]:
     raw = log_file.read_text(encoding="utf-8")
     records: list[dict[str, Any]] = []
     for line in raw.splitlines():
-        stripped = line.strip()
-        if stripped:
+        if stripped := line.strip():
             decoded: dict[str, Any] = json.loads(stripped)
             records.append(decoded)
     return records
@@ -655,7 +654,7 @@ def test_intellicrack_logger_configure_no_file(tmp_path: Path) -> None:
     stdlib_logging.shutdown()
 
     assert not (tmp_path / _LOG_FILENAME).exists()
-    assert list(tmp_path.glob("*.log*")) == []
+    assert not list(tmp_path.glob("*.log*"))
 
 
 def test_intellicrack_logger_configure_plain_text(tmp_path: Path) -> None:
@@ -1037,7 +1036,7 @@ def test_operation_timer_success() -> None:
     complete = [c for c in caps if c.get("event") == "operation_complete"]
     failed = [c for c in caps if c.get("event") == "operation_failed"]
     assert len(complete) == 1
-    assert failed == []
+    assert not failed
     record = complete[0]
     assert record["log_level"] == "info"
     assert record["operation"] == "test_op"
@@ -1080,7 +1079,7 @@ def test_operation_timer_on_exception() -> None:
     failed = [c for c in caps if c.get("event") == "operation_failed"]
     complete = [c for c in caps if c.get("event") == "operation_complete"]
     assert len(failed) == 1
-    assert complete == []
+    assert not complete
     record = failed[0]
     assert record["log_level"] == "error"
     assert record["operation"] == "failing_op"

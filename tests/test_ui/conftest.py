@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from PyQt6.QtCore import QEvent
 from PyQt6.QtWidgets import QApplication
 
 from intellicrack.core.config import Config
@@ -22,6 +23,7 @@ from intellicrack.core.orchestrator import Orchestrator
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
 from intellicrack.providers.registry import ProviderRegistry
+from intellicrack.ui.panels.async_bridge import drain_bridge_workers, shutdown_bridge_loop
 
 
 if TYPE_CHECKING:
@@ -66,7 +68,7 @@ class SignalRecorder:
 
     @property
     def times_called(self) -> int:
-        """Return the number of recorded calls.
+        """The number of recorded calls.
 
         Returns:
             int: Number of times this recorder was called.
@@ -99,10 +101,6 @@ class NoOpSandboxManager:
 
     Accepts any constructor arguments and returns no-op callables
     for any attribute access.
-
-    Args:
-        *args: Ignored positional arguments.
-        **kwargs: Ignored keyword arguments.
     """
 
     def __init__(self, *args: object, **kwargs: object) -> None:
@@ -127,11 +125,7 @@ class NoOpSandboxManager:
 
 
 class CallRecorder:
-    """Records arbitrary function calls for assertion.
-
-    Args:
-        result: Value returned by each invocation of this recorder.
-    """
+    """Records arbitrary function calls for assertion."""
 
     def __init__(self, result: object = None) -> None:
         """Initialise the call recorder.
@@ -157,7 +151,7 @@ class CallRecorder:
 
     @property
     def times_called(self) -> int:
-        """Return the number of recorded calls.
+        """The number of recorded calls.
 
         Returns:
             int: Number of times this recorder was called.
@@ -169,19 +163,48 @@ class CallRecorder:
 def qapp() -> Generator[QApplication]:
     """Provide a QApplication instance for the test session.
 
-    Qt requires exactly one QApplication instance per process.
-    This fixture creates one for the entire test session and
-    cleans it up afterward.
+    Qt requires exactly one QApplication instance per process. This fixture
+    reuses an existing application when present, otherwise creates one for the
+    whole session. On teardown it drains any still-running background bridge
+    workers, flushes pending ``deleteLater`` events, and stops the persistent
+    bridge event loop so the interpreter can exit cleanly instead of aborting
+    with ``QThread: Destroyed while thread is still running``.
 
     Yields:
-        Generator[QApplication]: QApplication instance for widget testing.
+        QApplication: QApplication instance for widget testing.
     """
     existing = QApplication.instance()
-    if existing is not None and isinstance(existing, QApplication):
-        yield existing
-        return
+    app = existing if isinstance(existing, QApplication) else QApplication([])
+    try:
+        yield app
+    finally:
+        drain_bridge_workers()
+        app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        app.processEvents()
+        shutdown_bridge_loop()
 
-    yield QApplication([])
+
+@pytest.fixture(autouse=True)
+def _drain_bridge_workers_after_test() -> Generator[None]:
+    """Drain in-flight async-bridge worker threads after every UI test.
+
+    UI panels dispatch real ``BridgeCallWorker`` / ``GenericCallableWorker``
+    ``QThread`` instances through the async-bridge helpers. With no Qt event
+    loop spinning during a unit test, a worker whose OS thread is still running
+    when the test ends - and the widget it references is torn down - would be
+    destroyed mid-flight, aborting the interpreter. Draining after each test
+    guarantees every dispatched worker finishes and its ``deleteLater`` is
+    delivered before the next test (or process exit) begins.
+
+    Yields:
+        None: Control passes to the test; the drain runs on teardown.
+    """
+    yield
+    drain_bridge_workers()
+    app = QApplication.instance()
+    if app is not None:
+        app.sendPostedEvents(None, QEvent.Type.DeferredDelete.value)
+        app.processEvents()
 
 
 @pytest.fixture

@@ -438,7 +438,7 @@ def _make_fake_torch(
             del device
             if zeros_exc is not None:
                 raise zeros_exc
-            return n - n
+            return 0
 
         @staticmethod
         def device(spec: str) -> torch.device:
@@ -1293,7 +1293,7 @@ class TestEnrichFromWindowsGpus:
         monkeypatch.setattr(xpu_utils_mod, "_get_windows_gpu_info", _fake_gpu_info)
         result = _call_enrich_from_windows_gpus("Intel Arc B580", "31.0.101.5522", "e20b")
         assert result == ("Intel Arc B580", "31.0.101.5522", "e20b")
-        assert len(wmi_called) == 0
+        assert not wmi_called
 
     @staticmethod
     def test_wmi_fills_empty_name_and_driver(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -1434,9 +1434,7 @@ class TestPickPrimaryArcGpu:
         def _fake_max_bar(pnp_id: str) -> int:
             if "E20B" in pnp_id:
                 return b580_bar
-            if "4905" in pnp_id:
-                return a770_bar
-            return 0
+            return a770_bar if "4905" in pnp_id else 0
 
         monkeypatch.setattr(xpu_utils_mod, "max_memory_bar_bytes", _fake_max_bar)
         gpus: list[dict[str, str]] = [

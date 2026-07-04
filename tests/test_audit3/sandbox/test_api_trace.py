@@ -117,8 +117,7 @@ def _have_trace_event_dll() -> bool:
     script_dir_dll = _SCRIPT_PATH.parent / "Microsoft.Diagnostics.Tracing.TraceEvent.dll"
     if script_dir_dll.is_file():
         return True
-    user_profile = os.environ.get("USERPROFILE", "")
-    if user_profile:
+    if user_profile := os.environ.get("USERPROFILE", ""):
         nuget_root = Path(user_profile) / ".nuget" / "packages" / "microsoft.diagnostics.tracing.traceevent"
         if nuget_root.is_dir():
             for dll in nuget_root.rglob("Microsoft.Diagnostics.Tracing.TraceEvent.dll"):
@@ -221,7 +220,7 @@ def _run_script(
     """
     env = dict(os.environ)
     if extra_env:
-        env.update(extra_env)
+        env |= extra_env
     return run(
         [
             pwsh,
@@ -318,7 +317,7 @@ def _start_script_background(
     """
     env = dict(os.environ)
     if extra_env:
-        env.update(extra_env)
+        env |= extra_env
     return Popen(
         [
             pwsh,
@@ -792,11 +791,10 @@ def test_f0013_handler_extracts_target_process_id_and_return_code(tmp_path: Path
     assert "Missing=True" in out, f"missing field must resolve to $null (True); stdout={out!r}"
     assert "Function=NtOpenProcess" in out, f"expected event id 5 to map to NtOpenProcess; stdout={out!r}"
 
-    trace_line: str | None = None
-    for line in out.splitlines():
-        if line.startswith("TRACELINE:"):
-            trace_line = line.removeprefix("TRACELINE:")
-            break
+    trace_line: str | None = next(
+        (line.removeprefix("TRACELINE:") for line in out.splitlines() if line.startswith("TRACELINE:")),
+        None,
+    )
     assert trace_line is not None, f"probe must emit a TRACELINE: row; stdout={out!r}"
     fields = trace_line.split("|")
     assert len(fields) == 7, f"trace line must have 7 pipe-fields; got {len(fields)} in {trace_line!r}"

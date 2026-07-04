@@ -83,9 +83,7 @@ class TestYaraMatchRendering:
             QApplication: The Qt application instance.
         """
         existing = QApplication.instance()
-        if isinstance(existing, QApplication):
-            return existing
-        return QApplication([])
+        return existing if isinstance(existing, QApplication) else QApplication([])
 
     def test_match_offset_matches_real_file(self, qapp: QApplication, real_pe_dll: Path) -> None:
         """Verify the rendered offset equals the real position of the matched string.

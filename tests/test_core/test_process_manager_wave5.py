@@ -10,6 +10,7 @@ Covers:
   S7-10 — ``_pid_exists_windows`` kernel32 → psutil fallback path; also
            tests ``_pid_exists`` zero-pid boundary.
 """
+
 from __future__ import annotations
 
 import ctypes
@@ -116,9 +117,7 @@ class TestProcessStateError:
         ``in str(err)`` check.
         """
         err = ProcessStateError(name="cmd.exe", pid=12345)
-        assert err.process_name == "cmd.exe", (
-            f"process_name should be 'cmd.exe'; got {err.process_name!r}"
-        )
+        assert err.process_name == "cmd.exe", f"process_name should be 'cmd.exe'; got {err.process_name!r}"
         assert err.pid == 12345, f"pid should be 12345; got {err.pid}"
         assert "cmd.exe" in str(err), f"str(err) missing 'cmd.exe': {str(err)!r}"
         assert "12345" in str(err), f"str(err) missing '12345': {str(err)!r}"
@@ -131,9 +130,7 @@ class TestProcessStateError:
         string literal fails the ``in str(err)`` assertion.
         """
         err = ProcessStateError(name="python.exe", pid=1)
-        assert "subprocess returned no exit status" in str(err), (
-            f"Default detail absent from error message: {str(err)!r}"
-        )
+        assert "subprocess returned no exit status" in str(err), f"Default detail absent from error message: {str(err)!r}"
 
     def test_custom_message_used_when_provided(self) -> None:
         """Custom message overrides the default detail.
@@ -143,12 +140,8 @@ class TestProcessStateError:
         means the custom text is absent, failing the assertion.
         """
         err = ProcessStateError(name="helper.exe", pid=9999, message="out-of-band exit")
-        assert "out-of-band exit" in str(err), (
-            f"Custom message absent from error: {str(err)!r}"
-        )
-        assert "subprocess returned no exit status" not in str(err), (
-            f"Default message should not appear when custom is given: {str(err)!r}"
-        )
+        assert "out-of-band exit" in str(err), f"Custom message absent from error: {str(err)!r}"
+        assert "subprocess returned no exit status" not in str(err), f"Default message should not appear when custom is given: {str(err)!r}"
 
     def test_is_a_runtime_error(self) -> None:
         """ProcessStateError subclasses RuntimeError.
@@ -186,12 +179,8 @@ class TestProcessStateError:
             mgr.run_tracked(["fake_cmd.exe"], name="zombie_proc")
 
         err = exc_info.value
-        assert err.process_name == "zombie_proc", (
-            f"Expected process_name='zombie_proc'; got {err.process_name!r}"
-        )
-        assert err.pid == _ZombieProcess.pid, (
-            f"Expected pid={_ZombieProcess.pid}; got {err.pid}"
-        )
+        assert err.process_name == "zombie_proc", f"Expected process_name='zombie_proc'; got {err.process_name!r}"
+        assert err.pid == _ZombieProcess.pid, f"Expected pid={_ZombieProcess.pid}; got {err.pid}"
         assert "zombie_proc" in str(err)
 
 
@@ -207,9 +196,7 @@ class TestPidExistsWindowsFallback:
         this assertion; swapping the return value of the kernel32 path also fails.
         """
         result = _pid_exists_windows(os.getpid())
-        assert result is True, (
-            f"_pid_exists_windows({os.getpid()}) should be True for the current process; got {result}"
-        )
+        assert result is True, f"_pid_exists_windows({os.getpid()}) should be True for the current process; got {result}"
 
     def test_pid_exists_zero_pid_returns_false_via_pid_exists(self) -> None:
         """_pid_exists(0) returns False because pid <= 0 triggers the early return.
@@ -252,9 +239,7 @@ class TestPidExistsWindowsFallback:
         """
         monkeypatch.setattr(ctypes, "windll", None)
         result = _pid_exists_windows(os.getpid())
-        assert result is True, (
-            f"psutil fallback should return True for current PID; got {result}"
-        )
+        assert result is True, f"psutil fallback should return True for current PID; got {result}"
 
     def test_pid_exists_psutil_fallback_with_dead_pid(
         self,
@@ -279,6 +264,4 @@ class TestPidExistsWindowsFallback:
 
         monkeypatch.setattr(ctypes, "windll", None)
         result = _pid_exists_windows(dead_pid)
-        assert result is False, (
-            f"psutil fallback should return False for terminated PID {dead_pid}; got {result}"
-        )
+        assert result is False, f"psutil fallback should return False for terminated PID {dead_pid}; got {result}"

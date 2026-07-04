@@ -17,6 +17,7 @@ Covers:
 Note: ``tests/test_bridges/test_sandbox_bridge.py`` cannot be deleted per
 wave-5 constraints, but its behaviors are now properly gated here.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -108,9 +109,7 @@ class TestStateTrackerClearsLastErrorOnSuccess:
         """
         bridge = _TestableSandboxBridge()
         bridge.set_state_outcome("prior failure message")
-        assert bridge.state.last_error == "prior failure message", (
-            "Pre-condition: last_error must be set before testing clear"
-        )
+        assert bridge.state.last_error == "prior failure message", "Pre-condition: last_error must be set before testing clear"
 
         async def _run() -> None:
             async with bridge.track_state("test_success"):
@@ -118,8 +117,7 @@ class TestStateTrackerClearsLastErrorOnSuccess:
 
         asyncio.run(_run())
         assert bridge.state.last_error is None, (
-            f"last_error must be None after successful track_state block; "
-            f"got {bridge.state.last_error!r}"
+            f"last_error must be None after successful track_state block; got {bridge.state.last_error!r}"
         )
 
     def test_last_error_set_to_exception_text_on_failure(self) -> None:
@@ -144,8 +142,7 @@ class TestStateTrackerClearsLastErrorOnSuccess:
 
         asyncio.run(_run())
         assert bridge.state.last_error == _SENTINEL_ERROR_TEXT, (
-            f"last_error must be set to the exception text; "
-            f"got {bridge.state.last_error!r}"
+            f"last_error must be set to the exception text; got {bridge.state.last_error!r}"
         )
 
     def test_fail_then_succeed_clears_last_error(self) -> None:
@@ -166,9 +163,7 @@ class TestStateTrackerClearsLastErrorOnSuccess:
             except _FirstCallError:
                 pass
 
-            assert bridge.state.last_error == _FIRST_CALL_FAIL_TEXT, (
-                "Pre-condition: last_error must be set after first failure"
-            )
+            assert bridge.state.last_error == _FIRST_CALL_FAIL_TEXT, "Pre-condition: last_error must be set after first failure"
 
             async with bridge.track_state("second_call_succeeds"):
                 pass
@@ -176,8 +171,7 @@ class TestStateTrackerClearsLastErrorOnSuccess:
         asyncio.run(_run())
 
         assert bridge.state.last_error is None, (
-            f"last_error must be None after the second (successful) call; "
-            f"got {bridge.state.last_error!r}"
+            f"last_error must be None after the second (successful) call; got {bridge.state.last_error!r}"
         )
 
     def test_set_state_outcome_no_op_when_value_unchanged(self) -> None:
@@ -255,9 +249,7 @@ class TestSandboxBridgeManagerGates:
         bridge = SandboxBridge()
         mgr1 = bridge.ensure_manager()
         mgr2 = bridge.ensure_manager()
-        assert mgr1 is mgr2, (
-            "ensure_manager() must return the same SandboxManager instance on repeated calls"
-        )
+        assert mgr1 is mgr2, "ensure_manager() must return the same SandboxManager instance on repeated calls"
 
     def test_initial_bridge_state_has_no_last_error(self) -> None:
         """Freshly constructed SandboxBridge has last_error=None.
@@ -282,14 +274,10 @@ class TestSandboxBridgeManagerGates:
         bridge = _TestableSandboxBridge()
 
         bridge.set_state_outcome("bridge error")
-        assert bridge.state.last_error == "bridge error", (
-            f"last_error must be 'bridge error'; got {bridge.state.last_error!r}"
-        )
+        assert bridge.state.last_error == "bridge error", f"last_error must be 'bridge error'; got {bridge.state.last_error!r}"
 
         bridge.set_state_outcome(None)
-        assert bridge.state.last_error is None, (
-            f"last_error must be None after clearing; got {bridge.state.last_error!r}"
-        )
+        assert bridge.state.last_error is None, f"last_error must be None after clearing; got {bridge.state.last_error!r}"
 
     def test_cont_raises_tool_error_with_instance_id_in_message(self) -> None:
         """cont() error message includes the specific instance ID.

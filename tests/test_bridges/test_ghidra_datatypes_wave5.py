@@ -164,10 +164,10 @@ class _CommandRecorder:
             an empty string when no configured prefix matches.
         """
         self.commands.append(command)
-        for prefix, response in self.responses.items():
-            if command.startswith(prefix):
-                return response
-        return ""
+        return next(
+            (response for prefix, response in self.responses.items() if command.startswith(prefix)),
+            "",
+        )
 
     def quit(self) -> None:
         """No-op quit matching the r2pipe.open interface."""

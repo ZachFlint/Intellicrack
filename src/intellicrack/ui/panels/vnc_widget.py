@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import QWidget
 
 from intellicrack.bridges.named_pipe_client import NamedPipeClient
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import ensure_loop, run_bridge_coroutine, run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import ensure_loop, run_bridge_coroutine_logged
 from intellicrack.ui.panels.qt_compat import key_event_key
 from intellicrack.ui.resources.theme_manager import ThemeManager
 
@@ -1793,6 +1793,7 @@ class VNCWidget(QWidget):
         self._pending_connect: tuple[str, int] = ("", 0)
         _ = self.framebuffer_updated.connect(self.update)
         _ = self._connect_finished.connect(self._on_connect_finished)
+        _ = ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(320, 240)
@@ -1871,13 +1872,26 @@ class VNCWidget(QWidget):
         self.connection_status_changed.emit(succeeded)
 
     def disconnect_from_server(self) -> None:
-        """Disconnect from the VNC server and stop the pump task."""
+        """Disconnect from the VNC server and stop the pump task.
+
+        The socket teardown is dispatched onto the shared bridge event loop
+        through the non-blocking async worker path so the Qt main thread is
+        never blocked - even when the peer never acknowledges the TCP close
+        and ``RFBClient.disconnect()`` hangs waiting on ``wait_closed()``.
+        The widget is treated as disconnected immediately; the background
+        close outcome is only used for logging.
+        """
         self.update_timer.stop()
         self._cancel_pump_task()
-        try:
-            run_bridge_coroutine(self.client.disconnect())
-        except (OSError, RuntimeError):
-            _logger.debug("vnc_widget_disconnect_error", exc_info=True)
+        run_bridge_coroutine_logged(
+            self.client.disconnect(),
+            on_success=None,
+            on_error=None,
+            parent=self,
+            event="vnc_widget_disconnect",
+            logger=_logger,
+            level="info",
+        )
         disconnected: bool = False
         self.connection_status_changed.emit(disconnected)
 
@@ -1960,6 +1974,21 @@ class VNCWidget(QWidget):
             disconnected: bool = False
             self.connection_status_changed.emit(disconnected)
             return
+        self.update()
+
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Force a repaint when the active application theme changes.
+
+        Connected to :attr:`ThemeManager.theme_changed` so the idle "VNC
+        Display" splash - which is only otherwise redrawn by the connection
+        repaint timer or an unrelated native repaint such as a resize -
+        immediately reflects the new theme's colors instead of rendering
+        stale ones until some other event happens to trigger a repaint.
+
+        Args:
+            resolved_theme: The concrete theme now active ("dark" or "light").
+        """
+        _ = resolved_theme
         self.update()
 
     @override

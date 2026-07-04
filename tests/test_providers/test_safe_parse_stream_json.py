@@ -83,10 +83,8 @@ def _read_events(stream: io.StringIO) -> list[dict[str, Any]]:
     """
     events: list[dict[str, Any]] = []
     for raw in stream.getvalue().splitlines():
-        line = raw.strip()
-        if not line:
-            continue
-        events.append(cast("dict[str, Any]", json.loads(line)))
+        if line := raw.strip():
+            events.append(cast("dict[str, Any]", json.loads(line)))
     return events
 
 

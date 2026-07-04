@@ -429,7 +429,7 @@ class TestWatchpointInfoFields:
         wp.hit_count += 1
         wp.enabled = False
         assert wp.hit_count == 2
-        assert wp.enabled is False
+        assert not wp.enabled
         assert wp.id == 7
         assert wp.address == _ADDR
         assert wp.size == 4

@@ -15,6 +15,7 @@ Covers:
   S7-12 — ``AnalysisAggregator`` with both Ghidra and Cutter bridges contributing
            yields both names in ``summary.source_bridges``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -393,9 +394,7 @@ class TestScriptManagerR2Command:
         cmd = mgr.build_execute_command(script, args=None)
         script_path = Path(cmd[3])
 
-        assert script_path.is_absolute(), (
-            f"Materialized script path must be absolute; got {cmd[3]!r}"
-        )
+        assert script_path.is_absolute(), f"Materialized script path must be absolute; got {cmd[3]!r}"
 
 
 class TestTemplateBootstrapError:
@@ -420,9 +419,7 @@ class TestTemplateBootstrapError:
             manager.bootstrap_builtins(document)
 
         err = exc_info.value
-        assert len(err.failed_templates) > 0, (
-            f"failed_templates must be non-empty after export failure; got {err.failed_templates!r}"
-        )
+        assert len(err.failed_templates) > 0, f"failed_templates must be non-empty after export failure; got {err.failed_templates!r}"
 
     def test_bootstrap_error_message_contains_failure_count(self, tmp_path: Path) -> None:
         """TemplateBootstrapError message contains the failure count.
@@ -442,12 +439,8 @@ class TestTemplateBootstrapError:
 
         err = exc_info.value
         msg = str(err)
-        assert "bootstrap encountered" in msg, (
-            f"Expected 'bootstrap encountered' in error message; got {msg!r}"
-        )
-        assert "template failure" in msg, (
-            f"Expected 'template failure' in error message; got {msg!r}"
-        )
+        assert "bootstrap encountered" in msg, f"Expected 'bootstrap encountered' in error message; got {msg!r}"
+        assert "template failure" in msg, f"Expected 'template failure' in error message; got {msg!r}"
 
     def test_bootstrap_error_failed_templates_are_path_string_pairs(self, tmp_path: Path) -> None:
         """Each failed_template entry is a (Path, str) pair.
@@ -467,17 +460,11 @@ class TestTemplateBootstrapError:
             manager.bootstrap_builtins(document)
 
         for entry in exc_info.value.failed_templates:
-            assert isinstance(entry, tuple), (
-                f"Each failed_template entry must be a tuple; got {type(entry)!r}: {entry!r}"
-            )
+            assert isinstance(entry, tuple), f"Each failed_template entry must be a tuple; got {type(entry)!r}: {entry!r}"
             assert len(entry) == 2, f"Each entry must be a 2-tuple; got {entry!r}"
             path_part, msg_part = entry
-            assert isinstance(path_part, Path), (
-                f"First element must be a Path; got {type(path_part)!r}"
-            )
-            assert isinstance(msg_part, str), (
-                f"Second element must be a str; got {type(msg_part)!r}"
-            )
+            assert isinstance(path_part, Path), f"First element must be a Path; got {type(path_part)!r}"
+            assert isinstance(msg_part, str), f"Second element must be a str; got {type(msg_part)!r}"
 
     def test_bootstrap_is_runtime_error_subclass(self) -> None:
         """TemplateBootstrapError is a RuntimeError subclass.
@@ -486,9 +473,7 @@ class TestTemplateBootstrapError:
         Mutation: changing the base class to ``Exception`` fails this assertion.
         """
         err = TemplateBootstrapError("msg", [])
-        assert isinstance(err, RuntimeError), (
-            f"TemplateBootstrapError must subclass RuntimeError; got {type(err).__mro__!r}"
-        )
+        assert isinstance(err, RuntimeError), f"TemplateBootstrapError must subclass RuntimeError; got {type(err).__mro__!r}"
 
 
 class TestAnalysisAggregatorCutterOnly:
@@ -518,16 +503,11 @@ class TestAnalysisAggregatorCutterOnly:
         async def _run() -> None:
             summary = await aggregator.aggregate("target.exe", binary_info)
 
-            assert "cutter" in summary.source_bridges, (
-                f"'cutter' must appear in source_bridges; got {summary.source_bridges!r}"
-            )
-            assert summary.complete is True, (
-                f"summary.complete must be True when cutter contributed; got {summary.complete!r}"
-            )
+            assert "cutter" in summary.source_bridges, f"'cutter' must appear in source_bridges; got {summary.source_bridges!r}"
+            assert summary.complete is True, f"summary.complete must be True when cutter contributed; got {summary.complete!r}"
             found_stub_string = any(s.value == "cutter_stub_string" for s in summary.strings)
             assert found_stub_string, (
-                f"Stub string 'cutter_stub_string' must appear in summary.strings; "
-                f"got {[s.value for s in summary.strings]!r}"
+                f"Stub string 'cutter_stub_string' must appear in summary.strings; got {[s.value for s in summary.strings]!r}"
             )
 
         asyncio.run(_run())
@@ -552,8 +532,7 @@ class TestAnalysisAggregatorCutterOnly:
         async def _run() -> None:
             summary = await aggregator.aggregate("target.exe", binary_info)
             assert "ghidra" not in summary.source_bridges, (
-                f"'ghidra' must NOT appear when only cutter is registered; "
-                f"got {summary.source_bridges!r}"
+                f"'ghidra' must NOT appear when only cutter is registered; got {summary.source_bridges!r}"
             )
             assert "cutter" in summary.source_bridges
 
@@ -586,15 +565,9 @@ class TestAnalysisAggregatorBothBridges:
         async def _run() -> None:
             summary = await aggregator.aggregate("target.exe", binary_info)
 
-            assert "ghidra" in summary.source_bridges, (
-                f"'ghidra' must be in source_bridges; got {summary.source_bridges!r}"
-            )
-            assert "cutter" in summary.source_bridges, (
-                f"'cutter' must be in source_bridges; got {summary.source_bridges!r}"
-            )
-            assert summary.complete is True, (
-                f"complete must be True when both bridges contributed; got {summary.complete!r}"
-            )
+            assert "ghidra" in summary.source_bridges, f"'ghidra' must be in source_bridges; got {summary.source_bridges!r}"
+            assert "cutter" in summary.source_bridges, f"'cutter' must be in source_bridges; got {summary.source_bridges!r}"
+            assert summary.complete is True, f"complete must be True when both bridges contributed; got {summary.complete!r}"
 
         asyncio.run(_run())
 
@@ -619,11 +592,7 @@ class TestAnalysisAggregatorBothBridges:
         async def _run() -> None:
             summary = await aggregator.aggregate("target.exe", binary_info)
             values = {s.value for s in summary.strings}
-            assert "ghidra_stub_string" in values, (
-                f"Ghidra stub string must appear in summary.strings; values={values!r}"
-            )
-            assert "cutter_stub_string" in values, (
-                f"Cutter stub string must appear in summary.strings; values={values!r}"
-            )
+            assert "ghidra_stub_string" in values, f"Ghidra stub string must appear in summary.strings; values={values!r}"
+            assert "cutter_stub_string" in values, f"Cutter stub string must appear in summary.strings; values={values!r}"
 
         asyncio.run(_run())

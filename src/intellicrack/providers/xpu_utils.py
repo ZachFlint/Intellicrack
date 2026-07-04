@@ -671,7 +671,7 @@ def _pick_primary_arc_gpu(gpus: list[dict[str, str]]) -> tuple[str, int] | None:
     primary_bar = 0
     for gpu in gpus:
         name = gpu.get("name", "")
-        if "Intel" not in name or not any(p in name for p in _ARC_DEVICE_PATTERNS):
+        if "Intel" not in name or all(p not in name for p in _ARC_DEVICE_PATTERNS):
             continue
         pnp_id = gpu.get("pnp_device_id", "")
         if not pnp_id:
@@ -680,9 +680,7 @@ def _pick_primary_arc_gpu(gpus: list[dict[str, str]]) -> tuple[str, int] | None:
         if bar_bytes > primary_bar:
             primary_bar = bar_bytes
             primary_name = name
-    if primary_name is None:
-        return None
-    return (primary_name, primary_bar)
+    return None if primary_name is None else (primary_name, primary_bar)
 
 
 def _check_intel_driver(gpus: list[dict[str, str]] | None = None) -> tuple[bool, str]:
@@ -702,10 +700,9 @@ def _check_intel_driver(gpus: list[dict[str, str]] | None = None) -> tuple[bool,
         name = gpu.get("name", "")
         if "Intel" not in name:
             continue
-        if not any(pattern in name for pattern in _ARC_DEVICE_PATTERNS):
+        if all(pattern not in name for pattern in _ARC_DEVICE_PATTERNS):
             continue
-        driver_version = gpu.get("driver_version", "").strip()
-        if driver_version:
+        if driver_version := gpu.get("driver_version", "").strip():
             _logger.debug("xpu_driver_detected", device=name, driver_version=driver_version)
             return (True, "")
     _logger.debug("xpu_driver_not_found", gpu_count=len(gpu_list))

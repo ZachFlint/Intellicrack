@@ -140,12 +140,8 @@ class TestOpenAIModelListing:
             assert isinstance(model.name, str), f"Model name must be a str; got {type(model.name)}"
             assert len(model.name) > 0, f"Model name must be non-empty; got {model.name!r}"
             assert model.provider == ProviderName.OPENAI, f"Expected OPENAI provider, got {model.provider}"
-            assert isinstance(model.context_window, int), (
-                f"Model {model.id} context_window must be int; got {type(model.context_window)}"
-            )
-            assert model.context_window > 0, (
-                f"Model {model.id} context_window must be positive; got {model.context_window!r}"
-            )
+            assert isinstance(model.context_window, int), f"Model {model.id} context_window must be int; got {type(model.context_window)}"
+            assert model.context_window > 0, f"Model {model.id} context_window must be positive; got {model.context_window!r}"
             assert isinstance(model.supports_tools, bool), f"supports_tools must be bool for {model.id}"
             assert isinstance(model.supports_vision, bool), f"supports_vision must be bool for {model.id}"
             assert isinstance(model.supports_streaming, bool), f"supports_streaming must be bool for {model.id}"
@@ -172,10 +168,8 @@ class TestOpenAIModelListing:
         models = await openai_provider.list_models()
 
         gpt4o_mini_models = [m for m in models if m.id.startswith(_GPT4O_MINI_ID_PREFIX)]
-        assert len(gpt4o_mini_models) > 0, (
-            f"gpt-4o-mini (or a dated variant such as gpt-4o-mini-2024-07-18) must appear in the "
-            f"OpenAI model listing; bridge filtered it out or the API did not return it. "
-            f"Available model ids: {sorted(m.id for m in models)}"
+        assert gpt4o_mini_models, (
+            f"gpt-4o-mini (or a dated variant such as gpt-4o-mini-2024-07-18) must appear in the OpenAI model listing; bridge filtered it out or the API did not return it. Available model ids: {sorted(m.id for m in models)}"
         )
 
         for model in gpt4o_mini_models:
@@ -195,9 +189,7 @@ class TestOpenAIModelListing:
                 f"gpt-4o-mini supports_streaming must be {_GPT4O_MINI_SUPPORTS_STREAMING} "
                 f"(OpenAI documented streaming); bridge returned {model.supports_streaming} for {model.id!r}"
             )
-            assert model.provider == ProviderName.OPENAI, (
-                f"gpt-4o-mini must report provider OPENAI; got {model.provider} for {model.id!r}"
-            )
+            assert model.provider == ProviderName.OPENAI, f"gpt-4o-mini must report provider OPENAI; got {model.provider} for {model.id!r}"
 
     @pytest.mark.asyncio
     @staticmethod

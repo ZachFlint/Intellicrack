@@ -382,7 +382,4 @@ class TestProcessMitigationStructLayouts:
             PROCESS_MITIGATION_FONT_DISABLE_POLICY,
         ]
         for struct_cls in single_dword_structs:
-            assert ctypes.sizeof(struct_cls) == 4, (
-                f"Expected sizeof({struct_cls.__name__}) == 4, "
-                f"got {ctypes.sizeof(struct_cls)}"
-            )
+            assert ctypes.sizeof(struct_cls) == 4, f"Expected sizeof({struct_cls.__name__}) == 4, got {ctypes.sizeof(struct_cls)}"

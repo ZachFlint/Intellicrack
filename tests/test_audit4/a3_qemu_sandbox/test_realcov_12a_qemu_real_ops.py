@@ -98,8 +98,7 @@ def _oracle_expected_accelerator(qemu_exe: Path) -> AcceleratorType:
     combined = (result.stdout + result.stderr).lower()
 
     if "whpx" in combined and platform.system() == "Windows":
-        pwsh = shutil.which("pwsh") or shutil.which("powershell")
-        if pwsh:
+        if pwsh := shutil.which("pwsh") or shutil.which("powershell"):
             try:
                 ps_result = subprocess.run(
                     [
@@ -122,10 +121,7 @@ def _oracle_expected_accelerator(qemu_exe: Path) -> AcceleratorType:
             except (OSError, subprocess.TimeoutExpired):
                 pass
 
-    if "kvm" in combined:
-        return AcceleratorType.KVM
-
-    return AcceleratorType.TCG
+    return AcceleratorType.KVM if "kvm" in combined else AcceleratorType.TCG
 
 
 def _run[T](coro: Coroutine[object, object, T]) -> T:
@@ -518,7 +514,7 @@ class TestYaraScanRealRulesRealBinary:
         assert "RealPEMagic" in rule_names, f"expected the real rule name in matches; got {rule_names}"
         scanned = {str(m.get("source", "")) for m in matches}
         assert any(real_pe_dll.name in s for s in scanned if s), f"match must reference the real scanned PE; got {scanned}"
-        assert not any("not_a_pe" in s for s in scanned if s), "the non-PE control must not produce a match"
+        assert all("not_a_pe" not in s for s in scanned if s), "the non-PE control must not produce a match"
 
 
 def _qemu_is_findable() -> bool:

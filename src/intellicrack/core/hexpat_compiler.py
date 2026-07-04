@@ -443,7 +443,42 @@ class HexPatCodegen:
 
         field_type = self._gen_type(type_node)
 
-        if node.is_pointer or isinstance(type_node, PointerType):
+        if (
+            not node.is_pointer
+            and not isinstance(type_node, PointerType)
+            and array_size_expr is not None
+            and isinstance(array_size_expr, NumberLiteral)
+        ):
+            field_type = {
+                "type": "Array",
+                "params": {
+                    "element_type": field_type,
+                    "count": array_size_expr.value,
+                },
+            }
+        elif (
+            not node.is_pointer
+            and not isinstance(type_node, PointerType)
+            and array_size_expr is not None
+            and isinstance(array_size_expr, IdentifierExpr)
+        ):
+            field_type = {
+                "type": "DynamicArray",
+                "params": {
+                    "element_type": field_type,
+                    "count_field": array_size_expr.name,
+                },
+            }
+        elif not node.is_pointer and not isinstance(type_node, PointerType) and array_size_expr is not None:
+            field_type = {
+                "type": "Array",
+                "params": {
+                    "element_type": field_type,
+                    "count": self._eval_const_expr(array_size_expr),
+                },
+            }
+
+        elif node.is_pointer or isinstance(type_node, PointerType):
             pointee = type_node.pointee if isinstance(type_node, PointerType) else type_node
             if isinstance(pointee, NamedType):
                 target = pointee.name
@@ -461,32 +496,6 @@ class HexPatCodegen:
                     "target_template": target,
                 },
             }
-        elif array_size_expr is not None:
-            if isinstance(array_size_expr, NumberLiteral):
-                field_type = {
-                    "type": "Array",
-                    "params": {
-                        "element_type": field_type,
-                        "count": array_size_expr.value,
-                    },
-                }
-            elif isinstance(array_size_expr, IdentifierExpr):
-                field_type = {
-                    "type": "DynamicArray",
-                    "params": {
-                        "element_type": field_type,
-                        "count_field": array_size_expr.name,
-                    },
-                }
-            else:
-                field_type = {
-                    "type": "Array",
-                    "params": {
-                        "element_type": field_type,
-                        "count": self._eval_const_expr(array_size_expr),
-                    },
-                }
-
         result: dict[str, Any] = {
             "name": node.name,
             "field_type": field_type,

@@ -607,7 +607,7 @@ class TestRealProviderConnectionContract:
 
         await provider.disconnect()
 
-        assert provider.connected is False
+        assert not provider.connected
         assert provider.is_connected is False
 
     @pytest.mark.asyncio

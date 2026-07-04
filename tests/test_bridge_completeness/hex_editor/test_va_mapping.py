@@ -411,9 +411,7 @@ class TestPerformanceSettingsEntryPointDispatchesRealBridgeL3:
             )
             applied = _run(bridge.get_memory_usage())
             assert applied["chunk_size"] == 128 * 1024, "accepted dialog's new chunk size must be applied via set_chunk_size"
-            assert applied["memory_budget"] == 8 * 1024 * 1024, (
-                "accepted dialog's new memory budget must be applied via set_memory_budget"
-            )
+            assert applied["memory_budget"] == 8 * 1024 * 1024, "accepted dialog's new memory budget must be applied via set_memory_budget"
         finally:
             release_and_unlink(bridge, path)
             panel.deleteLater()

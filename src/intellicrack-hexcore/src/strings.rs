@@ -363,4 +363,88 @@ mod tests {
         assert_eq!(results[0].content, "Hello");
         assert_eq!(results[1].content, "World");
     }
+
+    #[test]
+    fn test_ascii_parallel_large_buffer_offset_stitching_and_sort() {
+        // > 1 MiB drives the rayon path; a 20-byte run straddles the 65536 chunk seam
+        // and is reported as two fragments with correct absolute offsets.
+        let total = 2 * 1024 * 1024;
+        let mut data = vec![0u8; total];
+        data[100..111].copy_from_slice(b"FIRSTSTRING");
+        for b in &mut data[65530..65550] {
+            *b = b'A';
+        }
+        data[200_000..200_010].copy_from_slice(b"LASTSTRING");
+        let results = extract_strings(&data, 4, true, false, 100);
+        let got: Vec<(usize, String)> =
+            results.iter().map(|r| (r.offset, r.content.clone())).collect();
+        assert_eq!(
+            got,
+            vec![
+                (100, "FIRSTSTRING".to_string()),
+                (65530, "AAAAAA".to_string()),
+                (65536, "AAAAAAAAAAAAAA".to_string()),
+                (200_000, "LASTSTRING".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_ascii_run_to_eof_no_trailing_terminator() {
+        let data = b"\x00GOODBYE";
+        let results = extract_strings(data, 4, true, false, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "GOODBYE");
+        assert_eq!(results[0].offset, 1);
+    }
+
+    #[test]
+    fn test_ascii_whitespace_bytes_are_printable() {
+        // \t \n \r are printable per is_printable_ascii.
+        let data = b"\x00A\tB\nC\rD\x00";
+        let results = extract_strings(data, 4, true, false, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "A\tB\nC\rD");
+    }
+
+    #[test]
+    fn test_utf16le_shorter_than_two_bytes_is_empty() {
+        let results = extract_strings(&[0x41], 4, false, true, 100);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_utf16le_mid_string_control_char_flushes() {
+        // "ABCD" then U+0001 (control, flush) then "EFGH".
+        let mut data: Vec<u8> = vec![0, 0];
+        data.extend_from_slice(&encode_utf16le("ABCD"));
+        data.extend_from_slice(&[0x01, 0x00]); // U+0001 control -> flush
+        data.extend_from_slice(&encode_utf16le("EFGH"));
+        data.extend_from_slice(&[0, 0]);
+        let results = extract_strings(&data, 2, false, true, 100);
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[0].content, "ABCD");
+        assert_eq!(results[1].content, "EFGH");
+    }
+
+    #[test]
+    fn test_combined_ascii_and_utf16_merge() {
+        // ASCII string at offset 0 (even length), a 0x00,0x00 pair flushes the UTF-16
+        // scanner, then "UNICODE" begins at an even offset so it decodes cleanly.
+        let mut data: Vec<u8> = Vec::new();
+        data.extend_from_slice(b"ASCIISTR"); // ascii at offset 0
+        data.extend_from_slice(&[0x00, 0x00]);
+        data.extend_from_slice(&encode_utf16le("UNICODE"));
+        data.extend_from_slice(&[0, 0]);
+
+        let results = extract_strings(&data, 4, true, true, 100);
+        assert!(results.iter().any(|r| r.encoding == "ascii" && r.content == "ASCIISTR"));
+        assert!(results.iter().any(|r| r.encoding == "utf16le" && r.content == "UNICODE"));
+        // offsets must be globally sorted after the merge
+        assert!(results.windows(2).all(|w| w[0].offset <= w[1].offset));
+
+        // max_results truncation applies after the merge
+        let truncated = extract_strings(&data, 4, true, true, 1);
+        assert_eq!(truncated.len(), 1);
+    }
 }

@@ -151,6 +151,29 @@ instead:**
 **This is non-negotiable: Every line of code Claude writes must be ready for
 production use.**
 
+### Tests as Real Falsifiable Gates
+
+**MANDATORY:** All new or modified code must be accompanied by tests that are
+**real, falsifiable quality gates**. Every test must be capable of *failing*
+when the behavior it asserts is broken.
+
+- **NO fake tests** - no tautological, always-green, or trivially-passing tests
+- **NO asserting on mocks** - do not assert on mocked or stubbed return values
+  in place of the real behavior under test; exercise genuine operations
+- **NO masked failures** - no unconditional `try/except: pass`, blanket
+  `pytest.skip`, or broad exception swallowing that hides a real failure
+- **REAL inputs** - tests must run against real binaries, real data formats, and
+  real tool integrations, and must fail loudly on regression
+- **Falsifiability check** - a test that cannot fail when the implementation is
+  intentionally broken is not a valid gate and must be rewritten
+
+This is non-negotiable: every quality gate must genuinely be able to detect a
+regression, or it does not count as a test.
+
+**Test placement:** Place tests under `tests/` in the area subdirectory that
+matches the code under test (e.g. `test_bridges/`, `test_core/`,
+`test_providers/`, `test_ui/`) - never at the root or beside source.
+
 ### User Clarification
 
 **MANDATORY:** When the user **initiates a new task**, use the AskUserQuestion

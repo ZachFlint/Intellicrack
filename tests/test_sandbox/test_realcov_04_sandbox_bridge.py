@@ -108,7 +108,7 @@ class TestToolDefinitionDispatchEndToEnd:
         )
         assert status_type_by_id[_QEMU_INSTANCE] == "qemu", f"qemu instance type must be 'qemu', got {status_type_by_id[_QEMU_INSTANCE]!r}"
 
-        running_in_status = sum(1 for e in status_instances if str(e["status"]) == "running")
+        running_in_status = sum(bool(str(e["status"]) == "running") for e in status_instances)
         assert int(result["active_count"]) == running_in_status, (
             f"active_count {result['active_count']!r} must equal independently-counted running instances {running_in_status}"
         )

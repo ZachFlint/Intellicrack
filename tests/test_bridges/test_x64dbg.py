@@ -84,7 +84,7 @@ def test_bridge_initial_state() -> None:
     bridge.is_64bit = False
     assert bridge.attached_pid == 1234
     assert bridge.binary_path == Path("C:/test.exe")
-    assert bridge.is_64bit is False
+    assert not bridge.is_64bit
 
     bridge.attached_pid = None
     assert bridge.attached_pid is None

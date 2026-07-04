@@ -111,7 +111,7 @@ class TestSearchHex:
         assert pe_bytes[2] == 0x90
         doc = hexcore.HexDocument.open_bytes(pe_bytes)
         results: list[tuple[int, int]] = doc.search_hex("4D ?? 90", 100)
-        assert len(results) >= 1
+        assert results
         assert results[0][0] == 0
         assert results[0][1] == 3
 

@@ -114,7 +114,7 @@ def test_send_button_whitespace_only_does_not_emit(qtbot: QtBot) -> None:
     qtbot.mouseClick(panel._input._send_button, Qt.MouseButton.LeftButton)
     qtbot.wait(50)
 
-    assert emitted == []
+    assert not emitted
     assert text_edit.toPlainText() == "   \n\t  "
     assert panel.findChildren(MessageBubble) == []
 
@@ -152,7 +152,7 @@ def test_shift_enter_inserts_newline_without_submitting(qtbot: QtBot) -> None:
     qtbot.keyClicks(text_edit, "line two")
     qtbot.wait(50)
 
-    assert emitted == []
+    assert not emitted
     assert "line one" in text_edit.toPlainText()
     assert "line two" in text_edit.toPlainText()
     assert "\n" in text_edit.toPlainText()

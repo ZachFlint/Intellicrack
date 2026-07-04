@@ -395,7 +395,7 @@ def test_save_selected_no_selection_shows_info(
 
     assert info_calls
     assert info_calls[0][0] == "Save Selected"
-    assert saved == []
+    assert not saved
     window.close()
 
 
@@ -557,7 +557,7 @@ def test_reload_from_disk_replaces_model_contents(qtbot: QtBot, tmp_path: Path) 
     _trigger_action(window, "Reload from Disk")
 
     def seeded_count() -> int:
-        return sum(1 for r in window.model.all_records() if r["event"].startswith("seed_event_"))
+        return sum(bool(r["event"].startswith("seed_event_")) for r in window.model.all_records())
 
     qtbot.waitUntil(lambda: seeded_count() == 5, timeout=_DEFAULT_TIMEOUT_MS)
     window.close()
@@ -737,7 +737,7 @@ def test_auto_scroll_disabled_does_not_scroll(
     )
     window.model.flush()
     qtbot.wait(120)
-    assert calls == []
+    assert not calls
     window.close()
 
 

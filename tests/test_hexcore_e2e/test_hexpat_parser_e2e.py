@@ -226,8 +226,8 @@ struct B { u16 y; };
 enum E : u8 { V = 1 };
 """
         nodes = _parse(source)
-        struct_count = sum(bool(isinstance(n, StructDecl)) for n in nodes)
-        enum_count = sum(bool(isinstance(n, EnumDecl)) for n in nodes)
+        struct_count = sum(isinstance(n, StructDecl) for n in nodes)
+        enum_count = sum(isinstance(n, EnumDecl) for n in nodes)
         assert struct_count == 2
         assert enum_count == 1
 

@@ -123,10 +123,8 @@ class TestGoogleModelListing:
         assert len(models) > 0, "Expected at least one model from Google AI API"
 
         gemini_models = [m for m in models if "gemini" in m.id.lower()]
-        assert len(gemini_models) > 0, (
-            f"Expected at least one Gemini model in the response, "
-            f"but none of the {len(models)} returned models have 'gemini' in their id. "
-            f"IDs returned: {[m.id for m in models[:5]]}"
+        assert gemini_models, (
+            f"Expected at least one Gemini model in the response, but none of the {len(models)} returned models have 'gemini' in their id. IDs returned: {[m.id for m in models[:5]]}"
         )
 
         first_gemini = gemini_models[0]
@@ -155,7 +153,7 @@ class TestGoogleModelListing:
         """
         models: list[ModelInfo] = await google_provider.list_models()
 
-        assert len(models) > 0, "list_models must return at least one model"
+        assert models, "list_models must return at least one model"
 
         for model in models:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
@@ -163,27 +161,17 @@ class TestGoogleModelListing:
             assert len(model.id) > 0, f"Model id must not be empty; got {model.id!r}"
             assert isinstance(model.name, str), f"Model name must be str; got {type(model.name)}"
             assert len(model.name) > 0, f"Model name must not be empty; got {model.name!r}"
-            assert model.provider == ProviderName.GOOGLE, (
-                f"Model {model.id} has wrong provider {model.provider!r}"
-            )
-            assert isinstance(model.context_window, int), (
-                f"Model {model.id} context_window must be int; got {type(model.context_window)}"
-            )
-            assert model.context_window > 0, (
-                f"Model {model.id} has invalid context_window {model.context_window!r}"
-            )
-            assert isinstance(model.supports_tools, bool), (
-                f"Model {model.id} supports_tools must be bool, got {type(model.supports_tools)}"
-            )
+            assert model.provider == ProviderName.GOOGLE, f"Model {model.id} has wrong provider {model.provider!r}"
+            assert isinstance(model.context_window, int), f"Model {model.id} context_window must be int; got {type(model.context_window)}"
+            assert model.context_window > 0, f"Model {model.id} has invalid context_window {model.context_window!r}"
+            assert isinstance(model.supports_tools, bool), f"Model {model.id} supports_tools must be bool, got {type(model.supports_tools)}"
             assert isinstance(model.supports_vision, bool), (
                 f"Model {model.id} supports_vision must be bool, got {type(model.supports_vision)}"
             )
             assert isinstance(model.supports_streaming, bool), (
                 f"Model {model.id} supports_streaming must be bool, got {type(model.supports_streaming)}"
             )
-            assert "gemini" in model.id.lower(), (
-                f"Bridge filter should only return Gemini models; got {model.id!r}"
-            )
+            assert "gemini" in model.id.lower(), f"Bridge filter should only return Gemini models; got {model.id!r}"
 
     @pytest.mark.asyncio
     @pytest.mark.usefixtures("google_network_required")
@@ -214,9 +202,8 @@ class TestGoogleModelListing:
         returned_ids: set[str] = {m.id for m in models}
 
         matching_ids: set[str] = returned_ids & _KNOWN_GEMINI_MODELS
-        assert len(matching_ids) > 0, (
-            f"At least one known production Gemini model must appear in the API response. "
-            f"Known: {_KNOWN_GEMINI_MODELS}. Got: {returned_ids}"
+        assert matching_ids, (
+            f"At least one known production Gemini model must appear in the API response. Known: {_KNOWN_GEMINI_MODELS}. Got: {returned_ids}"
         )
 
         if _WELL_DOCUMENTED_GEMINI_ID in returned_ids:

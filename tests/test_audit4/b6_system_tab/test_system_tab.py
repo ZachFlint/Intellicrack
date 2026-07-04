@@ -56,9 +56,7 @@ def qapp() -> QApplication:
         QApplication: A live QApplication for widget construction.
     """
     existing = QApplication.instance()
-    if isinstance(existing, QApplication):
-        return existing
-    return QApplication([])
+    return existing if isinstance(existing, QApplication) else QApplication([])
 
 
 class _AsyncSuccess:
@@ -584,7 +582,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         with patch(_MOD, runner):
             getattr(tab, "_refresh_privileges")()
 
-        assert calls == [], "no dispatcher call must occur when _attached_pid is None"
+        assert not calls, "no dispatcher call must occur when _attached_pid is None"
         assert bridge.method_calls.get("get_token_privileges", 0) == 0, (
             "get_token_privileges must not be called on the bridge when unattached"
         )
@@ -600,7 +598,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         with patch(_MOD, runner):
             getattr(tab, "_on_enable_debug")()
 
-        assert calls == [], "no dispatcher call must occur when _attached_pid is None"
+        assert not calls, "no dispatcher call must occur when _attached_pid is None"
         assert bridge.method_calls.get("adjust_token_privilege", 0) == 0, (
             "adjust_token_privilege must not be called on the bridge when unattached"
         )
@@ -616,7 +614,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         with patch(_MOD, runner):
             getattr(tab, "_refresh_services")()
 
-        assert calls == [], "no dispatcher call must occur when _attached_pid is None"
+        assert not calls, "no dispatcher call must occur when _attached_pid is None"
         assert bridge.method_calls.get("list_services", 0) == 0, "list_services must not be called on the bridge when unattached"
 
     def test_unattached_does_not_dispatch_read_peb(self) -> None:
@@ -630,7 +628,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         with patch(_MOD, runner):
             getattr(tab, "_on_read_peb")()
 
-        assert calls == [], "no dispatcher call must occur when _attached_pid is None"
+        assert not calls, "no dispatcher call must occur when _attached_pid is None"
         assert bridge.method_calls.get("read_peb", 0) == 0, "read_peb must not be called on the bridge when unattached"
 
     def test_set_attached_pid_none_surfaces_not_attached_status(self) -> None:
@@ -644,7 +642,7 @@ class TestUnattachedDoesNotDispatchPrivileges:
         with patch(_MOD, runner):
             getattr(tab, "_refresh_privileges")()
 
-        assert calls == []
+        assert not calls
         assert "Not attached" in _raw_output_text(tab)
 
 
@@ -738,7 +736,7 @@ class TestUserVisibleWarningDialogIsShown:
         with patch(_MOD, runner):
             getattr(tab, "_refresh_privileges")()
 
-        assert calls == [], "no bridge dispatch may occur when unattached"
+        assert not calls, "no bridge dispatch may occur when unattached"
         assert warning_recorder.titles == ["Query Privileges"], (
             f"expected exactly one warning titled 'Query Privileges', got {warning_recorder.titles}"
         )
@@ -759,7 +757,7 @@ class TestUserVisibleWarningDialogIsShown:
         with patch(_MOD, runner):
             getattr(tab, "_on_read_teb")()
 
-        assert calls == [], "no bridge dispatch may occur when no thread is selected"
+        assert not calls, "no bridge dispatch may occur when no thread is selected"
         assert warning_recorder.titles == ["Read TEB"]
         assert warning_recorder.messages == ["No thread selected"]
 
@@ -778,6 +776,6 @@ class TestUserVisibleWarningDialogIsShown:
             getattr(tab, "_refresh_privileges")()
             getattr(tab, "_refresh_services")()
 
-        assert calls == [], "no bridge dispatch may occur when unattached"
+        assert not calls, "no bridge dispatch may occur when unattached"
         assert warning_recorder.titles == ["Query Privileges", "Enumerate Services"]
         assert warning_recorder.messages == [_NOT_ATTACHED_MSG, _NOT_ATTACHED_MSG]

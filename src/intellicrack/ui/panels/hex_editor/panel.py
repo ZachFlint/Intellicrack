@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QGroupBox,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -148,6 +149,7 @@ class HexEditorPanel(
     """
 
     context_push_requested: pyqtSignal = pyqtSignal(dict)
+    _state_event_received: pyqtSignal = pyqtSignal(object, dict)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the HexEditorPanel widget.
@@ -263,6 +265,7 @@ class HexEditorPanel(
         self._va_status_label: QLabel | None = None
 
         super().__init__(parent)
+        self._state_event_received.connect(self._on_state_event)
 
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
         """Add hex editor controls to the toolbar.
@@ -310,8 +313,10 @@ class HexEditorPanel(
         toolbar.addSeparator()
 
         self._encoding_combo = QComboBox()
-        self._encoding_combo.setFixedWidth(_ENCODING_COMBO_WIDTH)
+        self._encoding_combo.setMinimumWidth(_ENCODING_COMBO_WIDTH)
+        self._encoding_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._populate_toolbar_encoding_combo(self._encoding_combo)
+        self._encoding_combo.setToolTip(self._encoding_combo.currentText())
         toolbar.addWidget(self._encoding_combo)
 
         self._add_secondary_button(toolbar, "Send to AI", self._on_send_to_ai)
@@ -710,6 +715,10 @@ class HexEditorPanel(
         tree.setHeaderLabels(headers)
         tree.setRootIsDecorated(False)
         tree.setAlternatingRowColors(True)
+        header = tree.header()
+        if header is not None:
+            header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            header.setStretchLastSection(True)
         return tree
 
     def load_file(self, file_path: Path | str) -> bool:
@@ -999,53 +1008,8 @@ class HexEditorPanel(
         _logger.info("panel_state_holder_attached", holder_type=type(state_holder).__name__)
         self.state_holder = state_holder
 
-        def on_state_event(event_type: object, data: dict[str, Any]) -> None:
-            evt = HexDocumentEvent_cls
-            if evt is None:
-                return
-            if event_type == evt.DOCUMENT_OPENED:
-                file_path_str = data.get("file_path")
-                if file_path_str:
-                    if self.document is not None:
-                        self.document = None
-                    self.load_file(file_path_str)
-            elif event_type == evt.CURSOR_MOVED:
-                offset = data.get("offset", 0)
-                if self._hex_widget is not None:
-                    goto_fn = getattr(self._hex_widget, "goto_offset", None)
-                    if callable(goto_fn):
-                        goto_fn(offset)
-                self._update_data_inspector(offset)
-            elif event_type == evt.DATA_MODIFIED:
-                if self._hex_widget is not None:
-                    update_fn = getattr(self._hex_widget, "_update_viewport", None)
-                    if callable(update_fn):
-                        update_fn()
-                self._on_data_changed()
-            elif event_type == evt.SELECTION_CHANGED:
-                start = data.get("start", -1)
-                end = data.get("end", -1)
-                if self._hex_widget is not None and start >= 0 and end >= 0:
-                    widget = self._hex_widget
-                    set_sel_fn = getattr(widget, "set_selection_range", None)
-                    if callable(set_sel_fn):
-                        set_sel_fn(start, end)
-                    update_fn = getattr(widget, "_update_viewport", None)
-                    if callable(update_fn):
-                        update_fn()
-            elif event_type == evt.TEMPLATE_REGISTERED:
-                self._populate_template_combo()
-            elif event_type == evt.HIGHLIGHT_RULE_ADDED:
-                rule = data.get("rule")
-                if isinstance(rule, dict):
-                    self._apply_bridge_highlight_rule_added(cast("dict[str, Any]", rule))
-            elif event_type == evt.HIGHLIGHT_RULE_REMOVED:
-                rule_id = data.get("rule_id")
-                if isinstance(rule_id, str):
-                    self._apply_bridge_highlight_rule_removed(rule_id)
-
-        self._state_callback = on_state_event
-        state_holder.register_callback(on_state_event, source_id="panel")
+        self._state_callback = self._state_event_received.emit
+        state_holder.register_callback(self._state_callback, source_id="panel")
 
         if self._bridge is not None:
             run_bridge_coroutine_logged(
@@ -1056,6 +1020,65 @@ class HexEditorPanel(
                 event="hex_editor_list_highlight_rules",
                 logger=_logger,
             )
+
+    def _on_state_event(self, event_type: object, data: dict[str, Any]) -> None:
+        """Apply a shared-state notification on the GUI thread.
+
+        Connected to ``_state_event_received`` so it always runs via a
+        queued (or direct, when already on the GUI thread) Qt connection
+        regardless of which thread the originating ``HexDocumentState``
+        callback fired on -- ``register_callback`` is given
+        ``self._state_event_received.emit`` rather than this method
+        directly, so cross-thread notifications are marshalled onto the
+        GUI thread before any widget is touched.
+
+        Args:
+            event_type: The ``HexDocumentEvent`` member describing what changed.
+            data: Event-specific payload describing the change.
+        """
+        evt = HexDocumentEvent_cls
+        if evt is None:
+            return
+        if event_type == evt.DOCUMENT_OPENED:
+            file_path_str = data.get("file_path")
+            if file_path_str:
+                if self.document is not None:
+                    self.document = None
+                self.load_file(file_path_str)
+        elif event_type == evt.CURSOR_MOVED:
+            offset = data.get("offset", 0)
+            if self._hex_widget is not None:
+                goto_fn = getattr(self._hex_widget, "goto_offset", None)
+                if callable(goto_fn):
+                    goto_fn(offset)
+            self._update_data_inspector(offset)
+        elif event_type == evt.DATA_MODIFIED:
+            if self._hex_widget is not None:
+                update_fn = getattr(self._hex_widget, "_update_viewport", None)
+                if callable(update_fn):
+                    update_fn()
+            self._on_data_changed()
+        elif event_type == evt.SELECTION_CHANGED:
+            start = data.get("start", -1)
+            end = data.get("end", -1)
+            if self._hex_widget is not None and start >= 0 and end >= 0:
+                widget = self._hex_widget
+                set_sel_fn = getattr(widget, "set_selection_range", None)
+                if callable(set_sel_fn):
+                    set_sel_fn(start, end)
+                update_fn = getattr(widget, "_update_viewport", None)
+                if callable(update_fn):
+                    update_fn()
+        elif event_type == evt.TEMPLATE_REGISTERED:
+            self._populate_template_combo()
+        elif event_type == evt.HIGHLIGHT_RULE_ADDED:
+            rule = data.get("rule")
+            if isinstance(rule, dict):
+                self._apply_bridge_highlight_rule_added(cast("dict[str, Any]", rule))
+        elif event_type == evt.HIGHLIGHT_RULE_REMOVED:
+            rule_id = data.get("rule_id")
+            if isinstance(rule_id, str):
+                self._apply_bridge_highlight_rule_removed(rule_id)
 
     def _on_selection_changed(self, start: int, end: int) -> None:
         """Handle selection range changes from the hex widget.
@@ -1106,8 +1129,9 @@ class HexEditorPanel(
                 encodings = []
         if not encodings:
             encodings = [("utf-8", "UTF-8"), ("ascii", "ASCII (7-bit)")]
-        for name, description in encodings:
+        for index, (name, description) in enumerate(encodings):
             combo.addItem(description, userData=name)
+            combo.setItemData(index, description, Qt.ItemDataRole.ToolTipRole)
 
     def _on_encoding_changed(self, _text: str) -> None:
         """Handle encoding combo box selection changes.
@@ -1120,7 +1144,10 @@ class HexEditorPanel(
             _text: The selected combo box display text (unused; the codec
                 name is read from the item's user data).
         """
-        if self._encoding_combo is None or self._hex_widget is None:
+        if self._encoding_combo is None:
+            return
+        self._encoding_combo.setToolTip(self._encoding_combo.currentText())
+        if self._hex_widget is None:
             return
         data = self._encoding_combo.currentData()
         encoding = data if isinstance(data, str) and data else "utf-8"

@@ -163,6 +163,13 @@ class BasicBlockItem(QGraphicsRectItem):
         self.setBrush(QBrush(self._colors["block_bg"]))
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, enabled=True)
 
+    def refresh_theme_colors(self) -> None:
+        """Re-resolve theme colors and repaint after an application theme change."""
+        self._colors = _get_graph_colors()
+        self.setPen(QPen(self._colors["block_border"], 1.5))
+        self.setBrush(QBrush(self._colors["block_bg"]))
+        self.update()
+
     @override
     def paint(
         self,
@@ -282,6 +289,19 @@ class EdgeItem(QGraphicsPathItem):
 
         self._arrow = QPolygonF([end, arrow_p1, arrow_p2])
         self._arrow_brush = QBrush(color)
+
+    def refresh_theme_colors(self) -> None:
+        """Re-resolve theme colors and repaint after an application theme change."""
+        colors = _get_graph_colors()
+        if self.edge_type == "true":
+            color = colors["edge_true"]
+        elif self.edge_type == "false":
+            color = colors["edge_false"]
+        else:
+            color = colors["edge_uncond"]
+        self.setPen(QPen(color, 1.5))
+        self._arrow_brush = QBrush(color)
+        self.update()
 
     @override
     def paint(
@@ -517,6 +537,30 @@ class CFGGraphView(QGraphicsView):
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setBackgroundBrush(QBrush(_get_graph_colors()["background"]))
+        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
+
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Re-resolve and reapply CFG colors when the application theme changes.
+
+        Connected to :attr:`ThemeManager.theme_changed` so the view background
+        and every already-rendered :class:`BasicBlockItem`/:class:`EdgeItem`
+        track live theme switches instead of keeping the colors captured at
+        construction time.
+
+        Args:
+            resolved_theme: The concrete theme now active ("dark" or "light").
+        """
+        _ = resolved_theme
+        self.setBackgroundBrush(QBrush(_get_graph_colors()["background"]))
+        scene = self.scene()
+        if scene is None:
+            return
+        for item in scene.items():
+            if isinstance(item, (BasicBlockItem, EdgeItem)):
+                item.refresh_theme_colors()
+        viewport = self.viewport()
+        if viewport is not None:
+            viewport.update()
 
     def graph_scene(self) -> CFGGraphScene:
         """Get the typed CFGGraphScene.

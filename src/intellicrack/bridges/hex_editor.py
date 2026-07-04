@@ -3582,9 +3582,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
                 return int(value, 16)
             if value.startswith(("0b", "0B")):
                 return int(value, 2)
-            if value.startswith(("0o", "0O")):
-                return int(value, 8)
-            return int(value)
+            return int(value, 8) if value.startswith(("0o", "0O")) else int(value)
         if from_base == "hex":
             return int(value.removeprefix("0x").removeprefix("0X"), 16)
         if from_base == "binary":

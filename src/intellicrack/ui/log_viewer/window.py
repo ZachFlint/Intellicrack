@@ -49,6 +49,7 @@ from intellicrack.ui.log_viewer._model import LogRecordTableModel
 from intellicrack.ui.log_viewer._proxy import LogFilterProxyModel, level_name_to_int
 from intellicrack.ui.log_viewer._record import LogRecordDict, record_to_json_text
 from intellicrack.ui.log_viewer._tail_reader import LogFileTailReader
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 
 
 if TYPE_CHECKING:
@@ -69,6 +70,7 @@ _SETTINGS_APP: Final[str] = "LogViewer"
 _DEFAULT_WIDTH: Final[int] = 1100
 _DEFAULT_HEIGHT: Final[int] = 600
 _DEFAULT_FILTER_PANEL_WIDTH: Final[int] = 260
+_FILTER_PANEL_MIN_WIDTH: Final[int] = 200
 _DETAILS_DIALOG_WIDTH: Final[int] = 720
 _DETAILS_DIALOG_HEIGHT: Final[int] = 480
 
@@ -77,6 +79,9 @@ _MAX_ROWS: Final[int] = 500_000
 
 _TIME_COLUMN: Final[int] = 0
 _LEVEL_COLUMN: Final[int] = 1
+_LOGGER_COLUMN: Final[int] = 2
+_LOCATION_COLUMN: Final[int] = 3
+_EVENT_COLUMN: Final[int] = 4
 
 
 def _resolve_log_path(config: Config) -> Path:
@@ -132,6 +137,26 @@ def _coerce_bool(value: object) -> bool | None:
             return True
         return False if lowered in _FALSY_STRINGS else None
     return None
+
+
+def _write_records_jsonl(target: str, records: list[LogRecordDict]) -> int:
+    """Serialize log records to a JSON-Lines file.
+
+    Runs on a background worker thread so that saving a large capture
+    (up to :data:`_MAX_ROWS` rows) does not block the Qt GUI thread.
+
+    Args:
+        target: Destination file path selected by the user.
+        records: Records to serialize, one JSON object per line.
+
+    Returns:
+        int: Number of records written.
+    """
+    with Path(target).open("w", encoding="utf-8", newline="\n") as handle:
+        for record in records:
+            handle.write(json.dumps(dict(record), ensure_ascii=False, default=repr))
+            handle.write("\n")
+    return len(records)
 
 
 def _open_in_file_browser(folder: Path) -> None:
@@ -245,6 +270,9 @@ class _LogTableView(QTableView):
             horizontal_header.setStretchLastSection(True)
             horizontal_header.setSectionResizeMode(_TIME_COLUMN, QHeaderView.ResizeMode.ResizeToContents)
             horizontal_header.setSectionResizeMode(_LEVEL_COLUMN, QHeaderView.ResizeMode.ResizeToContents)
+            horizontal_header.setSectionResizeMode(_LOGGER_COLUMN, QHeaderView.ResizeMode.ResizeToContents)
+            horizontal_header.setSectionResizeMode(_LOCATION_COLUMN, QHeaderView.ResizeMode.ResizeToContents)
+            horizontal_header.setSectionResizeMode(_EVENT_COLUMN, QHeaderView.ResizeMode.Stretch)
         self.doubleClicked.connect(self._on_double_clicked)
         _logger.debug("log_viewer_table_view_initialized")
 
@@ -385,6 +413,7 @@ class LogViewerWindow(QMainWindow):
         self._build_toolbar()
 
         splitter = QSplitter(Qt.Orientation.Horizontal, central)
+        splitter.setChildrenCollapsible(False)
         layout.addWidget(splitter)
 
         filter_panel = self._build_filter_panel()
@@ -456,6 +485,7 @@ class LogViewerWindow(QMainWindow):
             QWidget: The configured panel.
         """
         panel = QWidget(self)
+        panel.setMinimumWidth(_FILTER_PANEL_MIN_WIDTH)
         form = QVBoxLayout(panel)
         form.setContentsMargins(8, 8, 8, 8)
         self._add_level_combo(panel, form)
@@ -617,6 +647,11 @@ class LogViewerWindow(QMainWindow):
     def _save_records(self, records: list[LogRecordDict], default_name: str) -> None:
         """Serialize records to a user-selected JSON-Lines file.
 
+        The actual serialize-and-write work runs on a background
+        :class:`GenericCallableWorker` thread so that saving a large
+        capture (up to :data:`_MAX_ROWS` rows) never blocks the Qt GUI
+        thread.
+
         Args:
             records: Records to save.
             default_name: Suggested filename.
@@ -632,13 +667,18 @@ class LogViewerWindow(QMainWindow):
         )
         if not target:
             return
-        try:
-            with Path(target).open("w", encoding="utf-8", newline="\n") as handle:
-                for record in records:
-                    handle.write(json.dumps(dict(record), ensure_ascii=False, default=repr))
-                    handle.write("\n")
-        except OSError as exc:
-            QMessageBox.warning(self, "Save Logs", f"Failed to save log records: {exc}")
+
+        def _on_finished(result: object) -> None:
+            _logger.debug("log_viewer_save_records_succeeded", target=target, record_count=result)
+
+        def _on_error(exc: object) -> None:
+            error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
+            QMessageBox.warning(self, "Save Logs", f"Failed to save log records: {error_obj}")
+
+        worker = GenericCallableWorker(_write_records_jsonl, target, records, parent=self)
+        worker.call_finished.connect(_on_finished)
+        worker.call_error.connect(_on_error)
+        worker.start()
 
     def _on_open_logs_folder(self) -> None:
         """Open the logs directory in the operating system file browser."""

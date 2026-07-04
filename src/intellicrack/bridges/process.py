@@ -767,7 +767,12 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         name="process.enumerate_handles",
         description="Enumerate open handles system-wide via NtQuerySystemInformation, exposing the raw object_type_index",
         parameters=[
-            ToolParameter(name="pid", type="integer", description="Process ID to filter on (returns all handles if not specified)", required=False),
+            ToolParameter(
+                name="pid",
+                type="integer",
+                description="Process ID to filter on (returns all handles if not specified)",
+                required=False,
+            ),
         ],
         returns="List of handle dicts with pid, handle_value, object_type_index, granted_access, object_address fields",
     ),
@@ -775,7 +780,12 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         name="process.enum_handles",
         description="Enumerate open handles system-wide, resolving type indices to human-readable type names",
         parameters=[
-            ToolParameter(name="pid", type="integer", description="Process ID to filter on (returns all handles if not specified)", required=False),
+            ToolParameter(
+                name="pid",
+                type="integer",
+                description="Process ID to filter on (returns all handles if not specified)",
+                required=False,
+            ),
         ],
         returns="List of handle dicts with pid, handle_value, type_name, granted_access, object_address fields",
     ),
@@ -799,7 +809,13 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         name="process.enumerate_services",
         description="Enumerate Windows services filtered by active/inactive state rather than owning PID",
         parameters=[
-            ToolParameter(name="active", type="boolean", description="Limit results to currently running services", required=False, default="false"),
+            ToolParameter(
+                name="active",
+                type="boolean",
+                description="Limit results to currently running services",
+                required=False,
+                default="false",
+            ),
         ],
         returns="List of service dicts",
     ),
@@ -1005,7 +1021,12 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
                 description="Registry hive abbreviation (HKLM, HKCU, HKCR, HKU, HKCC, or the corresponding HKEY_* long form)",
                 required=True,
             ),
-            ToolParameter(name="key_path", type="string", description=r"Subkey path within the hive (e.g. SOFTWARE\Microsoft\Windows NT\CurrentVersion)", required=True),
+            ToolParameter(
+                name="key_path",
+                type="string",
+                description=r"Subkey path within the hive (e.g. SOFTWARE\Microsoft\Windows NT\CurrentVersion)",
+                required=True,
+            ),
             ToolParameter(name="value_name", type="string", description="Name of the registry value to read", required=True),
         ],
         returns="Dict with type (Windows REG_* name string) and data fields",
@@ -1096,7 +1117,12 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         description="Remove a privilege from the primary token of a process",
         parameters=[
             ToolParameter(name="pid", type="integer", description="Process ID", required=True),
-            ToolParameter(name="privilege_name", type="string", description="Name of the privilege to remove (e.g. SeShutdownPrivilege)", required=True),
+            ToolParameter(
+                name="privilege_name",
+                type="string",
+                description="Name of the privilege to remove (e.g. SeShutdownPrivilege)",
+                required=True,
+            ),
         ],
         returns="True if the privilege was successfully removed",
     ),
@@ -1105,7 +1131,13 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         description="Wait on a thread handle via WaitForSingleObject and measure elapsed time",
         parameters=[
             ToolParameter(name="tid", type="integer", description="Thread ID to wait on", required=True),
-            ToolParameter(name="timeout_ms", type="integer", description="Wait timeout in milliseconds (0 returns immediately)", required=False, default="0"),
+            ToolParameter(
+                name="timeout_ms",
+                type="integer",
+                description="Wait timeout in milliseconds (0 returns immediately)",
+                required=False,
+                default="0",
+            ),
         ],
         returns="Dict with result (signaled, timeout, failed, or other_<code>) and elapsed_us fields",
     ),
@@ -3542,9 +3574,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             wow64_get_ctx.restype = wintypes.BOOL
             ctx32 = WOW64_CONTEXT()
             ctx32.ContextFlags = CONTEXT_I386_ALL
-            if wow64_get_ctx(handle, ctypes.byref(ctx32)):
-                return int(ctx32.Eip)
-            return 0
+            return int(ctx32.Eip) if wow64_get_ctx(handle, ctypes.byref(ctx32)) else 0
         ctx64 = CONTEXT64()
         ctx64.ContextFlags = CONTEXT_ALL
         if self._kernel32.GetThreadContext(handle, ctypes.byref(ctx64)):
@@ -5215,8 +5245,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             return self._read_teb_with_thread_handle(tid, thread_handle, proc_handle_box)
         finally:
             self._kernel32.CloseHandle(thread_handle)
-            owned = proc_handle_box[0]
-            if owned:
+            if owned := proc_handle_box[0]:
                 self._kernel32.CloseHandle(owned)
 
     def _read_teb_with_thread_handle(
@@ -6237,7 +6266,6 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
         """
         if self._kernel32 is None:
             return {"error": "kernel32 not available"}
-        policies: dict[str, object] = {}
         policy_queries: list[tuple[str, int, type[ctypes.Structure]]] = [
             ("DEP", ProcessDEPPolicy, PROCESS_MITIGATION_DEP_POLICY),
             ("ASLR", ProcessASLRPolicy, PROCESS_MITIGATION_ASLR_POLICY),
@@ -6255,8 +6283,16 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             _logger.warning("process_get_mitigation_policies_unavailable")
             return {"error": "GetProcessMitigationPolicy not available"}
 
-        for name, policy_class, struct_type in policy_queries:
-            policies[name] = self._query_single_mitigation_policy(get_policy, proc_handle, name, policy_class, struct_type)
+        policies: dict[str, object] = {
+            name: self._query_single_mitigation_policy(
+                get_policy,
+                proc_handle,
+                name,
+                policy_class,
+                struct_type,
+            )
+            for name, policy_class, struct_type in policy_queries
+        }
         return policies
 
     def _query_single_mitigation_policy(

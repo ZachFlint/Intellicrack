@@ -258,6 +258,11 @@ class ToolInstallWorker(QThread):
                 success = False
                 self.install_finished.emit(success, "Could not connect to download server")
                 return
+            except httpx.HTTPError as exc:
+                _logger.exception("tool_download_http_error", tool_id=self._tool_id)
+                success = False
+                self.install_finished.emit(success, f"Download failed: {exc}")
+                return
             if result is None:
                 return
             downloaded, total = result
@@ -1024,8 +1029,8 @@ class ToolSettingsWidget(QFrame):
 
         self.status_label = QLabel("Unknown")
         self.status_label.setObjectName("status_label")
-        status_row.addWidget(self.status_label)
-        status_row.addStretch()
+        self.status_label.setWordWrap(True)
+        status_row.addWidget(self.status_label, stretch=1)
 
         status_layout.addRow("Status:", status_row)
 
@@ -1697,6 +1702,7 @@ class ToolStatusDialog(QDialog):
             entry = statuses.get(tool_id)
             if entry is None:
                 item = QListWidgetItem(f"... {display_name} - Status unknown")
+                item.setToolTip(f"{display_name} - Status unknown")
                 self._status_list.addItem(item)
                 continue
 
@@ -1706,6 +1712,7 @@ class ToolStatusDialog(QDialog):
 
             status_icon = "✓" if available else "✗"
             item = QListWidgetItem(f"{status_icon}  {display_name} - {message}")
+            item.setToolTip(f"{display_name} - {message}")
             self._status_list.addItem(item)
 
         if self._status_list.count() > 0:
@@ -1731,6 +1738,7 @@ class ToolStatusDialog(QDialog):
         )
         for display_name, tool_id, _category in tool_rows:
             item = QListWidgetItem(f"... {display_name} - Checking...")
+            item.setToolTip(f"{display_name} - Checking...")
             self._status_list.addItem(item)
 
             tool_settings = saved_settings.get(tool_id, {})
@@ -1772,6 +1780,7 @@ class ToolStatusDialog(QDialog):
             item = self._status_list.item(i)
             if item and display_name in item.text():
                 item.setText(f"{status_icon}  {display_name} - {status_text}")
+                item.setToolTip(f"{display_name} - {status_text}")
                 break
 
         if len(self._tool_statuses) == EXPECTED_TOOL_COUNT:

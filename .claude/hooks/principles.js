@@ -10,6 +10,7 @@ const principlesReminder = `<system-reminder>
 	• KISS (Keep It Simple, Stupid)
 [5] ALL code requires explicit type hints/annotations that are fully basedpyright compliant. Code must be absolutely and completely type correct with zero basedpyright findings acceptable. NEVER use type suppression comments (type-ignore directives, pyright-ignore directives, or any inline suppression mechanism) under any circumstance - fix the actual type error instead. NEVER edit the [tool.basedpyright] section in pyproject.toml - the basedpyright configuration is locked and immutable. Windows compatibility PRIORITY with proper platform checks. NEVER delete method bindings - create FUNCTIONAL missing functions instead. NO comments/emojis/TODO markers unless requested. MAINTAIN functionality over "cleaner" code.
 [6] When the user INITIATES A NEW TASK, use AskUserQuestion to clarify scope, approach, and constraints before implementation. Mid-task feedback or corrections should be acted on directly.
+[7] ALL new or modified code must be accompanied by tests that are REAL, FALSIFIABLE QUALITY GATES - each test must be capable of failing when the behavior it asserts is broken. Absolutely NO fake, tautological, always-green, or trivially-passing tests; NO tests that merely assert on mocked/stubbed return values instead of real behavior; NO tests wrapped in unconditional try/except-pass or skips that mask failures. Tests must exercise genuine operations against real inputs/binaries and fail loudly on regression.
 </system-reminder>`;
 
 console.log(principlesReminder);

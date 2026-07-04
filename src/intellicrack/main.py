@@ -76,6 +76,7 @@ class _SetupLoggingFn(Protocol):
                 default (``Path.cwd() / "logs"``).
         """
 
+
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _EARLY_SPLASH_WIDTH: Final[int] = 600
 _EARLY_SPLASH_HEIGHT: Final[int] = 400
@@ -385,9 +386,7 @@ def _compute_early_dpi_scale(app: QApplication) -> float:
         screen cannot be queried.
     """
     screen = app.primaryScreen()
-    if screen is None:
-        return 1.0
-    return float(screen.devicePixelRatio())
+    return 1.0 if screen is None else float(screen.devicePixelRatio())
 
 
 def _build_early_splash_pixmap(splash_asset: Path, width: int, height: int) -> QPixmap:
@@ -1144,6 +1143,30 @@ async def _cancel_pending_bridge_tasks(logger: BoundLogger) -> None:
             logger.warning("cancel_drain_interrupted", exc_info=True)
 
 
+def _drain_and_stop_bridge_loop(logger: BoundLogger) -> None:
+    """Drain in-flight bridge worker threads, then stop the persistent bridge loop.
+
+    The async-bridge helpers dispatch work onto ``BridgeCallWorker`` /
+    ``GenericCallableWorker`` ``QThread`` instances that run against the shared
+    background event loop. Draining waits for any still-running worker to finish
+    before :func:`shutdown_bridge_loop` stops the loop those workers depend on,
+    so no worker is destroyed mid-flight and the loop is not torn down while a
+    worker is still awaiting a coroutine scheduled on it.
+
+    Args:
+        logger: BoundLogger used to report how many workers were drained.
+    """
+    bridge_module = importlib.import_module("intellicrack.ui.panels.async_bridge")
+    drain_fn = getattr(bridge_module, "drain_bridge_workers", None)
+    if callable(drain_fn):
+        drained = int(cast("Callable[[], int]", drain_fn)())
+        if drained:
+            logger.info("bridge_workers_drained", count=drained)
+    shutdown_fn = getattr(bridge_module, "shutdown_bridge_loop", None)
+    if callable(shutdown_fn):
+        shutdown_fn()
+
+
 async def _shutdown_application(
     *,
     logger: BoundLogger,
@@ -1205,13 +1228,7 @@ async def _shutdown_application(
         logger.warning("process_cleanup_timeout")
 
     try:
-        shutdown_fn = getattr(
-            importlib.import_module("intellicrack.ui.panels.async_bridge"),
-            "shutdown_bridge_loop",
-            None,
-        )
-        if callable(shutdown_fn):
-            shutdown_fn()
+        _drain_and_stop_bridge_loop(logger)
     except (ImportError, OSError, RuntimeError):
         logger.exception("bridge_loop_shutdown_failed")
 

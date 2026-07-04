@@ -197,9 +197,7 @@ class _MixinHarness(SignaturesMixin, QWidget):
             bool: ``True`` if the worker finished within the timeout.
         """
         w = self._sig_worker
-        if w is None:
-            return True
-        return w.wait(timeout_ms)
+        return True if w is None else w.wait(timeout_ms)
 
     def result_row_count(self) -> int:
         """Return the number of top-level rows in the results tree.
@@ -741,7 +739,7 @@ class TestWorkerReceivesCorrectBytes:
 
         results = execute_signature_scan_from_source(None, doc, "die", str(db_path))
 
-        assert any(r.get("name") == "MZExecutable" for r in results), "Expected MZExecutable match in results but got: " + repr(results)
+        assert any(r.get("name") == "MZExecutable" for r in results), f"Expected MZExecutable match in results but got: {repr(results)}"
 
     @staticmethod
     def test_execute_signature_scan_direct(tmp_path: Path) -> None:

@@ -156,6 +156,8 @@ class DebuggerTab(QWidget):
 
         self._status_label = QLabel(self.tr("Not attached"))
         self._status_label.setFont(fm.get_ui_font(9))
+        self._status_label.setWordWrap(True)
+        self._status_label.setToolTip(self.tr("Not attached"))
         attach_row.addWidget(self._status_label)
         layout.addLayout(attach_row)
 
@@ -365,7 +367,9 @@ class DebuggerTab(QWidget):
         self._modules_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         modules_h = self._modules_table.horizontalHeader()
         if modules_h is not None:
-            modules_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            for column in range(len(_MODULE_COLUMNS) - 1):
+                modules_h.setSectionResizeMode(column, QHeaderView.ResizeMode.ResizeToContents)
+            modules_h.setSectionResizeMode(len(_MODULE_COLUMNS) - 1, QHeaderView.ResizeMode.Stretch)
         vlayout.addWidget(self._modules_table)
         return container
 
@@ -377,10 +381,19 @@ class DebuggerTab(QWidget):
         """
         self._bridge = bridge
 
+    def _set_status(self, text: str) -> None:
+        """Set the status label text and mirror it as a tooltip for overflow readability.
+
+        Args:
+            text: Status message to display, which may exceed the visible label width.
+        """
+        self._status_label.setText(text)
+        self._status_label.setToolTip(text)
+
     def _on_attach(self) -> None:
         """Attach the debugger to the process identifier in the PID input."""
         if self._bridge is None:
-            self._status_label.setText(self.tr("No bridge configured"))
+            self._set_status(self.tr("No bridge configured"))
             return
         pid_text = self._pid_input.text().strip()
         if not pid_text:
@@ -389,7 +402,7 @@ class DebuggerTab(QWidget):
             pid = int(pid_text)
         except ValueError:
             _logger.warning("cutter_debugger_invalid_pid", input_text=pid_text)
-            self._status_label.setText(self.tr("Invalid PID"))
+            self._set_status(self.tr("Invalid PID"))
             return
 
         self._attach_btn.setEnabled(False)
@@ -410,7 +423,7 @@ class DebuggerTab(QWidget):
         Args:
             pid: The process identifier that was attached to.
         """
-        self._status_label.setText(f"Attached to PID {pid}")
+        self._set_status(f"Attached to PID {pid}")
         _logger.info("cutter_debug_attached", pid=pid)
         self._attach_btn.setEnabled(True)
         self._refresh_all()
@@ -421,7 +434,7 @@ class DebuggerTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
-        self._status_label.setText(f"Attach failed: {exc}")
+        self._set_status(f"Attach failed: {exc}")
         _logger.warning("cutter_debug_attach_failed", error=str(exc))
         self._attach_btn.setEnabled(True)
 
@@ -442,7 +455,7 @@ class DebuggerTab(QWidget):
 
     def _on_detach_success(self) -> None:
         """Handle successful debugger detach by clearing all views."""
-        self._status_label.setText(self.tr("Not attached"))
+        self._set_status(self.tr("Not attached"))
         _logger.info("cutter_debug_detached")
         self._detach_btn.setEnabled(True)
         self._reg_table.setRowCount(0)
@@ -458,7 +471,7 @@ class DebuggerTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
-        self._status_label.setText(f"Detach failed: {exc}")
+        self._set_status(f"Detach failed: {exc}")
         _logger.warning("cutter_debug_detach_failed", error=str(exc))
         self._detach_btn.setEnabled(True)
 
@@ -499,7 +512,7 @@ class DebuggerTab(QWidget):
         self._step_into_btn.setEnabled(True)
         self._step_over_btn.setEnabled(True)
         if isinstance(result, int):
-            self._status_label.setText(f"PC = 0x{result:X}")
+            self._set_status(f"PC = 0x{result:X}")
         self._refresh_all()
 
     def _on_step_error(self, exc: object) -> None:
@@ -508,7 +521,7 @@ class DebuggerTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
-        self._status_label.setText(f"Step failed: {exc}")
+        self._set_status(f"Step failed: {exc}")
         _logger.warning("cutter_debug_step_failed", error=str(exc))
         self._step_into_btn.setEnabled(True)
         self._step_over_btn.setEnabled(True)
@@ -530,7 +543,7 @@ class DebuggerTab(QWidget):
 
     def _on_continue_success(self) -> None:
         """Handle successful continue by refreshing debugger state."""
-        self._status_label.setText(self.tr("Stopped"))
+        self._set_status(self.tr("Stopped"))
         self._continue_btn.setEnabled(True)
         self._refresh_all()
 
@@ -540,7 +553,7 @@ class DebuggerTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
-        self._status_label.setText(f"Continue failed: {exc}")
+        self._set_status(f"Continue failed: {exc}")
         _logger.warning("cutter_debug_run_failed", error=str(exc))
         self._continue_btn.setEnabled(True)
 
@@ -562,7 +575,7 @@ class DebuggerTab(QWidget):
         value = _parse_address(val_text)
         if value is None:
             _logger.warning("cutter_debug_invalid_register_value", register=reg_name, input_text=val_text)
-            self._status_label.setText(f"Invalid value for {reg_name}: {val_text}")
+            self._set_status(f"Invalid value for {reg_name}: {val_text}")
             return
 
         self._reg_table.setEnabled(False)
@@ -585,7 +598,7 @@ class DebuggerTab(QWidget):
             reg_name: The register name that was updated.
             value: The new register value.
         """
-        self._status_label.setText(f"{reg_name} = 0x{value:X}")
+        self._set_status(f"{reg_name} = 0x{value:X}")
         self._reg_table.setEnabled(True)
 
     def _on_reg_set_error(self, reg_name: str, exc: object) -> None:
@@ -595,7 +608,7 @@ class DebuggerTab(QWidget):
             reg_name: The register that failed to update.
             exc: The exception that occurred.
         """
-        self._status_label.setText(f"Failed to set {reg_name}: {exc}")
+        self._set_status(f"Failed to set {reg_name}: {exc}")
         _logger.warning("cutter_debug_set_register_failed", register=reg_name, error=str(exc))
         self._reg_table.setEnabled(True)
 
@@ -605,7 +618,7 @@ class DebuggerTab(QWidget):
             return
         address = _parse_address(self._bp_addr_input.text())
         if address is None:
-            self._status_label.setText(self.tr("Invalid breakpoint address"))
+            self._set_status(self.tr("Invalid breakpoint address"))
             return
         bp_type = self._bp_type_combo.currentText()
         condition = self._bp_cond_input.text().strip() or None
@@ -634,7 +647,7 @@ class DebuggerTab(QWidget):
             return
         address = _parse_address(self._bp_addr_input.text())
         if address is None:
-            self._status_label.setText(self.tr("Invalid breakpoint address"))
+            self._set_status(self.tr("Invalid breakpoint address"))
             return
 
         self._remove_bp_btn.setEnabled(False)
@@ -660,7 +673,7 @@ class DebuggerTab(QWidget):
         Args:
             exc: The exception that occurred.
         """
-        self._status_label.setText(f"Breakpoint operation failed: {exc}")
+        self._set_status(f"Breakpoint operation failed: {exc}")
         _logger.warning("cutter_debug_breakpoint_failed", error=str(exc))
         self._add_bp_btn.setEnabled(True)
         self._remove_bp_btn.setEnabled(True)
@@ -742,7 +755,7 @@ class DebuggerTab(QWidget):
             result: Number of bytes written returned by the bridge.
         """
         written = result if isinstance(result, int) else 0
-        self._status_label.setText(f"Wrote {written} bytes @ 0x{address:X}")
+        self._set_status(f"Wrote {written} bytes @ 0x{address:X}")
         self._mem_write_btn.setEnabled(True)
         self._on_read_memory()
 
@@ -916,4 +929,7 @@ class DebuggerTab(QWidget):
             self._modules_table.setItem(row, 1, QTableWidgetItem(f"0x{getattr(mod, 'base_address', 0):X}"))
             self._modules_table.setItem(row, 2, QTableWidgetItem(str(getattr(mod, "size", 0))))
             self._modules_table.setItem(row, 3, QTableWidgetItem(f"0x{getattr(mod, 'entry_point', 0):X}"))
-            self._modules_table.setItem(row, 4, QTableWidgetItem(str(getattr(mod, "path", ""))))
+            path = str(getattr(mod, "path", ""))
+            path_item = QTableWidgetItem(path)
+            path_item.setToolTip(path)
+            self._modules_table.setItem(row, 4, path_item)

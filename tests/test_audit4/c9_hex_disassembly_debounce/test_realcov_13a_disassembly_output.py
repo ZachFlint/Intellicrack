@@ -118,9 +118,7 @@ def _read_doc_bytes(bridge: HexEditorBridge, offset: int, length: int) -> bytes:
         return raw
     if isinstance(raw, bytearray):
         return bytes(raw)
-    if isinstance(raw, list):
-        return bytes(cast("list[int]", raw))
-    return b""
+    return bytes(cast("list[int]", raw)) if isinstance(raw, list) else b""
 
 
 def _read_table(table: QTableWidget) -> list[tuple[str, str, str, str]]:

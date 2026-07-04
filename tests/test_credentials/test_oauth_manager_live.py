@@ -187,7 +187,7 @@ def test_singleton_thread_safety(reloaded_oauth_module: ModuleType) -> None:
         "verify_pkce_pair returned False for a freshly generated PKCE pair — "
         "the singleton's PKCE implementation is broken or its module-level state is poisoned"
     )
-    assert not reloaded_oauth_module.verify_pkce_pair(code_verifier + "x", code_challenge), (
+    assert not reloaded_oauth_module.verify_pkce_pair(f"{code_verifier}x", code_challenge), (
         "verify_pkce_pair must reject a mutated code_verifier"
     )
 
@@ -204,10 +204,7 @@ def test_pkce_roundtrip(reloaded_oauth_module: ModuleType) -> None:
     assert code_challenge
     assert code_verifier != code_challenge
     assert reloaded_oauth_module.verify_pkce_pair(code_verifier, code_challenge)
-    assert not reloaded_oauth_module.verify_pkce_pair(
-        code_verifier + "x",
-        code_challenge,
-    )
+    assert not reloaded_oauth_module.verify_pkce_pair(f"{code_verifier}x", code_challenge)
 
 
 def test_full_callback_path_with_mock_provider(

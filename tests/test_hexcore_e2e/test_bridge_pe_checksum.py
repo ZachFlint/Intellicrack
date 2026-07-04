@@ -163,7 +163,7 @@ class TestVerifyPEChecksum:
         _run(bridge.open_file(str(pe_binary_full)))
         assert bridge.document is not None, "open_file must set bridge.document; bridge is broken if None here."
         closed: bool = _run(bridge.close_file())
-        assert closed is True, "close_file must return True when a file was open."
+        assert closed, "close_file must return True when a file was open."
         assert bridge.document is None, "close_file must reset bridge.document to None; if non-None here, close_file has a regression."
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.verify_pe_checksum())
@@ -184,7 +184,7 @@ class TestVerifyPEChecksum:
         _run(bridge.open_file(str(pe_binary_full)))
         assert bridge.document is not None, "open_file must set bridge.document; bridge is broken if None here."
         closed: bool = _run(bridge.close_file())
-        assert closed is True, "close_file must return True when a file was open."
+        assert closed, "close_file must return True when a file was open."
         assert bridge.document is None, "close_file must reset bridge.document to None; if non-None here, close_file has a regression."
         with pytest.raises(RuntimeError, match="no document open"):
             _run(bridge.repair_pe_checksum())

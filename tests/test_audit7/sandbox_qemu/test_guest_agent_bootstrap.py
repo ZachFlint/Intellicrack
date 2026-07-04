@@ -230,7 +230,7 @@ def test_bootstrap_windows_guest_exec_uses_cmd_exe_and_z_drive_script() -> None:
 
     ping_calls = [cmd for cmd, _ in fake_qmp.invocations if cmd.get("execute") == "guest-ping"]
     exec_calls = [cmd for cmd, _ in fake_qmp.invocations if cmd.get("execute") == "guest-exec"]
-    assert len(ping_calls) >= 1
+    assert ping_calls
     assert len(exec_calls) == 1
     assert sandbox.get_agent_guest_pid() == 4242
 
@@ -273,8 +273,8 @@ def test_bootstrap_raises_sandbox_error_when_qemu_ga_never_responds() -> None:
 
     ping_calls = [cmd for cmd, _ in fake_qmp.invocations if cmd.get("execute") == "guest-ping"]
     exec_calls = [cmd for cmd, _ in fake_qmp.invocations if cmd.get("execute") == "guest-exec"]
-    assert len(ping_calls) >= 1
-    assert len(exec_calls) == 0
+    assert ping_calls
+    assert not exec_calls
     assert sandbox.get_agent_guest_pid() is None
 
 

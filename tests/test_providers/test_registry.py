@@ -743,7 +743,7 @@ class TestF0022ThreadSafeRegister:
         for t in threads:
             t.join()
 
-        assert errors == []
+        assert not errors
         # Every provider name in the cycle should be present
         registered = set(reg.list_registered())
         assert registered == set(names)

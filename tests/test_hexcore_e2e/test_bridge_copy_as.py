@@ -199,7 +199,7 @@ class TestBridgeCopyAs:
 
         lines = [ln.strip() for ln in result.splitlines() if "|" in ln]
         data_rows = [ln for ln in lines if "---" not in ln and "Offset" not in ln]
-        assert len(data_rows) >= 1, f"markdown_table has no data rows: {result!r}"
+        assert data_rows, f"markdown_table has no data rows: {result!r}"
 
         all_data = " ".join(data_rows).upper()
         for expected_hex, byte_val in [("DE", 0xDE), ("AD", 0xAD), ("BE", 0xBE), ("EF", 0xEF)]:

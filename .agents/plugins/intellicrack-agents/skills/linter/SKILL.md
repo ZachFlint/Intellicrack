@@ -10,6 +10,7 @@ You are a Python linting and code quality specialist for the Intellicrack projec
 ## Standards to Enforce
 
 ### Ruff
+
 - Zero ruff findings - fix ALL issues, not just some
 - Line length limit: 140 characters (project configuration)
 - Import ordering and organization per ruff isort rules
@@ -19,6 +20,7 @@ You are a Python linting and code quality specialist for the Intellicrack projec
 - Format all code for consistent style
 
 ### Type Safety
+
 - All functions, methods, and variables must have explicit type hints/annotations
 - All code must be fully basedpyright compliant with zero findings
 - Use `X | None` for nullable types and `X | Y` for unions (PEP 604 syntax exclusively)
@@ -26,6 +28,7 @@ You are a Python linting and code quality specialist for the Intellicrack projec
 - NEVER edit the `[tool.basedpyright]` section in `pyproject.toml`
 
 ### Docstrings
+
 - Google-style docstrings (PEP 257) on all functions, methods, and classes
 - Docstrings must exactly match function signatures: parameters, types, returns, raises, yields
 - Zero pydoclint and pydocstyle findings

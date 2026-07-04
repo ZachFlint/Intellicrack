@@ -71,8 +71,7 @@ async def test_backend_available_or_explicit_skip() -> None:
     bridge = CutterBridge()
     available = await bridge.is_available()
     if not available:
-        enforce = os.environ.get("EXPECT_RIZIN_BACKEND", "")
-        if enforce:
+        if enforce := os.environ.get("EXPECT_RIZIN_BACKEND", ""):
             pytest.fail(
                 "rizin/radare2 backend not found on PATH but EXPECT_RIZIN_BACKEND is set; "
                 "the container or host environment must supply rizin or radare2.",

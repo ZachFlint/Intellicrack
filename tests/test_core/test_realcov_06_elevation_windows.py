@@ -102,16 +102,16 @@ def _query_token_elevation_independently() -> bool:
         raise OSError(ctypes.get_last_error(), "OpenProcessToken failed")
 
     try:
-        ok = get_token_information(
+        if ok := get_token_information(
             token,
             _TOKEN_ELEVATION,
             ctypes.byref(elevation_flag),
             ctypes.sizeof(elevation_flag),
             ctypes.byref(return_length),
-        )
-        if not ok:
+        ):
+            return bool(elevation_flag.value)
+        else:
             raise OSError(ctypes.get_last_error(), "GetTokenInformation failed")
-        return bool(elevation_flag.value)
     finally:
         kernel32.CloseHandle(token)
 
@@ -200,7 +200,7 @@ def test_maybe_elevate_disabled_never_relaunches(monkeypatch: pytest.MonkeyPatch
         working_dir=str(Path.cwd()),
     )
     assert result is False
-    assert relaunch_called == [], (
+    assert not relaunch_called, (
         "maybe_elevate must short-circuit at the disabled guard and never invoke _relaunch_elevated; the guard branch is missing or broken"
     )
 

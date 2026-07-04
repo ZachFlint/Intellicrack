@@ -1104,7 +1104,12 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                     description="Join two contiguous memory blocks into one",
                     parameters=[
                         ToolParameter(name="name1", type="string", description="Name of the first (lower-addressed) block", required=True),
-                        ToolParameter(name="name2", type="string", description="Name of the second (higher-addressed) block", required=True),
+                        ToolParameter(
+                            name="name2",
+                            type="string",
+                            description="Name of the second (higher-addressed) block",
+                            required=True,
+                        ),
                     ],
                     returns="Dict with the joined block name and success",
                 ),
@@ -4558,10 +4563,8 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
 
         _logger.debug("undo_requested")
         try:
-            result = await self._execute_remote(
-                """currentProgram.undo() True."""
-                                                 ,
-            )
+            script = "currentProgram.undo()\nTrue"
+            result = await self._execute_remote(script)
             _logger.debug("undo_performed", success=bool(result))
             return {"success": bool(result)}
         except Exception as e:

@@ -239,7 +239,7 @@ class TestImportExportRendering:
 
         dlls, functions = _SectionsHarness().render_imports(imports)
 
-        assert any(fn for fn in functions), "import functions must be rendered"
+        assert any(functions), "import functions must be rendered"
         real_fns: list[dict[str, Any]] = imports
         assert {str(entry["function"]) for entry in real_fns} & functions
         assert {str(entry["dll"]) for entry in real_fns} & dlls

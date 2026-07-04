@@ -365,7 +365,7 @@ class TestDuplicateTokenL1:
 
             kernel32 = ctypes.windll.kernel32
             closed = bool(kernel32.CloseHandle(dup_handle))
-            assert closed is True, "the handle returned by duplicate_token must be a real, closable Win32 handle"
+            assert closed, "the handle returned by duplicate_token must be a real, closable Win32 handle"
         finally:
             await bridge.shutdown()
 

@@ -75,7 +75,7 @@ class TestToggleBitRoutesThroughBridge:
 
             assert bridge.toggle_bit_calls == [{"offset": 0, "bit_index": 0}]
             assert bridge.document is not None
-            assert bool(bridge.document.get_bit(0, 0)) is True
+            assert bool(bridge.document.get_bit(0, 0))
             assert bridge.document.read(0, 1) == b"\x01"
         finally:
             release_and_unlink(bridge, path)

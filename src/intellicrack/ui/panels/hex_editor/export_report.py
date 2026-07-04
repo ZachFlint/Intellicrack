@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_info, show_warning
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 
 
 if TYPE_CHECKING:
@@ -40,8 +40,7 @@ _MAX_BYTES_PER_ROW: Final[int] = 64
 class AnnotatedExportRangeDialog(QDialog):
     """Dialog collecting the byte range and layout for an annotated export.
 
-    Presents start / end offset fields (hex accepted via ``0x`` prefix)
-    alongside a bytes-per-row spin box shared by both the HTML and PDF
+    Presents start / end offset fields (hex accepted via ``0x`` prefix) alongside a bytes-per-row spin box shared by both the HTML and PDF
     annotated export paths.
     """
 
@@ -132,14 +131,16 @@ class ExportReportMixin:
 
     document: Any | None
     _bridge: HexEditorBridge | None
+    _pending_html_export_path: str | None
+    _pending_pdf_export_path: str | None
 
     def _on_export_annotated_html(self) -> None:
         """Export the current document as annotated HTML via the bridge.
 
-        Prompts for the byte range and layout, then calls
-        :meth:`HexEditorBridge.export_annotated_html` through
-        :func:`run_bridge_coroutine` and writes the returned HTML string to
-        a user-chosen file.
+        Prompts for the byte range and layout, then dispatches :meth:`HexEditorBridge.export_annotated_html` through
+        :func:`run_bridge_coroutine_logged` so rendering the annotated range does not block the Qt main thread. The returned HTML string is
+        written to the chosen file by :meth:`_on_export_annotated_html_success`, which runs on the main thread once the bridge call
+        completes.
         """
         parent = self if isinstance(self, QWidget) else None
         if self.document is None:
@@ -164,42 +165,65 @@ class ExportReportMixin:
         end = range_dlg.end_offset
         bytes_per_row = range_dlg.bytes_per_row
 
-        _logger.info(
-            "export_annotated_html_started",
+        self._pending_html_export_path = save_path
+        run_bridge_coroutine_logged(
+            bridge.export_annotated_html(start, end, bytes_per_row),
+            on_success=self._on_export_annotated_html_success,
+            on_error=self._on_export_annotated_html_error,
+            parent=parent,
+            event="hex_editor_export_annotated_html",
+            logger=_logger,
+            level="info",
             path=save_path,
             start=start,
             end=end,
             bytes_per_row=bytes_per_row,
         )
-        try:
-            html_result = run_bridge_coroutine(bridge.export_annotated_html(start, end, bytes_per_row))
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("export_annotated_html_failed", path=save_path)
-            show_warning(parent, "Export Annotated HTML", f"Export failed:\n{exc}")
+
+    def _on_export_annotated_html_success(self, result: object) -> None:
+        """Write the bridge-rendered annotated HTML payload to disk.
+
+        Args:
+            result: HTML markup string returned by :meth:`HexEditorBridge.export_annotated_html`.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        save_path = self._pending_html_export_path
+        self._pending_html_export_path = None
+        if save_path is None:
             return
 
-        if not isinstance(html_result, str):
-            _logger.error("export_annotated_html_unexpected_type", actual=type(html_result).__name__)
+        if not isinstance(result, str):
+            _logger.error("export_annotated_html_unexpected_type", actual=type(result).__name__)
             show_warning(parent, "Export Annotated HTML", "Bridge returned an unexpected payload type.")
             return
 
         try:
-            Path(save_path).write_text(html_result, encoding="utf-8")
+            Path(save_path).write_text(result, encoding="utf-8")
         except OSError as exc:
             _logger.exception("export_annotated_html_write_failed", path=save_path)
             show_warning(parent, "Export Annotated HTML", f"Failed to write file:\n{exc}")
             return
 
-        _logger.info("export_annotated_html_complete", path=save_path, size=len(html_result))
+        _logger.info("export_annotated_html_complete", path=save_path, size=len(result))
         show_info(parent, "Export Annotated HTML", f"Exported annotated HTML report to:\n{save_path}")
+
+    def _on_export_annotated_html_error(self, exc: object) -> None:
+        """Report an annotated HTML export failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        save_path = self._pending_html_export_path
+        self._pending_html_export_path = None
+        show_warning(parent, "Export Annotated HTML", f"Export failed to {save_path}:\n{exc}")
 
     def _on_export_annotated_pdf(self) -> None:
         """Export the current document as an annotated PDF via the bridge.
 
-        Prompts for the byte range and layout, then calls
-        :meth:`HexEditorBridge.export_annotated_pdf` through
-        :func:`run_bridge_coroutine`, which writes the PDF directly to the
-        user-chosen path on the bridge side.
+        Prompts for the byte range and layout, then dispatches :meth:`HexEditorBridge.export_annotated_pdf` through
+        :func:`run_bridge_coroutine_logged` so rendering and writing the PDF (which the bridge performs directly at the chosen path) does
+        not block the Qt main thread.
         """
         parent = self if isinstance(self, QWidget) else None
         if self.document is None:
@@ -224,24 +248,45 @@ class ExportReportMixin:
         end = range_dlg.end_offset
         bytes_per_row = range_dlg.bytes_per_row
 
-        _logger.info(
-            "export_annotated_pdf_started",
+        self._pending_pdf_export_path = save_path
+        run_bridge_coroutine_logged(
+            bridge.export_annotated_pdf(save_path, start, end, bytes_per_row),
+            on_success=self._on_export_annotated_pdf_success,
+            on_error=self._on_export_annotated_pdf_error,
+            parent=parent,
+            event="hex_editor_export_annotated_pdf",
+            logger=_logger,
+            level="info",
             path=save_path,
             start=start,
             end=end,
             bytes_per_row=bytes_per_row,
         )
-        try:
-            written_path = run_bridge_coroutine(bridge.export_annotated_pdf(save_path, start, end, bytes_per_row))
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("export_annotated_pdf_failed", path=save_path)
-            show_warning(parent, "Export Annotated PDF", f"Export failed:\n{exc}")
-            return
 
-        if not isinstance(written_path, str):
-            _logger.error("export_annotated_pdf_unexpected_type", actual=type(written_path).__name__)
+    def _on_export_annotated_pdf_success(self, result: object) -> None:
+        """Confirm the annotated PDF export the bridge wrote to disk.
+
+        Args:
+            result: Path the bridge wrote the rendered PDF to, returned by :meth:`HexEditorBridge.export_annotated_pdf`.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        self._pending_pdf_export_path = None
+
+        if not isinstance(result, str):
+            _logger.error("export_annotated_pdf_unexpected_type", actual=type(result).__name__)
             show_warning(parent, "Export Annotated PDF", "Bridge returned an unexpected payload type.")
             return
 
-        _logger.info("export_annotated_pdf_complete", path=written_path)
-        show_info(parent, "Export Annotated PDF", f"Exported annotated PDF report to:\n{written_path}")
+        _logger.info("export_annotated_pdf_complete", path=result)
+        show_info(parent, "Export Annotated PDF", f"Exported annotated PDF report to:\n{result}")
+
+    def _on_export_annotated_pdf_error(self, exc: object) -> None:
+        """Report an annotated PDF export failure raised by the bridge.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        save_path = self._pending_pdf_export_path
+        self._pending_pdf_export_path = None
+        show_warning(parent, "Export Annotated PDF", f"Export failed to {save_path}:\n{exc}")

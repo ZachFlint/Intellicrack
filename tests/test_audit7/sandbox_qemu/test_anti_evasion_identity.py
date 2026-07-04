@@ -507,7 +507,7 @@ class TestF0022RegExeAllowlistSafe:
             f"  actual:   {techniques!r}"
         )
 
-        accepted_reg_dispatches = sum(1 for cmd, args in agent.sent_commands if args and args[0] == "add" and is_windows_allowlisted(cmd))
+        accepted_reg_dispatches = sum(bool(args and args[0] == "add" and is_windows_allowlisted(cmd)) for cmd, args in agent.sent_commands)
         assert techniques.count("registry_patch") == accepted_reg_dispatches, (
             f"profile={profile!r}: each registry_patch technique must correspond to an accepted reg.exe dispatch: "
             f"techniques={techniques!r} accepted_reg_dispatches={accepted_reg_dispatches}"
@@ -841,6 +841,7 @@ class TestF0029IdentityProfileConsistency:
             f"profile={profile!r}: SMBIOS/registry product mismatch: smbios={smbios_product!r} registry={registry_product!r}"
         )
 
+        other_manufacturers = {_EXPECTED_IDENTITY[p][0] for p in _ALL_PROFILES if p != profile}
         if profile == "workstation":
             assert smbios_manufacturer != "HP", (
                 "profile='workstation': SMBIOS manufacturer must not be 'HP' (F-0029 pre-fix hardcoded regression)"
@@ -849,7 +850,6 @@ class TestF0029IdentityProfileConsistency:
                 "profile='workstation': registry manufacturer must not be 'HP' "
                 "(F-0029 pre-fix hardcoded regression: registry was hardcoded regardless of profile)"
             )
-            other_manufacturers = {_EXPECTED_IDENTITY[p][0] for p in _ALL_PROFILES if p != profile}
             assert smbios_manufacturer not in other_manufacturers, (
                 f"profile='workstation': SMBIOS manufacturer {smbios_manufacturer!r} "
                 f"must not match another profile's manufacturer (cross-profile exclusion): {other_manufacturers!r}"
@@ -862,13 +862,11 @@ class TestF0029IdentityProfileConsistency:
                 "profile='laptop': registry manufacturer must not be 'HP' "
                 "(F-0029 pre-fix hardcoded regression: registry was hardcoded regardless of profile)"
             )
-            other_manufacturers = {_EXPECTED_IDENTITY[p][0] for p in _ALL_PROFILES if p != profile}
             assert smbios_manufacturer not in other_manufacturers, (
                 f"profile='laptop': SMBIOS manufacturer {smbios_manufacturer!r} "
                 f"must not match another profile's manufacturer (cross-profile exclusion): {other_manufacturers!r}"
             )
         else:
-            other_manufacturers = {_EXPECTED_IDENTITY[p][0] for p in _ALL_PROFILES if p != profile}
             assert smbios_manufacturer not in other_manufacturers, (
                 f"profile='default': SMBIOS manufacturer {smbios_manufacturer!r} "
                 f"must not match another profile's manufacturer (cross-profile exclusion): {other_manufacturers!r}"

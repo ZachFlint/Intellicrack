@@ -250,7 +250,7 @@ class TestGetStrings:
         f.write_bytes(b"")
         _run(bridge.open_file(str(f)))
         results: list[dict[str, Any]] = _run(bridge.get_strings())
-        assert results == [], f"expected [] for empty file, got {results}"
+        assert not results, f"expected [] for empty file, got {results}"
 
     def test_no_document_raises(self, bridge: HexEditorBridge) -> None:
         """get_strings raises RuntimeError with a diagnostic message when no document is open.

@@ -13,6 +13,7 @@ Covers:
   S7-06 — Confirmation gate: ``ConfirmationLevel.DESTRUCTIVE`` + callback
            returns False → bridge never executed → ``stats.total_tool_calls == 0``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -566,13 +567,8 @@ class TestMaxIterationsGuard:
 
         asyncio.run(_run())
 
-        assert orch.stats.total_tool_calls == 3, (
-            f"Expected total_tool_calls==3 after max_iterations=3; "
-            f"got {orch.stats.total_tool_calls}"
-        )
-        assert bridge.probe_calls == 3, (
-            f"Expected bridge.probe_calls==3; got {bridge.probe_calls}"
-        )
+        assert orch.stats.total_tool_calls == 3, f"Expected total_tool_calls==3 after max_iterations=3; got {orch.stats.total_tool_calls}"
+        assert bridge.probe_calls == 3, f"Expected bridge.probe_calls==3; got {bridge.probe_calls}"
 
 
 class TestTimeoutGuard:
@@ -593,7 +589,9 @@ class TestTimeoutGuard:
     """
 
     def test_timeout_seconds_not_enforced_red_by_design(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """process_user_input raises asyncio.TimeoutError when timeout_seconds elapses.
 
@@ -609,6 +607,7 @@ class TestTimeoutGuard:
         stub isolates the timeout concern: the orchestrator's own loop logic is
         unchanged and the PD-009 defect is still the reason the gate is red.
         """
+
         def _fake_get_encoder(_p: ProviderName | None) -> _FakeTiktokenEncoder:
             del _p
             return _FakeTiktokenEncoder()
@@ -665,13 +664,8 @@ class TestConfirmationGate:
 
         asyncio.run(_run())
 
-        assert orch.stats.total_tool_calls == 0, (
-            f"Expected total_tool_calls==0 when confirmation denied; "
-            f"got {orch.stats.total_tool_calls}"
-        )
-        assert bridge.terminate_calls == 0, (
-            f"Expected bridge.terminate_calls==0; got {bridge.terminate_calls}"
-        )
+        assert orch.stats.total_tool_calls == 0, f"Expected total_tool_calls==0 when confirmation denied; got {orch.stats.total_tool_calls}"
+        assert bridge.terminate_calls == 0, f"Expected bridge.terminate_calls==0; got {bridge.terminate_calls}"
 
     def test_destructive_call_approved_executes_bridge(self, tmp_path: Path) -> None:
         """Destructive call with callback returning True executes the bridge method.
@@ -696,10 +690,5 @@ class TestConfirmationGate:
 
         asyncio.run(_run())
 
-        assert orch.stats.total_tool_calls == 1, (
-            f"Expected total_tool_calls==1 after approved terminate; "
-            f"got {orch.stats.total_tool_calls}"
-        )
-        assert bridge.terminate_calls == 1, (
-            f"Expected bridge.terminate_calls==1; got {bridge.terminate_calls}"
-        )
+        assert orch.stats.total_tool_calls == 1, f"Expected total_tool_calls==1 after approved terminate; got {orch.stats.total_tool_calls}"
+        assert bridge.terminate_calls == 1, f"Expected bridge.terminate_calls==1; got {bridge.terminate_calls}"

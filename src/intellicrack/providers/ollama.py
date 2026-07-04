@@ -1513,7 +1513,7 @@ class OllamaProvider(LLMProviderBase):
                 if chunk_data is None:
                     continue
                 last_chunk_data.clear()
-                last_chunk_data.update(chunk_data)
+                last_chunk_data |= chunk_data
                 message_obj_raw: object = chunk_data.get("message")
                 if isinstance(message_obj_raw, dict):
                     message_obj: dict[str, Any] = cast("dict[str, Any]", message_obj_raw)
@@ -1682,6 +1682,7 @@ class OllamaProvider(LLMProviderBase):
         Yields:
             str: Content chunks as they arrive.
         """
+
         async with client.stream(
             "POST",
             f"{base_url}{endpoint}",

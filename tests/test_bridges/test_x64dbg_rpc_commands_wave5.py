@@ -167,9 +167,7 @@ class TestGetStackTrace:
         ]
 
         def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "stack_trace":
-                return _success(raw_frames)
-            return _success()
+            return _success(raw_frames) if command == "stack_trace" else _success()
 
         bridge = X64DbgBridge()
         _install_fake_pipe(bridge, _responder)
@@ -466,9 +464,7 @@ class TestScriptLoad:
         """
 
         def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "eval":
-                return _success(0)
-            return _success("")
+            return _success(0) if command == "eval" else _success("")
 
         bridge = X64DbgBridge()
         fake = _install_fake_pipe(bridge, _responder)
@@ -497,9 +493,7 @@ class TestScriptRun:
         """
 
         def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "eval":
-                return _success(0)
-            return _success("")
+            return _success(0) if command == "eval" else _success("")
 
         bridge = X64DbgBridge()
         fake = _install_fake_pipe(bridge, _responder)
@@ -526,9 +520,7 @@ class TestScriptCmd:
         """
 
         def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "eval":
-                return _success(0)
-            return _success("")
+            return _success(0) if command == "eval" else _success("")
 
         bridge = X64DbgBridge()
         fake = _install_fake_pipe(bridge, _responder)
@@ -554,9 +546,7 @@ class TestScriptAbort:
         """
 
         def _responder(command: str, _params: dict[str, Any] | None) -> dict[str, Any]:
-            if command == "eval":
-                return _success(0)
-            return _success("")
+            return _success(0) if command == "eval" else _success("")
 
         bridge = X64DbgBridge()
         fake = _install_fake_pipe(bridge, _responder)

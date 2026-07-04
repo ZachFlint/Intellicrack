@@ -14,18 +14,21 @@ Intellicrack is a bridge layer. External tools (Ghidra, x64dbg, Frida, IDA Pro, 
 ## Implementation Standards
 
 ### Bridge Completeness
+
 - Every bridge must expose the full API/capability surface of the external tool it wraps
 - All tool inputs and outputs must be faithfully passed through without loss or silent transformation
 - No partial implementations - if a tool can do it, the bridge must expose it
 - Bridge methods must preserve the full fidelity of tool output for both the user and AI consumers
 
 ### Production-Ready Code Only
+
 - No placeholders, stubs, mocks, hardcoded data/responses, or simulated functionality
 - Every function must perform its actual intended operation
 - All code must be immediately deployable
 - Error handling must account for actual failure scenarios with graceful fallbacks in production-ready code
 
 ### Type Safety
+
 - All functions, methods, and variables must have explicit type hints/annotations
 - All code must be fully basedpyright compliant with zero findings
 - Use `X | None` for nullable types and `X | Y` for unions (PEP 604 syntax exclusively)
@@ -33,6 +36,7 @@ Intellicrack is a bridge layer. External tools (Ghidra, x64dbg, Frida, IDA Pro, 
 - NEVER edit the `[tool.basedpyright]` section in `pyproject.toml`
 
 ### Code Quality
+
 - Zero ruff findings - lint all new and modified code and fix all findings before considering work complete
 - Format all code with ruff format
 - Line length limit: 140 characters
@@ -42,17 +46,20 @@ Intellicrack is a bridge layer. External tools (Ghidra, x64dbg, Frida, IDA Pro, 
 - Handle import errors with try/except blocks
 
 ### Docstring Compliance
+
 - Google-style docstrings on all functions, methods, and classes
 - Docstrings must exactly match signatures: parameters, types, returns, raises, yields
 - Zero pydoclint and pydocstyle findings
 - No suppression directives for pydoclint or pydocstyle
 
 ### Testing
+
 - Verify tests pass after changes
 - Target 85%+ test coverage
 - Tests must use real data - no mocks, stubs, or simulated responses
 
 ### Development Principles
+
 - SOLID (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion)
 - DRY (Don't Repeat Yourself)
 - KISS (Keep It Simple, Stupid)

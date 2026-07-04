@@ -133,11 +133,26 @@ class X64DbgAdvancedTab(QWidget):
         self._modinfo_table = QTableWidget(0, len(_MODINFO_IMPORT_COLUMNS))
         self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_IMPORT_COLUMNS)
         self._modinfo_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        modinfo_h = self._modinfo_table.horizontalHeader()
-        if modinfo_h is not None:
-            modinfo_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self._apply_modinfo_resize_modes(name_column=0)
         layout.addWidget(self._modinfo_table)
         return container
+
+    def _apply_modinfo_resize_modes(self, name_column: int) -> None:
+        """Configure the module-info table's column resize modes.
+
+        Stretches the variable-length "Name" column and resizes the
+        remaining fixed-format columns to fit their content.
+
+        Args:
+            name_column: Index of the variable-length "Name" column for the
+                currently displayed view (imports or PE directories).
+        """
+        modinfo_h = self._modinfo_table.horizontalHeader()
+        if modinfo_h is None:
+            return
+        for column in range(self._modinfo_table.columnCount()):
+            mode = QHeaderView.ResizeMode.Stretch if column == name_column else QHeaderView.ResizeMode.ResizeToContents
+            modinfo_h.setSectionResizeMode(column, mode)
 
     def _modinfo_module_name(self) -> str | None:
         """Read and validate the module-name field.
@@ -156,6 +171,7 @@ class X64DbgAdvancedTab(QWidget):
         if module_name is None:
             return
         self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_IMPORT_COLUMNS)
+        self._apply_modinfo_resize_modes(name_column=0)
         self._modinfo_imports_btn.setEnabled(False)
         run_bridge_coroutine_logged(
             self._bridge.get_module_imports(module_name),
@@ -180,8 +196,10 @@ class X64DbgAdvancedTab(QWidget):
         for entry in imports:
             row = self._modinfo_table.rowCount()
             self._modinfo_table.insertRow(row)
-            name = entry.get("undecoratedName") or entry.get("name", "")
-            self._modinfo_table.setItem(row, 0, QTableWidgetItem(str(name)))
+            name = str(entry.get("undecoratedName") or entry.get("name", ""))
+            name_item = QTableWidgetItem(name)
+            name_item.setToolTip(name)
+            self._modinfo_table.setItem(row, 0, name_item)
             self._modinfo_table.setItem(row, 1, QTableWidgetItem(str(entry.get("ordinal", ""))))
             self._modinfo_table.setItem(row, 2, QTableWidgetItem(str(entry.get("iatRva", ""))))
             self._modinfo_table.setItem(row, 3, QTableWidgetItem(str(entry.get("iatVa", ""))))
@@ -226,6 +244,7 @@ class X64DbgAdvancedTab(QWidget):
         if module_name is None:
             return
         self._modinfo_table.setHorizontalHeaderLabels(_MODINFO_PEDIR_COLUMNS)
+        self._apply_modinfo_resize_modes(name_column=1)
         self._modinfo_pedirs_btn.setEnabled(False)
         run_bridge_coroutine_logged(
             self._bridge.get_pe_directories(module_name),
@@ -251,7 +270,10 @@ class X64DbgAdvancedTab(QWidget):
             row = self._modinfo_table.rowCount()
             self._modinfo_table.insertRow(row)
             self._modinfo_table.setItem(row, 0, QTableWidgetItem(str(entry.get("index", ""))))
-            self._modinfo_table.setItem(row, 1, QTableWidgetItem(str(entry.get("name", ""))))
+            name = str(entry.get("name", ""))
+            name_item = QTableWidgetItem(name)
+            name_item.setToolTip(name)
+            self._modinfo_table.setItem(row, 1, name_item)
             self._modinfo_table.setItem(row, 2, QTableWidgetItem(str(entry.get("rva", ""))))
             self._modinfo_table.setItem(row, 3, QTableWidgetItem(str(entry.get("size", ""))))
 
@@ -667,6 +689,7 @@ class X64DbgAdvancedTab(QWidget):
         layout.addLayout(dll_row)
 
         self._bpcfg_status_label = QLabel("")
+        self._bpcfg_status_label.setWordWrap(True)
         layout.addWidget(self._bpcfg_status_label)
         layout.addStretch()
         return container
@@ -1032,7 +1055,9 @@ class X64DbgAdvancedTab(QWidget):
         self._handles_table.cellClicked.connect(self._on_handle_row_selected)
         handles_h = self._handles_table.horizontalHeader()
         if handles_h is not None:
-            handles_h.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            for column in range(len(_HANDLE_COLUMNS)):
+                mode = QHeaderView.ResizeMode.Stretch if column == 1 else QHeaderView.ResizeMode.ResizeToContents
+                handles_h.setSectionResizeMode(column, mode)
         layout.addWidget(self._handles_table)
         return container
 
@@ -1050,6 +1075,26 @@ class X64DbgAdvancedTab(QWidget):
             logger=_logger,
         )
 
+    @staticmethod
+    def _coerce_handle_value(handle_val: object) -> int:
+        """Coerce a bridge-supplied handle value to an integer.
+
+        Args:
+            handle_val: Handle value from the bridge, either an int or a hex
+                string such as ``"0x1a4"``.
+
+        Returns:
+            int: The parsed handle value, or 0 if it could not be parsed.
+        """
+        if isinstance(handle_val, int):
+            return handle_val
+        if isinstance(handle_val, str):
+            try:
+                return int(handle_val, 0)
+            except ValueError:
+                return 0
+        return 0
+
     def _apply_handles(self, result: object) -> None:
         """Populate the handle table with enumerated handle entries.
 
@@ -1063,12 +1108,14 @@ class X64DbgAdvancedTab(QWidget):
         for entry in handles:
             row = self._handles_table.rowCount()
             self._handles_table.insertRow(row)
-            handle_val = entry.get("handle", 0)
-            handle_int = handle_val if isinstance(handle_val, int) else 0
+            handle_int = self._coerce_handle_value(entry.get("handle", 0))
             handle_item = QTableWidgetItem(f"0x{handle_int:X}")
             handle_item.setData(Qt.ItemDataRole.UserRole, handle_int)
             self._handles_table.setItem(row, 0, handle_item)
-            self._handles_table.setItem(row, 1, QTableWidgetItem(str(entry.get("object", ""))))
+            object_text = str(entry.get("object", ""))
+            object_item = QTableWidgetItem(object_text)
+            object_item.setToolTip(object_text)
+            self._handles_table.setItem(row, 1, object_item)
             self._handles_table.setItem(row, 2, QTableWidgetItem(str(entry.get("granted_access", ""))))
             self._handles_table.setItem(row, 3, QTableWidgetItem(str(entry.get("object_type_index", ""))))
             self._handles_table.setItem(row, 4, QTableWidgetItem(str(entry.get("handle_attributes", ""))))
@@ -1187,6 +1234,7 @@ class X64DbgAdvancedTab(QWidget):
         layout.addLayout(cmd_row)
 
         self._script_status_label = QLabel("")
+        self._script_status_label.setWordWrap(True)
         layout.addWidget(self._script_status_label)
         layout.addStretch()
         return container

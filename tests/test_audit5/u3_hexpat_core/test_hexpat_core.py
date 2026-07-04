@@ -342,7 +342,7 @@ def test_print_sink_disable_silences_output() -> None:
     u8 mark @ ping();
     """
     interp_no_sink.execute_bytes(source, _zeros(8))
-    assert captured == []
+    assert not captured
 
 
 # ---------------------------------------------------------------------------

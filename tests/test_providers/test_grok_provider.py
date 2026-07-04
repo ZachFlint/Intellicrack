@@ -94,9 +94,7 @@ def _expected_context_window(model_id: str) -> int:
         return _GROK_4_CONTEXT_WINDOW_EXPECTED
     if "grok-3" in model_id or "grok-2" in model_id:
         return _GROK_3_CONTEXT_WINDOW_EXPECTED
-    if "grok-1" in model_id:
-        return 8192
-    return _GROK_3_CONTEXT_WINDOW_EXPECTED
+    return 8192 if "grok-1" in model_id else _GROK_3_CONTEXT_WINDOW_EXPECTED
 
 
 def _expected_supports_vision(model_id: str) -> bool:
@@ -166,24 +164,12 @@ class TestGrokModelListing:
             assert len(model.id) > 0, f"Model id must be non-empty, got {model.id!r}"
             assert isinstance(model.name, str), f"Model name must be str, got {type(model.name)}"
             assert len(model.name) > 0, f"Model name must be non-empty, got {model.name!r}"
-            assert model.provider == ProviderName.GROK, (
-                f"Expected ProviderName.GROK, got {model.provider!r}"
-            )
-            assert isinstance(model.context_window, int), (
-                f"context_window must be int, got {type(model.context_window)}"
-            )
-            assert model.context_window > 0, (
-                f"context_window must be positive, got {model.context_window!r}"
-            )
-            assert isinstance(model.supports_tools, bool), (
-                f"supports_tools must be bool, got {type(model.supports_tools)}"
-            )
-            assert isinstance(model.supports_vision, bool), (
-                f"supports_vision must be bool, got {type(model.supports_vision)}"
-            )
-            assert isinstance(model.supports_streaming, bool), (
-                f"supports_streaming must be bool, got {type(model.supports_streaming)}"
-            )
+            assert model.provider == ProviderName.GROK, f"Expected ProviderName.GROK, got {model.provider!r}"
+            assert isinstance(model.context_window, int), f"context_window must be int, got {type(model.context_window)}"
+            assert model.context_window > 0, f"context_window must be positive, got {model.context_window!r}"
+            assert isinstance(model.supports_tools, bool), f"supports_tools must be bool, got {type(model.supports_tools)}"
+            assert isinstance(model.supports_vision, bool), f"supports_vision must be bool, got {type(model.supports_vision)}"
+            assert isinstance(model.supports_streaming, bool), f"supports_streaming must be bool, got {type(model.supports_streaming)}"
 
     @pytest.mark.asyncio
     @staticmethod
@@ -219,28 +205,23 @@ class TestGrokModelListing:
         for model_id, model in model_index.items():
             expected_ctx = _expected_context_window(model_id)
             assert model.context_window == expected_ctx, (
-                f"Model {model_id!r}: context_window={model.context_window}, "
-                f"expected {expected_ctx} per published X.AI documentation"
+                f"Model {model_id!r}: context_window={model.context_window}, expected {expected_ctx} per published X.AI documentation"
             )
 
             assert model.supports_tools is True, (
-                f"Model {model_id!r}: supports_tools must be True; "
-                "all Grok chat models support function calling per X.AI documentation"
+                f"Model {model_id!r}: supports_tools must be True; all Grok chat models support function calling per X.AI documentation"
             )
 
             expected_vision = _expected_supports_vision(model_id)
             assert model.supports_vision is expected_vision, (
-                f"Model {model_id!r}: supports_vision={model.supports_vision}, "
-                f"expected {expected_vision} (based on 'vision'/'image' in id)"
+                f"Model {model_id!r}: supports_vision={model.supports_vision}, expected {expected_vision} (based on 'vision'/'image' in id)"
             )
 
             assert model.supports_streaming is True, (
-                f"Model {model_id!r}: supports_streaming must be True; "
-                "all Grok chat models support streaming per X.AI documentation"
+                f"Model {model_id!r}: supports_streaming must be True; all Grok chat models support streaming per X.AI documentation"
             )
 
-        grok3_models = [m for m in models if "grok-3" in m.id]
-        if grok3_models:
+        if grok3_models := [m for m in models if "grok-3" in m.id]:
             representative = grok3_models[0]
             assert representative.context_window == _GROK_3_CONTEXT_WINDOW_EXPECTED, (
                 f"grok-3 model {representative.id!r}: context_window="

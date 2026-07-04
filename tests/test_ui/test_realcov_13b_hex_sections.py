@@ -106,10 +106,10 @@ def _text_of(record: dict[str, Any]) -> str:
     Returns:
         str: The decoded string content.
     """
-    for key in ("content", "text", "value"):
-        if key in record:
-            return str(record[key])
-    return ""
+    return next(
+        (str(record[key]) for key in ("content", "text", "value") if key in record),
+        "",
+    )
 
 
 class TestProductionConstantValue:
@@ -252,7 +252,7 @@ class TestFormatDetectionDrivesTemplates:
         document = hexcore.HexDocument.open(str(real_pe_dll))
         magic = document.read(0, 4)
         assert isinstance(magic, (bytes, bytearray, list))
-        magic_bytes = bytes(magic) if not isinstance(magic, bytes) else magic
+        magic_bytes = magic if isinstance(magic, bytes) else bytes(magic)
         assert detect_format(magic_bytes) == "pe"
 
     def test_real_elf_detected(self, real_elf_binary: Path) -> None:
@@ -263,7 +263,7 @@ class TestFormatDetectionDrivesTemplates:
         """
         document = hexcore.HexDocument.open(str(real_elf_binary))
         magic = document.read(0, 4)
-        magic_bytes = bytes(magic) if not isinstance(magic, bytes) else magic
+        magic_bytes = magic if isinstance(magic, bytes) else bytes(magic)
         assert detect_format(magic_bytes) == "elf"
 
     def test_real_macho_detected(self, real_macho_binary: Path) -> None:
@@ -274,5 +274,5 @@ class TestFormatDetectionDrivesTemplates:
         """
         document = hexcore.HexDocument.open(str(real_macho_binary))
         magic = document.read(0, 4)
-        magic_bytes = bytes(magic) if not isinstance(magic, bytes) else magic
+        magic_bytes = magic if isinstance(magic, bytes) else bytes(magic)
         assert detect_format(magic_bytes) == "macho"

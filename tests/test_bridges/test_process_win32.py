@@ -64,15 +64,15 @@ def _oracle_mitigation_primary_bit(policy_class: int) -> bool:
     kernel32.GetProcessMitigationPolicy.restype = wintypes.BOOL
     kernel32.GetCurrentProcess.restype = wintypes.HANDLE
     flags = ctypes.c_ulong(0)
-    ok = kernel32.GetProcessMitigationPolicy(
+    if ok := kernel32.GetProcessMitigationPolicy(
         kernel32.GetCurrentProcess(),
         policy_class,
         ctypes.byref(flags),
         ctypes.sizeof(flags),
-    )
-    if not ok:
+    ):
+        return bool(flags.value & 1)
+    else:
         raise OSError(ctypes.get_last_error(), "GetProcessMitigationPolicy failed")
-    return bool(flags.value & 1)
 
 
 pytestmark = [
@@ -418,7 +418,7 @@ async def test_read_registry_product_name(bridge: ProcessBridge) -> None:
     assert isinstance(result, dict)
     assert result.get("type") == "REG_SZ"
     assert isinstance(result.get("data"), str)
-    assert len(str(result.get("data"))) > 0
+    assert str(result.get("data")) != ""
 
 
 async def test_read_registry_invalid_hive_raises(bridge: ProcessBridge) -> None:

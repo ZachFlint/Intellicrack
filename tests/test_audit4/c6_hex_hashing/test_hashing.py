@@ -94,7 +94,7 @@ def _build_minimal_pe32() -> bytes:
         bytes: Raw bytes of the minimal PE32 image.
     """
     dos_stub = bytearray(64)
-    dos_stub[0:2] = b"MZ"
+    dos_stub[:2] = b"MZ"
     struct.pack_into("<I", dos_stub, 0x3C, _E_LFANEW)
 
     pe_sig = b"PE\x00\x00"
@@ -700,7 +700,7 @@ class TestRepairPeChecksumFiresNotify:
             harness.deleteLater()
 
         data_events = [evt for evt in recorder.events if evt[0] is HexDocumentEvent.DATA_MODIFIED]
-        assert data_events == [], (
+        assert not data_events, (
             "expected the loop-guard filter to suppress the data_modified echo when the recorder "
             "registers with the same source_id, but received: " + repr(data_events)
         )

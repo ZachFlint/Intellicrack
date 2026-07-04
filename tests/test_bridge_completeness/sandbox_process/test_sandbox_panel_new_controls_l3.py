@@ -176,7 +176,7 @@ class TestSandboxPanelRefreshInstancesWiringL3:
 
         _invoke(sandbox_panel, "_on_refresh_instances")
 
-        assert dispatch_calls == [], "list must not be dispatched without a configured bridge"
+        assert not dispatch_calls, "list must not be dispatched without a configured bridge"
 
     def test_success_callback_populates_instances_tree(
         self,
@@ -317,7 +317,7 @@ class TestSandboxPanelRefreshSnapshotsWiringL3:
 
         _invoke(sandbox_panel, "_on_refresh_snapshots")
 
-        assert dispatch_calls == [], "snapshot_list must not be dispatched without an active instance"
+        assert not dispatch_calls, "snapshot_list must not be dispatched without an active instance"
 
 
 class TestSandboxPanelPendingMessagesWiringL3:
@@ -383,7 +383,7 @@ class TestSandboxPanelPendingMessagesWiringL3:
 
         _invoke(sandbox_panel, "_on_pending_messages")
 
-        assert dispatch_calls == [], "get_pending_messages must not be dispatched without an active instance"
+        assert not dispatch_calls, "get_pending_messages must not be dispatched without an active instance"
 
 
 class TestSandboxPanelAntiEvasionWiringL3:
@@ -487,7 +487,7 @@ class TestSandboxPanelAntiEvasionWiringL3:
 
         _invoke(sandbox_panel, "_on_anti_evasion")
 
-        assert dispatch_calls == [], "anti_evasion must not be dispatched without an active instance"
+        assert not dispatch_calls, "anti_evasion must not be dispatched without an active instance"
 
 
 class TestSandboxPanelDetectC2WiringL3:
@@ -553,7 +553,7 @@ class TestSandboxPanelDetectC2WiringL3:
 
         _invoke(sandbox_panel, "_on_detect_c2")
 
-        assert dispatch_calls == [], "detect_c2 must not be dispatched without an active instance"
+        assert not dispatch_calls, "detect_c2 must not be dispatched without an active instance"
 
 
 class TestSandboxPanelDiffWiringL3:
@@ -629,4 +629,4 @@ class TestSandboxPanelDiffWiringL3:
 
         _invoke(sandbox_panel, "_on_diff")
 
-        assert dispatch_calls == [], "diff must not be dispatched when the second instance id is missing"
+        assert not dispatch_calls, "diff must not be dispatched when the second instance id is missing"

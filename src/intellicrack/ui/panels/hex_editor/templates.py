@@ -290,11 +290,9 @@ class TemplatesMixin:
     def _populate_template_combo(self) -> None:
         """Populate the template combo box with available templates.
 
-        Routes through :meth:`HexEditorBridge.list_templates_detailed`
-        instead of the document's plain ``list_templates()`` so the
-        combo is populated from the same richer (name, description,
-        category, field_count) metadata the AI-callable tool sees, even
-        though only the name is currently rendered into the widget.
+        Routes through :meth:`HexEditorBridge.list_templates_detailed` instead of the document's plain ``list_templates()`` so the combo is
+        populated from the same richer (name, description, category, field_count) metadata the AI-callable tool sees, even though only the
+        name is currently rendered into the widget.
         """
         if self._template_combo is None or self.document is None:
             return
@@ -563,10 +561,8 @@ class TemplatesMixin:
     def _auto_bookmark_structure_local(self) -> None:
         """Create PE/ELF structure bookmarks directly against the document.
 
-        Local fallback used only when no bridge is attached to this
-        mixin (e.g. headless / test harnesses that drive the document
-        directly), preserving the exact PE/ELF detection and bookmark
-        regions the panel has always produced.
+        Local fallback used only when no bridge is attached to this mixin (e.g. headless / test harnesses that drive the document directly),
+        preserving the exact PE/ELF detection and bookmark regions the panel has always produced.
         """
         document = self.document
         if document is None:
@@ -624,9 +620,7 @@ class TemplatesMixin:
             return raw
         if isinstance(raw, bytearray):
             return bytes(raw)
-        if isinstance(raw, list):
-            return bytes(cast("list[int]", raw))
-        return None
+        return bytes(cast("list[int]", raw)) if isinstance(raw, list) else None
 
     def _bookmark_pe_structure(self) -> None:
         """Create colored bookmarks for PE file structure regions."""

@@ -22,7 +22,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_info, show_warning
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.hex_editor.widgets import LargeFileSettingsDialog
 
 
@@ -299,17 +299,32 @@ class VaMappingMixin:
             show_warning(parent, "VA Mapping", "Enter a valid hex virtual address.")
             return
 
-        try:
-            offset = run_bridge_coroutine(bridge.va_to_file_offset(va))
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("va_to_file_offset_failed", va=hex(va))
-            show_warning(parent, "VA Mapping", f"Conversion failed:\n{exc}")
-            return
+        run_bridge_coroutine_logged(
+            bridge.va_to_file_offset(va),
+            on_success=lambda result: self._on_va_to_file_offset_resolved(va, result),
+            on_error=lambda exc: self._on_va_conversion_error(va, exc),
+            parent=parent,
+            event="hex_editor_va_to_file_offset",
+            logger=_logger,
+            va=hex(va),
+        )
 
-        if offset is None:
+    def _on_va_to_file_offset_resolved(self, va: int, offset_result: object) -> None:
+        """Navigate the hex view to the file offset resolved from a VA.
+
+        Args:
+            va: Virtual address that was looked up.
+            offset_result: File-offset payload returned by
+                :meth:`HexEditorBridge.va_to_file_offset`, or ``None`` when
+                the address is unmapped.
+        """
+        if offset_result is None:
             if self._va_status_label is not None:
                 self._va_status_label.setText(f"0x{va:X} is not mapped to a file offset")
             return
+        if not isinstance(offset_result, int):
+            return
+        offset = offset_result
 
         if self._va_status_label is not None:
             self._va_status_label.setText(f"0x{va:X} -> file offset 0x{offset:X}")
@@ -317,6 +332,17 @@ class VaMappingMixin:
         if callable(goto_fn):
             goto_fn(offset)
         _logger.info("va_goto_navigated", va=hex(va), offset=hex(offset))
+
+    def _on_va_conversion_error(self, va: int, exc: object) -> None:
+        """Surface a VA-to-file-offset bridge failure to the user.
+
+        Args:
+            va: Virtual address that failed to resolve.
+            exc: Exception object emitted by the bridge worker.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        _logger.warning("va_to_file_offset_failed", va=hex(va), error=str(exc))
+        show_warning(parent, "VA Mapping", f"Conversion failed:\n{exc}")
 
     def _on_cursor_offset_to_va(self) -> None:
         """Convert the current cursor's file offset to a virtual address."""
@@ -330,29 +356,57 @@ class VaMappingMixin:
             show_warning(parent, "VA Mapping", "No cursor position available.")
             return
 
-        try:
-            va = run_bridge_coroutine(bridge.file_offset_to_va(cursor_offset))
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("file_offset_to_va_failed", offset=hex(cursor_offset))
-            show_warning(parent, "VA Mapping", f"Conversion failed:\n{exc}")
-            return
+        run_bridge_coroutine_logged(
+            bridge.file_offset_to_va(cursor_offset),
+            on_success=lambda result: self._on_file_offset_to_va_resolved(cursor_offset, result),
+            on_error=lambda exc: self._on_cursor_offset_conversion_error(cursor_offset, exc),
+            parent=parent,
+            event="hex_editor_file_offset_to_va",
+            logger=_logger,
+            offset=hex(cursor_offset),
+        )
 
-        if va is None:
+    def _on_file_offset_to_va_resolved(self, cursor_offset: int, va_result: object) -> None:
+        """Report the virtual address resolved from the cursor's file offset.
+
+        Args:
+            cursor_offset: File offset that was looked up.
+            va_result: Virtual-address payload returned by
+                :meth:`HexEditorBridge.file_offset_to_va`, or ``None`` when
+                the offset is unmapped.
+        """
+        if va_result is None:
             if self._va_status_label is not None:
                 self._va_status_label.setText(f"file offset 0x{cursor_offset:X} is not mapped to a virtual address")
             return
+        if not isinstance(va_result, int):
+            return
+        va = va_result
 
         if self._va_status_label is not None:
             self._va_status_label.setText(f"file offset 0x{cursor_offset:X} -> VA 0x{va:X}")
         _logger.info("cursor_offset_to_va_resolved", offset=hex(cursor_offset), va=hex(va))
 
+    def _on_cursor_offset_conversion_error(self, cursor_offset: int, exc: object) -> None:
+        """Surface a file-offset-to-VA bridge failure to the user.
+
+        Args:
+            cursor_offset: File offset that failed to resolve.
+            exc: Exception object emitted by the bridge worker.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        _logger.warning("file_offset_to_va_failed", offset=hex(cursor_offset), error=str(exc))
+        show_warning(parent, "VA Mapping", f"Conversion failed:\n{exc}")
+
     def _on_open_performance_settings(self) -> None:
         """Open the large-file performance dialog and apply chunk/budget changes.
 
         Reads the current memory usage estimate via
-        :meth:`HexEditorBridge.get_memory_usage`, presents
-        :class:`LargeFileSettingsDialog`, then applies any changes via
-        :meth:`HexEditorBridge.set_chunk_size` / ``set_memory_budget``.
+        :meth:`HexEditorBridge.get_memory_usage` on the background bridge
+        loop, presents :class:`LargeFileSettingsDialog` once the read
+        completes, then applies any changes via
+        :meth:`HexEditorBridge.set_chunk_size` / ``set_memory_budget``
+        without blocking the Qt main thread.
         """
         parent = self if isinstance(self, QWidget) else None
         bridge = self._bridge
@@ -360,14 +414,37 @@ class VaMappingMixin:
             show_warning(parent, "Performance Settings", "Hex editor bridge is not attached.")
             return
 
-        try:
-            usage_result = run_bridge_coroutine(bridge.get_memory_usage())
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("get_memory_usage_failed")
-            show_warning(parent, "Performance Settings", f"Failed to read current memory usage:\n{exc}")
+        run_bridge_coroutine_logged(
+            bridge.get_memory_usage(),
+            on_success=self._on_memory_usage_ready,
+            on_error=self._on_get_memory_usage_error,
+            parent=parent,
+            event="hex_editor_get_memory_usage",
+            logger=_logger,
+        )
+
+    def _on_get_memory_usage_error(self, exc: object) -> None:
+        """Surface a ``get_memory_usage`` bridge failure to the user.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        show_warning(parent, "Performance Settings", f"Failed to read current memory usage:\n{exc}")
+
+    def _on_memory_usage_ready(self, usage_result: object) -> None:
+        """Present the performance-settings dialog once memory usage is known.
+
+        Args:
+            usage_result: ``dict`` payload returned by
+                :meth:`HexEditorBridge.get_memory_usage`.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        bridge = self._bridge
+        if bridge is None:
             return
 
-        usage: dict[str, int] = usage_result if isinstance(usage_result, dict) else {}
+        usage: dict[str, int] = cast("dict[str, int]", usage_result) if isinstance(usage_result, dict) else {}
         current_chunk_kb = max(1, int(usage.get("chunk_size", 0)) // _BYTES_PER_KB)
         current_budget_mb = max(1, int(usage.get("memory_budget", 0)) // _BYTES_PER_MB)
         current_usage_mb = int(usage.get("usage_bytes", 0)) / _BYTES_PER_MB
@@ -379,17 +456,59 @@ class VaMappingMixin:
         chunk_bytes = dlg.chunk_size_kb * _BYTES_PER_KB
         budget_bytes = dlg.memory_budget_mb * _BYTES_PER_MB
 
-        try:
-            run_bridge_coroutine(bridge.set_chunk_size(chunk_bytes))
-            run_bridge_coroutine(bridge.set_memory_budget(budget_bytes))
-        except (OSError, RuntimeError, ValueError) as exc:
-            _logger.exception("performance_settings_apply_failed", chunk_bytes=chunk_bytes, budget_bytes=budget_bytes)
-            show_warning(parent, "Performance Settings", f"Failed to apply settings:\n{exc}")
+        run_bridge_coroutine_logged(
+            bridge.set_chunk_size(chunk_bytes),
+            on_success=lambda _result: self._on_chunk_size_applied(chunk_bytes, budget_bytes),
+            on_error=self._on_apply_performance_settings_error,
+            parent=parent,
+            event="hex_editor_set_chunk_size",
+            logger=_logger,
+            level="info",
+            chunk_bytes=chunk_bytes,
+        )
+
+    def _on_chunk_size_applied(self, chunk_bytes: int, budget_bytes: int) -> None:
+        """Apply the memory-budget setting after the chunk size is confirmed.
+
+        Args:
+            chunk_bytes: Chunk size, in bytes, already applied to the bridge.
+            budget_bytes: Memory budget, in bytes, to apply next.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        bridge = self._bridge
+        if bridge is None:
             return
 
-        _logger.info("performance_settings_applied", chunk_bytes=chunk_bytes, budget_bytes=budget_bytes)
+        run_bridge_coroutine_logged(
+            bridge.set_memory_budget(budget_bytes),
+            on_success=lambda _result: self._on_memory_budget_applied(chunk_bytes, budget_bytes),
+            on_error=self._on_apply_performance_settings_error,
+            parent=parent,
+            event="hex_editor_set_memory_budget",
+            logger=_logger,
+            level="info",
+            budget_bytes=budget_bytes,
+        )
+
+    def _on_memory_budget_applied(self, chunk_bytes: int, budget_bytes: int) -> None:
+        """Report success once chunk size and memory budget are both applied.
+
+        Args:
+            chunk_bytes: Chunk size, in bytes, applied to the bridge.
+            budget_bytes: Memory budget, in bytes, applied to the bridge.
+        """
+        parent = self if isinstance(self, QWidget) else None
         show_info(
             parent,
             "Performance Settings",
-            f"Chunk size set to {dlg.chunk_size_kb} KB, memory budget set to {dlg.memory_budget_mb} MB.",
+            f"Chunk size set to {chunk_bytes // _BYTES_PER_KB} KB, memory budget set to {budget_bytes // _BYTES_PER_MB} MB.",
         )
+
+    def _on_apply_performance_settings_error(self, exc: object) -> None:
+        """Surface a ``set_chunk_size`` / ``set_memory_budget`` bridge failure.
+
+        Args:
+            exc: Exception object emitted by the bridge worker.
+        """
+        parent = self if isinstance(self, QWidget) else None
+        show_warning(parent, "Performance Settings", f"Failed to apply settings:\n{exc}")

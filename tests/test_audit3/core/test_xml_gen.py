@@ -183,7 +183,7 @@ def test_xml_gen_element_factory_constructs_element() -> None:
     """``Element`` must construct a working ElementTree element."""
     root = Element("Configuration")
     assert root.tag == "Configuration"
-    assert list(root) == []
+    assert not list(root)
 
 
 def test_xml_gen_subelement_appends_child() -> None:

@@ -10,28 +10,28 @@
     <ProjectGuid>{CAE07175-D007-4FC3-BFE8-47B392814159}</ProjectGuid>
     <RootNamespace>CompilerIdCXX</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    
-    
+
+
     <WindowsTargetPlatformVersion>10.0.28000.0</WindowsTargetPlatformVersion>
-    
-    
-    
-    
+
+
+
+
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  
+
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
-    
+
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
-    
+
   </ImportGroup>
   <PropertyGroup>
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
@@ -52,11 +52,11 @@
       <DebugInformationFormat>
       </DebugInformationFormat>
     </ClCompile>
-    
+
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <SubSystem>Console</SubSystem>
-      
+
     </Link>
     <PostBuildEvent>
       <Command>for %%i in (cl.exe) do %40echo CMAKE_CXX_COMPILER=%%~$PATH:i</Command>
@@ -67,6 +67,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    
+
   </ImportGroup>
 </Project>

@@ -103,11 +103,9 @@ def _wait_for_marker(path: Path, marker: str, timeout_sec: float) -> bool:
     deadline = time.monotonic() + timeout_sec
     while time.monotonic() < deadline:
         if path.is_file():
-            try:
+            with contextlib.suppress(OSError):
                 if marker in path.read_text(encoding="utf-8", errors="replace"):
                     return True
-            except OSError:
-                pass
         time.sleep(0.25)
     return False
 

@@ -163,14 +163,13 @@ TOOL_CAPABILITY_MAP: dict[str, str] = {
 
 Each key is either the unqualified method/tool name exposed by a bridge (the ``name`` field of its ``ToolFunction`` entries with the
 ``<bridge>.`` prefix stripped) or a fully-qualified ``<bridge>.<method>`` name. Each value is the capability name that would appear in
-``BridgeCapabilities`` as ``supports_<value>``. ``ToolRegistry`` consults this mapping in ``execute_tool_call`` and prefers a
-fully-qualified match over the short-name match, so a bridge whose method name collides with an unrelated bridge's (for example the
-sandbox's ``stop`` versus a debugger's ``stop``) can require the capability that actually fits its own operation instead of inheriting the
-short name's capability. It raises ``ToolError`` when a bridge is asked to execute a tool whose required capability it does not advertise.
-The mapping lives in ``bridges.base`` so that bridge implementations and the registry share a single source of truth, and
+``BridgeCapabilities`` as ``supports_<value>``. ``ToolRegistry`` consults this mapping in ``execute_tool_call`` and prefers a fully-
+qualified match over the short-name match, so a bridge whose method name collides with an unrelated bridge's (for example the sandbox's
+``stop`` versus a debugger's ``stop``) can require the capability that actually fits its own operation instead of inheriting the short
+name's capability. It raises ``ToolError`` when a bridge is asked to execute a tool whose required capability it does not advertise. The
+mapping lives in ``bridges.base`` so that bridge implementations and the registry share a single source of truth, and
 ``intellicrack.core.tools`` imports it from here.
 """
-
 
 @dataclass
 class DisassemblyLine:

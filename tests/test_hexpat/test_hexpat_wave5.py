@@ -138,9 +138,7 @@ class TestPreprocessorImportDirective:
         source = "import std.mem;\nu32 x @ 4;\n"
         processed_text, _ = pp.process(source)
 
-        assert "u32 offset @ 0;" in processed_text, (
-            f"Expected std/mem.pat content to be inlined; got:\n{processed_text}"
-        )
+        assert "u32 offset @ 0;" in processed_text, f"Expected std/mem.pat content to be inlined; got:\n{processed_text}"
         assert "u32 x @ 4;" in processed_text
 
     def test_import_directive_missing_library_is_graceful(self, tmp_path: Path) -> None:
@@ -174,9 +172,7 @@ class TestPreprocessorImportDirective:
         source = "import a.b.c;\nu32 x @ 1;\n"
         processed_text, _ = pp.process(source)
 
-        assert "u8 tag @ 0;" in processed_text, (
-            f"Expected a/b/c.pat content inlined; got:\n{processed_text}"
-        )
+        assert "u8 tag @ 0;" in processed_text, f"Expected a/b/c.pat content inlined; got:\n{processed_text}"
 
     def test_import_line_removed_from_output(self, tmp_path: Path) -> None:
         """The 'import X;' line itself must not appear verbatim in the output.
@@ -197,9 +193,7 @@ class TestPreprocessorImportDirective:
         source = "import std.io;\n"
         processed_text, _ = pp.process(source)
 
-        assert "import std.io;" not in processed_text, (
-            "The import directive must be replaced, not echoed to output"
-        )
+        assert "import std.io;" not in processed_text, "The import directive must be replaced, not echoed to output"
 
 
 # ---------------------------------------------------------------------------
@@ -262,10 +256,7 @@ class TestCircularIncludePrevention:
         processed_text, _ = pp.process(a_hexpat.read_text(encoding="utf-8"), file_path=a_hexpat)
 
         x_count = processed_text.count("u32 x @ 0;")
-        assert x_count == 2, (
-            f"Expected exactly 2 occurrences of 'u32 x @ 0;' but got {x_count}; "
-            f"output:\n{processed_text}"
-        )
+        assert x_count == 2, f"Expected exactly 2 occurrences of 'u32 x @ 0;' but got {x_count}; output:\n{processed_text}"
 
     def test_circular_include_y_count_is_exactly_one(self, tmp_path: Path) -> None:
         """Processing a.hexpat must produce exactly 1 occurrence of 'u32 y @ 0;'.
@@ -289,10 +280,7 @@ class TestCircularIncludePrevention:
         processed_text, _ = pp.process(a_hexpat.read_text(encoding="utf-8"), file_path=a_hexpat)
 
         y_count = processed_text.count("u32 y @ 0;")
-        assert y_count == 1, (
-            f"Expected exactly 1 occurrence of 'u32 y @ 0;' but got {y_count}; "
-            f"output:\n{processed_text}"
-        )
+        assert y_count == 1, f"Expected exactly 1 occurrence of 'u32 y @ 0;' but got {y_count}; output:\n{processed_text}"
 
     def test_circular_include_does_not_raise(self, tmp_path: Path) -> None:
         """Circular includes must not raise HexPatPreprocessorError.

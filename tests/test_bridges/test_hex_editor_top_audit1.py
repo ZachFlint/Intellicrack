@@ -481,9 +481,7 @@ class TestF0013PeImportsExportsDiskPath:
                 for imp in getattr(entry, "imports", []):
                     name_bytes: Any = getattr(imp, "name", None)
                     ordinal_val: int = int(getattr(imp, "ordinal", 0) or 0)
-                    func_name: str = (
-                        name_bytes.decode("utf-8", errors="replace") if name_bytes else f"Ordinal {ordinal_val}"
-                    )
+                    func_name: str = name_bytes.decode("utf-8", errors="replace") if name_bytes else f"Ordinal {ordinal_val}"
                     pairs.add((dll_name.lower(), func_name))
             return frozenset(pairs)
         finally:
@@ -511,10 +509,7 @@ class TestF0013PeImportsExportsDiskPath:
         _run(bridge.open_file(str(_SYSTEM_PE_PATH)))
         result: list[dict[str, Any]] = _run(bridge.get_pe_imports())
         actual: frozenset[tuple[str, str]] = frozenset((r["dll"].lower(), r["function"]) for r in result)
-        assert actual == expected, (
-            f"bridge imports do not match pefile oracle: "
-            f"extra={actual - expected!r} missing={expected - actual!r}"
-        )
+        assert actual == expected, f"bridge imports do not match pefile oracle: extra={actual - expected!r} missing={expected - actual!r}"
 
     def test_get_pe_imports_succeeds_after_modification(
         self,
@@ -536,9 +531,7 @@ class TestF0013PeImportsExportsDiskPath:
         _run(bridge.open_file(str(_SYSTEM_PE_PATH)))
         _run(bridge.write_bytes(0, "EB"))
         result: list[dict[str, Any]] = _run(bridge.get_pe_imports())
-        assert result == [], (
-            f"corrupted MZ header must cause get_pe_imports to return []; got {result!r}"
-        )
+        assert not result, f"corrupted MZ header must cause get_pe_imports to return []; got {result!r}"
 
     def test_get_pe_imports_does_not_raise_for_pe(
         self,
@@ -567,8 +560,7 @@ class TestF0013PeImportsExportsDiskPath:
                 dll_b: Any = getattr(entry, "dll", None)
                 if dll_b and b"KERNEL32" in dll_b.upper():
                     for imp in getattr(entry, "imports", []):
-                        nb: Any = getattr(imp, "name", None)
-                        if nb:
+                        if nb := getattr(imp, "name", None):
                             oracle_func = nb.decode("utf-8", errors="replace")
                             break
                 if oracle_func:
@@ -1044,9 +1036,7 @@ class _RegistryStub:
         Returns:
             _FailingSandboxBridge | None: The registered sandbox bridge or None.
         """
-        if name == ToolName.SANDBOX:
-            return self._sandbox
-        return None
+        return self._sandbox if name == ToolName.SANDBOX else None
 
 
 class TestF0033SaveToSandboxDestroysOrphan:

@@ -326,7 +326,7 @@ def test_save_routes_through_bridge_copy_to(
     finally:
         monkeypatch.setattr(subprocess, "Popen", real_popen)
 
-    assert subprocess_calls == [], f"Unexpected subprocess invocation: {subprocess_calls}"
+    assert not subprocess_calls, f"Unexpected subprocess invocation: {subprocess_calls}"
     assert bridge.copy_to_calls == [("qemu-instance-7", str(src), "/sandbox/payload.bin")]
     assert len(captured) == 1
 
@@ -364,7 +364,7 @@ def test_windows_sandbox_uses_wdag_copy(
 
     def trap_copy2(src_arg: str, dst_arg: str, *args: object, **kwargs: object) -> str:
         del args, kwargs
-        shutil_calls.append((str(src_arg), str(dst_arg)))
+        shutil_calls.append((src_arg, dst_arg))
         msg = f"shutil.copy2({src_arg!r}, {dst_arg!r}) attempted from hex editor sandbox tab"
         raise AssertionError(msg)
 
@@ -374,7 +374,7 @@ def test_windows_sandbox_uses_wdag_copy(
     finally:
         monkeypatch.setattr(_shutil, "copy2", real_copy2)
 
-    assert shutil_calls == [], f"Unexpected shutil.copy2 invocation: {shutil_calls}"
+    assert not shutil_calls, f"Unexpected shutil.copy2 invocation: {shutil_calls}"
     assert bridge.copy_to_calls == [("windows-instance-1", str(src), "input/payload.bin")]
     assert len(captured) == 1
     bridge_dest = bridge.copy_to_calls[0][2]

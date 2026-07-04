@@ -243,4 +243,4 @@ class TestSandboxCreateConfigWiringL3:
 
         _invoke(panel, "_on_create")
 
-        assert dispatch_calls == [], "bridge.create must not be dispatched when no bridge is configured"
+        assert not dispatch_calls, "bridge.create must not be dispatched when no bridge is configured"

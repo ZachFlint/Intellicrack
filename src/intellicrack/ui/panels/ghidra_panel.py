@@ -98,6 +98,7 @@ _ASCII_PRINTABLE_MIN: Final[int] = 32
 _ASCII_PRINTABLE_MAX: Final[int] = 127
 
 _FILTER_DEBOUNCE_MS: Final[int] = 250
+_CLEANUP_SHUTDOWN_TIMEOUT_S: Final[float] = 5.0
 
 try:
     from intellicrack.ui.panels.graph_view import CFGGraphView, NumericSortTreeItem
@@ -211,7 +212,7 @@ class GhidraPanel(AnalysisPanelBase):
         """Shut down the Ghidra bridge if active."""
         if self._bridge is not None and self._bridge.state.is_ready():
             try:
-                run_bridge_coroutine(self._bridge.shutdown())
+                run_bridge_coroutine(self._bridge.shutdown(), timeout_s=_CLEANUP_SHUTDOWN_TIMEOUT_S)
             except (RuntimeError, ConnectionError, OSError):
                 _logger.exception("ghidra_shutdown_failed", bridge_type="ghidra")
 
@@ -373,6 +374,7 @@ class GhidraPanel(AnalysisPanelBase):
             QWidget: Vertical splitter with labels and bookmarks sections.
         """
         splitter = QSplitter(Qt.Orientation.Vertical)
+        splitter.setChildrenCollapsible(False)
 
         labels_widget = QWidget()
         labels_layout = QVBoxLayout(labels_widget)
@@ -495,6 +497,7 @@ class GhidraPanel(AnalysisPanelBase):
 
         self._struct_fields_list: list[tuple[str, str]] = []
         self._struct_fields_label = QLabel("")
+        self._struct_fields_label.setWordWrap(True)
         layout.addWidget(self._struct_fields_label)
 
         apply_label = QLabel(self.tr("Apply Structure"))
@@ -1299,6 +1302,9 @@ class GhidraPanel(AnalysisPanelBase):
         self._func_tree.itemClicked.connect(self._on_function_clicked)
         self._func_tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._func_tree.customContextMenuRequested.connect(self._on_func_context_menu)
+        func_tree_header = self._func_tree.header()
+        if func_tree_header is not None:
+            func_tree_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         layout.addWidget(self._func_tree)
 
         create_layout = QHBoxLayout()
@@ -1851,15 +1857,18 @@ class GhidraPanel(AnalysisPanelBase):
         self._func_tree.clear()
 
         for func in functions:
+            func_name = getattr(func, "name", "")
             item = NumericSortTreeItem([
-                getattr(func, "name", ""),
+                func_name,
                 f"0x{getattr(func, 'address', 0):X}",
                 str(getattr(func, "size", 0)),
             ])
+            item.setToolTip(0, func_name)
             tree_item_set_data(item, 0, Qt.ItemDataRole.UserRole, getattr(func, "address", 0))
             self._func_tree.addTopLevelItem(item)
 
         set_sorting_enabled(self._func_tree, enable=True)
+        self._func_tree.resizeColumnToContents(0)
         self._func_count_label.setText(f"Functions ({len(functions)})")
         self._refresh_funcs_btn.setEnabled(True)
         _logger.debug("ghidra_functions_refreshed", count=len(functions))
@@ -2986,7 +2995,9 @@ class GhidraPanel(AnalysisPanelBase):
             return
         self._struct_fields_list.append((field_name.strip(), field_type.strip()))
         fields_str = ", ".join(f"{n}:{t}" for n, t in self._struct_fields_list)
-        self._struct_fields_label.setText(f"Fields: {fields_str}")
+        label_text = f"Fields: {fields_str}"
+        self._struct_fields_label.setText(label_text)
+        self._struct_fields_label.setToolTip(label_text)
 
     def _on_define_structure(self) -> None:
         """Define a new structure in Ghidra."""
@@ -3000,6 +3011,7 @@ class GhidraPanel(AnalysisPanelBase):
         field_dicts: list[dict[str, object]] = [{"name": n, "type": t, "size": 0} for n, t in self._struct_fields_list]
         self._struct_fields_list.clear()
         self._struct_fields_label.setText("")
+        self._struct_fields_label.setToolTip("")
         run_bridge_coroutine_logged(
             bridge.define_structure(name, field_dicts),
             on_success=lambda _: self._on_refresh_structures(),

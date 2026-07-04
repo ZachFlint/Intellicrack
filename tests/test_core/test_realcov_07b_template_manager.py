@@ -301,4 +301,4 @@ class TestHexPatPatternRegistry:
             pytest.skip("no community patterns discovered")
         grouped_total = sum(len(items) for items in grouped.values())
         assert grouped_total == len(flat)
-        assert all(category for category in grouped)
+        assert all(grouped)

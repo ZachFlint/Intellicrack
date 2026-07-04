@@ -1256,7 +1256,7 @@ class TestClearAll:
         state.clear_all()
 
         closed = [e for e in events if e[0] == HexDocumentEvent.DOCUMENT_CLOSED]
-        assert len(closed) == 0
+        assert not closed
 
     def test_clear_all_resets_all_state_properties(self) -> None:
         """clear_all resets document, file_path, cursor, and selection to defaults.

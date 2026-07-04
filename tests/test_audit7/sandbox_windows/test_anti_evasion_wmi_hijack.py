@@ -75,7 +75,7 @@ def _extract_mof_identity(mof_text: str) -> dict[str, str]:
             str: Captured value, or empty string when not found.
         """
         match = re.search(pattern, mof_text)
-        return match.group(1) if match else ""
+        return match[1] if match else ""
 
     return {
         "Manufacturer": _grab(r'\binstance of Win32_ComputerSystem\b[\s\S]*?Manufacturer\s*=\s*"([^"]+)";'),
@@ -149,9 +149,7 @@ class _RecordingSandbox(WindowsSandbox):
         """
         del time_limit, working_directory
         self.commands.append(command)
-        if self._handler is None:
-            return (0, "", "")
-        return self._handler(command)
+        return (0, "", "") if self._handler is None else self._handler(command)
 
 
 def _make_recording_sandbox(tmp_path: Path) -> _RecordingSandbox:
@@ -354,9 +352,7 @@ class TestF0013AntiEvasionMOFCompilationAndVerification:
             Returns:
                 tuple[int, str, str]: ``(1, "", "compile failed")`` for mofcomp.
             """
-            if "mofcomp" in cmd.lower():
-                return (1, "", "compile failed")
-            return (0, "", "")
+            return (1, "", "compile failed") if "mofcomp" in cmd.lower() else (0, "", "")
 
         sb.set_handler(handler)
 

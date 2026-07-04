@@ -54,8 +54,8 @@ class TestInspectAtBasic:
         """
         data = bytes(range(256))
         result = sample_doc_from_bytes.inspect_at(0)
-        assert result["uint8"] == str(struct.unpack("B", data[0:1])[0])
-        assert result["int8"] == str(struct.unpack("b", data[0:1])[0])
+        assert result["uint8"] == str(struct.unpack("B", data[:1])[0])
+        assert result["int8"] == str(struct.unpack("b", data[:1])[0])
 
     def test_inspect_at_has_uint8_key(self, sample_doc_from_bytes: HexDocument) -> None:
         r"""Verify inspect_at(0) decodes uint8 to '0' for the 0x00 byte.
@@ -68,7 +68,7 @@ class TestInspectAtBasic:
         """
         data = bytes(range(256))
         result = sample_doc_from_bytes.inspect_at(0)
-        assert result["uint8"] == str(struct.unpack("B", data[0:1])[0])
+        assert result["uint8"] == str(struct.unpack("B", data[:1])[0])
 
     def test_inspect_at_has_int8_key(self, sample_doc_from_bytes: HexDocument) -> None:
         r"""Verify inspect_at(0) decodes int8 to '0' for the 0x00 byte.
@@ -81,7 +81,7 @@ class TestInspectAtBasic:
         """
         data = bytes(range(256))
         result = sample_doc_from_bytes.inspect_at(0)
-        assert result["int8"] == str(struct.unpack("b", data[0:1])[0])
+        assert result["int8"] == str(struct.unpack("b", data[:1])[0])
 
     def test_inspect_at_has_uint16_le_key(self, sample_doc_from_bytes: HexDocument) -> None:
         r"""Verify inspect_at(0) decodes uint16_le to '256' for bytes [0x00, 0x01].
@@ -94,7 +94,7 @@ class TestInspectAtBasic:
         """
         data = bytes(range(256))
         result = sample_doc_from_bytes.inspect_at(0)
-        assert result["uint16_le"] == str(struct.unpack("<H", data[0:2])[0])
+        assert result["uint16_le"] == str(struct.unpack("<H", data[:2])[0])
 
     def test_inspect_at_has_uint32_le_key(self, sample_doc_from_bytes: HexDocument) -> None:
         r"""Verify inspect_at(0) decodes uint32_le to '50462976' for bytes [0x00..0x03].
@@ -107,7 +107,7 @@ class TestInspectAtBasic:
         """
         data = bytes(range(256))
         result = sample_doc_from_bytes.inspect_at(0)
-        assert result["uint32_le"] == str(struct.unpack("<I", data[0:4])[0])
+        assert result["uint32_le"] == str(struct.unpack("<I", data[:4])[0])
 
     def test_inspect_at_has_uint32_be_key(self, sample_doc_from_bytes: HexDocument) -> None:
         r"""Verify inspect_at(0) decodes uint32_be to '66051' for bytes [0x00..0x03].
@@ -120,7 +120,7 @@ class TestInspectAtBasic:
         """
         data = bytes(range(256))
         result = sample_doc_from_bytes.inspect_at(0)
-        assert result["uint32_be"] == str(struct.unpack(">I", data[0:4])[0])
+        assert result["uint32_be"] == str(struct.unpack(">I", data[:4])[0])
 
     def test_inspect_at_has_uint64_le_key(self, sample_doc_from_bytes: HexDocument) -> None:
         r"""Verify inspect_at(0) decodes uint64_le to '506097522914230528' for bytes [0x00..0x07].
@@ -133,7 +133,7 @@ class TestInspectAtBasic:
         """
         data = bytes(range(256))
         result = sample_doc_from_bytes.inspect_at(0)
-        assert result["uint64_le"] == str(struct.unpack("<Q", data[0:8])[0])
+        assert result["uint64_le"] == str(struct.unpack("<Q", data[:8])[0])
 
     def test_inspect_at_has_float32_le_key(self, sample_doc_from_bytes: HexDocument) -> None:
         """Verify inspect_at(0) decodes float32_le to a value matching the struct.unpack oracle.
@@ -146,7 +146,7 @@ class TestInspectAtBasic:
             sample_doc_from_bytes: HexDocument loaded from bytes(range(256)).
         """
         data = bytes(range(256))
-        oracle: float = struct.unpack("<f", data[0:4])[0]
+        oracle: float = struct.unpack("<f", data[:4])[0]
         result = sample_doc_from_bytes.inspect_at(0)
         assert math.isclose(float(result["float32_le"]), oracle, rel_tol=1e-6)
 
@@ -160,7 +160,7 @@ class TestInspectAtBasic:
             sample_doc_from_bytes: HexDocument loaded from bytes(range(256)).
         """
         data = bytes(range(256))
-        oracle: float = struct.unpack("<d", data[0:8])[0]
+        oracle: float = struct.unpack("<d", data[:8])[0]
         result = sample_doc_from_bytes.inspect_at(0)
         assert math.isclose(float(result["float64_le"]), oracle, rel_tol=1e-12)
 
@@ -177,11 +177,11 @@ class TestInspectAtBasic:
         data = bytes(range(256))
         result = sample_doc_from_bytes.inspect_at(0)
         expected_values: dict[str, str] = {
-            "uint8": str(struct.unpack("B", data[0:1])[0]),
-            "int8": str(struct.unpack("b", data[0:1])[0]),
-            "uint16_le": str(struct.unpack("<H", data[0:2])[0]),
-            "uint16_be": str(struct.unpack(">H", data[0:2])[0]),
-            "uint32_le": str(struct.unpack("<I", data[0:4])[0]),
+            "uint8": str(struct.unpack("B", data[:1])[0]),
+            "int8": str(struct.unpack("b", data[:1])[0]),
+            "uint16_le": str(struct.unpack("<H", data[:2])[0]),
+            "uint16_be": str(struct.unpack(">H", data[:2])[0]),
+            "uint32_le": str(struct.unpack("<I", data[:4])[0]),
             "uint32_be": str(struct.unpack(">I", data[0:4])[0]),
             "uint64_le": str(struct.unpack("<Q", data[0:8])[0]),
             "uint64_be": str(struct.unpack(">Q", data[0:8])[0]),
@@ -207,13 +207,13 @@ class TestInspectAtBasic:
         """
         data = bytes(range(256))
         result = sample_doc_from_bytes.inspect_at(0)
-        f32_oracle: float = struct.unpack("<f", data[0:4])[0]
-        f64_oracle: float = struct.unpack("<d", data[0:8])[0]
+        f32_oracle: float = struct.unpack("<f", data[:4])[0]
+        f64_oracle: float = struct.unpack("<d", data[:8])[0]
         assert math.isclose(float(result["float32_le"]), f32_oracle, rel_tol=1e-6)
         assert math.isclose(float(result["float64_le"]), f64_oracle, rel_tol=1e-12)
-        assert result["uint8"] == str(struct.unpack("B", data[0:1])[0])
-        assert result["uint16_le"] == str(struct.unpack("<H", data[0:2])[0])
-        assert result["uint32_le"] == str(struct.unpack("<I", data[0:4])[0])
+        assert result["uint8"] == str(struct.unpack("B", data[:1])[0])
+        assert result["uint16_le"] == str(struct.unpack("<H", data[:2])[0])
+        assert result["uint32_le"] == str(struct.unpack("<I", data[:4])[0])
         assert result["uint64_le"] == str(struct.unpack("<Q", data[0:8])[0])
 
 

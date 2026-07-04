@@ -912,9 +912,11 @@ class ToolInstaller:
 
             for line in content.splitlines()[:10]:
                 line_stripped = line.strip()
-                date_match = re.search(r"(\d{4})\.(\d{2})\.(\d{2})", line_stripped)
-                if date_match:
-                    date_str = date_match.group(0)
+                if date_match := re.search(
+                    r"(\d{4})\.(\d{2})\.(\d{2})",
+                    line_stripped,
+                ):
+                    date_str = date_match[0]
                     version = _ToolInstallerVersion.parse(date_str)
                     if version is not None:
                         _logger.debug(
@@ -1527,6 +1529,7 @@ class ToolInstaller:
             temp_path: Destination path on disk for the downloaded bytes.
             filename: Display name used in progress and completion logs.
         """
+
         async with client.stream("GET", url) as response:
             response.raise_for_status()
             total = int(response.headers.get("content-length", 0))

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -22,8 +22,12 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.dialogs_helpers import show_warning
+from intellicrack.ui.panels.async_bridge import GenericCallableWorker
 from intellicrack.ui.panels.hex_editor.widgets import CustomCrcDialog
 
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _logger = get_logger(__name__)
 
@@ -33,11 +37,71 @@ _PE_CHECKSUM_OFFSET_FROM_E_LFANEW: Final[int] = 4 + 20 + 64
 _PE_CHECKSUM_LEN: Final[int] = 4
 
 
+def _format_hash_result(document: object, algo: str) -> str:
+    """Compute the document hash and format it for display.
+
+    Runs on a background ``GenericCallableWorker`` thread so hashing a large document never blocks the Qt event loop.
+
+    Args:
+        document: Hex document exposing ``compute_hash``.
+        algo: Hash algorithm name selected in the UI.
+
+    Returns:
+        str: Formatted ``"<algo>: <hash>"`` display string.
+
+    Raises:
+        RuntimeError: If the document fails to compute the hash.
+        OSError: If reading the underlying file fails.
+        ValueError: If the algorithm name is not recognised.
+        AttributeError: If the document does not expose ``compute_hash``.
+    """
+    doc: Any = document
+    try:
+        result = doc.compute_hash(algo)
+    except (RuntimeError, OSError, ValueError, AttributeError):
+        _logger.exception("hash_calculate_failed", algo=algo)
+        raise
+    _logger.info("hash_calculated", algo=algo)
+    return f"{algo}: {result}"
+
+
+def _format_hash_range_result(document: object, start: int, end: int, algo: str) -> str:
+    """Compute the hash of a byte range and format it for display.
+
+    Runs on a background ``GenericCallableWorker`` thread so hashing a large selection never blocks the Qt event loop.
+
+    Args:
+        document: Hex document exposing ``compute_hash_range``.
+        start: Start byte offset of the range, inclusive.
+        end: End byte offset of the range, exclusive.
+        algo: Hash algorithm name selected in the UI.
+
+    Returns:
+        str: Formatted ``"<algo> (0x<start>-0x<end>): <hash>"`` display string.
+
+    Raises:
+        RuntimeError: If the document fails to compute the hash.
+        OSError: If reading the underlying file fails.
+        ValueError: If the algorithm name is not recognised.
+        AttributeError: If the document does not expose ``compute_hash_range``.
+    """
+    doc: Any = document
+    try:
+        result = doc.compute_hash_range(start, end, algo)
+    except (RuntimeError, OSError, ValueError, AttributeError):
+        _logger.exception("hash_selection_failed", algo=algo, start=start, end=end)
+        raise
+    _logger.info("hash_selection_calculated", algo=algo, start=start, end=end)
+    return f"{algo} (0x{start:X}-0x{end:X}): {result}"
+
+
 class HashingMixin:
     """Mixin providing hash computation for the hex editor panel.
 
     All hash and PE-checksum work is delegated to the hexcore document so that the UI thread never has to materialise the full file in
-    Python. The mixin only formats the returned values for display.
+    Python. Every document call that scans the full file (hashing, PE-checksum verification and repair) runs on a background
+    ``GenericCallableWorker`` thread so the Qt event loop keeps pumping while a multi-hundred-megabyte or multi-gigabyte file is processed.
+    The mixin only formats the returned values for display.
     """
 
     _document: Any | None
@@ -51,6 +115,8 @@ class HashingMixin:
     state_holder: Any | None
     file_path: Path | None
     _custom_crc_worker: Any | None
+    _hash_worker: GenericCallableWorker | None
+    _pe_checksum_worker: GenericCallableWorker | None
 
     def _notify_state_data_modified_for_hashing(self, offset: int, length: int, *, source: str) -> None:
         """Forward a byte-region mutation event to the shared state holder if attached.
@@ -122,19 +188,39 @@ class HashingMixin:
                 continue
         return None
 
-    def _on_calculate_hash(self) -> None:
-        """Calculate the hash of the current document via hexcore document.compute_hash."""
-        if self.document is None or self._hash_algo_combo is None or self._hash_result_label is None:
-            return
-        algo = self._hash_algo_combo.currentText()
-        try:
-            result = self.document.compute_hash(algo)
-        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            self._hash_result_label.setText(f"Error: {exc}")
-            _logger.exception("hash_calculate_failed")
-        else:
-            self._hash_result_label.setText(f"{algo}: {result}")
-            _logger.info("hash_calculated", algo=algo)
+    def _spawn_hex_worker(
+        self,
+        existing: GenericCallableWorker | None,
+        func: Callable[..., object],
+        args: tuple[object, ...],
+        on_success: Callable[[object], None],
+        on_error: Callable[[object], None],
+    ) -> GenericCallableWorker | None:
+        """Start a background ``GenericCallableWorker`` unless one is already running.
+
+        Args:
+            existing: The previously tracked worker for this operation category, if any.
+            func: Callable executed on the background thread.
+            args: Positional arguments forwarded to ``func``.
+            on_success: Slot invoked on the main thread with the callable's result.
+            on_error: Slot invoked on the main thread with the raised exception.
+
+        Returns:
+            GenericCallableWorker | None: The newly started worker, or ``None``
+                when ``existing`` is still running and no new worker was started.
+        """
+        if existing is not None and existing.isRunning():
+            _logger.warning("hex_editor_hash_worker_skipped")
+            return None
+        if existing is not None:
+            existing.deleteLater()
+
+        parent = self if isinstance(self, QWidget) else None
+        worker = GenericCallableWorker(func, *args, parent=parent)
+        _: object = worker.call_finished.connect(on_success)
+        _ = worker.call_error.connect(on_error)
+        worker.start()
+        return worker
 
     def _on_custom_crc(self) -> None:
         """Open the custom CRC dialog wired to the streaming worker.
@@ -184,8 +270,50 @@ class HashingMixin:
         layout.addWidget(repair_btn)
         return box
 
+    def _on_calculate_hash(self) -> None:
+        """Calculate the hash of the current document via hexcore document.compute_hash.
+
+        The hash is computed on a background worker thread so hashing a multi-hundred-megabyte or multi-gigabyte document never blocks the
+        Qt event loop.
+        """
+        if self.document is None or self._hash_algo_combo is None or self._hash_result_label is None:
+            return
+        algo = self._hash_algo_combo.currentText()
+        worker = self._spawn_hex_worker(
+            getattr(self, "_hash_worker", None),
+            _format_hash_result,
+            (self.document, algo),
+            self._on_hash_result_ready,
+            self._on_hash_error,
+        )
+        if worker is None:
+            return
+        self._hash_worker = worker
+        self._hash_result_label.setText(f"{algo}: Computing...")
+
+    def _on_hash_result_ready(self, result: object) -> None:
+        """Display a computed hash result on the main thread.
+
+        Args:
+            result: Formatted hash display string produced by the background worker.
+        """
+        if self._hash_result_label is not None and isinstance(result, str):
+            self._hash_result_label.setText(result)
+
+    def _on_hash_error(self, exc: object) -> None:
+        """Display a hash computation failure on the main thread.
+
+        Args:
+            exc: The exception raised by the background worker.
+        """
+        if self._hash_result_label is not None:
+            self._hash_result_label.setText(f"Error: {exc}")
+
     def _on_hash_selection(self) -> None:
-        """Hash the current selection range via hexcore document.compute_hash_range."""
+        """Hash the current selection range via hexcore document.compute_hash_range.
+
+        The hash is computed on a background worker thread so hashing a large selection never blocks the Qt event loop.
+        """
         if self.document is None or self._hash_algo_combo is None or self._hash_result_label is None:
             return
 
@@ -196,40 +324,47 @@ class HashingMixin:
             return
 
         algo = self._hash_algo_combo.currentText()
-        try:
-            result = self.document.compute_hash_range(sel_start, sel_end, algo)
-        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            self._hash_result_label.setText(f"Error: {exc}")
-            _logger.exception(
-                "hash_selection_failed",
-                algo=algo,
-                start=sel_start,
-                end=sel_end,
-            )
-        else:
-            self._hash_result_label.setText(
-                f"{algo} (0x{sel_start:X}-0x{sel_end:X}): {result}",
-            )
-            _logger.info(
-                "hash_selection_calculated",
-                algo=algo,
-                start=sel_start,
-                end=sel_end,
-            )
+        worker = self._spawn_hex_worker(
+            getattr(self, "_hash_worker", None),
+            _format_hash_range_result,
+            (self.document, sel_start, sel_end, algo),
+            self._on_hash_result_ready,
+            self._on_hash_error,
+        )
+        if worker is None:
+            return
+        self._hash_worker = worker
+        self._hash_result_label.setText(f"{algo} (0x{sel_start:X}-0x{sel_end:X}): Computing...")
 
     def _on_verify_pe_checksum(self) -> None:
-        """Verify the PE checksum via hexcore document.verify_pe_checksum."""
+        """Verify the PE checksum via hexcore document.verify_pe_checksum.
+
+        The verification runs on a background worker thread so scanning a large image never blocks the Qt event loop.
+        """
         if self.document is None:
             return
 
-        try:
-            info = self.document.verify_pe_checksum()
-        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            if self._pe_checksum_status is not None:
-                self._pe_checksum_status.setText(f"Error: {exc}")
-            _logger.exception("pe_checksum_verify_failed")
+        worker = self._spawn_hex_worker(
+            getattr(self, "_pe_checksum_worker", None),
+            self.document.verify_pe_checksum,
+            (),
+            self._apply_pe_checksum_verification,
+            self._on_pe_checksum_verify_error,
+        )
+        if worker is None:
             return
+        self._pe_checksum_worker = worker
+        if self._pe_checksum_status is not None:
+            self._pe_checksum_status.setText("Verifying...")
 
+    def _apply_pe_checksum_verification(self, info: object) -> None:
+        """Apply a PE-checksum verification result to the status label.
+
+        Called on the main thread when the background verification worker completes successfully.
+
+        Args:
+            info: The raw result returned by ``document.verify_pe_checksum``.
+        """
         if self._pe_checksum_status is None:
             return
 
@@ -253,6 +388,16 @@ class HashingMixin:
             self._pe_checksum_status.setText(
                 f"Invalid: stored=0x{stored:08X}, expected=0x{calculated:08X}",
             )
+
+    def _on_pe_checksum_verify_error(self, exc: object) -> None:
+        """Handle a PE-checksum verification worker failure.
+
+        Args:
+            exc: The exception raised by the background worker.
+        """
+        _logger.warning("pe_checksum_verify_failed", error=str(exc), error_type=type(exc).__name__)
+        if self._pe_checksum_status is not None:
+            self._pe_checksum_status.setText(f"Error: {exc}")
 
     def _pe_checksum_field_offset(self) -> int | None:
         """Locate the PE ``CheckSum`` field by reading ``e_lfanew`` from the document.
@@ -285,12 +430,13 @@ class HashingMixin:
             _logger.warning("pe_checksum_offset_resolution_failed")
             return None
         offset = e_lfanew + _PE_CHECKSUM_OFFSET_FROM_E_LFANEW
-        if offset + _PE_CHECKSUM_LEN > total:
-            return None
-        return offset
+        return None if offset + _PE_CHECKSUM_LEN > total else offset
 
     def _on_repair_pe_checksum(self) -> None:
-        """Repair the PE checksum via hexcore document.repair_pe_checksum."""
+        """Repair the PE checksum via hexcore document.repair_pe_checksum.
+
+        The repair runs on a background worker thread so recomputing the checksum of a large image never blocks the Qt event loop.
+        """
         if self.document is None:
             return
 
@@ -303,13 +449,40 @@ class HashingMixin:
         if reply != QMessageBox.StandardButton.Yes:
             return
 
-        try:
-            self.document.repair_pe_checksum()
-        except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-            _logger.exception("pe_checksum_repair_failed")
-            show_warning(parent, "Repair Failed", str(exc))
+        worker = self._spawn_hex_worker(
+            getattr(self, "_pe_checksum_worker", None),
+            self.document.repair_pe_checksum,
+            (),
+            self._on_pe_checksum_repaired,
+            self._on_pe_checksum_repair_error,
+        )
+        if worker is None:
             return
+        self._pe_checksum_worker = worker
+        if self._pe_checksum_status is not None:
+            self._pe_checksum_status.setText("Repairing...")
 
+    def _on_pe_checksum_repair_error(self, exc: object) -> None:
+        """Handle a PE-checksum repair worker failure.
+
+        Args:
+            exc: The exception raised by the background worker.
+        """
+        _logger.warning("pe_checksum_repair_failed", error=str(exc), error_type=type(exc).__name__)
+        parent = self if isinstance(self, QWidget) else None
+        show_warning(parent, "Repair Failed", str(exc))
+        if self._pe_checksum_status is not None:
+            self._pe_checksum_status.setText(f"Error: {exc}")
+
+    def _on_pe_checksum_repaired(self, _result: object) -> None:
+        """Finish a successful PE-checksum repair on the main thread.
+
+        Notifies the shared state holder of the modified checksum bytes, refreshes the hex viewport, and starts a second background worker
+        that re-verifies the repaired checksum for display.
+
+        Args:
+            _result: The (unused) return value of ``document.repair_pe_checksum``.
+        """
         checksum_offset = self._pe_checksum_field_offset()
         if checksum_offset is None:
             _logger.warning("pe_checksum_notify_skipped_unresolved_offset")
@@ -320,30 +493,58 @@ class HashingMixin:
                 source="hex-editor.hashing.repair_pe_checksum",
             )
 
-        if self._pe_checksum_status is not None:
-            try:
-                info = self.document.verify_pe_checksum()
-            except (RuntimeError, OSError, ValueError, AttributeError) as exc:
-                _logger.warning(
-                    "pe_checksum_post_repair_verify_failed",
-                    error_type=type(exc).__name__,
-                    error=str(exc),
-                )
-                self._pe_checksum_status.setText(f"Repaired (verify failed: {exc})")
-            else:
-                if isinstance(info, dict):
-                    info_dict = cast("dict[str, Any]", info)
-                    calculated = info_dict.get("calculated", info_dict.get("stored"))
-                    if isinstance(calculated, int):
-                        self._pe_checksum_status.setText(f"Repaired: 0x{calculated:08X}")
-                    else:
-                        self._pe_checksum_status.setText("Repaired")
-                else:
-                    self._pe_checksum_status.setText("Repaired")
-
         if self._hex_widget is not None:
             update_fn = getattr(self._hex_widget, "_update_viewport", None)
             if callable(update_fn):
                 update_fn()
 
         _logger.info("pe_checksum_repaired")
+
+        if self.document is None or self._pe_checksum_status is None:
+            return
+
+        worker = self._spawn_hex_worker(
+            getattr(self, "_pe_checksum_worker", None),
+            self.document.verify_pe_checksum,
+            (),
+            self._apply_post_repair_verification,
+            self._on_post_repair_verify_error,
+        )
+        if worker is None:
+            return
+        self._pe_checksum_worker = worker
+        self._pe_checksum_status.setText("Repaired, verifying...")
+
+    def _apply_post_repair_verification(self, info: object) -> None:
+        """Display the post-repair PE-checksum verification result.
+
+        Called on the main thread when the background post-repair verification worker completes successfully.
+
+        Args:
+            info: The raw result returned by ``document.verify_pe_checksum``.
+        """
+        if self._pe_checksum_status is None:
+            return
+        if isinstance(info, dict):
+            info_dict = cast("dict[str, Any]", info)
+            calculated = info_dict.get("calculated", info_dict.get("stored"))
+            if isinstance(calculated, int):
+                self._pe_checksum_status.setText(f"Repaired: 0x{calculated:08X}")
+            else:
+                self._pe_checksum_status.setText("Repaired")
+        else:
+            self._pe_checksum_status.setText("Repaired")
+
+    def _on_post_repair_verify_error(self, exc: object) -> None:
+        """Handle a post-repair PE-checksum verification worker failure.
+
+        Args:
+            exc: The exception raised by the background worker.
+        """
+        _logger.warning(
+            "pe_checksum_post_repair_verify_failed",
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
+        if self._pe_checksum_status is not None:
+            self._pe_checksum_status.setText(f"Repaired (verify failed: {exc})")

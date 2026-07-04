@@ -790,9 +790,7 @@ class BuiltinFunctions:
             hook = getattr(self._reflection, "current_bit_offset", None)
             if callable(hook):
                 hook_result = hook()
-                if isinstance(hook_result, int):
-                    return hook_result
-                return 0
+                return hook_result if isinstance(hook_result, int) else 0
         return 0
 
     def _mem_create_section(self, *args: object) -> PatternValue:
@@ -1015,9 +1013,7 @@ class BuiltinFunctions:
             return ""
         s = str(self._unwrap(args[0]))
         idx = int(self._unwrap(args[1]))
-        if 0 <= idx < len(s):
-            return s[idx]
-        return ""
+        return s[idx] if 0 <= idx < len(s) else ""
 
     def _string_substr(self, *args: object) -> str:
         """Extract a substring.
@@ -1175,9 +1171,7 @@ class BuiltinFunctions:
         if not args:
             return 0
         val = self._unwrap(args[0])
-        if isinstance(val, float):
-            return abs(val)
-        return abs(int(val))
+        return abs(val) if isinstance(val, float) else abs(int(val))
 
     def _math_min(self, *args: object) -> int | float:
         """Return the minimum of two values.
@@ -1360,9 +1354,7 @@ class BuiltinFunctions:
         if not args:
             return 0.0
         val = float(self._unwrap(args[0]))
-        if val < 0:
-            return -((-val) ** (1.0 / 3.0))
-        return val ** (1.0 / 3.0)
+        return -((-val) ** (1.0 / 3.0)) if val < 0 else val ** (1.0 / 3.0)
 
     def _math_exp(self, *args: object) -> float:
         """Compute e raised to the given power.
@@ -1373,9 +1365,7 @@ class BuiltinFunctions:
         Returns:
             float: The value ``e ** x``.
         """
-        if not args:
-            return 1.0
-        return math.exp(float(self._unwrap(args[0])))
+        return math.exp(float(self._unwrap(args[0]))) if args else 1.0
 
     def _math_fmod(self, *args: object) -> float:
         """Compute the floating-point remainder of the division.
@@ -2729,9 +2719,7 @@ class BuiltinFunctions:
         Returns:
             str: The formatted string.
         """
-        if not args:
-            return ""
-        return self._format_string(args[0], list(args[1:]))
+        return self._format_string(args[0], list(args[1:])) if args else ""
 
     def _io_error(self, *args: object) -> NoReturn:
         """Raise a fatal pattern error.

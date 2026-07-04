@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING, Any, Final, Protocol, cast, runtime_checkable
 
 from PyQt6.QtWidgets import QComboBox, QLabel, QTreeWidget, QTreeWidgetItem, QWidget
@@ -20,6 +21,7 @@ from intellicrack.ui.panels.hex_editor.base import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
     from intellicrack.bridges.hex_editor import HexEditorBridge
@@ -39,7 +41,6 @@ _FORMAT_TO_TEMPLATE: Final[dict[str, tuple[str, str]]] = {
     "zip": ("ZIP", "ZIP_LOCAL_FILE_HEADER"),
 }
 """Map :func:`detect_format` results to ``(display_name, template_id)`` for the templates panel."""
-
 
 @runtime_checkable
 class _StringsSource(Protocol):
@@ -110,19 +111,13 @@ class SectionsMixin:
     _pattern_registry: Any | None
     _strings_worker: GenericCallableWorker | None
     _bridge: HexEditorBridge | None
+    _select_template: Callable[[str], None]
 
     def goto_offset(self, offset: int) -> None:
         """Navigate the hex widget to the given byte offset.
 
         Args:
             offset: Absolute byte offset within the active document.
-        """
-
-    def _select_template(self, template_name: str) -> None:
-        """Select a structure template by name for the current file type.
-
-        Args:
-            template_name: Identifier of the template to activate.
         """
 
     def _populate_sections(self) -> None:
@@ -337,9 +332,41 @@ class SectionsMixin:
             _STRINGS_MAX_RESULTS,
         )
         self._strings_worker = worker
-        _: object = worker.call_finished.connect(self._on_strings_ready)
-        _ = worker.call_error.connect(self._on_strings_failed_obj)
+        _: object = worker.call_finished.connect(partial(self._on_strings_worker_finished, worker))
+        _ = worker.call_error.connect(partial(self._on_strings_worker_error, worker))
         worker.start()
+
+    def _on_strings_worker_finished(self, worker: GenericCallableWorker, results: object) -> None:
+        """Render extraction results only if ``worker`` is still the active strings worker.
+
+        A superseded worker's ``requestInterruption()`` request does not stop its
+        already-running native extraction call, so a stale worker can still emit
+        ``call_finished`` after a newer scan has replaced it. Comparing against the
+        current :attr:`_strings_worker` reference discards any such stale delivery
+        instead of overwriting freshly rendered results.
+
+        Args:
+            worker: The :class:`GenericCallableWorker` instance that produced
+                ``results``.
+            results: Iterable of dict-like records as returned by
+                ``HexDocument.extract_strings``.
+        """
+        if worker is not self._strings_worker:
+            _logger.debug("strings_extract_stale_result_discarded")
+            return
+        self._on_strings_ready(results)
+
+    def _on_strings_worker_error(self, worker: GenericCallableWorker, exc: object) -> None:
+        """Report an extraction failure only if ``worker`` is still the active strings worker.
+
+        Args:
+            worker: The :class:`GenericCallableWorker` instance that raised ``exc``.
+            exc: Exception object emitted by ``GenericCallableWorker.call_error``.
+        """
+        if worker is not self._strings_worker:
+            _logger.debug("strings_extract_stale_error_discarded")
+            return
+        self._on_strings_failed_obj(exc)
 
     def _on_strings_failed_obj(self, exc: object) -> None:
         """Forward worker exceptions to the typed strings-failed handler.

@@ -243,13 +243,9 @@ def _classify_directive(line: str) -> str | None:
     comma_idx = head.find(",")
     if eq_idx >= 0 and (space_idx < 0 or eq_idx < space_idx) and (comma_idx < 0 or eq_idx < comma_idx):
         reg = head[:eq_idx].strip().lower()
-        if reg in _X64DBG_REGISTERS:
-            return "register-assign"
-        return None
+        return "register-assign" if reg in _X64DBG_REGISTERS else None
     token = head.lower() if space_idx < 0 else head[:space_idx].lower()
-    if token in _X64DBG_COMMANDS:
-        return token
-    return None
+    return token if token in _X64DBG_COMMANDS else None
 
 
 class TestX64dbgTemplateParse:

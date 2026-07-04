@@ -324,6 +324,6 @@ class TestExportAnnotatedHtmlGuiDispatchesRealBridgeL3:
         monkeypatch.setattr(AnnotatedExportRangeDialog, "exec", _fail_if_opened)
         try:
             priv_method(panel, "_on_export_annotated_html")()
-            assert dialog_opened is False
+            assert not dialog_opened
         finally:
             panel.deleteLater()

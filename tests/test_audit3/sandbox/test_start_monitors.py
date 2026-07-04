@@ -229,13 +229,12 @@ def test_start_script_default_logdir_uses_programdata() -> None:
     """
     text = _START_SCRIPT.read_text(encoding="utf-8")
     assert "DEFAULT_LOG_DIR=%ProgramData%\\Intellicrack\\Sandbox\\logs" in text, (
-        "default LogDir constant missing or wrong; found text snippet: " + text[:500]
+        f"default LogDir constant missing or wrong; found text snippet: {text[:500]}"
     )
     assert "WDAGUtilityAccount" not in text, "legacy hardcoded WDAG default must be removed"
     assert "-LogDir" in text, "monitors must receive -LogDir argument"
 
-    program_data: str | None = os.environ.get("PROGRAMDATA")
-    if program_data:
+    if program_data := os.environ.get("PROGRAMDATA"):
         expected_resolved: str = program_data + "\\Intellicrack\\Sandbox\\logs"
         constant_line: str = "DEFAULT_LOG_DIR=%ProgramData%\\Intellicrack\\Sandbox\\logs"
         assert constant_line in text, (
@@ -643,7 +642,7 @@ def _list_pwsh_pids(pwsh: str) -> set[int]:
         check=False,
         timeout=10.0,
     )
-    output = (completed.stdout or "").strip()
-    if not output:
+    if output := (completed.stdout or "").strip():
+        return {int(p) for p in output.split(",") if p.strip().isdigit()}
+    else:
         return set()
-    return {int(p) for p in output.split(",") if p.strip().isdigit()}

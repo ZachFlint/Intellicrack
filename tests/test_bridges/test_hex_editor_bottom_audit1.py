@@ -555,7 +555,7 @@ def _make_minimal_pe() -> bytes:
     total = opt_offset + opt_size
 
     image = bytearray(b"\x00" * total)
-    image[0:2] = b"MZ"
+    image[:2] = b"MZ"
     image[0x3C:0x40] = struct.pack("<I", e_lfanew)
     image[pe_offset : pe_offset + 4] = b"PE\x00\x00"
     image[coff_offset + 16 : coff_offset + 18] = struct.pack("<H", opt_size)
@@ -683,7 +683,7 @@ class TestPeBookmarkRollback:
         total = section_table_offset + 64
 
         image = bytearray(b"\x00" * total)
-        image[0:2] = b"MZ"
+        image[:2] = b"MZ"
         image[0x3C:0x40] = struct.pack("<I", e_lfanew)
         image[pe_offset : pe_offset + 4] = b"PE\x00\x00"
         image[coff_offset + 2 : coff_offset + 4] = struct.pack("<H", 1024)

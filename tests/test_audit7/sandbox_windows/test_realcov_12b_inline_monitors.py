@@ -241,8 +241,7 @@ async def test_process_monitor_source_captures_live_process_table(tmp_path: Path
     assert all(rec["pid"] >= 0 for rec in created), "live process PIDs must be non-negative integers"
     assert any(rec["pid"] > 0 for rec in created), "live table must contain real user-mode processes with positive PIDs"
 
-    pwsh_records = [rec for rec in created if rec["name"].lower() == "pwsh.exe"]
-    if pwsh_records:
+    if pwsh_records := [rec for rec in created if rec["name"].lower() == "pwsh.exe"]:
         pwsh_rec = pwsh_records[0]
         assert pwsh_rec["path"] is not None, "pwsh record must carry a real executable path"
         assert pwsh_rec["path"].lower().endswith("pwsh.exe"), f"unexpected pwsh image path: {pwsh_rec['path']!r}"
@@ -327,7 +326,7 @@ async def test_network_monitor_source_captures_live_endpoints(tmp_path: Path) ->
         assert 0 <= rec["local_port"] <= 65535, f"local port out of range: {rec['local_port']}"
         assert 0 <= rec["remote_port"] <= 65535, f"remote port out of range: {rec['remote_port']}"
 
-    if not any(rec["protocol"] == "tcp" for rec in records):
+    if all(rec["protocol"] != "tcp" for rec in records):
         # A real established loopback connection is held open across the
         # capture, yet Get-NetTCPConnection does not surface loopback TCP
         # endpoints on a network-isolated host (a container with no network

@@ -116,10 +116,10 @@ class _CommandRecorder:
             an empty string when no configured prefix matches.
         """
         self.commands.append(command)
-        for prefix, response in self.responses.items():
-            if command == prefix or command.startswith(prefix):
-                return response
-        return ""
+        return next(
+            (response for prefix, response in self.responses.items() if command == prefix or command.startswith(prefix)),
+            "",
+        )
 
     def quit(self) -> None:
         """No-op quit matching the r2pipe.open interface."""
@@ -268,7 +268,7 @@ class TestGetSections:
 
         result: list[SectionInfo] = await bridge.get_sections()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -395,7 +395,7 @@ class TestGetClasses:
 
         result: list[ClassInfo] = await bridge.get_classes()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -487,7 +487,7 @@ class TestGetVtables:
 
         result: list[VtableInfo] = await bridge.get_vtables()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -550,7 +550,7 @@ class TestGetSyscalls:
 
         result: list[dict[str, Any]] = await bridge.get_syscalls()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -612,7 +612,7 @@ class TestGetCallgraph:
 
         result: list[dict[str, Any]] = await bridge.get_callgraph()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -728,7 +728,7 @@ class TestGetResources:
 
         result: list[ResourceInfo] = await bridge.get_resources()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -837,7 +837,7 @@ class TestGetSymbols:
 
         result: list[SymbolInfo] = await bridge.get_symbols()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -927,7 +927,7 @@ class TestGetFlags:
 
         result: list[FlagInfo] = await bridge.get_flags()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -970,7 +970,7 @@ class TestAddFlag:
 
         expected_cmd = f"f {_FLAG_NAME} {_FLAG_COVER_SIZE} @ {_FLAG_ADDR}"
         assert expected_cmd in rec.commands
-        assert result is True
+        assert result
 
     @pytest.mark.asyncio
     async def test_name_embedded_in_command(self) -> None:
@@ -1107,7 +1107,7 @@ class TestGetLibraries:
 
         result: list[LibraryInfo] = await bridge.get_libraries()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -1196,7 +1196,7 @@ class TestGetHeaders:
 
         result: list[HeaderInfo] = await bridge.get_headers()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -1274,7 +1274,7 @@ class TestGetDebugInfo:
 
         result: dict[str, Any] = await bridge.get_debug_info()
 
-        assert result == {}
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:
@@ -1326,7 +1326,7 @@ class TestGetAllStrings:
         await bridge.get_all_strings()
 
         assert "izzj" in rec.commands
-        assert not any(c == "izj" for c in rec.commands)
+        assert all(c != "izj" for c in rec.commands)
 
     @pytest.mark.asyncio
     async def test_string_address_from_vaddr_key(self) -> None:
@@ -1450,7 +1450,7 @@ class TestGetAllStrings:
 
         result: list[StringInfo] = await bridge.get_all_strings()
 
-        assert result == []
+        assert not result
 
     @pytest.mark.asyncio
     async def test_raises_without_binary(self) -> None:

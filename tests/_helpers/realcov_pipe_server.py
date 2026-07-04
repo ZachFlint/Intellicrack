@@ -150,9 +150,7 @@ def _read_frame(k32: ctypes.WinDLL, handle: int) -> dict[str, Any] | None:
     if body is None:
         return None
     decoded: object = json.loads(body.decode("utf-8"))
-    if not isinstance(decoded, dict):
-        return None
-    return cast("dict[str, Any]", decoded)
+    return cast("dict[str, Any]", decoded) if isinstance(decoded, dict) else None
 
 
 def _build_replies(mode: str, frame: dict[str, Any]) -> list[dict[str, Any]]:
@@ -245,9 +243,7 @@ def main() -> int:
         int: Process exit code.
     """
     expected_args = 3
-    if len(sys.argv) != expected_args:
-        return 2
-    return serve(sys.argv[1], sys.argv[2])
+    return 2 if len(sys.argv) != expected_args else serve(sys.argv[1], sys.argv[2])
 
 
 if __name__ == "__main__":

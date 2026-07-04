@@ -4,9 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Data Type Manager creation widget for the Ghidra panel.
 
-Provides the "Create Type" sub-form embedded in the Data Types tab, letting
-users define enums, unions, typedefs, and function-definition types through
-``GhidraBridge.create_data_type`` without leaving the GUI.
+Provides the "Create Type" sub-form embedded in the Data Types tab, letting users define enums, unions, typedefs, and function-definition
+types through ``GhidraBridge.create_data_type`` without leaving the GUI.
 """
 
 from __future__ import annotations
@@ -43,8 +42,7 @@ _DEFAULT_CATEGORY: Final[str] = "/Intellicrack"
 class DataTypeManagerWidget(QWidget):
     """Data Type Manager "create type" sub-form for the Ghidra Data Types tab.
 
-    Owns its own bridge reference (set via ``set_bridge``) so it stays
-    self-contained and reusable independently of the host panel.
+    Owns its own bridge reference (set via ``set_bridge``) so it stays self-contained and reusable independently of the host panel.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

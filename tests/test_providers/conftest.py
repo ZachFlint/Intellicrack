@@ -108,10 +108,10 @@ def _account_limit_reason(exc: BaseException) -> str | None:
         parts.append(str(current))
         current = current.__cause__ or current.__context__
     haystack = " ".join(parts).lower()
-    for signal in _ACCOUNT_LIMIT_SIGNALS:
-        if signal in haystack:
-            return signal
-    return None
+    return next(
+        (signal for signal in _ACCOUNT_LIMIT_SIGNALS if signal in haystack),
+        None,
+    )
 
 
 @pytest.hookimpl(wrapper=True)

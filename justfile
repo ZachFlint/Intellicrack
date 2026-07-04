@@ -448,7 +448,7 @@ nextest *FLAGS:
 [doc('Run code coverage with cargo-llvm-cov on Rust hexcore crate')]
 [group('lint')]
 llvm-cov *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName llvm-cov -DisplayName LlvmCov -Command "{{ pixi }} cargo llvm-cov nextest run {{ FLAGS }} --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} cargo llvm-cov"
+    @& scripts/run-lint-tool.ps1 -ToolName llvm-cov -DisplayName LlvmCov -Command "{{ pixi }} cargo llvm-cov nextest {{ FLAGS }} --no-fail-fast" -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} cargo llvm-cov"
 
 [doc('Detect unused Rust dependencies with cargo-machete')]
 [group('lint')]

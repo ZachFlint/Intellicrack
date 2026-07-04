@@ -60,7 +60,7 @@ def _build_elf64_header() -> bytes:
         bytes: 256-byte buffer whose first 64 bytes form a valid ELF64 header.
     """
     data = bytearray(256)
-    data[0:4] = b"\x7fELF"
+    data[:4] = b"\x7fELF"
     data[4] = 2
     data[5] = 1
     data[6] = 1

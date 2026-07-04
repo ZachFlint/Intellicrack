@@ -132,8 +132,7 @@ class _StubHandler(BaseHTTPRequestHandler):
         Args:
             method: HTTP method of the request being handled.
         """
-        content_length = int(self.headers.get("Content-Length") or 0)
-        if content_length:
+        if content_length := int(self.headers.get("Content-Length") or 0):
             _ = self.rfile.read(content_length)
 
         server = cast("_StubHTTPServer", self.server)

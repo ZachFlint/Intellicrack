@@ -126,13 +126,10 @@ class SandboxMixin:
     def _on_save_to_sandbox(self) -> None:
         """Save the current document into a sandbox via ``HexEditorBridge.save_to_sandbox``.
 
-        Routes through the hex-editor bridge instead of a generic sandbox
-        bridge call so the bridge's auto-provisioning of a sandbox
-        instance, orphan-instance cleanup on failure, and unsaved/
-        in-memory document handling all apply here too. The bridge
-        provisions its own instance, so no pre-existing Instance ID is
-        required; the field is populated with the auto-created instance
-        ID once the save completes.
+        Routes through the hex-editor bridge instead of a generic sandbox bridge call so the bridge's auto-provisioning of a sandbox
+        instance, orphan-instance cleanup on failure, and unsaved/ in-memory document handling all apply here too. The bridge provisions its
+        own instance, so no pre-existing Instance ID is required; the field is populated with the auto-created instance ID once the save
+        completes.
         """
         if self.document is None:
             parent = self if isinstance(self, QWidget) else None
@@ -172,12 +169,9 @@ class SandboxMixin:
     def _on_test_in_sandbox(self) -> None:
         """Execute the current document in a sandbox via ``HexEditorBridge.test_in_sandbox``.
 
-        Routes through the hex-editor bridge instead of a generic sandbox
-        bridge call so the bridge's end-to-end ``run_binary`` orchestration
-        (instance creation, file copy, execution) is used instead of a
-        raw ``execute`` call against a pre-selected instance. Requires the
-        document to already be saved to a file on disk, matching the
-        bridge method's own requirement.
+        Routes through the hex-editor bridge instead of a generic sandbox bridge call so the bridge's end-to-end ``run_binary``
+        orchestration (instance creation, file copy, execution) is used instead of a raw ``execute`` call against a pre-selected instance.
+        Requires the document to already be saved to a file on disk, matching the bridge method's own requirement.
         """
         if self.file_path is None:
             parent = self if isinstance(self, QWidget) else None

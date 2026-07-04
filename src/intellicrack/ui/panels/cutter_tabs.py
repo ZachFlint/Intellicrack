@@ -468,6 +468,8 @@ class FlagsTab(QWidget):
         self._add_btn = QPushButton("Add Flag")
         self._add_btn.setObjectName("tool_button")
         add_row.addWidget(self._add_btn)
+        self._add_result_label = QLabel("")
+        add_row.addWidget(self._add_result_label)
         layout.addLayout(add_row)
 
         resolve_row = QHBoxLayout()
@@ -553,12 +555,12 @@ class FlagsTab(QWidget):
         name = self._add_name_input.text().strip()
         address = self._parse_address(self._add_addr_input.text())
         if not name or address is None:
-            self._resolve_result_label.setText("Enter a name and a valid address")
+            self._add_result_label.setText("Enter a name and a valid address")
             return
         try:
             size = int(self._add_size_input.text().strip() or "1")
         except ValueError:
-            self._resolve_result_label.setText("Invalid size")
+            self._add_result_label.setText("Invalid size")
             return
 
         self._add_btn.setEnabled(False)
@@ -577,6 +579,7 @@ class FlagsTab(QWidget):
     def _on_add_flag_success(self) -> None:
         """Handle successful flag addition and refresh the flag table."""
         self._add_btn.setEnabled(True)
+        self._add_result_label.setText("")
         self._add_name_input.clear()
         self._add_addr_input.clear()
         self._fetch_flags()
@@ -589,7 +592,7 @@ class FlagsTab(QWidget):
         """
         self._add_btn.setEnabled(True)
         _logger.warning("cutter_add_flag_failed", error=str(exc))
-        self._resolve_result_label.setText(f"Add failed: {exc}")
+        self._add_result_label.setText(f"Add failed: {exc}")
 
     def _on_resolve_flag(self) -> None:
         """Resolve the nearest flag name for the address given in the resolve input."""
@@ -1178,6 +1181,10 @@ class TypeBrowserTab(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self._tree = QTreeWidget()
         self._tree.setHeaderLabels(["Name", "Details"])
+        header = self._tree.header()
+        if header is not None:
+            header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+            header.setStretchLastSection(True)
         layout.addWidget(self._tree)
 
     def refresh(self, bridge: CutterBridge, _run_async: RunAsyncFn) -> None:

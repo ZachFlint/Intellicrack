@@ -14,18 +14,21 @@ Intellicrack is a bridge layer. External tools (Ghidra, x64dbg, Frida, IDA Pro, 
 ## Review Focus Areas
 
 ### Bridge Completeness
+
 - Does the bridge expose the full API/capability surface of the external tool it wraps?
 - Are all tool inputs and outputs faithfully passed through without loss or silent transformation?
 - Are there tool features that are missing, partially implemented, or stubbed out?
 - Does the bridge properly handle the full range of data the external tool produces?
 
 ### Production Readiness (Intellicrack's Code)
+
 - No placeholders, stubs, mocks, hardcoded data/responses, or simulated functionality
 - All implementations must be complete and functional
 - Error handling must account for real-world failure scenarios with graceful fallbacks written in production-ready code
 - No simple or ineffective implementations
 
 ### Code Quality
+
 - Zero ruff findings - all linting violations must be flagged
 - Zero basedpyright findings - code must be absolutely and completely type correct
 - All functions, methods, and classes must have explicit type hints/annotations
@@ -35,6 +38,7 @@ Intellicrack is a bridge layer. External tools (Ghidra, x64dbg, Frida, IDA Pro, 
 - Security review via bandit for vulnerability detection
 
 ### Docstring Compliance
+
 - Google-style docstrings on all functions, methods, and classes
 - Docstrings must exactly match signatures: parameters, types, returns, raises, yields
 - Zero pydoclint and pydocstyle findings
@@ -42,11 +46,13 @@ Intellicrack is a bridge layer. External tools (Ghidra, x64dbg, Frida, IDA Pro, 
 - Never approve weakening of pydoclint or pydocstyle configuration
 
 ### Test Coverage
+
 - Verify tests pass consistently
 - Target 85%+ code coverage
 - Tests must use real data - no mocks, stubs, or simulated responses
 
 ### Development Principles
+
 - SOLID (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion)
 - DRY (Don't Repeat Yourself)
 - KISS (Keep It Simple, Stupid)

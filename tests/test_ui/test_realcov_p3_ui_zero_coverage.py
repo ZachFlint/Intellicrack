@@ -105,10 +105,10 @@ def _is_bold_at(doc: QTextDocument, block_num: int, char_pos: int) -> bool:
     layout = block.layout()
     if layout is None:
         return False
-    for fmt_range in layout.formats():
-        if fmt_range.start <= char_pos < fmt_range.start + fmt_range.length and fmt_range.format.fontWeight() == _BOLD:
-            return True
-    return False
+    return any(
+        fmt_range.start <= char_pos < fmt_range.start + fmt_range.length and fmt_range.format.fontWeight() == _BOLD
+        for fmt_range in layout.formats()
+    )
 
 
 def _is_italic_at(doc: QTextDocument, block_num: int, char_pos: int) -> bool:
@@ -128,10 +128,9 @@ def _is_italic_at(doc: QTextDocument, block_num: int, char_pos: int) -> bool:
     layout = block.layout()
     if layout is None:
         return False
-    for fmt_range in layout.formats():
-        if fmt_range.start <= char_pos < fmt_range.start + fmt_range.length and fmt_range.format.fontItalic():
-            return True
-    return False
+    return any(
+        fmt_range.start <= char_pos < fmt_range.start + fmt_range.length and fmt_range.format.fontItalic() for fmt_range in layout.formats()
+    )
 
 
 def _block_user_state(doc: QTextDocument, block_num: int) -> int:
@@ -149,9 +148,7 @@ def _block_user_state(doc: QTextDocument, block_num: int) -> int:
         int: The block user state, or -1 if the block is invalid.
     """
     block = doc.findBlockByNumber(block_num)
-    if not block.isValid():
-        return -1
-    return block.userState()
+    return block.userState() if block.isValid() else -1
 
 
 @pytest.mark.usefixtures("qapp")
@@ -333,9 +330,7 @@ class TestStackViewerPanel:
         connected state.
         """
         panel = StackViewerPanel()
-        assert panel.status_label.text() == "Not connected", (
-            f"Expected 'Not connected', got {panel.status_label.text()!r}"
-        )
+        assert panel.status_label.text() == "Not connected", f"Expected 'Not connected', got {panel.status_label.text()!r}"
 
     @staticmethod
     def test_frame_table_initially_empty() -> None:
@@ -362,9 +357,7 @@ class TestStackViewerPanel:
         assert frame_table.rowCount() == 1, "Pre-condition: expected 1 row before clear"
 
         panel.clear()
-        assert frame_table.rowCount() == 0, (
-            f"Expected 0 rows after clear(), got {frame_table.rowCount()}"
-        )
+        assert frame_table.rowCount() == 0, f"Expected 0 rows after clear(), got {frame_table.rowCount()}"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -384,9 +377,7 @@ class TestCSyntaxHighlighter:
         doc.setPlainText("int x = 0;")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, (
-            f"Expected keyword color {_KEYWORD_COLOR!r} at 'int'[0], got {color!r}"
-        )
+        assert color == _KEYWORD_COLOR, f"Expected keyword color {_KEYWORD_COLOR!r} at 'int'[0], got {color!r}"
 
     @staticmethod
     def test_keyword_is_bold() -> None:
@@ -413,9 +404,7 @@ class TestCSyntaxHighlighter:
         doc.setPlainText("0x1A")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _NUMBER_COLOR, (
-            f"Expected number color {_NUMBER_COLOR!r} at '0x1A'[0], got {color!r}"
-        )
+        assert color == _NUMBER_COLOR, f"Expected number color {_NUMBER_COLOR!r} at '0x1A'[0], got {color!r}"
 
     @staticmethod
     def test_single_line_comment_is_italic() -> None:
@@ -444,9 +433,7 @@ class TestCSyntaxHighlighter:
         doc.setPlainText("code /* open comment")
         hl.rehighlight()
         state = _block_user_state(doc, 0)
-        assert state == _BLOCK_STATE_IN_MULTILINE, (
-            f"Expected block state 1 (in-comment) after unclosed /*, got {state}"
-        )
+        assert state == _BLOCK_STATE_IN_MULTILINE, f"Expected block state 1 (in-comment) after unclosed /*, got {state}"
 
     @staticmethod
     def test_multiline_comment_continues_across_lines() -> None:
@@ -462,9 +449,7 @@ class TestCSyntaxHighlighter:
         doc.setPlainText("x /* start\nmiddle\nend */ y")
         hl.rehighlight()
         middle_color = _color_at(doc, 1, 0)
-        assert middle_color == _COMMENT_COLOR, (
-            f"Expected comment color {_COMMENT_COLOR!r} at middle-line[0], got {middle_color!r}"
-        )
+        assert middle_color == _COMMENT_COLOR, f"Expected comment color {_COMMENT_COLOR!r} at middle-line[0], got {middle_color!r}"
 
     @staticmethod
     def test_multiline_comment_state_resets_after_close() -> None:
@@ -480,9 +465,7 @@ class TestCSyntaxHighlighter:
         doc.setPlainText("code /* open\nmiddle\nend */ back")
         hl.rehighlight()
         state = _block_user_state(doc, 2)
-        assert state == _BLOCK_STATE_NORMAL, (
-            f"Expected block state 0 (normal) after '*/' close, got {state}"
-        )
+        assert state == _BLOCK_STATE_NORMAL, f"Expected block state 0 (normal) after '*/' close, got {state}"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -502,9 +485,7 @@ class TestAssemblySyntaxHighlighter:
         doc.setPlainText("mov rax, 0")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, (
-            f"Expected instruction color {_KEYWORD_COLOR!r} at 'mov'[0], got {color!r}"
-        )
+        assert color == _KEYWORD_COLOR, f"Expected instruction color {_KEYWORD_COLOR!r} at 'mov'[0], got {color!r}"
 
     @staticmethod
     def test_instruction_is_bold() -> None:
@@ -531,9 +512,7 @@ class TestAssemblySyntaxHighlighter:
         doc.setPlainText("mov rax, 0")
         hl.rehighlight()
         color = _color_at(doc, 0, 4)
-        assert color == _REGISTER_COLOR, (
-            f"Expected register color {_REGISTER_COLOR!r} at 'rax'[0] (pos 4), got {color!r}"
-        )
+        assert color == _REGISTER_COLOR, f"Expected register color {_REGISTER_COLOR!r} at 'rax'[0] (pos 4), got {color!r}"
 
     @staticmethod
     def test_semicolon_comment_is_italic() -> None:
@@ -563,9 +542,7 @@ class TestPythonSyntaxHighlighter:
         doc.setPlainText("def foo():")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, (
-            f"Expected keyword color {_KEYWORD_COLOR!r} at 'def'[0], got {color!r}"
-        )
+        assert color == _KEYWORD_COLOR, f"Expected keyword color {_KEYWORD_COLOR!r} at 'def'[0], got {color!r}"
 
     @staticmethod
     def test_builtin_len_has_type_color() -> None:
@@ -580,9 +557,7 @@ class TestPythonSyntaxHighlighter:
         doc.setPlainText("n = len(x)")
         hl.rehighlight()
         color = _color_at(doc, 0, 4)
-        assert color == _TYPE_COLOR, (
-            f"Expected builtin color {_TYPE_COLOR!r} at 'len'[0] (pos 4), got {color!r}"
-        )
+        assert color == _TYPE_COLOR, f"Expected builtin color {_TYPE_COLOR!r} at 'len'[0] (pos 4), got {color!r}"
 
     @staticmethod
     def test_triple_double_quote_sets_block_state() -> None:
@@ -598,9 +573,7 @@ class TestPythonSyntaxHighlighter:
         doc.setPlainText('x = """open string')
         hl.rehighlight()
         state = _block_user_state(doc, 0)
-        assert state == _BLOCK_STATE_TRIPLE_DOUBLE, (
-            f'Expected block state {_BLOCK_STATE_TRIPLE_DOUBLE} after unclosed """, got {state}'
-        )
+        assert state == _BLOCK_STATE_TRIPLE_DOUBLE, f'Expected block state {_BLOCK_STATE_TRIPLE_DOUBLE} after unclosed """, got {state}'
 
     @staticmethod
     def test_triple_quote_continuation_receives_string_color() -> None:
@@ -617,9 +590,7 @@ class TestPythonSyntaxHighlighter:
         doc.setPlainText('x = """open\nmiddle\nend"""')
         hl.rehighlight()
         color = _color_at(doc, 1, 0)
-        assert color == _STRING_COLOR, (
-            f"Expected string color {_STRING_COLOR!r} at middle-line[0], got {color!r}"
-        )
+        assert color == _STRING_COLOR, f"Expected string color {_STRING_COLOR!r} at middle-line[0], got {color!r}"
 
     @staticmethod
     def test_triple_quote_state_resets_after_close() -> None:
@@ -633,9 +604,7 @@ class TestPythonSyntaxHighlighter:
         doc.setPlainText('x = """open\nmiddle\nend""" extra')
         hl.rehighlight()
         state = _block_user_state(doc, 2)
-        assert state == _BLOCK_STATE_NORMAL, (
-            f'Expected block state {_BLOCK_STATE_NORMAL} after closing """, got {state}'
-        )
+        assert state == _BLOCK_STATE_NORMAL, f'Expected block state {_BLOCK_STATE_NORMAL} after closing """, got {state}'
 
     @staticmethod
     def test_triple_single_quote_sets_block_state_2() -> None:
@@ -650,9 +619,7 @@ class TestPythonSyntaxHighlighter:
         doc.setPlainText("x = '''open string")
         hl.rehighlight()
         state = _block_user_state(doc, 0)
-        assert state == _BLOCK_STATE_TRIPLE_SINGLE, (
-            f"Expected block state {_BLOCK_STATE_TRIPLE_SINGLE} after unclosed ''', got {state}"
-        )
+        assert state == _BLOCK_STATE_TRIPLE_SINGLE, f"Expected block state {_BLOCK_STATE_TRIPLE_SINGLE} after unclosed ''', got {state}"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -670,9 +637,7 @@ class TestHexPatSyntaxHighlighter:
         doc.setPlainText("struct MyStruct {")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, (
-            f"Expected keyword color {_KEYWORD_COLOR!r} at 'struct'[0], got {color!r}"
-        )
+        assert color == _KEYWORD_COLOR, f"Expected keyword color {_KEYWORD_COLOR!r} at 'struct'[0], got {color!r}"
 
     @staticmethod
     def test_type_u8_has_type_color() -> None:
@@ -687,9 +652,7 @@ class TestHexPatSyntaxHighlighter:
         doc.setPlainText("u8 field;")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _TYPE_COLOR, (
-            f"Expected type color {_TYPE_COLOR!r} at 'u8'[0], got {color!r}"
-        )
+        assert color == _TYPE_COLOR, f"Expected type color {_TYPE_COLOR!r} at 'u8'[0], got {color!r}"
 
     @staticmethod
     def test_multiline_comment_sets_block_state_1() -> None:
@@ -703,9 +666,7 @@ class TestHexPatSyntaxHighlighter:
         doc.setPlainText("u8 x; /* open comment")
         hl.rehighlight()
         state = _block_user_state(doc, 0)
-        assert state == _BLOCK_STATE_IN_MULTILINE, (
-            f"Expected block state 1 after unclosed /*, got {state}"
-        )
+        assert state == _BLOCK_STATE_IN_MULTILINE, f"Expected block state 1 after unclosed /*, got {state}"
 
     @staticmethod
     def test_multiline_comment_continuation_line_color() -> None:
@@ -718,9 +679,7 @@ class TestHexPatSyntaxHighlighter:
         doc.setPlainText("u8 x; /* open\nmiddle\nend */ u16 y;")
         hl.rehighlight()
         color = _color_at(doc, 1, 0)
-        assert color == _COMMENT_COLOR, (
-            f"Expected comment color at middle-line[0], got {color!r}"
-        )
+        assert color == _COMMENT_COLOR, f"Expected comment color at middle-line[0], got {color!r}"
 
 
 @pytest.mark.usefixtures("qapp")
@@ -738,9 +697,7 @@ class TestJavaScriptSyntaxHighlighter:
         doc.setPlainText("const x = 1;")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _KEYWORD_COLOR, (
-            f"Expected keyword color {_KEYWORD_COLOR!r} at 'const'[0], got {color!r}"
-        )
+        assert color == _KEYWORD_COLOR, f"Expected keyword color {_KEYWORD_COLOR!r} at 'const'[0], got {color!r}"
 
     @staticmethod
     def test_frida_global_process_has_frida_color() -> None:
@@ -755,9 +712,7 @@ class TestJavaScriptSyntaxHighlighter:
         doc.setPlainText("Process.enumerate()")
         hl.rehighlight()
         color = _color_at(doc, 0, 0)
-        assert color == _TYPE_COLOR, (
-            f"Expected Frida global color {_TYPE_COLOR!r} at 'Process'[0], got {color!r}"
-        )
+        assert color == _TYPE_COLOR, f"Expected Frida global color {_TYPE_COLOR!r} at 'Process'[0], got {color!r}"
 
     @staticmethod
     def test_multiline_comment_js_sets_block_state_1() -> None:
@@ -771,9 +726,7 @@ class TestJavaScriptSyntaxHighlighter:
         doc.setPlainText("let x; /* open")
         hl.rehighlight()
         state = _block_user_state(doc, 0)
-        assert state == _BLOCK_STATE_IN_MULTILINE, (
-            f"Expected block state 1 after unclosed /*, got {state}"
-        )
+        assert state == _BLOCK_STATE_IN_MULTILINE, f"Expected block state 1 after unclosed /*, got {state}"
 
     @staticmethod
     def test_multiline_comment_js_continuation_receives_comment_color() -> None:
@@ -786,9 +739,7 @@ class TestJavaScriptSyntaxHighlighter:
         doc.setPlainText("let x; /* open\ncontinuation\nend */")
         hl.rehighlight()
         color = _color_at(doc, 1, 0)
-        assert color == _COMMENT_COLOR, (
-            f"Expected comment color at continuation-line[0], got {color!r}"
-        )
+        assert color == _COMMENT_COLOR, f"Expected comment color at continuation-line[0], got {color!r}"
 
 
 @pytest.mark.usefixtures("qapp")

@@ -305,11 +305,68 @@ mod tests {
             *b = (state >> 16).to_le_bytes()[0];
         }
         let classes = content_classification(&data, data.len());
-        assert!(classes[0] == 3 || classes[0] == 4);
+        // Single 4096-byte LCG stream has Shannon entropy 7.953 (> 7.0) -> category 3 exactly.
+        assert_eq!(classes[0], 3);
     }
 
     #[test]
     fn test_classification_empty() {
         assert!(content_classification(&[], 256).is_empty());
+    }
+
+    #[test]
+    fn test_byte_distribution_parallel_merge_counts_all_chunks() {
+        // 2 MiB (>= PARALLEL_THRESHOLD) drives the par_chunks + merge path.
+        // Byte value == index % 256 so every value appears exactly len/256 times.
+        let total: usize = 2 * 1024 * 1024;
+        let data: Vec<u8> = (0..total).map(|i| u8::try_from(i % 256).unwrap()).collect();
+        let dist = byte_distribution(&data);
+        let expected = (total / 256) as u64;
+        assert!(dist.iter().all(|&c| c == expected), "merge dropped counts");
+        assert_eq!(dist.iter().sum::<u64>(), total as u64);
+    }
+
+    #[test]
+    fn test_digram_matrix_parallel_merge_boundary_exact() {
+        // 2 MiB of constant 0x00 -> every 2-byte window is (0,0); N-1 total.
+        // The per-chunk +1 overlap must count each boundary digram exactly once.
+        let total: usize = 2 * 1024 * 1024;
+        let data = vec![0u8; total];
+        let matrix = digram_matrix(&data);
+        assert_eq!(matrix[0], (total - 1) as u64);
+        assert_eq!(matrix.iter().sum::<u64>(), (total - 1) as u64);
+    }
+
+    #[test]
+    fn test_classify_block_category_2_moderate_low_printable() {
+        // Four distinct high bytes -> entropy 2.0, printable 0, null 0.
+        // Fails every earlier arm and every entropy band -> falls through to 2.
+        let block: Vec<u8> = [0x80u8, 0x81, 0x82, 0x83].iter().copied().cycle().take(256).collect();
+        assert_eq!(classify_block(&block), 2);
+    }
+
+    #[test]
+    fn test_classify_block_full_byte_range_is_category_3() {
+        // All 256 byte values equiprobable -> entropy 8.0 (> 7.0) -> category 3.
+        let block: Vec<u8> = (0..=255u8).cycle().take(4096).collect();
+        assert_eq!(classify_block(&block), 3);
+    }
+
+    #[test]
+    fn test_classify_block_moderate_entropy_is_category_4() {
+        // 64 equiprobable symbols -> entropy 6.0, printable 0.5 -> band (4.5,7.0] -> 4.
+        let block: Vec<u8> = (0..64u8).cycle().take(4096).collect();
+        assert_eq!(classify_block(&block), 4);
+    }
+
+    #[test]
+    fn test_entropy_map_block_size_zero_guard() {
+        // Non-empty data isolates the block_size == 0 sub-condition.
+        assert!(entropy_map(b"abc", 0).is_empty());
+    }
+
+    #[test]
+    fn test_content_classification_block_size_zero_guard() {
+        assert!(content_classification(b"abc", 0).is_empty());
     }
 }

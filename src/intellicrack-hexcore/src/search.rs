@@ -1082,7 +1082,8 @@ mod tests {
         let mut data = vec![0u8; 100];
         data[10..14].copy_from_slice(&val.to_le_bytes());
         let results = search_numeric_int(&data, -1, 4, true, false, 1, 100);
-        assert!(results.iter().any(|r| r.offset == 10));
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 10);
     }
 
     #[test]
@@ -1098,5 +1099,320 @@ mod tests {
         assert_eq!(results2[0].offset, 0);
         assert_eq!(results2[1].offset, 3);
         assert_eq!(results2[2].offset, 6);
+    }
+
+    fn buf_with(total: usize, fill: u8, pat: &[u8], offsets: &[usize]) -> Vec<u8> {
+        let mut d = vec![fill; total];
+        for &off in offsets {
+            d[off..off + pat.len()].copy_from_slice(pat);
+        }
+        d
+    }
+
+    #[test]
+    fn test_search_bytes_parallel_over_chunk_boundary() {
+        // >4 MiB forces the rayon chunked path; one match straddles the CHUNK_SIZE seam.
+        let pat = [0xDEu8, 0xAD, 0xBE, 0xEF, 0xCA];
+        let total = CHUNK_SIZE + 300_000;
+        let offsets = [100usize, CHUNK_SIZE - 2, CHUNK_SIZE + 50_000];
+        let data = buf_with(total, 0x00, &pat, &offsets);
+        let results = search_bytes(&data, &pat, 100);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![100, CHUNK_SIZE - 2, CHUNK_SIZE + 50_000]);
+        // dedup_by_key must collapse any boundary double-report to a single hit.
+        assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn test_search_hex_wildcards_parallel_over_chunk() {
+        // Wildcards keep it on the masked parallel path (not delegated to search_bytes).
+        let total = CHUNK_SIZE + 200_000;
+        let mut data = vec![0x11u8; total];
+        // Matches for "DE AD ?? EF": 0xDE 0xAD <any> 0xEF
+        for &off in &[500usize, CHUNK_SIZE + 1000] {
+            data[off] = 0xDE;
+            data[off + 1] = 0xAD;
+            data[off + 2] = 0x77;
+            data[off + 3] = 0xEF;
+        }
+        let results = search_hex_with_wildcards(&data, "DE AD ?? EF", 100);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![500, CHUNK_SIZE + 1000]);
+    }
+
+    #[test]
+    fn test_search_numeric_int_parallel_over_chunk() {
+        let total = CHUNK_SIZE + 100_000;
+        let mut data = vec![0x11u8; total];
+        let val: u32 = 0xDEAD_BEEF;
+        data[64..68].copy_from_slice(&val.to_le_bytes());
+        data[CHUNK_SIZE + 40..CHUNK_SIZE + 44].copy_from_slice(&val.to_le_bytes());
+        let results = search_numeric_int(&data, 0xDEAD_BEEF, 4, false, false, 1, 100);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![64, CHUNK_SIZE + 40]);
+    }
+
+    #[test]
+    fn test_search_numeric_float_parallel_over_chunk_f64_be() {
+        let total = CHUNK_SIZE + 80_000;
+        let mut data = vec![0x11u8; total];
+        let val: f64 = 12_345.678_9;
+        data[32..40].copy_from_slice(&val.to_be_bytes());
+        data[CHUNK_SIZE + 8..CHUNK_SIZE + 16].copy_from_slice(&val.to_be_bytes());
+        let results = search_numeric_float(&data, 12_345.678_9, 8, true, 1e-9, 8, 100);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![32, CHUNK_SIZE + 8]);
+    }
+
+    #[test]
+    fn test_search_numeric_range_parallel_over_chunk() {
+        let total = CHUNK_SIZE + 60_000;
+        let mut data = vec![0x00u8; total];
+        // value 500 (LE) is inside [100, 1000]; place at two positions.
+        data[16..20].copy_from_slice(&500u32.to_le_bytes());
+        data[CHUNK_SIZE + 4..CHUNK_SIZE + 8].copy_from_slice(&500u32.to_le_bytes());
+        // A zero window (fill) decodes to 0, outside [100,1000]; must not match.
+        let results = search_numeric_range(&data, 100, 1000, 4, false, false, 4, 100);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![16, CHUNK_SIZE + 4]);
+    }
+
+    #[test]
+    fn test_parse_hex_pattern_odd_nibble_count_returns_none() {
+        assert!(parse_hex_pattern("4D 5").is_none());
+    }
+
+    #[test]
+    fn test_parse_hex_pattern_high_nibble_wildcard() {
+        // "?A" -> low nibble 0xA known, high nibble wildcard -> (value 0x0A, mask 0x0F)
+        let result = parse_hex_pattern("?A").unwrap();
+        assert_eq!(result, vec![(0x0A, 0x0F)]);
+    }
+
+    #[test]
+    fn test_parse_hex_pattern_empty_returns_empty_vec() {
+        // Empty (and all-non-hex) input yields zero nibbles: 0 is even -> Some(empty).
+        assert_eq!(parse_hex_pattern("").unwrap(), Vec::<(u8, u8)>::new());
+        assert_eq!(parse_hex_pattern("GG!!").unwrap(), Vec::<(u8, u8)>::new());
+    }
+
+    #[test]
+    fn test_search_hex_empty_pattern_returns_empty() {
+        // parse succeeds with an empty pattern -> guard returns no results.
+        let results = search_hex_with_wildcards(b"anything", "", 10);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_search_text_empty_text_returns_empty() {
+        assert!(search_text(b"data", "", "utf-8", true, 10).is_empty());
+    }
+
+    #[test]
+    fn test_search_text_utf16be_case_sensitive() {
+        let encoded: Vec<u8> = "OK".encode_utf16().flat_map(u16::to_be_bytes).collect();
+        let mut data = vec![0x00u8; 6];
+        data.extend_from_slice(&encoded);
+        let results = search_text(&data, "OK", "utf-16be", true, 10);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 6);
+    }
+
+    #[test]
+    fn test_search_text_ci_data_shorter_than_needle_returns_empty() {
+        // Case-insensitive branch: data.len() < encoded.len() -> early empty.
+        let results = search_text(b"ab", "abcdef", "utf-8", false, 10);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_window_matches_ci_utf16be() {
+        let window: Vec<u8> = "AB".encode_utf16().flat_map(u16::to_be_bytes).collect();
+        assert!(window_matches_ci(&window, "ab", "utf-16be"));
+    }
+
+    #[test]
+    fn test_window_matches_ci_odd_length_utf16_rejected() {
+        assert!(!window_matches_ci(&[0x41], "a", "utf-16le"));
+        assert!(!window_matches_ci(&[0x41], "a", "utf-16be"));
+    }
+
+    #[test]
+    fn test_window_matches_ci_invalid_utf16_rejected() {
+        // Lone high surrogate D800 (LE bytes 0x00,0xD8) is invalid UTF-16.
+        assert!(!window_matches_ci(&[0x00, 0xD8], "x", "utf-16le"));
+        assert!(!window_matches_ci(&[0xD8, 0x00], "x", "utf-16be"));
+    }
+
+    #[test]
+    fn test_window_matches_ci_invalid_utf8_rejected() {
+        assert!(!window_matches_ci(&[0xFF, 0xFE], "x", "utf-8"));
+    }
+
+    #[test]
+    fn test_window_matches_ci_ascii_high_bit_rejected_and_valid_accepted() {
+        assert!(!window_matches_ci(&[0x80], "x", "ascii"));
+        assert!(window_matches_ci(b"AB", "ab", "ascii"));
+    }
+
+    #[test]
+    fn test_window_matches_ci_encoding_rs_fallback_windows1252_and_latin1() {
+        // 0xC9 is 'É' in windows-1252/latin1; lowercased 'é'.
+        assert!(window_matches_ci(&[0xC9], "é", "windows-1252"));
+        assert!(window_matches_ci(&[0xC9], "é", "latin1"));
+    }
+
+    #[test]
+    fn test_window_matches_ci_encoding_rs_had_errors_rejected() {
+        // Lone Shift_JIS lead byte 0x81 cannot decode -> had_errors -> reject.
+        assert!(!window_matches_ci(&[0x81], "x", "shift_jis"));
+    }
+
+    #[test]
+    fn test_window_matches_ci_unknown_label_rejected() {
+        assert!(!window_matches_ci(b"AB", "ab", "no-such-encoding-xyz"));
+    }
+
+    #[test]
+    fn test_search_regex_invalid_pattern_returns_empty() {
+        assert!(search_regex(b"data", "[unclosed", 10).is_empty());
+    }
+
+    #[test]
+    fn test_search_regex_max_results_break() {
+        let data = b"a a a a a";
+        let results = search_regex(data, "a", 2);
+        assert_eq!(results.len(), 2);
+    }
+
+    #[test]
+    fn test_replace_all_empty_pattern_returns_copy_and_zero() {
+        let (out, count) = replace_all(b"abc", b"", b"z");
+        assert_eq!(out, b"abc".to_vec());
+        assert_eq!(count, 0);
+    }
+
+    #[test]
+    fn test_decode_uint_all_sizes_and_endianness() {
+        assert_eq!(decode_uint(&[0xAB], 1, false), 0xAB);
+        assert_eq!(decode_uint(&[0x12, 0x34], 2, false), 0x3412);
+        assert_eq!(decode_uint(&[0x12, 0x34], 2, true), 0x1234);
+        assert_eq!(decode_uint(&[0x12, 0x34, 0x56], 3, false), 0x0056_3412);
+        assert_eq!(decode_uint(&[0x12, 0x34, 0x56], 3, true), 0x0012_3456);
+        assert_eq!(decode_uint(&[1, 2, 3, 4], 4, false), 0x0403_0201);
+        assert_eq!(decode_uint(&[1, 2, 3, 4], 4, true), 0x0102_0304);
+        let eight = [1u8, 2, 3, 4, 5, 6, 7, 8];
+        assert_eq!(decode_uint(&eight, 8, true), 0x0102_0304_0506_0708);
+        assert_eq!(decode_uint(&eight, 8, false), 0x0807_0605_0403_0201);
+        // Unsupported width (5/6/7) falls through to 0.
+        assert_eq!(decode_uint(&[1, 2, 3, 4, 5], 5, false), 0);
+    }
+
+    #[test]
+    fn test_sign_extend_all_sizes() {
+        assert_eq!(sign_extend(0xFF, 1), -1);
+        assert_eq!(sign_extend(0x7F, 1), 127);
+        assert_eq!(sign_extend(0xFFFF, 2), -1);
+        assert_eq!(sign_extend(0xFF_FFFF, 3), -1);
+        assert_eq!(sign_extend(0x80_0000, 3), -8_388_608);
+        assert_eq!(sign_extend(0xFFFF_FFFF, 4), -1);
+        // Width 8 (and unsupported widths) just reinterpret the bits.
+        assert_eq!(sign_extend(u64::MAX, 8), -1);
+    }
+
+    #[test]
+    fn test_encode_uint_target_unsigned_widths_and_overflow() {
+        assert_eq!(encode_uint_target(200, 1, false, false), Some(vec![200]));
+        assert_eq!(encode_uint_target(256, 1, false, false), None);
+        assert_eq!(encode_uint_target(-1, 1, false, false), None);
+        assert_eq!(encode_uint_target(0x1234, 2, false, true), Some(vec![0x12, 0x34]));
+        assert_eq!(encode_uint_target(0x1234, 2, false, false), Some(vec![0x34, 0x12]));
+        assert_eq!(encode_uint_target(0x1_0000, 2, false, false), None);
+        assert_eq!(
+            encode_uint_target(0x0012_3456, 3, false, true),
+            Some(vec![0x12, 0x34, 0x56])
+        );
+        assert_eq!(
+            encode_uint_target(0x0012_3456, 3, false, false),
+            Some(vec![0x56, 0x34, 0x12])
+        );
+        assert_eq!(encode_uint_target(0x0100_0000, 3, false, false), None);
+        assert_eq!(encode_uint_target(0x1_0000_0000, 4, false, false), None);
+        assert_eq!(
+            encode_uint_target(0xABCD, 4, false, true),
+            Some(vec![0x00, 0x00, 0xAB, 0xCD])
+        );
+        assert_eq!(
+            encode_uint_target(1, 8, false, true),
+            Some(vec![0, 0, 0, 0, 0, 0, 0, 1])
+        );
+        // Unsupported width -> None.
+        assert_eq!(encode_uint_target(1, 5, false, false), None);
+    }
+
+    #[test]
+    fn test_encode_uint_target_signed_widths_and_overflow() {
+        assert_eq!(encode_uint_target(-1, 1, true, false), Some(vec![0xFF]));
+        assert_eq!(encode_uint_target(200, 1, true, false), None);
+        assert_eq!(encode_uint_target(-1, 2, true, true), Some(vec![0xFF, 0xFF]));
+        assert_eq!(encode_uint_target(8_388_607, 3, true, false).unwrap().len(), 3);
+        assert_eq!(encode_uint_target(8_388_608, 3, true, false), None);
+        assert_eq!(encode_uint_target(-8_388_608, 3, true, false).unwrap().len(), 3);
+        assert_eq!(encode_uint_target(-8_388_609, 3, true, false), None);
+        assert_eq!(
+            encode_uint_target(-1, 4, true, false),
+            Some(vec![0xFF, 0xFF, 0xFF, 0xFF])
+        );
+        assert_eq!(
+            encode_uint_target(-1, 8, true, true),
+            Some(vec![0xFF; 8])
+        );
+        assert_eq!(encode_uint_target(1, 7, true, false), None);
+    }
+
+    #[test]
+    fn test_search_numeric_int_size_guards_and_encode_none() {
+        assert!(search_numeric_int(b"abcd", 1, 0, false, false, 1, 10).is_empty());
+        assert!(search_numeric_int(b"abcd", 1, 9, false, false, 1, 10).is_empty());
+        assert!(search_numeric_int(b"a", 1, 4, false, false, 1, 10).is_empty());
+        // value 256 does not fit in 1 unsigned byte -> encode returns None -> empty.
+        assert!(search_numeric_int(b"abcd", 256, 1, false, false, 1, 10).is_empty());
+    }
+
+    #[test]
+    fn test_search_numeric_int_size3_and_size8_small_path() {
+        let mut data = vec![0x00u8; 32];
+        // 24-bit value 0x0056_3412 little-endian == bytes 12 34 56
+        data[4..7].copy_from_slice(&[0x12, 0x34, 0x56]);
+        let r3 = search_numeric_int(&data, 0x0056_3412, 3, false, false, 1, 10);
+        assert_eq!(r3.iter().map(|r| r.offset).collect::<Vec<_>>(), vec![4]);
+        let v: u64 = 0x0102_0304_0506_0708;
+        data[8..16].copy_from_slice(&v.to_le_bytes());
+        let r8 = search_numeric_int(&data, v.cast_signed(), 8, false, false, 1, 10);
+        assert_eq!(r8.iter().map(|r| r.offset).collect::<Vec<_>>(), vec![8]);
+    }
+
+    #[test]
+    fn test_search_numeric_float_size_guard_and_non_finite_skip() {
+        // size 2 is invalid for float search.
+        assert!(search_numeric_float(b"abcdef", 1.0, 2, false, 0.0, 1, 10).is_empty());
+        // An f32 +inf window must be skipped (non-finite guard); a real 5.0 must match.
+        let mut data = vec![0x11u8; 64];
+        data[8..12].copy_from_slice(&[0x00, 0x00, 0x80, 0x7F]); // f32 +inf LE
+        data[20..24].copy_from_slice(&5.0f32.to_le_bytes());
+        let results = search_numeric_float(&data, 5.0, 4, false, 0.001, 1, 10);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![20]);
+    }
+
+    #[test]
+    fn test_search_numeric_range_signed_negative_small_path() {
+        let mut data = vec![0x00u8; 32];
+        data[4..8].copy_from_slice(&(-50i32).to_le_bytes());
+        data[8..12].copy_from_slice(&25i32.to_le_bytes());
+        // range [-100, -1] signed matches only the -50 window (zero-fill windows decode to 0).
+        let results = search_numeric_range(&data, -100, -1, 4, true, false, 4, 10);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![4]);
     }
 }

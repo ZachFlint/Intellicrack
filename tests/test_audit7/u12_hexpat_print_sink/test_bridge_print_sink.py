@@ -146,7 +146,7 @@ def loaded_bridge() -> HexEditorBridge:
     bridge.document = _StubDocument(b"\x00" * 256)
     try:
         _run(bridge.execute_pattern("u8 x @ 0x00;"))
-    except (ImportError, ModuleNotFoundError) as exc:
+    except ImportError as exc:
         pytest.skip(f"hexpat interpreter package unavailable: {exc}")
     return bridge
 

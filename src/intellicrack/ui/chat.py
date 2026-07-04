@@ -163,13 +163,16 @@ class MessageBubble(QFrame):
         layout.addWidget(header)
 
         if call.arguments:
-            args_text = ", ".join(f"{k}={v!r}" for k, v in call.arguments.items())
+            full_args_text = ", ".join(f"{k}={v!r}" for k, v in call.arguments.items())
+            args_text = full_args_text
             if len(args_text) > _MAX_ARGS_DISPLAY_LEN:
                 args_text = f"{args_text[: _MAX_ARGS_DISPLAY_LEN - 3]}..."
             args_label = QLabel(args_text)
             args_label.setFont(FontManager.get_instance().get_code_font(8))
             args_label.setObjectName("tool_call_args")
             args_label.setWordWrap(True)
+            if args_text != full_args_text:
+                args_label.setToolTip(full_args_text)
             layout.addWidget(args_label)
 
         return frame
@@ -204,13 +207,16 @@ class MessageBubble(QFrame):
             error_label.setWordWrap(True)
             layout.addWidget(error_label)
         elif result.result is not None:
-            result_text = str(result.result)
+            full_result_text = str(result.result)
+            result_text = full_result_text
             if len(result_text) > _MAX_RESULT_DISPLAY_LEN:
                 result_text = f"{result_text[: _MAX_RESULT_DISPLAY_LEN - 3]}..."
             result_label = QLabel(result_text)
             result_label.setFont(FontManager.get_instance().get_code_font(8))
             result_label.setObjectName("result_text")
             result_label.setWordWrap(True)
+            if result_text != full_result_text:
+                result_label.setToolTip(full_result_text)
             layout.addWidget(result_label)
 
         return frame

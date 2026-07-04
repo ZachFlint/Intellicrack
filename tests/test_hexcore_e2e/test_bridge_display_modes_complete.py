@@ -58,7 +58,7 @@ class TestDisplayModesExtended:
             bridge: An initialized HexEditorBridge fixture.
         """
         result: bool = _run(bridge.set_display_mode("hex16_be"))
-        assert result is True
+        assert result
         mode: str = _run(bridge.get_display_mode())
         assert mode == "hex16_be"
 

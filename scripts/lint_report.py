@@ -1238,7 +1238,7 @@ def process_llvm_cov_text(text_output: str) -> tuple[dict[str, list[dict[str, An
         Tuple of findings grouped by file path and total count.
     """
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    coverage_threshold = 80.0
+    coverage_threshold = 95.0
     row_pattern = re.compile(
         r"^\s*(.+\.rs)\s+"
         r"(\d+)\s+(\d+)\s+([\d.]+)%\s+"

@@ -247,6 +247,7 @@ class SystemTab(QWidget):
         wh = self._win_table.horizontalHeader()
         if wh is not None:
             wh.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            wh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         tab_layout.addWidget(self._win_table)
         return tab
 
@@ -434,13 +435,17 @@ class SystemTab(QWidget):
 
         summary_btn = QPushButton("Summary Policy")
         summary_btn.setObjectName("tool_button")
-        summary_btn.setToolTip("Query a flat DEP/ASLR/CFG/SEHOP mitigation summary for the attached process (or this process when detached)")
+        summary_btn.setToolTip(
+            "Query a flat DEP/ASLR/CFG/SEHOP mitigation summary for the attached process (or this process when detached)",
+        )
         summary_btn.clicked.connect(self._on_mitigation_summary)
         toolbar.addWidget(summary_btn)
 
         extension_btn = QPushButton("Extension Policy")
         extension_btn.setObjectName("tool_button")
-        extension_btn.setToolTip("Query the extension-point disable mitigation policy for the attached process (or this process when detached)")
+        extension_btn.setToolTip(
+            "Query the extension-point disable mitigation policy for the attached process (or this process when detached)",
+        )
         extension_btn.clicked.connect(self._on_extension_policy)
         toolbar.addWidget(extension_btn)
 
@@ -1577,7 +1582,10 @@ class SystemTab(QWidget):
                 hwnd_val = hwnd_raw if isinstance(hwnd_raw, int) else 0
                 self._win_table.setItem(row, 0, QTableWidgetItem(f"0x{hwnd_val:X}"))
                 self._win_table.setItem(row, 1, QTableWidgetItem(str(typed_win.get("title", ""))))
-                self._win_table.setItem(row, 2, QTableWidgetItem(str(typed_win.get("class_name", ""))))
+                class_name = str(typed_win.get("class_name", ""))
+                class_name_item = QTableWidgetItem(class_name)
+                class_name_item.setToolTip(class_name)
+                self._win_table.setItem(row, 2, class_name_item)
                 self._win_table.setItem(row, 3, QTableWidgetItem("Yes" if typed_win.get("visible") else "No"))
 
         def _on_error(exc: object) -> None:
@@ -1718,10 +1726,15 @@ class SystemTab(QWidget):
     def _selected_pipe(self) -> tuple[str, int] | None:
         """Resolve the pipe name and handle currently selected in the pipe table.
 
+        The handle is read directly from the selected row's own handle
+        cell rather than looked up by name, so that reconnecting to a
+        pipe with the same name (which produces a second row with a
+        different handle) can never resolve the wrong row's handle.
+
         Returns:
             tuple[str, int] | None: The ``(pipe_name, handle)`` pair for the
-            selected row, or ``None`` if no row is selected or the handle is
-            unknown.
+            selected row, or ``None`` if no row is selected or the row's
+            handle cell cannot be parsed.
         """
         sel = self._pipe_table.selectionModel()
         if sel is None:
@@ -1731,13 +1744,15 @@ class SystemTab(QWidget):
             return None
         row = indexes[0].row()
         name_item = self._pipe_table.item(row, 0)
-        if name_item is None:
+        handle_item = self._pipe_table.item(row, 1)
+        if name_item is None or handle_item is None:
             return None
         pipe_name = name_item.text()
-        handle = self._pipe_handles.get(pipe_name)
-        if handle is None:
+        try:
+            handle = int(handle_item.text(), 16)
+        except ValueError:
             return None
-        return pipe_name, handle
+        return (pipe_name, handle)
 
     def _on_pipe_close(self) -> None:
         """Close the selected pipe."""
@@ -1757,8 +1772,17 @@ class SystemTab(QWidget):
             self._pipe_handles.pop(pipe_name, None)
             target_row = -1
             for r in range(self._pipe_table.rowCount()):
-                item = self._pipe_table.item(r, 0)
-                if item is not None and item.text() == pipe_name:
+                row_name_item = self._pipe_table.item(r, 0)
+                row_handle_item = self._pipe_table.item(r, 1)
+                if row_name_item is None or row_handle_item is None:
+                    continue
+                if row_name_item.text() != pipe_name:
+                    continue
+                try:
+                    row_handle = int(row_handle_item.text(), 16)
+                except ValueError:
+                    continue
+                if row_handle == handle:
                     target_row = r
                     break
             if target_row >= 0:

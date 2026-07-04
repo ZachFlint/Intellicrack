@@ -276,7 +276,7 @@ class TestDisconnect:
 
         assert getattr(provider, "_cancel_requested") is False
         assert provider.client is None
-        assert provider.connected is False
+        assert not provider.connected
 
 
 # ---------------------------------------------------------------------------
@@ -381,7 +381,7 @@ class TestConsumeStreamChunks:
             )
         ]
 
-        assert chunks == []
+        assert not chunks
 
 
 # ---------------------------------------------------------------------------
@@ -669,7 +669,7 @@ class TestReleaseDeviceCaches:
         setattr(provider, "_device_type", "cpu")
         getattr(provider, "_release_device_caches")()
 
-        assert len(gc_calls) >= 1
+        assert gc_calls
 
     @staticmethod
     def test_xpu_cache_cleared_and_gc_called_on_xpu_device(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -696,7 +696,7 @@ class TestReleaseDeviceCaches:
         getattr(provider, "_release_device_caches")()
 
         assert xpu_calls == [True]
-        assert len(gc_calls) >= 1
+        assert gc_calls
 
 
 # ---------------------------------------------------------------------------
@@ -757,9 +757,7 @@ class TestListModels:
 
         async def _fake_fetch_with_context(model_id: str) -> dict[str, Any]:
             await asyncio.sleep(0)
-            if "Phi" in model_id:
-                return {"max_position_embeddings": 8192}
-            return {}
+            return {"max_position_embeddings": 8192} if "Phi" in model_id else {}
 
         monkeypatch.setattr(lt_mod, "_fetch_model_config", _fake_fetch_with_context)
 
@@ -958,7 +956,7 @@ class TestLoadForDevice:
         result = await getattr(provider, "_load_for_device")("xpu", config)
 
         assert xpu_called == [True]
-        assert cpu_called == []
+        assert not cpu_called
         assert result is sentinel
 
     @pytest.mark.asyncio
@@ -989,7 +987,7 @@ class TestLoadForDevice:
         result = await getattr(provider, "_load_for_device")("cpu", config)
 
         assert cpu_called == [True]
-        assert xpu_called == []
+        assert not xpu_called
         assert result is sentinel
 
     @pytest.mark.asyncio
@@ -1029,8 +1027,8 @@ class TestLoadForDevice:
         with pytest.raises(RuntimeError, match="CUDA"):
             await getattr(provider, "_load_for_device")("cuda", config)
 
-        assert cpu_called == []
-        assert xpu_called == []
+        assert not cpu_called
+        assert not xpu_called
 
 
 # ---------------------------------------------------------------------------

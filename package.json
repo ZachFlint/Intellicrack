@@ -6,6 +6,6 @@
   "description": "Intellicrack binary analysis platform",
   "dependencies": {
     "jsonlint": "^1.6.3",
-    "markdownlint-cli2": "^0.22.1"
+    "markdownlint-cli2": "^0.23.0"
   }
 }

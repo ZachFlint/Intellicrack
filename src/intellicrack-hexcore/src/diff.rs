@@ -643,4 +643,116 @@ mod tests {
             mismatch_region.length,
         );
     }
+
+    #[test]
+    fn test_op_to_region_replace_uses_max_length_and_modified() {
+        // old_len < new_len
+        let (region, count) = op_to_region(
+            &similar::DiffOp::Replace {
+                old_index: 2,
+                old_len: 3,
+                new_index: 4,
+                new_len: 5,
+            },
+            100,
+            200,
+        );
+        assert_eq!(region.diff_type, DiffType::Modified);
+        assert_eq!(region.offset_a, 102);
+        assert_eq!(region.offset_b, 204);
+        assert_eq!(region.length, 5);
+        assert_eq!(count, 5);
+
+        // old_len > new_len -> length is still the max
+        let (region2, count2) = op_to_region(
+            &similar::DiffOp::Replace {
+                old_index: 0,
+                old_len: 9,
+                new_index: 0,
+                new_len: 2,
+            },
+            0,
+            0,
+        );
+        assert_eq!(region2.length, 9);
+        assert_eq!(count2, 9);
+    }
+
+    #[test]
+    fn test_diff_slice_with_base_fast_paths() {
+        // both empty -> no region, no diff
+        let mut regions = Vec::new();
+        let mut total = 0;
+        diff_slice_with_base(b"", b"", 0, 0, &mut regions, &mut total);
+        assert!(regions.is_empty());
+        assert_eq!(total, 0);
+
+        // data_a empty -> InsertedB at the provided base offsets
+        let mut regions = Vec::new();
+        let mut total = 0;
+        diff_slice_with_base(b"", b"XY", 5, 7, &mut regions, &mut total);
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].diff_type, DiffType::InsertedB);
+        assert_eq!(regions[0].offset_a, 5);
+        assert_eq!(regions[0].offset_b, 7);
+        assert_eq!(regions[0].length, 2);
+        assert_eq!(total, 2);
+
+        // data_b empty -> InsertedA
+        let mut regions = Vec::new();
+        let mut total = 0;
+        diff_slice_with_base(b"XYZ", b"", 5, 7, &mut regions, &mut total);
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].diff_type, DiffType::InsertedA);
+        assert_eq!(regions[0].offset_a, 5);
+        assert_eq!(regions[0].length, 3);
+        assert_eq!(total, 3);
+
+        // equal segment -> single Match, no diffs
+        let mut regions = Vec::new();
+        let mut total = 0;
+        diff_slice_with_base(b"AB", b"AB", 3, 4, &mut regions, &mut total);
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].diff_type, DiffType::Match);
+        assert_eq!(regions[0].offset_a, 3);
+        assert_eq!(regions[0].offset_b, 4);
+        assert_eq!(regions[0].length, 2);
+        assert_eq!(total, 0);
+    }
+
+    #[test]
+    fn test_find_sync_points_resync_look_ahead_in_b() {
+        // hash_a matches an anchor a few positions ahead in b -> j advances.
+        let anchors_a = [(100u32, 10usize)];
+        let anchors_b = [(50u32, 5usize), (100u32, 12usize)];
+        let sync = find_sync_points(&anchors_a, &anchors_b);
+        assert_eq!(sync, vec![(10, 12)]);
+    }
+
+    #[test]
+    fn test_find_sync_points_resync_look_ahead_in_a() {
+        // hash_b matches an anchor a few positions ahead in a -> i advances.
+        let anchors_a = [(50u32, 5usize), (100u32, 10usize)];
+        let anchors_b = [(100u32, 12usize)];
+        let sync = find_sync_points(&anchors_a, &anchors_b);
+        assert_eq!(sync, vec![(10, 12)]);
+    }
+
+    #[test]
+    fn test_find_sync_points_no_resync_advances_both() {
+        // Neither look-ahead finds a match -> !advanced fallback advances i and j.
+        let anchors_a = [(50u32, 5usize), (60u32, 6usize)];
+        let anchors_b = [(70u32, 7usize), (80u32, 8usize)];
+        let sync = find_sync_points(&anchors_a, &anchors_b);
+        assert!(sync.is_empty());
+    }
+
+    #[test]
+    fn test_find_sync_points_rejects_non_monotonic_positions() {
+        // Second matching anchor has pos_a < last_a -> monotonicity guard rejects it.
+        let anchors_a = [(100u32, 10usize), (100u32, 5usize)];
+        let anchors_b = [(100u32, 20usize), (100u32, 3usize)];
+        let sync = find_sync_points(&anchors_a, &anchors_b);
+        assert_eq!(sync, vec![(10, 20)]);
+    }
 }

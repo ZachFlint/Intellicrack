@@ -132,8 +132,7 @@ def process_orphan_killer() -> Generator[None]:
     try:
         yield
     finally:
-        leaked = kill_new_descendants(baseline)
-        if leaked:
+        if leaked := kill_new_descendants(baseline):
             _logger.warning(
                 "tests_process_leak_swept",
                 leaked_pids=leaked,
@@ -170,8 +169,7 @@ def process_per_test_orphan_killer(request: pytest.FixtureRequest) -> Generator[
     try:
         yield
     finally:
-        leaked = kill_new_descendants(baseline)
-        if leaked:
+        if leaked := kill_new_descendants(baseline):
             _logger.warning(
                 "tests_process_leak_swept_per_test",
                 leaked_pids=leaked,

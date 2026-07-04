@@ -66,6 +66,7 @@ class BridgeAnalysisPanel(QWidget):
         self._mono_font = FontManager.get_instance().get_code_font(9)
         self._addr_color = ThemeManager.get_instance().get_analysis_colors()["accent"]
         self._setup_ui()
+        ThemeManager.get_instance().theme_changed.connect(self._on_theme_changed)
 
     def _setup_ui(self) -> None:
         """Build the panel layout with header and tabbed tables."""
@@ -90,17 +91,21 @@ class BridgeAnalysisPanel(QWidget):
 
         self._binary_label = QLabel("No binary loaded")
         self._binary_label.setProperty("heading", "true")
+        self._binary_label.setWordWrap(True)
         header_layout.addWidget(self._binary_label, 0, 0, 1, 2)
 
         self._format_label = QLabel("")
         self._format_label.setProperty("muted", "true")
+        self._format_label.setWordWrap(True)
         header_layout.addWidget(self._format_label, 1, 0)
 
         self._arch_label = QLabel("")
         self._arch_label.setProperty("muted", "true")
+        self._arch_label.setWordWrap(True)
         header_layout.addWidget(self._arch_label, 1, 1)
 
         self._bridges_label = QLabel("")
+        self._bridges_label.setWordWrap(True)
         header_layout.addWidget(self._bridges_label, 2, 0, 1, 2)
 
         layout.addWidget(header)
@@ -108,11 +113,17 @@ class BridgeAnalysisPanel(QWidget):
         self.tab_widget = QTabWidget()
         self.tab_widget.setObjectName("analysis_tabs")
 
-        self._strings_table = self._create_table(["Address", "Value", "Encoding", "Section"])
-        self._imports_table = self._create_table(["DLL", "Function", "Ordinal", "Address"])
-        self._exports_table = self._create_table(["Name", "Ordinal", "Address"])
-        self._functions_table = self._create_table(["Address", "Name", "Size", "Convention", "Return Type"])
-        self._sections_table = self._create_table(["Name", "VA", "VSize", "RawSize", "Characteristics", "Entropy"])
+        self._strings_table = self._create_table(["Address", "Value", "Encoding", "Section"], [1])
+        self._imports_table = self._create_table(["DLL", "Function", "Ordinal", "Address"], [0, 1])
+        self._exports_table = self._create_table(["Name", "Ordinal", "Address"], [0])
+        self._functions_table = self._create_table(
+            ["Address", "Name", "Size", "Convention", "Return Type"],
+            [1],
+        )
+        self._sections_table = self._create_table(
+            ["Name", "VA", "VSize", "RawSize", "Characteristics", "Entropy"],
+            [0],
+        )
         self._notes_edit = QTextEdit()
         self._notes_edit.setReadOnly(True)
         self._notes_edit.setPlaceholderText("No notes available")
@@ -134,11 +145,39 @@ class BridgeAnalysisPanel(QWidget):
         self._functions_table.cellDoubleClicked.connect(self._on_functions_cell_clicked)
         self._sections_table.cellDoubleClicked.connect(self._on_sections_cell_clicked)
 
-    def _create_table(self, headers: list[str]) -> QTableWidget:
+    def _on_theme_changed(self, resolved_theme: str) -> None:
+        """Re-resolve and reapply the address-column accent color.
+
+        Connected to :attr:`ThemeManager.theme_changed` so already-rendered
+        address cells in every table track live theme switches instead of
+        keeping the color captured at construction time.
+
+        Args:
+            resolved_theme: The concrete theme now active ("dark" or "light").
+        """
+        _ = resolved_theme
+        self._addr_color = ThemeManager.get_instance().get_analysis_colors()["accent"]
+        address_columns = (
+            (self._strings_table, 0),
+            (self._imports_table, 3),
+            (self._exports_table, 2),
+            (self._functions_table, 0),
+            (self._sections_table, 1),
+        )
+        for table, col in address_columns:
+            for row in range(table.rowCount()):
+                item = table.item(row, col)
+                if item is not None:
+                    item.setForeground(self._addr_color)
+
+    def _create_table(self, headers: list[str], stretch_columns: list[int]) -> QTableWidget:
         """Create a styled table widget with given column headers.
 
         Args:
             headers: Column header labels.
+            stretch_columns: Indices of columns holding variable-length data
+                that should stretch to fill available space. All other
+                columns are sized to fit their contents.
 
         Returns:
             QTableWidget: Configured QTableWidget.
@@ -156,10 +195,26 @@ class BridgeAnalysisPanel(QWidget):
 
         h_header = table.horizontalHeader()
         if h_header is not None:
-            h_header.setStretchLastSection(True)
-            h_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+            h_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+            for col in stretch_columns:
+                h_header.setSectionResizeMode(col, QHeaderView.ResizeMode.Stretch)
 
         return table
+
+    @staticmethod
+    def _make_item(text: str) -> QTableWidgetItem:
+        """Create a table item whose tooltip shows its full, unclipped text.
+
+        Args:
+            text: Cell text to display.
+
+        Returns:
+            QTableWidgetItem: Item with its tooltip set to the same text, so
+            values truncated by column width remain readable on hover.
+        """
+        item = QTableWidgetItem(text)
+        item.setToolTip(text)
+        return item
 
     def _on_strings_cell_clicked(self, row: int, _col: int) -> None:
         """Handle double-click on a strings table cell.
@@ -238,9 +293,16 @@ class BridgeAnalysisPanel(QWidget):
         self._current_analysis = analysis
 
         self._binary_label.setText(analysis.binary_name)
-        self._format_label.setText(f"Format: {analysis.format_info}")
-        self._arch_label.setText(f"Arch: {analysis.architecture}")
-        self._bridges_label.setText(f"Sources: {', '.join(analysis.source_bridges)}")
+        self._binary_label.setToolTip(analysis.binary_name)
+        format_text = f"Format: {analysis.format_info}"
+        self._format_label.setText(format_text)
+        self._format_label.setToolTip(format_text)
+        arch_text = f"Arch: {analysis.architecture}"
+        self._arch_label.setText(arch_text)
+        self._arch_label.setToolTip(arch_text)
+        bridges_text = f"Sources: {', '.join(analysis.source_bridges)}"
+        self._bridges_label.setText(bridges_text)
+        self._bridges_label.setToolTip(bridges_text)
 
         self._populate_strings(analysis)
         self._populate_imports(analysis)
@@ -269,9 +331,9 @@ class BridgeAnalysisPanel(QWidget):
         self._strings_table.setRowCount(len(analysis.strings))
         for i, s in enumerate(analysis.strings):
             self._set_addr_item(self._strings_table, i, 0, s.address)
-            self._strings_table.setItem(i, 1, QTableWidgetItem(s.value))
-            self._strings_table.setItem(i, 2, QTableWidgetItem(s.encoding))
-            self._strings_table.setItem(i, 3, QTableWidgetItem(s.section))
+            self._strings_table.setItem(i, 1, self._make_item(s.value))
+            self._strings_table.setItem(i, 2, self._make_item(s.encoding))
+            self._strings_table.setItem(i, 3, self._make_item(s.section))
 
     def _populate_imports(self, analysis: BridgeAnalysisSummary) -> None:
         """Fill the imports table.
@@ -281,10 +343,10 @@ class BridgeAnalysisPanel(QWidget):
         """
         self._imports_table.setRowCount(len(analysis.imports))
         for i, imp in enumerate(analysis.imports):
-            self._imports_table.setItem(i, 0, QTableWidgetItem(imp.dll))
-            self._imports_table.setItem(i, 1, QTableWidgetItem(imp.function))
+            self._imports_table.setItem(i, 0, self._make_item(imp.dll))
+            self._imports_table.setItem(i, 1, self._make_item(imp.function))
             ordinal_text = str(imp.ordinal) if imp.ordinal is not None else ""
-            self._imports_table.setItem(i, 2, QTableWidgetItem(ordinal_text))
+            self._imports_table.setItem(i, 2, self._make_item(ordinal_text))
             self._set_addr_item(self._imports_table, i, 3, imp.address)
 
     def _populate_exports(self, analysis: BridgeAnalysisSummary) -> None:
@@ -295,8 +357,8 @@ class BridgeAnalysisPanel(QWidget):
         """
         self._exports_table.setRowCount(len(analysis.exports))
         for i, exp in enumerate(analysis.exports):
-            self._exports_table.setItem(i, 0, QTableWidgetItem(exp.name))
-            self._exports_table.setItem(i, 1, QTableWidgetItem(str(exp.ordinal)))
+            self._exports_table.setItem(i, 0, self._make_item(exp.name))
+            self._exports_table.setItem(i, 1, self._make_item(str(exp.ordinal)))
             self._set_addr_item(self._exports_table, i, 2, exp.address)
 
     def _populate_functions(self, analysis: BridgeAnalysisSummary) -> None:
@@ -308,10 +370,10 @@ class BridgeAnalysisPanel(QWidget):
         self._functions_table.setRowCount(len(analysis.functions))
         for i, fn in enumerate(analysis.functions):
             self._set_addr_item(self._functions_table, i, 0, fn.address)
-            self._functions_table.setItem(i, 1, QTableWidgetItem(fn.name))
-            self._functions_table.setItem(i, 2, QTableWidgetItem(str(fn.size)))
-            self._functions_table.setItem(i, 3, QTableWidgetItem(fn.calling_convention))
-            self._functions_table.setItem(i, 4, QTableWidgetItem(fn.return_type))
+            self._functions_table.setItem(i, 1, self._make_item(fn.name))
+            self._functions_table.setItem(i, 2, self._make_item(str(fn.size)))
+            self._functions_table.setItem(i, 3, self._make_item(fn.calling_convention))
+            self._functions_table.setItem(i, 4, self._make_item(fn.return_type))
 
     def _populate_sections(self, analysis: BridgeAnalysisSummary) -> None:
         """Fill the sections table.
@@ -321,12 +383,12 @@ class BridgeAnalysisPanel(QWidget):
         """
         self._sections_table.setRowCount(len(analysis.sections))
         for i, sec in enumerate(analysis.sections):
-            self._sections_table.setItem(i, 0, QTableWidgetItem(sec.name))
+            self._sections_table.setItem(i, 0, self._make_item(sec.name))
             self._set_addr_item(self._sections_table, i, 1, sec.virtual_address)
-            self._sections_table.setItem(i, 2, QTableWidgetItem(f"0x{sec.virtual_size:X}"))
-            self._sections_table.setItem(i, 3, QTableWidgetItem(f"0x{sec.raw_size:X}"))
-            self._sections_table.setItem(i, 4, QTableWidgetItem(f"0x{sec.characteristics:08X}"))
-            self._sections_table.setItem(i, 5, QTableWidgetItem(f"{sec.entropy:.2f}"))
+            self._sections_table.setItem(i, 2, self._make_item(f"0x{sec.virtual_size:X}"))
+            self._sections_table.setItem(i, 3, self._make_item(f"0x{sec.raw_size:X}"))
+            self._sections_table.setItem(i, 4, self._make_item(f"0x{sec.characteristics:08X}"))
+            self._sections_table.setItem(i, 5, self._make_item(f"{sec.entropy:.2f}"))
 
     def _set_addr_item(self, table: QTableWidget, row: int, col: int, address: int) -> None:
         """Set a table cell with a formatted hex address.
@@ -337,7 +399,9 @@ class BridgeAnalysisPanel(QWidget):
             col: Column index.
             address: Address value to format.
         """
-        item = QTableWidgetItem(f"0x{address:08X}")
+        addr_text = f"0x{address:08X}"
+        item = QTableWidgetItem(addr_text)
+        item.setToolTip(addr_text)
         item.setForeground(self._addr_color)
         item.setFont(self._mono_font)
         table.setItem(row, col, item)
@@ -359,9 +423,13 @@ class BridgeAnalysisPanel(QWidget):
         _logger.info("analysis_panel_cleared")
         self._current_analysis = None
         self._binary_label.setText("No binary loaded")
+        self._binary_label.setToolTip("")
         self._format_label.setText("")
+        self._format_label.setToolTip("")
         self._arch_label.setText("")
+        self._arch_label.setToolTip("")
         self._bridges_label.setText("")
+        self._bridges_label.setToolTip("")
         self._strings_table.setRowCount(0)
         self._imports_table.setRowCount(0)
         self._exports_table.setRowCount(0)

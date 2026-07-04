@@ -426,10 +426,9 @@ def _poll_log_for_pid_mutex(
                 raw_lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
             except OSError:
                 raw_lines = []
-            matches = [
+            if matches := [
                 ln for ln in raw_lines if len(ln.split("|")) >= 6 and ln.split("|")[3] == str(helper_pid) and mutex_name in ln.split("|")[2]
-            ]
-            if matches:
+            ]:
                 return matches
         time.sleep(0.2)
     return []

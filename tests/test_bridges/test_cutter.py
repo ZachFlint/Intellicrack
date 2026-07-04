@@ -147,10 +147,10 @@ class _CommandRecorder:
             an empty string when no configured prefix matches.
         """
         self.commands.append(command)
-        for prefix, response in self.responses.items():
-            if command.startswith(prefix):
-                return response
-        return ""
+        return next(
+            (response for prefix, response in self.responses.items() if command.startswith(prefix)),
+            "",
+        )
 
     def quit(self) -> None:
         """No-op ``quit`` for test cleanup."""
@@ -916,7 +916,7 @@ class TestWriteBytes:
         """
         await loaded_bridge.write_bytes(0xDEAD, "CC")
         wx_cmds = [c for c in recorder.commands if c.startswith("wx")]
-        assert f"@ {0xDEAD}" in wx_cmds[0]
+        assert f"@ 57005" in wx_cmds[0]
 
     @pytest.mark.asyncio
     async def test_no_binary_raises(self, bridge: CutterBridge) -> None:
@@ -955,7 +955,7 @@ class TestAssembleAt:
         wx_cmds = [c for c in recorder.commands if c.startswith("wx")]
         assert len(wx_cmds) == 1
         assert "90" in wx_cmds[0]
-        assert f"@ {0x401000}" in wx_cmds[0]
+        assert f"@ 4198400" in wx_cmds[0]
 
     @pytest.mark.asyncio
     async def test_uses_pa_not_rasm2(
@@ -976,7 +976,7 @@ class TestAssembleAt:
         pa_cmds = [c for c in recorder.commands if c.startswith("pa")]
         rasm2_cmds = [c for c in recorder.commands if c.startswith("rasm2")]
         assert len(pa_cmds) == 1
-        assert len(rasm2_cmds) == 0
+        assert not rasm2_cmds
         assert "nop" in pa_cmds[0]
 
     @pytest.mark.asyncio
@@ -1488,7 +1488,7 @@ class TestReadBytes:
         b.r2 = _as_r2pipe(rec)
         result = await b.read_bytes(0x1000, 3)
         assert result == b"\x48\x8b\x05"
-        assert f"p8 3 @ {0x1000}" in rec.commands
+        assert f"p8 3 @ 4096" in rec.commands
 
     @pytest.mark.asyncio
     async def test_sends_p8_command(self) -> None:
@@ -1502,7 +1502,7 @@ class TestReadBytes:
         p8_cmds = [c for c in rec.commands if c.startswith("p8")]
         assert len(p8_cmds) == 1
         assert "1" in p8_cmds[0]
-        assert f"@ {0x1000}" in p8_cmds[0]
+        assert f"@ 4096" in p8_cmds[0]
 
 
 class TestGetFlags:
@@ -1537,7 +1537,7 @@ class TestAddFlag:
         f_cmds = [c for c in rec.commands if c.startswith("f ")]
         assert len(f_cmds) == 1
         assert "test_flag" in f_cmds[0]
-        assert f"@ {0x1000}" in f_cmds[0]
+        assert f"@ 4096" in f_cmds[0]
 
 
 class TestGetComments:
@@ -1578,7 +1578,7 @@ class TestHexdump:
         b.r2 = _as_r2pipe(rec)
         result = await b.hexdump(0x1000, 128)
         assert result == "- offset -   0 1  2 3\n0x00001000  9090 9090"
-        assert f"px 128 @ {0x1000}" in rec.commands
+        assert f"px 128 @ 4096" in rec.commands
 
 
 class TestGetBasicBlocks:

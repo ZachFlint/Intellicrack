@@ -630,4 +630,111 @@ mod tests {
         let results = search_text_encoded(data, "", "utf-8", true, 10);
         assert!(results.is_empty());
     }
+
+    #[test]
+    fn test_encode_ebcdic_unmappable_char() {
+        let err = encode_text("日", "ebcdic").unwrap_err();
+        assert!(
+            matches!(&err, EncodingError::EncodeFailed(m) if m.contains("EBCDIC")),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_encode_generic_unmappable_char() {
+        // A CJK char cannot be represented in windows-1252.
+        let err = encode_text("日", "windows-1252").unwrap_err();
+        assert!(
+            matches!(&err, EncodingError::EncodeFailed(m) if m.contains("windows-1252")),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_encode_utf16be_arm() {
+        let encoded = encode_text("Hi", "utf-16be").unwrap();
+        assert_eq!(encoded, vec![0x00, 0x48, 0x00, 0x69]);
+    }
+
+    #[test]
+    fn test_decode_shift_jis_had_errors() {
+        // A lone Shift_JIS lead byte cannot be decoded -> had_errors is true.
+        let (_text, had_errors) = decode_text(&[0x81], "shift_jis").unwrap();
+        assert!(had_errors);
+    }
+
+    #[test]
+    fn test_search_text_encoded_guards() {
+        // max_results == 0
+        assert!(search_text_encoded(b"hello", "he", "utf-8", true, 0).is_empty());
+        // unsupported encoding -> encode_text fails -> empty
+        assert!(search_text_encoded(b"hello", "he", "no-such-enc", true, 10).is_empty());
+    }
+
+    #[test]
+    fn test_search_case_insensitive_data_shorter_than_window() {
+        // window_len (6) > data.len() (2) -> empty
+        assert!(search_text_encoded(b"ab", "abcdef", "utf-8", false, 10).is_empty());
+    }
+
+    #[test]
+    fn test_find_pattern_oversize_pattern_via_search() {
+        // case-sensitive path: pattern longer than data -> no results
+        assert!(search_text_encoded(b"ab", "abcdef", "utf-8", true, 10).is_empty());
+    }
+
+    #[test]
+    fn test_window_matches_case_insensitive_reject_arms() {
+        // ASCII high bit -> reject
+        assert!(!window_matches_case_insensitive(&[0x80], "x", "ascii"));
+        // EBCDIC decode-and-compare: 0xC1 -> 'A' lowercased 'a' matches
+        assert!(window_matches_case_insensitive(&[0xC1], "a", "ebcdic"));
+        assert!(!window_matches_case_insensitive(&[0xC2], "a", "ebcdic"));
+        // resolve_encoding error -> reject
+        assert!(!window_matches_case_insensitive(&[0x41], "a", "no-such-enc"));
+        // decode had_errors (lone Shift_JIS lead byte) -> reject
+        assert!(!window_matches_case_insensitive(&[0x81], "x", "shift_jis"));
+    }
+
+    #[test]
+    fn test_decode_text_resolves_every_encoding_alias() {
+        let names = [
+            "utf-16le",
+            "utf-16be",
+            "iso-8859-1",
+            "windows-1252",
+            "iso-8859-2",
+            "iso-8859-3",
+            "iso-8859-4",
+            "iso-8859-5",
+            "iso-8859-6",
+            "iso-8859-7",
+            "iso-8859-8",
+            "iso-8859-10",
+            "iso-8859-13",
+            "iso-8859-14",
+            "iso-8859-15",
+            "iso-8859-16",
+            "windows-1250",
+            "windows-1251",
+            "windows-1253",
+            "windows-1254",
+            "windows-1255",
+            "windows-1256",
+            "windows-1257",
+            "windows-1258",
+            "shift_jis",
+            "euc-jp",
+            "iso-2022-jp",
+            "euc-kr",
+            "gb2312",
+            "gb18030",
+            "big5",
+            "koi8-r",
+            "koi8-u",
+        ];
+        for n in names {
+            assert!(decode_text(&[0x41], n).is_ok(), "encoding {n} should resolve");
+        }
+    }
 }

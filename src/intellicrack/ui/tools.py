@@ -43,7 +43,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.types import ToolError
+from intellicrack.core.types import BridgeAnalysisSummary, ToolError
 from intellicrack.ui.highlighter import (
     get_highlighter_for_language,
 )
@@ -354,7 +354,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.x64dbg import X64DbgBridge
     from intellicrack.core.script_gen import ScriptManager, ScriptValidator
     from intellicrack.core.tools import ToolRegistry
-    from intellicrack.core.types import BridgeAnalysisSummary, CrossReference
+    from intellicrack.core.types import CrossReference
     from intellicrack.sandbox.base import SandboxBase
     from intellicrack.sandbox.manager import SandboxManager
     from intellicrack.ui.panels.analysis_panel import BridgeAnalysisPanel
@@ -378,6 +378,7 @@ _DEFAULT_SPLIT_RIGHT: Final[int] = 200
 _CODE_SPLIT_LEFT: Final[int] = 400
 _CODE_SPLIT_RIGHT: Final[int] = 100
 _SPLITTER_PANE_COUNT: Final[int] = 2
+_BRIDGE_SHUTDOWN_TIMEOUT_S: Final[float] = 5.0
 
 
 OutputType = Literal[
@@ -512,6 +513,7 @@ class ToolTab(QFrame):
         layout.setSpacing(0)
 
         self._splitter = QSplitter(Qt.Orientation.Vertical)
+        self._splitter.setChildrenCollapsible(False)
 
         self.code_display = CodeDisplay(self._language)
         self._splitter.addWidget(self.code_display)
@@ -826,6 +828,7 @@ class _ToolOutputPanelBase(QFrame):
         layout.addWidget(header)
 
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self.main_splitter.setChildrenCollapsible(False)
 
         left_panel = QFrame()
         left_panel.setMinimumWidth(_LEFT_MIN_WIDTH)
@@ -895,6 +898,37 @@ class _ToolOutputPanelBase(QFrame):
         self.address_clicked.emit(address)
         self.populate_xrefs_for_address(address)
 
+    def _get_or_create_tool_tab(self, tab_name: OutputType, *, language: str = "text") -> ToolTab | None:
+        """Return the generic ``ToolTab`` backing ``tab_name``, creating it on demand.
+
+        Mirrors the on-demand creation historically used only for the
+        ``"log"`` tab so every ``OutputType`` that has no dedicated native
+        panel (e.g. ``"binary"``) gets a real, functioning content tab
+        instead of silently discarding updates.
+
+        Args:
+            tab_name: Output type identifier for the target tab.
+            language: Syntax-highlighting language used only when a new
+                tab is created for ``tab_name``.
+
+        Returns:
+            ToolTab | None: The existing or newly created generic tab, or
+                ``None`` when ``tab_name`` is already claimed by a native
+                panel registered in ``self.panels`` or ``self.embedded_tools``,
+                which must be updated through its own API instead.
+        """
+        key = tab_name.lower()
+        if tab := self.tabs.get(key):
+            return tab
+        if key in self.panels or key in self.embedded_tools:
+            return None
+        title = tab_name.capitalize()
+        tab = ToolTab(title, language)
+        self.tabs[key] = tab
+        self.tab_widget.addTab(tab, title)
+        _logger.debug("generic_tab_created", tab_name=tab_name)
+        return tab
+
     def set_tab_content(self, tab_name: OutputType, content: str) -> None:
         """Set content for a specific tab.
 
@@ -902,8 +936,15 @@ class _ToolOutputPanelBase(QFrame):
             tab_name: Name of the tab.
             content: Text content to display.
         """
-        if tab := self.tabs.get(tab_name.lower()):
+        if tab := self._get_or_create_tool_tab(tab_name):
             tab.set_content(content)
+            return
+        widget = self.panels.get(tab_name.lower()) or self.embedded_tools.get(tab_name.lower())
+        setter = getattr(widget, "set_content", None)
+        if callable(setter):
+            setter(content)
+        else:
+            _logger.warning("tab_content_unsupported", tab_name=tab_name)
 
     def set_tab_info(self, tab_name: OutputType, header: str, content: str) -> None:
         """Set info panel content for a specific tab.
@@ -913,8 +954,15 @@ class _ToolOutputPanelBase(QFrame):
             header: Info header text.
             content: Info content text.
         """
-        if tab := self.tabs.get(tab_name.lower()):
+        if tab := self._get_or_create_tool_tab(tab_name):
             tab.set_info(header, content)
+            return
+        widget = self.panels.get(tab_name.lower()) or self.embedded_tools.get(tab_name.lower())
+        setter = getattr(widget, "set_info", None)
+        if callable(setter):
+            setter(header, content)
+        else:
+            _logger.warning("tab_info_unsupported", tab_name=tab_name)
 
     def append_tab_content(self, tab_name: OutputType, content: str) -> None:
         """Append content to a specific tab.
@@ -923,8 +971,15 @@ class _ToolOutputPanelBase(QFrame):
             tab_name: Name of the tab.
             content: Text content to append.
         """
-        if tab := self.tabs.get(tab_name.lower()):
+        if tab := self._get_or_create_tool_tab(tab_name):
             tab.append_content(content)
+            return
+        widget = self.panels.get(tab_name.lower()) or self.embedded_tools.get(tab_name.lower())
+        appender = getattr(widget, "append_content", None)
+        if callable(appender):
+            appender(content)
+        else:
+            _logger.warning("tab_append_unsupported", tab_name=tab_name)
 
     def set_current_address(self, address: int) -> None:
         """Set the currently displayed address.
@@ -1067,10 +1122,7 @@ class _ToolOutputPanelBase(QFrame):
         Args:
             message: Message to append to the log tab.
         """
-        if "log" not in self.tabs:
-            log_tab = ToolTab("Log", "python")
-            self.tabs["log"] = log_tab
-            self.tab_widget.addTab(log_tab, "Log")
+        self._get_or_create_tool_tab("log", language="python")
         self.append_tab_content("log", message)
 
     def clear_tab(self, tab_name: OutputType) -> None:
@@ -1079,8 +1131,16 @@ class _ToolOutputPanelBase(QFrame):
         Args:
             tab_name: Name of the tab to clear.
         """
-        if tab := self.tabs.get(tab_name.lower()):
+        key = tab_name.lower()
+        if tab := self.tabs.get(key):
             tab.set_content("")
+            return
+        widget = self.panels.get(key) or self.embedded_tools.get(key)
+        clearer = getattr(widget, "clear", None)
+        if callable(clearer):
+            clearer()
+        else:
+            _logger.warning("tab_clear_unsupported", tab_name=tab_name)
 
     def clear_all(self) -> None:
         """Clear all tab contents."""
@@ -1126,23 +1186,30 @@ class _ToolOutputPanelBase(QFrame):
         if index >= 0:
             self.tab_widget.setCurrentIndex(index)
 
-    @staticmethod
-    def _cleanup_bridge(bridge: ToolBridgeBase, bridge_attr: str) -> None:
-        """Safely clean up a bridge, handling both sync and async methods.
+    def _cleanup_bridge(self, bridge: ToolBridgeBase, bridge_attr: str) -> None:
+        """Clean up a bridge without blocking the GUI thread.
+
+        Runs the bridge's teardown methods (``detach``, ``shutdown``,
+        ``stop``) on the persistent background bridge event loop via
+        :func:`run_bridge_coroutine_async` so a slow or hung external tool
+        process (Ghidra headless RPC, x64dbg pipe, Cutter/rizin socket,
+        Frida transport) cannot freeze the Qt event loop while a tab is
+        being closed or the application is shutting down.
 
         Args:
             bridge: The bridge instance to clean up.
             bridge_attr: Attribute name for logging.
         """
-        async_mod = importlib.import_module(".panels.async_bridge", "intellicrack.ui")
-        run_coro = async_mod.run_bridge_coroutine
 
-        for method_name in ("detach", "shutdown", "stop"):
-            method = getattr(bridge, method_name, None)
-            if method is not None and callable(method):
+        async def _teardown() -> None:
+            """Sequentially invoke each available teardown method on ``bridge``."""
+            for method_name in ("detach", "shutdown", "stop"):
+                method = getattr(bridge, method_name, None)
+                if method is None or not callable(method):
+                    continue
                 try:
                     if inspect.iscoroutinefunction(method):
-                        run_coro(method())
+                        await method()
                     else:
                         method()
                 except (RuntimeError, OSError, AttributeError, ToolError):
@@ -1152,6 +1219,59 @@ class _ToolOutputPanelBase(QFrame):
                         bridge=bridge_attr,
                         method=method_name,
                     )
+
+        def _on_worker_error(exc: object) -> None:
+            _logger.warning(
+                "bridge_cleanup_worker_error",
+                bridge=bridge_attr,
+                error_type=type(exc).__name__,
+                error=str(exc),
+            )
+
+        run_bridge_coroutine_async(_teardown(), on_success=None, on_error=_on_worker_error, parent=self)
+
+    @staticmethod
+    def _cleanup_bridge_blocking(bridge: ToolBridgeBase, bridge_attr: str) -> None:
+        """Synchronously tear down a bridge with a bounded timeout.
+
+        Used only from :meth:`close_embedded_tools` during application
+        shutdown, where the caller needs a deterministic guarantee that
+        ``detach``/``shutdown``/``stop`` have actually completed --
+        releasing OS resources such as
+        :class:`~intellicrack.bridges.process.ProcessBridge`'s tracked
+        Win32 handles -- before the process exits. The fire-and-forget
+        :meth:`_cleanup_bridge` dispatches teardown onto the background
+        bridge event loop and returns immediately, which is correct for
+        interactive tab closes (never block the GUI thread) but leaves
+        application exit racing the dispatched worker with no
+        synchronization point. This method instead waits for each
+        teardown call directly, bounded by
+        :data:`_BRIDGE_SHUTDOWN_TIMEOUT_S` so a hung external tool
+        process cannot stall application exit indefinitely, mirroring
+        the existing blocking
+        ``run_bridge_coroutine(self.sandbox_manager.destroy_all())`` call
+        made immediately afterwards in ``MainWindow.closeEvent``.
+
+        Args:
+            bridge: The bridge instance to clean up.
+            bridge_attr: Attribute name for logging.
+        """
+        for method_name in ("detach", "shutdown", "stop"):
+            method = getattr(bridge, method_name, None)
+            if method is None or not callable(method):
+                continue
+            try:
+                if inspect.iscoroutinefunction(method):
+                    run_bridge_coroutine(method(), timeout_s=_BRIDGE_SHUTDOWN_TIMEOUT_S)
+                else:
+                    method()
+            except (RuntimeError, OSError, AttributeError, ToolError, TimeoutError):
+                _logger.warning(
+                    "bridge_cleanup_error",
+                    exc_info=True,
+                    bridge=bridge_attr,
+                    method=method_name,
+                )
 
     def _on_tab_close_requested(self, index: int) -> None:
         """Handle a tab close request.
@@ -2214,7 +2334,9 @@ class _ToolOutputPanelTabsMixin(_ToolOutputPanelOpenersMixin):
             self.stack_panel = None
 
         for attr_name in ("x64dbg_bridge", "ghidra_bridge", "cutter_bridge", "frida_bridge", "process_bridge"):
-            if getattr(self, attr_name, None) is not None:
+            bridge = getattr(self, attr_name, None)
+            if bridge is not None:
+                self._cleanup_bridge_blocking(bridge, attr_name)
                 setattr(self, attr_name, None)
                 _logger.debug("bridge_reference_released", bridge=attr_name)
 
@@ -2324,20 +2446,38 @@ class _ToolOutputPanelAccessorsMixin(_ToolOutputPanelTabsMixin):
     def display_analysis_result(
         self,
         tab_name: OutputType,
-        content: str,
+        content: str | BridgeAnalysisSummary,
         info: str = "",
     ) -> None:
         """Display analysis results in a specific tab.
 
-        Routes analysis output from the orchestrator to the appropriate
-        tab using set_tab_content and set_tab_info.
+        A ``BridgeAnalysisSummary`` destined for the ``"analysis"`` tab is
+        routed directly into ``BridgeAnalysisPanel``'s structured
+        ``set_analysis`` API, since that native panel has no generic
+        string ``set_content`` method and would otherwise silently
+        discard the update. Every other combination of ``tab_name`` and
+        ``content`` is routed through the generic ``set_tab_content`` /
+        ``set_tab_info`` string setters, coercing non-string ``content``
+        to ``str`` first.
 
         Args:
             tab_name: Name of the tab to display in.
-            content: Content to display.
+            content: Content to display. Pass a ``BridgeAnalysisSummary``
+                for ``tab_name="analysis"`` to populate the panel's
+                structured tables; any other value is stringified and
+                routed through the generic tab setters.
             info: Additional info text for the tab header.
         """
-        self.set_tab_content(tab_name, content)
+        if tab_name.lower() == "analysis" and isinstance(content, BridgeAnalysisSummary):
+            if self.analysis_panel is not None:
+                self.analysis_panel.set_analysis(content)
+            else:
+                _logger.warning("analysis_summary_dropped", reason="no_analysis_panel")
+            self.activate_tab(tab_name)
+            return
+
+        text_content = content if isinstance(content, str) else str(content)
+        self.set_tab_content(tab_name, text_content)
         if info:
             self.set_tab_info(tab_name, tab_name, info)
         self.activate_tab(tab_name)
@@ -2605,6 +2745,8 @@ class _ToolOutputPanelWiringMixin(_ToolOutputPanelAccessorsMixin):
             "Analysis": self.add_analysis_panel,
             "Scripts": self.add_script_panel,
             "Stack": self.add_stack_panel,
+            "x64dbg": self.add_x64dbg_tab,
+            "x32dbg": lambda: self.add_x64dbg_tab(is_64bit=False),
         }
 
         names_val: object = state.get("tab_names")

@@ -174,8 +174,10 @@ class FridaPanel(AnalysisPanelBase):
             QWidget: Splitter with process browser, editor, hooks/threads, and console.
         """
         main_splitter = QSplitter(Qt.Orientation.Vertical)
+        main_splitter.setChildrenCollapsible(False)
 
         top_splitter = QSplitter(Qt.Orientation.Horizontal)
+        top_splitter.setChildrenCollapsible(False)
         top_splitter.addWidget(self._create_process_browser())
         top_splitter.addWidget(self._create_editor_section())
         top_splitter.addWidget(self._create_right_tabs())
@@ -979,6 +981,8 @@ class FridaPanel(AnalysisPanelBase):
             )
             return
 
+        if selected < len(self._hook_ids):
+            self._hook_ids.pop(selected)
         self._hooks_table.removeRow(selected)
 
     def _on_hook_removed(self, hook_id: str) -> None:
@@ -1626,6 +1630,8 @@ class FridaPanel(AnalysisPanelBase):
         detail_row.addWidget(QLabel("Module:"))
         self._module_combo = QComboBox()
         self._module_combo.setMinimumWidth(_DEVICE_COMBO_MIN_WIDTH)
+        self._module_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
+        self._module_combo.currentTextChanged.connect(self._on_module_combo_changed)
         detail_row.addWidget(self._module_combo)
         self._exports_btn = QPushButton("Exports")
         self._exports_btn.setObjectName("tool_button")
@@ -1664,6 +1670,7 @@ class FridaPanel(AnalysisPanelBase):
         self._load_module_btn.clicked.connect(self._on_load_module)
         load_row.addWidget(self._load_module_btn)
         self._load_module_result = QLabel("")
+        self._load_module_result.setWordWrap(True)
         load_row.addWidget(self._load_module_result)
         layout.addLayout(load_row)
 
@@ -1682,6 +1689,14 @@ class FridaPanel(AnalysisPanelBase):
             event="frida_enumerate_modules",
             logger=_logger,
         )
+
+    def _on_module_combo_changed(self, text: str) -> None:
+        """Update the module combo tooltip to show the full selected module name.
+
+        Args:
+            text: The currently selected combo box display text.
+        """
+        self._module_combo.setToolTip(text)
 
     def _populate_modules_table(self, result: object) -> None:
         """Populate the modules table and combo from results.
@@ -1715,15 +1730,24 @@ class FridaPanel(AnalysisPanelBase):
         self._console.appendPlainText(f"[-] Modules operation failed: {exc}")
         self._refresh_modules_btn.setEnabled(True)
 
+    def _set_load_module_result(self, text: str) -> None:
+        """Set the load-module result label text and its full-text tooltip.
+
+        Args:
+            text: The status or error message to display.
+        """
+        self._load_module_result.setText(text)
+        self._load_module_result.setToolTip(text)
+
     def _on_load_module(self) -> None:
         """Load a shared library into the target process via ``Module.load``."""
         if self._bridge is None:
-            self._load_module_result.setText("No bridge available")
+            self._set_load_module_result("No bridge available")
             _logger.warning("frida_load_module_failed_no_bridge")
             return
         path_str = self._load_module_path_input.text().strip()
         if not path_str:
-            self._load_module_result.setText("Enter a module path")
+            self._set_load_module_result("Enter a module path")
             return
         self._load_module_btn.setEnabled(False)
         run_bridge_coroutine_logged(
@@ -1746,7 +1770,7 @@ class FridaPanel(AnalysisPanelBase):
         self._load_module_btn.setEnabled(True)
         name = str(getattr(result, "name", ""))
         base = getattr(result, "base_address", 0)
-        self._load_module_result.setText(f"Loaded {name} (base 0x{base:X})" if isinstance(base, int) else f"Loaded {name}")
+        self._set_load_module_result(f"Loaded {name} (base 0x{base:X})" if isinstance(base, int) else f"Loaded {name}")
         self._console.appendPlainText(f"[+] Module loaded: {name}")
         _logger.info("frida_module_loaded_via_gui", module_name=name)
 
@@ -1757,7 +1781,7 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._load_module_btn.setEnabled(True)
-        self._load_module_result.setText(f"Load failed: {exc}")
+        self._set_load_module_result(f"Load failed: {exc}")
         _logger.warning("frida_load_module_failed", error=str(exc))
 
     def _on_show_exports(self) -> None:

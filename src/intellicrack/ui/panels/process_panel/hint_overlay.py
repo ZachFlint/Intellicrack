@@ -4,10 +4,9 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Instructional overlay for gated process detail tabs.
 
-Provides :class:`AttachHintOverlay`, a translucent panel shown on top of the
-Memory, Threads, Modules, and System tabs while the ProcessPanel is not
-attached to a target process. It replaces the previously silent disabled tabs
-with a clear, always-legible instruction telling the user to attach first.
+Provides :class:`AttachHintOverlay`, a translucent panel shown on top of the Memory, Threads, Modules, and System tabs while the
+ProcessPanel is not attached to a target process. It replaces the previously silent disabled tabs with a clear, always-legible instruction
+telling the user to attach first.
 """
 
 from __future__ import annotations
@@ -29,11 +28,9 @@ _OVERLAY_STYLE: Final[str] = (
 class AttachHintOverlay(QWidget):
     """Translucent overlay directing the user to attach to a process.
 
-    The overlay is parented to a detail tab and, when shown, covers the entire
-    tab area with a centered message. Its stylesheet fixes the foreground and
-    background colors so the text stays fully legible even while the parent tab
-    is disabled. Geometry is kept in sync with the parent via an installed
-    event filter so the overlay always fills the tab.
+    The overlay is parented to a detail tab and, when shown, covers the entire tab area with a centered message. Its stylesheet fixes the
+    foreground and background colors so the text stays fully legible even while the parent tab is disabled. Geometry is kept in sync with
+    the parent via an installed event filter so the overlay always fills the tab.
     """
 
     def __init__(self, parent: QWidget, message: str) -> None:

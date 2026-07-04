@@ -413,7 +413,7 @@ class TestSearchTextEncodedPreference:
 
         assert len(ci_results) == 1
         assert ci_results[0] == (15, 5)
-        assert cs_results == []
+        assert not cs_results
 
     def test_search_text_encoded_ebcdic_at_known_offset(
         self,
@@ -494,7 +494,7 @@ class TestSearchTextEncodedPreference:
         assert doc is not None
         results: list[tuple[int, int]] = doc.search_text_encoded("ABSENT_MARKER", "ascii", case_sensitive=True, max_results=100)
 
-        assert results == []
+        assert not results
 
     def test_bridge_search_text_dispatches_to_encoded(
         self,

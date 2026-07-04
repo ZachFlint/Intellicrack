@@ -106,7 +106,7 @@ def _start_script(
     """
     env = dict(os.environ)
     if extra_env:
-        env.update(extra_env)
+        env |= extra_env
     return Popen(
         [
             pwsh,

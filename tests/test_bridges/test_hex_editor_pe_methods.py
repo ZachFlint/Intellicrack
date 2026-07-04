@@ -153,7 +153,7 @@ class TestToolDefinitionsRegistered:
         """
         functions = {fn.name: fn for fn in bridge.tool_definition.functions}
         fn = functions[tool_name]
-        assert list(fn.parameters) == [], f"{tool_name} should have no parameters"
+        assert not list(fn.parameters), f"{tool_name} should have no parameters"
 
 
 _ZERO_ARG_EXPECTED: Final[dict[str, int]] = {
@@ -203,7 +203,7 @@ class TestMethodDispatchSurface:
         """
         method = getattr(bridge, method_name)
         sig = inspect.signature(method)
-        assert list(sig.parameters) == [], f"{method_name} must accept no arguments beyond self"
+        assert not list(sig.parameters), f"{method_name} must accept no arguments beyond self"
 
         bridge.document = _InMemoryDocument(_build_pe_buffer(is_pe64=False))
         result: list[dict[str, Any]] = _run(method())
@@ -377,7 +377,7 @@ def _build_pe_buffer(*, is_pe64: bool) -> bytes:
     nt_headers = PE_SIGNATURE + coff + opt_full + text + rdata
     final_size = _RDATA_RAW_OFFSET + _RDATA_RAW_SIZE
     buf = bytearray(final_size)
-    buf[0:2] = PE_DOS_SIGNATURE
+    buf[:2] = PE_DOS_SIGNATURE
     struct.pack_into("<I", buf, PE_DOS_LFANEW_OFFSET, e_lfanew)
     buf[e_lfanew : e_lfanew + len(nt_headers)] = nt_headers
     return bytes(buf)

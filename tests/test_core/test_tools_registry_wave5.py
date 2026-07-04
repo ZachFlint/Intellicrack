@@ -15,6 +15,7 @@ Covers:
            ``"auto"`` / ``"none"`` / ``"required"`` / ``"specific"``; complete
            member set verified.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -215,8 +216,7 @@ class TestInitializeToolInstallerPath:
 
         assert success is True, f"initialize_tool(GHIDRA) should return True; got {success}"
         assert bridge.initialized_with == expected_path, (
-            f"bridge.initialize not called with installer path; "
-            f"initialized_with={bridge.initialized_with!r}, expected={expected_path!r}"
+            f"bridge.initialize not called with installer path; initialized_with={bridge.initialized_with!r}, expected={expected_path!r}"
         )
 
     def test_initialize_tool_x64dbg_invokes_installer_and_bridge(
@@ -365,9 +365,7 @@ class TestTypedGetterErrorMessages:
         Oracle: the constant string from tools.py used in every typed getter.
         Mutation: changing the constant to any other string fails the equality.
         """
-        assert _ERR_BRIDGE_NA == "bridge not available", (
-            f"_ERR_BRIDGE_NA changed from expected; got {_ERR_BRIDGE_NA!r}"
-        )
+        assert _ERR_BRIDGE_NA == "bridge not available", f"_ERR_BRIDGE_NA changed from expected; got {_ERR_BRIDGE_NA!r}"
 
     def test_wrong_type_bridge_raises_with_exact_message(self, tmp_path: Path) -> None:
         """get_ghidra_bridge() raises ToolError when a non-GhidraBridge is registered.
@@ -400,9 +398,7 @@ class TestConfirmationLevelEnumValues:
         to 'never' or 'disabled' breaks any code that deserialises from the
         stored string.
         """
-        assert ConfirmationLevel.NONE.value == "none", (
-            f"ConfirmationLevel.NONE.value={ConfirmationLevel.NONE.value!r}"
-        )
+        assert ConfirmationLevel.NONE.value == "none", f"ConfirmationLevel.NONE.value={ConfirmationLevel.NONE.value!r}"
 
     def test_destructive_value(self) -> None:
         """ConfirmationLevel.DESTRUCTIVE.value == 'destructive'.
@@ -419,9 +415,7 @@ class TestConfirmationLevelEnumValues:
 
         Oracle: wire-format constant 'all' used in orchestrator config serialisation.
         """
-        assert ConfirmationLevel.ALL.value == "all", (
-            f"ConfirmationLevel.ALL.value={ConfirmationLevel.ALL.value!r}"
-        )
+        assert ConfirmationLevel.ALL.value == "all", f"ConfirmationLevel.ALL.value={ConfirmationLevel.ALL.value!r}"
 
     def test_complete_member_set(self) -> None:
         """ConfirmationLevel has exactly three members: NONE, DESTRUCTIVE, ALL.
@@ -432,9 +426,7 @@ class TestConfirmationLevelEnumValues:
         """
         expected = {ConfirmationLevel.NONE, ConfirmationLevel.DESTRUCTIVE, ConfirmationLevel.ALL}
         actual = set(ConfirmationLevel)
-        assert actual == expected, (
-            f"ConfirmationLevel member set mismatch: {actual!r} != {expected!r}"
-        )
+        assert actual == expected, f"ConfirmationLevel member set mismatch: {actual!r} != {expected!r}"
 
 
 class TestToolChoiceModeEnumValues:
@@ -446,9 +438,7 @@ class TestToolChoiceModeEnumValues:
         Oracle: wire-format constant used in provider conversion code.
         Mutation: any other string breaks provider-specific tool-choice serialisation.
         """
-        assert ToolChoiceMode.AUTO.value == "auto", (
-            f"ToolChoiceMode.AUTO.value={ToolChoiceMode.AUTO.value!r}"
-        )
+        assert ToolChoiceMode.AUTO.value == "auto", f"ToolChoiceMode.AUTO.value={ToolChoiceMode.AUTO.value!r}"
 
     def test_none_value(self) -> None:
         """ToolChoiceMode.NONE.value == 'none'.
@@ -457,27 +447,21 @@ class TestToolChoiceModeEnumValues:
         path (passing ``ToolChoice(mode=ToolChoiceMode.NONE)``).  Mutation:
         renaming to 'disabled' breaks provider serialisation.
         """
-        assert ToolChoiceMode.NONE.value == "none", (
-            f"ToolChoiceMode.NONE.value={ToolChoiceMode.NONE.value!r}"
-        )
+        assert ToolChoiceMode.NONE.value == "none", f"ToolChoiceMode.NONE.value={ToolChoiceMode.NONE.value!r}"
 
     def test_required_value(self) -> None:
         """ToolChoiceMode.REQUIRED.value == 'required'.
 
         Oracle: wire-format constant instructing providers to force tool use.
         """
-        assert ToolChoiceMode.REQUIRED.value == "required", (
-            f"ToolChoiceMode.REQUIRED.value={ToolChoiceMode.REQUIRED.value!r}"
-        )
+        assert ToolChoiceMode.REQUIRED.value == "required", f"ToolChoiceMode.REQUIRED.value={ToolChoiceMode.REQUIRED.value!r}"
 
     def test_specific_value(self) -> None:
         """ToolChoiceMode.SPECIFIC.value == 'specific'.
 
         Oracle: wire-format constant instructing providers to call a named tool.
         """
-        assert ToolChoiceMode.SPECIFIC.value == "specific", (
-            f"ToolChoiceMode.SPECIFIC.value={ToolChoiceMode.SPECIFIC.value!r}"
-        )
+        assert ToolChoiceMode.SPECIFIC.value == "specific", f"ToolChoiceMode.SPECIFIC.value={ToolChoiceMode.SPECIFIC.value!r}"
 
     def test_complete_member_set(self) -> None:
         """ToolChoiceMode has exactly four members: AUTO, NONE, REQUIRED, SPECIFIC.
@@ -492,6 +476,4 @@ class TestToolChoiceModeEnumValues:
             ToolChoiceMode.SPECIFIC,
         }
         actual = set(ToolChoiceMode)
-        assert actual == expected, (
-            f"ToolChoiceMode member set mismatch: {actual!r} != {expected!r}"
-        )
+        assert actual == expected, f"ToolChoiceMode member set mismatch: {actual!r} != {expected!r}"

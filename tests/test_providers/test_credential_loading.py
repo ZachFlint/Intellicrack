@@ -119,8 +119,7 @@ def _assert_get_credentials_value(env_path: Path, known_key: str, monkeypatch: p
     assert creds is not None, "get_credentials must return ProviderCredentials when the key is present in the env file"
     assert isinstance(creds, ProviderCredentials), f"Expected ProviderCredentials, got {type(creds)}"
     assert creds.api_key == known_key, (
-        f"get_credentials must propagate the exact injected api_key value; "
-        f"expected {known_key!r}, got {creds.api_key!r}"
+        f"get_credentials must propagate the exact injected api_key value; expected {known_key!r}, got {creds.api_key!r}"
     )
     absent_creds = loader.get_credentials(ProviderName.OPENAI)
     assert absent_creds is None, "get_credentials must return None for a provider not present in the controlled env file"
@@ -461,9 +460,7 @@ class TestEnvironmentVariableAccess:
         try:
             credential_loader.set_env_var(test_key, test_value)
             cached_result = credential_loader.get_env_var(test_key)
-            assert cached_result == test_value, (
-                f"Internal cache must reflect the set value; expected {test_value!r}, got {cached_result!r}"
-            )
+            assert cached_result == test_value, f"Internal cache must reflect the set value; expected {test_value!r}, got {cached_result!r}"
             environ_result = os.environ.get(test_key)
             assert environ_result == test_value, (
                 f"os.environ must be updated by set_env_var; expected {test_value!r}, got {environ_result!r}"

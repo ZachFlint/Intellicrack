@@ -285,7 +285,7 @@ class TestDeadModuleRemoved:
             is_range=False,
         )
 
-        assert len(results) >= 1
+        assert results
         assert results[0][0] == oracle_offset
         assert results[0][1] == 4
 
@@ -346,7 +346,7 @@ class TestBridgeBuildIpsFromPatches:
         data = b"\x10\x20\x30\x40\x50"
         result = _build_ips([(offset, data)])
         body = result[len(_IPS_MAGIC) : -len(_IPS_FOOTER)]
-        decoded_offset = struct.unpack(">I", b"\x00" + body[0:3])[0]
+        decoded_offset = struct.unpack(">I", b"\x00" + body[:3])[0]
         decoded_size = struct.unpack(">H", body[3:5])[0]
         decoded_data = body[5 : 5 + decoded_size]
         assert decoded_offset == offset

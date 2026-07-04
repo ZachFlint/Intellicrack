@@ -12,6 +12,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
+    QHeaderView,
     QLabel,
     QPlainTextEdit,
     QPushButton,
@@ -127,6 +128,13 @@ class YaraMixin:
         self._yara_results_tree.setHeaderLabels(["Rule", "Offset", "Identifier", "Match Data"])
         self._yara_results_tree.setAlternatingRowColors(True)
         self._yara_results_tree.itemDoubleClicked.connect(self._on_yara_result_double_clicked)
+        results_header = self._yara_results_tree.header()
+        if results_header is not None:
+            results_header.setStretchLastSection(False)
+            results_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+            results_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+            results_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+            results_header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         layout.addWidget(self._yara_results_tree)
 
         return container
@@ -283,6 +291,7 @@ class YaraMixin:
         for match in matches:
             rule_name = str(match.get("rule", ""))
             rule_item = QTreeWidgetItem([rule_name, "", "", ""])
+            rule_item.setToolTip(0, rule_name)
             self._yara_results_tree.addTopLevelItem(rule_item)
             all_match_offsets.extend(self._append_yara_match_strings(rule_item, match))
             rule_item.setExpanded(True)

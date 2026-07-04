@@ -152,22 +152,15 @@ class TestHuggingFaceModelListing:
 
         for model in sample:
             assert isinstance(model, ModelInfo), f"Expected ModelInfo, got {type(model)}"
-            assert model.provider is ProviderName.HUGGINGFACE, (
-                f"Model {model.id!r} has provider {model.provider!r}, expected HUGGINGFACE"
-            )
+            assert model.provider is ProviderName.HUGGINGFACE, f"Model {model.id!r} has provider {model.provider!r}, expected HUGGINGFACE"
             assert model.supports_streaming is True, (
-                f"Model {model.id!r} has supports_streaming={model.supports_streaming!r}; "
-                "HuggingFace builder always sets this True"
+                f"Model {model.id!r} has supports_streaming={model.supports_streaming!r}; HuggingFace builder always sets this True"
             )
             assert model.context_window == _HUGGINGFACE_DEFAULT_CONTEXT_WINDOW, (
-                f"Model {model.id!r} has context_window={model.context_window!r}, "
-                f"expected {_HUGGINGFACE_DEFAULT_CONTEXT_WINDOW}"
+                f"Model {model.id!r} has context_window={model.context_window!r}, expected {_HUGGINGFACE_DEFAULT_CONTEXT_WINDOW}"
             )
             expected_name = model.id.rsplit("/", maxsplit=1)[-1] if "/" in model.id else model.id
-            assert model.name == expected_name, (
-                f"Model {model.id!r} has name={model.name!r}, "
-                f"expected short component {expected_name!r}"
-            )
+            assert model.name == expected_name, f"Model {model.id!r} has name={model.name!r}, expected short component {expected_name!r}"
 
     @pytest.mark.asyncio
     @staticmethod
