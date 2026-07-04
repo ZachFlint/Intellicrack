@@ -1,4 +1,0 @@
-D:/Intellicrack/tools/x64dbg_plugin/build_x32/CMakeFiles/intellicrack_bridge_x32.dir
-D:/Intellicrack/tools/x64dbg_plugin/build_x32/CMakeFiles/INSTALL.dir
-D:/Intellicrack/tools/x64dbg_plugin/build_x32/CMakeFiles/ALL_BUILD.dir
-D:/Intellicrack/tools/x64dbg_plugin/build_x32/CMakeFiles/ZERO_CHECK.dir
