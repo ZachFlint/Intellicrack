@@ -460,6 +460,19 @@ intellicrack-launcher/target/
 target/
 
 # ==============================================================================
+# X64DBG PLUGIN BUILD OUTPUT
+# ==============================================================================
+# CMake/MSBuild build trees for the x64dbg bridge plugin. Regenerable output;
+# the prebuilt binaries are committed under tools/x64dbg_plugin/bin/ instead.
+tools/x64dbg_plugin/build/
+tools/x64dbg_plugin/build_*/
+# The CMake build writes the plugin straight into bin/; track only the plugin
+# binaries there, never build debris (import libs, export tables, PDBs).
+tools/x64dbg_plugin/bin/*
+!tools/x64dbg_plugin/bin/*.dp32
+!tools/x64dbg_plugin/bin/*.dp64
+
+# ==============================================================================
 # REMOVED TEMPLATE DIRECTORIES - DO NOT RECREATE
 # ==============================================================================
 # These directories were removed as part of template cleanup

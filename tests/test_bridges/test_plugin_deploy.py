@@ -143,6 +143,7 @@ def _assert_deployed_pe(target: Path, source: bytes, expected_machine: int) -> N
 DUMMY_PE = _build_real_pe(_IMAGE_FILE_MACHINE_AMD64)
 DUMMY_PE_32 = _build_real_pe(_IMAGE_FILE_MACHINE_I386)
 DUMMY_ALTERNATE = _build_real_pe(_IMAGE_FILE_MACHINE_AMD64) + b"\xff" * 16
+DUMMY_PE_32_ALT = _build_real_pe(_IMAGE_FILE_MACHINE_I386) + b"\xff" * 16
 
 
 def _make_x64dbg_tree(root: Path) -> Path:
@@ -291,6 +292,33 @@ class TestFindPluginSourceViaDeployment:
 
         target = x64dbg / "release" / "x64" / "plugins" / "intellicrack_bridge_x64.dp64"
         assert target.read_bytes() == b"\x01" * 64
+
+    @staticmethod
+    def test_priority_bin_over_arch_build_x32(tmp_path: Path) -> None:
+        """Prefer the committed bin/ x32 plugin over a stale build_x32 output.
+
+        This gates the exact layout the repository ships: the current plugin
+        lives in ``x64dbg_plugin/bin`` while a regenerable ``build_x32`` tree
+        may still hold an older compile. Deployment must select the ``bin``
+        binary (a valid I386 PE) and never the stale build-tree copy.
+
+        Args:
+            tmp_path: Pytest-provided temporary directory used to build a fake deployment tree.
+        """
+        x64dbg = _make_x64dbg_tree(tmp_path)
+        _make_plugin_source(tmp_path, "intellicrack_bridge_x32.dp32", DUMMY_PE_32, "bin")
+        _make_plugin_source(
+            tmp_path,
+            "intellicrack_bridge_x32.dp32",
+            DUMMY_PE_32_ALT,
+            subdir="build_x32/Release",
+        )
+
+        assert deploy_x64dbg_plugin(x64dbg, tmp_path) is True
+
+        target = x64dbg / "release" / "x32" / "plugins" / "intellicrack_bridge_x32.dp32"
+        _assert_deployed_pe(target, DUMMY_PE_32, _IMAGE_FILE_MACHINE_I386)
+        assert target.read_bytes() != DUMMY_PE_32_ALT
 
 
 class TestDeployX64dbgPlugin:
