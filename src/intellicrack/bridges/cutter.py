@@ -94,7 +94,7 @@ _ERR_INVALID_HEX = "invalid hex response from rizin"
 _ERR_INVALID_DEBUG_RESPONSE = "invalid debug response from rizin"
 _VALID_BP_TYPES: frozenset[str] = frozenset({"software", "hardware", "memory"})
 _BITS_64 = 64
-_R2_COMMAND_TIMEOUT: float = 60.0
+_R2_COMMAND_TIMEOUT: float = 5.0
 R2_COMMAND_TIMEOUT: float = _R2_COMMAND_TIMEOUT
 
 _RZ_64BIT_ARCHES: frozenset[str] = frozenset(
@@ -311,6 +311,109 @@ def validate_r2_argument(value: str, *, field: str) -> str:
         _logger.warning("validate_r2_argument_raise_pending", error_type="ToolError")
         raise ToolError(msg)
     return value
+
+
+def _find_json_start(text: str) -> int | None:
+    """Locate the index of the first JSON container opener in ``text``.
+
+    rizin's ``j``-suffixed commands occasionally prepend a handful of
+    non-JSON bytes (banner/status noise from the pipe) ahead of the real
+    payload. Scanning for the first ``{`` or ``[`` recovers the start of the
+    JSON value so the leading junk can be sliced away.
+
+    Args:
+        text: Raw command output to scan.
+
+    Returns:
+        int | None: Zero-based index of the first ``{`` or ``[``, or
+        ``None`` when the text contains neither.
+    """
+    for index, char in enumerate(text):
+        if char in "{[":
+            return index
+    return None
+
+
+def _balanced_json_slice(text: str, start: int) -> str | None:
+    """Slice the brace/bracket-balanced JSON region beginning at ``start``.
+
+    Walks ``text`` from the opening container character, tracking nesting
+    depth while respecting string literals and escape sequences, and returns
+    the substring that closes the top-level container. Trailing bytes emitted
+    after the JSON value (rizin can append pipe status noise) are excluded.
+
+    Args:
+        text: Raw command output containing a JSON value.
+        start: Index of the opening ``{`` or ``[`` returned by
+            :func:`_find_json_start`.
+
+    Returns:
+        str | None: The balanced JSON substring, or ``None`` when the
+        container never closes (truncated or malformed output).
+    """
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(start, len(text)):
+        char = text[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+        elif char in "{[":
+            depth += 1
+        elif char in "}]":
+            depth -= 1
+            if depth == 0:
+                return text[start : index + 1]
+    return None
+
+
+def _extract_rizin_json(raw: str, command: str) -> object:
+    """Extract and parse a JSON value from raw rizin/r2 command output.
+
+    Well-formed output parses directly. When rizin prepends non-JSON bytes
+    to a ``j``-suffixed command's payload (a known rizin 0.9.x quirk that
+    surfaces as ``Extra data`` decode errors), the first JSON container is
+    located and a brace/bracket-balanced region is sliced out before
+    parsing, so both leading and trailing junk are discarded without loss of
+    the real payload.
+
+    Args:
+        raw: Raw command output string from the analysis pipe.
+        command: The command that produced ``raw`` (used for error context).
+
+    Returns:
+        object: The parsed JSON value (``dict``, ``list``, or scalar).
+
+    Raises:
+        ToolError: If ``raw`` contains no recoverable, decodable JSON value.
+    """
+    text = raw.strip()
+    if text:
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            _logger.debug("rizin_json_direct_parse_failed", command=command, response_prefix=text[:120])
+    start = _find_json_start(text)
+    if start is not None:
+        candidate = _balanced_json_slice(text, start)
+        if candidate is not None:
+            try:
+                return json.loads(candidate)
+            except json.JSONDecodeError as exc:
+                _logger.warning("rizin_json_slice_parse_failed", command=command, response_prefix=candidate[:120], error=str(exc))
+                msg = f"{_ERR_JSON_PARSE_FAILED}: {command}"
+                raise ToolError(msg, tool_name="cutter") from exc
+    _logger.warning("rizin_json_unrecoverable", command=command, response_prefix=text[:120])
+    msg = f"{_ERR_JSON_PARSE_FAILED}: {command}"
+    raise ToolError(msg, tool_name="cutter")
 
 
 def _get_str(data: dict[str, Any], key: str, default: str = "") -> str:
@@ -1245,17 +1348,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         if not result or not result.strip():
             return []
 
-        try:
-            parsed = json.loads(result)
-        except json.JSONDecodeError as exc:
-            _logger.warning(
-                "json_parse_failed",
-                command=command,
-                error=str(exc),
-                response_prefix=result[:120],
-            )
-            msg = f"{_ERR_JSON_PARSE_FAILED}: {command}"
-            raise ToolError(msg) from exc
+        parsed = _extract_rizin_json(result, command)
         if isinstance(parsed, list):
             return cast("list[dict[str, Any]]", parsed)
         return [cast("dict[str, Any]", parsed)] if isinstance(parsed, dict) else []
@@ -1281,6 +1374,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
                 virtual_address=_get_int(s, "vaddr"),
                 virtual_size=_get_int(s, "vsize"),
                 raw_size=_get_int(s, "size"),
+                raw_offset=_get_int(s, "paddr"),
                 characteristics=_get_int(s, "perm"),
                 entropy=_get_float(s, "entropy"),
             )
@@ -2585,9 +2679,9 @@ class CutterMetadataMixin(CutterCommandMixin):
         result: list[LibraryInfo] = []
         if raw.strip():
             try:
-                parsed_raw = json.loads(raw)
-            except json.JSONDecodeError:
-                _logger.exception("libraries_json_parse_failed")
+                parsed_raw = _extract_rizin_json(raw, "ilj")
+            except ToolError:
+                _logger.warning("libraries_json_parse_failed", response_prefix=raw[:120])
                 return result
             if isinstance(parsed_raw, list):
                 lib_list = cast("list[Any]", parsed_raw)
@@ -3057,8 +3151,8 @@ class CutterAnnotationMixin(CutterRopMixin):
 
         if raw.strip():
             try:
-                parsed: Any = json.loads(raw)
-            except json.JSONDecodeError:
+                parsed: Any = _extract_rizin_json(raw, "fdj")
+            except ToolError:
                 _logger.warning("flag_resolve_json_parse_failed", address=hex(address))
             else:
                 candidates: list[dict[str, Any]] = []
@@ -4017,27 +4111,17 @@ class CutterDebugMixin(CutterDisplayMixin):
             command: Rizin command to execute (the JSON-emitting variant,
                 e.g. ``dbj`` or ``drj``).
 
+        Any decode failure propagates as a :class:`ToolError` raised by the
+        shared :func:`_extract_rizin_json` extractor.
+
         Returns:
             object: Parsed JSON value (dict, list, scalar, or ``None`` when
             rizin returned an empty response).
-
-        Raises:
-            ToolError: If the command output cannot be decoded as JSON.
         """
         result = await self._r2_cmd(command)
         if not result or not result.strip():
             return None
-        try:
-            return json.loads(result)
-        except json.JSONDecodeError as exc:
-            _logger.warning(
-                "cutter_debug_json_parse_failed",
-                command=command,
-                error=str(exc),
-                response_prefix=result[:120],
-            )
-            msg = f"{_ERR_JSON_PARSE_FAILED}: {command}"
-            raise ToolError(msg, tool_name="cutter") from exc
+        return _extract_rizin_json(result, command)
 
     async def attach(self, pid: int) -> None:
         """Attach the rizin debugger to a running process.

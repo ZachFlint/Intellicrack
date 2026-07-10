@@ -6,10 +6,12 @@
 
 This module provides integration with HuggingFace's Inference API using the official ``huggingface_hub.AsyncInferenceClient`` and its
 ``chat_completion`` method.  The client targets the HuggingFace first-party router endpoint at
-``https://router.huggingface.co/hf-inference``
-via the ``provider="hf-inference"``
-selector, which replaces the deprecated ``api-inference.huggingface.co`` host
-and provides direct access to HuggingFace-hosted serverless endpoints.
+``https://router.huggingface.co``
+via the
+``provider="auto"`` policy, which replaces the deprecated ``api-inference.huggingface.co`` host and lets the router pick whichever
+backing inference provider (e.g. Cerebras, Together, Groq, Fireworks) currently serves the requested model for chat completion.
+The dedicated ``hf-inference`` provider serves only legacy/non-generative models (embeddings, classification, translation, and
+similar) and does not support the conversational task, so it is never used as the chat-completion routing target.
 """
 
 from __future__ import annotations
@@ -161,16 +163,19 @@ class HuggingFaceProvider(LLMProviderBase):
 
     Uses ``huggingface_hub.AsyncInferenceClient.chat_completion`` for both
     blocking and streaming requests.  The client is configured with
-    ``provider="hf-inference"`` so requests are routed through HuggingFace's
-    first-party router at ``https://router.huggingface.co/hf-inference``,
-    replacing the deprecated ``api-inference.huggingface.co`` host.
+    ``provider="auto"`` so requests are routed through HuggingFace's
+    first-party router at ``https://router.huggingface.co``, which selects
+    whichever backing inference provider currently serves the requested
+    model's conversational task, replacing the deprecated
+    ``api-inference.huggingface.co`` host. The dedicated ``hf-inference``
+    provider does not support chat completion and is never selected.
 
     Attributes:
         DEFAULT_PROVIDER: HuggingFace inference-provider routing strategy.
         MODELS_LIST_LIMIT: Maximum number of models fetched from ``HfApi``.
     """
 
-    DEFAULT_PROVIDER: ClassVar[Literal["hf-inference"]] = "hf-inference"
+    DEFAULT_PROVIDER: ClassVar[Literal["auto"]] = "auto"
     MODELS_LIST_LIMIT: ClassVar[int] = _MODEL_LIST_LIMIT
 
     def __init__(self) -> None:

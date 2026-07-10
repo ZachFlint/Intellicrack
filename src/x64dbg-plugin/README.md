@@ -108,6 +108,7 @@ All messages use a 4-byte little-endian length prefix followed by JSON:
 ### Response Format
 
 Success:
+
 ```json
 {
   "id": 1,
@@ -117,6 +118,7 @@ Success:
 ```
 
 Error:
+
 ```json
 {
   "id": 1,
@@ -140,7 +142,7 @@ Error:
 ### Execution Control
 
 | Command | Parameters | Description |
-|---------|------------|-------------|
+| --------- | ------------ | ------------- |
 | `exec` | `cmd` | Execute x64dbg command |
 | `run` | - | Continue execution |
 | `pause` | - | Pause execution |
@@ -153,7 +155,7 @@ Error:
 ### Breakpoints
 
 | Command | Parameters | Description |
-|---------|------------|-------------|
+| --------- | ------------ | ------------- |
 | `bp_set` | `address` | Set breakpoint |
 | `bp_remove` | `address` | Remove breakpoint |
 | `bp_list` | - | List all breakpoints |
@@ -163,7 +165,7 @@ Error:
 ### Watchpoints
 
 | Command | Parameters | Description |
-|---------|------------|-------------|
+| --------- | ------------ | ------------- |
 | `wp_set` | `address`, `size`, `type` | Set hardware watchpoint |
 | `wp_remove` | `address` | Remove watchpoint |
 | `wp_list` | - | List all watchpoints |
@@ -171,7 +173,7 @@ Error:
 ### Registers
 
 | Command | Parameters | Description |
-|---------|------------|-------------|
+| --------- | ------------ | ------------- |
 | `reg_all` | - | Get all registers |
 | `reg_get` | `name` | Get register value |
 | `reg_set` | `name`, `value` | Set register value |
@@ -179,7 +181,7 @@ Error:
 ### Memory
 
 | Command | Parameters | Description |
-|---------|------------|-------------|
+| --------- | ------------ | ------------- |
 | `mem_read` | `address`, `size` | Read memory (hex) |
 | `mem_write` | `address`, `data` | Write memory (hex) |
 | `mem_map` | - | Get memory map |
@@ -187,7 +189,7 @@ Error:
 ### Modules
 
 | Command | Parameters | Description |
-|---------|------------|-------------|
+| --------- | ------------ | ------------- |
 | `mod_list` | - | List loaded modules |
 | `mod_base` | `name` | Get module base address |
 | `mod_exports` | `name` | Get module exports |
@@ -203,7 +205,7 @@ Error:
 ### Misc
 
 | Command | Parameters | Description |
-|---------|------------|-------------|
+| --------- | ------------ | ------------- |
 | `goto` | `address` | Navigate to address |
 | `status` | - | Get debugger status |
 | `ping` | - | Ping server |

@@ -371,8 +371,8 @@ _HEADER_HEIGHT: Final[int] = 32
 _MAIN_HEADER_HEIGHT: Final[int] = 40
 _HEADER_MARGIN_H: Final[int] = 8
 _MAIN_HEADER_MARGIN_H: Final[int] = 12
-_LEFT_MIN_WIDTH: Final[int] = 300
-_RIGHT_MIN_WIDTH: Final[int] = 150
+_LEFT_MIN_WIDTH: Final[int] = 240
+_RIGHT_MIN_WIDTH: Final[int] = 120
 _DEFAULT_SPLIT_LEFT: Final[int] = 600
 _DEFAULT_SPLIT_RIGHT: Final[int] = 200
 _CODE_SPLIT_LEFT: Final[int] = 400
@@ -799,6 +799,7 @@ class _ToolOutputPanelBase(QFrame):
         self.embedded_tools: dict[str, QWidget] = {}
         self.panels: dict[str, QWidget] = {}
         self._detached_windows: dict[str, DetachedPanelWindow] = {}
+        self._detached_indices: dict[str, int] = {}
         self._setup_ui()
         self._setup_embedded_tabs()
 
@@ -982,12 +983,50 @@ class _ToolOutputPanelBase(QFrame):
             _logger.warning("tab_append_unsupported", tab_name=tab_name)
 
     def set_current_address(self, address: int) -> None:
-        """Set the currently displayed address.
+        """Set the current address and scroll the hex editor to its file offset.
+
+        Updates the address label, then maps the virtual address to a raw file
+        offset via the active analysis's section table and scrolls the hex
+        editor there, bringing its tab forward. When no loaded section contains
+        the address (or no analysis / hex editor is available), only the label
+        is updated.
 
         Args:
-            address: Memory address.
+            address: Virtual address to navigate to.
         """
         self.address_label.setText(f"0x{address:08X}")
+
+        file_offset = self._map_va_to_file_offset(address)
+        if file_offset is None or self._hex_editor_panel is None:
+            return
+
+        self._activate_tab_by_widget(cast("QWidget", self._hex_editor_panel))
+        self._hex_editor_panel.goto_offset(file_offset)
+        _logger.info("analysis_address_navigated", address=hex(address), file_offset=file_offset)
+
+    def _map_va_to_file_offset(self, address: int) -> int | None:
+        """Map a virtual address to a raw file offset using the section table.
+
+        Finds the section whose virtual address range contains ``address`` and
+        translates it with ``raw_offset + (address - virtual_address)``.
+
+        Args:
+            address: Virtual address to translate.
+
+        Returns:
+            int | None: The corresponding file offset, or ``None`` when no
+                analysis is loaded or no section contains the address.
+        """
+        if self.analysis_panel is None:
+            return None
+        analysis = self.analysis_panel.current_analysis
+        if analysis is None:
+            return None
+        for section in analysis.sections:
+            start = section.virtual_address
+            if start <= address < start + section.virtual_size:
+                return section.raw_offset + (address - start)
+        return None
 
     def set_functions(self, functions: list[tuple[str, int]]) -> None:
         """Set the function list.
@@ -1395,9 +1434,10 @@ class _ToolOutputPanelBase(QFrame):
         window = DetachedPanelWindow(widget, title, self)
         window.reattach_requested.connect(self._reattach_panel)
         self._detached_windows[title] = window
+        self._detached_indices[title] = index
         window.show()
 
-        _logger.info("tab_detached", title=title)
+        _logger.info("tab_detached", title=title, source_index=index)
         return window
 
     def _reattach_panel(self, widget: QWidget, title: str) -> None:
@@ -1412,9 +1452,14 @@ class _ToolOutputPanelBase(QFrame):
             window.hide()
             window.deleteLater()
 
-        self.tab_widget.addTab(widget, title)
-        self.tab_widget.setCurrentWidget(widget)
-        _logger.info("tab_reattached", title=title)
+        # Restore the panel at its original tab position rather than appending
+        # it at the end (F3 / F18). A stale index is clamped to the current tab
+        # count so it always lands in range.
+        source_index = self._detached_indices.pop(title, self.tab_widget.count())
+        insert_at = max(0, min(source_index, self.tab_widget.count()))
+        inserted_index = self.tab_widget.insertTab(insert_at, widget, title)
+        self.tab_widget.setCurrentIndex(inserted_index)
+        _logger.info("tab_reattached", title=title, restored_index=inserted_index)
 
     def _close_other_tabs(self, keep_index: int) -> None:
         """Close all tabs except the one at the given index.
@@ -1591,6 +1636,10 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         panel_module = importlib.import_module(".panels.analysis_panel", "intellicrack.ui")
         panel = cast("BridgeAnalysisPanel", panel_module.BridgeAnalysisPanel())
         self.analysis_panel = panel
+        # Route a double-clicked Section/address VA through the shared address
+        # chain so it scrolls the hex editor (F1); previously this signal was
+        # emitted but never connected, so VA links were dead.
+        _ = panel.address_navigate.connect(self.address_clicked)
         self.tab_widget.addTab(panel, "Analysis")
         self.panels["analysis"] = panel
         _logger.info("analysis_panel_added", tab="Analysis")
@@ -2259,6 +2308,33 @@ class _ToolOutputPanelOpenersMixin(_ToolOutputPanelPanelsMixin):
             count=len(function_pairs),
             source_bridges=list(analysis.source_bridges),
         )
+
+    def mark_binary_loaded(self, binary_name: str) -> None:
+        """Mark the analysis panel as holding a loaded-but-unanalyzed binary.
+
+        Ensures the analysis panel exists and switches its header to the
+        intermediate "Loaded - not analyzed" state, clearing any prior binary's
+        stale tables (N3 / F11).
+
+        Args:
+            binary_name: Name of the freshly loaded binary.
+        """
+        if self.analysis_panel is None:
+            self.add_analysis_panel()
+        if self.analysis_panel is None:
+            return
+        current = self.analysis_panel.current_analysis
+        if current is None or current.binary_name != binary_name:
+            self.analysis_panel.mark_loaded(binary_name)
+
+    def reset_analysis(self) -> None:
+        """Clear the analysis panel back to the empty "no binary" state.
+
+        Used when a load fails or an unsupported format is detected so the panel
+        never shows a prior binary's data against a failed load (F11).
+        """
+        if self.analysis_panel is not None:
+            self.analysis_panel.clear()
 
     def activate_analysis_tab(self) -> None:
         """Activate the bridge analysis tab."""

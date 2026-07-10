@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 . "$PSScriptRoot/common.ps1"
 
-$totalSteps = 8
+$totalSteps = 11
 $script:currentStep = 0
 
 Write-Banner "Intellicrack Installation"
@@ -41,11 +41,14 @@ try {
 }
 
 $subSteps = @(
-    @{ Step = 4; Name = 'Ghidra';  Recipe = 'install-ghidra' },
-    @{ Step = 5; Name = 'radare2'; Recipe = 'install-radare2' },
-    @{ Step = 6; Name = 'QEMU';    Recipe = 'install-qemu' },
-    @{ Step = 7; Name = 'x64dbg';  Recipe = 'install-x64dbg' },
-    @{ Step = 8; Name = 'Cutter';  Recipe = 'install-cutter' }
+    @{ Step = 4;  Name = 'Node.js dev tooling (yarn install)';        Recipe = 'install-yarn' },
+    @{ Step = 5;  Name = 'Rust hex editor core (intellicrack-hexcore)'; Recipe = 'build-hexcore' },
+    @{ Step = 6;  Name = 'Ghidra';  Recipe = 'install-ghidra' },
+    @{ Step = 7;  Name = 'radare2'; Recipe = 'install-radare2' },
+    @{ Step = 8;  Name = 'QEMU';    Recipe = 'install-qemu' },
+    @{ Step = 9;  Name = 'x64dbg';  Recipe = 'install-x64dbg' },
+    @{ Step = 10; Name = 'x64dbg bridge plugin'; Recipe = 'install-x64dbg-plugin' },
+    @{ Step = 11; Name = 'Cutter';  Recipe = 'install-cutter' }
 )
 
 foreach ($sub in $subSteps) {

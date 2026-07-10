@@ -521,7 +521,6 @@ intellicrack.ui.tools.cutter_bridge  # unused-attribute (read via getattr in clo
 intellicrack.ui.tools.process_bridge  # unused-attribute (read via getattr in close_embedded_tools)
 
 # UI app - intentional GC retention for Qt async workers / app-scoped instances / tested
-intellicrack.ui.app.model_browse_worker  # unused-attribute (Qt AsyncWorker GC retention)
 intellicrack.ui.app._script_generator  # unused-attribute (intentional app-scoped retention)
 intellicrack.ui.app.on_open_x64dbg  # unused-method (tested in test_app_embedded_tools.py)
 intellicrack.ui.app.on_open_cutter  # unused-method (tested in test_app_embedded_tools.py)

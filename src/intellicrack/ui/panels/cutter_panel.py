@@ -42,7 +42,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.highlighter import AssemblySyntaxHighlighter, CSyntaxHighlighter
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
-from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.cutter_debugger_tab import DebuggerTab
 from intellicrack.ui.panels.cutter_project_tab import ProjectTab
 from intellicrack.ui.panels.cutter_search_tab import SearchTab
@@ -154,8 +154,16 @@ class CutterPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._save_btn = self._add_tool_button(toolbar, "Save Binary", self._on_save_binary)
-        self._patch_btn = self._add_tool_button(toolbar, "Patch...", self._on_patch_dialog)
+        binary_actions = self._add_tool_menu(
+            toolbar,
+            "Binary",
+            [
+                ToolMenuEntry("Save Binary", self._on_save_binary),
+                ToolMenuEntry("Patch...", self._on_patch_dialog),
+            ],
+        )
+        self._save_btn = binary_actions["Save Binary"]
+        self._patch_btn = binary_actions["Patch..."]
 
         toolbar.addSeparator()
 
@@ -504,6 +512,36 @@ class CutterPanel(AnalysisPanelBase):
             binary_path=str(binary_path),
         )
         return True
+
+    def inherit_app_binary(self, binary_path: Path) -> bool:
+        """Adopt the application's loaded binary when the panel has none.
+
+        Lets the host application propagate its current target into the
+        Cutter panel so opening the panel does not require a second, manual
+        load. When the panel already tracks a binary the call is a no-op so a
+        user's in-panel selection is never overridden. Loading is routed
+        through :meth:`analyze_binary`, preserving the standard load and
+        auto-analysis chain.
+
+        Args:
+            binary_path: Path to the application's currently loaded binary.
+
+        Returns:
+            bool: True when the binary was adopted and loading began; False
+            when the panel already has a binary or loading could not start.
+        """
+        if self._current_binary is not None:
+            _logger.debug(
+                "cutter_inherit_skipped_existing_binary",
+                existing=str(self._current_binary),
+                offered=str(binary_path),
+            )
+            return False
+        if not binary_path.exists():
+            _logger.warning("cutter_inherit_binary_missing", path=str(binary_path))
+            return False
+        _logger.info("cutter_inherit_app_binary", path=str(binary_path))
+        return self.analyze_binary(binary_path)
 
     @override
     def start_tool(self) -> bool:

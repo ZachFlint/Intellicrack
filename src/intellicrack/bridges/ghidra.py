@@ -21,6 +21,7 @@ import os
 import re
 import socket
 import string
+import sys
 import tempfile
 import textwrap
 import threading
@@ -72,6 +73,25 @@ _HEX_TOKEN_LENGTH = 2
 _BOOKMARK_READBACK_PAIR_LEN = 2
 
 _RESULT_SENTINEL_BASE = "_intellicrack_ghidra_result_"
+
+# jfx_bridge defaults its per-RPC response timeout to 2 seconds
+# (``jfx_bridge.bridge.DEFAULT_RESPONSE_TIMEOUT``) and multiplies it by 100
+# for the ``remote_exec``/``remote_eval`` ceilings. A 2 second base is far too
+# small for Ghidra, whose auto-analysis and metadata sweeps routinely take
+# minutes on real binaries. This base is passed explicitly at bridge
+# construction so both the base timeout and the derived exec/eval ceilings
+# scale proportionally (base 300s -> exec/eval ceiling 30000s), which is ample
+# headroom for the short polling RPCs the analyze loop issues.
+_GHIDRA_RESPONSE_TIMEOUT = 300
+
+# Upper bound on how long :meth:`GhidraBridge.analyze` will poll for
+# auto-analysis to finish before surfacing a timeout. Analysis runs on a
+# background Jython thread on the Ghidra side and is polled in short RPCs, so
+# this deadline governs total wall-clock, not any single RPC.
+_GHIDRA_ANALYZE_DEADLINE_SECONDS = 1800.0
+
+# Delay between successive analyze completion polls.
+_GHIDRA_ANALYZE_POLL_INTERVAL_SECONDS = 1.0
 
 _remote_call_counter: itertools.count[int] = itertools.count(1)
 
@@ -1400,6 +1420,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                 namespace=None,
                 connect_to_host="127.0.0.1",
                 connect_to_port=self._port,
+                response_timeout=_GHIDRA_RESPONSE_TIMEOUT,
             )
 
         except ImportError as imp_err:
@@ -1506,16 +1527,21 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
     ) -> None:
         """Start Ghidra in headless mode with the long-running bridge server.
 
-        The launcher selects the platform-appropriate ``analyzeHeadless`` entry
-        point (``analyzeHeadless.bat`` on Windows, ``analyzeHeadless`` on POSIX),
-        deploys an UTF-8 bridge script under a unique temporary directory, and
-        spawns the JVM with ``cwd`` set to the Ghidra ``support`` directory,
-        ``creationflags=CREATE_NO_WINDOW`` on Windows, and a scrubbed environment
-        that strips Ghidra/Java/Python overrides which can hijack the JVM. The
-        deployed script invokes ``GhidraBridgeServer.run_server`` with
-        ``background=False`` so the JVM is kept alive after the post-script
-        returns. Stdout and stderr are drained continuously by background
-        threads to prevent pipe-buffer deadlock during ``_wait_for_bridge_port``.
+        Ghidra 11.3+/12.x removed the bundled Jython interpreter and rejects
+        ``.py`` scripts run directly, so the analyzer is launched *through
+        PyGhidra* (``python -m pyghidra.ghidra_launch ... AnalyzeHeadless``)
+        with ``sys.executable`` as the interpreter, so the bridge post-script
+        runs under CPython/jpype. The installation is first validated with
+        :meth:`_resolve_headless_executable`. An UTF-8 bridge script is deployed
+        under a unique temporary directory and passed as the ``-postScript``; it
+        starts a :class:`jfx_bridge.bridge.BridgeServer` whose eval/exec hooks
+        run in the live PyGhidra script namespace. The JVM is spawned with
+        ``cwd`` set to the Ghidra install root, ``creationflags=CREATE_NO_WINDOW``
+        on Windows, a scrubbed environment that strips Ghidra/Java/Python
+        overrides which can hijack the JVM, and ``JAVA_HOME`` pointed at a
+        discovered JDK (:meth:`_discover_jdk`). Stdout and stderr are drained
+        continuously by background threads to prevent pipe-buffer deadlock
+        during ``_wait_for_bridge_port``.
 
         Args:
             project_dir: Directory for Ghidra project.
@@ -1530,15 +1556,28 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             error_message = "Ghidra path not set"
             raise ToolError(error_message)
 
-        ghidra_run = await asyncio.to_thread(self._resolve_headless_executable, self._ghidra_path)
+        # Validate the installation is a real Ghidra tree (the headless
+        # launcher must exist even though, on Jython-less Ghidra 11.3+/12.x,
+        # it is driven through PyGhidra rather than invoked directly).
+        _ = await asyncio.to_thread(self._resolve_headless_executable, self._ghidra_path)
 
         await asyncio.to_thread(project_dir.mkdir, parents=True, exist_ok=True)
         self._project_path = project_dir / project_name
 
         bridge_script = await asyncio.to_thread(self._create_bridge_script)
 
+        # Launch analyzeHeadless *through PyGhidra* so the bridge post-script
+        # runs under CPython (Ghidra 11.3+/12.x removed the bundled Jython
+        # interpreter and reject .py scripts otherwise). ``sys.executable`` is
+        # the interpreter running Intellicrack, which carries the pyghidra,
+        # jpype and jfx_bridge packages the launcher and bridge depend on.
         cmd = [
-            str(ghidra_run),
+            sys.executable,
+            "-m",
+            "pyghidra.ghidra_launch",
+            "--install-dir",
+            str(self._ghidra_path),
+            "ghidra.app.util.headless.AnalyzeHeadless",
             str(project_dir),
             project_name,
             "-scriptPath",
@@ -1548,7 +1587,10 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         ]
 
         env = self._scrubbed_environment()
-        cwd = str(ghidra_run.parent)
+        jdk_home = await asyncio.to_thread(self._discover_jdk, self._ghidra_path)
+        if jdk_home is not None:
+            env["JAVA_HOME"] = str(jdk_home)
+        cwd = str(self._ghidra_path)
         creation_flags = CREATE_NO_WINDOW if os.name == "nt" else 0
 
         _logger.info(
@@ -1600,6 +1642,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                 namespace=None,
                 connect_to_host="127.0.0.1",
                 connect_to_port=self._port,
+                response_timeout=_GHIDRA_RESPONSE_TIMEOUT,
             )
         except Exception as e:
             _logger.warning("ghidra_connect_failed", port=self._port, error=str(e))
@@ -1650,6 +1693,40 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         for key in _HEADLESS_ENV_BLOCKLIST:
             env.pop(key, None)
         return env
+
+    @staticmethod
+    def _discover_jdk(ghidra_path: Path) -> Path | None:
+        """Locate a JDK home for the PyGhidra JVM launch.
+
+        Prefers a valid ``JAVA_HOME`` already present in the environment, then
+        falls back to a JDK bundled inside the Ghidra installation
+        (``<install>/jdk-*``), selecting the highest-versioned entry that
+        contains a ``bin`` directory. PyGhidra starts the JVM through jpype,
+        which resolves the runtime from ``JAVA_HOME``; supplying the bundled
+        JDK keeps headless analysis working on hosts where ``JAVA_HOME`` is not
+        configured globally.
+
+        Args:
+            ghidra_path: Root directory of the Ghidra installation.
+
+        Returns:
+            Path | None: Path to a usable JDK home, or ``None`` when none is
+                found, in which case PyGhidra falls back to its own JVM
+                discovery.
+        """
+        existing = os.environ.get("JAVA_HOME")
+        if existing:
+            existing_path = Path(existing)
+            if (existing_path / "bin").is_dir():
+                return existing_path
+
+        bundled = sorted(
+            (candidate for candidate in ghidra_path.glob("jdk-*") if (candidate / "bin").is_dir()),
+            reverse=True,
+        )
+        if bundled:
+            return bundled[0]
+        return None
 
     def _start_drain_threads(self, process: Popen[bytes]) -> None:
         """Spawn background threads that drain stdout/stderr to prevent pipe deadlock.
@@ -1749,7 +1826,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
 
     async def _wait_for_bridge_port(
         self,
-        timeout_seconds: int = 60,
+        timeout_seconds: int = 120,
         poll_interval: float = 2.0,
     ) -> None:
         """Poll until the Ghidra bridge port is accepting connections.
@@ -1814,11 +1891,12 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         and the write is verified by reading the file back and comparing the
         on-disk size to the rendered content size before logging success.
 
-        The deployed script invokes ``ghidra_bridge_server.GhidraBridgeServer``
-        ``run_server`` with ``background=False`` (the real upstream API),
-        which keeps the JVM alive after the post-script returns. Calling the
-        non-existent constructor + ``start()`` previously crashed Ghidra at
-        boot with ``TypeError: object() takes no parameters``.
+        The deployed script starts a :class:`jfx_bridge.bridge.BridgeServer`
+        directly and calls ``.run()`` to keep the JVM alive after the
+        post-script returns. The upstream ``ghidra_bridge_server`` subclasses a
+        Java interface at import time and cannot load under PyGhidra/jpype on
+        Jython-less Ghidra, so its eval/exec are routed instead through the live
+        PyGhidra script namespace via ``local_eval_hook`` / ``local_exec_hook``.
 
         Returns:
             Path: Path to the verified-on-disk bridge script.
@@ -1828,15 +1906,48 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                 cannot be written, or post-write verification fails.
         """
         script_content = (
-            "# @category: IntelliCrack\n"
-            "# Start ghidra_bridge server (long-running) so JVM stays alive\n"
-            "# after analyzeHeadless finishes the post-script.\n"
-            "import ghidra_bridge_server\n"
-            "ghidra_bridge_server.GhidraBridgeServer.run_server(\n"
+            "# @category: Intellicrack\n"
+            "# Long-running ghidra_bridge-compatible RPC server, started as a\n"
+            "# PyGhidra post-script so it runs under CPython. Ghidra 11.3+/12.x\n"
+            "# dropped the bundled Jython interpreter, so the upstream\n"
+            "# ghidra_bridge_server (which subclasses a Java interface at import\n"
+            "# time) cannot load under PyGhidra/jpype. We therefore start the\n"
+            "# underlying jfx_bridge server directly and route its eval/exec\n"
+            "# through the live PyGhidra script namespace (a PyGhidraScript whose\n"
+            "# __missing__ lazily resolves the Ghidra flat API), so remote calls\n"
+            "# to getState, currentProgram, analyzeAll, etc. resolve correctly.\n"
+            "import logging\n"
+            "from jfx_bridge import bridge as _ic_bridge\n"
+            "_ic_ns = globals()\n"
+            "# Ghidra 12.x runs the flat API under CPython/jpype instead of\n"
+            "# Jython. jpype resolves the overloaded toAddr(int)/toAddr(long)\n"
+            "# to the int overload and raises OverflowError on 64-bit\n"
+            "# addresses (image base >= 0x1_0000_0000). Shadow the flat-API\n"
+            "# toAddr in the script namespace with a variant that forces the\n"
+            "# long overload via the address factory, matching the flat API's\n"
+            "# default-space semantics for both integer and string offsets.\n"
+            "def toAddr(_ic_off):\n"
+            "    from ghidra.program.model.address import Address as _ICAddress\n"
+            "    if isinstance(_ic_off, _ICAddress):\n"
+            "        return _ic_off\n"
+            "    if isinstance(_ic_off, str):\n"
+            "        return currentProgram.getAddressFactory().getAddress(_ic_off)\n"
+            "    from java.lang import Long as _ICLong\n"
+            "    _ic_space = currentProgram.getAddressFactory().getDefaultAddressSpace()\n"
+            "    return _ic_space.getAddress(_ICLong(str(_ic_off)).longValue())\n"
+            "def _ic_eval_hook(_conn, _expr, _globals, _locals):\n"
+            "    return eval(_expr, _ic_ns, _locals if _locals else _ic_ns)\n"
+            "def _ic_exec_hook(_conn, _expr, _globals):\n"
+            "    exec(_expr, _ic_ns, _ic_ns)\n"
+            "_ic_server = _ic_bridge.BridgeServer(\n"
             '    server_host="127.0.0.1",\n'
             f"    server_port={self._port},\n"
-            "    background=False,\n"
+            "    loglevel=logging.INFO,\n"
+            f"    response_timeout={_GHIDRA_RESPONSE_TIMEOUT},\n"
+            "    local_eval_hook=_ic_eval_hook,\n"
+            "    local_exec_hook=_ic_exec_hook,\n"
             ")\n"
+            "_ic_server.run()\n"
         )
 
         with _BRIDGE_SCRIPT_LOCK:
@@ -1930,12 +2041,12 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             try:
                 import_result = await self._execute_remote(
                     "import java.io.File as _JFile\n"
-                    f"prog = importFile(_JFile({safe_path}))\n"
-                    "if prog is None:\n"
-                    "    {'imported': False}\n"
-                    "else:\n"
-                    "    state.setCurrentProgram(prog)\n"
-                    "    {'imported': True, 'name': prog.getName()}\n",
+                    f"_ic_prog = importFile(_JFile({safe_path}))\n"
+                    "_ic_imported = _ic_prog is not None\n"
+                    "if _ic_imported:\n"
+                    "    state.setCurrentProgram(_ic_prog)\n"
+                    "    currentProgram = _ic_prog\n"
+                    "{'imported': _ic_imported, 'name': (_ic_prog.getName() if _ic_imported else None)}\n",
                 )
             except ToolError:
                 _logger.exception("ghidra_remote_import_failed", binary_path=str(path))
@@ -2036,6 +2147,16 @@ try:
         if block.isExecute():
             flags |= 0x4
 
+        raw_offset = 0
+        try:
+            source_infos = block.getSourceInfos()
+            if source_infos is not None and source_infos.size() > 0:
+                file_bytes_offset = source_infos.get(0).getFileBytesOffset()
+                if file_bytes_offset is not None and file_bytes_offset >= 0:
+                    raw_offset = file_bytes_offset
+        except Exception:
+            raw_offset = 0
+
         entropy = 0.0
         if block.isInitialized() and size > 0:
             counts = [0] * 256
@@ -2062,6 +2183,7 @@ try:
             'virtual_address': start.getOffset(),
             'virtual_size': size,
             'raw_size': size,
+            'raw_offset': raw_offset,
             'characteristics': flags,
             'entropy': float(entropy),
         })
@@ -2107,6 +2229,7 @@ metadata
                 virtual_address=int(s.get("virtual_address", 0)),
                 virtual_size=int(s.get("virtual_size", 0)),
                 raw_size=int(s.get("raw_size", 0)),
+                raw_offset=int(s.get("raw_offset", 0)),
                 characteristics=int(s.get("characteristics", 0)),
                 entropy=float(s.get("entropy", 0.0)),
             )
@@ -2243,18 +2366,27 @@ metadata
         return header_arch, header_is_64
 
     async def analyze(self) -> None:
-        """Run full Ghidra analysis and block until every analyser pass completes.
+        """Run full Ghidra auto-analysis, polling to completion without a blocking RPC.
 
-        ``GhidraScript.analyzeAll`` only schedules pending analyses; it
-        does not wait for the asynchronous analyzers to finish. Callers
-        that immediately query symbols/functions afterwards observe a
-        partially-analysed program. This implementation invokes
-        ``analyzeAll`` and then blocks on
-        ``AutoAnalysisManager.waitForAnalysis`` so the method only
-        returns once Ghidra reports the program fully analysed.
+        ``GhidraScript.analyzeAll`` schedules every pending analyser and
+        then blocks until they finish. Running ``analyzeAll`` (optionally
+        followed by ``AutoAnalysisManager.waitForAnalysis``) inside a single
+        synchronous RPC can exceed the bridge response-timeout ceiling on
+        real binaries, surfacing as a spurious ``timed out`` failure and an
+        empty analysis view.
+
+        To avoid that, this method launches ``analyzeAll`` on a background
+        Jython thread on the Ghidra side so the kick-off RPC returns
+        immediately, then polls a completion flag in short RPCs (each well
+        within the response ceiling) until the worker thread finishes or the
+        bounded overall deadline elapses. Any exception raised by
+        ``analyzeAll`` is captured on the server and re-raised on the client,
+        so callers only return once Ghidra reports the program fully analysed.
 
         Raises:
-            ToolError: If Ghidra is not connected or analysis fails.
+            ToolError: If Ghidra is not connected, the analysis worker
+                reports a failure, or the bounded polling deadline is
+                exceeded before analysis completes.
         """
         if self._bridge is None:
             _logger.error("ghidra_not_connected")
@@ -2262,28 +2394,83 @@ metadata
             raise ToolError(error_message)
 
         _logger.info("ghidra_analysis_started", bridge="ghidra")
-        analyze_script = textwrap.dedent(
+
+        kickoff_script = textwrap.dedent(
             """
-            from ghidra.app.plugin.core.analysis import AutoAnalysisManager
-            analyzeAll(currentProgram)
-            mgr = AutoAnalysisManager.getAnalysisManager(currentProgram)
-            mgr.waitForAnalysis(None, monitor)
+            import threading as _ic_threading
+
+            _ic_analysis_error = None
+            _ic_analysis_done = False
+
+            def _ic_run_analysis():
+                global _ic_analysis_error, _ic_analysis_done
+                try:
+                    _ic_tx = currentProgram.startTransaction("Intellicrack auto-analysis")
+                    try:
+                        analyzeAll(currentProgram)
+                    finally:
+                        currentProgram.endTransaction(_ic_tx, True)
+                except Exception as _ic_exc:
+                    _ic_analysis_error = str(_ic_exc)
+                finally:
+                    _ic_analysis_done = True
+
+            _ic_analysis_thread = _ic_threading.Thread(
+                name='intellicrack-ghidra-analysis',
+                target=_ic_run_analysis,
+            )
+            _ic_analysis_thread.setDaemon(True)
+            _ic_analysis_thread.start()
             """,
         )
         try:
-            await self._execute_remote(analyze_script)
+            await self._execute_remote(kickoff_script)
         except ToolError:
-            _logger.warning("ghidra_analysis_failed", phase="wait_for_analysis")
+            _logger.warning("ghidra_analysis_failed", phase="kickoff")
             raise
         except Exception as exc:
-            _logger.warning("ghidra_analysis_failed", phase="wait_for_analysis", error=str(exc))
+            _logger.warning("ghidra_analysis_failed", phase="kickoff", error=str(exc))
             error_message = f"Analysis failed: {exc}"
             raise ToolError(error_message) from exc
+
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + _GHIDRA_ANALYZE_DEADLINE_SECONDS
+
+        while True:
+            try:
+                done = bool(await self._execute_remote_eval("_ic_analysis_done"))
+            except ToolError:
+                _logger.warning("ghidra_analysis_failed", phase="poll")
+                raise
+            except Exception as exc:
+                _logger.warning("ghidra_analysis_failed", phase="poll", error=str(exc))
+                error_message = f"Analysis failed: {exc}"
+                raise ToolError(error_message) from exc
+
+            if done:
+                break
+
+            if loop.time() >= deadline:
+                _logger.warning(
+                    "ghidra_analysis_timeout",
+                    deadline_seconds=_GHIDRA_ANALYZE_DEADLINE_SECONDS,
+                )
+                error_message = f"Ghidra analysis did not complete within {_GHIDRA_ANALYZE_DEADLINE_SECONDS:.0f}s"
+                raise ToolError(error_message)
+
+            await asyncio.sleep(_GHIDRA_ANALYZE_POLL_INTERVAL_SECONDS)
+
+        analysis_error = await self._execute_remote_eval("_ic_analysis_error")
+        if analysis_error is not None:
+            error_text = str(analysis_error)
+            _logger.warning("ghidra_analysis_failed", phase="analyze_all", error=error_text)
+            error_message = f"Analysis failed: {error_text}"
+            raise ToolError(error_message)
 
         _logger.info(
             "ghidra_analysis_complete",
             bridge="ghidra",
-            phase="wait_for_analysis_returned",
+            phase="poll_complete",
         )
 
     async def get_functions(
@@ -2456,7 +2643,7 @@ metadata
         Applies the bridge-level decompiler configuration (set via
         :meth:`set_decompiler_options`) to the ``DecompInterface``
         before invoking decompilation. The decompiler outcome is
-        captured in module-level Jython variables on the bridge server,
+        captured in a module-level variable on the bridge server,
         then read back through ``remote_eval`` so the client can
         distinguish "function not found", decompiler failure, and
         success - and raise :class:`ToolError` instead of returning an
@@ -2484,16 +2671,13 @@ metadata
             result = await self._execute_remote(
                 f"""
                 import json as _json
-                from ghidra.app.decompiler import DecompInterface
+                from ghidra.app.decompiler import DecompInterface, DecompileOptions
 
                 ifc = DecompInterface()
-                ifc.openProgram(currentProgram)
-                opts = ifc.getOptions()
+                opts = DecompileOptions()
                 simp = {simp_literal}
                 max_instr = {max_instr_literal}
                 extra_data = _json.loads({json.dumps(extra_literal)})
-                if simp is not None:
-                    opts.setSimplificationStyle(simp)
                 if max_instr is not None:
                     opts.setMaxInstructions(max_instr)
                 for key, value in extra_data.items():
@@ -2503,6 +2687,9 @@ metadata
                     except Exception:
                         pass
                 ifc.setOptions(opts)
+                if simp is not None:
+                    ifc.setSimplificationStyle(simp)
+                ifc.openProgram(currentProgram)
 
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)

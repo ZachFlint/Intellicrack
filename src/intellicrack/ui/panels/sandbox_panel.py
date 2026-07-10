@@ -39,7 +39,7 @@ from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.logging import get_logger
 from intellicrack.sandbox.qemu import QEMUSandbox
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
-from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.qt_compat import (
     get_current_tree_item,
     set_header_labels,
@@ -59,6 +59,8 @@ _EXEC_MARGIN: Final[int] = 4
 _EXEC_SPACING: Final[int] = 4
 _SPLIT_LEFT: Final[int] = 200
 _SPLIT_RIGHT: Final[int] = 400
+_MIN_FIELD_WIDTH: Final[int] = 160
+_MIN_SPIN_WIDTH: Final[int] = 110
 
 _TIMEOUT_MIN_SECONDS: Final[int] = 1
 _TIMEOUT_MAX_SECONDS: Final[int] = 86400
@@ -183,11 +185,6 @@ class SandboxPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self.snapshot_btn = self._add_tool_button(toolbar, "Take Snapshot", self._on_take_snapshot, enabled=False)
-        self.restore_btn = self._add_tool_button(toolbar, "Restore Snapshot", self._on_restore_snapshot, enabled=False)
-
-        toolbar.addSeparator()
-
         self._add_toolbar_label(toolbar, "Type:")
 
         self.sandbox_type_combo = QComboBox()
@@ -197,43 +194,70 @@ class SandboxPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self.screenshot_btn = self._add_tool_button(toolbar, "Screenshot", self._on_screenshot, enabled=False)
-        self.pcap_btn = self._add_tool_button(toolbar, "PCAP Start", self._on_pcap_toggle, enabled=False)
-        self.memdump_btn = self._add_tool_button(toolbar, "Mem Dump", self._on_memory_dump, enabled=False)
-        self.extract_files_btn = self._add_tool_button(
+        snapshot_actions = self._add_tool_menu(
             toolbar,
-            "Extract Files",
-            self._on_extract_files,
-            enabled=False,
+            "Snapshots",
+            [
+                ToolMenuEntry("Take Snapshot", self._on_take_snapshot, enabled=False),
+                ToolMenuEntry("Restore Snapshot", self._on_restore_snapshot, enabled=False),
+                ToolMenuEntry("Delete Snapshot", self._on_delete_snapshot, enabled=False),
+            ],
         )
+        self.snapshot_btn = snapshot_actions["Take Snapshot"]
+        self.restore_btn = snapshot_actions["Restore Snapshot"]
+        self.delete_snap_btn = snapshot_actions["Delete Snapshot"]
 
-        toolbar.addSeparator()
-
-        self.yara_btn = self._add_tool_button(toolbar, "YARA Scan", self._on_yara_scan, enabled=False)
-        self.iocs_btn = self._add_tool_button(toolbar, "Extract IOCs", self._on_extract_iocs, enabled=False)
-        self.timeline_btn = self._add_tool_button(toolbar, "Timeline", self._on_timeline, enabled=False)
-        self.behaviors_btn = self._add_tool_button(
+        capture_actions = self._add_tool_menu(
             toolbar,
-            "Behaviors",
-            self._on_detect_behaviors,
-            enabled=False,
+            "Capture",
+            [
+                ToolMenuEntry("Screenshot", self._on_screenshot, enabled=False),
+                ToolMenuEntry("PCAP Start", self._on_pcap_toggle, enabled=False),
+                ToolMenuEntry("Memory Dump", self._on_memory_dump, enabled=False),
+                ToolMenuEntry("Extract Files", self._on_extract_files, enabled=False),
+            ],
         )
+        self.screenshot_btn = capture_actions["Screenshot"]
+        self.pcap_btn = capture_actions["PCAP Start"]
+        self.memdump_btn = capture_actions["Memory Dump"]
+        self.extract_files_btn = capture_actions["Extract Files"]
 
-        toolbar.addSeparator()
-
-        self.copy_in_btn = self._add_tool_button(toolbar, "Copy In", self._on_copy_in, enabled=False)
-        self.copy_out_btn = self._add_tool_button(toolbar, "Copy Out", self._on_copy_out, enabled=False)
-
-        toolbar.addSeparator()
-
-        self.continue_btn = self._add_tool_button(toolbar, "Continue VM", self._on_continue_vm, enabled=False)
-        self.pause_btn = self._add_tool_button(toolbar, "Pause VM", self._on_pause_vm, enabled=False)
-        self.delete_snap_btn = self._add_tool_button(
+        analysis_actions = self._add_tool_menu(
             toolbar,
-            "Delete Snap",
-            self._on_delete_snapshot,
-            enabled=False,
+            "Analysis",
+            [
+                ToolMenuEntry("YARA Scan", self._on_yara_scan, enabled=False),
+                ToolMenuEntry("Extract IOCs", self._on_extract_iocs, enabled=False),
+                ToolMenuEntry("Timeline", self._on_timeline, enabled=False),
+                ToolMenuEntry("Behaviors", self._on_detect_behaviors, enabled=False),
+            ],
         )
+        self.yara_btn = analysis_actions["YARA Scan"]
+        self.iocs_btn = analysis_actions["Extract IOCs"]
+        self.timeline_btn = analysis_actions["Timeline"]
+        self.behaviors_btn = analysis_actions["Behaviors"]
+
+        transfer_actions = self._add_tool_menu(
+            toolbar,
+            "Transfer",
+            [
+                ToolMenuEntry("Copy In", self._on_copy_in, enabled=False),
+                ToolMenuEntry("Copy Out", self._on_copy_out, enabled=False),
+            ],
+        )
+        self.copy_in_btn = transfer_actions["Copy In"]
+        self.copy_out_btn = transfer_actions["Copy Out"]
+
+        vm_actions = self._add_tool_menu(
+            toolbar,
+            "VM Control",
+            [
+                ToolMenuEntry("Continue VM", self._on_continue_vm, enabled=False),
+                ToolMenuEntry("Pause VM", self._on_pause_vm, enabled=False),
+            ],
+        )
+        self.continue_btn = vm_actions["Continue VM"]
+        self.pause_btn = vm_actions["Pause VM"]
 
     def _build_config_row(self, exec_layout: QVBoxLayout, fm: FontManager) -> None:
         """Build the sandbox VM/environment configuration row.
@@ -258,6 +282,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._timeout_spin = QSpinBox()
         self._timeout_spin.setRange(_TIMEOUT_MIN_SECONDS, _TIMEOUT_MAX_SECONDS)
         self._timeout_spin.setValue(_TIMEOUT_DEFAULT_SECONDS)
+        self._timeout_spin.setMinimumWidth(_MIN_SPIN_WIDTH)
         self._timeout_spin.setToolTip("Sandbox execution timeout in seconds")
         config_row.addWidget(self._timeout_spin)
 
@@ -268,6 +293,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._memory_limit_spin = QSpinBox()
         self._memory_limit_spin.setRange(_MEMORY_MIN_MB, _MEMORY_MAX_MB)
         self._memory_limit_spin.setValue(_MEMORY_DEFAULT_MB)
+        self._memory_limit_spin.setMinimumWidth(_MIN_SPIN_WIDTH)
         self._memory_limit_spin.setToolTip("Sandbox memory limit in megabytes")
         config_row.addWidget(self._memory_limit_spin)
 
@@ -331,6 +357,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         self._anti_evasion_profile_input = QLineEdit()
         self._anti_evasion_profile_input.setFont(fm.get_code_font(9))
+        self._anti_evasion_profile_input.setMinimumWidth(_MIN_FIELD_WIDTH)
         self._anti_evasion_profile_input.setPlaceholderText("default")
         self._anti_evasion_profile_input.setToolTip("Anti-evasion hardening profile name (QEMU only)")
         evasion_row.addWidget(self._anti_evasion_profile_input)
@@ -349,11 +376,13 @@ class SandboxPanel(AnalysisPanelBase):
 
         self._diff_instance_a_input = QLineEdit()
         self._diff_instance_a_input.setFont(fm.get_code_font(9))
+        self._diff_instance_a_input.setMinimumWidth(_MIN_FIELD_WIDTH)
         self._diff_instance_a_input.setPlaceholderText("Instance A ID")
         diff_row.addWidget(self._diff_instance_a_input)
 
         self._diff_instance_b_input = QLineEdit()
         self._diff_instance_b_input.setFont(fm.get_code_font(9))
+        self._diff_instance_b_input.setMinimumWidth(_MIN_FIELD_WIDTH)
         self._diff_instance_b_input.setPlaceholderText("Instance B ID")
         diff_row.addWidget(self._diff_instance_b_input)
 
@@ -393,6 +422,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         self._binary_path_input = QLineEdit()
         self._binary_path_input.setFont(fm.get_code_font(9))
+        self._binary_path_input.setMinimumWidth(_MIN_FIELD_WIDTH)
         path_row.addWidget(self._binary_path_input)
 
         self._browse_btn = QPushButton("Browse...")
@@ -408,6 +438,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         self._args_input = QLineEdit()
         self._args_input.setFont(fm.get_code_font(9))
+        self._args_input.setMinimumWidth(_MIN_FIELD_WIDTH)
         args_row.addWidget(self._args_input)
 
         self._run_btn = QPushButton("Run in Sandbox")
@@ -424,6 +455,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         self._cmd_input = QLineEdit()
         self._cmd_input.setFont(fm.get_code_font(9))
+        self._cmd_input.setMinimumWidth(_MIN_FIELD_WIDTH)
         self._cmd_input.setPlaceholderText("Execute command in sandbox...")
         cmd_row.addWidget(self._cmd_input)
 
@@ -436,7 +468,7 @@ class SandboxPanel(AnalysisPanelBase):
 
         self._build_analysis_controls(exec_layout, fm)
 
-        main_splitter.addWidget(exec_container)
+        main_splitter.addWidget(self._make_scrollable(exec_container))
 
         output_tabs = QTabWidget()
 

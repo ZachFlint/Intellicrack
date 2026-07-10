@@ -270,53 +270,87 @@ def _daemon_ready() -> bool:
     return proc.returncode == 0 and bool(proc.stdout.strip())
 
 
-def ensure_docker_running() -> None:
-    """Verify the Docker daemon is running; start Docker Desktop if not.
+def _engine_ready() -> bool:
+    """Report whether the container engine can service container operations.
 
-    When the daemon is unresponsive the function launches ``Docker Desktop.exe``
-    in the background and polls ``docker version`` until the daemon responds
-    or :data:`_DOCKER_DAEMON_TIMEOUT_SECONDS` elapses.
+    ``docker version`` answers as soon as the API server is up, but on Windows
+    the container runtime needs additional time before it can create and attach
+    containers -- an immediate ``docker run`` in that window fails with
+    ``unable to upgrade to tcp, received 500``. ``docker ps`` exercises the
+    container backend, so a clean exit is a reliable signal that ``docker run``
+    will succeed.
+
+    Returns:
+        bool: ``True`` when ``docker ps`` exits 0, ``False`` otherwise.
+    """
+    try:
+        proc = _run_docker(
+            ["ps", "--quiet"],
+            check=False,
+            timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+        )
+    except SandboxError:
+        return False
+    return proc.returncode == 0
+
+
+def ensure_docker_running() -> None:
+    """Verify Docker is ready to run containers; start Docker Desktop if not.
+
+    Readiness requires both the daemon (``docker version``) *and* the container
+    engine (``docker ps``): the daemon answers first, but running a container
+    before the engine has warmed up fails with ``unable to upgrade to tcp,
+    received 500``. When the daemon is down the function launches ``Docker
+    Desktop.exe``; when the daemon is already up but the engine is still warming
+    up (Docker Desktop mid-start) it waits without relaunching. Either way it
+    polls until both are ready or :data:`_DOCKER_DAEMON_TIMEOUT_SECONDS` elapses.
 
     Raises:
-        SandboxError: If the Docker Desktop launcher cannot be found or the
-            daemon never becomes ready.
+        SandboxError: If the Docker Desktop launcher cannot be found or Docker
+            never becomes ready to run containers.
     """
-    if _daemon_ready():
-        _LOGGER.info("docker_daemon_ready")
+    if _daemon_ready() and _engine_ready():
+        _LOGGER.info("docker_ready")
         return
 
-    launcher = _docker_desktop_binary()
-    if launcher is None:
-        message = (
-            "Docker daemon is not running and Docker Desktop launcher was not found; "
-            "install Docker Desktop or start it manually"
+    # Only launch Docker Desktop when the daemon itself is down. If the daemon
+    # already answers, Docker is mid-start and relaunching is pointless -- just
+    # wait for the engine to finish warming up.
+    if not _daemon_ready():
+        launcher = _docker_desktop_binary()
+        if launcher is None:
+            message = (
+                "Docker daemon is not running and Docker Desktop launcher was not found; "
+                "install Docker Desktop or start it manually"
+            )
+            raise SandboxError(message)
+        _LOGGER.info("docker_desktop_starting", launcher=str(launcher))
+        print(f"[sandbox] Docker daemon not responding; launching {launcher.name} ...", file=sys.stderr)
+        subprocess.Popen(
+            [str(launcher)],
+            cwd=str(launcher.parent),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
         )
-        raise SandboxError(message)
-
-    _LOGGER.info("docker_desktop_starting", launcher=str(launcher))
-    print(f"[sandbox] Docker daemon not responding; launching {launcher.name} ...", file=sys.stderr)
-    subprocess.Popen(
-        [str(launcher)],
-        cwd=str(launcher.parent),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        close_fds=True,
-    )
+    else:
+        _LOGGER.info("docker_engine_warming_up")
+        print("[sandbox] Docker daemon up; waiting for the container engine to warm up ...", file=sys.stderr)
 
     deadline = time.monotonic() + _DOCKER_DAEMON_TIMEOUT_SECONDS
     elapsed = 0.0
     while time.monotonic() < deadline:
-        if _daemon_ready():
-            _LOGGER.info("docker_daemon_ready_after_launch", waited_seconds=round(elapsed, 1))
+        if _daemon_ready() and _engine_ready():
+            _LOGGER.info("docker_ready_after_wait", waited_seconds=round(elapsed, 1))
             print(
-                f"[sandbox] Docker daemon ready after {elapsed:.1f}s.",
+                f"[sandbox] Docker ready to run containers after {elapsed:.1f}s.",
                 file=sys.stderr,
             )
             return
         time.sleep(_DOCKER_DAEMON_POLL_INTERVAL)
         elapsed += _DOCKER_DAEMON_POLL_INTERVAL
-        _LOGGER.debug("docker_daemon_wait", elapsed_seconds=round(elapsed, 1))
-    message = f"Docker daemon did not become ready within {_DOCKER_DAEMON_TIMEOUT_SECONDS}s"
+        _LOGGER.debug("docker_ready_wait", elapsed_seconds=round(elapsed, 1))
+    message = f"Docker did not become ready to run containers within {_DOCKER_DAEMON_TIMEOUT_SECONDS}s"
     raise SandboxError(message)
 
 
@@ -464,6 +498,9 @@ def _build_docker_run_argv(
         f"{_PROJECT_ROOT / 'docker'}:{_CONTAINER_WORKSPACE}\\docker:ro"
     )
     src_mount = f"{_PROJECT_ROOT / 'src'}:{_CONTAINER_WORKSPACE}\\src:ro"
+    scripts_mount = (
+        f"{_PROJECT_ROOT / 'scripts'}:{_CONTAINER_WORKSPACE}\\scripts:ro"
+    )
     _ = writable_workspace
 
     container_name = f"intellicrack-sandbox-{spec.test_type.value}"
@@ -490,6 +527,8 @@ def _build_docker_run_argv(
         docker_mount,
         "--volume",
         src_mount,
+        "--volume",
+        scripts_mount,
     ]
     # Mount the committed vendor corpus when present so real-data tests that
     # drive the shipped ``.hexpat`` pattern files (and other vendored fixtures)
@@ -527,6 +566,14 @@ def _build_docker_run_argv(
     # baked into the image; runs without an ``.env`` simply forward nothing and
     # the key-gated tests skip themselves.
     argv.extend(_env_file_docker_args(_PROJECT_ROOT / ".env"))
+    # Forward isolated-coverage tuning knobs when the operator has set them on
+    # the host. ``COVERAGE_TESTS_ROOT`` scopes the per-directory run to a subset
+    # (used for smoke-testing the mechanism); ``COVERAGE_GROUP_TIMEOUT`` bounds
+    # each per-directory pytest process before the watchdog kills it.
+    for cov_var in ("COVERAGE_TESTS_ROOT", "COVERAGE_GROUP_TIMEOUT"):
+        cov_val = os.environ.get(cov_var)
+        if cov_val:
+            argv.extend(["--env", f"{cov_var}={cov_val}"])
     if spec.module:
         argv.extend(["--env", f"TEST_MODULE={spec.module}"])
     if interactive:
@@ -650,7 +697,8 @@ class DockerSandbox:
             SummaryRecord: Normalized summary for the completed run.
         """
         tag = self.ensure_image()
-        _remove_stale_container(f"intellicrack-sandbox-{spec.test_type.value}")
+        container_name = f"intellicrack-sandbox-{spec.test_type.value}"
+        _remove_stale_container(container_name)
         _write_spec_file(spec)
         argv = _build_docker_run_argv(
             spec,
@@ -678,7 +726,11 @@ class DockerSandbox:
             file=sys.stderr,
         )
         start = time.monotonic()
-        exit_code = _run_streamed(argv, timeout_seconds=spec.timeout_seconds)
+        exit_code = _run_streamed(
+            argv,
+            timeout_seconds=spec.timeout_seconds,
+            container_name=container_name,
+        )
         duration = time.monotonic() - start
         _LOGGER.info(
             "sandbox_container_finished",
@@ -710,12 +762,41 @@ class DockerSandbox:
         return record
 
 
-def _run_streamed(argv: list[str], *, timeout_seconds: int) -> int:
+def _force_stop_container(container_name: str) -> None:
+    """Stop a detached container by name, killing every process inside it.
+
+    Terminating the host-side ``docker run`` client does **not** stop the
+    container it launched: the container runs detached in the Docker engine and
+    keeps executing (this is why an earlier hung run continued for hours after
+    the host timeout fired). ``docker kill`` sends the stop to the engine, which
+    terminates the container and, via ``--rm``, removes it.
+
+    Args:
+        container_name: Name of the container to stop.
+    """
+    _LOGGER.warning("sandbox_container_force_stop", name=container_name)
+    result = _run_docker(["kill", container_name], check=False, timeout=30)
+    if result.returncode != 0:
+        # The container may already be gone; ensure no stale record remains so
+        # the next run's ``--name`` does not conflict.
+        _run_docker(["rm", "-f", container_name], check=False, timeout=30)
+
+
+def _run_streamed(
+    argv: list[str],
+    *,
+    timeout_seconds: int,
+    container_name: str,
+) -> int:
     """Run a subprocess with live output streaming and SIGINT forwarding.
 
     Args:
         argv: Argument vector beginning with the executable path.
         timeout_seconds: Hard timeout applied to the subprocess.
+        container_name: Name of the launched container, used to force-stop it
+            in the engine when the host timeout or an interrupt fires (killing
+            the ``docker run`` client alone leaves the detached container
+            running).
 
     Returns:
         int: The subprocess exit code. ``130`` is returned on ``KeyboardInterrupt``
@@ -749,6 +830,7 @@ def _run_streamed(argv: list[str], *, timeout_seconds: int) -> int:
         return proc.wait(timeout=timeout_seconds)
     except subprocess.TimeoutExpired:
         _LOGGER.exception("sandbox_timeout", timeout_seconds=timeout_seconds)
+        _force_stop_container(container_name)
         proc.terminate()
         try:
             proc.wait(timeout=30)
@@ -756,6 +838,7 @@ def _run_streamed(argv: list[str], *, timeout_seconds: int) -> int:
             proc.kill()
         return 124
     except KeyboardInterrupt:
+        _force_stop_container(container_name)
         proc.terminate()
         try:
             proc.wait(timeout=30)

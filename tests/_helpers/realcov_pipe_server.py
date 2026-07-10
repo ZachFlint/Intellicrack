@@ -39,6 +39,7 @@ MODE_ECHO = "echo"
 MODE_INDEX = "index"
 MODE_BLOB = "blob"
 MODE_EVENT_THEN_ECHO = "event_then_echo"
+MODE_DROP_AFTER_ONE = "drop_after_one"
 
 BLOB_PAYLOAD = "A1b2C3" * 40000
 EVENT_NAME = "breakpoint_hit"
@@ -83,6 +84,8 @@ def _kernel32() -> ctypes.WinDLL:
     ]
     k32.DisconnectNamedPipe.restype = wintypes.BOOL
     k32.DisconnectNamedPipe.argtypes = [wintypes.HANDLE]
+    k32.FlushFileBuffers.restype = wintypes.BOOL
+    k32.FlushFileBuffers.argtypes = [wintypes.HANDLE]
     k32.CloseHandle.restype = wintypes.BOOL
     k32.CloseHandle.argtypes = [wintypes.HANDLE]
     return k32
@@ -164,6 +167,15 @@ def _build_replies(mode: str, frame: dict[str, Any]) -> list[dict[str, Any]]:
         list[dict[str, Any]]: Frames to write back to the client.
     """
     rid = int(frame["id"])
+    if mode == MODE_DROP_AFTER_ONE:
+        return [
+            {
+                "id": rid,
+                "type": "response",
+                "success": True,
+                "result": {"echo_command": frame.get("command")},
+            },
+        ]
     if mode == MODE_INDEX:
         params: object = frame.get("params")
         index = -1
@@ -203,6 +215,13 @@ def _serve_connection(k32: ctypes.WinDLL, handle: int, mode: str) -> None:
             break
         for reply in _build_replies(mode, request):
             _write_frame(k32, handle, reply)
+        if mode == MODE_DROP_AFTER_ONE:
+            # Block until the client has drained the reply before the server
+            # tears the pipe down. Without this, the ``DisconnectNamedPipe`` in
+            # :func:`serve` would forcibly discard the still-buffered reply and
+            # the client would observe a read failure instead of the response.
+            k32.FlushFileBuffers(handle)
+            break
 
 
 def serve(pipe_name: str, mode: str) -> int:

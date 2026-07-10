@@ -18,7 +18,7 @@ import weakref
 from pathlib import Path
 from typing import TYPE_CHECKING, cast, override
 
-from PyQt6.QtCore import QByteArray, QObject, QSettings, QSignalBlocker, Qt, QThread, QTimer, pyqtSignal
+from PyQt6.QtCore import QByteArray, QObject, QSettings, QSignalBlocker, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QApplication,
@@ -51,6 +51,8 @@ from intellicrack.core.logging import get_logger, log_tool_call
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.script_gen import ScriptGenerator, ScriptManager
 from intellicrack.core.types import (
+    BinaryInfo,
+    BridgeAnalysisSummary,
     ConfigurationError,
     Message,
     ModelInfo,
@@ -72,6 +74,7 @@ from intellicrack.ui.log_viewer import LogViewerWindow, install_qt_log_handler
 from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import (
     GenericCallableWorker,
+    drain_bridge_workers,
     run_bridge_coroutine,
     run_bridge_coroutine_async,
     run_bridge_coroutine_logged,
@@ -116,9 +119,10 @@ if TYPE_CHECKING:
 
 _MAX_RESULT_DISPLAY_LEN = 500
 _STATUS_REFRESH_FAILURE_THRESHOLD = 5
+_STATUS_REFRESH_INTERVAL_MS = 60000
 _SPLITTER_PANE_COUNT = 2
-_CHAT_PANEL_MIN_WIDTH = 400
-_TOOL_PANEL_MIN_WIDTH = 500
+_CHAT_PANEL_MIN_WIDTH = 300
+_TOOL_PANEL_MIN_WIDTH = 340
 _SPLITTER_HANDLE_WIDTH = 6
 _WINDOW_MIN_WIDTH = _CHAT_PANEL_MIN_WIDTH + _TOOL_PANEL_MIN_WIDTH + _SPLITTER_HANDLE_WIDTH
 _MEMORY_REGION_TUPLE_LEN = 4
@@ -145,74 +149,6 @@ def _unhandled_exception_hook(
         exc_info=(exc_type, exc_value, exc_tb),
     )
     _original_excepthook(exc_type, exc_value, exc_tb)
-
-
-class AsyncWorker(QThread):
-    """Worker thread for running async operations.
-
-    Runs an asyncio event loop in a separate thread to execute
-    async operations without blocking the UI.
-
-    Attributes:
-        finished: Qt signal for finished.
-        error: Qt signal for error.
-    """
-
-    finished = pyqtSignal(object)
-    error = pyqtSignal(Exception)
-
-    def __init__(
-        self,
-        coro: Coroutine[object, object, object],
-        parent: QWidget | None = None,
-    ) -> None:
-        """Initialize the AsyncWorker with the given coroutine.
-
-        Args:
-            coro: Coroutine to execute in a separate thread.
-            parent: Parent widget.
-        """
-        super().__init__(parent)
-        self._coro: Coroutine[object, object, object] = coro
-
-    def run(self) -> None:
-        """Run the coroutine in a new event loop.
-
-        Cancels any still-pending tasks and awaits their completion before
-        closing the loop so ``asyncio.CancelledError`` cannot leak and orphan
-        tasks are not abandoned.  Non-``SystemExit`` failures are reported
-        back to the UI thread via the ``error`` signal; ``SystemExit`` is
-        propagated so the interpreter can shut down.
-
-        Raises:
-            SystemExit: Re-raised to allow interpreter shutdown when the
-                worker coroutine (or its teardown) exits the process.
-        """
-        loop: asyncio.AbstractEventLoop | None = None
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result: object = loop.run_until_complete(self._coro)
-            self.finished.emit(result)
-        except asyncio.CancelledError:
-            _logger.info("async_worker_cancelled")
-            self.error.emit(RuntimeError("async operation cancelled"))
-        except SystemExit:
-            raise
-        except BaseException as exc:
-            _logger.exception("async_worker_failed")
-            self.error.emit(exc if isinstance(exc, Exception) else RuntimeError(str(exc) or type(exc).__name__))
-        finally:
-            if loop is not None:
-                try:
-                    pending = asyncio.all_tasks(loop=loop)
-                    for task in pending:
-                        task.cancel()
-                    if pending:
-                        loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
-                except (RuntimeError, OSError):
-                    _logger.debug("async_worker_pending_cancel_failed", exc_info=True)
-                loop.close()
 
 
 class MainWindow(QMainWindow):
@@ -256,11 +192,9 @@ class MainWindow(QMainWindow):
         sys.excepthook = _unhandled_exception_hook
         self._config = config
         self._orchestrator = orchestrator
-        self._current_worker: AsyncWorker | None = None
         self._stream_append: Callable[[str], None] | None = None
         self.sandbox_manager = SandboxManager()
         self.model_refresh_worker: ModelRefreshWorker | None = None
-        self.model_browse_worker: AsyncWorker | None = None
         self._shutting_down: bool = False
 
         self.current_binary: Path | None = None
@@ -322,7 +256,56 @@ class MainWindow(QMainWindow):
 
         self._apply_smart_window_size()
         self._restore_window_state()
+
+        registry = self._orchestrator.provider_registry
+        connected: list[ProviderName] = registry.list_connected()
+        if connected:
+            first_connected: ProviderName = connected[0]
+            try:
+                registry.set_active(first_connected)
+                _logger.info("startup_active_provider_set", provider=first_connected.value)
+            except (ProviderError, RuntimeError, ValueError) as exc:
+                _logger.warning("startup_active_provider_set_failed", error=str(exc))
+            for idx in range(self._provider_combo.count()):
+                combo_data: object = self._provider_combo.itemData(idx)
+                if isinstance(combo_data, ProviderName) and combo_data == first_connected:
+                    with QSignalBlocker(self._provider_combo):
+                        self._provider_combo.setCurrentIndex(idx)
+                    break
+
         QTimer.singleShot(250, self._kickoff_initial_discovery)
+        QTimer.singleShot(750, self._kickoff_initial_session)
+
+    def _kickoff_initial_session(self) -> None:
+        """Create a default session at startup when a provider and model are ready.
+
+        Best-effort: when a provider is already connected, a model is selected,
+        and no session exists yet, a session is created so the first binary load
+        does not need to create one. When no provider is connected or no model
+        is selected this is a no-op, and the lazy backstop in
+        :meth:`_load_binary` creates a session on demand instead (N1).
+        """
+        if self._shutting_down or self._orchestrator.current_session is not None:
+            return
+        provider, model = self._selected_provider_model()
+        if not model:
+            _logger.debug("initial_session_deferred_no_model")
+            return
+        try:
+            provider_name = provider if isinstance(provider, ProviderName) else ProviderName(str(provider).lower())
+        except ValueError:
+            _logger.debug("initial_session_deferred_bad_provider", provider=str(provider))
+            return
+        instance = self._orchestrator.provider_registry.get(provider_name)
+        if instance is None or not instance.is_connected:
+            _logger.debug("initial_session_deferred_provider_not_connected", provider=provider_name.value)
+            return
+
+        async def create() -> None:
+            await self._ensure_active_session(provider_name, model)
+
+        _logger.info("initial_session_kickoff", provider=provider_name.value, model=model)
+        self._run_async(create())
 
     def _apply_smart_window_size(self) -> None:
         """Size and center the window based on available screen geometry.
@@ -658,6 +641,7 @@ class MainWindow(QMainWindow):
             msg = "Failed to create Tools menu"
             raise TypeError(msg)
 
+        self._add_menu_action(tools_menu, "Run Full Analysis", self._on_run_full_analysis)
         self._add_menu_action(tools_menu, "Tool Status...", self._on_tool_status)
         self._add_menu_action(tools_menu, "Configure Tools...", self._on_configure_tools)
         tools_menu.addSeparator()
@@ -802,12 +786,30 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(model_label)
 
         self.model_combo = QComboBox()
-        self.model_combo.setMinimumWidth(200)
+        self.model_combo.setMinimumWidth(250)
+        self.model_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.model_combo.setObjectName("toolbar_combo")
         self.model_combo.setEditable(True)
+        combo_view = self.model_combo.view()
+        if combo_view is not None:
+            combo_view.setMinimumWidth(350)
         model_line_edit = self.model_combo.lineEdit()
         if model_line_edit is not None:
             model_line_edit.editingFinished.connect(self._on_model_combo_text_committed)
+
+        def _update_model_combo_tooltip(text: str) -> None:
+            # Long model ids truncate in the collapsed field; the tooltip
+            # surfaces the full id on hover (prior UX #3 residual).
+            self.model_combo.setToolTip(text)
+
+        self.model_combo.currentTextChanged.connect(_update_model_combo_tooltip)
+
+        def _reset_model_combo_cursor() -> None:
+            le = self.model_combo.lineEdit()
+            if le is not None:
+                le.setCursorPosition(0)
+
+        self.model_combo.currentIndexChanged.connect(_reset_model_combo_cursor)
         toolbar.addWidget(self.model_combo)
 
         toolbar.addSeparator()
@@ -927,14 +929,15 @@ class MainWindow(QMainWindow):
 
         self._status_timer = QTimer(self)
         self._status_timer.timeout.connect(self._refresh_system_status)
-        self._status_timer.start(30000)
+        self._status_timer.start(_STATUS_REFRESH_INTERVAL_MS)
 
     def _refresh_system_status(self) -> None:
         """Periodically refresh the system status display.
 
-        Dispatches the orchestrator status fetch on the async bridge worker so the 30-second GUI timer never blocks the Qt event loop
-        waiting on a slow or hung orchestrator. Overlapping ticks are skipped while a fetch is in flight. Results and errors are marshalled
-        back to the GUI thread via the worker's queued signals.
+        Dispatches the orchestrator status fetch on the persistent bridge event loop so the GUI timer never blocks the Qt event loop waiting
+        on a slow or hung orchestrator. Overlapping ticks are skipped while a fetch is in flight. The orchestrator serves tool-availability
+        from a short-lived cache, so this periodic refresh does not re-probe every external tool on each tick. Results and errors are
+        marshalled back to the GUI thread via the worker's queued signals.
         """
         if self._shutting_down or self._status_refresh_in_flight:
             return
@@ -1202,14 +1205,16 @@ class MainWindow(QMainWindow):
     def _on_bridge_analysis_displayed(self, analysis: object) -> None:
         """Render bridge analysis text into the analysis tab on the GUI thread.
 
-        Connected to ``bridge_analysis_received`` so the tab clear/redisplay runs
-        on the Qt main thread regardless of which thread produced the analysis.
+        Routes the real ``BridgeAnalysisSummary`` (not a stringified copy)
+        through the structured analysis panel so the strings/functions tables
+        populate and no duplicate generic "Analysis" tab is created
+        (F8 / N4 / duplicate-tab).
 
         Args:
             analysis: The BridgeAnalysisSummary result from the orchestrator.
         """
-        self.tool_panel.clear_analysis_tab("analysis")
-        self.tool_panel.display_analysis_result("analysis", str(analysis))
+        if isinstance(analysis, BridgeAnalysisSummary):
+            self.tool_panel.display_analysis_result("analysis", analysis)
 
     def _on_bridge_analysis_activated(self, _analysis: object) -> None:
         """Activate the analysis tab after bridge analysis completes.
@@ -1489,15 +1494,22 @@ class MainWindow(QMainWindow):
         self._set_status_label(self._token_label, f"Tokens: {self._session_token_total:,}")
 
     def _run_async(self, coro: Coroutine[object, object, object]) -> None:
-        """Run an async operation in a worker thread.
+        """Run an async operation on the persistent bridge event loop.
+
+        Submits ``coro`` through :func:`run_bridge_coroutine_async`, which
+        executes it on the single long-lived asyncio loop shared by every UI
+        bridge call and delivers the result to the GUI thread via a retained
+        :class:`BridgeCallWorker`. Using the persistent loop (instead of a
+        throwaway per-call loop) keeps asyncio primitives valid across calls -
+        so a chat send issued right after a bridge timeout no longer hits
+        "Event loop is closed" - and the worker registry pins each worker for
+        the lifetime of its OS thread, so overlapping operations can no longer
+        drop a worker's only reference and crash the GUI thread.
 
         Args:
             coro: Coroutine to execute.
         """
-        self._current_worker = AsyncWorker(coro, self)
-        self._current_worker.finished.connect(self._on_async_finished)
-        self._current_worker.error.connect(self._on_async_error)
-        self._current_worker.start()
+        run_bridge_coroutine_async(coro, self._on_async_finished, self._on_async_error, self)
 
     def _on_async_finished(self, result: object) -> None:
         """Handle async operation completion.
@@ -1510,16 +1522,17 @@ class MainWindow(QMainWindow):
         self._stream_append = None
         self.status_update.emit("Ready")
 
-    def _on_async_error(self, error: Exception) -> None:
+    def _on_async_error(self, error: object) -> None:
         """Handle async operation error.
 
         Args:
-            error: The error that occurred.
+            error: The exception object emitted by the bridge worker.
         """
         self._chat_panel.set_input_enabled(enabled=True)
         self._stream_append = None
         self.status_update.emit("Error")
-        QMessageBox.critical(self, "Error", str(error))
+        message = str(error) if isinstance(error, BaseException) else repr(error)
+        QMessageBox.critical(self, "Error", message)
 
     def _update_status(self, status: str) -> None:
         """Update the status bar.
@@ -1567,34 +1580,88 @@ class MainWindow(QMainWindow):
             _logger.info("load_binary_dialog_cancelled")
 
     def _load_binary(self, path: Path) -> None:
-        """Load a binary file.
+        """Load a binary file through the orchestrator.
+
+        All optimistic UI (status label, enabling tool buttons, opening the hex
+        editor) is deferred until the asynchronous load chain succeeds and the
+        detected format is supported, so a failed or unsupported load never
+        leaves the app looking like a binary is loaded (N1 / F11). A default
+        session is created on demand when none is active, so the very first Load
+        Binary cannot fail with "No active session" (N1).
 
         Args:
             path: Path to the binary.
         """
-        _logger.info("binary_loaded", path=str(path), binary_name=path.name)
-        self.current_binary = path
-        self._set_status_label(self._binary_label, f"Binary: {path.name}")
-        for button in self._binary_dependent_buttons:
-            button.setEnabled(True)
+        _logger.info("binary_load_requested", path=str(path), binary_name=path.name)
         binary_name = path.name
+        provider, model = self._selected_provider_model()
+        self.status_update.emit(f"Loading {binary_name}...")
 
-        async def load() -> None:
-            await self._orchestrator.add_binary(path)
+        async def load() -> BinaryInfo:
+            if self._orchestrator.current_session is None:
+                await self._ensure_active_session(provider, model)
+            binary_info = await self._orchestrator.add_binary(path)
             await self._orchestrator.activate_binary_by_name(binary_name)
             await self._orchestrator.refresh_session_state()
+            return binary_info
 
-        self.status_update.emit(f"Loading {binary_name}...")
-        self._run_async(load())
+        run_bridge_coroutine_async(load(), self._on_binary_loaded, self._on_binary_load_failed, self)
 
-        self.tool_panel.open_in_hex_editor(str(path))
+    def _on_binary_loaded(self, result: object) -> None:
+        """Apply post-load UI once the async load chain succeeds.
 
-        cached_analysis = self._orchestrator.get_current_bridge_analysis(binary_name)
-        if cached_analysis is not None:
-            self.tool_panel.display_analysis_result(
-                "analysis",
-                str(cached_analysis),
+        Enables tool buttons and opens the hex editor only for supported
+        formats. An ``unknown``/unsupported format surfaces a clear message,
+        leaves tools disabled and clears the analysis panel so no stale data
+        lingers (F11).
+
+        Args:
+            result: The ``BinaryInfo`` returned by the load chain.
+        """
+        if not isinstance(result, BinaryInfo):
+            self._on_binary_load_failed(RuntimeError("binary load returned no metadata"))
+            return
+
+        binary_info = result
+        if binary_info.file_type.lower() in {"", "unknown"}:
+            self.current_binary = None
+            for button in self._binary_dependent_buttons:
+                button.setEnabled(False)
+            self._set_status_label(self._binary_label, "No binary loaded")
+            self.tool_panel.reset_analysis()
+            _logger.warning("binary_unsupported_format", binary=binary_info.name, file_type=binary_info.file_type)
+            self.status_update.emit(f"Unsupported or invalid format: {binary_info.name}")
+            QMessageBox.warning(
+                self,
+                "Unsupported Format",
+                f"'{binary_info.name}' is not a recognised binary format "
+                f"(detected: {binary_info.file_type or 'unknown'}). Tools remain disabled.",
             )
+            return
+
+        self.current_binary = binary_info.path
+        self._set_status_label(self._binary_label, f"Binary: {binary_info.name}")
+        for button in self._binary_dependent_buttons:
+            button.setEnabled(True)
+        self.tool_panel.mark_binary_loaded(binary_info.name)
+        self.tool_panel.open_in_hex_editor(str(binary_info.path))
+        _logger.info("binary_loaded", path=str(binary_info.path), binary_name=binary_info.name)
+        self.status_update.emit(f"Loaded {binary_info.name}")
+
+    def _on_binary_load_failed(self, error: object) -> None:
+        """Roll back optimistic UI when the async load chain fails.
+
+        Args:
+            error: The exception object emitted by the bridge worker.
+        """
+        self.current_binary = None
+        for button in self._binary_dependent_buttons:
+            button.setEnabled(False)
+        self._set_status_label(self._binary_label, "No binary loaded")
+        message = str(error) if isinstance(error, BaseException) else repr(error)
+        _logger.warning("binary_load_failed", error=message)
+        self.status_update.emit("Binary load failed")
+        QMessageBox.critical(self, "Load Failed", f"Failed to load binary: {message}")
 
     def _on_new_session(self) -> None:
         """Handle new session action.
@@ -1770,24 +1837,26 @@ class MainWindow(QMainWindow):
             self.status_update.emit("Session exported")
             QMessageBox.information(self, "Export", f"Session exported to {path}")
 
-        def _on_export_failed(err: Exception) -> None:
+        def _on_export_failed(err: object) -> None:
             _logger.warning("session_export_failed", path=path, error=str(err))
             self.status_update.emit("Session export failed")
             QMessageBox.warning(self, "Export", f"Failed to export session: {err}")
 
-        worker = AsyncWorker(cast("Coroutine[object, object, object]", coro), self)
-        worker.finished.connect(_on_export_done)
-        worker.error.connect(_on_export_failed)
-        self._current_worker = worker
         _logger.info("session_export_started", session_id=session.id, path=path)
         self.status_update.emit("Exporting session...")
-        worker.start()
+        run_bridge_coroutine_async(
+            cast("Coroutine[object, object, object]", coro),
+            _on_export_done,
+            _on_export_failed,
+            self,
+        )
 
     def _on_import_session(self) -> None:
         """Import a session from a JSON file.
 
-        The import coroutine runs on an ``AsyncWorker`` so the success dialog only appears after the import actually completes. Duplicate-
-        session errors surface a replace-and-retry prompt and malformed JSON files surface a friendly parse-error dialog.
+        The import coroutine runs on the persistent bridge event loop so the success dialog only appears after the import actually
+        completes. Duplicate-session errors surface a replace-and-retry prompt and malformed JSON files surface a friendly parse-error
+        dialog.
         """
         path, _ = QFileDialog.getOpenFileName(
             self,
@@ -1836,15 +1905,12 @@ class MainWindow(QMainWindow):
             self.status_update.emit("Session imported")
             QMessageBox.information(self, "Import", "Session imported successfully.")
 
-        def _on_import_failed(err: Exception) -> None:
-            self._handle_session_import_error(err, import_json, source_path)
+        def _on_import_failed(err: object) -> None:
+            exc = err if isinstance(err, Exception) else RuntimeError(str(err) or type(err).__name__)
+            self._handle_session_import_error(exc, import_json, source_path)
 
-        worker = AsyncWorker(coro, self)
-        worker.finished.connect(_on_import_done)
-        worker.error.connect(_on_import_failed)
-        self._current_worker = worker
         self.status_update.emit("Importing session...")
-        worker.start()
+        run_bridge_coroutine_async(coro, _on_import_done, _on_import_failed, self)
 
     def _handle_session_import_error(
         self,
@@ -1861,9 +1927,9 @@ class MainWindow(QMainWindow):
             source_path: Path of the file that failed to import.
         """
         _logger.warning("session_import_failed", path=str(source_path), error=str(err), error_type=type(err).__name__)
-        self.status_update.emit("Session import failed")
 
         if isinstance(err, json.JSONDecodeError):
+            self.status_update.emit("Session import failed")
             QMessageBox.warning(
                 self,
                 "Import",
@@ -1874,6 +1940,9 @@ class MainWindow(QMainWindow):
         if isinstance(err, ValueError):
             message = str(err)
             if "already exists" in message.lower():
+                # Recoverable: the user can replace the existing session. Do
+                # not flash "Session import failed" before the confirm dialog
+                # resolves (premature-status glitch).
                 reply = QMessageBox.question(
                     self,
                     "Import",
@@ -1883,10 +1952,14 @@ class MainWindow(QMainWindow):
                 )
                 if reply == QMessageBox.StandardButton.Yes:
                     self._start_session_import(import_json, source_path, replace=True)
+                else:
+                    self.status_update.emit("Session import cancelled")
                 return
+            self.status_update.emit("Session import failed")
             QMessageBox.warning(self, "Import", f"Failed to import session: {message}")
             return
 
+        self.status_update.emit("Session import failed")
         QMessageBox.warning(self, "Import", f"Failed to import session: {err}")
 
     def _on_save_patched_binary(self) -> None:
@@ -1927,8 +2000,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Export", "No analysis available.")
             return
 
-        get_analysis = getattr(analysis_panel, "get_current_analysis", None)
-        analysis = get_analysis() if callable(get_analysis) else None
+        analysis = cast("BridgeAnalysisSummary | None", getattr(analysis_panel, "current_analysis", None))
         if analysis is None:
             QMessageBox.information(self, "Export", "No analysis data available.")
             return
@@ -1941,17 +2013,10 @@ class MainWindow(QMainWindow):
         )
         if path:
             _logger.info("analysis_export_started", path=path)
-            analysis_dict: object
-            to_dict_fn = getattr(analysis, "to_dict", None)
-            if callable(to_dict_fn):
-                analysis_dict = to_dict_fn()
-            elif hasattr(analysis, "__dict__"):
-                analysis_dict = vars(analysis)
-            else:
-                analysis_dict = str(analysis)
-
+            # ``to_dict`` recurses nested dataclasses (sections, imports,
+            # functions) into structured JSON objects rather than repr strings.
             with Path(path).open("w", encoding="utf-8") as f:
-                json.dump(analysis_dict, f, indent=2, default=str)
+                json.dump(analysis.to_dict(), f, indent=2, default=str)
 
             _logger.info("analysis_export_completed", path=path)
             QMessageBox.information(self, "Export", f"Analysis exported to {path}")
@@ -2053,10 +2118,12 @@ class MainWindow(QMainWindow):
                     except (RuntimeError, OSError, ValueError) as e:
                         _logger.warning("tool_reinit_failed", tool_id=tid, error=str(e))
 
-            worker = AsyncWorker(_reinit_tools(), self)
-            worker.finished.connect(self._on_tool_reinit_finished)
-            worker.error.connect(self._on_tool_reinit_error)
-            worker.start()
+            run_bridge_coroutine_async(
+                _reinit_tools(),
+                self._on_tool_reinit_finished,
+                self._on_tool_reinit_error,
+                self,
+            )
 
         count = len(settings)
         self.status_update.emit(f"Tool settings applied ({count} tools configured)")
@@ -2070,11 +2137,11 @@ class MainWindow(QMainWindow):
         del result
         self.status_update.emit("Tool re-initialization complete")
 
-    def _on_tool_reinit_error(self, error: Exception) -> None:
+    def _on_tool_reinit_error(self, error: object) -> None:
         """Handle tool re-initialization failure.
 
         Args:
-            error: The exception that occurred.
+            error: The exception object emitted by the bridge worker.
         """
         _logger.warning("tool_reinit_batch_failed", error=str(error))
         self.status_update.emit("Tool re-initialization failed")
@@ -2135,6 +2202,20 @@ class MainWindow(QMainWindow):
 
         _logger.info("toolbar_provider_synced", provider_id=provider_id)
         self.status_update.emit(f"Active provider: {provider_id}")
+
+        if self.model_discovery is not None:
+            cached_models = self.model_discovery.cache.get(new_active)
+            if cached_models:
+                models_list = [str(m.id) for m in cached_models]
+                with QSignalBlocker(self.model_combo):
+                    self.model_combo.clear()
+                    self.model_combo.addItems(models_list)
+                    self.model_combo.setCurrentIndex(self._config.preferred_model_index(new_active, models_list))
+                line_edit = self.model_combo.lineEdit()
+                if line_edit is not None:
+                    line_edit.setCursorPosition(0)
+            else:
+                self._on_refresh_models()
 
     def _apply_provider_settings(self, settings: dict[str, dict[str, object]]) -> None:
         """Apply provider configuration settings at runtime.
@@ -2206,10 +2287,12 @@ class MainWindow(QMainWindow):
                             error=str(e),
                         )
 
-            worker = AsyncWorker(_apply_provider_changes(), self)
-            worker.finished.connect(self._on_provider_reconnect_finished)
-            worker.error.connect(self._on_provider_reconnect_error)
-            worker.start()
+            run_bridge_coroutine_async(
+                _apply_provider_changes(),
+                self._on_provider_reconnect_finished,
+                self._on_provider_reconnect_error,
+                self,
+            )
 
         count = len(settings)
         self.status_update.emit(
@@ -2225,11 +2308,11 @@ class MainWindow(QMainWindow):
         del result
         self.status_update.emit("Provider connections updated")
 
-    def _on_provider_reconnect_error(self, error: Exception) -> None:
+    def _on_provider_reconnect_error(self, error: object) -> None:
         """Handle provider reconnection failure.
 
         Args:
-            error: The exception that occurred.
+            error: The exception object emitted by the bridge worker.
         """
         _logger.warning("provider_reconnect_batch_failed", error=str(error))
         self.status_update.emit("Provider reconnection failed")
@@ -2329,12 +2412,8 @@ class MainWindow(QMainWindow):
         async def fetch() -> list[ModelInfo]:
             return await active_provider.list_models()
 
-        worker = AsyncWorker(fetch(), self)
-        worker.finished.connect(self._on_browse_models_result)
-        worker.error.connect(self._on_async_error)
-        self.model_browse_worker = worker
         _logger.info("provider_list_models_requested", provider=active_provider.name.value)
-        worker.start()
+        run_bridge_coroutine_async(fetch(), self._on_browse_models_result, self._on_async_error, self)
         self.status_update.emit("Fetching models...")
 
     def _on_browse_models_result(self, result: object) -> None:
@@ -2448,15 +2527,46 @@ class MainWindow(QMainWindow):
             result: Mapping of provider names to lists of ``ModelInfo``.
         """
         if isinstance(result, dict):
-            result_dict = cast("dict[object, object]", result)
+            res_dict = cast("dict[ProviderName, list[ModelInfo]]", result)
             counts: dict[str, int] = {}
-            for provider_name_obj, models_obj in result_dict.items():
-                key = provider_name_obj.value if isinstance(provider_name_obj, ProviderName) else str(provider_name_obj)
-                counts[key] = len(cast("list[object]", models_obj)) if isinstance(models_obj, list) else 0
+            for provider_name_obj, models_obj in res_dict.items():
+                key = provider_name_obj.value
+                counts[key] = len(models_obj)
             _logger.info("initial_model_discovery_completed", per_provider_counts=counts)
         else:
             _logger.info("initial_model_discovery_completed", provider_count=0)
         self._refresh_model_discovery_status()
+
+        provider_data: object = self._provider_combo.currentData()
+        if isinstance(provider_data, ProviderName):
+            models_list: list[str] = []
+            if isinstance(result, dict):
+                res_dict = cast("dict[ProviderName, list[ModelInfo]]", result)
+                for k, v in res_dict.items():
+                    if k == provider_data:
+                        models_list.extend(m.id for m in v)
+                        break
+            if not models_list and self.model_discovery is not None:
+                cached = self.model_discovery.cache.get(provider_data)
+                if cached:
+                    models_list = [m.id for m in cached]
+
+            if models_list:
+                with QSignalBlocker(self.model_combo):
+                    self.model_combo.clear()
+                    self.model_combo.addItems(models_list)
+                    if self._pending_model_restore:
+                        idx = self.model_combo.findText(self._pending_model_restore)
+                        if idx >= 0:
+                            self.model_combo.setCurrentIndex(idx)
+                        else:
+                            self.model_combo.setCurrentText(self._pending_model_restore)
+                        self._pending_model_restore = ""
+                    else:
+                        self.model_combo.setCurrentIndex(self._config.preferred_model_index(provider_data, models_list))
+                line_edit = self.model_combo.lineEdit()
+                if line_edit is not None:
+                    line_edit.setCursorPosition(0)
 
     def _on_initial_discovery_error(self, error: object) -> None:
         """Handle initial discovery failure.
@@ -2714,15 +2824,12 @@ class MainWindow(QMainWindow):
                     _logger.info("sandbox_opened_via_bridge", instance_id=instance_id)
                 self.status_update.emit("Sandbox opened")
 
-        def on_sandbox_error(e: Exception) -> None:
-            QMessageBox.critical(self, "Error", str(e))
+        def on_sandbox_error(e: object) -> None:
+            message = str(e) if isinstance(e, BaseException) else repr(e)
+            QMessageBox.critical(self, "Error", message)
 
         self.status_update.emit("Opening sandbox...")
-        worker = AsyncWorker(open_sandbox(), self)
-        worker.finished.connect(on_sandbox_opened)
-        worker.error.connect(on_sandbox_error)
-        worker.start()
-        self._current_worker = worker
+        run_bridge_coroutine_async(open_sandbox(), on_sandbox_opened, on_sandbox_error, self)
 
     def _on_preferences(self) -> None:
         """Handle preferences action.
@@ -2902,16 +3009,37 @@ class MainWindow(QMainWindow):
         self._on_open_cutter()
 
     def _on_open_cutter(self) -> None:
-        """Open Cutter reverse engineering panel."""
+        """Open Cutter reverse engineering panel.
+
+        When a binary is already loaded app-wide, its path is propagated into the freshly opened Cutter panel so the user does not have to
+        load it a second time (F7 context propagation).
+        """
         try:
             widget = self.tool_panel.add_cutter_tab()
             if widget is None:
                 self._show_tool_error("Cutter", "Failed to initialize Cutter panel")
                 return
             widget.start_tool()
+            self._inherit_app_binary_into_cutter(widget)
         except (RuntimeError, ImportError, AttributeError) as e:
             _logger.exception("tool_open_failed", tool_name="Cutter")
             self._show_tool_error("Cutter", f"Failed to open Cutter panel: {e}")
+
+    def _inherit_app_binary_into_cutter(self, widget: object) -> None:
+        """Propagate the app's loaded binary into a freshly opened Cutter panel.
+
+        No-ops when no binary is loaded or the panel does not expose the
+        ``inherit_app_binary`` hook (F7 context propagation).
+
+        Args:
+            widget: The Cutter panel widget just added.
+        """
+        if self.current_binary is None:
+            return
+        inherit = getattr(widget, "inherit_app_binary", None)
+        if callable(inherit):
+            _logger.info("cutter_inherit_app_binary", binary=str(self.current_binary))
+            _ = inherit(self.current_binary)
 
     def _on_open_hex_editor(self) -> None:
         """Open hex editor panel."""
@@ -3224,6 +3352,46 @@ class MainWindow(QMainWindow):
         if not self.tool_panel.open_in_x64dbg(self.current_binary):
             self._show_tool_error("x64dbg", "Failed to open binary in x64dbg")
 
+    def _on_run_full_analysis(self) -> None:
+        """Run full bridge analysis (strings + functions) on the current binary.
+
+        Triggers the orchestrator's aggregated bridge analysis (radare2/Ghidra strings extraction and function discovery) on the active
+        binary and routes the result into the structured analysis panel via the bridge-analysis callback, so the Strings and Functions tabs
+        populate (F8 / N4).
+        """
+        if self.current_binary is None:
+            self._show_no_binary_warning("analyze")
+            return
+        binary_name = self.current_binary.name
+        _logger.info("run_full_analysis_requested", binary=binary_name)
+        self.status_update.emit(f"Running full analysis on {binary_name}...")
+
+        async def analyze() -> BridgeAnalysisSummary | None:
+            return await self._orchestrator.reanalyze_bridge_analysis()
+
+        run_bridge_coroutine_async(analyze(), self._on_full_analysis_done, self._on_async_error, self)
+
+    def _on_full_analysis_done(self, result: object) -> None:
+        """Report completion of a full-analysis run.
+
+        The structured panel is populated by the bridge-analysis callback fired
+        inside the reanalysis; this only updates status and warns when no bridge
+        contributed data.
+
+        Args:
+            result: The ``BridgeAnalysisSummary`` produced, or ``None`` when no
+                analysis bridge contributed data.
+        """
+        if isinstance(result, BridgeAnalysisSummary):
+            self.status_update.emit("Full analysis complete")
+            return
+        self.status_update.emit("Full analysis produced no bridge data")
+        QMessageBox.information(
+            self,
+            "Analysis",
+            "No analysis bridge (radare2 / Ghidra) contributed data. Configure a static-analysis tool and try again.",
+        )
+
     def _on_analyze_current_binary(self) -> None:
         """Analyze the currently loaded binary with Cutter."""
         if self.current_binary is None:
@@ -3336,6 +3504,20 @@ class MainWindow(QMainWindow):
         _logger.info("provider_changed", provider=provider.value)
         self.status_update.emit(f"Active provider: {provider.value}")
 
+        if self.model_discovery is not None:
+            cached_models = self.model_discovery.cache.get(provider)
+            if cached_models:
+                models_list = [str(m.id) for m in cached_models]
+                with QSignalBlocker(self.model_combo):
+                    self.model_combo.clear()
+                    self.model_combo.addItems(models_list)
+                    self.model_combo.setCurrentIndex(self._config.preferred_model_index(provider, models_list))
+                line_edit = self.model_combo.lineEdit()
+                if line_edit is not None:
+                    line_edit.setCursorPosition(0)
+            else:
+                self._on_refresh_models()
+
     def _prompt_provider_not_connected(self, provider_name: str) -> str:
         """Show the disconnected-provider dialog and return the user's choice.
 
@@ -3441,6 +3623,20 @@ class MainWindow(QMainWindow):
                 _logger.warning("log_viewer_close_failed", error=str(e))
             self._log_viewer_window = None
 
+        self.tool_panel.close_embedded_tools()
+
+        try:
+            run_bridge_coroutine(self.sandbox_manager.destroy_all())
+        except (RuntimeError, OSError) as e:
+            _logger.warning("sandbox_manager_destroy_all_failed", error=str(e))
+
+        drained = drain_bridge_workers()
+
+        # Final guaranteed sweep: request_shutdown() synchronously terminates
+        # every process still tracked by ProcessManager (including descendant
+        # processes), so a bridge whose own detach/shutdown/stop call above
+        # silently failed or timed out cannot leave an orphaned subprocess
+        # behind. Runs last, after graceful per-bridge teardown had its chance.
         try:
             pm = ProcessManager.get_instance()
             request_shutdown = getattr(pm, "request_shutdown", None)
@@ -3449,16 +3645,6 @@ class MainWindow(QMainWindow):
         except (RuntimeError, AttributeError, ImportError) as e:
             _logger.warning("process_manager_shutdown_failed", error=str(e))
 
-        self.tool_panel.close_embedded_tools()
-
-        try:
-            run_bridge_coroutine(self.sandbox_manager.destroy_all())
-        except (RuntimeError, OSError) as e:
-            _logger.warning("sandbox_manager_destroy_all_failed", error=str(e))
-
-        if self._current_worker and self._current_worker.isRunning():
-            self._current_worker.wait()
-
-        _logger.info("main_window_closed")
+        _logger.info("main_window_closed", workers_drained=drained)
         if a0 is not None:
             a0.accept()

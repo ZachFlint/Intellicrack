@@ -10,25 +10,32 @@ Provides common layout scaffolding, toolbar construction, async bridge integrati
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING, Final, NamedTuple
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMenu,
     QPlainTextEdit,
     QPushButton,
+    QScrollArea,
     QToolBar,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.ui.overflow_toolbar import OverflowToolBar
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_async
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
+    from collections.abc import Callable, Coroutine, Sequence
 
     import structlog
 
@@ -40,6 +47,22 @@ _BASE_SPACING: Final[int] = 4
 _TOOLBAR_HEIGHT: Final[int] = 32
 _MIN_PANEL_WIDTH: Final[int] = 200
 _MIN_PANEL_HEIGHT: Final[int] = 150
+_CONTROL_SCROLL_MIN_HEIGHT: Final[int] = 88
+_CONTROL_ROW_SCROLLBAR_ALLOWANCE: Final[int] = 16
+
+
+class ToolMenuEntry(NamedTuple):
+    """A single entry in a grouped toolbar dropdown menu.
+
+    Attributes:
+        label: Text shown for the menu action.
+        handler: Zero-argument callback invoked when the action triggers.
+        enabled: Initial enabled state of the action.
+    """
+
+    label: str
+    handler: Callable[[], None]
+    enabled: bool = True
 
 
 class AnalysisPanelBase(QWidget):
@@ -84,10 +107,15 @@ class AnalysisPanelBase(QWidget):
     def _build_toolbar(self) -> QToolBar:
         """Create and configure the panel toolbar.
 
+        Uses :class:`OverflowToolBar` so that when the panel is too narrow to
+        show every control, the clipped buttons remain reachable through a
+        populated overflow popup instead of Qt's built-in popup, which renders
+        empty for the button widgets these panels add via ``addWidget``.
+
         Returns:
             QToolBar: Toolbar populated by ``_populate_toolbar``.
         """
-        toolbar = QToolBar()
+        toolbar = OverflowToolBar("Panel Tools", self)
         toolbar.setMovable(False)
         toolbar.setFixedHeight(_TOOLBAR_HEIGHT)
         self._populate_toolbar(toolbar)
@@ -235,6 +263,109 @@ class AnalysisPanelBase(QWidget):
         line_edit.setMaximumWidth(max_width)
         toolbar.addWidget(line_edit)
         return line_edit
+
+    @staticmethod
+    def _make_scrollable(
+        inner: QWidget,
+        *,
+        min_height: int = _CONTROL_SCROLL_MIN_HEIGHT,
+    ) -> QScrollArea:
+        """Wrap a control cluster in a scroll area so it scrolls instead of clipping.
+
+        The scroll area resizes ``inner`` to fill the available width when
+        there is room, but honours ``inner``'s minimum size: when the panel is
+        narrower or shorter than the controls require, scrollbars appear as
+        needed instead of the rows being squeezed until their text is cut off.
+
+        Args:
+            inner: The control-cluster widget to make scrollable.
+            min_height: Minimum height reserved for the scroll viewport so the
+                controls stay usable when the surrounding splitter is short.
+
+        Returns:
+            QScrollArea: A frameless, transparent scroll area wrapping ``inner``.
+        """
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setMinimumHeight(min_height)
+        scroll.setWidget(inner)
+        return scroll
+
+    @staticmethod
+    def _make_control_row(row: QHBoxLayout) -> QScrollArea:
+        """Wrap a dense horizontal control row so it scrolls sideways instead of crushing its controls.
+
+        A packed toolbar row -- labels, inputs, and several buttons in a plain
+        ``QHBoxLayout`` -- lets Qt shrink every control below its natural width
+        when the panel is narrow, eliding button captions down to unreadable
+        fragments such as ``ble``/``ible`` in place of ``Enable``/``Disable``.
+        Hosting the row in a horizontally scrollable viewport whose inner widget
+        keeps its natural minimum width means the controls stay full size and a
+        horizontal scrollbar appears when the panel is too narrow, which also
+        lets the panel -- and the window hosting it -- shrink freely.
+
+        Args:
+            row: The populated horizontal layout to host.
+
+        Returns:
+            QScrollArea: A frameless, fixed-height scroll area wrapping the row.
+        """
+        inner = QWidget()
+        inner.setLayout(row)
+        inner.ensurePolished()
+        natural = inner.sizeHint()
+        inner.setMinimumWidth(natural.width())
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(inner)
+        scroll.setFixedHeight(natural.height() + _CONTROL_ROW_SCROLLBAR_ALLOWANCE)
+        return scroll
+
+    @staticmethod
+    def _add_tool_menu(
+        toolbar: QToolBar,
+        title: str,
+        entries: Sequence[ToolMenuEntry],
+    ) -> dict[str, QAction]:
+        """Group related actions under a single dropdown tool button.
+
+        Replaces a run of individual toolbar buttons with one compact
+        ``QToolButton`` whose menu exposes each entry, reducing the number of
+        top-level toolbar items so fewer controls spill into the overflow
+        popup. Each returned action supports ``setEnabled``/``setText`` so
+        callers can keep driving enable-state and label toggles exactly as they
+        did with the original buttons.
+
+        Args:
+            toolbar: Target toolbar.
+            title: Text shown on the dropdown button.
+            entries: Ordered menu entries to expose under the button.
+
+        Returns:
+            dict[str, QAction]: Mapping of entry label to its created action.
+        """
+        button = QToolButton()
+        button.setText(title)
+        button.setObjectName("tool_menu_button")
+        button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+        menu = QMenu(button)
+        actions: dict[str, QAction] = {}
+        for entry in entries:
+            action = QAction(entry.label, menu)
+            action.setEnabled(entry.enabled)
+            action.setToolTip(entry.label)
+            action.triggered.connect(entry.handler)
+            menu.addAction(action)
+            actions[entry.label] = action
+        button.setMenu(menu)
+        toolbar.addWidget(button)
+        return actions
 
     def _set_status(self, text: str) -> None:
         """Update the status label text (null-safe).

@@ -82,12 +82,18 @@ class DetachedPanelWindow(QMainWindow):
         toolbar.addWidget(redock_btn)
 
         self.setCentralWidget(panel)
+        # ``removeTab`` hid the panel before it was reparented here; a tool
+        # panel (Ghidra/Frida/Cutter) would otherwise render a blank body until
+        # re-dock. Force it visible and re-laid-out immediately (F3 / F18).
+        panel.setVisible(True)
+        panel.show()
+        panel.updateGeometry()
         self.resize(_DEFAULT_DOCK_WIDTH, _DEFAULT_DOCK_HEIGHT)
         self._restore_geometry()
 
     @property
     def panel(self) -> QWidget:
-        """Get the hosted panel widget.
+        """The hosted panel widget.
 
         Returns:
             QWidget: The panel widget.
@@ -96,7 +102,7 @@ class DetachedPanelWindow(QMainWindow):
 
     @property
     def panel_title(self) -> str:
-        """Get the tab title for re-docking.
+        """The tab title used for re-docking.
 
         Returns:
             str: The original tab title.

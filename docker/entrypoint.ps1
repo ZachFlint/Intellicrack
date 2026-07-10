@@ -39,23 +39,25 @@ $PixiExe = 'pixi.exe'
 $ContainerEventsLog = Join-Path $ReportsRoot '_container_events.jsonl'
 $CacheRoot = 'C:\cache'
 
-if (-not (Test-Path $CacheRoot)) {
-    New-Item -ItemType Directory -Path $CacheRoot -Force | Out-Null
-    New-Item -ItemType Directory -Path (Join-Path $CacheRoot 'pytest') -Force | Out-Null
-}
-if (-not (Test-Path $ReportsRoot)) {
-    New-Item -ItemType Directory -Path $ReportsRoot -Force | Out-Null
-}
+function Initialize-ContainerDirs {
+    if (-not (Test-Path $CacheRoot)) {
+        New-Item -ItemType Directory -Path $CacheRoot -Force | Out-Null
+        New-Item -ItemType Directory -Path (Join-Path $CacheRoot 'pytest') -Force | Out-Null
+    }
+    if (-not (Test-Path $ReportsRoot)) {
+        New-Item -ItemType Directory -Path $ReportsRoot -Force | Out-Null
+    }
 
-# Ensure a .env file exists at the workspace root so credential-loading tests
-# that assert its presence pass. Real API keys are injected into the process
-# environment by the host driver via --env-file (read from the host .env), and
-# CredentialLoader falls back to os.environ, so an empty file here is
-# sufficient. The Test-Path guard avoids clobbering a real .env if one is ever
-# baked or mounted in.
-$EnvFile = Join-Path $WorkspaceRoot '.env'
-if (-not (Test-Path $EnvFile)) {
-    New-Item -ItemType File -Path $EnvFile | Out-Null
+    # Ensure a .env file exists at the workspace root so credential-loading tests
+    # that assert its presence pass. Real API keys are injected into the process
+    # environment by the host driver via --env-file (read from the host .env), and
+    # CredentialLoader falls back to os.environ, so an empty file here is
+    # sufficient. The Test-Path guard avoids clobbering a real .env if one is ever
+    # baked or mounted in.
+    $EnvFile = Join-Path $WorkspaceRoot '.env'
+    if (-not (Test-Path $EnvFile)) {
+        New-Item -ItemType File -Path $EnvFile | Out-Null
+    }
 }
 
 function Write-SandboxLog {
@@ -394,7 +396,65 @@ function Invoke-Pytest {
     return $exit
 }
 
+function Invoke-CoverageIsolated {
+    param(
+        [Parameter(Mandatory = $true)][pscustomobject]$Paths,
+        [Parameter(Mandatory = $true)][string]$Timestamp,
+        [string[]]$Extra
+    )
+    # Coverage orchestration is delegated to docker/coverage_runner.py, whose
+    # per-group timeout is a kernel wait (starvation-immune) and whose kill uses
+    # a Windows Job Object that reaps orphaned descendants. The previous
+    # PowerShell scheduler relied on a Start-Sleep poll loop plus taskkill /T,
+    # which a runaway group starved and orphaned monitors escaped -- letting a
+    # single hung group run for over four hours before the watchdog fired.
+    Assert-PixiEnvironment
+    $testsRoot = if ($env:COVERAGE_TESTS_ROOT) { $env:COVERAGE_TESTS_ROOT } else { Join-Path $WorkspaceRoot 'tests' }
+    $jobs = if ($env:COVERAGE_JOBS) { [int]$env:COVERAGE_JOBS } else { 4 }
+    $groupTimeout = if ($env:COVERAGE_GROUP_TIMEOUT) { [int]$env:COVERAGE_GROUP_TIMEOUT } else { 900 }
+    $combineDir = Join-Path $CacheRoot "covdata_$($Paths.Suffix)"
+    $runner = Join-Path $WorkspaceRoot 'docker\coverage_runner.py'
+
+    $runnerArgs = @(
+        $runner,
+        '--tests-root', $testsRoot,
+        '--workspace-root', $WorkspaceRoot,
+        '--reports-root', $ReportsRoot,
+        '--combine-dir', $combineDir,
+        '--junit-out', $Paths.Junit,
+        '--coverage-xml', $Paths.CoverageXml,
+        '--coverage-html', $Paths.CoverageHtml,
+        '--log', $Paths.Log,
+        '--timestamp', $Timestamp,
+        '--jobs', "$jobs",
+        '--group-timeout', "$groupTimeout",
+        '--fail-under', '95'
+    )
+    if ($Extra -and $Extra.Count -gt 0) {
+        $runnerArgs += '--'
+        $runnerArgs += $Extra
+    }
+
+    Write-SandboxLog -Level 'info' -Event 'coverage_isolated_started' -Context @{
+        tests_root = $testsRoot; jobs = $jobs; group_timeout = $groupTimeout
+    }
+
+    if (Get-Command $PixiExe -ErrorAction SilentlyContinue) {
+        & $PixiExe run --no-install --frozen python @runnerArgs
+    }
+    else {
+        & $PixiPython @runnerArgs
+    }
+    $code = $LASTEXITCODE
+    if ($null -eq $code) { $code = 0 }
+
+    Write-SandboxLog -Level 'info' -Event 'coverage_isolated_complete' -Context @{ exit_code = $code }
+    return $code
+}
+
 # ----- Main ------------------------------------------------------------------
+
+Initialize-ContainerDirs
 
 if (-not $TestType) {
     throw 'TestType is required (set -TestType or TEST_TYPE environment variable)'
@@ -420,6 +480,34 @@ if ($TestType -in @('interactive', 'interactive-rw')) {
 }
 
 $Paths = Initialize-ReportLayout -Timestamp $Timestamp -Type $TestType
+
+# Coverage runs each leaf test directory in its own pytest process so that a
+# native subsystem's teardown (Frida, Ghidra/JPype, Qt) cannot poison the
+# interpreter state of an unrelated group. This replaces the single whole-tree
+# process, whose shared asyncio loop / native runtime produced non-deterministic
+# hangs and aborts. The 95% gate and reports are produced once over the merged
+# coverage data.
+if ($TestType -eq 'coverage') {
+    $exitCode = Invoke-CoverageIsolated -Paths $Paths -Timestamp $Timestamp -Extra $mergedExtra
+    Write-LastExitCode -Code $exitCode
+    $counts = Read-JunitCount -JunitPath $Paths.Junit
+    $coverage = Get-CoveragePercent -CoverageXmlPath $Paths.CoverageXml
+    Write-SummaryJson -TestType $TestType -Timestamp $Timestamp -ExitCode $exitCode `
+        -Paths $Paths -Counts $counts -CoveragePercent $coverage `
+        -ModuleName $Module -Extra $mergedExtra
+    Write-SandboxLog -Level 'info' -Event 'sandbox_run_complete' -Context @{
+        test_type = $TestType
+        timestamp = $Timestamp
+        exit_code = $exitCode
+        tests = $counts.tests
+        passed = $counts.passed
+        failed = $counts.failed
+        skipped = $counts.skipped
+        errors = $counts.errors
+        coverage_percent = $coverage
+    }
+    exit $exitCode
+}
 
 $finalArgs = $null
 if ($Spec -and $Spec.pytest_args -and $Spec.pytest_args.Count -gt 0 -and ($TestType -eq $Spec.test_type)) {

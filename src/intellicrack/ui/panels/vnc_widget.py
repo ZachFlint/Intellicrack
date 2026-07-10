@@ -1798,7 +1798,13 @@ class VNCWidget(QWidget):
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setMinimumSize(320, 240)
 
-    def connect_to_server(self, host: str, port: int, password: str | None = None) -> None:
+    def connect_to_server(
+        self,
+        host: str,
+        port: int,
+        password: str | None = None,
+        timeout: float = _DEFAULT_CONNECT_TIMEOUT,
+    ) -> None:
         """Initiate an asynchronous connection to a VNC server.
 
         The connect handshake is dispatched onto the shared bridge event loop
@@ -1814,13 +1820,16 @@ class VNCWidget(QWidget):
             port: Server port number.
             password: Optional password for VNC Authentication. Required when
                 the server negotiates RFB security type 2.
+            timeout: Maximum seconds to wait for the TCP connection before the
+                attempt fails and ``connection_status_changed(False)`` is
+                emitted. Bounds how long the background connect worker can run.
         """
         self._pending_connect = (host, port)
         run_bridge_coroutine_logged(
-            self.client.connect(host, port, password=password),
+            self.client.connect(host, port, password=password, timeout=timeout),
             on_success=self._emit_connect_result,
             on_error=self._emit_connect_failure,
-            parent=self,
+            parent=None,
             event="vnc_widget_connect",
             logger=_logger,
             level="info",
@@ -1887,7 +1896,7 @@ class VNCWidget(QWidget):
             self.client.disconnect(),
             on_success=None,
             on_error=None,
-            parent=self,
+            parent=None,
             event="vnc_widget_disconnect",
             logger=_logger,
             level="info",
@@ -2067,7 +2076,7 @@ class VNCWidget(QWidget):
             self.client.send_pointer_event(x, y, VNCWidget.button_mask(a0)),
             on_success=None,
             on_error=None,
-            parent=self,
+            parent=None,
             event="vnc_pointer_move",
             logger=_logger,
             x=x,
@@ -2088,7 +2097,7 @@ class VNCWidget(QWidget):
             self.client.send_pointer_event(x, y, VNCWidget.button_mask(a0)),
             on_success=None,
             on_error=None,
-            parent=self,
+            parent=None,
             event="vnc_pointer_press",
             logger=_logger,
             x=x,
@@ -2110,7 +2119,7 @@ class VNCWidget(QWidget):
             self.client.send_pointer_event(x, y, 0),
             on_success=None,
             on_error=None,
-            parent=self,
+            parent=None,
             event="vnc_pointer_release",
             logger=_logger,
             x=x,
@@ -2132,7 +2141,7 @@ class VNCWidget(QWidget):
             self.client.send_key_event(keysym, down=True),
             on_success=None,
             on_error=None,
-            parent=self,
+            parent=None,
             event="vnc_key_press",
             logger=_logger,
             keysym=keysym,
@@ -2153,7 +2162,7 @@ class VNCWidget(QWidget):
             self.client.send_key_event(keysym, down=False),
             on_success=None,
             on_error=None,
-            parent=self,
+            parent=None,
             event="vnc_key_release",
             logger=_logger,
             keysym=keysym,

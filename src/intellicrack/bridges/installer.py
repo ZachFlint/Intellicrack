@@ -307,7 +307,7 @@ TOOL_REGISTRY: dict[ToolName, ToolInfo] = {
             Path("C:/x64dbg"),
             Path("D:/Tools/x64dbg"),
         ],
-        executables=["x64dbg.exe", "x96dbg.exe"],
+        executables=["release/x64/x64dbg.exe", "release/x32/x32dbg.exe"],
         download_url="https://github.com/x64dbg/x64dbg/releases/latest",
         version_command=[],
         min_version="2024.01.01",
@@ -1530,6 +1530,7 @@ class ToolInstaller:
             temp_path: Destination path on disk for the downloaded bytes.
             filename: Display name used in progress and completion logs.
         """
+
         async with client.stream("GET", url) as response:
             response.raise_for_status()
             total = int(response.headers.get("content-length", 0))
@@ -1927,6 +1928,34 @@ def _program_files_x86() -> Path:
     return Path(r"C:\Program Files (x86)")
 
 
+_X64DBG_SDK_HEADER = "bridgemain.h"
+
+
+def _resolve_x64dbg_sdk_path(x64dbg_path: Path) -> Path | None:
+    """Locate the x64dbg plugin SDK directory inside an installation.
+
+    x64dbg snapshots ship the plugin SDK either directly under
+    ``<install>/pluginsdk`` or, on some layouts, under
+    ``<install>/release/pluginsdk``. The directory is identified by the
+    presence of the ``bridgemain.h`` header that the bridge plugin
+    includes, so a stale or partial folder without headers is rejected.
+
+    Args:
+        x64dbg_path: Path to the x64dbg installation root.
+
+    Returns:
+        Path | None: The resolved ``pluginsdk`` directory containing the
+        SDK headers, or None when no SDK headers are found under the
+        installation.
+    """
+    for candidate in (x64dbg_path / "pluginsdk", x64dbg_path / "release" / "pluginsdk"):
+        if (candidate / _X64DBG_SDK_HEADER).is_file():
+            _logger.debug("x64dbg_sdk_resolved", sdk_path=str(candidate))
+            return candidate
+    _logger.debug("x64dbg_sdk_not_found", x64dbg_path=str(x64dbg_path))
+    return None
+
+
 def _find_cmake() -> Path | None:
     """Locate the cmake executable.
 
@@ -2053,11 +2082,16 @@ def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
     Args:
         plugin_dir: Root of the ``x64dbg-plugin`` source tree containing
             ``CMakeLists.txt``.
-        x64dbg_path: Path to the x64dbg installation (passed to CMake
-            as a hint for SDK headers).
+        x64dbg_path: Path to the x64dbg installation whose bundled plugin
+            SDK the plugin is compiled against. The actual SDK directory
+            is resolved from this root and passed to CMake via
+            ``-DX64DBG_SDK_PATH`` so the plugin links the installed
+            build's ``x64dbg.lib`` / ``x64bridge.lib`` and picks up its
+            ``PLUG_SDKVERSION``.
 
     Returns:
-        bool: True if at least one architecture built successfully.
+        bool: True if at least one architecture built successfully;
+        False when the toolchain or the x64dbg plugin SDK is unavailable.
     """
     cmake_path = _find_cmake()
     if cmake_path is None:
@@ -2072,6 +2106,15 @@ def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
         _logger.warning(
             "plugin_build_skipped",
             reason="no Visual Studio generator detected",
+        )
+        return False
+
+    sdk_path = _resolve_x64dbg_sdk_path(x64dbg_path)
+    if sdk_path is None:
+        _logger.warning(
+            "plugin_build_skipped",
+            reason="x64dbg plugin SDK not found under installation",
+            x64dbg_path=str(x64dbg_path),
         )
         return False
 
@@ -2105,7 +2148,7 @@ def build_x64dbg_plugin(plugin_dir: Path, x64dbg_path: Path) -> bool:
                 "-A",
                 target_platform,
                 f"-DBUILD_X64={build_x64_flag}",
-                f"-DX64DBG_PATH={x64dbg_path}",
+                f"-DX64DBG_SDK_PATH={sdk_path}",
             ],
             cwd=build_dir,
             timeout_s=configure_timeout,
@@ -2438,6 +2481,7 @@ program_files_x86 = _program_files_x86
 cmake_timeout = _cmake_timeout
 run_cmake_step = _run_cmake_step
 find_cmake = _find_cmake
+resolve_x64dbg_sdk_path = _resolve_x64dbg_sdk_path
 PLUGIN_ARCHS = _PLUGIN_ARCHS
 ToolInstallerVersion = _ToolInstallerVersion
 

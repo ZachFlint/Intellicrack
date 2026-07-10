@@ -1462,6 +1462,191 @@ def process_typos_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]
     return grouped, cnt
 
 
+def process_clang_tidy_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process clang-tidy static analysis text output.
+
+    Args:
+        text_output: Raw text output from ``clang-tidy``.
+
+    Returns:
+        Tuple of findings grouped by file path and total count.
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    pattern = re.compile(r"^(.+):(\d+):(\d+):\s*(warning|error):\s*(.+)$")
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = pattern.match(stripped)
+        if not match:
+            continue
+        fp = match.group(1)
+        line_num = int(match.group(2))
+        col_num = int(match.group(3))
+        severity = match.group(4)
+        message = match.group(5).strip()
+        code = ""
+        code_match = re.search(r"\[([\w,.\-]+)\]$", message)
+        if code_match:
+            code = code_match.group(1)
+            message = message[: code_match.start()].strip()
+        grouped[fp].append({
+            "line": line_num,
+            "column": col_num,
+            "severity": severity,
+            "code": code,
+            "message": message,
+            "raw": stripped,
+        })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_clang_format_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process clang-format ``--dry-run --Werror`` text output.
+
+    Args:
+        text_output: Raw text output from ``clang-format --dry-run --Werror``.
+
+    Returns:
+        Tuple of findings grouped by file path and total count.
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    pattern = re.compile(r"^(.+):(\d+):(\d+):\s*(warning|error):\s*(.+)$")
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = pattern.match(stripped)
+        if not match:
+            continue
+        fp = match.group(1)
+        line_num = int(match.group(2))
+        col_num = int(match.group(3))
+        severity = match.group(4)
+        message = match.group(5).strip()
+        code = ""
+        code_match = re.search(r"\[([\w,.\-]+)\]$", message)
+        if code_match:
+            code = code_match.group(1)
+            message = message[: code_match.start()].strip()
+        grouped[fp].append({
+            "line": line_num,
+            "column": col_num,
+            "severity": severity,
+            "code": code,
+            "message": message,
+            "raw": stripped,
+        })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_cppcheck_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process cppcheck ``--template=gcc`` text output.
+
+    Args:
+        text_output: Raw text output from ``cppcheck --template=gcc``.
+
+    Returns:
+        Tuple of findings grouped by file path and total count.
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    pattern = re.compile(r"^(.+):(\d+):(\d+):\s*(warning|error|style|performance|portability|note):\s*(.+)$")
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = pattern.match(stripped)
+        if not match:
+            continue
+        fp = match.group(1).replace("\\", "/")
+        line_num = int(match.group(2))
+        col_num = int(match.group(3))
+        severity = match.group(4)
+        message = match.group(5).strip()
+        code = ""
+        code_match = re.search(r"\[(\w+)\]$", message)
+        if code_match:
+            code = code_match.group(1)
+            message = message[: code_match.start()].strip()
+        grouped[fp].append({
+            "line": line_num,
+            "column": col_num,
+            "severity": severity,
+            "code": code,
+            "message": message,
+            "raw": stripped,
+        })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_cmake_format_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process cmake-format ``--check`` text output.
+
+    Args:
+        text_output: Raw text output from ``cmake-format --check``.
+
+    Returns:
+        Tuple of findings grouped by file path and total count.
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    pattern = re.compile(r"^ERROR\s+\S+:\s*Check failed:\s*(.+)$")
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = pattern.match(stripped)
+        if not match:
+            continue
+        fp = match.group(1).strip()
+        grouped[fp].append({
+            "line": None,
+            "column": None,
+            "severity": "warning",
+            "message": "Formatting differs from cmake-format style",
+            "raw": stripped,
+        })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
+def process_cmake_lint_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
+    """Process cmake-lint text output.
+
+    Args:
+        text_output: Raw text output from ``cmake-lint --suppress-decorations``.
+
+    Returns:
+        Tuple of findings grouped by file path and total count.
+    """
+    grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    pattern = re.compile(r"^(.+):(\d+)(?:,(\d+))?:\s*\[(\w+)\]\s*(.+)$")
+    for line in text_output.strip().split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        match = pattern.match(stripped)
+        if not match:
+            continue
+        fp = match.group(1)
+        line_num = int(match.group(2))
+        col_num = int(match.group(3)) if match.group(3) else None
+        code = match.group(4)
+        message = match.group(5).strip()
+        grouped[fp].append({
+            "line": line_num,
+            "column": col_num,
+            "severity": "warning",
+            "code": code,
+            "message": message,
+            "raw": stripped,
+        })
+    cnt = sum(len(v) for v in grouped.values())
+    return grouped, cnt
+
+
 def process_shellcheck_text(text_output: str) -> tuple[dict[str, list[dict[str, Any]]], int]:
     """Process shellcheck shell script analysis text output (GCC format).
 
@@ -2856,6 +3041,15 @@ TEXT_PROCESSORS: dict[str, Callable[[str], tuple[dict[str, list[dict[str, Any]]]
     "rust-code-analysis": process_rust_code_analysis_text,
     "rust_code_analysis": process_rust_code_analysis_text,
     "typos": process_typos_text,
+    "clang-tidy": process_clang_tidy_text,
+    "clang_tidy": process_clang_tidy_text,
+    "clang-format": process_clang_format_text,
+    "clang_format": process_clang_format_text,
+    "cppcheck": process_cppcheck_text,
+    "cmake-format": process_cmake_format_text,
+    "cmake_format": process_cmake_format_text,
+    "cmake-lint": process_cmake_lint_text,
+    "cmake_lint": process_cmake_lint_text,
 }
 
 

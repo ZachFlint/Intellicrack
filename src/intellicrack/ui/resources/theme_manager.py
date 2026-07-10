@@ -216,6 +216,7 @@ QComboBox {
     border-radius: 4px;
     padding: 4px 8px;
     min-height: 24px;
+    min-width: 90px;
 }
 
 QComboBox:hover {
@@ -241,6 +242,36 @@ QComboBox QAbstractItemView {
     color: #d4d4d4;
     selection-background-color: #094771;
     border: 1px solid #3e3e42;
+}
+
+/* Grouped Toolbar Dropdown Button */
+QToolButton#tool_menu_button {
+    background-color: transparent;
+    color: #d4d4d4;
+    border: 1px solid #3e3e42;
+    border-radius: 4px;
+    padding: 6px 8px;
+    min-height: 24px;
+}
+
+QToolButton#tool_menu_button:hover {
+    background-color: #3e3e42;
+    border-color: #007acc;
+}
+
+QToolButton#tool_menu_button:pressed {
+    background-color: #094771;
+}
+
+QToolButton#tool_menu_button:disabled {
+    color: #6e6e6e;
+    border-color: #3e3e42;
+}
+
+QToolButton#tool_menu_button::menu-indicator {
+    subcontrol-origin: padding;
+    subcontrol-position: right center;
+    width: 10px;
 }
 
 /* Line Edit */
@@ -492,6 +523,7 @@ QSpinBox, QDoubleSpinBox {
     border: 1px solid #3e3e42;
     border-radius: 4px;
     padding: 4px 8px;
+    min-width: 90px;
 }
 
 QSpinBox:focus, QDoubleSpinBox:focus {
@@ -548,11 +580,11 @@ QSplitter::handle {
 }
 
 QSplitter::handle:horizontal {
-    width: 2px;
+    width: 8px;
 }
 
 QSplitter::handle:vertical {
-    height: 2px;
+    height: 8px;
 }
 
 QSplitter::handle:hover {
@@ -840,6 +872,7 @@ QComboBox {
     border-radius: 4px;
     padding: 4px 8px;
     min-height: 24px;
+    min-width: 90px;
 }
 
 QComboBox:hover {
@@ -866,6 +899,36 @@ QComboBox QAbstractItemView {
     selection-background-color: #0067c0;
     selection-color: #ffffff;
     border: 1px solid #c2c8d0;
+}
+
+/* Grouped Toolbar Dropdown Button */
+QToolButton#tool_menu_button {
+    background-color: transparent;
+    color: #1a1d21;
+    border: 1px solid #c2c8d0;
+    border-radius: 4px;
+    padding: 6px 8px;
+    min-height: 24px;
+}
+
+QToolButton#tool_menu_button:hover {
+    background-color: #e3e6eb;
+    border-color: #0067c0;
+}
+
+QToolButton#tool_menu_button:pressed {
+    background-color: #dde1e7;
+}
+
+QToolButton#tool_menu_button:disabled {
+    color: #9aa3ad;
+    border-color: #c2c8d0;
+}
+
+QToolButton#tool_menu_button::menu-indicator {
+    subcontrol-origin: padding;
+    subcontrol-position: right center;
+    width: 10px;
 }
 
 /* Line Edit */
@@ -1120,6 +1183,7 @@ QSpinBox, QDoubleSpinBox {
     border: 1px solid #c2c8d0;
     border-radius: 4px;
     padding: 4px 8px;
+    min-width: 90px;
 }
 
 QSpinBox:focus, QDoubleSpinBox:focus {
@@ -1173,6 +1237,14 @@ QProgressBar::chunk {
 /* Splitter */
 QSplitter::handle {
     background-color: #c2c8d0;
+}
+
+QSplitter::handle:horizontal {
+    width: 8px;
+}
+
+QSplitter::handle:vertical {
+    height: 8px;
 }
 
 QSplitter::handle:hover {

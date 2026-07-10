@@ -164,7 +164,7 @@ class OverflowToolBar(QToolBar):
 
     @property
     def overflow_menu(self) -> QMenu:
-        """Return the overflow menu used for hidden toolbar items.
+        """The overflow menu used for hidden toolbar items.
 
         Exposes the populated :class:`QMenu` so callers (including the
         Intellicrack UI integration tests and accessibility helpers) can
@@ -178,7 +178,7 @@ class OverflowToolBar(QToolBar):
 
     @property
     def extension_button(self) -> QToolButton | None:
-        """Return Qt's extension button once it has been hooked.
+        """Qt's extension button once it has been hooked, or ``None``.
 
         Qt creates the extension button lazily during the toolbar's first
         layout pass, after which :meth:`_hook_extension_button` registers
@@ -239,6 +239,8 @@ class OverflowToolBar(QToolBar):
         """
         if isinstance(widget, QLabel):
             return False
+        if isinstance(widget, QToolButton):
+            return self._add_tool_button_proxy(widget, original)
         text = self._widget_text(widget, original)
         if not text:
             return False
@@ -248,6 +250,33 @@ class OverflowToolBar(QToolBar):
         proxy.setEnabled(widget.isEnabled())
         self._wire_proxy(proxy, widget)
         self._overflow_menu.addAction(proxy)
+        return True
+
+    def _add_tool_button_proxy(self, widget: QToolButton, original: QAction) -> bool:
+        """Expose a clipped dropdown tool button as a submenu in the overflow menu.
+
+        Grouped toolbar buttons added via ``_add_tool_menu`` are
+        :class:`QToolButton` instances backed by their own :class:`QMenu`.
+        When such a button is itself clipped, its menu is re-attached as a
+        submenu of the overflow popup so every grouped action stays reachable,
+        instead of collapsing to an inert entry.
+
+        Args:
+            widget: The clipped dropdown tool button.
+            original: The :class:`QAction` the toolbar associates with
+                ``widget`` (used as a fallback source of text).
+
+        Returns:
+            bool: ``True`` when the button's menu was attached as a submenu;
+            ``False`` when the button exposes no menu or has no usable title.
+        """
+        submenu = widget.menu()
+        title = widget.text() or original.text() or widget.objectName()
+        if submenu is None or not title:
+            return False
+        submenu.setTitle(title)
+        submenu.setEnabled(widget.isEnabled())
+        self._overflow_menu.addMenu(submenu)
         return True
 
     @staticmethod

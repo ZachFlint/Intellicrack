@@ -185,6 +185,12 @@ class BridgeAnalysisPanel(QWidget):
         table = QTableWidget()
         table.setColumnCount(len(headers))
         table.setHorizontalHeaderLabels(headers)
+        for col, header_text in enumerate(headers):
+            header_item = table.horizontalHeaderItem(col)
+            if header_item is not None:
+                # Keep a truncated column header readable on hover in a narrow
+                # dock (N2).
+                header_item.setToolTip(header_text)
         table.setAlternatingRowColors(True)
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -417,6 +423,43 @@ class BridgeAnalysisPanel(QWidget):
             has_analysis=self._current_analysis is not None,
         )
         return self._current_analysis
+
+    @property
+    def current_analysis(self) -> BridgeAnalysisSummary | None:
+        """The analysis summary currently displayed, if any.
+
+        Returns:
+            BridgeAnalysisSummary | None: The active summary, or ``None`` when
+                no analysis has been set.
+        """
+        return self._current_analysis
+
+    def mark_loaded(self, binary_name: str) -> None:
+        """Show the intermediate "loaded but not analyzed" header state.
+
+        Distinguishes a binary that has been loaded but not yet analyzed from
+        the "No binary loaded" empty state, and clears any prior binary's tables
+        so stale data is never shown against a newly loaded name.
+
+        Args:
+            binary_name: Name of the freshly loaded binary.
+        """
+        self._current_analysis = None
+        self._binary_label.setText(f"Loaded - not analyzed: {binary_name}")
+        self._binary_label.setToolTip(binary_name)
+        self._format_label.setText("")
+        self._format_label.setToolTip("")
+        self._arch_label.setText("")
+        self._arch_label.setToolTip("")
+        self._bridges_label.setText("")
+        self._bridges_label.setToolTip("")
+        self._strings_table.setRowCount(0)
+        self._imports_table.setRowCount(0)
+        self._exports_table.setRowCount(0)
+        self._functions_table.setRowCount(0)
+        self._sections_table.setRowCount(0)
+        self._notes_edit.clear()
+        _logger.info("analysis_panel_marked_loaded", binary=binary_name)
 
     def clear(self) -> None:
         """Clear all displayed data."""
