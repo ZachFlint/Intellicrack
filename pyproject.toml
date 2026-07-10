@@ -745,6 +745,7 @@ dependencies.cppcheck = ">=2.21.0,<3"
 dependencies.cmake-format = ">=0.6.13,<0.7"
 dependencies.cmake = ">=4.4.0,<5"
 dependencies.ninja = ">=1.13.2,<2"
+dependencies.pygments = ">=2.20.0,<3"
 pypi-dependencies.intellicrack = { path = ".", editable = true, extras = [
   "dev",
   "test",
@@ -782,7 +783,6 @@ pypi-dependencies.xxhash = ">=3.8.1, <4"
 pypi-dependencies.networkx = ">=3.6.1, <4"
 pypi-dependencies.anyio = ">=4.14.1, <5"
 pypi-dependencies.markdown-it-py = ">=4.2.0, <5"
-pypi-dependencies.pygments = "*"
 pypi-dependencies.rich = ">=15.0.0, <16"
 pypi-dependencies.python-dotenv = ">=1.2.2, <2"
 pypi-dependencies.aiofiles = ">=25.1.0, <26"
