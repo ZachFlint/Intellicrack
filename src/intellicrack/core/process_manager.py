@@ -876,9 +876,6 @@ class ProcessManager:
             external_pids = list(self._external_pids.keys())
 
         for pid in pids:
-            if self.is_shutdown_requested():
-                logger.info("cleanup_interrupted_by_shutdown", remaining=len(pids))
-                break
             try:
                 await self.terminate_process(pid, graceful_timeout, force_timeout)
             except (OSError, psutil.NoSuchProcess, RuntimeError) as e:
@@ -911,10 +908,21 @@ class ProcessManager:
         self.shutdown_event.clear()
 
     def request_shutdown(self) -> None:
-        """Request a graceful shutdown of all tracked processes."""
+        """Request and perform an immediate shutdown of all tracked processes.
+
+        Sets the shutdown flag observed by :meth:`is_shutdown_requested`, then
+        synchronously runs :meth:`_sync_cleanup`, which walks every tracked
+        subprocess and external PID (including descendant processes) and
+        terminates them. This gives callers -- such as ``MainWindow.closeEvent``
+        -- a guaranteed, bounded final sweep that reaps any process left behind
+        by a bridge whose own ``detach``/``shutdown``/``stop`` teardown silently
+        failed or timed out, rather than merely flipping a flag nothing else
+        acts on.
+        """
         logger = ProcessManager._get_logger()
         logger.info("shutdown_requested")
         self.shutdown_event.set()
+        self._sync_cleanup()
 
     @property
     def process_count(self) -> int:

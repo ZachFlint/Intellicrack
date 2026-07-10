@@ -31,7 +31,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import drain_bridge_workers_for, run_bridge_coroutine_logged
 from intellicrack.ui.panels.process_panel.workers import TrackedRefreshWorker
 from intellicrack.ui.panels.qt_compat import set_sorting_enabled
 
@@ -222,6 +222,7 @@ class ProcessTab(QWidget):
         self._process_table.setHorizontalHeaderLabels(_PROC_COLUMNS)
         self._process_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._process_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self._process_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         set_sorting_enabled(self._process_table, enable=True)
         sel = self._process_table.selectionModel()
         if sel is not None:
@@ -274,6 +275,7 @@ class ProcessTab(QWidget):
         self._tracked_table.setHorizontalHeaderLabels(_TRACKED_COLUMNS)
         self._tracked_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self._tracked_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self._tracked_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         set_sorting_enabled(self._tracked_table, enable=True)
         th = self._tracked_table.horizontalHeader()
         if th is not None:
@@ -314,6 +316,7 @@ class ProcessTab(QWidget):
         self._env_table = QTableWidget(0, 2)
         self._env_table.setHorizontalHeaderLabels(["Variable", "Value"])
         self._env_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self._env_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         env_h = self._env_table.horizontalHeader()
         if env_h is not None:
             env_h.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
@@ -790,7 +793,13 @@ class ProcessTab(QWidget):
             self._tracked_timer.stop()
 
     def cleanup(self) -> None:
-        """Stop timers and cancel pending workers."""
+        """Stop timers and join pending workers.
+
+        Stops the auto-refresh, tracked-refresh, and filter-debounce timers, waits for the dedicated tracked-refresh worker, then joins
+        every bridge-call worker still owned by this tab subtree (the process-list refresh plus the per-selection info / environment
+        coroutines) via :func:`drain_bridge_workers_for`. Joining them here stops their result callbacks from touching this tab's tables and
+        trees after the widget has been destroyed.
+        """
         self._auto_refresh_timer.stop()
         self._tracked_timer.stop()
         self._filter_debounce_timer.stop()
@@ -799,6 +808,7 @@ class ProcessTab(QWidget):
                 self._tracked_worker.wait(2000)
             self._tracked_worker.deleteLater()
         self._tracked_worker = None
+        _ = drain_bridge_workers_for(self)
 
     def start_refresh(self) -> None:
         """Trigger an initial process list refresh."""

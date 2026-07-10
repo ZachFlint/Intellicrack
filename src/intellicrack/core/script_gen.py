@@ -238,7 +238,7 @@ class BypassStrategy(Enum):
 
     @property
     def description(self) -> str:
-        """Get human-readable description of the strategy.
+        """Human-readable description of the strategy.
 
         Returns:
             str: Description text for this bypass strategy.
@@ -638,6 +638,12 @@ class ScriptValidator:
     def validate(self, script: Script) -> tuple[bool, str | None]:
         """Validate a script based on its language.
 
+        A script whose content is empty or only whitespace is rejected with
+        ``(False, "Script is empty")`` before any language validator runs.
+        This closes the case where an empty program parses cleanly (an empty
+        string is valid Python and valid JavaScript), which would otherwise
+        report success when no script is actually present.
+
         Languages without a real validator (currently ``R2_COMMANDS`` and
         ``X64DBG_SCRIPT``) return ``(False, <reason>)`` and leave
         :attr:`Script.verified` unchanged. The previous behaviour of
@@ -650,10 +656,19 @@ class ScriptValidator:
 
         Returns:
             tuple[bool, str | None]: ``(True, None)`` when the language has
-            a validator and the script passes. ``(False, <reason>)`` when
-            the script fails validation or no validator exists for the
-            language.
+            a validator and the non-empty script passes. ``(False, <reason>)``
+            when the script is empty, fails validation, or no validator exists
+            for the language.
         """
+        if not script.content.strip():
+            _logger.debug(
+                "script_validation_empty",
+                script=script.name,
+                language=script.language.value,
+            )
+            script.verified = False
+            return False, "Script is empty"
+
         validators = {
             ScriptLanguage.PYTHON: self.validate_python,
             ScriptLanguage.JAVASCRIPT: self.validate_javascript,

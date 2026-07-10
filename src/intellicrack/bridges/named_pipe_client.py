@@ -160,10 +160,17 @@ class NamedPipeClient:
     def is_connected(self) -> bool:
         """Check connection status.
 
+        A recorded background-reader failure marks the client as
+        disconnected even while the underlying handle is still open, so
+        callers re-establish the pipe instead of reusing a transport whose
+        read side has already died (for example after the server dropped an
+        idle client). The handle is torn down separately by :meth:`close`.
+
         Returns:
-            bool: True if connected to the pipe.
+            bool: True only when the handle is open and no fatal reader
+            failure has been recorded.
         """
-        return self._handle is not None
+        return self._handle is not None and self._read_failure is None
 
     def set_event_handler(self, handler: EventHandler | None) -> None:
         """Set the event handler callback.

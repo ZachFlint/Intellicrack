@@ -10,7 +10,7 @@ This module contains all the fundamental dataclasses, enums, and type definition
 from __future__ import annotations
 
 import enum
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, Literal, Protocol, runtime_checkable
 
@@ -368,6 +368,10 @@ class SectionInfo:
         raw_size: Size on disk.
         characteristics: Section flags/permissions.
         entropy: Shannon entropy (0-8, higher = more random/encrypted).
+        raw_offset: File offset of the section's raw data on disk
+            (PE ``PointerToRawData`` / ELF ``sh_offset``). Used to map a
+            virtual address inside this section back to a file offset for
+            hex-editor navigation. Defaults to 0 when unknown.
     """
 
     name: str
@@ -376,6 +380,7 @@ class SectionInfo:
     raw_size: int
     characteristics: int
     entropy: float
+    raw_offset: int = 0
 
     @property
     def is_executable(self) -> bool:
@@ -666,6 +671,20 @@ class BridgeAnalysisSummary:
     source_bridges: list[str]
     analysis_notes: list[str]
     complete: bool = False
+
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the summary to a JSON-ready nested dictionary.
+
+        Recurses into every nested dataclass member (sections, imports,
+        exports, functions, strings and their own nested types) so callers
+        such as Export Analysis emit structured JSON objects rather than
+        Python ``repr`` strings.
+
+        Returns:
+            dict[str, Any]: Nested mapping with all dataclass members
+                converted to plain dictionaries and lists.
+        """
+        return asdict(self)
 
 
 @dataclass

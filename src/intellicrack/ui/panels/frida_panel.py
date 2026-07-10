@@ -39,7 +39,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.highlighter import get_highlighter_for_language
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
-from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.frida_instrumentation_tab import (
     CancellableControls,
     InterceptorLifecycleControls,
@@ -152,15 +152,32 @@ class FridaPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._spawn_btn = self._add_tool_button(toolbar, "Spawn", self._on_spawn)
-        self._resume_btn = self._add_tool_button(toolbar, "Resume", self._on_resume, enabled=False)
+        spawn_actions = self._add_tool_menu(
+            toolbar,
+            "Spawn",
+            [
+                ToolMenuEntry("Spawn", self._on_spawn),
+                ToolMenuEntry("Resume", self._on_resume, enabled=False),
+            ],
+        )
+        self._spawn_btn = spawn_actions["Spawn"]
+        self._resume_btn = spawn_actions["Resume"]
 
         toolbar.addSeparator()
 
         self.run_btn = self._add_tool_button(toolbar, "Run Script", self._on_run_script)
-        self._stop_btn = self._add_tool_button(toolbar, "Stop", self._on_stop_script, enabled=False)
-        self._stop_all_btn = self._add_danger_button(toolbar, "Stop All Scripts", self._on_stop_all_scripts, enabled=False)
-        self._clear_btn = self._add_secondary_button(toolbar, "Clear Console", self._on_clear_console)
+        script_actions = self._add_tool_menu(
+            toolbar,
+            "Scripts",
+            [
+                ToolMenuEntry("Stop", self._on_stop_script, enabled=False),
+                ToolMenuEntry("Stop All Scripts", self._on_stop_all_scripts, enabled=False),
+                ToolMenuEntry("Clear Console", self._on_clear_console),
+            ],
+        )
+        self._stop_btn = script_actions["Stop"]
+        self._stop_all_btn = script_actions["Stop All Scripts"]
+        self._clear_btn = script_actions["Clear Console"]
 
         toolbar.addSeparator()
 

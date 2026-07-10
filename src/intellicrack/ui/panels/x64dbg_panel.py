@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
 from PyQt6.QtCore import QRegularExpression, QSignalBlocker, Qt, QTimer, pyqtSignal
-from PyQt6.QtGui import QIntValidator, QRegularExpressionValidator
+from PyQt6.QtGui import QAction, QIntValidator, QRegularExpressionValidator
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -38,7 +38,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.core.logging import get_logger
 from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
-from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
 from intellicrack.ui.panels.x64dbg_advanced_tab import X64DbgAdvancedTab
 from intellicrack.ui.resources.font_manager import FontManager
@@ -181,12 +181,28 @@ class X64DbgPanel(AnalysisPanelBase):
         self._step_count_input = self._add_toolbar_input(toolbar, "N", max_width=60)
         self._step_count_input.setValidator(QIntValidator(1, 1_000_000, self._step_count_input))
         self._step_count_btn = self._add_tool_button(toolbar, "Step N", self._on_step_count)
-        self._animate_start_btn = self._add_tool_button(toolbar, "Animate Start", self._on_animate_start)
-        self._animate_stop_btn = self._add_tool_button(toolbar, "Animate Stop", self._on_animate_stop)
+        animate_actions = self._add_tool_menu(
+            toolbar,
+            "Animate",
+            [
+                ToolMenuEntry("Animate Start", self._on_animate_start),
+                ToolMenuEntry("Animate Stop", self._on_animate_stop),
+            ],
+        )
+        self._animate_start_btn = animate_actions["Animate Start"]
+        self._animate_stop_btn = animate_actions["Animate Stop"]
 
         toolbar.addSeparator()
-        self._detach_btn = self._add_tool_button(toolbar, "Detach", self._on_detach)
-        self._spawn_btn = self._add_tool_button(toolbar, "Spawn", self._on_spawn)
+        process_actions = self._add_tool_menu(
+            toolbar,
+            "Process",
+            [
+                ToolMenuEntry("Detach", self._on_detach),
+                ToolMenuEntry("Spawn", self._on_spawn),
+            ],
+        )
+        self._detach_btn = process_actions["Detach"]
+        self._spawn_btn = process_actions["Spawn"]
         toolbar.addSeparator()
         self._add_toolbar_label(toolbar, "Run To:")
         self._run_to_input = self._add_toolbar_input(toolbar, "0x...", max_width=120)
@@ -198,9 +214,18 @@ class X64DbgPanel(AnalysisPanelBase):
         self._set_ip_input = self._add_toolbar_input(toolbar, "0x...", max_width=120)
         self._set_ip_btn = self._add_tool_button(toolbar, "Set", self._on_set_ip)
         toolbar.addSeparator()
-        self._save_db_btn = self._add_tool_button(toolbar, "Save DB", self._on_save_db)
-        self._load_db_btn = self._add_tool_button(toolbar, "Load DB", self._on_load_db)
-        self._clear_db_btn = self._add_tool_button(toolbar, "Clear DB", self._on_clear_db)
+        database_actions = self._add_tool_menu(
+            toolbar,
+            "Database",
+            [
+                ToolMenuEntry("Save DB", self._on_save_db),
+                ToolMenuEntry("Load DB", self._on_load_db),
+                ToolMenuEntry("Clear DB", self._on_clear_db),
+            ],
+        )
+        self._save_db_btn = database_actions["Save DB"]
+        self._load_db_btn = database_actions["Load DB"]
+        self._clear_db_btn = database_actions["Clear DB"]
 
         toolbar.addSeparator()
 
@@ -216,7 +241,7 @@ class X64DbgPanel(AnalysisPanelBase):
         toolbar.addSeparator()
 
         self.status_label = self._add_toolbar_label(toolbar, "Not loaded")
-        self._debug_buttons: list[QPushButton] = [
+        self._debug_buttons: list[QPushButton | QAction] = [
             self._run_btn,
             self._pause_btn,
             self._stop_btn,
@@ -493,7 +518,9 @@ class X64DbgPanel(AnalysisPanelBase):
         bp_type_label.setFont(fm.get_ui_font(9))
         bp_toolbar.addWidget(bp_type_label)
         self._bp_type_combo = QComboBox()
-        self._bp_type_combo.addItems(["software", "hardware", "memory"])
+        self._bp_type_combo.addItem("Software", "software")
+        self._bp_type_combo.addItem("Hardware", "hardware")
+        self._bp_type_combo.addItem("Memory", "memory")
         bp_toolbar.addWidget(self._bp_type_combo)
         bp_cond_label = QLabel(self.tr("Condition:"))
         bp_cond_label.setFont(fm.get_ui_font(9))
@@ -537,7 +564,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._disable_bp_btn.clicked.connect(self._on_disable_breakpoint)
         bp_toolbar.addWidget(self._disable_bp_btn)
         bp_toolbar.addStretch()
-        bp_layout.addLayout(bp_toolbar)
+        bp_layout.addWidget(self._make_control_row(bp_toolbar))
         self._bp_table = QTableWidget(0, len(_BP_COLUMNS))
         self._bp_table.setHorizontalHeaderLabels(_BP_COLUMNS)
         self._bp_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -617,7 +644,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._nop_btn.clicked.connect(self._on_nop_range)
         mem_toolbar.addWidget(self._nop_btn)
         mem_toolbar.addStretch()
-        mem_layout.addLayout(mem_toolbar)
+        mem_layout.addWidget(self._make_control_row(mem_toolbar))
         self._mem_dump = QPlainTextEdit()
         self._mem_dump.setFont(fm.get_code_font(10))
         self._mem_dump.setReadOnly(True)
@@ -672,14 +699,16 @@ class X64DbgPanel(AnalysisPanelBase):
         self._exc_code_input.setPlaceholderText("0xC0000005")
         eval_row.addWidget(self._exc_code_input)
         self._exc_handling_combo = QComboBox()
-        self._exc_handling_combo.addItems(["break", "ignore", "log"])
+        self._exc_handling_combo.addItem("Break", "break")
+        self._exc_handling_combo.addItem("Ignore", "ignore")
+        self._exc_handling_combo.addItem("Log", "log")
         eval_row.addWidget(self._exc_handling_combo)
         self._exc_set_btn = QPushButton(self.tr("Set"))
         self._exc_set_btn.setObjectName("tool_button")
         self._exc_set_btn.clicked.connect(self._on_set_exception_config)
         eval_row.addWidget(self._exc_set_btn)
         eval_row.addStretch()
-        console_layout.addLayout(eval_row)
+        console_layout.addWidget(self._make_control_row(eval_row))
         return console_container
 
     def _build_wp_tab(self, hex_validator: QRegularExpressionValidator) -> QWidget:
@@ -717,7 +746,9 @@ class X64DbgPanel(AnalysisPanelBase):
         wp_type_label.setFont(fm.get_ui_font(9))
         wp_toolbar.addWidget(wp_type_label)
         self._wp_type_combo = QComboBox()
-        self._wp_type_combo.addItems(["read", "write", "execute"])
+        self._wp_type_combo.addItem("Read", "read")
+        self._wp_type_combo.addItem("Write", "write")
+        self._wp_type_combo.addItem("Execute", "execute")
         self._wp_type_combo.setCurrentIndex(1)
         wp_toolbar.addWidget(self._wp_type_combo)
         self._add_wp_btn = QPushButton(self.tr("Add WP"))
@@ -729,7 +760,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._remove_wp_btn.clicked.connect(self._on_remove_watchpoint)
         wp_toolbar.addWidget(self._remove_wp_btn)
         wp_toolbar.addStretch()
-        wp_layout.addLayout(wp_toolbar)
+        wp_layout.addWidget(self._make_control_row(wp_toolbar))
         self._wp_table = QTableWidget(0, len(_WP_COLUMNS))
         self._wp_table.setHorizontalHeaderLabels(_WP_COLUMNS)
         self._wp_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -764,7 +795,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._patch_export_btn.clicked.connect(self._on_export_patches)
         patch_toolbar.addWidget(self._patch_export_btn)
         patch_toolbar.addStretch()
-        patch_layout.addLayout(patch_toolbar)
+        patch_layout.addWidget(self._make_control_row(patch_toolbar))
         self._patch_table = QTableWidget(0, len(_PATCH_COLUMNS))
         self._patch_table.setHorizontalHeaderLabels(_PATCH_COLUMNS)
         self._patch_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -805,7 +836,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._search_btn.clicked.connect(self._on_search)
         search_toolbar.addWidget(self._search_btn)
         search_toolbar.addStretch()
-        search_layout.addLayout(search_toolbar)
+        search_layout.addWidget(self._make_control_row(search_toolbar))
         self._search_table = QTableWidget(0, len(_SEARCH_COLUMNS))
         self._search_table.setHorizontalHeaderLabels(_SEARCH_COLUMNS)
         self._search_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -859,7 +890,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._trace_over_btn.clicked.connect(self._on_trace_over)
         trace_toolbar.addWidget(self._trace_over_btn)
         trace_toolbar.addStretch()
-        trace_layout.addLayout(trace_toolbar)
+        trace_layout.addWidget(self._make_control_row(trace_toolbar))
         trace_record_toolbar = QHBoxLayout()
         trace_record_label = QLabel(self.tr("Query Address:"))
         trace_record_label.setFont(fm.get_ui_font(9))
@@ -874,7 +905,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._trace_record_btn.clicked.connect(self._on_get_trace_record)
         trace_record_toolbar.addWidget(self._trace_record_btn)
         trace_record_toolbar.addStretch()
-        trace_layout.addLayout(trace_record_toolbar)
+        trace_layout.addWidget(self._make_control_row(trace_record_toolbar))
         self._trace_output = QPlainTextEdit()
         self._trace_output.setFont(fm.get_code_font(9))
         self._trace_output.setReadOnly(True)
@@ -936,7 +967,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._lbl_refresh_btn.clicked.connect(self._on_refresh_labels)
         lbl_toolbar.addWidget(self._lbl_refresh_btn)
         lbl_toolbar.addStretch()
-        lbl_layout.addLayout(lbl_toolbar)
+        lbl_layout.addWidget(self._make_control_row(lbl_toolbar))
         self._lbl_table = QTableWidget(0, len(_ANNOT_COLUMNS))
         self._lbl_table.setHorizontalHeaderLabels(_ANNOT_COLUMNS)
         self._lbl_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -984,7 +1015,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._cmt_refresh_btn.clicked.connect(self._on_refresh_comments)
         cmt_toolbar.addWidget(self._cmt_refresh_btn)
         cmt_toolbar.addStretch()
-        cmt_layout.addLayout(cmt_toolbar)
+        cmt_layout.addWidget(self._make_control_row(cmt_toolbar))
         self._cmt_table = QTableWidget(0, len(_ANNOT_COLUMNS))
         self._cmt_table.setHorizontalHeaderLabels(_ANNOT_COLUMNS)
         self._cmt_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -1031,7 +1062,10 @@ class X64DbgPanel(AnalysisPanelBase):
         alloc_prot_label.setFont(fm.get_ui_font(9))
         mmap_toolbar.addWidget(alloc_prot_label)
         self._alloc_prot_combo = QComboBox()
-        self._alloc_prot_combo.addItems(["rwx", "rw", "rx", "r"])
+        self._alloc_prot_combo.addItem("RWX", "rwx")
+        self._alloc_prot_combo.addItem("RW", "rw")
+        self._alloc_prot_combo.addItem("RX", "rx")
+        self._alloc_prot_combo.addItem("R", "r")
         mmap_toolbar.addWidget(self._alloc_prot_combo)
         self._alloc_btn = QPushButton(self.tr("Alloc"))
         self._alloc_btn.setObjectName("tool_button")
@@ -1049,7 +1083,7 @@ class X64DbgPanel(AnalysisPanelBase):
         self._free_btn.clicked.connect(self._on_free_memory)
         mmap_toolbar.addWidget(self._free_btn)
         mmap_toolbar.addStretch()
-        mmap_layout.addLayout(mmap_toolbar)
+        mmap_layout.addWidget(self._make_control_row(mmap_toolbar))
         self._mmap_table = QTableWidget(0, len(_MEMMAP_COLUMNS))
         self._mmap_table.setHorizontalHeaderLabels(_MEMMAP_COLUMNS)
         self._mmap_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
@@ -1710,7 +1744,8 @@ class X64DbgPanel(AnalysisPanelBase):
             self._console_output.appendPlainText(f"[!] Invalid address: {addr_text}")
             return
 
-        bp_type_text = self._bp_type_combo.currentText()
+        bp_type_data = self._bp_type_combo.currentData()
+        bp_type_text = bp_type_data if isinstance(bp_type_data, str) else "software"
         bp_type = cast(
             "BreakpointType",
             bp_type_text if bp_type_text in {"software", "hardware", "memory"} else "software",
@@ -2399,7 +2434,7 @@ class X64DbgPanel(AnalysisPanelBase):
             self._thread_table.setItem(row, 1, QTableWidgetItem(str(getattr(thr, "priority", 0))))
             self._thread_table.setItem(row, 2, QTableWidgetItem(getattr(thr, "state", "")))
 
-    def _on_generic_error(self, operation: str, exc: object, btn: QPushButton | None = None) -> None:
+    def _on_generic_error(self, operation: str, exc: object, btn: QPushButton | QAction | None = None) -> None:
         """Handle a generic operation failure.
 
         Args:
@@ -2637,7 +2672,8 @@ class X64DbgPanel(AnalysisPanelBase):
             )
             return
         size = int(size_text) if size_text else 4
-        wp_type_text = self._wp_type_combo.currentText()
+        wp_type_data = self._wp_type_combo.currentData()
+        wp_type_text = wp_type_data if isinstance(wp_type_data, str) else "write"
         wp_type = cast(
             "MemoryProtection",
             wp_type_text if wp_type_text in {"read", "write", "execute"} else "write",
@@ -3148,7 +3184,8 @@ class X64DbgPanel(AnalysisPanelBase):
         except ValueError:
             _logger.warning("x64dbg_alloc_memory_invalid_size", input_text=size_text)
             return
-        prot = self._alloc_prot_combo.currentText()
+        prot_data = self._alloc_prot_combo.currentData()
+        prot = prot_data if isinstance(prot_data, str) else "rwx"
         run_bridge_coroutine_logged(
             self._bridge.allocate_memory(size, prot),
             on_success=lambda r: self._console_output.appendPlainText(f"[+] Allocated at {hex(r) if isinstance(r, int) else r}"),
@@ -3659,7 +3696,8 @@ class X64DbgPanel(AnalysisPanelBase):
                 logger=_logger,
             )
             return
-        handling = self._exc_handling_combo.currentText()
+        handling_data = self._exc_handling_combo.currentData()
+        handling = handling_data if isinstance(handling_data, str) else "break"
         run_bridge_coroutine_logged(
             self._bridge.set_exception_config(code, handling),
             on_success=lambda _: self._console_output.appendPlainText(f"[+] Exception {hex(code)} -> {handling}"),

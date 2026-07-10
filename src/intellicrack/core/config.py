@@ -202,6 +202,7 @@ def _default_providers() -> dict[ProviderName, ProviderConfig]:
         ProviderName.HUGGINGFACE: ProviderConfig(
             enabled=True,
             api_base="https://api-inference.huggingface.co",
+            default_model="openai/gpt-oss-120b",
             timeout_seconds=120,
             max_retries=3,
         ),
@@ -670,6 +671,31 @@ class Config:
         """
         config = self.get_provider_config(provider)
         return config.enabled
+
+    def preferred_model_index(self, provider: ProviderName, models: list[str]) -> int:
+        """Find the index of the configured default model within a discovered catalog.
+
+        Lets model-selection UI prefer a provider's curated ``default_model``
+        over whatever a discovered catalog happens to sort first. This
+        matters for providers like HuggingFace, whose catalog is sorted by
+        download count rather than suitability, so the most-downloaded
+        entry is not necessarily one the provider can actually serve for
+        chat.
+
+        Args:
+            provider: The provider whose configured default model to look up.
+            models: Model ids from the provider's discovered catalog, in
+                display order.
+
+        Returns:
+            int: Index within ``models`` matching the provider's configured
+            ``default_model``, or ``0`` when no default is configured or the
+            configured default is not present in ``models``.
+        """
+        default_model = self.get_provider_config(provider).default_model
+        if default_model and default_model in models:
+            return models.index(default_model)
+        return 0
 
     def is_tool_enabled(self, tool: ToolName) -> bool:
         """Check if a tool is enabled.

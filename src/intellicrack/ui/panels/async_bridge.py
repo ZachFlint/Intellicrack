@@ -13,7 +13,10 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
-from concurrent.futures import TimeoutError as FuturesTimeoutError
+from concurrent.futures import (
+    Future,
+    TimeoutError as FuturesTimeoutError,
+)
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, overload, override
 
 from PyQt6.QtCore import QThread, pyqtSignal
@@ -28,6 +31,7 @@ __all__ = [
     "GenericCallableWorker",
     "cancel_pending_main_loop_tasks",
     "drain_bridge_workers",
+    "drain_bridge_workers_for",
     "run_bridge_coroutine",
     "run_bridge_coroutine_async",
     "run_bridge_coroutine_logged",
@@ -75,7 +79,6 @@ Extends ``WORKER_DEFAULT_EXCEPTIONS`` with the Intellicrack domain hierarchy (``
 out of ``BridgeCallWorker.run`` and terminate the worker thread without emitting ``call_finished`` or ``call_error``, leaving callers (e.g.
 the process panel's "Refreshing..." button) stuck indefinitely with no result and no surfaced error.
 """
-
 
 class _LoopState:
     """Module-level mutable state for the persistent event loop."""
@@ -146,6 +149,11 @@ class _RetainedWorker(QThread):
 
 
 _LOOP_READY_TIMEOUT: float = 2.0
+
+_WORKER_POLL_INTERVAL_S: float = 0.1
+"""Polling slice, in seconds, used by :meth:`BridgeCallWorker.run` to wait on its coroutine future while staying responsive to loop
+teardown.
+"""
 
 _WORKER_DRAIN_TIMEOUT_MS: int = 5000
 """Default per-worker wait, in milliseconds, applied by :func:`drain_bridge_workers`."""
@@ -263,14 +271,46 @@ class BridgeCallWorker(_RetainedWorker):
         self._coro: Coroutine[object, object, object] = coro
         _: object = self.finished.connect(self.deleteLater)
 
+    @staticmethod
+    def _await_future(loop: asyncio.AbstractEventLoop, future: Future[object]) -> tuple[bool, object]:
+        """Wait for ``future`` while staying responsive to loop teardown.
+
+        The future is awaited in bounded polling slices rather than a single
+        unbounded ``future.result()`` so that if the shared bridge loop is torn
+        down (``shutdown_bridge_loop``) while this worker is still in flight, the
+        worker detects the dead loop, cancels its pending future, and returns
+        instead of blocking its OS thread forever. A worker left blocked on a
+        stopped loop becomes an unjoinable zombie whose ``QThread`` later aborts
+        the process when destroyed - the class of non-deterministic hang/crash
+        seen when the whole suite shares one loop across thousands of tests.
+
+        Args:
+            loop: The persistent bridge event loop the coroutine runs on.
+            future: The cross-thread future returned by
+                :func:`asyncio.run_coroutine_threadsafe`.
+
+        Returns:
+            tuple[bool, object]: ``(True, result)`` when the coroutine completed,
+            or ``(False, None)`` when the loop was torn down before completion.
+        """
+        while True:
+            try:
+                return True, future.result(timeout=_WORKER_POLL_INTERVAL_S)
+            except FuturesTimeoutError:
+                if loop.is_closed() or not loop.is_running():
+                    _ = future.cancel()
+                    _logger.warning("async_bridge_worker_abandoned_dead_loop")
+                    return False, None
+
     @override
     def run(self) -> None:
         """Execute the coroutine on the persistent event loop."""
         try:
             loop = _ensure_loop()
             future = asyncio.run_coroutine_threadsafe(self._coro, loop)
-            result = future.result()
-            self.call_finished.emit(result)
+            completed, result = self._await_future(loop, future)
+            if completed:
+                self.call_finished.emit(result)
         except _BRIDGE_CALL_EXCEPTIONS as exc:
             _logger.exception("async_bridge_worker_failed")
             self.call_error.emit(exc)
@@ -562,14 +602,82 @@ def drain_bridge_workers(timeout_ms: int = _WORKER_DRAIN_TIMEOUT_MS) -> int:
     return drained
 
 
+def _worker_has_ancestor(worker: QThread, root: QObject) -> bool:
+    """Report whether ``root`` appears anywhere in ``worker``'s Qt parent chain.
+
+    Walks ``worker.parent()`` upward comparing each node identity against
+    ``root``. A worker started with ``parent=root`` (or parented to any widget
+    nested inside ``root``, such as a tab reparented into a ``QTabWidget``)
+    resolves to ``True``. If the underlying C++ object of any node has already
+    been destroyed the sip wrapper raises ``RuntimeError``; that is treated as
+    "not a descendant" so a partially torn-down worker is simply skipped.
+
+    Args:
+        worker: The retained worker thread whose ancestry is inspected.
+        root: The candidate ancestor object.
+
+    Returns:
+        bool: True if ``root`` is ``worker`` itself or one of its Qt ancestors.
+    """
+    try:
+        node: QObject | None = worker
+        while node is not None:
+            if node is root:
+                return True
+            node = node.parent()
+    except RuntimeError:
+        return False
+    return False
+
+
+def drain_bridge_workers_for(root: QObject, timeout_ms: int = _WORKER_DRAIN_TIMEOUT_MS) -> int:
+    """Block until every retained worker parented under ``root`` has finished.
+
+    A scoped counterpart to :func:`drain_bridge_workers`: it waits only for the
+    worker threads whose Qt parent chain includes ``root`` (see
+    :func:`_worker_has_ancestor`), leaving workers owned by unrelated widgets
+    untouched. This is what a panel calls when it is being closed or torn down:
+    its own in-flight refresh / architecture / privilege coroutines are joined so
+    their result callbacks cannot fire against a half-destroyed panel and, more
+    importantly, so the still-running child ``QThread`` objects are not destroyed
+    mid-flight when Qt deletes the panel subtree (which would abort the process
+    with ``QThread: Destroyed while thread is still running``). Draining globally
+    instead would join and flush callbacks for workers belonging to entirely
+    different widgets, which can resurrect their side effects at the wrong time.
+
+    Args:
+        root: The widget whose owned worker subtree should be joined.
+        timeout_ms: Maximum number of milliseconds to wait for each individual
+            worker thread to finish before moving on to the next one.
+
+    Returns:
+        int: The number of matching workers confirmed finished (or already gone).
+    """
+    with _WorkerRegistry.lock:
+        snapshot = list(_WorkerRegistry.workers)
+    drained = 0
+    for worker in snapshot:
+        if not _worker_has_ancestor(worker, root):
+            continue
+        try:
+            if not worker.isRunning() or worker.wait(timeout_ms):
+                drained += 1
+        except RuntimeError:
+            drained += 1
+    return drained
+
+
 def shutdown_bridge_loop() -> None:
     """Shut down the persistent background event loop.
 
-    Should be called during application exit to cleanly stop the background thread.
+    Should be called during application exit to cleanly stop the background thread. In-flight workers are drained first so none is left
+    blocked on a future that the loop would never complete once stopped; any worker that outlasts the drain budget detects the stopped loop
+    and abandons its future rather than zombieing (see :meth:`BridgeCallWorker.run`).
     """
     if _state.loop is None:
         return
 
+    _ = drain_bridge_workers()
     _ = _state.loop.call_soon_threadsafe(_state.loop.stop)
 
     if _state.thread is not None and _state.thread.is_alive():

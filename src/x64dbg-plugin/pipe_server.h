@@ -10,7 +10,9 @@
 #define INTELLICRACK_PIPE_SERVER_H
 
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 
@@ -27,6 +29,7 @@ constexpr const char* PIPE_NAME = "\\\\.\\pipe\\intellicrack_x64dbg";
 constexpr DWORD PIPE_BUFFER_SIZE = 65536;
 constexpr DWORD READ_TIMEOUT_MS = 100;
 constexpr DWORD CONNECT_TIMEOUT_MS = 5000;
+constexpr DWORD PAYLOAD_READ_TIMEOUT_MS = 30000;
 
 struct PipeMessage {
     uint32_t id;
@@ -80,8 +83,9 @@ private:
     void handle_client();
     bool read_message(PipeMessage& msg);
     bool write_response(const PipeResponse& response);
-    bool write_data(const char* data, uint32_t length);
-    bool read_data(char* buffer, uint32_t length);
+    bool write_message(const char* payload, uint32_t length);
+    bool write_data_locked(const char* data, uint32_t length);
+    bool read_data(char* buffer, uint32_t length, DWORD timeout_ms);
     std::string serialize_response(const PipeResponse& response);
     bool parse_message(const std::string& json, PipeMessage& msg);
 };

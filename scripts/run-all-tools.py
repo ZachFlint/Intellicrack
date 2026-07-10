@@ -59,6 +59,8 @@ GROUP_COLORS: dict[str, str] = {
     "bat": f"{ESC}[38;2;120;180;230m",
     "ps": f"{ESC}[38;2;30;110;200m",
     "txt": f"{ESC}[38;2;190;190;190m",
+    "cpp": f"{ESC}[38;2;0;89;156m",
+    "cmake": f"{ESC}[38;2;100;170;100m",
     "dash": f"{ESC}[95m",
 }
 GROUP_NAMES: dict[str, str] = {
@@ -72,6 +74,8 @@ GROUP_NAMES: dict[str, str] = {
     "bat": "Batch",
     "ps": "PowerShell",
     "txt": "Text",
+    "cpp": "C++",
+    "cmake": "CMake",
     "dash": "Dashboard",
 }
 GROUP_ALIASES: dict[str, str] = {
@@ -95,6 +99,10 @@ GROUP_ALIASES: dict[str, str] = {
     "ps1": "ps",
     "text": "txt",
     "txt": "txt",
+    "cpp": "cpp",
+    "c++": "cpp",
+    "cxx": "cpp",
+    "cmake": "cmake",
     "dashboard": "dash",
     "dash": "dash",
 }
@@ -162,6 +170,11 @@ TOOLS: list[Tool] = [
     Tool("Machete", "machete", is_formatter=False, group="rs"),
     Tool("RustAnalysis", "rust-code-analysis", is_formatter=False, group="rs"),
     Tool("Typos", "typos", is_formatter=False, group="txt"),
+    Tool("ClangTidy", "clang-tidy", is_formatter=False, group="cpp"),
+    Tool("ClangFormat", "clang-format", is_formatter=True, group="cpp"),
+    Tool("Cppcheck", "cppcheck", is_formatter=False, group="cpp"),
+    Tool("CmakeFormat", "cmake-format", is_formatter=True, group="cmake"),
+    Tool("CmakeLint", "cmake-lint", is_formatter=False, group="cmake"),
     Tool("Dashboard", "lint-dashboard", is_formatter=True, group="dash"),
 ]
 
@@ -853,25 +866,15 @@ def main() -> None:
     try:
         tracker.start()
         _run_phase_sequential(formatters, tracker, results, "Formatting")
-        non_rust_linters = [t for t in linters if t.group != "rs"]
-        rust_linters = [t for t in linters if t.group == "rs"]
-        if non_rust_linters:
+        if linters:
             print(f"\n  {GRAY}-- Source & Config --{RESET}\n")
         _run_phase_parallel(
-            non_rust_linters,
+            linters,
             tracker,
             results,
             max_workers,
             phase_label="Linting Source & Config",
             group_header=None,
-        )
-        _run_phase_parallel(
-            rust_linters,
-            tracker,
-            results,
-            max_workers,
-            phase_label="Linting Rust",
-            group_header="rs",
         )
         _run_phase_sequential(dashboard, tracker, results, "Dashboard")
         tracker.stop()

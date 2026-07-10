@@ -10,6 +10,13 @@
 #include "pipe_server.h"
 #include "command_handler.h"
 
+// The vendored x64dbg SDK headers trip C4324 (struct padded due to an
+// alignment specifier) under /W4 on the 32-bit build. They are third-party
+// and must not be modified, so scope the suppression to just their inclusion.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324)
+#endif
 #include <pluginsdk/_plugins.h>
 #include <pluginsdk/_scriptapi_memory.h>
 #include <pluginsdk/_scriptapi_register.h>
@@ -17,6 +24,9 @@
 #include <pluginsdk/_scriptapi_module.h>
 #include <pluginsdk/_scriptapi_misc.h>
 #include <pluginsdk/bridgemain.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #include <cstdio>
 #include <cstring>
@@ -45,6 +55,85 @@ std::string escape_json_path(const char* s) {
         }
     }
     return ss.str();
+}
+
+// Passed to the EnumWindows callback so it can tell x64dbg's main window
+// (hidden to keep the debugger alive) from auxiliary popups (closed), and
+// report back how much window activity a sweep pass observed.
+struct HeadlessSweepCtx {
+    DWORD pid;
+    HWND main_window;
+    int acted;  // number of windows hidden/closed on this pass
+};
+
+BOOL CALLBACK headless_sweep_window(HWND hwnd, LPARAM lparam) {
+    auto* ctx = reinterpret_cast<HeadlessSweepCtx*>(lparam);
+    DWORD win_pid = 0;
+    GetWindowThreadProcessId(hwnd, &win_pid);
+    if (win_pid != ctx->pid || !IsWindowVisible(hwnd)) {
+        return TRUE;
+    }
+
+    if (hwnd == ctx->main_window) {
+        // The main debugger window: hide it so x64dbg keeps running as a
+        // windowless engine driven over the pipe.
+        ShowWindow(hwnd, SW_HIDE);
+    } else {
+        // An auxiliary popup (notably the version "Release Notes" dialog):
+        // close it so its modal message loop unwinds cleanly. Hiding such a
+        // dialog with SW_HIDE would leave the loop spinning and wedge the
+        // GUI thread, stalling command dispatch.
+        PostMessageW(hwnd, WM_CLOSE, 0, 0);
+    }
+    ctx->acted++;
+    return TRUE;
+}
+
+DWORD WINAPI headless_sweep_thread(LPVOID) {
+    // The main window and the startup "Release Notes" popup each appear a
+    // beat apart from plugin setup, so sweep for a minimum window to catch
+    // them, then stop as soon as the debugger has settled with nothing left
+    // to hide or close. Terminating promptly keeps this background thread
+    // from contending with debugger command dispatch during a session.
+    const int MIN_PASSES = 15;   // ~3.0s minimum coverage for late popups
+    const int MAX_PASSES = 80;   // ~16s hard ceiling
+    const int SETTLE_PASSES = 4; // consecutive idle passes before stopping
+    const DWORD INTERVAL_MS = 200;
+
+    int settled = 0;
+    for (int i = 0; i < MAX_PASSES; ++i) {
+        HWND main_window = GuiGetWindowHandle();
+        HeadlessSweepCtx ctx{ GetCurrentProcessId(), main_window, 0 };
+        if (main_window) {
+            EnumWindows(headless_sweep_window, reinterpret_cast<LPARAM>(&ctx));
+        }
+
+        settled = (main_window && ctx.acted == 0) ? settled + 1 : 0;
+        if (i >= MIN_PASSES && settled >= SETTLE_PASSES) {
+            break;
+        }
+        Sleep(INTERVAL_MS);
+    }
+    return 0;
+}
+
+// When Intellicrack launches x64dbg as an embedded, headless debugging
+// engine it exports INTELLICRACK_X64DBG_HEADLESS=1 so the debugger runs
+// windowless and every interaction happens through the Intellicrack x64dbg
+// panel over the named pipe. A background sweep hides the main window and
+// dismisses auxiliary popups so no debugger window is ever presented. A
+// standalone x64dbg launch (no such variable) is left untouched.
+void hide_windows_if_headless() {
+    char buf[8] = {};
+    DWORD n = GetEnvironmentVariableA("INTELLICRACK_X64DBG_HEADLESS", buf, sizeof(buf));
+    if (n == 0 || n >= sizeof(buf) || buf[0] != '1') {
+        return;
+    }
+
+    HANDLE thread = CreateThread(nullptr, 0, headless_sweep_thread, nullptr, 0, nullptr);
+    if (thread) {
+        CloseHandle(thread);
+    }
 }
 
 }
@@ -223,6 +312,8 @@ DLL_EXPORT void plugsetup(PLUG_SETUPSTRUCT* setupStruct) {
     if (!intellicrack::initialize_plugin()) {
         _plugin_logputs("[Intellicrack] Plugin initialization failed!");
     }
+
+    hide_windows_if_headless();
 }
 
 DLL_EXPORT void CBMENUENTRY(CBTYPE cbType, PLUG_CB_MENUENTRY* info) {
@@ -256,6 +347,8 @@ DLL_EXPORT void CBMENUENTRY(CBTYPE cbType, PLUG_CB_MENUENTRY* info) {
         _plugin_logputs(status);
         break;
     }
+    default:
+        break;
     }
 }
 

@@ -46,7 +46,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
-from intellicrack.ui.panels.base_panel import AnalysisPanelBase
+from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.ghidra_panel_data_types import DataTypeManagerWidget
 from intellicrack.ui.panels.ghidra_panel_extras import GhidraAnalysisExtrasWidget
 from intellicrack.ui.panels.ghidra_panel_program_tree import ProgramTreeWidget
@@ -170,8 +170,16 @@ class GhidraPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._undo_btn = self._add_tool_button(toolbar, self.tr("Undo"), self._on_undo, enabled=False)
-        self._redo_btn = self._add_tool_button(toolbar, self.tr("Redo"), self._on_redo, enabled=False)
+        edit_actions = self._add_tool_menu(
+            toolbar,
+            self.tr("Edit"),
+            [
+                ToolMenuEntry(self.tr("Undo"), self._on_undo, enabled=False),
+                ToolMenuEntry(self.tr("Redo"), self._on_redo, enabled=False),
+            ],
+        )
+        self._undo_btn = edit_actions[self.tr("Undo")]
+        self._redo_btn = edit_actions[self.tr("Redo")]
 
         toolbar.addSeparator()
 
@@ -180,8 +188,16 @@ class GhidraPanel(AnalysisPanelBase):
 
         toolbar.addSeparator()
 
-        self._debug_info_btn = self._add_secondary_button(toolbar, self.tr("Debug Info..."), self._on_import_debug_info)
-        self._diff_btn = self._add_secondary_button(toolbar, self.tr("Diff..."), self._on_diff_programs)
+        import_actions = self._add_tool_menu(
+            toolbar,
+            self.tr("Import"),
+            [
+                ToolMenuEntry(self.tr("Debug Info..."), self._on_import_debug_info),
+                ToolMenuEntry(self.tr("Diff..."), self._on_diff_programs),
+            ],
+        )
+        self._debug_info_btn = import_actions[self.tr("Debug Info...")]
+        self._diff_btn = import_actions[self.tr("Diff...")]
 
         self.status_label = self._add_toolbar_label(toolbar, self.tr("Not connected"))
 
@@ -1838,7 +1854,7 @@ class GhidraPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             bridge.get_functions(filter_text),
             on_success=self._apply_functions,
-            on_error=lambda _: self._on_refresh_funcs_error(),
+            on_error=self._on_refresh_funcs_error,
             parent=self,
             event="ghidra_get_functions",
             logger=_logger,
@@ -1873,9 +1889,14 @@ class GhidraPanel(AnalysisPanelBase):
         self._refresh_funcs_btn.setEnabled(True)
         _logger.debug("ghidra_functions_refreshed", count=len(functions))
 
-    def _on_refresh_funcs_error(self) -> None:
-        """Handle function refresh failure."""
-        _logger.warning("ghidra_refresh_functions_failed", bridge_type="ghidra")
+    def _on_refresh_funcs_error(self, exc: object) -> None:
+        """Handle function refresh failure.
+
+        Args:
+            exc: The exception raised while retrieving functions.
+        """
+        _logger.warning("ghidra_refresh_functions_failed", bridge_type="ghidra", error=str(exc))
+        self._set_status(f"Function refresh failed: {exc}")
         self._refresh_funcs_btn.setEnabled(True)
 
     def _on_filter_changed(self, _text: str) -> None:

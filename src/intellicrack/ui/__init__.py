@@ -11,7 +11,7 @@ dialogs.
 from __future__ import annotations
 
 from intellicrack.ui._hex_format import format_hex_dump
-from intellicrack.ui.app import AsyncWorker, MainWindow
+from intellicrack.ui.app import MainWindow
 from intellicrack.ui.chat import ChatInput, ChatPanel, MessageBubble
 from intellicrack.ui.confirmation_dialog import ToolConfirmationDialog
 from intellicrack.ui.dialogs import SplashScreen
@@ -54,7 +54,6 @@ from intellicrack.ui.tools import (
 
 __all__: list[str] = [
     "AssemblySyntaxHighlighter",
-    "AsyncWorker",
     "CSyntaxHighlighter",
     "ChatInput",
     "ChatPanel",

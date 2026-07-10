@@ -14,6 +14,11 @@ mdlint2 := "node node_modules/markdownlint-cli2/markdownlint-cli2-bin.mjs"
 install:
     @& scripts/install-all.ps1
 
+[doc('Install Node.js dev-tooling dependencies (markdownlint-cli2, jsonlint) via yarn')]
+[group('install')]
+install-yarn:
+    yarn install
+
 [doc('Update everything: pixi env, cargo crates (hexcore + CLI launcher), yarn deps')]
 [group('update')]
 update:
@@ -80,13 +85,19 @@ clean:
     @& scripts/clean.ps1 -Pixi "{{ pixi }}" -SrcAndTests "{{ src_and_tests }}"
 
 # Run tests in Docker sandbox. Usage: just test [TYPE] [FLAGS...]
-# TYPE: unit (default), all, coverage, integration, e2e, smoke, parallel, failed, verbose, bench, module, module-cov, registry, custom
+# TYPE: unit (default), all, integration, e2e, smoke, parallel, failed, verbose, bench, module, module-cov, registry, custom
 # FLAGS: --module NAME, --extra-args "...", --rebuild, --rw, --network NAME, --memory X, --cpus X, --log-level LEVEL
 
-# Examples: just test | just test coverage | just test module --module bridges | just test custom --extra-args "-x tests/test_core"
+# Examples: just test | just test module --module bridges | just test custom --extra-args "-x tests/test_core"
 [group('test')]
 test *ARGS='unit':
     @{{ pixi }} python -m scripts.sandbox.docker_sandbox {{ ARGS }}
+
+# Measure test coverage. Default runs both; scope with --python (sandbox suite, 95% gate) or --rust (cargo llvm-cov).
+# Extra flags require exactly one target, e.g. just test-coverage --python --memory 16g | just test-coverage --rust --html
+[group('test')]
+test-coverage *FLAGS:
+    @& scripts/test-coverage.ps1 -Pixi "{{ pixi }}" {{ FLAGS }}
 
 # Open an interactive shell inside the Docker sandbox (add --rw for writable workspace)
 [group('sandbox')]
@@ -470,6 +481,33 @@ rust-code-analysis *FLAGS:
 typos *FLAGS:
     @& scripts/run-lint-tool.ps1 -ToolName typos -DisplayName Typos -Command "{{ pixi }} typos {{ FLAGS }} ." -TextMode -Pixi "{{ pixi }}" -WorkDir src/intellicrack-hexcore -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}"
 
+[doc('Run clang-tidy static analysis on the x64dbg-plugin C++ bridge')]
+[group('lint')]
+clang-tidy *FLAGS:
+    @& scripts/run-clang-tidy.ps1 -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}"
+
+[doc('Check clang-format style on the x64dbg-plugin C++ bridge')]
+[group('lint')]
+clang-format *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName clang-format -DisplayName ClangFormat -Command "{{ pixi }} clang-format --dry-run --Werror -style=file intellicrack_bridge.cpp intellicrack_bridge.h pipe_server.cpp pipe_server.h command_handler.cpp command_handler.h" -TextMode -Pixi "{{ pixi }}" -WorkDir src/x64dbg-plugin -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} clang-format -style=file intellicrack_bridge.cpp intellicrack_bridge.h pipe_server.cpp pipe_server.h command_handler.cpp command_handler.h"
+
+[doc('Run cppcheck static analysis on the x64dbg-plugin C++ bridge')]
+[group('lint')]
+cppcheck *FLAGS:
+    @& scripts/build-x64dbg-plugin-compiledb.ps1 -Pixi "{{ pixi }}"
+    @& scripts/fix-cppcheck-cfg.ps1 -Pixi "{{ pixi }}"
+    @& scripts/run-lint-tool.ps1 -ToolName cppcheck -DisplayName Cppcheck -Command "{{ pixi }} cppcheck --project=src/x64dbg-plugin/build_lint/compile_commands.json --enable=warning,performance,portability,style --inconclusive --suppress=missingIncludeSystem --template=gcc" -TextMode -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} cppcheck --project=src/x64dbg-plugin/build_lint/compile_commands.json"
+
+[doc('Check cmake-format style on the x64dbg-plugin CMakeLists.txt')]
+[group('lint')]
+cmake-format *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName cmake-format -DisplayName CmakeFormat -Command "{{ pixi }} cmake-format -c src/x64dbg-plugin/.cmake-format.yaml --check src/x64dbg-plugin/CMakeLists.txt" -TextMode -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} cmake-format -c src/x64dbg-plugin/.cmake-format.yaml src/x64dbg-plugin/CMakeLists.txt"
+
+[doc('Run cmake-lint style checks on the x64dbg-plugin CMakeLists.txt')]
+[group('lint')]
+cmake-lint *FLAGS:
+    @& scripts/run-lint-tool.ps1 -ToolName cmake-lint -DisplayName CmakeLint -Command "{{ pixi }} cmake-lint --suppress-decorations -c src/x64dbg-plugin/.cmake-format.yaml -- src/x64dbg-plugin/CMakeLists.txt" -TextMode -Pixi "{{ pixi }}" -ReportFormats 'txt','json','xml','csv','sarif','sql' -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} cmake-lint -c src/x64dbg-plugin/.cmake-format.yaml -- src/x64dbg-plugin/CMakeLists.txt"
+
 [doc('Generate unified HTML lint dashboard from all tool findings')]
 [group('reports')]
 lint-dashboard:
@@ -519,7 +557,6 @@ alias cargo-nextest := nextest
 alias cargo-machete := machete
 
 alias llvmcov := llvm-cov
-alias coverage := llvm-cov
 
 alias rust-fmt := rustfmt
 

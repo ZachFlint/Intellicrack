@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(intellicrack_bridge VERSION 1.0.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 option(BUILD_X64 "Build 64-bit plugin" ON)

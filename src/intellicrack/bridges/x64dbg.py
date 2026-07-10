@@ -96,12 +96,6 @@ from intellicrack.bridges.win32_types import (
 from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
-from intellicrack.core.subprocess_compat import (
-    DEVNULL,
-    STARTF_USESHOWWINDOW,
-    STARTUPINFO,
-    Popen,
-)
 from intellicrack.core.types import (
     BreakpointInfo,
     MemoryRegion,
@@ -114,6 +108,10 @@ from intellicrack.core.types import (
     ToolFunction,
     ToolName,
     ToolParameter,
+)
+from intellicrack.core.win32_desktop_process import (
+    DesktopProcess,
+    spawn_on_hidden_desktop,
 )
 
 
@@ -284,6 +282,14 @@ class _ResourcePathLabels:
 
 
 _ERR_REQUIRES_WINDOWS = "requires Windows platform"
+_PLUGIN_PIPE_REMEDIATION = (
+    "x64dbg started but the Intellicrack bridge plugin never opened its named pipe, so no debugger "
+    "command can be issued. This usually means x64dbg loaded (or silently skipped) the plugin DLL but "
+    "the plugin failed to initialise - most often an x64dbg SDK/ABI or architecture (x64 vs x32) "
+    "mismatch. Open x64dbg and check the Log window and the Plugins menu for the 'Intellicrack Bridge' "
+    "entry; if it is missing, rebuild the plugin from src/x64dbg-plugin against this x64dbg build's "
+    "pluginsdk and redeploy."
+)
 _ERR_NOT_ATTACHED = "not attached to a process"
 _ERR_OPEN_PROCESS_FAILED = "failed to open process"
 _ERR_CREATE_SNAPSHOT_FAILED = "failed to create snapshot"
@@ -314,6 +320,13 @@ _X64DBG_ERR_TIMEOUT = "timeout"
 _X64DBG_ERR_UNKNOWN_COMMAND = "unknown_command"
 _X64DBG_ERR_REMOTE = "remote_error"
 _X64DBG_ERR_PROTOCOL_VIOLATION = "protocol_violation"
+
+# Environment variable the bridge exports when spawning x64dbg so the
+# deployed Intellicrack plugin runs the debugger as an embedded, windowless
+# engine (hiding its main window and dismissing startup popups) driven over
+# the pipe rather than presenting a second top-level debugger window.
+_HEADLESS_ENV_VAR: str = "INTELLICRACK_X64DBG_HEADLESS"
+
 
 # Marker substrings recognised on legacy plugin builds that returned a
 # raw error string rather than a structured ``code`` field. Mapping is
@@ -795,7 +808,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         """Initialize the X64DbgBridge instance."""
         super().__init__()
         self._x64dbg_path: Path | None = None
-        self._process: Popen[bytes] | None = None
+        self._process: DesktopProcess | None = None
         self._pipe_client: NamedPipeClient | None = None
         self._attached_pid: int | None = None
         self._port: int = self.DEFAULT_PORT
@@ -2142,23 +2155,28 @@ class _X64DbgBridgeBase(DebuggerBridge):
             cleanup_errors.append(exc)
         finally:
             try:
-                process_manager.unregister(pid)
+                process_manager.unregister_external_pid(pid)
             except (RuntimeError, KeyError) as exc:
                 _logger.warning("x64dbg_process_unregister_failed", pid=pid, error=str(exc))
+                cleanup_errors.append(exc)
+            try:
+                process.close()
+            except OSError as exc:
+                _logger.warning("x64dbg_process_handle_close_failed", pid=pid, error=str(exc))
                 cleanup_errors.append(exc)
             self._process = None
 
     @staticmethod
     async def _terminate_process_with_timeout(
-        process: Popen[bytes],
+        process: DesktopProcess,
         pid: int,
         cleanup_errors: list[BaseException],
     ) -> None:
         """Terminate a process and fall back to ``kill`` on timeout.
 
         Args:
-            process: The ``Popen`` handle representing the spawned
-                x64dbg debugger.
+            process: The hidden-desktop process handle representing the
+                spawned x64dbg debugger.
             pid: Process ID, used for logging context.
             cleanup_errors: Mutable list that records exceptions raised
                 by the fallback ``kill`` call.
@@ -2301,39 +2319,101 @@ class _X64DbgBridgeBase(DebuggerBridge):
         self._is_64bit = is_64bit
         _logger.info("x64dbg_starting", path=str(exe_path))
 
-        si = STARTUPINFO()
-        si.dwFlags |= STARTF_USESHOWWINDOW
-        si.wShowWindow = 1
+        # x64dbg is a Qt GUI application that calls ShowWindow(SW_SHOW)
+        # unconditionally during startup, ignoring STARTUPINFO.wShowWindow, so a
+        # SW_HIDE spawn still flashes the window until an in-process hook hides
+        # it. Launching x64dbg on a dedicated desktop that is never made the
+        # input desktop keeps every window it creates off-screen from the very
+        # first frame - the Intellicrack x64dbg panel is the only user-facing
+        # surface. INTELLICRACK_X64DBG_HEADLESS still tells the deployed plugin
+        # to dismiss the modal dialogs x64dbg would otherwise block on while
+        # driven headlessly. Standard handles are wired to NUL inside
+        # spawn_on_hidden_desktop so a plugin that writes diagnostics cannot
+        # deadlock on an undrained pipe (audit6.md F-0015).
+        headless_env = dict(os.environ)
+        headless_env[_HEADLESS_ENV_VAR] = "1"
 
-        # x64dbg.exe is a GUI-only application that does not need its
-        # standard streams. Routing them through pipes that the bridge
-        # never drains causes a deadlock once the kernel buffer (~64
-        # KiB) fills - typically when a plugin writes diagnostics or a
-        # native assertion fires (audit6.md F-0015). Discarding both
-        # streams via ``DEVNULL`` prevents the deadlock entirely.
         self._process = await asyncio.to_thread(
-            Popen,
-            [str(exe_path)],
-            stdout=DEVNULL,
-            stderr=DEVNULL,
-            stdin=DEVNULL,
-            startupinfo=si,
+            spawn_on_hidden_desktop,
+            exe_path,
+            None,
+            headless_env,
         )
         _logger.info("x64dbg_spawned", pid=self._process.pid, path=str(exe_path))
 
         process_manager = ProcessManager.get_instance()
-        process_manager.register(
-            self._process,
-            name=f"x64dbg-{'x64' if is_64bit else 'x32'}",
-            process_type=ProcessType.DEBUGGER,
-            metadata={"binary": str(exe_path)},
-            cleanup_callback=self.shutdown,
-        )
+        try:
+            process_manager.register_external_pid(
+                self._process.pid,
+                name=f"x64dbg-{'x64' if is_64bit else 'x32'}",
+                process_type=ProcessType.DEBUGGER,
+                metadata={"binary": str(exe_path)},
+            )
+        except ValueError as exc:
+            self._process.close()
+            self._process = None
+            msg = f"x64dbg exited immediately after launch: {exc}"
+            raise ToolError(msg, tool_name="x64dbg") from exc
 
-        await self._wait_for_pipe_ready()
+        await self._establish_bridge_connection()
         self._state.connected = True
         self._state.tool_running = True
         self._publish_tool_state()
+
+    async def _establish_bridge_connection(self) -> None:
+        """Wait for the bridge pipe, connect to it, and verify readiness.
+
+        Runs immediately after x64dbg.exe is spawned so a plugin that
+        was deployed but never actually loaded - for example an x64dbg
+        SDK/ABI or architecture (x64 vs x32) mismatch - fails the
+        :meth:`load` call outright with an actionable remediation
+        message, rather than deferring the failure to the first debugger
+        RPC such as :meth:`step_into`.
+
+        Keeps the existing bounded :meth:`_wait_for_pipe_ready` poll and
+        then establishes the real pipe connection so
+        ``plugin_status["pipe_connected"]`` reflects a genuine, verified
+        transport before any command is issued.
+
+        Raises:
+            ToolError: If the bridge pipe never becomes available, the
+                connection cannot be established, or the pipe still
+                reports as disconnected after connecting.
+        """
+        try:
+            await self._wait_for_pipe_ready()
+            await self._connect()
+        except ToolError as exc:
+            raise ToolError(
+                self._bridge_pipe_failure_message(str(exc)),
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_PIPE_DISCONNECTED},
+            ) from exc
+
+        if not bool(self.plugin_status.get("pipe_connected")):
+            raise ToolError(
+                self._bridge_pipe_failure_message(None),
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_PIPE_DISCONNECTED},
+            )
+
+    @staticmethod
+    def _bridge_pipe_failure_message(cause: str | None) -> str:
+        """Build the actionable message for a bridge-pipe readiness failure.
+
+        Args:
+            cause: Underlying error text to append for diagnostics, or
+                None when the failure is simply that the pipe reported
+                as disconnected after the connect attempt.
+
+        Returns:
+            str: The remediation guidance, optionally suffixed with the
+            underlying error, used as a :class:`ToolError` message.
+        """
+        message = _PLUGIN_PIPE_REMEDIATION
+        if cause:
+            message = f"{message} Underlying error: {cause}"
+        return message
 
     _PIPE_READY_TIMEOUT_SECONDS: float = 15.0
     _PIPE_READY_POLL_MS: int = 500
@@ -2388,7 +2468,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         try:
             if self._pipe_client is None:
                 self._pipe_client = NamedPipeClient(
-                    PipeConfig(),
+                    PipeConfig(pipe_name=self._PIPE_NAME),
                     event_handler=self._handle_event,
                 )
             await self._pipe_client.connect()
@@ -2608,7 +2688,10 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 details={"x64dbg_error_code": _X64DBG_ERR_PLUGIN_UNAVAILABLE, "command": command},
             )
 
-        if self._pipe_client is None or not self._pipe_client.is_connected:
+        if self._pipe_client is not None and not self._pipe_client.is_connected:
+            _logger.info("x64dbg_pipe_reconnecting", command=command)
+            await self._close_connection()
+        if self._pipe_client is None:
             await self._connect()
 
         if self._pipe_client is None:
@@ -3185,7 +3268,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         await self._send_pipe_command(
             "bp_set",
             {
-                "address": address,
+                "address": hex(address),
                 "type": bp_type,
                 "condition": condition,
             },
@@ -3353,7 +3436,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
             bool: True if removed.
         """
         _logger.info("remove_breakpoint_started", address=hex(address))
-        await self._send_pipe_command("bp_remove", {"address": address})
+        await self._send_pipe_command("bp_remove", {"address": hex(address)})
 
         with self._state_lock:
             self._breakpoints.pop(address, None)
@@ -3437,7 +3520,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         await self._send_pipe_command(
             "wp_set",
             {
-                "address": address,
+                "address": hex(address),
                 "size": size,
                 "access": access,
             },
@@ -3474,7 +3557,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
         await self._send_pipe_command(
             "wp_remove",
-            {"address": watchpoint.address},
+            {"address": hex(watchpoint.address)},
         )
 
         with self._state_lock:

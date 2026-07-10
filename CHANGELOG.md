@@ -342,7 +342,7 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
-- **x64dbg-plugin:** Relocate first-party bridge plugin from tools/ to src/ (`5112241`)
+- **x64dbg-plugin:** Relocate first-party bridge plugin from tools/ to src/ (`81576dc`)
 The x64dbg bridge plugin is first-party Intellicrack source (C++ + CMake),
 but lived under tools/ alongside third-party vendored tools. Move it to
 src/x64dbg-plugin/ next to the first-party intellicrack-hexcore crate.
@@ -871,6 +871,15 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
+
+- Harden process isolation and tool integration (``)
+Harden the application's process management, headless execution, and tool integration layers to eliminate resource leaks, window flashing, and communication timeouts. This includes migrating Ghidra to PyGhidra, spawning x64dbg on a hidden Windows desktop, truncating large LLM context payloads, and restructuring the test suite for isolated coverage runs.
+- **Process Management**: Implemented a dedicated Win32 hidden desktop launcher for GUI tools and enforced synchronous process tree termination on shutdown.
+- **Ghidra Bridge**: Migrated headless execution to PyGhidra (CPython/jpype), implemented polled background analysis, and shadowed `toAddr` for 64-bit address spaces.
+- **Cutter & x64dbg Bridges**: Added brace-balanced JSON extraction for rizin output, reduced command timeouts, and implemented fail-fast load-time pipe verification.
+- **Orchestration & Providers**: Added tool result truncation to bound LLM context windows, injected analysis summaries into the system prompt, and updated HuggingFace routing to "auto".
+- **UI & Layout**: Wrapped dense control rows in scrollable viewports, grouped toolbar actions into dropdown menus, and fixed hex editor save-as default paths.
+- **Test Suite**: Reorganized tests into isolated directories and added a leaf-directory coverage runner to prevent cross-test native contamination.
 
 
 ### Documentation

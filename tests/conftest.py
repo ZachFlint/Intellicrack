@@ -70,6 +70,29 @@ _HOST_SPAWN_FIXTURES = frozenset({"notepad_process"})
 
 _logger = get_logger("tests.conftest")
 
+_CURRENT_TEST_BREADCRUMB = Path(__file__).resolve().parent.parent / "reports" / "tests" / "current_test.txt"
+
+
+def pytest_runtest_logstart(nodeid: str) -> None:
+    """Record the in-flight test's nodeid to a durable breadcrumb file.
+
+    Overwrites ``reports/tests/current_test.txt`` with the nodeid of each test
+    as it starts and flushes immediately, so that when the interpreter later
+    hangs (container hard-kill, no junit written) or aborts, the file still
+    names the exact test that was executing. This is the primary diagnostic for
+    exit-124 hangs and exit-255 aborts in the whole-suite sandbox run.
+
+    Args:
+        nodeid: Identifier of the test that is about to run.
+    """
+    try:
+        _CURRENT_TEST_BREADCRUMB.parent.mkdir(parents=True, exist_ok=True)
+        with _CURRENT_TEST_BREADCRUMB.open("w", encoding="utf-8") as handle:
+            _ = handle.write(nodeid)
+            handle.flush()
+    except OSError:
+        _logger.debug("current_test_breadcrumb_write_failed", nodeid=nodeid, exc_info=True)
+
 
 def pytest_configure(config: pytest.Config) -> None:
     """Register Intellicrack-specific pytest markers.

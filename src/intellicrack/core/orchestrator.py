@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import pathlib
 import time
 from collections import deque
@@ -85,6 +86,29 @@ _PROVIDER_TOKEN_ENCODINGS: dict[ProviderName, str] = {
 }
 
 _DEFAULT_TOKEN_ENCODING: str = _TIKTOKEN_CL100K
+
+_MAX_TOOL_RESULT_CHARS: int = 8000
+"""Maximum serialized characters of a single tool result re-fed to the model.
+
+A tool result (for example a full hex-dump or memory read) is bounded to this size before it re-enters the conversation context, so a single
+large payload cannot balloon token usage. The truncated preview carries an explicit marker so the model knows to request a narrower range
+for full detail (audit F2).
+"""
+
+_ANALYSIS_PROMPT_SAMPLE: int = 15
+"""Maximum number of strings/imports/functions/sections sampled into the prompt."""
+
+_ANALYSIS_STRING_PREVIEW_CHARS: int = 80
+"""Maximum characters of each sampled string value injected into the prompt."""
+
+_TOOL_STATUS_CACHE_TTL_S: float = 120.0
+"""Seconds a probed tool-status snapshot is reused by :meth:`Orchestrator.get_system_status`.
+
+The periodic GUI status refresh calls ``get_system_status`` on a short timer; each underlying ``get_tool_status`` re-probes every external
+tool (rizin, x64dbg, Ghidra, sandbox) with subprocess/version checks. Reusing a recent snapshot for this window keeps the periodic refresh
+from spinning a fresh probe every tick while still surfacing availability changes within a couple of minutes. On-demand callers use
+:meth:`Orchestrator.get_tool_status` directly, which always re-probes.
+"""
 
 _token_encoder_cache: dict[str, tiktoken.Encoding] = {}
 
@@ -704,6 +728,9 @@ class Orchestrator:
         self._cancel_event = asyncio.Event()
         self._shutdown_event = asyncio.Event()
 
+        self._tool_status_cache: list[dict[str, Any]] | None = None
+        self._tool_status_cache_monotonic: float = 0.0
+
         self._script_manager: ScriptManager | None = None
         self._shutdown_called: bool = False
 
@@ -1094,8 +1121,13 @@ class Orchestrator:
             elapsed_ms = (time.time() - start_time) * 1000
             self._stats.record_response_time(elapsed_ms)
 
-            if self._state != "cancelled":
-                self._state = "idle"
+            # Settle cancellation state as soon as the request unwinds: clear the
+            # cancel flag and return to idle here rather than deferring to the
+            # next request, so a stale flag cannot abort a subsequently-started
+            # unrelated operation and the status bar does not stick on
+            # "cancelled" (audit F17).
+            self._cancel_event.clear()
+            self._state = "idle"
 
             if loop_succeeded:
                 await self._sessions.update(self._current_session)
@@ -1369,6 +1401,9 @@ class Orchestrator:
                 f"Architecture: {active_binary.architecture}",
                 f"Entry point: 0x{active_binary.entry_point:X}",
             ])
+            analysis = self._current_session.get_bridge_analysis(active_binary.name)
+            if analysis is not None:
+                prompt_parts.extend(self._render_analysis_summary(analysis))
 
         if self._current_session.patches:
             prompt_parts.extend([
@@ -1380,6 +1415,82 @@ class Orchestrator:
                 prompt_parts.append(f"- 0x{patch.address:X}: {patch.description} ({status})")
 
         return "\n".join(prompt_parts)
+
+    @staticmethod
+    def _render_analysis_summary(analysis: BridgeAnalysisSummary) -> list[str]:
+        """Render a bounded bridge-analysis summary for the system prompt.
+
+        Injects counts and a capped sample of the aggregated sections, imports,
+        functions and strings so the model can answer binary-specific questions
+        from context without issuing a tool call for data already on hand, while
+        keeping the prompt bounded (audit F2).
+
+        Args:
+            analysis: The aggregated bridge analysis for the active binary.
+
+        Returns:
+            list[str]: Prompt lines describing the analysis.
+        """
+        lines: list[str] = [
+            "",
+            "Bridge analysis summary (already available - reason from this before calling tools):",
+            (f"- Format: {analysis.format_info}; Arch: {analysis.architecture}; Sources: {', '.join(analysis.source_bridges) or 'none'}"),
+            (
+                f"- Counts: {len(analysis.strings)} strings, {len(analysis.imports)} imports, "
+                f"{len(analysis.exports)} exports, {len(analysis.functions)} functions, {len(analysis.sections)} sections"
+            ),
+        ]
+        if analysis.sections:
+            rendered = ", ".join(f"{s.name}@0x{s.virtual_address:X}" for s in analysis.sections[:_ANALYSIS_PROMPT_SAMPLE])
+            lines.append(f"- Sections: {rendered}")
+        if analysis.imports:
+            rendered = ", ".join(f"{imp.dll}!{imp.function}" for imp in analysis.imports[:_ANALYSIS_PROMPT_SAMPLE])
+            lines.append(f"- Imports (sample): {rendered}")
+        if analysis.functions:
+            rendered = ", ".join(f"{fn.name}@0x{fn.address:X}" for fn in analysis.functions[:_ANALYSIS_PROMPT_SAMPLE])
+            lines.append(f"- Functions (sample): {rendered}")
+        if analysis.strings:
+            previews = [
+                repr(s.value.replace("\n", " ")[:_ANALYSIS_STRING_PREVIEW_CHARS]) for s in analysis.strings[:_ANALYSIS_PROMPT_SAMPLE]
+            ]
+            lines.append(f"- Strings (sample): {' | '.join(previews)}")
+        return lines
+
+    @staticmethod
+    def _bound_tool_result(result: object) -> object:
+        """Bound a tool result so a large payload cannot balloon the context.
+
+        Serialises the result and, when the serialised form exceeds
+        :data:`_MAX_TOOL_RESULT_CHARS`, replaces it with a truncated preview plus
+        an explicit marker, so a large hex dump or memory read does not re-enter
+        the model context in full (audit F2).
+
+        Args:
+            result: The raw tool result value.
+
+        Returns:
+            object: The original result when small enough, otherwise a truncated
+                preview string.
+        """
+        if result is None or isinstance(result, bool | int | float):
+            return result
+        if isinstance(result, str):
+            serialized = result
+        else:
+            try:
+                serialized = json.dumps(result, default=str)
+            except (TypeError, ValueError):
+                serialized = str(result)
+        if len(serialized) <= _MAX_TOOL_RESULT_CHARS:
+            return result
+        omitted = len(serialized) - _MAX_TOOL_RESULT_CHARS
+        _logger.info(
+            "tool_result_truncated",
+            original_chars=len(serialized),
+            kept_chars=_MAX_TOOL_RESULT_CHARS,
+            omitted_chars=omitted,
+        )
+        return f"{serialized[:_MAX_TOOL_RESULT_CHARS]}\n... [truncated {omitted} characters; request a narrower range for full detail]"
 
     def _render_tool_catalog(self) -> list[str]:
         """Render the tool catalog as a list of prompt lines.
@@ -1990,7 +2101,7 @@ class Orchestrator:
         return ToolResult(
             call_id=call.id,
             success=True,
-            result=result,
+            result=self._bound_tool_result(result),
             error=None,
             duration_ms=elapsed_ms,
         )
@@ -2217,6 +2328,15 @@ class Orchestrator:
         ``False`` return so callers do not see leaked exceptions and do not
         hang waiting for user input that will never arrive.
         """
+        if self._state not in {"processing", "waiting_confirmation"}:
+            # Nothing is in flight to cancel. Clear any stray flag rather than
+            # arming it, so an idle-time Cancel cannot make the next unrelated
+            # async operation raise a spurious "async operation cancelled"
+            # (audit F17).
+            self._cancel_event.clear()
+            _logger.debug("cancel_noop_no_active_operation", state=self._state)
+            return
+
         _logger.info("operation_cancelling", state=self._state)
         self._cancel_event.set()
 
@@ -2581,8 +2701,27 @@ class Orchestrator:
             "state": self._state,
             "session_id": self.current_session.id if self.current_session else None,
             "metrics": self.stats.to_dict(),
-            "tools": await self.get_tool_status(),
+            "tools": await self._get_cached_tool_status(),
         }
+
+    async def _get_cached_tool_status(self) -> list[dict[str, Any]]:
+        """Return tool status, reusing a recent probe within the cache TTL.
+
+        Serves the periodic status refresh from a cached snapshot so it does
+        not re-probe every external tool on each timer tick. Refreshes the
+        snapshot once it is older than :data:`_TOOL_STATUS_CACHE_TTL_S`.
+
+        Returns:
+            list[dict[str, Any]]: The cached or freshly probed tool statuses.
+        """
+        now = time.monotonic()
+        cached = self._tool_status_cache
+        if cached is not None and (now - self._tool_status_cache_monotonic) < _TOOL_STATUS_CACHE_TTL_S:
+            return cached
+        statuses = await self.get_tool_status()
+        self._tool_status_cache = statuses
+        self._tool_status_cache_monotonic = now
+        return statuses
 
     def configure_hooks(
         self,
@@ -2851,6 +2990,7 @@ def _extract_sections(binary: object) -> list[SectionInfo]:
                 raw_size=len(sec.content) if hasattr(sec, "content") else int(sec.size),
                 characteristics=characteristics,
                 entropy=entropy,
+                raw_offset=int(sec.offset) if hasattr(sec, "offset") else 0,
             ),
         )
     return result

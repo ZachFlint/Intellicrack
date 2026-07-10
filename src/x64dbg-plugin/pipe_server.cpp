@@ -124,7 +124,7 @@ bool PipeServer::create_pipe_instance() {
     m_pipe_handle = CreateNamedPipeA(
         PIPE_NAME,
         PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
-        PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
         1,
         PIPE_BUFFER_SIZE,
         PIPE_BUFFER_SIZE,
@@ -193,7 +193,14 @@ void PipeServer::handle_client() {
 
 bool PipeServer::read_message(PipeMessage& msg) {
     uint32_t length = 0;
-    if (!read_data(reinterpret_cast<char*>(&length), sizeof(length))) {
+    // Wait indefinitely for the next command frame's length prefix. A
+    // connected client legitimately sits idle between commands, and a
+    // running debuggee can take arbitrarily long to reach a breakpoint,
+    // so bounding this idle read would tear down a healthy client and
+    // silently drop every subsequent breakpoint/pause event. The wait is
+    // still interruptible by the stop event and by client disconnect
+    // (ReadFile completes with a broken-pipe error).
+    if (!read_data(reinterpret_cast<char*>(&length), sizeof(length), INFINITE)) {
         return false;
     }
 
@@ -201,8 +208,11 @@ bool PipeServer::read_message(PipeMessage& msg) {
         return false;
     }
 
+    // Once a frame has started, its payload has already been written by the
+    // client under its write lock, so bound the continuation read to guard
+    // against a half-sent frame from a buggy peer.
     std::vector<char> buffer(length + 1);
-    if (!read_data(buffer.data(), length)) {
+    if (!read_data(buffer.data(), length, PAYLOAD_READ_TIMEOUT_MS)) {
         return false;
     }
     buffer[length] = '\0';
@@ -213,18 +223,24 @@ bool PipeServer::read_message(PipeMessage& msg) {
 
 bool PipeServer::write_response(const PipeResponse& response) {
     std::string json = serialize_response(response);
-    uint32_t length = static_cast<uint32_t>(json.size());
+    return write_message(json.c_str(), static_cast<uint32_t>(json.size()));
+}
 
-    if (!write_data(reinterpret_cast<const char*>(&length), sizeof(length))) {
+bool PipeServer::write_message(const char* payload, uint32_t length) {
+    // Frame the length prefix and payload under a single lock so an
+    // asynchronous event broadcast (issued from an x64dbg debug-event
+    // callback thread) can never interleave its bytes between another
+    // message's length prefix and body on the byte-stream pipe.
+    std::lock_guard<std::mutex> lock(m_pipe_mutex);
+
+    if (!write_data_locked(reinterpret_cast<const char*>(&length), sizeof(length))) {
         return false;
     }
 
-    return write_data(json.c_str(), length);
+    return write_data_locked(payload, length);
 }
 
-bool PipeServer::write_data(const char* data, uint32_t length) {
-    std::lock_guard<std::mutex> lock(m_pipe_mutex);
-
+bool PipeServer::write_data_locked(const char* data, uint32_t length) {
     if (m_pipe_handle == INVALID_HANDLE_VALUE) {
         return false;
     }
@@ -262,42 +278,63 @@ bool PipeServer::write_data(const char* data, uint32_t length) {
     return bytes_written == length;
 }
 
-bool PipeServer::read_data(char* buffer, uint32_t length) {
+bool PipeServer::read_data(char* buffer, uint32_t length, DWORD timeout_ms) {
     if (m_pipe_handle == INVALID_HANDLE_VALUE) {
         return false;
     }
 
-    OVERLAPPED overlapped = {};
-    overlapped.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
-    if (!overlapped.hEvent) {
-        return false;
-    }
-
-    DWORD bytes_read = 0;
-    BOOL result = ReadFile(m_pipe_handle, buffer, length, &bytes_read, &overlapped);
-
-    if (!result) {
-        if (GetLastError() == ERROR_IO_PENDING) {
-            HANDLE wait_handles[2] = { overlapped.hEvent, m_stop_event };
-            DWORD wait_result = WaitForMultipleObjects(2, wait_handles, FALSE, 30000);
-
-            if (wait_result == WAIT_OBJECT_0) {
-                GetOverlappedResult(m_pipe_handle, &overlapped, &bytes_read, FALSE);
-                CloseHandle(overlapped.hEvent);
-                return bytes_read == length;
-            }
-
-            CancelIo(m_pipe_handle);
-            CloseHandle(overlapped.hEvent);
+    // On a byte-mode pipe a single ReadFile may return fewer bytes than
+    // requested, so accumulate until the full length-prefixed frame has
+    // been received rather than assuming one read yields the whole span.
+    uint32_t total_read = 0;
+    while (total_read < length) {
+        OVERLAPPED overlapped = {};
+        overlapped.hEvent = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+        if (!overlapped.hEvent) {
             return false;
         }
 
+        DWORD bytes_read = 0;
+        BOOL result = ReadFile(
+            m_pipe_handle,
+            buffer + total_read,
+            length - total_read,
+            &bytes_read,
+            &overlapped
+        );
+
+        if (!result) {
+            DWORD error = GetLastError();
+            if (error == ERROR_IO_PENDING) {
+                HANDLE wait_handles[2] = { overlapped.hEvent, m_stop_event };
+                DWORD wait_result = WaitForMultipleObjects(2, wait_handles, FALSE, timeout_ms);
+
+                if (wait_result != WAIT_OBJECT_0) {
+                    CancelIo(m_pipe_handle);
+                    CloseHandle(overlapped.hEvent);
+                    return false;
+                }
+
+                if (!GetOverlappedResult(m_pipe_handle, &overlapped, &bytes_read, FALSE)) {
+                    CloseHandle(overlapped.hEvent);
+                    return false;
+                }
+            } else {
+                CloseHandle(overlapped.hEvent);
+                return false;
+            }
+        }
+
         CloseHandle(overlapped.hEvent);
-        return false;
+
+        if (bytes_read == 0) {
+            return false;
+        }
+
+        total_read += bytes_read;
     }
 
-    CloseHandle(overlapped.hEvent);
-    return bytes_read == length;
+    return true;
 }
 
 bool PipeServer::send_event(const std::string& event_type, const std::string& data) {
@@ -312,12 +349,41 @@ bool PipeServer::broadcast_event(const std::string& event_json) {
         return false;
     }
 
-    uint32_t length = static_cast<uint32_t>(event_json.size());
-    if (!write_data(reinterpret_cast<const char*>(&length), sizeof(length))) {
-        return false;
-    }
+    return write_message(event_json.c_str(), static_cast<uint32_t>(event_json.size()));
+}
 
-    return write_data(event_json.c_str(), length);
+namespace {
+
+std::string escape_json_string(const std::string& value) {
+    std::string out;
+    out.reserve(value.size() + 8);
+    for (char ch : value) {
+        switch (ch) {
+            case '"': out += "\\\""; break;
+            case '\\': out += "\\\\"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            default:
+                if (static_cast<unsigned char>(ch) < 0x20) {
+                    char buf[7];
+                    std::snprintf(
+                        buf,
+                        sizeof(buf),
+                        "\\u%04x",
+                        static_cast<unsigned int>(static_cast<unsigned char>(ch))
+                    );
+                    out += buf;
+                } else {
+                    out += ch;
+                }
+        }
+    }
+    return out;
+}
+
 }
 
 std::string PipeServer::serialize_response(const PipeResponse& response) {
@@ -327,7 +393,7 @@ std::string PipeServer::serialize_response(const PipeResponse& response) {
         ss << R"(,"success":true,"result":)"
            << (response.result.empty() ? "null" : response.result);
     } else {
-        ss << R"(,"success":false,"error":")" << response.error << '"';
+        ss << R"(,"success":false,"error":")" << escape_json_string(response.error) << '"';
     }
     ss << '}';
     return ss.str();

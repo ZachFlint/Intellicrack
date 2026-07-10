@@ -193,3 +193,57 @@ function Install-GitHubRelease {
     $elapsed = ((Get-Date) - $startTime).TotalSeconds
     Write-Host "`n$script:e[32m$Tag installed to tools\$DestName$script:e[0m $script:e[90m($("{0:N1}" -f $elapsed)s)$script:e[0m"
 }
+
+function Find-VsInstallationPath {
+    $pf86 = ${env:ProgramFiles(x86)}
+    if (!$pf86) { $pf86 = ${env:ProgramFiles} }
+    if (!$pf86) { $pf86 = "C:\Program Files (x86)" }
+    $vswhere = Join-Path $pf86 "Microsoft Visual Studio\Installer\vswhere.exe"
+    if (!(Test-Path $vswhere)) {
+        return $null
+    }
+
+    $vsPath = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    if (!$vsPath) {
+        $vsPath = & $vswhere -latest -property installationPath
+    }
+    return $vsPath
+}
+
+function Import-VcVarsEnvironment {
+    <#
+    .SYNOPSIS
+        Imports the MSVC x64 developer environment (INCLUDE/LIB/PATH) from
+        vcvarsall.bat into the current PowerShell process so cl.exe-family
+        tools (cl.exe itself, and clang-tidy/clang running in MSVC-compatible
+        driver mode) can resolve the CRT/STL/Windows SDK system headers the
+        same way a native Developer Command Prompt build would.
+    .PARAMETER Arch
+        The vcvarsall.bat target architecture. Defaults to 'x64'.
+    #>
+    param([string]$Arch = 'x64')
+
+    $vsPath = Find-VsInstallationPath
+    if (!$vsPath) {
+        Write-Fail "vswhere.exe not found or no Visual Studio installation with the C++ workload detected"
+        exit 1
+    }
+
+    $vcvarsall = Join-Path $vsPath "VC\Auxiliary\Build\vcvarsall.bat"
+    if (!(Test-Path $vcvarsall)) {
+        Write-Fail "vcvarsall.bat not found at $vcvarsall"
+        exit 1
+    }
+
+    $envDump = & cmd.exe /c "`"$vcvarsall`" $Arch && set" 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Fail "vcvarsall.bat $Arch failed to initialize the MSVC environment"
+        exit 1
+    }
+
+    foreach ($line in $envDump) {
+        if ($line -match '^([^=]+)=(.*)$') {
+            [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
+        }
+    }
+}

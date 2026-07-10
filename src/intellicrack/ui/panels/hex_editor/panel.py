@@ -829,25 +829,75 @@ class HexEditorPanel(
                 self.state_holder.notify_document_saved(str(file_path), source="panel")
             _logger.info("file_saved", path=file_path)
 
-    def _on_save_as(self) -> None:
-        """Save the current document to a new path."""
+    def _default_save_as_path(self) -> str:
+        """Compute the suggested default path for Save-As dialogs.
+
+        Returns:
+            str: The current document's directory and stem with a
+                ``_patched`` suffix appended before the original file
+                extension (e.g. ``notepad_patched.exe``). Empty string when
+                there is no open document or its source path is unknown.
+        """
         if self.document is None:
-            return
-        result = QFileDialog.getSaveFileName(self, "Save As", "", "All Files (*)")
+            return ""
+        file_path = self.document.file_path()
+        if file_path is None:
+            return ""
+        source_path = Path(file_path)
+        return str(source_path.with_name(f"{source_path.stem}_patched{source_path.suffix}"))
+
+    def _perform_save_as(self) -> bool:
+        """Prompt for a destination path and save the document there.
+
+        The dialog is pre-filled with a suggested ``<stem>_patched<suffix>``
+        filename so the source file is never silently overwritten. Both the
+        public :meth:`save_as` API and the internal Save-As toolbar action
+        share this implementation.
+
+        Returns:
+            bool: True if the document was saved to the chosen path.
+        """
+        if self.document is None:
+            return False
+        result = QFileDialog.getSaveFileName(self, "Save As", self._default_save_as_path(), "All Files (*)")
         save_path = result[0] if result else ""
-        if save_path:
-            _logger.info("panel_save_as_started", path=save_path)
-            try:
-                self.document.save(save_path)
-            except OSError as exc:
-                _logger.exception("panel_save_as_failed", path=save_path)
-                show_warning(self, "Save Failed", f"Failed to save:\n{exc}")
-            else:
-                self.file_path = Path(save_path)
-                self._on_data_changed()
-                if self.state_holder is not None:
-                    self.state_holder.notify_document_saved(save_path, source="panel")
-                _logger.info("file_saved_as", path=save_path)
+        if not save_path:
+            return False
+        _logger.info("panel_save_as_started", path=save_path)
+        try:
+            self.document.save(save_path)
+        except OSError as exc:
+            _logger.exception("panel_save_as_failed", path=save_path)
+            show_warning(self, "Save Failed", f"Failed to save:\n{exc}")
+            return False
+        else:
+            self.file_path = Path(save_path)
+            self._on_data_changed()
+            if self.state_holder is not None:
+                self.state_holder.notify_document_saved(save_path, source="panel")
+            _logger.info("file_saved_as", path=save_path)
+            return True
+
+    def _on_save_as(self) -> None:
+        """Save the current document to a new path chosen via a Save-As dialog."""
+        self._perform_save_as()
+
+    def save_as(self) -> bool:
+        """Save the current document to a new path chosen via a Save-As dialog.
+
+        Prompts with a Save-As dialog pre-filled with a ``<stem>_patched<suffix>``
+        suggested filename, ensuring the original source file is never
+        overwritten without explicit user confirmation.
+
+        Returns:
+            bool: True if the save completed successfully.
+        """
+        if self.document is None:
+            return False
+        _logger.info("panel_save_as_public_called")
+        result = self._perform_save_as()
+        _logger.info("panel_save_as_public_completed", result=result)
+        return result
 
     def _on_goto_offset(self) -> None:
         """Navigate to the offset entered in the toolbar input."""

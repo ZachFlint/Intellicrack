@@ -6,6 +6,13 @@
 #include "command_handler.h"
 #include "intellicrack_bridge.h"
 
+// The vendored x64dbg SDK headers trip C4324 (struct padded due to an
+// alignment specifier) under /W4 on the 32-bit build. They are third-party
+// and must not be modified, so scope the suppression to just their inclusion.
+#ifdef _MSC_VER
+#pragma warning(push)
+#pragma warning(disable : 4324)
+#endif
 #include <pluginsdk/_plugins.h>
 #include <pluginsdk/_scriptapi_memory.h>
 #include <pluginsdk/_scriptapi_register.h>
@@ -15,6 +22,9 @@
 #include <pluginsdk/_scriptapi_label.h>
 #include <pluginsdk/_scriptapi_comment.h>
 #include <pluginsdk/bridgemain.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
 
 #include <cstdio>
 #include <cstring>
@@ -26,6 +36,72 @@
 #include <set>
 
 namespace intellicrack {
+
+namespace {
+
+// Extract a JSON string value for `key` from `json`, resolving standard
+// JSON backslash escapes. Unlike the lightweight positional scans used for
+// numeric/hex parameters (which never contain quotes), this correctly
+// handles values with embedded escaped quotes such as the quoted target
+// path in `InitDebug "C:/path/to/file.exe"`.
+bool extract_json_string(const std::string& json, const char* key, std::string& out) {
+    std::string search = "\"" + std::string(key) + "\"";
+    size_t key_pos = json.find(search);
+    if (key_pos == std::string::npos) {
+        return false;
+    }
+
+    size_t colon = json.find(':', key_pos + search.size());
+    if (colon == std::string::npos) {
+        return false;
+    }
+
+    size_t pos = colon + 1;
+    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t')) {
+        pos++;
+    }
+    if (pos >= json.size() || json[pos] != '"') {
+        return false;
+    }
+
+    std::string result;
+    size_t i = pos + 1;
+    bool closed = false;
+    while (i < json.size()) {
+        char c = json[i];
+        if (c == '\\' && i + 1 < json.size()) {
+            char n = json[i + 1];
+            switch (n) {
+                case '"':  result.push_back('"'); break;
+                case '\\': result.push_back('\\'); break;
+                case '/':  result.push_back('/'); break;
+                case 'n':  result.push_back('\n'); break;
+                case 't':  result.push_back('\t'); break;
+                case 'r':  result.push_back('\r'); break;
+                case 'b':  result.push_back('\b'); break;
+                case 'f':  result.push_back('\f'); break;
+                default:   result.push_back(n); break;
+            }
+            i += 2;
+            continue;
+        }
+        if (c == '"') {
+            closed = true;
+            break;
+        }
+        result.push_back(c);
+        i++;
+    }
+
+    if (!closed) {
+        return false;
+    }
+
+    out = result;
+    return true;
+}
+
+}  // namespace
 
 CommandHandler g_command_handler;
 
@@ -111,24 +187,12 @@ PipeResponse CommandHandler::cmd_exec(const PipeMessage& msg) {
     PipeResponse response;
     response.id = msg.id;
 
-    size_t cmd_pos = msg.params.find("\"command\"");
-    if (cmd_pos == std::string::npos) {
+    std::string cmd;
+    if (!extract_json_string(msg.params, "command", cmd)) {
         response.success = false;
-        response.error = "Missing 'command' parameter";
+        response.error = "Missing or invalid 'command' parameter";
         return response;
     }
-
-    size_t start = msg.params.find('"', cmd_pos + 9);
-    if (start != std::string::npos) start++;
-    size_t end = msg.params.find('"', start);
-
-    if (start == std::string::npos || end == std::string::npos) {
-        response.success = false;
-        response.error = "Invalid 'command' parameter format";
-        return response;
-    }
-
-    std::string cmd = msg.params.substr(start, end - start);
 
     bool result = DbgCmdExec(cmd.c_str());
     response.success = result;

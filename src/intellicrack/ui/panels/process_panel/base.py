@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ToolError
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
+from intellicrack.ui.panels.async_bridge import drain_bridge_workers_for, run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase
 from intellicrack.ui.panels.process_panel.hint_overlay import AttachHintOverlay
 from intellicrack.ui.panels.process_panel.memory_tab import MemoryTab
@@ -238,6 +238,7 @@ class ProcessPanel(AnalysisPanelBase):
             pid: Selected process ID.
         """
         self.process_selected.emit(pid)
+        self._update_controls_for_state()
 
     def _on_process_attached(self, pid: int) -> None:
         """Handle successful process attachment.
@@ -443,10 +444,18 @@ class ProcessPanel(AnalysisPanelBase):
 
     @override
     def _cleanup(self) -> None:
-        """Stop timers, cancel pending workers, and release bridge-tracked OS handles."""
+        """Stop timers, cancel pending workers, and release bridge-tracked OS handles.
+
+        After the tabs release their own timers and workers and the bridge handles are shut down, any bridge-call worker still owned by this
+        panel subtree (the status-bar architecture / privilege refreshes started in :meth:`_on_process_attached`, plus any per-tab refresh
+        coroutines) is joined via :func:`drain_bridge_workers_for`. Joining these before the panel widget tree is destroyed prevents their
+        result callbacks from firing against already-deleted labels, tables, and trees. The drain is scoped to this panel, so workers owned
+        by unrelated widgets keep running.
+        """
         self._process_tab.cleanup()
         self._threads_tab.cleanup()
         self._shutdown_bridge_resources()
+        _ = drain_bridge_workers_for(self)
 
     @override
     def start_tool(self) -> bool:
