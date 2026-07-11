@@ -213,6 +213,8 @@ class _DummyHolder:
         self.status_label: _StatusLabelDouble | None = None
         self._refresh_memory_status: object = None
         self._refresh_model_discovery_status: object = None
+        self.model_discovery: object = None
+        self._persist_provider_selection: Callable[[ProviderName], None] = lambda _provider: None
 
     @classmethod
     def for_save_binary(cls, stub_panel: object) -> _DummyHolder:
@@ -1964,7 +1966,7 @@ def real_window(qapp: QCoreApplication, tmp_path: Path) -> Generator[MainWindow]
         tmp_path: Pytest temporary directory fixture.
 
     Yields:
-        Generator[MainWindow]: The MainWindow under test.
+        MainWindow: The MainWindow under test.
     """
     del qapp
     tools_dir = tmp_path / "tools"

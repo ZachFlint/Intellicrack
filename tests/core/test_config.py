@@ -114,6 +114,38 @@ def test_ui_config_defaults() -> None:
     assert uc.font_family == "JetBrains Mono"
     assert uc.font_size == _DEFAULT_FONT_SIZE
     assert uc.show_tool_calls is True
+    assert uc.restore_layout is False
+
+
+def test_ui_config_restore_layout_round_trip(tmp_path: Path) -> None:
+    """Verify ui.restore_layout survives save/reload and defaults to reset.
+
+    Persisting a config with ``restore_layout=True`` must reload as ``True``
+    (so the toggle is honoured across launches), while a TOML file that omits
+    the key entirely must parse back to the reset default ``False``.
+
+    Args:
+        tmp_path: Pytest temporary directory.
+    """
+    pytest.importorskip("tomli_w")
+
+    config = Config(
+        tools_directory=tmp_path / "tools",
+        logs_directory=tmp_path / "logs",
+        data_directory=tmp_path / "data",
+        ui=UIConfig(restore_layout=True),
+    )
+    save_path = tmp_path / "restore_layout.toml"
+    config.save(save_path)
+
+    serialised = _config_to_dict(config)
+    assert serialised["ui"]["restore_layout"] is True
+
+    reloaded = Config.load(save_path)
+    assert reloaded.ui.restore_layout is True
+
+    _, ui_without_key, _, _ = Config.parse_sub_configs({"ui": {"theme": "dark"}})
+    assert ui_without_key.restore_layout is False
 
 
 def test_session_config_defaults() -> None:

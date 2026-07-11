@@ -569,8 +569,9 @@ def _build_docker_run_argv(
     # Forward isolated-coverage tuning knobs when the operator has set them on
     # the host. ``COVERAGE_TESTS_ROOT`` scopes the per-directory run to a subset
     # (used for smoke-testing the mechanism); ``COVERAGE_GROUP_TIMEOUT`` bounds
-    # each per-directory pytest process before the watchdog kills it.
-    for cov_var in ("COVERAGE_TESTS_ROOT", "COVERAGE_GROUP_TIMEOUT"):
+    # each per-directory pytest process before the watchdog kills it;
+    # ``COVERAGE_JOBS`` overrides how many groups run concurrently.
+    for cov_var in ("COVERAGE_TESTS_ROOT", "COVERAGE_GROUP_TIMEOUT", "COVERAGE_JOBS"):
         cov_val = os.environ.get(cov_var)
         if cov_val:
             argv.extend(["--env", f"{cov_var}={cov_val}"])
@@ -636,8 +637,8 @@ class DockerSandbox:
     """Coordinate image build, container launch, and report harvesting.
 
     Attributes:
-        memory: Memory quota string, for example ``"8g"``.
-        cpus: CPU quota string, for example ``"4"``.
+        memory: Memory quota string, for example ``"32g"``.
+        cpus: CPU quota string, for example ``"16"``.
         network: Docker network attached to the container.
         rebuild: When ``True`` force an image rebuild.
         writable_workspace: When ``True`` mount the host workspace read-write.
@@ -652,8 +653,8 @@ class DockerSandbox:
     def __init__(
         self,
         *,
-        memory: str = "8g",
-        cpus: str = "4",
+        memory: str = "32g",
+        cpus: str = "16",
         network: str = "none",
         rebuild: bool = False,
         writable_workspace: bool = False,
@@ -921,13 +922,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--memory",
-        default="8g",
-        help="Memory quota for docker run (default: 8g).",
+        default="32g",
+        help="Memory quota for docker run (default: 32g).",
     )
     parser.add_argument(
         "--cpus",
-        default="4",
-        help="CPU quota for docker run (default: 4).",
+        default="16",
+        help="CPU quota for docker run (default: 16).",
     )
     parser.add_argument(
         "--network",

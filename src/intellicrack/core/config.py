@@ -119,12 +119,17 @@ class UIConfig:
         font_family: Font family for code display.
         font_size: Font size in points.
         show_tool_calls: Whether to show tool calls in chat.
+        restore_layout: Whether to restore window geometry, splitter sizes,
+            open tool tabs, and detached panels from the previous session on
+            startup. When ``False`` (the default) the GUI resets to its
+            smart-sized default layout each launch.
     """
 
     theme: str = "system"
     font_family: str = "JetBrains Mono"
     font_size: int = 11
     show_tool_calls: bool = True
+    restore_layout: bool = False
 
 
 @dataclass
@@ -469,6 +474,7 @@ class Config:
             font_family=ui_data.get("font_family", "JetBrains Mono"),
             font_size=ui_data.get("font_size", 11),
             show_tool_calls=ui_data.get("show_tool_calls", True),
+            restore_layout=ui_data.get("restore_layout", False),
         )
 
         session_data = data.get("session", {})
@@ -570,6 +576,7 @@ class Config:
                 "font_family": self.ui.font_family,
                 "font_size": self.ui.font_size,
                 "show_tool_calls": self.ui.show_tool_calls,
+                "restore_layout": self.ui.restore_layout,
             },
             "session": {
                 "auto_save": self.session.auto_save,

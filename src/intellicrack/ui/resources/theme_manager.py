@@ -232,11 +232,6 @@ QComboBox::drop-down {
     width: 20px;
 }
 
-QComboBox::down-arrow {
-    width: 12px;
-    height: 12px;
-}
-
 QComboBox QAbstractItemView {
     background-color: #2d2d30;
     color: #d4d4d4;
@@ -381,6 +376,16 @@ QTabBar::tab:selected {
 }
 
 QTabBar::tab:hover:!selected {
+    background-color: #3e3e42;
+}
+
+QTabBar::close-button {
+    subcontrol-position: right;
+    margin-left: 6px;
+    border-radius: 3px;
+}
+
+QTabBar::close-button:hover {
     background-color: #3e3e42;
 }
 
@@ -707,10 +712,10 @@ QTreeWidget:focus, QTreeView:focus { border-color: #007acc; }
 QListWidget:focus, QListView:focus { border-color: #007acc; }
 
 /* ObjectName Selectors */
-QLabel#search_status_label { color: #888888; font-size: 8pt; }
+QLabel#search_status_label { color: #9d9d9d; font-size: 8pt; }
 QLabel#muted_label { color: #888888; }
 QLabel#bold_label { font-weight: bold; }
-QLabel#hint_label { color: #888888; font-style: italic; font-size: 8pt; }
+QLabel#hint_label { color: #9d9d9d; font-style: italic; font-size: 8pt; }
 
 QTabWidget#analysis_tabs::pane { border: none; background: #1e1e1e; }
 QTabWidget#analysis_tabs > QTabBar::tab { padding: 6px 12px; }
@@ -888,11 +893,6 @@ QComboBox::drop-down {
     width: 20px;
 }
 
-QComboBox::down-arrow {
-    width: 12px;
-    height: 12px;
-}
-
 QComboBox QAbstractItemView {
     background-color: #ffffff;
     color: #1a1d21;
@@ -1038,6 +1038,16 @@ QTabBar::tab:selected {
 }
 
 QTabBar::tab:hover:!selected {
+    background-color: #dde1e7;
+}
+
+QTabBar::close-button {
+    subcontrol-position: right;
+    margin-left: 6px;
+    border-radius: 3px;
+}
+
+QTabBar::close-button:hover {
     background-color: #dde1e7;
 }
 
