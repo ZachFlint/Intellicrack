@@ -260,18 +260,19 @@ class MainWindow(QMainWindow):
         registry = self._orchestrator.provider_registry
         connected: list[ProviderName] = registry.list_connected()
         if connected:
-            first_connected: ProviderName = connected[0]
+            target_provider: ProviderName = self._startup_provider(connected)
             try:
-                registry.set_active(first_connected)
-                _logger.info("startup_active_provider_set", provider=first_connected.value)
+                registry.set_active(target_provider)
+                _logger.info("startup_active_provider_set", provider=target_provider.value)
             except (ProviderError, RuntimeError, ValueError) as exc:
                 _logger.warning("startup_active_provider_set_failed", error=str(exc))
             for idx in range(self._provider_combo.count()):
                 combo_data: object = self._provider_combo.itemData(idx)
-                if isinstance(combo_data, ProviderName) and combo_data == first_connected:
+                if isinstance(combo_data, ProviderName) and combo_data == target_provider:
                     with QSignalBlocker(self._provider_combo):
                         self._provider_combo.setCurrentIndex(idx)
                     break
+            self._pending_model_restore = self._remembered_model_for(target_provider)
 
         QTimer.singleShot(250, self._kickoff_initial_discovery)
         QTimer.singleShot(750, self._kickoff_initial_session)
@@ -375,7 +376,19 @@ class MainWindow(QMainWindow):
         _logger.debug("window_state_saved")
 
     def _restore_window_state(self) -> None:
-        """Restore window geometry, splitter sizes, and tab state from QSettings."""
+        """Restore window geometry, splitter sizes, and tab state from QSettings.
+
+        No-op unless ``ui.restore_layout`` is enabled. By default the GUI
+        resets to its smart-sized default layout on each launch, discarding the
+        previous session's window geometry, splitter sizes, open tool tabs, and
+        detached panels. The layout is still persisted by
+        :meth:`_save_window_state` regardless, so enabling the toggle restores
+        the most recent layout on the next launch.
+        """
+        if not self._config.ui.restore_layout:
+            _logger.debug("window_state_restore_skipped_layout_reset")
+            return
+
         settings = QSettings("Intellicrack", "MainWindow")
 
         geometry = settings.value("geometry")
@@ -413,6 +426,109 @@ class MainWindow(QMainWindow):
                     self.tool_panel.detach_tab(tab_idx)
 
         _logger.debug("window_state_restored")
+
+    def _startup_provider(self, connected: list[ProviderName]) -> ProviderName:
+        """Choose which provider to activate at startup from the connected set.
+
+        Prefers the persisted last-active provider when it is still connected so
+        the user's most recent selection survives a restart, otherwise falls
+        back to the first connected provider.
+
+        Args:
+            connected: Providers with a live connection, in registration order.
+                Must be non-empty.
+
+        Returns:
+            ProviderName: The provider to make active.
+        """
+        remembered = self._remembered_provider()
+        return remembered if remembered in connected else connected[0]
+
+    @staticmethod
+    def _remembered_provider() -> ProviderName | None:
+        """Return the persisted last-active provider from QSettings.
+
+        Returns:
+            ProviderName | None: The provider stored under ``last_provider`` on
+            the last selection, or ``None`` when nothing valid is stored.
+        """
+        raw: object = QSettings("Intellicrack", "MainWindow").value("last_provider")
+        if isinstance(raw, str):
+            try:
+                return ProviderName(raw)
+            except ValueError:
+                _logger.debug("remembered_provider_invalid", value=raw)
+                return None
+        return None
+
+    @staticmethod
+    def _remembered_model_for(provider: ProviderName) -> str:
+        """Return the persisted model id for ``provider`` from QSettings.
+
+        Args:
+            provider: Provider whose last-selected model to look up.
+
+        Returns:
+            str: The remembered model id stored under
+            ``last_model/<provider>``, or ``""`` when none is stored.
+        """
+        raw: object = QSettings("Intellicrack", "MainWindow").value(f"last_model/{provider.value}")
+        return raw.strip() if isinstance(raw, str) else ""
+
+    @staticmethod
+    def _persist_provider_selection(provider: ProviderName) -> None:
+        """Persist ``provider`` as the last-active provider in QSettings.
+
+        Args:
+            provider: The provider the user just activated.
+        """
+        QSettings("Intellicrack", "MainWindow").setValue("last_provider", provider.value)
+
+    def _persist_current_model(self) -> None:
+        """Persist the toolbar's current provider and model to QSettings.
+
+        Stores the model per-provider under ``last_model/<provider>`` and the
+        provider under ``last_provider`` so the selection is restored on the
+        next launch. No-op when no provider enum is selected or the model field
+        is empty. Wired to the model combo's ``activated`` signal (user picks
+        only, never programmatic repopulation) and invoked from the typed and
+        browsed selection paths.
+        """
+        provider_data: object = self._provider_combo.currentData()
+        if not isinstance(provider_data, ProviderName):
+            return
+        model = self.model_combo.currentText().strip()
+        if not model:
+            return
+        settings = QSettings("Intellicrack", "MainWindow")
+        settings.setValue(f"last_model/{provider_data.value}", model)
+        settings.setValue("last_provider", provider_data.value)
+        _logger.debug("model_selection_persisted", provider=provider_data.value, model=model)
+
+    def _select_model_for_provider(self, provider: ProviderName, models: list[str]) -> None:
+        """Select the preferred model in the already-populated model combo.
+
+        Prefers the per-provider remembered model persisted in QSettings,
+        falling back to the provider's configured default via
+        :meth:`Config.preferred_model_index`. The remembered id is honored even
+        when absent from ``models`` (the combo is editable), so a custom
+        selection survives a catalog refresh. Callers must hold a
+        :class:`QSignalBlocker` on the combo and have populated it before
+        calling.
+
+        Args:
+            provider: Provider whose remembered or default model to select.
+            models: Model ids currently loaded into the combo, in display order.
+        """
+        remembered = self._remembered_model_for(provider)
+        if remembered:
+            idx = self.model_combo.findText(remembered)
+            if idx >= 0:
+                self.model_combo.setCurrentIndex(idx)
+            else:
+                self.model_combo.setCurrentText(remembered)
+            return
+        self.model_combo.setCurrentIndex(self._config.preferred_model_index(provider, models))
 
     def wire_script_manager(self, manager: object, validator: object | None = None) -> None:
         """Wire a script manager and validator into the UI.
@@ -774,7 +890,8 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(provider_label)
 
         self._provider_combo = QComboBox()
-        self._provider_combo.setMinimumWidth(120)
+        self._provider_combo.setMinimumWidth(150)
+        self._provider_combo.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self._provider_combo.setObjectName("toolbar_combo")
         for provider in ProviderName:
             self._provider_combo.addItem(provider_display_name(provider), provider)
@@ -810,6 +927,7 @@ class MainWindow(QMainWindow):
                 le.setCursorPosition(0)
 
         self.model_combo.currentIndexChanged.connect(_reset_model_combo_cursor)
+        self.model_combo.activated.connect(self._persist_current_model)
         toolbar.addWidget(self.model_combo)
 
         toolbar.addSeparator()
@@ -2200,6 +2318,7 @@ class MainWindow(QMainWindow):
                     self._provider_combo.setCurrentIndex(index)
                 break
 
+        self._persist_provider_selection(new_active)
         _logger.info("toolbar_provider_synced", provider_id=provider_id)
         self.status_update.emit(f"Active provider: {provider_id}")
 
@@ -2210,7 +2329,7 @@ class MainWindow(QMainWindow):
                 with QSignalBlocker(self.model_combo):
                     self.model_combo.clear()
                     self.model_combo.addItems(models_list)
-                    self.model_combo.setCurrentIndex(self._config.preferred_model_index(new_active, models_list))
+                    self._select_model_for_provider(new_active, models_list)
                 line_edit = self.model_combo.lineEdit()
                 if line_edit is not None:
                     line_edit.setCursorPosition(0)
@@ -2493,6 +2612,7 @@ class MainWindow(QMainWindow):
             idx = self.model_combo.findText(model_id)
         if idx >= 0:
             self.model_combo.setCurrentIndex(idx)
+        self._persist_current_model()
         self.status_update.emit(f"Model selected: {model_id}")
 
     def _on_model_combo_text_committed(self) -> None:
@@ -2513,6 +2633,7 @@ class MainWindow(QMainWindow):
             self.status_update.emit(
                 f"Custom model id '{text}' not present in provider catalog - request may fail",
             )
+        self._persist_current_model()
 
     def _kickoff_initial_discovery(self) -> None:
         """Trigger a one-shot non-blocking model discovery pass after startup.
@@ -2579,7 +2700,7 @@ class MainWindow(QMainWindow):
                             self.model_combo.setCurrentText(self._pending_model_restore)
                         self._pending_model_restore = ""
                     else:
-                        self.model_combo.setCurrentIndex(self._config.preferred_model_index(provider_data, models_list))
+                        self._select_model_for_provider(provider_data, models_list)
                 line_edit = self.model_combo.lineEdit()
                 if line_edit is not None:
                     line_edit.setCursorPosition(0)
@@ -2857,7 +2978,7 @@ class MainWindow(QMainWindow):
         _logger.info("preferences_dialog_opened")
         preferences_module = importlib.import_module(".preferences", "intellicrack.ui")
         dialog = preferences_module.PreferencesDialog(self._config, self)
-        config_path = get_config_file("config.json")
+        config_path = get_config_file("config.toml")
         set_config_path = getattr(dialog, "set_config_path", None)
         if callable(set_config_path):
             set_config_path(config_path)
@@ -3517,6 +3638,7 @@ class MainWindow(QMainWindow):
             )
             return
 
+        self._persist_provider_selection(provider)
         _logger.info("provider_changed", provider=provider.value)
         self.status_update.emit(f"Active provider: {provider.value}")
 
@@ -3527,7 +3649,7 @@ class MainWindow(QMainWindow):
                 with QSignalBlocker(self.model_combo):
                     self.model_combo.clear()
                     self.model_combo.addItems(models_list)
-                    self.model_combo.setCurrentIndex(self._config.preferred_model_index(provider, models_list))
+                    self._select_model_for_provider(provider, models_list)
                 line_edit = self.model_combo.lineEdit()
                 if line_edit is not None:
                     line_edit.setCursorPosition(0)

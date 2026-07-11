@@ -258,6 +258,14 @@ class AppearanceSettingsWidget(QWidget):
 
         layout.addWidget(display_group)
 
+        startup_group = QGroupBox("Startup")
+        startup_layout = QFormLayout(startup_group)
+
+        self._restore_layout = QCheckBox("Restore window layout and open tabs between sessions")
+        startup_layout.addRow(self._restore_layout)
+
+        layout.addWidget(startup_group)
+
         layout.addStretch()
 
     def _load_settings(self) -> None:
@@ -275,6 +283,7 @@ class AppearanceSettingsWidget(QWidget):
 
         self._font_size.setValue(self._config.ui.font_size)
         self._show_tool_calls.setChecked(self._config.ui.show_tool_calls)
+        self._restore_layout.setChecked(self._config.ui.restore_layout)
 
     def get_settings(self) -> dict[str, Any]:
         """Get current settings.
@@ -291,6 +300,7 @@ class AppearanceSettingsWidget(QWidget):
                 font_family=font_family,
                 font_size=self._font_size.value(),
                 show_tool_calls=self._show_tool_calls.isChecked(),
+                restore_layout=self._restore_layout.isChecked(),
             ),
         }
 

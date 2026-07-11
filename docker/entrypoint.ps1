@@ -410,7 +410,7 @@ function Invoke-CoverageIsolated {
     # single hung group run for over four hours before the watchdog fired.
     Assert-PixiEnvironment
     $testsRoot = if ($env:COVERAGE_TESTS_ROOT) { $env:COVERAGE_TESTS_ROOT } else { Join-Path $WorkspaceRoot 'tests' }
-    $jobs = if ($env:COVERAGE_JOBS) { [int]$env:COVERAGE_JOBS } else { 4 }
+    $jobs = if ($env:COVERAGE_JOBS) { [int]$env:COVERAGE_JOBS } else { 8 }
     $groupTimeout = if ($env:COVERAGE_GROUP_TIMEOUT) { [int]$env:COVERAGE_GROUP_TIMEOUT } else { 900 }
     $combineDir = Join-Path $CacheRoot "covdata_$($Paths.Suffix)"
     $runner = Join-Path $WorkspaceRoot 'docker\coverage_runner.py'

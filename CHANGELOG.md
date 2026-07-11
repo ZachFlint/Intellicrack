@@ -339,6 +339,14 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
 
+- Implement layout restoration toggle and model persistence (``)
+Introduce opt-in window layout restoration and per-provider model selection persistence via QSettings to improve session continuity. Additionally, scale up the Docker sandbox default resource limits to support full-suite coverage runs and clean up legacy audit documentation.
+- Add `restore_layout` toggle to UI configuration and preferences
+- Persist and restore last-active provider and per-provider model selections
+- Increase default sandbox resources to 16 CPUs and 32GB RAM, forwarding `COVERAGE_JOBS`
+- Fix preferences dialog target path to use `config.toml` instead of `config.json`
+- Clean up obsolete audit markdown and analysis export files
+
 
 ### Changed
 
@@ -952,6 +960,12 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- Resolve named pipe concurrency, bridge lifecycle, and UI bugs (`38fe13b`)
+This commit addresses several critical robustness issues identified during testing and audits. It introduces overlapped I/O and connection serialization to the Win32 named pipe client to prevent pipe collisions and idle timeouts, ensures static analysis bridges properly track document state and health, and dynamically calculates UI panel minimum widths to prevent layout clipping.
+- **Bridges**: Added `_r2_lock` to serialize Cutter commands, implemented a TCP liveness probe for Ghidra initialization, and added document adoption to the Hex Editor bridge.
+- **Named Pipes**: Implemented overlapped Win32 I/O, added connection locks, allowed infinite idle wait times, and drained abandoned future exceptions to prevent leaks.
+- **UI**: Added dynamic minimum width calculations for dock panels, auto-populated process panel tabs on attach, forced menu/toolbar repolishing on theme changes, and filtered out non-chat media models from provider catalogs.
 
 - **deps:** Declare pygments as conda dependency to unblock requirements.txt (`5f74b87`)
 pygments was declared under [tool.pixi] pypi-dependencies but pixi resolves
@@ -3484,11 +3498,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- Resolve named pipe concurrency, bridge lifecycle, and UI bugs (``)
-This commit addresses several critical robustness issues identified during testing and audits. It introduces overlapped I/O and connection serialization to the Win32 named pipe client to prevent pipe collisions and idle timeouts, ensures static analysis bridges properly track document state and health, and dynamically calculates UI panel minimum widths to prevent layout clipping.
-- **Bridges**: Added `_r2_lock` to serialize Cutter commands, implemented a TCP liveness probe for Ghidra initialization, and added document adoption to the Hex Editor bridge.
-- **Named Pipes**: Implemented overlapped Win32 I/O, added connection locks, allowed infinite idle wait times, and drained abandoned future exceptions to prevent leaks.
-- **UI**: Added dynamic minimum width calculations for dock panels, auto-populated process panel tabs on attach, forced menu/toolbar repolishing on theme changes, and filtered out non-chat media models from provider catalogs.
 
 
