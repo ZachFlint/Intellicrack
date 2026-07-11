@@ -778,6 +778,9 @@ class HexEditorPanel(
         if self._file_info_label is not None:
             self._file_info_label.setText(f"  {path.name} ({format_size(doc_len)})")
 
+        if self._bridge is not None:
+            self._bridge.adopt_document(self.document, path)
+
         self._populate_template_combo()
         if self._encoding_combo is not None:
             self._encoding_combo.setCurrentIndex(0)

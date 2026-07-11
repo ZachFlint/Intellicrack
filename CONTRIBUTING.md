@@ -39,32 +39,43 @@ welcoming environment for all contributors.
 
 ### Prerequisites
 
-- **Python 3.12+** (required for full functionality)
+- **Python 3.13+** (required for full functionality)
 - **Git** for version control
 - **Windows 11**
+- **[Pixi](https://pixi.sh)** for environment management (the project manifest
+  lives in `pyproject.toml`)
+- **Docker** — the test suites run inside a Docker sandbox
+- **[`just`](https://github.com/casey/just)** command runner — all quality-gate,
+  build, and test recipes are defined in the `justfile`
 
 ### Virtual Environment Setup
 
-1. Create and activate virtual environment:
+1. Create and activate the environment (the manifest already exists in
+   `pyproject.toml`, so there is nothing to initialize):
 
-    ````bash
-    # Windows 11 (using actual project structure)
-    pixi init
-    pixi shell   ```
-
-    ````
+    ```bash
+    # Installs all runtime and development dependencies from pyproject.toml
+    pixi install
+    pixi shell
+    ```
 
 2. Install dependencies:
 
-    ```bash
-    # Install from requirements lock file (actual file location)
-    pip install -r requirements/requirements.lock
+    All runtime and development dependencies are provided by the Pixi
+    environment created above, so no separate install step is required. If you
+    need a pip-based fallback, install from the root `requirements.txt`:
 
-    # For development dependencies
-    pip install -r requirements/requirements-dev.lock
+    ```bash
+    pip install -r requirements.txt
     ```
 
-3. Install pre-commit hooks:
+3. Build the Rust hex editor core (`intellicrack-hexcore`):
+
+    ```bash
+    just build-hexcore
+    ```
+
+4. Install pre-commit hooks:
 
     ```bash
     pre-commit install
@@ -75,13 +86,17 @@ welcoming environment for all contributors.
 ```text
 intellicrack/
 ├── src/intellicrack/      # Main package source code
-│   ├── ai/               # AI and ML components
-│   ├── core/             # Core functionality
-│   ├── hexview/          # Hex viewer implementation
-│   ├── models/           # Model management
-│   ├── plugins/          # Plugin system
-│   ├── scripts/          # Utility scripts
-│   └── ui/               # User interface components
+│   ├── assets/           # Bundled icons and static assets
+│   ├── bridges/          # Bridge layer for external tools and internal modules
+│   ├── core/             # Core orchestration, logging, and shared functionality
+│   ├── credentials/      # Credential storage and management
+│   ├── providers/        # AI provider connectivity
+│   ├── sandbox/          # Sandbox analysis and orchestration
+│   ├── ui/               # User interface components
+│   ├── main.py           # Application entry point
+│   ├── __main__.py       # `python -m intellicrack` entry point
+│   └── _metadata.py      # Package metadata
+├── src/intellicrack-hexcore/  # Rust hex editor core crate
 ├── tests/                # Test suite
 ├── docs/                 # Documentation
 ├── data/                 # Runtime data (gitignored)
@@ -113,9 +128,11 @@ intellicrack/
 ### Python Code Style
 
 - Follow PEP 8 style guide
-- Use Black for code formatting (line length: 100)
-- Use type hints where applicable
-- Write docstrings for all public functions and classes
+- Format with ruff (`just ruff-fmt`); line length 140
+- All code must pass `ruff check`, `basedpyright`, `pydoclint`, and `pydocstyle`
+- Every function, method, and variable must have precise type hints and
+  annotations
+- Write Google-style docstrings for all functions, methods, and classes
 - Keep functions focused and under 50 lines when possible
 
 ### Import Order
@@ -134,8 +151,8 @@ from typing import Dict, List
 import numpy as np
 from PyQt6.QtWidgets import QWidget
 
-from intellicrack.core import BinaryAnalyzer
-from intellicrack.utils import logger
+from intellicrack.core.logging import get_logger
+from intellicrack.core.tools import ToolRegistry
 ```
 
 ### Naming Conventions
@@ -150,37 +167,39 @@ from intellicrack.utils import logger
 
 ### Running Tests
 
+Tests run inside a Docker sandbox and are driven through `just` recipes.
+Invoking `pytest` directly is not supported.
+
 ```bash
-# Run all tests
-pytest
+# Run the test suite in the Docker sandbox
+just test
 
 # Run with coverage
-pytest --cov=intellicrack
-
-# Run specific test file
-pytest tests/test_core_components.py
-
-# Run tests with verbose output
-pytest -v
+just test-coverage
 ```
 
 ### Writing Tests
 
-- Place tests in the `tests/` directory
-- Mirror the source code structure
-
+- Place tests under `tests/` in the subsystem subdirectory that matches the code
+  under test: `bridges/`, `core/`, `providers/`, `sandbox/`, `hexpat/`,
+  `integration/`, or `ui/`
+- Never place tests at the `tests/` root or beside the source files
 - Use descriptive test names that explain what is being tested
 - Include both positive and negative test cases
-- Mock external dependencies
+- Every test must be a real, falsifiable quality gate that fails when the
+  behavior it asserts is broken — do not assert on mocks or stubs in place of
+  the real behavior under test
 
 Example:
 
 ```python
-def test_binary_analyzer_detects_pe_format():
-    """Test that BinaryAnalyzer correctly identifies PE files."""
-    analyzer = BinaryAnalyzer()
-    result = analyzer.analyze("test_data/sample.exe")
-    assert result.format == "PE"
+from intellicrack.core.logging import get_logger
+
+
+def test_get_logger_returns_named_logger():
+    """Verify get_logger returns a logger bound to the requested name."""
+    logger = get_logger("intellicrack.example")
+    assert logger is not None
 ```
 
 ## Submitting Changes

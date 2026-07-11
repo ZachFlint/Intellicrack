@@ -96,6 +96,10 @@ class ThreadsTab(QWidget):
         """
         self._attached_pid = pid
 
+    def refresh(self) -> None:
+        """Populate the thread list immediately, e.g. after attach or tab activation."""
+        self._refresh_threads()
+
     def update_thread_list(self, threads: list[ThreadInfo]) -> None:
         """Update the thread list and combo boxes with new data.
 

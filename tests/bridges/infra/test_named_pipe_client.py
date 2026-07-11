@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import gc
 import json
 import os
 import sys
@@ -1275,3 +1276,76 @@ async def test_send_command_round_trip(
     assert response["type"] == "response"
     assert response["ok"] is True
     assert response["echo"] == "ping"
+
+
+# ---------------------------------------------------------------------------
+# F16 - _fail_pending drains abandoned futures so exceptions are never leaked
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_fail_pending_drains_abandoned_future_exception() -> None:
+    """``_fail_pending`` prevents an "exception was never retrieved" leak (F16).
+
+    Simulates the exact race the F16 leak came from: a ``send_command``
+    caller's own outer timeout (the x64dbg bridge's ``COMMAND_TIMEOUT``)
+    abandons its future - dropping every reference to it - a moment before
+    the background reader records a fatal pipe failure and calls
+    ``_fail_pending``. A future stored only in ``_pending`` is created
+    directly (bypassing ``send_command`` so nothing ever awaits it,
+    reproducing "owner already gave up"), the loop's exception handler is
+    replaced to observe ``call_exception_handler`` invocations, the real
+    ``_fail_pending`` is driven, the last strong reference is dropped, and
+    a GC pass is forced. asyncio's ``Future.__del__`` reports "Future
+    exception was never retrieved" via the loop's exception handler only
+    when the future's exception was set but never read via ``.exception()``/
+    ``.result()``/``await`` - so a clean run here proves the drain
+    done-callback actually retrieved it.
+
+    Falsifiability: removing the
+    ``fut.add_done_callback(self._drain_future_exception)`` line from
+    ``NamedPipeClient._fail_pending`` (in
+    ``src/intellicrack/bridges/named_pipe_client.py``) leaves the future's
+    exception set but never retrieved; when the future is garbage collected
+    below, ``Future.__del__`` invokes the loop's exception handler with
+    ``message == "Future exception was never retrieved"``, and the final
+    assertion fails.
+    """
+    client = NamedPipeClient()
+    loop = asyncio.get_running_loop()
+
+    future: asyncio.Future[dict[str, Any]] = loop.create_future()
+    pending: dict[int, asyncio.Future[dict[str, Any]]] = getattr(client, "_pending")
+    pending[1] = future
+
+    captured_messages: list[str] = []
+
+    def _capture_exception_handler(_loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
+        """Record the exception-handler message instead of the default report.
+
+        Args:
+            _loop: The event loop reporting the context (unused).
+            context: The exception-handler context dict; only ``message`` is inspected.
+        """
+        captured_messages.append(str(context.get("message", "")))
+
+    previous_handler = loop.get_exception_handler()
+    loop.set_exception_handler(_capture_exception_handler)
+    try:
+        fail_pending: Any = getattr(client, "_fail_pending")
+        fail_pending(ToolError("simulated fatal pipe read failure"))
+
+        # Let the done-callback scheduled by set_exception()+add_done_callback
+        # actually run before the future is collected. _fail_pending already
+        # clears self._pending (the same dict object as `pending`), so the
+        # local `future` reference is the only remaining strong reference.
+        await asyncio.sleep(0)
+        assert pending == {}
+
+        del future
+        gc.collect()
+        await asyncio.sleep(0)
+    finally:
+        loop.set_exception_handler(previous_handler)
+
+    assert "Future exception was never retrieved" not in captured_messages

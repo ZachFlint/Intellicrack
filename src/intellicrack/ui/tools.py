@@ -831,9 +831,9 @@ class _ToolOutputPanelBase(QFrame):
         self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
         self.main_splitter.setChildrenCollapsible(False)
 
-        left_panel = QFrame()
-        left_panel.setMinimumWidth(_LEFT_MIN_WIDTH)
-        left_layout = QVBoxLayout(left_panel)
+        self.left_panel = QFrame()
+        self.left_panel.setMinimumWidth(_LEFT_MIN_WIDTH)
+        left_layout = QVBoxLayout(self.left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(0)
 
@@ -846,13 +846,14 @@ class _ToolOutputPanelBase(QFrame):
             tab_bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             tab_bar.customContextMenuRequested.connect(self._on_tab_context_menu)
         self.tab_widget.tabCloseRequested.connect(self._on_tab_close_requested)
+        self.tab_widget.currentChanged.connect(self._sync_left_panel_min_width)
 
         left_layout.addWidget(self.tab_widget)
-        self.main_splitter.addWidget(left_panel)
+        self.main_splitter.addWidget(self.left_panel)
 
-        right_panel = QFrame()
-        right_panel.setMinimumWidth(_RIGHT_MIN_WIDTH)
-        right_layout = QVBoxLayout(right_panel)
+        self.right_panel = QFrame()
+        self.right_panel.setMinimumWidth(_RIGHT_MIN_WIDTH)
+        right_layout = QVBoxLayout(self.right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
 
@@ -864,12 +865,39 @@ class _ToolOutputPanelBase(QFrame):
         self.xref_panel.xref_selected.connect(self._on_xref_selected)
         right_layout.addWidget(self.xref_panel)
 
-        self.main_splitter.addWidget(right_panel)
+        # The right column hosts fixed (non-tabbed) content, so its natural
+        # minimum can be measured once from its actual children instead of
+        # relying on a guessed constant that drifts as those panels change
+        # (N2): the floor is whichever is larger, the static constant or the
+        # real minimum size hint of the widest child.
+        self.right_panel.setMinimumWidth(
+            max(_RIGHT_MIN_WIDTH, self.func_list.minimumSizeHint().width(), self.xref_panel.minimumSizeHint().width()),
+        )
+
+        self.main_splitter.addWidget(self.right_panel)
         self.main_splitter.setSizes([_DEFAULT_SPLIT_LEFT, _DEFAULT_SPLIT_RIGHT])
 
         layout.addWidget(self.main_splitter)
 
         self.setObjectName("analysis_panel")
+
+    def _sync_left_panel_min_width(self) -> None:
+        """Raise the left dock column's floor to fit the active tab's real content.
+
+        A static minimum width (:data:`_LEFT_MIN_WIDTH`) has no relationship
+        to what an embedded tool panel actually needs to render without
+        clipping -- the Frida/Cutter/Ghidra panels each carry multi-column
+        tables and control rows whose natural ``minimumSizeHint`` far exceeds
+        any reasonable static floor. Since :attr:`main_splitter` has
+        ``setChildrenCollapsible(False)``, raising :attr:`left_panel`'s
+        minimum width to match the currently active tab's real minimum size
+        hint is what actually stops the splitter from squeezing that tab's
+        content narrower than it can render (N2), while still allowing a
+        smaller floor for lightweight tabs.
+        """
+        current = self.tab_widget.currentWidget()
+        floor = _LEFT_MIN_WIDTH if current is None else max(_LEFT_MIN_WIDTH, current.minimumSizeHint().width())
+        self.left_panel.setMinimumWidth(floor)
 
     def _on_function_selected(self, name: str, address: int) -> None:
         """Handle function selection in the list.
@@ -1049,22 +1077,56 @@ class _ToolOutputPanelBase(QFrame):
         """
         self.xref_panel.set_xrefs(incoming, outgoing)
 
+    @staticmethod
+    def _bridge_is_healthy(bridge: StaticAnalysisBridge) -> bool:
+        """Check whether a static-analysis bridge is ready to serve xref queries.
+
+        A bridge only counts as healthy when it is connected to its
+        underlying tool process *and* has a binary loaded through that same
+        bridge instance. Connection alone is not enough: the Cutter bridge
+        reports ``state.connected`` as soon as its rizin backend is
+        initialized, even when the Cutter panel is open without ever
+        loading a binary through this bridge's own ``load_binary`` -- in
+        that state ``get_xrefs_to``/``get_xrefs_from`` raise immediately.
+
+        Args:
+            bridge: Static-analysis bridge to probe.
+
+        Returns:
+            bool: True when the bridge is connected, has a binary loaded,
+                and carries no stored last error.
+        """
+        state = bridge.state
+        return state.connected and state.binary_loaded and state.last_error is None
+
     def _select_static_analysis_bridge(self) -> StaticAnalysisBridge | None:
         """Return the active static-analysis bridge for xref/function lookups.
 
-        Prefers the Cutter bridge (rizin-backed, fast `axt`/`axf` queries),
-        falling back to Ghidra. Returns ``None`` when neither bridge has been
-        constructed yet so callers can no-op gracefully instead of erroring.
+        Probes each attached bridge's health before selecting: prefers the
+        Cutter bridge (rizin-backed, fast `axt`/`axf` queries) only while it
+        is actually connected with a binary loaded, falling back to a
+        healthy Ghidra bridge otherwise. When neither bridge is healthy,
+        Ghidra is still preferred as a best-effort fallback over an
+        unhealthy/erroring Cutter bridge since Cutter is the bridge known to
+        error while its panel is open without a bridge-loaded binary.
+        Returns ``None`` when no static-analysis bridge has been constructed
+        at all so callers can no-op gracefully instead of erroring.
 
         Returns:
             StaticAnalysisBridge | None: The bridge to use for xref queries,
                 or ``None`` if no static-analysis bridge is currently attached.
         """
-        if self.cutter_bridge is not None:
-            return cast("StaticAnalysisBridge", self.cutter_bridge)
-        if self.ghidra_bridge is not None:
-            return cast("StaticAnalysisBridge", self.ghidra_bridge)
-        return None
+        cutter = cast("StaticAnalysisBridge", self.cutter_bridge) if self.cutter_bridge is not None else None
+        ghidra = cast("StaticAnalysisBridge", self.ghidra_bridge) if self.ghidra_bridge is not None else None
+
+        if cutter is not None and self._bridge_is_healthy(cutter):
+            return cutter
+        if ghidra is not None and self._bridge_is_healthy(ghidra):
+            return ghidra
+        if ghidra is not None:
+            _logger.debug("static_analysis_bridge_fallback", reason="cutter_unhealthy_or_absent", selected="ghidra")
+            return ghidra
+        return cutter
 
     @staticmethod
     def _xref_label(ref: CrossReference, *, source: bool) -> str:
@@ -1085,8 +1147,9 @@ class _ToolOutputPanelBase(QFrame):
     def populate_xrefs_for_address(self, address: int) -> None:
         """Populate the xref panel with cross-references for ``address``.
 
-        Schedules an async fetch on the active static-analysis bridge
-        (Cutter preferred, Ghidra fallback) for ``get_xrefs_to`` and
+        Schedules an async fetch on the active static-analysis bridge,
+        selected by :meth:`_select_static_analysis_bridge` (healthy Cutter
+        preferred, healthy Ghidra fallback) for ``get_xrefs_to`` and
         ``get_xrefs_from``. Results are delivered back to the Qt main
         thread and projected into ``XRefPanel.set_xrefs``. When no bridge
         is attached the panel is cleared so stale data does not leak.
@@ -2331,10 +2394,15 @@ class _ToolOutputPanelOpenersMixin(_ToolOutputPanelPanelsMixin):
         """Clear the analysis panel back to the empty "no binary" state.
 
         Used when a load fails or an unsupported format is detected so the panel
-        never shows a prior binary's data against a failed load (F11).
+        never shows a prior binary's data against a failed load (F11). Also clears
+        the right-hand function navigator and cross-reference panel, which are
+        populated independently of the analysis panel by ``update_bridge_analysis``
+        and must not keep showing the previous binary's functions/xrefs.
         """
         if self.analysis_panel is not None:
             self.analysis_panel.clear()
+        self.func_list.set_functions([])
+        self.xref_panel.set_xrefs([], [])
 
     def activate_analysis_tab(self) -> None:
         """Activate the bridge analysis tab."""

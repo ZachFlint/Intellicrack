@@ -124,7 +124,7 @@ class OpenAIProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """The provider's name.
 
         Returns:
             ProviderName: ProviderName.OPENAI
@@ -205,6 +205,7 @@ class OpenAIProvider(LLMProviderBase):
             "whisper-",
             "tts-",
             "text-moderation-",
+            "omni-moderation-",
             "davinci-",
             "babbage-",
             "canary-",
@@ -215,6 +216,8 @@ class OpenAIProvider(LLMProviderBase):
             "text-ada-",
             "code-davinci-",
             "code-cushman-",
+            "sora-",
+            "gpt-image-",
         )
         return not model_id.startswith(non_chat_prefixes)
 

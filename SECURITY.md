@@ -7,13 +7,11 @@ vulnerabilities:
 
 ### CodeQL Analysis
 
-- **Languages Analyzed**: Python, Rust
+- **Languages Analyzed**: Actions, C/C++, JavaScript/TypeScript, Python, Rust
 - **Scan Frequency**:
-  - On every push to `main` and `develop` branches
+  - On every push to `main`
   - On all pull requests to `main`
-  - Weekly scheduled scans (Sundays at 1:30 AM UTC)
-- **Query Sets**: Security and quality queries
-- **Configuration**: `.github/codeql/codeql-config.yml`
+  - Weekly scheduled scans (Saturdays at 04:28 UTC)
 
 ### Dependency Updates
 
@@ -50,6 +48,6 @@ This project implements several security best practices:
 ## Scope
 
 This security policy applies specifically to vulnerabilities in Intellicrack's
-codebase. As a security research tool for analyzing software licensing
-protections, Intellicrack is designed for authorized testing in controlled
-environments only.
+codebase. Intellicrack is a unified workspace that connects reverse-engineering
+and binary-analysis tools with AI provider connectivity, and it is intended for
+authorized testing and analysis in controlled environments only.

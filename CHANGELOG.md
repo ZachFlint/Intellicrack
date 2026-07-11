@@ -342,6 +342,15 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Harden process isolation and tool integration (`4f5a4c7`)
+Harden the application's process management, headless execution, and tool integration layers to eliminate resource leaks, window flashing, and communication timeouts. This includes migrating Ghidra to PyGhidra, spawning x64dbg on a hidden Windows desktop, truncating large LLM context payloads, and restructuring the test suite for isolated coverage runs.
+- **Process Management**: Implemented a dedicated Win32 hidden desktop launcher for GUI tools and enforced synchronous process tree termination on shutdown.
+- **Ghidra Bridge**: Migrated headless execution to PyGhidra (CPython/jpype), implemented polled background analysis, and shadowed `toAddr` for 64-bit address spaces.
+- **Cutter & x64dbg Bridges**: Added brace-balanced JSON extraction for rizin output, reduced command timeouts, and implemented fail-fast load-time pipe verification.
+- **Orchestration & Providers**: Added tool result truncation to bound LLM context windows, injected analysis summaries into the system prompt, and updated HuggingFace routing to "auto".
+- **UI & Layout**: Wrapped dense control rows in scrollable viewports, grouped toolbar actions into dropdown menus, and fixed hex editor save-as default paths.
+- **Test Suite**: Reorganized tests into isolated directories and added a leaf-directory coverage runner to prevent cross-test native contamination.
+
 - **x64dbg-plugin:** Relocate first-party bridge plugin from tools/ to src/ (`81576dc`)
 The x64dbg bridge plugin is first-party Intellicrack source (C++ + CMake),
 but lived under tools/ alongside third-party vendored tools. Move it to
@@ -872,15 +881,6 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
 
-- Harden process isolation and tool integration (``)
-Harden the application's process management, headless execution, and tool integration layers to eliminate resource leaks, window flashing, and communication timeouts. This includes migrating Ghidra to PyGhidra, spawning x64dbg on a hidden Windows desktop, truncating large LLM context payloads, and restructuring the test suite for isolated coverage runs.
-- **Process Management**: Implemented a dedicated Win32 hidden desktop launcher for GUI tools and enforced synchronous process tree termination on shutdown.
-- **Ghidra Bridge**: Migrated headless execution to PyGhidra (CPython/jpype), implemented polled background analysis, and shadowed `toAddr` for 64-bit address spaces.
-- **Cutter & x64dbg Bridges**: Added brace-balanced JSON extraction for rizin output, reduced command timeouts, and implemented fail-fast load-time pipe verification.
-- **Orchestration & Providers**: Added tool result truncation to bound LLM context windows, injected analysis summaries into the system prompt, and updated HuggingFace routing to "auto".
-- **UI & Layout**: Wrapped dense control rows in scrollable viewports, grouped toolbar actions into dropdown menus, and fixed hex editor save-as default paths.
-- **Test Suite**: Reorganized tests into isolated directories and added a leaf-directory coverage runner to prevent cross-test native contamination.
-
 
 ### Documentation
 
@@ -952,6 +952,16 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **deps:** Declare pygments as conda dependency to unblock requirements.txt (`5f74b87`)
+pygments was declared under [tool.pixi] pypi-dependencies but pixi resolves
+it from conda-forge (noarch 2.20.0), so it never appears as a pypi entry in
+pixi.lock. scripts/generate_requirements.py cross-checks declared pypi deps
+against pypi lock entries and aborted (exit 1) because pygments was "missing",
+skipping requirements.txt regeneration during `just git-commit`.
+Move pygments to the conda dependencies table (mirroring the existing capstone
+pattern), which excludes it from the pypi-required check. Lockfile already had
+pygments as conda so no resolution change; requirements.txt regenerates cleanly.
 
 - **ui:** Remediate 2026-07-01 GUI audit findings (`a75756c`)
 Fix every finding in audit/gui-audit-2026-07-01.md across the PyQt6 GUI.
@@ -3474,5 +3484,11 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- Resolve named pipe concurrency, bridge lifecycle, and UI bugs (``)
+This commit addresses several critical robustness issues identified during testing and audits. It introduces overlapped I/O and connection serialization to the Win32 named pipe client to prevent pipe collisions and idle timeouts, ensures static analysis bridges properly track document state and health, and dynamically calculates UI panel minimum widths to prevent layout clipping.
+- **Bridges**: Added `_r2_lock` to serialize Cutter commands, implemented a TCP liveness probe for Ghidra initialization, and added document adoption to the Hex Editor bridge.
+- **Named Pipes**: Implemented overlapped Win32 I/O, added connection locks, allowed infinite idle wait times, and drained abandoned future exceptions to prevent leaks.
+- **UI**: Added dynamic minimum width calculations for dock panels, auto-populated process panel tabs on attach, forced menu/toolbar repolishing on theme changes, and filtered out non-chat media models from provider catalogs.
 
 

@@ -171,6 +171,8 @@ class ProcessPanel(AnalysisPanelBase):
         self._tab_widget.addTab(self._system_tab, "System")
         self._threads_tab.attach_system_tab(self._system_tab)
 
+        self._tab_widget.currentChanged.connect(self._on_tab_widget_changed)
+
         self._detail_tabs = [
             self._memory_tab,
             self._threads_tab,
@@ -231,6 +233,24 @@ class ProcessPanel(AnalysisPanelBase):
         bar_layout.addStretch()
         return bar
 
+    def _on_tab_widget_changed(self, index: int) -> None:
+        """Populate Threads/Modules when their tab becomes active while attached.
+
+        Covers the case where a tab is switched into after attachment (or
+        revisited later) without relying solely on the one-shot refresh
+        triggered by attachment itself.
+
+        Args:
+            index: Newly active top-level tab index.
+        """
+        if self._state != _PanelState.ATTACHED:
+            return
+        widget = self._tab_widget.widget(index)
+        if widget is self._threads_tab:
+            self._threads_tab.refresh()
+        elif widget is self._modules_tab:
+            self._modules_tab.refresh()
+
     def _on_process_selected(self, pid: int) -> None:
         """Handle process selection from the process tab.
 
@@ -253,6 +273,8 @@ class ProcessPanel(AnalysisPanelBase):
         self._threads_tab.set_attached_pid(pid)
         self._modules_tab.set_attached_pid(pid)
         self._system_tab.set_attached_pid(pid)
+        self._threads_tab.refresh()
+        self._modules_tab.refresh()
 
         self._update_controls_for_state()
         self._status_pid.setText(f"PID: {pid}")

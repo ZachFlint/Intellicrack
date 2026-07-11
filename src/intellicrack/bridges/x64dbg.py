@@ -821,6 +821,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         self._next_wp_id: int = 1
         self._plugin_deployed: bool = False
         self.event_callbacks: list[Callable[[str, dict[str, Any]], None]] = []
+        self._pipe_connect_lock: asyncio.Lock = asyncio.Lock()
         self._state_lock: threading.Lock = threading.Lock()
         self._process_handles: dict[int, int] = {}
         self._handle_cache_lock: threading.Lock = threading.Lock()
@@ -2462,30 +2463,61 @@ class _X64DbgBridgeBase(DebuggerBridge):
     async def _connect(self) -> None:
         """Connect to x64dbg via named pipe.
 
+        Serialises every caller on ``_pipe_connect_lock`` and always
+        discards any existing pipe client before opening a fresh one
+        (unless that client is already verified connected). The x64dbg
+        bridge plugin hosts a single-instance named pipe, so two coroutines
+        racing to reconnect it concurrently - a command discovering a dead
+        connection at the same moment as the register/stack panel's
+        periodic refresh, or a fresh ``load()`` racing an in-flight command
+        - would otherwise either collide on ``ERROR_PIPE_BUSY`` (231) or
+        silently reuse a stale handle left over from a previous x64dbg
+        process generation, both of which starve the server's one pipe
+        instance until every subsequent connect attempt times out with
+        ``ERROR_SEM_TIMEOUT`` (121) (F16). Always replacing the client here
+        - rather than only when it is ``None`` - also guarantees that a
+        fresh ``load()`` never reuses a handle from a previous session.
+
         Raises:
             ToolError: If connection fails.
         """
-        try:
-            if self._pipe_client is None:
-                self._pipe_client = NamedPipeClient(
-                    PipeConfig(pipe_name=self._PIPE_NAME),
-                    event_handler=self._handle_event,
+        async with self._pipe_connect_lock:
+            if self._pipe_client is not None and self._pipe_client.is_connected:
+                return
+            try:
+                await self._reconnect_pipe_client_locked()
+            except Exception as e:
+                diag = str(self.plugin_status.get("diagnostic", ""))
+                _logger.warning(
+                    "x64dbg_pipe_connect_failed",
+                    error=str(e),
+                    diagnostic=diag,
                 )
-            await self._pipe_client.connect()
-            self._pipe_client.set_event_handler(self._handle_event)
-            _logger.info("x64dbg_pipe_connected", bridge="x64dbg")
-        except Exception as e:
-            diag = str(self.plugin_status.get("diagnostic", ""))
-            _logger.warning(
-                "x64dbg_pipe_connect_failed",
-                error=str(e),
-                diagnostic=diag,
-            )
-            self._pipe_client = None
-            msg = f"Failed to connect to x64dbg pipe: {e}"
-            if diag:
-                msg = f"{msg}. {diag}"
-            raise ToolError(msg) from e
+                self._pipe_client = None
+                msg = f"Failed to connect to x64dbg pipe: {e}"
+                if diag:
+                    msg = f"{msg}. {diag}"
+                raise ToolError(msg) from e
+
+    async def _reconnect_pipe_client_locked(self) -> None:
+        """Discard any existing pipe client and connect a fresh one.
+
+        Callers must hold ``_pipe_connect_lock`` for the duration of this
+        call; it is a private helper for :meth:`_connect` split out purely
+        to keep that method's exception-translation ``try`` block small.
+        Any exception from the underlying ``NamedPipeClient.close``/
+        ``connect`` calls propagates to the caller unmodified so
+        :meth:`_connect` can classify and wrap it.
+        """
+        if self._pipe_client is not None:
+            await self._pipe_client.close()
+        self._pipe_client = NamedPipeClient(
+            PipeConfig(pipe_name=self._PIPE_NAME),
+            event_handler=self._handle_event,
+        )
+        await self._pipe_client.connect()
+        self._pipe_client.set_event_handler(self._handle_event)
+        _logger.info("x64dbg_pipe_connected", bridge="x64dbg")
 
     async def _close_connection(self) -> None:
         """Close named pipe connection."""
@@ -2688,10 +2720,8 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 details={"x64dbg_error_code": _X64DBG_ERR_PLUGIN_UNAVAILABLE, "command": command},
             )
 
-        if self._pipe_client is not None and not self._pipe_client.is_connected:
+        if self._pipe_client is None or not self._pipe_client.is_connected:
             _logger.info("x64dbg_pipe_reconnecting", command=command)
-            await self._close_connection()
-        if self._pipe_client is None:
             await self._connect()
 
         if self._pipe_client is None:

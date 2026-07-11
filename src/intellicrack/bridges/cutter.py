@@ -1225,6 +1225,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         """Initialize the CutterBridge instance."""
         super().__init__()
         self._r2: Any = None
+        self._r2_lock: asyncio.Lock = asyncio.Lock()
         self._tool_path: Path | None = None
         self._binary_path: Path | None = None
         self._analyzed: bool = False
@@ -1290,6 +1291,23 @@ class _CutterBridgeBase(StaticAnalysisBridge):
     async def _r2_cmd(self, command: str) -> str:
         """Execute an r2 command and return a guaranteed string result.
 
+        Serializes access to the underlying analysis pipe through
+        :attr:`_r2_lock`. Both ``rzpipe`` and ``r2pipe`` speak a single
+        request/response protocol over one stdin/stdout pair with no
+        per-call framing beyond a trailing NUL byte; the ``rzpipe``
+        backend additionally mutates unsynchronized instance state
+        (``pending``) while reading. Because ``_r2_cmd`` hands the blocking
+        ``self._r2.cmd`` call to :func:`asyncio.to_thread`, which runs on
+        the real OS thread pool, multiple coroutines issuing commands
+        concurrently (as every panel refresh after ``analyze()`` does) can
+        interleave writes and reads on the same pipe. That corrupts the
+        NUL-terminated framing so a caller's read either never observes its
+        own terminator (surfacing as a command timeout) or observes another
+        caller's partial/garbled response, and can leave the child process
+        in a state where subsequent commands fail outright. Holding the
+        lock for the duration of one round trip guarantees at most one
+        command is in flight against the pipe at a time.
+
         Args:
             command: The r2 command to execute.
 
@@ -1303,23 +1321,27 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             _logger.warning("_r2_cmd_without_binary", command=command)
             raise ToolError(_ERR_NO_BINARY)
         timeout = R2_COMMAND_TIMEOUT
-        try:
-            result = await asyncio.wait_for(
-                asyncio.to_thread(self._r2.cmd, command),
-                timeout=timeout,
-            )
-        except TimeoutError:
-            _logger.warning(
-                "r2_command_timeout",
-                command=command,
-                timeout=timeout,
-            )
-            msg = f"{_ERR_CMD_TIMEOUT} after {timeout}s: {command}"
-            raise ToolError(msg) from None
-        except (OSError, RuntimeError, ValueError) as e:
-            _logger.warning("r2_command_failed", command=command, error=str(e))
-            msg = f"{_ERR_CMD_FAILED}: {command}"
-            raise ToolError(msg) from e
+        async with self._r2_lock:
+            if self._r2 is None:
+                _logger.warning("_r2_cmd_without_binary", command=command)
+                raise ToolError(_ERR_NO_BINARY)
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(self._r2.cmd, command),
+                    timeout=timeout,
+                )
+            except TimeoutError:
+                _logger.warning(
+                    "r2_command_timeout",
+                    command=command,
+                    timeout=timeout,
+                )
+                msg = f"{_ERR_CMD_TIMEOUT} after {timeout}s: {command}"
+                raise ToolError(msg) from None
+            except (OSError, RuntimeError, ValueError) as e:
+                _logger.warning("r2_command_failed", command=command, error=str(e))
+                msg = f"{_ERR_CMD_FAILED}: {command}"
+                raise ToolError(msg) from e
         return "" if result is None else result
 
     async def _cmd_json(self, command: str) -> list[dict[str, Any]]:
@@ -1491,12 +1513,13 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         released. Errors are logged but never re-raised.
         """
         if self._r2 is not None:
-            try:
-                await asyncio.to_thread(self._r2.quit)
-            except (OSError, RuntimeError) as e:
-                _logger.warning("cutter_close_failed", error=str(e))
-            finally:
-                self.r2 = None
+            async with self._r2_lock:
+                try:
+                    await asyncio.to_thread(self._r2.quit)
+                except (OSError, RuntimeError) as e:
+                    _logger.warning("cutter_close_failed", error=str(e))
+                finally:
+                    self.r2 = None
 
         if self._r2_pid is not None:
             try:
@@ -1739,15 +1762,16 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         Returns:
             BinaryInfo: Populated descriptor of the loaded binary.
         """
-        await self._close_existing_r2()
+        async with self._r2_lock:
+            await self._close_existing_r2()
 
-        open_flags: list[str] = ["-d"] if debug else ["-2"]
-        self.r2 = await asyncio.to_thread(_open_analysis_pipe, str(path), open_flags)
-        self._binary_path = await asyncio.to_thread(path.resolve)
-        self._analyzed = False
-        self._debug_mode = debug
+            open_flags: list[str] = ["-d"] if debug else ["-2"]
+            self.r2 = await asyncio.to_thread(_open_analysis_pipe, str(path), open_flags)
+            self._binary_path = await asyncio.to_thread(path.resolve)
+            self._analyzed = False
+            self._debug_mode = debug
 
-        self._register_rizin_process(path)
+            self._register_rizin_process(path)
 
         file_type, arch, bits, entry = await self._extract_binary_metadata()
         await self._r2_cmd("e io.cache=true")

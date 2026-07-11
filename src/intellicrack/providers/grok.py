@@ -118,7 +118,7 @@ class GrokProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """The provider's name.
 
         Returns:
             ProviderName: ProviderName.GROK
@@ -195,7 +195,9 @@ class GrokProvider(LLMProviderBase):
             "embedding-",
             "moderation-",
         )
-        return not model_id.startswith(non_chat_prefixes)
+        if model_id.startswith(non_chat_prefixes):
+            return False
+        return "imagine" not in model_id
 
     @staticmethod
     def _infer_context_window(model_id: str) -> int:

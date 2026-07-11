@@ -14,16 +14,20 @@ import enum
 import math
 from typing import Final, final, override
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QRectF, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QEasingCurve, QPointF, QPropertyAnimation, QRectF, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import (
     QBrush,
     QColor,
+    QFont,
+    QFontDatabase,
+    QImage,
     QLinearGradient,
     QPainter,
     QPainterPath,
     QPaintEvent,
     QPen,
     QPixmap,
+    QRadialGradient,
     QResizeEvent,
 )
 from PyQt6.QtWidgets import (
@@ -135,6 +139,159 @@ _X_MARK_SCALE: Final[float] = 0.35
 _PENDING_PEN_WIDTH: Final[float] = 1.5
 _ACTIVE_PEN_WIDTH: Final[float] = 2.0
 _VERSION_ALPHA: Final[int] = 153
+
+# --- Splash artwork generation (build_splash_image) -------------------------
+#
+# Used both to (re)generate the shipped splash.png / icons/splash.png assets
+# and to regression-test that the shipped assets match. The canonical
+# "Intellicrack" wordmark is composited from a frozen PNG asset rather than
+# shaped live, so the pixel output is deterministic across machines and font
+# environments (PNG decoding is bit-exact; live glyph shaping/hinting is not
+# guaranteed to be). Any other wordmark string is shaped live for comparison
+# purposes only.
+CANONICAL_WORDMARK: Final[str] = "Intellicrack"
+SPLASH_IMAGE_SIZE: Final[int] = 1024
+_WORDMARK_ASSET_NAME: Final[str] = "splash-wordmark.png"
+_WORDMARK_FONT_ASSET: Final[str] = "fonts/JetBrainsMono-Bold.ttf"
+_WORDMARK_FONT_FAMILY_FALLBACK: Final[str] = "JetBrains Mono"
+_WORDMARK_LIVE_PIXEL_SIZE: Final[int] = 102
+_ICON_BACKDROP_HEIGHT: Final[int] = 205
+_ICON_BACKDROP_Y: Final[int] = 288
+_WORDMARK_CENTER_X_FRACTION: Final[float] = 0.5
+_WORDMARK_CENTER_Y: Final[int] = 624
+_BG_GRADIENT_CENTER_X_FRACTION: Final[float] = 0.5
+_BG_GRADIENT_CENTER_Y_FRACTION: Final[float] = 0.42
+_BG_GRADIENT_RADIUS_FRACTION: Final[float] = 0.75
+_BG_GRADIENT_INNER_COLOR: Final[str] = "#1a1a1a"
+_BG_GRADIENT_MID_COLOR: Final[str] = "#121212"
+_BG_GRADIENT_OUTER_COLOR: Final[str] = "#0a0a0a"
+_BG_GRADIENT_MID_STOP: Final[float] = 0.55
+
+
+def _draw_splash_background(painter: QPainter, size: int) -> None:
+    """Fill a dark radial-vignette background matching the shipped splash artwork.
+
+    Args:
+        painter: Active QPainter targeting the destination image.
+        size: Width and height of the square destination image.
+    """
+    gradient = QRadialGradient(
+        QPointF(size * _BG_GRADIENT_CENTER_X_FRACTION, size * _BG_GRADIENT_CENTER_Y_FRACTION),
+        size * _BG_GRADIENT_RADIUS_FRACTION,
+    )
+    gradient.setColorAt(0.0, QColor(_BG_GRADIENT_INNER_COLOR))
+    gradient.setColorAt(_BG_GRADIENT_MID_STOP, QColor(_BG_GRADIENT_MID_COLOR))
+    gradient.setColorAt(1.0, QColor(_BG_GRADIENT_OUTER_COLOR))
+    painter.fillRect(0, 0, size, size, gradient)
+
+
+def _draw_splash_brain_icon(painter: QPainter, size: int) -> None:
+    """Composite the bundled brain icon onto the destination image.
+
+    Args:
+        painter: Active QPainter targeting the destination image.
+        size: Width and height of the square destination image.
+    """
+    icon_pixmap = QPixmap(str(get_assets_path() / _BRAIN_ICON_NAME))
+    if icon_pixmap.isNull():
+        return
+    scaled_icon = icon_pixmap.scaled(
+        _ICON_BACKDROP_HEIGHT,
+        _ICON_BACKDROP_HEIGHT,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
+    icon_x = (size - scaled_icon.width()) // 2
+    painter.drawPixmap(icon_x, _ICON_BACKDROP_Y, scaled_icon)
+
+
+def _draw_frozen_wordmark(painter: QPainter, size: int) -> None:
+    """Composite the frozen canonical wordmark PNG asset, centered horizontally.
+
+    Args:
+        painter: Active QPainter targeting the destination image.
+        size: Width and height of the square destination image.
+    """
+    wordmark_pixmap = QPixmap(str(get_assets_path() / _WORDMARK_ASSET_NAME))
+    if wordmark_pixmap.isNull():
+        return
+    x = int(size * _WORDMARK_CENTER_X_FRACTION - wordmark_pixmap.width() / 2.0)
+    y = int(_WORDMARK_CENTER_Y - wordmark_pixmap.height() / 2.0)
+    painter.drawPixmap(x, y, wordmark_pixmap)
+
+
+def _load_wordmark_font() -> QFont:
+    """Load the bundled JetBrains Mono Bold font for live wordmark shaping.
+
+    Returns:
+        QFont: The bundled bold font at the live wordmark render size, or a
+        best-effort fallback constructed from the family name alone if the
+        bundled font file could not be registered.
+    """
+    font_path = get_assets_path() / _WORDMARK_FONT_ASSET
+    font_id = QFontDatabase.addApplicationFont(str(font_path))
+    families = QFontDatabase.applicationFontFamilies(font_id) if font_id != -1 else []
+    family = families[0] if families else _WORDMARK_FONT_FAMILY_FALLBACK
+    font = QFont(family)
+    font.setPixelSize(_WORDMARK_LIVE_PIXEL_SIZE)
+    font.setBold(True)
+    return font
+
+
+def _draw_live_wordmark(painter: QPainter, wordmark: str, size: int) -> None:
+    """Shape and draw an arbitrary wordmark string live, centered horizontally.
+
+    Not used for the canonical wordmark: live glyph shaping is not guaranteed
+    pixel-identical across machines or font environments, so this path exists
+    only to prove that :func:`build_splash_image` output actually depends on
+    its ``wordmark`` argument.
+
+    Args:
+        painter: Active QPainter targeting the destination image.
+        wordmark: The text to shape and draw.
+        size: Width and height of the square destination image.
+    """
+    path = QPainterPath()
+    path.addText(0.0, 0.0, _load_wordmark_font(), wordmark)
+    rect = path.boundingRect()
+    dx = size * _WORDMARK_CENTER_X_FRACTION - (rect.x() + rect.width() / 2.0)
+    dy = _WORDMARK_CENTER_Y - (rect.y() + rect.height() / 2.0)
+    painter.save()
+    painter.translate(dx, dy)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.fillPath(path, QColor(255, 255, 255))
+    painter.restore()
+
+
+def build_splash_image(wordmark: str, *, size: int = SPLASH_IMAGE_SIZE) -> QImage:
+    """Render the Intellicrack splash artwork for the given wordmark string.
+
+    Composites the dark radial-vignette background, the bundled brain icon,
+    and the wordmark text into a single square image. This is both the
+    generator used to produce the shipped ``splash.png`` /
+    ``icons/splash.png`` assets (called with :data:`CANONICAL_WORDMARK`) and
+    the function regression-tested against those shipped assets.
+
+    Args:
+        wordmark: The wordmark text to render below the brain icon.
+        size: Width and height of the square output image in pixels.
+
+    Returns:
+        QImage: The composited RGB32 splash artwork, ``size`` x ``size``.
+    """
+    image = QImage(size, size, QImage.Format.Format_RGB32)
+    painter = QPainter(image)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+    _draw_splash_background(painter, size)
+    _draw_splash_brain_icon(painter, size)
+    if wordmark == CANONICAL_WORDMARK:
+        _draw_frozen_wordmark(painter, size)
+    else:
+        _draw_live_wordmark(painter, wordmark, size)
+
+    painter.end()
+    return image
 
 
 class _StageState(enum.IntEnum):

@@ -21,6 +21,7 @@ from __future__ import annotations
 import ctypes
 import json
 import sys
+import time
 from ctypes import wintypes
 from typing import Any, cast
 
@@ -40,10 +41,13 @@ MODE_INDEX = "index"
 MODE_BLOB = "blob"
 MODE_EVENT_THEN_ECHO = "event_then_echo"
 MODE_DROP_AFTER_ONE = "drop_after_one"
+MODE_DELAYED_EVENT = "delayed_event"
+MODE_ECHO_SUCCESS = "echo_success"
 
 BLOB_PAYLOAD = "A1b2C3" * 40000
 EVENT_NAME = "breakpoint_hit"
 EVENT_ADDRESS = 0x401000
+IDLE_DELAY_SECONDS = 2.0
 
 
 def _kernel32() -> ctypes.WinDLL:
@@ -167,7 +171,7 @@ def _build_replies(mode: str, frame: dict[str, Any]) -> list[dict[str, Any]]:
         list[dict[str, Any]]: Frames to write back to the client.
     """
     rid = int(frame["id"])
-    if mode == MODE_DROP_AFTER_ONE:
+    if mode in {MODE_DROP_AFTER_ONE, MODE_ECHO_SUCCESS}:
         return [
             {
                 "id": rid,
@@ -205,14 +209,17 @@ def _serve_connection(k32: ctypes.WinDLL, handle: int, mode: str) -> None:
     Args:
         k32: Typed kernel32 binding.
         handle: Server pipe handle to accept on and serve.
-        mode: Server behaviour selector (echo / index / blob / event+echo).
+        mode: Server behaviour selector (echo / index / blob / event+echo /
+            delayed_event).
     """
     if not k32.ConnectNamedPipe(handle, None) and ctypes.get_last_error() != ERROR_PIPE_CONNECTED:
         return
+    request_count = 0
     while True:
         request = _read_frame(k32, handle)
         if request is None:
             break
+        request_count += 1
         for reply in _build_replies(mode, request):
             _write_frame(k32, handle, reply)
         if mode == MODE_DROP_AFTER_ONE:
@@ -222,6 +229,14 @@ def _serve_connection(k32: ctypes.WinDLL, handle: int, mode: str) -> None:
             # the client would observe a read failure instead of the response.
             k32.FlushFileBuffers(handle)
             break
+        if mode == MODE_DELAYED_EVENT and request_count == 1:
+            # Stay silent for longer than a short client io_timeout before
+            # pushing an unsolicited event, reproducing the legitimate idle
+            # gap between debugger events (F16). The client must not treat
+            # this silence as a fatal read timeout.
+            k32.FlushFileBuffers(handle)
+            time.sleep(IDLE_DELAY_SECONDS)
+            _write_frame(k32, handle, {"type": "event", "name": EVENT_NAME, "address": EVENT_ADDRESS})
 
 
 def serve(pipe_name: str, mode: str) -> int:

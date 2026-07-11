@@ -166,6 +166,11 @@ def prepare_remote_script(code: str) -> tuple[str, str | None]:
 
 
 _ERR_NOT_CONNECTED = "Ghidra not connected"
+_ERR_BRIDGE_PORT_UNREACHABLE = (
+    "Ghidra bridge server not reachable at 127.0.0.1:{port}. Start headless Ghidra "
+    "(the Start Headless control) or launch Ghidra with the bridge server script "
+    "running, then try Connect again."
+)
 _ERR_IMPORT_FILE_FAILED = "Failed to import binary into Ghidra"
 _ERR_FILE_NOT_FOUND = "File not found"
 _ERR_WRITE_VERIFICATION_FAILED = "Write verification failed: readback does not match written bytes"
@@ -1390,6 +1395,33 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         self.state.tool_running = True
         _logger.info("ghidra_bridge_attached", port=self._port)
 
+    @staticmethod
+    def _probe_bridge_port(host: str, port: int, timeout_seconds: float = 3.0) -> bool:
+        """Attempt a single TCP connection to check if a bridge server is listening.
+
+        The upstream ``ghidra_bridge.GhidraBridge`` client is lazy: its
+        constructor never touches the network unless a ``namespace`` is
+        supplied, so building the client object always succeeds even when
+        nothing is listening on the target port. This probe performs the
+        real connection attempt that the lazy client defers, so callers can
+        distinguish "no server running" from "server running" before
+        reporting the bridge as ready.
+
+        Args:
+            host: Bridge server hostname or IP address.
+            port: Bridge server TCP port.
+            timeout_seconds: Maximum seconds to wait for the connection.
+
+        Returns:
+            bool: True if a listener accepted the TCP connection.
+        """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout_seconds)
+        try:
+            return sock.connect_ex((host, port)) == 0
+        finally:
+            sock.close()
+
     async def initialize(self, tool_path: Path | None = None) -> None:
         """Initialize the Ghidra bridge.
 
@@ -1397,7 +1429,8 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             tool_path: Path to Ghidra installation.
 
         Raises:
-            ToolError: If ghidra_bridge is not installed or connection fails.
+            ToolError: If ghidra_bridge is not installed, no bridge server is
+                listening on the configured port, or the connection fails.
         """
         if tool_path is not None:
             self._ghidra_path = tool_path
@@ -1410,6 +1443,17 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             target_pid=None,
             last_error=None,
         )
+
+        reachable = await asyncio.to_thread(self._probe_bridge_port, "127.0.0.1", self._port)
+        if not reachable:
+            _logger.warning("ghidra_bridge_port_unreachable", port=self._port)
+            error_message = _ERR_BRIDGE_PORT_UNREACHABLE.format(port=self._port)
+            self._bridge = None
+            self.state.connected = False
+            self.state.tool_running = False
+            self.state.last_error = error_message
+            self._publish_tool_state()
+            raise ToolError(error_message)
 
         try:
             ghidra_bridge_mod = importlib.import_module("ghidra_bridge")

@@ -11,6 +11,10 @@ Covers:
     F-0021: ``wire_sandbox_backend`` actually wires the supplied sandbox
         (and optional manager) into a real ``SandboxBridge`` and forwards
         it to ``wire_sandbox_bridge`` instead of being a deprecation no-op.
+    F4: ``_select_static_analysis_bridge`` probes bridge health (connected
+        + binary loaded) instead of unconditionally preferring Cutter, so
+        an unhealthy/erroring Cutter bridge does not starve the xref panel
+        when a healthy Ghidra bridge holds the real cross-reference data.
 """
 
 from __future__ import annotations
@@ -27,6 +31,7 @@ from PyQt6.QtCore import QCoreApplication, QEventLoop, QTimer
 from PyQt6.QtWidgets import QApplication
 
 from intellicrack.bridges.cutter import CutterBridge
+from intellicrack.bridges.ghidra import GhidraBridge
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.types import (
     BridgeAnalysisSummary,
@@ -434,6 +439,159 @@ class TestF0005XRefPopulation:
             )
         finally:
             panel.deleteLater()
+
+
+class _FakeGhidraXrefRemote:
+    """Minimal in-process double for the ``ghidra_bridge`` RPC client.
+
+    Mirrors the ``_FakeGhidraRemote`` seam used in
+    ``tests/bridges/test_ghidra_wave2a_xrefs.py``: records every script
+    dispatched via ``remote_exec`` and returns a pre-scripted dict list via
+    ``remote_eval``, so ``GhidraBridge.get_xrefs_to``/``get_xrefs_from`` run
+    their real parsing/framing logic unmodified. Dispatches the canned
+    response on whether the most recently executed script queries
+    ``getReferencesTo`` or ``getReferencesFrom`` so a single fake can answer
+    both queries ``populate_xrefs_for_address`` issues with distinct data.
+    """
+
+    def __init__(
+        self,
+        to_result: list[dict[str, object]],
+        from_result: list[dict[str, object]],
+    ) -> None:
+        """Initialize the fake with scripted responses for each xref direction.
+
+        Args:
+            to_result: Payload dicts returned when the executed script calls
+                ``getReferencesTo``.
+            from_result: Payload dicts returned when the executed script
+                calls ``getReferencesFrom``.
+        """
+        self.exec_calls: list[str] = []
+        self.eval_calls: list[str] = []
+        self._to_result = to_result
+        self._from_result = from_result
+
+    def remote_exec(self, code: str) -> None:
+        """Record the dispatched Jython script.
+
+        Args:
+            code: Jython source emitted by the bridge after
+                ``prepare_remote_script`` has rewritten the script.
+        """
+        self.exec_calls.append(code)
+
+    def remote_eval(self, expr: str) -> object:
+        """Record the sentinel readback and return the matching scripted result.
+
+        Args:
+            expr: Sentinel variable name produced by ``prepare_remote_script``.
+
+        Returns:
+            object: ``to_result`` when the most recent script queried
+            ``getReferencesTo``, otherwise ``from_result``.
+        """
+        self.eval_calls.append(expr)
+        last_exec = self.exec_calls[-1]
+        return self._to_result if "getReferencesTo" in last_exec else self._from_result
+
+
+@pytest.mark.usefixtures("qapp")
+class TestF4HealthAwareBridgeSelection:
+    """F4: xref bridge selection must probe health, not just non-``None``-ness."""
+
+    @staticmethod
+    def test_ghidra_selected_over_unhealthy_erroring_cutter(qapp: QCoreApplication) -> None:
+        """A connected-but-unloaded, erroring Cutter must not starve xrefs.
+
+        Reproduces the F4 root cause: the Cutter panel has initialized its
+        backend (``state.connected = True``, mirroring the panel being
+        open) but no binary was ever loaded through this bridge instance
+        (``state.binary_loaded`` stays ``False``), and querying it raises --
+        exactly what the real ``CutterBridge.get_xrefs_to``/``get_xrefs_from``
+        do when ``_r2`` is ``None``. A healthy Ghidra bridge (connected,
+        binary loaded) holds the real cross-reference data for a function
+        with both callers and callees. Selection must route to Ghidra
+        without ever invoking the unhealthy Cutter bridge, and the panel
+        must populate with Ghidra's real xref data.
+        """
+        panel = ToolOutputPanel()
+
+        cutter = _RecordingCutterBridge()
+        cutter.state.connected = True
+        cutter.should_raise = RuntimeError("cutter_no_binary_in_bridge_instance")
+
+        ghidra = GhidraBridge()
+        remote = _FakeGhidraXrefRemote(
+            to_result=[
+                {
+                    "from": 0x500100,
+                    "to": _ADDR_MAIN,
+                    "type": "UNCONDITIONAL_CALL",
+                    "from_function": "caller_a",
+                    "to_function": "main",
+                },
+            ],
+            from_result=[
+                {
+                    "from": _ADDR_MAIN,
+                    "to": 0x500200,
+                    "type": "UNCONDITIONAL_CALL",
+                    "from_function": "main",
+                    "to_function": "callee_b",
+                },
+            ],
+        )
+        ghidra.attach_remote_bridge(remote)
+        ghidra.state.binary_loaded = True
+
+        panel.cutter_bridge = cutter
+        panel.ghidra_bridge = ghidra
+
+        try:
+            TestF4HealthAwareBridgeSelection._assert_ghidra_selected(qapp, panel, cutter, remote)
+        finally:
+            panel.deleteLater()
+
+    @staticmethod
+    def _assert_ghidra_selected(
+        qapp: QCoreApplication,
+        panel: ToolOutputPanel,
+        cutter: _RecordingCutterBridge,
+        remote: _FakeGhidraXrefRemote,
+    ) -> None:
+        """Trigger the fetch and assert Ghidra's real xref data populated the panel.
+
+        Args:
+            qapp: Active Qt application driving the event loop.
+            panel: ToolOutputPanel under test.
+            cutter: The unhealthy/erroring Cutter bridge that must never be queried.
+            remote: The fake Ghidra RPC transport that must be queried.
+        """
+        panel.populate_xrefs_for_address(_ADDR_MAIN)
+
+        assert _process_events_until(
+            qapp,
+            lambda: panel.xref_panel.xref_display.topLevelItemCount() == 2,
+        )
+
+        assert cutter.to_calls == []
+        assert cutter.from_calls == []
+        assert remote.exec_calls
+
+        roots = panel.xref_panel.xref_display
+        in_root = roots.topLevelItem(0)
+        out_root = roots.topLevelItem(1)
+        assert in_root is not None
+        assert out_root is not None
+        in_child = in_root.child(0)
+        out_child = out_root.child(0)
+        assert in_child is not None
+        assert out_child is not None
+        assert "0x00500100" in in_child.text(0)
+        assert "caller_a" in in_child.text(0)
+        assert "0x00500200" in out_child.text(0)
+        assert "callee_b" in out_child.text(0)
 
 
 @pytest.mark.usefixtures("qapp")

@@ -165,6 +165,7 @@ class GhidraPanel(AnalysisPanelBase):
         toolbar.addSeparator()
 
         self._load_btn = self._add_tool_button(toolbar, self.tr("Load Binary..."), self._on_load_binary, enabled=False)
+        self._load_btn.setToolTip(self.tr("Connect to a running Ghidra bridge, or start headless Ghidra, before loading a binary"))
         self._analyze_btn = self._add_tool_button(toolbar, self.tr("Analyze"), self._on_analyze, enabled=False)
         self._headless_btn = self._add_tool_button(toolbar, self.tr("Start Headless"), self._on_start_headless)
 
@@ -1411,6 +1412,11 @@ class GhidraPanel(AnalysisPanelBase):
         """Enable or disable toolbar buttons based on bridge connection state."""
         ready = self._bridge is not None and self._bridge.state.is_ready()
         self._load_btn.setEnabled(ready)
+        self._load_btn.setToolTip(
+            self.tr("Load a binary into the connected Ghidra bridge")
+            if ready
+            else self.tr("Connect to a running Ghidra bridge, or start headless Ghidra, before loading a binary"),
+        )
         self._analyze_btn.setEnabled(ready)
         self._refresh_funcs_btn.setEnabled(ready)
         self._string_search_btn.setEnabled(ready)

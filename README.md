@@ -43,11 +43,13 @@ protocol reversing, malware triage, and software protection analysis.
   tool calling with confirmation workflow, and iterative tool execution
 - **Session Manager** (`core/session.py`): SQLite-based persistence for
   conversations, loaded binaries, tool states, and patches
-- **License Analyzer** (`core/license_analyzer.py`): Specialized module for
-  detecting protection algorithms, validation functions, and crypto API
-  usage encountered during reverse engineering
+- **Analysis Aggregator** (`core/analysis_aggregator.py`): Queries connected
+  bridges and aggregates their output into a unified `BridgeAnalysisSummary`,
+  including detected protection algorithms, validation routines, and crypto
+  API usage
 - **Config** (`core/config.py`): TOML-based configuration management
-- **Types** (`core/types.py`): Comprehensive type system with 70+ dataclasses
+- **Types** (`core/types.py`): Comprehensive type system with 50+ dataclasses
+  (72 total type definitions including enums and protocols)
 
 ### Tool Bridges
 
@@ -58,8 +60,10 @@ Unified interfaces for external reverse engineering tools:
   communication with custom plugin
 - **Frida** (`bridges/frida_bridge.py`): Runtime instrumentation, function
   hooking, memory manipulation
-- **Cutter/Rizin** (`bridges/cutter.py`): Multi-platform binary analysis via r2pipe
-- **Binary** (`bridges/binary.py`): Direct PE/ELF/Mach-O parsing using pefile/lief
+- **Cutter/Rizin** (`bridges/cutter.py`): Multi-platform binary analysis via
+  rzpipe/r2pipe (prefers rzpipe/rizin, falls back to r2pipe/radare2)
+- **Binary** (`BinaryOperationsBridge` in `bridges/base.py`): Direct
+  PE/ELF/Mach-O parsing via lief, orchestrated through `core/orchestrator.py`
 
 ### LLM Providers
 
@@ -72,6 +76,8 @@ Multiple provider implementations with unified interface:
 - OpenRouter
 - Hugging Face
 - xAI Grok
+- Local Transformers (in-process HuggingFace models with Intel XPU/CPU
+  acceleration)
 
 ### User Interface
 
@@ -149,7 +155,6 @@ intellicrack/
 │   ├── sandbox/        # Windows Sandbox isolation
 │   ├── ui/             # PyQt6 graphical interface
 │   ├── credentials/    # API key management
-│   ├── plugins/        # Plugin infrastructure
 │   └── assets/         # Configuration files and resources
 ├── tests/              # Test suite
 ├── tools/              # External tool binaries

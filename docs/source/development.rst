@@ -32,12 +32,12 @@ Running Linters
 Testing
 -------
 
-Tests run in Windows Sandbox for isolation:
+Tests run inside a Docker sandbox container for isolation (``just test``):
 
 .. code-block:: bash
 
    just test              # Unit tests
-   just test-all          # Full test suite
+   just test all          # Full test suite
    just test-coverage     # With coverage report
 
 Writing Tests
@@ -54,9 +54,9 @@ Generate documentation with Sphinx:
 
 .. code-block:: bash
 
-   just docs-build   # Build HTML docs
-   just docs-open    # Open in browser
-   just docs-apidoc  # Regenerate API docs
+   just docs build   # Build HTML docs
+   just docs open    # Open in browser
+   just docs apidoc  # Regenerate API docs
 
 Project Structure
 -----------------

@@ -1,10 +1,11 @@
 Intellicrack Documentation
 ===========================
 
-**Intellicrack** is an advanced binary analysis platform for analyzing software
-licensing protections. This tool focuses on defeating software licensing mechanisms,
-registration systems, trial limitations, and copy protection schemes for security
-research purposes.
+**Intellicrack** is a unified desktop workspace that orchestrates external
+binary-analysis tools (Ghidra, Cutter/rizin, Frida, x64dbg) and AI providers
+behind a single PyQt6 GUI. Rather than replacing debuggers, disassemblers, or
+model backends, it connects and coordinates them so reverse-engineering and
+analysis workflows share context, outputs, and AI assistance in one interface.
 
 .. toctree::
    :maxdepth: 2

@@ -14,16 +14,18 @@ diverse, inclusive, and healthy community focused on ethical security research.
 
 ## Ethical Usage and Research Purpose
 
-### Primary Purpose: Defensive Security Research
+### Primary Purpose: Reverse-Engineering and Binary-Analysis Workspace
 
-Intellicrack is developed exclusively for **defensive security research** to
-help software developers:
+Intellicrack is a unified workspace that connects reverse-engineering and
+binary-analysis tools with AI provider connectivity. It is intended to support
+authorized analysis and defensive security work, helping practitioners:
 
-- **Identify weaknesses** in their own licensing protection mechanisms
-- **Test robustness** of their protection implementations in controlled
-  environments
-- **Strengthen defenses** against potential attacks by understanding attack
-  vectors
+- **Understand software behavior** by coordinating debuggers, disassemblers, and
+  sandboxes from a single interface
+- **Analyze binaries** they own or are explicitly authorized to inspect, in
+  controlled environments
+- **Strengthen defenses** against potential attacks by understanding
+  vulnerabilities and attack vectors
 - **Validate security** of their own software before deployment
 
 ### Acceptable Use
@@ -109,8 +111,9 @@ are expected to use the tool ethically and in compliance with applicable laws.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement. All complaints
-will be reviewed and investigated promptly and fairly.
+reported to the community leaders responsible for enforcement at
+<zach.flint2@gmail.com>. All complaints will be reviewed and investigated
+promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
 reporter of any incident.

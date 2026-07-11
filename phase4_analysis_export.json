@@ -1,0 +1,5189 @@
+{
+  "binary_name": "HOSTNAME.EXE",
+  "strings": [
+    {
+      "address": 5368779272,
+      "value": "bad allocation",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779288,
+      "value": "generic",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779296,
+      "value": "unknown error",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779312,
+      "value": "iostream",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779328,
+      "value": "iostream stream error",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779352,
+      "value": "system",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779360,
+      "value": "invalid string position",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779384,
+      "value": "string too long",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779400,
+      "value": "permission denied",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779424,
+      "value": "file exists",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779440,
+      "value": "no such device",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779456,
+      "value": "filename too long",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779480,
+      "value": "device or resource busy",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779504,
+      "value": "io error",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779520,
+      "value": "directory not empty",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779544,
+      "value": "invalid argument",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779568,
+      "value": "no space on device",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779592,
+      "value": "no such file or directory",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779624,
+      "value": "function not supported",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779648,
+      "value": "no lock available",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779672,
+      "value": "not enough memory",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779696,
+      "value": "resource unavailable try again",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779728,
+      "value": "cross device link",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779752,
+      "value": "operation canceled",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779776,
+      "value": "too many files open",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779800,
+      "value": "permission_denied",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779824,
+      "value": "address_in_use",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779840,
+      "value": "address_not_available",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779864,
+      "value": "address_family_not_supported",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779896,
+      "value": "connection_already_in_progress",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779928,
+      "value": "bad_file_descriptor",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779952,
+      "value": "connection_aborted",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368779976,
+      "value": "connection_refused",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780000,
+      "value": "connection_reset",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780024,
+      "value": "destination_address_required",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780056,
+      "value": "bad_address",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780072,
+      "value": "host_unreachable",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780096,
+      "value": "operation_in_progress",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780120,
+      "value": "interrupted",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780136,
+      "value": "invalid_argument",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780160,
+      "value": "already_connected",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780184,
+      "value": "too_many_files_open",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780208,
+      "value": "message_size",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780224,
+      "value": "filename_too_long",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780248,
+      "value": "network_down",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780264,
+      "value": "network_reset",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780280,
+      "value": "network_unreachable",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780304,
+      "value": "no_buffer_space",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780320,
+      "value": "no_protocol_option",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780344,
+      "value": "not_connected",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780360,
+      "value": "not_a_socket",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780376,
+      "value": "operation_not_supported",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780400,
+      "value": "protocol_not_supported",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780424,
+      "value": "wrong_protocol_type",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780448,
+      "value": "timed_out",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780464,
+      "value": "operation_would_block",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780488,
+      "value": "address family not supported",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780520,
+      "value": "address in use",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780536,
+      "value": "address not available",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780560,
+      "value": "already connected",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780584,
+      "value": "argument list too long",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780608,
+      "value": "argument out of domain",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780632,
+      "value": "bad address",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780648,
+      "value": "bad file descriptor",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780672,
+      "value": "bad message",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780688,
+      "value": "broken pipe",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780704,
+      "value": "connection aborted",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780728,
+      "value": "connection already in progress",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780760,
+      "value": "connection refused",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780784,
+      "value": "connection reset",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780808,
+      "value": "destination address required",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780840,
+      "value": "executable format error",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780864,
+      "value": "file too large",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780880,
+      "value": "host unreachable",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780904,
+      "value": "identifier removed",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780928,
+      "value": "illegal byte sequence",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780952,
+      "value": "inappropriate io control operation",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368780992,
+      "value": "invalid seek",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781008,
+      "value": "is a directory",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781024,
+      "value": "message size",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781040,
+      "value": "network down",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781056,
+      "value": "network reset",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781072,
+      "value": "network unreachable",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781096,
+      "value": "no buffer space",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781112,
+      "value": "no child process",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781136,
+      "value": "no link",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781144,
+      "value": "no message available",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781168,
+      "value": "no message",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781184,
+      "value": "no protocol option",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781208,
+      "value": "no stream resources",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781232,
+      "value": "no such device or address",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781264,
+      "value": "no such process",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781280,
+      "value": "not a directory",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781296,
+      "value": "not a socket",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781312,
+      "value": "not a stream",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781328,
+      "value": "not connected",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781344,
+      "value": "not supported",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781360,
+      "value": "operation in progress",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781384,
+      "value": "operation not permitted",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781408,
+      "value": "operation not supported",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781432,
+      "value": "operation would block",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781456,
+      "value": "owner dead",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781472,
+      "value": "protocol error",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781488,
+      "value": "protocol not supported",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781512,
+      "value": "read only file system",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781536,
+      "value": "resource deadlock would occur",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781568,
+      "value": "result out of range",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781592,
+      "value": "state not recoverable",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781616,
+      "value": "stream timeout",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781632,
+      "value": "text file busy",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781648,
+      "value": "timed out",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781664,
+      "value": "too many files open in system",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781696,
+      "value": "too many links",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781712,
+      "value": "too many symbolic link levels",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781744,
+      "value": "value too large",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781760,
+      "value": "wrong protocol type",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368781976,
+      "value": "PARSER2",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368782272,
+      "value": "map/set<T> too long",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368782320,
+      "value": "Kerberos",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368782372,
+      "value": "BUFFER",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368782560,
+      "value": "PARSER2",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368783440,
+      "value": ".gehcont",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368783492,
+      "value": ".rdata",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368783508,
+      "value": ".rdata$voltmd",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368783764,
+      "value": ".data",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368783796,
+      "value": ".pdata",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788578,
+      "value": "LookupPrivilegeDisplayNameW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788608,
+      "value": "LookupPrivilegeNameW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788632,
+      "value": "GetSidIdentifierAuthority",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788660,
+      "value": "LookupAccountSidW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788680,
+      "value": "GetLengthSid",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788696,
+      "value": "OpenProcessToken",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788716,
+      "value": "IsValidSid",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788730,
+      "value": "CopySid",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788740,
+      "value": "GetSidSubAuthority",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788762,
+      "value": "GetSidSubAuthorityCount",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788788,
+      "value": "AdjustTokenPrivileges",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788812,
+      "value": "LookupPrivilegeValueW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788836,
+      "value": "GetTokenInformation",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788858,
+      "value": "InitializeSid",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788874,
+      "value": "EqualSid",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788884,
+      "value": "ADVAPI32.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788900,
+      "value": "SetLastError",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788916,
+      "value": "SetThreadUILanguage",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788938,
+      "value": "GetLastError",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788954,
+      "value": "HeapSetInformation",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788976,
+      "value": "GetCurrentProcess",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368788996,
+      "value": "CloseHandle",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789010,
+      "value": "LocalFree",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789020,
+      "value": "KERNEL32.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789036,
+      "value": "__CxxFrameHandler4",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789058,
+      "value": "_vsnwprintf",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789072,
+      "value": "_ultow",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789082,
+      "value": "??3@YAXPEAX@Z",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789098,
+      "value": "malloc",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789108,
+      "value": "_callnewh",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789120,
+      "value": "_purecall",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789132,
+      "value": "??0exception@@QEAA@AEBQEBD@Z",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789164,
+      "value": "??0exception@@QEAA@AEBQEBDH@Z",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789196,
+      "value": "??0exception@@QEAA@AEBV0@@Z",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789226,
+      "value": "??1exception@@UEAA@XZ",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789250,
+      "value": "?what@exception@@UEBAPEBDXZ",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789280,
+      "value": "_CxxThrowException",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789302,
+      "value": "__CxxFrameHandler3",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789324,
+      "value": "memcpy",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789334,
+      "value": "memmove",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789344,
+      "value": "_XcptFilter",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789358,
+      "value": "_amsg_exit",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789372,
+      "value": "__wgetmainargs",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789390,
+      "value": "__set_app_type",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789408,
+      "value": "exit",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789416,
+      "value": "_exit",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789424,
+      "value": "_cexit",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789434,
+      "value": "__setusermatherr",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789454,
+      "value": "_initterm",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789466,
+      "value": "__C_specific_handler",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789490,
+      "value": "_fmode",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789500,
+      "value": "_commode",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789510,
+      "value": "msvcrt.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789524,
+      "value": "_lock",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789532,
+      "value": "_unlock",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789542,
+      "value": "__dllonexit",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789556,
+      "value": "_onexit",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789566,
+      "value": "??1type_info@@UEAA@XZ",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789590,
+      "value": "?terminate@@YAXXZ",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789610,
+      "value": "RtlCaptureContext",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789630,
+      "value": "RtlLookupFunctionEntry",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789656,
+      "value": "RtlVirtualUnwind",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789676,
+      "value": "VerSetConditionMask",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789698,
+      "value": "RtlVerifyVersionInfo",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789720,
+      "value": "ntdll.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789732,
+      "value": "CharLowerW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789746,
+      "value": "LoadStringW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789760,
+      "value": "CharUpperW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789772,
+      "value": "USER32.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789784,
+      "value": "WS2_32.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789798,
+      "value": "GetFileVersionInfoSizeExW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789826,
+      "value": "GetFileVersionInfoExW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789850,
+      "value": "VerQueryValueW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789866,
+      "value": "VERSION.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789880,
+      "value": "FreeClaimDictionary",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789902,
+      "value": "FreeClaimDefinitions",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789926,
+      "value": "InitializeClaimDictionary",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789954,
+      "value": "GetClaimDefinitions",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789974,
+      "value": "AUTHZ.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368789986,
+      "value": "GetUserNameExW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790004,
+      "value": "LsaConnectUntrusted",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790026,
+      "value": "LsaCallAuthenticationPackage",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790058,
+      "value": "LsaLookupAuthenticationPackage",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790090,
+      "value": "SspiCli.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790104,
+      "value": "NetGetJoinInformation",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790126,
+      "value": "wkscli.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790140,
+      "value": "NetApiBufferFree",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790158,
+      "value": "netutils.dll",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790174,
+      "value": "Sleep",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790182,
+      "value": "ReleaseSRWLockExclusive",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790208,
+      "value": "AcquireSRWLockExclusive",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790234,
+      "value": "WakeAllConditionVariable",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790262,
+      "value": "SleepConditionVariableSRW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790290,
+      "value": "SetUnhandledExceptionFilter",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790320,
+      "value": "GetModuleHandleW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790340,
+      "value": "QueryPerformanceCounter",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790366,
+      "value": "GetCurrentProcessId",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790388,
+      "value": "GetCurrentThreadId",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790410,
+      "value": "GetSystemTimeAsFileTime",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790436,
+      "value": "GetTickCount",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790452,
+      "value": "UnhandledExceptionFilter",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790480,
+      "value": "TerminateProcess",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790500,
+      "value": "FormatMessageW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790518,
+      "value": "FindStringOrdinal",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790538,
+      "value": "WideCharToMultiByte",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790560,
+      "value": "GetFileType",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790574,
+      "value": "GetConsoleMode",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790592,
+      "value": "GetStdHandle",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790608,
+      "value": "lstrlenW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790620,
+      "value": "CompareStringW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790638,
+      "value": "GetThreadLocale",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790656,
+      "value": "CompareStringA",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790674,
+      "value": "WriteConsoleW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790690,
+      "value": "ExitProcess",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790704,
+      "value": "GetConsoleOutputCP",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790726,
+      "value": "GetProcessHeap",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790744,
+      "value": "HeapFree",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790756,
+      "value": "HeapValidate",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790772,
+      "value": "HeapAlloc",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790784,
+      "value": "HeapReAlloc",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790798,
+      "value": "HeapSize",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790810,
+      "value": "GetModuleFileNameW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790832,
+      "value": "GetTimeFormatW",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790850,
+      "value": "FileTimeToSystemTime",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790874,
+      "value": "__iob_func",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790888,
+      "value": "_memicmp",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790900,
+      "value": "_errno",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790910,
+      "value": "wcstod",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790920,
+      "value": "wcstol",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790930,
+      "value": "wcstoul",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790940,
+      "value": "wcschr",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790950,
+      "value": "_fileno",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790960,
+      "value": "_get_osfhandle",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790978,
+      "value": "fprintf",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790988,
+      "value": "fflush",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368790998,
+      "value": "wcstok",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368791008,
+      "value": "memset",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368791080,
+      "value": ".?AVbad_alloc@std@@",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368791120,
+      "value": ".?AVexception@@",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368791152,
+      "value": ".?AVlogic_error@std@@",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368791192,
+      "value": ".?AVlength_error@std@@",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368791232,
+      "value": ".?AVout_of_range@std@@",
+      "encoding": "ascii",
+      "section": ""
+    },
+    {
+      "address": 5368799472,
+      "value": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<!-- Copyright (c) Microsoft Corporation -->\r\n<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\" manifestVersion=\"1.0\">\r\n<assemblyIdentity\r\n    version=\"5.1.0.0\"\r\n    processorArchitecture=\"amd64\"\r\n    name=\"Microsoft.Windows.Filesystem.WhoAmI\"\r\n    type=\"win32\"\r\n/>\r\n<description>whoami - displays logged on user information</description>\r\n\r\n<trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">\r\n    <security>\r\n        <requestedPrivileges>\r\n            <requestedExecutionLevel\r\n                level=\"asInvoker\"\r\n                uiAccess=\"false\"\r\n            />\r\n        </requestedPrivileges>\r\n    </security>\r\n</trustInfo>\r\n</assembly>\r\n\r\n",
+      "encoding": "ascii",
+      "section": ""
+    }
+  ],
+  "imports": [
+    {
+      "dll": "msvcrt.dll",
+      "function": "_wcsicmp",
+      "ordinal": null,
+      "address": 19842
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "exit",
+      "ordinal": null,
+      "address": 19816
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "fflush",
+      "ordinal": null,
+      "address": 19854
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "?terminate@@YAXXZ",
+      "ordinal": null,
+      "address": 20128
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_commode",
+      "ordinal": null,
+      "address": 20104
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_fmode",
+      "ordinal": null,
+      "address": 20094
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "__C_specific_handler",
+      "ordinal": null,
+      "address": 20070
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_initterm",
+      "ordinal": null,
+      "address": 20058
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "__setusermatherr",
+      "ordinal": null,
+      "address": 20038
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_cexit",
+      "ordinal": null,
+      "address": 20028
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_exit",
+      "ordinal": null,
+      "address": 20020
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "__set_app_type",
+      "ordinal": null,
+      "address": 20002
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "__wgetmainargs",
+      "ordinal": null,
+      "address": 19984
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_amsg_exit",
+      "ordinal": null,
+      "address": 19970
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_XcptFilter",
+      "ordinal": null,
+      "address": 19956
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "fwprintf",
+      "ordinal": null,
+      "address": 19944
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_get_osfhandle",
+      "ordinal": null,
+      "address": 19824
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "fgetpos",
+      "ordinal": null,
+      "address": 19934
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "wcschr",
+      "ordinal": null,
+      "address": 19924
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_vscwprintf",
+      "ordinal": null,
+      "address": 19910
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_fileno",
+      "ordinal": null,
+      "address": 19900
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_write",
+      "ordinal": null,
+      "address": 19890
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "_setmode",
+      "ordinal": null,
+      "address": 19878
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "vswprintf_s",
+      "ordinal": null,
+      "address": 19864
+    },
+    {
+      "dll": "msvcrt.dll",
+      "function": "__iob_func",
+      "ordinal": null,
+      "address": 21224
+    },
+    {
+      "dll": "api-ms-win-core-localization-l1-2-0.dll",
+      "function": "FormatMessageW",
+      "ordinal": null,
+      "address": 20228
+    },
+    {
+      "dll": "api-ms-win-core-localization-l1-2-0.dll",
+      "function": "SetThreadUILanguage",
+      "ordinal": null,
+      "address": 20148
+    },
+    {
+      "dll": "api-ms-win-core-processenvironment-l1-1-0.dll",
+      "function": "GetEnvironmentVariableW",
+      "ordinal": null,
+      "address": 20170
+    },
+    {
+      "dll": "api-ms-win-core-heap-l2-1-0.dll",
+      "function": "LocalFree",
+      "ordinal": null,
+      "address": 20326
+    },
+    {
+      "dll": "api-ms-win-core-heap-l2-1-0.dll",
+      "function": "LocalAlloc",
+      "ordinal": null,
+      "address": 20196
+    },
+    {
+      "dll": "api-ms-win-core-console-l1-1-0.dll",
+      "function": "GetConsoleMode",
+      "ordinal": null,
+      "address": 20210
+    },
+    {
+      "dll": "api-ms-win-core-errorhandling-l1-1-0.dll",
+      "function": "UnhandledExceptionFilter",
+      "ordinal": null,
+      "address": 20610
+    },
+    {
+      "dll": "api-ms-win-core-errorhandling-l1-1-0.dll",
+      "function": "SetUnhandledExceptionFilter",
+      "ordinal": null,
+      "address": 20382
+    },
+    {
+      "dll": "api-ms-win-core-errorhandling-l1-1-0.dll",
+      "function": "GetLastError",
+      "ordinal": null,
+      "address": 20246
+    },
+    {
+      "dll": "WS2_32.dll",
+      "function": "ord_9223372036854775923",
+      "ordinal": 9223372036854775923,
+      "address": 9223372036854775923
+    },
+    {
+      "dll": "WS2_32.dll",
+      "function": "GetHostNameW",
+      "ordinal": null,
+      "address": 20262
+    },
+    {
+      "dll": "api-ms-win-core-heap-l1-1-0.dll",
+      "function": "HeapSetInformation",
+      "ordinal": null,
+      "address": 20278
+    },
+    {
+      "dll": "MSWSOCK.dll",
+      "function": "GetSocketErrorMessageW",
+      "ordinal": null,
+      "address": 20300
+    },
+    {
+      "dll": "api-ms-win-core-string-l1-1-0.dll",
+      "function": "WideCharToMultiByte",
+      "ordinal": null,
+      "address": 20338
+    },
+    {
+      "dll": "api-ms-win-core-file-l1-1-0.dll",
+      "function": "GetFileType",
+      "ordinal": null,
+      "address": 20360
+    },
+    {
+      "dll": "api-ms-win-core-synch-l1-2-0.dll",
+      "function": "Sleep",
+      "ordinal": null,
+      "address": 20374
+    },
+    {
+      "dll": "api-ms-win-core-libraryloader-l1-2-0.dll",
+      "function": "GetModuleHandleW",
+      "ordinal": null,
+      "address": 20412
+    },
+    {
+      "dll": "api-ms-win-core-profile-l1-1-0.dll",
+      "function": "QueryPerformanceCounter",
+      "ordinal": null,
+      "address": 20432
+    },
+    {
+      "dll": "api-ms-win-core-processthreads-l1-1-0.dll",
+      "function": "GetCurrentThreadId",
+      "ordinal": null,
+      "address": 20480
+    },
+    {
+      "dll": "api-ms-win-core-processthreads-l1-1-0.dll",
+      "function": "GetCurrentProcessId",
+      "ordinal": null,
+      "address": 20458
+    },
+    {
+      "dll": "api-ms-win-core-processthreads-l1-1-0.dll",
+      "function": "GetCurrentProcess",
+      "ordinal": null,
+      "address": 20638
+    },
+    {
+      "dll": "api-ms-win-core-processthreads-l1-1-0.dll",
+      "function": "TerminateProcess",
+      "ordinal": null,
+      "address": 20658
+    },
+    {
+      "dll": "api-ms-win-core-sysinfo-l1-1-0.dll",
+      "function": "GetTickCount",
+      "ordinal": null,
+      "address": 20528
+    },
+    {
+      "dll": "api-ms-win-core-sysinfo-l1-1-0.dll",
+      "function": "GetSystemTimeAsFileTime",
+      "ordinal": null,
+      "address": 20502
+    },
+    {
+      "dll": "api-ms-win-core-rtlsupport-l1-1-0.dll",
+      "function": "RtlVirtualUnwind",
+      "ordinal": null,
+      "address": 20590
+    },
+    {
+      "dll": "api-ms-win-core-rtlsupport-l1-1-0.dll",
+      "function": "RtlLookupFunctionEntry",
+      "ordinal": null,
+      "address": 20564
+    },
+    {
+      "dll": "api-ms-win-core-rtlsupport-l1-1-0.dll",
+      "function": "RtlCaptureContext",
+      "ordinal": null,
+      "address": 20544
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "LookupPrivilegeDisplayNameW",
+      "ordinal": null,
+      "address": 1
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "LookupPrivilegeNameW",
+      "ordinal": null,
+      "address": 2
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "GetSidIdentifierAuthority",
+      "ordinal": null,
+      "address": 3
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "LookupAccountSidW",
+      "ordinal": null,
+      "address": 4
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "GetLengthSid",
+      "ordinal": null,
+      "address": 5
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "OpenProcessToken",
+      "ordinal": null,
+      "address": 6
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "IsValidSid",
+      "ordinal": null,
+      "address": 7
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "CopySid",
+      "ordinal": null,
+      "address": 8
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "GetSidSubAuthority",
+      "ordinal": null,
+      "address": 9
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "GetSidSubAuthorityCount",
+      "ordinal": null,
+      "address": 10
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "AdjustTokenPrivileges",
+      "ordinal": null,
+      "address": 11
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "LookupPrivilegeValueW",
+      "ordinal": null,
+      "address": 12
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "GetTokenInformation",
+      "ordinal": null,
+      "address": 13
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "InitializeSid",
+      "ordinal": null,
+      "address": 14
+    },
+    {
+      "dll": "ADVAPI32.DLL",
+      "function": "EqualSid",
+      "ordinal": null,
+      "address": 15
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "LocalFree",
+      "ordinal": null,
+      "address": 16
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "CloseHandle",
+      "ordinal": null,
+      "address": 17
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetCurrentProcess",
+      "ordinal": null,
+      "address": 18
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "FileTimeToSystemTime",
+      "ordinal": null,
+      "address": 19
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetTimeFormatW",
+      "ordinal": null,
+      "address": 20
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetModuleFileNameW",
+      "ordinal": null,
+      "address": 21
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "HeapSize",
+      "ordinal": null,
+      "address": 22
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "HeapReAlloc",
+      "ordinal": null,
+      "address": 23
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "HeapAlloc",
+      "ordinal": null,
+      "address": 24
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "HeapValidate",
+      "ordinal": null,
+      "address": 25
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "HeapFree",
+      "ordinal": null,
+      "address": 26
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetProcessHeap",
+      "ordinal": null,
+      "address": 27
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "HeapSetInformation",
+      "ordinal": null,
+      "address": 28
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetConsoleOutputCP",
+      "ordinal": null,
+      "address": 29
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "ExitProcess",
+      "ordinal": null,
+      "address": 30
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "WriteConsoleW",
+      "ordinal": null,
+      "address": 31
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "CompareStringA",
+      "ordinal": null,
+      "address": 32
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetThreadLocale",
+      "ordinal": null,
+      "address": 33
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "CompareStringW",
+      "ordinal": null,
+      "address": 34
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "lstrlenW",
+      "ordinal": null,
+      "address": 35
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetStdHandle",
+      "ordinal": null,
+      "address": 36
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetConsoleMode",
+      "ordinal": null,
+      "address": 37
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetFileType",
+      "ordinal": null,
+      "address": 38
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "WideCharToMultiByte",
+      "ordinal": null,
+      "address": 39
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "FindStringOrdinal",
+      "ordinal": null,
+      "address": 40
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "FormatMessageW",
+      "ordinal": null,
+      "address": 41
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "TerminateProcess",
+      "ordinal": null,
+      "address": 42
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "UnhandledExceptionFilter",
+      "ordinal": null,
+      "address": 43
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetTickCount",
+      "ordinal": null,
+      "address": 44
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetSystemTimeAsFileTime",
+      "ordinal": null,
+      "address": 45
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetCurrentThreadId",
+      "ordinal": null,
+      "address": 46
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetCurrentProcessId",
+      "ordinal": null,
+      "address": 47
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "QueryPerformanceCounter",
+      "ordinal": null,
+      "address": 48
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetModuleHandleW",
+      "ordinal": null,
+      "address": 49
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "SetUnhandledExceptionFilter",
+      "ordinal": null,
+      "address": 50
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "SleepConditionVariableSRW",
+      "ordinal": null,
+      "address": 51
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "WakeAllConditionVariable",
+      "ordinal": null,
+      "address": 52
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "AcquireSRWLockExclusive",
+      "ordinal": null,
+      "address": 53
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "ReleaseSRWLockExclusive",
+      "ordinal": null,
+      "address": 54
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "GetLastError",
+      "ordinal": null,
+      "address": 55
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "SetThreadUILanguage",
+      "ordinal": null,
+      "address": 56
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "SetLastError",
+      "ordinal": null,
+      "address": 57
+    },
+    {
+      "dll": "KERNEL32.DLL",
+      "function": "Sleep",
+      "ordinal": null,
+      "address": 58
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "fflush",
+      "ordinal": null,
+      "address": 59
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "fprintf",
+      "ordinal": null,
+      "address": 60
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "wcstok",
+      "ordinal": null,
+      "address": 61
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_get_osfhandle",
+      "ordinal": null,
+      "address": 62
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_fileno",
+      "ordinal": null,
+      "address": 63
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "wcschr",
+      "ordinal": null,
+      "address": 64
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "wcstoul",
+      "ordinal": null,
+      "address": 65
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "wcstol",
+      "ordinal": null,
+      "address": 66
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "wcstod",
+      "ordinal": null,
+      "address": 67
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_errno",
+      "ordinal": null,
+      "address": 68
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "terminate",
+      "ordinal": null,
+      "address": 69
+    },
+    {
+      "dll": "type_info",
+      "function": "~type_info",
+      "ordinal": null,
+      "address": 70
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_onexit",
+      "ordinal": null,
+      "address": 71
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "__dllonexit",
+      "ordinal": null,
+      "address": 72
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_unlock",
+      "ordinal": null,
+      "address": 73
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_lock",
+      "ordinal": null,
+      "address": 74
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_commode",
+      "ordinal": null,
+      "address": 75
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_fmode",
+      "ordinal": null,
+      "address": 76
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "__C_specific_handler",
+      "ordinal": null,
+      "address": 77
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_initterm",
+      "ordinal": null,
+      "address": 78
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "__setusermatherr",
+      "ordinal": null,
+      "address": 79
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_cexit",
+      "ordinal": null,
+      "address": 80
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_exit",
+      "ordinal": null,
+      "address": 81
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "exit",
+      "ordinal": null,
+      "address": 82
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "__set_app_type",
+      "ordinal": null,
+      "address": 83
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "__wgetmainargs",
+      "ordinal": null,
+      "address": 84
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_amsg_exit",
+      "ordinal": null,
+      "address": 85
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_XcptFilter",
+      "ordinal": null,
+      "address": 86
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "memmove",
+      "ordinal": null,
+      "address": 87
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "memcpy",
+      "ordinal": null,
+      "address": 88
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "__CxxFrameHandler3",
+      "ordinal": null,
+      "address": 89
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_CxxThrowException",
+      "ordinal": null,
+      "address": 90
+    },
+    {
+      "dll": "exception",
+      "function": "what",
+      "ordinal": null,
+      "address": 91
+    },
+    {
+      "dll": "exception",
+      "function": "~exception",
+      "ordinal": null,
+      "address": 92
+    },
+    {
+      "dll": "exception",
+      "function": "exception",
+      "ordinal": null,
+      "address": 93
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_purecall",
+      "ordinal": null,
+      "address": 96
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_callnewh",
+      "ordinal": null,
+      "address": 97
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "malloc",
+      "ordinal": null,
+      "address": 98
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "operator_delete",
+      "ordinal": null,
+      "address": 99
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_ultow",
+      "ordinal": null,
+      "address": 100
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_vsnwprintf",
+      "ordinal": null,
+      "address": 101
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "__CxxFrameHandler4",
+      "ordinal": null,
+      "address": 102
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "__iob_func",
+      "ordinal": null,
+      "address": 103
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "_memicmp",
+      "ordinal": null,
+      "address": 104
+    },
+    {
+      "dll": "MSVCRT.DLL",
+      "function": "memset",
+      "ordinal": null,
+      "address": 105
+    },
+    {
+      "dll": "NTDLL.DLL",
+      "function": "RtlVerifyVersionInfo",
+      "ordinal": null,
+      "address": 106
+    },
+    {
+      "dll": "NTDLL.DLL",
+      "function": "RtlCaptureContext",
+      "ordinal": null,
+      "address": 107
+    },
+    {
+      "dll": "NTDLL.DLL",
+      "function": "RtlLookupFunctionEntry",
+      "ordinal": null,
+      "address": 108
+    },
+    {
+      "dll": "NTDLL.DLL",
+      "function": "VerSetConditionMask",
+      "ordinal": null,
+      "address": 109
+    },
+    {
+      "dll": "NTDLL.DLL",
+      "function": "RtlVirtualUnwind",
+      "ordinal": null,
+      "address": 110
+    },
+    {
+      "dll": "USER32.DLL",
+      "function": "LoadStringW",
+      "ordinal": null,
+      "address": 111
+    },
+    {
+      "dll": "USER32.DLL",
+      "function": "CharLowerW",
+      "ordinal": null,
+      "address": 112
+    },
+    {
+      "dll": "USER32.DLL",
+      "function": "CharUpperW",
+      "ordinal": null,
+      "address": 113
+    },
+    {
+      "dll": "WS2_32.DLL",
+      "function": "WSACleanup",
+      "ordinal": null,
+      "address": 114
+    },
+    {
+      "dll": "VERSION.DLL",
+      "function": "GetFileVersionInfoSizeExW",
+      "ordinal": null,
+      "address": 115
+    },
+    {
+      "dll": "VERSION.DLL",
+      "function": "GetFileVersionInfoExW",
+      "ordinal": null,
+      "address": 116
+    },
+    {
+      "dll": "VERSION.DLL",
+      "function": "VerQueryValueW",
+      "ordinal": null,
+      "address": 117
+    },
+    {
+      "dll": "AUTHZ.DLL",
+      "function": "FreeClaimDefinitions",
+      "ordinal": null,
+      "address": 118
+    },
+    {
+      "dll": "AUTHZ.DLL",
+      "function": "InitializeClaimDictionary",
+      "ordinal": null,
+      "address": 119
+    },
+    {
+      "dll": "AUTHZ.DLL",
+      "function": "GetClaimDefinitions",
+      "ordinal": null,
+      "address": 120
+    },
+    {
+      "dll": "AUTHZ.DLL",
+      "function": "FreeClaimDictionary",
+      "ordinal": null,
+      "address": 121
+    },
+    {
+      "dll": "SSPICLI.DLL",
+      "function": "GetUserNameExW",
+      "ordinal": null,
+      "address": 122
+    },
+    {
+      "dll": "SSPICLI.DLL",
+      "function": "LsaConnectUntrusted",
+      "ordinal": null,
+      "address": 123
+    },
+    {
+      "dll": "SSPICLI.DLL",
+      "function": "LsaCallAuthenticationPackage",
+      "ordinal": null,
+      "address": 124
+    },
+    {
+      "dll": "SSPICLI.DLL",
+      "function": "LsaLookupAuthenticationPackage",
+      "ordinal": null,
+      "address": 125
+    },
+    {
+      "dll": "WKSCLI.DLL",
+      "function": "NetGetJoinInformation",
+      "ordinal": null,
+      "address": 126
+    },
+    {
+      "dll": "NETUTILS.DLL",
+      "function": "NetApiBufferFree",
+      "ordinal": null,
+      "address": 127
+    }
+  ],
+  "exports": [
+    {
+      "name": "entry",
+      "ordinal": 0,
+      "address": 5368716464
+    }
+  ],
+  "sections": [
+    {
+      "name": ".text",
+      "virtual_address": 4096,
+      "virtual_size": 8192,
+      "raw_size": 4784,
+      "characteristics": 1610612768,
+      "entropy": 5.720943033328927,
+      "raw_offset": 4096
+    },
+    {
+      "name": "fothk",
+      "virtual_address": 12288,
+      "virtual_size": 4096,
+      "raw_size": 4096,
+      "characteristics": 1610612768,
+      "entropy": 0.015920183265625623,
+      "raw_offset": 12288
+    },
+    {
+      "name": ".rdata",
+      "virtual_address": 16384,
+      "virtual_size": 8192,
+      "raw_size": 4854,
+      "characteristics": 1073741888,
+      "entropy": 4.162174152107984,
+      "raw_offset": 16384
+    },
+    {
+      "name": ".data",
+      "virtual_address": 24576,
+      "virtual_size": 4096,
+      "raw_size": 2208,
+      "characteristics": 3221225536,
+      "entropy": 0.08432727289900656,
+      "raw_offset": 24576
+    },
+    {
+      "name": ".pdata",
+      "virtual_address": 28672,
+      "virtual_size": 4096,
+      "raw_size": 348,
+      "characteristics": 1073741888,
+      "entropy": 3.730647582623128,
+      "raw_offset": 28672
+    },
+    {
+      "name": ".rsrc",
+      "virtual_address": 32768,
+      "virtual_size": 4096,
+      "raw_size": 2088,
+      "characteristics": 1073741888,
+      "entropy": 4.42436348816571,
+      "raw_offset": 32768
+    },
+    {
+      "name": ".reloc",
+      "virtual_address": 36864,
+      "virtual_size": 4096,
+      "raw_size": 136,
+      "characteristics": 1107296320,
+      "entropy": 3.035805955280687,
+      "raw_offset": 36864
+    }
+  ],
+  "functions": [
+    {
+      "name": "FUN_140001010",
+      "address": 5368713232,
+      "size": 12,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001030",
+      "address": 5368713264,
+      "size": 12,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001050",
+      "address": 5368713296,
+      "size": 12,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001064",
+      "address": 5368713316,
+      "size": 48,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000109c",
+      "address": 5368713372,
+      "size": 33,
+      "calling_convention": "__fastcall",
+      "return_type": "exception *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400010c4",
+      "address": 5368713412,
+      "size": 65,
+      "calling_convention": "__fastcall",
+      "return_type": "exception *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000110c",
+      "address": 5368713484,
+      "size": 33,
+      "calling_convention": "__fastcall",
+      "return_type": "exception *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001134",
+      "address": 5368713524,
+      "size": 47,
+      "calling_convention": "__fastcall",
+      "return_type": "exception *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001190",
+      "address": 5368713616,
+      "size": 38,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8 *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "`scalar_deleting_destructor'",
+      "address": 5368713664,
+      "size": 57,
+      "calling_convention": "__thiscall",
+      "return_type": "void *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001200",
+      "address": 5368713728,
+      "size": 47,
+      "calling_convention": "__fastcall",
+      "return_type": "exception *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001238",
+      "address": 5368713784,
+      "size": 225,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_Tidy",
+      "address": 5368714040,
+      "size": 88,
+      "calling_convention": "__thiscall",
+      "return_type": "void",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001398",
+      "address": 5368714136,
+      "size": 31,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400013c0",
+      "address": 5368714176,
+      "size": 16,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400013d8",
+      "address": 5368714200,
+      "size": 34,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001404",
+      "address": 5368714244,
+      "size": 34,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001430",
+      "address": 5368714288,
+      "size": 16,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001448",
+      "address": 5368714312,
+      "size": 260,
+      "calling_convention": "__fastcall",
+      "return_type": "longlong *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001554",
+      "address": 5368714580,
+      "size": 244,
+      "calling_convention": "__fastcall",
+      "return_type": "ulonglong *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001650",
+      "address": 5368714832,
+      "size": 73,
+      "calling_convention": "__fastcall",
+      "return_type": "int *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400016a0",
+      "address": 5368714912,
+      "size": 11,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined4 *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400016c0",
+      "address": 5368714944,
+      "size": 17,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined1",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400016e0",
+      "address": 5368714976,
+      "size": 57,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001720",
+      "address": 5368715040,
+      "size": 148,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8 *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400017c0",
+      "address": 5368715200,
+      "size": 95,
+      "calling_convention": "__fastcall",
+      "return_type": "ulonglong *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001830",
+      "address": 5368715312,
+      "size": 132,
+      "calling_convention": "__fastcall",
+      "return_type": "ulonglong *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400018c0",
+      "address": 5368715456,
+      "size": 95,
+      "calling_convention": "__fastcall",
+      "return_type": "ulonglong *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001930",
+      "address": 5368715568,
+      "size": 8,
+      "calling_convention": "__fastcall",
+      "return_type": "char *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001940",
+      "address": 5368715584,
+      "size": 8,
+      "calling_convention": "__fastcall",
+      "return_type": "char *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001950",
+      "address": 5368715600,
+      "size": 8,
+      "calling_convention": "__fastcall",
+      "return_type": "char *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001960",
+      "address": 5368715616,
+      "size": 40,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001990",
+      "address": 5368715664,
+      "size": 40,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400019c0",
+      "address": 5368715712,
+      "size": 211,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001aa0",
+      "address": 5368715936,
+      "size": 73,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001af0",
+      "address": 5368716016,
+      "size": 392,
+      "calling_convention": "__fastcall",
+      "return_type": "uint",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "entry",
+      "address": 5368716464,
+      "size": 18,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "__CxxFrameHandler4",
+      "address": 5368716488,
+      "size": 6,
+      "calling_convention": "unknown",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001cd8",
+      "address": 5368716504,
+      "size": 57,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_Init_thread_footer",
+      "address": 5368716568,
+      "size": 105,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001d88",
+      "address": 5368716680,
+      "size": 120,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001e08",
+      "address": 5368716808,
+      "size": 146,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef _onexit_t _onexit_t *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001ea0",
+      "address": 5368716960,
+      "size": 23,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "operator_delete",
+      "address": 5368716989,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "void",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_callnewh",
+      "address": 5368717001,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_purecall",
+      "address": 5368717024,
+      "size": 6,
+      "calling_convention": "unknown",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "exception",
+      "address": 5368717036,
+      "size": 6,
+      "calling_convention": "__thiscall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "exception",
+      "address": 5368717048,
+      "size": 6,
+      "calling_convention": "__thiscall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "exception",
+      "address": 5368717060,
+      "size": 6,
+      "calling_convention": "__thiscall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "~exception",
+      "address": 5368717072,
+      "size": 6,
+      "calling_convention": "__thiscall",
+      "return_type": "void",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "what",
+      "address": 5368717088,
+      "size": 6,
+      "calling_convention": "__thiscall",
+      "return_type": "char *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_CxxThrowException",
+      "address": 5368717100,
+      "size": 6,
+      "calling_convention": "__stdcall",
+      "return_type": "void",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "memcpy",
+      "address": 5368717126,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "void *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "memmove",
+      "address": 5368717138,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "void *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001f60",
+      "address": 5368717152,
+      "size": 48,
+      "calling_convention": "__fastcall",
+      "return_type": "type_info *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001fa0",
+      "address": 5368717216,
+      "size": 56,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140001fe0",
+      "address": 5368717280,
+      "size": 24,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_XcptFilter",
+      "address": 5368717310,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000200c",
+      "address": 5368717324,
+      "size": 78,
+      "calling_convention": "__fastcall",
+      "return_type": "int *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140002068",
+      "address": 5368717416,
+      "size": 70,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined4",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_amsg_exit",
+      "address": 5368717492,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "void",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400020c0",
+      "address": 5368717504,
+      "size": 3,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_FindPESection",
+      "address": 5368717520,
+      "size": 68,
+      "calling_convention": "__cdecl",
+      "return_type": "typedef PIMAGE_SECTION_HEADER _IMAGE_SECTION_HEADER *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_IsNonwritableInCurrentImage",
+      "address": 5368717600,
+      "size": 75,
+      "calling_convention": "__cdecl",
+      "return_type": "typedef BOOL int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140002180",
+      "address": 5368717696,
+      "size": 43,
+      "calling_convention": "__fastcall",
+      "return_type": "bool",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400021b4",
+      "address": 5368717748,
+      "size": 217,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_initterm",
+      "address": 5368717971,
+      "size": 6,
+      "calling_convention": "unknown",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "__raise_securityfailure",
+      "address": 5368717996,
+      "size": 52,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400022f0",
+      "address": 5368718064,
+      "size": 414,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_lock",
+      "address": 5368718484,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "void",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_unlock",
+      "address": 5368718496,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "void",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "__dllonexit",
+      "address": 5368718508,
+      "size": 6,
+      "calling_convention": "unknown",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_guard_check_icall",
+      "address": 5368718544,
+      "size": 3,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400024e8",
+      "address": 5368718568,
+      "size": 30,
+      "calling_convention": "__fastcall",
+      "return_type": "FILE *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "__iob_func",
+      "address": 5368718604,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "FILE *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "wcstok",
+      "address": 5368718616,
+      "size": 7,
+      "calling_convention": "__cdecl",
+      "return_type": "wchar_t *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140002528",
+      "address": 5368718632,
+      "size": 1819,
+      "calling_convention": "__fastcall",
+      "return_type": "bool",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140002c4c",
+      "address": 5368720460,
+      "size": 1740,
+      "calling_convention": "__fastcall",
+      "return_type": "uint",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140003320",
+      "address": 5368722208,
+      "size": 167,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400033d0",
+      "address": 5368722384,
+      "size": 155,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140003474",
+      "address": 5368722548,
+      "size": 27,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140003498",
+      "address": 5368722584,
+      "size": 1690,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140003b3c",
+      "address": 5368724284,
+      "size": 122,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140003bc0",
+      "address": 5368724416,
+      "size": 586,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140003e14",
+      "address": 5368725012,
+      "size": 585,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140004064",
+      "address": 5368725604,
+      "size": 116,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400040e0",
+      "address": 5368725728,
+      "size": 114,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined4",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000415c",
+      "address": 5368725852,
+      "size": 60,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400041a0",
+      "address": 5368725920,
+      "size": 300,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400042d4",
+      "address": 5368726228,
+      "size": 251,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400043d8",
+      "address": 5368726488,
+      "size": 481,
+      "calling_convention": "__fastcall",
+      "return_type": "bool",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400045c0",
+      "address": 5368726976,
+      "size": 323,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000470c",
+      "address": 5368727308,
+      "size": 852,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140004a68",
+      "address": 5368728168,
+      "size": 356,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140004bd4",
+      "address": 5368728532,
+      "size": 462,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140004dac",
+      "address": 5368729004,
+      "size": 250,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140004eb0",
+      "address": 5368729264,
+      "size": 690,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000516c",
+      "address": 5368729964,
+      "size": 356,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400052d8",
+      "address": 5368730328,
+      "size": 205,
+      "calling_convention": "__fastcall",
+      "return_type": "uint",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400053ac",
+      "address": 5368730540,
+      "size": 42,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400053e0",
+      "address": 5368730592,
+      "size": 688,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8 *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005698",
+      "address": 5368731288,
+      "size": 359,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8 *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005808",
+      "address": 5368731656,
+      "size": 390,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8 *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005998",
+      "address": 5368732056,
+      "size": 128,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005a3c",
+      "address": 5368732220,
+      "size": 23,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005a60",
+      "address": 5368732256,
+      "size": 23,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005a84",
+      "address": 5368732292,
+      "size": 18,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005a9c",
+      "address": 5368732316,
+      "size": 101,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005b08",
+      "address": 5368732424,
+      "size": 56,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005b48",
+      "address": 5368732488,
+      "size": 77,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8 *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005ba0",
+      "address": 5368732576,
+      "size": 85,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005bfc",
+      "address": 5368732668,
+      "size": 10,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005c14",
+      "address": 5368732692,
+      "size": 51,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005c50",
+      "address": 5368732752,
+      "size": 453,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140005e1c",
+      "address": 5368733212,
+      "size": 672,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400060c4",
+      "address": 5368733892,
+      "size": 531,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400062e0",
+      "address": 5368734432,
+      "size": 318,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140006428",
+      "address": 5368734760,
+      "size": 200,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400064f8",
+      "address": 5368734968,
+      "size": 430,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400066ac",
+      "address": 5368735404,
+      "size": 351,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined4 *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140006814",
+      "address": 5368735764,
+      "size": 2916,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140007380",
+      "address": 5368738688,
+      "size": 443,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140007544",
+      "address": 5368739140,
+      "size": 1996,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined4",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140007d18",
+      "address": 5368741144,
+      "size": 1469,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef DWORD ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400082dc",
+      "address": 5368742620,
+      "size": 244,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400083d8",
+      "address": 5368742872,
+      "size": 209,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined4",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400084b0",
+      "address": 5368743088,
+      "size": 519,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef LPCWSTR WCHAR *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400086c0",
+      "address": 5368743616,
+      "size": 105,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef LPVOID void *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000879c",
+      "address": 5368743836,
+      "size": 238,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008894",
+      "address": 5368744084,
+      "size": 267,
+      "calling_convention": "__fastcall",
+      "return_type": "ulong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400089a8",
+      "address": 5368744360,
+      "size": 99,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef BOOL int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008a14",
+      "address": 5368744468,
+      "size": 128,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008a9c",
+      "address": 5368744604,
+      "size": 209,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008b74",
+      "address": 5368744820,
+      "size": 156,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef BOOL int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008c18",
+      "address": 5368744984,
+      "size": 100,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008c88",
+      "address": 5368745096,
+      "size": 514,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008e94",
+      "address": 5368745620,
+      "size": 105,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008f04",
+      "address": 5368745732,
+      "size": 55,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008f44",
+      "address": 5368745796,
+      "size": 47,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140008f7c",
+      "address": 5368745852,
+      "size": 429,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009130",
+      "address": 5368746288,
+      "size": 318,
+      "calling_convention": "__fastcall",
+      "return_type": "bool",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009278",
+      "address": 5368746616,
+      "size": 257,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009380",
+      "address": 5368746880,
+      "size": 240,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009478",
+      "address": 5368747128,
+      "size": 95,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400094e0",
+      "address": 5368747232,
+      "size": 281,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009600",
+      "address": 5368747520,
+      "size": 208,
+      "calling_convention": "__fastcall",
+      "return_type": "bool",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400096d8",
+      "address": 5368747736,
+      "size": 218,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef BOOL int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009828",
+      "address": 5368748072,
+      "size": 207,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009900",
+      "address": 5368748288,
+      "size": 162,
+      "calling_convention": "__fastcall",
+      "return_type": "short *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_1400099ac",
+      "address": 5368748460,
+      "size": 211,
+      "calling_convention": "__fastcall",
+      "return_type": "ulonglong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009a88",
+      "address": 5368748680,
+      "size": 148,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009b24",
+      "address": 5368748836,
+      "size": 329,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009c74",
+      "address": 5368749172,
+      "size": 62,
+      "calling_convention": "__fastcall",
+      "return_type": "bool",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009cbc",
+      "address": 5368749244,
+      "size": 194,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_140009d88",
+      "address": 5368749448,
+      "size": 923,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000a148",
+      "address": 5368750408,
+      "size": 551,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000a378",
+      "address": 5368750968,
+      "size": 139,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000a40c",
+      "address": 5368751116,
+      "size": 243,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000a508",
+      "address": 5368751368,
+      "size": 141,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000a59c",
+      "address": 5368751516,
+      "size": 152,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000a63c",
+      "address": 5368751676,
+      "size": 89,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000a69c",
+      "address": 5368751772,
+      "size": 322,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef LPCWSTR WCHAR *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000a7e8",
+      "address": 5368752104,
+      "size": 987,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000abcc",
+      "address": 5368753100,
+      "size": 227,
+      "calling_convention": "__fastcall",
+      "return_type": "short *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000acb8",
+      "address": 5368753336,
+      "size": 306,
+      "calling_convention": "__fastcall",
+      "return_type": "uint",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000adf4",
+      "address": 5368753652,
+      "size": 319,
+      "calling_convention": "__fastcall",
+      "return_type": "uint",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000af3c",
+      "address": 5368753980,
+      "size": 1690,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000b5e0",
+      "address": 5368755680,
+      "size": 933,
+      "calling_convention": "__fastcall",
+      "return_type": "wchar_t *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000b98c",
+      "address": 5368756620,
+      "size": 183,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined4",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000ba4c",
+      "address": 5368756812,
+      "size": 797,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000bd70",
+      "address": 5368757616,
+      "size": 962,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000c13c",
+      "address": 5368758588,
+      "size": 360,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000c2ac",
+      "address": 5368758956,
+      "size": 486,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000c49c",
+      "address": 5368759452,
+      "size": 674,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000c748",
+      "address": 5368760136,
+      "size": 781,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000ca5c",
+      "address": 5368760924,
+      "size": 1715,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d118",
+      "address": 5368762648,
+      "size": 41,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d148",
+      "address": 5368762696,
+      "size": 121,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d1c8",
+      "address": 5368762824,
+      "size": 86,
+      "calling_convention": "__fastcall",
+      "return_type": "uint",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d228",
+      "address": 5368762920,
+      "size": 98,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d294",
+      "address": 5368763028,
+      "size": 102,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d304",
+      "address": 5368763140,
+      "size": 102,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d374",
+      "address": 5368763252,
+      "size": 98,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d3e0",
+      "address": 5368763360,
+      "size": 156,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d484",
+      "address": 5368763524,
+      "size": 147,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d520",
+      "address": 5368763680,
+      "size": 63,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d568",
+      "address": 5368763752,
+      "size": 76,
+      "calling_convention": "__fastcall",
+      "return_type": "ulonglong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d5bc",
+      "address": 5368763836,
+      "size": 48,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d5f4",
+      "address": 5368763892,
+      "size": 63,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d63c",
+      "address": 5368763964,
+      "size": 74,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d690",
+      "address": 5368764048,
+      "size": 315,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d7d4",
+      "address": 5368764372,
+      "size": 114,
+      "calling_convention": "__fastcall",
+      "return_type": "typedef LPSYSTEMTIME _SYSTEMTIME *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d850",
+      "address": 5368764496,
+      "size": 99,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d8bc",
+      "address": 5368764604,
+      "size": 213,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d998",
+      "address": 5368764824,
+      "size": 58,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000d9dc",
+      "address": 5368764892,
+      "size": 145,
+      "calling_convention": "__fastcall",
+      "return_type": "int",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000da74",
+      "address": 5368765044,
+      "size": 213,
+      "calling_convention": "__fastcall",
+      "return_type": "uint",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000db50",
+      "address": 5368765264,
+      "size": 104,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000dbc0",
+      "address": 5368765376,
+      "size": 54,
+      "calling_convention": "__fastcall",
+      "return_type": "longlong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "__GSHandlerCheck",
+      "address": 5368765440,
+      "size": 29,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined8",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "__GSHandlerCheckCommon",
+      "address": 5368765476,
+      "size": 91,
+      "calling_convention": "__fastcall",
+      "return_type": "ulonglong",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FID_conflict:__GSHandlerCheck_EH",
+      "address": 5368765576,
+      "size": 127,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "memset",
+      "address": 5368765718,
+      "size": 6,
+      "calling_convention": "__cdecl",
+      "return_type": "void *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "__security_check_cookie",
+      "address": 5368765760,
+      "size": 30,
+      "calling_convention": "__cdecl",
+      "return_type": "void",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_guard_dispatch_icall",
+      "address": 5368765824,
+      "size": 6,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_guard_dispatch_icall",
+      "address": 5368765872,
+      "size": 2,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_guard_dispatch_icall",
+      "address": 5368765920,
+      "size": 6,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000de00",
+      "address": 5368765952,
+      "size": 77,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "Catch_All@14000de53",
+      "address": 5368766035,
+      "size": 67,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined *",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "Catch_All@14000de97",
+      "address": 5368766103,
+      "size": 36,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000dec2",
+      "address": 5368766146,
+      "size": 29,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000dee6",
+      "address": 5368766182,
+      "size": 26,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000df10",
+      "address": 5368766224,
+      "size": 31,
+      "calling_convention": "__fastcall",
+      "return_type": "bool",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000df94",
+      "address": 5368766356,
+      "size": 31,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000dfba",
+      "address": 5368766394,
+      "size": 22,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000e100",
+      "address": 5368766720,
+      "size": 15,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000e120",
+      "address": 5368766752,
+      "size": 15,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000e140",
+      "address": 5368766784,
+      "size": 15,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "FUN_14000e160",
+      "address": 5368766816,
+      "size": 12,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    },
+    {
+      "name": "_guard_dispatch_icall",
+      "address": 5368770576,
+      "size": 5,
+      "calling_convention": "__fastcall",
+      "return_type": "undefined",
+      "parameters": [],
+      "local_variables": [],
+      "decompiled_code": null,
+      "disassembly": null
+    }
+  ],
+  "format_info": "pe",
+  "architecture": "x86_64",
+  "source_bridges": [
+    "ghidra"
+  ],
+  "analysis_notes": [
+    "cutter string search failed: command execution failed: izj",
+    "cutter import enumeration failed: command execution failed: iij",
+    "cutter export enumeration failed: command execution failed: iEj",
+    "cutter function enumeration failed: command execution failed: aflj"
+  ],
+  "complete": true
+}

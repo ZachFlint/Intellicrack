@@ -17,10 +17,15 @@ from dataclasses import dataclass, field
 from typing import Any, ClassVar, cast
 
 from intellicrack.bridges.win32_types import (
+    ERROR_IO_PENDING,
+    FILE_FLAG_OVERLAPPED,
     GENERIC_READ,
     GENERIC_WRITE,
+    INFINITE,
     INVALID_HANDLE_VALUE,
     OPEN_EXISTING,
+    OVERLAPPED,
+    WAIT_OBJECT_0,
 )
 from intellicrack.core.error_logging import log_passthrough
 from intellicrack.core.logging import get_logger
@@ -75,7 +80,7 @@ if sys.platform == "win32":
         wintypes.LPVOID,
         wintypes.DWORD,
         ctypes.POINTER(wintypes.DWORD),
-        wintypes.LPVOID,
+        ctypes.POINTER(OVERLAPPED),
     ]
 
     kernel32.WriteFile.restype = wintypes.BOOL
@@ -84,7 +89,7 @@ if sys.platform == "win32":
         wintypes.LPCVOID,
         wintypes.DWORD,
         ctypes.POINTER(wintypes.DWORD),
-        wintypes.LPVOID,
+        ctypes.POINTER(OVERLAPPED),
     ]
 
     kernel32.CloseHandle.restype = wintypes.BOOL
@@ -92,6 +97,25 @@ if sys.platform == "win32":
 
     kernel32.CancelIoEx.restype = wintypes.BOOL
     kernel32.CancelIoEx.argtypes = [wintypes.HANDLE, wintypes.LPVOID]
+
+    kernel32.CreateEventW.restype = wintypes.HANDLE
+    kernel32.CreateEventW.argtypes = [
+        wintypes.LPVOID,
+        wintypes.BOOL,
+        wintypes.BOOL,
+        wintypes.LPCWSTR,
+    ]
+
+    kernel32.GetOverlappedResult.restype = wintypes.BOOL
+    kernel32.GetOverlappedResult.argtypes = [
+        wintypes.HANDLE,
+        ctypes.POINTER(OVERLAPPED),
+        ctypes.POINTER(wintypes.DWORD),
+        wintypes.BOOL,
+    ]
+
+    kernel32.WaitForSingleObject.restype = wintypes.DWORD
+    kernel32.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
 
 
 EventHandler = Callable[[dict[str, Any]], None]
@@ -141,9 +165,12 @@ class NamedPipeClient:
         """
         self._config = config or PipeConfig()
         self._handle: int | None = None
+        self._read_overlapped: OVERLAPPED | None = None
+        self._write_overlapped: OVERLAPPED | None = None
         self._write_lock = asyncio.Lock()
         self._id_lock = asyncio.Lock()
         self._close_lock = asyncio.Lock()
+        self._connect_lock = asyncio.Lock()
         self._pending: dict[int, asyncio.Future[dict[str, Any]]] = {}
         self._reader_task: asyncio.Task[None] | None = None
         self._read_failure: Exception | None = None
@@ -189,6 +216,14 @@ class NamedPipeClient:
         call has already returned a real handle, the handle is closed in the
         cancellation path so it does not leak into the operating system.
 
+        Serialises concurrent callers on ``_connect_lock`` and re-checks
+        ``_handle`` once the lock is held so two coroutines racing to
+        (re)connect the same client never both open a handle against a
+        single-instance server pipe: the loser would otherwise collide with
+        ``ERROR_PIPE_BUSY`` (231) while the winner's live connection gets
+        discarded by the caller, permanently starving the server's one pipe
+        instance until it is recycled (F16).
+
         Raises:
             ToolError: If called on a non-Windows platform, if the connect
                 times out, or if the underlying Win32 calls fail.
@@ -202,48 +237,49 @@ class NamedPipeClient:
             error_message = "Named pipes are only supported on Windows"
             raise ToolError(error_message)
 
-        if self._handle is not None:
-            return
+        async with self._connect_lock:
+            if self._handle is not None:
+                return
 
-        pipe_name = self._config.pipe_name
-        _logger.info("pipe_connecting", pipe_name=pipe_name)
+            pipe_name = self._config.pipe_name
+            _logger.info("pipe_connecting", pipe_name=pipe_name)
 
-        open_task: asyncio.Task[int] = asyncio.create_task(
-            asyncio.to_thread(self._open_handle),
-        )
-        try:
-            self._handle = await asyncio.wait_for(
-                asyncio.shield(open_task),
-                timeout=self._config.connect_timeout,
+            open_task: asyncio.Task[int] = asyncio.create_task(
+                asyncio.to_thread(self._open_handle),
             )
-        except TimeoutError as exc:
-            _logger.warning(
-                "pipe_connection_failed",
-                pipe_name=pipe_name,
-                error="connection timeout",
-            )
-            self._reap_open_task(open_task)
-            error_message = "Timed out connecting to named pipe"
-            raise ToolError(error_message) from exc
-        except asyncio.CancelledError:
-            _logger.warning(
-                "pipe_connection_cancelled",
-                pipe_name=pipe_name,
-            )
-            self._reap_open_task(open_task)
-            raise
-        except Exception:
-            self._reap_open_task(open_task)
-            _logger.exception(
-                "pipe_connect_unexpected_failure",
-                pipe_name=pipe_name,
-            )
-            raise
+            try:
+                self._handle = await asyncio.wait_for(
+                    asyncio.shield(open_task),
+                    timeout=self._config.connect_timeout,
+                )
+            except TimeoutError as exc:
+                _logger.warning(
+                    "pipe_connection_failed",
+                    pipe_name=pipe_name,
+                    error="connection timeout",
+                )
+                self._reap_open_task(open_task)
+                error_message = "Timed out connecting to named pipe"
+                raise ToolError(error_message) from exc
+            except asyncio.CancelledError:
+                _logger.warning(
+                    "pipe_connection_cancelled",
+                    pipe_name=pipe_name,
+                )
+                self._reap_open_task(open_task)
+                raise
+            except Exception:
+                self._reap_open_task(open_task)
+                _logger.exception(
+                    "pipe_connect_unexpected_failure",
+                    pipe_name=pipe_name,
+                )
+                raise
 
-        _logger.info("pipe_connected", pipe_name=pipe_name)
-        self._read_failure = None
-        loop = asyncio.get_running_loop()
-        self._reader_task = loop.create_task(self._reader_loop())
+            _logger.info("pipe_connected", pipe_name=pipe_name)
+            self._read_failure = None
+            loop = asyncio.get_running_loop()
+            self._reader_task = loop.create_task(self._reader_loop())
 
     @staticmethod
     def _reap_open_task(open_task: asyncio.Task[int]) -> None:
@@ -342,6 +378,7 @@ class NamedPipeClient:
                         fut.set_exception(
                             ToolError(f"Pipe closed before response for request {request_id}"),
                         )
+                        fut.add_done_callback(self._drain_future_exception)
 
                 await asyncio.to_thread(self._close_handle)
                 self._handle = None
@@ -446,6 +483,16 @@ class NamedPipeClient:
         future. Exits cleanly on cancellation. On any other unhandled error
         the failure is recorded and propagated to all pending futures.
 
+        Waits indefinitely for each new frame to start (``frame_timeout=
+        None``) rather than bounding the idle gap by
+        :attr:`PipeConfig.io_timeout`: a connected peer legitimately stays
+        silent for an unbounded time between messages (for example while a
+        debuggee runs between breakpoints), and treating that idle gap as a
+        fatal read timeout would permanently kill an otherwise healthy
+        connection (F16). A genuinely dead peer is still detected promptly
+        because the underlying blocking read fails with a broken-pipe error
+        as soon as the OS tears down the handle.
+
         Raises:
             asyncio.CancelledError: Re-raised when the background task is
                 cancelled by :meth:`close`. All other read failures are
@@ -455,7 +502,7 @@ class NamedPipeClient:
         loop = asyncio.get_running_loop()
         while True:
             try:
-                message = await self._read_message()
+                message = await self._read_message(frame_timeout=None)
             except asyncio.CancelledError as exc:
                 log_passthrough(
                     _logger,
@@ -525,6 +572,17 @@ class NamedPipeClient:
     def _fail_pending(self, exc: Exception) -> None:
         """Resolve every pending response future with ``exc``.
 
+        A future's original awaiter (``send_command``) may already have
+        been cancelled by its caller's own outer timeout (for example the
+        x64dbg bridge's ``COMMAND_TIMEOUT``) before this method runs. When
+        that happens the future is resolved here but never awaited again,
+        so the exception set below would otherwise be reported by asyncio
+        as "Future exception was never retrieved" once the future is
+        garbage collected. A done-callback that drains the exception is
+        attached to every future this method resolves so that outcome is
+        consumed exactly once regardless of whether the original awaiter
+        is still listening (F16 unretrieved-future leak).
+
         Args:
             exc: Exception to propagate to awaiting ``send_command`` callers.
         """
@@ -533,6 +591,21 @@ class NamedPipeClient:
         for _, fut in pending:
             if not fut.done():
                 fut.set_exception(exc)
+                fut.add_done_callback(self._drain_future_exception)
+
+    @staticmethod
+    def _drain_future_exception(future: asyncio.Future[dict[str, Any]]) -> None:
+        """Retrieve a resolved future's exception so it is never reported as leaked.
+
+        Args:
+            future: The completed future to inspect. Cancelled futures and
+                futures that resolved successfully are left untouched.
+        """
+        if future.cancelled():
+            return
+        exc = future.exception()
+        if exc is not None:
+            _logger.debug("pipe_pending_future_exception_drained", error=str(exc))
 
     async def _send_message(self, payload: dict[str, Any]) -> None:
         """Send a JSON message over the pipe.
@@ -552,8 +625,17 @@ class NamedPipeClient:
         length_prefix = len(data).to_bytes(_LENGTH_PREFIX_SIZE, "little", signed=False)
         await self._write_bytes(length_prefix + data)
 
-    async def _read_message(self) -> dict[str, Any]:
+    async def _read_message(self, *, frame_timeout: float | None) -> dict[str, Any]:
         """Read a JSON message from the pipe.
+
+        Args:
+            frame_timeout: Timeout in seconds for the initial length-prefix
+                read that marks the start of a new frame, or ``None`` to
+                wait indefinitely for the next frame to begin. Once a frame
+                has started, the payload continuation read always uses
+                :attr:`PipeConfig.io_timeout` regardless of this value,
+                since a peer that has committed to sending a frame is
+                expected to finish it promptly.
 
         Returns:
             dict[str, Any]: Parsed JSON payload.
@@ -561,7 +643,7 @@ class NamedPipeClient:
         Raises:
             ToolError: If reading or parsing fails.
         """
-        length_bytes = await self._read_exact(_LENGTH_PREFIX_SIZE)
+        length_bytes = await self._read_exact(_LENGTH_PREFIX_SIZE, read_timeout=frame_timeout)
         if len(length_bytes) != _LENGTH_PREFIX_SIZE:
             error_message = "Failed to read message length"
             raise ToolError(error_message)
@@ -571,7 +653,7 @@ class NamedPipeClient:
             error_message = "Invalid message length"
             raise ToolError(error_message)
 
-        data = await self._read_exact(length)
+        data = await self._read_exact(length, read_timeout=self._config.io_timeout)
         try:
             payload: object = json.loads(data.decode("utf-8"))
         except json.JSONDecodeError as exc:
@@ -584,11 +666,18 @@ class NamedPipeClient:
             raise ToolError(error_message)
         return cast("dict[str, Any]", payload)
 
-    async def _read_exact(self, size: int) -> bytes:
+    async def _read_exact(self, size: int, *, read_timeout: float | None) -> bytes:
         """Read an exact number of bytes from the pipe.
 
         Args:
             size: Number of bytes to read.
+            read_timeout: Maximum seconds to wait for the read to complete,
+                or ``None`` to wait indefinitely. The background reader loop
+                passes ``None`` for the idle wait on a new frame's length
+                prefix, since a connected peer may legitimately stay silent
+                for an unbounded time (for example while a debuggee runs
+                between breakpoints); every other caller passes a bounded
+                timeout so a genuinely stuck read still fails loudly.
 
         Returns:
             bytes: Bytes read.
@@ -596,13 +685,13 @@ class NamedPipeClient:
         Raises:
             ToolError: If the read fails or times out.
         """
+        read_call = asyncio.to_thread(self._read_exact_sync, size)
+        if read_timeout is None:
+            return await read_call
         try:
-            return await asyncio.wait_for(
-                asyncio.to_thread(self._read_exact_sync, size),
-                timeout=self._config.io_timeout,
-            )
+            return await asyncio.wait_for(read_call, timeout=read_timeout)
         except TimeoutError as exc:
-            self._cancel_io()
+            self._cancel_read_io()
             _logger.warning(
                 "pipe_error",
                 operation="read",
@@ -626,7 +715,7 @@ class NamedPipeClient:
                 timeout=self._config.io_timeout,
             )
         except TimeoutError as exc:
-            self._cancel_io()
+            self._cancel_write_io()
             _logger.warning(
                 "pipe_error",
                 operation="write",
@@ -712,13 +801,19 @@ class NamedPipeClient:
                 error_message = f"{error_message}. {hint}"
             raise ToolError(error_message)
 
+        # FILE_FLAG_OVERLAPPED is required so the background reader thread's
+        # indefinite ReadFile and a concurrent send_command's WriteFile can
+        # both be genuinely in flight on this one duplex handle at the same
+        # time. A synchronous (non-overlapped) handle does not support that:
+        # a second thread's I/O call on the same handle can block for the
+        # full duration of an unrelated already-pending operation (F16).
         handle: int | None = kernel32.CreateFileW(
             pipe_name,
             GENERIC_READ | GENERIC_WRITE,
             FILE_SHARE_READ | FILE_SHARE_WRITE,
             None,
             OPEN_EXISTING,
-            0,
+            FILE_FLAG_OVERLAPPED,
             None,
         )
 
@@ -752,7 +847,7 @@ class NamedPipeClient:
     def _read_exact_sync(self, size: int) -> bytes:
         """Read exactly ``size`` bytes from the pipe synchronously.
 
-        Performs blocking ``ReadFile`` calls in ``_CHUNK_SIZE`` increments
+        Performs overlapped ``ReadFile`` calls in ``_CHUNK_SIZE`` increments
         until the requested number of bytes has been collected. Designed
         to be driven on a worker thread via ``asyncio.to_thread``.
 
@@ -780,26 +875,8 @@ class NamedPipeClient:
         while remaining > 0:
             chunk_size = min(_CHUNK_SIZE, remaining)
             buffer = ctypes.create_string_buffer(chunk_size)
-            bytes_read = wintypes.DWORD(0)
-            success = kernel32.ReadFile(
-                self._handle,
-                buffer,
-                chunk_size,
-                ctypes.byref(bytes_read),
-                None,
-            )
-            if not success:
-                error = ctypes.get_last_error()
-                _logger.error(
-                    "pipe_error",
-                    operation="read",
-                    error="read failed",
-                    error_code=error,
-                    hint=self.format_error_hint(error) or "",
-                )
-                error_message = f"Pipe read failed (error {error})"
-                raise ToolError(error_message)
-            if bytes_read.value == 0:
+            bytes_read = self._run_overlapped_io(kernel32.ReadFile, buffer, chunk_size, is_read=True)
+            if bytes_read == 0:
                 _logger.error(
                     "pipe_error",
                     operation="read",
@@ -809,11 +886,11 @@ class NamedPipeClient:
                 raise ToolError(error_message)
             _logger.debug(
                 "pipe_read_chunk",
-                chunk_bytes=bytes_read.value,
-                remaining=remaining - bytes_read.value,
+                chunk_bytes=bytes_read,
+                remaining=remaining - bytes_read,
             )
-            data.extend(buffer.raw[: bytes_read.value])
-            remaining -= bytes_read.value
+            data.extend(buffer.raw[:bytes_read])
+            remaining -= bytes_read
 
         _logger.debug("pipe_read_complete", total_bytes=size)
         return bytes(data)
@@ -821,7 +898,7 @@ class NamedPipeClient:
     def _write_sync(self, data: bytes) -> None:
         """Write ``data`` to the pipe synchronously.
 
-        Performs blocking ``WriteFile`` calls in ``_CHUNK_SIZE`` increments
+        Performs overlapped ``WriteFile`` calls in ``_CHUNK_SIZE`` increments
         until the entire buffer has been transmitted. Designed to be
         driven on a worker thread via ``asyncio.to_thread``.
 
@@ -845,33 +922,140 @@ class NamedPipeClient:
 
         while offset < total:
             chunk = data[offset : offset + _CHUNK_SIZE]
-            bytes_written = wintypes.DWORD(0)
-            success = kernel32.WriteFile(
+            bytes_written = self._run_overlapped_io(kernel32.WriteFile, chunk, len(chunk), is_read=False)
+            _logger.debug(
+                "pipe_write_chunk",
+                chunk_bytes=bytes_written,
+                offset=offset + bytes_written,
+            )
+            offset += bytes_written
+
+        _logger.debug("pipe_write_complete", total_bytes=total)
+
+    def _run_overlapped_io(
+        self,
+        win32_func: Callable[[int, ctypes.Array[ctypes.c_char] | bytes, int, Any, Any], int],
+        buffer: ctypes.Array[ctypes.c_char] | bytes,
+        length: int,
+        *,
+        is_read: bool,
+    ) -> int:
+        """Execute one overlapped ``ReadFile``/``WriteFile`` call.
+
+        A synchronous (non-overlapped) pipe handle does not safely support
+        two threads issuing I/O on it concurrently: the background reader
+        thread's indefinite wait for the next frame and a concurrent
+        ``send_command`` write can otherwise block each other for the
+        duration of whichever operation is pending first (F16). Opening the
+        handle with ``FILE_FLAG_OVERLAPPED`` (see :meth:`_open_handle`) and
+        driving every read/write through a dedicated per-call
+        :class:`~intellicrack.bridges.win32_types.OVERLAPPED` structure
+        makes concurrent duplex I/O on one handle safe, matching the
+        approach the x64dbg plugin's own pipe server already uses.
+
+        The in-flight ``OVERLAPPED`` is recorded on
+        :attr:`_read_overlapped` or :attr:`_write_overlapped` for the
+        duration of the call so :meth:`_cancel_read_io`/
+        :meth:`_cancel_write_io` can target ``CancelIoEx`` at this specific
+        operation without collaterally aborting an unrelated,
+        concurrently-pending operation of the other kind on the same
+        handle.
+
+        Args:
+            win32_func: The bound ``kernel32.ReadFile`` or
+                ``kernel32.WriteFile`` entry point to invoke.
+            buffer: The read/write buffer (a mutable ``ctypes`` buffer for
+                reads, raw ``bytes`` for writes).
+            length: Number of bytes to transfer for this call.
+            is_read: True to track this operation on
+                :attr:`_read_overlapped` and report read-specific
+                diagnostics; False for :attr:`_write_overlapped`.
+
+        Returns:
+            int: The number of bytes actually transferred.
+
+        Raises:
+            ToolError: If the pipe is not connected, if the overlapped
+                event cannot be created, if the underlying Win32 call
+                fails, if the overlapped wait fails, or if the completion
+                status reports failure.
+        """
+        if self._handle is None:
+            error_message = "Pipe not connected"
+            raise ToolError(error_message)
+
+        operation = "read" if is_read else "write"
+        manual_reset = True
+        initially_signaled = False
+        event_handle = kernel32.CreateEventW(None, manual_reset, initially_signaled, None)
+        if not event_handle:
+            error = ctypes.get_last_error()
+            error_message = f"Failed to create overlapped event (error {error})"
+            raise ToolError(error_message)
+
+        overlapped = OVERLAPPED()
+        overlapped.hEvent = event_handle
+        if is_read:
+            self._read_overlapped = overlapped
+        else:
+            self._write_overlapped = overlapped
+        try:
+            transferred = wintypes.DWORD(0)
+            success = win32_func(
                 self._handle,
-                chunk,
-                len(chunk),
-                ctypes.byref(bytes_written),
-                None,
+                buffer,
+                length,
+                ctypes.byref(transferred),
+                ctypes.byref(overlapped),
             )
             if not success:
                 error = ctypes.get_last_error()
-                _logger.error(
-                    "pipe_error",
-                    operation="write",
-                    error="write failed",
-                    error_code=error,
-                    hint=self.format_error_hint(error) or "",
-                )
-                error_message = f"Pipe write failed (error {error})"
-                raise ToolError(error_message)
-            _logger.debug(
-                "pipe_write_chunk",
-                chunk_bytes=bytes_written.value,
-                offset=offset + bytes_written.value,
-            )
-            offset += bytes_written.value
+                if error != ERROR_IO_PENDING:
+                    self._log_pipe_io_failure(operation, error)
+                    error_message = f"Pipe {operation} failed (error {error})"
+                    raise ToolError(error_message)
 
-        _logger.debug("pipe_write_complete", total_bytes=total)
+                wait_result = kernel32.WaitForSingleObject(overlapped.hEvent, INFINITE)
+                if wait_result != WAIT_OBJECT_0:
+                    error = ctypes.get_last_error()
+                    error_message = f"Overlapped {operation} wait failed (result {wait_result}, error {error})"
+                    raise ToolError(error_message)
+
+                block_until_complete = False
+                completed = kernel32.GetOverlappedResult(
+                    self._handle,
+                    ctypes.byref(overlapped),
+                    ctypes.byref(transferred),
+                    block_until_complete,
+                )
+                if not completed:
+                    error = ctypes.get_last_error()
+                    self._log_pipe_io_failure(operation, error)
+                    error_message = f"Pipe {operation} failed (error {error})"
+                    raise ToolError(error_message)
+
+            return transferred.value
+        finally:
+            if is_read:
+                self._read_overlapped = None
+            else:
+                self._write_overlapped = None
+            kernel32.CloseHandle(event_handle)
+
+    def _log_pipe_io_failure(self, operation: str, error: int) -> None:
+        """Log a failed read/write completion with its Win32 error hint.
+
+        Args:
+            operation: ``"read"`` or ``"write"``.
+            error: The ``GetLastError`` value for the failed operation.
+        """
+        _logger.error(
+            "pipe_error",
+            operation=operation,
+            error=f"{operation} failed",
+            error_code=error,
+            hint=self.format_error_hint(error) or "",
+        )
 
     def _cancel_io(self) -> None:
         """Cancel any in-flight pipe I/O on supported Windows builds.
@@ -887,3 +1071,43 @@ class NamedPipeClient:
         _logger.debug("pipe_cancelling_io", handle=self._handle)
         kernel32.CancelIoEx(self._handle, None)
         _logger.debug("pipe_io_cancelled", handle=self._handle)
+
+    def _cancel_read_io(self) -> None:
+        """Cancel only the in-flight overlapped read, if any.
+
+        Scopes ``CancelIoEx`` to the specific pending read's
+        :class:`~intellicrack.bridges.win32_types.OVERLAPPED` structure so a
+        read timeout can never collaterally abort a concurrently in-flight
+        write on the same duplex handle (F16). A no-op when no read is
+        currently pending.
+        """
+        self._cancel_scoped_io(self._read_overlapped, operation="read")
+
+    def _cancel_write_io(self) -> None:
+        """Cancel only the in-flight overlapped write, if any.
+
+        Scopes ``CancelIoEx`` to the specific pending write's
+        :class:`~intellicrack.bridges.win32_types.OVERLAPPED` structure so a
+        write timeout can never collaterally abort a concurrently
+        in-flight read on the same duplex handle (F16). A no-op when no
+        write is currently pending.
+        """
+        self._cancel_scoped_io(self._write_overlapped, operation="write")
+
+    def _cancel_scoped_io(self, overlapped: OVERLAPPED | None, *, operation: str) -> None:
+        """Cancel a single tracked overlapped operation without touching others.
+
+        Args:
+            overlapped: The specific pending operation's ``OVERLAPPED``
+                structure, or None if nothing of this kind is in flight.
+            operation: ``"read"`` or ``"write"``, used only for logging.
+        """
+        if self._handle is None:
+            return
+        if sys.platform != "win32":
+            return
+        if overlapped is None:
+            return
+        _logger.debug("pipe_cancelling_scoped_io", handle=self._handle, operation=operation)
+        kernel32.CancelIoEx(self._handle, ctypes.byref(overlapped))
+        _logger.debug("pipe_scoped_io_cancelled", handle=self._handle, operation=operation)
