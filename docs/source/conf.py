@@ -10,10 +10,10 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 project = "Intellicrack"
-copyright = f"{datetime.now().year}, Intellicrack Team"  # noqa: A001
-author = "Intellicrack Team"
-release = "1.0.0"
-version = "1.0"
+copyright = f"{datetime.now().year}, Zachary Flint"  # noqa: A001
+author = "Zachary Flint"
+release = "0.1.0a1"
+version = "0.1"
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -91,7 +91,7 @@ html_theme_options = {
 
 html_context = {
     "display_github": True,
-    "github_user": "intellicrack",
+    "github_user": "zacharyflint",
     "github_repo": "intellicrack",
     "github_version": "main",
     "conf_py_path": "/docs/source/",

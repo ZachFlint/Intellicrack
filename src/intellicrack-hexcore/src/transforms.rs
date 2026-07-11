@@ -40,8 +40,9 @@ pub enum PaddingMode {
     /// the next block boundary.  Decrypt keeps the plaintext as-is so the
     /// caller can strip zeros according to their own schema.
     Zero,
-    /// ISO 10126 padding: random padding bytes with the final byte holding
-    /// the padding length.  Strictly validated on decrypt.
+    /// ISO 10126 padding: filler bytes with the final byte holding the
+    /// padding length.  This implementation uses deterministic zero filler
+    /// for reproducibility.  Strictly validated on decrypt.
     Iso10126,
 }
 

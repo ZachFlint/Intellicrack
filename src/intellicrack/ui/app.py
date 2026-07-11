@@ -2318,13 +2318,28 @@ class MainWindow(QMainWindow):
         self.status_update.emit("Provider reconnection failed")
 
     def _on_refresh_models(self) -> None:
-        """Handle refresh models action."""
+        """Handle refresh models action.
+
+        Prefers the already-connected provider instance (if any) so the
+        refresh reuses its authenticated client and resolved endpoint
+        (e.g. the HuggingFace token already verified at connect time, or
+        the Ollama cloud endpoint when local Ollama is not running)
+        instead of re-deriving credentials and falling back to a bare
+        HTTP probe against a possibly-empty token or an unreachable local
+        endpoint.
+        """
         provider_data: object = self._provider_combo.currentData()
         if not provider_data:
             QMessageBox.warning(self, "Warning", "Please select a provider first.")
             return
 
         provider_id: str = provider_data.value if isinstance(provider_data, ProviderName) else str(provider_data)
+
+        connected_instance = None
+        if isinstance(provider_data, ProviderName):
+            registry_instance = self._orchestrator.provider_registry.get(provider_data)
+            if registry_instance is not None and registry_instance.is_connected:
+                connected_instance = registry_instance
 
         if (
             hasattr(self._config, "is_provider_enabled")
@@ -2358,6 +2373,7 @@ class MainWindow(QMainWindow):
             "models_refresh_requested",
             provider=provider_id,
             has_credentials=bool(api_key),
+            reuse_connected_instance=connected_instance is not None,
         )
         self.status_update.emit("Refreshing models...")
         self._pending_model_restore = self.model_combo.currentText().strip()
@@ -2367,7 +2383,7 @@ class MainWindow(QMainWindow):
         if self.model_discovery is not None:
             run_bridge_coroutine_async(self.model_discovery.discover_all(), parent=self)
 
-        self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, parent=self)
+        self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, provider=connected_instance, parent=self)
 
         def _refresh_slot(s: int, m: list[str], msg: str) -> None:
             self._on_models_refresh_finished(success=bool(s), models=m, message=msg)

@@ -59,6 +59,7 @@ if TYPE_CHECKING:
     from intellicrack.core.hexpat_compiler import HexPatCompiler, HexPatError
     from intellicrack.core.tools import ToolRegistry
     from intellicrack.core.transform_pipeline import TransformPipeline
+    from intellicrack.core.types import HexDocumentFull
     from intellicrack.core.yara_scanner import YaraScanner
 
 
@@ -3942,7 +3943,7 @@ class _HexEditorBridgeBase(ToolBridgeBase):
             original_path: Filesystem path of the source file.
 
         Yields:
-            Generator[mmap.mmap | bytes]: A memory-mapped view of the
+            mmap.mmap | bytes: A memory-mapped view of the
                 file, or ``b""`` if the file is empty.
         """
         with Path(original_path).open("rb") as fh:
@@ -4882,6 +4883,34 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             self.state_holder.set_document(None, None, source="bridge")
         _logger.info("file_closed")
         return True
+
+    def adopt_document(self, document: HexDocumentFull, path: Path) -> None:
+        """Adopt an already-open hexcore document as the bridge's active document.
+
+        Called by the GUI panel after it opens a file directly through
+        ``intellicrack_hexcore.HexDocument.open`` so that AI-callable tool
+        operations -- PE section/import/export parsing, disassembly,
+        VA-mapping auto-detection, and ``.hexpat`` pattern auto-detection --
+        operate on the same document the panel displays instead of raising
+        "no document open". Synchronous and intentionally does not publish
+        through :attr:`state_holder`: the panel already publishes its own
+        ``DOCUMENT_OPENED`` notification via ``HexDocumentState.set_document``
+        immediately after calling this, and the panel's state-event handler
+        reacts to that event by reloading the file, so publishing here as
+        well would recurse back into the panel's load path.
+
+        Args:
+            document: Already-opened ``HexDocument`` instance.
+            path: Filesystem path the document was opened from.
+        """
+        with self._state_lock:
+            self.document = document
+            self._cursor_offset = 0
+            self._selection = None
+            self._state.binary_loaded = True
+            self._state.target_path = path
+        self._publish_tool_state()
+        _logger.info("bridge_document_adopted", path=str(path))
 
     async def compare_files(self, path_a: str, path_b: str) -> dict[str, Any]:
         """Compare two files byte-by-byte.

@@ -985,7 +985,7 @@ class TestReadExactTimeout:
 
         read_exact = getattr(client, "_read_exact")
         with pytest.raises(ToolError, match=r"Timed out reading from pipe"):
-            asyncio.run(read_exact(8))
+            asyncio.run(read_exact(8, read_timeout=config.io_timeout))
 
     def test_read_exact_timeout_error_message_exact(self) -> None:
         """ToolError raised on timeout must carry the exact message string.
@@ -1016,7 +1016,7 @@ class TestReadExactTimeout:
 
         read_exact = getattr(client, "_read_exact")
         with pytest.raises(ToolError, match=r"^Timed out reading from pipe$"):
-            asyncio.run(read_exact(8))
+            asyncio.run(read_exact(8, read_timeout=config.io_timeout))
 
 
 # ---------------------------------------------------------------------------

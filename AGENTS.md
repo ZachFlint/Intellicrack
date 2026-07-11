@@ -50,6 +50,10 @@ unifies tools, context, and AI connectivity into a single operational surface.
 
 ## CRITICAL: SHELL USAGE
 
+- **Prefer the `PowerShell` tool over the `Bash` tool for ALL shell
+  operations.** Only fall back to the `Bash` tool when a command genuinely
+  requires Unix shell syntax or POSIX-only utilities that have no PowerShell
+  equivalent. Default tool of choice is `PowerShell`.
 - **Always use `pwsh` (PowerShell 7) for PowerShell commands, NEVER
   `powershell.exe` (PowerShell 5)**
 - When executing PowerShell commands, use `pwsh -Command '...'` or `pwsh -File ...`
@@ -89,13 +93,15 @@ unifies tools, context, and AI connectivity into a single operational surface.
   weaken type checking strictness,
   add exclusions, or suppress diagnostics. The basedpyright config is locked and
   immutable.
-- **ALL code must pass `darglint`** - Full darglint compliance required with zero
-  findings. Docstrings must exactly match signatures: parameters, types, returns,
-  raises, and yields. No errors or warnings of any kind are acceptable.
-- **NEVER suppress darglint findings** - No inline suppression directives, disable
-  comments, or any mechanism to ignore darglint findings. Fix the docstring instead.
-- **NEVER weaken darglint configuration** - The darglint config is locked and
-  immutable. Never disable rules, add ignores, exclude files, or reduce strictness.
+- **ALL code must pass `pydoclint` and `pydocstyle`** - Full compliance required
+  with zero findings. Docstrings must exactly match signatures: parameters, types,
+  returns, raises, and yields. No errors or warnings of any kind are acceptable.
+- **NEVER suppress pydoclint or pydocstyle findings** - No inline suppression
+  directives, disable comments, or any mechanism to ignore findings. Fix the
+  docstring instead.
+- **NEVER weaken pydoclint or pydocstyle configuration** - The configs are locked
+  and immutable. Never disable rules, add ignores, exclude files, or reduce
+  strictness.
 - **Follow common development principles (where relevant) including:** •
   **SOLID** (Single Responsibility Principle, Open/Closed Principle, Liskov
   Substitution Principle, Interface Segregation Principle, and Dependency

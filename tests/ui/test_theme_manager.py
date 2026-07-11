@@ -13,7 +13,8 @@ from __future__ import annotations
 
 import pytest
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import QApplication, QMainWindow, QToolBar, QWidget
 
 from intellicrack.ui.resources.resource_helper import get_assets_path
 from intellicrack.ui.resources.theme_manager import (
@@ -530,6 +531,116 @@ class TestStylesheetFiles:
             assert "}" in content, f"{theme} missing closing braces"
             assert ":" in content, f"{theme} missing property separators"
             assert ";" in content, f"{theme} missing statement terminators"
+
+
+class _RecordingStyleStandIn:
+    """Duck-typed stand-in for ``QApplication.style()`` that records ``polish``/``unpolish`` calls.
+
+    ``QStyle.polish``/``unpolish`` are C++ virtuals with three
+    inconsistently-named PyQt6-stub overloads (``QWidget``, ``QPalette``,
+    ``QApplication``): a real ``QStyle`` subclass overriding them cannot be
+    typed in a way that is simultaneously compatible with all three
+    differently-named base overloads, so this stand-in avoids subclassing
+    ``QStyle``/``QProxyStyle`` entirely. ``ThemeManager._repolish_chrome``
+    only ever calls ``style().unpolish(widget)`` and ``style().polish(widget)``
+    via plain duck typing on whatever ``QApplication.style()`` returns, so a
+    plain, precisely-typed Python object serves exactly as well as a real
+    ``QStyle`` for observing those two calls, with no override involved at
+    all. It is installed only by reassigning the ``style`` attribute on the
+    live ``QApplication`` instance for the narrow, fully synchronous duration
+    of a single ``ThemeManager.apply_theme`` call, then immediately restored.
+    """
+
+    def __init__(self) -> None:
+        """Initialize the stand-in with empty call-history lists."""
+        self.polished: list[QWidget] = []
+        self.unpolished: list[QWidget] = []
+
+    def polish(self, widget: QWidget) -> None:
+        """Record a ``polish(widget)`` call.
+
+        Args:
+            widget: The widget being polished.
+        """
+        self.polished.append(widget)
+
+    def unpolish(self, widget: QWidget) -> None:
+        """Record an ``unpolish(widget)`` call.
+
+        Args:
+            widget: The widget being unpolished.
+        """
+        self.unpolished.append(widget)
+
+
+class TestMenuBarToolbarRuntimeRepolish:
+    """Regression gate: a live theme toggle must repolish the menu bar and toolbar.
+
+    Reproduces the reported bug where Settings -> Toggle Theme left the main
+    menu bar and toolbar rendering the previous theme's colors: on Windows, a
+    QMenuBar/QToolBar that has already been polished once keeps its
+    first-polished background after a second ``QApplication.setStyleSheet()``
+    call unless it is explicitly unpolished and repolished. This asserts the
+    fix's actual mechanism -- that ``ThemeManager.apply_theme`` calls
+    ``style().unpolish()`` then ``style().polish()`` on the live
+    QMenuBar/QToolBar during a runtime toggle -- via
+    :class:`_RecordingStyleStandIn`, rather than sampling rendered pixels:
+    pixel output does not distinguish a fixed build from a broken one under
+    Qt's offscreen platform plugin (used in the sandbox), where
+    ``setStyleSheet`` alone already repaints correctly regardless of polish
+    state.
+    """
+
+    @staticmethod
+    @pytest.mark.usefixtures("qapp")
+    def test_runtime_toggle_repolishes_menubar_and_toolbar(theme_manager: ThemeManager) -> None:
+        """A runtime dark->light toggle unpolishes and repolishes a live QMenuBar and QToolBar.
+
+        Falsifiable: removing the ``self._repolish_chrome(app_instance)`` call
+        from ``ThemeManager.apply_theme`` leaves ``unpolished`` (and
+        ``polished``) empty for both widgets (confirmed by reverting it
+        locally and rerunning this test) -- the stand-in style is never
+        consulted at all without that call, since Qt's own stylesheet
+        machinery resolves styling internally rather than by calling back
+        into ``QApplication.style()``.
+
+        Args:
+            theme_manager: Fresh ThemeManager fixture instance.
+        """
+        app = QApplication.instance()
+        assert isinstance(app, QApplication)
+
+        window = QMainWindow()
+        menubar = window.menuBar()
+        assert menubar is not None
+        menubar.addMenu("&File")
+        toolbar = QToolBar("Main Toolbar")
+        toolbar.addAction(QAction("Load Binary", toolbar))
+        window.addToolBar(toolbar)
+        window.resize(400, 200)
+        window.show()
+        QApplication.processEvents()
+
+        try:
+            assert theme_manager.apply_theme(THEME_DARK)
+            QApplication.processEvents()
+
+            stand_in = _RecordingStyleStandIn()
+            original_style_method = app.style
+            setattr(app, "style", lambda: stand_in)
+            try:
+                assert theme_manager.apply_theme(THEME_LIGHT)
+            finally:
+                setattr(app, "style", original_style_method)
+            QApplication.processEvents()
+
+            assert menubar in stand_in.unpolished, "QMenuBar was not unpolished during the runtime theme toggle"
+            assert menubar in stand_in.polished, "QMenuBar was not repolished during the runtime theme toggle"
+            assert toolbar in stand_in.unpolished, "QToolBar was not unpolished during the runtime theme toggle"
+            assert toolbar in stand_in.polished, "QToolBar was not repolished during the runtime theme toggle"
+        finally:
+            window.close()
+            theme_manager.apply_theme(THEME_DARK)
 
 
 class TestThemeIntegrity:

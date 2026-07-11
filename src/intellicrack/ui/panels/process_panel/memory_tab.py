@@ -92,6 +92,44 @@ class MemoryTab(QWidget):
         attached = pid is not None
         for btn in self._action_buttons:
             btn.setEnabled(attached)
+        if pid is not None:
+            self._populate_default_read_address(pid)
+
+    def _populate_default_read_address(self, pid: int) -> None:
+        """Prefill the Read tab address with the main module base so the default read succeeds.
+
+        The main executable module's image header is always a committed,
+        readable region, so seeding the Read address field with it means a
+        user who presses Read immediately after attaching -- without typing
+        an address first -- gets real bytes back instead of a
+        ReadProcessMemory failure against an empty/unreadable default.
+
+        Args:
+            pid: Attached process ID to query the module list for.
+        """
+        if self._bridge is None:
+            return
+
+        def _on_success(result: object) -> None:
+            if not isinstance(result, list) or not result:
+                return
+            typed_result = cast("list[object]", result)
+            base_raw: object = getattr(typed_result[0], "base_address", None)
+            if isinstance(base_raw, int) and base_raw:
+                self._read_addr.setText(f"0x{base_raw:X}")
+
+        def _on_error(exc: object) -> None:
+            _logger.debug("memory_default_read_address_failed", pid=pid, error=str(exc))
+
+        run_bridge_coroutine_logged(
+            self._bridge.get_modules(pid),
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=self,
+            event="process_get_modules_default_read",
+            logger=_logger,
+            pid=pid,
+        )
 
     def _setup_ui(self) -> None:
         """Build the memory tab layout."""
@@ -520,9 +558,15 @@ class MemoryTab(QWidget):
         fmt = self._read_format.currentText()
 
         def _on_success(result: object) -> None:
-            if not isinstance(result, (bytes, bytearray)):
+            if not isinstance(result, str):
                 return
-            self._read_output.setPlainText(self._format_memory(result, addr, fmt))
+            try:
+                data = bytes.fromhex(result)
+            except ValueError:
+                _logger.warning("memory_read_hex_decode_failed", address=hex(addr), size=size)
+                self._read_output.setPlainText("Error: malformed hex payload from bridge")
+                return
+            self._read_output.setPlainText(self._format_memory(data, addr, fmt))
 
         def _on_error(exc: object) -> None:
             _logger.warning("memory_read_failed", error=str(exc))

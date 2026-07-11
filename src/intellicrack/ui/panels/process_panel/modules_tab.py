@@ -81,6 +81,10 @@ class ModulesTab(QWidget):
         """
         self._attached_pid = pid
 
+    def refresh(self) -> None:
+        """Populate the module list immediately, e.g. after attach or tab activation."""
+        self._refresh_modules()
+
     def _setup_ui(self) -> None:
         """Build the modules tab layout."""
         layout = QVBoxLayout(self)

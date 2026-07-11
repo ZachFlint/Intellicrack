@@ -237,6 +237,12 @@ NMPWAIT_WAIT_FOREVER: Final[int] = 0xFFFFFFFF
 NMPWAIT_USE_DEFAULT_WAIT: Final[int] = 0x00000000
 
 # ---------------------------------------------------------------------------
+# Overlapped I/O
+# ---------------------------------------------------------------------------
+FILE_FLAG_OVERLAPPED: Final[int] = 0x40000000
+ERROR_IO_PENDING: Final[int] = 997
+
+# ---------------------------------------------------------------------------
 # RTL_USER_PROCESS_PARAMETERS command-line offsets
 # ---------------------------------------------------------------------------
 CMD_LINE_OFFSET_32: Final[int] = 0x40
@@ -294,6 +300,31 @@ THREAD_STATE_NAMES: Final[dict[int, str]] = {
     THREAD_STATE_TRANSITION: "transition",
     THREAD_STATE_DEFERRED_READY: "deferred_ready",
 }
+
+# ---------------------------------------------------------------------------
+# Overlapped I/O structures
+# ---------------------------------------------------------------------------
+
+
+class OVERLAPPED(ctypes.Structure):
+    """Windows OVERLAPPED structure for asynchronous (overlapped) file I/O.
+
+    Required alongside ``FILE_FLAG_OVERLAPPED`` for ``ReadFile``/
+    ``WriteFile``/``ConnectNamedPipe`` calls that must be able to run
+    concurrently on one handle from different threads (for example a
+    named-pipe client's background reader thread and its command-writer
+    thread) without one operation blocking the other's completion, which a
+    synchronous (non-overlapped) handle does not support safely.
+    """
+
+    _fields_: ClassVar = [
+        ("Internal", ctypes.c_void_p),
+        ("InternalHigh", ctypes.c_void_p),
+        ("Offset", wintypes.DWORD),
+        ("OffsetHigh", wintypes.DWORD),
+        ("hEvent", wintypes.HANDLE),
+    ]
+
 
 # ---------------------------------------------------------------------------
 # Toolhelp32 Structures

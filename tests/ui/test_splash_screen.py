@@ -21,6 +21,7 @@ from PyQt6.QtGui import QColor, QImage, QPainter, QPixmap
 from PyQt6.QtWidgets import QLabel, QProgressBar, QWidget
 
 from intellicrack.ui.dialogs.splash_screen import (
+    CANONICAL_WORDMARK,
     DEFAULT_DPI_SCALE,
     FADE_DURATION_MS,
     FALLBACK_ACCENT_COLOR,
@@ -28,8 +29,10 @@ from intellicrack.ui.dialogs.splash_screen import (
     FALLBACK_TEXT_COLOR,
     PROGRESS_ANIM_DURATION_MS,
     SPLASH_HEIGHT,
+    SPLASH_IMAGE_SIZE,
     SPLASH_WIDTH,
     SplashScreen,
+    build_splash_image,
 )
 from intellicrack.ui.resources.resource_helper import get_assets_path
 
@@ -143,7 +146,7 @@ def splash_screen(
         qapp: Qt application fixture.
 
     Yields:
-        Generator[SplashScreen]:: A SplashScreen instance.
+        SplashScreen: A SplashScreen instance.
     """
     del qapp
     splash = SplashScreen()
@@ -161,7 +164,7 @@ def splash_with_version(
         qapp: Qt application fixture.
 
     Yields:
-        Generator[SplashScreen]:: A SplashScreen instance with version "1.2.3".
+        SplashScreen: A SplashScreen instance with version "1.2.3".
     """
     del qapp
     splash = SplashScreen(version="1.2.3")
@@ -558,6 +561,107 @@ class TestSplashImageAsset:
         assert pixmap.height() >= _MIN_SPLASH_IMAGE_HEIGHT, "splash.png too short"
         assert pixmap.width() <= _MAX_SPLASH_IMAGE_WIDTH, "splash.png too wide"
         assert pixmap.height() <= _MAX_SPLASH_IMAGE_HEIGHT, "splash.png too tall"
+
+
+_OLD_CAPITAL_C_WORDMARK: str = "IntelliCrack"
+
+
+class TestSplashAssetGeneration:
+    """Tests for build_splash_image and its relationship to the shipped assets.
+
+    Regression gate for the branding fix: the shipped splash.png (and its
+    icons/splash.png duplicate) must be exactly build_splash_image's output
+    for the canonical "Intellicrack" wordmark, not the old "IntelliCrack"
+    (capital C) wordmark. build_splash_image freezes the canonical wordmark
+    as a pre-rendered PNG asset instead of shaping it live, so this
+    comparison is pixel-exact and deterministic regardless of which fonts
+    are installed in the environment running the test.
+    """
+
+    @staticmethod
+    def test_build_splash_image_returns_correct_size(qapp: QApplication) -> None:
+        """build_splash_image returns a square image at SPLASH_IMAGE_SIZE.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
+        del qapp
+        image = build_splash_image(CANONICAL_WORDMARK)
+        assert image.width() == SPLASH_IMAGE_SIZE
+        assert image.height() == SPLASH_IMAGE_SIZE
+        assert not image.isNull()
+
+    @staticmethod
+    def test_wordmark_argument_drives_output(qapp: QApplication) -> None:
+        """Different wordmark strings produce different pixel output.
+
+        Proves build_splash_image actually renders its ``wordmark`` argument
+        rather than ignoring it: a regression that hardcoded the canonical
+        frozen asset regardless of input would make this comparison spuriously
+        equal.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
+        del qapp
+        canonical = build_splash_image(CANONICAL_WORDMARK)
+        old_capital_c = build_splash_image(_OLD_CAPITAL_C_WORDMARK)
+        assert canonical != old_capital_c, "build_splash_image produced identical output for different wordmark strings"
+
+    @staticmethod
+    def test_build_splash_image_is_deterministic(qapp: QApplication) -> None:
+        """Two calls with the canonical wordmark produce pixel-identical output.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
+        del qapp
+        first = build_splash_image(CANONICAL_WORDMARK)
+        second = build_splash_image(CANONICAL_WORDMARK)
+        assert first == second, "build_splash_image(CANONICAL_WORDMARK) is not deterministic across calls"
+
+    @staticmethod
+    def test_shipped_splash_png_matches_canonical_build(qapp: QApplication) -> None:
+        """splash.png is pixel-exact-equal to build_splash_image(CANONICAL_WORDMARK).
+
+        Falsifiable: reverting splash.png to the old capital-C asset makes
+        this comparison fail, since the shipped bytes would no longer match
+        the deterministic canonical build.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
+        del qapp
+        canonical = build_splash_image(CANONICAL_WORDMARK)
+        shipped_path = get_assets_path() / "splash.png"
+        shipped = QImage(str(shipped_path)).convertToFormat(canonical.format())
+        assert shipped == canonical, "shipped splash.png does not pixel-match build_splash_image(CANONICAL_WORDMARK)"
+
+    @staticmethod
+    def test_shipped_splash_png_does_not_match_old_capital_c_wordmark(qapp: QApplication) -> None:
+        """splash.png does NOT match a build using the old "IntelliCrack" wordmark.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
+        del qapp
+        old_capital_c = build_splash_image(_OLD_CAPITAL_C_WORDMARK)
+        shipped_path = get_assets_path() / "splash.png"
+        shipped = QImage(str(shipped_path)).convertToFormat(old_capital_c.format())
+        assert shipped != old_capital_c, "shipped splash.png still matches the old capital-C wordmark rendering"
+
+    @staticmethod
+    def test_shipped_icons_splash_png_matches_canonical_build(qapp: QApplication) -> None:
+        """The duplicate icons/splash.png is pixel-exact-equal to the canonical build.
+
+        Args:
+            qapp: QApplication fixture required by Qt widgets.
+        """
+        del qapp
+        canonical = build_splash_image(CANONICAL_WORDMARK)
+        dup_path = get_assets_path() / "icons" / "splash.png"
+        dup = QImage(str(dup_path)).convertToFormat(canonical.format())
+        assert dup == canonical, "icons/splash.png duplicate does not pixel-match build_splash_image(CANONICAL_WORDMARK)"
 
 
 class TestSplashScreenIntegration:

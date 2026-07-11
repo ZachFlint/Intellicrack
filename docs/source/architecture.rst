@@ -10,7 +10,7 @@ Overview
 .. code-block:: text
 
    intellicrack/
-   ├── bridges/         # External tool integrations (Ghidra, radare2, Frida)
+   ├── bridges/         # External tool integrations (Ghidra, Cutter/rizin, Frida, x64dbg)
    ├── core/            # Core analysis engine
    ├── credentials/     # Credential and OAuth management
    ├── providers/       # AI provider integrations
@@ -28,6 +28,9 @@ The providers module provides integration with multiple AI providers:
 * OpenAI (GPT-4, GPT-3.5)
 * Anthropic (Claude)
 * Google (Gemini)
+* Grok (xAI)
+* OpenRouter (multi-provider aggregator)
+* HuggingFace / transformers (local models)
 * Local models (Ollama, GGUF)
 
 Core Analysis
@@ -55,7 +58,10 @@ Bridge Integrations
 
 External tool integrations:
 
-* **Ghidra**: Advanced decompilation
-* **radare2**: Binary analysis framework
+* **Ghidra**: Advanced decompilation and static analysis
+* **Cutter/rizin**: Binary analysis and disassembly framework
 * **Frida**: Dynamic instrumentation
-* **Capstone**: Disassembly engine
+* **x64dbg**: Windows debugger integration
+* **Process**: Windows process inspection and manipulation
+* **Hex editor**: Binary editing backed by the native hexcore module
+* **Sandbox**: Isolated execution environments

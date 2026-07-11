@@ -28,10 +28,10 @@ Bridge Integrations
 The ``intellicrack.bridges`` module provides external tool integrations:
 
 * **GhidraBridge** - Ghidra headless analysis and decompilation
-* **Radare2Bridge** - radare2/rizin binary analysis
+* **CutterBridge** - Cutter/rizin binary analysis
 * **FridaBridge** - Dynamic instrumentation via Frida
 * **X64DbgBridge** - x64dbg debugger integration
-* **BinaryBridge** - Generic binary operations (PE/ELF/Mach-O)
+* **BinaryOperationsBridge** - Generic binary operations (PE/ELF/Mach-O)
 * **ProcessBridge** - Windows process manipulation
 
 AI Providers
@@ -73,7 +73,8 @@ User Interface
 The ``intellicrack.ui`` module contains PyQt6 GUI components:
 
 * **MainWindow** - Primary application window
-* **ChatWidget** - AI chat interface
+* **ChatPanel** - AI chat interface
 * **HexEditorWidget** - Binary hex editor
-* **DisassemblyView** - Disassembly display
-* **AnalysisPanel** - Analysis results panel
+* **GhidraPanel** - Ghidra analysis panel
+* **CutterPanel** - Cutter/rizin analysis panel
+* **X64DbgPanel** - x64dbg debugger panel

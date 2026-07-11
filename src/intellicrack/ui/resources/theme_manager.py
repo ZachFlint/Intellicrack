@@ -15,7 +15,7 @@ from typing import ClassVar, Final
 
 from PyQt6.QtCore import QObject, Qt, pyqtBoundSignal, pyqtSignal
 from PyQt6.QtGui import QColor, QGuiApplication
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMenuBar, QToolBar
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.resource_helper import get_assets_path, get_style_path
@@ -1528,6 +1528,7 @@ class ThemeManager:
 
         if isinstance(app_instance, QApplication):
             app_instance.setStyleSheet(stylesheet)
+            self._repolish_chrome(app_instance)
             self._requested_theme = theme
             self._current_theme = resolved
             self._update_system_watch()
@@ -1537,6 +1538,33 @@ class ThemeManager:
 
         _logger.warning("no_qapplication_instance")
         return False
+
+    @staticmethod
+    def _repolish_chrome(app_instance: QApplication) -> None:
+        """Force menu bars and toolbars to repaint after a live stylesheet change.
+
+        ``QApplication.setStyleSheet`` reliably restyles ordinary widgets on
+        a live theme change, but on Windows a :class:`~PyQt6.QtWidgets.QMenuBar`
+        or :class:`~PyQt6.QtWidgets.QToolBar` that has already been painted once
+        keeps rendering with the background it was first polished with: only
+        newly constructed instances pick up the new stylesheet automatically.
+        Explicitly unpolishing and repolishing every live instance forces Qt to
+        recompute their style from the new stylesheet immediately, instead of
+        leaving the main menu bar and toolbar visually stuck on the previous
+        theme until the next resize or window recreation.
+
+        Args:
+            app_instance: The active QApplication instance whose menu bars and
+                toolbars are repolished.
+        """
+        style = app_instance.style()
+        if style is None:
+            return
+        for widget in app_instance.allWidgets():
+            if isinstance(widget, (QMenuBar, QToolBar)):
+                style.unpolish(widget)
+                style.polish(widget)
+                widget.update()
 
     def _update_system_watch(self) -> None:
         """Connect or disconnect live OS color-scheme tracking.
@@ -1570,6 +1598,7 @@ class ThemeManager:
         app_instance = QApplication.instance()
         if isinstance(app_instance, QApplication):
             app_instance.setStyleSheet(self.get_stylesheet(resolved))
+            self._repolish_chrome(app_instance)
             self._current_theme = resolved
             _logger.info("system_color_scheme_changed", resolved=resolved)
             self._notifier.theme_changed.emit(resolved)
