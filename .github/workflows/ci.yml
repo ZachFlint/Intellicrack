@@ -242,8 +242,41 @@ jobs:
           path: |
             tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64
             tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32
-      - name: Commit refreshed plugin binaries
+      - name: Detect plugin source changes
+        id: plugin_src
         if: github.event_name == 'push'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $before = '${{ github.event.before }}'
+          $sha = '${{ github.sha }}'
+          $zero = '0' * 40
+          $baseValid = [bool]$before -and $before -ne $zero
+          if ($baseValid) {
+            git cat-file -e "$before^{commit}" 2>$null
+            if ($LASTEXITCODE -ne 0) { $baseValid = $false }
+          }
+          if ($baseValid) {
+            $range = "$before..$sha"
+          } else {
+            git rev-parse --verify --quiet "$sha~1" | Out-Null
+            $range = if ($LASTEXITCODE -eq 0) { "$sha~1..$sha" } else { $null }
+          }
+          if ($null -eq $range) {
+            # Base commit unknown (new branch / shallow / initial push): refresh
+            # to be safe rather than risk shipping stale committed binaries.
+            $changed = 'true'
+            Write-Host "No comparable base commit; treating plugin source as changed."
+          } else {
+            $files = git diff --name-only $range -- src/x64dbg-plugin/
+            if ($LASTEXITCODE -ne 0) { throw "git diff failed for range $range" }
+            $changed = if ($files) { 'true' } else { 'false' }
+            Write-Host "Range $range changed plugin-source files:`n$files"
+          }
+          "changed=$changed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "plugin_source_changed=$changed"
+      - name: Commit refreshed plugin binaries
+        if: github.event_name == 'push' && steps.plugin_src.outputs.changed == 'true'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
