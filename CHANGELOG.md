@@ -9,6 +9,14 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- Implement layout restoration toggle and model persistence (`921c7a4`)
+Introduce opt-in window layout restoration and per-provider model selection persistence via QSettings to improve session continuity. Additionally, scale up the Docker sandbox default resource limits to support full-suite coverage runs and clean up legacy audit documentation.
+- Add `restore_layout` toggle to UI configuration and preferences
+- Persist and restore last-active provider and per-provider model selections
+- Increase default sandbox resources to 16 CPUs and 32GB RAM, forwarding `COVERAGE_JOBS`
+- Fix preferences dialog target path to use `config.toml` instead of `config.json`
+- Clean up obsolete audit markdown and analysis export files
+
 - Complete tool bridge capabilities and integrate UI controls (`6bb308b`)
 This update resolves gaps between the LLM-callable tool bridges and the Qt GUI panels across Cutter, Frida, Ghidra, Hex Editor, Process, and Sandbox tools. By routing GUI actions through the unified bridge layer, we eliminate duplicate implementations, ensure consistent behavior, and expose previously headless capabilities directly to the user interface.
 - **Cutter/Rizin**: Added debugger, project, search, and static analysis tabs, corrected relocations/resources commands, and added ESIL/flag controls.
@@ -338,14 +346,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
-
-- Implement layout restoration toggle and model persistence (``)
-Introduce opt-in window layout restoration and per-provider model selection persistence via QSettings to improve session continuity. Additionally, scale up the Docker sandbox default resource limits to support full-suite coverage runs and clean up legacy audit documentation.
-- Add `restore_layout` toggle to UI configuration and preferences
-- Persist and restore last-active provider and per-provider model selections
-- Increase default sandbox resources to 16 CPUs and 32GB RAM, forwarding `COVERAGE_JOBS`
-- Fix preferences dialog target path to use `config.toml` instead of `config.json`
-- Clean up obsolete audit markdown and analysis export files
 
 
 ### Changed
@@ -888,6 +888,13 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
+
+- Overhaul auto-save and introduce host-native test pass (``)
+Migrated the SessionManager auto-save loop from an asyncio task to a dedicated daemon thread with a standard threading.Lock to ensure safe, loop-agnostic session closure across different event loops. Additionally, established a dedicated host-native test runner and registry to execute hardware- and OS-dependent tests outside the isolated Docker sandbox.
+* **Bridges**: Fixed Cutter relocation RVA-to-VA mapping, expanded Process Bridge TLS slot reading to cover expansion slots, and switched Ghidra path resolution to lexical normalization to bypass Windows ACL handle-opening errors.
+* **Plugins**: Ported the x64dbg launcher from subprocess.Popen to spawn_on_hidden_desktop to prevent GUI deadlocks and support hidden desktop execution.
+* **Providers**: Implemented a uniform empty-message validation guard across all LLM backends.
+* **UI**: Added bounded synchronous joins on background workers in the hex editor pattern evaluator and PE checksum repairer to improve responsiveness for fast operations.
 
 
 ### Documentation

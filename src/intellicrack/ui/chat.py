@@ -446,6 +446,11 @@ class ChatPanel(QFrame):
         content_label = bubble.content_label
 
         def append_chunk(chunk: str) -> None:
+            """Append a streamed token chunk to the bubble and scroll into view.
+
+            Args:
+                chunk: Incremental text fragment from the streaming response.
+            """
             message.content += chunk
             content_label.setText(message.content)
             content_label.setVisible(bool(message.content))

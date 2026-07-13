@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sqlite3
+import threading
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime, timedelta
@@ -146,7 +147,7 @@ class Session:
 
     @property
     def active_binary(self) -> BinaryInfo | None:
-        """Get the currently active binary.
+        """Currently active binary, when one is selected.
 
         Returns:
             BinaryInfo | None: Active BinaryInfo or None.
@@ -300,10 +301,10 @@ class SessionStore:
 
     @contextmanager
     def _connection(self) -> Generator[sqlite3.Connection]:
-        """Get a database connection.
+        """Open a database connection with commit/rollback handling.
 
         Yields:
-            Generator[sqlite3.Connection]: Active database connection with
+            sqlite3.Connection: Active database connection with
                 auto-commit/rollback.
 
         Raises:
@@ -996,7 +997,15 @@ class SessionManager:
     """Manages session lifecycle and persistence.
 
     Coordinates between the active session and the session store.
+
+    Auto-save runs on a dedicated daemon thread rather than an ``asyncio.Task``
+    so start/stop/close remain safe when callers use different event loops
+    (GUI bridge loop vs application main loop). SQLite access is serialised with
+    a :class:`threading.Lock` for the same reason: ``asyncio.Lock`` is loop-bound
+    and cannot protect writers across loops or the auto-save thread.
     """
+
+    _AUTOSAVE_JOIN_TIMEOUT_S: float = 5.0
 
     def __init__(
         self,
@@ -1016,22 +1025,153 @@ class SessionManager:
         self._current: Session | None = None
         self.auto_save = auto_save
         self.save_interval = save_interval
-        self._save_task: asyncio.Task[None] | None = None
-        # SQLite can corrupt under concurrent writes from a single process; this
-        # lock serialises every SQLite operation routed through the manager so
-        # ``update`` and ``save`` (called from the auto-save loop, the GUI, and
-        # bridges) cannot interleave their transactions.
-        self._db_lock = asyncio.Lock()
+        self._db_lock = threading.Lock()
+        self._autosave_stop = threading.Event()
+        self._autosave_thread: threading.Thread | None = None
+        self._autosave_lifecycle = threading.Lock()
         _logger.debug("session_manager_init", auto_save=auto_save, save_interval=save_interval)
 
     @property
     def current(self) -> Session | None:
-        """Get the current session.
+        """Current session, if one is active.
 
         Returns:
             Session | None: Current session or None.
         """
         return self._current
+
+    def _persist_session(self, session: Session) -> None:
+        """Persist ``session`` under the process-wide store lock.
+
+        Args:
+            session: Session to write to SQLite.
+        """
+        with self._db_lock:
+            self.store.save(session)
+
+    def _load_session_sync(self, session_id: str) -> Session | None:
+        """Load a session by id under the store lock.
+
+        Args:
+            session_id: Session identifier.
+
+        Returns:
+            Session | None: Loaded session, or ``None`` when missing.
+        """
+        with self._db_lock:
+            return self.store.load(session_id)
+
+    def _delete_session_sync(self, session_id: str) -> bool:
+        """Delete a session by id under the store lock.
+
+        Args:
+            session_id: Session identifier.
+
+        Returns:
+            bool: ``True`` when a row was deleted.
+        """
+        with self._db_lock:
+            return self.store.delete(session_id)
+
+    def _cleanup_old_sync(self, days: int) -> int:
+        """Delete sessions older than ``days`` under the store lock.
+
+        Args:
+            days: Retention window in days.
+
+        Returns:
+            int: Number of sessions deleted.
+        """
+        with self._db_lock:
+            return self.store.cleanup_old(days)
+
+    def _list_sessions_sync(self, limit: int) -> list[SessionMetadata]:
+        """List session metadata under the store lock.
+
+        Args:
+            limit: Maximum number of rows to return.
+
+        Returns:
+            list[SessionMetadata]: Session metadata rows.
+        """
+        with self._db_lock:
+            return self.store.list_all(limit)
+
+    def _search_by_tag_sync(self, tag: str) -> list[SessionMetadata]:
+        """Search sessions by tag under the store lock.
+
+        Args:
+            tag: Tag to search for.
+
+        Returns:
+            list[SessionMetadata]: Matching session metadata rows.
+        """
+        with self._db_lock:
+            return self.store.search_by_tag(tag)
+
+    def _export_session_sync(self, session_id: str, path: Path) -> bool:
+        """Load and export a session under the store lock.
+
+        Args:
+            session_id: Session identifier to export.
+            path: Destination JSON path.
+
+        Returns:
+            bool: ``True`` when the session was found and exported, ``False``
+            when no session exists for ``session_id``.
+        """
+        with self._db_lock:
+            session = self.store.load(session_id)
+            if session is None:
+                return False
+            self.store.export_to_json(session, path)
+            return True
+
+    def _import_session_sync(
+        self,
+        path: Path,
+        *,
+        replace: bool,
+    ) -> tuple[Session, bool] | None:
+        """Import a session from JSON and persist it under the store lock.
+
+        Args:
+            path: Path to the JSON file.
+            replace: Whether to replace an existing session with the same id.
+
+        Returns:
+            tuple[Session, bool] | None: Imported session and whether a prior
+            row was replaced, or ``None`` when a conflicting session exists and
+            ``replace`` is ``False``.
+        """
+        session = self.store.import_from_json(path)
+        with self._db_lock:
+            existing = self.store.load(session.id)
+            if existing is not None and not replace:
+                return None
+            self.store.save(session)
+            return session, existing is not None
+
+    def _export_session_object_sync(self, session: Session, path: Path) -> None:
+        """Export an in-memory session to JSON under the store lock.
+
+        Args:
+            session: Session object to export.
+            path: Destination JSON path.
+        """
+        with self._db_lock:
+            self.store.export_to_json(session, path)
+
+    def _autosave_join_timeout_s(self) -> float:
+        """Return the join timeout for the auto-save worker thread.
+
+        Stop is event-driven, so this budget only covers an in-flight SQLite
+        write rather than the configured save interval.
+
+        Returns:
+            float: Seconds to wait for the worker to exit after stop is signaled.
+        """
+        return self._AUTOSAVE_JOIN_TIMEOUT_S
 
     async def create(
         self,
@@ -1074,8 +1214,7 @@ class SessionManager:
         if self._current is not None:
             await self.save()
 
-        async with self._db_lock:
-            session = await asyncio.to_thread(self.store.load, session_id)
+        session = await asyncio.to_thread(self._load_session_sync, session_id)
 
         if session is not None:
             self._current = session
@@ -1094,41 +1233,42 @@ class SessionManager:
             Session | None: Session instance or None if not found.
         """
         _logger.debug("session_get_invoked", session_id=session_id)
-        async with self._db_lock:
-            return await asyncio.to_thread(self.store.load, session_id)
+        return await asyncio.to_thread(self._load_session_sync, session_id)
 
     async def update(self, session: Session) -> None:
         """Update a session in the store.
 
         SQLite I/O is offloaded to a worker thread so the event loop is never
         blocked by disk I/O, and serialised against every other writer through
-        ``self._db_lock`` to keep SQLite from racing with the auto-save loop or
+        ``self._db_lock`` to keep SQLite from racing with the auto-save worker or
         concurrent ``update`` callers.
 
         Args:
             session: Session to update.
         """
-
-        async with self._db_lock:
-            await asyncio.to_thread(self.store.save, session)
+        await asyncio.to_thread(self._persist_session, session)
         _logger.debug("session_updated", session_id=session.id)
 
     async def save(self) -> None:
         """Save the current session.
 
-        Like ``update``, the SQLite work is run via ``asyncio.to_thread`` under the same lock so ``save`` and ``update`` cannot interleave
-        their transactions.
+        Like ``update``, the SQLite work is run via ``asyncio.to_thread`` under
+        the same lock so ``save`` and ``update`` cannot interleave their
+        transactions.
         """
         if self._current is None:
             return
         current = self._current
-        async with self._db_lock:
-            await asyncio.to_thread(self.store.save, current)
+        await asyncio.to_thread(self._persist_session, current)
         log_session_operation("save", current.id)
         _logger.debug("current_session_saved", session_id=current.id)
 
     async def close(self) -> None:
-        """Close the current session."""
+        """Close the current session.
+
+        Stops the auto-save worker (safe from any event loop), flushes the
+        current session once, then clears it.
+        """
         await self._stop_auto_save()
 
         if self._current is not None:
@@ -1151,8 +1291,7 @@ class SessionManager:
             await self._stop_auto_save()
             self._current = None
 
-        async with self._db_lock:
-            return await asyncio.to_thread(self.store.delete, session_id)
+        return await asyncio.to_thread(self._delete_session_sync, session_id)
 
     def list_sessions(self, limit: int = 100) -> list[SessionMetadata]:
         """List all sessions.
@@ -1163,7 +1302,7 @@ class SessionManager:
         Returns:
             list[SessionMetadata]: List of session metadata.
         """
-        return self.store.list_all(limit)
+        return self._list_sessions_sync(limit)
 
     def search_by_tag(self, tag: str) -> list[SessionMetadata]:
         """Search sessions by tag.
@@ -1174,7 +1313,7 @@ class SessionManager:
         Returns:
             list[SessionMetadata]: List of matching session metadata.
         """
-        return self.store.search_by_tag(tag)
+        return self._search_by_tag_sync(tag)
 
     async def cleanup(self, days: int = 30) -> int:
         """Clean up old sessions.
@@ -1186,8 +1325,7 @@ class SessionManager:
             int: Number of sessions deleted.
         """
         _logger.info("session_cleanup_requested", days=days)
-        async with self._db_lock:
-            return await asyncio.to_thread(self.store.cleanup_old, days)
+        return await asyncio.to_thread(self._cleanup_old_sync, days)
 
     async def export_json(self, session_id: str, path: Path) -> None:
         """Export a session to a JSON file.
@@ -1200,12 +1338,9 @@ class SessionManager:
             ValueError: If the session is not found.
         """
         _logger.info("session_exporting", session_id=session_id, path=str(path))
-        async with self._db_lock:
-            session = await asyncio.to_thread(self.store.load, session_id)
-        if session is None:
+        exported = await asyncio.to_thread(self._export_session_sync, session_id, path)
+        if not exported:
             raise ValueError(_ERR_SESSION_NOT_FOUND)
-
-        await asyncio.to_thread(self.store.export_to_json, session, path)
 
     async def import_json(self, path: Path, *, replace: bool = False) -> Session:
         """Import a session from a JSON file.
@@ -1221,15 +1356,20 @@ class SessionManager:
             ValueError: If session with same ID already exists and replace=False.
         """
         _logger.info("session_import_json_started", path=str(path), replace=replace)
-        session = await asyncio.to_thread(self.store.import_from_json, path)
-
-        async with self._db_lock:
-            existing = await asyncio.to_thread(self.store.load, session.id)
-            if existing is not None and not replace:
-                raise ValueError(_ERR_SESSION_EXISTS)
-
-            await asyncio.to_thread(self.store.save, session)
-        _logger.info("session_imported", path=str(path), session_id=session.id, replaced=existing is not None)
+        result = await asyncio.to_thread(
+            self._import_session_sync,
+            path,
+            replace=replace,
+        )
+        if result is None:
+            raise ValueError(_ERR_SESSION_EXISTS)
+        session, replaced = result
+        _logger.info(
+            "session_imported",
+            path=str(path),
+            session_id=session.id,
+            replaced=replaced,
+        )
         return session
 
     async def export_current(self, path: Path) -> None:
@@ -1245,66 +1385,99 @@ class SessionManager:
         if self._current is None:
             raise ValueError(_ERR_NO_CURRENT_SESSION)
 
-        await asyncio.to_thread(self.store.export_to_json, self._current, path)
+        current = self._current
+        await asyncio.to_thread(self._export_session_object_sync, current, path)
 
     @property
     def is_auto_saving(self) -> bool:
-        """Whether the auto-save background task is currently running.
+        """Whether the auto-save background worker is currently running.
 
         Returns:
-            bool: ``True`` when an auto-save task has been started and has
-                not yet been cancelled or finished.
+            bool: ``True`` when an auto-save thread has been started and is
+                still alive.
         """
-        return self._save_task is not None and not self._save_task.done()
+        thread = self._autosave_thread
+        return thread is not None and thread.is_alive()
 
     async def stop_auto_save(self) -> None:
-        """Cancel the auto-save background task.
+        """Stop the auto-save background worker.
 
-        Public counterpart to :meth:`_stop_auto_save` for callers (test harnesses, embedding applications) that need to cleanly cancel the
-        background save loop without reaching into private members. No-op when no task is currently running.
+        Public counterpart to :meth:`_stop_auto_save` for callers (test
+        harnesses, embedding applications) that need to cleanly stop the
+        background save loop without reaching into private members. No-op when
+        no worker is currently running.
         """
         await self._stop_auto_save()
 
     async def _start_auto_save(self) -> None:
-        """Start the auto-save task."""
-        await self._stop_auto_save()
-
-        if self.auto_save:
-            self._save_task = asyncio.create_task(self._auto_save_loop())
-            _logger.debug("autosave_task_started", interval=self.save_interval)
+        """Start the auto-save worker thread."""
+        await asyncio.to_thread(self._start_auto_save_sync)
 
     async def _stop_auto_save(self) -> None:
-        """Stop the auto-save task."""
-        if self._save_task is not None:
-            self._save_task.cancel()
-            try:
-                await self._save_task
-            except asyncio.CancelledError:
-                _logger.debug("autosave_task_cancel_expected", exc_info=True)
-            self._save_task = None
+        """Stop the auto-save worker thread."""
+        await asyncio.to_thread(self._stop_auto_save_sync)
 
-    async def _auto_save_loop(self) -> None:
-        """Periodically persist the current session.
+    def _start_auto_save_sync(self) -> None:
+        """Start the auto-save worker on a dedicated daemon thread."""
+        self._stop_auto_save_sync()
+        if not self.auto_save:
+            return
+        with self._autosave_lifecycle:
+            self._autosave_stop.clear()
+            thread = threading.Thread(
+                target=self._auto_save_worker,
+                name="session-autosave",
+                daemon=True,
+            )
+            self._autosave_thread = thread
+            thread.start()
+        _logger.debug("autosave_thread_started", interval=self.save_interval)
+
+    def _stop_auto_save_sync(self) -> None:
+        """Signal the auto-save worker to stop and join it with a timeout."""
+        with self._autosave_lifecycle:
+            thread = self._autosave_thread
+            if thread is None:
+                return
+            self._autosave_stop.set()
+            self._autosave_thread = None
+        join_timeout = self._autosave_join_timeout_s()
+        thread.join(timeout=join_timeout)
+        if thread.is_alive():
+            _logger.warning(
+                "autosave_thread_join_timeout",
+                timeout_s=join_timeout,
+            )
+        else:
+            _logger.debug("autosave_thread_stopped")
+
+    def _auto_save_once(self) -> None:
+        """Persist the current session once for the auto-save worker.
+
+        No-op when there is no current session.
+        """
+        current = self._current
+        if current is None:
+            return
+        self._persist_session(current)
+        log_session_operation("save", current.id)
+        _logger.debug("autosave_persisted", session_id=current.id)
+
+    def _auto_save_worker(self) -> None:
+        """Periodically persist the current session on a background thread.
 
         The loop is wrapped in a broad exception guard because it has to keep
         running across transient failure modes (filesystem hiccups, locked
         SQLite databases, exhausted disk, intermittent permission errors). A
-        single ``raise`` would otherwise terminate the task and silently leave
-        the application without auto-save until restart. ``asyncio.CancelledError``
-        is intentionally re-raised so ``_stop_auto_save`` continues to cancel
-        cleanly.
-
-        Raises:
-            asyncio.CancelledError: Re-raised so ``_stop_auto_save`` can cancel
-                the task without it being swallowed by the broad exception guard.
+        single uncaught exception would otherwise terminate the worker and
+        silently leave the application without auto-save until restart. Stop
+        is cooperative via :attr:`_autosave_stop` so callers on any event loop
+        can shut the worker down without awaiting a loop-bound task.
         """
-        while True:
+        interval = max(float(self.save_interval), 0.0)
+        while not self._autosave_stop.wait(timeout=interval):
             try:
-                await asyncio.sleep(self.save_interval)
-                await self.save()
-            except asyncio.CancelledError:
-                _logger.warning("autosave_loop_cancelled")
-                raise
+                self._auto_save_once()
             except Exception:
                 _logger.exception(
                     "autosave_loop_iteration_failed",

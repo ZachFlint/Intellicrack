@@ -61,9 +61,9 @@ std::string escape_json_path(const char* s) {
 // (hidden to keep the debugger alive) from auxiliary popups (closed), and
 // report back how much window activity a sweep pass observed.
 struct HeadlessSweepCtx {
-    DWORD pid;
-    HWND main_window;
-    int acted;  // number of windows hidden/closed on this pass
+    DWORD pid{0};
+    HWND main_window{nullptr};
+    int acted{0};  // number of windows hidden/closed on this pass
 };
 
 BOOL CALLBACK headless_sweep_window(HWND hwnd, LPARAM lparam) {
@@ -301,7 +301,7 @@ DLL_EXPORT bool plugstop() {
     return true;
 }
 
-DLL_EXPORT void plugsetup(PLUG_SETUPSTRUCT* setupStruct) {
+DLL_EXPORT void plugsetup(const PLUG_SETUPSTRUCT* setupStruct) {
     intellicrack::menu_handle = setupStruct->hMenu;
 
     _plugin_menuaddentry(intellicrack::menu_handle, 0, "About Intellicrack Bridge...");
@@ -316,7 +316,7 @@ DLL_EXPORT void plugsetup(PLUG_SETUPSTRUCT* setupStruct) {
     hide_windows_if_headless();
 }
 
-DLL_EXPORT void CBMENUENTRY(CBTYPE cbType, PLUG_CB_MENUENTRY* info) {
+DLL_EXPORT void CBMENUENTRY(CBTYPE cbType, const PLUG_CB_MENUENTRY* info) {
     (void)cbType;
 
     switch (info->hEntry) {
@@ -362,7 +362,7 @@ DLL_EXPORT void CBCREATEPROCESS(CBTYPE cbType, PLUG_CB_CREATEPROCESS* info) {
     }
 }
 
-DLL_EXPORT void CBEXITPROCESS(CBTYPE cbType, PLUG_CB_EXITPROCESS* info) {
+DLL_EXPORT void CBEXITPROCESS(CBTYPE cbType, const PLUG_CB_EXITPROCESS* info) {
     (void)cbType;
     intellicrack::on_process_exit(
         info && info->ExitProcess ? info->ExitProcess->dwExitCode : 0
@@ -379,7 +379,7 @@ DLL_EXPORT void CBLOADDLL(CBTYPE cbType, PLUG_CB_LOADDLL* info) {
     }
 }
 
-DLL_EXPORT void CBUNLOADDLL(CBTYPE cbType, PLUG_CB_UNLOADDLL* info) {
+DLL_EXPORT void CBUNLOADDLL(CBTYPE cbType, const PLUG_CB_UNLOADDLL* info) {
     (void)cbType;
     if (info && info->UnloadDll) {
         intellicrack::on_dll_unload(
@@ -389,7 +389,7 @@ DLL_EXPORT void CBUNLOADDLL(CBTYPE cbType, PLUG_CB_UNLOADDLL* info) {
     }
 }
 
-DLL_EXPORT void CBBREAKPOINT(CBTYPE cbType, PLUG_CB_BREAKPOINT* info) {
+DLL_EXPORT void CBBREAKPOINT(CBTYPE cbType, const PLUG_CB_BREAKPOINT* info) {
     (void)cbType;
     if (info && info->breakpoint) {
         intellicrack::g_state.paused = true;
@@ -397,7 +397,7 @@ DLL_EXPORT void CBBREAKPOINT(CBTYPE cbType, PLUG_CB_BREAKPOINT* info) {
     }
 }
 
-DLL_EXPORT void CBEXCEPTION(CBTYPE cbType, PLUG_CB_EXCEPTION* info) {
+DLL_EXPORT void CBEXCEPTION(CBTYPE cbType, const PLUG_CB_EXCEPTION* info) {
     (void)cbType;
     if (info && info->Exception) {
         intellicrack::on_exception(

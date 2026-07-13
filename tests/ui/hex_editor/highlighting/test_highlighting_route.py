@@ -471,6 +471,7 @@ class _HighlightingTestHost(HighlightingMixin):
         setattr(self, "_highlight_rules_list", self.rules_list)
         setattr(self, "_active_highlight_ids", self.active_ids)
         setattr(self, "_bridge", cast("HexEditorBridge | None", bridge))
+        setattr(self, "_pattern_search_busy_count", 0)
 
     def configure_add_controls(
         self,
@@ -946,7 +947,9 @@ class TestListHighlightsSeedsWidget:
 
         label_a = build_rule_label(rule_a, "byte_value", {"value": 0x10}, "#AABBCC")
         label_b = build_rule_label(rule_b, "byte_range", {"min": 0x20, "max": 0x30}, "#DDEEFF")
-        item_texts = {host.rules_list.item(i).text() for i in range(host.rules_list.count()) if host.rules_list.item(i) is not None}
+        item_texts = {
+            item.text() for i in range(host.rules_list.count()) if (item := host.rules_list.item(i)) is not None
+        }
         assert label_a in item_texts, f"List widget must contain label for rule A.\n  expected: {label_a!r}\n  found: {item_texts!r}"
         assert label_b in item_texts, f"List widget must contain label for rule B.\n  expected: {label_b!r}\n  found: {item_texts!r}"
 
@@ -993,6 +996,14 @@ class TestRefreshPatternHighlightsCallsUpdateOnce:
         host.widget.update_counter.call_count = 0
 
         host.refresh_pattern_highlights()
+
+        refresh_worker = getattr(host, "_pattern_refresh_worker", None)
+        if refresh_worker is not None:
+            refresh_worker.wait(5000)
+        for _ in range(200):
+            QApplication.processEvents()
+            if host.widget.update_counter.call_count >= 1:
+                break
 
         assert host.widget.update_counter.call_count == 1, (
             f"Expected update() called exactly once, got {host.widget.update_counter.call_count}"

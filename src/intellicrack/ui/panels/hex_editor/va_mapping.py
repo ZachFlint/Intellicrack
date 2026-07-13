@@ -182,10 +182,10 @@ class VaMappingMixin:
         self._on_refresh_va_mappings()
 
     def _on_va_mapping_error(self, exc: object) -> None:
-        """Surface a VA-mapping bridge failure to the user.
+        """Show a VA Mapping warning and log ``va_mapping_bridge_failed``.
 
         Args:
-            exc: Exception object emitted by the bridge worker.
+            exc: Error from add/remove/list VA-mapping bridge work.
         """
         parent = self if isinstance(self, QWidget) else None
         show_warning(parent, "VA Mapping", f"Operation failed:\n{exc}")
@@ -334,11 +334,11 @@ class VaMappingMixin:
         _logger.info("va_goto_navigated", va=hex(va), offset=hex(offset))
 
     def _on_va_conversion_error(self, va: int, exc: object) -> None:
-        """Surface a VA-to-file-offset bridge failure to the user.
+        """Log ``va_to_file_offset_failed`` and show a VA Mapping conversion warning.
 
         Args:
-            va: Virtual address that failed to resolve.
-            exc: Exception object emitted by the bridge worker.
+            va: Virtual address that failed to resolve to a file offset.
+            exc: Error from the VA-to-offset bridge conversion.
         """
         parent = self if isinstance(self, QWidget) else None
         _logger.warning("va_to_file_offset_failed", va=hex(va), error=str(exc))
@@ -388,11 +388,11 @@ class VaMappingMixin:
         _logger.info("cursor_offset_to_va_resolved", offset=hex(cursor_offset), va=hex(va))
 
     def _on_cursor_offset_conversion_error(self, cursor_offset: int, exc: object) -> None:
-        """Surface a file-offset-to-VA bridge failure to the user.
+        """Log ``file_offset_to_va_failed`` and show a VA Mapping conversion warning.
 
         Args:
-            cursor_offset: File offset that failed to resolve.
-            exc: Exception object emitted by the bridge worker.
+            cursor_offset: File offset that failed to resolve to a VA.
+            exc: Error from the file-offset-to-VA bridge conversion.
         """
         parent = self if isinstance(self, QWidget) else None
         _logger.warning("file_offset_to_va_failed", offset=hex(cursor_offset), error=str(exc))
@@ -424,10 +424,10 @@ class VaMappingMixin:
         )
 
     def _on_get_memory_usage_error(self, exc: object) -> None:
-        """Surface a ``get_memory_usage`` bridge failure to the user.
+        """Show Performance Settings warning when current memory usage cannot be read.
 
         Args:
-            exc: Exception object emitted by the bridge worker.
+            exc: Error from the ``get_memory_usage`` bridge call.
         """
         parent = self if isinstance(self, QWidget) else None
         show_warning(parent, "Performance Settings", f"Failed to read current memory usage:\n{exc}")
@@ -505,10 +505,10 @@ class VaMappingMixin:
         )
 
     def _on_apply_performance_settings_error(self, exc: object) -> None:
-        """Surface a ``set_chunk_size`` / ``set_memory_budget`` bridge failure.
+        """Show Performance Settings warning when chunk size or budget apply fails.
 
         Args:
-            exc: Exception object emitted by the bridge worker.
+            exc: Error from ``set_chunk_size`` / ``set_memory_budget`` bridge calls.
         """
         parent = self if isinstance(self, QWidget) else None
         show_warning(parent, "Performance Settings", f"Failed to apply settings:\n{exc}")

@@ -324,7 +324,7 @@ class TestF0004ResourcesPropagateErrors:
             bridge: Fresh CutterBridge fixture.
             loop: Per-test asyncio loop.
         """
-        recorder = _RecordingR2(responses={"irj": "not valid json"})
+        recorder = _RecordingR2(responses={"iRj": "not valid json"})
         _attach(bridge, recorder)
         with pytest.raises(ToolError):
             loop.run_until_complete(bridge.get_resources())

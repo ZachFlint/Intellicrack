@@ -31,19 +31,17 @@ class BookmarksMixin:
     state_holder: HexDocumentState | None
 
     def _notify_state_data_modified(self, offset: int, length: int, *, source: str) -> None:
-        """Forward a panel-side bookmark change extent to the shared HexDocumentState.
+        """Publish bookmark-affected byte extents through ``HexDocumentState``.
 
-        Bridge subscribers (AI tools, peer GUIs) only learn about document
-        state mutations through ``HexDocumentState.notify_data_modified``.
-        Panel-driven bookmark operations must publish the same event so those
-        consumers do not analyse stale annotated state after a GUI operation.
+        Bridge subscribers (AI tools, peer GUIs) only see document mutations via
+        ``notify_data_modified``. Panel bookmark edits must emit the same event
+        so consumers do not keep stale annotated state after a GUI change.
 
         Args:
             offset: Start byte offset of the affected range.
             length: Number of bytes that were affected.
-            source: Caller identifier used by the loop-guard filter; must
-                be unique per bookmark op so subscribers registered with
-                a different source still receive the event.
+            source: Loop-guard id unique per bookmark op so other subscribers
+                still receive the event while this caller is filtered.
         """
         state_holder = getattr(self, "state_holder", None)
         if state_holder is None:

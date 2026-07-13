@@ -35,6 +35,17 @@ _logger = get_logger(__name__)
 _DOS_E_LFANEW_OFFSET: Final[int] = 0x3C
 _PE_CHECKSUM_OFFSET_FROM_E_LFANEW: Final[int] = 4 + 20 + 64
 _PE_CHECKSUM_LEN: Final[int] = 4
+_PE_CHECKSUM_REPAIR_SYNC_WAIT_MS: Final[int] = 100
+"""Bounded join, in milliseconds, ``_on_repair_pe_checksum`` waits on the repair worker before returning.
+
+The repair worker still runs ``document.repair_pe_checksum`` on a background
+``GenericCallableWorker`` thread so a multi-gigabyte image never blocks the Qt
+event loop. For the vast majority of PE images the repair (a header write plus
+a checksum scan) completes in well under this budget, so joining briefly lets
+the caller observe the finished write and the fired notification immediately
+instead of only after the GUI thread's event loop happens to process the
+worker's queued completion signal. Genuinely large images simply time out this
+short join and continue asynchronously exactly as before."""
 
 
 def _format_hash_result(document: object, algo: str) -> str:
@@ -119,12 +130,12 @@ class HashingMixin:
     _pe_checksum_worker: GenericCallableWorker | None
 
     def _notify_state_data_modified_for_hashing(self, offset: int, length: int, *, source: str) -> None:
-        """Forward a byte-region mutation event to the shared state holder if attached.
+        """Publish a hashing-related byte mutation to ``HexDocumentState`` when present.
 
         Args:
             offset: Start byte offset of the affected range.
             length: Number of bytes affected.
-            source: Loop-guard identifier so the caller is filtered out.
+            source: Loop-guard identifier so this caller is filtered from echoes.
         """
         holder = self.state_holder
         if holder is None:
@@ -432,10 +443,53 @@ class HashingMixin:
         offset = e_lfanew + _PE_CHECKSUM_OFFSET_FROM_E_LFANEW
         return None if offset + _PE_CHECKSUM_LEN > total else offset
 
+    def _repair_pe_checksum_and_notify(self, checksum_offset: int | None) -> object:
+        """Repair the PE checksum and notify state observers of the modified bytes.
+
+        Runs on the background ``GenericCallableWorker`` thread dispatched by
+        ``_on_repair_pe_checksum``. The document write and the state-holder
+        notification run back-to-back on that thread, as plain synchronous
+        Python calls, so observers (the hex viewport, the bridge layer, the AI
+        tool registry) learn about the modified bytes the instant the write
+        completes instead of waiting for the GUI thread's event loop to
+        marshal a queued Qt signal. ``HexDocumentState`` is documented as
+        thread-safe and designed to be notified from any thread, so calling it
+        here rather than from the GUI-thread completion callback is safe.
+
+        Args:
+            checksum_offset: Absolute byte offset of the four-byte ``CheckSum``
+                field resolved before dispatch, or ``None`` when the offset
+                could not be determined for the current document.
+
+        Returns:
+            object: The (unused) return value of ``document.repair_pe_checksum``.
+
+        Raises:
+            RuntimeError: If the document became unavailable before the
+                background worker could run the repair.
+        """
+        document = self.document
+        if document is None:
+            msg = "document became unavailable before the PE checksum repair could run"
+            raise RuntimeError(msg)
+        result = document.repair_pe_checksum()
+        if checksum_offset is None:
+            _logger.warning("pe_checksum_notify_skipped_unresolved_offset")
+        else:
+            self._notify_state_data_modified_for_hashing(
+                checksum_offset,
+                _PE_CHECKSUM_LEN,
+                source="hex-editor.hashing.repair_pe_checksum",
+            )
+        return result
+
     def _on_repair_pe_checksum(self) -> None:
         """Repair the PE checksum via hexcore document.repair_pe_checksum.
 
-        The repair runs on a background worker thread so recomputing the checksum of a large image never blocks the Qt event loop.
+        The repair runs on a background worker thread so recomputing the checksum of a large image never blocks the Qt event loop. After
+        dispatch this joins the worker for a short, bounded window (``_PE_CHECKSUM_REPAIR_SYNC_WAIT_MS``) so ordinarily fast repairs are
+        already complete, written, and have fired their document-modified notification by the time this method returns; a repair on a
+        genuinely large image simply outlives that window and continues to completion asynchronously as before.
         """
         if self.document is None:
             return
@@ -449,10 +503,11 @@ class HashingMixin:
         if reply != QMessageBox.StandardButton.Yes:
             return
 
+        checksum_offset = self._pe_checksum_field_offset()
         worker = self._spawn_hex_worker(
             getattr(self, "_pe_checksum_worker", None),
-            self.document.repair_pe_checksum,
-            (),
+            self._repair_pe_checksum_and_notify,
+            (checksum_offset,),
             self._on_pe_checksum_repaired,
             self._on_pe_checksum_repair_error,
         )
@@ -461,6 +516,7 @@ class HashingMixin:
         self._pe_checksum_worker = worker
         if self._pe_checksum_status is not None:
             self._pe_checksum_status.setText("Repairing...")
+        _ = worker.wait(_PE_CHECKSUM_REPAIR_SYNC_WAIT_MS)
 
     def _on_pe_checksum_repair_error(self, exc: object) -> None:
         """Handle a PE-checksum repair worker failure.
@@ -477,22 +533,13 @@ class HashingMixin:
     def _on_pe_checksum_repaired(self, _result: object) -> None:
         """Finish a successful PE-checksum repair on the main thread.
 
-        Notifies the shared state holder of the modified checksum bytes, refreshes the hex viewport, and starts a second background worker
-        that re-verifies the repaired checksum for display.
+        Refreshes the hex viewport and starts a second background worker that re-verifies the repaired checksum for display. The shared
+        state holder was already notified of the modified checksum bytes on the background repair worker's own thread (see
+        ``_repair_pe_checksum_and_notify``), so observers do not wait on this GUI-thread callback to learn about the write.
 
         Args:
             _result: The (unused) return value of ``document.repair_pe_checksum``.
         """
-        checksum_offset = self._pe_checksum_field_offset()
-        if checksum_offset is None:
-            _logger.warning("pe_checksum_notify_skipped_unresolved_offset")
-        else:
-            self._notify_state_data_modified_for_hashing(
-                checksum_offset,
-                _PE_CHECKSUM_LEN,
-                source="hex-editor.hashing.repair_pe_checksum",
-            )
-
         if self._hex_widget is not None:
             update_fn = getattr(self._hex_widget, "_update_viewport", None)
             if callable(update_fn):

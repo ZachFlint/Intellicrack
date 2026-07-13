@@ -45,6 +45,7 @@ _FIRST_SWEEP_TIMEOUT_SEC: Final[float] = 60.0
 _KILL_GRACE_SEC: Final[float] = 10.0
 _LOG_NAME: Final[str] = "kernel_object_monitor.log"
 _ERR_LOG_NAME: Final[str] = "kernel_object_monitor.errors.log"
+_LIFECYCLE_LOG_NAME: Final[str] = "kernel_object_monitor.lifecycle.log"
 # 400 ms: long enough for the 100 ms monitor to observe within a single poll
 # cycle, but shorter than the legacy 3 s cadence that F-0021 gates against.
 _TRANSIENT_MUTEX_LIFETIME_MS: Final[int] = 2000
@@ -450,20 +451,30 @@ def _assert_log_entry_fields(line: str, expected_pid: int) -> None:
 def _run_mutex_helper_and_collect(
     pwsh: str,
     mutex_name: str,
-    err_log: Path,
+    lifecycle_log: Path,
     log_path: Path,
 ) -> tuple[Popen[str] | None, int, str, str, list[str]]:
     """Wait for monitor steady-state, spawn mutex helper, collect matching lines.
 
-    Waits for the monitor to complete its first sweep (signalled by the
-    appearance of ``|OpenProcess|`` in the error log), then spawns the
-    transient-mutex helper and polls the object log for lines keyed by the
-    helper PID and mutex name.  All teardown is handled by the caller.
+    Waits for the monitor to complete its first, full-system-handle-table
+    sweep (signalled by the appearance of ``|first_sweep_complete|`` in the
+    lifecycle log), then spawns the transient-mutex helper and polls the
+    object log for lines keyed by the helper PID and mutex name.  All
+    teardown is handled by the caller.
+
+    An ``|OpenProcess|`` failure in the error log is not a reliable
+    readiness signal here: it can be written at any point while sweep #1 -
+    which resolves every kernel object already open system-wide - is still
+    running, long before the monitor has converged to its fast,
+    new-handles-only steady state. Spawning the transient mutex before that
+    convergence risks the object being created and destroyed entirely
+    within the still-running first sweep's window, which predates its
+    existence and can never observe it.
 
     Args:
         pwsh: Absolute path to the ``pwsh`` executable.
         mutex_name: Base object name used by the helper.
-        err_log: Path to the monitor error log.
+        lifecycle_log: Path to the monitor lifecycle log.
         log_path: Path to the monitor object log.
 
     Returns:
@@ -473,7 +484,7 @@ def _run_mutex_helper_and_collect(
         sweep.  ``matching_lines`` is empty if no matching log entries were
         found within the timeout.
     """
-    if not _wait_for_log_marker(err_log, "|OpenProcess|", _FIRST_SWEEP_TIMEOUT_SEC):
+    if not _wait_for_log_marker(lifecycle_log, "|first_sweep_complete|", _FIRST_SWEEP_TIMEOUT_SEC):
         return None, 0, "", "", []
     helper_proc = _create_transient_mutex_in_background(pwsh, mutex_name)
     helper_pid = helper_proc.pid
@@ -511,6 +522,7 @@ def test_script_captures_transient_mutex(tmp_path: Path) -> None:
     log_dir.mkdir()
     log_path = log_dir / _LOG_NAME
     err_log = log_dir / _ERR_LOG_NAME
+    lifecycle_log = log_dir / _LIFECYCLE_LOG_NAME
     mutex_name = "Local\\IntellicrackAudit3U7"
 
     monitor_proc = _start_monitor(log_dir, pwsh, poll_ms=_FAST_POLL_INTERVAL_MS)
@@ -520,7 +532,7 @@ def test_script_captures_transient_mutex(tmp_path: Path) -> None:
     helper_err = ""
     matching_lines: list[str] = []
     try:
-        helper_proc, helper_pid, helper_out, helper_err, matching_lines = _run_mutex_helper_and_collect(pwsh, mutex_name, err_log, log_path)
+        helper_proc, helper_pid, helper_out, helper_err, matching_lines = _run_mutex_helper_and_collect(pwsh, mutex_name, lifecycle_log, log_path)
         if helper_proc is None:
             pytest.fail(
                 f"monitor did not complete its first sweep within {_FIRST_SWEEP_TIMEOUT_SEC} s; cannot test transient capture",

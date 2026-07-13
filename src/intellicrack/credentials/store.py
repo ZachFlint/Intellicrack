@@ -306,6 +306,11 @@ class CredentialStore:
         keyring = self._keyring
 
         def _fetch() -> str | None:
+            """Read the serialized credential blob for the provider key.
+
+            Returns:
+                str | None: Credential payload string, or ``None`` if absent.
+            """
             result = keyring.get_password(self.SERVICE_NAME, key)
             return str(result) if result is not None else None
 
@@ -358,6 +363,7 @@ class CredentialStore:
         keyring = self._keyring
 
         def _store() -> None:
+            """Persist credential and metadata payloads under the provider keys."""
             keyring.set_password(self.SERVICE_NAME, key, data)
             keyring.set_password(self.SERVICE_NAME, metadata_key, metadata_data)
 
@@ -385,6 +391,11 @@ class CredentialStore:
         keyring = self._keyring
 
         def _fetch() -> str | None:
+            """Read the serialized metadata blob for the provider key.
+
+            Returns:
+                str | None: Metadata payload string, or ``None`` if absent.
+            """
             result = keyring.get_password(self.SERVICE_NAME, key)
             return str(result) if result is not None else None
 
@@ -516,6 +527,12 @@ class CredentialStore:
         _logger.info("credential_delete_started", provider=provider.value, key_id=key)
 
         def _delete() -> bool:
+            """Remove credential and metadata entries for the provider keys.
+
+            Returns:
+                bool: ``True`` when the credential entry was deleted; ``False``
+                when credential deletion itself failed.
+            """
             try:
                 keyring.delete_password(self.SERVICE_NAME, key)
             except (OSError, KeyError, ValueError, _KeyringError):

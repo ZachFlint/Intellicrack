@@ -57,7 +57,7 @@ def process_manager() -> Generator[ProcessManager]:
     """Provide a fresh ProcessManager for each test.
 
     Yields:
-        Generator[ProcessManager]: Fresh singleton instance with handlers uninstalled.
+        ProcessManager: Fresh singleton instance with handlers uninstalled.
     """
     ProcessManager.reset_instance()
     pm = ProcessManager.get_instance()
@@ -239,7 +239,7 @@ class TestF0020AtexitDeduplication:
 
         pm_module = importlib.import_module("intellicrack.core.process_manager")
         global_flag = getattr(pm_module, "_atexit_registered_globally")
-        assert global_flag is True
+        assert global_flag[0] is True
 
 
 class TestF0025SignalHandlerNonBlocking:

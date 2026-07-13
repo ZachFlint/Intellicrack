@@ -298,6 +298,12 @@ class ProcessPanel(AnalysisPanelBase):
         _logger.debug("process_detect_architecture_starting", pid=pid)
 
         async def _detect() -> str | None:
+            """Query the process bridge for the target architecture string.
+
+            Returns:
+                str | None: Architecture label from the bridge, or ``None``
+                when detection fails.
+            """
             try:
                 return await bridge.detect_architecture(pid)
             except ToolError as exc:
@@ -305,6 +311,11 @@ class ProcessPanel(AnalysisPanelBase):
                 return None
 
         def _on_arch(result: object) -> None:
+            """Update the architecture status label from a bridge result.
+
+            Args:
+                result: Architecture string, or ``None`` when unknown.
+            """
             arch = str(result) if result is not None else "Unknown"
             self._status_arch.setText(f"Arch: {arch}")
 
@@ -329,6 +340,12 @@ class ProcessPanel(AnalysisPanelBase):
         _logger.debug("process_get_token_privileges_starting", pid=pid)
 
         async def _fetch_privs() -> list[dict[str, object]] | None:
+            """Load token privilege entries for the attached process.
+
+            Returns:
+                list[dict[str, object]] | None: Privilege records from the
+                bridge, or ``None`` when the query fails.
+            """
             try:
                 return await bridge.get_token_privileges(pid)
             except ToolError as exc:
@@ -336,6 +353,11 @@ class ProcessPanel(AnalysisPanelBase):
                 return None
 
         def _on_privs(result: object) -> None:
+            """Update the privilege label based on enabled SeDebugPrivilege.
+
+            Args:
+                result: Privilege entry list, or a non-list when unavailable.
+            """
             if not isinstance(result, list):
                 self._status_priv.setText("Privilege: Standard")
                 return

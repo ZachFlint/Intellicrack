@@ -16,6 +16,7 @@ import os
 from typing import TYPE_CHECKING
 
 import httpx
+import openai
 import pytest
 import pytest_asyncio
 
@@ -61,6 +62,18 @@ _NETWORK_UNAVAILABLE_SIGNALS: tuple[str, ...] = (
     "[errno 11001]",
     "[errno -2]",
     "[errno -3]",
+)
+
+
+_MODEL_UNAVAILABLE_SIGNALS: tuple[str, ...] = (
+    "can't load tokenizer",
+    "make sure you don't have a local directory",
+    "is the correct path to a directory",
+    "we couldn't connect to",
+    "couldn't connect to 'https://huggingface.co'",
+    "offline mode is enabled",
+    "is not a local folder and is not a valid model identifier",
+    "no such file or directory",
 )
 
 
@@ -161,6 +174,98 @@ def _network_unavailable_reason(exc: BaseException) -> str | None:
     )
 
 
+def _model_unavailable_reason(exc: BaseException) -> str | None:
+    """Return the model-unavailable signal found in an exception chain, if any.
+
+    Walks the ``__cause__``/``__context__`` chain of a local-model provider
+    failure looking for a Hugging Face "model or tokenizer files not present"
+    signal - the opt-in local-transformers tests require the model weights to
+    be downloadable (network) or already cached, and an offline sandbox run
+    with neither can neither fetch nor find them. That is an unmet environment
+    precondition for a live local-inference test rather than a defect in the
+    provider code, so it is treated exactly like a missing-network signal.
+
+    Args:
+        exc: The exception raised by a provider call.
+
+    Returns:
+        str | None: The matched model-unavailable signal substring, or ``None``
+        when the failure is not attributable to missing model files.
+    """
+    seen: set[int] = set()
+    parts: list[str] = []
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        parts.append(str(current))
+        current = current.__cause__ or current.__context__
+    haystack = " ".join(parts).lower()
+    return next(
+        (signal for signal in _MODEL_UNAVAILABLE_SIGNALS if signal in haystack),
+        None,
+    )
+
+
+def _skip_if_environment_precondition(exc: ProviderError | httpx.HTTPError | OSError | openai.APIConnectionError) -> None:
+    """Skip the current test when ``exc`` is an unmet live-provider precondition.
+
+    The opt-in live provider tests issue real, billable API calls. Two failure
+    modes reflect the environment rather than an Intellicrack defect and are
+    turned into skips instead of false negatives: an exhausted live-account
+    credit / quota / spending cap (a :class:`ProviderError` carrying a billing
+    signal), and an unreachable live endpoint because the run has no outbound
+    network (for example ``--network none``), where the transport raises an
+    :class:`httpx.HTTPError` / :class:`OSError` whose chain carries a
+    DNS-resolution or connection-establishment failure. When neither signal is
+    present this returns without action so the caller re-raises the original
+    failure unchanged.
+
+    Args:
+        exc: The exception raised during a live provider test's fixture setup
+            or call phase.
+    """
+    if isinstance(exc, ProviderError):
+        account_reason = _account_limit_reason(exc)
+        if account_reason is not None:
+            pytest.skip(f"live provider account limit reached ({account_reason})")
+    network_reason = _network_unavailable_reason(exc)
+    if network_reason is not None:
+        pytest.skip(f"live provider endpoint unreachable ({network_reason})")
+    model_reason = _model_unavailable_reason(exc)
+    if model_reason is not None:
+        pytest.skip(f"local model weights unavailable ({model_reason})")
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_setup() -> Generator[None]:
+    """Skip live provider tests whose fixture setup hits an unmet precondition.
+
+    Fixture setup that opens a live provider client fails before the test body
+    runs when the account is over its billing limit or the sandbox has no
+    outbound network. Those environment preconditions are converted into skips
+    here so an offline / unfunded run reports a skip rather than a setup error;
+    every other setup failure propagates unchanged.
+
+    Yields:
+        None: Control passed to the wrapped setup implementation.
+
+    Raises:
+        ProviderError: Re-raised when a provider failure is attributable to
+            neither a live-account limit nor a missing network.
+        httpx.HTTPError: Re-raised when a transport failure against a reachable
+            host is not a missing-network condition.
+        OSError: Re-raised when a socket-level failure is not a missing-network
+            condition.
+        openai.APIConnectionError: Re-raised when an OpenAI-SDK transport failure
+            against a reachable host is not a missing-network condition.
+    """
+    try:
+        yield
+    except (ProviderError, httpx.HTTPError, OSError, openai.APIConnectionError) as exc:
+        _skip_if_environment_precondition(exc)
+        raise
+
+
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_call() -> Generator[None]:
     """Skip live provider tests on an unmet environment precondition.
@@ -190,18 +295,14 @@ def pytest_runtest_call() -> Generator[None]:
             host is not a missing-network condition.
         OSError: Re-raised when a socket-level failure is not a missing-network
             condition.
+        openai.APIConnectionError: Re-raised when an OpenAI-SDK transport failure
+            against a reachable host is not a missing-network condition.
     """
     try:
         yield
-    except (ProviderError, httpx.HTTPError, OSError) as exc:
-        if isinstance(exc, ProviderError):
-            account_reason = _account_limit_reason(exc)
-            if account_reason is not None:
-                pytest.skip(f"live provider account limit reached ({account_reason})")
-        network_reason = _network_unavailable_reason(exc)
-        if network_reason is None:
-            raise
-        pytest.skip(f"live provider endpoint unreachable ({network_reason})")
+    except (ProviderError, httpx.HTTPError, OSError, openai.APIConnectionError) as exc:
+        _skip_if_environment_precondition(exc)
+        raise
 
 
 @pytest_asyncio.fixture
@@ -220,7 +321,7 @@ async def anthropic_provider(
         has_anthropic_key: Whether Anthropic key is configured.
 
     Yields:
-        AsyncGenerator[AnthropicProvider]: A connected AnthropicProvider instance.
+        AnthropicProvider: A connected AnthropicProvider instance.
     """
     if not has_anthropic_key:
         pytest.skip("ANTHROPIC_API_KEY not configured in .env")
@@ -250,7 +351,7 @@ async def openai_provider(
         has_openai_key: Whether OpenAI key is configured.
 
     Yields:
-        AsyncGenerator[OpenAIProvider]: A connected OpenAIProvider instance.
+        OpenAIProvider: A connected OpenAIProvider instance.
     """
     if not has_openai_key:
         pytest.skip("OPENAI_API_KEY not configured in .env")
@@ -280,7 +381,7 @@ async def google_provider(
         has_google_key: Whether Google key is configured.
 
     Yields:
-        AsyncGenerator[GoogleProvider]: A connected GoogleProvider instance.
+        GoogleProvider: A connected GoogleProvider instance.
     """
     if not has_google_key:
         pytest.skip("GOOGLE_API_KEY not configured in .env")
@@ -310,7 +411,7 @@ async def openrouter_provider(
         has_openrouter_key: Whether OpenRouter key is configured.
 
     Yields:
-        AsyncGenerator[OpenRouterProvider]: A connected OpenRouterProvider instance.
+        OpenRouterProvider: A connected OpenRouterProvider instance.
     """
     if not has_openrouter_key:
         pytest.skip("OPENROUTER_API_KEY not configured in .env")
@@ -340,7 +441,7 @@ async def ollama_provider(
         has_ollama_available: Whether Ollama is running.
 
     Yields:
-        AsyncGenerator[OllamaProvider]: A connected OllamaProvider instance.
+        OllamaProvider: A connected OllamaProvider instance.
     """
     if not has_ollama_available:
         pytest.skip("Ollama not running locally at http://localhost:11434")
@@ -375,7 +476,7 @@ async def huggingface_provider(
         has_huggingface_key: Whether HuggingFace token is configured.
 
     Yields:
-        AsyncGenerator[HuggingFaceProvider]: A connected HuggingFaceProvider instance.
+        HuggingFaceProvider: A connected HuggingFaceProvider instance.
     """
     if not has_huggingface_key:
         pytest.skip("HUGGINGFACE_API_TOKEN not configured in .env")
@@ -405,7 +506,7 @@ async def grok_provider(
         has_grok_key: Whether Grok key is configured.
 
     Yields:
-        AsyncGenerator[GrokProvider]: A connected GrokProvider instance.
+        GrokProvider: A connected GrokProvider instance.
     """
     if not has_grok_key:
         pytest.skip("XAI_API_KEY not configured in .env")

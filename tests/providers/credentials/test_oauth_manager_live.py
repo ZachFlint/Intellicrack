@@ -12,15 +12,16 @@ These tests cover:
   stands in for an OAuth provider. No external network calls are made.
 * Token-refresh error path including the 401/403 distinction.
 
-The singleton is reset between tests via :func:`importlib.reload` rather
-than reaching into private attributes.
+The singleton is reset between tests by clearing its module-level holder
+(``_OAuthManagerHolder.instance``) rather than via ``importlib.reload``, which
+would redefine the module's exception/enum classes and break identity checks in
+other tests sharing the same interpreter.
 """
 
 from __future__ import annotations
 
 import asyncio
 import http.server
-import importlib
 import json
 import socket
 import threading
@@ -136,16 +137,23 @@ def mock_oauth_provider() -> Iterator[tuple[str, list[dict[str, object]]]]:
 
 @pytest.fixture
 def reloaded_oauth_module() -> Iterator[ModuleType]:
-    """Reload the oauth module so singleton state is fresh per test.
+    """Reset the oauth manager singleton so state is fresh per test.
+
+    Clears the module-level singleton holder (``_OAuthManagerHolder.instance``)
+    directly instead of calling ``importlib.reload``: reloading re-executes the
+    module and redefines its exception and enum classes, so any other test in
+    the same interpreter that imported those classes earlier would hold stale
+    objects and fail identity (``is``) and ``pytest.raises`` checks. Resetting
+    the holder resets the singleton while preserving class identity.
 
     Yields:
-        ModuleType: The freshly reloaded module.
+        ModuleType: The oauth module with its singleton reset.
     """
-    module = importlib.reload(oauth_module)
+    getattr(oauth_module, "_OAuthManagerHolder").instance = None
     try:
-        yield module
+        yield oauth_module
     finally:
-        importlib.reload(oauth_module)
+        getattr(oauth_module, "_OAuthManagerHolder").instance = None
 
 
 def test_singleton_thread_safety(reloaded_oauth_module: ModuleType) -> None:

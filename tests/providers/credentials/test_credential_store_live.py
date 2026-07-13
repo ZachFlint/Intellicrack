@@ -5,9 +5,10 @@
 """Live end-to-end tests for the credential store against the real OS keyring.
 
 These tests exercise the real Windows Credential Manager backend where
-available. Each test reloads the credential store module via
-``importlib.reload`` to reset the module-level singleton between tests
-without touching private attributes directly.
+available. Each test resets the module-level singleton holder between tests
+(clearing ``_store_holder.instance``) rather than reloading the module via
+``importlib.reload``, which would redefine the module's exception/enum classes
+and break identity checks in other tests sharing the same interpreter.
 
 The tests verify:
 
@@ -24,7 +25,6 @@ The tests verify:
 from __future__ import annotations
 
 import asyncio
-import importlib
 import sys
 import threading
 import uuid
@@ -103,12 +103,20 @@ class _StoreProtocol(Protocol):
 
 
 def _reload_store() -> ModuleType:
-    """Reload the credential store module to reset the singleton state.
+    """Reset the credential store singleton without reloading the module.
+
+    Reloading the module via ``importlib.reload`` re-executes it and redefines
+    its exception and enum classes (``CredentialSource``, ``CredentialStoreError``,
+    ...), so any other test in the same process that imported those classes
+    earlier would hold stale objects and fail identity (``is``) and
+    ``pytest.raises`` checks. Clearing the holder's ``instance`` resets the
+    singleton while preserving class identity for the whole process.
 
     Returns:
-        ModuleType: The freshly reloaded store module.
+        ModuleType: The credential store module with its singleton reset.
     """
-    return importlib.reload(store_module_original)
+    getattr(store_module_original, "_store_holder").instance = None
+    return store_module_original
 
 
 @pytest.fixture

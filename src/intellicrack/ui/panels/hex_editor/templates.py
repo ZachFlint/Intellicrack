@@ -70,18 +70,17 @@ class TemplatesMixin:
     _bridge: Any | None
 
     def _notify_user(self, title: str, message: str, level: NotificationLevel) -> None:
-        """Surface a user-facing notification through the injected reporter or a dialog.
+        """Route template/bookmark feedback to the injected notifier or a modal box.
 
-        When a non-modal ``_user_notifier`` reporter is attached (for headless
-        orchestration, the bridge layer, or tests), the notification is routed
-        to it so the registry / bookmark mutation logic can run to completion
-        without blocking on a modal dialog. Otherwise the panel falls back to
-        the standard modal :class:`QMessageBox`.
+        When a non-modal ``_user_notifier`` is attached (headless orchestration,
+        bridge layer, or tests), the message goes there so registry/bookmark
+        mutations can finish without blocking. Otherwise falls back to a
+        modal :class:`QMessageBox`.
 
         Args:
-            title: Dialog / notification title.
+            title: Dialog or notification title.
             message: Human-readable notification body.
-            level: ``"info"`` or ``"warning"`` notification severity.
+            level: ``"info"`` or ``"warning"`` severity for the chosen channel.
         """
         notifier = getattr(self, "_user_notifier", None)
         if callable(notifier):
@@ -124,12 +123,12 @@ class TemplatesMixin:
         notify(template_name, source=source)
 
     def _notify_state_data_modified(self, offset: int, length: int, *, source: str) -> None:
-        """Forward a byte-region mutation event to the shared state holder if attached.
+        """Publish a template-driven byte mutation to ``HexDocumentState`` when present.
 
         Args:
             offset: Start byte offset of the affected range.
             length: Number of bytes affected.
-            source: Loop-guard identifier so the caller is filtered out.
+            source: Loop-guard identifier so this caller is filtered from echoes.
         """
         holder = self.state_holder
         if holder is None:
@@ -146,12 +145,12 @@ class TemplatesMixin:
         *,
         source: str,
     ) -> None:
-        """Forward a pattern-execution event to the shared state holder if attached.
+        """Publish pattern-run metadata through ``notify_pattern_executed`` when present.
 
         Args:
             pattern_name: Name of the executed pattern or template.
             field_count: Number of top-level fields produced by the execution.
-            source: Loop-guard identifier so the caller is filtered out.
+            source: Loop-guard identifier so this caller is filtered from echoes.
         """
         holder = self.state_holder
         if holder is None:

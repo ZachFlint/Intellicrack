@@ -7,7 +7,7 @@
 
 Tests validate:
 - Bridge instantiation, name, capabilities
-- Tool definition completeness (26 functions, all resolve to methods)
+- Tool definition completeness (29 functions, all resolve to methods)
 - Tool definition parameter names match method signatures
 - Initialize/shutdown lifecycle
 - Create/destroy sandbox instances
@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from intellicrack.sandbox.base import SandboxConfig
 
 
-_EXPECTED_FUNC_COUNT: Final[int] = 27
+_EXPECTED_FUNC_COUNT: Final[int] = 29
 _MIN_DESC_LEN: Final[int] = 5
 _WIN_INSTANCE: Final[str] = "win-test-001"
 _QEMU_INSTANCE: Final[str] = "qemu-test-001"
@@ -229,6 +229,14 @@ class TestToolDefinition:
         capture_id = (await _dispatch("pcap_start", _QEMU_INSTANCE))["capture_id"]
         assert capture_id == "cap-001"
         assert (await _dispatch("pcap_stop", _QEMU_INSTANCE, capture_id))["pcap_path"] == str(tmpdir / "capture.pcap")
+
+        assert (await _dispatch("stop", _QEMU_INSTANCE))["status"] == "paused"
+
+        second_capture_id = (await _dispatch("pcap_start", _QEMU_INSTANCE))["capture_id"]
+        stop_pcap_result = await _dispatch("stop_pcap", _QEMU_INSTANCE)
+        assert stop_pcap_result["stopped"] is True
+        assert stop_pcap_result["capture_id"] == second_capture_id
+        assert stop_pcap_result["pcap_path"] == str(tmpdir / "capture.pcap")
 
         snapshot_id = (await _dispatch("snapshot_create", _QEMU_INSTANCE, "dispatch_snap"))["snapshot_id"]
         assert snapshot_id == "snap-dispatch_snap"

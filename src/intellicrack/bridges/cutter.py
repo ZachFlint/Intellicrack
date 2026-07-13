@@ -87,6 +87,7 @@ _ERR_TOOL_NOT_AVAILABLE = "cutter not available"
 _ERR_DECOMPILE_NA = "decompilation not available"
 _ERR_ASSEMBLE_FAILED = "failed to assemble instruction"
 _ERR_CMD_TIMEOUT = "cutter command timed out"
+_RELOC_RVA_MASK = 0x7FFFFFFF
 _ERR_INVALID_R2_INPUT = "input contains rizin command-control characters"
 _ERR_JSON_PARSE_FAILED = "failed to parse rizin JSON output"
 _ERR_INVALID_BP_TYPE = "invalid breakpoint type"
@@ -2857,8 +2858,26 @@ class CutterMetadataMixin(CutterCommandMixin):
     async def get_relocations(self) -> list[RelocationInfo]:
         """Get relocation table entries from the binary.
 
+        Rizin's ``irj`` relocation records report ``vaddr`` as an RVA
+        (offset from the image's load base), not the fully mapped virtual
+        address, despite the field name -- the loader/analysis base
+        address (rizin ``ij`` -> ``bin.baddr``) must be added to place each
+        relocation inside the actual mapped image. ``paddr`` is left
+        untouched: it is the on-disk file offset of the relocation site,
+        which is independent of the RVA-to-VA conversion.
+
+        A minority of entries additionally carry a spurious bit 31 set on
+        the raw ``vaddr`` RVA (observed on real PE relocation blocks, e.g.
+        ``0x80024b3c`` where the surrounding, otherwise-identical entries
+        report plain ``0x24b3c``-scale RVAs); no real PE image approaches a
+        2 GiB RVA span, so :data:`_RELOC_RVA_MASK` clears that stray bit
+        before combining the RVA with the image base, recovering the true
+        in-image relocation target instead of a bogus 2 GiB-plus address.
+
         Returns:
-            list[RelocationInfo]: List of relocation information.
+            list[RelocationInfo]: List of relocation information with
+            ``vaddr`` expressed as a real virtual address inside the
+            mapped image.
 
         Raises:
             ToolError: If no binary is loaded.
@@ -2868,17 +2887,46 @@ class CutterMetadataMixin(CutterCommandMixin):
             raise ToolError(_ERR_NO_BINARY)
 
         relocs = await self._cmd_json("irj")
+        image_base = await self._get_image_base()
         result: list[RelocationInfo] = [
             RelocationInfo(
                 name=_get_str(r, "name"),
                 address=_get_int(r, "paddr"),
                 type=_get_str(r, "type"),
-                vaddr=_get_int(r, "vaddr"),
+                vaddr=image_base + (_get_int(r, "vaddr") & _RELOC_RVA_MASK),
             )
             for r in relocs
         ]
-        _logger.debug("relocations_queried", result_count=len(result))
+        _logger.debug("relocations_queried", result_count=len(result), image_base=image_base)
         return result
+
+    async def _get_image_base(self) -> int:
+        """Get the binary's loaded/analysis base address.
+
+        Reads rizin's ``ij`` command and returns ``bin.baddr``, the load
+        base address rizin uses when reporting fully-mapped virtual
+        addresses elsewhere (e.g. section ``vaddr`` from ``iSj``). Some
+        rizin listings -- notably relocation ``irj`` records -- report
+        addresses relative to this base rather than the mapped virtual
+        address, so callers combining those RVA-style fields with a real
+        address space must add this value back in.
+
+        Returns:
+            int: The image's load base address, or ``0`` when rizin does
+            not report one (e.g. a raw/headerless binary with no fixed
+            load address).
+
+        Raises:
+            ToolError: If no binary is loaded.
+        """
+        if self._r2 is None:
+            _logger.warning("get_image_base_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        info_list = await self._cmd_json("ij")
+        info = info_list[0] if info_list else {}
+        bin_info = _get_dict(info, "bin")
+        return _get_int(bin_info, "baddr")
 
     async def get_resources(self) -> list[ResourceInfo]:
         """Get embedded resources from the binary.
@@ -3322,6 +3370,11 @@ class CutterTypesMixin(CutterAnnotationMixin):
             raise ToolError(_ERR_NO_BINARY)
 
         def _write_temp() -> Path:
+            """Write the C header text to a temporary ``.h`` file.
+
+            Returns:
+                Path: Absolute path of the temporary header file.
+            """
             fd, name = tempfile.mkstemp(suffix=".h", prefix="intellicrack_hdr_")
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 handle.write(header_text)

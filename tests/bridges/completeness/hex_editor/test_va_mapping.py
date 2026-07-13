@@ -288,7 +288,6 @@ class TestVaMappingGuiDispatchesRealBridgeL3:
         Args:
             qapp: Session QApplication fixture.
         """
-        del qapp
         panel = HexEditorPanel()
         bridge = HexEditorBridge()
         path = open_doc(bridge, b"\x00" * 64)
@@ -299,8 +298,10 @@ class TestVaMappingGuiDispatchesRealBridgeL3:
 
             priv(panel, "_va_goto_edit", QLineEdit).setText("0x140001008")
             priv_method(panel, "_on_goto_va")()
+            status_label = priv(panel, "_va_status_label", QLabel)
+            pump_until(qapp, lambda: bool(status_label.text()))
 
-            assert priv(panel, "_va_status_label", QLabel).text() == "0x140001008 -> file offset 0x18"
+            assert status_label.text() == "0x140001008 -> file offset 0x18"
         finally:
             release_and_unlink(bridge, path)
             panel.deleteLater()
@@ -312,7 +313,6 @@ class TestVaMappingGuiDispatchesRealBridgeL3:
         Args:
             qapp: Session QApplication fixture.
         """
-        del qapp
         panel = HexEditorPanel()
         bridge = HexEditorBridge()
         path = open_doc(bridge, b"\x00" * 64)
@@ -322,8 +322,10 @@ class TestVaMappingGuiDispatchesRealBridgeL3:
 
             priv(panel, "_va_goto_edit", QLineEdit).setText("0xDEADBEEF")
             priv_method(panel, "_on_goto_va")()
+            status_label = priv(panel, "_va_status_label", QLabel)
+            pump_until(qapp, lambda: bool(status_label.text()))
 
-            assert priv(panel, "_va_status_label", QLabel).text() == "0xDEADBEEF is not mapped to a file offset"
+            assert status_label.text() == "0xDEADBEEF is not mapped to a file offset"
         finally:
             release_and_unlink(bridge, path)
             panel.deleteLater()
@@ -390,7 +392,6 @@ class TestPerformanceSettingsEntryPointDispatchesRealBridgeL3:
             qapp: Session QApplication fixture.
             monkeypatch: pytest monkeypatch fixture.
         """
-        del qapp
         panel = HexEditorPanel()
         bridge = HexEditorBridge()
         path = open_doc(bridge, b"\x00" * (1024 * 1024))
@@ -404,10 +405,16 @@ class TestPerformanceSettingsEntryPointDispatchesRealBridgeL3:
             monkeypatch.setattr(va_mapping_module, "LargeFileSettingsDialog", _StubPerformanceDialog)
 
             priv_method(panel, "_on_open_performance_settings")()
+            pump_until(qapp, lambda: bool(_StubPerformanceDialog.opened_with))
 
             assert _StubPerformanceDialog.opened_with == [(64, 4)], (
                 "the handler must read get_memory_usage and open the dialog with the current "
                 f"chunk-KiB/budget-MiB; recorded {_StubPerformanceDialog.opened_with!r}"
+            )
+            pump_until(
+                qapp,
+                lambda: (usage := _run(bridge.get_memory_usage()))["chunk_size"] == 128 * 1024
+                and usage["memory_budget"] == 8 * 1024 * 1024,
             )
             applied = _run(bridge.get_memory_usage())
             assert applied["chunk_size"] == 128 * 1024, "accepted dialog's new chunk size must be applied via set_chunk_size"

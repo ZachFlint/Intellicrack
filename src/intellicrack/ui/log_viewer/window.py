@@ -438,6 +438,11 @@ class LogViewerWindow(QMainWindow):
         pause_action.setCheckable(True)
 
         def _pause_slot(state: int) -> None:
+            """Pause or resume live log tailing from the toolbar pause action.
+
+            Args:
+                state: Qt ``toggled`` payload; nonzero means live tail is paused.
+            """
             self._on_pause_toggled(checked=bool(state))
 
         pause_action.toggled.connect(_pause_slot)
@@ -551,6 +556,11 @@ class LogViewerWindow(QMainWindow):
         check = QCheckBox("Case sensitive", panel)
 
         def _case_sensitive_slot(state: int) -> None:
+            """Rebuild the log filter when the Case sensitive checkbox changes.
+
+            Args:
+                state: Qt ``toggled`` payload; nonzero enables case-sensitive match.
+            """
             self._on_case_sensitive_changed(checked=bool(state))
 
         check.toggled.connect(_case_sensitive_slot)
@@ -584,6 +594,11 @@ class LogViewerWindow(QMainWindow):
         check.setChecked(True)
 
         def _auto_scroll_slot(state: int) -> None:
+            """Enable or disable follow-tail scrolling from the Auto-scroll checkbox.
+
+            Args:
+                state: Qt ``toggled`` payload; nonzero keeps the view on the newest row.
+            """
             self._on_auto_scroll_toggled(checked=bool(state))
 
         check.toggled.connect(_auto_scroll_slot)
@@ -669,9 +684,19 @@ class LogViewerWindow(QMainWindow):
             return
 
         def _on_finished(result: object) -> None:
+            """Log successful completion of the background save worker.
+
+            Args:
+                result: Record count returned by the JSONL write helper.
+            """
             _logger.debug("log_viewer_save_records_succeeded", target=target, record_count=result)
 
         def _on_error(exc: object) -> None:
+            """Warn the user when the background save worker fails.
+
+            Args:
+                exc: Exception or error payload from the worker.
+            """
             error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
             QMessageBox.warning(self, "Save Logs", f"Failed to save log records: {error_obj}")
 

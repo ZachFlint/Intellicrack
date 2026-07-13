@@ -22,7 +22,7 @@ logger name so failures can be filtered by subsystem.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, overload
+from typing import TYPE_CHECKING, Final
 
 from intellicrack.core.logging import get_logger
 
@@ -98,33 +98,13 @@ def safe_int_from_str(
         return default
 
 
-@overload
 def safe_call[T, D](
     func: Callable[[], T],
-    *,
-    exceptions: type[BaseException],
-    context: str,
-    default: D,
-) -> T | D: ...
-
-
-@overload
-def safe_call[T, D](
-    func: Callable[[], T],
-    *,
-    exceptions: tuple[type[BaseException], ...],
-    context: str,
-    default: D,
-) -> T | D: ...
-
-
-def safe_call(
-    func: Callable[[], object],
     *,
     exceptions: type[BaseException] | tuple[type[BaseException], ...],
     context: str,
-    default: object,
-) -> object:
+    default: D,
+) -> T | D:
     """Call ``func`` and return ``default`` on any of the listed exceptions.
 
     Mirrors :func:`intellicrack.bridges.parse_helpers.safe_call`. The
@@ -142,7 +122,7 @@ def safe_call(
         default: Value to return when one of ``exceptions`` is raised.
 
     Returns:
-        object: Result of ``func()`` on success, otherwise ``default``.
+        T | D: Result of ``func()`` on success, otherwise ``default``.
     """
     try:
         return func()

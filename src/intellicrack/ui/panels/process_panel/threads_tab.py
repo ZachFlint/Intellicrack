@@ -164,6 +164,11 @@ class ThreadsTab(QWidget):
         self._auto_refresh_btn.setObjectName("toggle_button")
 
         def _auto_slot(c: int) -> None:
+            """Start or stop thread-list auto-refresh from the toolbar toggle.
+
+            Args:
+                c: Qt ``toggled`` payload; nonzero enables periodic thread refresh.
+            """
             self._on_auto_refresh_toggled(checked=bool(c))
 
         self._auto_refresh_btn.toggled.connect(_auto_slot)
@@ -410,6 +415,11 @@ class ThreadsTab(QWidget):
         _logger.debug("threads_refresh_starting", pid=pid)
 
         def _on_success(result: object) -> None:
+            """Replace the thread table rows and repoint TID combos from ``get_threads``.
+
+            Args:
+                result: ThreadInfo list returned by ``get_threads``.
+            """
             if not isinstance(result, list):
                 return
             typed_result = cast("list[object]", result)
@@ -436,6 +446,11 @@ class ThreadsTab(QWidget):
                 self._system_tab.update_thread_list(thread_list)
 
         def _on_error(exc: object) -> None:
+            """Emit ``threads_refresh_failed`` for the attached PID without a modal dialog.
+
+            Args:
+                exc: Failure from ``get_threads`` while refreshing the thread table.
+            """
             _logger.warning("threads_refresh_failed", pid=pid, error=str(exc))
 
         run_bridge_coroutine_logged(
@@ -473,6 +488,11 @@ class ThreadsTab(QWidget):
         pid = self._attached_pid
 
         def _on_error(exc: object) -> None:
+            """Emit ``process_suspend_failed`` when bulk thread suspend fails for the PID.
+
+            Args:
+                exc: Failure from process-level ``suspend`` on the attached PID.
+            """
             _logger.warning("process_suspend_failed", pid=pid, error=str(exc))
 
         run_bridge_coroutine_logged(
@@ -493,6 +513,11 @@ class ThreadsTab(QWidget):
         pid = self._attached_pid
 
         def _on_error(exc: object) -> None:
+            """Emit ``process_resume_failed`` when bulk thread resume fails for the PID.
+
+            Args:
+                exc: Failure from process-level ``resume`` on the attached PID.
+            """
             _logger.warning("process_resume_failed", pid=pid, error=str(exc))
 
         run_bridge_coroutine_logged(
@@ -516,6 +541,12 @@ class ThreadsTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Show the wait outcome and elapsed microseconds for the selected TID.
+
+            Args:
+                result: Mapping with ``result`` and ``elapsed_us`` from
+                    ``time_thread_wait``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -526,6 +557,11 @@ class ThreadsTab(QWidget):
             self._wait_status.setToolTip(message)
 
         def _on_error(exc: object) -> None:
+            """Update the wait status label and show a dialog on wait failure.
+
+            Args:
+                exc: Exception raised while calling ``time_thread_wait``.
+            """
             _logger.warning("time_thread_wait_failed", tid=tid, error=str(exc))
             message = f"Wait failed: {exc}"
             self._wait_status.setText(message)
@@ -551,6 +587,11 @@ class ThreadsTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the register table with name, hex value, and decimal columns.
+
+            Args:
+                result: Register name-to-value mapping from ``get_thread_context``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -566,6 +607,11 @@ class ThreadsTab(QWidget):
                 self._reg_table.setItem(row, 2, QTableWidgetItem(str(int_val)))
 
         def _on_error(exc: object) -> None:
+            """Emit ``thread_context_fetch_failed`` for the selected TID without a dialog.
+
+            Args:
+                exc: Failure from ``get_thread_context`` while filling the register table.
+            """
             _logger.warning("thread_context_fetch_failed", tid=tid, error=str(exc))
 
         run_bridge_coroutine_logged(
@@ -667,6 +713,11 @@ class ThreadsTab(QWidget):
                     continue
 
         def _on_success(_result: object) -> None:
+            """Log successful application of the edited register context.
+
+            Args:
+                _result: Unused write result from ``set_thread_context``.
+            """
             _logger.info(
                 "thread_context_written",
                 tid=tid,
@@ -674,6 +725,11 @@ class ThreadsTab(QWidget):
             )
 
         def _on_error(exc: object) -> None:
+            """Emit ``thread_context_write_failed`` when edited registers cannot be applied.
+
+            Args:
+                exc: Failure from ``set_thread_context`` for the selected TID.
+            """
             _logger.warning(
                 "thread_context_write_failed",
                 tid=tid,
@@ -702,6 +758,11 @@ class ThreadsTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the stack table with frame index, return address, symbol, module, and offset.
+
+            Args:
+                result: Stack frame dict list returned by ``stack_walk``.
+            """
             if not isinstance(result, list):
                 return
             self._stack_table.setRowCount(0)
@@ -725,6 +786,11 @@ class ThreadsTab(QWidget):
                 self._stack_table.setItem(row, 4, QTableWidgetItem(f"0x{disp:X}"))
 
         def _on_error(exc: object) -> None:
+            """Emit ``stack_walk_failed`` for the selected TID and leave the stack table empty.
+
+            Args:
+                exc: Failure from ``stack_walk`` for the selected thread.
+            """
             _logger.warning("stack_walk_failed", tid=tid, error=str(exc))
 
         run_bridge_coroutine_logged(
@@ -746,6 +812,11 @@ class ThreadsTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the SEH table with frame address, handler address, and next pointer.
+
+            Args:
+                result: SEH chain entry list returned by ``get_seh_chain``.
+            """
             if not isinstance(result, list):
                 return
             self._seh_table.setRowCount(0)
@@ -766,6 +837,11 @@ class ThreadsTab(QWidget):
                 self._seh_table.setItem(row, 2, QTableWidgetItem(f"0x{next_val:X}"))
 
         def _on_error(exc: object) -> None:
+            """Emit ``seh_enumerate_failed`` for the selected TID without a modal dialog.
+
+            Args:
+                exc: Failure from ``get_seh_chain`` while filling the SEH table.
+            """
             _logger.warning("seh_enumerate_failed", tid=tid, error=str(exc))
 
         run_bridge_coroutine_logged(
@@ -787,6 +863,11 @@ class ThreadsTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the fiber table with field names and hex-formatted values.
+
+            Args:
+                result: Fiber field mapping returned by ``get_fiber_data``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -799,6 +880,11 @@ class ThreadsTab(QWidget):
                 self._fiber_table.setItem(row, 1, QTableWidgetItem(val_str))
 
         def _on_error(exc: object) -> None:
+            """Emit ``fiber_data_fetch_failed`` for the selected TID without a dialog.
+
+            Args:
+                exc: Failure from ``get_fiber_data`` while filling the fiber table.
+            """
             _logger.warning("fiber_data_fetch_failed", tid=tid, error=str(exc))
 
         run_bridge_coroutine_logged(
@@ -820,6 +906,11 @@ class ThreadsTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the TLS table with slot index and hex-formatted value columns.
+
+            Args:
+                result: TLS slot dict list returned by ``get_tls_values``.
+            """
             if not isinstance(result, list):
                 return
             self._tls_table.setRowCount(0)
@@ -838,6 +929,11 @@ class ThreadsTab(QWidget):
                 self._tls_table.setItem(row, 1, QTableWidgetItem(f"0x{tls_val:X}"))
 
         def _on_error(exc: object) -> None:
+            """Emit ``tls_values_fetch_failed`` for the selected TID without a dialog.
+
+            Args:
+                exc: Failure from ``get_tls_values`` while filling the TLS table.
+            """
             _logger.warning("tls_values_fetch_failed", tid=tid, error=str(exc))
 
         run_bridge_coroutine_logged(

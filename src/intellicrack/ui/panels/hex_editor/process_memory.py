@@ -528,10 +528,10 @@ class ProcessMemoryMixin:
             _logger.info("process_memory_success_unknown_payload_shape")
 
     def _on_process_memory_error(self, exc: object) -> None:
-        """Surface a bridge ``open_process_memory`` failure to the user.
+        """Show a Process Memory warning dialog after ``open_process_memory`` fails.
 
         Args:
-            exc: Exception object emitted by the bridge worker.
+            exc: Error emitted by the bridge worker that attempted the open.
         """
         parent = self if isinstance(self, QWidget) else None
         QMessageBox.warning(

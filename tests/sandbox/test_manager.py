@@ -433,8 +433,7 @@ class TestManagerProperties:
             patch("intellicrack.sandbox.manager.QEMUSandbox", _in_memory_sandbox_factory),
         ):
             mgr = SandboxManager(max_instances=5)
-            loop = asyncio.get_event_loop()
-            loop.run_until_complete(mgr.create(sandbox_type="windows", auto_start=False))
+            asyncio.run(mgr.create(sandbox_type="windows", auto_start=False))
 
         first_list = mgr.instances
         assert len(first_list) == 1

@@ -646,6 +646,8 @@ def _extract_command_line_from_peb(handle: int) -> str | None:
         return None
 
     class ProcessBasicInformation(ctypes.Structure):
+        """NtQueryInformationProcess ProcessBasicInformation layout for PEB lookup."""
+
         _fields_: ClassVar = [
             ("Reserved1", ctypes.c_void_p),
             ("PebBaseAddress", ctypes.c_void_p),
@@ -5045,6 +5047,18 @@ class _X64DbgBridgeBase(DebuggerBridge):
         """
 
         def _parse_int(val: object) -> int:
+            """Coerce a stack-frame field into an integer.
+
+            Accepts decimal or ``0x``-prefixed strings via ``int(..., 0)``,
+            converts numeric values with ``int(...)``, and returns ``0`` for
+            any other type.
+
+            Args:
+                val: Raw field value from the stack-frame entry dict.
+
+            Returns:
+                int: Parsed integer, or ``0`` when ``val`` is unusable.
+            """
             return int(val, 0) if isinstance(val, str) else (int(val) if isinstance(val, (int, float)) else 0)
 
         idx = _parse_int(entry.get("index", 0))
@@ -5119,6 +5133,8 @@ class _X64DbgBridgeBase(DebuggerBridge):
         kernel32 = ctypes.windll.kernel32
 
         class ProcessEntry32W(ctypes.Structure):
+            """Toolhelp32 PROCESSENTRY32W layout for parent-PID snapshot walks."""
+
             _fields_: ClassVar = [
                 ("dwSize", wintypes.DWORD),
                 ("cntUsage", wintypes.DWORD),
@@ -8170,14 +8186,16 @@ class _X64DbgScriptingMixin(_X64DbgTraceMixin):
             yara_matches: list[Any] = yara_match_fn(data=data)
             for m in yara_matches:
                 rule_name: str = str(m.rule)
-                strings_list: list[tuple[int, str, Any]] = list(m.strings)
-                for offset_val, _identifier, match_bytes in strings_list:
-                    byte_val: bytes = match_bytes if isinstance(match_bytes, bytes) else str(match_bytes).encode()
-                    results.append({
-                        "rule": rule_name,
-                        "address": hex(window_addr + offset_val),
-                        "matched_bytes": byte_val.hex(),
-                    })
+                for string_match in list(m.strings):
+                    for instance in list(string_match.instances):
+                        offset_val: int = int(instance.offset)
+                        raw_bytes: Any = instance.matched_data
+                        byte_val: bytes = raw_bytes if isinstance(raw_bytes, bytes) else bytes(raw_bytes)
+                        results.append({
+                            "rule": rule_name,
+                            "address": hex(window_addr + offset_val),
+                            "matched_bytes": byte_val.hex(),
+                        })
 
         if address and size:
             await _scan_window(address, size)

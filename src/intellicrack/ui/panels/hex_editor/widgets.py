@@ -171,9 +171,25 @@ class EntropyGraphWidget(QWidget):
         usable_h = h - 2 * pad
 
         def x_coord(idx: int) -> int:
+            """Map an entropy sample index to a pixel X coordinate.
+
+            Args:
+                idx: Zero-based index into the entropy sample list.
+
+            Returns:
+                int: Horizontal pixel position within the paint area.
+            """
             return pad + int(idx * usable_w / max(len(values) - 1, 1))
 
         def y_coord(val: float) -> int:
+            """Map an entropy sample value to a pixel Y coordinate.
+
+            Args:
+                val: Entropy reading in the unit interval scaled by ``ENTROPY_MAX``.
+
+            Returns:
+                int: Vertical pixel position within the paint area.
+            """
             return h - pad - int((val / ENTROPY_MAX) * usable_h)
 
         for i in range(len(values) - 1):
@@ -284,6 +300,14 @@ class ByteDistributionWidget(QWidget):
         bar_w = max(1.0, (w - 2 * pad) / BYTE_VALUES_COUNT)
 
         def bar_h(count: int) -> int:
+            """Compute a histogram bar height for a byte-value frequency.
+
+            Args:
+                count: Occurrence count for one byte value.
+
+            Returns:
+                int: Bar height in pixels, or ``0`` when ``count`` is zero.
+            """
             if count == 0:
                 return 0
             if self._log_scale:

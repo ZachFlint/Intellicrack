@@ -148,7 +148,23 @@ class DataInspectorMixin:
             bit_index = 7 - i
 
             def _make_bit_handler(bi: int) -> Callable[..., None]:
+                """Build a click handler bound to a specific bit index.
+
+                Args:
+                    bi: Bit position (0=LSB, 7=MSB) captured for the button.
+
+                Returns:
+                    Callable[..., None]: Slot that forwards the checked state
+                    to ``_on_bit_toggled``.
+                """
+
                 def _handler(*args: object) -> None:
+                    """Apply a bit-button click to the bound bit index.
+
+                    Args:
+                        *args: Qt ``clicked`` payload; the first value is the
+                            new checked state when present.
+                    """
                     checked = bool(args[0]) if args else False
                     self._on_bit_toggled(bi, checked=checked)
 
@@ -272,11 +288,21 @@ class DataInspectorMixin:
         parent = self if isinstance(self, QWidget) else None
 
         def _on_toggle_success(_result: object) -> None:
+            """Refresh UI state after a successful bridge bit toggle.
+
+            Args:
+                _result: Unused bridge coroutine result.
+            """
             self._notify_bit_written(offset)
             self._sync_bit_button(bit_index, offset, fallback=checked)
             self._refresh_hex_viewport()
 
         def _on_toggle_error(exc: object) -> None:
+            """Fall back to a direct document write when the bridge fails.
+
+            Args:
+                exc: Exception raised by the bridge ``toggle_bit`` call.
+            """
             _logger.warning(
                 "bit_toggle_bridge_failed",
                 offset=offset,
@@ -299,10 +325,12 @@ class DataInspectorMixin:
         )
 
     def _notify_bit_written(self, offset: int) -> None:
-        """Forward a single-byte bit write to the shared state holder if attached.
+        """Notify ``HexDocumentState`` that one byte changed after a bit flip.
+
+        No-ops when no state holder is attached or it lacks ``notify_data_modified``.
 
         Args:
-            offset: Byte offset that was written.
+            offset: Byte offset whose bit was written in the inspector.
         """
         state_holder = getattr(self, "state_holder", None)
         if state_holder is not None:
@@ -508,6 +536,11 @@ class DataInspectorMixin:
         encoding = self._selected_encoding(self._encode_combo)
 
         def _on_encode_success(hex_str: object) -> None:
+            """Display spaced uppercase hex for a successful encode result.
+
+            Args:
+                hex_str: Hex string returned by the bridge encode operation.
+            """
             if self._encode_output is None:
                 return
             if hex_str is None:
@@ -517,6 +550,11 @@ class DataInspectorMixin:
             self._encode_output.setText(spaced)
 
         def _on_encode_error(exc: object) -> None:
+            """Show the encode failure message in the encode output widget.
+
+            Args:
+                exc: Exception raised while encoding text through the bridge.
+            """
             if self._encode_output is not None:
                 self._encode_output.setText(f"Error: {exc}")
 

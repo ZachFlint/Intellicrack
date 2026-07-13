@@ -24,7 +24,7 @@
     ".pixi",
     "CLI Coding",
     "Screenshots",
-    "tests/test_ui"
+    "tests/ui"
   ],
   "typeCheckingMode": "strict",
   "pythonVersion": "3.13",

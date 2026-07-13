@@ -33,6 +33,7 @@ paths and assert the bridge contract is honoured.
 from __future__ import annotations
 
 import base64
+import time
 from typing import TYPE_CHECKING, Any, Final
 
 import pytest
@@ -50,6 +51,38 @@ _DOC_LEN: Final[int] = 64
 _PATCH_OFFSET: Final[int] = 0x10
 _PATCH_BYTES: Final[bytes] = b"PATCH\x00\x00\x10\x00\x01ZEOF"
 _BPS_BYTES: Final[bytes] = b"BPS1\x00\x00\x00\x00"
+_ASYNC_WAIT_TIMEOUT_S: Final[float] = 5.0
+_ASYNC_POLL_INTERVAL_S: Final[float] = 0.02
+
+
+def _wait_until(predicate: Callable[[], bool], timeout: float = _ASYNC_WAIT_TIMEOUT_S) -> bool:
+    """Poll ``predicate`` until it is true or ``timeout`` seconds elapse.
+
+    ``_on_export_patches`` / ``_on_import_patches`` dispatch the bridge
+    call on the real persistent background bridge event loop via
+    :func:`~intellicrack.ui.panels.async_bridge.run_bridge_coroutine_logged`,
+    so the bridge call and its on-success side effects happen on a
+    background thread asynchronously relative to the calling test. This
+    helper lets tests observe that eventual, real (non-mocked) side effect
+    deterministically instead of racing a bare post-call assertion against
+    the worker thread.
+
+    Args:
+        predicate: Zero-argument callable checked on every poll iteration.
+        timeout: Maximum number of seconds to poll before giving up.
+
+    Returns:
+        bool: ``True`` if ``predicate()`` became true within ``timeout``,
+            ``False`` otherwise (the final ``predicate()`` result).
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        QApplication.processEvents()
+        if predicate():
+            return True
+        time.sleep(_ASYNC_POLL_INTERVAL_S)
+    QApplication.processEvents()
+    return predicate()
 
 
 @pytest.fixture(scope="module")
@@ -57,7 +90,7 @@ def qapp() -> Generator[QApplication]:
     """Provide a process-wide ``QApplication`` for Qt widget construction.
 
     Yields:
-        Generator[QApplication]: Qt application instance shared across tests.
+        QApplication: Qt application instance shared across tests.
     """
     existing = QApplication.instance()
     if existing is not None and isinstance(existing, QApplication):
@@ -277,8 +310,15 @@ class TestExportRoutesThroughBridge:
 
         harness.trigger_export_for_test()
 
+        assert _wait_until(lambda: len(bridge.export_calls) == 1), (
+            f"bridge.export_patches must be called exactly once; got {len(bridge.export_calls)} "
+            f"after waiting {_ASYNC_WAIT_TIMEOUT_S}s for the background bridge worker"
+        )
         assert bridge.export_calls == [("ips", None)], (
             "panel must call bridge.export_patches with the right format and no original_path for IPS"
+        )
+        assert _wait_until(stub_save_dialog_ips.exists), (
+            f"export must write the decoded patch file within {_ASYNC_WAIT_TIMEOUT_S}s"
         )
         written = stub_save_dialog_ips.read_bytes()
         assert written == _PATCH_BYTES, "panel must base64-decode the bridge payload and write the raw bytes verbatim"
@@ -329,7 +369,14 @@ class TestExportRoutesThroughBridge:
 
         harness.trigger_export_for_test()
 
+        assert _wait_until(lambda: len(bridge.export_calls) == 1), (
+            f"bridge.export_patches must be called exactly once; got {len(bridge.export_calls)} "
+            f"after waiting {_ASYNC_WAIT_TIMEOUT_S}s for the background bridge worker"
+        )
         assert bridge.export_calls == [("bps", str(original))], "panel must pass the resolved original file path to the bridge"
+        assert _wait_until(stub_save_dialog_bps.exists), (
+            f"export must write the decoded patch file within {_ASYNC_WAIT_TIMEOUT_S}s"
+        )
         assert stub_save_dialog_bps.read_bytes() == _BPS_BYTES
 
 
@@ -354,11 +401,16 @@ class TestImportRoutesThroughBridge:
 
         harness.trigger_import_for_test()
 
-        assert len(bridge.import_calls) == 1
+        assert _wait_until(lambda: len(bridge.import_calls) == 1), (
+            f"bridge.import_patches must be called exactly once; got {len(bridge.import_calls)} "
+            f"after waiting {_ASYNC_WAIT_TIMEOUT_S}s for the background bridge worker"
+        )
         sent_b64, sent_original = bridge.import_calls[0]
         assert sent_original is None, "panel must NOT supply original_path when importing an IPS patch"
         assert base64.b64decode(sent_b64.encode("ascii")) == _PATCH_BYTES, "panel must base64-encode the on-disk patch bytes verbatim"
-        assert harness.hex_widget_update_count_for_test() == 1, "successful import must repaint the hex widget viewport exactly once"
+        assert _wait_until(lambda: harness.hex_widget_update_count_for_test() == 1), (
+            f"successful import must repaint the hex widget viewport exactly once within {_ASYNC_WAIT_TIMEOUT_S}s"
+        )
         assert stub_open_dialog_ips.exists()
 
     @staticmethod
@@ -422,6 +474,9 @@ class TestImportRoutesThroughBridge:
 
         harness.trigger_import_for_test()
 
-        assert len(bridge.import_calls) == 1
+        assert _wait_until(lambda: len(bridge.import_calls) == 1), (
+            f"bridge.import_patches must be called exactly once; got {len(bridge.import_calls)} "
+            f"after waiting {_ASYNC_WAIT_TIMEOUT_S}s for the background bridge worker"
+        )
         _b64, sent_original = bridge.import_calls[0]
         assert sent_original == str(original), "panel must pass the resolved original file path for BPS import"

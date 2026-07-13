@@ -53,9 +53,11 @@ if TYPE_CHECKING:
 
 __all__ = [
     "ALLOW_HOST_PROCESS_TESTS_ENV",
+    "HOST_NATIVE_ONLY_ENV",
     "SANDBOX_ENV_VAR",
     "ManagedProcess",
     "allow_host_process_tests",
+    "host_native_only",
     "is_sandboxed",
     "kill_new_descendants",
     "kill_pid_tree",
@@ -68,6 +70,7 @@ _logger: Final[logging.Logger] = logging.getLogger(__name__)
 
 SANDBOX_ENV_VAR: Final[str] = "INTELLICRACK_SANDBOXED"
 ALLOW_HOST_PROCESS_TESTS_ENV: Final[str] = "INTELLICRACK_ALLOW_HOST_PROCESS_TESTS"
+HOST_NATIVE_ONLY_ENV: Final[str] = "INTELLICRACK_HOST_NATIVE_ONLY"
 
 _GRACEFUL_TERMINATE_TIMEOUT_S: Final[float] = 5.0
 _FORCE_KILL_TIMEOUT_S: Final[float] = 3.0
@@ -115,6 +118,20 @@ def allow_host_process_tests() -> bool:
         bool: ``True`` when the override env var is truthy.
     """
     return _env_truthy(ALLOW_HOST_PROCESS_TESTS_ENV)
+
+
+def host_native_only() -> bool:
+    """Return whether the host-native pass requested a host-only collection.
+
+    :mod:`scripts.host_native_tests` sets :data:`HOST_NATIVE_ONLY_ENV` so the
+    conftest collection hook keeps only ``host_native`` tests and deselects the
+    rest. This yields a fast, focused run that exercises exactly the tests the
+    Docker sandbox cannot.
+
+    Returns:
+        bool: ``True`` when the host-native-only env var is truthy.
+    """
+    return _env_truthy(HOST_NATIVE_ONLY_ENV)
 
 
 def kill_pid_tree(pid: int, *, timeout: float = _TREE_KILL_TIMEOUT_S) -> None:
@@ -234,7 +251,7 @@ class ManagedProcess(AbstractContextManager["ManagedProcess"]):
 
     @property
     def pid(self) -> int:
-        """Return the PID of the wrapped process.
+        """The PID of the wrapped process.
 
         Returns:
             int: PID assigned by the operating system.

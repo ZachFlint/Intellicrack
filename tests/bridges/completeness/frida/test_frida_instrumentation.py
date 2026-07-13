@@ -287,25 +287,33 @@ class TestRevertHookAndFlushInterceptorL1:
         assert result is True
 
     @staticmethod
-    def test_revert_hook_on_never_hooked_target_raises_hook_failed(
+    def test_revert_hook_on_never_hooked_target_is_a_safe_no_op(
         registry: ToolRegistry,
     ) -> None:
-        """``frida.revert_hook`` on an address with no active interceptor must raise ``ToolError``.
+        """``frida.revert_hook`` on an address with no active interceptor must succeed.
 
-        Falsifiable: if ``revert_hook`` swallowed the real
-        ``Interceptor.revert`` failure instead of propagating it as
-        ``ToolError`` (per the ``if "error" in result: raise
-        ToolError(_ERR_HOOK_FAILED)`` check), reverting a target Frida never
-        actually instrumented would silently report success instead of
-        surfacing the genuine Frida-side error.
+        Real Frida's ``Interceptor.revert(target)`` is documented as a safe,
+        idempotent no-op for a target address that currently has no active
+        interceptor -- it does not raise. ``revert_hook`` must reach the
+        genuine ``Interceptor.revert`` call and report the true JS-side
+        result rather than raising a synthetic precondition error.
+
+        Falsifiable: if ``revert_hook`` stopped executing the real
+        ``Interceptor.revert(targetAddr)`` script against the live Frida
+        session (e.g. reduced to a local no-op that never talks to the
+        process), a genuine JS-side failure (bad address resolution,
+        crashed script) would go undetected because nothing would ever
+        exercise the real call path; this test proves the real path runs
+        end-to-end and returns ``True`` for the real no-op result Frida
+        itself reports.
 
         Args:
             registry: ToolRegistry with a real, self-attached bridge.
         """
-        with pytest.raises(ToolError):
-            _run_async(
-                registry.execute_tool_call("frida", "frida.revert_hook", {"target": "0x1"}),
-            )
+        result = _run_async(
+            registry.execute_tool_call("frida", "frida.revert_hook", {"target": "0x1"}),
+        )
+        assert result is True
 
     @staticmethod
     def test_revert_hook_actually_reverts_a_real_hook(

@@ -933,6 +933,7 @@ class ScriptManagerPanel(QWidget):
                 self._set_status_style("error")
 
         def reset_status() -> None:
+            """Restore the status bar style after the validation feedback delay."""
             self._set_status_style("info")
 
         QTimer.singleShot(_STATUS_RESET_MS, reset_status)
@@ -1020,6 +1021,7 @@ class ScriptManagerPanel(QWidget):
         _logger.info("script_execute_acknowledged", script_name=name, result_length=len(result))
 
         def reset_status() -> None:
+            """Restore the status bar style after the execution feedback delay."""
             self._set_status_style("info")
 
         QTimer.singleShot(_STATUS_RESET_MS, reset_status)

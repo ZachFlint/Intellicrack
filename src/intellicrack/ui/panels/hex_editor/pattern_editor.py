@@ -10,7 +10,7 @@ from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, cast
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import QCoreApplication, Qt, QThread
 from PyQt6.QtWidgets import (
     QComboBox,
     QFileDialog,
@@ -51,6 +51,21 @@ _logger = get_logger(__name__)
 
 _PATTERN_FIELD_DARK: Final[str] = "#FFD080"
 _PATTERN_FIELD_LIGHT: Final[str] = "#E65100"
+_PATTERN_APPLY_SYNC_WAIT_MS: Final[int] = 100
+"""Bounded join, in milliseconds, ``_apply_via_interpreter`` waits on the apply worker before returning.
+
+The interpreter still runs ``execute`` on a background ``GenericCallableWorker``
+thread so a pattern with large or deeply nested arrays never freezes the Qt
+event loop. Most patterns applied through this panel finish well inside this
+budget, so joining briefly here lets a caller that immediately re-applies (or
+inspects the freshly cached interpreter) observe a finished, reusable worker
+instead of racing the background thread's startup. When the join succeeds the
+worker's already-queued completion signal is flushed immediately (see
+``_apply_via_interpreter``) so the decoded fields, the notifications, and the
+buffered print output are all visible by the time this method returns. A
+pattern that genuinely takes longer simply outlives this short join and keeps
+running fully asynchronously exactly as before, delivering its result via the
+worker's queued signals whenever the GUI event loop next pumps."""
 
 
 def _get_default_pattern_field_color() -> str:
@@ -399,6 +414,26 @@ class PatternEditorMixin:
             return
         self._pattern_print_output.appendPlainText(line)
 
+    def _pattern_print_sink(self, line: str) -> None:
+        """Route one ``std::print``/``std::warning`` line to the widget or the worker-thread buffer.
+
+        Installed as the interpreter's ``print_sink`` by :meth:`_apply_via_interpreter`, so the interpreter invokes this synchronously,
+        mid-evaluation, from whichever thread is currently running ``execute``. When that thread is the panel's own GUI thread the line is
+        appended straight to :attr:`_pattern_print_output`; when it is a background :class:`GenericCallableWorker` thread the line is
+        buffered into :attr:`_pattern_print_buffer` instead, since a :class:`QPlainTextEdit` may only be mutated from the GUI thread.
+        :meth:`_flush_pattern_print_buffer` drains the buffer on the GUI thread once the worker signals completion.
+
+        Args:
+            line: Formatted message emitted by the interpreter's print sink.
+        """
+        widget = self if isinstance(self, QWidget) else None
+        if widget is not None and QThread.currentThread() is widget.thread():
+            self._append_pattern_print_line(line)
+            return
+        buffer = self._pattern_print_buffer
+        if buffer is not None:
+            buffer.append(line)
+
     def _apply_via_interpreter(self, source: str, offset: int) -> None:
         """Execute HexPat source via the interpreter on a background worker thread.
 
@@ -406,15 +441,24 @@ class PatternEditorMixin:
         so a pattern with large or deeply nested arrays cannot freeze the Qt
         event loop. ``HexPatInterpreter.execute`` invokes its print sink
         synchronously, mid-evaluation, for every ``std::print``/``std::warning``
-        call in the pattern; since the interpreter now runs on the worker
-        thread, the sink installed here only appends to
-        :attr:`_pattern_print_buffer` instead of mutating
-        :attr:`_pattern_print_output` directly. The buffer is flushed to the
-        widget on the GUI thread by :meth:`_flush_pattern_print_buffer` once
-        the worker signals completion (success or failure). Results and
-        errors are delivered back to the GUI thread via the worker's signals
-        and applied by :meth:`_on_interpreter_apply_finished` /
-        :meth:`_on_interpreter_apply_error`.
+        call in the pattern; :meth:`_pattern_print_sink` routes each line to the
+        widget directly when called from the GUI thread, or into
+        :attr:`_pattern_print_buffer` when called from the worker thread, since a
+        :class:`QPlainTextEdit` may only be mutated from the GUI thread. The
+        buffer is flushed to the widget on the GUI thread by
+        :meth:`_flush_pattern_print_buffer` once the worker signals completion
+        (success or failure). Results and errors are delivered back to the GUI
+        thread via the worker's signals and applied by
+        :meth:`_on_interpreter_apply_finished` / :meth:`_on_interpreter_apply_error`.
+        After dispatch this joins the worker for a short, bounded window
+        (``_PATTERN_APPLY_SYNC_WAIT_MS``); if the worker finishes inside that
+        window its already-queued completion signal is flushed immediately via
+        ``QCoreApplication.processEvents()`` so an ordinarily fast pattern is
+        fully applied -- decoded fields, notifications, buffered print output,
+        and the cached interpreter's reinstalled print sink -- by the time this
+        method returns. A pattern that genuinely takes longer simply outlives
+        that window and keeps running fully asynchronously as before, with its
+        result delivered whenever the GUI event loop next pumps.
 
         Args:
             source: HexPat DSL source code.
@@ -431,29 +475,14 @@ class PatternEditorMixin:
         if self._pattern_print_output is not None:
             self._pattern_print_output.clear()
 
-        print_buffer: list[str] = []
-        self._pattern_print_buffer = print_buffer
-
-        def _buffer_print_line(line: str) -> None:
-            """Buffer a ``std::print``/``std::warning`` line from the worker thread.
-
-            The interpreter invokes this sink synchronously while
-            ``execute`` runs on the background worker thread, so it must
-            not touch any :class:`QWidget`; the buffered lines are later
-            appended to :attr:`_pattern_print_output` on the GUI thread by
-            :meth:`_flush_pattern_print_buffer`.
-
-            Args:
-                line: Formatted message emitted by the interpreter's print sink.
-            """
-            print_buffer.append(line)
+        self._pattern_print_buffer = []
 
         if self._interpreter is None:
-            self._interpreter = HexPatInterpreter_cls(print_sink=_buffer_print_line)
+            self._interpreter = HexPatInterpreter_cls(print_sink=self._pattern_print_sink)
         else:
             set_sink = getattr(self._interpreter, "set_print_sink", None)
             if callable(set_sink):
-                set_sink(_buffer_print_line)
+                set_sink(self._pattern_print_sink)
         interpreter = self._interpreter
         if interpreter is None:
             return
@@ -476,6 +505,8 @@ class PatternEditorMixin:
         self._pattern_apply_worker = worker
         _logger.info("pattern_interpreter_worker_starting", offset=offset)
         worker.start()
+        if worker.wait(_PATTERN_APPLY_SYNC_WAIT_MS):
+            QCoreApplication.processEvents()
 
     def _flush_pattern_print_buffer(self) -> None:
         """Append buffered ``std::print``/``std::warning`` output to the GUI widget.
@@ -536,13 +567,13 @@ class PatternEditorMixin:
         _logger.info("pattern_executed_via_interpreter", field_count=len(fields))
 
     def _on_interpreter_apply_error(self, exc: object) -> None:
-        """Surface a HexPat interpreter execution failure on the GUI thread.
+        """Flush print output and show interpreter errors after a background apply fails.
 
-        Called on the main thread when the background worker started by
-        :meth:`_apply_via_interpreter` raises during execution.
+        Called on the main thread when the worker started by
+        :meth:`_apply_via_interpreter` raises during HexPat execution.
 
         Args:
-            exc: The exception raised by the interpreter on the worker thread.
+            exc: Interpreter exception from the worker, optionally with line/column.
         """
         self._flush_pattern_print_buffer()
         if self._pattern_error_display is not None:

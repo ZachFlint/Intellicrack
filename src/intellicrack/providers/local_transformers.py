@@ -576,6 +576,7 @@ class LocalTransformersProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
+        self._reject_empty_messages(messages)
         if not self.connected:
             self._logger.warning(
                 "local_transformers_chat_not_connected",
@@ -728,6 +729,7 @@ class LocalTransformersProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
+        self._reject_empty_messages(messages)
         if not self.connected:
             self._logger.warning(
                 "local_transformers_stream_not_connected",

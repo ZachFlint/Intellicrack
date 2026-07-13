@@ -1054,16 +1054,14 @@ class TransformsMixin:
         self._refresh_widget()
 
     def _on_arithmetic_failed(self, exc: object) -> None:
-        """Surface a failure from the background arithmetic chain to the user.
+        """Log and warn when select-range + apply-arithmetic fails on the bridge.
 
-        The chain (``select_range`` followed by
-        ``apply_arithmetic_to_selection``) runs on the background bridge loop;
-        this callback is delivered back on the GUI thread, so the warning
-        dialog is shown safely and no widget refresh is performed for a failed
-        operation.
+        The chain (``select_range`` then ``apply_arithmetic_to_selection``) runs
+        off the GUI thread; this slot only logs and opens a warning, without
+        refreshing widgets for the failed transform.
 
         Args:
-            exc: Exception raised while running the select/apply chain.
+            exc: Exception raised while running the select/apply arithmetic chain.
         """
         _logger.warning("arithmetic_bridge_failed", error=str(exc))
         parent = self if isinstance(self, QWidget) else None

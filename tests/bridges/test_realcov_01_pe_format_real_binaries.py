@@ -200,13 +200,34 @@ def _import_directory_rva(data: bytes) -> int:
     return rva
 
 
-_KERNEL32_E_LFANEW: int = 0x100
-"""Independently verified ``e_lfanew`` for the kernel32.dll shipped with Windows 11.
+_DOS_E_LFANEW_SPEC_OFFSET: int = 0x3C
+"""``IMAGE_DOS_HEADER.e_lfanew`` byte offset, fixed by the PE/COFF spec.
 
-Verified by both raw ``struct.unpack_from('<I', data, 0x3C)`` and pefile on the
-same file. A helper that computed 0x40 (the minimum valid value) or any other
-constant would fail this assertion.
+Used to build a raw-bytes oracle for :func:`read_dos_e_lfanew` that is
+independent of both the helper under test and the :mod:`pefile` library.
 """
+
+
+def _raw_e_lfanew(data: bytes) -> int:
+    """Read ``e_lfanew`` directly from DOS-header bytes, bypassing the helper under test.
+
+    Windows System32 DLLs vary in ``e_lfanew`` across OS builds because the
+    linker-inserted DOS stub's length is not fixed by the spec, so this value
+    cannot be a portable hardcoded constant. Reading it independently here --
+    with a raw ``struct.unpack_from`` rather than either the helper under test
+    or the ``pefile`` library -- keeps the assertion a genuine third oracle
+    that is still falsifiable: a helper regression to any other offset or
+    byte order would disagree with this independently computed value on any
+    real kernel32.dll, regardless of which Windows build supplies it.
+
+    Args:
+        data: Whole-file bytes of a real PE binary.
+
+    Returns:
+        int: The ``e_lfanew`` value read directly from offset ``0x3C``.
+    """
+    return int(struct.unpack_from("<I", data, _DOS_E_LFANEW_SPEC_OFFSET)[0])
+
 
 _KERNEL32_MACHINE: int = 0x8664
 """``IMAGE_FILE_MACHINE_AMD64`` constant shared by all System32 x64 DLLs.
@@ -262,20 +283,27 @@ class TestPeFormatHelpersAgainstRealDlls:
         assert read_dos_e_lfanew(data) == expected
 
     def test_e_lfanew_kernel32_known_constant(self, real_pe_dll: Path) -> None:
-        """``read_dos_e_lfanew`` must equal the independently-verified kernel32 constant.
+        """``read_dos_e_lfanew`` must equal a raw-bytes third oracle, not just pefile.
 
-        The constant ``_KERNEL32_E_LFANEW`` was read from the raw file with
-        ``struct.unpack_from('<I', data, 0x3C)`` and separately confirmed with
-        pefile. This test is the independent third oracle that the pefile-vs-helper
-        comparison cannot provide: if both pefile and the helper returned a wrong
-        value, this assertion would catch it.
+        ``e_lfanew`` is not a portable hardcoded constant across kernel32.dll
+        builds: the linker-inserted DOS stub between the DOS header and the
+        NT headers varies in length by Windows version, so a fixed expected
+        value would be stale on a different Windows build (including inside
+        the Windows test container). Reading it independently at runtime via
+        :func:`_raw_e_lfanew` -- a bare ``struct.unpack_from('<I', data, 0x3C)``
+        that does not call the helper under test or ``pefile`` -- keeps this
+        the independent third oracle that the pefile-vs-helper comparison in
+        :meth:`test_e_lfanew_matches_pefile` cannot provide: if both pefile
+        and the helper agreed on a wrong value, this assertion would still
+        catch it.
 
         Args:
             real_pe_dll: Path to a real System32 DLL fixture (kernel32.dll).
         """
         data = real_pe_dll.read_bytes()
+        expected = _raw_e_lfanew(data)
         result = read_dos_e_lfanew(data)
-        assert result == _KERNEL32_E_LFANEW, f"kernel32.dll e_lfanew expected {_KERNEL32_E_LFANEW:#x}, got {result:#x}"
+        assert result == expected, f"kernel32.dll e_lfanew expected {expected:#x} (raw offset 0x3C), got {result:#x}"
 
     def test_coff_header_matches_pefile(self, real_pe_dlls: list[Path]) -> None:
         """Verify COFF machine / section-count / opt-header-size match pefile.

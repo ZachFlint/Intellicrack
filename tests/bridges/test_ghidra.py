@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from types import ModuleType
 
 
-_EXPECTED_TOOL_COUNT: Final[int] = 81
+_EXPECTED_TOOL_COUNT: Final[int] = 85
 _GHIDRA_DEFAULT_PORT: Final[int] = 4768
 _TEST_ADDRESS: Final[int] = 0x401000
 _TEST_RADIUS: Final[int] = 0x100

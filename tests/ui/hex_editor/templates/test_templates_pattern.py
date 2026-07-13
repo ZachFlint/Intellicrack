@@ -203,6 +203,7 @@ class TemplatesHarness(QWidget, TemplatesMixin):
             self._template_combo.setCurrentIndex(0)
         self._templates_tree = QTreeWidget(self)
         self.state_holder = state_holder
+        self._bridge: Any | None = None
         self.user_notifications: list[tuple[str, str, NotificationLevel]] = []
         self._user_notifier = self._record_notification
 

@@ -652,12 +652,11 @@ class SignaturesMixin:
         )
 
     def _on_sig_scan_bridge_success(self, result: object) -> None:
-        """Forward a successful bridge scan result to the results-tree renderer.
+        """Render DiE/ClamAV/custom signature hits after a successful bridge scan.
 
         Args:
-            result: ``list[dict]`` payload returned by the bridge's
-                ``scan_die_signatures``, ``scan_clamav_signatures``, or
-                ``scan_custom_signatures`` method.
+            result: Match list from ``scan_die_signatures``,
+                ``scan_clamav_signatures``, or ``scan_custom_signatures``.
         """
         if not isinstance(result, list):
             _logger.warning("sig_scan_bridge_unexpected_result_type", result_type=type(result).__name__)
@@ -665,15 +664,15 @@ class SignaturesMixin:
         self._on_sig_scan_finished(cast("list[object]", result))
 
     def _on_sig_scan_bridge_error(self, exc: object) -> None:
-        """Forward a bridge signature-scan failure to the error handler.
+        """Show the signature-scan error path when a bridge scan method fails.
 
         Args:
-            exc: Exception raised by the bridge's scan method.
+            exc: Exception raised by the signature-scan bridge method.
         """
         self._on_sig_scan_error(str(exc))
 
     def _on_sig_scan_finished_obj(self, results: object) -> None:
-        """Forward worker results to the typed signature scan handler.
+        """Accept untyped worker finished payloads into the typed scan-finished path.
 
         Args:
             results: Raw object emitted by ``GenericCallableWorker.call_finished``.

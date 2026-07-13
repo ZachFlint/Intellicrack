@@ -16,7 +16,7 @@ import json
 import pathlib
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Literal, cast
 from uuid import uuid4
@@ -544,6 +544,7 @@ Each entry maps a :class:`ToolName` to the exact method-name leaves (the part af
 classify as destructive. Method names not present in the relevant set are read-only. Bridges absent from this map default to ``unknown``
 classification, which the orchestrator treats as destructive so that newly added bridges fail safe until their methods are catalogued here.
 """
+
 
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.
@@ -1076,6 +1077,10 @@ class Orchestrator:
            modified, leaving the persisted state consistent with the last
            successful turn.
 
+        Propagates ``asyncio.TimeoutError`` from :meth:`_run_user_turn` when
+        the agent loop does not complete within ``self._config.timeout_seconds``;
+        the in-memory turn is rolled back before the error surfaces here.
+
         Args:
             text: User's natural language input.
 
@@ -1146,7 +1151,10 @@ class Orchestrator:
         helper is invoked; callers verify that precondition before delegating.
         ``asyncio.CancelledError`` propagates unchanged so the caller can
         update state and re-raise. Any other exception raised by
-        ``_run_agent_loop`` propagates after the in-memory rollback runs.
+        ``_run_agent_loop`` propagates after the in-memory rollback runs. The
+        loop is wrapped in ``asyncio.wait_for``, so ``asyncio.TimeoutError``
+        propagates (after the same in-memory rollback) when the loop does not
+        complete within ``self._config.timeout_seconds``.
 
         Args:
             user_message: The user message to append before running the loop.
@@ -1170,7 +1178,10 @@ class Orchestrator:
         loop_succeeded = False
         self._current_session.messages.append(user_message)
         try:
-            await self._run_agent_loop(turn_messages=turn_messages)
+            await asyncio.wait_for(
+                self._run_agent_loop(turn_messages=turn_messages),
+                timeout=self._config.timeout_seconds,
+            )
             loop_succeeded = True
         finally:
             if not loop_succeeded:
@@ -1211,13 +1222,26 @@ class Orchestrator:
         )
 
     async def _run_agent_loop(self, *, turn_messages: list[Message]) -> None:
-        """Run the main agent loop until completion or cancellation.
+        """Run the main agent loop until completion, timeout, or cancellation.
 
         ``_validate_tool_schemas`` and ``_require_model_context_window`` are
         called at the top of the loop and raise ``ToolError`` when a tool
         definition is invalid for the active provider or no context window is
         known; those errors propagate to the caller and abort the turn before
         any LLM request is sent.
+
+        The loop also enforces ``self._config.timeout_seconds`` directly,
+        by comparing a ``time.monotonic()`` deadline at the top of every
+        iteration. This is required in addition to the ``asyncio.wait_for``
+        wrapper :meth:`_run_user_turn` applies around this coroutine: when
+        every provider/bridge call in an iteration resolves without ever
+        suspending on a genuine asyncio primitive (no real socket I/O, no
+        ``asyncio.sleep``), the whole multi-iteration loop can run as a
+        single uninterruptible step of the event loop, so ``wait_for``'s
+        ``call_later`` timeout callback never gets scheduled until after the
+        loop has already finished. The explicit deadline check below closes
+        that gap so ``timeout_seconds`` is honoured even when nothing in the
+        loop body ever truly yields control back to the event loop.
 
         Args:
             turn_messages: Mutable list that the loop appends every assistant
@@ -1227,6 +1251,8 @@ class Orchestrator:
 
         Raises:
             RuntimeError: If provider is not available.
+            TimeoutError: If the loop's elapsed wall-clock time exceeds
+                ``self._config.timeout_seconds``.
             asyncio.CancelledError: If the operation is cancelled.
         """
         if self._current_session is None:
@@ -1246,10 +1272,20 @@ class Orchestrator:
         context_window = await self._require_model_context_window(provider)
         iteration = 0
         force_no_tools_next = False
+        deadline = time.monotonic() + self._config.timeout_seconds
 
         while iteration < self._config.max_iterations:
             if self._cancel_event.is_set():
                 raise asyncio.CancelledError
+
+            if time.monotonic() >= deadline:
+                _logger.warning(
+                    "agent_loop_timeout_exceeded",
+                    timeout_seconds=self._config.timeout_seconds,
+                    iteration=iteration,
+                )
+                error_message = f"Agent loop exceeded timeout_seconds={self._config.timeout_seconds} at iteration {iteration}"
+                raise TimeoutError(error_message)
 
             iteration += 1
             _logger.debug("agent_loop_iteration", iteration=iteration)
@@ -1318,8 +1354,18 @@ class Orchestrator:
     def _build_messages(self) -> list[Message]:
         """Build message list for LLM including system prompt.
 
+        Tool-result payloads are bounded (see :meth:`_bound_tool_result`) only
+        in the copy returned here for the outgoing LLM request. The
+        session's own ``self._current_session.messages`` -- and every
+        ``ToolResult`` handed to callers via the tool-result callback or
+        persisted to the session store -- keep the real, structured result
+        object untouched, so a large tool payload (e.g. a full import table)
+        remains a genuine ``dict``/``list`` for downstream consumers while
+        the model-facing context still stays bounded (audit F2).
+
         Returns:
-            list[Message]: List of messages with system prompt prepended.
+            list[Message]: List of messages with system prompt prepended,
+                with any tool-result payloads bounded for LLM consumption.
         """
         if self._current_session is None:
             return []
@@ -1331,13 +1377,38 @@ class Orchestrator:
             timestamp=datetime.now(tz=UTC),
         )
 
-        messages = [system_message, *self._current_session.messages]
+        messages = [system_message, *(self._bound_message_for_llm(m) for m in self._current_session.messages)]
         _logger.debug(
             "messages_built",
             message_count=len(messages),
             system_prompt_length=len(system_prompt),
         )
         return messages
+
+    @staticmethod
+    def _bound_message_for_llm(message: Message) -> Message:
+        """Return a copy of ``message`` with tool results bounded for the LLM.
+
+        Non-``tool`` messages and ``tool`` messages without results are
+        returned unchanged (no copy needed, since they carry nothing to
+        bound). For a ``tool`` message, a shallow copy is returned whose
+        ``tool_results`` list holds copies of each :class:`ToolResult` with
+        ``result`` passed through :meth:`_bound_tool_result`. The original
+        message and its ``ToolResult`` objects are never mutated, so the
+        session's persisted history and any previously-returned callback
+        references keep the full, untruncated result.
+
+        Args:
+            message: The message to bound a copy of.
+
+        Returns:
+            Message: The original message, or a bounded copy when it is a
+                ``tool`` message carrying results.
+        """
+        if message.role != "tool" or not message.tool_results:
+            return message
+        bounded_results = [replace(tr, result=Orchestrator._bound_tool_result(tr.result)) for tr in message.tool_results]
+        return replace(message, tool_results=bounded_results)
 
     def build_system_prompt(self) -> str:
         """Render the current system prompt.
@@ -2101,7 +2172,7 @@ class Orchestrator:
         return ToolResult(
             call_id=call.id,
             success=True,
-            result=self._bound_tool_result(result),
+            result=result,
             error=None,
             duration_ms=elapsed_ms,
         )

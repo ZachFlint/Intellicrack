@@ -41,7 +41,7 @@ from intellicrack.core.types import ToolError
 from intellicrack.ui.panels.hex_editor.export_report import AnnotatedExportRangeDialog
 from intellicrack.ui.panels.hex_editor.panel import HexEditorPanel
 
-from .conftest import open_doc, priv, priv_method, release_and_unlink
+from .conftest import open_doc, priv, priv_method, pump_until, release_and_unlink
 
 
 if TYPE_CHECKING:
@@ -265,7 +265,6 @@ class TestExportAnnotatedHtmlGuiDispatchesRealBridgeL3:
             qapp: Session QApplication fixture.
             monkeypatch: pytest monkeypatch fixture for the unavoidable modal Qt chrome.
         """
-        del qapp
         panel = HexEditorPanel()
         bridge = HexEditorBridge()
         data = bytes(range(16))
@@ -289,6 +288,7 @@ class TestExportAnnotatedHtmlGuiDispatchesRealBridgeL3:
             monkeypatch.setattr(QFileDialog, "getSaveFileName", _save_dialog)
 
             priv_method(panel, "_on_export_annotated_html")()
+            pump_until(qapp, out_path.exists)
 
             assert out_path.exists(), "the handler must write the real bridge HTML output to the chosen path"
             written = out_path.read_text(encoding="utf-8")

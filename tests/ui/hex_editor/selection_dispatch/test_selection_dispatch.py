@@ -28,6 +28,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Final, cast, override
 
 import pytest
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QApplication, QWidget
 
 from intellicrack.bridges.hex_state import HexDocumentEvent, HexDocumentState
@@ -209,7 +210,7 @@ class _PanelHarness(QWidget):
 
     @property
     def selection_start(self) -> int:
-        """Return the stored selection start offset.
+        """The stored selection start offset.
 
         Returns:
             int: The value of ``_selection_start`` after the last handler call.
@@ -218,7 +219,7 @@ class _PanelHarness(QWidget):
 
     @property
     def selection_end(self) -> int:
-        """Return the stored selection end offset.
+        """The stored selection end offset.
 
         Returns:
             int: The value of ``_selection_end`` after the last handler call.
@@ -351,7 +352,16 @@ class _DocumentOpenedHarness(QWidget):
     Instead of constructing the full ``HexEditorPanel``, this harness
     calls the production ``set_state_holder`` on itself and records
     every ``load_file`` call so tests can assert which path was passed.
+
+    Declares the same ``_state_event_received`` pyqtSignal that
+    ``HexEditorPanel`` defines at class level: ``set_state_holder`` reads
+    ``self._state_event_received.emit`` directly, so the harness must expose
+    the identical signal for that assignment to resolve. The signal is wired
+    to a local handler that mirrors only the ``DOCUMENT_OPENED`` branch of
+    ``HexEditorPanel._on_state_event`` (the branch these tests exercise).
     """
+
+    _state_event_received: pyqtSignal = pyqtSignal(object, dict)
 
     def __init__(self) -> None:
         """Initialise the harness with no loaded document and an empty load log."""
@@ -362,6 +372,21 @@ class _DocumentOpenedHarness(QWidget):
         self._bridge: object | None = None
         self._state_callback: object | None = None
         self.loaded_paths: list[str] = []
+        self._state_event_received.connect(self._on_state_event)
+
+    def _on_state_event(self, event_type: object, data: dict[str, Any]) -> None:
+        """Mirror the ``DOCUMENT_OPENED`` branch of ``HexEditorPanel._on_state_event``.
+
+        Args:
+            event_type: The ``HexDocumentEvent`` member describing what changed.
+            data: Event-specific payload describing the change.
+        """
+        if event_type == HexDocumentEvent.DOCUMENT_OPENED:
+            file_path_str = data.get("file_path")
+            if file_path_str:
+                if self.document is not None:
+                    self.document = None
+                self.load_file(file_path_str)
 
     def load_file(self, file_path: str) -> bool:
         """Record the path and simulate a successful load by setting document.

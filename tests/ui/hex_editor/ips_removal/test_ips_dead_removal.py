@@ -283,6 +283,7 @@ class TestDeadModuleRemoved:
             signed=False,
             big_endian=False,
             is_range=False,
+            is_float=False,
         )
 
         assert results

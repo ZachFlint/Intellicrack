@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, cast, overload, override
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Protocol, cast, override
 
 import httpx
 from huggingface_hub import (
@@ -74,37 +74,46 @@ if TYPE_CHECKING:
 class _ChatCompletionCallable(Protocol):
     """Protocol matching the typed subset of ``chat_completion`` we use."""
 
-    @overload
     async def __call__(
         self,
         *,
         messages: list[dict[str, Any] | ChatCompletionInputMessage],
         model: str,
-        stream: Literal[False],
+        stream: bool,
         temperature: float,
         max_tokens: int,
         tools: list[ChatCompletionInputTool] | None,
         tool_choice: ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"] | None,
-    ) -> ChatCompletionOutput: ...
+    ) -> ChatCompletionOutput | AsyncIterable[ChatCompletionStreamOutput]:
+        """Invoke Hugging Face chat completion in streaming or non-streaming mode.
 
-    @overload
-    async def __call__(
-        self,
-        *,
-        messages: list[dict[str, Any] | ChatCompletionInputMessage],
-        model: str,
-        stream: Literal[True],
-        temperature: float,
-        max_tokens: int,
-        tools: list[ChatCompletionInputTool] | None,
-        tool_choice: ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"] | None,
-    ) -> AsyncIterable[ChatCompletionStreamOutput]: ...
+        Args:
+            messages: Chat messages to send to the model.
+            model: Model identifier on the Hugging Face Hub.
+            stream: When True, return streamed token chunks; otherwise a full response.
+            temperature: Sampling temperature for generation.
+            max_tokens: Maximum number of tokens to generate.
+            tools: Optional tool definitions for function calling.
+            tool_choice: Optional tool selection strategy.
+
+        Returns:
+            ChatCompletionOutput | AsyncIterable[ChatCompletionStreamOutput]:
+                Complete response when ``stream`` is False, or an async iterable
+                of stream chunks when ``stream`` is True.
+        """
+        ...
 
 
 class _WhoamiCallable(Protocol):
     """Protocol matching the typed subset of ``HfApi.whoami`` we use."""
 
-    def __call__(self) -> dict[str, Any]: ...
+    def __call__(self) -> dict[str, Any]:
+        """Return the authenticated Hugging Face account identity payload.
+
+        Returns:
+            dict[str, Any]: Hub identity fields for the current API token.
+        """
+        ...
 
 
 _ERR_MODEL_LOADING = "HuggingFace model is loading and not yet ready: %s"
@@ -536,6 +545,7 @@ class HuggingFaceProvider(LLMProviderBase):
             ProviderError: If not connected, the response is empty, or the
                 underlying SDK raises a non-auth/rate-limit error.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
@@ -563,14 +573,17 @@ class HuggingFaceProvider(LLMProviderBase):
 
         start_time = time.perf_counter()
         try:
-            raw_result: ChatCompletionOutput = await chat_completion(
-                messages=hf_messages,
-                model=model,
-                stream=False,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                tools=hf_tools,
-                tool_choice=hf_tool_choice,
+            raw_result = cast(
+                "ChatCompletionOutput",
+                await chat_completion(
+                    messages=hf_messages,
+                    model=model,
+                    stream=False,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=hf_tools,
+                    tool_choice=hf_tool_choice,
+                ),
             )
         except BadRequestError as exc:
             self._logger.warning("huggingface_bad_request", model=model, error=str(exc))
@@ -734,6 +747,7 @@ class HuggingFaceProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or the stream fails transportwise.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
@@ -761,14 +775,17 @@ class HuggingFaceProvider(LLMProviderBase):
         chat_completion = cast("_ChatCompletionCallable", self.client.chat_completion)
 
         try:
-            raw_stream: AsyncIterable[ChatCompletionStreamOutput] = await chat_completion(
-                messages=hf_messages,
-                model=model,
-                stream=True,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                tools=hf_tools,
-                tool_choice=hf_tool_choice,
+            raw_stream = cast(
+                "AsyncIterable[ChatCompletionStreamOutput]",
+                await chat_completion(
+                    messages=hf_messages,
+                    model=model,
+                    stream=True,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    tools=hf_tools,
+                    tool_choice=hf_tool_choice,
+                ),
             )
         except BadRequestError as exc:
             self._logger.warning("huggingface_stream_bad_request", model=model, error=str(exc))

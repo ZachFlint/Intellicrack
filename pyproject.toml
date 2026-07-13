@@ -43,13 +43,28 @@ urls."Source Code" = "https://github.com/zacharyflint/intellicrack"
 scripts.intellicrack = "intellicrack.main:main"
 gui-scripts.intellicrack-gui = "intellicrack.main:main"
 dependencies = [
+  "anthropic>=0.116.0,<0.117",
+  "capstone>=5.0.9,<6",
   "cryptography>=49.0.0,<50",
+  "frida>=17.15.4,<18",
+  "google-genai>=2.11.0,<3",
+  "httpx>=0.28.1,<0.29",
   "huggingface-hub>=1.23.0,<2",
   "jpype1>=1.7.1,<2",
   "keyring>=25.7.0,<26",
+  "keystone-engine>=0.9.2,<0.10",
+  "lief>=0.17.6,<0.18",
+  "openai>=2.45.0,<3",
+  "pefile>=2024.8.26,<2025",
   "psutil>=7.2.2,<8",
   "pyghidra>=2.2.1,<3",
+  "PyQt6>=6.11.0,<7",
   "pyyaml",
+  "r2pipe>=1.9.8,<2",
+  "rzpipe>=0.6.2,<0.7",
+  "structlog>=26.1.0,<27",
+  "tiktoken>=0.13.0,<0.14",
+  "xxhash>=3.8.1,<4",
   "yara-python>=4.5.4,<5",
 ]
 optional-dependencies.dev = [
@@ -546,6 +561,7 @@ per_rule_ignores = { DEP002 = [
 package_module_name_map.keystone-engine = ["keystone"]
 package_module_name_map.google-genai = ["google"]
 package_module_name_map.ghidra-bridge = ["ghidra_bridge"]
+package_module_name_map.jpype1 = ["jpype"]
 package_module_name_map.tomli-w = ["tomli_w"]
 
 [tool.docformatter]
@@ -937,6 +953,7 @@ ini_options.markers = [
   "xpu: Tests requiring Intel XPU hardware",
   "b580: Tests specific to Intel Arc B580 GPU",
   "spawns_process: Test spawns external OS processes; runs only inside the Docker sandbox",
+  "host_native: Test needs real host capabilities (Intel XPU, local Ollama, debug symbols, raw disk, loopback TCP, or a specific elevation) absent in the sandbox; runs only in the host-native pass",
 ]
 ini_options.minversion = "8.0"
 ini_options.python_classes = ["Test*"]

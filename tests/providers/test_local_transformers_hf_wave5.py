@@ -722,7 +722,8 @@ class TestListModels:
             monkeypatch: pytest MonkeyPatch fixture for attribute patching.
         """
 
-        async def _fake_fetch(_model_id: str) -> dict[str, Any]:
+        async def _fake_fetch(_model_id: str, token: str | None = None) -> dict[str, Any]:
+            del token
             await asyncio.sleep(0)
             return {}
 
@@ -755,7 +756,8 @@ class TestListModels:
             monkeypatch: pytest MonkeyPatch fixture for attribute patching.
         """
 
-        async def _fake_fetch_with_context(model_id: str) -> dict[str, Any]:
+        async def _fake_fetch_with_context(model_id: str, token: str | None = None) -> dict[str, Any]:
+            del token
             await asyncio.sleep(0)
             return {"max_position_embeddings": 8192} if "Phi" in model_id else {}
 

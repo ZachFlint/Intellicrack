@@ -142,6 +142,18 @@ def find_window_by_pid(pid: int) -> int | None:
     )
 
     def _enum_callback(hwnd: int, _lparam: int) -> bool:
+        """EnumWindows callback that captures the first top-level window for ``pid``.
+
+        Continues enumeration for windows that fail the ownership, visibility,
+        owner, or title checks, and stops once a matching hwnd is recorded.
+
+        Args:
+            hwnd: Window handle under inspection.
+            _lparam: Unused application-defined EnumWindows parameter.
+
+        Returns:
+            bool: ``True`` to keep enumerating, ``False`` once a match is stored.
+        """
         window_pid = ctypes.wintypes.DWORD()
         user32.GetWindowThreadProcessId(hwnd, ctypes.byref(window_pid))
         if window_pid.value != pid:
@@ -317,6 +329,7 @@ def poll_and_embed(
     attempt_count = [0]
 
     def _try_embed() -> None:
+        """Attempt one embed poll and reschedule until success or exhaustion."""
         attempt_count[0] += 1
         hwnd = find_window_by_pid(pid)
 

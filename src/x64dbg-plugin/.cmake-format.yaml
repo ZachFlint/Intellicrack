@@ -5,10 +5,13 @@ format:
   line_ending: windows
   max_subgroups_hwrap: 2
   max_pargs_hwrap: 6
-  dangle_parens: false
+  dangle_parens: true
   min_prefix_chars: 4
   max_prefix_chars: 10
   enable_sort: false
   autosort: false
+lint:
+  disabled_codes:
+    - C0327
 markup:
   enable_markup: false

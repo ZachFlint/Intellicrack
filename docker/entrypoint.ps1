@@ -440,10 +440,10 @@ function Invoke-CoverageIsolated {
     }
 
     if (Get-Command $PixiExe -ErrorAction SilentlyContinue) {
-        & $PixiExe run --no-install --frozen python @runnerArgs
+        & $PixiExe run --no-install --frozen python @runnerArgs | Out-Host
     }
     else {
-        & $PixiPython @runnerArgs
+        & $PixiPython @runnerArgs | Out-Host
     }
     $code = $LASTEXITCODE
     if ($null -eq $code) { $code = 0 }

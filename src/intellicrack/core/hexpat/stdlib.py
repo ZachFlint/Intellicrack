@@ -2765,6 +2765,15 @@ class BuiltinFunctions:
         auto_index: int = 0
 
         def _replace(match: re.Match[str]) -> str:
+            """Expand one format-string field from the positional value list.
+
+            Args:
+                match: Regex match for a single ``{...}`` format field.
+
+            Returns:
+                str: Formatted field text, the original match text on invalid
+                index syntax, or an empty string for out-of-range indices.
+            """
             nonlocal auto_index
             spec = match.group(1)
             index: int

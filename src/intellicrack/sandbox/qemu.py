@@ -1082,6 +1082,12 @@ class QEMUSandbox(SandboxBase):
             search_paths.append(base / exe_name)
 
         def _find_existing() -> Path | None:
+            """Return the first existing QEMU executable path on disk.
+
+            Returns:
+                Path | None: First ``search_paths`` entry that is a real file, or
+                ``None`` when none exist.
+            """
             return next(
                 (path for path in search_paths if path.exists() and path.is_file()),
                 None,
@@ -3876,6 +3882,11 @@ rule PackedBinary {
                 await asyncio.to_thread(extract_dir.mkdir, parents=True, exist_ok=True)
 
                 def _extract_zips() -> list[Path]:
+                    """Extract dropped-file zip archives into the scan directory.
+
+                    Returns:
+                        list[Path]: All regular files found under the extract root.
+                    """
                     extracted: list[Path] = []
                     for zf_path in zip_files:
                         with zipfile.ZipFile(zf_path, "r") as zf:

@@ -37,7 +37,7 @@ from intellicrack.core.tools import ToolRegistry
 from intellicrack.core.types import ToolError, ToolName
 from intellicrack.ui.panels.hex_editor.panel import HexEditorPanel
 
-from .conftest import open_doc, priv, priv_method, release_and_unlink
+from .conftest import open_doc, priv, priv_method, pump_until, release_and_unlink
 
 
 if TYPE_CHECKING:
@@ -238,7 +238,6 @@ class TestReplaceAllGuiDispatchesRealBridgeL3:
         Args:
             qapp: Session QApplication fixture.
         """
-        del qapp
         panel = HexEditorPanel()
         bridge = HexEditorBridge()
         original = b"\x90\x90\xcc\x90\x90\xcc\x11\x22"
@@ -252,13 +251,15 @@ class TestReplaceAllGuiDispatchesRealBridgeL3:
             priv(panel, "_replace_input", QLineEdit).setText("AA BB")
 
             priv_method(panel, "_on_replace_all")()
+            status_label = priv(panel, "_search_status_label", QLabel)
+            pump_until(qapp, lambda: status_label.text().startswith("Replaced"))
 
             doc = bridge.document
             assert doc is not None
             after = bytes(doc.read(0, len(original)))
             expected = original.replace(b"\x90\x90", b"\xaa\xbb")
             assert after == expected
-            assert "Replaced 2" in priv(panel, "_search_status_label", QLabel).text()
+            assert "Replaced 2" in status_label.text()
         finally:
             release_and_unlink(bridge, path)
             panel.deleteLater()
@@ -274,7 +275,6 @@ class TestReplaceAllGuiDispatchesRealBridgeL3:
         Args:
             qapp: Session QApplication fixture.
         """
-        del qapp
         panel = HexEditorPanel()
         bridge = HexEditorBridge()
         find_value = 0xDEADBEEF
@@ -293,6 +293,8 @@ class TestReplaceAllGuiDispatchesRealBridgeL3:
             priv(panel, "_numeric_replace_input", QLineEdit).setText(f"0x{replace_value:X}")
 
             priv_method(panel, "_on_replace_all")()
+            status_label = priv(panel, "_search_status_label", QLabel)
+            pump_until(qapp, lambda: status_label.text().startswith("Replaced"))
 
             doc = bridge.document
             assert doc is not None

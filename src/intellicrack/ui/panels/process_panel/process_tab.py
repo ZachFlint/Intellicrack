@@ -175,6 +175,11 @@ class ProcessTab(QWidget):
         self._auto_refresh_btn.setObjectName("toggle_button")
 
         def _auto_slot(c: int) -> None:
+            """Start or stop system-process auto-refresh from the toolbar toggle.
+
+            Args:
+                c: Qt ``toggled`` payload; nonzero enables periodic process refresh.
+            """
             self._on_auto_refresh_toggled(checked=bool(c))
 
         self._auto_refresh_btn.toggled.connect(_auto_slot)
@@ -259,6 +264,11 @@ class ProcessTab(QWidget):
         self._tracked_auto_btn.setObjectName("toggle_button")
 
         def _tracked_auto_slot(c: int) -> None:
+            """Start or stop tracked-process auto-refresh from its toolbar toggle.
+
+            Args:
+                c: Qt ``toggled`` payload; nonzero enables periodic tracked refresh.
+            """
             self._on_tracked_auto_toggled(checked=bool(c))
 
         self._tracked_auto_btn.toggled.connect(_tracked_auto_slot)
@@ -339,6 +349,11 @@ class ProcessTab(QWidget):
         current_filter = self._search_input.text().strip() or None
 
         def _on_success(result: object) -> None:
+            """Repopulate the process table and re-arm a pending filter refresh.
+
+            Args:
+                result: Detailed process entry list from ``list_processes_detailed``.
+            """
             self._filter_refresh_in_flight = False
             self._refresh_btn.setEnabled(True)
             self._refresh_btn.setText("Refresh")
@@ -351,6 +366,11 @@ class ProcessTab(QWidget):
                 self._filter_debounce_timer.start(_FILTER_DEBOUNCE_MS)
 
         def _on_error(exc: object) -> None:
+            """Restore the Refresh button and re-arm a pending filter on failure.
+
+            Args:
+                exc: Exception raised while calling ``list_processes_detailed``.
+            """
             self._filter_refresh_in_flight = False
             self._refresh_btn.setEnabled(True)
             self._refresh_btn.setText("Refresh")
@@ -473,6 +493,12 @@ class ProcessTab(QWidget):
         pid = self._selected_pid
 
         def _on_success(result: object) -> None:
+            """Record the attached PID, notify the user, and emit process_attached.
+
+            Args:
+                result: Open-process payload from ``open_process``; may include
+                    a process ``name`` field for the confirmation dialog.
+            """
             name: str = ""
             if isinstance(result, dict):
                 name_val = cast("dict[str, object]", result).get("name", "")
@@ -484,6 +510,11 @@ class ProcessTab(QWidget):
             self.process_attached.emit(pid)
 
         def _on_error(exc: object) -> None:
+            """Log ``process_attach_failed`` and show Attach Failed with the target PID.
+
+            Args:
+                exc: Failure from ``open_process`` for the process selected in the table.
+            """
             _logger.warning("process_attach_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Attach Failed", f"Failed to attach to PID {pid}:\n{exc}")
 
@@ -504,10 +535,20 @@ class ProcessTab(QWidget):
             return
 
         def _on_success(_result: object) -> None:
+            """Clear the attached PID and emit process_detached after close.
+
+            Args:
+                _result: Unused close result from ``close``.
+            """
             self._attached_pid = None
             self.process_detached.emit()
 
         def _on_error(exc: object) -> None:
+            """Log ``process_detach_failed`` and show Detach Failed with the bridge error text.
+
+            Args:
+                exc: Failure from ``close`` while releasing the attached process handle.
+            """
             _logger.warning("process_detach_failed", error=str(exc))
             QMessageBox.warning(self, "Detach Failed", f"Failed to detach:\n{exc}")
 
@@ -528,6 +569,11 @@ class ProcessTab(QWidget):
         pid = self._selected_pid
 
         def _on_error(exc: object) -> None:
+            """Log ``process_suspend_failed`` and show Suspend Failed naming the PID.
+
+            Args:
+                exc: Failure from ``suspend`` for the selected process PID.
+            """
             _logger.warning("process_suspend_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Suspend Failed", f"Failed to suspend PID {pid}:\n{exc}")
 
@@ -549,6 +595,11 @@ class ProcessTab(QWidget):
         pid = self._selected_pid
 
         def _on_error(exc: object) -> None:
+            """Log ``process_resume_failed`` and show Resume Failed naming the PID.
+
+            Args:
+                exc: Failure from ``resume`` for the selected process PID.
+            """
             _logger.warning("process_resume_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Resume Failed", f"Failed to resume PID {pid}:\n{exc}")
 
@@ -581,6 +632,11 @@ class ProcessTab(QWidget):
         pid = self._selected_pid
 
         def _on_success(_result: object) -> None:
+            """Clear selection/attachment state and schedule process list refresh.
+
+            Args:
+                _result: Unused terminate result from ``terminate``.
+            """
             _logger.info("process_terminated", pid=pid)
             self._selected_pid = None
             if self._attached_pid == pid:
@@ -590,6 +646,11 @@ class ProcessTab(QWidget):
             QTimer.singleShot(500, self._refresh_tracked)
 
         def _on_error(exc: object) -> None:
+            """Log ``process_terminate_failed`` and show Terminate Failed naming the PID.
+
+            Args:
+                exc: Failure from ``terminate`` for the selected process PID.
+            """
             _logger.warning("process_terminate_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Terminate Failed", f"Failed to terminate PID {pid}:\n{exc}")
 
@@ -634,10 +695,20 @@ class ProcessTab(QWidget):
             return
 
         def _on_success(_result: object) -> None:
+            """Confirm successful DLL injection into the attached process.
+
+            Args:
+                _result: Unused inject result from ``inject_dll``.
+            """
             _logger.info("dll_injected_from_panel", path=path, pid=attached_pid)
             QMessageBox.information(self, "Injected", f"Injected {path} into PID {attached_pid}.")
 
         def _on_error(exc: object) -> None:
+            """Log ``dll_inject_failed`` and show Inject Failed with path and target PID.
+
+            Args:
+                exc: Failure from ``inject_dll`` for the chosen DLL path and attached PID.
+            """
             _logger.warning("dll_inject_failed", path=path, pid=attached_pid, error=str(exc))
             QMessageBox.warning(self, "Inject Failed", f"Failed to inject {path} into PID {attached_pid}:\n{exc}")
 
@@ -663,6 +734,11 @@ class ProcessTab(QWidget):
             return
 
         def _on_info(result: object) -> None:
+            """Populate the info tree with process fields and thread/module counts.
+
+            Args:
+                result: Process info object returned by ``get_process_info``.
+            """
             self._info_tree.clear()
             if result is None:
                 return
@@ -678,6 +754,11 @@ class ProcessTab(QWidget):
             QTreeWidgetItem(self._info_tree, ["module_count", str(len(modules_list))])
 
         def _on_info_error(exc: object) -> None:
+            """Log ``process_info_load_failed`` and show Info Load Failed for the PID.
+
+            Args:
+                exc: Failure from ``get_process_info`` while filling the info tree.
+            """
             _logger.warning("process_info_load_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Info Load Failed", f"Failed to load info for PID {pid}:\n{exc}")
 
@@ -692,6 +773,11 @@ class ProcessTab(QWidget):
         )
 
         def _on_env(result: object) -> None:
+            """Fill the environment table with variable name and value rows.
+
+            Args:
+                result: Environment name-to-value mapping from ``get_environment``.
+            """
             self._env_table.setRowCount(0)
             if not isinstance(result, dict):
                 return
@@ -703,6 +789,11 @@ class ProcessTab(QWidget):
                 self._env_table.setItem(row, 1, QTableWidgetItem(str(val)))
 
         def _on_env_error(exc: object) -> None:
+            """Emit ``process_env_load_failed`` without dialoging; env table stays stale.
+
+            Args:
+                exc: Failure from ``get_environment`` while loading environment rows.
+            """
             _logger.warning("process_env_load_failed", pid=pid, error=str(exc))
 
         run_bridge_coroutine_logged(

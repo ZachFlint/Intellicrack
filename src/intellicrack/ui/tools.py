@@ -1164,6 +1164,12 @@ class _ToolOutputPanelBase(QFrame):
             return
 
         async def _fetch() -> tuple[list[CrossReference], list[CrossReference]]:
+            """Load incoming and outgoing cross-references for the address.
+
+            Returns:
+                tuple[list[CrossReference], list[CrossReference]]: Incoming
+                then outgoing xref lists from the static-analysis bridge.
+            """
             incoming, outgoing = await asyncio.gather(
                 bridge.get_xrefs_to(address),
                 bridge.get_xrefs_from(address),
@@ -1171,6 +1177,11 @@ class _ToolOutputPanelBase(QFrame):
             return incoming, outgoing
 
         def _on_success(result: object) -> None:
+            """Render fetched xrefs into the panel after a successful fetch.
+
+            Args:
+                result: Tuple of incoming and outgoing xref lists.
+            """
             try:
                 raw_pair = cast("tuple[object, object]", result)
                 raw_in_obj, raw_out_obj = raw_pair
@@ -1193,6 +1204,11 @@ class _ToolOutputPanelBase(QFrame):
             )
 
         def _on_error(exc: object) -> None:
+            """Clear the xref panel and log when the fetch fails.
+
+            Args:
+                exc: Exception raised while gathering cross-references.
+            """
             self.xref_panel.set_xrefs([], [])
             _logger.warning(
                 "xref_population_failed",
@@ -1323,6 +1339,11 @@ class _ToolOutputPanelBase(QFrame):
                     )
 
         def _on_worker_error(exc: object) -> None:
+            """Log a failure from the asynchronous bridge teardown worker.
+
+            Args:
+                exc: Exception raised during bridge detach/shutdown/stop.
+            """
             _logger.warning(
                 "bridge_cleanup_worker_error",
                 bridge=bridge_attr,

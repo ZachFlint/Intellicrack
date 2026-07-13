@@ -1004,6 +1004,7 @@ class OllamaProvider(LLMProviderBase):
                 HTTP status. Authentication and rate-limit failures
                 propagate as the appropriate ``ProviderError`` subclass.
         """
+        self._reject_empty_messages(messages)
         if not self.connected:
             self._logger.error("ollama_chat_not_connected", model=model)
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
@@ -1341,6 +1342,7 @@ class OllamaProvider(LLMProviderBase):
                 (HTTP 401/403) and ``RateLimitError`` (HTTP 429) raised by
                 the underlying transport propagate unchanged.
         """
+        self._reject_empty_messages(messages)
         if not self.connected:
             self._logger.error("ollama_chat_stream_not_connected", model=model)
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")

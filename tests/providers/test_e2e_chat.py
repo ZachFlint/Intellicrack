@@ -403,7 +403,7 @@ def ollama_server() -> Generator[Popen[bytes] | None]:
     Kills the server on teardown.
 
     Yields:
-        Generator[Popen[bytes] | None]: The Ollama server process, or None if already running.
+        Popen[bytes] | None: The Ollama server process, or None if already running.
     """
     try:
         response = httpx.get(_OLLAMA_TAGS_URL, timeout=2.0)
@@ -453,7 +453,7 @@ async def ollama_e2e_provider(
         ollama_server: The Ollama server process fixture.
 
     Yields:
-        AsyncGenerator[OllamaProvider]: A connected OllamaProvider instance.
+        OllamaProvider: A connected OllamaProvider instance.
     """
     _ = ollama_server
     provider = OllamaProvider()
@@ -1157,7 +1157,7 @@ class TestCrossProviderConsistency:
             has_huggingface_key: Whether HuggingFace key is configured.
 
         Yields:
-            AsyncGenerator[list[tuple[str, str, LLMProviderBase]]]: List of available provider tuples.
+            list[tuple[str, str, LLMProviderBase]]: List of available provider tuples.
         """
         _ = ollama_server
         providers: list[tuple[str, str, LLMProviderBase]] = []
@@ -1343,6 +1343,12 @@ class TestRateLimitAndErrorHandling:
         elapsed = time.monotonic() - start
 
         combined = " ".join(str(link).lower() for link in _walk_exception_chain(exc_info.value))
+        if "the network location cannot be reached" in combined or "winerror 1231" in combined or "network is unreachable" in combined:
+            await provider.disconnect()
+            pytest.skip(
+                "outbound network unavailable: the non-routable address fails fast with ENETUNREACH "
+                "instead of hanging to a transport timeout, so the timeout-translation path cannot be exercised",
+            )
         assert "timed out" in combined or "timeout" in combined, f"error did not name a timeout: {combined[:200]!r}"
         assert elapsed < 20.0, f"timeout took too long to surface: {elapsed:.1f}s"
 

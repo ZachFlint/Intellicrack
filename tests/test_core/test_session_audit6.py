@@ -113,7 +113,7 @@ class TestAutoSaveLoopSurvivesFailures:
 
         save_attempts: int = 0
         failure_serial_numbers: list[int] = []
-        save_completed: asyncio.Event = asyncio.Event()
+        save_completed = threading.Event()
         original_save = SessionStore.save
 
         def multi_flaky_save(self_store: SessionStore, sess: Session) -> None:
@@ -129,6 +129,9 @@ class TestAutoSaveLoopSurvivesFailures:
                     before a successful persistence path is exercised.
             """
             nonlocal save_attempts
+            if save_completed.is_set():
+                original_save(self_store, sess)
+                return
             save_attempts += 1
             attempt = save_attempts
             if attempt <= 3:
@@ -136,12 +139,13 @@ class TestAutoSaveLoopSurvivesFailures:
                 msg = f"transient sqlite failure #{attempt}"
                 raise RuntimeError(msg)
             original_save(self_store, sess)
-            if not save_completed.is_set():
-                save_completed.set()
+            save_completed.set()
 
         previous = _swap_session_store_save(multi_flaky_save)
         try:
-            await asyncio.wait_for(save_completed.wait(), timeout=10.0)
+            completed = await asyncio.to_thread(save_completed.wait, 10.0)
+            assert completed is True, "auto-save worker must complete a successful save within 10s"
+            await manager.stop_auto_save()
         finally:
             _restore_session_store_save(previous)
             await manager.close()
@@ -156,7 +160,7 @@ class TestAutoSaveLoopSurvivesFailures:
     @staticmethod
     @pytest.mark.asyncio
     async def test_auto_save_loop_task_is_active_after_create(tmp_path: Path) -> None:
-        """Verify the auto-save background task is running after session creation.
+        """Verify the auto-save background worker is running after session creation.
 
         Args:
             tmp_path: Pytest temporary directory.
@@ -170,6 +174,122 @@ class TestAutoSaveLoopSurvivesFailures:
             await manager.close()
 
         assert manager.is_auto_saving is False, "is_auto_saving must be False after close()"
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_close_from_different_event_loop_succeeds(tmp_path: Path) -> None:
+        """Verify close() works when invoked on a different event loop than create().
+
+        Reproduces the production shutdown path: session lifecycle starts on one
+        loop (GUI bridge) and close runs on another (application main loop).
+        A loop-bound asyncio auto-save task would raise RuntimeError here.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+        """
+        store = SessionStore(tmp_path / "sessions.db")
+        manager = SessionManager(store, save_interval=300)
+        session = await manager.create(
+            provider=ProviderName.ANTHROPIC,
+            model="claude",
+            name="cross-loop",
+        )
+        session.notes = "flushed-on-cross-loop-close"
+        session_id = session.id
+        assert manager.is_auto_saving is True, "auto-save must be running before cross-loop close"
+
+        def _close_on_foreign_loop() -> None:
+            """Run manager.close() on a brand-new event loop in this thread.
+
+            Raises:
+                RuntimeError: Propagated if close is not loop-agnostic.
+            """
+            foreign_loop = asyncio.new_event_loop()
+            try:
+                foreign_loop.run_until_complete(manager.close())
+            finally:
+                foreign_loop.close()
+
+        await asyncio.to_thread(_close_on_foreign_loop)
+
+        assert manager.current is None, "current session must be cleared after close"
+        assert manager.is_auto_saving is False, "auto-save must stop after close"
+        loaded = store.load(session_id)
+        assert loaded is not None, "session must remain readable after cross-loop close"
+        assert loaded.notes == "flushed-on-cross-loop-close", (
+            f"final flush must persist notes; got {loaded.notes!r}"
+        )
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_stop_auto_save_is_prompt_with_long_interval(tmp_path: Path) -> None:
+        """Verify stop_auto_save returns without waiting for a long save interval.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+        """
+        store = SessionStore(tmp_path / "sessions.db")
+        manager = SessionManager(store, save_interval=300)
+        await manager.create(
+            provider=ProviderName.ANTHROPIC,
+            model="claude",
+            name="prompt-stop",
+        )
+        assert manager.is_auto_saving is True
+
+        started = time.monotonic()
+        await manager.stop_auto_save()
+        elapsed = time.monotonic() - started
+
+        assert manager.is_auto_saving is False, "worker must be stopped"
+        assert elapsed < 5.0, f"stop must be prompt; took {elapsed:.3f}s with 300s interval"
+        await manager.close()
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_close_final_save_persists_mutations(tmp_path: Path) -> None:
+        """Verify close() flushes in-memory mutations after stopping auto-save.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+        """
+        store = SessionStore(tmp_path / "sessions.db")
+        manager = SessionManager(store, save_interval=300)
+        session = await manager.create(
+            provider=ProviderName.ANTHROPIC,
+            model="claude",
+            name="final-flush",
+        )
+        session.notes = "post-create-mutation"
+        session_id = session.id
+        await manager.close()
+
+        loaded = store.load(session_id)
+        assert loaded is not None, "session must load after close"
+        assert loaded.notes == "post-create-mutation", (
+            f"close must flush mutations; got {loaded.notes!r}"
+        )
+        assert manager.is_auto_saving is False
+
+    @staticmethod
+    @pytest.mark.asyncio
+    async def test_auto_save_disabled_does_not_start_worker(tmp_path: Path) -> None:
+        """Verify auto_save=False leaves the background worker stopped.
+
+        Args:
+            tmp_path: Pytest temporary directory.
+        """
+        store = SessionStore(tmp_path / "sessions.db")
+        manager = SessionManager(store, auto_save=False, save_interval=1)
+        await manager.create(
+            provider=ProviderName.ANTHROPIC,
+            model="claude",
+            name="no-autosave",
+        )
+        try:
+            assert manager.is_auto_saving is False, "auto_save=False must not start a worker"
+        finally:
+            await manager.close()
 
 
 # =====================================================================

@@ -1183,6 +1183,13 @@ class ToolSettingsWidget(QFrame):
         )
 
         def _status_slot(tid: str, avail: int, msg: str) -> None:
+            """Apply a status-check worker result to the tool row's availability UI.
+
+            Args:
+                tid: Tool id whose install/path status was probed.
+                avail: Nonzero when the worker found the tool available.
+                msg: Status text to show next to the tool entry.
+            """
             self._on_status_checked(tid, is_available=bool(avail), message=msg)
 
         self._status_worker.status_checked.connect(_status_slot)
@@ -1264,6 +1271,12 @@ class ToolSettingsWidget(QFrame):
             self._install_worker.progress.connect(self._install_progress.setValue)
 
             def _install_slot(s: int, m: str) -> None:
+                """Coerce install-worker finished ints into the install-finished handler.
+
+                Args:
+                    s: Nonzero when the install worker completed successfully.
+                    m: Install status or failure text from the worker.
+                """
                 self._on_install_finished(success=bool(s), message=m)
 
             self._install_worker.install_finished.connect(_install_slot)
@@ -1747,6 +1760,13 @@ class ToolStatusDialog(QDialog):
             worker = ToolStatusCheckWorker(tool_id, tool_path, self)
 
             def _tool_status_slot(tid: str, avail: int, msg: str) -> None:
+                """Forward one tool's dialog status-check result to the list UI.
+
+                Args:
+                    tid: Tool identifier that was checked.
+                    avail: Integer availability flag (nonzero means available).
+                    msg: Human-readable status message from the worker.
+                """
                 self._on_tool_status_received(tid, is_available=bool(avail), message=msg)
 
             worker.status_checked.connect(_tool_status_slot)

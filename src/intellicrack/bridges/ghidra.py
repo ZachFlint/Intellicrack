@@ -217,40 +217,53 @@ def _map_ghidra_ref_type(raw_type: str) -> _XRefRefType:
 def _resolve_debug_info_path(path: str) -> Path:
     r"""Canonicalise and validate a debug-info path before passing it to Ghidra.
 
-    Resolves the supplied path with ``Path.resolve(strict=True)`` to reject
-    non-existent paths and to defeat traversal sequences such as
-    ``..\..\Windows\System32``. Refuses paths that resolve to anything
-    other than a regular file (directories, devices, symlink loops).
+    Normalises the supplied path with ``os.path.normpath`` to collapse
+    traversal sequences such as ``..\..\Windows\System32`` lexically,
+    without opening a filesystem handle to any path component. Existence
+    and file-type are then verified with ``Path.exists()`` /
+    ``Path.is_file()``, which query filesystem metadata only and never
+    open the target for reading. This avoids ``Path.resolve(strict=True)``,
+    whose Windows implementation opens a ``CreateFileW`` handle with
+    backup semantics to canonicalise the path and can raise ``WinError 5``
+    (Access is denied) against ACL-protected files such as
+    ``C:\Windows\System32\kernel32.dll`` even though the file itself is
+    world-readable.
 
     Args:
         path: Untrusted, possibly-relative path supplied by the caller.
 
     Returns:
-        Path: Absolute, normalised filesystem path that is guaranteed to
-        exist and to refer to a regular file at the moment of the check.
+        Path: Absolute, lexically-normalised filesystem path that is
+        guaranteed to exist and to refer to a regular file at the moment
+        of the check.
 
     Raises:
-        ToolError: If ``path`` is empty, cannot be resolved, does not
+        ToolError: If ``path`` is empty, cannot be normalised, does not
             exist, or does not refer to a regular file.
     """
     if not path or not path.strip():
         raise ToolError(_ERR_DEBUG_PATH_INVALID)
 
     candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    normalized = Path(os.path.normpath(str(candidate)))
+
     try:
-        resolved = candidate.resolve(strict=True)
-    except FileNotFoundError as exc:
-        msg = f"{_ERR_DEBUG_PATH_NOT_FOUND}: {path}"
-        raise ToolError(msg) from exc
+        exists = normalized.exists()
     except OSError as exc:
         msg = f"{_ERR_DEBUG_PATH_INVALID}: {path}: {exc}"
         raise ToolError(msg) from exc
 
-    if not resolved.is_file():
-        msg = f"{_ERR_DEBUG_PATH_NOT_FILE}: {resolved}"
+    if not exists:
+        msg = f"{_ERR_DEBUG_PATH_NOT_FOUND}: {path}"
         raise ToolError(msg)
 
-    return resolved
+    if not normalized.is_file():
+        msg = f"{_ERR_DEBUG_PATH_NOT_FILE}: {normalized}"
+        raise ToolError(msg)
+
+    return normalized
 
 
 class _GhidraBridgeBase(StaticAnalysisBridge):
@@ -1444,6 +1457,18 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             last_error=None,
         )
 
+        try:
+            ghidra_bridge_mod = importlib.import_module("ghidra_bridge")
+        except ImportError as imp_err:
+            _logger.warning("ghidra_bridge_module_missing", bridge="ghidra")
+            self._bridge = None
+            self.state.connected = False
+            self.state.tool_running = False
+            self.state.last_error = "ghidra_bridge package not installed"
+            self._publish_tool_state()
+            error_message = "ghidra_bridge package not installed"
+            raise ToolError(error_message) from imp_err
+
         reachable = await asyncio.to_thread(self._probe_bridge_port, "127.0.0.1", self._port)
         if not reachable:
             _logger.warning("ghidra_bridge_port_unreachable", port=self._port)
@@ -1456,7 +1481,6 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
             raise ToolError(error_message)
 
         try:
-            ghidra_bridge_mod = importlib.import_module("ghidra_bridge")
             bridge_cls = cast("Callable[..., object]", ghidra_bridge_mod.GhidraBridge)
 
             self._bridge = await asyncio.to_thread(
@@ -1466,16 +1490,6 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
                 connect_to_port=self._port,
                 response_timeout=_GHIDRA_RESPONSE_TIMEOUT,
             )
-
-        except ImportError as imp_err:
-            _logger.warning("ghidra_bridge_module_missing", bridge="ghidra")
-            self._bridge = None
-            self.state.connected = False
-            self.state.tool_running = False
-            self.state.last_error = "ghidra_bridge package not installed"
-            self._publish_tool_state()
-            error_message = "ghidra_bridge package not installed"
-            raise ToolError(error_message) from imp_err
 
         except Exception as exc:
             _logger.exception("ghidra_connect_failed")
@@ -1562,7 +1576,11 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         _logger.info("ghidra_is_available_started", ghidra_path=str(self._ghidra_path) if self._ghidra_path else None)
         if self._ghidra_path is None:
             return False
-        return importlib.util.find_spec("ghidra_bridge") is not None
+        return (
+            importlib.util.find_spec("ghidra_bridge") is not None
+            and importlib.util.find_spec("jpype") is not None
+            and importlib.util.find_spec("pyghidra") is not None
+        )
 
     async def start_headless(
         self,
@@ -1825,6 +1843,7 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         """
 
         def read_loop() -> None:
+            """Drain the pipe line-by-line until EOF, logging each decoded line."""
             for raw_line in iter(stream.readline, b""):
                 line = raw_line.decode("utf-8", errors="replace").rstrip()
                 if not line:
@@ -3580,14 +3599,16 @@ metadata
                 parser = DataTypeParser(dtm)
                 parsed = parser.parse({data_type_literal})
 
+                _set_ok = False
                 if parsed is None:
-                    False
+                    _set_ok = False
                 else:
                     existing = listing.getDataAt(addr)
                     if existing is not None:
                         listing.clearCodeUnits(addr, addr, False)
                     listing.createData(addr, parsed)
-                    True
+                    _set_ok = True
+                _set_ok
             """)
             return bool(result)
 
@@ -4001,10 +4022,12 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             result = await self._execute_remote(f"""
                 addr = toAddr({address})
                 func = createFunction(addr, {name_arg})
+                _cf_result = None
                 if func is not None:
-                    {{'name': func.getName(), 'address': func.getEntryPoint().getOffset(), 'size': func.getBody().getNumAddresses()}}
+                    _cf_result = {{'name': func.getName(), 'address': func.getEntryPoint().getOffset(), 'size': func.getBody().getNumAddresses()}}
                 else:
-                    None
+                    _cf_result = None
+                _cf_result
             """)
         except Exception as e:
             _logger.warning("ghidra_create_function_failed", address=hex(address), error=str(e))
@@ -4042,8 +4065,9 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                 addr = toAddr({address})
                 fm = currentProgram.getFunctionManager()
                 func = fm.getFunctionAt(addr)
+                _df_result = None
                 if func is None:
-                    {{'exists': False, 'name': None, 'removed': False}}
+                    _df_result = {{'exists': False, 'name': None, 'removed': False}}
                 else:
                     name = func.getName()
                     tx_id = currentProgram.startTransaction('intellicrack.delete_function')
@@ -4052,7 +4076,8 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                         removed = bool(fm.removeFunction(func.getEntryPoint()))
                     finally:
                         currentProgram.endTransaction(tx_id, removed)
-                    {{'exists': True, 'name': name, 'removed': removed}}
+                    _df_result = {{'exists': True, 'name': name, 'removed': removed}}
+                _df_result
             """)
         except ToolError:
             raise
@@ -4112,8 +4137,9 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
 
                 addr = toAddr({address})
                 func = getFunctionContaining(addr)
+                _efs_result = None
                 if func is None:
-                    None
+                    _efs_result = None
                 else:
                     rt = {rt_literal}
                     cc = {cc_literal}
@@ -4132,12 +4158,13 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     if nm is not None:
                         func.setName(nm, SourceType.USER_DEFINED)
 
-                    {{
+                    _efs_result = {{
                         'name': func.getName(),
                         'address': func.getEntryPoint().getOffset(),
                         'return_type': str(func.getReturnType()),
                         'calling_convention': func.getCallingConventionName(),
                     }}
+                _efs_result
             """)
         except Exception as e:
             _logger.warning(
@@ -4346,15 +4373,17 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     if s.getName() == {json.dumps(struct_name)}:
                         struct_type = s
                         break
+                _apply_ok = False
                 if struct_type is not None:
                     listing = currentProgram.getListing()
                     existing = listing.getDataAt(addr)
                     if existing is not None:
                         listing.clearCodeUnits(addr, addr.add(struct_type.getLength() - 1), False)
                     listing.createData(addr, struct_type)
-                    True
+                    _apply_ok = True
                 else:
-                    False
+                    _apply_ok = False
+                _apply_ok
             """)
         except Exception as e:
             _logger.warning(
@@ -4819,10 +4848,8 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
 
         _logger.debug("redo_requested")
         try:
-            result = await self._execute_remote(
-                """currentProgram.redo() True."""
-                                                 ,
-            )
+            script = "currentProgram.redo()\nTrue"
+            result = await self._execute_remote(script)
             _logger.debug("redo_performed", success=bool(result))
             return {"success": bool(result)}
         except Exception as e:
@@ -5194,10 +5221,10 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         ``DWARFAnalyzer`` for DWARF-bearing files (``.debug``, ``.dbg``,
         ``.dwarf``, ``.so``, ``.dylib``, ``.o``, ``.elf``). The import
         runs inside a Ghidra transaction and is rolled back if the
-        analyzer raises. The supplied path is canonicalised with
-        ``Path.resolve(strict=True)`` and verified to exist as a regular
-        file before any value is forwarded to Ghidra to defeat path
-        traversal sequences and dangling references.
+        analyzer raises. The supplied path is lexically normalised and
+        verified to exist as a regular file before any value is
+        forwarded to Ghidra to defeat path traversal sequences and
+        dangling references.
 
         Args:
             path: Path to a ``.pdb`` file or to a DWARF-bearing debug file.

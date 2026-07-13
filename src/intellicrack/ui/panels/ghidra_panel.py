@@ -2369,6 +2369,11 @@ class GhidraPanel(AnalysisPanelBase):
         elif chosen is actions["conventions"]:
 
             def _show_conventions(r: object) -> None:
+                """Display calling-convention results from the Ghidra bridge.
+
+                Args:
+                    r: Bridge result, either a list of convention names or a scalar.
+                """
                 if isinstance(r, list):
                     conv_list = cast("list[object]", r)
                     body_text = "\n".join(str(c) for c in conv_list)

@@ -95,6 +95,34 @@ def _wait_until_rows(qtbot: QtBot, window: LogViewerWindow, count: int, timeout:
     qtbot.waitUntil(predicate, timeout=timeout)
 
 
+def _wait_for_saved_lines(qtbot: QtBot, target: Path, expected_line_count: int, timeout: int = _DEFAULT_TIMEOUT_MS) -> None:
+    """Wait until the background save worker has written the expected JSONL lines.
+
+    The write runs on a :class:`~intellicrack.ui.panels.async_bridge.GenericCallableWorker`
+    thread, so polling only ``target.exists()`` would race a still-in-progress
+    write; this instead waits until the file can be parsed and holds exactly
+    ``expected_line_count`` lines, which only happens once the worker's
+    ``with`` block has fully written and closed the file.
+
+    Args:
+        qtbot: pytest-qt bot fixture.
+        target: Destination file the save worker writes to.
+        expected_line_count: Number of JSONL lines the finished write must contain.
+        timeout: Maximum wait in milliseconds.
+    """
+
+    def predicate() -> bool:
+        if not target.exists():
+            return False
+        try:
+            lines = target.read_text(encoding="utf-8").strip().splitlines()
+        except OSError:
+            return False
+        return len(lines) == expected_line_count
+
+    qtbot.waitUntil(predicate, timeout=timeout)
+
+
 def test_window_opens_and_loads_history(qtbot: QtBot, tmp_path: Path) -> None:
     """Verify the window backfills the table from the on-disk log.
 
@@ -353,7 +381,7 @@ def test_save_selected_writes_jsonl_to_disk(
     table.selectAll()
     _trigger_action(window, "Save Selected As...")
 
-    assert target.exists()
+    _wait_for_saved_lines(qtbot, target, 3)
     lines = target.read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == 3
     for line in lines:
@@ -440,6 +468,7 @@ def test_save_all_writes_visible_post_filter(
     )
     _trigger_action(window, "Save All As...")
 
+    _wait_for_saved_lines(qtbot, target, 1)
     saved = [json.loads(line) for line in target.read_text(encoding="utf-8").splitlines() if line.strip()]
     assert len(saved) == 1
     assert saved[0]["event"] == "error_event"
@@ -482,7 +511,7 @@ def test_save_records_oserror_routes_to_warning_dialog(
     qtbot.wait(50)
     _trigger_action(window, "Save Selected As...")
 
-    assert warning_calls
+    qtbot.waitUntil(lambda: bool(warning_calls), timeout=_DEFAULT_TIMEOUT_MS)
     assert warning_calls[0][0] == "Save Logs"
     assert "Failed to save log records" in warning_calls[0][1]
     window.close()
@@ -518,12 +547,23 @@ def test_open_logs_folder_missing_directory_shows_warning(
 ) -> None:
     """Verify a missing logs directory routes to a warning dialog.
 
+    The live tail reader's background initial-load read must finish, and its
+    ``QFileSystemWatcher`` must be stopped and torn down through the event
+    loop, before the directory is deleted out from under it: on Windows an
+    in-flight file read or a still-active directory watch can hold the
+    directory in use, turning the deliberate deletion below into a spurious
+    ``PermissionError``/``WinError 32`` that has nothing to do with the
+    behavior under test.
+
     Args:
         qtbot: pytest-qt bot fixture.
         tmp_path: Pytest temp directory.
         monkeypatch: Pytest monkeypatch fixture.
     """
     window, config = _open_window(qtbot, tmp_path, seed_count=0)
+    qtbot.wait(150)
+    getattr(window, "_tail_reader").stop()
+    qtbot.wait(50)
     for child in list(config.logs_directory.iterdir()):
         child.unlink()
     config.logs_directory.rmdir()

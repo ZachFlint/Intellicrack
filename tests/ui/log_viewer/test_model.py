@@ -14,9 +14,12 @@ from PyQt6.QtCore import QModelIndex, Qt
 from PyQt6.QtGui import QColor
 
 from intellicrack.ui.log_viewer import LogRecordDict, LogRecordTableModel
+from intellicrack.ui.resources.theme_manager import ThemeManager
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from pytestqt.qtbot import QtBot
 
 
@@ -28,6 +31,27 @@ _RING_CAP: int = 1_000
 _PRE_EVICTION_TOTAL: int = 2_500
 _PRE_SHRINK_TOTAL: int = 2_000
 _SHRINK_TARGET: int = 1_000
+
+_LEVELS: tuple[str, ...] = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+_BACKGROUND_TINT_ALPHA: int = 48
+
+
+@pytest.fixture
+def dark_theme() -> Iterator[ThemeManager]:
+    """Force the shared :class:`ThemeManager` to the dark theme for the test.
+
+    Yields:
+        ThemeManager: The application theme manager singleton, forced to
+            ``"dark"`` so level-color assertions are deterministic
+            regardless of what an earlier test left active.
+    """
+    manager = ThemeManager.get_instance()
+    original = manager.requested_theme
+    manager.apply_theme("dark")
+    try:
+        yield manager
+    finally:
+        manager.apply_theme(original)
 
 
 def _make(event: str = "evt", level: str = "INFO", **extras: object) -> LogRecordDict:
@@ -151,63 +175,95 @@ def test_set_max_rows_shrink_evicts() -> None:
     assert first["event"] == f"x{_PRE_SHRINK_TOTAL - _SHRINK_TARGET}"
 
 
-def test_foreground_role_per_level() -> None:
-    """Verify ForegroundRole returns the level-specific QColor for every level."""
+def test_foreground_role_per_level(dark_theme: ThemeManager) -> None:
+    """Verify ForegroundRole resolves the theme-aware color for every level.
+
+    DEBUG / INFO / WARNING / ERROR are direct 1:1 mappings onto the active
+    theme's muted / foreground / warning / error colors (the GUI-audit H4
+    fix that replaced a fixed dark-only palette so INFO stays legible under
+    the light theme too). CRITICAL is a black-or-white contrast pick against
+    its own badge background, so it is asserted against the two colors that
+    formula can ever produce, not a single hardcoded value.
+
+    Args:
+        dark_theme: Fixture forcing a deterministic active theme.
+    """
     model = LogRecordTableModel()
-    for level in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+    for level in _LEVELS:
         model.append_record(dict(_make(level=level)))
     model.flush()
+
+    colors = dark_theme.get_analysis_colors()
     expected = {
-        "DEBUG": QColor(120, 120, 120),
-        "INFO": QColor(220, 220, 220),
-        "WARNING": QColor(255, 200, 0),
-        "ERROR": QColor(255, 90, 90),
-        "CRITICAL": QColor(255, 50, 200),
+        "DEBUG": QColor(colors["muted"]),
+        "INFO": QColor(colors["foreground"]),
+        "WARNING": QColor(colors["warning"]),
+        "ERROR": QColor(colors["error"]),
     }
-    for row, level in enumerate(("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")):
+    for row, level in enumerate(_LEVELS[:-1]):
         color = model.data(model.index(row, 0), Qt.ItemDataRole.ForegroundRole)
         assert isinstance(color, QColor)
-        assert color == expected[level]
+        assert color.getRgb() == expected[level].getRgb(), f"{level} foreground {color.getRgb()} != theme color {expected[level].getRgb()}"
+
+    critical_row = len(_LEVELS) - 1
+    critical_color = model.data(model.index(critical_row, 0), Qt.ItemDataRole.ForegroundRole)
+    assert isinstance(critical_color, QColor)
+    assert critical_color.getRgb()[:3] in {(0, 0, 0), (255, 255, 255)}, (
+        f"CRITICAL foreground must be a pure black/white contrast pick, got {critical_color.getRgb()}"
+    )
+    critical_resolved = model.level_foreground("CRITICAL")
+    assert critical_resolved is not None
+    assert critical_color.getRgb() == critical_resolved.getRgb()
 
 
-def test_background_role_tints_warn_error_critical_only() -> None:
-    """Verify BackgroundRole returns the exact tint per severity level.
+def test_background_role_tints_warn_error_critical_only(dark_theme: ThemeManager) -> None:
+    """Verify BackgroundRole tints WARNING / ERROR translucent and CRITICAL solid.
 
     DEBUG and INFO must carry no background tint (``None``) so routine
-    chatter stays visually flat, while WARNING / ERROR / CRITICAL must
-    each return their own distinct, exact QColor. The expected RGB values
-    are the independently-specified design palette; a swapped, inverted,
-    or dropped mapping is caught because each color is asserted by value.
-    The three tinted levels must also use mutually distinct colors so a
-    copy-paste regression (same color for two levels) is caught.
+    chatter stays visually flat. WARNING and ERROR resolve to their theme
+    color at the model's fixed translucency (a subtle wash, not the full
+    opaque accent), while CRITICAL renders as a solid badge using the plain
+    theme error color. Colors are compared by full ARGB (rgba, not just rgb)
+    so a regression that drops the alpha channel - making WARNING/ERROR look
+    like the opaque CRITICAL badge - is caught even though their base RGB is
+    identical to ERROR's.
+
+    Args:
+        dark_theme: Fixture forcing a deterministic active theme.
     """
+    colors = dark_theme.get_analysis_colors()
+    warning_tint = QColor(colors["warning"])
+    warning_tint.setAlpha(_BACKGROUND_TINT_ALPHA)
+    error_tint = QColor(colors["error"])
+    error_tint.setAlpha(_BACKGROUND_TINT_ALPHA)
+    critical_solid = QColor(colors["error"])
+
     expected_background: dict[str, QColor | None] = {
         "DEBUG": None,
         "INFO": None,
-        "WARNING": QColor(60, 48, 16),
-        "ERROR": QColor(70, 24, 24),
-        "CRITICAL": QColor(70, 16, 56),
+        "WARNING": warning_tint,
+        "ERROR": error_tint,
+        "CRITICAL": critical_solid,
     }
-    levels: tuple[str, ...] = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
     model = LogRecordTableModel()
-    for level in levels:
+    for level in _LEVELS:
         model.append_record(dict(_make(level=level)))
     model.flush()
 
     seen_colors: list[QColor] = []
-    for row, level in enumerate(levels):
+    for row, level in enumerate(_LEVELS):
         background = model.data(model.index(row, 0), Qt.ItemDataRole.BackgroundRole)
         expected = expected_background[level]
         if expected is None:
             assert background is None, f"{level} must have no background tint, got {background!r}"
         else:
             assert isinstance(background, QColor), f"{level} must yield a QColor, got {background!r}"
-            assert background == expected, f"{level} background {background.getRgb()[:3]} != expected {expected.getRgb()[:3]}"
+            assert background.getRgb() == expected.getRgb(), f"{level} background {background.getRgb()} != expected {expected.getRgb()}"
             seen_colors.append(background)
 
-    rgb_triples: set[tuple[int, int, int]] = {(c.red(), c.green(), c.blue()) for c in seen_colors}
-    assert len(rgb_triples) == len(seen_colors), "each tinted level must use a distinct color"
+    rgba_quadruples: set[tuple[int, int, int, int]] = {c.getRgb() for c in seen_colors}
+    assert len(rgba_quadruples) == len(seen_colors), "each tinted level must use a distinct ARGB color"
 
 
 def test_header_data_horizontal_returns_titles() -> None:
