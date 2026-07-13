@@ -37,15 +37,15 @@
 namespace intellicrack {
 
 struct PluginState {
-    bool initialized;
-    bool pipe_server_running;
-    HANDLE pipe_server_thread;
-    bool stop_server;
-    HANDLE stop_event;
-    uint64_t current_address;
-    uint64_t module_base;
-    std::atomic<bool> debugging;
-    std::atomic<bool> paused;
+    bool initialized{false};
+    bool pipe_server_running{false};
+    HANDLE pipe_server_thread{nullptr};
+    bool stop_server{false};
+    HANDLE stop_event{nullptr};
+    uint64_t current_address{0};
+    uint64_t module_base{0};
+    std::atomic<bool> debugging{false};
+    std::atomic<bool> paused{false};
 };
 
 extern PluginState g_state;

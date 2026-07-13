@@ -3372,10 +3372,11 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         script_code = f"""
         var sym = DebugSymbol.fromAddress(ptr({validated_address}));
+        var owningModule = Process.findModuleByAddress(ptr({validated_address}));
         send({{
             type: 'symbol',
             name: sym.name,
-            moduleName: sym.moduleName,
+            moduleName: owningModule ? owningModule.name : sym.moduleName,
             fileName: sym.fileName,
             lineNumber: sym.lineNumber,
             address: sym.address.toString()
@@ -5242,9 +5243,6 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             raise ToolError(_ERR_NOT_ATTACHED)
 
         matching_hooks = [info for info in self._hooks.values() if info.target == target and info.active]
-        if not matching_hooks:
-            _logger.warning("frida_revert_hook_no_active_hook", target=target)
-            raise ToolError(_ERR_HOOK_FAILED)
 
         addr_resolve = self._resolve_target_js(target)
         script_code = f"""
@@ -5912,7 +5910,7 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
         Raises:
             ToolError: If not attached or ObjC runtime is unavailable.
         """
-        _logger.info("frida_objc_hook_method_started", class_name=class_name, method_name=method_name)
+        _logger.info("frida_objc_hook_method_started", class_name=class_name, objc_method=method_name)
         if self._session is None:
             raise ToolError(_ERR_NOT_ATTACHED)
 
@@ -6168,7 +6166,7 @@ class FridaBridge(_FridaBridgeAnalysisMixin):
         _logger.info(
             "frida_java_hook_method_started",
             class_name=class_name,
-            method_name=method_name,
+            java_method=method_name,
             overload_count=len(overloads) if overloads else 0,
         )
         if self._session is None:

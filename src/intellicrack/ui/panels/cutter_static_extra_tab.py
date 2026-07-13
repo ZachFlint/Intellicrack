@@ -115,6 +115,11 @@ def _log_error(tab_name: str, rpc: str) -> Callable[[object], None]:
     """
 
     def _callback(error: object) -> None:
+        """Log a bridge RPC failure for the bound tab and RPC labels.
+
+        Args:
+            error: Exception or error payload from the async bridge runner.
+        """
         _logger.warning(
             "cutter_tab_refresh_failed",
             tab=tab_name,

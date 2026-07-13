@@ -128,10 +128,9 @@ class SystemTab(QWidget):
         return self._attached_pid
 
     def _show_error(self, title: str, exc: object, *, log_event: str) -> None:
-        """Surface a bridge error to the user via a warning dialog and structured log.
+        """Open a titled warning dialog and emit the structured log event for a bridge fault.
 
-        Mirrors the user-facing error-handling pattern used by ``ModulesTab`` so the
-        operator sees failures rather than having them silently dropped into the log.
+        Shared by System tab actions so operators see failures instead of silent log-only drops.
 
         Args:
             title: Title for the warning dialog, also used to convey the action context
@@ -1032,9 +1031,19 @@ class SystemTab(QWidget):
         active = self._svc_active_only.isChecked()
 
         def _on_success(result: object) -> None:
+            """Render the SCM service list after enumeration succeeds.
+
+            Args:
+                result: Service entries returned by ``enumerate_services``.
+            """
             self._render_services(result)
 
         def _on_error(exc: object) -> None:
+            """Open the Enumerate All Services error dialog after SCM listing fails.
+
+            Args:
+                exc: Failure from ``enumerate_services`` (optional active-only filter).
+            """
             self._show_error("Enumerate All Services Error", exc, log_event="system_tab_enumerate_services_failed")
 
         run_bridge_coroutine_logged(
@@ -1056,9 +1065,19 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Render open handles using the raw object-type index column.
+
+            Args:
+                result: Handle entries returned by ``enumerate_handles``.
+            """
             self._render_handles(result, "object_type_index")
 
         def _on_error(exc: object) -> None:
+            """Present the Enumerate Handles dialog when open-handle listing fails.
+
+            Args:
+                exc: Failure from ``enumerate_handles`` for the optional PID filter.
+            """
             self._show_error("Enumerate Handles Error", exc, log_event="system_tab_enumerate_handles_failed")
 
         run_bridge_coroutine_logged(
@@ -1080,9 +1099,19 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Render open handles with resolved object type names.
+
+            Args:
+                result: Handle entries returned by ``enum_handles``.
+            """
             self._render_handles(result, "type_name")
 
         def _on_error(exc: object) -> None:
+            """Report a Resolve Handle Types error when type-name resolution fails.
+
+            Args:
+                exc: Failure from ``enum_handles`` while mapping object type indexes.
+            """
             self._show_error("Resolve Handle Types Error", exc, log_event="system_tab_enum_handles_failed")
 
         run_bridge_coroutine_logged(
@@ -1101,6 +1130,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the system process table with PID, name, parent, and threads.
+
+            Args:
+                result: Process entry list from ``enumerate_system_processes``.
+            """
             if not isinstance(result, list):
                 return
             typed_result = cast("list[object]", result)
@@ -1118,6 +1152,11 @@ class SystemTab(QWidget):
             self._proc_status.setText(f"{self._proc_table.rowCount()} processes")
 
         def _on_error(exc: object) -> None:
+            """Show Enumerate System Processes Error and leave the process table unchanged.
+
+            Args:
+                exc: Failure from ``enumerate_system_processes`` system-wide listing.
+            """
             self._show_error("Enumerate System Processes Error", exc, log_event="system_tab_enumerate_system_processes_failed")
 
         run_bridge_coroutine_logged(
@@ -1136,9 +1175,19 @@ class SystemTab(QWidget):
         pid = self._attached_pid
 
         def _on_success(result: object) -> None:
+            """Display the flat DEP/ASLR/CFG/SEHOP mitigation summary.
+
+            Args:
+                result: Policy field mapping from ``get_mitigation_policy``.
+            """
             self._render_policy_dict(result)
 
         def _on_error(exc: object) -> None:
+            """Show Summary Policy Error when the flat DEP/ASLR/CFG query fails.
+
+            Args:
+                exc: Failure from ``get_mitigation_policy`` for the attached PID.
+            """
             self._show_error("Summary Policy Error", exc, log_event="system_tab_mitigation_summary_failed")
 
         run_bridge_coroutine_logged(
@@ -1158,9 +1207,19 @@ class SystemTab(QWidget):
         pid = self._attached_pid
 
         def _on_success(result: object) -> None:
+            """Display the extension-point disable mitigation policy fields.
+
+            Args:
+                result: Policy field mapping from ``get_extension_policy``.
+            """
             self._render_policy_dict(result)
 
         def _on_error(exc: object) -> None:
+            """Show Extension Policy Error when extension-point disable flags cannot load.
+
+            Args:
+                exc: Failure from ``get_extension_policy`` for the attached PID.
+            """
             self._show_error("Extension Policy Error", exc, log_event="system_tab_extension_policy_failed")
 
         run_bridge_coroutine_logged(
@@ -1185,6 +1244,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Populate the registry tree with the typed value payload.
+
+            Args:
+                result: Registry value fields returned by ``read_registry``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -1193,6 +1257,11 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._reg_tree, [str(k), str(v)])
 
         def _on_error(exc: object) -> None:
+            """Show Read Registry (Typed) Error and leave the registry tree empty.
+
+            Args:
+                exc: Failure from ``read_registry`` for the hive/key/value inputs.
+            """
             self._show_error("Read Registry (Typed) Error", exc, log_event="system_tab_read_registry_typed_failed")
 
         run_bridge_coroutine_logged(
@@ -1217,6 +1286,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Track the opened device handle and append it to the device table.
+
+            Args:
+                result: Native handle integer returned by ``device_open``.
+            """
             if not isinstance(result, int):
                 return
             self._device_handles[result] = device_path
@@ -1227,6 +1301,11 @@ class SystemTab(QWidget):
             self._device_status.setText(f"Opened {device_path} (handle 0x{result:X})")
 
         def _on_error(exc: object) -> None:
+            """Show Open Device Error without adding a handle to the device table.
+
+            Args:
+                exc: Failure from ``device_open`` for the entered device path.
+            """
             self._show_error("Open Device Error", exc, log_event="system_tab_device_open_failed")
 
         run_bridge_coroutine_logged(
@@ -1261,12 +1340,22 @@ class SystemTab(QWidget):
         output_size = self._ioctl_output_size.value()
 
         def _on_success(result: object) -> None:
+            """Render the IOCTL output buffer as spaced hex and update status.
+
+            Args:
+                result: Hex-encoded output string from ``device_ioctl``.
+            """
             hex_out = result if isinstance(result, str) else ""
             spaced = " ".join(hex_out[i : i + 2] for i in range(0, len(hex_out), 2))
             self._device_output.setPlainText(spaced)
             self._device_status.setText(f"IOCTL returned {len(hex_out) // 2} bytes")
 
         def _on_error(exc: object) -> None:
+            """Show Send IOCTL Error without rewriting the device output pane.
+
+            Args:
+                exc: Failure from ``device_ioctl`` for the selected handle and code.
+            """
             self._show_error("Send IOCTL Error", exc, log_event="system_tab_device_ioctl_failed")
 
         run_bridge_coroutine_logged(
@@ -1294,11 +1383,21 @@ class SystemTab(QWidget):
         target = handle
 
         def _on_success(_result: object) -> None:
+            """Drop the closed device handle from local tracking and the table.
+
+            Args:
+                _result: Unused success payload from ``device_close``.
+            """
             self._device_handles.pop(target, None)
             self._remove_table_row_by_int(self._device_table, 1, target)
             self._device_status.setText(f"Closed handle 0x{target:X}")
 
         def _on_error(exc: object) -> None:
+            """Show Close Device Error and keep the selected handle in the table.
+
+            Args:
+                exc: Failure from ``device_close`` for the selected device handle.
+            """
             self._show_error("Close Device Error", exc, log_event="system_tab_device_close_failed")
 
         run_bridge_coroutine_logged(
@@ -1321,6 +1420,11 @@ class SystemTab(QWidget):
         section_name: str | None = name_text or None
 
         def _on_success(result: object) -> None:
+            """Track the new section handle and append it to the section table.
+
+            Args:
+                result: Section handle integer returned by ``create_section``.
+            """
             if not isinstance(result, int):
                 return
             self._section_handles[result] = name_text
@@ -1332,6 +1436,11 @@ class SystemTab(QWidget):
             self._section_status.setText(f"Created section handle 0x{result:X}")
 
         def _on_error(exc: object) -> None:
+            """Show Create Section Error without inserting a section-table row.
+
+            Args:
+                exc: Failure from ``create_section`` for the requested size/name.
+            """
             self._show_error("Create Section Error", exc, log_event="system_tab_create_section_failed")
 
         run_bridge_coroutine_logged(
@@ -1359,6 +1468,11 @@ class SystemTab(QWidget):
         target = handle
 
         def _on_success(result: object) -> None:
+            """Record the mapped view base and append it to the views table.
+
+            Args:
+                result: Base address integer returned by ``map_section``.
+            """
             if not isinstance(result, int):
                 return
             self._section_views[result] = target
@@ -1369,6 +1483,11 @@ class SystemTab(QWidget):
             self._section_status.setText(f"Mapped section at 0x{result:X}")
 
         def _on_error(exc: object) -> None:
+            """Show Map Section Error without recording a mapped view base.
+
+            Args:
+                exc: Failure from ``map_section`` for the selected section handle.
+            """
             self._show_error("Map Section Error", exc, log_event="system_tab_map_section_failed")
 
         run_bridge_coroutine_logged(
@@ -1396,6 +1515,11 @@ class SystemTab(QWidget):
         owning_handle = self._section_views.get(target_base)
 
         def _on_success(_result: object) -> None:
+            """Remove the unmapped view and its owning section from local tables.
+
+            Args:
+                _result: Unused success payload from ``unmap_section``.
+            """
             self._section_views.pop(target_base, None)
             self._remove_table_row_by_int(self._views_table, 0, target_base)
             if owning_handle is not None:
@@ -1404,6 +1528,11 @@ class SystemTab(QWidget):
             self._section_status.setText(f"Unmapped view at 0x{target_base:X}")
 
         def _on_error(exc: object) -> None:
+            """Show Unmap Section Error and keep the view and section rows intact.
+
+            Args:
+                exc: Failure from ``unmap_section`` for the selected mapped base.
+            """
             self._show_error("Unmap Section Error", exc, log_event="system_tab_unmap_section_failed")
 
         run_bridge_coroutine_logged(
@@ -1426,6 +1555,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the privilege table with name, LUID, enabled state, and attributes.
+
+            Args:
+                result: Privilege entry list from ``get_token_privileges``.
+            """
             if not isinstance(result, list):
                 return
             self._priv_table.setRowCount(0)
@@ -1446,6 +1580,11 @@ class SystemTab(QWidget):
                 self._priv_table.setItem(row, 3, QTableWidgetItem(str(typed_priv.get("attributes", 0))))
 
         def _on_error(exc: object) -> None:
+            """Show Query Privileges Error without rebuilding the privilege table.
+
+            Args:
+                exc: Failure from ``get_token_privileges`` for the attached PID.
+            """
             self._show_error("Query Privileges Error", exc, log_event="system_tab_privileges_failed")
 
         run_bridge_coroutine_logged(
@@ -1467,6 +1606,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(_result: object) -> None:
+            """Log successful enablement of SeDebugPrivilege on the target token.
+
+            Args:
+                _result: Unused success payload from ``adjust_token_privilege``.
+            """
             _logger.info(
                 "sedebug_privilege_enabled",
                 pid=pid,
@@ -1474,6 +1618,11 @@ class SystemTab(QWidget):
             )
 
         def _on_error(exc: object) -> None:
+            """Show Enable Debug Privilege Error when SeDebugPrivilege cannot be set.
+
+            Args:
+                exc: Failure from ``adjust_token_privilege`` enabling SeDebugPrivilege.
+            """
             self._show_error("Enable Debug Privilege Error", exc, log_event="system_tab_enable_debug_failed")
 
         run_bridge_coroutine_logged(
@@ -1498,12 +1647,22 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Display the duplicated primary token handle in the token status line.
+
+            Args:
+                result: Token handle integer returned by ``duplicate_token``.
+            """
             if not isinstance(result, int):
                 return
             _logger.info("process_token_duplicated", pid=pid, handle=hex(result))
             self._token_status.setText(f"Duplicated token handle: 0x{result:X}")
 
         def _on_error(exc: object) -> None:
+            """Show Duplicate Token Error without updating the token status label.
+
+            Args:
+                exc: Failure from ``duplicate_token`` for the attached process.
+            """
             self._show_error("Duplicate Token Error", exc, log_event="system_tab_duplicate_token_failed")
 
         run_bridge_coroutine_logged(
@@ -1541,11 +1700,21 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Report whether the named privilege was present and removed.
+
+            Args:
+                result: Truthy when ``remove_privilege`` removed the privilege.
+            """
             removed = bool(result)
             _logger.info("process_privilege_removed", pid=pid, privilege=privilege_name, removed=removed)
             self._token_status.setText(f"Removed {privilege_name}" if removed else f"{privilege_name} was not present")
 
         def _on_error(exc: object) -> None:
+            """Show Remove Privilege Error when the named privilege cannot be stripped.
+
+            Args:
+                exc: Failure from ``remove_privilege`` for the confirmed privilege name.
+            """
             self._show_error("Remove Privilege Error", exc, log_event="system_tab_remove_privilege_failed")
 
         run_bridge_coroutine_logged(
@@ -1569,6 +1738,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the window table with HWND, title, class name, and visibility.
+
+            Args:
+                result: Window entry list returned by ``get_windows``.
+            """
             if not isinstance(result, list):
                 return
             self._win_table.setRowCount(0)
@@ -1589,6 +1763,11 @@ class SystemTab(QWidget):
                 self._win_table.setItem(row, 3, QTableWidgetItem("Yes" if typed_win.get("visible") else "No"))
 
         def _on_error(exc: object) -> None:
+            """Show Enumerate Windows Error and leave the window table as-is.
+
+            Args:
+                exc: Failure from ``get_windows`` for the attached process.
+            """
             self._show_error("Enumerate Windows Error", exc, log_event="system_tab_windows_failed")
 
         run_bridge_coroutine_logged(
@@ -1610,9 +1789,19 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Render services owned by the attached process after enumeration.
+
+            Args:
+                result: Service entries returned by ``list_services``.
+            """
             self._render_services(result)
 
         def _on_error(exc: object) -> None:
+            """Show Enumerate Services Error when process-owned services cannot load.
+
+            Args:
+                exc: Failure from ``list_services`` for the attached PID.
+            """
             self._show_error("Enumerate Services Error", exc, log_event="system_tab_services_failed")
 
         run_bridge_coroutine_logged(
@@ -1634,6 +1823,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Populate the PEB tree with field names and hex-formatted values.
+
+            Args:
+                result: PEB field mapping returned by ``read_peb``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -1643,6 +1837,11 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._peb_tree, [str(key), val_str])
 
         def _on_error(exc: object) -> None:
+            """Show Read PEB Error without clearing or rewriting the PEB tree.
+
+            Args:
+                exc: Failure from ``read_peb`` for the attached process.
+            """
             self._show_error("Read PEB Error", exc, log_event="system_tab_read_peb_failed")
 
         run_bridge_coroutine_logged(
@@ -1665,6 +1864,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Populate the PEB/TEB tree with TEB field names and values.
+
+            Args:
+                result: TEB field mapping returned by ``read_teb``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -1674,6 +1878,11 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._peb_tree, [str(key), val_str])
 
         def _on_error(exc: object) -> None:
+            """Show Read TEB Error when the selected thread's TEB cannot be read.
+
+            Args:
+                exc: Failure from ``read_teb`` for the combo-selected TID.
+            """
             self._show_error("Read TEB Error", exc, log_event="system_tab_read_teb_failed")
 
         run_bridge_coroutine_logged(
@@ -1696,6 +1905,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Track the connected named-pipe handle and append a pipe table row.
+
+            Args:
+                result: Pipe handle integer returned by ``pipe_connect``.
+            """
             if not isinstance(result, int):
                 return
             _logger.info(
@@ -1710,6 +1924,11 @@ class SystemTab(QWidget):
             self._pipe_table.setItem(row, 1, QTableWidgetItem(f"0x{result:X}"))
 
         def _on_error(exc: object) -> None:
+            """Show Connect Pipe Error without adding a pipe-table row or handle map entry.
+
+            Args:
+                exc: Failure from ``pipe_connect`` for the entered pipe name.
+            """
             self._show_error("Connect Pipe Error", exc, log_event="system_tab_pipe_connect_failed")
 
         run_bridge_coroutine_logged(
@@ -1764,6 +1983,11 @@ class SystemTab(QWidget):
         pipe_name, handle = selected
 
         def _on_success(_result: object) -> None:
+            """Remove the closed pipe handle from local state and the matching table row.
+
+            Args:
+                _result: Unused success payload from ``pipe_close``.
+            """
             _logger.info(
                 "named_pipe_closed",
                 pipe_name=pipe_name,
@@ -1789,6 +2013,11 @@ class SystemTab(QWidget):
                 self._pipe_table.removeRow(target_row)
 
         def _on_error(exc: object) -> None:
+            """Warn the user when closing the selected named pipe fails.
+
+            Args:
+                exc: Exception raised while calling ``pipe_close``.
+            """
             message = str(exc)
             _logger.warning(
                 "system_tab_pipe_close_failed",
@@ -1821,6 +2050,11 @@ class SystemTab(QWidget):
         size = self._pipe_read_size.value()
 
         def _on_success(result: object) -> None:
+            """Display hex-encoded pipe data and report how many bytes were read.
+
+            Args:
+                result: Hex string payload returned by ``pipe_read``.
+            """
             if not isinstance(result, str):
                 return
             _logger.info(
@@ -1834,6 +2068,11 @@ class SystemTab(QWidget):
             self._pipe_io_status.setText(f"Read {len(result) // 2} bytes from {pipe_name}")
 
         def _on_error(exc: object) -> None:
+            """Show Read Pipe Error without replacing the pipe I/O hex pane.
+
+            Args:
+                exc: Failure from ``pipe_read`` for the selected handle and size.
+            """
             self._show_error("Read Pipe Error", exc, log_event="system_tab_pipe_read_failed")
 
         run_bridge_coroutine_logged(
@@ -1867,6 +2106,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Report how many bytes were written to the selected named pipe.
+
+            Args:
+                result: Byte count returned by ``pipe_write``.
+            """
             written = result if isinstance(result, int) else 0
             _logger.info(
                 "named_pipe_written",
@@ -1877,6 +2121,11 @@ class SystemTab(QWidget):
             self._pipe_io_status.setText(f"Wrote {written} bytes to {pipe_name}")
 
         def _on_error(exc: object) -> None:
+            """Show Write Pipe Error without updating the pipe I/O status line.
+
+            Args:
+                exc: Failure from ``pipe_write`` for the selected handle and hex payload.
+            """
             self._show_error("Write Pipe Error", exc, log_event="system_tab_pipe_write_failed")
 
         run_bridge_coroutine_logged(
@@ -1901,6 +2150,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the mitigations table with policy names, enabled state, and flags.
+
+            Args:
+                result: Policy mapping returned by ``get_mitigation_policies``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -1917,6 +2171,11 @@ class SystemTab(QWidget):
                     self._mit_table.setItem(row, 1, QTableWidgetItem(str(val)))
 
         def _on_error(exc: object) -> None:
+            """Show Query Mitigations Error without rebuilding the mitigations table.
+
+            Args:
+                exc: Failure from ``get_mitigation_policies`` for the attached PID.
+            """
             self._show_error("Query Mitigations Error", exc, log_event="system_tab_mitigations_failed")
 
         run_bridge_coroutine_logged(
@@ -1938,11 +2197,21 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Update the kernel-debugger status label from the detection result.
+
+            Args:
+                result: Truthy when ``detect_kernel_debugger`` found a debugger.
+            """
             detected = bool(result)
             _logger.info("kernel_debugger_detection_completed", pid=pid, detected=detected)
             self._kernel_dbg_status.setText("Kernel debugger detected" if detected else "No kernel debugger detected")
 
         def _on_error(exc: object) -> None:
+            """Show Detect Kernel Debugger Error without changing the status label text.
+
+            Args:
+                exc: Failure from ``detect_kernel_debugger`` for the attached PID.
+            """
             self._show_error("Detect Kernel Debugger Error", exc, log_event="system_tab_detect_kernel_debugger_failed")
 
         run_bridge_coroutine_logged(
@@ -1966,6 +2235,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Populate the registry tree with the read value field mapping.
+
+            Args:
+                result: Value fields returned by ``reg_read_value``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -1974,6 +2248,11 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._reg_tree, [str(k), str(v)])
 
         def _on_error(exc: object) -> None:
+            """Show Read Registry Value Error and leave the registry tree unchanged.
+
+            Args:
+                exc: Failure from ``reg_read_value`` for the key/value name fields.
+            """
             self._show_error("Read Registry Value Error", exc, log_event="system_tab_reg_read_failed")
 
         run_bridge_coroutine_logged(
@@ -1997,6 +2276,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """List registry subkey names in the registry tree.
+
+            Args:
+                result: Subkey name list returned by ``reg_enum_keys``.
+            """
             if not isinstance(result, list):
                 return
             self._reg_tree.clear()
@@ -2004,6 +2288,11 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._reg_tree, [str(subkey), ""])
 
         def _on_error(exc: object) -> None:
+            """Show Enumerate Registry Keys Error when subkey listing fails.
+
+            Args:
+                exc: Failure from ``reg_enum_keys`` for the entered key path.
+            """
             self._show_error("Enumerate Registry Keys Error", exc, log_event="system_tab_reg_enum_keys_failed")
 
         run_bridge_coroutine_logged(
@@ -2026,6 +2315,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """List registry value names under the requested key in the tree.
+
+            Args:
+                result: Value name list returned by ``reg_enum_values``.
+            """
             if not isinstance(result, list):
                 return
             self._reg_tree.clear()
@@ -2033,6 +2327,11 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._reg_tree, [str(val_name), ""])
 
         def _on_error(exc: object) -> None:
+            """Show Enumerate Registry Values Error when value-name listing fails.
+
+            Args:
+                exc: Failure from ``reg_enum_values`` for the entered key path.
+            """
             self._show_error("Enumerate Registry Values Error", exc, log_event="system_tab_reg_enum_values_failed")
 
         run_bridge_coroutine_logged(
@@ -2054,6 +2353,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Populate the resource tree with GUI object counts for the process.
+
+            Args:
+                result: Resource count mapping returned by ``get_gui_resources``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -2062,6 +2366,11 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._res_tree, [str(k), str(v)])
 
         def _on_error(exc: object) -> None:
+            """Show Get GUI Resources Error without rewriting the resource tree.
+
+            Args:
+                exc: Failure from ``get_gui_resources`` for the attached PID.
+            """
             self._show_error("Get GUI Resources Error", exc, log_event="system_tab_gui_resources_failed")
 
         run_bridge_coroutine_logged(
@@ -2083,6 +2392,11 @@ class SystemTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Populate the resource tree with job object fields for the process.
+
+            Args:
+                result: Job info mapping returned by ``get_job_info``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -2091,6 +2405,11 @@ class SystemTab(QWidget):
                 QTreeWidgetItem(self._res_tree, [str(k), str(v)])
 
         def _on_error(exc: object) -> None:
+            """Show Get Job Info Error when job-object fields cannot be retrieved.
+
+            Args:
+                exc: Failure from ``get_job_info`` for the attached PID.
+            """
             self._show_error("Get Job Info Error", exc, log_event="system_tab_job_info_failed")
 
         run_bridge_coroutine_logged(
@@ -2111,6 +2430,14 @@ class SystemTab(QWidget):
         buf_size = self._raw_buf_size.value()
 
         def _on_success(result: object) -> None:
+            """Format NtQuerySystemInformation output as an offset hex dump.
+
+            Accepts hex strings or raw bytes. Non-hex strings are shown as-is
+            when decoding fails.
+
+            Args:
+                result: Buffer payload from ``query_system_info``.
+            """
             data: bytes | None = None
             if isinstance(result, str):
                 try:
@@ -2137,6 +2464,11 @@ class SystemTab(QWidget):
             self._raw_output.setPlainText("\n".join(hex_lines))
 
         def _on_error(exc: object) -> None:
+            """Show Raw Query Error without dumping NtQuerySystemInformation output.
+
+            Args:
+                exc: Failure from ``query_system_info`` for the selected class/buffer size.
+            """
             self._show_error("Raw Query Error", exc, log_event="system_tab_raw_query_failed")
 
         run_bridge_coroutine_logged(

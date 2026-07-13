@@ -128,7 +128,7 @@ def test_bridge_completeness_split_into_per_tool_groups() -> None:
     """The natively fragile bridge-completeness suite runs one process per tool."""
     names = {g.name for g in _list_groups()}
     for tool in ("cutter", "frida", "ghidra", "hex_editor", "sandbox_process", "x64dbg"):
-        assert f"test_bridge_completeness__{tool}" in names, f"missing bridge group: {tool}"
+        assert f"bridges__completeness__{tool}" in names, f"missing bridge group: {tool}"
 
 
 def test_mixed_parent_yields_two_groups_and_ignores_child() -> None:
@@ -139,14 +139,14 @@ def test_mixed_parent_yields_two_groups_and_ignores_child() -> None:
     runs.
     """
     groups = {g.name: g for g in _list_groups()}
-    assert "test_ui" in groups
-    assert "test_ui__log_viewer" in groups
+    assert "ui" in groups
+    assert "ui__log_viewer" in groups
 
-    parent = groups["test_ui"]
-    child = groups["test_ui__log_viewer"]
+    parent = groups["ui"]
+    child = groups["ui__log_viewer"]
     child_target = Path(child.target).resolve()
     ignored = {Path(p).resolve() for p in parent.ignores}
-    assert child_target in ignored, f"test_ui must --ignore its log_viewer child; ignores={parent.ignores}"
+    assert child_target in ignored, f"ui must --ignore its log_viewer child; ignores={parent.ignores}"
 
 
 def test_group_names_are_unique() -> None:

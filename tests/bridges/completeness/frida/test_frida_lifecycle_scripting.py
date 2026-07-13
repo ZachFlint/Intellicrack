@@ -40,7 +40,6 @@ import json
 import os
 import sys
 import time
-from pathlib import Path
 from typing import TYPE_CHECKING, Final
 
 import pytest
@@ -48,10 +47,12 @@ import pytest
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine, Generator
+    from pathlib import Path
 
     import frida
 
     from intellicrack.bridges.frida_bridge import FridaBridge
+    from intellicrack.core.subprocess_compat import Popen
 
 try:
     from intellicrack.bridges.frida_bridge import FridaBridge
@@ -64,7 +65,6 @@ from intellicrack.core.tools import ToolRegistry
 from intellicrack.core.types import ToolError, ToolName
 
 
-_CURRENT_PROCESS_NAME: Final[str] = Path(sys.executable).name
 _ATTACH_WAIT_S: Final[float] = 5.0
 
 
@@ -235,7 +235,11 @@ class TestAttachDispatchG1:
         assert bridge.state.target_pid == current_pid
 
     @staticmethod
-    def test_execute_tool_call_attach_with_process_name(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
+    def test_execute_tool_call_attach_with_process_name(
+        registry: ToolRegistry,
+        bridge: _TestableFridaBridge,
+        notepad_process: Popen[bytes],
+    ) -> None:
         """``frida.attach`` dispatched via ToolRegistry with a name-shaped pid must resolve and attach.
 
         Falsifiable: if ``attach()`` did not branch on non-numeric strings to
@@ -244,12 +248,22 @@ class TestAttachDispatchG1:
         the ``isinstance(pid, str) and not pid.strip()...isdigit()`` branch in
         ``FridaBridge.attach`` (``frida_bridge.py``) that delegates to
         ``attach_by_name``.
+
+        The target is a dedicated, freshly-spawned ``notepad.exe`` (not the
+        ambient test process) so the asserted PID is the real, unambiguous
+        PID of the process this test actually spawned -- a real gate that
+        fails if ``attach_by_name`` resolves to the wrong process.
+
+        Args:
+            registry: ToolRegistry with the bridge registered.
+            bridge: Initialized FridaBridge fixture.
+            notepad_process: Dedicated spawned notepad target.
         """
         _run_async(
-            registry.execute_tool_call("frida", "frida.attach", {"pid": _CURRENT_PROCESS_NAME}),
+            registry.execute_tool_call("frida", "frida.attach", {"pid": "notepad.exe"}),
         )
         assert bridge.state.process_attached is True
-        assert bridge.state.target_pid == os.getpid()
+        assert bridge.state.target_pid == notepad_process.pid
 
     @staticmethod
     def test_attach_tool_def_parameter_is_named_pid_not_target(bridge: _TestableFridaBridge) -> None:
@@ -296,7 +310,11 @@ class TestNotRegisteredMethodsG2:
         assert expected_name in names
 
     @staticmethod
-    def test_attach_by_name_dispatchable_via_registry(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:
+    def test_attach_by_name_dispatchable_via_registry(
+        registry: ToolRegistry,
+        bridge: _TestableFridaBridge,
+        notepad_process: Popen[bytes],
+    ) -> None:
         """``frida.attach_by_name`` must dispatch through ToolRegistry and really attach.
 
         Falsifiable: if the ``ToolFunction`` entry were missing (pre-fix
@@ -304,12 +322,24 @@ class TestNotRegisteredMethodsG2:
         unknown function name before ever reaching ``attach_by_name``.
         Broken production line: the ``frida.attach_by_name`` ``ToolFunction``
         registration in ``_FRIDA_FUNCTIONS``.
+
+        The target is a dedicated, freshly-spawned ``notepad.exe`` (not the
+        ambient test process, whose name -- ``python.exe``/``pytest.exe`` --
+        commonly collides with other concurrently-running interpreters) so
+        the asserted PID is the real, unambiguous PID of the process this
+        test actually spawned -- a real gate that fails if
+        ``attach_by_name`` resolves to the wrong process.
+
+        Args:
+            registry: ToolRegistry with the bridge registered.
+            bridge: Initialized FridaBridge fixture.
+            notepad_process: Dedicated spawned notepad target.
         """
         _run_async(
-            registry.execute_tool_call("frida", "frida.attach_by_name", {"name": _CURRENT_PROCESS_NAME}),
+            registry.execute_tool_call("frida", "frida.attach_by_name", {"name": "notepad.exe"}),
         )
         assert bridge.state.process_attached is True
-        assert bridge.state.target_pid == os.getpid()
+        assert bridge.state.target_pid == notepad_process.pid
 
     @staticmethod
     def test_execute_persistent_script_and_unload_script_round_trip(registry: ToolRegistry, bridge: _TestableFridaBridge) -> None:

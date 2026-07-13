@@ -361,6 +361,7 @@ class OpenAIProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             self._logger.error("openai_chat_not_connected", model=model)
             raise ProviderError(_ERR_NOT_CONNECTED)
@@ -842,6 +843,7 @@ class OpenAIProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limited by OpenAI.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 

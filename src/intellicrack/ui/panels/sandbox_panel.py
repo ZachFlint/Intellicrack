@@ -498,6 +498,11 @@ class SandboxPanel(AnalysisPanelBase):
         self._vnc_widget = vnc_w
 
         def _vnc_status_slot(c: int) -> None:
+            """Forward VNC connection status changes into the panel handler.
+
+            Args:
+                c: Connection status integer emitted by the VNC widget.
+            """
             self._on_vnc_status_changed(connected=bool(c))
 
         vnc_w.connection_status_changed.connect(_vnc_status_slot)
@@ -589,6 +594,11 @@ class SandboxPanel(AnalysisPanelBase):
         sandbox_id = self.sandbox_id
 
         def _log_destroy_error(exc: object) -> None:
+            """Log a sandbox destroy failure during panel cleanup.
+
+            Args:
+                exc: Exception raised by ``bridge.destroy``.
+            """
             _logger.warning(
                 "sandbox_cleanup_destroy_skipped",
                 sandbox_id=sandbox_id,
@@ -596,6 +606,11 @@ class SandboxPanel(AnalysisPanelBase):
             )
 
         def _destroy_sandbox(_result: object) -> None:
+            """Clear PCAP state and request sandbox destruction after PCAP stop.
+
+            Args:
+                _result: Unused result from the preceding ``stop_pcap`` call.
+            """
             self._pcap_capture_id = None
             run_bridge_coroutine_logged(
                 bridge.destroy(sandbox_id),
@@ -607,6 +622,11 @@ class SandboxPanel(AnalysisPanelBase):
             )
 
         def _log_stop_pcap_error(exc: object) -> None:
+            """Log a PCAP stop failure, then continue with sandbox destruction.
+
+            Args:
+                exc: Exception raised by ``bridge.stop_pcap``.
+            """
             _logger.warning(
                 "sandbox_cleanup_pcap_stop_skipped",
                 sandbox_id=sandbox_id,

@@ -353,6 +353,11 @@ TLS_ARRAY_OFFSET_X64 = 0x1480
 _TLS_EXPANSION_OFFSET_X64 = 0x1780
 TLS_ARRAY_OFFSET_X86 = 0xE10
 TLS_STATIC_SLOT_COUNT = 64
+TLS_EXPANSION_SLOT_COUNT = 1024
+TLS_TOTAL_SLOT_COUNT = TLS_STATIC_SLOT_COUNT + TLS_EXPANSION_SLOT_COUNT
+_SAME_TEB_FLAGS_OFFSET_X64 = 0x17EE
+_SAME_TEB_FLAGS_OFFSET_X86 = 0xFCA
+_HAS_FIBER_DATA_FLAG = 0x0004
 _ENV_POINTER_OFFSET_X64 = 0x80
 _ENV_SIZE_OFFSET_X64 = 0x3F0
 _ENV_POINTER_OFFSET_X86 = 0x48
@@ -433,8 +438,8 @@ class TEB64(ctypes.Structure):
     """64-bit Thread Environment Block layout through TlsExpansionSlots.
 
     MS-documented offsets for ntdll!_TEB on amd64/arm64 targets. Gaps between named fields are filled with reserved byte arrays so that
-    ctypes.sizeof(TEB64) equals the true in-memory size and buffer allocation covers TlsSlots[64] at +0x1480 and TlsExpansionSlots at
-    +0x1780.
+    ctypes.sizeof(TEB64) equals the true in-memory size and buffer allocation covers TlsSlots[64] at +0x1480, TlsExpansionSlots at
+    +0x1780, and SameTebFlags at +0x17EE.
     """
 
     _fields_: ClassVar = [
@@ -457,6 +462,8 @@ class TEB64(ctypes.Structure):
         ("TlsLinks", ctypes.c_uint64 * 2),
         ("_Reserved1690", ctypes.c_byte * (_TLS_EXPANSION_OFFSET_X64 - 0x1690)),
         ("TlsExpansionSlots", ctypes.c_uint64),
+        ("_Reserved1788", ctypes.c_byte * (_SAME_TEB_FLAGS_OFFSET_X64 - (_TLS_EXPANSION_OFFSET_X64 + 0x8))),
+        ("SameTebFlags", ctypes.c_uint16),
     ]
 
 
@@ -464,7 +471,7 @@ class TEB32(ctypes.Structure):
     """32-bit Thread Environment Block layout through TlsSlots[64].
 
     MS-documented offsets for ntdll!_TEB on i386 targets and WOW64. Gaps between named fields are filled with reserved byte arrays so that
-    ctypes.sizeof(TEB32) equals the true in-memory size and buffer allocation covers TlsSlots[64] at +0xE10.
+    ctypes.sizeof(TEB32) equals the true in-memory size and buffer allocation covers TlsSlots[64] at +0xE10 and SameTebFlags at +0xFCA.
     """
 
     _fields_: ClassVar = [
@@ -484,6 +491,8 @@ class TEB32(ctypes.Structure):
         ("LastErrorValue", ctypes.c_uint32),
         ("_Reserved038", ctypes.c_byte * (TLS_ARRAY_OFFSET_X86 - 0x038)),
         ("TlsSlots", ctypes.c_uint32 * 64),
+        ("_ReservedF10", ctypes.c_byte * (_SAME_TEB_FLAGS_OFFSET_X86 - (TLS_ARRAY_OFFSET_X86 + 0x100))),
+        ("SameTebFlags", ctypes.c_uint16),
     ]
 
 
@@ -1083,7 +1092,7 @@ _PROCESS_FUNCTIONS: list[ToolFunction] = [
         description="Read TLS slot values for a thread",
         parameters=[
             ToolParameter(name="tid", type="integer", description="Thread ID", required=True),
-            ToolParameter(name="max_slots", type="integer", description="Maximum TLS slots to read", required=False, default="64"),
+            ToolParameter(name="max_slots", type="integer", description="Maximum TLS slots to read", required=False, default="1088"),
         ],
         returns="List of TLS slot dicts with index and value",
     ),
@@ -1569,6 +1578,26 @@ class _ProcessBridgeBase(ToolBridgeBase):
             ctypes.c_void_p,
         ]
         return advapi32_le
+
+    def _configure_current_process_token_prototypes(self) -> None:
+        """Configure ctypes prototypes for the ``GetCurrentProcess`` token path.
+
+        Declares ``GetCurrentProcess`` as returning a ``HANDLE`` and
+        ``OpenProcessToken`` with explicit ``argtypes`` so the 64-bit
+        ``(HANDLE)-1`` pseudo-handle that ``GetCurrentProcess`` returns is
+        marshalled as a pointer-sized value instead of overflowing a default
+        C ``int`` argument (which raises ``OverflowError`` on the no-pid
+        privilege paths).
+        """
+        if self._kernel32 is None or self._advapi32 is None:
+            return
+        self._kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        self._advapi32.OpenProcessToken.restype = wintypes.BOOL
+        self._advapi32.OpenProcessToken.argtypes = [
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            ctypes.POINTER(wintypes.HANDLE),
+        ]
 
     def _adjust_se_debug_privilege(
         self,
@@ -3966,6 +3995,7 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
             _logger.error("advapi32_unavailable", operation="get_token_privileges")
             raise ToolError(_ERR_ADVAPI32_NA)
 
+        self._configure_current_process_token_prototypes()
         target_pid = pid or self._attached_pid
         proc_handle: int | None = None
         close_proc = False
@@ -4127,6 +4157,7 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
         if self._advapi32 is None:
             raise ToolError(_ERR_ADVAPI32_NA)
 
+        self._configure_current_process_token_prototypes()
         target_pid = pid or self._attached_pid
         proc_handle: int | None = None
         close_proc = False
@@ -5378,6 +5409,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             thread_local_storage_pointer = struct.unpack_from("<Q", raw, 0x58)[0]
             peb_ptr = struct.unpack_from("<Q", raw, 0x60)[0]
             last_error = struct.unpack_from("<I", raw, 0x68)[0]
+            same_teb_flags = struct.unpack_from("<H", raw, _SAME_TEB_FLAGS_OFFSET_X64)[0]
             tls_array_base = teb_address + TLS_ARRAY_OFFSET_X64
         else:
             seh_frame = struct.unpack_from("<I", raw, 0x00)[0]
@@ -5387,6 +5419,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             thread_local_storage_pointer = struct.unpack_from("<I", raw, 0x2C)[0]
             peb_ptr = struct.unpack_from("<I", raw, 0x30)[0]
             last_error = struct.unpack_from("<I", raw, 0x34)[0]
+            same_teb_flags = struct.unpack_from("<H", raw, _SAME_TEB_FLAGS_OFFSET_X86)[0]
             tls_array_base = teb_address + TLS_ARRAY_OFFSET_X86
 
         return {
@@ -5398,6 +5431,8 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             "thread_local_storage_pointer": thread_local_storage_pointer,
             "peb_address": peb_ptr,
             "last_error_value": last_error,
+            "same_teb_flags": same_teb_flags,
+            "has_fiber_data": bool(same_teb_flags & _HAS_FIBER_DATA_FLAG),
             "tls_array_base": tls_array_base,
         }
 
@@ -5751,6 +5786,19 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             "ebp": "Ebp",
             "esp": "Esp",
             "eip": "Eip",
+            "eflags": "EFlags",
+            "cs": "SegCs",
+            "ds": "SegDs",
+            "es": "SegEs",
+            "fs": "SegFs",
+            "gs": "SegGs",
+            "ss": "SegSs",
+            "dr0": "Dr0",
+            "dr1": "Dr1",
+            "dr2": "Dr2",
+            "dr3": "Dr3",
+            "dr6": "Dr6",
+            "dr7": "Dr7",
         }
         for name, value in registers.items():
             attr = reg_map_wow64.get(name.lower())
@@ -5800,6 +5848,19 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             "r14": "R14",
             "r15": "R15",
             "rip": "Rip",
+            "eflags": "EFlags",
+            "cs": "SegCs",
+            "ds": "SegDs",
+            "es": "SegEs",
+            "fs": "SegFs",
+            "gs": "SegGs",
+            "ss": "SegSs",
+            "dr0": "Dr0",
+            "dr1": "Dr1",
+            "dr2": "Dr2",
+            "dr3": "Dr3",
+            "dr6": "Dr6",
+            "dr7": "Dr7",
         }
         for name, value in registers.items():
             attr = reg_map.get(name.lower())
@@ -8038,6 +8099,12 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
         """
 
         def run_parse() -> tuple[int, list[dict[str, int | str]]] | None:
+            """Parse PE headers for the COM Descriptor directory and sections.
+
+            Returns:
+                tuple[int, list[dict[str, int | str]]] | None: ``(com_rva,
+                sections)`` when a COM Descriptor exists, otherwise ``None``.
+            """
             nt_offset = read_dos_e_lfanew(data)
             if nt_offset <= 0 or len(data) < nt_offset + 4:
                 return None
@@ -9141,14 +9208,21 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
     # TLS slot access
     # ------------------------------------------------------------------
 
-    async def get_tls_values(self, tid: int, max_slots: int = 64) -> list[dict[str, object]]:
-        """Read static TLS slot values for a thread.
+    async def get_tls_values(self, tid: int, max_slots: int = TLS_TOTAL_SLOT_COUNT) -> list[dict[str, object]]:
+        """Read static and expansion TLS slot values for a thread.
 
         Reads the static TLS array directly from the TEB: TEB+0x1480 on
         x64 (64 slots of 8 bytes each) or TEB+0xE10 on x86 (64 slots of
-        4 bytes each). When ``max_slots`` exceeds
-        ``TLS_STATIC_SLOT_COUNT``, also reads expansion slots via the
-        TlsExpansionSlots pointer at TEB+0x1780 (x64 only).
+        4 bytes each). ``TlsAlloc`` hands out indexes from the 64-entry
+        static array first and, once that is exhausted, from a
+        separately-allocated expansion array reached through the
+        ``TlsExpansionSlots`` pointer at TEB+0x1780 (x64 only); slots at
+        index 64 and above therefore live outside the static array and are
+        invisible unless that pointer is also followed. The default
+        ``max_slots`` covers the full guaranteed range (``TLS_STATIC_SLOT_COUNT``
+        static plus ``TLS_EXPANSION_SLOT_COUNT`` expansion slots) so callers
+        that do not narrow the range still see indexes allocated after the
+        static array filled up.
 
         Args:
             tid: Thread ID.
@@ -9243,7 +9317,7 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
         exp_ptr = struct.unpack_from("<Q", exp_ptr_data, 0)[0]
         if exp_ptr == 0:
             return
-        expansion_count = min(max_slots - TLS_STATIC_SLOT_COUNT, 1024)
+        expansion_count = min(max_slots - TLS_STATIC_SLOT_COUNT, TLS_EXPANSION_SLOT_COUNT)
         expansion_read_size = expansion_count * ptr_size
         try:
             exp_data = self._sync_read_memory(exp_ptr, expansion_read_size)
@@ -9261,19 +9335,28 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
     async def get_fiber_data(self, tid: int) -> dict[str, object]:
         """Read fiber data pointer for a thread.
 
+        The TEB field at offset ``0x20`` (``NT_TIB.FiberData``) is a union
+        with ``Version`` and is therefore non-zero for ordinary threads, so
+        ``has_fiber`` is derived from the ``HasFiberData`` bit of
+        ``SameTebFlags`` (set only after ``ConvertThreadToFiber``) rather
+        than from ``fiber_data != 0``. The raw union value is preserved in
+        ``fiber_data``.
+
         Args:
             tid: Thread ID.
 
         Returns:
-            dict[str, object]: Dict with fiber_data address.
+            dict[str, object]: Dict with the raw ``fiber_data`` pointer and
+            a ``has_fiber`` bool sourced from the TEB ``HasFiberData`` flag.
         """
         _logger.debug("process_get_fiber_data_started", tid=tid)
         teb = await self.read_teb(tid)
         fiber_data = teb.get("fiber_data")
+        has_fiber = teb.get("has_fiber_data")
 
         return {
             "fiber_data": fiber_data if isinstance(fiber_data, int) else 0,
-            "has_fiber": isinstance(fiber_data, int) and fiber_data != 0,
+            "has_fiber": has_fiber is True,
         }
 
     # ------------------------------------------------------------------

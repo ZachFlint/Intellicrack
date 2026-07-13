@@ -337,7 +337,7 @@ class TestConnectUsesPluginPipeName:
 
 
 class _DummyProcess:
-    """Minimal Popen stand-in satisfying ``ProcessManager.register`` (needs ``pid``)."""
+    """Stand-in for :class:`DesktopProcess` returned by ``spawn_on_hidden_desktop``."""
 
     def __init__(self, pid: int) -> None:
         """Store a unique fake PID.
@@ -362,6 +362,54 @@ class _DummyProcess:
         del timeout
         return 0
 
+    def kill(self) -> None:
+        """No-op kill for cleanup callbacks."""
+
+    def close(self) -> None:
+        """No-op close, mirroring ``DesktopProcess.close``."""
+
+
+class _FakeExternalProcessManager:
+    """In-process stand-in for ``ProcessManager`` external-PID bookkeeping.
+
+    The real ``register_external_pid`` verifies the PID corresponds to a
+    live OS process before recording it, which the synthetic PID from
+    :func:`unique_pid` cannot satisfy. This fake mirrors the
+    ``register_external_pid``/``unregister_external_pid`` surface
+    :class:`X64DbgBridge` now calls after its migration from
+    ``subprocess.Popen`` to ``spawn_on_hidden_desktop`` so ``load`` can run
+    its real launch path without touching the real singleton.
+    """
+
+    def register_external_pid(
+        self,
+        pid: int,
+        name: str,
+        process_type: object = None,
+        metadata: dict[str, object] | None = None,
+    ) -> None:
+        """Accept the registration unconditionally.
+
+        Args:
+            pid: Process id to register.
+            name: Human-readable process name.
+            process_type: The tracked ``ProcessType``.
+            metadata: Optional metadata dict.
+        """
+        del pid, name, process_type, metadata
+
+    def unregister_external_pid(self, pid: int) -> bool:
+        """Accept the unregistration unconditionally.
+
+        Args:
+            pid: Process id to unregister.
+
+        Returns:
+            bool: Always ``True``.
+        """
+        del pid
+        return True
+
 
 @pytest.fixture
 def unique_pid() -> Iterator[int]:
@@ -372,7 +420,7 @@ def unique_pid() -> Iterator[int]:
     """
     pid = 0x7F000000 + (uuid.uuid4().int & 0xFFFF)
     yield pid
-    ProcessManager.get_instance().unregister(pid)
+    ProcessManager.get_instance().unregister_external_pid(pid)
 
 
 class TestLoadFailsFastWhenPipeNeverReady:
@@ -408,11 +456,21 @@ class TestLoadFailsFastWhenPipeNeverReady:
         exe_dir.mkdir(parents=True)
         (exe_dir / "x64dbg.exe").write_bytes(b"MZ")
 
-        def fake_popen(*_args: object, **_kwargs: object) -> _DummyProcess:
+        def fake_spawn(*_args: object, **_kwargs: object) -> _DummyProcess:
             return _DummyProcess(unique_pid)
 
+        fake_manager = _FakeExternalProcessManager()
+
+        def _stub_get_instance(_cls: type[ProcessManager]) -> _FakeExternalProcessManager:
+            return fake_manager
+
         monkeypatch.setattr(x64dbg_module, "_IS_WIN32", True)
-        monkeypatch.setattr(x64dbg_module, "Popen", fake_popen)
+        monkeypatch.setattr(x64dbg_module, "spawn_on_hidden_desktop", fake_spawn)
+        monkeypatch.setattr(
+            x64dbg_module.ProcessManager,
+            "get_instance",
+            classmethod(_stub_get_instance),
+        )
         monkeypatch.setattr(
             X64DbgBridge,
             "_PIPE_NAME",

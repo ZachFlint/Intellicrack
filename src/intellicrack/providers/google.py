@@ -309,6 +309,7 @@ class GoogleProvider(LLMProviderBase):
             ProviderError: If not connected, the request fails, or the response is blocked.
             RateLimitError: If the API rate limit is exceeded.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
@@ -519,6 +520,7 @@ class GoogleProvider(LLMProviderBase):
             ProviderError: If not connected, the stream fails, or the response is blocked.
             RateLimitError: If the API rate limit is exceeded.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 

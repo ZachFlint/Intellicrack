@@ -550,6 +550,14 @@ class WindowsSandbox(SandboxBase):
         user32.GetWindowTextLengthW.restype = ctypes.c_int
 
         def _window_text(hwnd: int) -> str:
+            """Read the caption text of a top-level or child window.
+
+            Args:
+                hwnd: Native window handle.
+
+            Returns:
+                str: Window text, or an empty string when the window has none.
+            """
             length = user32.GetWindowTextLengthW(hwnd)
             if length <= 0:
                 return ""
@@ -558,13 +566,30 @@ class WindowsSandbox(SandboxBase):
             return buffer.value
 
         def _class_name(hwnd: int) -> str:
+            """Read the Win32 class name of a window.
+
+            Args:
+                hwnd: Native window handle.
+
+            Returns:
+                str: Class name reported by ``GetClassNameW``.
+            """
             buffer = ctypes.create_unicode_buffer(_GET_CLASS_NAME_BUFFER)
             user32.GetClassNameW(hwnd, buffer, _GET_CLASS_NAME_BUFFER)
             return buffer.value
 
         collected: list[str] = []
 
-        def _child_cb(hwnd: int, _: int) -> bool:
+        def _child_cb(hwnd: int, _lparam: int) -> bool:
+            """Collect non-empty child window captions during enumeration.
+
+            Args:
+                hwnd: Child window handle supplied by ``EnumChildWindows``.
+                _lparam: Unused ``lParam`` from the enumeration callback.
+
+            Returns:
+                bool: Always ``True`` so enumeration continues.
+            """
             text = _window_text(hwnd)
             if text:
                 collected.append(text)
@@ -573,7 +598,16 @@ class WindowsSandbox(SandboxBase):
         child_proc = enum_windows_proc(_child_cb)
         matched: dict[str, str] = {}
 
-        def _top_cb(hwnd: int, _: int) -> bool:
+        def _top_cb(hwnd: int, _lparam: int) -> bool:
+            """Match Windows Sandbox client failure dialogs and harvest text.
+
+            Args:
+                hwnd: Top-level window handle supplied by ``EnumWindows``.
+                _lparam: Unused ``lParam`` from the enumeration callback.
+
+            Returns:
+                bool: Always ``True`` so enumeration continues after a match.
+            """
             if "text" in matched:
                 return True
             title = _window_text(hwnd)
@@ -908,6 +942,11 @@ class WindowsSandbox(SandboxBase):
             return False
 
         def _post_wm_close() -> bool:
+            """Post ``WM_CLOSE`` to every top-level window owned by ``pid``.
+
+            Returns:
+                bool: ``True`` when at least one ``WM_CLOSE`` was posted.
+            """
             user32 = ctypes.WinDLL("user32", use_last_error=True)
             kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
@@ -936,7 +975,16 @@ class WindowsSandbox(SandboxBase):
             target_pid = ctypes.c_ulong(pid)
             posted = {"count": 0}
 
-            def _cb(hwnd: int, _: int) -> bool:
+            def _cb(hwnd: int, _lparam: int) -> bool:
+                """Post ``WM_CLOSE`` when the window belongs to the target PID.
+
+                Args:
+                    hwnd: Top-level window handle from ``EnumWindows``.
+                    _lparam: Unused ``lParam`` from the enumeration callback.
+
+                Returns:
+                    bool: Always ``True`` so remaining windows are visited.
+                """
                 owner = ctypes.c_ulong(0)
                 user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
                 if owner.value == target_pid.value and user32.PostMessageW(hwnd, _WM_CLOSE, None, None):
@@ -1082,6 +1130,13 @@ class WindowsSandbox(SandboxBase):
             temp_dir = self._temp_dir
 
             def _rmtree_onerror(func: object, path: object, exc_info: object) -> None:
+                """Log a single ``shutil.rmtree`` entry failure without aborting.
+
+                Args:
+                    func: OS function that failed (for example ``os.unlink``).
+                    path: Filesystem path that could not be removed.
+                    exc_info: Exception triple or error object from ``rmtree``.
+                """
                 _logger.warning(
                     "temp_dir_cleanup_entry_failed",
                     func=getattr(func, "__name__", str(func)),
@@ -1176,6 +1231,7 @@ class WindowsSandbox(SandboxBase):
         wsb_path = self._wsb_path
 
         def _write_config() -> None:
+            """Serialize the generated WSB XML document to ``wsb_path``."""
             with wsb_path.open("wb") as fh:
                 tree.write(fh, encoding="utf-8", xml_declaration=True)
 
@@ -1345,6 +1401,14 @@ class WindowsSandbox(SandboxBase):
         monitor_folder = self._monitor_folder
 
         def _copy_scripts() -> list[str]:
+            """Copy PowerShell and CMD monitor scripts into the shared folder.
+
+            Returns:
+                list[str]: Names of files copied into ``monitor_folder``.
+
+            Raises:
+                SandboxError: If the host scripts directory is missing.
+            """
             scripts_dir = _SCRIPTS_DIR
             if not scripts_dir.is_dir():
                 _logger.error("monitor_scripts_dir_not_found", scripts_dir=str(scripts_dir))
@@ -2492,6 +2556,7 @@ class WindowsSandbox(SandboxBase):
         zip_path = self._shared_folder / "output" / zip_filename
 
         def _create_zip() -> None:
+            """Archive every file under the staging directory into ``zip_path``."""
             with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
                 if staging_dir.exists():
                     for file_path in staging_dir.rglob("*"):
@@ -2570,6 +2635,11 @@ class WindowsSandbox(SandboxBase):
                 await asyncio.to_thread(extract_dir.mkdir, parents=True, exist_ok=True)
 
                 def _extract_zips() -> list[Path]:
+                    """Unpack dropped-file archives and list every extracted path.
+
+                    Returns:
+                        list[Path]: Files under ``extract_dir`` after extraction.
+                    """
                     extracted: list[Path] = []
                     for zf_path in zip_files:
                         with zipfile.ZipFile(zf_path, "r") as zf:

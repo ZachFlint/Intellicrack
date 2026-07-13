@@ -9,18 +9,20 @@ These tests guard against three regressions in
 
 * F-0006 (Bridge Bypass): the ``Save to Sandbox`` button used to shell
   out to ``docker cp`` / ``scp`` / ``shutil.copy2`` directly instead of
-  routing through :meth:`SandboxBridge.copy_to`. The new path MUST call
-  ``bridge.copy_to(instance_id, source, dest)`` and MUST NOT invoke any
-  subprocess transfer.
+  routing through the hex-editor bridge. The current path MUST call
+  ``HexEditorBridge.save_to_sandbox(dest_path, sandbox_type=...)`` (which
+  itself auto-provisions the sandbox instance and performs the copy) and
+  MUST NOT invoke any subprocess transfer.
 * F-0018 (WDAG semantics): the ``windows_sandbox`` save branch used to
   ``shutil.copy2`` directly to the host path
   ``C:\\Users\\WDAGUtilityAccount\\Desktop`` which only exists inside
-  the live VM. The new path MUST route through ``bridge.copy_to`` so the
-  bridge's shared-folder mapping handles the WDAG translation.
+  the live VM. The current path MUST route through
+  ``bridge.save_to_sandbox`` so the bridge's shared-folder mapping
+  handles the WDAG translation instead of touching the host filesystem.
 * F-0019 (Concurrency): every save/test invocation used to spin a fresh
   ``asyncio.new_event_loop()`` on a worker thread, defeating the
-  persistent bridge loop. The new path MUST schedule coroutines on the
-  bridge's persistent loop and MUST NOT create a new event loop per
+  persistent bridge loop. The current path MUST schedule coroutines on
+  the bridge's persistent loop and MUST NOT create a new event loop per
   call.
 """
 
@@ -30,7 +32,7 @@ import asyncio
 import importlib
 import shutil as _shutil
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final
 
 import pytest
 from PyQt6.QtWidgets import QApplication, QMessageBox, QWidget
@@ -81,7 +83,7 @@ def sandbox_qapp() -> Generator[QApplication]:
     """Provide a session QApplication for Qt widgets created in this module.
 
     Yields:
-        Generator[QApplication]: The shared QApplication instance.
+        QApplication: The shared QApplication instance.
     """
     existing = QApplication.instance()
     if isinstance(existing, QApplication):
@@ -91,71 +93,37 @@ def sandbox_qapp() -> Generator[QApplication]:
 
 
 class _RecordingBridge:
-    """Fake SandboxBridge that records calls without performing real I/O.
+    """Fake HexEditorBridge that records calls without performing real I/O.
 
-    Each public method returns a real coroutine so the mixin's
+    ``save_to_sandbox`` returns a real coroutine so the mixin's
     ``run_bridge_coroutine_async`` dispatch path is exercised end-to-end
-    while the test stays hermetic.
+    while the test stays hermetic. This mirrors the real
+    :meth:`HexEditorBridge.save_to_sandbox` contract, which auto-provisions
+    the sandbox instance internally rather than accepting a pre-selected
+    instance ID.
     """
 
     def __init__(self) -> None:
-        """Initialise empty call ledgers for each tracked bridge method."""
-        self.copy_to_calls: list[tuple[str, str, str]] = []
-        self.execute_calls: list[tuple[str, str, int | None]] = []
-        self.list_calls: int = 0
+        """Initialise an empty call ledger for the tracked bridge method."""
+        self.save_to_sandbox_calls: list[tuple[str, str]] = []
 
-    async def copy_to(self, instance_id: str, source: str, dest: str) -> dict[str, Any]:
-        """Record a ``copy_to`` invocation and await one event-loop tick.
+    async def save_to_sandbox(self, dest_path: str, sandbox_type: str = "windows") -> dict[str, Any]:
+        """Record a ``save_to_sandbox`` invocation and await one event-loop tick.
 
         Args:
-            instance_id: Target sandbox instance ID.
-            source: Local source path.
-            dest: Destination path inside the sandbox.
+            dest_path: Destination path inside the sandbox.
+            sandbox_type: Sandbox type ('windows' or 'qemu').
 
         Returns:
             dict[str, Any]: Synthetic success payload mirroring the bridge contract.
         """
-        self.copy_to_calls.append((instance_id, source, dest))
+        self.save_to_sandbox_calls.append((dest_path, sandbox_type))
         await asyncio.sleep(0)
         return {
-            "success": True,
-            "source": source,
-            "dest": dest,
-            "instance_id": instance_id,
+            "sandbox_path": dest_path,
+            "status": "copied",
+            "instance_id": f"{sandbox_type}-auto-instance",
         }
-
-    async def execute(
-        self,
-        instance_id: str,
-        command: str,
-        time_limit: int | None = None,
-        working_directory: str | None = None,
-    ) -> dict[str, Any]:
-        """Record an ``execute`` invocation and await one event-loop tick.
-
-        Args:
-            instance_id: Target sandbox instance ID.
-            command: Command line to execute inside the sandbox.
-            time_limit: Optional command timeout in seconds.
-            working_directory: Optional working directory.
-
-        Returns:
-            dict[str, Any]: Synthetic execution payload.
-        """
-        del working_directory
-        self.execute_calls.append((instance_id, command, time_limit))
-        await asyncio.sleep(0)
-        return {"exit_code": 0, "stdout": "", "stderr": ""}
-
-    async def list(self) -> list[dict[str, Any]]:
-        """Record a ``list`` invocation and await one event-loop tick.
-
-        Returns:
-            list[dict[str, Any]]: Empty instance list.
-        """
-        self.list_calls += 1
-        await asyncio.sleep(0)
-        return []
 
 
 class _SandboxHost(SandboxMixin, QWidget):
@@ -178,6 +146,7 @@ class _SandboxHost(SandboxMixin, QWidget):
         self.document: object = object()
         self.file_path: Path | None = file_path
         self._tab_container: QWidget | None = None
+        self._bridge: Any | None = None
 
     def build_sandbox_tab(self) -> None:
         """Create the sandbox tab and parent it to this host widget.
@@ -188,6 +157,18 @@ class _SandboxHost(SandboxMixin, QWidget):
         container = self._create_sandbox_tab()
         container.setParent(self)
         self._tab_container = container
+
+    def set_bridge(self, bridge: object) -> None:
+        """Attach a ``HexEditorBridge`` for RPC-backed sandbox operations.
+
+        Mirrors :meth:`HexEditorPanel.set_bridge`, the real attachment point
+        the tools-panel wiring layer calls once the registry's hex editor
+        bridge instance is available.
+
+        Args:
+            bridge: ``HexEditorBridge`` instance (or a test double) to attach.
+        """
+        self._bridge = bridge
 
     def set_instance_id(self, instance_id: str) -> None:
         """Populate the instance combo with a known ID.
@@ -286,27 +267,26 @@ def _patch_dispatch(monkeypatch: pytest.MonkeyPatch) -> list[Coroutine[Any, Any,
     return captured
 
 
-def test_save_routes_through_bridge_copy_to(
+def test_save_routes_through_bridge_save_to_sandbox(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """F-0006: Save dispatches ``bridge.copy_to`` and not ``subprocess.run``.
+    """F-0006: Save dispatches ``bridge.save_to_sandbox`` and not ``subprocess.run``.
 
     Failure mode this test guards against: the legacy implementation
     issued ``subprocess.Popen(["docker", "cp", ...])`` / ``scp`` /
     ``shutil.copy2`` directly. After the fix, the only side effect of
-    pressing Save is a ``bridge.copy_to(instance_id, source, dest)``
+    pressing Save is a ``bridge.save_to_sandbox(dest_path, sandbox_type=...)``
     invocation; no subprocess transfer is launched.
 
     Args:
         tmp_path: Pytest temp directory fixture.
         monkeypatch: Pytest monkeypatch fixture.
     """
-    host, src = _make_host(tmp_path)
+    host, _src = _make_host(tmp_path)
     bridge = _RecordingBridge()
-    host.set_sandbox_bridge(cast("Any", bridge))
+    host.set_bridge(bridge)
     host.set_sandbox_type("qemu")
-    host.set_instance_id("qemu-instance-7")
     host.set_dest_path("/sandbox/payload.bin")
 
     captured = _patch_dispatch(monkeypatch)
@@ -327,7 +307,7 @@ def test_save_routes_through_bridge_copy_to(
         monkeypatch.setattr(subprocess, "Popen", real_popen)
 
     assert not subprocess_calls, f"Unexpected subprocess invocation: {subprocess_calls}"
-    assert bridge.copy_to_calls == [("qemu-instance-7", str(src), "/sandbox/payload.bin")]
+    assert bridge.save_to_sandbox_calls == [("/sandbox/payload.bin", "qemu")]
     assert len(captured) == 1
 
 
@@ -335,25 +315,25 @@ def test_windows_sandbox_uses_wdag_copy(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    r"""F-0018: ``windows`` save dispatches ``bridge.copy_to``, not host write.
+    r"""F-0018: ``windows`` save dispatches ``bridge.save_to_sandbox``, not host write.
 
     Failure mode this test guards against: the legacy implementation
     invoked ``shutil.copy2`` against
     ``C:\\Users\\WDAGUtilityAccount\\Desktop`` on the host (a path that
     only exists inside the running Windows Sandbox VM). After the fix,
-    the panel routes ``windows`` saves through ``bridge.copy_to`` so the
-    bridge's shared-folder mapping translates the destination into the
-    guest filesystem.
+    the panel routes ``windows`` saves through ``bridge.save_to_sandbox``
+    so the bridge's shared-folder mapping translates the destination into
+    the guest filesystem instead of the panel ever touching the host
+    filesystem.
 
     Args:
         tmp_path: Pytest temp directory fixture.
         monkeypatch: Pytest monkeypatch fixture.
     """
-    host, src = _make_host(tmp_path)
+    host, _src = _make_host(tmp_path)
     bridge = _RecordingBridge()
-    host.set_sandbox_bridge(cast("Any", bridge))
+    host.set_bridge(bridge)
     host.set_sandbox_type("windows")
-    host.set_instance_id("windows-instance-1")
     host.set_dest_path("input/payload.bin")
 
     captured = _patch_dispatch(monkeypatch)
@@ -375,9 +355,9 @@ def test_windows_sandbox_uses_wdag_copy(
         monkeypatch.setattr(_shutil, "copy2", real_copy2)
 
     assert not shutil_calls, f"Unexpected shutil.copy2 invocation: {shutil_calls}"
-    assert bridge.copy_to_calls == [("windows-instance-1", str(src), "input/payload.bin")]
+    assert bridge.save_to_sandbox_calls == [("input/payload.bin", "windows")]
     assert len(captured) == 1
-    bridge_dest = bridge.copy_to_calls[0][2]
+    bridge_dest = bridge.save_to_sandbox_calls[0][0]
     assert not Path(bridge_dest).is_absolute() or not str(bridge_dest).startswith(str(forbidden_path)), (
         f"Bridge dest {bridge_dest!r} must not be the host-side WDAG path"
     )
@@ -401,9 +381,8 @@ def test_no_new_event_loop_per_call(
     """
     host, _src = _make_host(tmp_path)
     bridge = _RecordingBridge()
-    host.set_sandbox_bridge(cast("Any", bridge))
+    host.set_bridge(bridge)
     host.set_sandbox_type("qemu")
-    host.set_instance_id("qemu-instance-loop-test")
 
     captured = _patch_dispatch(monkeypatch)
 
@@ -422,5 +401,5 @@ def test_no_new_event_loop_per_call(
         monkeypatch.setattr(asyncio, "new_event_loop", real_new_loop)
 
     assert counter["value"] == 0, f"Expected 0 new_event_loop calls, observed {counter['value']}"
-    assert len(bridge.copy_to_calls) == _OP_COUNT
+    assert len(bridge.save_to_sandbox_calls) == _OP_COUNT
     assert len(captured) == _OP_COUNT

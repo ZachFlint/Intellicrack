@@ -76,6 +76,7 @@ class _SetupLoggingFn(Protocol):
                 default (``Path.cwd() / "logs"``).
         """
 
+
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _EARLY_SPLASH_WIDTH: Final[int] = 600
 _EARLY_SPLASH_HEIGHT: Final[int] = 400
@@ -651,6 +652,12 @@ async def _initialize_providers(
             registry.register(provider)
 
     async def _init_one(provider_name: ProviderName, provider_class: type[LLMProviderBase]) -> None:
+        """Initialize one provider and log recoverable failures without aborting.
+
+        Args:
+            provider_name: Registry key for the provider being initialized.
+            provider_class: Concrete provider class to construct and register.
+        """
         try:
             await _init_one_impl(provider_name, provider_class)
         except (ImportError, OSError, RuntimeError, ValueError, TypeError, AttributeError) as e:
@@ -781,7 +788,11 @@ def main() -> int:
             _run_application(config, app, splash, process_manager, logger),
         )
     except (ImportError, OSError, RuntimeError) as exc:
-        logger.warning("startup_failed", error=str(exc), error_type=type(exc).__name__)
+        logger.warning(
+            "application_failed",
+            error=str(exc),
+            error_type=type(exc).__name__,
+        )
         return 1
     finally:
         _finalize_shutdown(loop, process_manager, logger)
@@ -1322,15 +1333,23 @@ async def _run_application(
     logger.info("ui_started")
     exit_code = app.exec()
 
-    await _shutdown_application(
-        logger=logger,
-        provider_registry=provider_registry,
-        orchestrator=orchestrator,
-        session_manager=session_manager,
-        process_manager=process_manager,
-        model_discovery=model_discovery,
-        discovery_cache=discovery_cache,
-    )
+    try:
+        await _shutdown_application(
+            logger=logger,
+            provider_registry=provider_registry,
+            orchestrator=orchestrator,
+            session_manager=session_manager,
+            process_manager=process_manager,
+            model_discovery=model_discovery,
+            discovery_cache=discovery_cache,
+        )
+    except (ImportError, OSError, RuntimeError) as exc:
+        logger.warning(
+            "shutdown_failed",
+            error=str(exc),
+            error_type=type(exc).__name__,
+        )
+        return 1 if exit_code == 0 else exit_code
     return exit_code
 
 

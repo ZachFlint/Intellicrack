@@ -117,6 +117,14 @@ class QMPResponse:
 class StubQMP:
     """Minimal QMP client stub for QEMU-specific bridge paths."""
 
+    async def stop(self) -> QMPResponse:
+        """Pause VM execution.
+
+        Returns:
+            QMPResponse: Success response.
+        """
+        return QMPResponse(success=True, data={"status": "paused"})
+
     async def cont(self) -> QMPResponse:
         """Resume VM execution.
 

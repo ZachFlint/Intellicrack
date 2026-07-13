@@ -305,7 +305,9 @@ class TestBuildX64dbgPluginCommandConstruction:
         plugin_dir = tmp_path / "plugin"
         plugin_dir.mkdir()
         x64dbg_path = tmp_path / "x64dbg"
-        x64dbg_path.mkdir()
+        sdk_path = x64dbg_path / "pluginsdk"
+        sdk_path.mkdir(parents=True)
+        (sdk_path / "bridgemain.h").write_bytes(b"")
 
         result = build_x64dbg_plugin(plugin_dir, x64dbg_path)
 
@@ -334,8 +336,10 @@ class TestBuildX64dbgPluginCommandConstruction:
         assert a_idx + 1 < len(x64_configure), "No architecture string follows -A"
         assert x64_configure[a_idx + 1] == "x64", f"Architecture mismatch: expected 'x64', got {x64_configure[a_idx + 1]!r}"
 
-        expected_x64dbg_flag = f"-DX64DBG_PATH={x64dbg_path}"
-        assert expected_x64dbg_flag in x64_configure, f"-DX64DBG_PATH not set correctly in configure call: {x64_configure}"
+        expected_x64dbg_sdk_flag = f"-DX64DBG_SDK_PATH={sdk_path}"
+        assert expected_x64dbg_sdk_flag in x64_configure, (
+            f"-DX64DBG_SDK_PATH not set correctly in configure call: {x64_configure}"
+        )
 
     def test_cmake_build_command_uses_release_config(
         self,
@@ -360,7 +364,9 @@ class TestBuildX64dbgPluginCommandConstruction:
         plugin_dir = tmp_path / "plugin2"
         plugin_dir.mkdir()
         x64dbg_path = tmp_path / "x64dbg2"
-        x64dbg_path.mkdir()
+        sdk_path = x64dbg_path / "pluginsdk"
+        sdk_path.mkdir(parents=True)
+        (sdk_path / "bridgemain.h").write_bytes(b"")
 
         result = build_x64dbg_plugin(plugin_dir, x64dbg_path)
 

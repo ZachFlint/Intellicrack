@@ -1,4 +1,66 @@
-# SCM syntax highlighting & preventing 3-way merges
+# ============================================================================
+# Intellicrack .gitattributes
+# ============================================================================
+
+# Generated lockfile: syntax highlighting, no 3-way merges, exclude from stats
 pixi.lock merge=binary linguist-language=YAML linguist-generated=true
+
+# ----------------------------------------------------------------------------
+# Line endings: CRLF working tree everywhere (Windows-first). Applies to every
+# clone and CI regardless of local core.autocrlf. vendor/* submodules carry
+# their own attributes and are unaffected.
+# ----------------------------------------------------------------------------
+* text=auto eol=crlf
+
+# Generated lockfile: treat as binary so it is never EOL-converted (pixi keeps
+# it LF). This -text rule wins over the global rule above.
+pixi.lock -text
+
+# ----------------------------------------------------------------------------
+# Shell-sourced files MUST stay LF (direnv/bash eval a trailing CR otherwise)
+# ----------------------------------------------------------------------------
+.envrc text eol=lf
+*.sh   text eol=lf
+
+# ----------------------------------------------------------------------------
+# Binary files: never text-convert or line-diff (defense against text=auto
+# mis-detection; also silences pointless diffs)
+# ----------------------------------------------------------------------------
+tests/fixtures/binaries/macho_osx_x64_ls binary
+tests/fixtures/binaries/true_x86_64      binary
+*.exe  binary
+*.dll  binary
+*.lib  binary
+*.dp32 binary
+*.dp64 binary
+*.pdf  binary
+*.png  binary
+*.ico  binary
+*.bmp  binary
+*.ttf  binary
+*.sdb  binary
+*.sig  binary
+*.qm   binary
+
+# ----------------------------------------------------------------------------
+# Windows script types: explicit CRLF (subsumed by the global rule; kept clear)
+# ----------------------------------------------------------------------------
 *.cmd text eol=crlf
 *.bat text eol=crlf
+
+# ----------------------------------------------------------------------------
+# GitHub Linguist: exclude vendored/generated trees from language statistics
+# ----------------------------------------------------------------------------
+tools/**   linguist-vendored
+vendor/**  linguist-vendored
+docs/**    linguist-documentation
+Cargo.lock linguist-generated merge=binary
+
+# ----------------------------------------------------------------------------
+# Diff drivers: language-aware hunk headers (@@ def / @@ fn ...)
+# ----------------------------------------------------------------------------
+*.py  diff=python
+*.rs  diff=rust
+*.cpp diff=cpp
+*.h   diff=cpp
+*.md  diff=markdown

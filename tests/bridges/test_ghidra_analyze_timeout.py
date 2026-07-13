@@ -159,6 +159,21 @@ async def test_initialize_constructs_bridge_with_large_response_timeout(
 
     monkeypatch.setattr(ghidra_bridge, "GhidraBridge", _CapturingClient)
 
+    def _reachable(_host: str, _port: int, _timeout_seconds: float = 3.0) -> bool:
+        """Report the bridge port reachable so initialize reaches client construction.
+
+        Args:
+            _host: Ignored probe host.
+            _port: Ignored probe port.
+            _timeout_seconds: Ignored probe timeout.
+
+        Returns:
+            bool: Always True.
+        """
+        return True
+
+    monkeypatch.setattr(GhidraBridge, "_probe_bridge_port", staticmethod(_reachable))
+
     bridge = GhidraBridge()
     await bridge.initialize()
 

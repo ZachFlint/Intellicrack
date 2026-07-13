@@ -627,11 +627,12 @@ class TestGetCallgraph:
 
 
 class TestGetResources:
-    """Gate ``get_resources``: ``irj`` command + ``ResourceInfo`` field mapping.
+    """Gate ``get_resources``: ``iRj`` command + ``ResourceInfo`` field mapping.
 
     Key mutation targets:
 
-    - ``"irj"`` changed to ``"iRj"`` → command assertion fails.
+    - ``"iRj"`` changed to ``"irj"`` (the relocations command) → command
+      assertion fails.
     - Reading ``"vaddr"`` instead of ``"paddr"`` → ``address`` is 0.
     - Dropping ``"type"`` parse → ``type`` field is empty.
     """
@@ -648,16 +649,16 @@ class TestGetResources:
 
     @pytest.mark.asyncio
     async def test_irj_command_issued(self) -> None:
-        """``get_resources`` must emit the ``irj`` rizin command.
+        """``get_resources`` must emit the ``iRj`` rizin command.
 
-        Mutation caught: emitting ``iRj`` (the non-JSON relocs command) →
-        ``irj`` not in recorded commands.
+        Mutation caught: emitting ``irj`` (the relocations command) →
+        ``iRj`` not in recorded commands.
         """
-        bridge, rec = _make_bridge({"irj": self._RESPONSE})
+        bridge, rec = _make_bridge({"iRj": self._RESPONSE})
 
         await bridge.get_resources()
 
-        assert "irj" in rec.commands
+        assert "iRj" in rec.commands
 
     @pytest.mark.asyncio
     async def test_resource_name_parsed(self) -> None:
@@ -665,7 +666,7 @@ class TestGetResources:
 
         Mutation caught: reading ``"id"`` instead of ``"name"`` → name empty.
         """
-        bridge, _ = _make_bridge({"irj": self._RESPONSE})
+        bridge, _ = _make_bridge({"iRj": self._RESPONSE})
 
         result: list[ResourceInfo] = await bridge.get_resources()
 
@@ -679,7 +680,7 @@ class TestGetResources:
         Mutation caught: reading ``"vaddr"`` instead of ``"paddr"`` →
         ``address`` is 0 for standard PE resource output.
         """
-        bridge, _ = _make_bridge({"irj": self._RESPONSE})
+        bridge, _ = _make_bridge({"iRj": self._RESPONSE})
 
         result: list[ResourceInfo] = await bridge.get_resources()
 
@@ -691,7 +692,7 @@ class TestGetResources:
 
         Mutation caught: hardcoding size to 0 → assertion fails.
         """
-        bridge, _ = _make_bridge({"irj": self._RESPONSE})
+        bridge, _ = _make_bridge({"iRj": self._RESPONSE})
 
         result: list[ResourceInfo] = await bridge.get_resources()
 
@@ -703,7 +704,7 @@ class TestGetResources:
 
         Mutation caught: dropping ``type`` parse → type is empty string.
         """
-        bridge, _ = _make_bridge({"irj": self._RESPONSE})
+        bridge, _ = _make_bridge({"iRj": self._RESPONSE})
 
         result: list[ResourceInfo] = await bridge.get_resources()
 
@@ -715,7 +716,7 @@ class TestGetResources:
 
         Mutation caught: dropping ``language`` parse → language is empty string.
         """
-        bridge, _ = _make_bridge({"irj": self._RESPONSE})
+        bridge, _ = _make_bridge({"iRj": self._RESPONSE})
 
         result: list[ResourceInfo] = await bridge.get_resources()
 
@@ -723,8 +724,8 @@ class TestGetResources:
 
     @pytest.mark.asyncio
     async def test_empty_response_yields_empty_list(self) -> None:
-        """``get_resources`` returns ``[]`` for an empty ``irj`` response."""
-        bridge, _ = _make_bridge({"irj": "[]"})
+        """``get_resources`` returns ``[]`` for an empty ``iRj`` response."""
+        bridge, _ = _make_bridge({"iRj": "[]"})
 
         result: list[ResourceInfo] = await bridge.get_resources()
 

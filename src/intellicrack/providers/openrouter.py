@@ -379,6 +379,7 @@ class OpenRouterProvider(LLMProviderBase):
         Raises:
             ProviderError: If not connected or request fails.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
@@ -733,6 +734,7 @@ class OpenRouterProvider(LLMProviderBase):
             RateLimitError: If OpenRouter returns HTTP 429 during streaming.
             ProviderError: If not connected or request fails.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 

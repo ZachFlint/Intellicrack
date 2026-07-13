@@ -68,6 +68,11 @@ def _log_tab_error(tab_name: str, rpc: str) -> Callable[[object], None]:
     """
 
     def _callback(error: object) -> None:
+        """Log a bridge RPC failure for the bound tab and RPC labels.
+
+        Args:
+            error: Exception or error payload from the async bridge runner.
+        """
         _logger.warning(
             "cutter_tab_refresh_failed",
             tab=tab_name,
@@ -943,19 +948,19 @@ class ESILConsoleTab(QWidget):
         _logger.info("esil_state_reset", reason="new_binary_loaded")
 
     def _on_auto_init_success(self, _result: object) -> None:
-        """Handle success of the automatic ``aeim`` initialisation.
+        """Mark ESIL memory ready and log successful automatic ``aeim`` init.
 
         Args:
-            _result: Unused result payload from the bridge call.
+            _result: Unused bridge success payload from the ``aeim`` call.
         """
         self._esil_initialised = True
         self._output.appendPlainText("[ok] ESIL memory initialised")
 
     def _on_auto_init_error(self, error: object) -> None:
-        """Handle failure of the automatic ``aeim`` initialisation.
+        """Log and display automatic ``aeim`` failure without enabling ESIL.
 
         Args:
-            error: Exception reported by the bridge runner.
+            error: Exception reported by the bridge runner for ``aeim``.
         """
         _logger.warning("esil_auto_init_failed", error=str(error))
         self._output.appendPlainText(f"[error] aeim failed: {error}")

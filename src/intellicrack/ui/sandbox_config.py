@@ -879,6 +879,12 @@ class SandboxConfigDialog(QDialog):
         )
 
         def _test_finished_slot(s: int, m: str) -> None:
+            """Coerce sandbox test worker ints into the finished-handler bool/message pair.
+
+            Args:
+                s: Worker success flag; nonzero means the sandbox test succeeded.
+                m: Status or error text emitted by the sandbox test worker.
+            """
             self._on_test_finished(success=bool(s), message=m)
 
         self._test_worker.finished.connect(_test_finished_slot)
@@ -1392,9 +1398,19 @@ class SandboxMonitorWidget(QFrame):
         )
 
         def _pid_kill_finished_slot(_result: object) -> None:
+            """Continue stop-sandbox cleanup after PID ``taskkill`` completes.
+
+            Args:
+                _result: Unused success payload from the PID kill worker.
+            """
             self._on_pid_kill_succeeded(pid)
 
         def _pid_kill_error_slot(exc: object) -> None:
+            """Report stop-sandbox failure when PID ``taskkill`` cannot terminate.
+
+            Args:
+                exc: Error from the worker that ran ``taskkill`` against ``pid``.
+            """
             self._on_pid_kill_failed(pid, exc)
 
         _ = worker.call_finished.connect(_pid_kill_finished_slot)

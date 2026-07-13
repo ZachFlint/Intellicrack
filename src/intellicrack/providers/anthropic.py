@@ -514,6 +514,7 @@ class AnthropicProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limited.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self._client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 
@@ -648,6 +649,7 @@ class AnthropicProvider(LLMProviderBase):
             ProviderError: If not connected or request fails.
             RateLimitError: If rate limited.
         """
+        self._reject_empty_messages(messages)
         if not self.connected or self._client is None:
             raise ProviderError(_MSG_NOT_CONNECTED)
 

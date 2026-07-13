@@ -442,6 +442,9 @@ bandit-report.json
 rollout-*.json
 .aider*
 
+# Host-native pass Microsoft symbol cache (_NT_SYMBOL_PATH)
+.symbols/
+
 # ==============================================================================
 # LARGE FILES
 # ==============================================================================

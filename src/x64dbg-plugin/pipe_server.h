@@ -32,7 +32,7 @@ constexpr DWORD CONNECT_TIMEOUT_MS = 5000;
 constexpr DWORD PAYLOAD_READ_TIMEOUT_MS = 30000;
 
 struct PipeMessage {
-    uint32_t id;
+    uint32_t id{0};
     std::string type;
     std::string command;
     std::string params;
@@ -40,8 +40,8 @@ struct PipeMessage {
 };
 
 struct PipeResponse {
-    uint32_t id;
-    bool success;
+    uint32_t id{0};
+    bool success{false};
     std::string result;
     std::string error;
 };
@@ -86,8 +86,8 @@ private:
     bool write_message(const char* payload, uint32_t length);
     bool write_data_locked(const char* data, uint32_t length);
     bool read_data(char* buffer, uint32_t length, DWORD timeout_ms);
-    std::string serialize_response(const PipeResponse& response);
-    bool parse_message(const std::string& json, PipeMessage& msg);
+    static std::string serialize_response(const PipeResponse& response);
+    static bool parse_message(const std::string& json, PipeMessage& msg);
 };
 
 extern PipeServer g_pipe_server;

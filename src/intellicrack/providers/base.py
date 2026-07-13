@@ -281,6 +281,9 @@ def map_thinking_budget_to_effort(
     return "high" if budget_tokens <= REASONING_EFFORT_HIGH_THRESHOLD else "xhigh"
 
 
+_ERR_EMPTY_MESSAGES: Final[str] = "messages must contain at least one message"
+
+
 class LLMProviderBase(ABC):
     """Abstract base class for LLM providers.
 
@@ -302,7 +305,7 @@ class LLMProviderBase(ABC):
     @property
     @abstractmethod
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """The provider's name.
 
         Returns:
             ProviderName: The ProviderName enum value for this provider.
@@ -782,6 +785,26 @@ class LLMProviderBase(ABC):
             str: The result as a string, JSON-encoded if not already a string.
         """
         return serialize_tool_result(result)
+
+    @staticmethod
+    def _reject_empty_messages(messages: list[Message]) -> None:
+        """Reject a chat request that carries no messages.
+
+        Every provider treats an empty ``messages`` list as invalid input: a
+        chat completion needs at least one message to respond to. Providers
+        call this at the top of ``chat`` and ``chat_stream`` so the misuse
+        surfaces as a typed :class:`ProviderError` before any connection state
+        check or network call, uniformly across every backend.
+
+        Args:
+            messages: The conversation messages supplied by the caller.
+
+        Raises:
+            ProviderError: When ``messages`` is empty.
+        """
+        if not messages:
+            _logger.warning("chat_rejected_empty_messages")
+            raise ProviderError(_ERR_EMPTY_MESSAGES)
 
     @staticmethod
     def _convert_tool_choice_to_openai_format(

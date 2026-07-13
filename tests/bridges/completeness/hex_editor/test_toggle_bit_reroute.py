@@ -32,7 +32,7 @@ from typing import TYPE_CHECKING
 
 from intellicrack.ui.panels.hex_editor.panel import HexEditorPanel
 
-from .conftest import RecordingHexEditorBridge, open_doc, priv, priv_method, priv_set, release_and_unlink
+from .conftest import RecordingHexEditorBridge, open_doc, priv, priv_method, priv_set, pump_until, release_and_unlink
 
 
 if TYPE_CHECKING:
@@ -62,7 +62,6 @@ class TestToggleBitRoutesThroughBridge:
         Args:
             qapp: Session QApplication fixture.
         """
-        del qapp
         panel = HexEditorPanel()
         bridge = RecordingHexEditorBridge()
         path = open_doc(bridge, b"\x00")
@@ -72,6 +71,7 @@ class TestToggleBitRoutesThroughBridge:
             priv_set(panel, "_bit_editor_offset", 0)
 
             priv_method(panel, "_on_bit_toggled")(0, checked=True)
+            pump_until(qapp, lambda: bool(bridge.toggle_bit_calls))
 
             assert bridge.toggle_bit_calls == [{"offset": 0, "bit_index": 0}]
             assert bridge.document is not None

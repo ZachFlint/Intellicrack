@@ -571,9 +571,15 @@ class HexEditorPanel(
         dist_ref = self._byte_dist_widget
 
         def _on_log_toggled() -> None:
+            """Toggle logarithmic scaling on the byte-distribution widget."""
             dist_ref.toggle_log_scale()
 
         def _log_toggled_slot(_checked: int) -> None:
+            """Handle the Log Scale button toggle from Qt.
+
+            Args:
+                _checked: Unused Qt checked-state integer from the button.
+            """
             _on_log_toggled()
 
         log_btn.toggled.connect(_log_toggled_slot)
@@ -1288,7 +1294,22 @@ class HexEditorPanel(
             if action is not None:
 
                 def _make_handler(f: str) -> Callable[[object], None]:
+                    """Build a menu action handler bound to a copy format name.
+
+                    Args:
+                        f: Copy-as format identifier captured for the action.
+
+                    Returns:
+                        Callable[[object], None]: Slot that runs ``_do_copy_as``
+                        for the bound format.
+                    """
+
                     def _handler(_checked: object = None) -> None:
+                        """Copy the current selection using the bound format.
+
+                        Args:
+                            _checked: Unused Qt triggered-signal payload.
+                        """
                         self._do_copy_as(f)
 
                     return _handler

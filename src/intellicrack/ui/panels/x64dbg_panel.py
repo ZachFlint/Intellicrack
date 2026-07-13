@@ -233,6 +233,11 @@ class X64DbgPanel(AnalysisPanelBase):
         self._64bit_toggle.setChecked(True)
 
         def _toggle_64bit_slot(c: int) -> None:
+            """Switch the panel between x64 and x86 debugger targets via the checkbox.
+
+            Args:
+                c: Qt ``toggled`` payload; nonzero selects the 64-bit debugger path.
+            """
             self._on_toggle_64bit(checked=bool(c))
 
         self._64bit_toggle.toggled.connect(_toggle_64bit_slot)

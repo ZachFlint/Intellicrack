@@ -272,47 +272,125 @@ $registered = (Register-ServiceWmiSubscription -Query $modificationQuery -EventK
 $registered = (Register-ServiceWmiSubscription -Query $creationQuery -EventKind 'created' -SourceIdentifier 'IntellicrackServiceCreated') -and $registered
 $registered = (Register-ServiceWmiSubscription -Query $deletionQuery -EventKind 'deleted' -SourceIdentifier 'IntellicrackServiceDeleted') -and $registered
 
+# CIM/WMI indication-event subscriptions require the eventing subsystem
+# (Winmgmt event provider host) to accept a live subscription; some locked
+# down hosts (e.g. minimal container images) run WMI class queries fine but
+# reject event registration. Rather than exit and stop monitoring entirely
+# - which would silently drop every subsequent service transition - fall
+# back to a bounded polling sweep over Win32_Service so the monitor keeps
+# producing genuine lifecycle data. The fallback is explicitly diagnosed so
+# a caller can distinguish it from the preferred event-driven mode.
+$script:PollingFallbackActive = $false
+
 if (-not $registered) {
-    Write-ErrorRecord -Stage 'register_summary' -Message 'one or more WMI event registrations failed; monitor will exit'
+    Write-ErrorRecord -Stage 'register_summary' -Message 'one or more WMI event registrations failed; falling back to polling'
     foreach ($sub in $wmiSubs) {
         try { Unregister-Event -SubscriptionId $sub.Id -ErrorAction Stop } catch { Write-ErrorRecord -Stage 'unregister' -Message $_.Exception.Message }
     }
-    return
+    $script:PollingFallbackActive = $true
 }
 
-Write-JsonlRecord -Record @{ event = 'monitor_started'; query_window_seconds = $within }
+function Get-CurrentServiceSnapshot {
+    [OutputType([hashtable])]
+    param()
+    $snapshot = @{}
+    try {
+        $services = Get-CimInstance -ClassName Win32_Service -ErrorAction Stop
+    } catch {
+        Write-ErrorRecord -Stage 'polling_snapshot' -Message $_.Exception.Message
+        return $snapshot
+    }
+    foreach ($svc in $services) {
+        $name = [string]$svc.Name
+        if (-not $name) { continue }
+        $snapshot[$name] = [PSCustomObject]@{
+            Name        = $name
+            DisplayName = [string]$svc.DisplayName
+            PathName    = [string]$svc.PathName
+            StartMode   = [string]$svc.StartMode
+            State       = [string]$svc.State
+        }
+    }
+    return $snapshot
+}
 
-try {
-    while ($true) {
-        $evt = Wait-Event -Timeout 5
-        if ($null -eq $evt) { continue }
-        try {
-            $sourceId = [string]$evt.SourceIdentifier
-            $kind = $sourceIdentifierKindMap[$sourceId]
-            if (-not $kind) { $kind = [string]$evt.MessageData }
-            if (-not $kind) { $kind = 'modified' }
-            $instance = $null
+function Invoke-ServicePollingSweep {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$KnownServices
+    )
+    $current = Get-CurrentServiceSnapshot
+    foreach ($name in $current.Keys) {
+        $instance = $current[$name]
+        if (-not $KnownServices.ContainsKey($name)) {
+            Publish-LifecycleTransition -Instance $instance -EventKind 'created'
+        } elseif ($KnownServices[$name].State -ne $instance.State) {
+            Publish-LifecycleTransition -Instance $instance -EventKind 'modified'
+        }
+        $KnownServices[$name] = $instance
+    }
+    foreach ($name in @($KnownServices.Keys)) {
+        if (-not $current.ContainsKey($name)) {
+            Publish-LifecycleTransition -Instance $KnownServices[$name] -EventKind 'deleted'
+            $KnownServices.Remove($name)
+        }
+    }
+}
+
+$monitorMode = 'event_driven'
+if ($script:PollingFallbackActive) { $monitorMode = 'polling_fallback' }
+Write-JsonlRecord -Record @{
+    event                = 'monitor_started'
+    query_window_seconds = $within
+    mode                 = $monitorMode
+}
+
+if ($script:PollingFallbackActive) {
+    $script:pollingKnownServices = Get-CurrentServiceSnapshot
+    try {
+        while ($true) {
+            Start-Sleep -Seconds $within
             try {
-                $instance = $evt.SourceEventArgs.NewEvent.TargetInstance
+                Invoke-ServicePollingSweep -KnownServices $script:pollingKnownServices
             } catch {
-                Write-ErrorRecord -Stage 'extract_target_instance' -Message $_.Exception.Message
+                Write-ErrorRecord -Stage 'polling_sweep' -Message $_.Exception.Message
             }
-            if ($null -ne $instance) {
-                Publish-LifecycleTransition -Instance $instance -EventKind $kind
+        }
+    } finally {
+        Write-JsonlRecord -Record @{ event = 'monitor_stopped' }
+    }
+} else {
+    try {
+        while ($true) {
+            $evt = Wait-Event -Timeout 5
+            if ($null -eq $evt) { continue }
+            try {
+                $sourceId = [string]$evt.SourceIdentifier
+                $kind = $sourceIdentifierKindMap[$sourceId]
+                if (-not $kind) { $kind = [string]$evt.MessageData }
+                if (-not $kind) { $kind = 'modified' }
+                $instance = $null
+                try {
+                    $instance = $evt.SourceEventArgs.NewEvent.TargetInstance
+                } catch {
+                    Write-ErrorRecord -Stage 'extract_target_instance' -Message $_.Exception.Message
+                }
+                if ($null -ne $instance) {
+                    Publish-LifecycleTransition -Instance $instance -EventKind $kind
+                }
+            } catch {
+                Write-ErrorRecord -Stage 'event_dispatch' -Message $_.Exception.Message
+            } finally {
+                try { Remove-Event -EventIdentifier $evt.EventIdentifier -ErrorAction Stop } catch { Write-ErrorRecord -Stage 'remove_event' -Message $_.Exception.Message }
             }
-        } catch {
-            Write-ErrorRecord -Stage 'event_dispatch' -Message $_.Exception.Message
-        } finally {
-            try { Remove-Event -EventIdentifier $evt.EventIdentifier -ErrorAction Stop } catch { Write-ErrorRecord -Stage 'remove_event' -Message $_.Exception.Message }
         }
-    }
-} finally {
-    foreach ($sub in $wmiSubs) {
-        try {
-            Unregister-Event -SubscriptionId $sub.Id -ErrorAction Stop
-        } catch {
-            Write-ErrorRecord -Stage 'unregister' -Message $_.Exception.Message
+    } finally {
+        foreach ($sub in $wmiSubs) {
+            try {
+                Unregister-Event -SubscriptionId $sub.Id -ErrorAction Stop
+            } catch {
+                Write-ErrorRecord -Stage 'unregister' -Message $_.Exception.Message
+            }
         }
+        Write-JsonlRecord -Record @{ event = 'monitor_stopped' }
     }
-    Write-JsonlRecord -Record @{ event = 'monitor_stopped' }
 }

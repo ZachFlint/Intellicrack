@@ -87,10 +87,6 @@
           {
             "type": "command",
             "command": "node D:/Intellicrack/.claude/hooks/block-ignore-comments.cjs"
-          },
-          {
-            "type": "command",
-            "command": "node D:/Intellicrack/.claude/hooks/post-tool-use.cjs"
           }
         ]
       }

@@ -191,6 +191,8 @@ class _ConcreteSearch(SearchMixin):
         self._numeric_align_spin = None
         self._numeric_range_check = None
         self._numeric_max_input = None
+        self._replace_input: QLineEdit | None = None
+        self._numeric_replace_input: QLineEdit | None = None
 
     @property
     def search_input(self) -> QLineEdit:

@@ -45,11 +45,17 @@ function deny(reason) {
     process.exit(0);
 }
 
-// Commands that prove the invocation already runs inside the sandbox.
+// Commands that prove the invocation already runs inside the sandbox, plus the
+// sanctioned host-native pass. The host-native runner deliberately executes a
+// small, marked subset of tests on the host (Intel XPU, local Ollama, debug
+// symbols, raw disk, loopback capture) that the container cannot provide; it
+// sets INTELLICRACK_ALLOW_HOST_PROCESS_TESTS and relies on the conftest
+// orphan-killer for cleanup, so it is an authorized exception to the ban.
 const CONTAINER_MARKERS = [
     /docker_sandbox/i,
     /scripts[./\\]sandbox/i,
-    /\bjust\s+test(-shell|-rebuild|-clean)?\b/i,
+    /\bhost_native_tests\b/i,
+    /\bjust\s+test(-shell|-rebuild|-clean|-host)?\b/i,
 ];
 
 // Local test-runner signatures we must intercept.

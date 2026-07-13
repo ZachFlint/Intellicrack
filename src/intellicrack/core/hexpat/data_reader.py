@@ -100,6 +100,15 @@ class DataReader:
         total_length = _resolve_length(document)
 
         def read_fn(offset: int, length: int) -> bytes:
+            """Read a byte slice from the backing HexDocument.
+
+            Args:
+                offset: Zero-based start offset inside the document.
+                length: Number of bytes to read.
+
+            Returns:
+                bytes: Document bytes converted from the document's int list.
+            """
             raw: list[int] = doc_read(offset, length)
             return bytes(raw)
 
@@ -117,6 +126,15 @@ class DataReader:
         """
 
         def read_fn(offset: int, length: int) -> bytes:
+            """Read a byte slice from the in-memory buffer.
+
+            Args:
+                offset: Zero-based start offset inside ``data``.
+                length: Number of bytes to read.
+
+            Returns:
+                bytes: Slice ``data[offset:offset + length]``.
+            """
             return data[offset : offset + length]
 
         return DataReader(read_fn, len(data))

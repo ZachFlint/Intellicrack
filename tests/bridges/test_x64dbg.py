@@ -115,7 +115,7 @@ def test_bridge_has_capabilities() -> None:
     assert len(caps.supported_formats) >= 1
     assert "pe" in caps.supported_formats
 
-    assert caps.supports_static_analysis is False
+    assert caps.supports_static_analysis is True
 
 
 def test_bridge_name() -> None:
@@ -270,9 +270,10 @@ def test_tool_definition_function_names(x64dbg_bridge: X64DbgBridge) -> None:
         "x64dbg.remove_breakpoint",
         "x64dbg.read_memory",
         "x64dbg.write_memory",
-        "x64dbg.disassemble",
+        "x64dbg.disassemble_at",
         "x64dbg.get_registers",
         "x64dbg.set_register",
+        "x64dbg.add_watch",
     }
     assert expected.issubset(function_names)
 

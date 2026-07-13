@@ -73,7 +73,7 @@ _DURATION: Final[float] = 42.5
 _NOTEPAD_STARTUP_DELAY: Final[float] = 1.0
 _BRIDGE_SLEEP: Final[float] = 0.3
 _STALKER_SLEEP: Final[float] = 1.0
-_EXACT_FUNCTION_COUNT: Final[int] = 94
+_EXACT_FUNCTION_COUNT: Final[int] = 102
 _ALLOC_SIZE: Final[int] = 4096
 _SMALL_ALLOC: Final[int] = 256
 _STALKER_LIMIT: Final[int] = 500
@@ -767,7 +767,7 @@ def test_all_function_names_have_methods() -> None:
 
 
 def test_function_count_exact() -> None:
-    """Verify exact function count is 94 (the complete parity-plan implementation).
+    """Verify exact function count is 102 (the complete parity-plan implementation).
 
     Falsifiable: adding or removing any function from _FRIDA_FUNCTIONS changes
     the count and fails this test. Using >= would mask deletions.
@@ -882,8 +882,7 @@ var Sleep = k32.getExportByName('Sleep');
 var code = Memory.alloc(4096);
 Memory.protect(code, 4096, 'rwx');
 var bytes = [
-    0x48, 0x83, 0xEC, 0x28,
-    0x41, 0xBD, 0x64, 0x00, 0x00, 0x00
+    0x48, 0x83, 0xEC, 0x28
 ];
 bytes.push(0x49, 0xBC);
 var a = Sleep;
@@ -894,10 +893,7 @@ for (var i = 0; i < 8; i++) {
 bytes = bytes.concat([
     0xB9, 0x0A, 0x00, 0x00, 0x00,
     0x41, 0xFF, 0xD4,
-    0x41, 0xFF, 0xCD,
-    0x75, 0xF3,
-    0x48, 0x83, 0xC4, 0x28,
-    0x31, 0xC0, 0xC3
+    0xEB, 0xF6
 ]);
 code.writeByteArray(bytes);
 var CreateThread = new NativeFunction(
@@ -914,16 +910,23 @@ send({ type: 'worker', tid: tidBuf.readU32() });
 def worker_thread(frida_bridge: FridaBridge) -> Generator[int]:
     """Spawn a busy worker thread inside notepad for Stalker testing.
 
-    Creates a thread running x86-64 machine code that loops calling Sleep(10)
-    a fixed number of times, ensuring user-mode execution for Stalker to trace.
-    The thread is created via a persistent script to prevent GC of the code
-    memory while the thread is still running.
+    Creates a thread running x86-64 machine code that loops calling
+    Sleep(10) forever (an unconditional jump back to the loop head, not a
+    bounded counter), so the thread is guaranteed to still be executing
+    call instructions no matter when -- or how many times -- a test in this
+    module later stalker-follows it. A bounded iteration count would race
+    against test execution order: by the time a later test in the module
+    ran, the thread could already have exhausted its fixed work and
+    returned, leaving Stalker with 0 events to collect. The thread is
+    created via a persistent script to prevent GC of the code memory while
+    the thread is still running, and is torn down only when the backing
+    notepad.exe process is terminated at test-module teardown.
 
     Args:
         frida_bridge: Attached FridaBridge instance.
 
     Yields:
-        Generator[int]: The thread ID of the busy worker thread.
+        int: The thread ID of the busy worker thread.
     """
     tids_before: set[int] = {t.tid for t in _run_async(frida_bridge.enumerate_threads())}
     script_id: str = _run_async(frida_bridge.execute_persistent_script(_WORKER_THREAD_JS))

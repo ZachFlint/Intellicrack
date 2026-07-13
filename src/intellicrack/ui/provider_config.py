@@ -496,6 +496,12 @@ class ConnectionTestWorker(QThread):
         provider = LocalTransformersProvider()
 
         async def _probe() -> tuple[bool, str]:
+            """Connect the local provider and report the resolved compute device.
+
+            Returns:
+                tuple[bool, str]: Success flag and a human-readable readiness
+                message naming the selected device, or a failure reason.
+            """
             try:
                 await provider.connect(ProviderCredentials())
             except ProviderError as exc:
@@ -718,6 +724,12 @@ class ConnectionTestWorker(QThread):
             creds = ProviderCredentials(api_key=self._api_key, api_base=self._api_base)
 
             async def _probe() -> tuple[bool, str]:
+                """Authenticate against Grok through the live provider instance.
+
+                Returns:
+                    tuple[bool, str]: Success flag and a short status message
+                    describing the connection outcome.
+                """
                 try:
                     await provider.connect(creds)
                 except AuthenticationError as exc:
@@ -1212,6 +1224,12 @@ class ModelRefreshWorker(QThread):
             creds = ProviderCredentials(api_key=self._api_key, api_base=self._api_base)
 
             async def _list() -> tuple[bool, list[str], str]:
+                """Connect to Grok and collect sorted model identifiers.
+
+                Returns:
+                    tuple[bool, list[str], str]: Success flag, sorted model
+                    ids when the listing succeeds, and a status message.
+                """
                 try:
                     await provider.connect(creds)
                 except AuthenticationError as exc:
@@ -1364,6 +1382,11 @@ class ProviderConfigDialog(QDialog):
         store = CredentialStore()
 
         async def _load_store_credentials() -> int:
+            """Enumerate credential-store providers and log each source.
+
+            Returns:
+                int: Number of providers present in the credential store.
+            """
             store_providers = await store.list_providers()
             for cred in store_providers:
                 source = await store.get_source(cred.provider)
@@ -1375,6 +1398,12 @@ class ProviderConfigDialog(QDialog):
             return len(store_providers)
 
         def _on_store_loaded(result: object) -> None:
+            """Record how many providers were found in the credential store.
+
+            Args:
+                result: Provider count returned by the store enumeration
+                    coroutine, or a non-int value treated as zero.
+            """
             store_count = result if isinstance(result, int) else 0
             _logger.info(
                 "credential_store_loaded",
@@ -1382,6 +1411,11 @@ class ProviderConfigDialog(QDialog):
             )
 
         def _on_store_load_error(exc: object) -> None:
+            """Log a credential-store enumeration failure without blocking the UI.
+
+            Args:
+                exc: Exception or error payload from the store load worker.
+            """
             _logger.warning("credential_store_load_failed", error=str(exc))
 
         run_bridge_coroutine_async(
@@ -1520,6 +1554,13 @@ class ProviderConfigDialog(QDialog):
             )
 
             def _conn_tested_slot(s: int, m: str) -> None:
+                """Adapt a settings-widget connection_tested signal.
+
+                Args:
+                    s: Success flag from the widget as an integer (nonzero
+                        means the connection test succeeded).
+                    m: Status message accompanying the connection test.
+                """
                 self._on_widget_connection_tested(success=bool(s), _message=m)
 
             widget.connection_tested.connect(_conn_tested_slot)
@@ -1802,10 +1843,21 @@ class ProviderConfigDialog(QDialog):
         store = CredentialStore()
 
         def _on_success(_result: object) -> None:
+            """Reload the credential overview after env migration succeeds.
+
+            Args:
+                _result: Migration coroutine return value; unused because
+                    only completion triggers the overview refresh.
+            """
             _logger.info("credentials_migrated_from_env", source=".env")
             self._load_credential_overview()
 
         def _on_error(exc: object) -> None:
+            """Log migration failure and still refresh the credential overview.
+
+            Args:
+                exc: Exception or error payload from the migration worker.
+            """
             _logger.warning("credential_migration_failed", error=str(exc))
             self._load_credential_overview()
 
@@ -1837,9 +1889,16 @@ class ProviderConfigDialog(QDialog):
             return
 
         async def _discover() -> None:
+            """Run model discovery for the selected provider on the bridge loop."""
             await discovery.discover_provider(pname)
 
         def _on_success(_result: object) -> None:
+            """Refresh provider status after discovery events are recorded.
+
+            Args:
+                _result: Discovery coroutine return value; unused because
+                    status is refreshed from the discovery event buffer.
+            """
             events = discovery.get_discovery_events()
             _logger.debug(
                 "provider_discovery_events",
@@ -1849,6 +1908,11 @@ class ProviderConfigDialog(QDialog):
             self._refresh_provider_status()
 
         def _on_error(exc: object) -> None:
+            """Log a single-provider discovery failure on the GUI thread.
+
+            Args:
+                exc: Exception or error payload from the discovery worker.
+            """
             _logger.warning(
                 "provider_discovery_failed",
                 provider=provider_name,
@@ -1899,10 +1963,22 @@ class ProviderConfigDialog(QDialog):
         manager = get_oauth_manager()
 
         async def _run_oauth() -> ProviderCredentials | None:
+            """Complete the browser OAuth flow and materialize provider credentials.
+
+            Returns:
+                ProviderCredentials | None: Credentials derived from the OAuth
+                tokens, or ``None`` when conversion yields no usable secret.
+            """
             await manager.run_authorization_flow(oauth_config)
             return await manager.to_provider_credentials(oauth_provider)
 
         def _on_success(result: object) -> None:
+            """Apply obtained OAuth credentials to the provider settings widget.
+
+            Args:
+                result: Credentials object from the OAuth worker, or another
+                    payload treated as a missing credential set.
+            """
             creds = result if isinstance(result, ProviderCredentials) else None
             if creds is not None and creds.api_key:
                 _logger.info("oauth_credentials_obtained", provider=provider_id)
@@ -1914,6 +1990,11 @@ class ProviderConfigDialog(QDialog):
             self._load_credential_overview()
 
         def _on_error(exc: object) -> None:
+            """Log OAuth flow failure and refresh the credential overview.
+
+            Args:
+                exc: Exception or error payload from the OAuth worker.
+            """
             _logger.warning("oauth_flow_failed", provider=provider_id, error=str(exc))
             self._load_credential_overview()
 
@@ -1938,10 +2019,21 @@ class ProviderConfigDialog(QDialog):
             return
 
         def _on_success(_result: object) -> None:
+            """Refresh credentials after the OAuth token is revoked.
+
+            Args:
+                _result: Revoke coroutine return value; unused because only
+                    completion triggers the overview reload.
+            """
             _logger.info("oauth_token_revoked", provider=provider_id)
             self._load_credential_overview()
 
         def _on_error(exc: object) -> None:
+            """Log OAuth revoke failure and still refresh the overview.
+
+            Args:
+                exc: Exception or error payload from the revoke worker.
+            """
             _logger.warning("oauth_revoke_failed", provider=provider_id, error=str(exc))
             self._load_credential_overview()
 
@@ -2039,6 +2131,11 @@ class ProviderSettingsWidget(QFrame):
         self._show_key_btn.setCheckable(True)
 
         def _key_visibility_slot(checked: int) -> None:
+            """Map the Show-key button toggle to plain-text vs masked key display.
+
+            Args:
+                checked: Qt ``toggled`` payload; nonzero reveals the API key.
+            """
             self._toggle_key_visibility(show=bool(checked))
 
         self._show_key_btn.toggled.connect(_key_visibility_slot)
@@ -2853,6 +2950,14 @@ class ProviderSettingsWidget(QFrame):
         )
 
         def _refresh_finished_slot(s: int, m: list[str], msg: str) -> None:
+            """Adapt the model-refresh worker signal into the typed handler.
+
+            Args:
+                s: Success flag from the worker as an integer (nonzero means
+                    the refresh succeeded).
+                m: Model identifiers returned for this provider.
+                msg: Status or error message produced by the refresh worker.
+            """
             self._on_models_refreshed(success=bool(s), models=m, message=msg)
 
         self._refresh_worker.refresh_finished.connect(_refresh_finished_slot)
@@ -2934,6 +3039,13 @@ class ProviderSettingsWidget(QFrame):
         self._test_worker = ConnectionTestWorker(self.provider_id, api_key, api_base, self)
 
         def _test_finished_slot(s: int, m: str) -> None:
+            """Adapt the connection-test worker signal into the typed handler.
+
+            Args:
+                s: Success flag from the worker as an integer (nonzero means
+                    the connection test succeeded).
+                m: Status message describing the connection test outcome.
+            """
             self._on_connection_tested(success=bool(s), message=m)
 
         self._test_worker.test_finished.connect(_test_finished_slot)
@@ -3206,6 +3318,12 @@ class ProviderSettingsWidget(QFrame):
         pull_failure: Final[bool] = False
 
         async def _pull() -> tuple[bool, str]:
+            """Connect to Ollama and stream pull progress for the selected model.
+
+            Returns:
+                tuple[bool, str]: Success flag and the final pull status or
+                failure message.
+            """
             success: bool = False
             message: str = ""
             try:
@@ -3229,6 +3347,12 @@ class ProviderSettingsWidget(QFrame):
             return success, message
 
         def _on_success(result: object) -> None:
+            """Emit ollama_pull_finished from the async pull result tuple.
+
+            Args:
+                result: ``(success, message)`` tuple from the pull coroutine,
+                    or an unexpected payload that becomes a failure signal.
+            """
             if isinstance(result, tuple) and len(cast("tuple[object, ...]", result)) == pull_result_arity:
                 tup = cast("tuple[object, object]", result)
                 ok = bool(tup[0])
@@ -3238,6 +3362,11 @@ class ProviderSettingsWidget(QFrame):
                 self.ollama_pull_finished.emit(pull_failure, model_name, "Unexpected pull result")
 
         def _on_error(exc: object) -> None:
+            """Emit a failed ollama_pull_finished signal for worker errors.
+
+            Args:
+                exc: Exception or error payload from the pull worker.
+            """
             self.ollama_pull_finished.emit(pull_failure, model_name, str(exc))
 
         self._set_status(f"Pulling {model_name}...")
@@ -3283,6 +3412,12 @@ class ProviderSettingsWidget(QFrame):
         creds = ProviderCredentials(api_key=api_key)
 
         async def _fetch() -> dict[str, Any] | None:
+            """Authenticate with OpenRouter and look up generation cost metadata.
+
+            Returns:
+                dict[str, Any] | None: Generation payload when found, otherwise
+                ``None``.
+            """
             try:
                 await provider.connect(creds)
                 return await provider.get_generation(generation_id)
@@ -3290,6 +3425,12 @@ class ProviderSettingsWidget(QFrame):
                 await provider.disconnect()
 
         def _on_success(result: object) -> None:
+            """Format generation metadata and emit generation_lookup_finished.
+
+            Args:
+                result: Generation dict from OpenRouter, or a non-dict payload
+                    treated as a not-found outcome.
+            """
             found = isinstance(result, dict)
             if found:
                 generation_data = cast("dict[str, Any]", result)
@@ -3299,6 +3440,11 @@ class ProviderSettingsWidget(QFrame):
             self.generation_lookup_finished.emit(found, generation_id, message)
 
         def _on_error(exc: object) -> None:
+            """Emit a not-found generation lookup result after a worker error.
+
+            Args:
+                exc: Exception or error payload from the generation fetch.
+            """
             _logger.debug("openrouter_generation_fetch_failed", generation_id=generation_id, error=str(exc))
             self.generation_lookup_finished.emit(_LOOKUP_FAILED, generation_id, f"No data found for generation ID: {generation_id}")
 

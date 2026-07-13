@@ -35,6 +35,7 @@ from intellicrack.bridges.process import (
     TLS_ARRAY_OFFSET_X64,
     TLS_ARRAY_OFFSET_X86,
     TLS_STATIC_SLOT_COUNT,
+    TLS_TOTAL_SLOT_COUNT,
     ProcessBridge,
 )
 from intellicrack.bridges.win32_types import SYMBOL_INFO
@@ -365,7 +366,7 @@ async def process_bridge() -> AsyncGenerator[ProcessBridge]:
     """Create, initialize, and shutdown a ProcessBridge for the module.
 
     Yields:
-        AsyncGenerator[ProcessBridge]: Initialized bridge that will be shut down on teardown.
+        ProcessBridge: Initialized bridge that will be shut down on teardown.
     """
     bridge = ProcessBridge()
     await bridge.initialize()
@@ -384,7 +385,7 @@ async def attached_bridge(process_bridge: ProcessBridge) -> AsyncGenerator[Proce
         process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
 
     Yields:
-        AsyncGenerator[ProcessBridge]: The shared bridge with an open handle on the current Python process.
+        ProcessBridge: The shared bridge with an open handle on the current Python process.
     """
     await process_bridge.open_process(os.getpid(), "all")
     yield process_bridge
@@ -424,7 +425,7 @@ def secondary_thread() -> Generator[int]:
     """Spawn a blocking thread and yield its Windows TID for context tests.
 
     Yields:
-        Generator[int]: Windows thread id of a parked worker thread that blocks until the fixture tears down.
+        int: Windows thread id of a parked worker thread that blocks until the fixture tears down.
     """
     event = threading.Event()
     tid_holder: list[int] = []
@@ -502,12 +503,12 @@ class TestInitialization:
         assert await process_bridge.is_available() is True
 
     async def test_tool_definition_count(self, process_bridge: ProcessBridge) -> None:
-        """Verify tool definition has 54 functions.
+        """Verify tool definition has 66 functions.
 
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        assert len(process_bridge.tool_definition.functions) == 54
+        assert len(process_bridge.tool_definition.functions) == 66
 
 
 class TestProcessListing:
@@ -1029,11 +1030,30 @@ class TestWindowEnumeration:
         user32 = ctypes.windll.user32
         k32 = ctypes.windll.kernel32
         user32.CreateWindowExW.restype = wintypes.HWND
+        user32.CreateWindowExW.argtypes = [
+            wintypes.DWORD,
+            wintypes.LPCWSTR,
+            wintypes.LPCWSTR,
+            wintypes.DWORD,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            wintypes.HWND,
+            wintypes.HMENU,
+            wintypes.HINSTANCE,
+            wintypes.LPVOID,
+        ]
         user32.DestroyWindow.restype = wintypes.BOOL
         user32.DestroyWindow.argtypes = [wintypes.HWND]
         user32.IsWindowVisible.restype = wintypes.BOOL
+        user32.IsWindowVisible.argtypes = [wintypes.HWND]
         user32.GetClassNameW.restype = ctypes.c_int
+        user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
         user32.GetWindowTextW.restype = ctypes.c_int
+        user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+        k32.GetModuleHandleW.restype = wintypes.HMODULE
+        k32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
 
         hinstance: int = k32.GetModuleHandleW(None)
         expected_title = f"IntellicrackBridgeWindowTest_{os.getpid()}"
@@ -1212,22 +1232,27 @@ class TestSetThreadContext:
 
     _SENTINEL: int = 0xDEADB00F
 
+    _DR7_L0_ENABLE: int = 0x1
+
     async def test_set_thread_context_dr0_roundtrip(
         self,
         attached_bridge: ProcessBridge,
         secondary_thread: int,
     ) -> None:
-        """set_thread_context writes dr0; get_thread_context reads back the sentinel.
+        """set_thread_context writes dr0 + dr7; get_thread_context reads back the sentinel.
 
-        Dr0 is a hardware debug-address register. Setting it to a known sentinel
-        value on a parked worker thread and immediately reading it back via
-        GetThreadContext confirms that SetThreadContext was actually called.
-        Dr0 does not affect execution unless dr7 enables the breakpoint, so the
-        secondary thread continues safely with dr0 = sentinel until restored.
+        Dr0 is a hardware debug-address register. Windows persists Dr0-Dr3 across
+        Get/SetThreadContext only while the matching Dr7 local-enable bit marks the
+        debug register active, so a hardware breakpoint sets the address register
+        and Dr7 together, exactly as a real debugger does. Writing the sentinel to
+        Dr0 with the Dr7 L0 enable bit set on a parked worker thread and reading it
+        back via GetThreadContext confirms SetThreadContext actually wrote the debug
+        registers. The parked secondary thread never executes the sentinel address,
+        so the armed breakpoint is inert until both registers are restored.
 
         Mutation caught: returning True from set_thread_context without calling
-        SetThreadContext causes the readback to return the original dr0 value
-        instead of _SENTINEL, failing the equality assertion.
+        SetThreadContext leaves dr0 at its original value and the Dr7 L0 bit clear,
+        failing both the sentinel equality and the Dr7 enable-bit assertions.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
@@ -1238,10 +1263,11 @@ class TestSetThreadContext:
 
         ctx_before = await attached_bridge.get_thread_context(secondary_thread)
         original_dr0 = int(ctx_before["dr0"])
+        original_dr7 = int(ctx_before["dr7"])
         try:
             result = await attached_bridge.set_thread_context(
                 secondary_thread,
-                {"dr0": self._SENTINEL},
+                {"dr0": self._SENTINEL, "dr7": original_dr7 | self._DR7_L0_ENABLE},
             )
             assert result is True, "set_thread_context must return True on success"
 
@@ -1251,10 +1277,13 @@ class TestSetThreadContext:
                 f"dr0 must equal sentinel {self._SENTINEL:#010x} after set_thread_context; "
                 f"got {read_back:#010x} -- SetThreadContext was not called or wrote to the wrong field"
             )
+            assert int(ctx_after["dr7"]) & self._DR7_L0_ENABLE, (
+                "dr7 L0 local-enable bit must round-trip; SetThreadContext did not persist the debug-control register"
+            )
         finally:
             await attached_bridge.set_thread_context(
                 secondary_thread,
-                {"dr0": original_dr0},
+                {"dr0": original_dr0, "dr7": original_dr7},
             )
 
     async def test_set_thread_context_invalid_tid_raises(
@@ -1476,7 +1505,7 @@ class TestRegistry:
         value_type = result["type"]
         assert isinstance(value_type, str)
         assert value_type == "string"
-        assert str(result["data"]) != ""
+        assert str(result["data"])
 
     async def test_reg_enum_keys_microsoft(self, process_bridge: ProcessBridge) -> None:
         r"""Verify enumerating HKLM\\SOFTWARE\\Microsoft returns non-empty list.
@@ -2657,7 +2686,7 @@ class TestF0019HandleTypeNames:
         type_names = {str(h.get("type_name", "")) for h in handles}
         known_types = {"Process", "Thread", "Event", "File", "Section", "Directory"}
         found = type_names & known_types
-        assert found, f"no known type names found; got: {str(sorted(type_names)[:20])}"
+        assert found, f"no known type names found; got: {sorted(type_names)[:20]!s}"
 
     async def test_enum_handles_type_name_never_int(self, process_bridge: ProcessBridge) -> None:
         """type_name field in enum_handles output must never be a bare integer.
@@ -2668,7 +2697,7 @@ class TestF0019HandleTypeNames:
         handles = await process_bridge.enum_handles(os.getpid())
         for entry in handles:
             type_name = entry.get("type_name")
-            assert not isinstance(type_name, int), f"type_name should not be int, got {repr(type_name)}"
+            assert not isinstance(type_name, int), f"type_name should not be int, got {type_name!r}"
 
     async def test_enum_handles_no_pid_returns_multiple_pids(self, process_bridge: ProcessBridge) -> None:
         """enum_handles without a pid filter returns handles from multiple PIDs.
@@ -3234,6 +3263,12 @@ class TestF0021StaticTLSSlots:
     async def test_tls_values_returns_list_of_dicts(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
         """Verify get_tls_values returns a list of dicts each with index and value.
 
+        The default call must cover both the 64-slot static TLS array and
+        the TEB expansion array (indexes ``TLS_STATIC_SLOT_COUNT`` and
+        above), since a long-running interpreter process routinely
+        exhausts the static array and ``TlsAlloc`` hands out expansion
+        indexes for the rest of its lifetime.
+
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
             main_thread_tid: Windows thread id of the first thread enumerated in the current process.
@@ -3245,7 +3280,7 @@ class TestF0021StaticTLSSlots:
             assert "value" in entry
             assert isinstance(entry["index"], int)
             assert isinstance(entry["value"], int)
-            assert 0 <= entry["index"] < TLS_STATIC_SLOT_COUNT
+            assert 0 <= entry["index"] < TLS_TOTAL_SLOT_COUNT
 
 
 class TestF0033FullEnvironmentBlock:

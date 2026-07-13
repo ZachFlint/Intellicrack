@@ -320,6 +320,13 @@ class ModulesTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Clear and repopulate the module tree from ``get_modules``.
+
+            Each node shows name, base, size, path, and entry point.
+
+            Args:
+                result: Module list returned by ``get_modules``.
+            """
             if not isinstance(result, list):
                 return
             typed_result = cast("list[object]", result)
@@ -347,6 +354,11 @@ class ModulesTab(QWidget):
             self._mod_count.setText(f"{len(typed_result)} modules")
 
         def _on_error(exc: object) -> None:
+            """Log ``module_enumeration_failed`` and open a Module Enumeration Error box.
+
+            Args:
+                exc: Failure from ``get_modules`` while rebuilding the module tree.
+            """
             _logger.warning("module_enumeration_failed", error=str(exc))
             QMessageBox.warning(self, "Module Enumeration Error", str(exc))
 
@@ -387,6 +399,11 @@ class ModulesTab(QWidget):
             return
 
         def _on_success(_result: object) -> None:
+            """Append a Success row to the injection log for the injected DLL path.
+
+            Args:
+                _result: Unused inject result from ``inject_dll``.
+            """
             _logger.info("dll_injected", path=path, pid=self._attached_pid)
             row = self._inject_log.rowCount()
             self._inject_log.insertRow(row)
@@ -395,6 +412,11 @@ class ModulesTab(QWidget):
             self._inject_log.setItem(row, 2, QTableWidgetItem(""))
 
         def _on_error(exc: object) -> None:
+            """Append a Failed row with the exception details to the injection log.
+
+            Args:
+                exc: Exception raised while calling ``inject_dll``.
+            """
             _logger.warning(
                 "dll_inject_failed",
                 path=path,
@@ -455,6 +477,11 @@ class ModulesTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the handle table with value, type, granted access, and object address.
+
+            Args:
+                result: Handle entry list returned by ``get_handles``.
+            """
             if not isinstance(result, list):
                 return
             typed_result = cast("list[object]", result)
@@ -480,6 +507,11 @@ class ModulesTab(QWidget):
             self._handle_count.setText(f"{len(typed_result)} handles")
 
         def _on_error(exc: object) -> None:
+            """Log ``handles_enumerate_failed`` for the attached PID and show Handle Enumeration Error.
+
+            Args:
+                exc: Failure from ``get_handles`` while filling the handle table.
+            """
             _logger.warning("handles_enumerate_failed", pid=self._attached_pid, error=str(exc))
             QMessageBox.warning(self, "Handle Enumeration Error", str(exc))
 
@@ -499,6 +531,11 @@ class ModulesTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the heap table with heap ID, flags, and default-heap marker.
+
+            Args:
+                result: Heap entry list returned by ``get_heaps``.
+            """
             if not isinstance(result, list):
                 return
             self._heap_table.setRowCount(0)
@@ -515,6 +552,11 @@ class ModulesTab(QWidget):
                 self._heap_table.setItem(row, 2, QTableWidgetItem("Yes" if typed_heap.get("is_default") else "No"))
 
         def _on_error(exc: object) -> None:
+            """Log ``heaps_enumerate_failed`` for the attached PID and show Heap Enumeration Error.
+
+            Args:
+                exc: Failure from ``get_heaps`` while filling the heap table.
+            """
             _logger.warning("heaps_enumerate_failed", pid=self._attached_pid, error=str(exc))
             QMessageBox.warning(self, "Heap Enumeration Error", str(exc))
 
@@ -534,6 +576,11 @@ class ModulesTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Fill the COM table with CLSID, registered DLL path, and loaded path.
+
+            Args:
+                result: COM server entry list from ``enumerate_com_servers``.
+            """
             if not isinstance(result, list):
                 return
             self._com_table.setRowCount(0)
@@ -548,6 +595,11 @@ class ModulesTab(QWidget):
                 self._com_table.setItem(row, 2, self._tooltip_item(str(typed_srv.get("loaded_path", ""))))
 
         def _on_error(exc: object) -> None:
+            """Log ``com_enumerate_failed`` for the attached PID and show COM Enumeration Error.
+
+            Args:
+                exc: Failure from ``enumerate_com_servers`` while filling the COM table.
+            """
             _logger.warning("com_enumerate_failed", pid=self._attached_pid, error=str(exc))
             QMessageBox.warning(self, "COM Enumeration Error", str(exc))
 
@@ -567,6 +619,11 @@ class ModulesTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Populate the .NET tree with detection fields and nested list children.
+
+            Args:
+                result: CLR detection field mapping from ``detect_dotnet``.
+            """
             if not isinstance(result, dict):
                 return
             typed_result = cast("dict[str, object]", result)
@@ -581,6 +638,11 @@ class ModulesTab(QWidget):
                     QTreeWidgetItem(self._net_tree, [str(key), str(val)])
 
         def _on_error(exc: object) -> None:
+            """Log ``dotnet_detect_failed`` for the attached PID and show .NET Detection Error.
+
+            Args:
+                exc: Failure from ``detect_dotnet`` while filling the CLR detection tree.
+            """
             _logger.warning("dotnet_detect_failed", pid=self._attached_pid, error=str(exc))
             QMessageBox.warning(self, ".NET Detection Error", str(exc))
 

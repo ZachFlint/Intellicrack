@@ -3108,18 +3108,57 @@ class HexPatEvaluator:
         data = self._data
 
         def builtin_sizeof(*args: PatternValue) -> PatternValue:
+            """Return the byte size of the first pattern value.
+
+            Args:
+                *args: Pattern values; only the first is measured.
+
+            Returns:
+                PatternValue: Size of the first argument, or ``0`` when no
+                arguments are supplied.
+            """
             return PatternValue(value=args[0].size) if args else PatternValue(value=0)
 
         def builtin_addressof(*args: PatternValue) -> PatternValue:
+            """Return the absolute data offset of the first pattern value.
+
+            Args:
+                *args: Pattern values; only the first contributes its offset.
+
+            Returns:
+                PatternValue: Offset of the first argument, or ``0`` when no
+                arguments are supplied.
+            """
             return PatternValue(value=args[0].offset) if args else PatternValue(value=0)
 
         def builtin_typenameof(*args: PatternValue) -> PatternValue:
+            """Return the type name associated with the first pattern value.
+
+            Args:
+                *args: Pattern values; only the first is inspected for type info.
+
+            Returns:
+                PatternValue: Type name string, or ``"unknown"`` when missing.
+            """
             if args:
                 ti = args[0].type_info
                 return PatternValue(value=ti.name if ti else "unknown")
             return PatternValue(value="unknown")
 
         def builtin_assert(*args: PatternValue) -> PatternValue:
+            """Abort evaluation when the first argument is falsy.
+
+            Args:
+                *args: Optional condition value followed by an optional error
+                    message pattern value used when the assertion fails.
+
+            Returns:
+                PatternValue: A null-valued pattern value when the assertion
+                passes or no condition is provided.
+
+            Raises:
+                HexPatRuntimeError: When the condition evaluates falsy.
+            """
             if args and not _truthy(args[0]):
                 assert_default = "assertion failed"
                 error_msg = args[1].value if len(args) > 1 else assert_default
@@ -3129,6 +3168,16 @@ class HexPatEvaluator:
             return PatternValue(value=None)
 
         def builtin_read_unsigned(*args: PatternValue) -> PatternValue:
+            """Read an unsigned little-endian integer from the binary data.
+
+            Args:
+                *args: Offset and size pattern values (requires at least two
+                    integer arguments).
+
+            Returns:
+                PatternValue: Unsigned integer at the given offset, or ``0``
+                when arguments are missing or not integers.
+            """
             if len(args) < 2:
                 return PatternValue(value=0)
             off = args[0].value
@@ -3139,6 +3188,16 @@ class HexPatEvaluator:
             return PatternValue(value=int.from_bytes(raw, byteorder="little"))
 
         def builtin_read_signed(*args: PatternValue) -> PatternValue:
+            """Read a signed little-endian integer from the binary data.
+
+            Args:
+                *args: Offset and size pattern values (requires at least two
+                    integer arguments).
+
+            Returns:
+                PatternValue: Signed integer at the given offset, or ``0``
+                when arguments are missing or not integers.
+            """
             if len(args) < 2:
                 return PatternValue(value=0)
             off = args[0].value
@@ -3149,6 +3208,15 @@ class HexPatEvaluator:
             return PatternValue(value=int.from_bytes(raw, byteorder="little", signed=True))
 
         def builtin_read_string(*args: PatternValue) -> PatternValue:
+            """Decode a null-terminated string starting at the given offset.
+
+            Args:
+                *args: First argument is the integer start offset.
+
+            Returns:
+                PatternValue: Decoded string, or empty string when the offset
+                is missing or not an integer.
+            """
             if not args:
                 return PatternValue(value="")
             off = args[0].value
@@ -3158,6 +3226,16 @@ class HexPatEvaluator:
             return PatternValue(value=decoded)
 
         def builtin_find_sequence(*args: PatternValue) -> PatternValue:
+            """Search for a byte or string sequence starting at an offset.
+
+            Args:
+                *args: Start offset followed by the sequence (``bytes`` or
+                    ``str``) to locate.
+
+            Returns:
+                PatternValue: Absolute offset of the match, or ``-1`` when no
+                match is found or arguments are invalid.
+            """
             if len(args) < 2:
                 return PatternValue(value=-1)
             off = args[0].value
@@ -3168,14 +3246,44 @@ class HexPatEvaluator:
             return PatternValue(value=-1)
 
         def builtin_min(*args: PatternValue) -> PatternValue:
+            """Return the minimum among numeric pattern argument values.
+
+            Args:
+                *args: Pattern values whose numeric payloads participate in
+                    the minimum calculation.
+
+            Returns:
+                PatternValue: Smallest numeric value, or ``0`` when no numeric
+                arguments are present.
+            """
             nums = [a.value for a in args if isinstance(a.value, (int, float)) and not isinstance(a.value, bool)]
             return PatternValue(value=min(nums)) if nums else PatternValue(value=0)
 
         def builtin_max(*args: PatternValue) -> PatternValue:
+            """Return the maximum among numeric pattern argument values.
+
+            Args:
+                *args: Pattern values whose numeric payloads participate in
+                    the maximum calculation.
+
+            Returns:
+                PatternValue: Largest numeric value, or ``0`` when no numeric
+                arguments are present.
+            """
             nums = [a.value for a in args if isinstance(a.value, (int, float)) and not isinstance(a.value, bool)]
             return PatternValue(value=max(nums)) if nums else PatternValue(value=0)
 
         def builtin_abs(*args: PatternValue) -> PatternValue:
+            """Return the absolute value of the first numeric argument.
+
+            Args:
+                *args: Pattern values; only the first is examined when it
+                    holds an ``int`` or ``float``.
+
+            Returns:
+                PatternValue: Absolute value of the first numeric argument, or
+                ``0`` when no suitable argument is present.
+            """
             if args:
                 v = args[0].value
                 if isinstance(v, int) and not isinstance(v, bool):
@@ -3185,6 +3293,16 @@ class HexPatEvaluator:
             return PatternValue(value=0)
 
         def builtin_strlen(*args: PatternValue) -> PatternValue:
+            """Return the character length of the first string argument.
+
+            Args:
+                *args: Pattern values; only the first is measured when it
+                    holds a ``str``.
+
+            Returns:
+                PatternValue: String length, or ``0`` when no string argument
+                is present.
+            """
             if args and isinstance(args[0].value, str):
                 return PatternValue(value=len(args[0].value))
             return PatternValue(value=0)

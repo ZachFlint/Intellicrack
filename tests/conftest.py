@@ -36,10 +36,17 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials, ProviderName
 from intellicrack.credentials.env_loader import CredentialLoader
 from intellicrack.providers.xpu_utils import is_arc_b580, is_xpu_available
+from tests._helpers.host_native import (
+    HOST_NATIVE_MARKER,
+    deselect_host_native,
+    keep_only_host_native,
+    mark_host_native_items,
+)
 from tests._helpers.process_cleanup import (
     ALLOW_HOST_PROCESS_TESTS_ENV,
     SANDBOX_ENV_VAR,
     allow_host_process_tests,
+    host_native_only,
     is_sandboxed,
     kill_new_descendants,
     snapshot_descendants,
@@ -67,6 +74,14 @@ _HOST_SKIP_REASON = (
     "to override."
 )
 _HOST_SPAWN_FIXTURES = frozenset({"notepad_process"})
+
+_HOST_NATIVE_MARKER_HELP = (
+    f"{HOST_NATIVE_MARKER}: test requires real host capabilities absent in the "
+    "Docker sandbox (Intel XPU, a running local Ollama daemon, Microsoft debug "
+    "symbols, raw physical disks, loopback TCP capture, or a specific process "
+    "elevation); executed only by the host-native pass "
+    "(scripts.host_native_tests), and deselected inside the container."
+)
 
 _logger = get_logger("tests.conftest")
 
@@ -104,29 +119,44 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         f"{_SPAWNS_PROCESS_MARKER}: test spawns external OS processes; runs only inside the Docker sandbox",
     )
+    config.addinivalue_line("markers", _HOST_NATIVE_MARKER_HELP)
 
 
 def pytest_collection_modifyitems(
     config: pytest.Config,
     items: list[pytest.Item],
 ) -> None:
-    """Skip ``spawns_process`` tests when not running inside the Docker sandbox.
+    """Gate ``spawns_process`` and ``host_native`` tests by execution context.
 
-    Tests that spawn real processes (notepad, ollama, target binaries, debuggee
-    processes) are intended to run only inside the Intellicrack Docker test
-    sandbox. When pytest is invoked directly on the host, those tests would
-    leak processes onto the developer's machine, so they are auto-skipped
-    unless :data:`tests._helpers.process_cleanup.ALLOW_HOST_PROCESS_TESTS_ENV`
-    is truthy. As a defence in depth, tests that request a known
-    process-spawning fixture (see :data:`_HOST_SPAWN_FIXTURES`) are skipped on
-    the host even when they omit the ``spawns_process`` marker.
+    Two symmetric rules run here:
+
+    * Inside the Docker sandbox, ``host_native`` tests are deselected (see
+      :func:`_deselect_host_native`); they require host-only capabilities the
+      container cannot provide and would otherwise only skip.
+    * On the host, tests that spawn real processes (notepad, ollama, target
+      binaries, debuggee processes) would leak onto the developer's machine, so
+      they are auto-skipped unless
+      :data:`tests._helpers.process_cleanup.ALLOW_HOST_PROCESS_TESTS_ENV` is
+      truthy (which the host-native pass sets). As a defence in depth, tests
+      that request a known process-spawning fixture (see
+      :data:`_HOST_SPAWN_FIXTURES`) are skipped on the host even when they omit
+      the ``spawns_process`` marker.
 
     Args:
         config: Active pytest configuration object.
         items: Mutable list of collected test items to filter.
     """
-    del config
-    if is_sandboxed() or allow_host_process_tests():
+    _ = mark_host_native_items(items)
+    if is_sandboxed():
+        dropped = deselect_host_native(config, items)
+        if dropped:
+            _logger.info("host_native_tests_deselected_in_sandbox", count=dropped)
+        return
+    if host_native_only():
+        kept = keep_only_host_native(config, items)
+        _logger.info("host_native_only_selection", kept=kept)
+        return
+    if allow_host_process_tests():
         return
     skip_marker = pytest.mark.skip(reason=_HOST_SKIP_REASON)
     for item in items:

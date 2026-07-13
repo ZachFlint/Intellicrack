@@ -476,6 +476,17 @@ def extract_iocs(report: ExecutionReport) -> list[IOCEntry]:
         source: str,
         context: str,
     ) -> None:
+        """Record a unique IOC entry after applying type-specific filters.
+
+        Skips values already present in ``seen`` and drops private or invalid
+        IPv4 addresses so the returned list stays deduplicated and actionable.
+
+        Args:
+            ioc_type: IOC category such as ``ipv4``, ``url``, or ``sha256``.
+            value: Extracted indicator text.
+            source: Report stream that produced the indicator.
+            context: Truncated surrounding text or source description.
+        """
         key = (ioc_type, value)
         if key in seen:
             return
@@ -493,6 +504,12 @@ def extract_iocs(report: ExecutionReport) -> list[IOCEntry]:
         )
 
     def _scan_text(text: str, source: str) -> None:
+        """Scan free-form text for network, hash, email, and domain indicators.
+
+        Args:
+            text: Arbitrary report text to pattern-match.
+            source: Report stream label attached to each extracted IOC.
+        """
         ctx = text[:_IOC_CONTEXT_MAX_LEN]
         for match in _IPV4_PATTERN.finditer(text):
             _add_ioc("ipv4", match.group(1), source, ctx)
@@ -555,7 +572,8 @@ def generate_timeline(
 
     Merges file changes, registry changes, network activity, process activity,
     API calls, service changes, kernel objects, DLL loads, injection events,
-    and clipboard events into a single chronological timeline.
+    clipboard events, and resource usage samples into a single chronological
+    timeline.
 
     Args:
         report: The execution report to generate a timeline from.
@@ -574,6 +592,14 @@ def generate_timeline(
     category_filter: frozenset[str] | None = frozenset(categories) if categories else None
 
     def _should_include(category: str) -> bool:
+        """Return whether a timeline category passes the optional filter.
+
+        Args:
+            category: Timeline stream name such as ``file`` or ``network``.
+
+        Returns:
+            bool: True when no filter is set or the category is requested.
+        """
         return category_filter is None or category in category_filter
 
     if _should_include("file"):
@@ -605,6 +631,9 @@ def generate_timeline(
 
     if _should_include("clipboard"):
         _timeline_add_clipboard_events(report, events)
+
+    if _should_include("resource"):
+        _timeline_add_resource_events(report, events)
 
     events.sort(key=operator.itemgetter("timestamp"))
 
@@ -914,6 +943,40 @@ def _timeline_add_clipboard_events(
                     "size_bytes": str(clip["size_bytes"]),
                     "pid": str(clip["pid"]),
                     "process_name": clip["process_name"],
+                },
+            ),
+        )
+
+
+def _timeline_add_resource_events(
+    report: ExecutionReport,
+    events: list[TimelineEvent],
+) -> None:
+    """Add resource usage sample events to the timeline.
+
+    Args:
+        report: The execution report.
+        events: Accumulator list for timeline events.
+    """
+    for sample in report.resource_samples:
+        summary = (
+            f"Resource usage: CPU {sample['cpu_percent']:.1f}%, "
+            f"memory {sample['memory_mb']:.1f} MB, "
+            f"disk R/W {sample['disk_read_bytes']}/{sample['disk_write_bytes']} bytes, "
+            f"net sent/recv {sample['net_sent_bytes']}/{sample['net_recv_bytes']} bytes"
+        )
+        events.append(
+            TimelineEvent(
+                timestamp=sample["timestamp"],
+                category="resource",
+                summary=summary,
+                details={
+                    "cpu_percent": str(sample["cpu_percent"]),
+                    "memory_mb": str(sample["memory_mb"]),
+                    "disk_read_bytes": str(sample["disk_read_bytes"]),
+                    "disk_write_bytes": str(sample["disk_write_bytes"]),
+                    "net_sent_bytes": str(sample["net_sent_bytes"]),
+                    "net_recv_bytes": str(sample["net_recv_bytes"]),
                 },
             ),
         )

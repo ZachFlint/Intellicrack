@@ -305,9 +305,11 @@ class RustTransformNode(TransformNode):
         """Apply the Rust-side transform to data.
 
         Creates a temporary ``HexDocument`` from ``data``, calls
-        ``transform_data``, and returns the result. String params are
-        interpreted as hex if they are valid even-length hex strings, or
-        encoded as UTF-8 otherwise. Integer params are converted to
+        ``transform_data``, and returns the result. String params must be
+        valid hex strings (even length, hex digits only) and are decoded to
+        bytes via :meth:`_coerce_hex_param`, which propagates
+        ``TransformParamError`` for a string that is not valid hex; an empty
+        string decodes to ``b""``. Integer params are converted to
         little-endian bytes.
 
         Args:
@@ -337,8 +339,7 @@ class RustTransformNode(TransformNode):
                 else:
                     rust_params[key] = val.to_bytes(8, "little")
             elif isinstance(val, str):
-                is_hex = len(val) > 0 and len(val) % 2 == 0 and all(c in string.hexdigits for c in val)
-                rust_params[key] = bytes.fromhex(val) if is_hex else val.encode("utf-8")
+                rust_params[key] = self._coerce_hex_param(key, val)
             else:
                 rust_params[key] = str(val).encode("utf-8")
 
@@ -346,6 +347,39 @@ class RustTransformNode(TransformNode):
         result: bytes = bytes(doc.transform_data(self._name, 0, len(data), rust_params))
         _logger.debug("rust_transform_completed", transform=self._name, output_size=len(result))
         return result
+
+    def _coerce_hex_param(self, key: str, val: str) -> bytes:
+        """Decode a string parameter as hex bytes, rejecting invalid hex.
+
+        An empty string decodes to ``b""``. Any non-empty string must have
+        even length and consist solely of hex digits; strings that do not
+        meet those requirements are rejected rather than silently
+        reinterpreted as UTF-8 text, since the Rust transform layer expects
+        raw byte parameters.
+
+        Args:
+            key: Name of the parameter being coerced, used in error messages.
+            val: The string value to decode as hex.
+
+        Returns:
+            bytes: The decoded byte value.
+
+        Raises:
+            TransformParamError: If ``val`` is non-empty and is not a valid
+                even-length hex string.
+        """
+        if not val:
+            return b""
+
+        if len(val) % 2 != 0:
+            detail = f"param {key!r} is not valid hex: odd-length string {val!r}"
+            raise TransformParamError(self._name, detail)
+
+        if not all(c in string.hexdigits for c in val):
+            detail = f"param {key!r} is not valid hex: {val!r}"
+            raise TransformParamError(self._name, detail)
+
+        return bytes.fromhex(val)
 
 
 class RegexReplaceNode(TransformNode):

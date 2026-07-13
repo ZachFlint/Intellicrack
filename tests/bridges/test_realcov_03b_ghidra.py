@@ -568,16 +568,23 @@ class TestRealAvailability:
         probe: _GhidraProbe,
         tmp_path: Path,
     ) -> None:
-        """Verify availability depends on both a set path and the RPC package.
+        """Verify availability depends on both a set path and all RPC packages.
 
-        With a real path configured, availability is driven solely by whether
-        the ``ghidra_bridge`` package is importable in this interpreter; the
-        test asserts the result agrees with the genuine import-spec lookup.
+        With a real path configured, availability is driven by whether every
+        package the RPC bridge needs at runtime - ``ghidra_bridge`` (the RPC
+        client), ``jpype`` (JVM bridge used by PyGhidra), and ``pyghidra``
+        (the headless launcher) - is importable in this interpreter; the test
+        asserts the result agrees with the genuine import-spec lookup for all
+        three, matching ``GhidraBridge.is_available``'s conjunction exactly.
 
         Args:
             probe: GhidraBridge probe fixture.
             tmp_path: Pytest temporary directory used as the install path.
         """
         probe.ghidra_path = tmp_path
-        expected = importlib.util.find_spec("ghidra_bridge") is not None
+        expected = (
+            importlib.util.find_spec("ghidra_bridge") is not None
+            and importlib.util.find_spec("jpype") is not None
+            and importlib.util.find_spec("pyghidra") is not None
+        )
         assert await probe.is_available() is expected

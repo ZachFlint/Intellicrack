@@ -110,63 +110,63 @@ CommandHandler::CommandHandler() {
 }
 
 void CommandHandler::register_commands() {
-    m_commands["exec"] = [this](const PipeMessage& m) { return cmd_exec(m); };
-    m_commands["run"] = [this](const PipeMessage& m) { return cmd_run(m); };
-    m_commands["pause"] = [this](const PipeMessage& m) { return cmd_pause(m); };
-    m_commands["stop"] = [this](const PipeMessage& m) { return cmd_stop(m); };
-    m_commands["step_into"] = [this](const PipeMessage& m) { return cmd_step_into(m); };
-    m_commands["step_over"] = [this](const PipeMessage& m) { return cmd_step_over(m); };
-    m_commands["step_out"] = [this](const PipeMessage& m) { return cmd_step_out(m); };
-    m_commands["run_to"] = [this](const PipeMessage& m) { return cmd_run_to(m); };
+    m_commands["exec"] = [](const PipeMessage& m) { return cmd_exec(m); };
+    m_commands["run"] = [](const PipeMessage& m) { return cmd_run(m); };
+    m_commands["pause"] = [](const PipeMessage& m) { return cmd_pause(m); };
+    m_commands["stop"] = [](const PipeMessage& m) { return cmd_stop(m); };
+    m_commands["step_into"] = [](const PipeMessage& m) { return cmd_step_into(m); };
+    m_commands["step_over"] = [](const PipeMessage& m) { return cmd_step_over(m); };
+    m_commands["step_out"] = [](const PipeMessage& m) { return cmd_step_out(m); };
+    m_commands["run_to"] = [](const PipeMessage& m) { return cmd_run_to(m); };
 
-    m_commands["bp_set"] = [this](const PipeMessage& m) { return cmd_bp_set(m); };
-    m_commands["bp_remove"] = [this](const PipeMessage& m) { return cmd_bp_remove(m); };
-    m_commands["bp_list"] = [this](const PipeMessage& m) { return cmd_bp_list(m); };
-    m_commands["bp_enable"] = [this](const PipeMessage& m) { return cmd_bp_enable(m); };
-    m_commands["bp_disable"] = [this](const PipeMessage& m) { return cmd_bp_disable(m); };
+    m_commands["bp_set"] = [](const PipeMessage& m) { return cmd_bp_set(m); };
+    m_commands["bp_remove"] = [](const PipeMessage& m) { return cmd_bp_remove(m); };
+    m_commands["bp_list"] = [](const PipeMessage& m) { return cmd_bp_list(m); };
+    m_commands["bp_enable"] = [](const PipeMessage& m) { return cmd_bp_enable(m); };
+    m_commands["bp_disable"] = [](const PipeMessage& m) { return cmd_bp_disable(m); };
 
-    m_commands["wp_set"] = [this](const PipeMessage& m) { return cmd_wp_set(m); };
-    m_commands["wp_remove"] = [this](const PipeMessage& m) { return cmd_wp_remove(m); };
-    m_commands["wp_list"] = [this](const PipeMessage& m) { return cmd_wp_list(m); };
+    m_commands["wp_set"] = [](const PipeMessage& m) { return cmd_wp_set(m); };
+    m_commands["wp_remove"] = [](const PipeMessage& m) { return cmd_wp_remove(m); };
+    m_commands["wp_list"] = [](const PipeMessage& m) { return cmd_wp_list(m); };
 
-    m_commands["reg_all"] = [this](const PipeMessage& m) { return cmd_reg_all(m); };
-    m_commands["reg_get"] = [this](const PipeMessage& m) { return cmd_reg_get(m); };
-    m_commands["reg_set"] = [this](const PipeMessage& m) { return cmd_reg_set(m); };
+    m_commands["reg_all"] = [](const PipeMessage& m) { return cmd_reg_all(m); };
+    m_commands["reg_get"] = [](const PipeMessage& m) { return cmd_reg_get(m); };
+    m_commands["reg_set"] = [](const PipeMessage& m) { return cmd_reg_set(m); };
 
-    m_commands["mem_read"] = [this](const PipeMessage& m) { return cmd_mem_read(m); };
-    m_commands["mem_write"] = [this](const PipeMessage& m) { return cmd_mem_write(m); };
-    m_commands["mem_map"] = [this](const PipeMessage& m) { return cmd_mem_map(m); };
+    m_commands["mem_read"] = [](const PipeMessage& m) { return cmd_mem_read(m); };
+    m_commands["mem_write"] = [](const PipeMessage& m) { return cmd_mem_write(m); };
+    m_commands["mem_map"] = [](const PipeMessage& m) { return cmd_mem_map(m); };
 
-    m_commands["mod_list"] = [this](const PipeMessage& m) { return cmd_mod_list(m); };
-    m_commands["mod_base"] = [this](const PipeMessage& m) { return cmd_mod_base(m); };
-    m_commands["mod_exports"] = [this](const PipeMessage& m) { return cmd_mod_exports(m); };
-    m_commands["mod_imports"] = [this](const PipeMessage& m) { return cmd_mod_imports(m); };
+    m_commands["mod_list"] = [](const PipeMessage& m) { return cmd_mod_list(m); };
+    m_commands["mod_base"] = [](const PipeMessage& m) { return cmd_mod_base(m); };
+    m_commands["mod_exports"] = [](const PipeMessage& m) { return cmd_mod_exports(m); };
+    m_commands["mod_imports"] = [](const PipeMessage& m) { return cmd_mod_imports(m); };
 
-    m_commands["disasm"] = [this](const PipeMessage& m) { return cmd_disasm(m); };
-    m_commands["assemble"] = [this](const PipeMessage& m) { return cmd_assemble(m); };
+    m_commands["disasm"] = [](const PipeMessage& m) { return cmd_disasm(m); };
+    m_commands["assemble"] = [](const PipeMessage& m) { return cmd_assemble(m); };
 
-    m_commands["goto"] = [this](const PipeMessage& m) { return cmd_goto(m); };
-    m_commands["status"] = [this](const PipeMessage& m) { return cmd_status(m); };
-    m_commands["ping"] = [this](const PipeMessage& m) { return cmd_ping(m); };
+    m_commands["goto"] = [](const PipeMessage& m) { return cmd_goto(m); };
+    m_commands["status"] = [](const PipeMessage& m) { return cmd_status(m); };
+    m_commands["ping"] = [](const PipeMessage& m) { return cmd_ping(m); };
 
-    m_commands["lbl_list"] = [this](const PipeMessage& m) { return cmd_lbl_list(m); };
-    m_commands["cmt_list"] = [this](const PipeMessage& m) { return cmd_cmt_list(m); };
-    m_commands["stack_trace"] = [this](const PipeMessage& m) { return cmd_stack_trace(m); };
-    m_commands["eval"] = [this](const PipeMessage& m) { return cmd_eval(m); };
-    m_commands["ref_search"] = [this](const PipeMessage& m) { return cmd_ref_search(m); };
-    m_commands["cfg"] = [this](const PipeMessage& m) { return cmd_cfg(m); };
-    m_commands["patch_list"] = [this](const PipeMessage& m) { return cmd_patch_list(m); };
-    m_commands["patch_restore"] = [this](const PipeMessage& m) { return cmd_patch_restore(m); };
-    m_commands["seh_chain"] = [this](const PipeMessage& m) { return cmd_seh_chain(m); };
-    m_commands["peb_read"] = [this](const PipeMessage& m) { return cmd_peb_read(m); };
-    m_commands["teb_read"] = [this](const PipeMessage& m) { return cmd_teb_read(m); };
-    m_commands["pe_directories"] = [this](const PipeMessage& m) { return cmd_pe_directories(m); };
-    m_commands["watch_add"] = [this](const PipeMessage& m) { return cmd_watch_add(m); };
-    m_commands["watch_remove"] = [this](const PipeMessage& m) { return cmd_watch_remove(m); };
-    m_commands["watch_list"] = [this](const PipeMessage& m) { return cmd_watch_list(m); };
-    m_commands["trace_record"] = [this](const PipeMessage& m) { return cmd_trace_record(m); };
-    m_commands["plugin_list"] = [this](const PipeMessage& m) { return cmd_plugin_list(m); };
-    m_commands["thread_detail"] = [this](const PipeMessage& m) { return cmd_thread_detail(m); };
+    m_commands["lbl_list"] = [](const PipeMessage& m) { return cmd_lbl_list(m); };
+    m_commands["cmt_list"] = [](const PipeMessage& m) { return cmd_cmt_list(m); };
+    m_commands["stack_trace"] = [](const PipeMessage& m) { return cmd_stack_trace(m); };
+    m_commands["eval"] = [](const PipeMessage& m) { return cmd_eval(m); };
+    m_commands["ref_search"] = [](const PipeMessage& m) { return cmd_ref_search(m); };
+    m_commands["cfg"] = [](const PipeMessage& m) { return cmd_cfg(m); };
+    m_commands["patch_list"] = [](const PipeMessage& m) { return cmd_patch_list(m); };
+    m_commands["patch_restore"] = [](const PipeMessage& m) { return cmd_patch_restore(m); };
+    m_commands["seh_chain"] = [](const PipeMessage& m) { return cmd_seh_chain(m); };
+    m_commands["peb_read"] = [](const PipeMessage& m) { return cmd_peb_read(m); };
+    m_commands["teb_read"] = [](const PipeMessage& m) { return cmd_teb_read(m); };
+    m_commands["pe_directories"] = [](const PipeMessage& m) { return cmd_pe_directories(m); };
+    m_commands["watch_add"] = [](const PipeMessage& m) { return cmd_watch_add(m); };
+    m_commands["watch_remove"] = [](const PipeMessage& m) { return cmd_watch_remove(m); };
+    m_commands["watch_list"] = [](const PipeMessage& m) { return cmd_watch_list(m); };
+    m_commands["trace_record"] = [](const PipeMessage& m) { return cmd_trace_record(m); };
+    m_commands["plugin_list"] = [](const PipeMessage& m) { return cmd_plugin_list(m); };
+    m_commands["thread_detail"] = [](const PipeMessage& m) { return cmd_thread_detail(m); };
 }
 
 PipeResponse CommandHandler::handle_command(const PipeMessage& msg) {
@@ -422,10 +422,10 @@ PipeResponse CommandHandler::cmd_bp_list(const PipeMessage& msg) {
     bool first_entry = true;
 
     struct BpTypeInfo {
-        BPXTYPE type;
-        const char* type_str;
+        BPXTYPE type{};
+        const char* type_str{nullptr};
     };
-    BpTypeInfo bp_types[] = {
+    const BpTypeInfo bp_types[] = {
         { bp_normal,   "normal"   },
         { bp_hardware, "hardware" },
         { bp_memory,   "memory"   }

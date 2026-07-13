@@ -601,6 +601,19 @@ function Invoke-MonitorSweep {
 $script:StopEvent = Open-MonitorStopEvent -Name $script:StopEventName
 Write-KernelLifecycle -State 'started' -Detail "poll_interval_ms=$PollIntervalMilliseconds stop_event=$script:StopEventName"
 
+# Sweep #1 must enumerate and resolve the type/name of every kernel object
+# already open system-wide (hundreds of thousands of handles on a typical
+# host) before the dedup set converges to steady state; that first pass can
+# take tens of seconds even though every later sweep only resolves the
+# handful of handles that are genuinely new. Consumers that need to know
+# "the monitor is now running at fast, steady-state cadence" - e.g. a test
+# or bridge caller about to create a short-lived object it expects the
+# monitor to catch - cannot infer that from an OpenProcess failure alone,
+# since such a failure can be logged at any point during the still-running
+# first sweep. Emit an explicit, unambiguous marker once sweep #1 itself has
+# fully returned.
+$script:SweepIndex = 0
+
 try {
     while ($true) {
         if (Test-MonitorStopRequested) { break }
@@ -609,6 +622,11 @@ try {
             Invoke-MonitorSweep
         } catch {
             Write-MonitorError -Stage 'Invoke-MonitorSweep' -Detail $_.Exception.Message
+        }
+
+        $script:SweepIndex++
+        if ($script:SweepIndex -eq 1) {
+            Write-KernelLifecycle -State 'first_sweep_complete' -Detail "seen_handle_count=$([NtKernelObjects]::SeenHandleCount)"
         }
 
         if ($processNameCache.Count -gt 4096) {

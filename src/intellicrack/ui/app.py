@@ -303,6 +303,7 @@ class MainWindow(QMainWindow):
             return
 
         async def create() -> None:
+            """Create the initial analysis session for the toolbar selection."""
             await self._ensure_active_session(provider_name, model)
 
         _logger.info("initial_session_kickoff", provider=provider_name.value, model=model)
@@ -915,13 +916,18 @@ class MainWindow(QMainWindow):
             model_line_edit.editingFinished.connect(self._on_model_combo_text_committed)
 
         def _update_model_combo_tooltip(text: str) -> None:
-            # Long model ids truncate in the collapsed field; the tooltip
-            # surfaces the full id on hover (prior UX #3 residual).
+            """Mirror the full model id into the combo tooltip for truncated labels.
+
+            Args:
+                text: Current model combo text, typically a long model id that
+                    may be clipped in the collapsed field.
+            """
             self.model_combo.setToolTip(text)
 
         self.model_combo.currentTextChanged.connect(_update_model_combo_tooltip)
 
         def _reset_model_combo_cursor() -> None:
+            """Scroll the editable model field back to the start of the id."""
             le = self.model_combo.lineEdit()
             if le is not None:
                 le.setCursorPosition(0)
@@ -1005,6 +1011,11 @@ class MainWindow(QMainWindow):
         self._auto_approve_btn.setText(f"Auto-approve: {'ON' if initial_auto_approve else 'OFF'}")
 
         def _auto_approve_slot(state: int) -> None:
+            """Convert the Auto-approve toolbar toggled int into a bool handler call.
+
+            Args:
+                state: Qt ``toggled`` payload; nonzero means auto-approve is ON.
+            """
             self._on_auto_approve_toggled(checked=bool(state))
 
         self._auto_approve_btn.toggled.connect(_auto_approve_slot)
@@ -1015,6 +1026,11 @@ class MainWindow(QMainWindow):
         self._sandbox_btn.setObjectName("toggle_button")
 
         def _sandbox_slot(state: int) -> None:
+            """Convert the Sandbox toolbar toggled int into a bool handler call.
+
+            Args:
+                state: Qt ``toggled`` payload; nonzero means sandbox mode is ON.
+            """
             self._on_sandbox_toggled(checked=bool(state))
 
         self._sandbox_btn.toggled.connect(_sandbox_slot)
@@ -1379,6 +1395,7 @@ class MainWindow(QMainWindow):
         self._orchestrator.resolve_confirmation(approved=approved)
 
         def _resolve() -> None:
+            """Deliver the dialog approval result onto the waiting asyncio future."""
             if not future.done():
                 future.set_result(approved)
 
@@ -1418,6 +1435,7 @@ class MainWindow(QMainWindow):
             _logger.debug("user_message_process_context", pid=active_pid)
 
         async def process() -> None:
+            """Ensure a session exists, then route the user message to the orchestrator."""
             if needs_session and provider is not None:
                 await self._ensure_active_session(provider, model)
             await self._orchestrator.process_user_input(text)
@@ -1716,6 +1734,12 @@ class MainWindow(QMainWindow):
         self.status_update.emit(f"Loading {binary_name}...")
 
         async def load() -> BinaryInfo:
+            """Register the binary on a live session and refresh session state.
+
+            Returns:
+                BinaryInfo: Metadata for the loaded binary after activation
+                succeeds.
+            """
             if self._orchestrator.current_session is None:
                 await self._ensure_active_session(provider, model)
             binary_info = await self._orchestrator.add_binary(path)
@@ -1810,6 +1834,7 @@ class MainWindow(QMainWindow):
             return
 
         async def create_session() -> None:
+            """Start a new orchestrator session with the dialog metadata."""
             await self._orchestrator.start_session(
                 provider,
                 model,
@@ -1852,6 +1877,7 @@ class MainWindow(QMainWindow):
         _logger.info("session_load_requested", session_id=session_id)
 
         async def load_session() -> None:
+            """Load the selected session into the orchestrator."""
             await self._orchestrator.load_session(session_id)
 
         self._chat_panel.clear_messages()
@@ -1873,6 +1899,7 @@ class MainWindow(QMainWindow):
         if current is not None and current.id == session_id:
 
             async def cancel_active() -> None:
+                """Abort in-flight work after the active session was deleted."""
                 await self._orchestrator.cancel()
 
             self.status_update.emit(f"Active session {session_id} deleted; cancelling work")
@@ -1889,6 +1916,7 @@ class MainWindow(QMainWindow):
         )
 
         async def save_session() -> None:
+            """Persist the current orchestrator session to storage."""
             await self._orchestrator.save_session()
 
         self.status_update.emit("Saving session...")
@@ -1952,10 +1980,21 @@ class MainWindow(QMainWindow):
             return
 
         def _on_export_done(_result: object) -> None:
+            """Notify the user that session export finished successfully.
+
+            Args:
+                _result: Export coroutine return value; unused because the
+                    dialog only needs completion of the write.
+            """
             self.status_update.emit("Session exported")
             QMessageBox.information(self, "Export", f"Session exported to {path}")
 
         def _on_export_failed(err: object) -> None:
+            """Log and surface a session export failure on the GUI thread.
+
+            Args:
+                err: Exception or error payload emitted by the export worker.
+            """
             _logger.warning("session_export_failed", path=path, error=str(err))
             self.status_update.emit("Session export failed")
             QMessageBox.warning(self, "Export", f"Failed to export session: {err}")
@@ -2020,10 +2059,21 @@ class MainWindow(QMainWindow):
         coro = import_json(source_path, replace=replace)
 
         def _on_import_done(_result: object) -> None:
+            """Notify the user that session import finished successfully.
+
+            Args:
+                _result: Import coroutine return value; unused because the
+                    dialog only needs completion of the load.
+            """
             self.status_update.emit("Session imported")
             QMessageBox.information(self, "Import", "Session imported successfully.")
 
         def _on_import_failed(err: object) -> None:
+            """Normalize and classify a session import failure for the user.
+
+            Args:
+                err: Exception or error payload emitted by the import worker.
+            """
             exc = err if isinstance(err, Exception) else RuntimeError(str(err) or type(err).__name__)
             self._handle_session_import_error(exc, import_json, source_path)
 
@@ -2172,6 +2222,14 @@ class MainWindow(QMainWindow):
         if isinstance(widgets_attr, dict):
 
             def _status_slot(tool_id: str, available: int) -> None:
+                """Relay a per-tool status_changed signal into the typed handler.
+
+                Args:
+                    tool_id: Identifier of the tool whose availability was
+                        rechecked.
+                    available: Qt integer flag from the widget signal; nonzero
+                        means the tool is currently available.
+                """
                 self._on_tool_status_changed(tool_id=tool_id, available=bool(available))
 
             for widget in cast("dict[str, object]", widgets_attr).values():
@@ -2229,6 +2287,7 @@ class MainWindow(QMainWindow):
         if tools_to_init:
 
             async def _reinit_tools() -> None:
+                """Re-initialize each enabled tool that has a configured path."""
                 for tid in tools_to_init:
                     try:
                         await self._orchestrator.initialize_tool(tid)
@@ -2385,6 +2444,7 @@ class MainWindow(QMainWindow):
         if providers_to_connect or providers_to_disconnect:
 
             async def _apply_provider_changes() -> None:
+                """Disconnect disabled providers, then reconnect updated credentials."""
                 for pname in providers_to_disconnect:
                     try:
                         await registry.disconnect_provider(pname)
@@ -2505,6 +2565,14 @@ class MainWindow(QMainWindow):
         self.model_refresh_worker = ModelRefreshWorker(provider_id, api_key, provider=connected_instance, parent=self)
 
         def _refresh_slot(s: int, m: list[str], msg: str) -> None:
+            """Adapt the model-refresh worker signal into the typed handler.
+
+            Args:
+                s: Success flag from the worker as an integer (nonzero means
+                    the refresh succeeded).
+                m: Model identifiers returned by the active provider.
+                msg: Status or error message produced by the refresh worker.
+            """
             self._on_models_refresh_finished(success=bool(s), models=m, message=msg)
 
         self.model_refresh_worker.refresh_finished.connect(_refresh_slot)
@@ -2545,6 +2613,12 @@ class MainWindow(QMainWindow):
             return
 
         async def fetch() -> list[ModelInfo]:
+            """Query the active provider for models available to browse.
+
+            Returns:
+                list[ModelInfo]: Model metadata entries returned by the
+                connected provider.
+            """
             return await active_provider.list_models()
 
         _logger.info("provider_list_models_requested", provider=active_provider.name.value)
@@ -2786,9 +2860,20 @@ class MainWindow(QMainWindow):
         total_instances = len(instances)
 
         def _on_teardown_succeeded(_result: object) -> None:
+            """Rebuild the sandbox manager after all live instances stop cleanly.
+
+            Args:
+                _result: Result of ``destroy_all``; unused because only
+                    completion is required before applying settings.
+            """
             self._finish_sandbox_settings_apply(new_config, stale_count, total_instances)
 
         def _on_teardown_failed(exc: object) -> None:
+            """Log teardown failure, then still rebuild the sandbox manager.
+
+            Args:
+                exc: Exception or error payload from the destroy_all worker.
+            """
             error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
             _logger.warning("sandbox_manager_teardown_failed", error=str(error_obj))
             self._finish_sandbox_settings_apply(new_config, stale_count, total_instances)
@@ -2939,10 +3024,23 @@ class MainWindow(QMainWindow):
         bridge = self._get_or_create_sandbox_bridge()
 
         async def open_sandbox() -> object:
+            """Create a sandbox instance when the bridge backend is available.
+
+            Returns:
+                object: Bridge create payload when a backend is available,
+                otherwise ``None`` so the GUI can show the unavailable
+                warning.
+            """
             available = await bridge.is_available()
             return await bridge.create() if available else None
 
         def on_sandbox_opened(result: object) -> None:
+            """Wire a created sandbox into the UI or report unavailability.
+
+            Args:
+                result: Create payload from the sandbox bridge, or ``None``
+                    when no backend was available.
+            """
             if result is None:
                 _logger.info("sandbox_open_unavailable")
                 QMessageBox.warning(
@@ -2962,6 +3060,11 @@ class MainWindow(QMainWindow):
                 self.status_update.emit("Sandbox opened")
 
         def on_sandbox_error(e: object) -> None:
+            """Show a critical dialog when sandbox open fails unexpectedly.
+
+            Args:
+                e: Exception or error payload emitted by the open worker.
+            """
             message = str(e) if isinstance(e, BaseException) else repr(e)
             QMessageBox.critical(self, "Error", message)
 
@@ -3285,10 +3388,26 @@ class MainWindow(QMainWindow):
         self._process_regions_worker = worker
 
         def _on_finished(result: object) -> None:
+            """Deliver region list to the picker only if this worker is still current.
+
+            Ignores stale finished signals when a newer region-list worker has
+            already replaced ``self._process_regions_worker``.
+
+            Args:
+                result: Region list from ``HexDocument.list_process_memory_regions``.
+            """
             if self._process_regions_worker is worker:
                 self._on_process_regions_listed(pid, result)
 
         def _on_error(exc: object) -> None:
+            """Report region-list failure only if this worker is still current.
+
+            Drops stale errors from superseded region-list workers so an older
+            failure cannot clobber a newer open-process-memory flow.
+
+            Args:
+                exc: Error from the ``list_process_memory_regions`` worker for ``pid``.
+            """
             if self._process_regions_worker is worker:
                 self._on_process_regions_failed(pid, exc)
 
@@ -3417,12 +3536,23 @@ class MainWindow(QMainWindow):
             return
 
         def _on_open_succeeded(result: object) -> None:
+            """Log successful process-memory open details for the selected region.
+
+            Args:
+                result: Open payload from the hex editor bridge, optionally
+                    containing ``document_length``.
+            """
             length: object = None
             if isinstance(result, dict):
                 length = cast("dict[str, object]", result).get("document_length")
             _logger.info("process_memory_loaded", pid=pid, address=hex(base_addr), length=length)
 
         def _on_open_failed(exc: object) -> None:
+            """Warn the user when opening process memory fails.
+
+            Args:
+                exc: Exception or error payload from the memory-open worker.
+            """
             _logger.warning("process_memory_open_failed", pid=pid, error=str(exc))
             QMessageBox.warning(self, "Process Memory", f"Failed to open memory: {exc}")
 
@@ -3504,6 +3634,13 @@ class MainWindow(QMainWindow):
         self.status_update.emit(f"Running full analysis on {binary_name}...")
 
         async def analyze() -> BridgeAnalysisSummary | None:
+            """Re-run aggregated bridge analysis on the active binary.
+
+            Returns:
+                BridgeAnalysisSummary | None: Bridge analysis summary when at
+                least one analysis bridge contributed data, otherwise
+                ``None``.
+            """
             return await self._orchestrator.reanalyze_bridge_analysis()
 
         run_bridge_coroutine_async(analyze(), self._on_full_analysis_done, self._on_async_error, self)
@@ -3717,6 +3854,7 @@ class MainWindow(QMainWindow):
         """Handle cancel button click."""
 
         async def cancel() -> None:
+            """Request cancellation of the orchestrator's in-flight work."""
             await self._orchestrator.cancel()
 
         self._run_async(cancel())

@@ -7,9 +7,11 @@
 Covers:
   S7-04 — max_iterations guard: scripted provider runs to exhaustion;
            assert ``stats.total_tool_calls == max_iterations``.
-  S7-05 — timeout_seconds guard (PD-009 RED-BY-DESIGN): orchestrator does
-           not wrap the agent loop in ``asyncio.wait_for``; assert
-           ``asyncio.TimeoutError`` propagates — DID NOT RAISE → test FAILS.
+  S7-05 — timeout_seconds guard (PD-009): the agent loop enforces an explicit
+           ``time.monotonic()`` deadline each iteration in addition to the
+           ``asyncio.wait_for`` wrapper around the whole turn; assert
+           ``asyncio.TimeoutError`` propagates for a workload whose measured
+           wall-clock cost genuinely crosses the configured budget.
   S7-06 — Confirmation gate: ``ConfirmationLevel.DESTRUCTIVE`` + callback
            returns False → bridge never executed → ``stats.total_tool_calls == 0``.
 """
@@ -572,20 +574,33 @@ class TestMaxIterationsGuard:
 
 
 class TestTimeoutGuard:
-    """Gate for S7-05: timeout_seconds not enforced (PD-009 RED-BY-DESIGN).
+    """Gate for S7-05: timeout_seconds enforcement (PD-009).
 
-    The production agent loop in ``_run_agent_loop`` has no
-    ``asyncio.wait_for`` wrapper around its ``while`` body. Consequently,
-    the ``timeout_seconds`` field of ``OrchestratorConfig`` is stored but
-    never consulted during the loop — the loop runs to completion regardless
-    of elapsed time.
+    ``_run_agent_loop`` enforces ``OrchestratorConfig.timeout_seconds`` via an
+    explicit ``time.monotonic()`` deadline check at the top of every
+    iteration, in addition to the ``asyncio.wait_for`` wrapper
+    :meth:`Orchestrator._run_user_turn` applies around the whole loop
+    coroutine. Both layers are required: real in-container timing measurement
+    showed that a bare ``asyncio.wait_for`` wrapper alone does *not* enforce
+    the timeout when every provider/bridge call in the loop resolves without
+    ever suspending on a genuine asyncio primitive (no real socket I/O, no
+    ``asyncio.sleep``) — a 5000-iteration run of the zero-latency
+    ``_ProbeProvider``/``_ProbeBridge`` pair ran for 8.27 real seconds past a
+    ``timeout_seconds=1`` budget without ``wait_for`` ever cancelling it,
+    because the whole coroutine chain executed as one uninterruptible step of
+    the event loop and the ``call_later`` timeout callback never got a chance
+    to run. The explicit in-loop deadline check closes that gap.
 
     This gate asserts the CORRECT contract: ``process_user_input`` must raise
     ``asyncio.TimeoutError`` when elapsed time exceeds ``timeout_seconds``.
-    Since production never raises this error, the test's
-    ``pytest.raises(asyncio.TimeoutError)`` block exits without the exception
-    and pytest reports **DID NOT RAISE**.  The gate is permanently RED until
-    the production code adds timeout enforcement.
+    ``max_iterations=5000`` is required (not a smaller value) so the
+    zero-latency probe workload's genuine, measured wall-clock cost actually
+    crosses the 1-second budget before it would otherwise be capped by
+    ``max_iterations``; the growing per-turn message history makes later
+    iterations more expensive than earlier ones (each iteration re-scans the
+    full session history for context-window trimming), so 5000 iterations
+    gives comfortable headroom over the ~1700 iterations measurement implied
+    are needed to cross one second.
     """
 
     def test_timeout_seconds_not_enforced_red_by_design(
@@ -595,17 +610,19 @@ class TestTimeoutGuard:
     ) -> None:
         """process_user_input raises asyncio.TimeoutError when timeout_seconds elapses.
 
-        This test is RED-BY-DESIGN (PD-009): the orchestrator does not wrap
-        the agent loop in ``asyncio.wait_for``, so the call completes normally
-        and DID NOT RAISE, failing this gate.  Oracle: the correct contract
-        as implied by ``OrchestratorConfig.timeout_seconds`` field documentation.
-        Mutation: adding ``asyncio.wait_for(..., timeout=self._config.timeout_seconds)``
-        around the agent loop turns this gate green.
+        Oracle: the correct contract implied by ``OrchestratorConfig.timeout_seconds``
+        field documentation ("Timeout for LLM requests") is that a turn may not run
+        longer than ``timeout_seconds`` of real wall-clock time. Mutation: removing
+        either the ``time.monotonic()`` deadline check inside ``_run_agent_loop`` or
+        the ``asyncio.wait_for`` wrapper in ``_run_user_turn`` makes the 5000-iteration
+        probe workload run to completion without ever raising, and
+        ``pytest.raises(asyncio.TimeoutError)`` reports **DID NOT RAISE**, failing
+        this gate.
 
         ``_get_token_encoder`` is replaced with ``_FakeTiktokenEncoder`` to
         avoid ``ModuleNotFoundError`` from offline tiktoken BPE files.  This
         stub isolates the timeout concern: the orchestrator's own loop logic is
-        unchanged and the PD-009 defect is still the reason the gate is red.
+        unchanged by the substitution.
         """
 
         def _fake_get_encoder(_p: ProviderName | None) -> _FakeTiktokenEncoder:
@@ -616,7 +633,7 @@ class TestTimeoutGuard:
         bridge = _ProbeBridge()
         provider = _ProbeProvider()
         config = OrchestratorConfig(
-            max_iterations=100,
+            max_iterations=5000,
             timeout_seconds=1,
             stream_responses=False,
             confirmation_level=ConfirmationLevel.NONE,

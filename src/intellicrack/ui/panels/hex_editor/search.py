@@ -569,6 +569,11 @@ class SearchMixin:
         self._numeric_range_check = QCheckBox("Range")
 
         def _range_toggled_slot(c: int) -> None:
+            """Show or hide the numeric max-value field for range searches.
+
+            Args:
+                c: Qt toggled checked state for the Range checkbox.
+            """
             self._on_numeric_range_toggled(checked=bool(c))
 
         self._numeric_range_check.toggled.connect(_range_toggled_slot)
@@ -1029,11 +1034,11 @@ class SearchMixin:
 
     @staticmethod
     def _on_replace_all_failed(parent: QWidget | None, exc: object) -> None:
-        """Surface a failed Replace All dispatch to the user.
+        """Show a Replace All warning when the bulk-replace bridge call fails.
 
         Args:
             parent: Parent widget for the warning dialog, or ``None``.
-            exc: The exception raised by the bridge coroutine.
+            exc: Exception raised while applying replace-all on the bridge.
         """
         show_warning(parent, "Replace All", f"Replace failed: {exc}")
 
@@ -1076,11 +1081,11 @@ class SearchMixin:
 
     @staticmethod
     def _on_replace_all_regex_encode_failed(parent: QWidget | None, exc: object) -> None:
-        """Surface a failed regex-replace ``encode_text`` dispatch to the user.
+        """Show Replace All warning when replacement text cannot be encoded.
 
         Args:
             parent: Parent widget for the warning dialog, or ``None``.
-            exc: The exception raised by the bridge coroutine.
+            exc: Exception raised by the ``encode_text`` bridge call for replace-all.
         """
         show_warning(parent, "Replace All", f"Could not encode replacement text: {exc}")
 
@@ -1251,11 +1256,11 @@ class SearchMixin:
 
     @staticmethod
     def _on_replace_single_encode_failed(parent: QWidget | None, exc: object) -> None:
-        """Surface a failed single-replace ``encode_text`` dispatch to the user.
+        """Show Replace warning when single-match replacement text cannot be encoded.
 
         Args:
             parent: Parent widget for the warning dialog, or ``None``.
-            exc: The exception raised by the bridge coroutine.
+            exc: Exception raised by the ``encode_text`` bridge call for one replace.
         """
         show_warning(parent, "Replace", f"Could not encode replacement text: {exc}")
 

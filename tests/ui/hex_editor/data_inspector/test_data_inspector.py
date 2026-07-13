@@ -28,6 +28,7 @@ These tests guard against three regressions in
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Any, override
 
 import pytest
@@ -38,7 +39,41 @@ from intellicrack.ui.panels.hex_editor.data_inspector import DataInspectorMixin
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
+
+
+_ASYNC_WAIT_TIMEOUT_S: float = 5.0
+_ASYNC_POLL_INTERVAL_S: float = 0.02
+
+
+def _wait_until(predicate: Callable[[], bool], timeout: float = _ASYNC_WAIT_TIMEOUT_S) -> bool:
+    """Poll ``predicate`` until it is true or ``timeout`` seconds elapse.
+
+    ``_on_encode_text`` dispatches ``bridge.encode_text`` on the real
+    persistent background bridge event loop via
+    :func:`~intellicrack.ui.panels.async_bridge.run_bridge_coroutine_logged`,
+    so the bridge call and the widget update it drives happen on a
+    background thread asynchronously relative to the calling test. This
+    helper lets tests observe that eventual, real (non-mocked) side effect
+    deterministically instead of racing a bare post-call assertion against
+    the worker thread.
+
+    Args:
+        predicate: Zero-argument callable checked on every poll iteration.
+        timeout: Maximum number of seconds to poll before giving up.
+
+    Returns:
+        bool: ``True`` if ``predicate()`` became true within ``timeout``,
+            ``False`` otherwise (the final ``predicate()`` result).
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        QApplication.processEvents()
+        if predicate():
+            return True
+        time.sleep(_ASYNC_POLL_INTERVAL_S)
+    QApplication.processEvents()
+    return predicate()
 
 
 @pytest.fixture(scope="module")
@@ -249,7 +284,7 @@ class _DataInspectorHarness(DataInspectorMixin, QWidget):
 
     @property
     def bridge(self) -> _StubBridge | None:
-        """Return the current bridge stub.
+        """The current bridge stub.
 
         Returns:
             _StubBridge | None: The stub bridge wired to ``_bridge``.
@@ -267,7 +302,7 @@ class _DataInspectorHarness(DataInspectorMixin, QWidget):
 
     @property
     def bit_buttons_list(self) -> list[QPushButton]:
-        """Return the bit-editor button list.
+        """The bit-editor button list.
 
         Returns:
             list[QPushButton]: The mixin's ``_bit_buttons`` list.
@@ -285,7 +320,7 @@ class _DataInspectorHarness(DataInspectorMixin, QWidget):
 
     @property
     def bit_editor_offset(self) -> int:
-        """Return the current bit-editor byte offset.
+        """The current bit-editor byte offset.
 
         Returns:
             int: The mixin's ``_bit_editor_offset``.
@@ -303,7 +338,7 @@ class _DataInspectorHarness(DataInspectorMixin, QWidget):
 
     @property
     def encode_input(self) -> QLineEdit | None:
-        """Return the encode text-input widget.
+        """The encode text-input widget.
 
         Returns:
             QLineEdit | None: The mixin's ``_encode_input``.
@@ -321,7 +356,7 @@ class _DataInspectorHarness(DataInspectorMixin, QWidget):
 
     @property
     def encode_output(self) -> QLabel | None:
-        """Return the encode output label.
+        """The encode output label.
 
         Returns:
             QLabel | None: The mixin's ``_encode_output``.
@@ -579,7 +614,10 @@ class TestEncodeTextWithDocRoutesThroughBridge:
 
         h.run_encode_text()
 
-        assert len(bridge.encode_calls) == 1, f"bridge.encode_text must be called exactly once; got {len(bridge.encode_calls)}"
+        assert _wait_until(lambda: len(bridge.encode_calls) == 1), (
+            f"bridge.encode_text must be called exactly once; got {len(bridge.encode_calls)} "
+            f"after waiting {_ASYNC_WAIT_TIMEOUT_S}s for the background bridge worker"
+        )
         called_text, called_encoding = bridge.encode_calls[0]
         assert called_text == "hello", f"bridge must receive the input text; got {called_text!r}"
         assert called_encoding == "utf-8", f"default encoding must be utf-8; got {called_encoding!r}"
@@ -604,6 +642,10 @@ class TestEncodeTextWithDocRoutesThroughBridge:
 
         h.run_encode_text()
 
+        assert _wait_until(lambda: bool(enc_output.text())), (
+            f"encode_output must be populated by the async bridge worker's on_success callback "
+            f"within {_ASYNC_WAIT_TIMEOUT_S}s; still empty"
+        )
         result = enc_output.text()
         assert result == "DE AD BE EF", f"output must be the bridge result formatted as spaced hex; got {result!r}"
 
@@ -772,7 +814,7 @@ class _FullHarness(_DataInspectorHarness):
 
     @property
     def text_decode_group(self) -> QGroupBox:
-        """Return the text decode/encode group box created by the mixin constructor.
+        """The text decode/encode group box created by the mixin constructor.
 
         Returns:
             QGroupBox: The real group box whose encode button carries the live signal connection.
@@ -781,7 +823,7 @@ class _FullHarness(_DataInspectorHarness):
 
     @property
     def encode_input_widget(self) -> QLineEdit | None:
-        """Return the encode input widget initialised by ``_create_text_decode_group``.
+        """The encode input widget initialised by ``_create_text_decode_group``.
 
         Returns:
             QLineEdit | None: The mixin's ``_encode_input`` field.
@@ -790,7 +832,7 @@ class _FullHarness(_DataInspectorHarness):
 
     @property
     def encode_output_widget(self) -> QLabel | None:
-        """Return the encode output label initialised by ``_create_text_decode_group``.
+        """The encode output label initialised by ``_create_text_decode_group``.
 
         Returns:
             QLabel | None: The mixin's ``_encode_output`` field.

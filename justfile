@@ -92,6 +92,13 @@ clean:
 [group('test')]
 test *ARGS='unit':
     @{{ pixi }} python -m scripts.sandbox.docker_sandbox {{ ARGS }}
+    @{{ pixi }} python -m scripts.host_native_tests
+
+# Run only the host-native pass (Intel XPU, local Ollama, debug symbols, raw disk, loopback) natively on the host.
+# Usage: just test-host [extra pytest args...]
+[group('test')]
+test-host *ARGS:
+    @{{ pixi }} python -m scripts.host_native_tests {{ ARGS }}
 
 # Measure test coverage. Default runs both; scope with --python (sandbox suite, 95% gate) or --rust (cargo llvm-cov).
 # Extra flags require exactly one target, e.g. just test-coverage --python --memory 16g | just test-coverage --rust --html

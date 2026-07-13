@@ -32,7 +32,6 @@ import asyncio
 import contextlib
 import os
 import sys
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -54,6 +53,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Coroutine, Generator
 
     from intellicrack.bridges.frida_bridge import FridaBridge
+    from intellicrack.core.subprocess_compat import Popen
 
 try:
     from intellicrack.bridges.frida_bridge import FridaBridge
@@ -462,29 +462,37 @@ class TestFridaPanelAttachDispatchesRealBridge:
     @staticmethod
     def test_attach_button_name_target_calls_bridge_attach_by_name(
         synchronous_dispatch: list[Coroutine[object, object, object]],
+        notepad_process: Popen[bytes],
     ) -> None:
         """Clicking Attach with a non-numeric target must invoke ``bridge.attach_by_name``.
 
         Falsifiable: if ``_on_attach``'s ``except ValueError`` branch
         (frida_panel.py) were removed or miswired to call ``attach`` instead
-        of ``attach_by_name``, the current test process would never be
-        resolved by name and ``process_attached`` would remain ``False``.
+        of ``attach_by_name``, the target would never be resolved by name
+        and ``process_attached`` would remain ``False``.
+
+        The target is a dedicated, freshly-spawned ``notepad.exe`` rather
+        than the ambient test process (whose name -- ``python.exe``/
+        ``pytest.exe`` -- commonly collides with other concurrently-running
+        interpreters), so the asserted PID is the real, unambiguous PID of
+        the process this test actually spawned -- a real gate that fails if
+        ``attach_by_name`` resolves to the wrong process.
 
         Args:
             synchronous_dispatch: Captures and drains dispatched coroutines.
+            notepad_process: Dedicated spawned notepad target.
         """
         panel = _TestFridaPanel()
         bridge = FridaBridge()
         _run_async(bridge.initialize())
         panel.set_bridge(bridge)
-        process_name = Path(sys.executable).name
-        panel.set_attach_target_text(process_name)
+        panel.set_attach_target_text("notepad.exe")
 
         panel.invoke_on_attach()
 
         assert len(synchronous_dispatch) == 1
         assert bridge.state.process_attached is True
-        assert bridge.state.target_pid == os.getpid()
+        assert bridge.state.target_pid == notepad_process.pid
 
         with contextlib.suppress(Exception):
             _run_async(bridge.shutdown())
@@ -562,13 +570,17 @@ class TestInterceptorLifecycleControlsWiring:
     ) -> None:
         """Clicking Revert must invoke ``revert_hook`` with the exact typed target string.
 
-        Falsifiable: if the click handler stopped forwarding the line edit's
-        text to ``self._bridge.revert_hook(target)`` -- e.g. hardcoding a
-        different string or silently dropping the call -- reverting a target
-        that was never actually hooked would not raise the real
-        hook-failure path Frida's own ``Interceptor.revert`` raises for an
-        address with no active interceptor, so the status label would never
-        show the "Revert failed" text this test asserts.
+        Real Frida's ``Interceptor.revert(target)`` is a safe, idempotent
+        no-op for a target address with no active interceptor -- it
+        succeeds rather than raising. So reverting a never-hooked target
+        must report success, and the status label must echo the *exact*
+        target string the user typed.
+
+        Falsifiable: if the click handler stopped forwarding the line
+        edit's text to ``self._bridge.revert_hook(target)`` -- e.g.
+        hardcoding a different string or silently dropping the call -- the
+        status label would either omit "0x1" entirely or show a different
+        target string than the one typed.
 
         Args:
             synchronous_dispatch: Captures and drains dispatched coroutines.
@@ -581,7 +593,7 @@ class TestInterceptorLifecycleControlsWiring:
         widget.invoke_on_revert_hook()
 
         assert len(synchronous_dispatch) == 1
-        assert "Revert failed" in widget.get_status_text()
+        assert widget.get_status_text() == "Reverted 0x1"
 
 
 @pytest.mark.usefixtures("qapp")

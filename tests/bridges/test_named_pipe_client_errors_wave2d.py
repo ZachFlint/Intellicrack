@@ -441,9 +441,9 @@ async def test_read_message_zero_length_raises_tool_error(fake_pipe: _FakePipe) 
     client = _raw_client(fake_pipe)
     fake_pipe.push_raw_bytes((0).to_bytes(4, "little"))
 
-    read_message: Callable[[], Any] = getattr(client, "_read_message")
+    read_message: Callable[..., Any] = getattr(client, "_read_message")
     with pytest.raises(ToolError, match=r"Invalid message length"):
-        await read_message()
+        await read_message(frame_timeout=None)
     setattr(client, "_handle", None)
 
 
@@ -469,9 +469,9 @@ async def test_read_message_excess_length_raises_tool_error(fake_pipe: _FakePipe
     client = _raw_client(fake_pipe, max_message_size=max_size)
     fake_pipe.push_raw_bytes((max_size + 1).to_bytes(4, "little"))
 
-    read_message: Callable[[], Any] = getattr(client, "_read_message")
+    read_message: Callable[..., Any] = getattr(client, "_read_message")
     with pytest.raises(ToolError, match=r"Invalid message length"):
-        await read_message()
+        await read_message(frame_timeout=None)
     setattr(client, "_handle", None)
 
 
@@ -498,9 +498,9 @@ async def test_read_message_malformed_json_raises_tool_error(fake_pipe: _FakePip
     body = b"not-valid-json{{"
     fake_pipe.push_raw_bytes(len(body).to_bytes(4, "little") + body)
 
-    read_message: Callable[[], Any] = getattr(client, "_read_message")
+    read_message: Callable[..., Any] = getattr(client, "_read_message")
     with pytest.raises(ToolError, match=r"Invalid JSON payload"):
-        await read_message()
+        await read_message(frame_timeout=None)
     setattr(client, "_handle", None)
 
 
@@ -527,9 +527,9 @@ async def test_read_message_non_dict_payload_raises_tool_error(fake_pipe: _FakeP
     body = json.dumps([1, 2, 3]).encode("utf-8")
     fake_pipe.push_raw_bytes(len(body).to_bytes(4, "little") + body)
 
-    read_message: Callable[[], Any] = getattr(client, "_read_message")
+    read_message: Callable[..., Any] = getattr(client, "_read_message")
     with pytest.raises(ToolError, match=r"Unexpected message payload type"):
-        await read_message()
+        await read_message(frame_timeout=None)
     setattr(client, "_handle", None)
 
 

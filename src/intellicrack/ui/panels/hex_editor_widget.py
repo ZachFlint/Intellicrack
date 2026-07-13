@@ -2496,6 +2496,12 @@ class HexEditorWidget(QAbstractScrollArea):
                     action.setEnabled(has_selection or has_data)
 
                     def _copy_as_slot(_checked: int, k: str = fmt_key) -> None:
+                        """Copy the current selection in the bound export format.
+
+                        Args:
+                            _checked: Unused Qt triggered checked state.
+                            k: Format key captured when the menu action was built.
+                        """
                         self._copy_as_action(k)
 
                     action.triggered.connect(_copy_as_slot)
@@ -2529,6 +2535,12 @@ class HexEditorWidget(QAbstractScrollArea):
                     action.setChecked(self._display_mode == mode_key)
 
                     def _mode_slot(_checked: int, m: str = mode_key) -> None:
+                        """Switch the hex view to the bound display mode.
+
+                        Args:
+                            _checked: Unused Qt triggered checked state.
+                            m: Display mode key captured when the menu action was built.
+                        """
                         self.set_display_mode(m)
 
                     action.triggered.connect(_mode_slot)
@@ -2539,6 +2551,11 @@ class HexEditorWidget(QAbstractScrollArea):
             minimap_action.setChecked(self._minimap.isVisible())
 
             def _minimap_slot(v: int) -> None:
+                """Toggle entropy minimap visibility from the context menu.
+
+                Args:
+                    v: Qt checked state for the minimap action.
+                """
                 self.show_minimap(visible=bool(v))
 
             minimap_action.triggered.connect(_minimap_slot)

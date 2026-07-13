@@ -380,11 +380,33 @@ class GenericCallableWorker(_RetainedWorker):
 
 
 @overload
-def run_bridge_coroutine[T](coro: Coroutine[object, object, T], /, *, timeout_s: float | None = None) -> T | None: ...
+def run_bridge_coroutine[T](coro: Coroutine[object, object, T], /, *, timeout_s: float | None = None) -> T | None:
+    """Run a bridge coroutine passed positionally from a synchronous Qt context.
+
+    Args:
+        coro: Awaitable bridge operation to execute on the background loop.
+        timeout_s: Optional wall-clock wait ceiling in seconds.
+
+    Returns:
+        T | None: Coroutine result, or ``None`` when scheduled without a
+        blocking wait.
+    """
+    ...
 
 
 @overload
-def run_bridge_coroutine[T](*, coro: Coroutine[object, object, T], timeout_s: float | None = None) -> T | None: ...
+def run_bridge_coroutine[T](*, coro: Coroutine[object, object, T], timeout_s: float | None = None) -> T | None:
+    """Run a bridge coroutine passed by keyword from a synchronous Qt context.
+
+    Args:
+        coro: Awaitable bridge operation to execute on the background loop.
+        timeout_s: Optional wall-clock wait ceiling in seconds.
+
+    Returns:
+        T | None: Coroutine result, or ``None`` when scheduled without a
+        blocking wait.
+    """
+    ...
 
 
 def run_bridge_coroutine(
@@ -551,11 +573,21 @@ def run_bridge_coroutine_logged(
     emit("bridge_coroutine_started", op_event=event, **context)
 
     def _logged_success(result: object) -> None:
+        """Emit a success log entry then invoke the caller success callback.
+
+        Args:
+            result: Value produced by the completed bridge coroutine.
+        """
         emit("bridge_coroutine_succeeded", op_event=event, **context)
         if on_success is not None:
             on_success(result)
 
     def _logged_error(exc: object) -> None:
+        """Emit a failure log entry then invoke the caller error callback.
+
+        Args:
+            exc: Exception or error payload from the bridge worker.
+        """
         error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
         logger.warning(
             "bridge_coroutine_failed",

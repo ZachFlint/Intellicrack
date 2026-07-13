@@ -575,6 +575,11 @@ class StackViewerPanel(QWidget):
         self._auto_refresh_btn.setCheckable(True)
 
         def _auto_refresh_slot(c: int) -> None:
+            """Start or stop stack-view auto-refresh when the Auto button is toggled.
+
+            Args:
+                c: Qt ``toggled`` payload; nonzero keeps the stack view refreshing.
+            """
             self._on_auto_refresh_toggled(checked=bool(c))
 
         self._auto_refresh_btn.toggled.connect(_auto_refresh_slot)

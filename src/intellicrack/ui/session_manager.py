@@ -371,6 +371,12 @@ class TagChipsWidget(QWidget):
         bound_tag: str = tag
 
         def _on_clicked(_state: int = 0, t: str = bound_tag) -> None:
+            """Handle a tag-chip click and forward the bound tag text.
+
+            Args:
+                _state: Unused Qt checked/clicked state.
+                t: Tag string captured when the chip was created.
+            """
             self._on_chip_clicked(t)
 
         chip.clicked.connect(_on_clicked)
@@ -887,6 +893,14 @@ class SessionManagerDialog(QDialog):
         sort_sentinel = datetime.min.replace(tzinfo=UTC)
 
         def _sort_key(s: dict[str, object]) -> datetime:
+            """Extract a session's sort timestamp, defaulting when missing.
+
+            Args:
+                s: Session metadata dictionary loaded from disk.
+
+            Returns:
+                datetime: ``updated_at`` when present, otherwise the sort sentinel.
+            """
             val = s.get("updated_at")
             return val if isinstance(val, datetime) else sort_sentinel
 

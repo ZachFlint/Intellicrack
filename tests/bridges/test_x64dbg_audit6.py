@@ -146,6 +146,7 @@ from intellicrack.bridges.x64dbg import (
     WIN_PROCESS_VM_READ,
     X64DbgBridge,
 )
+from intellicrack.core.process_manager import ProcessType
 from intellicrack.core.types import BreakpointInfo, MemoryRegion, ModuleInfo, ProcessInfo, ThreadInfo, ToolError, ToolName
 
 
@@ -3333,20 +3334,167 @@ class TestPipeReadyPlatformRefusal:
         assert not sleep_called
 
 
-class TestSubprocessStreamDrain:
-    """F-0015 - ``Popen`` is called with ``DEVNULL`` for std streams."""
+class _FakeExternalProcessManager:
+    """In-process stand-in for ``ProcessManager`` external-PID bookkeeping.
+
+    The real :class:`ProcessManager.register_external_pid` verifies the PID
+    corresponds to a live OS process via ``_pid_exists`` before recording it,
+    which a synthetic hidden-desktop PID in these tests cannot satisfy. This
+    fake mirrors the ``register_external_pid``/``unregister_external_pid``
+    surface :class:`X64DbgBridge` now calls (audit6.md F-0015 migration from
+    ``subprocess.Popen`` to ``spawn_on_hidden_desktop``) so the launch and
+    shutdown paths can be exercised end to end without touching the real
+    singleton or a live PID.
+    """
+
+    def __init__(self) -> None:
+        """Initialise empty call-recording lists."""
+        self.registered: list[tuple[int, str, Any, dict[str, Any] | None]] = []
+        self.unregistered: list[int] = []
+
+    def register_external_pid(
+        self,
+        pid: int,
+        name: str,
+        process_type: ProcessType = ProcessType.EXTERNAL_TOOL,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Record a registration call.
+
+        Args:
+            pid: Process id to register.
+            name: Human-readable process name.
+            process_type: The tracked ``ProcessType``.
+            metadata: Optional metadata dict.
+        """
+        self.registered.append((pid, name, process_type, metadata))
+
+    def unregister_external_pid(self, pid: int) -> bool:
+        """Record an unregistration call.
+
+        Args:
+            pid: Process id to unregister.
+
+        Returns:
+            bool: Always ``True``, mirroring a successful real unregister.
+        """
+        self.unregistered.append(pid)
+        return True
+
+
+def _install_fake_process_manager(
+    monkeypatch: pytest.MonkeyPatch,
+) -> _FakeExternalProcessManager:
+    """Patch ``ProcessManager.get_instance`` to return a fresh fake manager.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture.
+
+    Returns:
+        _FakeExternalProcessManager: The installed fake singleton.
+    """
+    fake = _FakeExternalProcessManager()
+
+    def _stub_get_instance(_cls: type[Any]) -> _FakeExternalProcessManager:
+        return fake
+
+    monkeypatch.setattr(
+        x64dbg_module.ProcessManager,
+        "get_instance",
+        classmethod(_stub_get_instance),
+    )
+    return fake
+
+
+class _FakeDesktopProcess:
+    """Stand-in for :class:`DesktopProcess` returned by ``spawn_on_hidden_desktop``."""
+
+    def __init__(self, pid: int) -> None:
+        """Store the fake pid and initialise call-tracking flags.
+
+        Args:
+            pid: Fake process id to expose.
+        """
+        self.pid = pid
+        self.terminated = False
+        self.closed = False
+
+    def terminate(self) -> None:
+        """Record a terminate call."""
+        self.terminated = True
+
+    def wait(self, timeout: float | None = None) -> int:
+        """Return a fake exit code.
+
+        Args:
+            timeout: Ignored wait timeout.
+
+        Returns:
+            int: Always ``0``.
+        """
+        del timeout
+        return 0
+
+    def kill(self) -> None:
+        """Record a kill call (alias of terminate for this fake)."""
+        self.terminated = True
+
+    def close(self) -> None:
+        """Record a close call, mirroring ``DesktopProcess.close``."""
+        self.closed = True
+
+
+def _patch_bridge_pipe_ready(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch pipe-readiness and connect so ``_start_debugger`` completes.
+
+    Args:
+        monkeypatch: pytest monkeypatch fixture.
+    """
+
+    async def fake_wait(_self: X64DbgBridge) -> None:
+        await asyncio.sleep(0)
+
+    monkeypatch.setattr(X64DbgBridge, "_wait_for_pipe_ready", fake_wait)
+
+    class _ConnectedPipe:
+        is_connected = True
+
+    async def fake_connect(self_bridge: X64DbgBridge) -> None:
+        await asyncio.sleep(0)
+        setattr(self_bridge, "_pipe_client", _ConnectedPipe())
+
+    monkeypatch.setattr(X64DbgBridge, "_connect", fake_connect)
+
+
+class TestHiddenDesktopSpawnReplacesPopen:
+    """F-0015 - x64dbg is launched via the hidden-desktop ``CreateProcessW`` path.
+
+    ``subprocess.Popen`` cannot set ``STARTUPINFOW.lpDesktop``, so the
+    bridge now launches x64dbg exclusively through
+    ``intellicrack.core.win32_desktop_process.spawn_on_hidden_desktop``,
+    which owns the NUL-redirected stdio wiring that keeps a GUI child from
+    deadlocking on an undrained pipe (audit6.md F-0015; real NUL-redirection
+    behaviour is gated end to end in
+    ``tests/core/test_win32_desktop_process.py``). This test proves the
+    bridge routes through that real launcher, with no fallback to a bare
+    subprocess call, and hands it a real, non-empty environment mapping.
+    """
 
     @staticmethod
-    def test_popen_uses_devnull(
+    def test_start_debugger_routes_through_hidden_desktop_launcher(
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """Recorded ``Popen`` invocation requests DEVNULL for stdout/stderr.
+        """``_start_debugger`` calls ``spawn_on_hidden_desktop``, never ``Popen``.
 
         Args:
             monkeypatch: pytest monkeypatch fixture.
             tmp_path: Per-test temp directory provided by pytest.
         """
+        assert not hasattr(x64dbg_module, "Popen"), (
+            "x64dbg.py must not import subprocess.Popen; the hidden-desktop launcher owns process creation (audit6 F-0015)"
+        )
+
         bridge = X64DbgBridge()
         setattr(bridge, _X64DBG_PATH_ATTR_A, tmp_path)
         setattr(bridge, _PLUGIN_DEPLOYED_ATTR_A, True)
@@ -3357,54 +3505,39 @@ class TestSubprocessStreamDrain:
 
         captured: dict[str, Any] = {}
 
-        class _DummyProcess:
-            def __init__(self) -> None:
-                self.pid = 0xC0FFEE
-
-            def terminate(self) -> None:
-                pass
-
-            def wait(self) -> int:
-                return 0
-
-        def fake_popen(args: object, **kwargs: object) -> _DummyProcess:
+        def fake_spawn(executable: Path, args: object, env: object) -> _FakeDesktopProcess:
+            captured["executable"] = executable
             captured["args"] = args
-            captured["kwargs"] = kwargs
-            return _DummyProcess()
+            captured["env"] = env
+            return _FakeDesktopProcess(0xC0FFEE)
 
-        monkeypatch.setattr(x64dbg_module, "Popen", fake_popen)
+        monkeypatch.setattr(x64dbg_module, "spawn_on_hidden_desktop", fake_spawn)
         monkeypatch.setattr(x64dbg_module, "_IS_WIN32", True)
+        _patch_bridge_pipe_ready(monkeypatch)
+        fake_manager = _install_fake_process_manager(monkeypatch)
 
-        async def fake_wait(_self: X64DbgBridge) -> None:
-            await asyncio.sleep(0)
+        asyncio.run(_start_debugger_a(bridge, is_64bit=True))
 
-        monkeypatch.setattr(X64DbgBridge, "_wait_for_pipe_ready", fake_wait)
-
-        class _ConnectedPipe:
-            is_connected = True
-
-        async def fake_connect(self_bridge: X64DbgBridge) -> None:
-            await asyncio.sleep(0)
-            setattr(self_bridge, "_pipe_client", _ConnectedPipe())
-
-        monkeypatch.setattr(X64DbgBridge, "_connect", fake_connect)
-
-        async def runner() -> None:
-            await _start_debugger_a(bridge, is_64bit=True)
-
-        asyncio.run(runner())
-
-        assert captured["kwargs"].get("stdout") is x64dbg_module.DEVNULL
-        assert captured["kwargs"].get("stderr") is x64dbg_module.DEVNULL
-        assert captured["kwargs"].get("stdin") is x64dbg_module.DEVNULL
+        assert captured["executable"] == exe_path
+        assert captured["args"] is None, "x64dbg needs no CLI args for a plain launch"
+        env = cast("dict[str, str]", captured["env"])
+        assert isinstance(env, dict)
+        assert env, "an explicit, non-empty environment mapping must be handed to the hidden-desktop launcher"
+        assert fake_manager.registered == [
+            (0xC0FFEE, "x64dbg-x64", x64dbg_module.ProcessType.DEBUGGER, {"binary": str(exe_path)}),
+        ], "the spawned pid must be registered with ProcessManager for cleanup tracking"
+        spawned = cast("_FakeDesktopProcess", _process_a(bridge))
+        assert spawned.pid == 0xC0FFEE
 
 
 class TestHeadlessLaunch:
     """x64dbg is spawned as an embedded, windowless engine.
 
-    The bridge must launch x64dbg with the window hidden (``SW_HIDE``) and
-    export ``INTELLICRACK_X64DBG_HEADLESS=1`` so the deployed plugin hides
-    x64dbg's own windows; the Intellicrack panel is the sole UI surface.
+    The bridge must launch x64dbg on a dedicated hidden desktop (so its
+    window is never composited to the screen) and export
+    ``INTELLICRACK_X64DBG_HEADLESS=1`` so the deployed plugin dismisses the
+    modal dialogs x64dbg would otherwise block on; the Intellicrack panel is
+    the sole user-facing surface.
     """
 
     @staticmethod
@@ -3412,7 +3545,7 @@ class TestHeadlessLaunch:
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
-        """Recorded ``Popen`` invocation runs x64dbg hidden and headless.
+        """The hidden-desktop launch call carries the headless env flag.
 
         Args:
             monkeypatch: pytest monkeypatch fixture.
@@ -3427,46 +3560,22 @@ class TestHeadlessLaunch:
 
         captured: dict[str, Any] = {}
 
-        class _DummyProcess:
-            def __init__(self) -> None:
-                self.pid = 0xC0FFEE
+        def fake_spawn(executable: Path, args: object, env: object) -> _FakeDesktopProcess:
+            del executable, args
+            captured["env"] = env
+            return _FakeDesktopProcess(0xC0FFEE)
 
-            def terminate(self) -> None:
-                pass
-
-            def wait(self) -> int:
-                return 0
-
-        def fake_popen(_args: object, **kwargs: object) -> _DummyProcess:
-            captured["kwargs"] = kwargs
-            return _DummyProcess()
-
-        monkeypatch.setattr(x64dbg_module, "Popen", fake_popen)
+        monkeypatch.setattr(x64dbg_module, "spawn_on_hidden_desktop", fake_spawn)
         monkeypatch.setattr(x64dbg_module, "_IS_WIN32", True)
-
-        async def fake_wait(_self: X64DbgBridge) -> None:
-            await asyncio.sleep(0)
-
-        monkeypatch.setattr(X64DbgBridge, "_wait_for_pipe_ready", fake_wait)
-
-        class _ConnectedPipe:
-            is_connected = True
-
-        async def fake_connect(self_bridge: X64DbgBridge) -> None:
-            await asyncio.sleep(0)
-            setattr(self_bridge, "_pipe_client", _ConnectedPipe())
-
-        monkeypatch.setattr(X64DbgBridge, "_connect", fake_connect)
+        _patch_bridge_pipe_ready(monkeypatch)
+        _install_fake_process_manager(monkeypatch)
 
         asyncio.run(_start_debugger_a(bridge, is_64bit=True))
 
-        startupinfo = captured["kwargs"].get("startupinfo")
-        assert startupinfo is not None, "Popen must receive a STARTUPINFO"
-        # SW_HIDE == 0: the x64dbg window must never be shown.
-        assert startupinfo.wShowWindow == 0, f"x64dbg must be spawned hidden (SW_HIDE); got wShowWindow={startupinfo.wShowWindow!r}"
-
-        env = captured["kwargs"].get("env")
-        assert env is not None, "Popen must receive an explicit environment mapping"
+        assert not hasattr(x64dbg_module, "STARTUPINFO"), (
+            "window-hiding must be fully delegated to spawn_on_hidden_desktop (SW_HIDE + lpDesktop), not constructed locally in the bridge"
+        )
+        env = cast("dict[str, str]", captured["env"])
         headless_var = getattr(x64dbg_module, "_HEADLESS_ENV_VAR")
         assert env.get(headless_var) == "1", (
             f"the headless env flag {headless_var!r} must be exported as '1' so the plugin runs windowless; got {env.get(headless_var)!r}"
@@ -3485,7 +3594,7 @@ class TestPluginRequiredStartGate:
 
         Sets up a working directory with a real ``x64dbg.exe`` file
         present so the previous behaviour (spawn first, fail at the
-        first RPC call) would have proceeded to ``Popen``. The fix
+        first RPC call) would have proceeded to launching it. The fix
         gates on ``_plugin_deployed`` and must therefore raise a
         plugin-related ``ToolError`` instead.
 
@@ -3501,15 +3610,15 @@ class TestPluginRequiredStartGate:
         exe_path = x64_dir / "x64dbg.exe"
         exe_path.write_bytes(b"\x00")
 
-        popen_called = False
+        spawn_called = False
 
-        def fake_popen(*_args: object, **_kwargs: object) -> object:
-            nonlocal popen_called
-            popen_called = True
-            msg = "Popen must not be invoked when plugin is not deployed"
+        def fake_spawn(*_args: object, **_kwargs: object) -> object:
+            nonlocal spawn_called
+            spawn_called = True
+            msg = "spawn_on_hidden_desktop must not be invoked when plugin is not deployed"
             raise AssertionError(msg)
 
-        monkeypatch.setattr(x64dbg_module, "Popen", fake_popen)
+        monkeypatch.setattr(x64dbg_module, "spawn_on_hidden_desktop", fake_spawn)
         monkeypatch.setattr(x64dbg_module, "_IS_WIN32", True)
 
         async def runner() -> None:
@@ -3518,7 +3627,7 @@ class TestPluginRequiredStartGate:
         with pytest.raises(ToolError, match="plugin"):
             asyncio.run(runner())
 
-        assert not popen_called
+        assert not spawn_called
         assert _process_a(bridge) is None
 
 
@@ -3554,6 +3663,9 @@ class TestShutdownTryFinally:
             def kill(self) -> None:
                 pass
 
+            def close(self) -> None:
+                pass
+
         setattr(bridge, _PROCESS_ATTR_A, _RaisingProcess())
 
         async def raising_close(_self: X64DbgBridge) -> None:
@@ -3563,20 +3675,7 @@ class TestShutdownTryFinally:
 
         monkeypatch.setattr(X64DbgBridge, "_close_connection", raising_close)
 
-        unregistered: list[int] = []
-
-        class _FakeManager:
-            def unregister(self, pid: int) -> None:
-                unregistered.append(pid)
-
-        def _stub_get_instance(_cls: type[Any]) -> _FakeManager:
-            return _FakeManager()
-
-        monkeypatch.setattr(
-            x64dbg_module.ProcessManager,
-            "get_instance",
-            classmethod(_stub_get_instance),
-        )
+        fake_manager = _install_fake_process_manager(monkeypatch)
 
         async def runner() -> None:
             await bridge.shutdown()
@@ -3586,7 +3685,7 @@ class TestShutdownTryFinally:
 
         assert terminate_called.is_set(), "terminate must run after close failure"
         assert wait_called.is_set(), "wait must run after terminate"
-        assert unregistered == [0xBADC0DE], "process manager must be informed of cleanup"
+        assert fake_manager.unregistered == [0xBADC0DE], "process manager must be informed of cleanup"
         assert _attached_pid_a(bridge) is None
         assert _process_a(bridge) is None
 

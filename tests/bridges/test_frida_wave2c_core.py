@@ -205,7 +205,17 @@ class _FakeSession:
         self.scripts: list[_FakeScript] = []
         self.sources: list[str] = []
         self.detach_calls: int = 0
+        self.on_handlers: dict[str, list[Callable[..., object]]] = {}
         self._script_exports = script_exports
+
+    def on(self, signal: str, callback: Callable[..., object]) -> None:
+        """Record a signal handler the way ``frida.core.Session.on`` does.
+
+        Args:
+            signal: Signal name (e.g. ``"detached"``).
+            callback: Handler to invoke when the signal fires.
+        """
+        self.on_handlers.setdefault(signal, []).append(callback)
 
     def create_script(self, source: str, **_: object) -> _FakeScript:
         """Return a new fake script and record the source.

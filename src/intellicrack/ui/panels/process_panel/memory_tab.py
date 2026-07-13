@@ -111,6 +111,12 @@ class MemoryTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Seed the Read address field with the main module base address.
+
+            Args:
+                result: Module list returned by ``get_modules``; the first
+                    entry's ``base_address`` is used when present.
+            """
             if not isinstance(result, list) or not result:
                 return
             typed_result = cast("list[object]", result)
@@ -119,6 +125,11 @@ class MemoryTab(QWidget):
                 self._read_addr.setText(f"0x{base_raw:X}")
 
         def _on_error(exc: object) -> None:
+            """Emit ``memory_default_read_address_failed`` without changing the address field.
+
+            Args:
+                exc: Failure from ``get_modules`` while seeding the default Read address.
+            """
             _logger.debug("memory_default_read_address_failed", pid=pid, error=str(exc))
 
         run_bridge_coroutine_logged(
@@ -478,6 +489,13 @@ class MemoryTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Rebuild the region table from ``get_memory_map`` entries.
+
+            Columns: base, size, protect, state, type, and owning module.
+
+            Args:
+                result: Memory region list returned by ``get_memory_map``.
+            """
             if not isinstance(result, list):
                 return
             typed_result = cast("list[object]", result)
@@ -501,6 +519,11 @@ class MemoryTab(QWidget):
             self._on_region_filter_changed(self._region_filter.text())
 
         def _on_error(exc: object) -> None:
+            """Log ``memory_map_failed`` and open a Memory Map Error message box.
+
+            Args:
+                exc: Failure from ``get_memory_map`` while filling the region table.
+            """
             _logger.warning("memory_map_failed", error=str(exc))
             QMessageBox.warning(self, "Memory Map Error", str(exc))
 
@@ -523,10 +546,20 @@ class MemoryTab(QWidget):
         pid = self._attached_pid
 
         def _on_success(result: object) -> None:
+            """Update the working-set label with the size in megabytes.
+
+            Args:
+                result: Working-set size in MB from ``get_process_memory_mb``.
+            """
             mb = float(result) if isinstance(result, (int, float)) else 0.0
             self._working_set_label.setText(f"Working set: {mb:.2f} MB")
 
         def _on_error(exc: object) -> None:
+            """Log ``memory_working_set_failed`` and open a Working Set Error dialog.
+
+            Args:
+                exc: Failure from ``get_process_memory_mb`` for the attached process.
+            """
             _logger.warning("memory_working_set_failed", error=str(exc))
             QMessageBox.warning(self, "Working Set Error", str(exc))
 
@@ -558,6 +591,11 @@ class MemoryTab(QWidget):
         fmt = self._read_format.currentText()
 
         def _on_success(result: object) -> None:
+            """Decode hex bytes from the bridge and render them in the read output.
+
+            Args:
+                result: Hex string payload returned by ``read_memory``.
+            """
             if not isinstance(result, str):
                 return
             try:
@@ -569,6 +607,11 @@ class MemoryTab(QWidget):
             self._read_output.setPlainText(self._format_memory(data, addr, fmt))
 
         def _on_error(exc: object) -> None:
+            """Show the read failure in the output pane and a warning dialog.
+
+            Args:
+                exc: Exception raised while calling ``read_memory``.
+            """
             _logger.warning("memory_read_failed", error=str(exc))
             self._read_output.setPlainText(f"Error: {exc}")
             QMessageBox.warning(self, "Read Error", str(exc))
@@ -644,9 +687,19 @@ class MemoryTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Update the write status label with the number of bytes written.
+
+            Args:
+                result: Byte count returned by ``write_memory``.
+            """
             self._write_status.setText(f"Wrote {result} bytes")
 
         def _on_error(exc: object) -> None:
+            """Mark the write status as failed and show a warning dialog.
+
+            Args:
+                exc: Exception raised while calling ``write_memory``.
+            """
             _logger.warning("memory_write_failed", error=str(exc))
             self._write_status.setText("Write failed")
             QMessageBox.warning(self, "Write Error", str(exc))
@@ -675,6 +728,11 @@ class MemoryTab(QWidget):
         prot = self._alloc_prot.currentText()
 
         def _on_success(result: object) -> None:
+            """Append an Allocated row with the new base address, size, and protection.
+
+            Args:
+                result: Allocated base address returned by ``allocate``.
+            """
             if not isinstance(result, int):
                 return
             row = self._alloc_log.rowCount()
@@ -685,6 +743,11 @@ class MemoryTab(QWidget):
             self._alloc_log.setItem(row, 3, QTableWidgetItem("Allocated"))
 
         def _on_error(exc: object) -> None:
+            """Log ``memory_allocate_failed`` and open an Allocate Error dialog.
+
+            Args:
+                exc: Failure from ``allocate`` for the requested size and protection.
+            """
             _logger.warning("memory_allocate_failed", error=str(exc))
             QMessageBox.warning(self, "Allocate Error", str(exc))
 
@@ -729,6 +792,11 @@ class MemoryTab(QWidget):
         target_text = f"0x{addr:X}"
 
         def _on_success(_result: object) -> None:
+            """Remove the matching Allocated row from the allocation log after free.
+
+            Args:
+                _result: Unused free-operation result from ``free``.
+            """
             for row in range(self._alloc_log.rowCount()):
                 item = self._alloc_log.item(row, 0)
                 action_item = self._alloc_log.item(row, 3)
@@ -742,6 +810,11 @@ class MemoryTab(QWidget):
                     return
 
         def _on_error(exc: object) -> None:
+            """Log ``memory_free_failed`` and open a Free Error dialog.
+
+            Args:
+                exc: Failure from ``free`` for the address confirmed by the user.
+            """
             _logger.warning("memory_free_failed", error=str(exc))
             QMessageBox.warning(self, "Free Error", str(exc))
 
@@ -788,6 +861,11 @@ class MemoryTab(QWidget):
         target_text = f"0x{addr:X}"
 
         def _on_success(_result: object) -> None:
+            """Remove the matching Allocated row after a successful decommit.
+
+            Args:
+                _result: Unused decommit result from ``decommit_memory``.
+            """
             for row in range(self._alloc_log.rowCount()):
                 item = self._alloc_log.item(row, 0)
                 action_item = self._alloc_log.item(row, 3)
@@ -801,6 +879,11 @@ class MemoryTab(QWidget):
                     return
 
         def _on_error(exc: object) -> None:
+            """Log ``memory_decommit_failed`` and open a Decommit Error dialog.
+
+            Args:
+                exc: Failure from ``decommit_memory`` for the confirmed address range.
+            """
             _logger.warning("memory_decommit_failed", error=str(exc))
             QMessageBox.warning(self, "Decommit Error", str(exc))
 
@@ -847,6 +930,11 @@ class MemoryTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
+            """Append a protect-log row with address, size, old protection, and new protection.
+
+            Args:
+                result: Previous protection value returned by ``protect``.
+            """
             row = self._prot_log.rowCount()
             self._prot_log.insertRow(row)
             self._prot_log.setItem(row, 0, QTableWidgetItem(f"0x{addr:X}"))
@@ -855,6 +943,11 @@ class MemoryTab(QWidget):
             self._prot_log.setItem(row, 3, QTableWidgetItem(prot))
 
         def _on_error(exc: object) -> None:
+            """Log ``memory_protect_failed`` and open a Protect Error dialog.
+
+            Args:
+                exc: Failure from ``protect`` for the confirmed address, size, and flags.
+            """
             _logger.warning("memory_protect_failed", error=str(exc))
             QMessageBox.warning(self, "Protect Error", str(exc))
 
@@ -904,6 +997,16 @@ class MemoryTab(QWidget):
         self._search_status.setText("Searching...")
 
         def _on_success(result: object) -> None:
+            """Render pattern-search hit addresses into the results table.
+
+            Args:
+                result: Match-address list returned by ``search_pattern``.
+
+            Raises:
+                RuntimeError: Propagated when result display fails after logging.
+                ValueError: Propagated when result display fails after logging.
+                TypeError: Propagated when result display fails after logging.
+            """
             try:
                 self._display_search_results(result)
             except (RuntimeError, ValueError, TypeError) as exc:
@@ -912,6 +1015,11 @@ class MemoryTab(QWidget):
                 raise
 
         def _on_error(exc: object) -> None:
+            """Mark search status as failed and show a critical error dialog.
+
+            Args:
+                exc: Exception raised while calling ``search_pattern``.
+            """
             self._search_status.setText("Search failed")
             _logger.warning("search_failed", error=str(exc))
             QMessageBox.critical(self, "Search Failed", f"Pattern search failed: {exc}")

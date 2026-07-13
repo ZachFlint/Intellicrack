@@ -550,6 +550,7 @@ class OAuthCallbackServer:
         server.expected_state = self._expected_state
 
         def serve() -> None:
+            """Handle a single OAuth callback HTTP request on the background thread."""
             try:
                 server.handle_request()
             except OSError:
