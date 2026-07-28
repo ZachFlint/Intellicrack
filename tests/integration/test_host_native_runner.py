@@ -18,7 +18,12 @@ from typing import TYPE_CHECKING, cast
 import pytest
 
 from scripts import host_native_tests
-from scripts.host_native_tests import build_pytest_argv, build_symbol_path, resolve_ollama_base_url
+from scripts.host_native_tests import (
+    build_pytest_argv,
+    build_symbol_path,
+    elevation_skip_notice,
+    resolve_ollama_base_url,
+)
 
 
 if TYPE_CHECKING:
@@ -103,6 +108,65 @@ def test_installed_ollama_models_returns_list_without_raising() -> None:
 
 
 @pytest.mark.parametrize(
+    ("model_name", "expected_local"),
+    [
+        ("qwen2.5:0.5b", True),
+        ("llama3.2:1b", True),
+        ("gpt-oss:120b-cloud", False),
+        ("deepseek-v3.1:671b-cloud", False),
+        ("", False),
+    ],
+)
+def test_is_local_model_name_excludes_cloud_suffix(model_name: str, *, expected_local: bool) -> None:
+    """Only non-empty, non ``-cloud`` tags count as genuinely-local models.
+
+    Args:
+        model_name: The Ollama tag to classify.
+        expected_local: Whether the tag should be treated as local.
+    """
+    classify = cast(
+        "Callable[[str], bool]",
+        getattr(host_native_tests, "_is_local_model_name"),
+    )
+    assert classify(model_name) is expected_local
+
+
+def test_has_local_ollama_model_returns_bool_without_raising() -> None:
+    """The local-model probe returns a real boolean and never raises.
+
+    In the network-isolated container there is no daemon, so this must return
+    ``False`` rather than propagate a connection error.
+    """
+    has_local = cast(
+        "Callable[[], bool]",
+        getattr(host_native_tests, "_has_local_ollama_model"),
+    )
+    result = has_local()
+    assert isinstance(result, bool)
+
+
+def test_elevation_skip_notice_names_admin_tests_when_not_elevated() -> None:
+    """Without elevation, the notice states admin-only tests are skipped."""
+    notice = elevation_skip_notice(elevated=False)
+    assert "Not elevated" in notice
+    assert "SKIPPED" in notice
+    assert "raw physical disk" in notice
+
+
+def test_elevation_skip_notice_names_nonelevated_tests_when_elevated() -> None:
+    """With elevation, the notice states non-elevated tests are skipped."""
+    notice = elevation_skip_notice(elevated=True)
+    assert "Elevated shell" in notice
+    assert "SKIPPED" in notice
+    assert "non-elevated token" in notice
+
+
+def test_elevation_skip_notice_differs_by_elevation() -> None:
+    """The elevated and non-elevated notices are distinct messages."""
+    assert elevation_skip_notice(elevated=True) != elevation_skip_notice(elevated=False)
+
+
+@pytest.mark.parametrize(
     ("ollama_host", "expected"),
     [
         ("0.0.0.0:11434", "http://127.0.0.1:11434"),
@@ -110,6 +174,7 @@ def test_installed_ollama_models_returns_list_without_raising() -> None:
         ("http://localhost:1234", "http://localhost:1234"),
         ("11888", "http://127.0.0.1:11888"),
         ("[::]:11434", "http://127.0.0.1:11434"),
+        ("[::1]:11500", "http://[::1]:11500"),
     ],
 )
 def test_resolve_ollama_base_url_from_ollama_host(

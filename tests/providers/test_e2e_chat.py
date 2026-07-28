@@ -77,6 +77,10 @@ _OLLAMA_URL = "http://localhost:11434"
 _OLLAMA_TAGS_URL = f"{_OLLAMA_URL}/api/tags"
 _OLLAMA_STARTUP_TIMEOUT = 30
 _OLLAMA_POLL_INTERVAL = 1.0
+# OllamaProvider prefixes local model IDs with ``local/`` and subscription-only
+# cloud model IDs with ``cloud/``; the E2E chat tests must exercise a local model
+# so a cloud-signed-in account does not route them to a paywalled endpoint.
+_OLLAMA_LOCAL_ID_PREFIX = "local/"
 _HTTP_OK = 200
 
 # max_tokens=32 truncates an English completion to roughly 24 words on average
@@ -472,41 +476,46 @@ async def ollama_e2e_provider(
 async def ollama_model(
     ollama_e2e_provider: OllamaProvider,
 ) -> str:
-    """Get the first available Ollama model for testing.
+    """Get the first locally-runnable Ollama model for testing.
 
-    Skips if no models are installed.
+    Cloud models (``cloud/`` prefix) require an ollama.com subscription and would
+    fail a live chat with HTTP 403, so only ``local/``-prefixed models qualify.
+    Skips if no local model is installed.
 
     Args:
         ollama_e2e_provider: A connected OllamaProvider instance.
 
     Returns:
-        str: The model ID of the first available model.
+        str: The model ID of the first local model.
     """
     models = await ollama_e2e_provider.list_models()
-    if not models:
-        pytest.skip("No Ollama models installed locally")
-    return models[0].id
+    local_ids = [m.id for m in models if m.id.startswith(_OLLAMA_LOCAL_ID_PREFIX)]
+    if not local_ids:
+        pytest.skip("No local Ollama models installed (cloud models require a subscription)")
+    return local_ids[0]
 
 
 @pytest_asyncio.fixture
 async def ollama_tool_model(
     ollama_e2e_provider: OllamaProvider,
 ) -> str:
-    """Get the first Ollama model that supports tool calling.
+    """Get the first local Ollama model that supports tool calling.
 
-    Skips if no models with tool support are installed.
+    Restricted to ``local/``-prefixed models so a cloud-signed-in account does
+    not route the tool-calling test to a subscription-only endpoint. Skips if no
+    local model with tool support is installed.
 
     Args:
         ollama_e2e_provider: A connected OllamaProvider instance.
 
     Returns:
-        str: The model ID of the first tool-capable model.
+        str: The model ID of the first local tool-capable model.
     """
     models = await ollama_e2e_provider.list_models()
     for model in models:
-        if model.supports_tools:
+        if model.id.startswith(_OLLAMA_LOCAL_ID_PREFIX) and model.supports_tools:
             return model.id
-    pytest.skip("No Ollama models with tool support installed")
+    pytest.skip("No local Ollama models with tool support installed")
 
 
 class TestAnthropicE2EChat:

@@ -350,6 +350,13 @@ Introduces a comprehensive Hex Editor
 
 ### Changed
 
+- Overhaul auto-save and introduce host-native test pass (`3b96c65`)
+Migrated the SessionManager auto-save loop from an asyncio task to a dedicated daemon thread with a standard threading.Lock to ensure safe, loop-agnostic session closure across different event loops. Additionally, established a dedicated host-native test runner and registry to execute hardware- and OS-dependent tests outside the isolated Docker sandbox.
+* **Bridges**: Fixed Cutter relocation RVA-to-VA mapping, expanded Process Bridge TLS slot reading to cover expansion slots, and switched Ghidra path resolution to lexical normalization to bypass Windows ACL handle-opening errors.
+* **Plugins**: Ported the x64dbg launcher from subprocess.Popen to spawn_on_hidden_desktop to prevent GUI deadlocks and support hidden desktop execution.
+* **Providers**: Implemented a uniform empty-message validation guard across all LLM backends.
+* **UI**: Added bounded synchronous joins on background workers in the hex editor pattern evaluator and PE checksum repairer to improve responsiveness for fast operations.
+
 - Harden process isolation and tool integration (`4f5a4c7`)
 Harden the application's process management, headless execution, and tool integration layers to eliminate resource leaks, window flashing, and communication timeouts. This includes migrating Ghidra to PyGhidra, spawning x64dbg on a hidden Windows desktop, truncating large LLM context payloads, and restructuring the test suite for isolated coverage runs.
 - **Process Management**: Implemented a dedicated Win32 hidden desktop launcher for GUI tools and enforced synchronous process tree termination on shutdown.
@@ -888,13 +895,6 @@ The `clean_nul.py` script has been refactored for better performance and robustn
 - Add Python scripts for generating and processing lint reports
 - Update automated linting reports, caches, and lockfiles
 - Track Cargo.lock files in version control
-
-- Overhaul auto-save and introduce host-native test pass (``)
-Migrated the SessionManager auto-save loop from an asyncio task to a dedicated daemon thread with a standard threading.Lock to ensure safe, loop-agnostic session closure across different event loops. Additionally, established a dedicated host-native test runner and registry to execute hardware- and OS-dependent tests outside the isolated Docker sandbox.
-* **Bridges**: Fixed Cutter relocation RVA-to-VA mapping, expanded Process Bridge TLS slot reading to cover expansion slots, and switched Ghidra path resolution to lexical normalization to bypass Windows ACL handle-opening errors.
-* **Plugins**: Ported the x64dbg launcher from subprocess.Popen to spawn_on_hidden_desktop to prevent GUI deadlocks and support hidden desktop execution.
-* **Providers**: Implemented a uniform empty-message validation guard across all LLM backends.
-* **UI**: Added bounded synchronous joins on background workers in the hex editor pattern evaluator and PE checksum repairer to improve responsiveness for fast operations.
 
 
 ### Documentation
@@ -3505,5 +3505,13 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- **tests:** Isolate local Ollama models and align device bridge permissions (``)
+Refactor host-native test provisioning to distinguish genuinely local Ollama models from cloud-suffixed tags (`-cloud`), ensuring local chat and tool tests do not attempt to invoke paywalled endpoints. Update IPv6 host/port parsing to correctly handle bracketed addresses.
+In the process bridge physical drive tests, update `CreateFileW` permissions and sharing flags to `GENERIC_READ | GENERIC_WRITE` with exclusive access, matching `ProcessBridge.device_open` so authorization probes accurately reflect bridge behavior.
+* Add cloud tag filtering and IPv6 splitting to `scripts/host_native_tests.py`
+* Update E2E and provider test fixtures to require `local/`-prefixed model IDs
+* Synchronize open flags in `tests/bridges/test_process_bridge.py`
+* Add unit tests for local model identification and IPv6 base URL resolution
 
 

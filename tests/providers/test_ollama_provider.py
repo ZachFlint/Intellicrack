@@ -25,27 +25,34 @@ from intellicrack.core.types import (
 from intellicrack.providers.ollama import OllamaProvider
 
 
+_LOCAL_MODEL_ID_PREFIX = "local/"
+
+
 @pytest_asyncio.fixture
 async def installed_models(
     ollama_provider: OllamaProvider,
 ) -> list[ModelInfo]:
-    """Fetch the installed Ollama model list; skip test when list is empty.
+    """Fetch the installed local Ollama models; skip when none are installed.
 
-    A non-empty model list is a precondition for the model-field tests:
-    any loop over an empty list asserts nothing. Skip rather than assert
-    a structural contract that cannot be verified without at least one
-    installed model.
+    This class asserts the local-source contract (``local/`` id prefix,
+    ``[Local] `` name prefix), so only ``local/``-prefixed models qualify:
+    a cloud-signed-in account also lists ``cloud/`` models, which carry the
+    ``[Cloud] `` prefix and would false-fail those assertions. A non-empty list
+    is a precondition for the per-model tests; any loop over an empty list
+    asserts nothing, so skip rather than assert a contract that cannot be
+    verified without at least one local model.
 
     Args:
         ollama_provider: Connected Ollama provider fixture.
 
     Returns:
-        list[ModelInfo]: Non-empty list of installed models.
+        list[ModelInfo]: Non-empty list of installed local models.
     """
     models = await ollama_provider.list_models()
-    if not models:
-        pytest.skip("No models installed in local Ollama instance")
-    return models
+    local_models = [m for m in models if m.id.startswith(_LOCAL_MODEL_ID_PREFIX)]
+    if not local_models:
+        pytest.skip("No local models installed in local Ollama instance")
+    return local_models
 
 
 @pytest.mark.integration
@@ -208,7 +215,7 @@ class TestOllamaModelListing:
         models2 = await ollama_provider.list_models()
 
         ids1 = {m.id for m in installed_models}
-        ids2 = {m.id for m in models2}
+        ids2 = {m.id for m in models2 if m.id.startswith(_LOCAL_MODEL_ID_PREFIX)}
 
         assert ids1, "First call must return at least one model ID"
 
@@ -217,7 +224,7 @@ class TestOllamaModelListing:
             suffix = mid[len("local/") :]
             assert suffix, f"Model name suffix after 'local/' must be non-empty, got empty in {mid!r}"
 
-        assert ids1 == ids2, "Model IDs must be identical across consecutive calls"
+        assert ids1 == ids2, "Local model IDs must be identical across consecutive calls"
 
 
 @pytest.mark.integration

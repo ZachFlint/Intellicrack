@@ -2317,8 +2317,8 @@ class TestF0039UnmapSection:
 _PIPE_NAME_AUDIT2 = r"\\.\pipe\intellicrack_audit2_test"
 _PIPE_BUF_SIZE = 64
 _PHYS_DRIVE = r"\\.\PhysicalDrive0"
-_PHYS_DRIVE_ACCESS = 0x80000000
-_PHYS_DRIVE_SHARE = 0x00000001 | 0x00000002
+_PHYS_DRIVE_ACCESS = 0xC0000000
+_PHYS_DRIVE_SHARE = 0x00000000
 
 
 def _create_named_pipe_server(pipe_name: str) -> int:
@@ -2346,10 +2346,16 @@ def _create_named_pipe_server(pipe_name: str) -> int:
 
 
 def _open_phys_drive_or_skip() -> int:
-    """Open PhysicalDrive0 for read sharing, skipping if access is denied.
+    """Open PhysicalDrive0 with the bridge's exact flags, skipping if denied.
+
+    The probe mirrors ``ProcessBridge.device_open`` exactly
+    (``GENERIC_READ | GENERIC_WRITE`` access, exclusive share mode) so its
+    success or failure faithfully predicts the bridge call. Opening a physical
+    drive with these flags requires an elevated token, so a non-elevated run
+    skips here rather than surfacing later as a ``ToolError`` from the bridge.
 
     Returns:
-        int: Valid device handle.
+        int: Valid device handle (caller owns it and must close it).
     """
     k32 = ctypes.windll.kernel32
     k32.CreateFileW.restype = wintypes.HANDLE
@@ -2486,7 +2492,8 @@ class TestF0016DeviceCloseResult:
         Args:
             process_bridge: Module-scoped ProcessBridge fixture that has already been initialized.
         """
-        _open_phys_drive_or_skip()
+        probe = _open_phys_drive_or_skip()
+        ctypes.windll.kernel32.CloseHandle(probe)
 
         handle = await process_bridge.device_open(_PHYS_DRIVE)
         result = await process_bridge.device_close(handle)
