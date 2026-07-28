@@ -67,6 +67,32 @@ def _is_wildcard_host(host: str) -> bool:
     return len(octets) == _IPV4_OCTET_COUNT and all(octet == "0" for octet in octets)
 
 
+def _split_host_port(authority: str) -> tuple[str, str]:
+    """Split a ``host:port`` authority into host and port, IPv6-aware.
+
+    Bracketed IPv6 literals (``[::]:11434``) are unbracketed to their inner host
+    so a naive colon split does not fracture the address. A bare all-digit value
+    is treated as a port with an empty host.
+
+    Args:
+        authority: The authority portion of an Ollama address, without scheme.
+
+    Returns:
+        tuple[str, str]: The ``(host, port)`` pair; ``port`` is empty when absent.
+    """
+    if authority.startswith("["):
+        close = authority.find("]")
+        if close != -1:
+            host = authority[1:close]
+            rest = authority[close + 1 :]
+            port = rest[1:] if rest.startswith(":") else ""
+            return host, port
+    host, sep, port = authority.partition(":")
+    if not sep and host.isdigit():
+        return "", host
+    return host, port
+
+
 def resolve_ollama_base_url() -> str:
     """Resolve the base URL of the local Ollama server from the environment.
 
@@ -90,11 +116,11 @@ def resolve_ollama_base_url() -> str:
     if "://" in raw:
         scheme, raw = raw.split("://", 1)
     raw = raw.rstrip("/")
-    host, sep, port = raw.partition(":")
-    if not sep and host.isdigit():
-        host, port = "", host
+    host, port = _split_host_port(raw)
     if _is_wildcard_host(host):
         host = _LOOPBACK_HOST
+    elif ":" in host:
+        host = f"[{host}]"
     return f"{scheme}://{host}:{port or _DEFAULT_OLLAMA_PORT}"
 
 
@@ -102,6 +128,9 @@ _OLLAMA_HOST: str = resolve_ollama_base_url()
 _OLLAMA_TAGS_URL: str = f"{_OLLAMA_HOST}/api/tags"
 _OLLAMA_MODEL_ENV: str = "INTELLICRACK_HOST_NATIVE_OLLAMA_MODEL"
 _DEFAULT_OLLAMA_MODEL: str = "qwen2.5:0.5b"
+# Ollama tags cloud-run models with this suffix (e.g. ``gpt-oss:120b-cloud``);
+# such entries need an ollama.com subscription and cannot back local chat tests.
+_CLOUD_MODEL_SUFFIX: str = "-cloud"
 
 _SYMBOL_SERVER: str = "https://msdl.microsoft.com/download/symbols"
 _SYMBOL_CACHE_DIRNAME: str = ".symbols"
@@ -179,6 +208,36 @@ def _installed_ollama_models() -> list[str]:
     return names
 
 
+def _is_local_model_name(name: str) -> bool:
+    """Return whether an Ollama tag names a genuinely-local, runnable model.
+
+    Ollama surfaces cloud-run models with a ``-cloud`` tag suffix; those require
+    an ollama.com subscription and cannot back a local chat test, so they are
+    not counted as a local model.
+
+    Args:
+        name: A model tag as reported by ``GET /api/tags`` (for example
+            ``qwen2.5:0.5b`` or ``gpt-oss:120b-cloud``).
+
+    Returns:
+        bool: ``True`` when ``name`` is a non-empty, non-cloud model tag.
+    """
+    return bool(name) and not name.endswith(_CLOUD_MODEL_SUFFIX)
+
+
+def _has_local_ollama_model() -> bool:
+    """Return whether at least one genuinely-local model is installed.
+
+    Cloud-only listings (every entry ``-cloud`` suffixed) count as *no* local
+    model, so the caller pulls a small default to give the local chat tests a
+    real target.
+
+    Returns:
+        bool: ``True`` when a non-cloud model is installed locally.
+    """
+    return any(_is_local_model_name(name) for name in _installed_ollama_models())
+
+
 def _start_ollama_daemon(ollama_path: str) -> subprocess.Popen[bytes] | None:
     """Start ``ollama serve`` and wait until it answers, if not already up.
 
@@ -239,12 +298,15 @@ def _pull_ollama_model(ollama_path: str, model: str) -> bool:
 
 
 def _provision_ollama() -> subprocess.Popen[bytes] | None:
-    """Ensure a local Ollama daemon is running with at least one model.
+    """Ensure a local Ollama daemon is running with at least one local model.
 
     Locates the ``ollama`` binary, starts the daemon when needed, and pulls a
-    small default model if none are installed. Failures are logged and tolerated
-    so the remaining host-native tests still run; the Ollama tests self-skip
-    with a precise reason when provisioning is impossible.
+    small default model when no *genuinely-local* model is installed. A signed-in
+    account may list subscription-only cloud models (``-cloud`` suffixed), which
+    do not count: the local chat tests need a model that runs locally, so the
+    default is pulled even when only cloud models are present. Failures are
+    logged and tolerated so the remaining host-native tests still run; the Ollama
+    tests self-skip with a precise reason when provisioning is impossible.
 
     Returns:
         subprocess.Popen[bytes] | None: The server process this call started
@@ -260,7 +322,7 @@ def _provision_ollama() -> subprocess.Popen[bytes] | None:
         _LOGGER.warning("ollama_unreachable_after_start")
         return started
 
-    if not _installed_ollama_models():
+    if not _has_local_ollama_model():
         model = os.environ.get(_OLLAMA_MODEL_ENV, _DEFAULT_OLLAMA_MODEL)
         _ = _pull_ollama_model(ollama_path, model)
     return started
@@ -313,15 +375,43 @@ def build_pytest_argv(repo_root: Path) -> list[str]:
     ]
 
 
+def elevation_skip_notice(*, elevated: bool) -> str:
+    """Build the startup notice naming which tests elevation will skip.
+
+    The host-native pass cannot satisfy both elevation states at once: admin-only
+    tests (raw physical disk, ETW realtime tracing) need an elevated token, while
+    the privilege-failure monitor tests need a non-elevated one. This notice
+    tells the operator up front which subset the current shell will skip.
+
+    Args:
+        elevated: Whether the invoking shell holds an elevated token.
+
+    Returns:
+        str: A single-line, human-readable notice for the console.
+    """
+    if elevated:
+        return (
+            "[host-native] Elevated shell: raw-disk and ETW tests will run; "
+            "tests that require a non-elevated token (privilege-failure monitors) "
+            "will be SKIPPED."
+        )
+    return (
+        "[host-native] Not elevated: admin-only tests (raw physical disk, ETW "
+        "realtime tracing) will be SKIPPED. Run from an elevated shell to include them."
+    )
+
+
 def _log_capabilities() -> None:
     """Log which host capabilities are present, so skips are explainable."""
+    installed = _installed_ollama_models()
     _LOGGER.info(
         "host_native_capabilities",
         platform=sys.platform,
         elevated=is_elevated(),
         xpu=is_xpu_available(),
         ollama=_ollama_reachable(),
-        ollama_models=len(_installed_ollama_models()),
+        ollama_models=len(installed),
+        ollama_local_models=sum(1 for name in installed if _is_local_model_name(name)),
     )
 
 
@@ -335,6 +425,7 @@ def run(repo_root: Path, extra_args: list[str] | None = None) -> int:
     Returns:
         int: The pytest process exit code (non-zero on any failure).
     """
+    print(elevation_skip_notice(elevated=is_elevated()), file=sys.stderr, flush=True)
     env = dict(os.environ)
     _configure_environment(env, repo_root)
     server = _provision_ollama()
