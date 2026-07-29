@@ -746,7 +746,7 @@ class CutterPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.decompile(address),
             on_success=self._apply_decompiled,
-            on_error=lambda _: _logger.warning("cutter_decompile_failed", address=hex(address)),
+            on_error=self._on_decompile_error,
             parent=self,
             event="cutter_decompile",
             logger=_logger,
@@ -766,7 +766,7 @@ class CutterPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.get_function_graph(address),
             on_success=self._apply_graph,
-            on_error=lambda _: _logger.warning("cutter_graph_failed", address=hex(address)),
+            on_error=self._on_graph_error,
             parent=self,
             event="cutter_get_function_graph",
             logger=_logger,
@@ -797,7 +797,7 @@ class CutterPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.decompile(address),
             on_success=self._apply_decompiled,
-            on_error=lambda _: _logger.warning("cutter_decompile_failed", address=hex(address)),
+            on_error=self._on_decompile_error,
             parent=self,
             event="cutter_decompile",
             logger=_logger,
@@ -819,7 +819,7 @@ class CutterPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.get_function_graph(address),
             on_success=self._apply_graph,
-            on_error=lambda _: _logger.warning("cutter_graph_failed", address=hex(address)),
+            on_error=self._on_graph_error,
             parent=self,
             event="cutter_get_function_graph",
             logger=_logger,
@@ -875,6 +875,20 @@ class CutterPanel(AnalysisPanelBase):
             return
         self._decompiled_view.setPlainText(str(result))
 
+    def _on_decompile_error(self, error: object) -> None:
+        """Surface a decompilation failure directly in the Decompiler tab.
+
+        Replaces a silently-swallowed warning log with an in-view message
+        so a failed decompile never leaves the tab showing stale or blank
+        content.
+
+        Args:
+            error: Exception raised by the bridge's ``decompile`` call.
+        """
+        _logger.warning("cutter_decompile_failed", error=str(error))
+        self._decompiled_view.setPlainText(f"// Decompilation failed: {error}")
+        self._set_status(f"Decompile failed: {error}")
+
     def _apply_disassembly(self, result: object) -> None:
         """Apply disassembly data to the view.
 
@@ -901,6 +915,22 @@ class CutterPanel(AnalysisPanelBase):
         blocks: list[dict[str, Any]] = [*result] if isinstance(result, list) else []
         self._cfg_view.graph_scene().load_graph(blocks)
         self._cfg_view.fit_to_view()
+        if not blocks:
+            self._set_status("No basic blocks found for this function")
+
+    def _on_graph_error(self, error: object) -> None:
+        """Surface a CFG retrieval failure and clear the graph view.
+
+        Replaces a silently-swallowed warning log with a status-bar message
+        and an emptied graph scene so a failed CFG fetch never leaves the
+        CFG tab showing a stale graph.
+
+        Args:
+            error: Exception raised by the bridge's ``get_function_graph`` call.
+        """
+        _logger.warning("cutter_graph_failed", error=str(error))
+        self._cfg_view.graph_scene().load_graph([])
+        self._set_status(f"CFG failed: {error}")
 
     def _on_cfg_block_clicked(self, address: int) -> None:
         """Navigate to a CFG basic block by seeking and loading its disassembly.

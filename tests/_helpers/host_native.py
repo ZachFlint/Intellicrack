@@ -48,6 +48,7 @@ _OLLAMA_CHAT_LIVE: Final[str] = "tests/providers/test_ollama_chat_live.py"
 _AGENTIC: Final[str] = "tests/providers/test_agentic_capabilities.py"
 _MODEL_DISCOVERY: Final[str] = "tests/providers/test_model_discovery.py"
 _PROCESS_BRIDGE: Final[str] = "tests/bridges/test_process_bridge.py"
+_CUTTER_DECOMPILE: Final[str] = "tests/bridges/test_realcov_03d_cutter_decompile_cfg.py"
 _ANALYSIS_REAL: Final[str] = "tests/sandbox/test_realcov_12b_analysis_real.py"
 _INLINE_MONITORS: Final[str] = "tests/sandbox/windows/test_realcov_12b_inline_monitors.py"
 _INJECTION_MONITOR: Final[str] = "tests/sandbox/monitors/test_injection_monitor.py"
@@ -114,6 +115,11 @@ HOST_NATIVE_METHODS: Final[frozenset[tuple[str, str, str]]] = frozenset(
         (_PROCESS_BRIDGE, "TestF0018DeviceIoctlHexInput", "test_device_ioctl_valid_hex_accepted"),
         (_PROCESS_BRIDGE, "TestF0037DeviceIoctlOutputHex", "test_device_ioctl_output_is_hex_string"),
         (_PROCESS_BRIDGE, "TestF0013JobHandleEnumeration", "test_get_job_info_returns_in_job_when_assigned"),
+        (_CUTTER_DECOMPILE, "TestRealDecompileGhidra", "test_decompile_produces_c_like_tokens"),
+        (_CUTTER_DECOMPILE, "TestRealDecompileGhidra", "test_decompile_is_deterministic_and_addresses_function"),
+        (_CUTTER_DECOMPILE, "TestRealCfgBasicBlocks", "test_get_function_graph_returns_multiple_real_blocks_with_edges"),
+        (_CUTTER_DECOMPILE, "TestRealCfgBasicBlocks", "test_get_function_graph_blocks_carry_real_disassembly"),
+        (_CUTTER_DECOMPILE, "TestRealCfgBasicBlocks", "test_get_function_graph_offsets_match_get_basic_blocks_oracle"),
     },
 )
 

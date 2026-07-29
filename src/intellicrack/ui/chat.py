@@ -19,6 +19,8 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
+    QTextBrowser,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -32,7 +34,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from PyQt6.QtGui import QKeyEvent
+    from PyQt6.QtGui import QKeyEvent, QResizeEvent
 
 _logger = get_logger(__name__)
 
@@ -51,6 +53,78 @@ _MSG_AREA_MARGIN: Final[int] = 12
 _MAX_RESULT_DISPLAY_LEN = 200
 
 
+class _MarkdownView(QTextBrowser):
+    """Read-only rich-text view that renders CommonMark markdown content.
+
+    Replaces a plain ``QLabel`` for message bubble content so headings, bold
+    and italic text, lists, inline code, and fenced code blocks render as
+    formatted rich text instead of literal markdown syntax. The view has no
+    frame or internal scrollbars and auto-sizes its height to the rendered
+    document so it behaves like a word-wrapping label inside the bubble's
+    ``QVBoxLayout``.
+    """
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the markdown view.
+
+        Args:
+            parent: Parent widget.
+        """
+        super().__init__(parent)
+        self.setReadOnly(True)
+        self.setOpenExternalLinks(False)
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setLineWrapMode(QTextBrowser.LineWrapMode.WidgetWidth)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setStyleSheet("background: transparent; border: none;")
+        document = self.document()
+        if document is not None:
+            document.setDocumentMargin(0)
+            layout = document.documentLayout()
+            if layout is not None:
+                layout.documentSizeChanged.connect(self._update_height)
+
+    def set_markdown_content(self, text: str) -> None:
+        """Render the given text as CommonMark markdown.
+
+        Args:
+            text: Markdown-formatted message content.
+        """
+        self.setMarkdown(text)
+        self._reflow_to_viewport_width()
+        self._update_height()
+
+    @override
+    def resizeEvent(self, a0: QResizeEvent | None) -> None:
+        """Reflow the document to the new viewport width and resize to fit.
+
+        Args:
+            a0: The incoming resize event, or ``None`` if Qt delivered no event.
+        """
+        self._reflow_to_viewport_width()
+        super().resizeEvent(a0)
+        self._update_height()
+
+    def _reflow_to_viewport_width(self) -> None:
+        """Set the document's text width to the current viewport width."""
+        document = self.document()
+        viewport = self.viewport()
+        if document is not None and viewport is not None:
+            document.setTextWidth(viewport.width())
+
+    def _update_height(self) -> None:
+        """Fix the widget's height to the rendered document's height."""
+        document = self.document()
+        if document is None:
+            return
+        margins = self.contentsMargins()
+        frame_width = self.frameWidth() * 2
+        height = int(document.size().height()) + margins.top() + margins.bottom() + frame_width
+        self.setFixedHeight(max(height, 1))
+
+
 class MessageBubble(QFrame):
     """A single message bubble in the chat.
 
@@ -58,11 +132,12 @@ class MessageBubble(QFrame):
     appropriate styling and formatting.
 
     Attributes:
-        content_label: QLabel displaying the message content; updated
-            directly by streaming consumers to append incremental chunks.
+        content_label: Markdown-rendering view displaying the message
+            content; updated directly by streaming consumers to append
+            incremental chunks.
     """
 
-    content_label: QLabel
+    content_label: _MarkdownView
 
     def __init__(
         self,
@@ -77,7 +152,8 @@ class MessageBubble(QFrame):
         """
         super().__init__(parent)
         self._message = message
-        self.content_label = QLabel(self._message.content)
+        self.content_label = _MarkdownView()
+        self.content_label.set_markdown_content(self._message.content)
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -100,8 +176,9 @@ class MessageBubble(QFrame):
         header_layout.addWidget(time_label)
         layout.addLayout(header_layout)
 
-        self.content_label.setWordWrap(True)
-        self.content_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.content_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.LinksAccessibleByMouse,
+        )
         self.content_label.setFont(FontManager.get_instance().get_ui_font(10))
         self.content_label.setVisible(bool(self._message.content))
         layout.addWidget(self.content_label)
@@ -452,7 +529,7 @@ class ChatPanel(QFrame):
                 chunk: Incremental text fragment from the streaming response.
             """
             message.content += chunk
-            content_label.setText(message.content)
+            content_label.set_markdown_content(message.content)
             content_label.setVisible(bool(message.content))
             self._scroll_to_bottom()
 
