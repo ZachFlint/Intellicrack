@@ -2243,6 +2243,13 @@ class Orchestrator:
             ToolError: If any tool definition is invalid for the provider.
         """
         provider_name = provider.name
+        function_count = sum(len(tool.functions) for tool in tools)
+        _logger.debug(
+            "tool_schema_validation_started",
+            provider=provider_name.value,
+            container_count=len(tools),
+            function_count=function_count,
+        )
         broken: list[str] = []
         for tool in tools:
             errors = validate_tool_for_provider(tool, provider_name)

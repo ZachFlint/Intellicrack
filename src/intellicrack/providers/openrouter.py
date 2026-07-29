@@ -78,9 +78,14 @@ class OpenRouterProvider(LLMProviderBase):
 
     Attributes:
         BASE_URL: OpenRouter unified LLM API base URL.
+        TOOL_COUNT_CAP: Maximum number of flattened tool functions sent in
+            a single function-calling request, matching the tightest
+            common limit among OpenAI-compatible backends OpenRouter
+            routes to (e.g. ``gpt-4o-mini``).
     """
 
     BASE_URL: str = "https://openrouter.ai/api/v1"
+    TOOL_COUNT_CAP: int = 128
 
     def __init__(self) -> None:
         """Initialize the OpenRouterProvider instance."""
@@ -953,7 +958,90 @@ class OpenRouterProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of tools in OpenRouter's format.
         """
-        return self._convert_tools_to_openai_format(tools)
+        capped_tools = self._enforce_tool_count_cap(tools)
+        return self._convert_tools_to_openai_format(capped_tools)
+
+    def _enforce_tool_count_cap(self, tools: list[ToolDefinition]) -> list[ToolDefinition]:
+        """Trim tool definitions to fit OpenRouter's flattened function-count cap.
+
+        Many of the OpenAI-compatible backends OpenRouter routes requests
+        to (e.g. ``gpt-4o-mini``) reject function-calling requests once the
+        flattened function count (every ``ToolFunction`` across every
+        bridge's :class:`ToolDefinition`) exceeds :attr:`TOOL_COUNT_CAP`.
+        Intellicrack's tool registry can expose hundreds more functions
+        than that across its bridges, so the set handed to OpenRouter must
+        be reduced before the request leaves the process.
+
+        Tools are kept in their existing (already deterministic) order and
+        included whole wherever possible. The tool whose inclusion would
+        push the running total past the cap is truncated to only its
+        leading functions that still fit, so every tool earlier in the list
+        stays fully intact and no tool is dropped arbitrarily.
+
+        Args:
+            tools: Tool definitions to trim, in priority order.
+
+        Returns:
+            list[ToolDefinition]: A new list of tool definitions whose
+            combined function count does not exceed :attr:`TOOL_COUNT_CAP`.
+            Returned unchanged (same object) when already within the cap.
+
+        Raises:
+            ProviderError: If :attr:`TOOL_COUNT_CAP` is too small to hold
+                even a single tool function.
+        """
+        function_count = sum(len(tool.functions) for tool in tools)
+        self._logger.debug(
+            "openrouter_tool_conversion_function_count",
+            container_count=len(tools),
+            function_count=function_count,
+            cap=self.TOOL_COUNT_CAP,
+        )
+        if function_count <= self.TOOL_COUNT_CAP:
+            return tools
+
+        if self.TOOL_COUNT_CAP < 1:
+            message = (
+                f"OpenRouter tool-count cap ({self.TOOL_COUNT_CAP}) cannot hold any tool function; "
+                f"{function_count} functions were requested."
+            )
+            self._logger.error(
+                "openrouter_tool_count_cap_unsatisfiable",
+                cap=self.TOOL_COUNT_CAP,
+                function_count=function_count,
+            )
+            raise ProviderError(message)
+
+        trimmed: list[ToolDefinition] = []
+        dropped: list[str] = []
+        remaining = self.TOOL_COUNT_CAP
+        for tool in tools:
+            tool_function_count = len(tool.functions)
+            if tool_function_count <= remaining:
+                trimmed.append(tool)
+                remaining -= tool_function_count
+                continue
+            if remaining > 0:
+                trimmed.append(
+                    ToolDefinition(
+                        tool_name=tool.tool_name,
+                        description=tool.description,
+                        functions=tool.functions[:remaining],
+                    ),
+                )
+                dropped.append(f"{tool.tool_name.value}:{tool_function_count - remaining}_truncated")
+                remaining = 0
+            else:
+                dropped.append(f"{tool.tool_name.value}:{tool_function_count}_dropped")
+
+        self._logger.warning(
+            "openrouter_tool_count_cap_exceeded",
+            cap=self.TOOL_COUNT_CAP,
+            function_count=function_count,
+            kept_count=self.TOOL_COUNT_CAP,
+            dropped_tools=dropped,
+        )
+        return trimmed
 
     async def get_generation(self, generation_id: str) -> dict[str, object]:
         """Get details about a specific generation.

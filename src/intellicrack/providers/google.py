@@ -11,6 +11,7 @@ SDK.
 from __future__ import annotations
 
 import asyncio
+import base64
 import os
 import time
 from datetime import UTC, datetime
@@ -910,6 +911,73 @@ class GoogleProvider(LLMProviderBase):
         )
 
     @staticmethod
+    def _iter_function_call_parts(
+        response: GenerateContentResponse,
+    ) -> list[tuple[types.FunctionCall, bytes | None]]:
+        """Pair each function-call part with its thought signature.
+
+        ``response.function_calls`` is a convenience accessor that returns
+        bare :class:`~google.genai.types.FunctionCall` objects and silently
+        drops the ``thought_signature`` that Gemini 3.x models attach to the
+        surrounding ``Part`` (``thought_signature`` is a sibling field of
+        ``function_call`` on ``Part``, not an attribute of ``FunctionCall``
+        itself). This helper walks the first candidate's parts directly so
+        callers can recover the signature alongside each call.
+
+        Args:
+            response: Gemini response or streaming chunk to inspect.
+
+        Returns:
+            list[tuple[types.FunctionCall, bytes | None]]: Each function
+            call paired with the raw ``thought_signature`` bytes from its
+            part (``None`` when the part carries no signature), in source
+            order. Empty when the response has no candidates or parts.
+        """
+        candidates = getattr(response, "candidates", None)
+        if not candidates:
+            return []
+        content_obj = getattr(candidates[0], "content", None)
+        parts = getattr(content_obj, "parts", None) if content_obj is not None else None
+        if not parts:
+            return []
+        return [
+            (part.function_call, getattr(part, "thought_signature", None))
+            for part in parts
+            if getattr(part, "function_call", None) is not None
+        ]
+
+    @staticmethod
+    def _build_tool_call(
+        idx: int,
+        function_call: types.FunctionCall,
+        thought_signature: bytes | None,
+    ) -> ToolCall:
+        """Build a :class:`ToolCall` from a Gemini function call and signature.
+
+        Args:
+            idx: Zero-based position of this call among its siblings, used
+                to derive the synthetic ``call_<idx>`` identifier.
+            function_call: The Gemini function call to convert.
+            thought_signature: Raw signature bytes from the owning part, or
+                ``None`` when the model did not emit one.
+
+        Returns:
+            ToolCall: The converted tool call, with ``thought_signature``
+            base64-encoded for safe storage/persistence, or ``None`` when
+            the source part carried no signature.
+        """
+        func_name = function_call.name or ""
+        args = dict(function_call.args) if function_call.args else {}
+        tool_name = func_name.split(".")[0] if "." in func_name else func_name
+        return ToolCall(
+            id=f"call_{idx}",
+            tool_name=tool_name,
+            function_name=func_name,
+            arguments=args,
+            thought_signature=base64.b64encode(thought_signature).decode("ascii") if thought_signature else None,
+        )
+
+    @staticmethod
     def _parse_response(
         response: GenerateContentResponse,
     ) -> tuple[str, list[ToolCall]]:
@@ -921,23 +989,11 @@ class GoogleProvider(LLMProviderBase):
         Returns:
             tuple[str, list[ToolCall]]: Tuple of (content string, list of ToolCall objects).
         """
-        tool_calls: list[ToolCall] = []
-
         content = response.text if hasattr(response, "text") and response.text else ""
-        if hasattr(response, "function_calls") and response.function_calls:
-            for idx, fc in enumerate(response.function_calls):
-                func_name = fc.name or ""
-                args = dict(fc.args) if fc.args else {}
-
-                tool_name = func_name.split(".")[0] if "." in func_name else func_name
-                tool_calls.append(
-                    ToolCall(
-                        id=f"call_{idx}",
-                        tool_name=tool_name,
-                        function_name=func_name,
-                        arguments=args,
-                    ),
-                )
+        tool_calls = [
+            GoogleProvider._build_tool_call(idx, fc, signature)
+            for idx, (fc, signature) in enumerate(GoogleProvider._iter_function_call_parts(response))
+        ]
 
         if not content and hasattr(response, "candidates") and response.candidates:
             candidate = response.candidates[0]
@@ -950,11 +1006,12 @@ class GoogleProvider(LLMProviderBase):
 
     @staticmethod
     def _extract_function_calls(chunk: GenerateContentResponse) -> list[ToolCall]:
-        """Convert ``response.function_calls`` into :class:`ToolCall` entries.
+        """Convert function-call parts on a chunk into :class:`ToolCall` entries.
 
         Streaming and non-streaming Gemini responses surface tool
-        invocations through the ``function_calls`` accessor.  This
-        helper converts each entry into a :class:`ToolCall`, deriving
+        invocations as ``Part`` entries carrying a ``function_call`` (and,
+        for Gemini 3.x, a sibling ``thought_signature``). This helper
+        converts each entry into a :class:`ToolCall`, deriving
         ``tool_name`` from the dotted prefix of the function name when
         present and assigning a synthetic ``call_<idx>`` identifier so
         downstream tool routing has a stable id.
@@ -966,23 +1023,10 @@ class GoogleProvider(LLMProviderBase):
             list[ToolCall]: Parsed tool calls in source order, or an
             empty list when the chunk has no function calls.
         """
-        function_calls = getattr(chunk, "function_calls", None)
-        if not function_calls:
-            return []
-        tool_calls: list[ToolCall] = []
-        for idx, fc in enumerate(function_calls):
-            func_name = fc.name or ""
-            args = dict(fc.args) if fc.args else {}
-            tool_name = func_name.split(".")[0] if "." in func_name else func_name
-            tool_calls.append(
-                ToolCall(
-                    id=f"call_{idx}",
-                    tool_name=tool_name,
-                    function_name=func_name,
-                    arguments=args,
-                ),
-            )
-        return tool_calls
+        return [
+            GoogleProvider._build_tool_call(idx, fc, signature)
+            for idx, (fc, signature) in enumerate(GoogleProvider._iter_function_call_parts(chunk))
+        ]
 
     @staticmethod
     def _extract_visible_chunk_text(chunk: GenerateContentResponse) -> str:
@@ -1057,6 +1101,38 @@ class GoogleProvider(LLMProviderBase):
                     thoughts.append(text)
         return "\n\n".join(thoughts)
 
+    @staticmethod
+    def _build_function_call_part(tool_call: ToolCall) -> dict[str, object]:
+        """Build a Gemini function-call part dict from an internal ToolCall.
+
+        Re-attaches ``thought_signature`` as a sibling of ``function_call``
+        (matching the shape of ``google.genai.types.Part``) so Gemini 3.x
+        multi-turn tool chains can resume without a
+        ``400 INVALID_ARGUMENT: Function call is missing a
+        thought_signature`` error. Older responses/models that never
+        produced a signature leave ``tool_call.thought_signature`` unset,
+        so the key is omitted entirely for backward compatibility.
+
+        Args:
+            tool_call: The internal tool call to convert, as previously
+                produced by :meth:`_parse_response` or
+                :meth:`_extract_function_calls`.
+
+        Returns:
+            dict[str, object]: A Gemini ``Part``-shaped dict containing the
+            ``function_call`` and, when present, the decoded
+            ``thought_signature`` bytes.
+        """
+        part: dict[str, object] = {
+            "function_call": {
+                "name": tool_call.function_name,
+                "args": tool_call.arguments,
+            },
+        }
+        if tool_call.thought_signature:
+            part["thought_signature"] = base64.b64decode(tool_call.thought_signature)
+        return part
+
     @override
     def _convert_messages_to_provider_format(
         self,
@@ -1099,15 +1175,7 @@ class GoogleProvider(LLMProviderBase):
                     parts.append({"text": msg.content})
 
                 if msg.tool_calls:
-                    parts.extend([
-                        {
-                            "function_call": {
-                                "name": tc.function_name,
-                                "args": tc.arguments,
-                            },
-                        }
-                        for tc in msg.tool_calls
-                    ])
+                    parts.extend([self._build_function_call_part(tc) for tc in msg.tool_calls])
 
                 contents.append({
                     "role": "model",

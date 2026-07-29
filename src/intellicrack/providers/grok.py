@@ -104,9 +104,12 @@ class GrokProvider(LLMProviderBase):
 
     Attributes:
         BASE_URL: The X.AI API base URL.
+        TOOL_COUNT_CAP: Maximum number of flattened tool functions Grok
+            accepts in a single function-calling request.
     """
 
     BASE_URL: str = "https://api.x.ai/v1"
+    TOOL_COUNT_CAP: int = 250
 
     def __init__(self) -> None:
         """Initialize the GrokProvider instance."""
@@ -1004,4 +1007,86 @@ class GrokProvider(LLMProviderBase):
         Returns:
             list[dict[str, object]]: List of tools in Grok's format.
         """
-        return self._convert_tools_to_openai_format(tools)
+        capped_tools = self._enforce_tool_count_cap(tools)
+        return self._convert_tools_to_openai_format(capped_tools)
+
+    def _enforce_tool_count_cap(self, tools: list[ToolDefinition]) -> list[ToolDefinition]:
+        """Trim tool definitions to fit Grok's flattened function-count cap.
+
+        Grok rejects function-calling requests once the flattened function
+        count (every ``ToolFunction`` across every bridge's
+        :class:`ToolDefinition`) exceeds :attr:`TOOL_COUNT_CAP`, responding
+        with ``400 "Maximum tools limit reached"``. Intellicrack's tool
+        registry can expose hundreds more functions than that across its
+        bridges, so the set handed to Grok must be reduced before the
+        request leaves the process.
+
+        Tools are kept in their existing (already deterministic) order and
+        included whole wherever possible. The tool whose inclusion would
+        push the running total past the cap is truncated to only its
+        leading functions that still fit, so every tool earlier in the list
+        stays fully intact and no tool is dropped arbitrarily.
+
+        Args:
+            tools: Tool definitions to trim, in priority order.
+
+        Returns:
+            list[ToolDefinition]: A new list of tool definitions whose
+            combined function count does not exceed :attr:`TOOL_COUNT_CAP`.
+            Returned unchanged (same object) when already within the cap.
+
+        Raises:
+            ProviderError: If :attr:`TOOL_COUNT_CAP` is too small to hold
+                even a single tool function.
+        """
+        function_count = sum(len(tool.functions) for tool in tools)
+        self._logger.debug(
+            "grok_tool_conversion_function_count",
+            container_count=len(tools),
+            function_count=function_count,
+            cap=self.TOOL_COUNT_CAP,
+        )
+        if function_count <= self.TOOL_COUNT_CAP:
+            return tools
+
+        if self.TOOL_COUNT_CAP < 1:
+            message = (
+                f"Grok tool-count cap ({self.TOOL_COUNT_CAP}) cannot hold any tool function; {function_count} functions were requested."
+            )
+            self._logger.error(
+                "grok_tool_count_cap_unsatisfiable",
+                cap=self.TOOL_COUNT_CAP,
+                function_count=function_count,
+            )
+            raise ProviderError(message)
+
+        trimmed: list[ToolDefinition] = []
+        dropped: list[str] = []
+        remaining = self.TOOL_COUNT_CAP
+        for tool in tools:
+            tool_function_count = len(tool.functions)
+            if tool_function_count <= remaining:
+                trimmed.append(tool)
+                remaining -= tool_function_count
+                continue
+            if remaining > 0:
+                trimmed.append(
+                    ToolDefinition(
+                        tool_name=tool.tool_name,
+                        description=tool.description,
+                        functions=tool.functions[:remaining],
+                    ),
+                )
+                dropped.append(f"{tool.tool_name.value}:{tool_function_count - remaining}_truncated")
+                remaining = 0
+            else:
+                dropped.append(f"{tool.tool_name.value}:{tool_function_count}_dropped")
+
+        self._logger.warning(
+            "grok_tool_count_cap_exceeded",
+            cap=self.TOOL_COUNT_CAP,
+            function_count=function_count,
+            kept_count=self.TOOL_COUNT_CAP,
+            dropped_tools=dropped,
+        )
+        return trimmed
