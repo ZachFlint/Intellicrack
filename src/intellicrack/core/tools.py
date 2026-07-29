@@ -603,7 +603,12 @@ class ToolRegistry:
             except (AttributeError, RuntimeError, ToolError) as e:
                 _logger.warning("tool_definition_retrieval_failed", error=str(e))
 
-        _logger.debug("get_tool_definitions_complete", definition_count=len(definitions))
+        function_count = sum(len(definition.functions) for definition in definitions)
+        _logger.debug(
+            "get_tool_definitions_complete",
+            definition_count=len(definitions),
+            function_count=function_count,
+        )
         return definitions
 
     def get_available_tools(self) -> list[ToolName]:

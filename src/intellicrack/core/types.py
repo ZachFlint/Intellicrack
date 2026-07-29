@@ -309,12 +309,18 @@ class ToolCall:
         tool_name: Name of the tool being called.
         function_name: Specific function within the tool.
         arguments: Dictionary of function arguments.
+        thought_signature: Opaque, base64-encoded provider signature bound to this
+            call (currently emitted by Gemini 3.x models). Must be echoed back
+            verbatim on the next request that includes this call so the provider
+            can resume its reasoning chain; ``None`` when the provider does not
+            emit one.
     """
 
     id: str
     tool_name: str
     function_name: str
     arguments: dict[str, Any]
+    thought_signature: str | None = None
 
 
 @dataclass

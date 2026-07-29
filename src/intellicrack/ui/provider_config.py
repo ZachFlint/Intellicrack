@@ -1474,8 +1474,11 @@ class ProviderConfigDialog(QDialog):
         left_layout.addLayout(cred_layout)
 
         advanced_layout = QHBoxLayout()
-        self._create_env_btn = QPushButton("Create .env")
-        self._create_env_btn.setToolTip("Create .env template for credential configuration")
+        self._create_env_btn = QPushButton("Write .env Template")
+        self._create_env_btn.setToolTip(
+            "Write a .env credential template. Non-destructive: an existing .env is backed up "
+            "and only missing variables are appended, existing values are never overwritten.",
+        )
         self._create_env_btn.clicked.connect(self.create_env_template)
         advanced_layout.addWidget(self._create_env_btn)
 
@@ -1821,13 +1824,45 @@ class ProviderConfigDialog(QDialog):
         self._load_credential_overview()
 
     def create_env_template(self) -> None:
-        """Create a .env template file for credential configuration."""
+        """Write or merge a .env credential template, then report the outcome.
+
+        Never truncates an existing `.env`: pre-existing content is backed
+        up to a timestamped ``.env.<timestamp>.bak`` file and only template
+        variables missing from the file are appended, so any real
+        credential already saved there is preserved.
+        """
         _logger.info("env_template_creation_starting", path=".env")
         try:
-            create_env_template(Path(".env"))
-            _logger.info("env_template_created", path=".env")
+            result = create_env_template(Path(".env"))
         except OSError as exc:
             _logger.warning("env_template_creation_failed", error=str(exc))
+            show_error(self, "Write .env Template", f"Failed to write .env template: {exc}")
+            self._load_credential_overview()
+            return
+
+        _logger.info(
+            "env_template_created",
+            path=str(result.path),
+            created=result.created,
+            merged=result.merged,
+            backup_path=str(result.backup_path) if result.backup_path else None,
+            added_keys=list(result.added_keys),
+        )
+        if result.created:
+            show_info(self, "Write .env Template", f"Created a new .env template at {result.path}.")
+        elif result.added_keys:
+            added = ", ".join(result.added_keys)
+            show_info(
+                self,
+                "Write .env Template",
+                f"Existing .env was preserved (backup: {result.backup_path}).\nAppended missing variables: {added}.",
+            )
+        else:
+            show_info(
+                self,
+                "Write .env Template",
+                f"Existing .env already defines every template variable; no changes were made (backup: {result.backup_path}).",
+            )
         self._load_credential_overview()
 
     def migrate_credentials(self) -> None:

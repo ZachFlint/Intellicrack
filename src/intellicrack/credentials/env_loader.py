@@ -13,8 +13,9 @@ import functools
 import os
 import re
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import ClassVar
+from typing import ClassVar, Final
 
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials, ProviderName
@@ -665,47 +666,232 @@ def get_api_key_env_var_mapping() -> dict[str, str]:
     return {provider.value: mapping.api_key_var for provider, mapping in CredentialLoader.PROVIDER_MAPPINGS.items()}
 
 
-def create_env_template(path: Path) -> None:
-    """Create a template .env file with all supported providers.
+@dataclass(frozen=True)
+class _EnvTemplateVar:
+    """A single environment variable entry rendered into the `.env` template.
+
+    Attributes:
+        key: Environment variable name.
+        placeholder: Example/placeholder value shown in the template.
+        commented: Whether the line is emitted commented-out (``# KEY=value``)
+            because the variable is optional.
+        suffix_comment: Optional trailing inline comment appended after the
+            value (for example ``# Usually not needed for local``).
+    """
+
+    key: str
+    placeholder: str
+    commented: bool = False
+    suffix_comment: str | None = None
+
+
+@dataclass(frozen=True)
+class _EnvTemplateSection:
+    """A titled group of related variables in the `.env` template.
+
+    Attributes:
+        title: Section heading rendered as a comment line.
+        variables: Ordered variables belonging to this section.
+    """
+
+    title: str
+    variables: tuple[_EnvTemplateVar, ...]
+
+
+_ENV_TEMPLATE_SECTIONS: Final[tuple[_EnvTemplateSection, ...]] = (
+    _EnvTemplateSection(
+        "Anthropic (Claude)",
+        (_EnvTemplateVar("ANTHROPIC_API_KEY", "sk-ant-api03-..."),),
+    ),
+    _EnvTemplateSection(
+        "OpenAI (GPT)",
+        (
+            _EnvTemplateVar("OPENAI_API_KEY", "sk-..."),
+            _EnvTemplateVar("OPENAI_ORGANIZATION", "org-...", commented=True),
+            _EnvTemplateVar("OPENAI_API_BASE", "https://api.openai.com/v1", commented=True),
+        ),
+    ),
+    _EnvTemplateSection(
+        "Google AI (Gemini)",
+        (
+            _EnvTemplateVar("GOOGLE_API_KEY", "..."),
+            _EnvTemplateVar("GOOGLE_CLOUD_PROJECT", "your-project-id", commented=True),
+        ),
+    ),
+    _EnvTemplateSection(
+        "OpenRouter",
+        (_EnvTemplateVar("OPENROUTER_API_KEY", "sk-or-v1-..."),),
+    ),
+    _EnvTemplateSection(
+        "Ollama (local)",
+        (
+            _EnvTemplateVar("OLLAMA_HOST", "http://localhost:11434", commented=True),
+            _EnvTemplateVar("OLLAMA_API_KEY", "", commented=True, suffix_comment="# Usually not needed for local"),
+        ),
+    ),
+)
+
+
+def _render_env_template_var(var: _EnvTemplateVar) -> str:
+    """Render a single template variable as a `.env` line.
 
     Args:
-        path: Path where to create the .env.example file.
+        var: The template variable to render.
+
+    Returns:
+        str: The rendered line, without a trailing newline.
+    """
+    prefix = "# " if var.commented else ""
+    suffix = f"  {var.suffix_comment}" if var.suffix_comment else ""
+    return f"{prefix}{var.key}={var.placeholder}{suffix}"
+
+
+def _render_full_env_template() -> str:
+    """Render the complete `.env` template text for a brand-new file.
+
+    Returns:
+        str: The full template content, ending in a single trailing newline.
+    """
+    lines: list[str] = [
+        "# Intellicrack API Credentials",
+        "# Copy this file to .env and fill in your API keys",
+        "",
+    ]
+    for section in _ENV_TEMPLATE_SECTIONS:
+        lines.append(f"# {section.title}")
+        lines.extend(_render_env_template_var(var) for var in section.variables)
+        lines.append("")
+    return "\n".join(lines).rstrip("\n") + "\n"
+
+
+def _render_missing_env_vars(existing_keys: set[str]) -> tuple[str, tuple[str, ...]]:
+    """Render only the template variables absent from an existing `.env` file.
+
+    Args:
+        existing_keys: Environment variable names already defined
+            (uncommented) in the existing file.
+
+    Returns:
+        tuple[str, tuple[str, ...]]: The rendered block of missing
+            variables (grouped by section, each section header included
+            only when it has at least one missing variable), and the
+            ordered tuple of variable names that were included.
+    """
+    block_lines: list[str] = []
+    added_keys: list[str] = []
+    for section in _ENV_TEMPLATE_SECTIONS:
+        section_vars = [var for var in section.variables if var.key not in existing_keys]
+        if not section_vars:
+            continue
+        block_lines.append(f"# {section.title}")
+        block_lines.extend(_render_env_template_var(var) for var in section_vars)
+        block_lines.append("")
+        added_keys.extend(var.key for var in section_vars)
+    return "\n".join(block_lines).rstrip("\n") + "\n" if block_lines else "", tuple(added_keys)
+
+
+@dataclass(frozen=True)
+class EnvTemplateResult:
+    """Outcome of a :func:`create_env_template` call.
+
+    Attributes:
+        path: The `.env` file that was written to or merged into.
+        backup_path: Path to a timestamped backup of the file's prior
+            content, or ``None`` when no pre-existing content needed
+            backing up (a fresh file was created).
+        created: ``True`` if ``path`` did not previously contain any
+            content and was written from the full template.
+        merged: ``True`` if ``path`` already contained content and was
+            preserved unmodified aside from appending any missing
+            template variables.
+        added_keys: Names of the variables newly appended to the file.
+            Keys already present in the file are never included here
+            because their existing lines -- and values -- are left
+            untouched.
+    """
+
+    path: Path
+    backup_path: Path | None
+    created: bool
+    merged: bool
+    added_keys: tuple[str, ...]
+
+
+def create_env_template(path: Path) -> EnvTemplateResult:
+    """Create or safely merge a template .env file with all supported providers.
+
+    When ``path`` does not exist, or exists but is empty, the full template
+    is written directly. When ``path`` already contains content, that
+    content is never truncated or overwritten: a timestamped backup of the
+    existing file is written first, and only the template variables that
+    are not already defined in the file are appended to its end. Every
+    existing ``KEY=value`` line -- and therefore any real credential it
+    holds -- is left completely untouched.
+
+    Args:
+        path: Path to the `.env` file to create or merge the template into.
+
+    Returns:
+        EnvTemplateResult: Details of what happened, so callers can inform
+            the user whether the file was created fresh or merged, and
+            where any backup was written.
 
     Raises:
-        OSError: If the template file cannot be written.
+        OSError: If the template file, or its pre-write backup, cannot be
+            written.
     """
-    template = """# Intellicrack API Credentials
-# Copy this file to .env and fill in your API keys
-
-# Anthropic (Claude)
-ANTHROPIC_API_KEY=sk-ant-api03-...
-
-# OpenAI (GPT)
-OPENAI_API_KEY=sk-...
-# OPENAI_ORGANIZATION=org-...
-# OPENAI_API_BASE=https://api.openai.com/v1
-
-# Google AI (Gemini)
-GOOGLE_API_KEY=...
-# GOOGLE_CLOUD_PROJECT=your-project-id
-
-# OpenRouter
-OPENROUTER_API_KEY=sk-or-v1-...
-
-# Ollama (local)
-# OLLAMA_HOST=http://localhost:11434
-# OLLAMA_API_KEY=  # Usually not needed for local
-"""
-
     _logger.debug("env_template_creating", path=str(path))
     path.parent.mkdir(parents=True, exist_ok=True)
+
+    existing_text = ""
+    if path.exists():
+        try:
+            existing_text = path.read_text(encoding="utf-8")
+        except OSError:
+            _logger.exception("env_template_read_existing_failed", path=str(path))
+            raise
+
+    if not existing_text.strip():
+        try:
+            path.write_text(_render_full_env_template(), encoding="utf-8")
+        except OSError:
+            _logger.exception("env_template_write_failed", path=str(path))
+            raise
+        all_keys = tuple(var.key for section in _ENV_TEMPLATE_SECTIONS for var in section.variables)
+        _logger.info("env_template_created", path=str(path), created=True, merged=False)
+        return EnvTemplateResult(path=path, backup_path=None, created=True, merged=False, added_keys=all_keys)
+
+    existing_keys = set(_parse_env_text(existing_text).keys())
+
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    backup_path = path.with_name(f"{path.name}.{timestamp}.bak")
     try:
-        with path.open("w", encoding="utf-8") as f:
-            f.write(template)
+        backup_path.write_text(existing_text, encoding="utf-8")
     except OSError:
-        _logger.exception("env_template_write_failed", path=str(path))
+        _logger.exception("env_template_backup_failed", path=str(backup_path))
         raise
-    _logger.debug("env_template_created", path=str(path))
+    _logger.info("env_template_backup_created", path=str(path), backup_path=str(backup_path))
+
+    missing_block, added_keys = _render_missing_env_vars(existing_keys)
+    if not added_keys:
+        _logger.info("env_template_merge_noop", path=str(path), backup_path=str(backup_path))
+        return EnvTemplateResult(path=path, backup_path=backup_path, created=False, merged=True, added_keys=())
+
+    separator = "" if existing_text.endswith("\n") else "\n"
+    appended = f"{separator}\n# --- Added by Intellicrack template merge on {timestamp} ---\n{missing_block}"
+    try:
+        with path.open("a", encoding="utf-8") as f:
+            f.write(appended)
+    except OSError:
+        _logger.exception("env_template_append_failed", path=str(path))
+        raise
+    _logger.info(
+        "env_template_merged",
+        path=str(path),
+        backup_path=str(backup_path),
+        added_keys=list(added_keys),
+    )
+    return EnvTemplateResult(path=path, backup_path=backup_path, created=False, merged=True, added_keys=added_keys)
 
 
 @functools.lru_cache(maxsize=1)
