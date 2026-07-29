@@ -2192,8 +2192,9 @@ metadata = {
 }
 
 try:
-    entry = currentProgram.getEntryPoint()
-    if entry is not None:
+    entry_points = currentProgram.getSymbolTable().getExternalEntryPointIterator()
+    if entry_points.hasNext():
+        entry = entry_points.next()
         metadata['entry_point'] = entry.getOffset()
 
     memory = currentProgram.getMemory()
@@ -3356,7 +3357,11 @@ metadata
                     cu = currentProgram.getListing().getCodeUnitAt(addr)
                     if cu is None:
                         raise RuntimeError('No code unit at ' + str(addr))
-                    cu.setComment({ghidra_type}, {json.dumps(comment)})
+                    tx_id = currentProgram.startTransaction('intellicrack.add_comment')
+                    try:
+                        cu.setComment({ghidra_type}, {json.dumps(comment)})
+                    finally:
+                        currentProgram.endTransaction(tx_id, True)
                     """,
                 ),
             )
@@ -3603,11 +3608,15 @@ metadata
                 if parsed is None:
                     _set_ok = False
                 else:
-                    existing = listing.getDataAt(addr)
-                    if existing is not None:
-                        listing.clearCodeUnits(addr, addr, False)
-                    listing.createData(addr, parsed)
-                    _set_ok = True
+                    tx_id = currentProgram.startTransaction('intellicrack.set_data_type')
+                    try:
+                        existing = listing.getDataAt(addr)
+                        if existing is not None:
+                            listing.clearCodeUnits(addr, addr, False)
+                        listing.createData(addr, parsed)
+                        _set_ok = True
+                    finally:
+                        currentProgram.endTransaction(tx_id, _set_ok)
                 _set_ok
             """)
             return bool(result)
@@ -3666,7 +3675,11 @@ metadata
                     from ghidra.program.model.symbol import SourceType
                     addr = toAddr({address})
                     st = currentProgram.getSymbolTable()
-                    st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED)
+                    tx_id = currentProgram.startTransaction('intellicrack.set_label')
+                    try:
+                        st.createLabel(addr, {json.dumps(name)}, SourceType.USER_DEFINED)
+                    finally:
+                        currentProgram.endTransaction(tx_id, True)
                     """,
                 ),
             )
@@ -3899,7 +3912,11 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                 textwrap.dedent(
                     f"""
                     bm = currentProgram.getBookmarkManager()
-                    bm.setBookmark(toAddr({address}), {json.dumps(bookmark_type)}, {json.dumps(category)}, {json.dumps(comment)})
+                    tx_id = currentProgram.startTransaction('intellicrack.create_bookmark')
+                    try:
+                        bm.setBookmark(toAddr({address}), {json.dumps(bookmark_type)}, {json.dumps(category)}, {json.dumps(comment)})
+                    finally:
+                        currentProgram.endTransaction(tx_id, True)
                     """,
                 ),
             )
@@ -4021,7 +4038,12 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         try:
             result = await self._execute_remote(f"""
                 addr = toAddr({address})
-                func = createFunction(addr, {name_arg})
+                func = None
+                tx_id = currentProgram.startTransaction('intellicrack.create_function')
+                try:
+                    func = createFunction(addr, {name_arg})
+                finally:
+                    currentProgram.endTransaction(tx_id, func is not None)
                 _cf_result = None
                 if func is not None:
                     _cf_result = {{'name': func.getName(), 'address': func.getEntryPoint().getOffset(), 'size': func.getBody().getNumAddresses()}}
@@ -4145,18 +4167,22 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     cc = {cc_literal}
                     nm = {name_literal}
 
-                    if rt is not None:
-                        dtm = currentProgram.getDataTypeManager()
-                        parser = DataTypeParser(dtm)
-                        parsed = parser.parse(rt)
-                        if parsed is not None:
-                            func.setReturnType(parsed, SourceType.USER_DEFINED)
+                    tx_id = currentProgram.startTransaction('intellicrack.edit_function_signature')
+                    try:
+                        if rt is not None:
+                            dtm = currentProgram.getDataTypeManager()
+                            parser = DataTypeParser(dtm)
+                            parsed = parser.parse(rt)
+                            if parsed is not None:
+                                func.setReturnType(parsed, SourceType.USER_DEFINED)
 
-                    if cc is not None:
-                        func.setCallingConvention(cc)
+                        if cc is not None:
+                            func.setCallingConvention(cc)
 
-                    if nm is not None:
-                        func.setName(nm, SourceType.USER_DEFINED)
+                        if nm is not None:
+                            func.setName(nm, SourceType.USER_DEFINED)
+                    finally:
+                        currentProgram.endTransaction(tx_id, True)
 
                     _efs_result = {{
                         'name': func.getName(),
@@ -4216,11 +4242,15 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     parser = DataTypeParser(dtm)
                     parsed = parser.parse({json.dumps(new_type)})
                     if parsed is not None:
-                        for var in func.getAllVariables():
-                            if var.getName() == {json.dumps(var_name)}:
-                                var.setDataType(parsed, SourceType.USER_DEFINED)
-                                found = True
-                                break
+                        tx_id = currentProgram.startTransaction('intellicrack.set_function_variable_type')
+                        try:
+                            for var in func.getAllVariables():
+                                if var.getName() == {json.dumps(var_name)}:
+                                    var.setDataType(parsed, SourceType.USER_DEFINED)
+                                    found = True
+                                    break
+                        finally:
+                            currentProgram.endTransaction(tx_id, found)
                 found
             """)
         except Exception as e:
@@ -4288,7 +4318,11 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                         struct.add(ft, f.get('size', ft.getLength()), f.get('name', ''), '')
 
                 dtm = currentProgram.getDataTypeManager()
-                added = dtm.addDataType(struct, None)
+                tx_id = currentProgram.startTransaction('intellicrack.define_structure')
+                try:
+                    added = dtm.addDataType(struct, None)
+                finally:
+                    currentProgram.endTransaction(tx_id, True)
                 {{'name': added.getName(), 'size': added.getLength(), 'field_count': added.getNumComponents()}}
             """)
             return cast("dict[str, Any]", result) if result else {"name": name, "success": False}
@@ -4376,11 +4410,15 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                 _apply_ok = False
                 if struct_type is not None:
                     listing = currentProgram.getListing()
-                    existing = listing.getDataAt(addr)
-                    if existing is not None:
-                        listing.clearCodeUnits(addr, addr.add(struct_type.getLength() - 1), False)
-                    listing.createData(addr, struct_type)
-                    _apply_ok = True
+                    tx_id = currentProgram.startTransaction('intellicrack.apply_structure_at')
+                    try:
+                        existing = listing.getDataAt(addr)
+                        if existing is not None:
+                            listing.clearCodeUnits(addr, addr.add(struct_type.getLength() - 1), False)
+                        listing.createData(addr, struct_type)
+                        _apply_ok = True
+                    finally:
+                        currentProgram.endTransaction(tx_id, _apply_ok)
                 else:
                     _apply_ok = False
                 _apply_ok

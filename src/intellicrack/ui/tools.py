@@ -21,6 +21,8 @@ from __future__ import annotations
 import asyncio
 import importlib
 import inspect
+import sys
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Literal, Protocol, cast, runtime_checkable
 
@@ -43,12 +45,21 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.subprocess_compat import (
+    PIPE,
+    TimeoutExpired,
+    run as _subprocess_run,
+)
 from intellicrack.core.types import BridgeAnalysisSummary, ToolError
 from intellicrack.ui.highlighter import (
     get_highlighter_for_language,
 )
 from intellicrack.ui.panel_dock import DetachedPanelWindow
-from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
+from intellicrack.ui.panels.async_bridge import (
+    run_bridge_coroutine,
+    run_bridge_coroutine_async,
+    run_bridge_coroutine_logged,
+)
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -342,7 +353,7 @@ class SandboxPanelProtocol(ToolWidget, Protocol):
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Coroutine
 
     from intellicrack.bridges.base import StaticAnalysisBridge, ToolBridgeBase
     from intellicrack.bridges.cutter import CutterBridge
@@ -379,6 +390,55 @@ _CODE_SPLIT_LEFT: Final[int] = 400
 _CODE_SPLIT_RIGHT: Final[int] = 100
 _SPLITTER_PANE_COUNT: Final[int] = 2
 _BRIDGE_SHUTDOWN_TIMEOUT_S: Final[float] = 5.0
+_PYTHON_SCRIPT_EXECUTION_TIMEOUT_S: Final[float] = 25.0
+
+
+def _run_python_script(content: str) -> str:
+    """Run Python script content as an isolated subprocess and capture its output.
+
+    Writes ``content`` to a temporary ``.py`` file and executes it with the
+    same interpreter running Intellicrack (``sys.executable``), so the
+    script sees the application's installed packages without sharing its
+    process or blocking the Qt event loop for longer than the bounded
+    timeout.
+
+    Args:
+        content: Python source code to execute.
+
+    Returns:
+        str: Combined stdout/stderr captured from the subprocess, annotated
+            with the exit code when it is non-zero. Never raises: launch
+            failures and timeouts are converted into a descriptive message.
+    """
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, encoding="utf-8") as handle:
+        handle.write(content)
+        script_path = handle.name
+
+    try:
+        completed = _subprocess_run(
+            [sys.executable, script_path],
+            stdout=PIPE,
+            stderr=PIPE,
+            text=True,
+            timeout=_PYTHON_SCRIPT_EXECUTION_TIMEOUT_S,
+            check=False,
+        )
+    except TimeoutExpired as exc:
+        partial_output = exc.stdout if isinstance(exc.stdout, str) else ""
+        message = f"Python script timed out after {_PYTHON_SCRIPT_EXECUTION_TIMEOUT_S:.0f}s."
+        return f"{message}\n{partial_output}".rstrip() if partial_output else message
+    except OSError as exc:
+        return f"Failed to launch Python interpreter: {exc}"
+    finally:
+        Path(script_path).unlink(missing_ok=True)
+
+    output = completed.stdout or ""
+    if completed.stderr:
+        output = f"{output}\n[stderr]\n{completed.stderr}" if output else f"[stderr]\n{completed.stderr}"
+    if completed.returncode != 0:
+        suffix = f"[exit code {completed.returncode}]"
+        output = f"{output}\n{suffix}" if output else suffix
+    return output or "(no output)"
 
 
 OutputType = Literal[
@@ -1749,6 +1809,7 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
             self.script_panel.set_backend(
                 cast("ScriptManager", self._pending_script_backend),
                 validator=cast("ScriptValidator | None", self._pending_script_validator),
+                executor=self._execute_script,
             )
             self._pending_script_backend = None
             self._pending_script_validator = None
@@ -2200,6 +2261,148 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
 
         _logger.info("sandbox_tab_added", tab="Sandbox")
         return self.sandbox_panel
+
+    def _execute_script(self, name: str, script_type: str, content: str) -> str | None:
+        """Dispatch a Scripts-panel Execute request to the bridge or interpreter matching ``script_type``.
+
+        Bound to the Scripts panel as its ``executor`` (see
+        :meth:`ScriptManagerPanel.set_backend`). ``python`` scripts run
+        synchronously as a subprocess and their captured output is
+        returned directly. Bridge-backed types (``frida``, ``ghidra``,
+        ``cutter``, ``x64dbg``) are dispatched on the shared background
+        event loop so a slow external tool never blocks the Qt event
+        loop; those return ``None`` and instead acknowledge the panel
+        asynchronously once the bridge call completes.
+
+        Args:
+            name: Script display name, used for logging and to match the
+                asynchronous acknowledgement back to the panel.
+            script_type: One of the ``ScriptTypeInfo`` identifiers:
+                ``"python"``, ``"frida"``, ``"ghidra"``, ``"cutter"``, or
+                ``"x64dbg"``.
+            content: Script source to execute.
+
+        Returns:
+            str | None: Captured output when resolved synchronously
+                (``"python"``, an unavailable bridge, or an unknown
+                script type). ``None`` when a bridge call was dispatched
+                asynchronously; ``acknowledge_execution`` is invoked on
+                the panel once that call completes.
+        """
+        _logger.info("script_executor_dispatch", script_name=name, script_type=script_type)
+
+        if script_type == "python":
+            return _run_python_script(content)
+
+        if script_type == "frida":
+            bridge = self.frida_bridge if self.frida_bridge is not None else self._resolve_frida_bridge()
+            if bridge is None:
+                return "Frida bridge is not available."
+            self._dispatch_script_coroutine(name, "Frida", bridge.execute_script(content))
+            return None
+
+        if script_type == "ghidra":
+            bridge = self.ghidra_bridge if self.ghidra_bridge is not None else self._resolve_ghidra_bridge()
+            if bridge is None:
+                return "Ghidra bridge is not available."
+            self._dispatch_script_coroutine(name, "Ghidra", bridge.execute_script(content))
+            return None
+
+        if script_type == "cutter":
+            bridge = self.cutter_bridge if self.cutter_bridge is not None else self._resolve_cutter_bridge()
+            if bridge is None:
+                return "Cutter bridge is not available."
+            self._dispatch_script_coroutine(name, "Cutter", bridge.execute_command(content))
+            return None
+
+        if script_type == "x64dbg":
+            bridge = self.x64dbg_bridge if self.x64dbg_bridge is not None else self._resolve_x64dbg_bridge()
+            if bridge is None:
+                return "x64dbg bridge is not available."
+            self._dispatch_x64dbg_script(name, bridge, content)
+            return None
+
+        return f"Unsupported script type: {script_type}"
+
+    def _dispatch_script_coroutine(
+        self,
+        name: str,
+        bridge_label: str,
+        coro: Coroutine[object, object, object],
+    ) -> None:
+        """Run a script-execution coroutine on the shared bridge loop and acknowledge the panel.
+
+        Args:
+            name: Script display name forwarded to ``acknowledge_execution``.
+            bridge_label: Human-readable bridge name used in the error
+                message when the coroutine raises.
+            coro: Awaitable script-execution call already bound to its
+                target bridge (e.g. ``bridge.execute_script(content)``).
+        """
+        panel = self.script_panel
+
+        def _on_success(result: object) -> None:
+            """Forward the bridge's script result to the panel.
+
+            Args:
+                result: Value returned by the completed bridge coroutine.
+            """
+            if panel is not None:
+                panel.acknowledge_execution(name, str(result) if result is not None else "")
+
+        def _on_error(exc: object) -> None:
+            """Forward the bridge's failure to the panel as an error message.
+
+            Args:
+                exc: Exception or error payload raised by the coroutine.
+            """
+            if panel is not None:
+                panel.acknowledge_execution(name, f"{bridge_label} execution error: {exc}")
+
+        run_bridge_coroutine_logged(
+            coro,
+            on_success=_on_success,
+            on_error=_on_error,
+            parent=panel,
+            event="script_panel_execute",
+            logger=_logger,
+            level="info",
+            script_name=name,
+            bridge=bridge_label,
+        )
+
+    def _dispatch_x64dbg_script(self, name: str, bridge: X64DbgBridge, content: str) -> None:
+        """Load and run x64dbg script content through the bridge's scripting engine.
+
+        x64dbg scripts are multi-line programs for its own ``scriptload``/
+        ``scriptrun`` engine, not single command-bar commands, so ``content``
+        is written to a temporary script file that the bridge loads and
+        runs; the file is removed once execution finishes.
+
+        Args:
+            name: Script display name forwarded to ``acknowledge_execution``.
+            bridge: Connected x64dbg bridge instance.
+            content: x64dbg script source (``scriptload``/``scriptrun`` syntax).
+        """
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8") as handle:
+            handle.write(content)
+            script_path = handle.name
+
+        async def _run() -> dict[str, dict[str, Any]]:
+            """Load then run the temporary script file, cleaning it up afterward.
+
+            Returns:
+                dict[str, dict[str, Any]]: ``load`` and ``run`` result dicts
+                    from the bridge's scripting engine.
+            """
+            try:
+                load_result = await bridge.script_load(script_path)
+                run_result = await bridge.script_run()
+                return {"load": load_result, "run": run_result}
+            finally:
+                await asyncio.to_thread(Path(script_path).unlink, missing_ok=True)
+
+        self._dispatch_script_coroutine(name, "x64dbg", _run())
 
 
 class _ToolOutputPanelOpenersMixin(_ToolOutputPanelPanelsMixin):
@@ -2869,6 +3072,7 @@ class _ToolOutputPanelWiringMixin(_ToolOutputPanelAccessorsMixin):
             self.script_panel.set_backend(
                 cast("ScriptManager", backend),
                 validator=cast("ScriptValidator | None", validator),
+                executor=self._execute_script,
             )
             self._pending_script_backend = None
             self._pending_script_validator = None

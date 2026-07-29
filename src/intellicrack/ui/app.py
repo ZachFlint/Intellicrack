@@ -1404,29 +1404,29 @@ class MainWindow(QMainWindow):
     def _on_user_message(self, text: str) -> None:
         """Handle user message submission.
 
-        When no session is active yet, a new one is created implicitly from the
-        provider and model currently selected in the toolbar so the message can
-        be processed without requiring an explicit "New Session" action first.
+        The session is created implicitly when none is active yet, or rebound
+        in place when one is active but its provider/model no longer matches
+        the toolbar's current selection, both from the provider and model
+        currently selected in the toolbar. This lets the toolbar's
+        Provider/Model combos take effect on the very next send instead of
+        being silently ignored until an explicit "New Session" action
+        (S16-D01).
 
         Args:
             text: User's message text.
         """
-        needs_session = self._orchestrator.current_session is None
-        provider: str | ProviderName | None = None
-        model = ""
-        if needs_session:
-            provider, model = self._selected_provider_model()
-            if not model:
-                self.status_update.emit("Select a model before sending")
-                QMessageBox.warning(
-                    self,
-                    "No Model Selected",
-                    "Select a model in the toolbar before sending a message.",
-                )
-                return
+        provider, model = self._selected_provider_model()
+        if not model:
+            self.status_update.emit("Select a model before sending")
+            QMessageBox.warning(
+                self,
+                "No Model Selected",
+                "Select a model in the toolbar before sending a message.",
+            )
+            return
 
         self._chat_panel.set_input_enabled(enabled=False)
-        self._stream_append = self._chat_panel.add_streaming_message()
+        self._stream_append = None
         self.status_update.emit("Processing...")
 
         _logger.debug("user_message_received", length=len(text))
@@ -1435,9 +1435,8 @@ class MainWindow(QMainWindow):
             _logger.debug("user_message_process_context", pid=active_pid)
 
         async def process() -> None:
-            """Ensure a session exists, then route the user message to the orchestrator."""
-            if needs_session and provider is not None:
-                await self._ensure_active_session(provider, model)
+            """Ensure the active session matches the toolbar selection, then route the user message to the orchestrator."""
+            await self._ensure_active_session(provider, model)
             await self._orchestrator.process_user_input(text)
 
         self._run_async(process())
@@ -1456,25 +1455,45 @@ class MainWindow(QMainWindow):
         return provider, model
 
     async def _ensure_active_session(self, provider: str | ProviderName, model: str) -> None:
-        """Ensure an active session exists, creating one if necessary.
+        """Ensure the active session is bound to the requested provider and model.
 
-        Connects the selected provider first when it is not already connected,
-        loading saved credentials from the credential store, then starts a new
-        session bound to the provider and model.
+        Creates a new session implicitly when none is active yet. When a
+        session is already active but its provider or model no longer
+        matches ``provider``/``model``, rebinds the existing session in
+        place so the next completion is routed to the newly selected
+        provider/model instead of silently continuing to use the session's
+        original binding (S16-D01) -- "New Session" remains the only way to
+        start a fresh conversation. Connects the selected provider first
+        when it is not already connected, loading saved credentials from the
+        credential store.
 
         Args:
             provider: Provider selected in the toolbar.
             model: Model identifier selected in the toolbar.
         """
-        if self._orchestrator.current_session is not None:
-            return
-
         provider_name = provider if isinstance(provider, ProviderName) else ProviderName(str(provider).lower())
+        current_session = self._orchestrator.current_session
+
+        if current_session is not None and current_session.provider == provider_name and current_session.model == model:
+            return
 
         registry = self._orchestrator.provider_registry
         instance = registry.get(provider_name)
         if instance is None or not instance.is_connected:
             await self._connect_provider_for_session(provider_name)
+
+        if current_session is not None:
+            _logger.info(
+                "active_session_rebound",
+                session_id=current_session.id,
+                previous_provider=current_session.provider.value,
+                previous_model=current_session.model,
+                provider=provider_name.value,
+                model=model,
+            )
+            current_session.provider = provider_name
+            current_session.model = model
+            return
 
         _logger.info("implicit_session_create", provider=provider_name.value, model=model)
         await self._orchestrator.start_session(provider_name, model)
@@ -1516,11 +1535,19 @@ class MainWindow(QMainWindow):
     def _on_stream_chunk(self, chunk: str) -> None:
         """Handle streaming response chunk.
 
+        Lazily creates the streaming message bubble on the first chunk of a
+        turn instead of eagerly when the message is sent. A completion that
+        never streams therefore never gets a placeholder bubble at all, so no
+        empty orphan "Intellicrack" bubble is left above the user's message
+        (S16-D05); the real reply then arrives as the turn's only assistant
+        bubble via ``message_received``.
+
         Args:
             chunk: Text chunk from LLM.
         """
-        if self._stream_append:
-            self._stream_append(chunk)
+        if self._stream_append is None:
+            self._stream_append = self._chat_panel.add_streaming_message()
+        self._stream_append(chunk)
         self._accumulate_usage_from_payload(chunk)
 
     def _on_tool_call(self, call: ToolCall) -> None:

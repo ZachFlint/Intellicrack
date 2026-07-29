@@ -199,16 +199,13 @@ public class LicenseAnalyzer extends GhidraScript {
 
                         # Find comparison operations
                         /c cmp
-                        """
-
-                           ,
+                        """,
         },
         "x64dbg": {
             "display": "x64dbg",
             "extension": ".txt",
             "language": "x64dbg",
-            "template":\
-                        """// x64dbg script for license bypass
+            "template": """// x64dbg script for license bypass
 // Target: {target}
 
 // Set an unconditional breakpoint at the validation function entry
@@ -229,8 +226,7 @@ run
             "display": "Python",
             "extension": ".py",
             "language": "python",
-            "template":\
-                        '''"""
+            "template": '''"""
 Python analysis script for license examination.
 Target: {target}
 """
@@ -275,7 +271,7 @@ if __name__ == "__main__":
     target = r"{target}"
     if Path(target).exists():
         analysis = analyze_binary(target)
-        print(f"Found {{len(analysis['license_strings'])}} license strings")
+        print(f"Found {len(analysis['license_strings'])} license strings")
 ''',
         },
     }
@@ -342,7 +338,7 @@ if __name__ == "__main__":
         """
         info = cls.TYPES.get(script_type, {})
         template = info.get("template", "")
-        return template.format(target=target, address=address)
+        return template.replace("{target}", target).replace("{address}", address)
 
 
 class ScriptListWidget(QListWidget):
@@ -785,11 +781,20 @@ class ScriptManagerPanel(QWidget):
             elif reply == QMessageBox.StandardButton.Cancel:
                 return
 
+        script_type = str(self._type_combo.currentData() or "frida")
+        try:
+            template = ScriptTypeInfo.get_template(script_type)
+        except (KeyError, ValueError, IndexError):
+            _logger.exception("script_template_load_failed", script_type=script_type)
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to load the {ScriptTypeInfo.get_display_name(script_type)} template. Check logs for details.",
+            )
+            return
+
         self._current_script_id = None
         self._name_edit.clear()
-
-        script_type = str(self._type_combo.currentData() or "frida")
-        template = ScriptTypeInfo.get_template(script_type)
         self._editor.set_content(template)
         self._modified = False
         self._status_bar.showMessage("New script created")
