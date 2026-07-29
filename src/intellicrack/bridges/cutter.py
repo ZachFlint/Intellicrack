@@ -18,7 +18,7 @@ import re
 import shutil
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Literal, cast, override
+from typing import TYPE_CHECKING, Any, Final, Literal, cast, override
 
 import r2pipe
 import rzpipe
@@ -97,6 +97,7 @@ _VALID_BP_TYPES: frozenset[str] = frozenset({"software", "hardware", "memory"})
 _BITS_64 = 64
 _R2_COMMAND_TIMEOUT: float = 5.0
 R2_COMMAND_TIMEOUT: float = _R2_COMMAND_TIMEOUT
+_PDG_DECOMPILE_TIMEOUT: float = 30.0
 
 _RZ_64BIT_ARCHES: frozenset[str] = frozenset(
     {
@@ -249,6 +250,43 @@ def _open_analysis_pipe(target: str, flags: list[str] | None = None) -> _Analysi
     else:
         pipe = backend.module.open(target, pipe_flags, radare2home=install_dir_str)
     return cast("_AnalysisPipe", pipe)
+
+
+_GHIDRA_SLEIGHHOME_CANDIDATES: Final[tuple[tuple[str, ...], ...]] = (
+    ("lib", "rizin", "plugins", "rz_ghidra_sleigh"),
+    ("share", "rizin", "rz_ghidra_sleigh"),
+    ("..", "lib", "rizin", "plugins", "rz_ghidra_sleigh"),
+    ("..", "share", "rizin", "rz_ghidra_sleigh"),
+)
+
+
+def _resolve_ghidra_sleighhome(install_dir: Path) -> Path | None:
+    """Locate the rz-ghidra SLEIGH specification directory next to the resolved backend.
+
+    The rz-ghidra plugin's own auto-detection of its bundled SLEIGH
+    specifications (``*.sla``/``*.ldefs`` files) does not reliably resolve
+    when the resolved backend binary is reached through a symlinked
+    launcher, which is exactly how :func:`_resolve_backend_for` locates it
+    on Windows. Without a valid ``ghidra.sleighhome``, ``pdg`` fails with
+    ``No sleigh specification for <language id>`` for every function.
+    Checking known install layouts relative to the resolved install
+    directory recovers a valid path deterministically instead of relying on
+    the plugin's environment-dependent search.
+
+    Args:
+        install_dir: Directory containing the resolved rizin/radare2
+            executable, as returned by :func:`_resolve_backend_for`.
+
+    Returns:
+        Path | None: The first existing SLEIGH specification directory
+        found relative to ``install_dir``, or ``None`` when none of the
+        known layouts match.
+    """
+    for parts in _GHIDRA_SLEIGHHOME_CANDIDATES:
+        candidate = install_dir.joinpath(*parts).resolve()
+        if candidate.is_dir():
+            return candidate
+    return None
 
 
 def is_rizin_64bit(bits: int, arch: str, file_class: str) -> bool:
@@ -1230,6 +1268,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         self._tool_path: Path | None = None
         self._binary_path: Path | None = None
         self._analyzed: bool = False
+        self._ghidra_sleighhome_applied: bool = False
         self._r2_pid: int | None = None
         self._debug_mode: bool = False
         self._attached_pid: int | None = None
@@ -1289,7 +1328,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         _logger.debug("r2_cmd_started", command=command)
         return await self._r2_cmd(command)
 
-    async def _r2_cmd(self, command: str) -> str:
+    async def _r2_cmd(self, command: str, *, command_timeout: float | None = None) -> str:
         """Execute an r2 command and return a guaranteed string result.
 
         Serializes access to the underlying analysis pipe through
@@ -1311,6 +1350,12 @@ class _CutterBridgeBase(StaticAnalysisBridge):
 
         Args:
             command: The r2 command to execute.
+            command_timeout: Optional override for the command timeout, in
+                seconds. Defaults to :data:`R2_COMMAND_TIMEOUT` when
+                omitted; callers that know a command can legitimately run
+                longer (e.g. the first ``pdg`` invocation of a session,
+                which loads SLEIGH specifications) pass an explicit,
+                larger value.
 
         Returns:
             str: Command output as string, empty string if None.
@@ -1321,7 +1366,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         if self._r2 is None:
             _logger.warning("_r2_cmd_without_binary", command=command)
             raise ToolError(_ERR_NO_BINARY)
-        timeout = R2_COMMAND_TIMEOUT
+        effective_timeout = R2_COMMAND_TIMEOUT if command_timeout is None else command_timeout
         async with self._r2_lock:
             if self._r2 is None:
                 _logger.warning("_r2_cmd_without_binary", command=command)
@@ -1329,15 +1374,15 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             try:
                 result = await asyncio.wait_for(
                     asyncio.to_thread(self._r2.cmd, command),
-                    timeout=timeout,
+                    timeout=effective_timeout,
                 )
             except TimeoutError:
                 _logger.warning(
                     "r2_command_timeout",
                     command=command,
-                    timeout=timeout,
+                    timeout=effective_timeout,
                 )
-                msg = f"{_ERR_CMD_TIMEOUT} after {timeout}s: {command}"
+                msg = f"{_ERR_CMD_TIMEOUT} after {effective_timeout}s: {command}"
                 raise ToolError(msg) from None
             except (OSError, RuntimeError, ValueError) as e:
                 _logger.warning("r2_command_failed", command=command, error=str(e))
@@ -1770,6 +1815,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             self.r2 = await asyncio.to_thread(_open_analysis_pipe, str(path), open_flags)
             self._binary_path = await asyncio.to_thread(path.resolve)
             self._analyzed = False
+            self._ghidra_sleighhome_applied = False
             self._debug_mode = debug
 
             self._register_rizin_process(path)
@@ -2038,8 +2084,42 @@ class CutterAnalysisMixin(_CutterBridgeBase):
             return 8
         return 0
 
+    async def _configure_ghidra_sleighhome(self) -> None:
+        """Point rz-ghidra's SLEIGH loader at the resolved backend's spec directory.
+
+        rz-ghidra's ``pdg`` command fails with ``No sleigh specification for
+        <language id>`` on every function unless ``ghidra.sleighhome`` names
+        a directory containing the plugin's bundled SLEIGH specifications.
+        The plugin's own auto-detection does not reliably resolve this when
+        the backend binary is reached through a symlinked launcher, so this
+        explicitly resolves and configures it once per loaded binary using
+        the same install directory the analysis pipe was opened against.
+        A backend or spec directory that cannot be resolved leaves
+        ``ghidra.sleighhome`` unset, matching the plugin's own default
+        behaviour on installs where auto-detection already works.
+        """
+        if self._ghidra_sleighhome_applied or self._r2 is None:
+            return
+        backend = await asyncio.to_thread(_select_pipe_backend)
+        if backend is None:
+            return
+        sleighhome = await asyncio.to_thread(_resolve_ghidra_sleighhome, backend.install_dir)
+        if sleighhome is None:
+            _logger.debug("ghidra_sleighhome_not_found", install_dir=str(backend.install_dir))
+            return
+        await self._r2_cmd(f"e ghidra.sleighhome={sleighhome}")
+        self._ghidra_sleighhome_applied = True
+        _logger.debug("ghidra_sleighhome_configured", sleighhome=str(sleighhome))
+
     async def decompile(self, address: int) -> str:
         """Decompile function at address.
+
+        Uses rz-ghidra's ``pdg`` command exclusively -- rizin 0.9.1 ships no
+        native ``pdc`` decompiler, so a prior fallback to it always failed
+        and masked genuine ``pdg`` failures. The SLEIGH specifications
+        ``pdg`` depends on are loaded lazily on first use within a session,
+        which can exceed the default per-command timeout, so this call uses
+        an extended timeout specific to ``pdg``.
 
         Args:
             address: Function address.
@@ -2058,13 +2138,13 @@ class CutterAnalysisMixin(_CutterBridgeBase):
             raise ToolError(_ERR_NOT_ANALYZED)
 
         _logger.debug("decompile_requested", address=hex(address))
+        await self._configure_ghidra_sleighhome()
         await self._r2_cmd(f"s {address}")
-        result = await self._r2_cmd("pdc")
+        result = await self._r2_cmd("pdg", command_timeout=_PDG_DECOMPILE_TIMEOUT)
 
-        if not result or "Cannot" in result:
-            result = await self._r2_cmd("pdg")
-
-        if not result or "Cannot" in result:
+        stripped = result.strip() if result else ""
+        if not stripped or stripped.startswith("Cannot ") or "Decompiler Error" in stripped:
+            _logger.warning("decompile_unavailable", address=hex(address), response_prefix=stripped[:120])
             raise ToolError(_ERR_DECOMPILE_NA)
 
         return result
@@ -2551,29 +2631,56 @@ class CutterCommandMixin(CutterEditingMixin):
     async def get_function_graph(self, address: int) -> list[dict[str, Any]]:
         """Get function control flow graph data for graph rendering.
 
+        Builds block-level graph data from rizin's ``afbj`` (basic-block
+        JSON) command rather than ``agj``/``agfj``, both of which return no
+        data against a rizin 0.9.1 backend. ``afbj`` does not embed
+        per-instruction disassembly the way ``agj`` historically did, so
+        each block's instructions are fetched separately through ``pdj``
+        (disassemble N instructions as JSON), using the block's own
+        ``ninstr`` count so the fetched range covers exactly one block.
+
         Args:
             address: Address of the function to graph.
 
         Returns:
-            list[dict[str, Any]]: List of basic block dictionaries from r2 agj output.
+            list[dict[str, Any]]: List of basic block dictionaries, each
+            with ``offset`` (int), ``jump`` (int | None), ``fail``
+            (int | None), and ``ops`` (list of instruction dicts carrying a
+            ``disasm`` field) -- the shape ``CFGGraphScene.load_graph``
+            expects. Empty when the address has no analyzed basic blocks.
 
         Raises:
-            ToolError: If no binary is loaded or command fails.
+            ToolError: If no binary is loaded, the binary has not been
+                analysed, or a command fails.
         """
         if self._r2 is None:
             _logger.warning("function_graph_without_binary", address=hex(address))
             raise ToolError(_ERR_NO_BINARY)
+        if not self._analyzed:
+            _logger.warning("function_graph_without_analysis", address=hex(address))
+            raise ToolError(_ERR_NOT_ANALYZED)
 
         _logger.debug("function_graph_queried", address=hex(address))
-        result = await self._cmd_json(f"agj @ {hex(address)}")
-        if result:
-            first = result[0]
-            if "blocks" in first:
-                blocks = first["blocks"]
-                if isinstance(blocks, list):
-                    return cast("list[dict[str, Any]]", blocks)
-            return result
-        return []
+        raw_blocks = await self._cmd_json(f"afbj @ {hex(address)}")
+
+        graph_blocks: list[dict[str, Any]] = []
+        for raw_block in raw_blocks:
+            block_addr = _get_int(raw_block, "addr")
+            ninstr = _get_int(raw_block, "ninstr")
+            ops: list[dict[str, Any]] = []
+            if ninstr > 0:
+                ops = await self._cmd_json(f"pdj {ninstr} @ {hex(block_addr)}")
+            graph_blocks.append(
+                {
+                    "offset": block_addr,
+                    "jump": _get_optional_int(raw_block, "jump"),
+                    "fail": _get_optional_int(raw_block, "fail"),
+                    "ops": ops,
+                },
+            )
+
+        _logger.debug("function_graph_resolved", address=hex(address), block_count=len(graph_blocks))
+        return graph_blocks
 
     async def get_function_address(self, name: str) -> int | None:
         """Get address of a function by name.

@@ -4457,7 +4457,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             result = await self._execute_remote(
                 """
                 blocks = []
-                for block in getMemory().getBlocks():
+                for block in currentProgram.getMemory().getBlocks():
                     blocks.append({
                         'name': block.getName(),
                         'start': block.getStart().getOffset(),
@@ -4598,7 +4598,7 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
             result = await self._execute_remote(
                 """
                 segments = []
-                for block in getMemory().getBlocks():
+                for block in currentProgram.getMemory().getBlocks():
                     segments.append({
                         'name': block.getName(),
                         'start': block.getStart().getOffset(),
@@ -5013,9 +5013,10 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
                     addr_iter = func_body.getAddressRanges()
                     while addr_iter.hasNext() and count < {max_blocks}:
                         rng = addr_iter.next()
-                        blk_it = bbm.getCodeBlocksContaining(rng.getMinAddress(), monitor)
-                        while blk_it.hasNext() and count < {max_blocks}:
-                            blk = blk_it.next()
+                        blk_array = bbm.getCodeBlocksContaining(rng.getMinAddress(), monitor)
+                        for blk in blk_array:
+                            if count >= {max_blocks}:
+                                break
                             src_addrs = []
                             src_it = blk.getSources(monitor)
                             while src_it.hasNext():
@@ -5824,17 +5825,25 @@ class _GhidraBridgeAnalysisMixin(_GhidraBridgeBase):
         try:
             result = await self._execute_remote(
                 f"""
+                import fnmatch
+
                 st = currentProgram.getSymbolTable()
                 type_filter = {type_filter_literal}
+                raw_pattern = {json.dumps(name)}
+                match_pattern = raw_pattern if ('*' in raw_pattern or '?' in raw_pattern) else '*' + raw_pattern + '*'
+                match_pattern_lower = match_pattern.lower()
                 symbols = []
-                it = st.getSymbolIterator({json.dumps(name)}, True)
-                while it.hasNext():
-                    sym = it.next()
+                sym_it = st.getAllSymbols(True)
+                while sym_it.hasNext():
+                    sym = sym_it.next()
+                    sym_name = sym.getName()
+                    if not fnmatch.fnmatch(sym_name.lower(), match_pattern_lower):
+                        continue
                     sym_type_str = str(sym.getSymbolType())
                     if type_filter is not None and sym_type_str != type_filter:
                         continue
                     symbols.append({{
-                        'name': sym.getName(),
+                        'name': sym_name,
                         'address': sym.getAddress().getOffset(),
                         'type': sym_type_str,
                         'namespace': sym.getParentNamespace().getName() if sym.getParentNamespace() else '',
@@ -7051,17 +7060,17 @@ class GhidraBridge(_GhidraBridgeAnalysisMixin):
                 addr = toAddr({address})
                 upm = currentProgram.getUsrPropertyManager()
                 props = {{}}
-                prop_names = list(upm.propertyNames())
-                for prop_name in prop_names:
+                name_it = upm.propertyManagers()
+                while name_it.hasNext():
+                    prop_name = name_it.next()
                     map_obj = upm.getPropertyMap(prop_name)
-                    if map_obj is not None and map_obj.hasProperty(addr):
-                        try:
-                            props[prop_name] = str(map_obj.getObject(addr))
-                        except Exception:
-                            try:
-                                props[prop_name] = bool(map_obj.getBoolean(addr))
-                            except Exception:
-                                props[prop_name] = None
+                    if map_obj is None or not map_obj.hasProperty(addr):
+                        continue
+                    raw_value = map_obj.get(addr)
+                    if raw_value is None:
+                        props[prop_name] = None
+                    else:
+                        props[prop_name] = str(raw_value)
                 _props_payload = {{'address': {address}, 'properties': props}}
                 _props_payload
                 """,
