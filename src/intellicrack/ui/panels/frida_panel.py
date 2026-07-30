@@ -9,11 +9,13 @@ Provides a script editor, console output, and hook manager for interacting with 
 
 from __future__ import annotations
 
+import threading
 import time
+from collections import deque
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
-from PyQt6.QtCore import QSignalBlocker, Qt, pyqtSignal
+from PyQt6.QtCore import QSignalBlocker, Qt, QTimer, pyqtSignal
 from PyQt6.QtGui import QFontMetrics, QIntValidator, QKeySequence, QShortcut
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -66,6 +68,10 @@ _STALKER_TID_MAX_WIDTH: Final[int] = 100
 _TOP_SPLIT: Final[list[int]] = [200, 400, 300]
 _MAIN_SPLIT: Final[list[int]] = [400, 200]
 _SPACING_STALKER: Final[int] = 4
+_CONSOLE_MAX_BLOCK_COUNT: Final[int] = 5000
+_CONSOLE_DRAIN_INTERVAL_MS: Final[int] = 50
+_CONSOLE_DRAIN_BATCH_SIZE: Final[int] = 200
+_CONSOLE_QUEUE_MAXLEN: Final[int] = 10000
 
 
 _DEFAULT_FRIDA_SCRIPT = """Interceptor.attach(ptr('ADDRESS'), {
@@ -108,7 +114,6 @@ class FridaPanel(AnalysisPanelBase):
 
     hook_added: pyqtSignal = pyqtSignal(str)
     script_executed: pyqtSignal = pyqtSignal()
-    _frida_message_received: pyqtSignal = pyqtSignal(object)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the FridaPanel widget.
@@ -117,12 +122,18 @@ class FridaPanel(AnalysisPanelBase):
             parent: Parent widget.
         """
         super().__init__(parent)
-        self._frida_message_received.connect(self._on_frida_message)
         self._bridge: FridaBridge | None = None
         self._attached_pid: int | None = None
         self._hook_ids: list[str] = []
         self._pending_hook_seq: int = 0
         self._active_script_id: str | None = None
+        self._frida_message_queue: deque[dict[str, object]] = deque(maxlen=_CONSOLE_QUEUE_MAXLEN)
+        self._frida_message_lock: threading.Lock = threading.Lock()
+        self._frida_dropped_message_count: int = 0
+        self._console_drain_timer: QTimer = QTimer(self)
+        self._console_drain_timer.setInterval(_CONSOLE_DRAIN_INTERVAL_MS)
+        self._console_drain_timer.timeout.connect(self._drain_frida_message_queue)
+        self._console_drain_timer.start()
 
     @override
     def _populate_toolbar(self, toolbar: QToolBar) -> None:
@@ -213,7 +224,7 @@ class FridaPanel(AnalysisPanelBase):
         self._console = QPlainTextEdit()
         self._console.setFont(FontManager.get_instance().get_code_font(9))
         self._console.setReadOnly(True)
-        set_max_block_count(self._console, 10000)
+        set_max_block_count(self._console, _CONSOLE_MAX_BLOCK_COUNT)
         console_layout.addWidget(self._console)
         main_splitter.addWidget(console_container)
 
@@ -508,7 +519,7 @@ class FridaPanel(AnalysisPanelBase):
             bridge: The FridaBridge to use.
         """
         self._bridge = bridge
-        bridge.set_message_handler(self._frida_message_received.emit)
+        bridge.set_message_handler(self._enqueue_frida_message)
         self._interceptor_lifecycle.set_bridge(bridge)
         self._stalker_call_probes.set_bridge(bridge)
         self._stalker_config.set_bridge(bridge)
@@ -546,11 +557,54 @@ class FridaPanel(AnalysisPanelBase):
         if msg_type == "send":
             payload = message.get("payload", "")
             self._console.appendPlainText(f"[send] {payload}")
+        elif msg_type == "log":
+            level = str(message.get("level", "info"))
+            payload = message.get("payload", "")
+            self._console.appendPlainText(f"[log:{level}] {payload}")
         elif msg_type == "error":
             desc = message.get("description", str(message))
             self._console.appendPlainText(f"[error] {desc}")
         else:
             self._console.appendPlainText(f"[{msg_type}] {message}")
+
+    def _enqueue_frida_message(self, message: dict[str, object]) -> None:
+        """Queue a Frida script message for coalesced, rate-limited console rendering.
+
+        This is the handler registered with ``FridaBridge.set_message_handler``,
+        so it runs directly on Frida's native callback thread and must never
+        touch Qt widgets. It only pushes onto a bounded, lock-protected deque
+        that ``_drain_frida_message_queue`` later drains on the GUI thread,
+        which keeps a high-frequency ``send()``/``console.log`` hook from
+        flooding the Qt event queue with one cross-thread delivery per
+        message. When the queue is already full, the oldest queued message is
+        evicted and the drop is recorded for the next drain's notice.
+
+        Args:
+            message: Frida message dictionary as delivered by the bridge.
+        """
+        with self._frida_message_lock:
+            if len(self._frida_message_queue) >= _CONSOLE_QUEUE_MAXLEN:
+                self._frida_dropped_message_count += 1
+            self._frida_message_queue.append(message)
+
+    def _drain_frida_message_queue(self) -> None:
+        """Flush queued Frida messages to the console in a bounded per-tick batch.
+
+        Runs on the GUI thread as the ``_console_drain_timer`` callback. Pops
+        at most ``_CONSOLE_DRAIN_BATCH_SIZE`` messages per tick so a chatty
+        script hook cannot monopolize the Qt event loop and starve process
+        controls like Detach/Flush, then renders a "messages dropped" notice
+        if the bounded queue overflowed since the previous drain.
+        """
+        with self._frida_message_lock:
+            batch_size = min(_CONSOLE_DRAIN_BATCH_SIZE, len(self._frida_message_queue))
+            batch = [self._frida_message_queue.popleft() for _ in range(batch_size)]
+            dropped = self._frida_dropped_message_count
+            self._frida_dropped_message_count = 0
+        for message in batch:
+            self._on_frida_message(message)
+        if dropped:
+            self._console.appendPlainText(f"[!] {dropped} Frida messages dropped (console queue overflow)")
 
     def _on_attach(self) -> None:
         """Attach to a target process."""

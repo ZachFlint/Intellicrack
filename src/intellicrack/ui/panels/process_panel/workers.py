@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QThread, pyqtSignal
 
 from intellicrack.core.logging import get_logger
-from intellicrack.core.process_manager import ProcessManager, TrackedProcess
+from intellicrack.core.process_manager import ProcessManager, TrackedEntry
 
 
 if TYPE_CHECKING:
@@ -58,16 +58,14 @@ class TrackedRefreshWorker(QThread):
             ``status``, and ``registered_at`` keys.
         """
         manager = ProcessManager.get_instance()
-        all_tracked: list[TrackedProcess] = manager.get_all_tracked()
-        running_pids: set[int | None] = {p.pid for p in manager.get_running_processes()}
+        all_tracked: list[TrackedEntry] = manager.get_all_tracked_entries()
 
         result: list[dict[str, str | int | None]] = []
         for tracked in all_tracked:
-            pid = tracked.pid
-            status = "Running" if pid in running_pids else "Stopped"
+            status = "Running" if tracked.is_running else "Stopped"
             registered_str = tracked.registered_at.strftime("%Y-%m-%d %H:%M:%S")
             result.append({
-                "pid": pid,
+                "pid": tracked.pid,
                 "name": tracked.name,
                 "process_type": tracked.process_type.value,
                 "status": status,

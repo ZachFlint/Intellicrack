@@ -225,7 +225,7 @@ class TrackedProcess:
 
     @property
     def pid(self) -> int | None:
-        """Get process ID if available.
+        """Process ID if available.
 
         Returns:
             int | None: The process ID, or None if not available.
@@ -256,6 +256,25 @@ class TrackedProcess:
         if isinstance(self.process, Popen):
             return self.process.poll() is None
         return self.process.returncode is None
+
+
+@dataclass
+class TrackedEntry:
+    """Unified, serializable view of a tracked process or external PID.
+
+    Produced by :meth:`ProcessManager.get_all_tracked_entries`, combining
+    subprocess-backed :class:`TrackedProcess` entries with PIDs registered
+    via :meth:`ProcessManager.register_external_pid` into a single shape so
+    UI consumers (e.g. the Tracked tab) can render both categories without
+    knowing which backing store an entry came from.
+    """
+
+    pid: int
+    name: str
+    process_type: ProcessType
+    registered_at: datetime
+    is_running: bool
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class ProcessManager:
@@ -718,6 +737,47 @@ class ProcessManager:
         with self._process_lock:
             return list(self._processes.values())
 
+    def get_all_tracked_entries(self) -> list[TrackedEntry]:
+        """Get a unified view of all tracked processes and external PIDs.
+
+        Combines subprocess-backed entries from :meth:`get_all_tracked` with
+        PIDs registered via :meth:`register_external_pid`, resolving live
+        running state for each so UI consumers (e.g. the Tracked tab) can
+        render both categories without querying two separate stores.
+
+        Returns:
+            list[TrackedEntry]: Combined, serializable tracked-process entries.
+        """
+        with self._process_lock:
+            processes = list(self._processes.values())
+            external = dict(self._external_pids)
+
+        entries: list[TrackedEntry] = [
+            TrackedEntry(
+                pid=tracked.pid if tracked.pid is not None else -1,
+                name=tracked.name,
+                process_type=tracked.process_type,
+                registered_at=tracked.registered_at,
+                is_running=tracked.is_running,
+                metadata=tracked.metadata,
+            )
+            for tracked in processes
+        ]
+
+        entries.extend(
+            TrackedEntry(
+                pid=pid,
+                name=info["name"],
+                process_type=info["process_type"],
+                registered_at=info["registered_at"],
+                is_running=_pid_exists(pid),
+                metadata=info["metadata"],
+            )
+            for pid, info in external.items()
+        )
+
+        return entries
+
     def get_running_processes(self) -> list[TrackedProcess]:
         """Get all currently running tracked processes.
 
@@ -926,7 +986,7 @@ class ProcessManager:
 
     @property
     def process_count(self) -> int:
-        """Get the number of tracked processes.
+        """Number of tracked processes.
 
         Returns:
             int: The total count of tracked processes.
@@ -936,7 +996,7 @@ class ProcessManager:
 
     @property
     def running_count(self) -> int:
-        """Get the number of running tracked processes.
+        """Number of running tracked processes.
 
         Returns:
             int: The count of currently running tracked processes.
