@@ -87,6 +87,24 @@ _PROVIDER_TOKEN_ENCODINGS: dict[ProviderName, str] = {
 
 _DEFAULT_TOKEN_ENCODING: str = _TIKTOKEN_CL100K
 
+_STREAMING_TOOL_CALL_PROVIDERS: frozenset[ProviderName] = frozenset(
+    {
+        ProviderName.OPENAI,
+        ProviderName.ANTHROPIC,
+        ProviderName.GOOGLE,
+        ProviderName.OLLAMA,
+        ProviderName.OPENROUTER,
+        ProviderName.HUGGINGFACE,
+        ProviderName.GROK,
+        ProviderName.LOCAL_TRANSFORMERS,
+    },
+)
+"""Providers whose ``chat_stream()`` implementation populates ``get_pending_tool_calls()``
+from streamed deltas, so a tools-on initial turn can be safely streamed without losing a
+tool call the model emits mid-stream. A provider added in the future that cannot yet
+finalize tool calls from a stream is simply left out of this set, so ``_should_use_streaming``
+falls back to the non-streaming path for its initial tools-on turn until it is added here."""
+
 _MAX_TOOL_RESULT_CHARS: int = 8000
 """Maximum serialized characters of a single tool result re-fed to the model.
 
@@ -1840,6 +1858,7 @@ class Orchestrator:
 
         tools_available = bool(tools)
         use_streaming = self._should_use_streaming(
+            provider=provider,
             tools_available=tools_available,
             is_final_response=is_final_response,
         )
@@ -1936,12 +1955,26 @@ class Orchestrator:
     def _should_use_streaming(
         self,
         *,
+        provider: LLMProvider,
         tools_available: bool,
         is_final_response: bool,
     ) -> bool:
         """Decide whether to use streaming mode.
 
+        In "auto" mode, a turn with no tools (or the final summarizing turn
+        after tool results have already been collected) always streams. An
+        initial turn where tools are available also streams as long as the
+        active provider is known to finalize tool calls from streamed deltas
+        (see ``_STREAMING_TOOL_CALL_PROVIDERS``); ``_stream_response`` still
+        collects any tool calls the model emits mid-stream via
+        ``provider.get_pending_tool_calls()`` after the stream completes, so
+        text deltas can reach the UI immediately without losing tool-call
+        fidelity.
+
         Args:
+            provider: LLM provider that will service this request. Used to
+                check whether the provider finalizes tool calls from a
+                streamed turn.
             tools_available: Whether tools are available for this request.
             is_final_response: Whether a final response is expected.
 
@@ -1956,7 +1989,11 @@ class Orchestrator:
         mode = self._config.stream_mode
         if mode == "never":
             return False
-        return True if mode == "always" else not tools_available or is_final_response
+        if mode == "always":
+            return True
+        if not tools_available or is_final_response:
+            return True
+        return provider.name in _STREAMING_TOOL_CALL_PROVIDERS
 
     async def _stream_response(
         self,

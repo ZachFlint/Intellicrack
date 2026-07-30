@@ -158,6 +158,31 @@ _VALID_PROTECTION_FLAGS: frozenset[str] = frozenset({
 })
 _VALID_SOCKET_FAMILIES: frozenset[str] = frozenset({"ipv4", "ipv6", "unix"})
 _SCAN_CONTEXT_BYTES: int = 16
+_SCAN_CHUNK_BYTES: int = 4 * 1024 * 1024
+_SCAN_CHUNK_TIMEOUT: float = 5.0
+_ALREADY_UNLOADED_MARKERS: tuple[str, ...] = ("destroy", "detach")
+_SCAN_AGENT_SCRIPT: str = """
+rpc.exports = {
+    scanChunk: function (baseHex, size, hexPattern) {
+        return new Promise(function (resolve) {
+            var matches = [];
+            try {
+                Memory.scan(ptr(baseHex), size, hexPattern, {
+                    onMatch: function (address, matchSize) {
+                        matches.push({ address: address.toString(), size: matchSize });
+                    },
+                    onError: function () {},
+                    onComplete: function () {
+                        resolve(matches);
+                    }
+                });
+            } catch (e) {
+                resolve([]);
+            }
+        });
+    }
+};
+"""
 _PATCH_CODE_PROBE_SIZE: int = 4096
 _ASCII_PRINTABLE_MIN: int = 0x20
 _ASCII_PRINTABLE_MAX: int = 0x7E
@@ -2071,9 +2096,16 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         Accepts either raw ``bytes`` (which are converted to a hex pattern
         with no wildcards) or a hex pattern string compatible with
-        ``Memory.scanSync`` (e.g. ``"48 8B ?? ??"``). The latter form is
-        what the JSON tool surface advertises, so the dispatcher can pass
-        through user-supplied wildcard patterns without conversion.
+        ``Memory.scan`` (e.g. ``"48 8B ?? ??"``). The latter form is what
+        the JSON tool surface advertises, so the dispatcher can pass through
+        user-supplied wildcard patterns without conversion.
+
+        Ranges are enumerated once and then scanned through a persistent
+        async scan agent in bounded chunks (see :meth:`_scan_ranges_chunked`)
+        rather than a single blocking ``Memory.scanSync`` call, so this
+        coroutine always resolves even for a large address space: a slow or
+        stuck chunk is skipped rather than allowed to hang the RPC channel
+        past Frida's transport timeout.
 
         Args:
             pattern: Byte pattern (``bytes``) or hex pattern string with
@@ -2099,6 +2131,41 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         _logger.debug("memory_scan_starting", pattern_length=pattern_len, module_name=module_name)
 
+        ranges = await self._enumerate_scan_ranges(module_name)
+
+        script_id = await self.execute_persistent_script(_SCAN_AGENT_SCRIPT)
+        try:
+            raw_matches = await self._scan_ranges_chunked(script_id, ranges, hex_pattern)
+        finally:
+            await self._unload_script(script_id)
+
+        matches = await self._build_scan_results(
+            scan_data=raw_matches,
+            hex_pattern=hex_pattern,
+            pattern_len=pattern_len,
+        )
+
+        _logger.debug("memory_scan_completed", matches=len(matches))
+        return matches
+
+    async def _enumerate_scan_ranges(self, module_name: str | None) -> list[tuple[int, int]]:
+        """Enumerate readable memory ranges eligible for a pattern scan.
+
+        Range enumeration is a fast metadata-only call (no memory content is
+        read), so it stays on the existing single-shot
+        :meth:`_execute_script_and_wait` helper.
+
+        Args:
+            module_name: Optional module name to limit the scan scope. When
+                omitted every readable range in the process is considered.
+
+        Returns:
+            list[tuple[int, int]]: ``(base_address, size)`` pairs for each
+            readable range, in enumeration order.
+
+        Raises:
+            ToolError: If range enumeration fails.
+        """
         if module_name is not None:
             escaped_module = self._escape_js_string(module_name)
             range_source = (
@@ -2111,35 +2178,116 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         script_code = f"""
         {range_source}
-        var results = [];
-        ranges.forEach(function(range) {{
-            if (range.protection.indexOf('r') === -1) return;
-            try {{
-                var matches = Memory.scanSync(range.base, range.size, '{hex_pattern}');
-                matches.forEach(function(m) {{
-                    results.push({{
-                        address: m.address.toString(),
-                        size: m.size
-                    }});
-                }});
-            }} catch (e) {{}}
+        var result = ranges.map(function (r) {{
+            return {{ base: r.base.toString(), size: r.size, protection: r.protection }};
         }});
-        send({{ type: 'scan', data: results }});
+        send({{ type: 'scan_ranges', data: result }});
         """
 
         result = await self._execute_script_and_wait(script_code)
-
         if "error" in result:
             raise ToolError(_ERR_READ_FAILED)
 
-        matches = await self._build_scan_results(
-            scan_data=result.get("data", []),
-            hex_pattern=hex_pattern,
-            pattern_len=pattern_len,
-        )
+        ranges: list[tuple[int, int]] = []
+        range_data = result.get("data", [])
+        if isinstance(range_data, list):
+            for raw_item in cast("list[object]", range_data):
+                if not isinstance(raw_item, dict):
+                    continue
+                item = cast("dict[str, object]", raw_item)
+                protection = str(item.get("protection", ""))
+                if "r" not in protection:
+                    continue
+                base_str = str(item.get("base", "0"))
+                base = int(base_str, 16) if base_str.startswith("0x") else int(base_str)
+                size_val = item.get("size", 0)
+                size = int(size_val) if isinstance(size_val, (int, float)) else 0
+                if size > 0:
+                    ranges.append((base, size))
+        return ranges
 
-        _logger.debug("memory_scan_completed", matches=len(matches))
+    async def _scan_ranges_chunked(
+        self,
+        script_id: str,
+        ranges: list[tuple[int, int]],
+        hex_pattern: str,
+    ) -> list[dict[str, object]]:
+        """Scan every range for ``hex_pattern`` through bounded async chunks.
+
+        Each range is split into ``_SCAN_CHUNK_BYTES``-sized pieces and
+        scanned one RPC call at a time via the loaded scan agent, so no
+        single round trip can approach Frida's transport timeout regardless
+        of how large the process address space is.
+
+        Args:
+            script_id: ID of the loaded scan-agent script (see
+                :data:`_SCAN_AGENT_SCRIPT`), as returned by
+                :meth:`execute_persistent_script`.
+            ranges: ``(base_address, size)`` pairs to scan.
+            hex_pattern: Space-separated hex pattern, ``??`` wildcards allowed.
+
+        Returns:
+            list[dict[str, object]]: Raw match dictionaries with ``address``
+            and ``size`` keys, collected across every chunk that resolved.
+
+        Raises:
+            ToolError: If the scan-agent script is not found.
+        """
+        script = self._scripts.get(script_id)
+        if script is None:
+            raise ToolError(_ERR_SCRIPT_NOT_FOUND)
+
+        matches: list[dict[str, object]] = []
+        for base, size in ranges:
+            offset = 0
+            while offset < size:
+                chunk_size = min(_SCAN_CHUNK_BYTES, size - offset)
+                chunk_matches = await self._scan_one_chunk(script, base + offset, chunk_size, hex_pattern)
+                matches.extend(chunk_matches)
+                offset += chunk_size
         return matches
+
+    @staticmethod
+    async def _scan_one_chunk(
+        script: frida.core.Script,
+        base: int,
+        size: int,
+        hex_pattern: str,
+    ) -> list[dict[str, object]]:
+        """Scan one bounded chunk via the async scan agent, tolerating timeouts.
+
+        Each call is capped at ``_SCAN_CHUNK_TIMEOUT`` seconds so a single
+        slow or stuck chunk can never block the caller past Frida's own
+        transport timeout. A timed-out or transport-failed chunk yields no
+        matches rather than raising, so the overall scan always resolves.
+
+        Args:
+            script: Loaded scan-agent script exposing the ``scanChunk`` RPC
+                export.
+            base: Chunk start address.
+            size: Chunk size in bytes.
+            hex_pattern: Space-separated hex pattern, ``??`` wildcards allowed.
+
+        Returns:
+            list[dict[str, object]]: Raw match dictionaries for this chunk,
+            or an empty list if the chunk timed out or the transport failed.
+        """
+        scan_chunk = cast("Callable[[str, int, str], object]", script.exports_sync.scan_chunk)
+        try:
+            raw_result = await asyncio.wait_for(
+                asyncio.to_thread(scan_chunk, hex(base), size, hex_pattern),
+                timeout=_SCAN_CHUNK_TIMEOUT,
+            )
+        except TimeoutError:
+            _logger.warning("memory_scan_chunk_timed_out", base=hex(base), size=size)
+            return []
+        except (frida.TransportError, frida.InvalidOperationError, frida.OperationCancelledError) as e:
+            _logger.warning("memory_scan_chunk_failed", base=hex(base), size=size, error=str(e))
+            return []
+
+        if not isinstance(raw_result, list):
+            return []
+        return [item for item in cast("list[object]", raw_result) if isinstance(item, dict)]
 
     async def _build_scan_results(
         self,
@@ -2726,7 +2874,13 @@ class _FridaBridgeBase(InstrumentationBridge):
             timed_out = True
             _logger.warning("frida_script_execution_timeout", max_wait=max_wait)
 
-        await asyncio.to_thread(script.unload)
+        try:
+            await asyncio.to_thread(script.unload)
+        except (frida.TransportError, frida.InvalidOperationError) as e:
+            if timed_out or self._is_already_unloaded_error(e):
+                _logger.debug("frida_script_unload_tolerated", error=str(e), timed_out=timed_out)
+            else:
+                _logger.warning("frida_script_unload_failed", error=str(e))
 
         if timed_out:
             raise ToolError(
@@ -2820,27 +2974,72 @@ class _FridaBridgeBase(InstrumentationBridge):
         except RuntimeError:
             _logger.warning("frida_event_loop_signal_runtime_error")
 
-    async def _unload_script(self, script_id: str) -> None:
-        """Unload a script and reap every registry that referenced it.
+    @staticmethod
+    def _is_already_unloaded_error(exc: Exception) -> bool:
+        """Check whether a Frida exception indicates the script was already gone.
+
+        Frida raises ``InvalidOperationError``/``TransportError`` with
+        messages such as ``"script has been destroyed"`` when a lifecycle
+        call targets a script that is already destroyed or whose session has
+        already detached. That state is not a genuine failure -- it means
+        the desired end state (no running script) is already reached -- so
+        callers can treat it as a successful no-op instead of a warning.
+
+        Args:
+            exc: Exception raised by a Frida script lifecycle call.
+
+        Returns:
+            bool: True if the exception message matches a known
+            already-unloaded or already-detached marker.
+        """
+        message = str(exc).lower()
+        return any(marker in message for marker in _ALREADY_UNLOADED_MARKERS)
+
+    async def _unload_script_handle(self, script_id: str, script: frida.core.Script) -> None:
+        """Best-effort unload of a single Frida script handle.
+
+        Skips the native ``unload()`` call entirely when Frida already
+        reports the script as destroyed, and tolerates
+        ``InvalidOperationError``/``TransportError`` raised for an
+        already-destroyed or detached script by treating them as a
+        successful no-op rather than a failure. Any other exception is
+        logged but never re-raised, so callers can always proceed to clear
+        their bookkeeping -- a single misbehaving script must never abort a
+        Stop-All sweep or leave stale registry entries behind.
+
+        Args:
+            script_id: Script ID used for log correlation.
+            script: The Frida script handle to unload.
+        """
+        if script.is_destroyed:
+            _logger.debug("script_already_destroyed", script_id=script_id)
+            return
+        try:
+            await asyncio.to_thread(script.unload)
+        except (frida.InvalidOperationError, frida.TransportError) as e:
+            if self._is_already_unloaded_error(e):
+                _logger.debug("script_already_unloaded", script_id=script_id, reason=str(e))
+            else:
+                _logger.warning("script_unload_failed", script_id=script_id, error=str(e))
+        except Exception:
+            _logger.exception("script_unload_failed", script_id=script_id)
+
+    def _forget_script_registries(self, script_id: str) -> None:
+        """Remove every bookkeeping reference to ``script_id``.
 
         The bridge tracks scripts in several lookup tables -- ``_scripts`` is
         the canonical handle store, while ``_alloc_scripts``, ``_call_probes``,
         and ``_stalker_scripts`` map per-domain identifiers to a script id.
         Unload paths historically only touched ``_scripts`` which left the
         secondary tables holding stale ids long after the underlying script
-        had been destroyed. This method now clears every reference so callers
-        can rely on the registries reflecting reality.
+        had been destroyed. This method clears every reference unconditionally
+        so callers can rely on the registries reflecting reality even when the
+        underlying Frida unload call failed.
 
         Args:
-            script_id: Script ID to unload.
+            script_id: Script ID to purge from every registry.
         """
-        if script_id in self._scripts:
-            script = self._scripts[script_id]
-            try:
-                await asyncio.to_thread(script.unload)
-            except Exception:
-                _logger.exception("script_unload_failed", script_id=script_id)
-            del self._scripts[script_id]
+        self._scripts.pop(script_id, None)
 
         for alloc_addr, alloc_sid in list(self._alloc_scripts.items()):
             if alloc_sid == script_id:
@@ -2856,6 +3055,17 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         if self._exception_handler_script == script_id:
             self._exception_handler_script = None
+
+    async def _unload_script(self, script_id: str) -> None:
+        """Unload a script and reap every registry that referenced it.
+
+        Args:
+            script_id: Script ID to unload.
+        """
+        script = self._scripts.get(script_id)
+        if script is not None:
+            await self._unload_script_handle(script_id, script)
+        self._forget_script_registries(script_id)
 
     async def _unload_stalker_script(self, tid: int, script_id: str) -> None:
         """Issue ``Stalker.unfollow`` on the script that owns the trace and unload it.
@@ -2888,10 +3098,22 @@ class _FridaBridgeBase(InstrumentationBridge):
         await self._unload_script(script_id)
 
     async def unload_all_scripts(self) -> None:
-        """Unload all active scripts."""
-        _logger.debug("unloading_all_scripts", count=len(self._scripts))
-        for script_id in list(self._scripts.keys()):
-            await self._unload_script(script_id)
+        """Unload every active script, tolerating individual failures.
+
+        Each script is unloaded independently. A failure tearing down one
+        script -- including a script that is already destroyed or detached
+        -- never aborts the sweep and never leaves that script's bookkeeping
+        behind, so "Stop All Scripts" always ends with an empty registry
+        even if one or more underlying Frida scripts misbehave.
+        """
+        script_ids = list(self._scripts.keys())
+        _logger.debug("unloading_all_scripts", count=len(script_ids))
+        for script_id in script_ids:
+            try:
+                await self._unload_script(script_id)
+            except Exception:
+                _logger.exception("script_unload_all_iteration_failed", script_id=script_id)
+                self._forget_script_registries(script_id)
 
     def set_message_handler(
         self,
