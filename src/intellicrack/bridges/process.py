@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import ctypes
+import functools
 import re
 import struct
 import time
@@ -22,6 +23,7 @@ from typing import TYPE_CHECKING, ClassVar, Literal, cast, override
 
 
 if TYPE_CHECKING:
+    import threading
     from collections.abc import Callable
 
 from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
@@ -1719,14 +1721,25 @@ class _ProcessBridgeBase(ToolBridgeBase):
                 details={"code": _CODE_SECTION_NOT_MAPPED, "base_address": base_address},
             )
 
-        ctypes.set_last_error(0)
+        self._kernel32.GetCurrentProcess.argtypes = []
+        self._kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        self._kernel32.GetLastError.argtypes = []
+        self._kernel32.GetLastError.restype = wintypes.DWORD
+        self._kernel32.SetLastError.argtypes = [wintypes.DWORD]
+        self._kernel32.SetLastError.restype = None
+
+        self._kernel32.SetLastError(0)
         unmap_view_of_file2 = getattr(self._kernel32, "UnmapViewOfFile2", None)
         if unmap_view_of_file2 is not None:
+            unmap_view_of_file2.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.DWORD]
+            unmap_view_of_file2.restype = wintypes.BOOL
             current_process = self._kernel32.GetCurrentProcess()
             result = unmap_view_of_file2(current_process, ctypes.c_void_p(base_address), 0)
         else:
+            self._kernel32.UnmapViewOfFile.argtypes = [ctypes.c_void_p]
+            self._kernel32.UnmapViewOfFile.restype = wintypes.BOOL
             result = self._kernel32.UnmapViewOfFile(ctypes.c_void_p(base_address))
-        last_error = ctypes.get_last_error()
+        last_error = int(self._kernel32.GetLastError())
 
         if not result:
             _logger.error(
@@ -2962,6 +2975,8 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         pattern: str,
         start_address: int | None = None,
         end_address: int | None = None,
+        cancel_event: threading.Event | None = None,
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> list[int]:
         """Search for byte pattern in memory.
 
@@ -2973,13 +2988,33 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         event loop remains responsive while large processes are
         searched.
 
+        When ``start_address``/``end_address`` are given, only regions
+        (or the in-region byte ranges) that intersect ``[start_address,
+        end_address]`` are scanned, so a caller can bound the scan to a
+        small area instead of the full address space. When
+        ``cancel_event`` is given, it is checked before each region and
+        between chunks within a region so a caller can stop a long scan
+        promptly and receive the matches found so far. When
+        ``progress_callback`` is given, it is invoked after each chunk
+        with the cumulative bytes scanned and the total bytes selected
+        for the whole scan, so a caller can render progress. Omitting
+        ``cancel_event``/``progress_callback`` preserves the original
+        run-to-completion behavior.
+
         Args:
             pattern: Hex pattern with wildcards (e.g., "48 8B ?? ??").
             start_address: Optional start address.
             end_address: Optional end address.
+            cancel_event: Optional cooperative cancellation flag. When
+                set, the scan stops before starting the next unscanned
+                region or chunk and returns the matches found so far.
+            progress_callback: Optional callback invoked with
+                ``(bytes_scanned, total_bytes)`` as regions and chunks
+                within them are scanned.
 
         Returns:
-            list[int]: List of matching addresses.
+            list[int]: List of matching addresses found before
+                completion or cancellation.
         """
         _logger.debug("pattern_search_starting", pattern=pattern)
         pattern_bytes: list[int | None] = []
@@ -2998,6 +3033,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         matches: list[int] = []
         overlap = pattern_len - 1
 
+        scoped_regions: list[tuple[int, int]] = []
         for region in regions:
             if "r" not in region.protection:
                 continue
@@ -3016,18 +3052,72 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             scan_size = scan_end - scan_base
             if scan_size < pattern_len:
                 continue
+            scoped_regions.append((scan_base, scan_size))
 
-            await asyncio.to_thread(
+        total_bytes = sum(size for _, size in scoped_regions)
+        bytes_scanned = 0
+
+        for scan_base, scan_size in scoped_regions:
+            if cancel_event is not None and cancel_event.is_set():
+                _logger.debug(
+                    "pattern_search_cancelled",
+                    bytes_scanned=bytes_scanned,
+                    total_bytes=total_bytes,
+                )
+                break
+
+            region_progress: Callable[[int], None] | None = None
+            if progress_callback is not None:
+                region_progress = functools.partial(
+                    self._region_progress_adapter,
+                    progress_callback,
+                    bytes_scanned,
+                    total_bytes,
+                )
+
+            scanned_in_region: int = await asyncio.to_thread(
                 self._scan_region_pattern,
                 scan_base,
                 scan_size,
                 pattern_bytes,
                 overlap,
                 matches,
+                cancel_event,
+                region_progress,
             )
+            bytes_scanned += scanned_in_region
             await asyncio.sleep(0)
 
+        _logger.debug(
+            "pattern_search_completed",
+            pattern=pattern,
+            match_count=len(matches),
+            bytes_scanned=bytes_scanned,
+            total_bytes=total_bytes,
+            cancelled=bool(cancel_event is not None and cancel_event.is_set()),
+        )
         return matches
+
+    @staticmethod
+    def _region_progress_adapter(
+        progress_callback: Callable[[int, int], None],
+        base_offset: int,
+        total_bytes: int,
+        scanned_in_region: int,
+    ) -> None:
+        """Forward region-local scan progress as a cumulative progress update.
+
+        Args:
+            progress_callback: Caller-supplied callback that receives
+                cumulative ``(bytes_scanned, total_bytes)`` for the whole
+                scoped scan.
+            base_offset: Bytes already scanned in regions preceding the
+                region this update belongs to.
+            total_bytes: Total bytes selected across every scoped region.
+            scanned_in_region: Bytes scanned so far within the current
+                region.
+        """
+        progress_callback(base_offset + scanned_in_region, total_bytes)
 
     def _scan_region_pattern(
         self,
@@ -3036,7 +3126,9 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         pattern_bytes: list[int | None],
         overlap: int,
         matches: list[int],
-    ) -> None:
+        cancel_event: threading.Event | None = None,
+        progress_callback: Callable[[int], None] | None = None,
+    ) -> int:
         """Chunk-scan a single region for a pattern, preserving overlap.
 
         On a chunk read failure the scan logs at debug level and continues
@@ -3055,12 +3147,32 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
                 (should be ``len(pattern_bytes) - 1``).
             matches: Mutable list to which absolute match addresses are
                 appended.
+            cancel_event: Optional cooperative cancellation flag, checked
+                before each chunk read so a set event stops the scan
+                before the next chunk is read.
+            progress_callback: Optional callback invoked with the number
+                of bytes scanned so far within this region after each
+                chunk is processed.
+
+        Returns:
+            int: Number of bytes actually scanned within this region
+                before the region was fully scanned or the scan was
+                cancelled.
         """
         pattern_len = len(pattern_bytes)
         offset = 0
         step = max(1, _SEARCH_CHUNK_SIZE - overlap)
 
         while offset < region_size:
+            if cancel_event is not None and cancel_event.is_set():
+                _logger.debug(
+                    "pattern_search_region_cancelled",
+                    address=hex(region_base + offset),
+                    scanned=offset,
+                    region_size=region_size,
+                )
+                break
+
             chunk_size = min(_SEARCH_CHUNK_SIZE, region_size - offset)
             if chunk_size < pattern_len:
                 break
@@ -3082,6 +3194,8 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
                     )
                     break
                 offset += step
+                if progress_callback is not None:
+                    progress_callback(min(offset, region_size))
                 continue
 
             limit = len(data_bytes) - pattern_len + 1
@@ -3091,9 +3205,16 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
                     matches.append(chunk_address + i)
 
             if chunk_size < _SEARCH_CHUNK_SIZE:
+                offset += chunk_size
+                if progress_callback is not None:
+                    progress_callback(min(offset, region_size))
                 break
 
             offset += chunk_size - overlap
+            if progress_callback is not None:
+                progress_callback(min(offset, region_size))
+
+        return min(offset, region_size)
 
     def _region_still_committed(self, address: int) -> bool:
         """Re-query a virtual address to confirm it is still committed.
@@ -9206,16 +9327,23 @@ class _ProcessBridgeIOMixin(_ProcessBridgeEnumMixin):
             _logger.error("kernel32_unavailable", operation="map_section")
             raise ToolError(_ERR_KERNEL32_NA)
 
-        address: int = cast(
-            "int",
-            self._kernel32.MapViewOfFile(
-                handle,
-                0xF001F,
-                0,
-                0,
-                size,
-            ),
+        self._kernel32.MapViewOfFile.argtypes = [
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            wintypes.DWORD,
+            ctypes.c_size_t,
+        ]
+        self._kernel32.MapViewOfFile.restype = ctypes.c_void_p
+
+        address_raw = self._kernel32.MapViewOfFile(
+            handle,
+            0xF001F,
+            0,
+            0,
+            size,
         )
+        address: int = int(address_raw) if address_raw else 0
 
         if not address:
             _logger.error("section_map_failed", handle=handle, size=size)
