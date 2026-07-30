@@ -297,6 +297,11 @@ _ERR_GET_THREADS_FAILED = "failed to get threads"
 _ERR_GET_MODULES_FAILED = "failed to get modules"
 _ERR_GET_PARENT_PID_FAILED = "failed to get parent PID"
 _STILL_ACTIVE = 259
+# Windows error code 24, reported as GetLastError() after a module-snapshot
+# call that raced a debuggee still finishing process creation.
+_ERROR_BAD_LENGTH = 24
+_TOOLHELP_MODULE_SNAPSHOT_MAX_ATTEMPTS = 10
+_TOOLHELP_MODULE_SNAPSHOT_RETRY_DELAY = 0.1
 _PE_HEADER_READ_SIZE = PE_OPTIONAL_HEADER_OFFSET + PE32PLUS_OPTIONAL_HEADER_SIZE + 0x100
 _ERR_YARA_NOT_AVAILABLE = "yara-python is not installed. Install with 'pixi run pip install yara-python' to enable YARA scanning"
 _ERR_YARA_EMPTY_RULE = "YARA rule must be non-empty"
@@ -2335,6 +2340,17 @@ class _X64DbgBridgeBase(DebuggerBridge):
         # deadlock on an undrained pipe (audit6.md F-0015).
         headless_env = dict(os.environ)
         headless_env[_HEADLESS_ENV_VAR] = "1"
+        # The vendored x64dbg build only ships the Windows Qt platform
+        # plugin, not the offscreen one. Intellicrack's own headless test
+        # tooling sets an offscreen Qt platform on the parent environment,
+        # and that setting must never leak into this child - it would make
+        # x64dbg's own Qt platform-plugin init fail and hang before the
+        # bridge plugin ever opens its pipe. A spawned GUI debugger must
+        # always resolve its own bundled platform plugin, never inherit the
+        # host application's headless one.
+        headless_env.pop("QT_QPA_PLATFORM", None)
+        headless_env.pop("QT_QPA_PLATFORM_PLUGIN_PATH", None)
+        headless_env.pop("QT_PLUGIN_PATH", None)
 
         self._process = await asyncio.to_thread(
             spawn_on_hidden_desktop,
@@ -2850,6 +2866,63 @@ class _X64DbgBridgeBase(DebuggerBridge):
             return str(output) if output is not None else ""
         return ""
 
+    def _register_attached_pid(self, pid: int) -> None:
+        """Record ``pid`` as the currently attached or debugged process.
+
+        Shared by :meth:`attach`, :meth:`load`, and :meth:`restart` so
+        every path that learns a target process id updates the same
+        state the process-inspection commands (``read_memory``,
+        ``get_memory_regions``, ``get_modules``, ``get_threads``,
+        ``get_process_info``) consult via ``self._attached_pid``.
+
+        Args:
+            pid: Process id of the attached or newly launched debuggee.
+        """
+        self._attached_pid = pid
+        self._state.target_pid = pid
+        self._state.process_attached = True
+
+    async def _await_debuggee_pid(self) -> int | None:
+        """Poll ``reg_get $pid`` until the debuggee reports a real process id.
+
+        ``InitDebug`` (used by :meth:`load` and :meth:`restart`) returns
+        as soon as the command is queued, not once the debuggee process
+        actually exists. Querying ``$pid`` immediately afterwards can
+        race the debug loop and observe ``0`` (or a transient pipe
+        failure) before the process has been created, which previously
+        left ``self._attached_pid`` permanently unset and made every
+        process-inspection command report "not attached" even though
+        the debuggee was running. Polling for up to
+        :attr:`VERIFY_TIMEOUT` absorbs that race instead of giving up
+        after a single attempt.
+
+        Returns:
+            int | None: The debuggee's process id once ``reg_get``
+            reports a positive value, or ``None`` if no positive pid
+            was observed before the deadline elapsed.
+
+        Raises:
+            ToolError: If ``reg_get`` fails with a pipe error that
+                :meth:`_is_recoverable_pipe_error` classifies as
+                non-recoverable.
+        """
+        deadline = asyncio.get_running_loop().time() + self.VERIFY_TIMEOUT
+        while True:
+            try:
+                pid_result = await self._send_pipe_command("reg_get", {"name": "$pid"})
+            except ToolError as exc:
+                if not self._is_recoverable_pipe_error(exc):
+                    raise
+                _logger.warning("pid_capture_retry_failed", error=str(exc))
+            else:
+                if isinstance(pid_result, str):
+                    pid_val = int(pid_result, 0)
+                    if pid_val > 0:
+                        return pid_val
+            if asyncio.get_running_loop().time() >= deadline:
+                return None
+            await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
+
     async def load(self, path: Path, args: str | None = None) -> None:
         """Load an executable into x64dbg.
 
@@ -2879,19 +2952,9 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
         await self._send_command(cmd)
 
-        try:
-            pid_result = await self._send_pipe_command("reg_get", {"name": "$pid"})
-        except ToolError as exc:
-            if not self._is_recoverable_pipe_error(exc):
-                raise
-            _logger.warning("pid_capture_after_load_failed", error=str(exc))
-        else:
-            if isinstance(pid_result, str):
-                pid_val = int(pid_result, 0)
-                if pid_val > 0:
-                    self._attached_pid = pid_val
-                    self._state.target_pid = pid_val
-                    self._state.process_attached = True
+        pid_val = await self._await_debuggee_pid()
+        if pid_val is not None:
+            self._register_attached_pid(pid_val)
 
         self._state.connected = True
         self._state.tool_running = True
@@ -2998,12 +3061,10 @@ class _X64DbgBridgeBase(DebuggerBridge):
             await self._start_debugger(is_64bit=is_64)
 
         await self._send_command(f"attach {pid}")
-        self._attached_pid = pid
+        self._register_attached_pid(pid)
 
         self._state.connected = True
         self._state.tool_running = True
-        self._state.process_attached = True
-        self._state.target_pid = pid
         self._publish_tool_state()
         _logger.info("x64dbg_attached", pid=pid)
 
@@ -4880,6 +4941,61 @@ class _X64DbgBridgeBase(DebuggerBridge):
             return int(ctx64.Rip)
         return 0
 
+    @staticmethod
+    async def _create_module_snapshot_with_retry(kernel32: ctypes.WinDLL, pid: int) -> int:
+        """Create a Toolhelp module snapshot, retrying transient failures.
+
+        ``CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, ...)`` commonly fails
+        with ``ERROR_BAD_LENGTH`` (24) for a process that has only just been
+        created - or is still sitting at its initial system breakpoint with
+        its module list not yet fully populated - which is exactly the state
+        a debuggee is in immediately after :meth:`load` or :meth:`attach`
+        registers ``self._attached_pid``. Retrying a handful of times with a
+        short delay lets the snapshot succeed once the target has finished
+        loading instead of surfacing a spurious failure to a caller that
+        attached only moments earlier.
+
+        Args:
+            kernel32: ``ctypes.windll.kernel32`` proxy used to call
+                ``CreateToolhelp32Snapshot``.
+            pid: Process id of the attached debuggee to snapshot.
+
+        Returns:
+            int: A valid, open ``CreateToolhelp32Snapshot`` handle.
+
+        Raises:
+            ToolError: If every retry attempt fails, reporting the real
+                ``GetLastError`` value from the final attempt.
+        """
+        error_code = 0
+        for attempt in range(_TOOLHELP_MODULE_SNAPSHOT_MAX_ATTEMPTS):
+            snapshot = kernel32.CreateToolhelp32Snapshot(
+                TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
+                pid,
+            )
+            if snapshot not in {INVALID_HANDLE_VALUE, DWORD_MASK}:
+                return cast("int", snapshot)
+
+            error_code = ctypes.get_last_error()
+            if error_code != _ERROR_BAD_LENGTH:
+                msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for modules PID {pid}: error {error_code}"
+                raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
+
+            if attempt < _TOOLHELP_MODULE_SNAPSHOT_MAX_ATTEMPTS - 1:
+                _logger.debug(
+                    "toolhelp_module_snapshot_retry",
+                    pid=pid,
+                    attempt=attempt + 1,
+                    error_code=error_code,
+                )
+                await asyncio.sleep(_TOOLHELP_MODULE_SNAPSHOT_RETRY_DELAY)
+
+        msg = (
+            f"{_ERR_CREATE_SNAPSHOT_FAILED} for modules PID {pid} after "
+            f"{_TOOLHELP_MODULE_SNAPSHOT_MAX_ATTEMPTS} attempts: error {error_code}"
+        )
+        raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
+
     async def _get_modules(self) -> list[ModuleInfo]:
         """Get loaded modules for the attached process.
 
@@ -4900,7 +5016,13 @@ class _X64DbgBridgeBase(DebuggerBridge):
             msg = f"get_modules: {_ERR_NOT_ATTACHED}"
             raise ToolError(msg, tool_name="x64dbg")
 
-        kernel32 = ctypes.windll.kernel32
+        # ctypes.windll.kernel32 is not constructed with use_last_error=True,
+        # so ctypes.get_last_error() would always read back 0 for calls made
+        # through it. The retry loop below needs the real code
+        # CreateToolhelp32Snapshot reported through GetLastError to tell a
+        # transient, retryable failure apart from a genuine one, so a
+        # dedicated handle with last-error tracking enabled is required here.
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
         class ModuleEntry32W(ctypes.Structure):
             """Windows ``MODULEENTRY32W`` layout for module snapshots.
@@ -4922,25 +5044,31 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 ("szExePath", ctypes.c_wchar * 260),
             ]
 
-        snapshot = kernel32.CreateToolhelp32Snapshot(
-            TH32CS_SNAPMODULE | TH32CS_SNAPMODULE32,
-            self._attached_pid,
-        )
-        if snapshot in {INVALID_HANDLE_VALUE, DWORD_MASK}:
-            error_code = ctypes.get_last_error()
-            msg = f"{_ERR_CREATE_SNAPSHOT_FAILED} for modules PID {self._attached_pid}: error {error_code}"
-            raise ToolError(msg, tool_name="x64dbg", exit_code=error_code)
-
+        # A snapshot taken immediately after CREATE_PROCESS_DEBUG_EVENT can be
+        # valid yet empty: the loader has only mapped the main executable and
+        # ntdll at that point, and Module32FirstW briefly reports no entries
+        # until the debuggee reaches its initial system breakpoint and the
+        # rest of the import table finishes loading. Retrying the whole
+        # snapshot-and-walk cycle absorbs that race instead of returning an
+        # empty list for a debuggee that is, in fact, running with modules
+        # loaded moments later.
+        deadline = asyncio.get_running_loop().time() + self.VERIFY_TIMEOUT
         modules: list[ModuleInfo] = []
+        while True:
+            snapshot = await self._create_module_snapshot_with_retry(kernel32, self._attached_pid)
+            modules = []
+            try:
+                self._enumerate_modules_into(kernel32, snapshot, ModuleEntry32W, modules)
+            except (OSError, ctypes.ArgumentError) as e:
+                _logger.warning("x64dbg_get_modules_failed", pid=self._attached_pid, error=str(e))
+                msg = f"{_ERR_GET_MODULES_FAILED}: {e}"
+                raise ToolError(msg, tool_name="x64dbg") from e
+            finally:
+                kernel32.CloseHandle(snapshot)
 
-        try:
-            self._enumerate_modules_into(kernel32, snapshot, ModuleEntry32W, modules)
-        except (OSError, ctypes.ArgumentError) as e:
-            _logger.warning("x64dbg_get_modules_failed", pid=self._attached_pid, error=str(e))
-            msg = f"{_ERR_GET_MODULES_FAILED}: {e}"
-            raise ToolError(msg, tool_name="x64dbg") from e
-        finally:
-            kernel32.CloseHandle(snapshot)
+            if modules or asyncio.get_running_loop().time() >= deadline:
+                break
+            await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
 
         _logger.debug("modules_found", count=len(modules), pid=self._attached_pid)
         return modules
@@ -7966,19 +8094,9 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
             cmd += f', "{self._launch_args}"'
         await self._send_command(cmd)
 
-        try:
-            pid_result = await self._send_pipe_command("reg_get", {"name": "$pid"})
-        except ToolError as exc:
-            if not self._is_recoverable_pipe_error(exc):
-                raise
-            _logger.warning("pid_capture_after_restart_failed", error=str(exc))
-        else:
-            if isinstance(pid_result, str):
-                pid_val = int(pid_result, 0)
-                if pid_val > 0:
-                    self._attached_pid = pid_val
-                    self._state.target_pid = pid_val
-                    self._state.process_attached = True
+        pid_val = await self._await_debuggee_pid()
+        if pid_val is not None:
+            self._register_attached_pid(pid_val)
 
         observed, rpc_available = await self._wait_for_running_state(expected=False)
         self._state.connected = True

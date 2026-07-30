@@ -49,6 +49,7 @@ _AGENTIC: Final[str] = "tests/providers/test_agentic_capabilities.py"
 _MODEL_DISCOVERY: Final[str] = "tests/providers/test_model_discovery.py"
 _PROCESS_BRIDGE: Final[str] = "tests/bridges/test_process_bridge.py"
 _CUTTER_DECOMPILE: Final[str] = "tests/bridges/test_realcov_03d_cutter_decompile_cfg.py"
+_X64DBG_LOAD: Final[str] = "tests/bridges/test_x64dbg_load_attach_s13.py"
 _ANALYSIS_REAL: Final[str] = "tests/sandbox/test_realcov_12b_analysis_real.py"
 _INLINE_MONITORS: Final[str] = "tests/sandbox/windows/test_realcov_12b_inline_monitors.py"
 _INJECTION_MONITOR: Final[str] = "tests/sandbox/monitors/test_injection_monitor.py"
@@ -120,6 +121,7 @@ HOST_NATIVE_METHODS: Final[frozenset[tuple[str, str, str]]] = frozenset(
         (_CUTTER_DECOMPILE, "TestRealCfgBasicBlocks", "test_get_function_graph_returns_multiple_real_blocks_with_edges"),
         (_CUTTER_DECOMPILE, "TestRealCfgBasicBlocks", "test_get_function_graph_blocks_carry_real_disassembly"),
         (_CUTTER_DECOMPILE, "TestRealCfgBasicBlocks", "test_get_function_graph_offsets_match_get_basic_blocks_oracle"),
+        (_X64DBG_LOAD, "TestLoadRegistersAttachedProcess", "test_load_then_run_makes_inspection_commands_see_the_attached_process"),
     },
 )
 
