@@ -187,6 +187,7 @@ _PATCH_CODE_PROBE_SIZE: int = 4096
 _ASCII_PRINTABLE_MIN: int = 0x20
 _ASCII_PRINTABLE_MAX: int = 0x7E
 _ASCII_DEL: int = 0x7F
+_HOOK_DEFAULT_ARG_SAMPLE_COUNT: int = 4
 _CODE_WRITER_MAP: dict[str, str] = {
     "x86": "X86Writer",
     "arm": "ArmWriter",
@@ -2500,6 +2501,13 @@ class _FridaBridgeBase(InstrumentationBridge):
     ) -> HookInfo:
         """Attach a hook to a function by name or address.
 
+        When ``on_enter`` / ``on_leave`` are omitted, the agent installs a
+        default logging callback instead of a no-op: ``onEnter`` emits a
+        ``hook_fire`` message with the target address and the first
+        :data:`_HOOK_DEFAULT_ARG_SAMPLE_COUNT` argument pointers, and
+        ``onLeave`` emits a ``hook_fire`` message with the return value, so
+        the hook is observable through the console even without custom code.
+
         Args:
             target: Function name (module!func) or hex address.
             on_enter: JavaScript code for function entry.
@@ -2523,8 +2531,31 @@ class _FridaBridgeBase(InstrumentationBridge):
 
         script_code = f"""
         var target = {addr_resolve};
-        var onEnterFn = function(args) {{}};
-        var onLeaveFn = function(retval) {{}};
+        var hookId = '{hook_id}';
+        function defaultOnEnter(args) {{
+            var argSamples = [];
+            for (var i = 0; i < {_HOOK_DEFAULT_ARG_SAMPLE_COUNT}; i++) {{
+                argSamples.push(args[i].toString());
+            }}
+            send({{
+                type: 'hook_fire',
+                hook_id: hookId,
+                phase: 'enter',
+                address: target.toString(),
+                args: argSamples
+            }});
+        }}
+        function defaultOnLeave(retval) {{
+            send({{
+                type: 'hook_fire',
+                hook_id: hookId,
+                phase: 'leave',
+                address: target.toString(),
+                retval: retval.toString()
+            }});
+        }}
+        var onEnterFn = defaultOnEnter;
+        var onLeaveFn = defaultOnLeave;
         recv('install_hook', function(msg) {{
             try {{
                 if (typeof msg.onEnter === 'string' && msg.onEnter.length > 0) {{
@@ -4595,8 +4626,9 @@ class _FridaBridgeAnalysisMixin(_FridaBridgeBase):
             self._child_gating_enabled = True
             _logger.info("child_gating_enabled")
         except Exception as e:
-            _logger.warning("child_gating_enable_failed", error=str(e))
-            raise ToolError(_ERR_CHILD_GATING_FAILED) from e
+            reason = str(e) or type(e).__name__
+            _logger.warning("child_gating_enable_failed", error=reason)
+            raise ToolError(_ERR_CHILD_GATING_FAILED, details={"reason": reason}) from e
 
     async def disable_child_gating(self) -> None:
         """Disable child process gating.

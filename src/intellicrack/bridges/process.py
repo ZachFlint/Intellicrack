@@ -251,6 +251,7 @@ _MB_DIVISOR = 1024.0 * 1024.0
 
 _STILL_ACTIVE = 259
 _NTQUERY_BUF_MAX = 0x40000000
+_NTQUERY_SYS_MAX_ATTEMPTS = 8
 _STATUS_INFO_LENGTH_MISMATCH = -1073741820
 _PTR_SIZE_64 = 8
 _PTR_SIZE_32 = 4
@@ -2118,6 +2119,29 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         _logger.debug("processes_listed", count=len(processes), filter_name=filter_name)
         return processes
 
+    @staticmethod
+    def _process_matches_filter(pid: int, name: str, filter_name: str | None) -> bool:
+        """Check whether a process entry matches a listing filter string.
+
+        A purely numeric filter matches against the decimal process ID
+        (substring containment, mirroring the name-filter semantics below).
+        Any other filter matches case-insensitively against the process
+        executable name.
+
+        Args:
+            pid: Process ID of the candidate entry.
+            name: Process executable name of the candidate entry.
+            filter_name: Optional filter string; ``None`` matches every entry.
+
+        Returns:
+            bool: True if the entry matches the filter, False otherwise.
+        """
+        if filter_name is None:
+            return True
+        if filter_name.isdigit():
+            return filter_name in str(pid)
+        return filter_name.lower() in name.lower()
+
     def _iterate_process_snapshot(
         self,
         snapshot: int,
@@ -2132,8 +2156,10 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             entry: Pre-sized ``PROCESSENTRY32`` buffer used for each call.
             processes: Output list that receives matching :class:`ProcessInfo`
                 records.
-            filter_name: Optional case-insensitive substring filter for the
-                process name; ``None`` collects every entry.
+            filter_name: Optional filter for the process; a purely numeric
+                value matches by PID substring, otherwise it is a
+                case-insensitive substring filter on the process name.
+                ``None`` collects every entry.
 
         Raises:
             ToolError: If ``Process32First`` fails for a reason other than
@@ -2149,7 +2175,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             return
         while True:
             name = entry.szExeFile.decode("utf-8", errors="ignore")
-            if filter_name is None or filter_name.lower() in name.lower():
+            if self._process_matches_filter(entry.th32ProcessID, name, filter_name):
                 processes.append(
                     ProcessInfo(
                         pid=entry.th32ProcessID,
@@ -2217,8 +2243,10 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             entry: Pre-sized ``PROCESSENTRY32`` buffer used for each call.
             results: Output list that receives detail dictionaries for
                 every matching process.
-            filter_name: Optional case-insensitive substring filter for the
-                process name; ``None`` collects every entry.
+            filter_name: Optional filter for the process; a purely numeric
+                value matches by PID substring, otherwise it is a
+                case-insensitive substring filter on the process name.
+                ``None`` collects every entry.
         """
         if self._kernel32 is None:
             return
@@ -2227,7 +2255,7 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         while True:
             name = entry.szExeFile.decode("utf-8", errors="ignore")
             pid = entry.th32ProcessID
-            if filter_name is None or filter_name.lower() in name.lower():
+            if self._process_matches_filter(pid, name, filter_name):
                 arch = await self.detect_architecture(pid)
                 mem_mb = await self.get_process_memory_mb(pid)
                 results.append({
@@ -9364,7 +9392,16 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
     # ------------------------------------------------------------------
 
     async def query_system_info(self, info_class: int, buffer_size: int = 65536) -> str:
-        """Raw NtQuerySystemInformation bridge with auto-growing buffer.
+        """Raw NtQuerySystemInformation bridge with an auto-sizing buffer.
+
+        Fixed-size information classes (e.g. ``SystemBasicInformation``, class
+        0) reject any buffer that is not exactly the required size, returning
+        ``STATUS_INFO_LENGTH_MISMATCH`` even when the supplied buffer is
+        larger than needed. Variable-size classes (e.g.
+        ``SystemProcessInformation``, class 5) return the same status when
+        the buffer is too small. Both cases report the exact size required in
+        ``ReturnLength``, so each retry resizes the buffer to that hint
+        (growing or shrinking as needed) rather than blindly doubling.
 
         Args:
             info_class: SystemInformationClass value.
@@ -9389,7 +9426,9 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
             _STATUS_BUFFER_TOO_SMALL,
         }
 
-        while current_size <= _NTQUERY_BUF_MAX:
+        for _ in range(_NTQUERY_SYS_MAX_ATTEMPTS):
+            if current_size > _NTQUERY_BUF_MAX:
+                break
             buffer = ctypes.create_string_buffer(current_size)
             return_length = wintypes.ULONG(0)
 
@@ -9402,10 +9441,7 @@ class _ProcessBridgeRuntimeMixin(_ProcessBridgeIOMixin):
 
             if status in grow_statuses:
                 hint = return_length.value
-                next_size = max(current_size * 2, hint or 0)
-                if next_size <= current_size:
-                    next_size = current_size * 2
-                current_size = next_size
+                current_size = hint if hint > 0 else current_size * 2
                 continue
 
             if status < 0:

@@ -38,6 +38,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import ToolError
 from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.highlighter import get_highlighter_for_language
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
@@ -2691,12 +2692,32 @@ class FridaPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.enable_child_gating(),
             on_success=lambda _: self._console.appendPlainText("[+] Child gating enabled"),
-            on_error=lambda e: self._console.appendPlainText(f"[-] Enable child gating failed: {e}"),
+            on_error=self._on_enable_child_gating_error,
             parent=self,
             event="frida_enable_child_gating",
             logger=_logger,
             level="info",
         )
+
+    def _on_enable_child_gating_error(self, exc: object) -> None:
+        """Surface the underlying Frida failure reason when child gating cannot be enabled.
+
+        ``FridaBridge.enable_child_gating`` attaches the real Frida error text
+        (for example ``"not yet supported on this OS"`` when the platform has
+        no spawn-gating support) to ``ToolError.details['reason']``. Without
+        this, the console only showed the generic "child gating operation
+        failed" message, hiding the fact that the failure is a platform
+        limitation rather than a transient error.
+
+        Args:
+            exc: The exception raised by the bridge while enabling child gating.
+        """
+        reason = str(exc)
+        if isinstance(exc, ToolError):
+            detail_reason = exc.details.get("reason")
+            if isinstance(detail_reason, str) and detail_reason:
+                reason = detail_reason
+        self._console.appendPlainText(f"[-] Enable child gating failed: {reason}")
 
     def _on_disable_child_gating(self) -> None:
         """Disable child process gating."""
