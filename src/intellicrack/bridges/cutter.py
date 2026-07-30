@@ -93,6 +93,7 @@ _ERR_JSON_PARSE_FAILED = "failed to parse rizin JSON output"
 _ERR_INVALID_BP_TYPE = "invalid breakpoint type"
 _ERR_INVALID_HEX = "invalid hex response from rizin"
 _ERR_INVALID_DEBUG_RESPONSE = "invalid debug response from rizin"
+_ERR_PROJECT_SAVE_FAILED = "failed to save rizin project"
 _VALID_BP_TYPES: frozenset[str] = frozenset({"software", "hardware", "memory"})
 _BITS_64 = 64
 _R2_COMMAND_TIMEOUT: float = 5.0
@@ -554,6 +555,18 @@ def _get_list(data: dict[str, Any], key: str) -> list[Any]:
     """
     val = data.get(key)
     return cast("list[Any]", val) if isinstance(val, list) else []
+
+
+def _list_rzdb_project_names(projects_dir: Path) -> list[str]:
+    """List the names of Rizin ``.rzdb`` project files inside a directory.
+
+    Args:
+        projects_dir: Directory to scan for ``*.rzdb`` project files.
+
+    Returns:
+        list[str]: Alphabetically sorted project names (file stems).
+    """
+    return sorted(entry.stem for entry in projects_dir.glob("*.rzdb") if entry.is_file())
 
 
 def _parse_int_response(value: str) -> int:
@@ -1269,6 +1282,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         self._binary_path: Path | None = None
         self._analyzed: bool = False
         self._ghidra_sleighhome_applied: bool = False
+        self._rop_gadgets_primed: bool = False
         self._r2_pid: int | None = None
         self._debug_mode: bool = False
         self._attached_pid: int | None = None
@@ -1816,6 +1830,7 @@ class _CutterBridgeBase(StaticAnalysisBridge):
             self._binary_path = await asyncio.to_thread(path.resolve)
             self._analyzed = False
             self._ghidra_sleighhome_applied = False
+            self._rop_gadgets_primed = False
             self._debug_mode = debug
 
             self._register_rizin_process(path)
@@ -2347,6 +2362,13 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
     async def search_bytes(self, pattern: bytes | str) -> list[int]:
         """Search for byte pattern.
 
+        The ``/xj`` byte-search hit reports the match location under
+        different keys depending on the resolved backend: rizin 0.9.1 uses
+        ``address`` (an absolute virtual address) while radare2 uses
+        ``offset``. Reading a single fixed key silently defaulted every hit
+        to ``0`` on the other backend, so each hit's address is taken from
+        ``address`` first and falls back to ``offset``.
+
         Args:
             pattern: Byte sequence or hex string (e.g. '48 8B 05').
 
@@ -2366,7 +2388,7 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
         clean_hex = pattern.hex() if isinstance(pattern, bytes) else pattern.replace(" ", "")
         results = await self._cmd_json(f"/xj {clean_hex}")
 
-        addrs = [_get_int(r, "offset") for r in results]
+        addrs = [_get_int(r, "address") or _get_int(r, "offset") for r in results]
         _logger.debug("byte_search_completed", result_count=len(addrs))
         return addrs
 
@@ -2392,7 +2414,7 @@ class CutterXRefSearchMixin(CutterAnalysisMixin):
         clean_pattern = hex_pattern.replace(" ", "").replace("??", "..")
         results = await self._cmd_json(f"/xj {clean_pattern}")
 
-        addrs = [_get_int(r, "offset") for r in results]
+        addrs = [_get_int(r, "address") for r in results]
         _logger.debug("wildcard_byte_search_completed", hex_pattern=hex_pattern, result_count=len(addrs))
         return addrs
 
@@ -3077,6 +3099,23 @@ class CutterRopMixin(CutterMetadataMixin):
     async def search_rop_gadgets(self, pattern: str = "") -> list[GadgetInfo]:
         """Search for ROP gadgets in the binary.
 
+        Rizin's ``/Rj`` gadget entries nest every instruction under an
+        ``opcodes`` array of ``{offset, opcode, ...}`` objects rather than
+        exposing a flat ``addr``/``opcode`` string pair. The gadget's own
+        top-level ``retaddr`` field names the address of its *terminating*
+        instruction (the shared ``ret`` several overlapping gadget variants
+        return through), not its entry point, so the usable ROP address --
+        the one a caller places on the stack to execute the gadget -- is
+        the first opcode's ``offset``; ``retaddr`` is used only as a
+        fallback when ``opcodes`` is empty.
+
+        Rizin's very first ``/Rj`` invocation against a freshly opened
+        session always reports zero gadgets regardless of the search
+        pattern -- the scan it performs only becomes visible to the JSON
+        printer starting with the next ``/Rj`` call. This method transparently
+        retries once per connection so callers see real results on a fresh
+        session instead of a spurious empty list.
+
         Args:
             pattern: Optional pattern to filter gadgets.
 
@@ -3092,14 +3131,22 @@ class CutterRopMixin(CutterMetadataMixin):
 
         cmd = f"/Rj {pattern}" if pattern else "/Rj"
         gadgets = await self._cmd_json(cmd)
-        result: list[GadgetInfo] = [
-            GadgetInfo(
-                address=_get_int(g, "addr", _get_int(g, "offset")),
-                instructions=_get_str(g, "opcodes", _get_str(g, "opcode")),
-                size=_get_int(g, "size"),
+        if not gadgets and not self._rop_gadgets_primed:
+            gadgets = await self._cmd_json(cmd)
+        self._rop_gadgets_primed = True
+
+        result: list[GadgetInfo] = []
+        for g in gadgets:
+            opcodes = [cast("dict[str, Any]", op) for op in _get_list(g, "opcodes") if isinstance(op, dict)]
+            address = _get_int(opcodes[0], "offset") if opcodes else _get_int(g, "retaddr")
+            instructions = " ; ".join(_get_str(op, "opcode") for op in opcodes)
+            result.append(
+                GadgetInfo(
+                    address=address,
+                    instructions=instructions,
+                    size=_get_int(g, "size"),
+                ),
             )
-            for g in gadgets
-        ]
         _logger.debug("rop_gadgets_searched", pattern=pattern, result_count=len(result))
         return result
 
@@ -3685,8 +3732,51 @@ class CutterZignatureMixin(CutterEsilMixin):
 class CutterProjectConfigMixin(CutterZignatureMixin):
     """Rizin project save/open/list and runtime configuration operations."""
 
+    async def _resolve_projects_dir(self) -> Path:
+        """Resolve and provision the directory Rizin projects are stored under.
+
+        Rizin's ``Ps``/``Po`` project commands do not consult the
+        ``dir.projects`` configuration value to resolve a bare project name
+        on this backend -- a project name with no path separators silently
+        writes nothing rather than landing under ``dir.projects``. This
+        bridge therefore treats the configured ``dir.projects`` value (or
+        rizin's own built-in default when unset) as the authoritative
+        storage location and always builds explicit, fully-qualified
+        project file paths from it, provisioning the directory on disk if
+        it does not already exist.
+
+        Returns:
+            Path: The resolved, existing project storage directory.
+
+        Raises:
+            ToolError: If no binary is loaded or the directory cannot be
+                created.
+        """
+        if self._r2 is None:
+            _logger.warning("resolve_projects_dir_without_binary")
+            raise ToolError(_ERR_NO_BINARY)
+
+        current = (await self.get_config("dir.projects")).strip()
+        projects_dir = Path(current) if current else Path(tempfile.gettempdir()) / "intellicrack" / "rizin_projects"
+        try:
+            await asyncio.to_thread(projects_dir.mkdir, parents=True, exist_ok=True)
+        except OSError as e:
+            _logger.warning("projects_dir_creation_failed", path=str(projects_dir), error=str(e))
+            msg = f"{_ERR_PROJECT_SAVE_FAILED}: cannot create projects directory {projects_dir}: {e}"
+            raise ToolError(msg) from e
+        await self.set_config("dir.projects", str(projects_dir))
+        return projects_dir
+
     async def save_project(self, name: str) -> bool:
         """Save the current analysis as a Rizin project.
+
+        Resolves the ``dir.projects`` storage directory via
+        :meth:`_resolve_projects_dir`, issues ``Ps`` against an explicit
+        ``<name>.rzdb`` path inside it, and verifies the file actually
+        landed on disk -- rizin's ``Ps`` silently no-ops on some failure
+        modes instead of reporting an error through its command output, so
+        a passing command response alone is not sufficient evidence of a
+        successful save.
 
         Args:
             name: Project name.
@@ -3695,14 +3785,26 @@ class CutterProjectConfigMixin(CutterZignatureMixin):
             bool: True if project was saved.
 
         Raises:
-            ToolError: If no binary is loaded.
+            ToolError: If no binary is loaded, ``name`` is invalid, or the
+                project file was not written to disk.
         """
         if self._r2 is None:
             _logger.warning("save_project_without_binary", project_name=name)
             raise ToolError(_ERR_NO_BINARY)
 
-        await self._r2_cmd(f"Ps {name}")
-        _logger.info("project_saved", project_name=name)
+        validate_r2_argument(name, field="save_project name")
+        if not name or os.sep in name or (os.altsep and os.altsep in name) or name in {".", ".."}:
+            msg = f"{_ERR_INVALID_R2_INPUT}: save_project name must not be empty or contain path separators"
+            raise ToolError(msg)
+
+        projects_dir = await self._resolve_projects_dir()
+        project_path = projects_dir / f"{name}.rzdb"
+        await self._r2_cmd(f"Ps {project_path}")
+        if not await asyncio.to_thread(project_path.is_file):
+            _logger.warning("project_save_verification_failed", project_name=name, path=str(project_path))
+            msg = f"{_ERR_PROJECT_SAVE_FAILED}: {project_path} was not written"
+            raise ToolError(msg)
+        _logger.info("project_saved", project_name=name, path=str(project_path))
         return True
 
     async def open_project(self, name: str) -> bool:
@@ -3728,8 +3830,15 @@ class CutterProjectConfigMixin(CutterZignatureMixin):
     async def list_projects(self) -> list[str]:
         """List available Rizin projects.
 
+        Rizin 0.9.1 exposes no ``Pl`` (or equivalent) command to list saved
+        projects -- only ``Ps``/``Po``/``Poo`` exist under the ``P`` command
+        family -- so this method instead scans the ``dir.projects`` storage
+        directory resolved by :meth:`_resolve_projects_dir` (the same
+        directory :meth:`save_project` writes into) for ``*.rzdb`` project
+        files.
+
         Returns:
-            list[str]: List of project names.
+            list[str]: List of project names, sorted alphabetically.
 
         Raises:
             ToolError: If no binary is loaded.
@@ -3738,8 +3847,8 @@ class CutterProjectConfigMixin(CutterZignatureMixin):
             _logger.warning("list_projects_without_binary")
             raise ToolError(_ERR_NO_BINARY)
 
-        result = await self._r2_cmd("Pl")
-        projects = [line.strip() for line in result.splitlines() if line.strip()]
+        projects_dir = await self._resolve_projects_dir()
+        projects = await asyncio.to_thread(_list_rzdb_project_names, projects_dir)
         _logger.debug("projects_listed", count=len(projects))
         return projects
 
