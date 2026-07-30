@@ -11,12 +11,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final, cast
 
-from PyQt6.QtCore import QModelIndex, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import QModelIndex, QPoint, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QFileDialog,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMenu,
     QMessageBox,
     QPushButton,
     QSplitter,
@@ -31,6 +32,7 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.process_manager import ProcessManager
 from intellicrack.ui.panels.async_bridge import drain_bridge_workers_for, run_bridge_coroutine_logged
 from intellicrack.ui.panels.process_panel.workers import TrackedRefreshWorker
 from intellicrack.ui.panels.qt_compat import set_sorting_enabled
@@ -232,6 +234,8 @@ class ProcessTab(QWidget):
         sel = self._process_table.selectionModel()
         if sel is not None:
             sel.currentChanged.connect(self._on_selection_changed)
+        self._process_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._process_table.customContextMenuRequested.connect(self._on_process_context_menu)
         proc_h = self._process_table.horizontalHeader()
         if proc_h is not None:
             proc_h.setSectionResizeMode(_COL_NAME, QHeaderView.ResizeMode.Stretch)
@@ -484,6 +488,53 @@ class ProcessTab(QWidget):
         self._selected_pid = pid
         self.process_selected.emit(pid)
         self._load_process_info(pid)
+
+    def _on_process_context_menu(self, pos: QPoint) -> None:
+        """Show a context menu with a Track This Process action for the system-process table.
+
+        Args:
+            pos: Position where the right-click occurred, in table viewport coordinates.
+        """
+        item = self._process_table.itemAt(pos)
+        if item is None:
+            return
+        row = item.row()
+        self._process_table.setCurrentCell(row, _COL_PID)
+
+        pid_item = self._process_table.item(row, _COL_PID)
+        if pid_item is None:
+            return
+        pid = int(pid_item.data(Qt.ItemDataRole.DisplayRole))
+        name_item = self._process_table.item(row, _COL_NAME)
+        name = name_item.text() if name_item is not None else f"PID-{pid}"
+
+        menu = QMenu(self)
+        track_action = menu.addAction(self.tr("Track This Process"))
+        if track_action is None:
+            return
+
+        chosen = menu.exec(self._process_table.mapToGlobal(pos))
+        if chosen is track_action:
+            self._on_track_process(pid, name)
+
+    def _on_track_process(self, pid: int, name: str) -> None:
+        """Register a system process with ProcessManager and show it in the Tracked tab.
+
+        Args:
+            pid: Process ID to register via ``ProcessManager.register_external_pid``.
+            name: Human-readable process name shown in the Tracked tab.
+        """
+        manager = ProcessManager.get_instance()
+        try:
+            manager.register_external_pid(pid, name)
+        except ValueError as exc:
+            _logger.warning("process_track_failed", pid=pid, error=str(exc))
+            QMessageBox.warning(self, "Track Failed", f"Failed to track PID {pid}:\n{exc}")
+            return
+
+        _logger.info("process_tracked_from_panel", pid=pid, process_name=name)
+        self._tabs.setCurrentIndex(1)
+        self._refresh_tracked()
 
     def _on_attach(self) -> None:
         """Attach to the selected process via bridge."""

@@ -2841,6 +2841,12 @@ class _FridaBridgeBase(InstrumentationBridge):
         def on_message(message: ScriptMessage, data: bytes | None) -> None:
             """Capture the first send/error response and release the waiter.
 
+            ``console.log`` messages (``type == "log"``) do not complete the
+            wait -- they are forwarded to the registered message handler so
+            the UI console still surfaces script log output even for
+            one-shot executions, then the callback returns without touching
+            the completion event.
+
             Args:
                 message: Message payload emitted by the Frida script.
                 data: Optional binary payload attached to the message.
@@ -2854,6 +2860,9 @@ class _FridaBridgeBase(InstrumentationBridge):
             elif message["type"] == "error":
                 result["__error_description"] = message["description"]
                 result["error"] = message["description"]
+            elif message["type"] == "log":
+                self._dispatch_message(dict(cast("dict[str, object]", message)))
+                return
             else:
                 return
             self._set_event_threadsafe(event)
