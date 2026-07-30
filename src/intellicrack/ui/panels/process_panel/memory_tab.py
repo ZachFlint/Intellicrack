@@ -9,8 +9,10 @@ Provides memory region map, read/write, allocate/free, protection change, and pa
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING, Final, cast
 
+from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QComboBox,
     QHeaderView,
@@ -44,6 +46,7 @@ _TOOLBAR_HEIGHT: Final[int] = 32
 _BYTES_PER_LINE: Final[int] = 16
 _ASCII_PRINTABLE_MIN: Final[int] = 32
 _ASCII_PRINTABLE_MAX: Final[int] = 127
+_PERCENT_MULTIPLIER: Final[int] = 100
 
 _NOT_ATTACHED_MSG: Final[str] = "Not attached to any process."
 
@@ -53,6 +56,8 @@ class MemoryTab(QWidget):
 
     Provides sub-tabs for region map, read, write, allocate/free, protection changes, and pattern search.
     """
+
+    _search_progress: pyqtSignal = pyqtSignal(int, int)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the MemoryTab.
@@ -64,6 +69,8 @@ class MemoryTab(QWidget):
         self._bridge: ProcessBridge | None = None
         self._attached_pid: int | None = None
         self._action_buttons: list[QPushButton] = []
+        self._search_cancel_event: threading.Event | None = None
+        self._search_progress.connect(self._on_search_progress)
         self._setup_ui()
 
     def set_bridge(self, bridge: ProcessBridge) -> None:
@@ -443,6 +450,12 @@ class MemoryTab(QWidget):
         search_btn.clicked.connect(self._on_search)
         self._action_buttons.append(search_btn)
         toolbar.addWidget(search_btn)
+
+        self._search_cancel_btn = QPushButton("Cancel")
+        self._search_cancel_btn.setObjectName("tool_button")
+        self._search_cancel_btn.setEnabled(False)
+        self._search_cancel_btn.clicked.connect(self._on_search_cancel)
+        toolbar.addWidget(self._search_cancel_btn)
 
         self._search_status = QLabel("")
         self._search_status.setObjectName("toolbar_label")
@@ -982,6 +995,29 @@ class MemoryTab(QWidget):
             self._search_results.setItem(row, 0, QTableWidgetItem(f"0x{addr_int:X}"))
         self._search_status.setText(f"{len(typed_result)} matches")
 
+    def _on_search_progress(self, scanned: int, total: int) -> None:
+        """Update the search status label with the scan's cumulative progress.
+
+        Connected to :attr:`_search_progress`, which is safe to ``emit`` from
+        any thread; Qt marshals the delivery of this slot back onto the GUI
+        thread since the signal and this ``MemoryTab`` live there.
+
+        Args:
+            scanned: Cumulative bytes scanned so far.
+            total: Total bytes selected for the whole scan.
+        """
+        if total <= 0:
+            return
+        percent = min(_PERCENT_MULTIPLIER, (scanned * _PERCENT_MULTIPLIER) // total)
+        self._search_status.setText(f"Searching... {percent}% ({scanned}/{total} bytes)")
+
+    def _on_search_cancel(self) -> None:
+        """Request cancellation of the in-progress pattern search, if any."""
+        if self._search_cancel_event is not None:
+            self._search_cancel_event.set()
+            self._search_status.setText("Cancelling...")
+            self._search_cancel_btn.setEnabled(False)
+
     def _on_search(self) -> None:
         """Search for a byte pattern in process memory."""
         if self._bridge is None:
@@ -995,6 +1031,9 @@ class MemoryTab(QWidget):
             return
 
         self._search_status.setText("Searching...")
+        cancel_event = threading.Event()
+        self._search_cancel_event = cancel_event
+        self._search_cancel_btn.setEnabled(True)
 
         def _on_success(result: object) -> None:
             """Render pattern-search hit addresses into the results table.
@@ -1007,6 +1046,8 @@ class MemoryTab(QWidget):
                 ValueError: Propagated when result display fails after logging.
                 TypeError: Propagated when result display fails after logging.
             """
+            self._search_cancel_btn.setEnabled(False)
+            self._search_cancel_event = None
             try:
                 self._display_search_results(result)
             except (RuntimeError, ValueError, TypeError) as exc:
@@ -1020,12 +1061,18 @@ class MemoryTab(QWidget):
             Args:
                 exc: Exception raised while calling ``search_pattern``.
             """
+            self._search_cancel_btn.setEnabled(False)
+            self._search_cancel_event = None
             self._search_status.setText("Search failed")
             _logger.warning("search_failed", error=str(exc))
             QMessageBox.critical(self, "Search Failed", f"Pattern search failed: {exc}")
 
         run_bridge_coroutine_logged(
-            self._bridge.search_pattern(pattern),
+            self._bridge.search_pattern(
+                pattern,
+                cancel_event=cancel_event,
+                progress_callback=self._search_progress.emit,
+            ),
             on_success=_on_success,
             on_error=_on_error,
             parent=self,
