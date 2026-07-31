@@ -2810,16 +2810,23 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
             raise ToolError(_ERR_KERNEL32_NA)
 
         prot = self._prot_from_string(protection)
-        address: int = cast(
-            "int",
-            self._kernel32.VirtualAllocEx(
-                self._process_handle,
-                0,
-                size,
-                MEM_COMMIT | MEM_RESERVE,
-                prot,
-            ),
+        self._kernel32.VirtualAllocEx.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+            ctypes.c_uint32,
+            ctypes.c_uint32,
+        ]
+        self._kernel32.VirtualAllocEx.restype = ctypes.c_void_p
+
+        address_raw = self._kernel32.VirtualAllocEx(
+            self._process_handle,
+            0,
+            size,
+            MEM_COMMIT | MEM_RESERVE,
+            prot,
         )
+        address: int = int(address_raw) if address_raw else 0
 
         if not address:
             raise ToolError(_ERR_ALLOC_FAILED)
@@ -2844,9 +2851,17 @@ class _ProcessBridgeListMixin(_ProcessBridgeBase):
         if self._kernel32 is None:
             raise ToolError(_ERR_KERNEL32_NA)
 
+        self._kernel32.VirtualFreeEx.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+            ctypes.c_uint32,
+        ]
+        self._kernel32.VirtualFreeEx.restype = wintypes.BOOL
+
         result = self._kernel32.VirtualFreeEx(
             self._process_handle,
-            address,
+            ctypes.c_void_p(address),
             0,
             MEM_RELEASE,
         )
@@ -7327,8 +7342,18 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         if not proc_handle:
             raise ToolError(_ERR_OPEN_FAILED)
 
+        self._kernel32.VirtualFreeEx.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_void_p,
+            ctypes.c_size_t,
+            ctypes.c_uint32,
+        ]
+        self._kernel32.VirtualFreeEx.restype = wintypes.BOOL
+
         try:
-            result: bool = bool(self._kernel32.VirtualFreeEx(proc_handle, address, size, MEM_DECOMMIT))
+            result: bool = bool(
+                self._kernel32.VirtualFreeEx(proc_handle, ctypes.c_void_p(address), size, MEM_DECOMMIT),
+            )
             if not result:
                 _logger.warning("decommit_memory_failed", pid=pid, address=address, error_code=ctypes.get_last_error())
             else:
