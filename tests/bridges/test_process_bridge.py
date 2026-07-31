@@ -1590,26 +1590,35 @@ class TestSehFiberTls:
     """Verify SEH chain, fiber data, and TLS access."""
 
     async def test_get_seh_chain_no_crash(self, attached_bridge: ProcessBridge, main_thread_tid: int) -> None:
-        """Verify SEH chain raises on x64 target and validates entry fields on WOW64.
+        """Verify SEH enumeration returns table-based handlers on x64 and chain frames on WOW64.
 
-        Per F-0008, SEH chain traversal via FS:[0] is only valid for x86 / WOW64.
-        On a native x64 target the bridge must raise ToolError with the exact
-        message. On a WOW64 (32-bit) target the bridge must return at least one
-        well-formed entry whose ``address``, ``handler_address``, and ``next``
-        fields are all integers with positive ``address`` and ``handler_address``
-        values (both must be valid pointer-sized memory addresses).
+        On a native x64 target the bridge enumerates the process's real
+        table-based exception handlers from each module's PE ``.pdata``
+        (``RUNTIME_FUNCTION``/``UNWIND_INFO``); the result must be a non-empty
+        list of entries whose ``address`` and ``handler_address`` are positive
+        integers. On a WOW64 (32-bit) target the bridge must return at least one
+        well-formed SEH chain entry whose ``address``, ``handler_address``, and
+        ``next`` fields are all integers with positive ``address`` and
+        ``handler_address`` values.
 
-        Mutation caught (x64): suppressing the ToolError raise causes the
-        ``pytest.raises`` block to fail. Mutation caught (WOW64): returning an
-        empty list or omitting required entry keys fails the structural assertions.
+        Mutation caught (x64): restoring the old ToolError raise, or breaking the
+        exception-directory parse, yields an empty/raised result and the
+        non-empty structural assertions fail. Mutation caught (WOW64): returning
+        an empty list or omitting required entry keys fails the structural checks.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
             main_thread_tid: Windows thread id of the first thread enumerated in the current process.
         """
         if struct.calcsize("P") == 8:
-            with pytest.raises(ToolError, match="SEH chain not applicable to x64 target"):
-                await attached_bridge.get_seh_chain(main_thread_tid)
+            handlers = await attached_bridge.get_seh_chain(main_thread_tid)
+            assert isinstance(handlers, list)
+            assert len(handlers) >= 1, "x64 process must expose table-based exception handlers"
+            for handler in handlers:
+                assert isinstance(handler["address"], int), f"address must be int: {handler}"
+                assert isinstance(handler["handler_address"], int), f"handler_address must be int: {handler}"
+                assert handler["address"] > 0, f"handler address must be positive: {handler}"
+                assert handler["handler_address"] > 0, f"handler_address must be positive: {handler}"
         else:
             chain = await attached_bridge.get_seh_chain(main_thread_tid)
             assert isinstance(chain, list)
@@ -3774,19 +3783,21 @@ class TestF0009ContextWow64:
         assert "rip" not in ctx, "WOW64 target must not expose rip"
 
 
-class TestF0008SehChainX64Raises:
-    """F-0008: get_seh_chain raises ToolError on x64 target (SEH not applicable)."""
+class TestF0008SehChainX64Handlers:
+    """F-0008: get_seh_chain enumerates table-based exception handlers on x64."""
 
-    async def test_seh_chain_x64_raises(
+    async def test_seh_chain_x64_enumerates_handlers(
         self,
         attached_bridge: ProcessBridge,
         secondary_thread: int,
     ) -> None:
-        """On an x64 target, get_seh_chain must raise ToolError.
+        """On an x64 target, get_seh_chain enumerates real .pdata handlers.
 
-        SEH chain traversal via FS:[0] is only valid for x86. On x64, Windows uses
-        table-based exception handling and the SEH chain pointer in the x86 TEB
-        is not populated.
+        SEH chain traversal via FS:[0] is only valid for x86. On x64, Windows
+        uses table-based exception handling, so the bridge enumerates each
+        module's PE exception directory (``RUNTIME_FUNCTION``/``UNWIND_INFO``)
+        and returns the functions that carry an exception/termination handler
+        instead of raising.
 
         Args:
             attached_bridge: ProcessBridge fixture pre-attached to the current Python process.
@@ -3795,8 +3806,10 @@ class TestF0008SehChainX64Raises:
         if struct.calcsize("P") != 8:
             pytest.skip("requires 64-bit native process")
 
-        with pytest.raises(ToolError, match="SEH chain not applicable to x64 target"):
-            await attached_bridge.get_seh_chain(secondary_thread)
+        handlers = await attached_bridge.get_seh_chain(secondary_thread)
+        assert isinstance(handlers, list)
+        assert len(handlers) >= 1, "x64 process must expose table-based exception handlers"
+        assert all(isinstance(h["handler_address"], int) and h["handler_address"] > 0 for h in handlers)
 
     async def test_seh_chain_not_attached_raises(self, process_bridge: ProcessBridge) -> None:
         """Verify get_seh_chain raises ToolError when no process is attached.
