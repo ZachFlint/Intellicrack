@@ -166,6 +166,26 @@ jobs:
           pixi run python -c "import intellicrack_hexcore"
           if ($LASTEXITCODE -ne 0) { throw 'intellicrack_hexcore import verification failed' }
         timeout-minutes: 20
+      - name: Build x64dbg bridge plugins for deployment tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x64 -A x64 -DBUILD_X64=ON
+          if ($LASTEXITCODE -ne 0) { throw 'x64 CMake configure failed' }
+          cmake --build src/x64dbg-plugin/build_x64 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x64 plugin build failed' }
+          cmake -S src/x64dbg-plugin -B src/x64dbg-plugin/build_x86 -A Win32 -DBUILD_X64=OFF
+          if ($LASTEXITCODE -ne 0) { throw 'x32 CMake configure failed' }
+          cmake --build src/x64dbg-plugin/build_x86 --config Release
+          if ($LASTEXITCODE -ne 0) { throw 'x32 plugin build failed' }
+          $x64 = 'src/x64dbg-plugin/bin/intellicrack_bridge_x64.dp64'
+          $x32 = 'src/x64dbg-plugin/bin/intellicrack_bridge_x32.dp32'
+          foreach ($p in @($x64, $x32)) {
+            if (-not (Test-Path $p)) { throw "expected plugin binary missing: $p" }
+            if ((Get-Item $p).Length -eq 0) { throw "plugin binary is empty: $p" }
+            Write-Host "built $p ($((Get-Item $p).Length) bytes)"
+          }
+        timeout-minutes: 20
       - name: Test with pytest
         run: |
           pixi run pytest tests/ -v --cov=src/intellicrack --cov-report=xml --cov-report=html --junitxml=test-results.xml
@@ -195,8 +215,6 @@ jobs:
     runs-on: windows-latest
     needs: [setup]
     if: success() || failure()
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v6.0.2
         with:
@@ -242,52 +260,3 @@ jobs:
           path: |
             tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64
             tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32
-      - name: Detect plugin source changes
-        id: plugin_src
-        if: github.event_name == 'push'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $before = '${{ github.event.before }}'
-          $sha = '${{ github.sha }}'
-          $zero = '0' * 40
-          $baseValid = [bool]$before -and $before -ne $zero
-          if ($baseValid) {
-            git cat-file -e "$before^{commit}" 2>$null
-            if ($LASTEXITCODE -ne 0) { $baseValid = $false }
-          }
-          if ($baseValid) {
-            $range = "$before..$sha"
-          } else {
-            git rev-parse --verify --quiet "$sha~1" | Out-Null
-            $range = if ($LASTEXITCODE -eq 0) { "$sha~1..$sha" } else { $null }
-          }
-          if ($null -eq $range) {
-            # Base commit unknown (new branch / shallow / initial push): refresh
-            # to be safe rather than risk shipping stale committed binaries.
-            $changed = 'true'
-            Write-Host "No comparable base commit; treating plugin source as changed."
-          } else {
-            $files = git diff --name-only $range -- src/x64dbg-plugin/
-            if ($LASTEXITCODE -ne 0) { throw "git diff failed for range $range" }
-            $changed = if ($files) { 'true' } else { 'false' }
-            Write-Host "Range $range changed plugin-source files:`n$files"
-          }
-          "changed=$changed" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          Write-Host "plugin_source_changed=$changed"
-      - name: Commit refreshed plugin binaries
-        if: github.event_name == 'push' && steps.plugin_src.outputs.changed == 'true'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64 `
-                  tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32
-          git diff --cached --quiet
-          if ($LASTEXITCODE -ne 0) {
-            git commit -m "chore(ci): rebuild x64dbg bridge plugins from source [skip ci]"
-            git push origin "HEAD:${{ github.ref_name }}"
-          } else {
-            Write-Host "Plugin binaries unchanged; nothing to commit."
-          }

@@ -968,6 +968,238 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 ### Fixed
 
+- **bridges,ui:** Enumerate real x64 exception handlers for SEH tab (`5fe1cf4`)
+
+- **bridges,core:** 64-bit VirtualAllocEx pointers, break bridges/core import cycle (`4a9bf44`)
+Process bridge: give VirtualAllocEx/VirtualFreeEx explicit c_void_p argtypes
+and restype in allocate/free/decommit_memory so 64-bit remote addresses are
+no longer truncated to a 32-bit int.
+core package: defer the ToolRegistry/ToolStatus re-exports via module
+__getattr__ so importing any intellicrack.bridges submodule first in a fresh
+interpreter no longer closes the bridges.base -> core.tools -> bridges.base
+import cycle. Adds Cutter search_bytes_wildcard address-key regression test.
+
+- **ui:** Embed x64dbg window via desktop-scoped HWND lookup (`cd2b27d`)
+
+- **ui:** Analysis no-backend notice, region popup decode, sandbox cleanup (`175b200`)
+
+- **ui:** Editable, persisted user notes on Analysis panel (`b36be5e`)
+
+- **ui:** Process-panel filtered counts + usable Pipes tab (`5fd9fcb`)
+
+- **ui:** Restore chat + binary on Load Session, guard stale ids (`267d118`)
+
+- **providers:** Surface OAuth client_id error, revoke API-key creds (`52bd8a5`)
+
+- **ui:** Non-blocking attach confirmation in process panel (`df9943e`)
+
+- **ui:** Xref/function-select signals carry 64-bit addresses (`e7c1e35`)
+
+- **ui:** Load Binary dialog uses sized non-native QFileDialog (`4305d95`)
+
+- **ui:** X64dbg panel reset views on stop + scrollable docked content (`696729c`)
+
+- **providers:** HuggingFace served-model filter, Ollama loop-safe clients (`6657ec8`)
+Phase 8 (S16-D03, S16-D09):
+- HuggingFace (S16-D03): list_models now filters the Hub catalog to models
+the token's Inference Providers actually serve (intersecting against the
+router's /v1/models catalog), and chat/chat_stream reject a known-unserved
+model with an actionable ProviderError ("No Inference Provider currently
+serves model ...") instead of HuggingFace's opaque 400. The router call
+has typed HTTP error handling so the path never trips an unhandled worker
+exception.
+- Ollama (S16-D09): _ensure_clients_on_loop now serializes its
+check-rebuild-store under a threading.Lock and returns the exact
+(local_client, cloud_client) references for the calling coroutine; every
+call site threads that reference through instead of re-reading the mutable
+self._local_client/_cloud_client, so a concurrent rebind on another loop
+(discovery firing during a Pull) can no longer hand a caller a client whose
+httpcore Event is bound to a different event loop.
+Both proven falsifiable via revert->RED->restore in the sandbox.
+
+- **bridges,ui:** X64dbg watchpoints list via bp_list (`62bc57f`)
+Phase 8 (S13-D03):
+- get_watchpoints (x64dbg.py): the plugin's dedicated wp_list is backed by
+DbgGetBpList(bp_hardware,...), whose return value is the hardware-BP
+count, not a success flag, so the deployed plugin's if(!DbgGetBpList())
+reported the near-universal zero-count case as "Failed to get watchpoint
+list" -- get_watchpoints raised on every fresh Load/Attach. It now issues
+bp_list and filters to type == "hardware" entries, so an empty list
+returns [] instead of raising.
+- x64dbg_panel.py: the watchpoints refresh error path now logs the real
+exception text instead of a blank warning.
+Falsifiable via revert->RED->restore host-native: the empty-debuggee gate
+raises the exact "Failed to get watchpoint list" ToolError against wp_list.
+
+- **ui,bridges:** Frida hooks table, integer call returns, Advanced layout (`d66521a`)
+Phase 7 (S14-D11, S14-D17, S14-D19):
+- Active Hooks table (S14-D11): Intercept-Ret / Replace-Fn installs now
+insert a row and populate it on success/failure, so they appear in the
+table and can be Removed/Reverted like Add-Hook.
+- call_function (S14-D17): integer NativeFunction returns pass through when
+they lack toInt32(), and the real JS error surfaces via
+ToolError.details['reason'].
+- Advanced tab (S14-D19): System Function Call / Function Calling rows use
+make_control_row and the tab is wrapped in a scroll area (helpers promoted
+to base_panel module functions), fixing label/combo overlap and docked
+clipping.
+Each fix proven falsifiable via revert->RED->restore (UI 5/5 + bridge 8/8).
+
+- **bridges,ui:** Process section unmap + pattern-search cancel/progress (`e7e7bbf`)
+Phase 7 partial (S14-D12, S14-D13):
+- map_section/unmap_section (S14-D12): set explicit ctypes argtypes/restype
+(c_void_p) on MapViewOfFile/UnmapViewOfFile so the real 64-bit mapped
+base is preserved. It was defaulting to a 32-bit c_int, truncating the
+pointer, tracking a bogus base, and failing NtUnmapViewOfSection at
+teardown; error reporting now uses kernel32.GetLastError().
+- search_pattern/_scan_region_pattern (S14-D13): add optional cancel_event
+(checked between chunks and regions) and progress_callback (cumulative
+bytes-scanned/total) so a scan can be scoped, cancelled promptly, and
+report progress; the memory tab gains a Cancel button and a live
+progress label. Full-scan behavior is preserved when neither is given.
+Both fixes proven falsifiable in the sandbox: the restype revert breaks the
+map/unmap round-trip; a neutered cancel check makes the cancel test unable
+to complete.
+
+- **bridges:** X64dbg Load registers attach state; headless Qt + modules (`c42d601`)
+Phase 5 x64dbg (S13-D02, S13-D06):
+- Load/restart now register the attached-process state (pid via a bounded
+_await_debuggee_pid poll that absorbs the InitDebug/process-creation
+race, then _register_attached_pid), so read_memory / get_memory_regions /
+get_modules / get_threads / get_process_info work after Load, not only
+after Attach (S13-D02).
+- _start_debugger no longer leaks the host's QT_QPA_PLATFORM (offscreen)
+into the spawned x64dbg child, whose bundled Qt only ships the windows
+platform plugin -- previously x64dbg hung in Qt init before the bridge
+plugin loaded and the pipe never opened.
+- _get_modules uses a use_last_error kernel32 handle and retries
+CreateToolhelp32Snapshot on ERROR_BAD_LENGTH, plus a bounded wait for a
+freshly-attached debuggee's modules to finish mapping.
+- scan_memory surfaces a clear ToolError for patterns under 16 bytes
+instead of silently returning empty (S13-D06).
+D02 verified via the real x64dbg host-native test; both fixes proven
+falsifiable via revert->RED->restore.
+
+- **bridges,ui:** Process PID filter + raw-query sizing, Frida hooks (`8d56bad`)
+Phase 6 partial (S14-D02, S14-D05, S14-D07, S14-D18):
+- ProcessBridge filter (S14-D02): a numeric filter string now matches by
+PID (via a shared _process_matches_filter used by both snapshot walkers),
+so "Filter by name or PID" actually filters by PID.
+- query_system_info (S14-D05): on STATUS_INFO_LENGTH_MISMATCH size the next
+buffer to the kernel's return_length hint (up or down) with a bounded
+retry count, so fixed-size classes (SystemBasicInformation) no longer
+overgrow to the 1 GB cap and raise.
+- Frida hook_function (S14-D07): a callback-less managed hook now installs a
+default logging callback that sends hook_fire enter/leave messages to the
+console, instead of an empty stub that never fires.
+- Frida child gating (S14-D18): propagate the real Frida reason (e.g. "not
+yet supported on this OS") via ToolError.details['reason'] and surface it
+in the Advanced tab instead of a generic failure message.
+Each fix proven falsifiable via revert->RED->restore in the sandbox.
+
+- **core,ui,bridges:** Track attached PID, Frida console.log + backpressure (`341b973`)
+Phase 5 partial (S14-D01, S14-D08, S14-D09):
+- ProcessManager (S14-D01): get_all_tracked() only ever read the
+subprocess store, so register_external_pid() PIDs could never surface.
+Add get_all_tracked_entries() unifying subprocess-backed and external
+PIDs; wire a "Track This Process" context-menu action on the process
+table that registers the selected PID and refreshes the Tracked tab.
+- FridaPanel (S14-D08): route frida 'log'-type messages (console.log) to
+the Console Output as [log:level] payload, and forward them from
+FridaBridge._execute_script_and_wait (which previously dropped them).
+- FridaPanel (S14-D09): cap the console via setMaximumBlockCount and
+replace per-message cross-thread signal delivery with a bounded deque
+drained in batches by a QTimer, with a drop-notice on overflow, so a
+high-rate send() hook degrades gracefully instead of exhausting memory
+and starving Detach/Flush.
+Each fix proven falsifiable via revert->RED->restore in the sandbox.
+
+- **bridges:** Cutter ROP gadgets, project round-trip, bytes search (`71ea329`)
+Phase 4 completion (S15-D03/04/05):
+- search_rop_gadgets (S15-D03): read the gadget entry address from the
+first opcode's offset (retaddr names the shared terminating ret, not
+the entry) and join opcodes[*].opcode for the instruction text; add a
+one-time transparent retry for rizin's empty-first-/Rj quirk.
+- save_project/list_projects (S15-D04): rizin ignores dir.projects for a
+bare Ps and exposes no Pl, so write an explicit <dir>/<name>.rzdb path,
+verify the file actually landed (raise ToolError otherwise), and list
+by scanning that directory for *.rzdb files.
+- search_bytes (S15-D05): read the /xj hit address backend-agnostically
+(rizin reports "address", radare2 "offset") so hits carry real,
+nonzero addresses on either backend.
+All three fixes proven falsifiable via revert->RED->restore in the
+sandbox; 5/5 green against the container's radare2 backend.
+
+- **core,bridges:** Streaming-on-tools, async Frida scan, robust unload (`ad4eadf`)
+Phase 4 partial (S16-D04, S14-D06, S14-D10):
+- Orchestrator._should_use_streaming (S16-D04): stream the initial
+tools-on turn for every provider that finalizes tool calls from a
+stream (all 8 current providers), instead of forcing the tools-on
+initial turn through the non-streaming path. _stream_response already
+collected tool calls correctly; only the gating decision changed.
+- FridaBridge.scan_memory (S14-D06): replace the single blocking
+Memory.scanSync-over-all-ranges call with a chunked async Memory.scan
+agent, each chunk bounded by asyncio.wait_for so a slow/stuck chunk
+degrades to no matches instead of hanging past Frida's transport
+timeout; the coroutine always resolves. _execute_script_and_wait's
+unload is now guarded so a raw Frida exception can never escape it.
+- FridaBridge unload (S14-D10): _unload_script_handle checks
+is_destroyed and tolerates already-unloaded/detached errors as no-ops;
+unload_all_scripts guards each iteration and always clears every
+registry, so Stop-All ends with an empty registry even when a script
+is already gone.
+Each fix proven falsifiable via revert->RED->restore in the sandbox.
+
+- **bridges,ui:** Cutter decompile/CFG, Ghidra read APIs, chat markdown (`3c4ae75`)
+Phase 3 audit fixes (S15-D01/02/06/07/08/12, S16-D02):
+- CutterBridge.decompile (S15-D01): drop dead pdc path, resolve and
+configure ghidra.sleighhome for rz-ghidra pdg, extended SLEIGH timeout.
+- CutterBridge.get_function_graph (S15-D02): build CFG from afbj basic
+blocks (agj returns empty on rizin 0.9.1) with per-block pdj disassembly.
+- GhidraBridge read APIs (S15-D06/07/08/12): iterate CodeBlock arrays,
+use currentProgram.getMemory() for memory map/segments, getAllSymbols
+traversal for symbol search, propertyManagers() for properties.
+- chat _MarkdownView (S16-D02): render assistant/user content via Qt
+native setMarkdown instead of literal plain text.
+Behavioral tests for the two rizin-specific defects run host-native
+against real rizin 0.9.1 + rz-ghidra (registered in host_native.py); the
+container keeps the backend-agnostic ToolError guards. Ghidra read-API
+and chat-markdown gates added. Each fix proven falsifiable via
+revert->RED->restore.
+
+- **bridges,ui:** S13-S16 Phase 2 — Ghidra write-transactions, session rebind, Scripts New/Execute (`ea78b4d`)
+- S15-D09/D10/D11/D14/D15: wrap the five user-facing Ghidra panel mutators
+(add_comment/set_label/create_bookmark/define_structure/apply_structure_at) in a
+program write transaction (startTransaction/endTransaction), matching their working
+siblings; also hardens four more unwrapped mutators found in the same range and fixes
+_extract_binary_metadata's nonexistent getEntryPoint call.
+- S16-D01: toolbar Provider/Model change now rebinds the active session's provider/model
+in place instead of being ignored until New Session.
+- S16-D05: the streaming placeholder bubble is created lazily on the first stream chunk,
+so non-stream completions no longer leave an empty orphan assistant bubble.
+- S16-D14: ScriptTypeInfo.get_template uses targeted {target}/{address} replacement instead
+of str.format, so literal code braces in frida/ghidra/python templates no longer crash New.
+- S15-D13: a real Scripts executor (python subprocess + bridge dispatch) is wired into both
+set_backend call sites, so Execute actually runs scripts instead of timing out.
+
+- **providers:** S16 Phase 1 — safe .env template, tool-count caps, Gemini thought_signature (`95d4af0`)
+- S16-D06: create_env_template no longer truncates a populated .env; writes a
+timestamped .bak and appends only missing keys (EnvTemplateResult), UI surfaces
+outcome and button relabeled to a non-destructive template writer.
+- S16-D15: per-provider flattened tool-count caps (Grok 250, OpenRouter 128) with
+deterministic trim-or-clear-error before send, plus true flattened-count logging.
+- S16-D10: capture and re-attach Gemini 3.x Part.thought_signature across the
+extract->rebuild tool-result continuation (additive ToolCall field, base64 for
+session persistence), fixing the 400 INVALID_ARGUMENT continuation failure.
+
+- **tests:** Isolate local Ollama models and align device bridge permissions (`4c7d061`)
+Refactor host-native test provisioning to distinguish genuinely local Ollama models from cloud-suffixed tags (`-cloud`), ensuring local chat and tool tests do not attempt to invoke paywalled endpoints. Update IPv6 host/port parsing to correctly handle bracketed addresses.
+In the process bridge physical drive tests, update `CreateFileW` permissions and sharing flags to `GENERIC_READ | GENERIC_WRITE` with exclusive access, matching `ProcessBridge.device_open` so authorization probes accurately reflect bridge behavior.
+* Add cloud tag filtering and IPv6 splitting to `scripts/host_native_tests.py`
+* Update E2E and provider test fixtures to require `local/`-prefixed model IDs
+* Synchronize open flags in `tests/bridges/test_process_bridge.py`
+* Add unit tests for local model identification and IPv6 base URL resolution
+
 - Resolve named pipe concurrency, bridge lifecycle, and UI bugs (`38fe13b`)
 This commit addresses several critical robustness issues identified during testing and audits. It introduces overlapped I/O and connection serialization to the Win32 named pipe client to prevent pipe collisions and idle timeouts, ensures static analysis bridges properly track document state and health, and dynamically calculates UI panel minimum widths to prevent layout clipping.
 - **Bridges**: Added `_r2_lock` to serialize Cutter commands, implemented a TCP liveness probe for Ghidra initialization, and added document adoption to the Hex Editor bridge.
@@ -3505,13 +3737,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- **tests:** Isolate local Ollama models and align device bridge permissions (``)
-Refactor host-native test provisioning to distinguish genuinely local Ollama models from cloud-suffixed tags (`-cloud`), ensuring local chat and tool tests do not attempt to invoke paywalled endpoints. Update IPv6 host/port parsing to correctly handle bracketed addresses.
-In the process bridge physical drive tests, update `CreateFileW` permissions and sharing flags to `GENERIC_READ | GENERIC_WRITE` with exclusive access, matching `ProcessBridge.device_open` so authorization probes accurately reflect bridge behavior.
-* Add cloud tag filtering and IPv6 splitting to `scripts/host_native_tests.py`
-* Update E2E and provider test fixtures to require `local/`-prefixed model IDs
-* Synchronize open flags in `tests/bridges/test_process_bridge.py`
-* Add unit tests for local model identification and IPv6 base URL resolution
 
 
