@@ -3661,6 +3661,15 @@ class _X64DbgBridgeBase(DebuggerBridge):
     async def get_watchpoints(self) -> list[WatchpointInfo]:
         """Get all watchpoints including those set in the x64dbg GUI.
 
+        Watchpoints are hardware breakpoints under the hood, so the
+        plugin's dedicated ``wp_list`` command (backed by
+        ``DbgGetBpList(bp_hardware, ...)`` returning the hardware
+        breakpoint *count*) misreports an empty result as a hard
+        failure. ``bp_list`` enumerates the same hardware breakpoint
+        table without that defect (it is already relied on for
+        breakpoint verification elsewhere in this class), so it is
+        used here and filtered down to ``type == "hardware"`` entries.
+
         Returns:
             list[WatchpointInfo]: List of watchpoints from both local tracking and x64dbg.
 
@@ -3673,7 +3682,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
 
         if self._pipe_client is not None and self._pipe_client.is_connected:
             try:
-                result = await self._send_pipe_command("wp_list")
+                result = await self._send_pipe_command("bp_list")
             except ToolError as exc:
                 if not self._is_recoverable_pipe_error(exc):
                     raise
@@ -3681,7 +3690,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
                 result = None
             if isinstance(result, list):
                 for wp_data in result:
-                    if _is_str_obj_dict(wp_data):
+                    if _is_str_obj_dict(wp_data) and wp_data.get("type") == "hardware":
                         wp_addr = _coerce_address(wp_data.get("address")) or 0
                         existing = any(w.address == wp_addr for w in merged.values())
                         if not existing:
@@ -3689,9 +3698,9 @@ class _X64DbgBridgeBase(DebuggerBridge):
                                 wp_id = self._next_wp_id
                                 self._next_wp_id += 1
                             raw_size = wp_data.get("size")
-                            raw_wp_type = wp_data.get("type")
+                            raw_wp_type = wp_data.get("access", wp_data.get("watch_type"))
                             raw_wp_enabled = wp_data.get("enabled")
-                            raw_wp_hits = wp_data.get("hit_count")
+                            raw_wp_hits = wp_data.get("hitCount", wp_data.get("hit_count"))
                             merged[wp_id] = WatchpointInfo(
                                 id=wp_id,
                                 address=wp_addr,

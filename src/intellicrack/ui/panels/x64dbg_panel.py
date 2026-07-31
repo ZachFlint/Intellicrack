@@ -3722,7 +3722,7 @@ class X64DbgPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.get_watchpoints(),
             on_success=self._apply_watchpoints,
-            on_error=lambda _: _logger.warning("x64dbg_refresh_watchpoints_failed"),
+            on_error=lambda e: _logger.warning("x64dbg_refresh_watchpoints_failed", error=str(e)),
             parent=self,
             event="x64dbg_get_watchpoints",
             logger=_logger,
