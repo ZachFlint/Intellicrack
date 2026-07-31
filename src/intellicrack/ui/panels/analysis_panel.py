@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Final
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import QSignalBlocker, pyqtSignal
 from PyQt6.QtWidgets import (
     QGridLayout,
     QHeaderView,
@@ -48,6 +48,14 @@ class BridgeAnalysisPanel(QWidget):
     Shows data from connected bridges in tabbed tables: strings, imports,
     exports, functions, sections, and notes.
 
+    The Notes tab keeps bridge-generated diagnostics (``analysis_notes``)
+    and free-form user notes as two separate widgets rather than merging
+    them into one field: diagnostics remain a read-only trace of what the
+    tooling observed, while the user notes box is fully editable and its
+    contents are cached per binary name (:attr:`_user_notes_by_binary`) so
+    they are not silently discarded when the panel is refreshed with a new
+    or re-analyzed :class:`BridgeAnalysisSummary` for the same binary.
+
     Attributes:
         address_navigate: Signal emitted with an address when a cell with
             an address value is double-clicked.
@@ -63,6 +71,8 @@ class BridgeAnalysisPanel(QWidget):
         """
         super().__init__(parent)
         self._current_analysis: BridgeAnalysisSummary | None = None
+        self._active_binary_name: str | None = None
+        self._user_notes_by_binary: dict[str, str] = {}
         self._mono_font = FontManager.get_instance().get_code_font(9)
         self._addr_color = ThemeManager.get_instance().get_analysis_colors()["accent"]
         self._setup_ui()
@@ -126,16 +136,38 @@ class BridgeAnalysisPanel(QWidget):
         )
         self._notes_edit = QTextEdit()
         self._notes_edit.setReadOnly(True)
-        self._notes_edit.setPlaceholderText("No notes available")
+        self._notes_edit.setPlaceholderText("No diagnostics available")
         self._notes_edit.setFont(self._mono_font)
         self._notes_edit.setObjectName("code_preview_text")
+
+        self._user_notes_edit = QTextEdit()
+        self._user_notes_edit.setReadOnly(False)
+        self._user_notes_edit.setPlaceholderText("Type notes about this binary here")
+        self._user_notes_edit.setFont(self._mono_font)
+        self._user_notes_edit.setObjectName("user_notes_text")
+        self._user_notes_edit.textChanged.connect(self._on_user_notes_changed)
+
+        notes_tab = QWidget()
+        notes_layout = QVBoxLayout(notes_tab)
+        notes_layout.setContentsMargins(0, 0, 0, 0)
+        notes_layout.setSpacing(_PANEL_SPACING)
+
+        diagnostics_label = QLabel("Diagnostics (generated)")
+        diagnostics_label.setProperty("muted", "true")
+        notes_layout.addWidget(diagnostics_label)
+        notes_layout.addWidget(self._notes_edit)
+
+        user_notes_label = QLabel("Notes (yours)")
+        user_notes_label.setProperty("muted", "true")
+        notes_layout.addWidget(user_notes_label)
+        notes_layout.addWidget(self._user_notes_edit)
 
         self.tab_widget.addTab(self._strings_table, "Strings")
         self.tab_widget.addTab(self._imports_table, "Imports")
         self.tab_widget.addTab(self._exports_table, "Exports")
         self.tab_widget.addTab(self._functions_table, "Functions")
         self.tab_widget.addTab(self._sections_table, "Sections")
-        self.tab_widget.addTab(self._notes_edit, "Notes")
+        self.tab_widget.addTab(notes_tab, "Notes")
 
         layout.addWidget(self.tab_widget)
 
@@ -290,6 +322,25 @@ class BridgeAnalysisPanel(QWidget):
                     f"Could not parse '{text}' as a hex address.",
                 )
 
+    def _on_user_notes_changed(self) -> None:
+        """Persist edits made in the editable user-notes box.
+
+        ``BridgeAnalysisSummary`` carries only bridge-generated diagnostic
+        strings (``analysis_notes``); it has no field for free-form user
+        text and this panel must not add one, since that would mean editing
+        :mod:`intellicrack.core.types` and the session serializer that
+        reads it field-by-field. Instead, user notes are kept in the
+        panel's own per-binary cache (:attr:`_user_notes_by_binary`), the
+        one piece of state this panel already owns and that already
+        survives a refresh/reload of the analysis (:meth:`set_analysis` or
+        :meth:`mark_loaded` called again for the same binary against the
+        long-lived singleton panel instance the application keeps per
+        session) without discarding what the user typed.
+        """
+        text = self._user_notes_edit.toPlainText()
+        if self._active_binary_name is not None:
+            self._user_notes_by_binary[self._active_binary_name] = text
+
     def set_analysis(self, analysis: BridgeAnalysisSummary) -> None:
         """Populate the panel with bridge analysis data.
 
@@ -297,6 +348,7 @@ class BridgeAnalysisPanel(QWidget):
             analysis: The aggregated analysis summary to display.
         """
         self._current_analysis = analysis
+        self._active_binary_name = analysis.binary_name
 
         self._binary_label.setText(analysis.binary_name)
         self._binary_label.setToolTip(analysis.binary_name)
@@ -318,6 +370,9 @@ class BridgeAnalysisPanel(QWidget):
 
         self._notes_edit.clear()
         self._notes_edit.setPlainText("\n".join(analysis.analysis_notes))
+
+        with QSignalBlocker(self._user_notes_edit):
+            self._user_notes_edit.setPlainText(self._user_notes_by_binary.get(analysis.binary_name, ""))
 
         _logger.info(
             "analysis_panel_updated",
@@ -445,6 +500,7 @@ class BridgeAnalysisPanel(QWidget):
             binary_name: Name of the freshly loaded binary.
         """
         self._current_analysis = None
+        self._active_binary_name = binary_name
         self._binary_label.setText(f"Loaded - not analyzed: {binary_name}")
         self._binary_label.setToolTip(binary_name)
         self._format_label.setText("")
@@ -459,12 +515,21 @@ class BridgeAnalysisPanel(QWidget):
         self._functions_table.setRowCount(0)
         self._sections_table.setRowCount(0)
         self._notes_edit.clear()
+        with QSignalBlocker(self._user_notes_edit):
+            self._user_notes_edit.setPlainText(self._user_notes_by_binary.get(binary_name, ""))
         _logger.info("analysis_panel_marked_loaded", binary=binary_name)
 
     def clear(self) -> None:
-        """Clear all displayed data."""
+        """Clear all displayed data.
+
+        Notes typed for previously loaded binaries stay cached in
+        :attr:`_user_notes_by_binary` so they reappear if that binary is
+        loaded again later in the session; only the currently displayed
+        editor content is reset here.
+        """
         _logger.info("analysis_panel_cleared")
         self._current_analysis = None
+        self._active_binary_name = None
         self._binary_label.setText("No binary loaded")
         self._binary_label.setToolTip("")
         self._format_label.setText("")
@@ -479,3 +544,5 @@ class BridgeAnalysisPanel(QWidget):
         self._functions_table.setRowCount(0)
         self._sections_table.setRowCount(0)
         self._notes_edit.clear()
+        with QSignalBlocker(self._user_notes_edit):
+            self._user_notes_edit.clear()
