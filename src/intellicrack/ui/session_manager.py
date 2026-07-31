@@ -12,7 +12,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Final, cast, override
+from typing import TYPE_CHECKING, ClassVar, Final, Literal, cast, override
 
 from PyQt6.QtCore import QRect, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QFontMetrics
@@ -44,6 +44,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.config import get_config_dir
 from intellicrack.core.logging import get_logger
+from intellicrack.core.types import BinaryInfo, Message
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 
 
@@ -475,6 +476,7 @@ class SessionManagerDialog(QDialog):
             current_session_id if current_session_id is not None else (current_session.id if current_session is not None else None)
         )
         self._sessions: list[dict[str, object]] = []
+        self._orchestrator: Orchestrator | None = None
 
         if self._manager is None and self._current_session is None:
             self._adopt_parent_orchestrator(parent)
@@ -527,12 +529,14 @@ class SessionManagerDialog(QDialog):
             ``orchestrator``'s live session manager and active session.
         """
         session_manager, current_session = cls._extract_orchestrator_state(orchestrator)
-        return cls(
+        dialog = cls(
             session_manager=session_manager,
             current_session_id=current_session.id if current_session is not None else None,
             parent=parent,
             current_session=current_session,
         )
+        dialog._orchestrator = orchestrator
+        return dialog
 
     @staticmethod
     def _extract_orchestrator_state(orchestrator: Orchestrator) -> tuple[SessionManager | None, Session | None]:
@@ -573,9 +577,11 @@ class SessionManagerDialog(QDialog):
         orchestrator = getattr(parent, "_orchestrator", None)
         if orchestrator is None:
             return
-        session_manager, current_session = self._extract_orchestrator_state(cast("Orchestrator", orchestrator))
+        typed_orchestrator = cast("Orchestrator", orchestrator)
+        session_manager, current_session = self._extract_orchestrator_state(typed_orchestrator)
         self._manager = session_manager
         self._current_session = current_session
+        self._orchestrator = typed_orchestrator
         if current_session is not None:
             self._current_session_id = current_session.id
 
@@ -1042,7 +1048,7 @@ class SessionManagerDialog(QDialog):
         self._preview_text.clear()
 
     def _load_selected_session(self) -> None:
-        """Load the currently selected session."""
+        """Load the currently selected session and restore it into the live UI."""
         sel_model = self._session_table.selectionModel()
         if sel_model is None:
             return
@@ -1071,10 +1077,276 @@ class SessionManagerDialog(QDialog):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
 
-        if reply == QMessageBox.StandardButton.Yes:
-            _logger.info("session_load_requested", session_id=session_id)
-            self.session_loaded.emit(session_id)
-            self.accept()
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        _logger.info("session_load_requested", session_id=session_id)
+        if self._manager is not None:
+            self._load_session_via_manager(session_id)
+        else:
+            self._load_session_from_disk(session_id)
+
+    def _load_session_via_manager(self, session_id: str) -> None:
+        """Load ``session_id`` through the session manager without blocking the GUI thread.
+
+        Validates ``session_id`` against the already-listed ``self._sessions``
+        first -- mirroring the same synchronous guard ``_load_session_from_disk``
+        already applies -- so a stale selection (the row was listed, but the
+        backing session was removed by a concurrent delete before the load
+        click landed) surfaces a warning immediately instead of dispatching a
+        bridge coroutine that can only report "not found" after a cross-thread
+        round trip. Once validated, prefers ``Orchestrator.load_session`` when
+        this dialog was wired to a live orchestrator (via ``from_orchestrator``
+        or the parent-adoption path), since that also updates the
+        orchestrator's own ``current_session`` pointer, tool-bridge session
+        binding, and state -- bookkeeping that calling ``SessionManager.load``
+        directly would skip, leaving the orchestrator pointed at the stale
+        session even though the UI now shows the newly loaded one. Falls back
+        to ``SessionManager.load`` directly when no orchestrator is wired (for
+        example, a dialog embedded with only a bare ``SessionManager``). Both
+        are dispatched through the non-blocking bridge worker, matching the
+        pattern already used for delete/import/tag-persist so the Qt event
+        loop stays responsive while the backing ``SessionStore`` performs its
+        SQLite read. Either path persists the previously-current session
+        before switching, honouring the confirmation prompt's "Current
+        session progress will be saved" promise.
+
+        Args:
+            session_id: Session identifier.
+        """
+        if not any(s["id"] == session_id for s in self._sessions):
+            _logger.warning("session_load_selection_stale", session_id=session_id)
+            QMessageBox.warning(self, "Load Failed", f"Session no longer exists: {session_id}")
+            return
+
+        orchestrator = self._orchestrator
+        if orchestrator is not None:
+            coro = orchestrator.load_session(session_id)
+        else:
+            manager = self._manager
+            if manager is None:
+                return
+            coro = manager.load(session_id)
+        run_bridge_coroutine_logged(
+            coro,
+            on_success=lambda result: self._on_load_session_succeeded(session_id, result),
+            on_error=lambda exc: self._on_load_session_failed(session_id, exc),
+            parent=self,
+            event="session_load",
+            logger=_logger,
+            level="info",
+            session_id=session_id,
+        )
+
+    def _on_load_session_succeeded(self, session_id: str, result: object) -> None:
+        """Restore a successfully loaded session into the live UI.
+
+        Args:
+            session_id: Identifier of the session that was requested to load.
+            result: ``Session`` (from ``Orchestrator.load_session``) or
+                ``Session | None`` (from ``SessionManager.load``) returned by
+                the bridge call. ``None`` means the session id was not found
+                in the store.
+        """
+        if result is None:
+            _logger.warning("session_load_not_found", session_id=session_id)
+            QMessageBox.warning(self, "Load Failed", f"Session not found: {session_id}")
+            return
+
+        messages_raw = getattr(result, "messages", None)
+        if not isinstance(messages_raw, list):
+            _logger.warning("session_load_malformed", session_id=session_id)
+            QMessageBox.warning(self, "Load Failed", f"Session file is malformed: {session_id}")
+            return
+        messages = cast("list[Message]", messages_raw)
+
+        active_binary = cast("BinaryInfo | None", getattr(result, "active_binary", None))
+        self._restore_session_to_ui(messages, active_binary)
+
+        self._current_session = cast("Session", result)
+        self._current_session_id = session_id
+        _logger.info("session_restored", session_id=session_id, message_count=len(messages))
+        self.session_loaded.emit(session_id)
+        self.accept()
+
+    def _on_load_session_failed(self, session_id: str, exc: object) -> None:
+        """Handle a failed ``SessionManager.load`` bridge call.
+
+        Args:
+            session_id: Identifier of the session that failed to load.
+            exc: Exception object emitted by the bridge worker on failure.
+        """
+        error_obj = exc if isinstance(exc, BaseException) else RuntimeError(repr(exc))
+        _logger.warning("session_load_failed", session_id=session_id, error=str(error_obj))
+        QMessageBox.warning(self, "Load Failed", f"Failed to load session:\n{error_obj}")
+
+    def _load_session_from_disk(self, session_id: str) -> None:
+        """Restore a disk-sidecar session's chat history and active binary into the live UI.
+
+        Used only when no session manager has been wired into the dialog
+        (the on-disk sidecar fallback store). Reconstructs ``Message`` and
+        ``BinaryInfo`` objects from the already-parsed sidecar dict in
+        ``self._sessions`` -- re-reading the file would duplicate the parsing
+        already performed by ``_load_sessions_from_disk`` /
+        ``_read_session_file`` -- and restores them through the same
+        UI-population path used for the manager-backed load.
+
+        Args:
+            session_id: Identifier of the session to restore.
+        """
+        session_data = next((s for s in self._sessions if s["id"] == session_id), None)
+        if session_data is None:
+            _logger.warning("session_load_from_disk_not_found", session_id=session_id)
+            QMessageBox.warning(self, "Load Failed", f"Session not found: {session_id}")
+            return
+
+        messages_raw = session_data.get("messages")
+        messages: list[Message] = []
+        if isinstance(messages_raw, list):
+            for item in cast("list[object]", messages_raw):
+                if isinstance(item, dict):
+                    message = self._message_from_disk_dict(cast("dict[str, object]", item))
+                    if message is not None:
+                        messages.append(message)
+        elif messages_raw is not None:
+            _logger.warning("session_load_from_disk_messages_malformed", session_id=session_id)
+
+        active_binary = self._active_binary_from_disk_session(session_data)
+
+        self._restore_session_to_ui(messages, active_binary)
+        self._current_session_id = session_id
+        _logger.info("session_restored", session_id=session_id, message_count=len(messages))
+        self.session_loaded.emit(session_id)
+        self.accept()
+
+    @staticmethod
+    def _message_from_disk_dict(data: dict[str, object]) -> Message | None:
+        """Reconstruct a ``Message`` from a disk-sidecar message dictionary.
+
+        Args:
+            data: Raw message dictionary as stored in a sidecar session JSON
+                file, matching the ``role``/``content``/``timestamp`` shape
+                written for the manager-backed store.
+
+        Returns:
+            Message | None: Reconstructed message, or ``None`` when ``data``
+            is missing a valid ``role``/``content`` pair.
+        """
+        role = data.get("role")
+        content = data.get("content")
+        if role not in {"user", "assistant", "system", "tool"} or not isinstance(content, str):
+            return None
+
+        timestamp = datetime.now(tz=UTC)
+        timestamp_raw = data.get("timestamp")
+        if isinstance(timestamp_raw, str):
+            try:
+                timestamp = datetime.fromisoformat(timestamp_raw)
+            except ValueError:
+                _logger.warning("session_load_message_timestamp_invalid", raw=timestamp_raw)
+
+        return Message(role=cast("Literal['user', 'assistant', 'system', 'tool']", role), content=content, timestamp=timestamp)
+
+    @classmethod
+    def _active_binary_from_disk_session(cls, session_data: dict[str, object]) -> BinaryInfo | None:
+        """Reconstruct the active ``BinaryInfo`` from a disk-sidecar session dictionary.
+
+        Args:
+            session_data: Raw session dictionary as parsed by
+                ``_read_session_file``.
+
+        Returns:
+            BinaryInfo | None: The active binary, or ``None`` when the
+            session has no binaries or the active index is out of range.
+        """
+        binaries_raw = session_data.get("binaries")
+        if not isinstance(binaries_raw, list) or not binaries_raw:
+            return None
+        binaries = cast("list[object]", binaries_raw)
+
+        index_raw = session_data.get("active_binary_index")
+        index = index_raw if isinstance(index_raw, int) else len(binaries) - 1
+        if not (0 <= index < len(binaries)):
+            return None
+
+        candidate = binaries[index]
+        if not isinstance(candidate, dict):
+            return None
+        return cls._binary_info_from_disk_dict(cast("dict[str, object]", candidate))
+
+    @staticmethod
+    def _binary_info_from_disk_dict(data: dict[str, object]) -> BinaryInfo | None:
+        """Reconstruct a ``BinaryInfo`` from a disk-sidecar binary dictionary.
+
+        Args:
+            data: Raw binary dictionary as stored in a sidecar session JSON
+                file, matching the ``path``/``name``/``file_type`` shape
+                written for the manager-backed store.
+
+        Returns:
+            BinaryInfo | None: Reconstructed binary info, or ``None`` when
+            ``data`` is missing the required ``path``/``name`` fields.
+        """
+        path_raw = data.get("path")
+        name_raw = data.get("name")
+        if not isinstance(path_raw, str) or not isinstance(name_raw, str):
+            return None
+
+        size_raw = data.get("size")
+        sha256_raw = data.get("sha256")
+        file_type_raw = data.get("file_type")
+        architecture_raw = data.get("architecture")
+        is_64bit_raw = data.get("is_64bit")
+        entry_point_raw = data.get("entry_point")
+
+        return BinaryInfo(
+            path=Path(path_raw),
+            name=name_raw,
+            size=size_raw if isinstance(size_raw, int) else 0,
+            sha256=sha256_raw if isinstance(sha256_raw, str) else "",
+            file_type=file_type_raw if isinstance(file_type_raw, str) else "unknown",
+            architecture=architecture_raw if isinstance(architecture_raw, str) else "unknown",
+            is_64bit=is_64bit_raw if isinstance(is_64bit_raw, bool) else False,
+            entry_point=entry_point_raw if isinstance(entry_point_raw, int) else 0,
+            sections=[],
+            imports=[],
+            exports=[],
+        )
+
+    def _restore_session_to_ui(self, messages: list[Message], active_binary: BinaryInfo | None) -> None:
+        """Push a loaded session's chat history and active binary into the live UI.
+
+        Drives restoration through the parent window's own UI-population
+        methods -- ``ChatPanel.add_message``, the exact call path used for
+        live conversation turns, and ``_on_binary_loaded``, the exact call
+        path used after a normal binary load completes -- so a restored
+        session renders identically to one built up interactively instead of
+        duplicating chat-bubble rendering or binary-activation UI logic here.
+        A no-op when the dialog has no parent window wired (for example, a
+        dialog constructed for the on-disk sidecar fallback without a
+        ``MainWindow`` parent).
+
+        Args:
+            messages: Ordered conversation history from the loaded session.
+            active_binary: Active binary from the loaded session, or
+                ``None`` when the session has no binaries.
+        """
+        parent = self.parent()
+
+        chat_panel = getattr(parent, "_chat_panel", None)
+        if chat_panel is not None:
+            clear_messages = getattr(chat_panel, "clear_messages", None)
+            if callable(clear_messages):
+                clear_messages()
+            add_message = getattr(chat_panel, "add_message", None)
+            if callable(add_message):
+                for message in messages:
+                    add_message(message)
+
+        if active_binary is not None:
+            on_binary_loaded = getattr(parent, "_on_binary_loaded", None)
+            if callable(on_binary_loaded):
+                on_binary_loaded(active_binary)
 
     def _delete_session(self) -> None:
         """Delete the currently selected session."""
