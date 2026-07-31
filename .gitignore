@@ -465,15 +465,14 @@ target/
 # ==============================================================================
 # X64DBG PLUGIN BUILD OUTPUT
 # ==============================================================================
-# CMake/MSBuild build trees for the x64dbg bridge plugin. Regenerable output;
-# the prebuilt binaries are committed under src/x64dbg-plugin/bin/ instead.
+# CMake/MSBuild build trees and compiled binaries for the x64dbg bridge
+# plugin. These are regenerable build output produced from the committed
+# C++ source and SDK; CI builds them from source so they are never tracked.
 src/x64dbg-plugin/build/
 src/x64dbg-plugin/build_*/
-# The CMake build writes the plugin straight into bin/; track only the plugin
-# binaries there, never build debris (import libs, export tables, PDBs).
-src/x64dbg-plugin/bin/*
-!src/x64dbg-plugin/bin/*.dp32
-!src/x64dbg-plugin/bin/*.dp64
+src/x64dbg-plugin/bin/
+tools/x64dbg/release/x64/plugins/intellicrack_bridge_x64.dp64
+tools/x64dbg/release/x32/plugins/intellicrack_bridge_x32.dp32
 
 # ==============================================================================
 # REMOVED TEMPLATE DIRECTORIES - DO NOT RECREATE
