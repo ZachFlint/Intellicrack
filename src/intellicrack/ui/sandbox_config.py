@@ -9,6 +9,8 @@ This module provides the UI for configuring Windows Sandbox settings, including 
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.wintypes
 import inspect
 import json
 import os
@@ -53,6 +55,7 @@ from .panels.async_bridge import (
     run_bridge_coroutine_async,
 )
 from .resources import IconManager
+from .win32_embed import find_window_by_pid
 
 
 if TYPE_CHECKING:
@@ -72,6 +75,8 @@ _SANDBOX_FEATURE_NAME: Final[str] = "Containers-DisposableClientVM"
 _SANDBOX_INSTALL_STATE_ENABLED: Final[str] = "1"
 _SANDBOX_AVAILABILITY_TIMEOUT_SECONDS: Final[int] = 10
 _AVAILABILITY_RESULT_LEN: Final[int] = 2
+_WM_CLOSE: Final[int] = 0x0010
+_GRACEFUL_CLOSE_TIMEOUT_S: Final[float] = 5.0
 
 
 def _windows_sandbox_binary_path() -> Path:
@@ -82,6 +87,39 @@ def _windows_sandbox_binary_path() -> Path:
     """
     system_root = os.environ.get("SYSTEMROOT", r"C:\Windows")
     return Path(system_root) / "System32" / "WindowsSandbox.exe"
+
+
+def _post_wm_close(pid: int) -> bool:
+    """Post ``WM_CLOSE`` to the top-level window owned by ``pid``, if any.
+
+    Mirrors clicking the sandbox window's own close button so Windows
+    Sandbox can run its documented teardown of the Host Compute Service
+    session it owns. A bare ``TerminateProcess`` kill of the client does
+    not reliably release that session, which can leave a subsequent
+    Windows Sandbox ``Create`` blocked by the orphaned instance. Reuses
+    :func:`~intellicrack.ui.win32_embed.find_window_by_pid` (returns
+    ``None`` on non-Windows platforms or when no window is found) instead
+    of duplicating window enumeration.
+
+    Args:
+        pid: Process ID whose top-level window should receive ``WM_CLOSE``.
+
+    Returns:
+        bool: True when a window belonging to ``pid`` was found and
+        ``WM_CLOSE`` was successfully posted to it.
+    """
+    hwnd = find_window_by_pid(pid)
+    if hwnd is None:
+        return False
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    user32.PostMessageW.argtypes = [
+        ctypes.wintypes.HWND,
+        ctypes.wintypes.UINT,
+        ctypes.wintypes.WPARAM,
+        ctypes.wintypes.LPARAM,
+    ]
+    user32.PostMessageW.restype = ctypes.wintypes.BOOL
+    return bool(user32.PostMessageW(hwnd, _WM_CLOSE, 0, 0))
 
 
 class _AvailabilityCache:
@@ -371,17 +409,7 @@ class SandboxTestWorker(QThread):
             success = False
             self.finished.emit(success, f"Failed to launch sandbox: {e}")
         finally:
-            if self._process is not None and self._process.poll() is None:
-                pid = self._process.pid
-                try:
-                    ProcessManager.terminate_tree(pid, graceful_timeout=5.0, force_timeout=3.0)
-                    _logger.info("sandbox_test_process_terminated", pid=pid)
-                except (OSError, TimeoutExpired):
-                    _logger.exception(
-                        "sandbox_test_termination_error",
-                        pid=pid,
-                    )
-                ProcessManager.get_instance().unregister(pid)
+            self._terminate_sandbox_process()
             if self._wsb_file and self._wsb_file.exists():
                 try:
                     _logger.info("wsb_file_unlinking", path=str(self._wsb_file))
@@ -484,24 +512,45 @@ class SandboxTestWorker(QThread):
         ))
         return "\n".join(config_lines)
 
+    def _terminate_sandbox_process(self) -> None:
+        """Stop the launched sandbox client, preferring a graceful window close.
+
+        Posts ``WM_CLOSE`` to the sandbox client's top-level window first so
+        Windows Sandbox can run its own teardown of the Host Compute Service
+        session it owns instead of only ever being force-killed, which can
+        leave that session orphaned and block a subsequent sandbox
+        ``Create`` (S16-D11). Falls back to a forced process-tree
+        termination when no window is found or the graceful close does not
+        complete within :data:`_GRACEFUL_CLOSE_TIMEOUT_S`. Unconditionally
+        unregisters the process from ``ProcessManager`` afterwards so no
+        leaked tracking entry survives regardless of which path terminated
+        it. No-op when no process was launched or it has already exited.
+        """
+        if self._process is None or self._process.poll() is not None:
+            return
+        pid = self._process.pid
+        closed = False
+        if _post_wm_close(pid):
+            try:
+                self._process.wait(timeout=_GRACEFUL_CLOSE_TIMEOUT_S)
+                closed = True
+                _logger.info("sandbox_test_graceful_close_ok", pid=pid)
+            except TimeoutExpired:
+                _logger.warning("sandbox_test_graceful_close_timeout", pid=pid)
+        if not closed:
+            try:
+                ProcessManager.terminate_tree(pid, graceful_timeout=5.0, force_timeout=3.0)
+                _logger.info("sandbox_test_process_terminated", pid=pid)
+            except (OSError, TimeoutExpired):
+                _logger.exception("sandbox_test_termination_error", pid=pid)
+        ProcessManager.get_instance().unregister(pid)
+
     def stop(self) -> None:
         """Stop the sandbox test and terminate the process."""
         if self._process:
             pid = self._process.pid
             _logger.info("sandbox_test_stop_requested", pid=pid)
-            process_manager = ProcessManager.get_instance()
-
-            try:
-                self._process.terminate()
-                self._process.wait(timeout=5)
-            except (TimeoutExpired, OSError):
-                try:
-                    self._process.kill()
-                    self._process.wait()
-                except OSError:
-                    _logger.exception("process_force_kill_error", pid=pid)
-
-            process_manager.unregister(pid)
+            self._terminate_sandbox_process()
             _logger.info("sandbox_test_stop_completed", pid=pid)
 
 

@@ -126,6 +126,29 @@ _TOOL_PANEL_MIN_WIDTH = 340
 _SPLITTER_HANDLE_WIDTH = 6
 _WINDOW_MIN_WIDTH = _CHAT_PANEL_MIN_WIDTH + _TOOL_PANEL_MIN_WIDTH + _SPLITTER_HANDLE_WIDTH
 _MEMORY_REGION_TUPLE_LEN = 4
+_MEM_COMMIT_STATE = 0x1000
+_MEM_STATE_NAMES: dict[int, str] = {
+    0x1000: "MEM_COMMIT",
+    0x2000: "MEM_RESERVE",
+    0x10000: "MEM_FREE",
+}
+_PAGE_PROTECTION_BASE_MASK = 0xFF
+_PAGE_PROTECTION_BASE_NAMES: dict[int, str] = {
+    0x01: "PAGE_NOACCESS",
+    0x02: "PAGE_READONLY",
+    0x04: "PAGE_READWRITE",
+    0x08: "PAGE_WRITECOPY",
+    0x10: "PAGE_EXECUTE",
+    0x20: "PAGE_EXECUTE_READ",
+    0x40: "PAGE_EXECUTE_READWRITE",
+    0x80: "PAGE_EXECUTE_WRITECOPY",
+}
+_PAGE_PROTECTION_MODIFIER_NAMES: dict[int, str] = {
+    0x100: "PAGE_GUARD",
+    0x200: "PAGE_NOCACHE",
+    0x400: "PAGE_WRITECOMBINE",
+}
+_PAGE_READABLE_PROTECTIONS: frozenset[int] = frozenset({0x02, 0x04, 0x08, 0x20, 0x40, 0x80})
 
 _original_excepthook = sys.excepthook
 
@@ -3497,6 +3520,62 @@ class MainWindow(QMainWindow):
             return None
         return cast("tuple[int, int, int, int]", values)
 
+    @staticmethod
+    def _decode_page_protection(protection: int) -> str:
+        """Decode a raw Win32 page-protection value into its symbolic name.
+
+        Args:
+            protection: Raw ``Protect`` value from a
+                ``MEMORY_BASIC_INFORMATION`` region query.
+
+        Returns:
+            str: The base ``PAGE_*`` constant name, with any
+            ``PAGE_GUARD``/``PAGE_NOCACHE``/``PAGE_WRITECOMBINE`` modifier
+            flags appended, or ``UNKNOWN(0x..)`` when the base value is not a
+            recognised Win32 protection constant.
+        """
+        base = protection & _PAGE_PROTECTION_BASE_MASK
+        name = _PAGE_PROTECTION_BASE_NAMES.get(base, f"UNKNOWN(0x{base:02X})")
+        modifiers = [mod_name for mask, mod_name in _PAGE_PROTECTION_MODIFIER_NAMES.items() if protection & mask]
+        return f"{name} | {' | '.join(modifiers)}" if modifiers else name
+
+    @staticmethod
+    def _decode_mem_state(state: int) -> str:
+        """Decode a raw Win32 memory-state value into its symbolic name.
+
+        Args:
+            state: Raw ``State`` value from a ``MEMORY_BASIC_INFORMATION``
+                region query.
+
+        Returns:
+            str: The ``MEM_COMMIT``/``MEM_RESERVE``/``MEM_FREE`` constant
+            name, or ``UNKNOWN(0x..)`` when the value is none of those three.
+        """
+        return _MEM_STATE_NAMES.get(state, f"UNKNOWN(0x{state:08X})")
+
+    @staticmethod
+    def _default_region_row(regions: list[tuple[int, int, int, int]]) -> int:
+        """Pick the default row to pre-select in the memory-region picker.
+
+        Prefers the first committed, readable region so the picker's default
+        selection (and its OK action) never lands on an unmapped or
+        unreadable region such as row 0 / base ``0x0`` (``MEM_FREE``),
+        which previously produced a ReadProcessMemory-failed dialog
+        (S14-D16).
+
+        Args:
+            regions: Enumerated ``(base, size, protection, state)`` tuples in
+                listing order.
+
+        Returns:
+            int: Index of the first committed region whose base protection is
+            readable, or ``0`` when no region qualifies.
+        """
+        for index, (_base, _size, protection, state) in enumerate(regions):
+            if state == _MEM_COMMIT_STATE and (protection & _PAGE_PROTECTION_BASE_MASK) in _PAGE_READABLE_PROTECTIONS:
+                return index
+        return 0
+
     def _on_process_regions_listed(self, pid: int, result: object) -> None:
         """Show the memory-region picker once native enumeration completes.
 
@@ -3534,8 +3613,12 @@ class MainWindow(QMainWindow):
         for row, (base, sz, prot, state) in enumerate(regions):
             table.setItem(row, 0, QTableWidgetItem(f"0x{base:016X}"))
             table.setItem(row, 1, QTableWidgetItem(f"0x{sz:X} ({sz:,} bytes)"))
-            table.setItem(row, 2, QTableWidgetItem(f"0x{prot:08X}"))
-            table.setItem(row, 3, QTableWidgetItem(f"0x{state:08X}"))
+            table.setItem(row, 2, QTableWidgetItem(self._decode_page_protection(prot)))
+            table.setItem(row, 3, QTableWidgetItem(self._decode_mem_state(state)))
+
+        default_row = self._default_region_row(regions)
+        table.setCurrentCell(default_row, 0)
+        table.selectRow(default_row)
 
         layout.addWidget(table)
 
@@ -3699,21 +3782,29 @@ class MainWindow(QMainWindow):
         """Report completion of a full-analysis run.
 
         The structured panel is populated by the bridge-analysis callback fired
-        inside the reanalysis; this only updates status and warns when no bridge
-        contributed data.
+        inside the reanalysis; this only updates status and warns when no
+        disassembler backend actually contributed data. ``result.complete`` is
+        the aggregator's own signal that at least one bridge (Ghidra/Cutter)
+        contributed strings/imports/exports/functions; when it is ``False`` the
+        returned summary's ``functions`` list (and any other bridge-derived
+        field) is not authoritative, so a "0 functions" outcome must never be
+        presented as a completed analysis (S13-D05).
 
         Args:
             result: The ``BridgeAnalysisSummary`` produced, or ``None`` when no
-                analysis bridge contributed data.
+                active session/binary was available to analyze.
         """
-        if isinstance(result, BridgeAnalysisSummary):
+        if isinstance(result, BridgeAnalysisSummary) and result.complete:
             self.status_update.emit("Full analysis complete")
             return
-        self.status_update.emit("Full analysis produced no bridge data")
-        QMessageBox.information(
+        self.status_update.emit("Full analysis: no analysis backend connected")
+        QMessageBox.warning(
             self,
-            "Analysis",
-            "No analysis bridge (radare2 / Ghidra) contributed data. Configure a static-analysis tool and try again.",
+            "No Analysis Backend Connected",
+            "No disassembler backend (Ghidra, Cutter) is connected, so function discovery "
+            "could not run. Any function count shown does not reflect the binary's actual "
+            "contents.\n\nConnect Ghidra or Cutter (Tools -> Embedded Tools), then run "
+            "Full Analysis again.",
         )
 
     def _on_analyze_current_binary(self) -> None:
