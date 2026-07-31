@@ -475,12 +475,15 @@ class MemoryTab(QWidget):
     def _on_region_filter_changed(self, text: str) -> None:
         """Filter the region table rows by case-insensitive substring match.
 
-        Filters on base address, protection, state, type, and module columns.
+        Filters on base address, protection, state, type, and module columns,
+        then updates the region count label to reflect the number of rows
+        left visible by the filter rather than the unfiltered total.
 
         Args:
             text: The filter substring.
         """
         needle = text.strip().lower()
+        visible_count = 0
         for row in range(self._region_table.rowCount()):
             match = False
             if not needle:
@@ -492,6 +495,9 @@ class MemoryTab(QWidget):
                         match = True
                         break
             self._region_table.setRowHidden(row, not match)
+            if match:
+                visible_count += 1
+        self._region_count.setText(f"{visible_count} regions")
 
     def _refresh_regions(self) -> None:
         """Refresh the memory region map."""
@@ -528,7 +534,6 @@ class MemoryTab(QWidget):
                 self._region_table.setItem(row, 4, QTableWidgetItem(str(getattr(region, "type", ""))))
                 self._region_table.setItem(row, 5, QTableWidgetItem(str(getattr(region, "module_name", "") or "")))
             set_sorting_enabled(self._region_table, enable=True)
-            self._region_count.setText(f"{len(typed_result)} regions")
             self._on_region_filter_changed(self._region_filter.text())
 
         def _on_error(exc: object) -> None:
