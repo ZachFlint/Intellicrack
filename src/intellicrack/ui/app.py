@@ -1730,17 +1730,40 @@ class MainWindow(QMainWindow):
     def _on_load_binary(self) -> None:
         """Handle load binary action."""
         _logger.info("load_binary_dialog_opened")
-        path, _ = QFileDialog.getOpenFileName(
-            self,
+        dialog = self._build_sized_open_file_dialog(
             "Load Binary",
             "",
             "Executables (*.exe *.dll *.so *.dylib);;All Files (*)",
         )
-        if path:
+        if dialog.exec() == QDialog.DialogCode.Accepted and dialog.selectedFiles():
+            path = dialog.selectedFiles()[0]
             _logger.info("load_binary_dialog_selection", path=path)
             self._load_binary(Path(path))
         else:
             _logger.info("load_binary_dialog_cancelled")
+
+    def _build_sized_open_file_dialog(self, caption: str, directory: str, name_filter: str) -> QFileDialog:
+        """Build a non-native open-file dialog with a sane minimum size.
+
+        The static ``QFileDialog.getOpenFileName`` convenience call uses the
+        native OS dialog, whose size cannot be controlled and can render
+        abnormally short with clipped buttons and filter text. This builds an
+        equivalent non-native dialog instance sized large enough to avoid that.
+
+        Args:
+            caption: Window caption for the dialog.
+            directory: Starting directory for the dialog.
+            name_filter: Qt-style filter string (e.g. ``"All Files (*)"``).
+
+        Returns:
+            QFileDialog: A configured, unexecuted dialog instance for a single existing file.
+        """
+        dialog = QFileDialog(self, caption, directory, name_filter)
+        dialog.setOption(QFileDialog.Option.DontUseNativeDialog, on=True)
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+        dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+        dialog.setMinimumSize(900, 600)
+        return dialog
 
     def _load_binary(self, path: Path) -> None:
         """Load a binary file through the orchestrator.
