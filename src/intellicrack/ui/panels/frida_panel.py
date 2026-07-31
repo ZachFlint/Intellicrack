@@ -322,7 +322,7 @@ class FridaPanel(AnalysisPanelBase):
         self._right_tabs.addTab(self._create_modules_section(), "Modules")
         self._right_tabs.addTab(self._create_memory_section(), "Memory")
         self._right_tabs.addTab(self._create_symbols_section(), "Symbols")
-        self._right_tabs.addTab(self._create_advanced_section(), "Advanced")
+        self._right_tabs.addTab(self._make_scrollable(self._create_advanced_section()), "Advanced")
         return self._right_tabs
 
     def _create_hooks_section(self) -> QWidget:
@@ -919,16 +919,11 @@ class FridaPanel(AnalysisPanelBase):
 
         pending_key = self._next_pending_hook_key()
         row = self._hooks_table.rowCount()
-        self._hooks_table.insertRow(row)
-        self._hooks_table.setItem(row, _HOOK_COL_ADDRESS, QTableWidgetItem("Resolving..."))
-        self._hooks_table.setItem(row, _HOOK_COL_MODULE, QTableWidgetItem(""))
-        function_item = QTableWidgetItem(target)
-        self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, function_item)
-        self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Installing..."))
-        self._hook_ids.append(pending_key)
-
+        self._insert_pending_hook_row(pending_key, target)
+        function_item = self._hooks_table.item(row, _HOOK_COL_FUNCTION)
         self._hooks_table.setCurrentCell(row, _HOOK_COL_FUNCTION)
-        edit_table_item(self._hooks_table, function_item)
+        if function_item is not None:
+            edit_table_item(self._hooks_table, function_item)
 
         self._add_hook_btn.setEnabled(False)
         run_bridge_coroutine_logged(
@@ -972,13 +967,56 @@ class FridaPanel(AnalysisPanelBase):
             -1,
         )
 
-    def _on_hook_installed(self, pending_key: str, target: str, result: object) -> None:
-        """Handle successful hook installation.
+    def _insert_pending_hook_row(self, pending_key: str, target: str) -> None:
+        """Insert a placeholder row into the Active Hooks table for an in-flight install.
+
+        Used by every install path that lands a row in :attr:`_hooks_table`
+        (Add Hook, Intercept Ret, Replace Fn) so a hook is visible -- and
+        selectable for Remove -- from the moment its bridge call is
+        dispatched, not only after it resolves.
+
+        Args:
+            pending_key: Sentinel key that identifies this row until the
+                bridge call resolves to a real hook id.
+            target: The raw target string (address or module!func) shown in
+                the Function column while installation is pending.
+        """
+        row = self._hooks_table.rowCount()
+        self._hooks_table.insertRow(row)
+        self._hooks_table.setItem(row, _HOOK_COL_ADDRESS, QTableWidgetItem("Resolving..."))
+        self._hooks_table.setItem(row, _HOOK_COL_MODULE, QTableWidgetItem(""))
+        self._hooks_table.setItem(row, _HOOK_COL_FUNCTION, QTableWidgetItem(target))
+        self._hooks_table.setItem(row, _HOOK_COL_STATUS, QTableWidgetItem("Installing..."))
+        self._hook_ids.append(pending_key)
+
+    def _remove_pending_hook_row(self, pending_key: str) -> None:
+        """Remove a pending hooks-table row after a failed install.
+
+        Args:
+            pending_key: Sentinel key stored in the pending hook row.
+        """
+        row = self._find_hook_row(pending_key)
+        if 0 <= row < self._hooks_table.rowCount():
+            self._hooks_table.removeRow(row)
+            self._hook_ids.pop(row)
+
+    def _apply_hook_install_result(self, pending_key: str, target: str, result: object) -> tuple[bool, str, str]:
+        """Write a successful install result into its pending hooks-table row.
+
+        Shared by every install path that tracks a hook in :attr:`_hooks_table`
+        (Add Hook, Intercept Ret, Replace Fn): all three bridge calls resolve
+        to a :class:`~intellicrack.core.types.HookInfo`, so the row-population
+        logic is identical -- only the console message each caller prints
+        differs.
 
         Args:
             pending_key: Sentinel key stored in the pending hook row.
             target: The original hook target string.
-            result: HookInfo from the bridge.
+            result: HookInfo returned by the bridge.
+
+        Returns:
+            tuple[bool, str, str]: Whether the pending row was still present,
+            the resolved hex address string, and the real hook id.
         """
         hook_id = str(getattr(result, "id", ""))
         address = getattr(result, "address", None)
@@ -991,13 +1029,10 @@ class FridaPanel(AnalysisPanelBase):
             module_str = parts[0]
             func_str = parts[1]
 
-        self._add_hook_btn.setEnabled(True)
         row = self._find_hook_row(pending_key)
         if row < 0:
-            self._console.appendPlainText(f"[+] Hook installed: {target} at {addr_str} (row refreshed)")
             self.hook_added.emit(addr_str)
-            _logger.info("frida_hook_installed_row_missing", target=target, hook_id=hook_id)
-            return
+            return False, addr_str, hook_id
 
         addr_item = self._hooks_table.item(row, _HOOK_COL_ADDRESS)
         if addr_item is not None:
@@ -1013,8 +1048,24 @@ class FridaPanel(AnalysisPanelBase):
             status_item.setText("Active")
 
         self._hook_ids[row] = hook_id
-        self._console.appendPlainText(f"[+] Hook installed: {target} at {addr_str}")
         self.hook_added.emit(addr_str)
+        return True, addr_str, hook_id
+
+    def _on_hook_installed(self, pending_key: str, target: str, result: object) -> None:
+        """Handle successful hook installation.
+
+        Args:
+            pending_key: Sentinel key stored in the pending hook row.
+            target: The original hook target string.
+            result: HookInfo from the bridge.
+        """
+        self._add_hook_btn.setEnabled(True)
+        row_found, addr_str, hook_id = self._apply_hook_install_result(pending_key, target, result)
+        if not row_found:
+            self._console.appendPlainText(f"[+] Hook installed: {target} at {addr_str} (row refreshed)")
+            _logger.info("frida_hook_installed_row_missing", target=target, hook_id=hook_id)
+            return
+        self._console.appendPlainText(f"[+] Hook installed: {target} at {addr_str}")
         _logger.info("frida_hook_installed", target=target, hook_id=hook_id)
 
     def _on_hook_install_error(self, pending_key: str, exc: object) -> None:
@@ -1025,12 +1076,60 @@ class FridaPanel(AnalysisPanelBase):
             exc: The exception that occurred.
         """
         self._add_hook_btn.setEnabled(True)
-        row = self._find_hook_row(pending_key)
-        if 0 <= row < self._hooks_table.rowCount():
-            self._hooks_table.removeRow(row)
-            self._hook_ids.pop(row)
+        self._remove_pending_hook_row(pending_key)
         self._console.appendPlainText(f"[-] Hook installation failed: {exc}")
         _logger.warning("frida_hook_install_failed", error=str(exc))
+
+    def _on_intercept_return_installed(self, pending_key: str, target: str, return_value: int, result: object) -> None:
+        """Handle successful Intercept-Ret installation by tracking it in the Active Hooks table.
+
+        Args:
+            pending_key: Sentinel key stored in the pending hook row.
+            target: The original intercept target string.
+            return_value: The forced return value that was installed.
+            result: HookInfo returned by the bridge.
+        """
+        row_found, addr_str, hook_id = self._apply_hook_install_result(pending_key, target, result)
+        if not row_found:
+            _logger.info("frida_intercept_return_row_missing", target=target, hook_id=hook_id)
+        self._console.appendPlainText(f"[+] Intercept return installed for {target} -> {return_value} at {addr_str}")
+        _logger.info("frida_intercept_return_installed", target=target, hook_id=hook_id, return_value=return_value)
+
+    def _on_intercept_return_error(self, pending_key: str, exc: object) -> None:
+        """Handle Intercept-Ret installation failure by removing the pending row.
+
+        Args:
+            pending_key: Sentinel key stored in the pending hook row.
+            exc: The exception that occurred.
+        """
+        self._remove_pending_hook_row(pending_key)
+        self._console.appendPlainText(f"[-] Intercept return failed: {exc}")
+        _logger.warning("frida_intercept_return_failed", error=str(exc))
+
+    def _on_replace_function_installed(self, pending_key: str, target: str, result: object) -> None:
+        """Handle successful Replace-Fn installation by tracking it in the Active Hooks table.
+
+        Args:
+            pending_key: Sentinel key stored in the pending hook row.
+            target: The original replacement target string.
+            result: HookInfo returned by the bridge.
+        """
+        row_found, addr_str, hook_id = self._apply_hook_install_result(pending_key, target, result)
+        if not row_found:
+            _logger.info("frida_replace_function_row_missing", target=target, hook_id=hook_id)
+        self._console.appendPlainText(f"[+] Function replaced: {target} at {addr_str}")
+        _logger.info("frida_function_replaced", target=target, hook_id=hook_id)
+
+    def _on_replace_function_error(self, pending_key: str, exc: object) -> None:
+        """Handle Replace-Fn installation failure by removing the pending row.
+
+        Args:
+            pending_key: Sentinel key stored in the pending hook row.
+            exc: The exception that occurred.
+        """
+        self._remove_pending_hook_row(pending_key)
+        self._console.appendPlainText(f"[-] Replace function failed: {exc}")
+        _logger.warning("frida_replace_function_failed", error=str(exc))
 
     def _on_remove_hook(self) -> None:
         """Remove the selected hook."""
@@ -1554,7 +1653,7 @@ class FridaPanel(AnalysisPanelBase):
         self._resume_btn.setEnabled(True)
 
     def _on_intercept_return(self) -> None:
-        """Set up a return value interception hook."""
+        """Set up a return value interception hook and track it in the Active Hooks table."""
         if self._bridge is None:
             self._console.appendPlainText("[!] No Frida bridge available")
             return
@@ -1562,27 +1661,29 @@ class FridaPanel(AnalysisPanelBase):
         target, accepted = QInputDialog.getText(self, "Intercept Return", "Target (address or module!func):")
         if not accepted or not target.strip():
             return
+        target = target.strip()
 
         ret_val, val_accepted = QInputDialog.getInt(self, "Return Value", "Value to return:", value=1)
         if not val_accepted:
             return
 
+        pending_key = self._next_pending_hook_key()
+        self._insert_pending_hook_row(pending_key, target)
+
         run_bridge_coroutine_logged(
-            self._bridge.intercept_return(target.strip(), ret_val),
-            on_success=lambda _: self._console.appendPlainText(
-                f"[+] Intercept return installed for {target.strip()} -> {ret_val}",
-            ),
-            on_error=lambda e: self._console.appendPlainText(f"[-] Intercept return failed: {e}"),
+            self._bridge.intercept_return(target, ret_val),
+            on_success=lambda result: self._on_intercept_return_installed(pending_key, target, ret_val, result),
+            on_error=lambda e: self._on_intercept_return_error(pending_key, e),
             parent=self,
             event="frida_intercept_return",
             logger=_logger,
             level="info",
-            target=target.strip(),
+            target=target,
             return_value=ret_val,
         )
 
     def _on_replace_function(self) -> None:
-        """Replace a function implementation with custom code."""
+        """Replace a function implementation with custom code and track it in the Active Hooks table."""
         if self._bridge is None:
             self._console.appendPlainText("[!] No Frida bridge available")
             return
@@ -1590,6 +1691,7 @@ class FridaPanel(AnalysisPanelBase):
         target, accepted = QInputDialog.getText(self, "Replace Function", "Target (address or module!func):")
         if not accepted or not target.strip():
             return
+        target = target.strip()
 
         code, code_accepted = QInputDialog.getMultiLineText(
             self,
@@ -1599,15 +1701,18 @@ class FridaPanel(AnalysisPanelBase):
         if not code_accepted or not code.strip():
             return
 
+        pending_key = self._next_pending_hook_key()
+        self._insert_pending_hook_row(pending_key, target)
+
         run_bridge_coroutine_logged(
-            self._bridge.replace_function(target.strip(), code.strip()),
-            on_success=lambda _: self._console.appendPlainText(f"[+] Function replaced: {target.strip()}"),
-            on_error=lambda e: self._console.appendPlainText(f"[-] Replace function failed: {e}"),
+            self._bridge.replace_function(target, code.strip()),
+            on_success=lambda result: self._on_replace_function_installed(pending_key, target, result),
+            on_error=lambda e: self._on_replace_function_error(pending_key, e),
             parent=self,
             event="frida_replace_function",
             logger=_logger,
             level="info",
-            target=target.strip(),
+            target=target,
             replacement_size=len(code.strip()),
         )
 
@@ -2560,7 +2665,7 @@ class FridaPanel(AnalysisPanelBase):
         call_row1.addWidget(self._adv_call_btn)
         self._adv_call_result = QLabel("")
         call_row1.addWidget(self._adv_call_result)
-        layout.addLayout(call_row1)
+        layout.addWidget(self._make_control_row(call_row1))
 
         call_row2 = QHBoxLayout()
         call_row2.addWidget(QLabel("Return:"))
@@ -2576,7 +2681,7 @@ class FridaPanel(AnalysisPanelBase):
         self._adv_cc.addItems(_CALLING_CONVENTIONS)
         call_row2.addWidget(self._adv_cc)
         call_row2.addStretch()
-        layout.addLayout(call_row2)
+        layout.addWidget(self._make_control_row(call_row2))
 
         self._syscall_controls = SystemFunctionCallControls()
         layout.addWidget(self._syscall_controls)
@@ -2674,7 +2779,7 @@ class FridaPanel(AnalysisPanelBase):
         run_bridge_coroutine_logged(
             self._bridge.call_function(addr, args, return_type=ret_type, arg_types=arg_types, calling_convention=cc),
             on_success=lambda r: self._adv_call_result.setText(f"0x{r:X}" if isinstance(r, int) else str(r)),
-            on_error=lambda e: self._console.appendPlainText(f"[-] Call failed: {e}"),
+            on_error=self._on_call_function_error,
             parent=self,
             event="frida_call_function",
             logger=_logger,
@@ -2684,6 +2789,25 @@ class FridaPanel(AnalysisPanelBase):
             arg_count=len(args) if args is not None else 0,
             calling_convention=cc,
         )
+
+    def _on_call_function_error(self, exc: object) -> None:
+        """Surface the underlying Frida failure reason when a function call fails.
+
+        ``FridaBridge.call_function`` attaches the real Frida/QuickJS error text
+        (for example a ``NativeFunction`` type mismatch or an uncaught script
+        exception) to ``ToolError.details['reason']``. Without this, the console
+        only showed the generic "function call failed" message, hiding the
+        actual cause.
+
+        Args:
+            exc: The exception raised by the bridge while calling the function.
+        """
+        reason = str(exc)
+        if isinstance(exc, ToolError):
+            detail_reason = exc.details.get("reason")
+            if isinstance(detail_reason, str) and detail_reason:
+                reason = detail_reason
+        self._console.appendPlainText(f"[-] Call failed: {reason}")
 
     def _on_enable_child_gating(self) -> None:
         """Enable child process gating."""

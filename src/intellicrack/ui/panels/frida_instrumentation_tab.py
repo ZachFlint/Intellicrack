@@ -38,6 +38,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.base_panel import make_control_row
 from intellicrack.ui.resources.font_manager import FontManager
 
 
@@ -831,7 +832,7 @@ class SystemFunctionCallControls(QWidget):
         self._syscall_call_btn.setObjectName("tool_button")
         self._syscall_call_btn.clicked.connect(self._on_call_system_function)
         row1.addWidget(self._syscall_call_btn)
-        layout.addLayout(row1)
+        layout.addWidget(make_control_row(row1))
 
         row2 = QHBoxLayout()
         row2.addWidget(QLabel("Return:"))
@@ -847,7 +848,7 @@ class SystemFunctionCallControls(QWidget):
         self._syscall_cc.addItems(_CALLING_CONVENTIONS)
         row2.addWidget(self._syscall_cc)
         row2.addStretch()
-        layout.addLayout(row2)
+        layout.addWidget(make_control_row(row2))
 
         result_row = QHBoxLayout()
         result_row.addWidget(QLabel("Value:"))
@@ -860,7 +861,7 @@ class SystemFunctionCallControls(QWidget):
         self._syscall_last_error_label = QLabel("")
         result_row.addWidget(self._syscall_last_error_label)
         result_row.addStretch()
-        layout.addLayout(result_row)
+        layout.addWidget(make_control_row(result_row))
 
         self._status_label = QLabel("")
         layout.addWidget(self._status_label)

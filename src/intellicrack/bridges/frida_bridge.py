@@ -2818,9 +2818,21 @@ class _FridaBridgeBase(InstrumentationBridge):
         elif return_type in {"float", "double"}:
             extract_js = "send({ type: 'call_result', value: result });"
         elif return_type in {"int64", "uint64", "pointer", "size_t", "ssize_t", "long", "ulong"}:
-            extract_js = "send({ type: 'call_result', value: result.toString(), valueIsString: true });"
+            # NativeFunction returns a NativePointer/Int64/UInt64 for these types, all of
+            # which expose toString(); a plain number never reaches this branch, but the
+            # guard keeps the extraction safe if the QuickJS runtime ever widens a value.
+            extract_js = (
+                "send({ type: 'call_result', "
+                "value: (result && result.toString) ? result.toString() : String(result), "
+                "valueIsString: true });"
+            )
         else:
-            extract_js = "send({ type: 'call_result', value: result.toInt32() });"
+            # int/uint/int8/16/32/uint8/16/32/bool return a plain JS number from
+            # NativeFunction, not a NativePointer, so it has no toInt32() method -- calling
+            # it unconditionally threw "result.toInt32 is not a function" for every integer
+            # return type. Only call toInt32() when the runtime actually handed back a
+            # pointer-like object; otherwise the number is already the value we want.
+            extract_js = "send({ type: 'call_result', value: (result && result.toInt32) ? result.toInt32() : result });"
 
         script_code = f"""
         var func = new NativeFunction(ptr({validated_address}), '{return_type}', [{arg_types_js}]{cc_part});
@@ -2831,7 +2843,7 @@ class _FridaBridgeBase(InstrumentationBridge):
         result = await self._execute_script_and_wait(script_code)
 
         if "error" in result:
-            raise ToolError(_ERR_CALL_FAILED)
+            raise ToolError(_ERR_CALL_FAILED, details={"reason": str(result["error"])})
 
         coerced = self._coerce_call_value(result)
         _logger.debug("function_called", address=hex(validated_address), return_value=coerced)

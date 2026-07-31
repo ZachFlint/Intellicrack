@@ -51,6 +51,79 @@ _CONTROL_SCROLL_MIN_HEIGHT: Final[int] = 88
 _CONTROL_ROW_SCROLLBAR_ALLOWANCE: Final[int] = 16
 
 
+def make_scrollable(
+    inner: QWidget,
+    *,
+    min_height: int = _CONTROL_SCROLL_MIN_HEIGHT,
+) -> QScrollArea:
+    """Wrap a control cluster in a scroll area so it scrolls instead of clipping.
+
+    The scroll area resizes ``inner`` to fill the available width when
+    there is room, but honours ``inner``'s minimum size: when the panel is
+    narrower or shorter than the controls require, scrollbars appear as
+    needed instead of the rows being squeezed until their text is cut off.
+
+    Module-level so it can be reused by standalone control-cluster widgets
+    that are not :class:`AnalysisPanelBase` subclasses (for example the
+    Frida instrumentation-tab helper widgets); :meth:`AnalysisPanelBase._make_scrollable`
+    is a thin wrapper kept for existing subclass call sites.
+
+    Args:
+        inner: The control-cluster widget to make scrollable.
+        min_height: Minimum height reserved for the scroll viewport so the
+            controls stay usable when the surrounding splitter is short.
+
+    Returns:
+        QScrollArea: A frameless, transparent scroll area wrapping ``inner``.
+    """
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    scroll.setMinimumHeight(min_height)
+    scroll.setWidget(inner)
+    return scroll
+
+
+def make_control_row(row: QHBoxLayout) -> QScrollArea:
+    """Wrap a dense horizontal control row so it scrolls sideways instead of crushing its controls.
+
+    A packed toolbar row -- labels, inputs, and several buttons in a plain
+    ``QHBoxLayout`` -- lets Qt shrink every control below its natural width
+    when the panel is narrow, eliding button captions down to unreadable
+    fragments such as ``ble``/``ible`` in place of ``Enable``/``Disable``.
+    Hosting the row in a horizontally scrollable viewport whose inner widget
+    keeps its natural minimum width means the controls stay full size and a
+    horizontal scrollbar appears when the panel is too narrow, which also
+    lets the panel -- and the window hosting it -- shrink freely.
+
+    Module-level so it can be reused by standalone control-cluster widgets
+    that are not :class:`AnalysisPanelBase` subclasses (for example the
+    Frida instrumentation-tab helper widgets); :meth:`AnalysisPanelBase._make_control_row`
+    is a thin wrapper kept for existing subclass call sites.
+
+    Args:
+        row: The populated horizontal layout to host.
+
+    Returns:
+        QScrollArea: A frameless, fixed-height scroll area wrapping the row.
+    """
+    inner = QWidget()
+    inner.setLayout(row)
+    inner.ensurePolished()
+    natural = inner.sizeHint()
+    inner.setMinimumWidth(natural.width())
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.Shape.NoFrame)
+    scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll.setWidget(inner)
+    scroll.setFixedHeight(natural.height() + _CONTROL_ROW_SCROLLBAR_ALLOWANCE)
+    return scroll
+
+
 class ToolMenuEntry(NamedTuple):
     """A single entry in a grouped toolbar dropdown menu.
 
@@ -272,10 +345,8 @@ class AnalysisPanelBase(QWidget):
     ) -> QScrollArea:
         """Wrap a control cluster in a scroll area so it scrolls instead of clipping.
 
-        The scroll area resizes ``inner`` to fill the available width when
-        there is room, but honours ``inner``'s minimum size: when the panel is
-        narrower or shorter than the controls require, scrollbars appear as
-        needed instead of the rows being squeezed until their text is cut off.
+        Thin wrapper around :func:`make_scrollable` kept for existing subclass
+        call sites (``self._make_scrollable(...)``).
 
         Args:
             inner: The control-cluster widget to make scrollable.
@@ -285,27 +356,14 @@ class AnalysisPanelBase(QWidget):
         Returns:
             QScrollArea: A frameless, transparent scroll area wrapping ``inner``.
         """
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setMinimumHeight(min_height)
-        scroll.setWidget(inner)
-        return scroll
+        return make_scrollable(inner, min_height=min_height)
 
     @staticmethod
     def _make_control_row(row: QHBoxLayout) -> QScrollArea:
         """Wrap a dense horizontal control row so it scrolls sideways instead of crushing its controls.
 
-        A packed toolbar row -- labels, inputs, and several buttons in a plain
-        ``QHBoxLayout`` -- lets Qt shrink every control below its natural width
-        when the panel is narrow, eliding button captions down to unreadable
-        fragments such as ``ble``/``ible`` in place of ``Enable``/``Disable``.
-        Hosting the row in a horizontally scrollable viewport whose inner widget
-        keeps its natural minimum width means the controls stay full size and a
-        horizontal scrollbar appears when the panel is too narrow, which also
-        lets the panel -- and the window hosting it -- shrink freely.
+        Thin wrapper around :func:`make_control_row` kept for existing
+        subclass call sites (``self._make_control_row(...)``).
 
         Args:
             row: The populated horizontal layout to host.
@@ -313,19 +371,7 @@ class AnalysisPanelBase(QWidget):
         Returns:
             QScrollArea: A frameless, fixed-height scroll area wrapping the row.
         """
-        inner = QWidget()
-        inner.setLayout(row)
-        inner.ensurePolished()
-        natural = inner.sizeHint()
-        inner.setMinimumWidth(natural.width())
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setWidget(inner)
-        scroll.setFixedHeight(natural.height() + _CONTROL_ROW_SCROLLBAR_ALLOWANCE)
-        return scroll
+        return make_control_row(row)
 
     @staticmethod
     def _add_tool_menu(
