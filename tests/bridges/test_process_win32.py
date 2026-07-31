@@ -19,7 +19,7 @@ import os
 import sys
 import threading
 from ctypes import wintypes
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 import pytest
 import pytest_asyncio
@@ -64,15 +64,14 @@ def _oracle_mitigation_primary_bit(policy_class: int) -> bool:
     kernel32.GetProcessMitigationPolicy.restype = wintypes.BOOL
     kernel32.GetCurrentProcess.restype = wintypes.HANDLE
     flags = ctypes.c_ulong(0)
-    if ok := kernel32.GetProcessMitigationPolicy(
+    if not kernel32.GetProcessMitigationPolicy(
         kernel32.GetCurrentProcess(),
         policy_class,
         ctypes.byref(flags),
         ctypes.sizeof(flags),
     ):
-        return bool(flags.value & 1)
-    else:
         raise OSError(ctypes.get_last_error(), "GetProcessMitigationPolicy failed")
+    return bool(flags.value & 1)
 
 
 pytestmark = [
@@ -418,7 +417,7 @@ async def test_read_registry_product_name(bridge: ProcessBridge) -> None:
     assert isinstance(result, dict)
     assert result.get("type") == "REG_SZ"
     assert isinstance(result.get("data"), str)
-    assert str(result.get("data")) != ""
+    assert str(result.get("data"))
 
 
 async def test_read_registry_invalid_hive_raises(bridge: ProcessBridge) -> None:
@@ -458,6 +457,196 @@ async def _alloc_decommit_free(bridge: ProcessBridge) -> None:
         assert ok is True
     finally:
         await bridge.free(address)
+
+
+_MEM_COMMIT = 0x1000
+_PAGE_READWRITE = 0x04
+_PROCESS_ALL_ACCESS = 0x1FFFFF
+_ALLOC_SIZE = 0x100000
+_ROUND_TRIP_PAYLOAD = b"INTELLICRACK_PTR"
+
+
+class _OracleMemoryBasicInformation(ctypes.Structure):
+    """Independent x64 ``MEMORY_BASIC_INFORMATION`` mirror for the oracle.
+
+    Declared separately from the bridge's own structure so the regression
+    test verifies the bridge's returned address against a wholly
+    independent, correctly-typed ``VirtualQueryEx`` path.
+    """
+
+    _fields_: ClassVar = [
+        ("BaseAddress", ctypes.c_void_p),
+        ("AllocationBase", ctypes.c_void_p),
+        ("AllocationProtect", wintypes.DWORD),
+        ("RegionSize", ctypes.c_size_t),
+        ("State", wintypes.DWORD),
+        ("Protect", wintypes.DWORD),
+        ("Type", wintypes.DWORD),
+    ]
+
+
+def _make_oracle_kernel32() -> ctypes.WinDLL:
+    """Load ``kernel32`` with explicit, full-width argtypes/restypes.
+
+    Every pointer parameter and pointer return is declared as
+    ``c_void_p`` so the oracle never truncates a 64-bit address, giving an
+    independent reference against which the bridge's ``allocate`` result is
+    checked.
+
+    Returns:
+        ctypes.WinDLL: A ``kernel32`` handle whose ``OpenProcess``,
+            ``CloseHandle``, ``VirtualQueryEx``, ``WriteProcessMemory``,
+            and ``ReadProcessMemory`` entry points are fully typed.
+    """
+    k = ctypes.WinDLL("kernel32", use_last_error=True)
+    k.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    k.OpenProcess.restype = wintypes.HANDLE
+    k.CloseHandle.argtypes = [wintypes.HANDLE]
+    k.CloseHandle.restype = wintypes.BOOL
+    k.VirtualQueryEx.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        ctypes.POINTER(_OracleMemoryBasicInformation),
+        ctypes.c_size_t,
+    ]
+    k.VirtualQueryEx.restype = ctypes.c_size_t
+    k.WriteProcessMemory.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_size_t),
+    ]
+    k.WriteProcessMemory.restype = wintypes.BOOL
+    k.ReadProcessMemory.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_size_t),
+    ]
+    k.ReadProcessMemory.restype = wintypes.BOOL
+    return k
+
+
+def _assert_region_matches(oracle: ctypes.WinDLL, handle: int, address: int, size: int) -> None:
+    """Assert an independent ``VirtualQueryEx`` confirms the bridge region.
+
+    A truncated ``VirtualAllocEx`` return would make ``address`` refer to
+    an unmapped location, so ``VirtualQueryEx`` would either fail or report
+    a non-matching base; a correct full-width pointer round-trips exactly.
+
+    Args:
+        oracle: Fully-typed ``kernel32`` from :func:`_make_oracle_kernel32`.
+        handle: Open handle to the target process.
+        address: Address the bridge returned from ``allocate``.
+        size: Requested allocation size in bytes.
+    """
+    mbi = _OracleMemoryBasicInformation()
+    written = oracle.VirtualQueryEx(handle, ctypes.c_void_p(address), ctypes.byref(mbi), ctypes.sizeof(mbi))
+    assert written == ctypes.sizeof(mbi), f"VirtualQueryEx failed for {address:#x}"
+    assert mbi.BaseAddress == address, f"region base {mbi.BaseAddress} != returned {address:#x}"
+    assert mbi.RegionSize >= size, f"region size {mbi.RegionSize:#x} < requested {size:#x}"
+    assert mbi.State == _MEM_COMMIT, f"region state {mbi.State:#x} is not MEM_COMMIT"
+    assert mbi.Protect == _PAGE_READWRITE, f"region protection {mbi.Protect:#x} is not PAGE_READWRITE"
+
+
+def _assert_round_trip(oracle: ctypes.WinDLL, handle: int, address: int) -> None:
+    """Assert bytes written at ``address`` read back byte-for-byte.
+
+    Exercises the exact returned pointer through ``WriteProcessMemory`` and
+    ``ReadProcessMemory``; a truncated address writes to the wrong location
+    (or fails), so the readback would differ.
+
+    Args:
+        oracle: Fully-typed ``kernel32`` from :func:`_make_oracle_kernel32`.
+        handle: Open handle to the target process.
+        address: Address the bridge returned from ``allocate``.
+    """
+    payload = _ROUND_TRIP_PAYLOAD
+    n_written = ctypes.c_size_t(0)
+    wrote = oracle.WriteProcessMemory(
+        handle,
+        ctypes.c_void_p(address),
+        payload,
+        len(payload),
+        ctypes.byref(n_written),
+    )
+    assert wrote, f"WriteProcessMemory failed at {address:#x}"
+    assert n_written.value == len(payload)
+
+    read_back = (ctypes.c_char * len(payload))()
+    n_read = ctypes.c_size_t(0)
+    got = oracle.ReadProcessMemory(
+        handle,
+        ctypes.c_void_p(address),
+        read_back,
+        len(payload),
+        ctypes.byref(n_read),
+    )
+    assert got, f"ReadProcessMemory failed at {address:#x}"
+    assert n_read.value == len(payload)
+    assert read_back.raw == payload, f"round-trip mismatch at {address:#x}"
+
+
+@pytest.mark.skipif(sys.maxsize <= 2**32, reason="64-bit pointer truncation only manifests on x64")
+async def test_allocate_returns_full_width_untruncated_pointer(bridge: ProcessBridge) -> None:
+    """Return value of allocate is a full-width pointer that round-trips exactly.
+
+    Regression gate for the ``VirtualAllocEx`` restype defect: without an
+    explicit ``restype = c_void_p`` the LPVOID return defaulted to a 32-bit
+    signed ``c_int``, so a real >2 GiB base was sign-extended to a negative
+    Python int (or had its high 32 bits dropped). Large bottom-up
+    allocations in this fully-loaded process land in exactly that regime, so
+    the returned address is validated as positive, canonical, page-aligned,
+    matched to an independent ``VirtualQueryEx`` region, and byte-for-byte
+    round-trippable via ``Write``/``ReadProcessMemory``; ``free`` must then
+    succeed, exercising the companion ``VirtualFreeEx`` argument fix.
+
+    Args:
+        bridge: ProcessBridge fixture.
+    """
+    await bridge.open_process(os.getpid(), "all")
+    oracle = _make_oracle_kernel32()
+    inherit_handle = False
+    handle = int(oracle.OpenProcess(_PROCESS_ALL_ACCESS, inherit_handle, os.getpid()) or 0)
+    assert handle, "oracle OpenProcess failed"
+    try:
+        await _verify_allocations_full_width(bridge, oracle, handle)
+    finally:
+        oracle.CloseHandle(wintypes.HANDLE(handle))
+        await bridge.close()
+
+
+async def _verify_allocations_full_width(bridge: ProcessBridge, oracle: ctypes.WinDLL, handle: int) -> None:
+    """Allocate, verify, and free regions until the >2 GiB regime is exercised.
+
+    Keeps each allocation live so bottom-up placement climbs into the
+    address range where a truncated restype would corrupt the pointer, then
+    frees every region asserting success.
+
+    Args:
+        bridge: ProcessBridge attached to the current process.
+        oracle: Fully-typed ``kernel32`` from :func:`_make_oracle_kernel32`.
+        handle: Open handle to the target process.
+    """
+    allocated: list[int] = []
+    truncation_sensitive_seen = False
+    for _ in range(32):
+        address = await bridge.allocate(_ALLOC_SIZE, "rw")
+        allocated.append(address)
+        assert address > 0, f"allocate returned truncated/negative address {address}"
+        assert address <= 0x7FFFFFFFFFFF, f"address {address:#x} outside canonical user range"
+        assert address % 0x1000 == 0, f"address {address:#x} not page aligned"
+        _assert_region_matches(oracle, handle, address, _ALLOC_SIZE)
+        _assert_round_trip(oracle, handle, address)
+        if address >= 0x80000000:
+            truncation_sensitive_seen = True
+            break
+
+    assert truncation_sensitive_seen, "no >=2 GiB allocation observed; truncation regime not exercised"
+    for address in allocated:
+        assert await bridge.free(address) is True
 
 
 async def test_duplicate_token_returns_handle(bridge: ProcessBridge) -> None:
