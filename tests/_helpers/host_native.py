@@ -48,6 +48,7 @@ _OLLAMA_CHAT_LIVE: Final[str] = "tests/providers/test_ollama_chat_live.py"
 _AGENTIC: Final[str] = "tests/providers/test_agentic_capabilities.py"
 _MODEL_DISCOVERY: Final[str] = "tests/providers/test_model_discovery.py"
 _PROCESS_BRIDGE: Final[str] = "tests/bridges/test_process_bridge.py"
+_SEH_X64_PDATA: Final[str] = "tests/bridges/test_seh_x64_pdata_s14d03.py"
 _CUTTER_DECOMPILE: Final[str] = "tests/bridges/test_realcov_03d_cutter_decompile_cfg.py"
 _X64DBG_LOAD: Final[str] = "tests/bridges/test_x64dbg_load_attach_s13.py"
 _X64DBG_WATCHPOINTS: Final[str] = "tests/bridges/test_x64dbg_watchpoints_s13.py"
@@ -155,6 +156,8 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_X64DBG_EMBED, "test_desktop_scoped_finder_returns_none_for_mismatched_pid"),
         (_X64DBG_EMBED, "test_resolve_debugger_window_hwnd_uses_registered_desktop"),
         (_X64DBG_EMBED, "test_get_desktop_handle_for_pid_cleared_after_close"),
+        (_SEH_X64_PDATA, "test_seh_chain_x64_target_returns_nonempty_pdata_handlers"),
+        (_SEH_X64_PDATA, "test_seh_chain_x64_addresses_resolve_within_loaded_modules"),
     },
 )
 

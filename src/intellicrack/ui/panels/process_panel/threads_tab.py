@@ -41,6 +41,12 @@ _MARGIN: Final[int] = 0
 _SPACING: Final[int] = 4
 _TOOLBAR_HEIGHT: Final[int] = 32
 _AUTO_REFRESH_INTERVAL_MS: Final[int] = 3000
+_SEH_COLUMN_COUNT: Final[int] = 6
+_SEH_NO_HANDLERS_NOTE: Final[str] = (
+    "No exception handlers found for this thread/process. Native x64 targets use "
+    "table-based exception handling (PE .pdata / UNWIND_INFO) instead of a per-thread "
+    "SEH chain; only functions carrying an EHANDLER or UHANDLER unwind flag are listed here."
+)
 
 
 class ThreadsTab(QWidget):
@@ -322,13 +328,13 @@ class ThreadsTab(QWidget):
 
         tab_layout.addWidget(toolbar)
 
-        columns = ["Address", "Handler Address", "Next"]
+        columns = ["Module", "Address", "Handler Address", "End Address", "Next", "Flags"]
         self._seh_table = QTableWidget(0, len(columns))
         self._seh_table.setHorizontalHeaderLabels(columns)
         self._seh_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         seh_h = self._seh_table.horizontalHeader()
         if seh_h is not None:
-            seh_h.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+            seh_h.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         tab_layout.addWidget(self._seh_table)
         return tab
 
@@ -804,7 +810,7 @@ class ThreadsTab(QWidget):
         )
 
     def _on_seh_enumerate(self) -> None:
-        """Enumerate SEH chain for the selected thread."""
+        """Enumerate the exception handler chain for the selected thread."""
         if self._bridge is None:
             return
         tid = self._seh_combo.currentData()
@@ -812,37 +818,35 @@ class ThreadsTab(QWidget):
             return
 
         def _on_success(result: object) -> None:
-            """Fill the SEH table with frame address, handler address, and next pointer.
+            """Fill the SEH table with 32-bit chain frames or native x64 ``.pdata`` handlers.
 
             Args:
-                result: SEH chain entry list returned by ``get_seh_chain``.
+                result: Handler entry list returned by ``get_seh_chain``:
+                    32-bit / WOW64 targets return SEH chain frames
+                    (``address``/``handler_address``/``next``); native x64
+                    targets return ``.pdata`` handler entries
+                    (``module``/``address``/``handler_address``/
+                    ``end_address``/``flags``).
             """
             if not isinstance(result, list):
                 return
+            entries = cast("list[object]", result)
             self._seh_table.setRowCount(0)
-            for entry in cast("list[object]", result):
-                if not isinstance(entry, dict):
-                    continue
-                typed_entry = cast("dict[str, object]", entry)
-                row = self._seh_table.rowCount()
-                self._seh_table.insertRow(row)
-                addr_raw = typed_entry.get("address", 0)
-                addr_val = addr_raw if isinstance(addr_raw, int) else 0
-                handler_raw = typed_entry.get("handler_address", 0)
-                handler_val = handler_raw if isinstance(handler_raw, int) else 0
-                next_raw = typed_entry.get("next", 0)
-                next_val = next_raw if isinstance(next_raw, int) else 0
-                self._seh_table.setItem(row, 0, QTableWidgetItem(f"0x{addr_val:X}"))
-                self._seh_table.setItem(row, 1, QTableWidgetItem(f"0x{handler_val:X}"))
-                self._seh_table.setItem(row, 2, QTableWidgetItem(f"0x{next_val:X}"))
+            if not entries:
+                self._show_seh_note(_SEH_NO_HANDLERS_NOTE)
+                return
+            for entry in entries:
+                if isinstance(entry, dict):
+                    self._append_seh_row(cast("dict[str, object]", entry))
 
         def _on_error(exc: object) -> None:
-            """Emit ``seh_enumerate_failed`` for the selected TID without a modal dialog.
+            """Show the failure reason in-table instead of leaving it silently blank.
 
             Args:
                 exc: Failure from ``get_seh_chain`` while filling the SEH table.
             """
             _logger.warning("seh_enumerate_failed", tid=tid, error=str(exc))
+            self._show_seh_note(f"Exception handler enumeration failed: {exc}")
 
         run_bridge_coroutine_logged(
             self._bridge.get_seh_chain(tid),
@@ -853,6 +857,54 @@ class ThreadsTab(QWidget):
             logger=_logger,
             tid=tid,
         )
+
+    def _append_seh_row(self, entry: dict[str, object]) -> None:
+        """Append one exception-handler row, mapping 32-bit chain and x64 handler fields.
+
+        Args:
+            entry: Single handler dict from ``get_seh_chain``: either a
+                32-bit / WOW64 SEH chain frame (``address``,
+                ``handler_address``, ``next``) or a native x64
+                ``.pdata`` handler (``module``, ``address``,
+                ``handler_address``, ``end_address``, ``flags``).
+                Fields absent for the entry's kind render as ``"-"``.
+        """
+        row = self._seh_table.rowCount()
+        self._seh_table.insertRow(row)
+
+        module_raw = entry.get("module")
+        module_val = module_raw if isinstance(module_raw, str) and module_raw else "-"
+        addr_raw = entry.get("address", 0)
+        addr_val = addr_raw if isinstance(addr_raw, int) else 0
+        handler_raw = entry.get("handler_address", 0)
+        handler_val = handler_raw if isinstance(handler_raw, int) else 0
+        end_raw = entry.get("end_address")
+        end_val = end_raw if isinstance(end_raw, int) else None
+        next_raw = entry.get("next")
+        next_val = next_raw if isinstance(next_raw, int) else None
+        flags_raw = entry.get("flags")
+        flags_val = flags_raw if isinstance(flags_raw, str) and flags_raw else "-"
+
+        self._seh_table.setItem(row, 0, QTableWidgetItem(module_val))
+        self._seh_table.setItem(row, 1, QTableWidgetItem(f"0x{addr_val:X}"))
+        self._seh_table.setItem(row, 2, QTableWidgetItem(f"0x{handler_val:X}"))
+        self._seh_table.setItem(row, 3, QTableWidgetItem(f"0x{end_val:X}" if end_val is not None else "-"))
+        self._seh_table.setItem(row, 4, QTableWidgetItem(f"0x{next_val:X}" if next_val is not None else "-"))
+        self._seh_table.setItem(row, 5, QTableWidgetItem(flags_val))
+
+    def _show_seh_note(self, message: str) -> None:
+        """Replace the SEH table contents with a single explanatory spanning row.
+
+        Args:
+            message: Note text to display, spanning every column so it
+                reads as a status line rather than a malformed data row.
+        """
+        self._seh_table.setRowCount(0)
+        self._seh_table.insertRow(0)
+        self._seh_table.setSpan(0, 0, 1, _SEH_COLUMN_COUNT)
+        note_item = QTableWidgetItem(message)
+        note_item.setFlags(note_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self._seh_table.setItem(0, 0, note_item)
 
     def _on_fiber(self) -> None:
         """Get fiber data for the selected thread."""

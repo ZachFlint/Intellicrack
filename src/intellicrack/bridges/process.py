@@ -19,7 +19,7 @@ import struct
 import time
 from ctypes import wintypes
 from pathlib import Path
-from typing import TYPE_CHECKING, ClassVar, Literal, cast, override
+from typing import TYPE_CHECKING, ClassVar, Final, Literal, cast, override
 
 
 if TYPE_CHECKING:
@@ -29,7 +29,9 @@ if TYPE_CHECKING:
 from intellicrack.bridges.base import BridgeCapabilities, BridgeState, ToolBridgeBase
 from intellicrack.bridges.parse_helpers import safe_call
 from intellicrack.bridges.pe_format import (
+    PE_DOS_HEADER_SIZE,
     PE_DOS_LFANEW_OFFSET,
+    PE_DOS_SIGNATURE,
     PE_OPTIONAL_HEADER_OFFSET,
     PE_SIGNATURE,
     detect_format,
@@ -214,7 +216,6 @@ _ERR_IOCTL_FAILED = "DeviceIoControl failed"
 _ERR_PIPE_CLOSE_FAILED = "pipe close failed"
 _ERR_DEVICE_CLOSE_FAILED = "device close failed"
 _ERR_INVALID_HEX = "input_data is not a valid hex string"
-_ERR_SEH_NOT_APPLICABLE_X64 = "SEH chain not applicable to x64 target"
 
 _MAX_MEMORY_ADDRESS = 0x7FFFFFFFFFFF
 _WILDCARD_PATTERNS = {"??", "?"}
@@ -259,6 +260,23 @@ _PTR_SIZE_64 = 8
 _PTR_SIZE_32 = 4
 _SEH_TERMINAL_32 = 0xFFFFFFFF
 _SEH_TERMINAL_64 = 0xFFFFFFFFFFFFFFFF
+
+_PE_DATA_DIR_EXCEPTION: Final[int] = 3
+"""``IMAGE_DIRECTORY_ENTRY_EXCEPTION`` data-directory index (the ``.pdata`` ``RUNTIME_FUNCTION`` table)."""
+_RUNTIME_FUNCTION_SIZE: Final[int] = 12
+"""Size in bytes of one x64 ``RUNTIME_FUNCTION`` entry (BeginAddress/EndAddress/UnwindInfoAddress, each u32 RVA)."""
+_UNWIND_INFO_HEADER_SIZE: Final[int] = 4
+"""Size in bytes of the fixed ``UNWIND_INFO`` header (Version+Flags, SizeOfProlog, CountOfCodes, FrameRegister+FrameOffset)."""
+_UNWIND_FLAG_EHANDLER: Final[int] = 0x1
+"""``UNW_FLAG_EHANDLER``: the function has a language-specific exception handler."""
+_UNWIND_FLAG_UHANDLER: Final[int] = 0x2
+"""``UNW_FLAG_UHANDLER``: the function has a language-specific termination handler."""
+_MAX_RUNTIME_FUNCTIONS_PER_MODULE: Final[int] = 65536
+"""Upper bound on ``RUNTIME_FUNCTION`` entries read from a single module's exception directory."""
+_MAX_HANDLERS_PER_MODULE: Final[int] = 2048
+"""Upper bound on handler-carrying entries collected from a single module."""
+_MAX_TOTAL_X64_HANDLERS: Final[int] = 8192
+"""Upper bound on handler-carrying entries collected across all modules of a process."""
 _REG_TYPE_DWORD = 4
 _REG_TYPE_QWORD = 11
 _REG_TYPE_SZ = 1
@@ -6372,17 +6390,33 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
     # ------------------------------------------------------------------
 
     async def get_seh_chain(self, tid: int) -> list[dict[str, object]]:
-        """Get the SEH exception handler chain for a thread.
+        """Get the exception handler chain for a thread.
 
-        Reads the TEB to get the initial exception list pointer, then
-        traverses the linked list of EXCEPTION_REGISTRATION_RECORD
-        structures via ReadProcessMemory.
+        On 32-bit / WOW64 targets, reads the TEB to get the initial
+        SEH exception-list pointer, then traverses the linked list of
+        ``EXCEPTION_REGISTRATION_RECORD`` structures via
+        ``ReadProcessMemory``.
+
+        Native x64 targets have no per-thread SEH linked list -- the
+        x64 calling convention replaces it with table-based exception
+        handling: every loaded module carries an
+        ``IMAGE_DIRECTORY_ENTRY_EXCEPTION`` data directory (the PE
+        ``.pdata`` section) listing ``RUNTIME_FUNCTION`` entries, each
+        of which may point at an ``UNWIND_INFO`` structure carrying a
+        language-specific exception (``EHANDLER``) or termination
+        (``UHANDLER``) handler. For those targets this method delegates
+        to :meth:`_enumerate_x64_exception_handlers`, which parses that
+        table directly out of remote process memory.
 
         Args:
             tid: Thread ID.
 
         Returns:
-            list[dict[str, object]]: List of SEH handler dicts.
+            list[dict[str, object]]: On 32-bit / WOW64 targets, one dict
+            per SEH frame with ``address``, ``handler_address``, and
+            ``next``. On native x64 targets, one dict per handler-
+            carrying ``RUNTIME_FUNCTION`` with ``module``, ``address``,
+            ``end_address``, ``handler_address``, and ``flags``.
 
         Raises:
             ToolError: If operation fails.
@@ -6394,7 +6428,7 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
 
         target_is_wow64 = self._target_is_wow64()
         if not target_is_wow64 and self._kernel32 is not None and self._target_is_64bit(self._process_handle):
-            raise ToolError(_ERR_SEH_NOT_APPLICABLE_X64)
+            return await self._enumerate_x64_exception_handlers()
 
         teb = await self.read_teb(tid)
         seh_frame_addr = teb.get("seh_frame")
@@ -6430,6 +6464,226 @@ class _ProcessBridgeStateMixin(_ProcessBridgePrivilegesMixin):
             current = next_ptr
 
         return chain
+
+    async def _enumerate_x64_exception_handlers(self) -> list[dict[str, object]]:
+        """Enumerate native x64 exception handlers via PE ``.pdata`` / ``UNWIND_INFO``.
+
+        Enumerates every module loaded in the attached process, parses
+        each module's PE headers directly out of remote memory to
+        locate the ``IMAGE_DIRECTORY_ENTRY_EXCEPTION`` data directory,
+        then walks that module's ``RUNTIME_FUNCTION`` table collecting
+        only the entries whose ``UNWIND_INFO`` carries a real
+        language-specific exception or termination handler. A module
+        that cannot be read or does not parse as PE32+ is skipped
+        rather than aborting the whole enumeration.
+
+        Returns:
+            list[dict[str, object]]: One dict per handler-carrying
+            ``RUNTIME_FUNCTION``, each with ``module`` (str),
+            ``address`` (int, function start VA), ``end_address`` (int,
+            function end VA), ``handler_address`` (int, handler VA),
+            and ``flags`` (str, ``"EHANDLER"``, ``"UHANDLER"``, or
+            ``"EHANDLER|UHANDLER"``).
+        """
+        handlers: list[dict[str, object]] = []
+        try:
+            modules = await self.get_modules()
+        except ToolError as exc:
+            _logger.warning("seh_x64_module_enum_failed", error=str(exc))
+            return handlers
+
+        truncated = False
+        for module in modules:
+            if len(handlers) >= _MAX_TOTAL_X64_HANDLERS:
+                truncated = True
+                break
+            module_handlers = self._enumerate_module_exception_handlers(module)
+            remaining = _MAX_TOTAL_X64_HANDLERS - len(handlers)
+            if len(module_handlers) > remaining:
+                module_handlers = module_handlers[:remaining]
+                truncated = True
+            handlers.extend(module_handlers)
+
+        if truncated:
+            _logger.warning(
+                "seh_x64_handler_enumeration_truncated",
+                count=len(handlers),
+                cap=_MAX_TOTAL_X64_HANDLERS,
+            )
+
+        return handlers
+
+    def _enumerate_module_exception_handlers(self, module: ModuleInfo) -> list[dict[str, object]]:
+        """Parse one module's exception directory into handler-carrying entries.
+
+        Reads the module's DOS header, NT headers, and
+        ``IMAGE_DIRECTORY_ENTRY_EXCEPTION`` data directory from remote
+        memory, then reads and iterates the ``RUNTIME_FUNCTION`` array
+        that directory describes. Non-PE32+ modules (there should be
+        none in a native x64 process, but WOW64 helper DLLs mapped for
+        inspection tooling are defensively skipped) and modules whose
+        headers cannot be read are skipped and logged at debug level.
+
+        Args:
+            module: Loaded module to inspect.
+
+        Returns:
+            list[dict[str, object]]: Handler-carrying entries for this
+            module, capped at :data:`_MAX_HANDLERS_PER_MODULE`. Empty
+            when the module has no exception directory, is not PE32+,
+            or its headers could not be read.
+        """
+        base = module.base_address
+        if base == 0:
+            return []
+
+        exc_dir = self._read_module_exception_directory(base, module.name)
+        if exc_dir is None:
+            return []
+        exc_rva, exc_size = exc_dir
+
+        entry_count = min(exc_size // _RUNTIME_FUNCTION_SIZE, _MAX_RUNTIME_FUNCTIONS_PER_MODULE)
+        if entry_count == 0:
+            return []
+        try:
+            table = self._sync_read_memory(base + exc_rva, entry_count * _RUNTIME_FUNCTION_SIZE)
+        except ToolError as exc:
+            _logger.debug("seh_x64_pdata_read_failed", module=module.name, base=hex(base), error=str(exc))
+            return []
+
+        module_handlers: list[dict[str, object]] = []
+        for i in range(len(table) // _RUNTIME_FUNCTION_SIZE):
+            if len(module_handlers) >= _MAX_HANDLERS_PER_MODULE:
+                break
+            entry = self._parse_runtime_function_entry(base, table, i, module.name)
+            if entry is not None:
+                module_handlers.append(entry)
+        return module_handlers
+
+    def _read_module_exception_directory(self, base: int, module_name: str) -> tuple[int, int] | None:
+        """Parse a module's DOS/NT headers and locate its exception data directory.
+
+        Args:
+            base: Module base address in the target process.
+            module_name: Module name, used only for diagnostic logging.
+
+        Returns:
+            tuple[int, int] | None: ``(exception_rva, exception_size)``
+            of the ``IMAGE_DIRECTORY_ENTRY_EXCEPTION`` directory, or
+            ``None`` when the headers cannot be read, the module is not
+            a valid PE32+ image, or the directory is empty.
+        """
+        try:
+            dos = self._sync_read_memory(base, PE_DOS_HEADER_SIZE)
+        except ToolError as exc:
+            _logger.debug("seh_x64_dos_read_failed", module=module_name, base=hex(base), error=str(exc))
+            return None
+        if len(dos) < PE_DOS_HEADER_SIZE or dos[:2] != PE_DOS_SIGNATURE:
+            return None
+        e_lfanew = read_dos_e_lfanew(dos)
+        if e_lfanew <= 0:
+            return None
+
+        nt_header_read_size = get_data_directory_offset(0, is_pe64=True, entry_index=_PE_DATA_DIR_EXCEPTION + 1)
+        try:
+            nt = self._sync_read_memory(base + e_lfanew, nt_header_read_size)
+        except ToolError as exc:
+            _logger.debug("seh_x64_nt_read_failed", module=module_name, base=hex(base), error=str(exc))
+            return None
+        if len(nt) < nt_header_read_size or nt[:4] != PE_SIGNATURE:
+            return None
+        if not is_pe64_optional_header(nt, PE_OPTIONAL_HEADER_OFFSET):
+            return None
+
+        dd_off = get_data_directory_offset(0, is_pe64=True, entry_index=_PE_DATA_DIR_EXCEPTION)
+        exc_rva, exc_size = read_data_directory_entry(nt, dd_off)
+        if exc_rva == 0 or exc_size == 0:
+            return None
+        return exc_rva, exc_size
+
+    def _parse_runtime_function_entry(
+        self,
+        base: int,
+        table: bytes,
+        index: int,
+        module_name: str,
+    ) -> dict[str, object] | None:
+        """Parse one ``RUNTIME_FUNCTION`` slot and resolve its handler, if any.
+
+        Args:
+            base: Module base address the RVA fields are relative to.
+            table: Raw ``RUNTIME_FUNCTION`` array bytes read from remote memory.
+            index: Zero-based entry index within ``table``.
+            module_name: Module name recorded on the returned entry.
+
+        Returns:
+            dict[str, object] | None: A handler entry dict (``module``,
+            ``address``, ``end_address``, ``handler_address``,
+            ``flags``), or ``None`` when the entry has no unwind info or
+            its ``UNWIND_INFO`` carries no real handler.
+        """
+        begin_rva, end_rva, unwind_rva = struct.unpack_from("<III", table, index * _RUNTIME_FUNCTION_SIZE)
+        if unwind_rva == 0:
+            return None
+        handler_info = self._parse_unwind_info_handler(base, unwind_rva)
+        if handler_info is None:
+            return None
+        handler_rva, flags_str = handler_info
+        return {
+            "module": module_name,
+            "address": base + begin_rva,
+            "end_address": base + end_rva,
+            "handler_address": base + handler_rva,
+            "flags": flags_str,
+        }
+
+    def _parse_unwind_info_handler(self, base: int, unwind_rva: int) -> tuple[int, str] | None:
+        """Read an ``UNWIND_INFO`` structure and extract its handler RVA, if any.
+
+        Reads the fixed 4-byte ``UNWIND_INFO`` header to check the
+        ``UNW_FLAG_EHANDLER`` / ``UNW_FLAG_UHANDLER`` flags and the
+        unwind-code count, then -- only for entries carrying a real
+        handler -- reads the 4-byte handler RVA that follows the
+        (DWORD-aligned) unwind-code array.
+
+        Args:
+            base: Module base address the ``UnwindInfoAddress`` RVA is
+                relative to.
+            unwind_rva: ``RUNTIME_FUNCTION.UnwindInfoAddress`` RVA.
+
+        Returns:
+            tuple[int, str] | None: ``(handler_rva, flags)`` where
+            ``flags`` is ``"EHANDLER"``, ``"UHANDLER"``, or
+            ``"EHANDLER|UHANDLER"``; ``None`` when the structure could
+            not be read, carries neither handler flag, or the handler
+            RVA is zero.
+        """
+        try:
+            header = self._sync_read_memory(base + unwind_rva, _UNWIND_INFO_HEADER_SIZE)
+        except ToolError:
+            return None
+        if len(header) < _UNWIND_INFO_HEADER_SIZE:
+            return None
+
+        version_and_flags = header[0]
+        flags = version_and_flags >> 3
+        if not (flags & (_UNWIND_FLAG_EHANDLER | _UNWIND_FLAG_UHANDLER)):
+            return None
+
+        count_of_codes = header[2]
+        handler_off = _UNWIND_INFO_HEADER_SIZE + ((count_of_codes + 1) & ~1) * 2
+        try:
+            handler_bytes = self._sync_read_memory(base + unwind_rva + handler_off, _PTR_SIZE_32)
+        except ToolError:
+            return None
+        if len(handler_bytes) < _PTR_SIZE_32:
+            return None
+        handler_rva = int(struct.unpack_from("<I", handler_bytes, 0)[0])
+        if handler_rva == 0:
+            return None
+
+        flag_names = [name for flag, name in ((_UNWIND_FLAG_EHANDLER, "EHANDLER"), (_UNWIND_FLAG_UHANDLER, "UHANDLER")) if flags & flag]
+        return handler_rva, "|".join(flag_names)
 
     # ------------------------------------------------------------------
     # Mitigation policies
