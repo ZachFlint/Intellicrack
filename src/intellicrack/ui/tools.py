@@ -653,10 +653,12 @@ class FunctionListPanel(QFrame):
     Allows navigation to specific functions by clicking.
 
     Attributes:
-        function_selected: Qt signal for function selected.
+        function_selected: Qt signal for function selected. The address
+            argument is declared ``qint64`` so 64-bit virtual addresses are
+            not truncated to 32 bits by Qt's default ``int`` marshalling.
     """
 
-    function_selected = pyqtSignal(str, int)
+    function_selected = pyqtSignal(str, "qint64")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the FunctionListPanel.
@@ -742,10 +744,12 @@ class XRefPanel(QFrame):
     Displays incoming and outgoing references for navigation.
 
     Attributes:
-        xref_selected: Qt signal for xref selected.
+        xref_selected: Qt signal for xref selected. Declared as ``qint64``
+            (not the default 32-bit C++ ``int``) so that 64-bit virtual
+            addresses are not truncated when emitted.
     """
 
-    xref_selected = pyqtSignal(int)
+    xref_selected = pyqtSignal("qint64")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the XRefPanel.
@@ -837,13 +841,15 @@ class _ToolOutputPanelBase(QFrame):
     class definition exceeds the public method limit.
 
     Attributes:
-        address_clicked: Signal emitted when an address is clicked.
+        address_clicked: Signal emitted when an address is clicked. Declared
+            as ``qint64`` (not the default 32-bit C++ ``int``) so that
+            64-bit virtual addresses are not truncated when emitted.
         embedded_tool_started: Signal emitted when embedded tool starts.
         embedded_tool_closed: Signal emitted when embedded tool closes.
         hex_context_ready: Signal emitted when hex context is formatted for AI.
     """
 
-    address_clicked: pyqtSignal = pyqtSignal(int)
+    address_clicked: pyqtSignal = pyqtSignal("qint64")
     embedded_tool_started: pyqtSignal = pyqtSignal(str)
     embedded_tool_closed: pyqtSignal = pyqtSignal(str)
     hex_context_ready: pyqtSignal = pyqtSignal(str)
