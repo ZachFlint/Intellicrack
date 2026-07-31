@@ -301,7 +301,8 @@ class X64DbgPanel(AnalysisPanelBase):
         main_splitter.addWidget(bottom_tabs)
         main_splitter.setSizes([_MAIN_SPLIT_TOP, _MAIN_SPLIT_BOTTOM])
 
-        native_layout.addWidget(main_splitter)
+        self._content_scroll_area = self._make_scrollable(main_splitter, min_height=_MAIN_SPLIT_TOP + _MAIN_SPLIT_BOTTOM)
+        native_layout.addWidget(self._content_scroll_area)
         self._main_tabs.addTab(native_container, self.tr("Analysis"))
 
         self.embed_host = QWidget()
@@ -1452,6 +1453,31 @@ class X64DbgPanel(AnalysisPanelBase):
         self._set_status("Stopped")
         self._console_output.appendPlainText("[+] Debugging stopped")
         self._stop_btn.setEnabled(True)
+        self._reset_debug_views()
+
+    def _reset_debug_views(self) -> None:
+        """Clear stale disassembly, registers, and embedded-window state after debugging stops.
+
+        Runs from the stop-success path so the panel does not keep showing a
+        previous debuggee's disassembly listing, register values, or embedded
+        x64dbg window once no process is attached.
+        """
+        self._disasm_view.clear()
+        with QSignalBlocker(self._reg_table):
+            self._reg_table.setRowCount(0)
+
+        self._stop_embed_timer()
+        if self.embedded_container is not None:
+            self.embedded_container.setParent(None)
+            self.embedded_container = None
+        layout = self.embed_host.layout()
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget() if item is not None else None
+                if widget is not None:
+                    widget.setParent(None)
+            layout.addWidget(self._embed_status_label)
 
     def _on_stop_error(self, exc: object) -> None:
         """Handle stop failure.
