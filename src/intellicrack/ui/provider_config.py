@@ -12,9 +12,10 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, cast
 
 import httpx
 from PyQt6.QtCore import Qt, QThread, QTimer, QUrl, pyqtSignal
@@ -52,10 +53,11 @@ from intellicrack.credentials.env_loader import (
 from intellicrack.credentials.oauth import (
     OAUTH_CONFIGS,
     OAuthConfig,
+    OAuthConfigurationError,
     OAuthProvider,
     get_oauth_manager,
 )
-from intellicrack.credentials.store import CredentialStore
+from intellicrack.credentials.store import CredentialStore, get_credential_store
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
@@ -210,6 +212,64 @@ _PROVIDER_RESOURCE_LINKS: dict[str, tuple[tuple[str, str, str], ...]] = {
 
 HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
+
+
+@dataclass(frozen=True)
+class _RevokeOutcome:
+    """Result of a "Revoke Token" credential-removal attempt.
+
+    Attributes:
+        kind: What kind of credential was targeted: ``"oauth"`` for an
+            OAuth-capable provider's token, ``"api_key"`` for a stored API
+            key deleted from the credential store, or ``"none"`` when the
+            provider had no credential configured at all.
+        success: Whether the revoke/delete actually removed a credential.
+    """
+
+    kind: Literal["oauth", "api_key", "none"]
+    success: bool
+
+
+async def _revoke_credential(
+    provider_name: ProviderName,
+    oauth_provider: OAuthProvider | None,
+    *,
+    store: CredentialStore | None = None,
+) -> _RevokeOutcome:
+    """Revoke the OAuth token for an OAuth-capable provider, else delete its API key.
+
+    Providers that expose an OAuth flow (``oauth_provider is not None``)
+    keep the existing behaviour of revoking through the OAuth manager.
+    Every other provider -- anything :class:`~intellicrack.credentials.oauth.OAuthProvider`
+    does not recognise, such as OpenAI, OpenRouter, Grok, Ollama, or local
+    Transformers -- has its stored API key deleted from the credential
+    store instead, so "Revoke Token" never silently no-ops for API-key
+    providers.
+
+    Args:
+        provider_name: Canonical provider identifier used by the credential store.
+        oauth_provider: The OAuth provider enum when the provider supports
+            OAuth, or ``None`` for API-key-only providers.
+        store: Credential store used for the API-key path. Defaults to the
+            shared global store; overridable so callers (including tests)
+            can target an isolated store instance.
+
+    Returns:
+        _RevokeOutcome: What kind of credential was targeted and whether the
+        revoke/delete actually succeeded.
+    """
+    if oauth_provider is not None:
+        manager = get_oauth_manager()
+        success = await manager.revoke_token(oauth_provider)
+        return _RevokeOutcome(kind="oauth", success=success)
+
+    resolved_store = store or get_credential_store()
+    source = await resolved_store.get_source(provider_name)
+    if source is None:
+        return _RevokeOutcome(kind="none", success=False)
+
+    deleted = await resolved_store.delete(provider_name)
+    return _RevokeOutcome(kind="api_key", success=deleted)
 
 
 class CredentialSource:
@@ -2025,67 +2085,118 @@ class ProviderConfigDialog(QDialog):
             self._load_credential_overview()
 
         def _on_error(exc: object) -> None:
-            """Log OAuth flow failure and refresh the credential overview.
+            """Surface OAuth flow failures to the user and refresh the credential overview.
+
+            A missing ``client_id`` surfaces as :class:`OAuthConfigurationError`
+            from :meth:`~intellicrack.credentials.oauth.OAuthManager.build_authorization_url`;
+            that specific case gets an actionable message telling the user which
+            environment variable to set. Every other OAuth failure still gets a
+            generic error dialog so the button never fails silently.
 
             Args:
                 exc: Exception or error payload from the OAuth worker.
             """
             _logger.warning("oauth_flow_failed", provider=provider_id, error=str(exc))
+            display = provider_display_name(provider_id)
+            if isinstance(exc, OAuthConfigurationError):
+                show_error(
+                    self,
+                    "OAuth Login",
+                    f"No OAuth client_id is configured for {display}. Set the "
+                    f"{oauth_provider.value.upper()}_OAUTH_CLIENT_ID environment variable before "
+                    "starting OAuth login for this provider.",
+                )
+            else:
+                show_error(self, "OAuth Login", f"OAuth login failed for {display}: {exc}")
             self._load_credential_overview()
 
         run_bridge_coroutine_async(_run_oauth(), on_success=_on_success, on_error=_on_error, parent=self)
 
     def _do_revoke_oauth_token(self, provider_id: str) -> None:
-        """Resolve the OAuth provider and revoke its current token.
+        """Revoke the OAuth token for an OAuth-capable provider, else delete its API key.
 
-        The revoke network call is dispatched on the persistent bridge
-        event loop via ``run_bridge_coroutine_async`` so it cannot freeze
-        the GUI thread; the credential overview is reloaded once the
-        revoke completes, whether it succeeded or failed.
+        Providers that resolve to a valid :class:`OAuthProvider` keep the
+        existing behaviour of revoking through the OAuth manager. Every
+        other configured provider -- one :class:`OAuthProvider` does not
+        recognise, such as OpenAI, OpenRouter, Grok, Ollama, or local
+        Transformers -- has its stored API key deleted from the credential
+        store instead, so the button never silently no-ops for API-key
+        providers. When nothing is configured for the provider at all, the
+        ``on_success`` handler reports that explicitly rather than staying
+        silent.
+
+        The revoke/delete work is dispatched on the persistent bridge event
+        loop via ``run_bridge_coroutine_async`` so it cannot freeze the GUI
+        thread; the credential overview is reloaded once it completes,
+        whether it succeeded or failed.
 
         Args:
-            provider_id: The provider whose token to revoke.
+            provider_id: The provider whose credential should be revoked.
         """
-        manager = get_oauth_manager()
         try:
-            oauth_provider = OAuthProvider(provider_id)
+            provider_name = ProviderName(provider_id)
         except ValueError:
-            _logger.warning("unknown_oauth_provider", provider=provider_id)
+            _logger.warning("unknown_provider_for_revoke", provider=provider_id)
+            show_error(self, "Revoke Credential", f"Unknown provider: {provider_id}")
             return
 
-        def _on_success(_result: object) -> None:
-            """Refresh credentials after the OAuth token is revoked.
+        try:
+            oauth_provider: OAuthProvider | None = OAuthProvider(provider_id)
+        except ValueError:
+            oauth_provider = None
+
+        def _on_success(result: object) -> None:
+            """Surface the revoke/delete outcome and refresh the credential overview.
 
             Args:
-                _result: Revoke coroutine return value; unused because only
-                    completion triggers the overview reload.
+                result: The :class:`_RevokeOutcome` produced by
+                    ``_revoke_credential``, or another payload treated as
+                    "nothing was revoked".
             """
-            _logger.info("oauth_token_revoked", provider=provider_id)
+            outcome = result if isinstance(result, _RevokeOutcome) else _RevokeOutcome(kind="none", success=False)
+            display = provider_display_name(provider_id)
+            if outcome.kind == "oauth":
+                _logger.info("oauth_token_revoked", provider=provider_id, success=outcome.success)
+            elif outcome.kind == "api_key" and outcome.success:
+                _logger.info("api_key_revoked", provider=provider_id)
+                show_info(self, "Revoke Credential", f"Stored API key removed for {display}.")
+            elif outcome.kind == "api_key":
+                _logger.warning("api_key_revoke_failed", provider=provider_id)
+                show_warning(
+                    self,
+                    "Revoke Credential",
+                    f"No stored API key could be removed for {display} from the secure credential store. It may be "
+                    "defined only via a .env file or environment variable, which must be edited directly.",
+                )
+            else:
+                _logger.info("revoke_nothing_configured", provider=provider_id)
+                show_warning(self, "Revoke Credential", f"No credential is configured for {display}; nothing to revoke.")
             self._load_credential_overview()
 
         def _on_error(exc: object) -> None:
-            """Log OAuth revoke failure and still refresh the overview.
+            """Surface a revoke/delete failure and still refresh the overview.
 
             Args:
                 exc: Exception or error payload from the revoke worker.
             """
-            _logger.warning("oauth_revoke_failed", provider=provider_id, error=str(exc))
+            _logger.warning("revoke_credential_failed", provider=provider_id, error=str(exc))
+            show_error(self, "Revoke Credential", f"Failed to revoke the credential for {provider_display_name(provider_id)}: {exc}")
             self._load_credential_overview()
 
         run_bridge_coroutine_async(
-            manager.revoke_token(oauth_provider),
+            _revoke_credential(provider_name, oauth_provider),
             on_success=_on_success,
             on_error=_on_error,
             parent=self,
         )
 
     def revoke_oauth_token(self, provider_id: str) -> None:
-        """Revoke an OAuth token for a provider.
+        """Revoke the OAuth token or delete the stored API key for a provider.
 
         Args:
-            provider_id: The provider whose token to revoke.
+            provider_id: The provider whose credential should be revoked.
         """
-        _logger.info("oauth_revoke_starting", provider=provider_id)
+        _logger.info("revoke_credential_starting", provider=provider_id)
         self._do_revoke_oauth_token(provider_id)
 
 
