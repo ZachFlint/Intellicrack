@@ -104,6 +104,7 @@ class ProcessTab(QWidget):
         self._filter_debounce_timer.timeout.connect(self._on_refresh)
         self._filter_refresh_pending: bool = False
         self._filter_refresh_in_flight: bool = False
+        self._attached_dialog: QMessageBox | None = None
         self._setup_ui()
 
     def set_bridge(self, bridge: ProcessBridge) -> None:
@@ -544,7 +545,12 @@ class ProcessTab(QWidget):
         pid = self._selected_pid
 
         def _on_success(result: object) -> None:
-            """Record the attached PID, notify the user, and emit process_attached.
+            """Record the attached PID, schedule auto-populate, and show a non-blocking confirmation.
+
+            ``process_attached`` is emitted before the confirmation dialog is shown, so the auto-populate it triggers in sibling tabs
+            (region/module/thread enumeration, dispatched through the existing bridge worker off the UI thread) is scheduled immediately
+            instead of waiting for the dialog to be dismissed. The confirmation itself is shown non-modally so its OK/close controls stay
+            responsive immediately, regardless of how long that background work takes to finish.
 
             Args:
                 result: Open-process payload from ``open_process``; may include
@@ -557,8 +563,8 @@ class ProcessTab(QWidget):
             self._attached_pid = pid
             label = f"Attached to PID {pid}" + (f" ({name})" if name else "")
             _logger.info("process_attached", pid=pid, process_name=name)
-            QMessageBox.information(self, "Attached", label)
             self.process_attached.emit(pid)
+            self._show_attached_confirmation(label)
 
         def _on_error(exc: object) -> None:
             """Log ``process_attach_failed`` and show Attach Failed with the target PID.
@@ -579,6 +585,36 @@ class ProcessTab(QWidget):
             level="info",
             pid=pid,
         )
+
+    def _show_attached_confirmation(self, label: str) -> None:
+        """Show a non-modal "Attached" confirmation that never blocks the UI thread.
+
+        Uses a non-modal ``QMessageBox`` instead of the blocking ``QMessageBox.information`` convenience function, so OK/close remain
+        responsive immediately no matter how long the post-attach auto-populate work triggered alongside it takes to finish. The instance is
+        retained on ``self`` so it is not garbage-collected while visible, and is released once the user dismisses it.
+
+        Args:
+            label: User-facing confirmation text.
+        """
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle("Attached")
+        box.setText(label)
+        box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        box.setWindowModality(Qt.WindowModality.NonModal)
+        box.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+
+        def _on_finished(_result: int) -> None:
+            """Release the retained dialog reference once it closes.
+
+            Args:
+                _result: Unused ``QDialog`` result code from ``finished``.
+            """
+            self._attached_dialog = None
+
+        box.finished.connect(_on_finished)
+        self._attached_dialog = box
+        box.show()
 
     def _on_detach(self) -> None:
         """Detach from the current process via bridge."""
