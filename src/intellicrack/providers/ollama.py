@@ -14,6 +14,7 @@ import asyncio
 import json
 import os
 import re
+import threading
 import time
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, TypedDict, cast, override
@@ -148,6 +149,7 @@ class OllamaProvider(LLMProviderBase):
         self._cloud_client: httpx.AsyncClient | None = None
         self._local_client_loop: asyncio.AbstractEventLoop | None = None
         self._cloud_client_loop: asyncio.AbstractEventLoop | None = None
+        self._client_rebind_lock: threading.Lock = threading.Lock()
         self._local_url: str = self.DEFAULT_LOCAL_URL
         self._cloud_api_key: str | None = None
         self._local_available: bool = False
@@ -178,8 +180,8 @@ class OllamaProvider(LLMProviderBase):
             headers={"Authorization": f"Bearer {self._cloud_api_key}"},
         )
 
-    def _ensure_clients_on_loop(self) -> None:
-        """Rebind the local/cloud HTTP clients to the current event loop.
+    def _ensure_clients_on_loop(self) -> tuple[httpx.AsyncClient | None, httpx.AsyncClient | None]:
+        """Return HTTP clients that are valid for the currently running event loop.
 
         Must be called from within a running event loop (i.e. at the
         start of an async method) while connected. Each available client
@@ -188,19 +190,43 @@ class OllamaProvider(LLMProviderBase):
         bootstrap-loop to bridge-loop transition. See
         :meth:`LLMProviderBase._httpx_client_rebind_target` for the
         rationale.
+
+        The check-rebuild-store sequence runs under ``self._client_rebind_lock``
+        (a plain :class:`threading.Lock`, not an ``asyncio.Lock``, since the
+        bootstrap loop, the persistent bridge loop, and any dedicated pull/stream
+        loop each run on their own OS thread and can call this method
+        concurrently). Without that lock, two threads racing this method can
+        interleave: one thread rebuilds and stores a client bound to its own
+        loop, then a second thread overwrites ``self._local_client`` /
+        ``self._cloud_client`` with a client bound to a *different* loop before
+        the first thread ever issues a request on it, so the first thread ends
+        up awaiting a connection-pool primitive (an ``asyncio.Event`` internal
+        to httpcore) that is bound to the second thread's loop. Callers must use
+        the clients returned here directly rather than re-reading
+        ``self._local_client`` / ``self._cloud_client`` afterwards, since those
+        attributes can be rebound again by a concurrent caller at any point
+        after this method returns.
+
+        Returns:
+            tuple[httpx.AsyncClient | None, httpx.AsyncClient | None]: The
+            local and cloud clients valid for the calling coroutine's
+            running loop, or ``None`` for a source that is not currently
+            available.
         """
-        if self._local_available and self._local_client is not None:
-            local_target = self._httpx_client_rebind_target(self._local_client_loop)
-            if local_target is not None:
-                self._logger.debug("ollama_local_client_rebound", reason="event_loop_changed")
-                self._local_client = self._build_local_client()
-                self._local_client_loop = local_target
-        if self._cloud_available and self._cloud_client is not None:
-            cloud_target = self._httpx_client_rebind_target(self._cloud_client_loop)
-            if cloud_target is not None:
-                self._logger.debug("ollama_cloud_client_rebound", reason="event_loop_changed")
-                self._cloud_client = self._build_cloud_client()
-                self._cloud_client_loop = cloud_target
+        with self._client_rebind_lock:
+            if self._local_available and self._local_client is not None:
+                local_target = self._httpx_client_rebind_target(self._local_client_loop)
+                if local_target is not None:
+                    self._logger.debug("ollama_local_client_rebound", reason="event_loop_changed")
+                    self._local_client = self._build_local_client()
+                    self._local_client_loop = local_target
+            if self._cloud_available and self._cloud_client is not None:
+                cloud_target = self._httpx_client_rebind_target(self._cloud_client_loop)
+                if cloud_target is not None:
+                    self._logger.debug("ollama_cloud_client_rebound", reason="event_loop_changed")
+                    self._cloud_client = self._build_cloud_client()
+                    self._cloud_client_loop = cloud_target
+            return self._local_client, self._cloud_client
 
     @property
     def name(self) -> ProviderName:
@@ -430,17 +456,17 @@ class OllamaProvider(LLMProviderBase):
             self._logger.error("ollama_list_models_not_connected")
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
 
-        self._ensure_clients_on_loop()
+        local_client, cloud_client = self._ensure_clients_on_loop()
 
         self._logger.debug("ollama_listing_models")
         models: list[ModelInfo] = []
 
-        if self._local_available and self._local_client:
-            local_models = await self._fetch_local_models()
+        if self._local_available and local_client:
+            local_models = await self._fetch_local_models(local_client)
             models.extend(local_models)
 
-        if self._cloud_available and self._cloud_client:
-            cloud_models = await self._fetch_cloud_models()
+        if self._cloud_available and cloud_client:
+            cloud_models = await self._fetch_cloud_models(cloud_client)
             models.extend(cloud_models)
 
         return sorted(models, key=lambda m: m.name)
@@ -742,33 +768,36 @@ class OllamaProvider(LLMProviderBase):
         """
         if not self.connected:
             raise ProviderError(_MSG_NOT_CONNECTED, provider_name="ollama")
-        self._ensure_clients_on_loop()
+        local_client, cloud_client = self._ensure_clients_on_loop()
         normalized = source.lower()
         if normalized == "cloud":
-            if self._cloud_available and self._cloud_client:
-                return self._cloud_client, self.CLOUD_API_URL
+            if self._cloud_available and cloud_client:
+                return cloud_client, self.CLOUD_API_URL
             raise ProviderError(_ERR_CLOUD_NOT_AVAILABLE, provider_name="ollama")
         if normalized == "local":
-            if self._local_available and self._local_client:
-                return self._local_client, self._local_url
+            if self._local_available and local_client:
+                return local_client, self._local_url
             raise ProviderError(_ERR_LOCAL_NOT_AVAILABLE, provider_name="ollama")
         msg = _ERR_UNKNOWN_SOURCE % source
         raise ProviderError(msg, provider_name="ollama")
 
-    async def _fetch_local_models(self) -> list[ModelInfo]:
+    async def _fetch_local_models(self, client: httpx.AsyncClient) -> list[ModelInfo]:
         """Fetch models from local Ollama instance.
+
+        Args:
+            client: The local Ollama HTTP client, already rebound to the
+                calling coroutine's running loop by
+                :meth:`_ensure_clients_on_loop`.
 
         Returns:
             list[ModelInfo]: List of local models with 'local/' prefix.
         """
         models: list[ModelInfo] = []
-        if not self._local_client:
-            return models
 
         self._logger.debug("local_models_fetching", url=self._local_url)
         try:
             await self._populate_ollama_models(
-                client=self._local_client,
+                client=client,
                 base_url=self._local_url,
                 id_prefix="local/",
                 name_prefix="[Local] ",
@@ -779,19 +808,22 @@ class OllamaProvider(LLMProviderBase):
 
         return models
 
-    async def _fetch_cloud_models(self) -> list[ModelInfo]:
+    async def _fetch_cloud_models(self, client: httpx.AsyncClient) -> list[ModelInfo]:
         """Fetch models from Ollama cloud API.
+
+        Args:
+            client: The cloud Ollama HTTP client, already rebound to the
+                calling coroutine's running loop by
+                :meth:`_ensure_clients_on_loop`.
 
         Returns:
             list[ModelInfo]: List of cloud models with 'cloud/' prefix.
         """
         models: list[ModelInfo] = []
-        if not self._cloud_client:
-            return models
 
         try:
             await self._populate_ollama_models(
-                client=self._cloud_client,
+                client=client,
                 base_url=self.CLOUD_API_URL,
                 id_prefix="cloud/",
                 name_prefix="[Cloud] ",
@@ -863,23 +895,23 @@ class OllamaProvider(LLMProviderBase):
         Raises:
             ProviderError: If requested source is not available.
         """
-        self._ensure_clients_on_loop()
+        local_client, cloud_client = self._ensure_clients_on_loop()
         if model.startswith("cloud/"):
-            if not self._cloud_available or not self._cloud_client:
+            if not self._cloud_available or not cloud_client:
                 self._logger.error("ollama_cloud_unavailable", model=model)
                 raise ProviderError(_ERR_CLOUD_NOT_AVAILABLE, provider_name="ollama")
-            return self._cloud_client, self.CLOUD_API_URL, model[6:]
+            return cloud_client, self.CLOUD_API_URL, model[6:]
 
         if model.startswith("local/"):
-            if not self._local_available or not self._local_client:
+            if not self._local_available or not local_client:
                 self._logger.error("ollama_local_unavailable", model=model)
                 raise ProviderError(_ERR_LOCAL_NOT_AVAILABLE, provider_name="ollama")
-            return self._local_client, self._local_url, model[6:]
+            return local_client, self._local_url, model[6:]
 
-        if self._local_available and self._local_client:
-            return self._local_client, self._local_url, model
-        if self._cloud_available and self._cloud_client:
-            return self._cloud_client, self.CLOUD_API_URL, model
+        if self._local_available and local_client:
+            return local_client, self._local_url, model
+        if self._cloud_available and cloud_client:
+            return cloud_client, self.CLOUD_API_URL, model
 
         self._logger.error("ollama_no_client_available", model=model)
         raise ProviderError(_ERR_NO_CLIENT, provider_name="ollama")
@@ -1684,7 +1716,6 @@ class OllamaProvider(LLMProviderBase):
         Yields:
             str: Content chunks as they arrive.
         """
-
         async with client.stream(
             "POST",
             f"{base_url}{endpoint}",
@@ -1856,8 +1887,8 @@ class OllamaProvider(LLMProviderBase):
                 error occurs, or the server returns any other non-2xx
                 status.
         """
-        self._ensure_clients_on_loop()
-        if not self._local_available or not self._local_client:
+        local_client, _cloud_client = self._ensure_clients_on_loop()
+        if not self._local_available or not local_client:
             raise ProviderError(_ERR_LOCAL_PULL_UNAVAILABLE, provider_name="ollama")
 
         actual_model = model_name
@@ -1865,7 +1896,7 @@ class OllamaProvider(LLMProviderBase):
             actual_model = model_name[6:]
 
         try:
-            async for status in self._iter_pull_progress(actual_model):
+            async for status in self._iter_pull_progress(actual_model, local_client):
                 yield status
         except (AuthenticationError, RateLimitError, ProviderError) as exc:
             log_passthrough(
@@ -1880,32 +1911,29 @@ class OllamaProvider(LLMProviderBase):
             self._logger.warning("ollama_pull_failed", model=actual_model, error=str(e))
             raise ProviderError(_ERR_TRANSPORT % e, provider_name="ollama") from e
 
-    async def _iter_pull_progress(self, actual_model: str) -> AsyncIterator[str]:
+    async def _iter_pull_progress(self, actual_model: str, client: httpx.AsyncClient) -> AsyncIterator[str]:
         """Stream progress events for ``/api/pull`` on the local instance.
 
         Args:
             actual_model: Resolved model name (without the ``local/``
                 prefix) to pull.
+            client: The local Ollama HTTP client, already rebound to the
+                calling coroutine's running loop by
+                :meth:`_ensure_clients_on_loop`. A long-running pull must
+                keep using this exact client object for its entire
+                duration rather than re-reading ``self._local_client``,
+                which a concurrent discovery call on a different loop may
+                rebind at any time.
 
         Yields:
             str: ``status`` strings emitted by Ollama during the pull.
-
-        Raises:
-            ProviderError: If the local Ollama client is unavailable.
         """
-        if self._local_client is None:
-            self._logger.error(
-                "ollama_pull_progress_local_client_unavailable",
-                provider="ollama",
-                model=actual_model,
-            )
-            raise ProviderError(_ERR_LOCAL_PULL_UNAVAILABLE, provider_name="ollama")
         self._logger.info(
             "ollama_pull_progress_stream_started",
             provider="ollama",
             model=actual_model,
         )
-        async with self._local_client.stream(
+        async with client.stream(
             "POST",
             f"{self._local_url}/api/pull",
             json={"name": actual_model},

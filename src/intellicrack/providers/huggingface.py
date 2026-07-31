@@ -123,12 +123,17 @@ _ERR_CREDENTIAL_REQUIRED = "HuggingFace API token is required"
 _ERR_CREDENTIAL_INVALID = "Invalid HuggingFace API token: %s"
 _ERR_CONNECT_FAILED = "Failed to connect to HuggingFace: %s"
 _ERR_LIST_MODELS_FAILED = "Failed to list HuggingFace models: %s"
+_ERR_SERVED_MODELS_FAILED = "Failed to fetch the HuggingFace Inference Providers served-model catalog: %s"
 _ERR_NO_RESPONSE_CHOICES = "No response choices returned"
 _ERR_API_ERROR = "HuggingFace API error: %s"
 _ERR_RATE_LIMITED = "HuggingFace rate limit exceeded: %s"
 _ERR_BAD_REQUEST = "HuggingFace bad request: %s"
 _ERR_TIMEOUT = "HuggingFace inference timeout: %s"
 _ERR_STREAM_FAILED = "HuggingFace stream failed: %s"
+_ERR_MODEL_NOT_SERVED = (
+    "No Inference Provider currently serves model '%s' for chat completion. "
+    "Call list_models() to refresh the served-model catalog and choose a listed model."
+)
 
 _MODEL_LIST_LIMIT = 100
 _DEFAULT_CONTEXT_WINDOW = 4096
@@ -179,13 +184,26 @@ class HuggingFaceProvider(LLMProviderBase):
     ``api-inference.huggingface.co`` host. The dedicated ``hf-inference``
     provider does not support chat completion and is never selected.
 
+    ``list_models`` additionally intersects the Hub catalog against the
+    router's own served-model set (fetched from ``GET
+    {ROUTER_BASE_URL}/v1/models``, the same OpenAI-compatible listing
+    endpoint documented for the router) so the returned catalog only ever
+    contains models the configured token can actually route a chat
+    completion to. ``chat`` and ``chat_stream`` re-check any model against
+    that cached served-model set before dispatching a request, raising an
+    actionable :class:`ProviderError` instead of forwarding an opaque
+    HTTP 400 when the model is not (or no longer) served.
+
     Attributes:
         DEFAULT_PROVIDER: HuggingFace inference-provider routing strategy.
         MODELS_LIST_LIMIT: Maximum number of models fetched from ``HfApi``.
+        ROUTER_BASE_URL: Base URL of the HuggingFace Inference Providers
+            router, used to fetch the served-model catalog.
     """
 
     DEFAULT_PROVIDER: ClassVar[Literal["auto"]] = "auto"
     MODELS_LIST_LIMIT: ClassVar[int] = _MODEL_LIST_LIMIT
+    ROUTER_BASE_URL: ClassVar[str] = "https://router.huggingface.co"
 
     def __init__(self) -> None:
         """Initialize the HuggingFaceProvider instance."""
@@ -195,6 +213,7 @@ class HuggingFaceProvider(LLMProviderBase):
         self._api_token: str | None = None
         self._api_base: str | None = None
         self._timeout: float = 120.0
+        self._served_model_ids: set[str] | None = None
         self._logger = get_logger(__name__).bind(provider="huggingface")
         self._logger.info("huggingface_provider_initialized")
 
@@ -331,26 +350,43 @@ class HuggingFaceProvider(LLMProviderBase):
         self._api_token = None
         self._api_base = None
         self._pending_usage = None
+        self._served_model_ids = None
         self._logger.info(
             "huggingface_disconnected",
             was_connected=was_connected,
         )
 
     async def list_models(self) -> list[ModelInfo]:
-        """Fetch available text-generation models from HuggingFace.
+        """Fetch available text-generation models actually served by a provider.
 
         Queries ``HfApi.list_models`` filtered to text-generation models
-        with warm inference endpoints, then normalises the results into
-        ``ModelInfo`` objects.  The call is dispatched to a worker thread
-        because ``HfApi`` is synchronous. HTTP errors are translated to
+        that the Hub reports as served by at least one Inference Provider
+        (``inference_provider="all"``), normalises the results into
+        ``ModelInfo`` objects, then intersects that catalog against the
+        router's own served-model set fetched by
+        :meth:`_fetch_served_model_ids`. The Hub-side filter and the
+        router's live catalog are populated from the same
+        provider-mapping data but can drift out of sync; intersecting
+        both guarantees that every model this method returns is one
+        :meth:`chat` / :meth:`chat_stream` can actually route a request
+        to via ``provider="auto"``, rather than the unfiltered Hub
+        catalog that includes models no configured Inference Provider
+        serves. The served-model set is cached on ``self`` so subsequent
+        :meth:`chat` / :meth:`chat_stream` calls can validate their
+        ``model`` argument without another network round trip. The Hub
+        call is dispatched to a worker thread because ``HfApi`` is
+        synchronous. HTTP errors from either call are translated to
         Intellicrack typed errors by
         :meth:`LLMProviderBase._raise_typed_for_status`.
 
         Returns:
-            list[ModelInfo]: List of available models with their capabilities.
+            list[ModelInfo]: Available models that are both catalogued on
+            the Hub and currently served by at least one Inference
+            Provider, together with their capabilities.
 
         Raises:
-            ProviderError: If not connected or the listing call fails.
+            ProviderError: If not connected, the Hub listing call fails,
+                or the router served-model fetch fails.
         """
         if not self.connected or self._hf_api is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
@@ -366,7 +402,7 @@ class HuggingFaceProvider(LLMProviderBase):
             return list(
                 api.list_models(
                     filter="text-generation",
-                    inference="warm",
+                    inference_provider="all",
                     sort="downloads",
                     limit=self.MODELS_LIST_LIMIT,
                     cardData=False,
@@ -391,13 +427,128 @@ class HuggingFaceProvider(LLMProviderBase):
             )
             raise ProviderError(_ERR_LIST_MODELS_FAILED % exc) from exc
 
-        models = self.build_model_info_list(raw_models)
+        served_ids = await self._fetch_served_model_ids()
+        self._served_model_ids = served_ids
+
+        catalog_models = self.build_model_info_list(raw_models)
+        served_models = [model for model in catalog_models if model.id in served_ids]
 
         self._logger.info(
             "huggingface_models_listed",
-            count=len(models),
+            catalog_count=len(catalog_models),
+            served_count=len(served_models),
         )
-        return models
+        return served_models
+
+    async def _fetch_served_model_ids(self) -> set[str]:
+        """Fetch the set of model IDs currently served by an Inference Provider.
+
+        Queries the HuggingFace Inference Providers router's
+        OpenAI-compatible ``GET /v1/models`` endpoint
+        (``{ROUTER_BASE_URL}/v1/models``), which lists every model
+        actually routable through the token's configured Inference
+        Providers for the conversational task -- the same catalog
+        :meth:`chat` and :meth:`chat_stream` dispatch requests against
+        via ``provider="auto"``. This is distinct from the general Hub
+        model-search API used by ``HfApi.list_models``, which can list
+        models tagged for text generation that no Inference Provider
+        currently serves.
+
+        Returns:
+            set[str]: Model IDs (``owner/name``) currently served by at
+            least one Inference Provider for the conversational task.
+
+        Raises:
+            ProviderError: If not connected or the router request fails.
+        """
+        if not self.connected or self._api_token is None:
+            raise ProviderError(_ERR_NOT_CONNECTED)
+
+        base_url = (self._api_base or self.ROUTER_BASE_URL).rstrip("/")
+        headers = {"Authorization": f"Bearer {self._api_token}"}
+
+        try:
+            async with httpx.AsyncClient(timeout=self._timeout) as router_client:
+                response = await router_client.get(f"{base_url}/v1/models", headers=headers)
+                response.raise_for_status()
+                payload = cast("object", response.json())
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            self._logger.warning(
+                "huggingface_served_models_fetch_failed",
+                status_code=status_code,
+            )
+            self._raise_typed_for_status(status_code, exc, messages=_HF_HTTP_MSGS, extract_503_message=self._extract_503_message)
+            raise ProviderError(_ERR_SERVED_MODELS_FAILED % exc) from exc
+        except (ConnectionError, TimeoutError, OSError, httpx.HTTPError, ValueError) as exc:
+            self._logger.warning(
+                "huggingface_served_models_fetch_failed",
+                error_type=type(exc).__name__,
+            )
+            raise ProviderError(_ERR_SERVED_MODELS_FAILED % exc) from exc
+
+        return self._parse_served_model_ids(payload)
+
+    @staticmethod
+    def _parse_served_model_ids(payload: object) -> set[str]:
+        """Extract model IDs from a router ``GET /v1/models`` response body.
+
+        Args:
+            payload: The decoded JSON response body, expected to be a
+                dict with a ``data`` list of ``{"id": ...}`` entries
+                following the OpenAI ``/v1/models`` schema.
+
+        Returns:
+            set[str]: The non-empty string ``id`` of every well-formed
+            entry in ``payload["data"]``. Malformed or missing entries
+            are skipped rather than raised, since a partially-typed
+            entry should not block the well-formed remainder of the
+            catalog.
+        """
+        if not isinstance(payload, dict):
+            return set()
+        payload_dict = cast("dict[str, Any]", payload)
+        entries = payload_dict.get("data")
+        if not isinstance(entries, list):
+            return set()
+        served: set[str] = set()
+        for entry in cast("list[object]", entries):
+            if not isinstance(entry, dict):
+                continue
+            entry_dict = cast("dict[str, Any]", entry)
+            model_id = entry_dict.get("id")
+            if isinstance(model_id, str) and model_id:
+                served.add(model_id)
+        return served
+
+    def _validate_model_served(self, model: str) -> None:
+        """Raise an actionable error when ``model`` is known not to be served.
+
+        Checks ``model`` against the served-model set cached by the most
+        recent :meth:`list_models` call, if any. When no catalog has been
+        fetched yet in this session the check is skipped so a caller that
+        already knows a valid model ID (without having called
+        :meth:`list_models` first) is not blocked. This lets :meth:`chat`
+        and :meth:`chat_stream` reject a known-unserved model before
+        spending a network round trip and surfacing HuggingFace's opaque
+        HTTP 400 response.
+
+        Args:
+            model: The requested model ID, optionally carrying a
+                ``:policy`` suffix such as ``:cheapest`` or ``:groq``.
+
+        Raises:
+            ProviderError: If a served-model catalog is cached and
+                ``model`` (with any ``:policy``/``:provider`` suffix
+                stripped) is absent from it.
+        """
+        if self._served_model_ids is None:
+            return
+        base_model = model.split(":", maxsplit=1)[0]
+        if base_model in self._served_model_ids:
+            return
+        self._logger.warning("huggingface_model_not_served", model=model)
+        raise ProviderError(_ERR_MODEL_NOT_SERVED % model)
 
     @staticmethod
     def build_model_info_list(raw_models: list[HfModelInfo]) -> list[ModelInfo]:
@@ -542,12 +693,15 @@ class HuggingFaceProvider(LLMProviderBase):
                 (assistant message, parsed tool calls or ``None``).
 
         Raises:
-            ProviderError: If not connected, the response is empty, or the
-                underlying SDK raises a non-auth/rate-limit error.
+            ProviderError: If not connected; if ``model`` is absent from
+                the served-model catalog cached by a prior
+                :meth:`list_models` call; if the response is empty; or if
+                the underlying SDK raises a non-auth/rate-limit error.
         """
         self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
+        self._validate_model_served(model)
 
         self._cancel_requested = False
         self._pending_usage = None
@@ -745,11 +899,15 @@ class HuggingFaceProvider(LLMProviderBase):
             str: Text chunks as they arrive from the stream.
 
         Raises:
-            ProviderError: If not connected or the stream fails transportwise.
+            ProviderError: If not connected; if ``model`` is absent from
+                the served-model catalog cached by a prior
+                :meth:`list_models` call; or if the stream fails
+                transportwise.
         """
         self._reject_empty_messages(messages)
         if not self.connected or self.client is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
+        self._validate_model_served(model)
 
         self._cancel_requested = False
         self._pending_usage = None
