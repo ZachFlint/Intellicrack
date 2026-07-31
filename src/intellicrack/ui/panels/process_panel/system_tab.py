@@ -35,6 +35,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
+from intellicrack.ui.panels.base_panel import make_scrollable
 
 
 if TYPE_CHECKING:
@@ -336,11 +337,16 @@ class SystemTab(QWidget):
     def _build_pipes_tab(self) -> QWidget:
         """Build the named pipes sub-tab.
 
+        The tab content is hosted in a vertically scrollable area so the
+        write box and its border remain fully visible instead of being
+        clipped when the panel is shorter than the content's natural
+        height.
+
         Returns:
-            QWidget: Pipes tab widget.
+            QWidget: Pipes tab widget, wrapped in a scroll area.
         """
-        tab = QWidget()
-        tab_layout = QVBoxLayout(tab)
+        content = QWidget()
+        tab_layout = QVBoxLayout(content)
         tab_layout.setContentsMargins(0, 0, 0, 0)
         tab_layout.setSpacing(_SPACING)
 
@@ -368,6 +374,7 @@ class SystemTab(QWidget):
 
         self._pipe_table = QTableWidget(0, 2)
         self._pipe_table.setHorizontalHeaderLabels(["Pipe Name", "Handle"])
+        self._pipe_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         pih = self._pipe_table.horizontalHeader()
         if pih is not None:
             pih.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
@@ -404,7 +411,7 @@ class SystemTab(QWidget):
         self._pipe_io_status = QLabel("")
         self._pipe_io_status.setObjectName("toolbar_label")
         tab_layout.addWidget(self._pipe_io_status)
-        return tab
+        return make_scrollable(content)
 
     def _build_mitigations_tab(self) -> QWidget:
         """Build the mitigation policies sub-tab.

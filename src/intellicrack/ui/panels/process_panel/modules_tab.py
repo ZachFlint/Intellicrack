@@ -146,6 +146,9 @@ class ModulesTab(QWidget):
     def _on_filter_modules(self, text: str) -> None:
         """Filter the module tree by case-insensitive substring match on the module name column.
 
+        Updates the module count label to reflect the number of modules left
+        visible by the filter rather than the unfiltered total.
+
         Args:
             text: The filter text entered by the user.
         """
@@ -153,12 +156,17 @@ class ModulesTab(QWidget):
         root = self._mod_tree.invisibleRootItem()
         if root is None:
             return
+        visible_count = 0
         for i in range(root.childCount()):
             item = root.child(i)
             if item is None:
                 continue
             col0 = item.text(0).lower()
-            item.setHidden(bool(needle) and needle not in col0)
+            hidden = bool(needle) and needle not in col0
+            item.setHidden(hidden)
+            if not hidden:
+                visible_count += 1
+        self._mod_count.setText(f"{visible_count} modules")
 
     def _build_inject(self) -> QWidget:
         """Build the DLL injection sub-tab.
@@ -351,7 +359,7 @@ class ModulesTab(QWidget):
                     ],
                 )
                 mod_item.setToolTip(3, mod_path)
-            self._mod_count.setText(f"{len(typed_result)} modules")
+            self._on_filter_modules(self._mod_filter.text())
 
         def _on_error(exc: object) -> None:
             """Log ``module_enumeration_failed`` and open a Module Enumeration Error box.
