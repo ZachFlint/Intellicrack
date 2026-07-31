@@ -51,6 +51,7 @@ _PROCESS_BRIDGE: Final[str] = "tests/bridges/test_process_bridge.py"
 _CUTTER_DECOMPILE: Final[str] = "tests/bridges/test_realcov_03d_cutter_decompile_cfg.py"
 _X64DBG_LOAD: Final[str] = "tests/bridges/test_x64dbg_load_attach_s13.py"
 _X64DBG_WATCHPOINTS: Final[str] = "tests/bridges/test_x64dbg_watchpoints_s13.py"
+_X64DBG_EMBED: Final[str] = "tests/ui/test_x64dbg_embed_finds_window_s13d04.py"
 _ANALYSIS_REAL: Final[str] = "tests/sandbox/test_realcov_12b_analysis_real.py"
 _INLINE_MONITORS: Final[str] = "tests/sandbox/windows/test_realcov_12b_inline_monitors.py"
 _INJECTION_MONITOR: Final[str] = "tests/sandbox/monitors/test_injection_monitor.py"
@@ -150,6 +151,10 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_API_TRACE, "test_smoke_script_emits_start_record_when_dll_available"),
         (_API_TRACE, "test_smoke_script_emits_event_records_under_admin"),
         (_SERVICE_MONITOR, "test_script_records_lifecycle_transitions"),
+        (_X64DBG_EMBED, "test_desktop_scoped_finder_locates_window_plain_enum_windows_cannot"),
+        (_X64DBG_EMBED, "test_desktop_scoped_finder_returns_none_for_mismatched_pid"),
+        (_X64DBG_EMBED, "test_resolve_debugger_window_hwnd_uses_registered_desktop"),
+        (_X64DBG_EMBED, "test_get_desktop_handle_for_pid_cleared_after_close"),
     },
 )
 

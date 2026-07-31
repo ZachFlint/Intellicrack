@@ -70,6 +70,9 @@ _INVALID_HANDLE_VALUE: int = -1
 _desktop_name_counter = itertools.count(1)
 _desktop_name_lock = threading.Lock()
 
+_pid_desktop_handles: dict[int, int] = {}
+_pid_desktop_handles_lock = threading.Lock()
+
 
 class _SecurityAttributes(ctypes.Structure):
     """Win32 ``SECURITY_ATTRIBUTES`` used to mark the NUL handles inheritable."""
@@ -309,6 +312,30 @@ def get_thread_desktop_name() -> str:
     return buffer.value
 
 
+def get_desktop_handle_for_pid(pid: int) -> int | None:
+    """Return the ``HDESK`` a process spawned by :func:`spawn_on_hidden_desktop` runs on.
+
+    Consumers that need to locate a hidden-desktop child's windows - such as
+    the x64dbg panel's embed poll - cannot use ``EnumWindows`` because that
+    API only ever sees windows on the calling thread's own current desktop.
+    They must instead call ``EnumDesktopWindows`` against the child's actual
+    desktop, which requires the raw ``HDESK`` this function exposes. The
+    handle stays registered for as long as the owning :class:`DesktopProcess`
+    is open and is removed by :meth:`DesktopProcess.close`.
+
+    Args:
+        pid: Process ID of a process previously returned by
+            :func:`spawn_on_hidden_desktop`.
+
+    Returns:
+        int | None: The desktop handle (``HDESK``) the process was launched
+        on, or ``None`` if ``pid`` was not spawned by this module or its
+        :class:`DesktopProcess` has already been closed.
+    """
+    with _pid_desktop_handles_lock:
+        return _pid_desktop_handles.get(pid)
+
+
 class HiddenDesktop:
     """A Win32 desktop object that is created but never made the input desktop.
 
@@ -332,6 +359,15 @@ class HiddenDesktop:
             raise OSError(*_win32_error(f"CreateDesktopW({self.name})"))
         self._handle: int = int(handle)
         _logger.debug("hidden_desktop_created", desktop=self.name)
+
+    @property
+    def handle(self) -> int:
+        """Raw ``HDESK`` value for this desktop.
+
+        Returns:
+            int: The desktop handle, valid until :meth:`close` is called.
+        """
+        return self._handle
 
     def close(self) -> None:
         """Release the desktop handle if it is still open."""
@@ -380,6 +416,8 @@ class DesktopProcess:
         self.pid: int = int(info.dwProcessId)
         self._desktop: HiddenDesktop = desktop
         self.returncode: int | None = None
+        with _pid_desktop_handles_lock:
+            _pid_desktop_handles[self.pid] = desktop.handle
 
     @property
     def desktop_name(self) -> str:
@@ -394,14 +432,26 @@ class DesktopProcess:
     def poll(self) -> int | None:
         """Return the exit code if the process has exited, else ``None``.
 
+        Once :meth:`close` has released the process handle there is nothing
+        left to query, so this returns the last known :attr:`returncode`
+        (possibly ``None``, if the process was closed before ever being
+        polled) instead of calling ``GetExitCodeProcess`` on an invalid
+        handle. This keeps :meth:`poll`, :meth:`wait`, and :meth:`terminate`
+        safe to call again after :meth:`close`, matching
+        :class:`subprocess.Popen`'s tolerance of repeated post-close calls.
+
         Returns:
-            int | None: The exit code, or ``None`` while the process runs.
+            int | None: The exit code, or ``None`` while the process runs or
+            after its handle has already been closed without ever recording
+            an exit code.
 
         Raises:
             OSError: If ``GetExitCodeProcess`` fails.
         """
         if self.returncode is not None:
             return self.returncode
+        if not self._hprocess:
+            return None
         api = _win32()
         code = wintypes.DWORD()
         if not api.get_exit_code(wintypes.HANDLE(self._hprocess), ctypes.byref(code)):
@@ -425,8 +475,15 @@ class DesktopProcess:
 
         Raises:
             TimeoutError: If the process does not exit within ``timeout``.
-            OSError: If the wait or exit-code query fails.
+            OSError: If the wait or exit-code query fails, or if the process
+                handle was already released by :meth:`close` without ever
+                recording an exit code.
         """
+        if self.returncode is not None:
+            return self.returncode
+        if not self._hprocess:
+            msg = f"process {self.pid} handle already closed with no recorded exit code"
+            raise OSError(msg)
         api = _win32()
         ms = _INFINITE if timeout is None else max(0, int(timeout * 1000))
         result = api.wait_for_single_object(wintypes.HANDLE(self._hprocess), ms)
@@ -444,9 +501,15 @@ class DesktopProcess:
     def terminate(self) -> None:
         """Forcibly terminate the process.
 
+        A no-op once :meth:`close` has already released the process handle,
+        so callers may safely terminate and then close - or call
+        :meth:`terminate` again after :meth:`close` - without raising.
+
         Raises:
             OSError: If ``TerminateProcess`` fails while the process is alive.
         """
+        if not self._hprocess:
+            return
         if self.poll() is not None:
             return
         if not _win32().terminate_process(wintypes.HANDLE(self._hprocess), 1):
@@ -468,6 +531,8 @@ class DesktopProcess:
         if self._hprocess:
             api.close_handle(wintypes.HANDLE(self._hprocess))
             self._hprocess = 0
+        with _pid_desktop_handles_lock:
+            _pid_desktop_handles.pop(self.pid, None)
         self._desktop.close()
 
 

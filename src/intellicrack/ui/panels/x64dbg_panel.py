@@ -10,6 +10,10 @@ debugging via the X64DbgBridge backend.
 
 from __future__ import annotations
 
+import ctypes
+import sys
+import threading
+from ctypes import wintypes
 from pathlib import Path
 from typing import TYPE_CHECKING, Final, cast, override
 
@@ -36,13 +40,14 @@ from PyQt6.QtWidgets import (
 )
 
 from intellicrack.core.logging import get_logger
+from intellicrack.core.win32_desktop_process import get_desktop_handle_for_pid
 from intellicrack.ui._hex_format import format_hex_dump
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.qt_compat import connect_cell_changed, set_max_block_count
 from intellicrack.ui.panels.x64dbg_advanced_tab import X64DbgAdvancedTab
 from intellicrack.ui.resources.font_manager import FontManager
-from intellicrack.ui.win32_embed import embed_window, find_window_by_pid
+from intellicrack.ui.win32_embed import GW_OWNER, MAX_TITLE_LEN, embed_window, find_window_by_pid
 
 
 if TYPE_CHECKING:
@@ -116,6 +121,164 @@ _EMBED_MAX_RETRIES: Final[int] = 20
 _CLEANUP_STOP_TIMEOUT_S: Final[float] = 5.0
 _MIN_PANE_WIDTH: Final[int] = 150
 _MIN_PANE_HEIGHT: Final[int] = 80
+
+_IS_WIN32: Final[bool] = sys.platform == "win32"
+
+
+class _DesktopWindowBindings:
+    """Lazily bound ``user32`` entry points for desktop-scoped window lookup.
+
+    x64dbg is launched on a dedicated, never-visible desktop (see
+    :mod:`intellicrack.core.win32_desktop_process`) so its windows never flash
+    on screen. ``EnumWindows`` only ever enumerates windows belonging to the
+    calling thread's own current desktop, so locating x64dbg's window for
+    embedding requires ``EnumDesktopWindows`` against that desktop's own
+    handle instead. Bound lazily on first use, never at import, so importing
+    this panel performs no ``ctypes`` work on non-Windows platforms or in
+    headless test environments that never open the embed tab.
+    """
+
+    def __init__(self) -> None:
+        """Load ``user32`` and bind the entry points this lookup needs."""
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+        self.enum_proc_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+        self.enum_desktop_windows = user32.EnumDesktopWindows
+        self.enum_desktop_windows.restype = wintypes.BOOL
+        self.enum_desktop_windows.argtypes = [wintypes.HANDLE, self.enum_proc_type, wintypes.LPARAM]
+
+        self.get_window_thread_process_id = user32.GetWindowThreadProcessId
+        self.get_window_thread_process_id.restype = wintypes.DWORD
+        self.get_window_thread_process_id.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+
+        self.is_window_visible = user32.IsWindowVisible
+        self.is_window_visible.restype = wintypes.BOOL
+        self.is_window_visible.argtypes = [wintypes.HWND]
+
+        self.get_window = user32.GetWindow
+        self.get_window.restype = wintypes.HWND
+        self.get_window.argtypes = [wintypes.HWND, wintypes.UINT]
+
+        self.get_window_text = user32.GetWindowTextW
+        self.get_window_text.restype = ctypes.c_int
+        self.get_window_text.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+
+
+_desktop_window_bindings_cache: list[_DesktopWindowBindings] = []
+_desktop_window_bindings_lock = threading.Lock()
+
+
+def _desktop_window_bindings() -> _DesktopWindowBindings | None:
+    """Return the lazily-bound desktop-scoped window lookup entry points.
+
+    Returns:
+        _DesktopWindowBindings | None: The cached bindings, or ``None`` when
+        not running on Windows.
+    """
+    if not _IS_WIN32:
+        return None
+    if not _desktop_window_bindings_cache:
+        with _desktop_window_bindings_lock:
+            if not _desktop_window_bindings_cache:
+                _desktop_window_bindings_cache.append(_DesktopWindowBindings())
+    return _desktop_window_bindings_cache[0]
+
+
+def find_window_by_pid_on_desktop(hdesk: int, pid: int) -> int | None:
+    """Find the main top-level window for a process on a specific Win32 desktop.
+
+    Mirrors :func:`intellicrack.ui.win32_embed.find_window_by_pid` - same
+    visible/unowned/titled top-level-window match - but enumerates via
+    ``EnumDesktopWindows`` against an explicit desktop handle rather than
+    ``EnumWindows`` against the calling thread's own current desktop. This is
+    the only way to observe windows created on a desktop the caller is not
+    attached to, which is exactly the situation x64dbg's hidden debugger
+    desktop creates.
+
+    Args:
+        hdesk: Handle (``HDESK``) of the desktop to enumerate.
+        pid: Process ID whose top-level window to locate.
+
+    Returns:
+        int | None: Window handle (HWND) as int, or None if not found or not
+        running on Windows.
+    """
+    api = _desktop_window_bindings()
+    if api is None:
+        return None
+
+    result_hwnd: list[int] = []
+
+    def _enum_callback(hwnd: int, _lparam: int) -> bool:
+        """Callback for EnumDesktopWindows that captures the first matching top-level window.
+
+        Continues enumeration for windows that fail the ownership, visibility,
+        owner, or title checks, and stops once a matching hwnd is recorded.
+
+        Args:
+            hwnd: Window handle under inspection.
+            _lparam: Unused application-defined EnumDesktopWindows parameter.
+
+        Returns:
+            bool: ``True`` to keep enumerating, ``False`` once a match is stored.
+        """
+        window_pid = wintypes.DWORD()
+        api.get_window_thread_process_id(hwnd, ctypes.byref(window_pid))
+        if window_pid.value != pid:
+            return True
+
+        if not api.is_window_visible(hwnd):
+            return True
+
+        owner_handle = api.get_window(hwnd, GW_OWNER)
+        owner_int = int(owner_handle) if owner_handle else 0
+        if owner_int != 0:
+            return True
+
+        title_buf = ctypes.create_unicode_buffer(MAX_TITLE_LEN)
+        api.get_window_text(hwnd, title_buf, MAX_TITLE_LEN)
+        if not title_buf.value:
+            return True
+
+        result_hwnd.append(hwnd)
+        return False
+
+    callback = api.enum_proc_type(_enum_callback)
+    api.enum_desktop_windows(wintypes.HANDLE(hdesk), callback, 0)
+
+    if result_hwnd:
+        _logger.debug("x64dbg_desktop_window_found", hdesk=hex(hdesk), pid=pid, hwnd=hex(result_hwnd[0]))
+        return result_hwnd[0]
+
+    _logger.debug("x64dbg_desktop_window_not_found", hdesk=hex(hdesk), pid=pid)
+    return None
+
+
+def _resolve_debugger_window_hwnd(pid: int) -> int | None:
+    """Locate the x64dbg top-level window for ``pid``, scoped to its own desktop.
+
+    x64dbg normally runs on Intellicrack's dedicated hidden desktop (see
+    :mod:`intellicrack.core.win32_desktop_process`), which ``EnumWindows``
+    cannot see because it only enumerates the calling thread's own current
+    desktop. When the desktop ``pid`` was launched on is registered, this
+    scopes the search to it via :func:`find_window_by_pid_on_desktop`;
+    otherwise - for example when x64dbg was attached to an externally
+    running process rather than spawned by Intellicrack - it falls back to
+    the default-desktop search.
+
+    Args:
+        pid: Process ID of the debugger instance whose window to locate.
+
+    Returns:
+        int | None: Window handle (HWND) as int, or None if not found.
+    """
+    hdesk = get_desktop_handle_for_pid(pid)
+    if hdesk is not None:
+        hwnd = find_window_by_pid_on_desktop(hdesk, pid)
+        if hwnd is not None:
+            return hwnd
+    return find_window_by_pid(pid)
 
 
 class X64DbgPanel(AnalysisPanelBase):
@@ -1222,7 +1385,7 @@ class X64DbgPanel(AnalysisPanelBase):
             return
 
         self._embed_attempts += 1
-        hwnd = find_window_by_pid(pid)
+        hwnd = _resolve_debugger_window_hwnd(pid)
         if hwnd is not None:
             container = embed_window(hwnd, self.embed_host)
             if container is not None:
