@@ -17,6 +17,7 @@ import os
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, Final, cast, override
 
@@ -46,6 +47,7 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.subprocess_compat import CREATE_NO_WINDOW, PIPE, CompletedProcess, Popen, SubprocessError, TimeoutExpired
 from intellicrack.sandbox.base import SandboxConfig
+from intellicrack.sandbox.windows import WindowsSandbox, find_sandbox_session_pid
 
 from .dialogs_helpers import show_info, show_warning
 from .panels.async_bridge import (
@@ -70,6 +72,8 @@ _DIALOG_WIDTH: Final[int] = 550
 _DIALOG_HEIGHT: Final[int] = 500
 _OUTPUT_MAX_HEIGHT: Final[int] = 150
 _IS_WIN32: bool = os.name == "nt"
+_TEST_VERIFY_TIMEOUT: Final[float] = 90.0
+_TEST_VERIFY_POLL_INTERVAL: Final[float] = 1.0
 _DEFAULT_CONFIG_ATTR: Final[str] = "_default_config"
 _SANDBOX_FEATURE_NAME: Final[str] = "Containers-DisposableClientVM"
 _SANDBOX_INSTALL_STATE_ENABLED: Final[str] = "1"
@@ -350,16 +354,57 @@ class SandboxTestWorker(QThread):
         )
         self._register_test_process()
 
-        self.output.emit("Windows Sandbox launched successfully")
-        self.output.emit("Waiting for sandbox to initialize (10 seconds)...")
+        self.output.emit("Windows Sandbox launched")
+        self.output.emit("Verifying the sandbox session actually started...")
 
-        try:
-            self._process.wait(timeout=10)
-        except TimeoutExpired:
-            _logger.warning("sandbox_test_wait_timeout")
-            self.output.emit("Sandbox is running normally")
-            return False
-        return self._handle_sandbox_exit_status()
+        return self._verify_sandbox_session()
+
+    def _verify_sandbox_session(self) -> bool:
+        """Confirm a real sandbox session started, or report why it did not.
+
+        Liveness of the launched process is not evidence of success. The
+        launcher is fire-and-forget and exits ``0`` as soon as it has handed
+        off, and a launch that fails with ``0x800706d9`` leaves a process alive
+        on a modal dialog -- so both "exited 0" and "still running after N
+        seconds" occur on hosts where creating a sandbox is impossible. Success
+        is therefore defined as an actual session host process existing for this
+        configuration, with no failure dialog on screen.
+
+        Returns:
+            bool: ``True`` when this method emitted ``finished`` itself (the
+            caller must not emit success); ``False`` when a real session was
+            confirmed and the caller should emit success.
+        """
+        failed = False
+        if self._wsb_file is None:
+            self.finished.emit(failed, "Sandbox test could not write its configuration file")
+            return True
+
+        wsb_name = self._wsb_file.name
+        deadline = time.monotonic() + _TEST_VERIFY_TIMEOUT
+        while time.monotonic() < deadline:
+            probe_pid = self._process.pid if self._process is not None else 0
+            if detail := WindowsSandbox.detect_failure_dialog(probe_pid):
+                normalized = " ".join(detail.split())
+                _logger.warning("sandbox_test_failure_dialog", dialog_text=normalized[:500])
+                self.finished.emit(failed, f"Windows Sandbox failed to start: {normalized}")
+                return True
+
+            if find_sandbox_session_pid(wsb_name) is not None:
+                self.output.emit("Sandbox session is running")
+                return False
+
+            if self._process is not None and self._process.poll() is not None and self._handle_sandbox_exit_status():
+                return True
+
+            time.sleep(_TEST_VERIFY_POLL_INTERVAL)
+
+        _logger.warning("sandbox_test_no_session", wsb=wsb_name)
+        self.finished.emit(
+            failed,
+            f"Windows Sandbox did not start: no sandbox session appeared within {_TEST_VERIFY_TIMEOUT:.0f} seconds.",
+        )
+        return True
 
     def run(self) -> None:
         """Execute the sandbox test."""
