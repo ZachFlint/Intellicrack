@@ -32,7 +32,7 @@ from typing import IO, TYPE_CHECKING, Any, NoReturn, cast
 
 from intellicrack.core._optional_imports import require_yara
 from intellicrack.core.logging import get_logger, log_sandbox_operation
-from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.process_manager import ProcessManager, ProcessType, pid_is_running
 from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, Popen
 from intellicrack.core.xml_gen import Element, ElementTree, SubElement, indent
 from intellicrack.sandbox.base import (
@@ -125,23 +125,31 @@ _ERR_WMI_HIJACK_VERIFY_FAILED = "WMI hijack verification did not return spoofed 
 _ERR_WMI_HIJACK_NO_SHARED = "Cannot stage anti-evasion MOF: shared folder not initialized"
 
 _ERR_LAUNCH_CLIENT_EXITED = (
-    "WindowsSandboxClient.exe exited during startup before the in-guest dispatcher "
+    "The Windows Sandbox launcher exited during startup before the in-guest dispatcher "
     "became ready. Confirm the Windows Sandbox feature is healthy and that no other "
-    "sandbox instance is running, then reboot the host if the failure persists."
+    "sandbox instance is running."
 )
 _ERR_LAUNCH_DIALOG = "Windows Sandbox reported a launch failure"
 _ERR_LAUNCH_RPC_ENDPOINT = (
-    "Windows Sandbox could not initialize its RPC connection "
-    "(0x800706d9, EPT_S_NOT_REGISTERED). This is a host-side Hyper-V / Host Compute "
-    "Service state problem, not an Intellicrack fault. Ensure only one sandbox runs at "
-    "a time (destroy any prior session and confirm no WindowsSandboxClient.exe / "
-    "vmwp.exe processes remain), then reboot the host to re-register the Host Compute "
-    "Service endpoints. Restarting the hns, vmcompute, and WinNat services may clear "
-    "it without a reboot."
+    "Windows Sandbox could not initialize its connection to the sandbox "
+    "(0x800706d9, EPT_S_NOT_REGISTERED). The usual cause is that a sandbox session is "
+    "already running: Windows Sandbox permits only one at a time, so destroy the "
+    "existing session and confirm no WindowsSandboxRemoteSession.exe, "
+    "WindowsSandboxServer.exe or vmmemWindowsSandbox process remains. This error is "
+    "also raised when the sandbox is started through WindowsSandboxClient.exe on "
+    "Windows builds where that binary is only the connection client and cannot create "
+    "a session on its own; WindowsSandbox.exe is the launcher that creates one. Only "
+    "if neither applies is this host Hyper-V / Host Compute Service state."
+)
+_ERR_LAUNCH_SESSION_NOT_STARTED = (
+    "The Windows Sandbox launcher exited successfully but no sandbox session process appeared. The sandbox did not start."
 )
 
 _SANDBOX_DIALOG_CLASS = "#32770"
 _SANDBOX_RPC_ENDPOINT_ERROR = "0x800706d9"
+_SANDBOX_RPC_ENDPOINT_EXIT_CODE = -2147023143
+_SESSION_PID_POLL_INTERVAL = 0.5
+_SESSION_PID_POLL_TIMEOUT = 60.0
 _SANDBOX_ERROR_CODE_RE = re.compile(r"0x[0-9A-Fa-f]{8}")
 _SANDBOX_FAILURE_MARKERS = (
     "could not be initialized",
@@ -401,13 +409,20 @@ class WindowsSandbox(SandboxBase):
 
     Attributes:
         SANDBOX_EXE: Windows Sandbox launcher executable filename.
+        SANDBOX_FALLBACK_EXE: Legacy launcher used when :attr:`SANDBOX_EXE` is
+            absent from ``PATH``.
+        SANDBOX_SESSION_EXE: Session host process spawned by the launcher. It
+            receives the ``.wsb`` path on its own command line, which is how a
+            session is correlated back to the instance that created it.
         SANDBOX_WORKER_EXE: Hyper-V worker process backing the sandbox VM.
         SHARED_FOLDER_NAME: Host-side shared folder name for sandbox mapping.
         SANDBOX_SHARED_PATH: Guest-side path where the shared folder is mounted.
         DISPATCHER_READY_MARKER: Marker filename used to signal dispatcher readiness.
     """
 
-    SANDBOX_EXE = "WindowsSandboxClient.exe"
+    SANDBOX_EXE = "WindowsSandbox.exe"
+    SANDBOX_FALLBACK_EXE = "WindowsSandboxClient.exe"
+    SANDBOX_SESSION_EXE = "WindowsSandboxRemoteSession.exe"
     SANDBOX_WORKER_EXE = "vmwp.exe"
     SHARED_FOLDER_NAME = "IntellicrackShared"
     SANDBOX_SHARED_PATH = r"C:\Users\WDAGUtilityAccount\Desktop\Shared"
@@ -426,17 +441,61 @@ class WindowsSandbox(SandboxBase):
         self._monitor_folder: Path | None = None
         self._temp_dir: Path | None = None
         self._worker_pid: int | None = None
+        self._session_pid: int | None = None
+        self._launcher_exe: str | None = None
         self._active_captures: dict[str, str] = {}
         _logger.info(
             "windows_sandbox_initialized",
             timeout_seconds=self._config.timeout_seconds,
         )
 
+    @staticmethod
+    async def _exe_on_path(exe: str) -> bool:
+        """Report whether an executable resolves on ``PATH``.
+
+        Args:
+            exe: Executable filename to look up.
+
+        Returns:
+            bool: True when ``where`` resolves the executable.
+        """
+        process_manager = ProcessManager.get_instance()
+        result = await process_manager.run_tracked_async(
+            ["where", exe],
+            name="where-sandbox-exe",
+            process_timeout=_WHERE_TIMEOUT,
+        )
+        return result.returncode == _RETURNCODE_SUCCESS
+
+    async def _resolve_launcher_exe(self) -> str | None:
+        """Resolve which Windows Sandbox launcher binary to use.
+
+        Prefers :attr:`SANDBOX_EXE` (``WindowsSandbox.exe``), which creates a
+        sandbox session. Falls back to :attr:`SANDBOX_FALLBACK_EXE`
+        (``WindowsSandboxClient.exe``) only when the preferred launcher is
+        absent, because on current Windows builds that binary is purely the
+        connection client: started on its own it cannot create a session and
+        fails with ``0x800706d9`` (verified on Windows 11 build 26220, where the
+        client exits ``-2147023143`` from a clean process state while
+        ``WindowsSandbox.exe`` starts a working VM).
+
+        Returns:
+            str | None: Launcher filename, or None when neither is on ``PATH``.
+        """
+        if self._launcher_exe is not None:
+            return self._launcher_exe
+        for candidate in (self.SANDBOX_EXE, self.SANDBOX_FALLBACK_EXE):
+            if await self._exe_on_path(candidate):
+                self._launcher_exe = candidate
+                _logger.debug("windows_sandbox_launcher_resolved", exe=candidate)
+                return candidate
+        return None
+
     async def _probe_sandbox_availability(self) -> bool:
         """Probe the host for Windows Sandbox availability.
 
-        Runs ``where WindowsSandboxClient.exe`` to confirm the launcher is on
-        ``PATH``, then queries ``Win32_OptionalFeature`` via CIM to verify the
+        Resolves the sandbox launcher on ``PATH``, then queries
+        ``Win32_OptionalFeature`` via CIM to verify the
         ``Containers-DisposableClientVM`` install state. The CIM query is used
         instead of ``Get-WindowsOptionalFeature -Online`` because the latter
         requires administrator elevation, which would cause the probe to fail
@@ -447,12 +506,7 @@ class WindowsSandbox(SandboxBase):
             probe succeed.
         """
         process_manager = ProcessManager.get_instance()
-        result = await process_manager.run_tracked_async(
-            ["where", self.SANDBOX_EXE],
-            name="where-sandbox-exe",
-            process_timeout=_WHERE_TIMEOUT,
-        )
-        if result.returncode != _RETURNCODE_SUCCESS:
+        if await self._resolve_launcher_exe() is None:
             _logger.debug("windows_sandbox_exe_not_found", exe=self.SANDBOX_EXE)
             return False
 
@@ -500,12 +554,22 @@ class WindowsSandbox(SandboxBase):
             return False
 
     def _check_sandbox_alive(self) -> None:
-        """Verify the sandbox process is still running.
+        """Verify the sandbox session is still running.
+
+        Liveness is judged on the session host process, not on the launcher:
+        the launcher exits immediately by design once it has handed off, so
+        polling it would report every healthy sandbox as terminated. The
+        launcher is only consulted while no session has been bound yet.
 
         Raises:
-            SandboxError: If the sandbox process has terminated.
+            SandboxError: If the sandbox session has terminated.
         """
-        if self.process is not None and self.process.poll() is not None:
+        if self._session_pid is not None:
+            if not pid_is_running(self._session_pid):
+                _logger.error("windows_sandbox_session_terminated", session_pid=self._session_pid)
+                raise SandboxError(_ERR_SANDBOX_TERMINATED)
+            return
+        if self.process is not None and self.process.poll() not in {None, _RETURNCODE_SUCCESS}:
             _logger.error("windows_sandbox_process_terminated", returncode=self.process.returncode)
             raise SandboxError(_ERR_SANDBOX_TERMINATED)
 
@@ -661,21 +725,39 @@ class WindowsSandbox(SandboxBase):
         raise SandboxError(msg)
 
     async def _check_startup_health(self) -> None:
-        """Detect an early client exit or native failure dialog during startup.
+        """Detect a failed launch or native failure dialog during startup.
+
+        ``WindowsSandbox.exe`` is a fire-and-forget launcher: it spawns the
+        session host and exits ``0`` immediately, so a zero exit is a normal
+        successful launch and must not be treated as a crash. Only a non-zero
+        launcher exit is fatal, and an exit code of ``0x800706d9`` is mapped to
+        the same actionable message the failure dialog produces -- from a clean
+        process state the launcher reports that condition as an exit code
+        rather than a dialog, so without this mapping it surfaced only as a bare
+        ``-2147023143``.
 
         Raises:
-            SandboxError: If the sandbox client exited before signalling
-                readiness, or a Windows Sandbox failure dialog (such as the
-                ``0x800706d9`` endpoint-mapper error) was detected.
+            SandboxError: If the launcher exited non-zero, or a Windows Sandbox
+                failure dialog (such as the ``0x800706d9`` endpoint-mapper
+                error) was detected.
         """
         if self.process is None:
             return
         if self.process.poll() is not None:
             returncode = self.process.returncode
-            _logger.error("windows_sandbox_client_exited_during_startup", returncode=returncode)
-            msg = f"{_ERR_LAUNCH_CLIENT_EXITED} (client exit code {returncode})"
-            raise SandboxError(msg)
-        detail = await asyncio.to_thread(self._detect_client_failure_dialog, self.process.pid)
+            if returncode == _SANDBOX_RPC_ENDPOINT_EXIT_CODE:
+                _logger.error(
+                    "windows_sandbox_launch_rpc_endpoint_exit",
+                    returncode=returncode,
+                    launcher=self._launcher_exe,
+                )
+                raise SandboxError(_ERR_LAUNCH_RPC_ENDPOINT)
+            if returncode != _RETURNCODE_SUCCESS:
+                _logger.error("windows_sandbox_client_exited_during_startup", returncode=returncode)
+                msg = f"{_ERR_LAUNCH_CLIENT_EXITED} (launcher exit code {returncode})"
+                raise SandboxError(msg)
+        dialog_pid = self._session_pid if self._session_pid is not None else self.process.pid
+        detail = await asyncio.to_thread(self._detect_client_failure_dialog, dialog_pid)
         if detail is not None:
             self._raise_launch_dialog_failure(detail)
 
@@ -699,16 +781,81 @@ class WindowsSandbox(SandboxBase):
         trigger_dir = self._shared_folder / "input" / "trigger"
         await asyncio.to_thread(trigger_dir.mkdir, exist_ok=True)
 
+    async def _find_session_pid(self) -> int | None:
+        """Locate the sandbox session process created for this instance.
+
+        The launcher passes the ``.wsb`` path straight through to
+        :attr:`SANDBOX_SESSION_EXE`, so the session is matched exactly by its
+        command line rather than by a most-recently-started heuristic. That
+        matters when several sandboxes are launched in sequence, where a
+        newest-wins match can attach to the wrong session.
+
+        Returns:
+            int | None: PID of the session process, or None when no session
+            process references this instance's configuration file.
+        """
+        if sys.platform != "win32" or self._wsb_path is None:
+            return None
+
+        wsb_name = self._wsb_path.name.replace("'", "''")
+        process_manager = ProcessManager.get_instance()
+        ps_script = (
+            "$ErrorActionPreference='Stop';"
+            f"$rows=Get-CimInstance Win32_Process -Filter \"Name='{self.SANDBOX_SESSION_EXE}'\" |"
+            f" Where-Object {{ $_.CommandLine -and $_.CommandLine.Contains('{wsb_name}') }} |"
+            " Select-Object -First 1 ProcessId;"
+            "if ($rows) { [pscustomobject]@{pid=[int]$rows.ProcessId} | ConvertTo-Json -Compress }"
+        )
+        try:
+            result = await process_manager.run_tracked_async(
+                ["pwsh" if shutil.which("pwsh") else "powershell", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", ps_script],
+                name="pwsh-find-sandbox-session",
+                process_timeout=_FEATURE_CHECK_TIMEOUT,
+            )
+        except (OSError, RuntimeError) as err:
+            _logger.warning("sandbox_session_lookup_error", error=str(err))
+            return None
+
+        raw = (result.stdout or "").strip()
+        if not raw:
+            return None
+        try:
+            data: object = json.loads(raw)
+        except (ValueError, TypeError) as parse_err:
+            _logger.warning("sandbox_session_json_parse_failed", error=str(parse_err), output_prefix=raw[:120])
+            return None
+        if isinstance(data, dict):
+            pid_val: object = cast("dict[str, object]", data).get("pid")
+            if isinstance(pid_val, int) and pid_val > 0:
+                return pid_val
+        return None
+
+    async def _await_session_pid(self) -> int | None:
+        """Poll for this instance's sandbox session process.
+
+        Returns:
+            int | None: PID of the session process, or None if none appeared
+            within :data:`_SESSION_PID_POLL_TIMEOUT`.
+        """
+        deadline = time.monotonic() + _SESSION_PID_POLL_TIMEOUT
+        while time.monotonic() < deadline:
+            if (pid := await self._find_session_pid()) is not None:
+                return pid
+            await asyncio.sleep(_SESSION_PID_POLL_INTERVAL)
+        return None
+
     async def _launch_sandbox_process(self) -> None:
-        """Launch the Windows Sandbox client process and register it.
+        """Launch Windows Sandbox and bind this instance to the resulting session.
 
         Generates monitor and dispatcher scripts, produces the ``.wsb``
-        configuration, spawns the sandbox executable, and registers the
-        process with the global :class:`ProcessManager`.
+        configuration, spawns the resolved sandbox launcher, registers the
+        process with the global :class:`ProcessManager`, and resolves the
+        session host process the launcher created.
 
         Raises:
             SandboxError: If the temporary sandbox directory was not
-                initialised before this call.
+                initialised before this call, if no sandbox launcher is
+                available, or if the launcher produced no session.
         """
         await self._create_monitor_scripts()
         await self._create_dispatcher_scripts()
@@ -718,11 +865,15 @@ class WindowsSandbox(SandboxBase):
         self._wsb_path = self._temp_dir / "intellicrack.wsb"
         await self._generate_wsb_config()
 
-        _logger.info("windows_sandbox_starting", config_path=str(self._wsb_path))
+        launcher = await self._resolve_launcher_exe()
+        if launcher is None:
+            raise SandboxError(_ERR_START_FAILED)
+
+        _logger.info("windows_sandbox_starting", config_path=str(self._wsb_path), launcher=launcher)
 
         self.process = await asyncio.to_thread(
             Popen,
-            [self.SANDBOX_EXE, str(self._wsb_path)],
+            [launcher, str(self._wsb_path)],
             stdout=PIPE,
             stderr=PIPE,
             creationflags=CREATE_NEW_CONSOLE,
@@ -738,6 +889,33 @@ class WindowsSandbox(SandboxBase):
         )
 
         await self._check_startup_health()
+        await self._bind_sandbox_session()
+
+    async def _bind_sandbox_session(self) -> None:
+        """Resolve and register the sandbox session host for this instance.
+
+        The launcher exits as soon as it has handed off, so the session host
+        process is what actually owns the running VM and its window. Resolving
+        it here gives teardown and health checks a real target instead of an
+        already-dead launcher PID.
+
+        Raises:
+            SandboxError: If no session process appeared, after re-checking for
+                a failure dialog so the specific cause is reported when one is
+                available.
+        """
+        self._session_pid = await self._await_session_pid()
+        if self._session_pid is None:
+            await self._check_startup_health()
+            _logger.error("windows_sandbox_session_not_started", launcher=self._launcher_exe)
+            raise SandboxError(_ERR_LAUNCH_SESSION_NOT_STARTED)
+
+        _logger.info("windows_sandbox_session_bound", session_pid=self._session_pid)
+        ProcessManager.get_instance().register_external_pid(
+            self._session_pid,
+            name="windows-sandbox-session",
+            process_type=ProcessType.SANDBOX,
+        )
 
     async def _attach_sandbox_worker(self) -> None:
         """Wait for dispatcher readiness, resolve worker PID, and finalize state.
@@ -767,9 +945,9 @@ class WindowsSandbox(SandboxBase):
 
         self.state.status = "running"
         self.state.started_at = datetime.now(UTC)
-        self.state.pid = self.process.pid
+        self.state.pid = self._session_pid if self._session_pid is not None else self.process.pid
 
-        _logger.info("windows_sandbox_started", pid=self.process.pid)
+        _logger.info("windows_sandbox_started", pid=self.state.pid, session_pid=self._session_pid)
 
     async def _start_impl(self) -> None:
         """Execute the full Windows Sandbox start sequence."""
@@ -823,11 +1001,13 @@ class WindowsSandbox(SandboxBase):
         modal error dialog that never honours a close request; the client is force-killed and unregistered so the next launch attempt is not
         blocked by a stale instance.
         """
+        process_manager = ProcessManager.get_instance()
+        await self._terminate_sandbox_session(process_manager)
+
         if self.process is None:
             return
 
         pid = self.process.pid
-        process_manager = ProcessManager.get_instance()
         if self.process.poll() is None:
             await self._force_kill_sandbox(pid)
 
@@ -873,6 +1053,35 @@ class WindowsSandbox(SandboxBase):
         process_manager.unregister(pid)
         self.process = None
 
+    async def _terminate_sandbox_session(self, process_manager: ProcessManager) -> None:
+        """Close the sandbox session host, unwinding the VM with it.
+
+        The session is closed gracefully first. That matters: force-killing the
+        session processes leaves the backing ``vmmemWindowsSandbox`` VM
+        resident, because only an orderly shutdown makes the Host Compute
+        Service terminate the compute system. A leaked VM then blocks the next
+        create through the single-instance limit. Force-kill is the fallback,
+        not the default.
+
+        Args:
+            process_manager: Active :class:`ProcessManager` used to terminate
+                and unregister the session PID.
+        """
+        if self._session_pid is None:
+            return
+
+        session_pid = self._session_pid
+        graceful_ok = await self._try_graceful_close(session_pid)
+        if not graceful_ok or pid_is_running(session_pid):
+            _logger.warning("windows_sandbox_session_force_kill", session_pid=session_pid, graceful=graceful_ok)
+            try:
+                process_manager.terminate_external_pid(session_pid, force=True)
+            except (OSError, RuntimeError) as session_err:
+                _logger.warning("sandbox_session_terminate_failed", session_pid=session_pid, error=str(session_err))
+
+        process_manager.unregister(session_pid)
+        self._session_pid = None
+
     def _terminate_sandbox_worker(self, process_manager: ProcessManager) -> None:
         """Terminate the vmwp.exe worker registered for this sandbox.
 
@@ -897,6 +1106,7 @@ class WindowsSandbox(SandboxBase):
     async def _stop_impl(self) -> None:
         """Execute the full Windows Sandbox stop sequence."""
         process_manager = ProcessManager.get_instance()
+        await self._terminate_sandbox_session(process_manager)
         await self._terminate_sandbox_client(process_manager)
         self._terminate_sandbox_worker(process_manager)
         await self._cleanup()

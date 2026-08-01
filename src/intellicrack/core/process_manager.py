@@ -100,6 +100,22 @@ def _pid_handle_alive(kernel32: ctypes.CDLL, handle: int) -> bool:
     return exit_code.value == still_active
 
 
+def pid_is_running(pid: int) -> bool:
+    """Report whether a live OS process exists for ``pid``.
+
+    Public wrapper over the module's PID-liveness probe, for callers outside
+    this module that need to check a process they track by PID rather than by
+    :class:`Popen` handle.
+
+    Args:
+        pid: The process identifier to verify.
+
+    Returns:
+        bool: True when a live process is detected for ``pid``.
+    """
+    return _pid_exists(pid)
+
+
 def _pid_exists_windows(pid: int) -> bool:
     """Verify a PID exists on Windows by attempting to open a handle.
 
