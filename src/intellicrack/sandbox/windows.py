@@ -33,7 +33,7 @@ from typing import IO, TYPE_CHECKING, Any, NoReturn, cast
 from intellicrack.core._optional_imports import require_yara
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType, pid_is_running
-from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, Popen
+from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, CompletedProcess, Popen
 from intellicrack.core.xml_gen import Element, ElementTree, SubElement, indent
 from intellicrack.sandbox.base import (
     ExecutionReport,
@@ -145,6 +145,7 @@ _ERR_LAUNCH_SESSION_NOT_STARTED = (
     "The Windows Sandbox launcher exited successfully but no sandbox session process appeared. The sandbox did not start."
 )
 
+_SANDBOX_SESSION_EXE = "WindowsSandboxRemoteSession.exe"
 _SANDBOX_DIALOG_CLASS = "#32770"
 _SANDBOX_RPC_ENDPOINT_ERROR = "0x800706d9"
 _SANDBOX_RPC_ENDPOINT_EXIT_CODE = -2147023143
@@ -161,6 +162,57 @@ _SANDBOX_FAILURE_MARKERS = (
 _GET_CLASS_NAME_BUFFER = 256
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent / "scripts"
+
+
+def find_sandbox_session_pid(wsb_name: str) -> int | None:
+    """Locate a Windows Sandbox session process started from a given config.
+
+    The launcher passes the ``.wsb`` path through to the session host, so a
+    session can be matched exactly by its command line. Shared by the sandbox
+    backend and by the Sandbox Settings "Test Sandbox" path so both judge
+    "did a sandbox actually start" the same way.
+
+    Args:
+        wsb_name: Filename of the ``.wsb`` configuration used to launch.
+
+    Returns:
+        int | None: PID of the matching session process, or None when no
+        session references that configuration.
+    """
+    if sys.platform != "win32":
+        return None
+
+    escaped = wsb_name.replace("'", "''")
+    ps_script = (
+        "$ErrorActionPreference='Stop';"
+        f"$rows=Get-CimInstance Win32_Process -Filter \"Name='{_SANDBOX_SESSION_EXE}'\" |"
+        f" Where-Object {{ $_.CommandLine -and $_.CommandLine.Contains('{escaped}') }} |"
+        " Select-Object -First 1 ProcessId;"
+        "if ($rows) { [pscustomobject]@{pid=[int]$rows.ProcessId} | ConvertTo-Json -Compress }"
+    )
+    try:
+        result: CompletedProcess[str] = ProcessManager.get_instance().run_tracked(
+            ["pwsh" if shutil.which("pwsh") else "powershell", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", ps_script],
+            name="pwsh-find-sandbox-session",
+            timeout=_FEATURE_CHECK_TIMEOUT,
+        )
+    except (OSError, RuntimeError) as err:
+        _logger.warning("sandbox_session_lookup_error", error=str(err))
+        return None
+
+    raw = (result.stdout or "").strip()
+    if not raw:
+        return None
+    try:
+        data: object = json.loads(raw)
+    except (ValueError, TypeError) as parse_err:
+        _logger.warning("sandbox_session_json_parse_failed", error=str(parse_err), output_prefix=raw[:120])
+        return None
+    if isinstance(data, dict):
+        pid_val: object = cast("dict[str, object]", data).get("pid")
+        if isinstance(pid_val, int) and pid_val > 0:
+            return pid_val
+    return None
 
 
 def _is_sandbox_failure_text(text: str) -> bool:
@@ -574,6 +626,24 @@ class WindowsSandbox(SandboxBase):
             raise SandboxError(_ERR_SANDBOX_TERMINATED)
 
     @staticmethod
+    def detect_failure_dialog(client_pid: int) -> str | None:
+        """Detect a native Windows Sandbox failure dialog.
+
+        Public entry point over the same detection the backend uses during
+        startup, so other callers (notably the Sandbox Settings "Test Sandbox"
+        path) judge a failed launch identically instead of reimplementing it.
+
+        Args:
+            client_pid: PID whose dialogs should be considered, in addition to
+                any top-level window titled "Windows Sandbox".
+
+        Returns:
+            str | None: Combined dialog text when a failure dialog is present,
+            otherwise None.
+        """
+        return WindowsSandbox._detect_client_failure_dialog(client_pid)
+
+    @staticmethod
     def _detect_client_failure_dialog(client_pid: int) -> str | None:
         """Detect a native Windows Sandbox failure dialog for the client process.
 
@@ -794,41 +864,9 @@ class WindowsSandbox(SandboxBase):
             int | None: PID of the session process, or None when no session
             process references this instance's configuration file.
         """
-        if sys.platform != "win32" or self._wsb_path is None:
+        if self._wsb_path is None:
             return None
-
-        wsb_name = self._wsb_path.name.replace("'", "''")
-        process_manager = ProcessManager.get_instance()
-        ps_script = (
-            "$ErrorActionPreference='Stop';"
-            f"$rows=Get-CimInstance Win32_Process -Filter \"Name='{self.SANDBOX_SESSION_EXE}'\" |"
-            f" Where-Object {{ $_.CommandLine -and $_.CommandLine.Contains('{wsb_name}') }} |"
-            " Select-Object -First 1 ProcessId;"
-            "if ($rows) { [pscustomobject]@{pid=[int]$rows.ProcessId} | ConvertTo-Json -Compress }"
-        )
-        try:
-            result = await process_manager.run_tracked_async(
-                ["pwsh" if shutil.which("pwsh") else "powershell", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", ps_script],
-                name="pwsh-find-sandbox-session",
-                process_timeout=_FEATURE_CHECK_TIMEOUT,
-            )
-        except (OSError, RuntimeError) as err:
-            _logger.warning("sandbox_session_lookup_error", error=str(err))
-            return None
-
-        raw = (result.stdout or "").strip()
-        if not raw:
-            return None
-        try:
-            data: object = json.loads(raw)
-        except (ValueError, TypeError) as parse_err:
-            _logger.warning("sandbox_session_json_parse_failed", error=str(parse_err), output_prefix=raw[:120])
-            return None
-        if isinstance(data, dict):
-            pid_val: object = cast("dict[str, object]", data).get("pid")
-            if isinstance(pid_val, int) and pid_val > 0:
-                return pid_val
-        return None
+        return await asyncio.to_thread(find_sandbox_session_pid, self._wsb_path.name)
 
     async def _await_session_pid(self) -> int | None:
         """Poll for this instance's sandbox session process.
