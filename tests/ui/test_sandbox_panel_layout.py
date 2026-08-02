@@ -152,8 +152,13 @@ class TestSandboxGroupedEnableState:
 
     @staticmethod
     def test_activate_then_deactivate_toggles_grouped_actions() -> None:
-        """Activating then deactivating the sandbox must enable then disable the grouped actions."""
+        """Activating then deactivating the sandbox must enable then disable the grouped actions.
+
+        QEMU is selected because the snapshot and VM-control actions are gated
+        on the backend that actually implements them (S17-D10).
+        """
         panel = SandboxPanel()
+        panel.sandbox_type_combo.setCurrentText("QEMU")
 
         panel._set_sandbox_controls_active(active=True)
         assert panel.snapshot_btn.isEnabled()

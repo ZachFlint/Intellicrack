@@ -44,7 +44,9 @@ import asyncio
 import time
 from typing import TYPE_CHECKING, cast
 
-from PyQt6.QtWidgets import QApplication, QSplitter, QTreeWidgetItem
+import pytest
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication, QMessageBox, QSplitter, QTreeWidgetItem
 
 import intellicrack.ui.panels.sandbox_panel as sandbox_panel_mod
 from intellicrack.sandbox.base import ExecutionReport
@@ -52,9 +54,7 @@ from intellicrack.ui.panels.sandbox_panel import SandboxPanel
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine
-
-    import pytest
+    from collections.abc import Callable, Coroutine, Iterator
 
     from intellicrack.bridges.sandbox_bridge import SandboxBridge
     from intellicrack.sandbox.base import FileChange, NetworkActivity, RegistryChange
@@ -64,6 +64,39 @@ _H11_BRIDGE_DELAY_S: float = 1.0
 _H11_GUI_BLOCK_CEILING_S: float = 0.5
 _H11_ASYNC_WAIT_CEILING_S: float = 5.0
 _H11_POLL_INTERVAL_S: float = 0.02
+_MODAL_POLL_INTERVAL_MS: int = 5
+
+
+def _dismiss_active_modal() -> None:
+    """Close the active modal ``QMessageBox`` if one is open.
+
+    The panel's failure handlers now raise real error dialogs (S17-D09), whose
+    blocking static call would otherwise stall any test that drives an error
+    handler. The dialogs themselves are gated in
+    ``test_sandbox_panel_error_dialogs_s17d09``; here they only need to be let
+    through so the state assertions below can run.
+    """
+    widget = QApplication.activeModalWidget()
+    if isinstance(widget, QMessageBox):
+        widget.done(int(QMessageBox.StandardButton.Ok))
+
+
+@pytest.fixture(autouse=True)
+def _release_error_dialogs() -> Iterator[None]:
+    """Dismiss any real error dialog a driven failure handler opens.
+
+    Yields:
+        None: Control passes to the test with the dismisser timer running.
+    """
+    timer = QTimer()
+    timer.setInterval(_MODAL_POLL_INTERVAL_MS)
+    timer.timeout.connect(_dismiss_active_modal)
+    timer.start()
+    try:
+        yield
+    finally:
+        timer.stop()
+        timer.timeout.disconnect(_dismiss_active_modal)
 
 
 class _DelayedCleanupBridge:
@@ -274,11 +307,17 @@ def test_m28_destroy_error_preserves_active_state_for_orphaned_sandbox(
     ``sandbox_id`` and the active controls intact and resyncs from a real
     status poll instead of assuming success.
 
+    QEMU is the selected backend because the scenario requires an active PCAP
+    capture, and ``SandboxBridge.pcap_start`` refuses a non-QEMU instance
+    outright (S17-D10) - a Windows sandbox can never hold the state this test
+    describes.
+
     Args:
         qapp: Session QApplication fixture required for widget construction.
     """
     _ = qapp
     panel = SandboxPanel()
+    panel.sandbox_type_combo.setCurrentText("QEMU")
     panel.sandbox_id = "sbx-orphan"
     panel._pcap_capture_id = "pcap-active"
     panel._set_sandbox_controls_active(active=True)
@@ -297,54 +336,56 @@ def test_m28_destroy_error_preserves_active_state_for_orphaned_sandbox(
         panel._status_poll_timer.stop()
 
 
-def test_m29_restart_create_failure_after_destroy_clears_stale_sandbox_id(
+def test_m29_restart_failure_clears_stale_sandbox_id(
     qapp: QApplication,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A restart whose destroy succeeded but whose create failed must reset state.
+    """A failed restart must reset the panel instead of keeping a dead instance.
 
     Pre-fix, the shared ``_on_restart_error`` handler only re-enabled the
-    Restart button in every case; if the destroy phase had already
-    succeeded (the old instance is really gone) and the subsequent create
-    failed, ``sandbox_id`` kept pointing at the destroyed instance while
-    every sandbox-active control (Screenshot, PCAP, Execute, ...) stayed
-    enabled. Post-fix, ``_on_restart_error`` checks
-    ``self._restart_pending_destroy`` and routes a post-destroy create
-    failure through ``_finish_restart_after_destroy_only``, which clears
-    ``sandbox_id``, disables the active controls, stops the poll timer, and
-    emits ``tool_closed``.
+    Restart button in every case; if the destroy phase had already succeeded
+    (the old instance is really gone) and the subsequent create failed,
+    ``sandbox_id`` kept pointing at the destroyed instance while every
+    sandbox-active control (Screenshot, PCAP, Execute, ...) stayed enabled.
+
+    Since S17-D14 the restart is one ``SandboxBridge.restart`` operation whose
+    manager-side semantics guarantee the original instance is gone in every
+    failure outcome, so ``_on_restart_error`` routes unconditionally through
+    ``_finish_restart_after_destroy_only``: ``sandbox_id`` is cleared, the
+    active controls are disabled, the poll timer stops, and ``tool_closed``
+    fires.
 
     Args:
         qapp: Session QApplication fixture required for widget construction.
-        monkeypatch: Fixture used to intercept the create-phase dispatch and
-            fail it synchronously and deterministically.
+        monkeypatch: Fixture used to intercept the restart dispatch and fail it
+            synchronously and deterministically.
     """
     _ = qapp
 
     class _FakeRestartBridge:
-        """Fake bridge exposing only the coroutine-returning methods restart uses."""
+        """Fake bridge exposing only the coroutine-returning method restart uses."""
 
-        async def create(self, *, sandbox_type: object, **kwargs: object) -> dict[str, object]:
+        async def restart(self, instance_id: str, **kwargs: object) -> dict[str, object]:
             """Return an empty result; never actually awaited by the test.
 
             Args:
-                sandbox_type: Sandbox type requested (ignored).
-                **kwargs: Remaining creation config (ignored).
+                instance_id: Instance the panel asked to restart (ignored).
+                **kwargs: Remaining restart config (ignored).
 
             Returns:
                 dict[str, object]: An empty placeholder result.
             """
-            del sandbox_type, kwargs
+            del instance_id, kwargs
             return {}
 
-    def _immediate_create_failure(
+    def _immediate_restart_failure(
         coro: Coroutine[object, object, object],
         on_success: Callable[[object], None] | None,
         on_error: Callable[[object], None] | None,
         parent: object,
         **_kwargs: object,
     ) -> None:
-        """Close the create coroutine and invoke ``on_error`` synchronously.
+        """Close the restart coroutine and invoke ``on_error`` synchronously.
 
         Args:
             coro: Bridge coroutine that would run on the worker (unused).
@@ -356,9 +397,9 @@ def test_m29_restart_create_failure_after_destroy_clears_stale_sandbox_id(
         _ = (on_success, parent, _kwargs)
         coro.close()
         if on_error is not None:
-            on_error(RuntimeError("create failed"))
+            on_error(RuntimeError("restart failed"))
 
-    monkeypatch.setattr(sandbox_panel_mod, "run_bridge_coroutine_logged", _immediate_create_failure)
+    monkeypatch.setattr(sandbox_panel_mod, "run_bridge_coroutine_logged", _immediate_restart_failure)
 
     panel = SandboxPanel()
     panel._bridge = cast("SandboxBridge", _FakeRestartBridge())
@@ -370,9 +411,9 @@ def test_m29_restart_create_failure_after_destroy_clears_stale_sandbox_id(
     closed: list[bool] = []
     _ = panel.tool_closed.connect(lambda: closed.append(True))
 
-    panel._on_restart_destroy_success(None)
+    panel._on_restart()
 
-    assert panel.sandbox_id is None, "sandbox_id must be cleared once the create phase fails after a successful destroy"
+    assert panel.sandbox_id is None, "sandbox_id must be cleared once the restart fails and the old instance is gone"
     assert panel._status_indicator.text() == "Inactive"
     assert not panel.destroy_btn.isEnabled()
     assert not panel.pcap_btn.isEnabled()
@@ -380,64 +421,103 @@ def test_m29_restart_create_failure_after_destroy_clears_stale_sandbox_id(
     assert closed == [True], "tool_closed must be emitted once the destroyed instance is not replaced"
 
 
-def test_m29_restart_destroy_phase_failure_only_reenables_restart_button(
+def test_m29_restart_never_chains_destroy_and_create(
     qapp: QApplication,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A restart whose destroy phase itself fails must leave state untouched.
+    """Restart must be one manager operation, not a GUI-side destroy/create chain.
 
-    Contrasts with the post-destroy create-failure case: here the original
-    instance was never destroyed, so ``sandbox_id`` and the active controls
-    must remain exactly as they were, and only the Restart button should be
-    re-enabled for a retry.
+    The two-phase chain is what put the teardown/recreate failure semantics in
+    the GUI in the first place (S17-D14). This gate fails if the panel goes back
+    to calling ``bridge.destroy`` (and then ``bridge.create``) for a restart.
 
     Args:
         qapp: Session QApplication fixture required for widget construction.
-        monkeypatch: Fixture used to intercept the destroy-phase dispatch
-            and fail it synchronously and deterministically.
+        monkeypatch: Fixture used to intercept the dispatch and run it inline.
     """
     _ = qapp
+    calls: list[str] = []
 
-    def _immediate_destroy_failure(
+    class _RecordingRestartBridge:
+        """Fake bridge recording which lifecycle method the panel invokes."""
+
+        async def restart(self, instance_id: str, **kwargs: object) -> dict[str, object]:
+            """Record a restart request.
+
+            Args:
+                instance_id: Instance the panel asked to restart.
+                **kwargs: Remaining restart config (ignored).
+
+            Returns:
+                dict[str, object]: The replacement instance payload.
+            """
+            del kwargs
+            calls.append("restart")
+            return {"instance_id": "new-sbx", "previous_instance_id": instance_id}
+
+        async def destroy(self, instance_id: str) -> dict[str, object]:
+            """Record a destroy request.
+
+            Args:
+                instance_id: Instance the panel asked to destroy (ignored).
+
+            Returns:
+                dict[str, object]: A success payload.
+            """
+            del instance_id
+            calls.append("destroy")
+            return {"success": True}
+
+        async def create(self, **kwargs: object) -> dict[str, object]:
+            """Record a create request.
+
+            Args:
+                **kwargs: Creation config (ignored).
+
+            Returns:
+                dict[str, object]: A new-instance payload.
+            """
+            del kwargs
+            calls.append("create")
+            return {"instance_id": "created-sbx"}
+
+    def _inline_dispatch(
         coro: Coroutine[object, object, object],
         on_success: Callable[[object], None] | None,
         on_error: Callable[[object], None] | None,
         parent: object,
         **_kwargs: object,
     ) -> None:
-        """Close the destroy coroutine and invoke ``on_error`` synchronously.
+        """Run the dispatched coroutine to completion on the calling thread.
 
         Args:
-            coro: Bridge coroutine that would run on the worker (unused).
-            on_success: Success callback (unused here).
-            on_error: Error callback invoked with a synthetic failure.
+            coro: Bridge coroutine the panel dispatched.
+            on_success: Success callback invoked with the coroutine result.
+            on_error: Error callback (unused: the fake bridge never raises).
             parent: Qt parent (unused here).
             **_kwargs: Structured logging context (ignored).
         """
-        _ = (on_success, parent, _kwargs)
-        coro.close()
-        if on_error is not None:
-            on_error(RuntimeError("destroy failed"))
+        _ = (on_error, parent, _kwargs)
+        loop = asyncio.new_event_loop()
+        try:
+            result = loop.run_until_complete(coro)
+        finally:
+            loop.close()
+        if on_success is not None:
+            on_success(result)
 
-    monkeypatch.setattr(sandbox_panel_mod, "run_bridge_coroutine_logged", _immediate_destroy_failure)
+    monkeypatch.setattr(sandbox_panel_mod, "run_bridge_coroutine_logged", _inline_dispatch)
 
     panel = SandboxPanel()
-    panel._bridge = cast("SandboxBridge", _DelayedCleanupBridge(delay_seconds=0.0))
+    panel._bridge = cast("SandboxBridge", _RecordingRestartBridge())
     panel.sandbox_id = "old-sbx"
     panel._set_sandbox_controls_active(active=True)
-    panel._status_indicator.setText("Active")
-    panel._status_poll_timer.start(5000)
 
-    try:
-        panel._on_restart()
+    panel._on_restart()
 
-        assert panel.sandbox_id == "old-sbx", "a destroy-phase failure must not touch sandbox_id"
-        assert panel._status_indicator.text() == "Active"
-        assert panel.destroy_btn.isEnabled()
-        assert panel.restart_btn.isEnabled(), "Restart must be re-enabled so the user can retry"
-        assert panel._status_poll_timer.isActive()
-    finally:
-        panel._status_poll_timer.stop()
+    assert calls == ["restart"], f"restart must be a single bridge operation; recorded {calls}"
+    assert panel.sandbox_id == "new-sbx", "the panel must adopt the replacement instance id"
+    assert panel.restart_btn.isEnabled(), "Restart must be usable again after a successful restart"
 
 
 def test_m61_main_splitter_children_not_collapsible(qapp: QApplication) -> None:

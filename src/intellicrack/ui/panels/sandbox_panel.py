@@ -39,6 +39,7 @@ from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.logging import get_logger
 from intellicrack.sandbox.qemu import QEMUSandbox
 from intellicrack.sandbox.settings import load_qemu_config
+from intellicrack.ui.dialogs_helpers import show_error
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.qt_compat import (
@@ -70,6 +71,8 @@ _TIMEOUT_DEFAULT_SECONDS: Final[int] = 300
 _MEMORY_MIN_MB: Final[int] = 128
 _MEMORY_MAX_MB: Final[int] = 131072
 _MEMORY_DEFAULT_MB: Final[int] = 2048
+
+_VM_DISPLAY_UNSUPPORTED_TIP: Final[str] = "The VM display is only available for QEMU sandboxes"
 
 
 def _configure_result_columns(tree: QTreeWidget) -> None:
@@ -143,6 +146,11 @@ class SandboxPanel(AnalysisPanelBase):
     execution_completed: pyqtSignal = pyqtSignal(str)
     sandbox_created: pyqtSignal = pyqtSignal(str)
 
+    _controls_active: bool = False
+    _active_sandbox_type: SandboxType | None = None
+    _last_poll_error: str | None = None
+    _vnc_widget: VNCWidget | None = None
+
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the SandboxPanel widget.
 
@@ -158,13 +166,11 @@ class SandboxPanel(AnalysisPanelBase):
         self._pending_args: list[str] = []
         self._pending_snapshot_id: str = "unknown"
         self._pending_snapshot_label: str | None = None
-        self._vnc_widget: VNCWidget | None = None
         self._pcap_capture_id: str | None = None
         self._pending_copy_in_dest: str = ""
         self._pending_copy_in_source: str = ""
         self._pending_copy_out_source: str = ""
         self._pending_copy_out_dest: str = ""
-        self._restart_pending_destroy: bool = False
         self._status_poll_timer = QTimer(self)
         self._status_poll_timer.timeout.connect(self._poll_status)
 
@@ -508,7 +514,8 @@ class SandboxPanel(AnalysisPanelBase):
             self._on_vnc_status_changed(connected=bool(c))
 
         vnc_w.connection_status_changed.connect(_vnc_status_slot)
-        output_tabs.addTab(vnc_w, "VM Display")
+        self._vnc_tab_index = output_tabs.addTab(vnc_w, "VM Display")
+        self._output_tabs = output_tabs
 
         self._api_calls_tree = QTreeWidget()
         set_header_labels(self._api_calls_tree, ["Timestamp", "Process", "API", "Module", "Args", "Return"])
@@ -582,6 +589,8 @@ class SandboxPanel(AnalysisPanelBase):
         main_splitter.addWidget(output_tabs)
 
         main_splitter.setSizes([_SPLIT_LEFT, _SPLIT_RIGHT])
+        self.sandbox_type_combo.currentTextChanged.connect(self._on_sandbox_type_changed)
+        self._apply_backend_capability_gating()
         return main_splitter
 
     @override
@@ -774,37 +783,108 @@ class SandboxPanel(AnalysisPanelBase):
         """
         self._console_output.appendPlainText(message)
 
+    def _report_failure(self, title: str, summary: str, exc: object) -> None:
+        """Surface a failed user-initiated sandbox operation to the console and a dialog.
+
+        The console line is kept as the durable record of the failure while the
+        modal dialog guarantees the user actually sees it: without one, a failed
+        Create (or any other toolbar action) was silent unless the Console tab
+        happened to be the visible tab.
+
+        Args:
+            title: Dialog window title naming the action that failed.
+            summary: Human-readable description of the failed action, without
+                the error text; used verbatim for both surfaces.
+            exc: Exception (or error object) reported by the failed call.
+        """
+        self._log(f"[-] {summary}: {exc}")
+        show_error(
+            self,
+            title,
+            f"{summary}:\n\n{exc}",
+            exc=exc if isinstance(exc, BaseException) else None,
+        )
+
     def _set_sandbox_controls_active(self, *, active: bool) -> None:
         """Enable or disable controls based on sandbox state.
+
+        Controls whose backing operation every backend implements follow
+        ``active`` directly. The QEMU-only controls are delegated to
+        :meth:`_apply_backend_capability_gating`, which additionally requires
+        the effective backend to be QEMU.
 
         Args:
             active: True to enable sandbox-active controls.
         """
+        self._controls_active = active
         self.create_btn.setEnabled(not active)
         self.destroy_btn.setEnabled(active)
         self.restart_btn.setEnabled(active)
         self._run_btn.setEnabled(active)
-        self.snapshot_btn.setEnabled(active)
-        self.restore_btn.setEnabled(active)
-        self.screenshot_btn.setEnabled(active)
-        self.pcap_btn.setEnabled(active)
         self.memdump_btn.setEnabled(active)
-        self.extract_files_btn.setEnabled(active)
         self.yara_btn.setEnabled(active)
         self.iocs_btn.setEnabled(active)
         self.timeline_btn.setEnabled(active)
         self.behaviors_btn.setEnabled(active)
         self.copy_in_btn.setEnabled(active)
         self.copy_out_btn.setEnabled(active)
-        self.continue_btn.setEnabled(active)
-        self.pause_btn.setEnabled(active)
-        self.delete_snap_btn.setEnabled(active)
         self._exec_cmd_btn.setEnabled(active)
-        self._refresh_snapshots_btn.setEnabled(active)
-        self._pending_messages_btn.setEnabled(active)
         self._detect_c2_btn.setEnabled(active)
-        self._anti_evasion_btn.setEnabled(active)
         self._diff_btn.setEnabled(active)
+        self._apply_backend_capability_gating()
+
+    def _apply_backend_capability_gating(self) -> None:
+        """Enable the QEMU-only controls only when the effective backend is QEMU.
+
+        ``WindowsSandbox`` implements neither snapshots nor VM pause/continue
+        nor the guest-agent message channel - it inherits the ``SandboxBase``
+        implementations that raise "not supported" - and it has no VNC port, so
+        its ``vnc_port`` is always ``None``. Leaving those controls enabled for
+        a Windows sandbox offered actions that could only ever fail.
+
+        The gated set mirrors exactly the ``SandboxBridge`` operations that
+        reject a non-QEMU instance outright: ``snapshot_create``,
+        ``snapshot_restore``, ``snapshot_list``, ``snapshot_delete``, ``stop``,
+        ``cont``, ``get_pending_messages``, ``pcap_start``, ``screenshot``,
+        ``anti_evasion``, ``extract_dropped_files`` and ``get_vnc_port``.
+        """
+        qemu_active = self._controls_active and self._effective_sandbox_type() == "qemu"
+        self.snapshot_btn.setEnabled(qemu_active)
+        self.restore_btn.setEnabled(qemu_active)
+        self.delete_snap_btn.setEnabled(qemu_active)
+        self._refresh_snapshots_btn.setEnabled(qemu_active)
+        self.continue_btn.setEnabled(qemu_active)
+        self.pause_btn.setEnabled(qemu_active)
+        self._pending_messages_btn.setEnabled(qemu_active)
+        self.screenshot_btn.setEnabled(qemu_active)
+        self.pcap_btn.setEnabled(qemu_active)
+        self.extract_files_btn.setEnabled(qemu_active)
+        self._anti_evasion_btn.setEnabled(qemu_active)
+        self._set_vm_display_enabled(enabled=qemu_active)
+
+    def _set_vm_display_enabled(self, *, enabled: bool) -> None:
+        """Enable or disable the VM Display tab and the VNC view it hosts.
+
+        Args:
+            enabled: True when the effective backend exposes a VNC display.
+        """
+        if self._vnc_widget is not None:
+            self._vnc_widget.setEnabled(enabled)
+        self._output_tabs.setTabEnabled(self._vnc_tab_index, enabled)
+        self._output_tabs.setTabToolTip(
+            self._vnc_tab_index,
+            "" if enabled else _VM_DISPLAY_UNSUPPORTED_TIP,
+        )
+
+    def _on_sandbox_type_changed(self, _text: str) -> None:
+        """Re-apply backend capability gating after a sandbox-type selection change.
+
+        Args:
+            _text: Newly selected combo text. Unused: the effective type is
+                re-read through :meth:`_effective_sandbox_type` so an active
+                instance keeps precedence over the combo.
+        """
+        self._apply_backend_capability_gating()
 
     def _selected_sandbox_type(self) -> SandboxType:
         """Get the sandbox type from the combo box selection.
@@ -814,6 +894,22 @@ class SandboxPanel(AnalysisPanelBase):
         """
         combo_text = self.sandbox_type_combo.currentText()
         return "qemu" if combo_text == "QEMU" else "windows"
+
+    def _effective_sandbox_type(self) -> SandboxType:
+        """Get the sandbox type the panel's controls must be gated against.
+
+        While an instance is live its own backend decides what is supported,
+        regardless of what the toolbar combo currently shows; with no live
+        instance the combo selection is what the next create would use.
+
+        Returns:
+            SandboxType: The live instance's type when one exists, otherwise
+            the type currently selected in the toolbar combo.
+        """
+        active_type = self._active_sandbox_type
+        if active_type is not None:
+            return active_type
+        return self._selected_sandbox_type()
 
     def _sandbox_create_config(self) -> _SandboxCreateConfig:
         """Read the VM/environment configuration controls for sandbox creation.
@@ -898,6 +994,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log("[+] Sandbox created")
         self._diff_instance_a_input.setText(self.sandbox_id)
         self._status_indicator.setText("Active")
+        self._active_sandbox_type = self._selected_sandbox_type()
         self._set_sandbox_controls_active(active=True)
         self.create_btn.setEnabled(False)
         self._status_poll_timer.start(5000)
@@ -913,7 +1010,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Failed to create sandbox: {exc}")
+        self._report_failure("Sandbox Creation Failed", "Failed to create sandbox", exc)
         self.create_btn.setEnabled(True)
         _logger.warning("sandbox_create_failed", error=str(exc))
 
@@ -944,6 +1041,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._disconnect_vnc_display()
         self._log("[+] Sandbox destroyed")
         self.sandbox_id = None
+        self._active_sandbox_type = None
         self._status_indicator.setText("Inactive")
         self._set_sandbox_controls_active(active=False)
         self._status_poll_timer.stop()
@@ -953,97 +1051,100 @@ class SandboxPanel(AnalysisPanelBase):
     def _on_destroy_error(self, exc: object) -> None:
         """Handle sandbox destruction failure.
 
+        The panel state is settled before the dialog is raised: the dialog runs
+        a nested Qt event loop, so anything left inconsistent here stays that
+        way - and keeps being polled - for as long as the user takes to dismiss
+        it.
+
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Failed to destroy sandbox: {exc}")
         self.destroy_btn.setEnabled(self.sandbox_id is not None)
         _logger.warning("sandbox_destroy_failed", error=str(exc))
         self._poll_status()
+        self._report_failure("Sandbox Destroy Failed", "Failed to destroy sandbox", exc)
 
     def _on_restart(self) -> None:
-        """Restart the sandbox environment."""
+        """Restart the sandbox environment through the manager's restart operation.
+
+        Issues a single ``SandboxBridge.restart`` call rather than chaining a
+        destroy and a create from the GUI: the teardown/recreate pair and its
+        failure semantics belong to the manager, so a failed restart can never
+        leave the panel pointing at an instance that no longer exists.
+        """
         if self._bridge is None or self.sandbox_id is None:
             return
 
+        sandbox_type = self._effective_sandbox_type()
+        config = self._sandbox_create_config()
+        qemu_config = self._qemu_create_config(sandbox_type)
         _logger.debug("sandbox_restart_started", sandbox_id=self.sandbox_id)
         self.restart_btn.setEnabled(False)
-        self._restart_pending_destroy = False
         run_bridge_coroutine_logged(
-            self._bridge.destroy(self.sandbox_id),
-            on_success=self._on_restart_destroy_success,
+            self._bridge.restart(self.sandbox_id, qemu_config=qemu_config, **config),
+            on_success=self._on_restart_success,
             on_error=self._on_restart_error,
             parent=self,
-            event="sandbox_restart_destroy",
+            event="sandbox_restart",
             logger=_logger,
             level="info",
             sandbox_id=self.sandbox_id,
-        )
-
-    def _on_restart_destroy_success(self, _result: object) -> None:
-        """Handle destroy phase of restart, proceed to create.
-
-        Args:
-            _result: Bridge call result (unused).
-        """
-        if self._bridge is None:
-            self._restart_pending_destroy = False
-            self._finish_restart_after_destroy_only()
-            return
-
-        self._restart_pending_destroy = True
-        sandbox_type = self._selected_sandbox_type()
-        config = self._sandbox_create_config()
-        qemu_config = self._qemu_create_config(sandbox_type)
-        run_bridge_coroutine_logged(
-            self._bridge.create(sandbox_type=sandbox_type, qemu_config=qemu_config, **config),
-            on_success=self._on_restart_create_success,
-            on_error=self._on_restart_error,
-            parent=self,
-            event="sandbox_restart_create",
-            logger=_logger,
-            level="info",
             sandbox_type=sandbox_type,
             **config,
         )
 
-    def _on_restart_create_success(self, result: object) -> None:
-        """Handle successful create phase of restart.
+    def _on_restart_success(self, result: object) -> None:
+        """Handle a completed sandbox restart.
+
+        The replacement is a different instance on a different VNC port, so the
+        display is torn down and re-attached rather than left pointing at the
+        destroyed VM's port, and the diff selector is re-seeded with the new id.
 
         Args:
-            result: Dictionary with instance_id from bridge.
+            result: Dictionary with the replacement instance_id from the bridge.
         """
-        self._restart_pending_destroy = False
+        self._disconnect_vnc_display()
         if isinstance(result, dict):
             typed = cast("dict[str, object]", result)
             self.sandbox_id = str(typed.get("instance_id", "active"))
+        if self.sandbox_id is not None:
+            self._diff_instance_a_input.setText(self.sandbox_id)
         self._log("[+] Sandbox restarted")
         self._clear_report_tabs()
         self.restart_btn.setEnabled(True)
         _logger.info("sandbox_restarted", sandbox_id=self.sandbox_id)
 
+        QTimer.singleShot(2000, self._connect_vnc_display)
+
     def _on_restart_error(self, exc: object) -> None:
         """Handle sandbox restart failure.
+
+        A failed restart always leaves the panel without a usable instance: the
+        manager tears the original down before recreating it, and the only
+        failure that skips the teardown is an unknown instance id, which means
+        the panel's id was already stale. Either way the panel must stop
+        pretending a sandbox is live.
+
+        The teardown runs before the dialog: the dialog spins a nested Qt event
+        loop, so raising it first would leave the status-poll timer dispatching
+        against the destroyed instance for as long as the dialog stayed open.
 
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Failed to restart sandbox: {exc}")
         _logger.warning("sandbox_restart_failed", error=str(exc))
-        if self._restart_pending_destroy:
-            self._restart_pending_destroy = False
-            self._finish_restart_after_destroy_only()
-        else:
-            self.restart_btn.setEnabled(True)
+        self._finish_restart_after_destroy_only()
+        self._report_failure("Sandbox Restart Failed", "Failed to restart sandbox", exc)
 
     def _finish_restart_after_destroy_only(self) -> None:
-        """Reflect UI state when a restart's destroy phase succeeded but create did not.
+        """Reflect UI state when a restart tore the old instance down without replacing it.
 
         Applied when the old sandbox instance has already been torn down server-side but no replacement was created, so ``sandbox_id`` must
         stop referring to the destroyed instance and every sandbox-active control must be disabled again.
         """
         self._disconnect_vnc_display()
         self.sandbox_id = None
+        self._active_sandbox_type = None
         self._status_indicator.setText("Inactive")
         self._set_sandbox_controls_active(active=False)
         self._status_poll_timer.stop()
@@ -1361,7 +1462,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         name_str = self._pending_binary.name if self._pending_binary.parts else "unknown"
-        self._log(f"[-] Execution failed: {exc}")
+        self._report_failure("Sandbox Execution Failed", "Execution failed", exc)
         self._run_btn.setEnabled(True)
         _logger.warning("sandbox_binary_execution_failed", binary=name_str, error=str(exc))
 
@@ -1428,7 +1529,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Snapshot failed: {exc}")
+        self._report_failure("Snapshot Failed", "Snapshot failed", exc)
         self.snapshot_btn.setEnabled(True)
         self._pending_snapshot_label = None
         _logger.warning("sandbox_snapshot_failed", error=str(exc))
@@ -1477,7 +1578,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         snapshot_id = getattr(self, "_pending_snapshot_id", "unknown")
-        self._log(f"[-] Restore failed: {exc}")
+        self._report_failure("Snapshot Restore Failed", "Restore failed", exc)
         self.restore_btn.setEnabled(True)
         _logger.warning("sandbox_snapshot_restore_failed", snapshot_id=snapshot_id, error=str(exc))
 
@@ -1516,7 +1617,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Screenshot failed: {exc}")
+        self._report_failure("Screenshot Failed", "Screenshot failed", exc)
         self.screenshot_btn.setEnabled(True)
 
     def _on_pcap_toggle(self) -> None:
@@ -1571,7 +1672,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] PCAP start failed: {exc}")
+        self._report_failure("PCAP Start Failed", "PCAP start failed", exc)
         self.pcap_btn.setEnabled(True)
 
     def _on_pcap_stop_success(self, result: object) -> None:
@@ -1595,7 +1696,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] PCAP stop failed: {exc}")
+        self._report_failure("PCAP Stop Failed", "PCAP stop failed", exc)
         self._pcap_capture_id = None
         self.pcap_btn.setText("PCAP Start")
         self.pcap_btn.setEnabled(True)
@@ -1635,7 +1736,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Memory dump failed: {exc}")
+        self._report_failure("Memory Dump Failed", "Memory dump failed", exc)
         self.memdump_btn.setEnabled(True)
 
     def _on_extract_files(self) -> None:
@@ -1673,7 +1774,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] File extraction failed: {exc}")
+        self._report_failure("File Extraction Failed", "File extraction failed", exc)
         self.extract_files_btn.setEnabled(True)
 
     def _on_yara_scan(self) -> None:
@@ -1720,7 +1821,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] YARA scan failed: {exc}")
+        self._report_failure("YARA Scan Failed", "YARA scan failed", exc)
         self.yara_btn.setEnabled(True)
 
     def _on_extract_iocs(self) -> None:
@@ -1772,7 +1873,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] IOC extraction failed: {exc}")
+        self._report_failure("IOC Extraction Failed", "IOC extraction failed", exc)
         self.iocs_btn.setEnabled(True)
 
     def _on_timeline(self) -> None:
@@ -1822,7 +1923,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Timeline generation failed: {exc}")
+        self._report_failure("Timeline Generation Failed", "Timeline generation failed", exc)
         self.timeline_btn.setEnabled(True)
 
     def _on_detect_behaviors(self) -> None:
@@ -1875,7 +1976,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Behavior detection failed: {exc}")
+        self._report_failure("Behavior Detection Failed", "Behavior detection failed", exc)
         self.behaviors_btn.setEnabled(True)
 
     def _on_copy_in(self) -> None:
@@ -1931,7 +2032,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Copy into sandbox failed: {exc}")
+        self._report_failure("Copy Into Sandbox Failed", "Copy into sandbox failed", exc)
         self.copy_in_btn.setEnabled(True)
 
     def _on_copy_out(self) -> None:
@@ -1987,7 +2088,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Copy from sandbox failed: {exc}")
+        self._report_failure("Copy From Sandbox Failed", "Copy from sandbox failed", exc)
         self.copy_out_btn.setEnabled(True)
 
     def _on_continue_vm(self) -> None:
@@ -2021,7 +2122,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] VM continue failed: {exc}")
+        self._report_failure("VM Continue Failed", "VM continue failed", exc)
         self.continue_btn.setEnabled(True)
 
     def _on_pause_vm(self) -> None:
@@ -2055,7 +2156,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] VM pause failed: {exc}")
+        self._report_failure("VM Pause Failed", "VM pause failed", exc)
         self.pause_btn.setEnabled(True)
 
     def _on_delete_snapshot(self) -> None:
@@ -2104,7 +2205,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Snapshot deletion failed: {exc}")
+        self._report_failure("Snapshot Deletion Failed", "Snapshot deletion failed", exc)
         self.delete_snap_btn.setEnabled(True)
 
     def _on_execute_command(self) -> None:
@@ -2157,7 +2258,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Command execution failed: {exc}")
+        self._report_failure("Command Execution Failed", "Command execution failed", exc)
         self._exec_cmd_btn.setEnabled(True)
 
     def _on_refresh_instances(self) -> None:
@@ -2197,7 +2298,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Instance refresh failed: {exc}")
+        self._report_failure("Instance Refresh Failed", "Instance refresh failed", exc)
         self._refresh_instances_btn.setEnabled(True)
 
     def _on_refresh_snapshots(self) -> None:
@@ -2242,7 +2343,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Snapshot list failed: {exc}")
+        self._report_failure("Snapshot List Failed", "Snapshot list failed", exc)
         self._refresh_snapshots_btn.setEnabled(True)
 
     def _on_pending_messages(self) -> None:
@@ -2292,7 +2393,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Pending messages retrieval failed: {exc}")
+        self._report_failure("Pending Messages Failed", "Pending messages retrieval failed", exc)
         self._pending_messages_btn.setEnabled(True)
 
     def _on_anti_evasion(self) -> None:
@@ -2337,7 +2438,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Anti-evasion failed: {exc}")
+        self._report_failure("Anti-Evasion Failed", "Anti-evasion failed", exc)
         self._anti_evasion_btn.setEnabled(True)
 
     def _render_techniques(self, techniques: object) -> None:
@@ -2401,7 +2502,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] C2 detection failed: {exc}")
+        self._report_failure("C2 Detection Failed", "C2 detection failed", exc)
         self._detect_c2_btn.setEnabled(True)
 
     def _on_diff(self) -> None:
@@ -2468,7 +2569,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             exc: The exception from the failed operation.
         """
-        self._log(f"[-] Diff failed: {exc}")
+        self._report_failure("Diff Failed", "Diff failed", exc)
         self._diff_btn.setEnabled(True)
 
     def _poll_status(self) -> None:
@@ -2491,6 +2592,7 @@ class SandboxPanel(AnalysisPanelBase):
         Args:
             result: Status dictionary from bridge.
         """
+        self._last_poll_error = None
         if isinstance(result, dict):
             typed = cast("dict[str, object]", result)
             active = typed.get("active_count", 0)
@@ -2545,13 +2647,27 @@ class SandboxPanel(AnalysisPanelBase):
             if row >= 0:
                 self._instances_tree.takeTopLevelItem(row)
 
-    def _on_poll_status_error(self, _exc: object) -> None:
+    def _on_poll_status_error(self, exc: object) -> None:
         """Handle status poll failure.
 
+        The poll runs every five seconds, so the failure is reported to the
+        console and the log only when its text differs from the previous
+        failure. That keeps a persistent backend outage from filling the
+        console with thousands of identical lines while still making the very
+        first occurrence - and any change in the error - visible. A modal
+        dialog is deliberately not used here: this path is timer-driven, not
+        user-initiated.
+
         Args:
-            _exc: The exception from the failed operation.
+            exc: The exception from the failed operation.
         """
         self._status_indicator.setText("Active (status unavailable)")
+        error_text = str(exc)
+        if error_text == self._last_poll_error:
+            return
+        self._last_poll_error = error_text
+        self._log(f"[-] Sandbox status poll failed: {error_text}")
+        _logger.warning("sandbox_status_poll_failed", sandbox_id=self.sandbox_id, error=error_text)
 
     def _on_vnc_status_changed(self, *, connected: bool) -> None:
         """Handle VNC connection status changes.
@@ -2565,19 +2681,45 @@ class SandboxPanel(AnalysisPanelBase):
             self._log("[*] VNC display disconnected")
 
     def _connect_vnc_display(self) -> None:
-        """Connect the VNC widget to the sandbox VNC port if available."""
+        """Connect the VNC widget to the sandbox VNC port if available.
+
+        Only the QEMU backend exposes a VNC server; ``WindowsSandbox`` inherits
+        ``vnc_port = None``, so the query is skipped entirely rather than
+        dispatched and failed for a backend that can never satisfy it.
+        """
         if self._vnc_widget is None or self._bridge is None or self.sandbox_id is None:
+            return
+
+        if self._effective_sandbox_type() != "qemu":
+            _logger.debug("sandbox_vnc_display_unsupported", sandbox_type=self._effective_sandbox_type())
             return
 
         run_bridge_coroutine_logged(
             self._bridge.get_vnc_port(self.sandbox_id),
             on_success=self._on_vnc_port_received,
-            on_error=lambda _: _logger.debug("vnc_port_query_failed"),
+            on_error=self._on_vnc_port_error,
             parent=self,
             event="sandbox_get_vnc_port",
             logger=_logger,
             sandbox_id=self.sandbox_id,
         )
+
+    def _on_vnc_port_error(self, exc: object) -> None:
+        """Handle a failed VNC port query.
+
+        The previous handler swallowed the failure at debug level without the
+        error text, so a VM Display that silently never connected left no
+        usable evidence anywhere. The failure is now logged at warning level
+        with the real error and mirrored into the console. No dialog is shown:
+        the query is issued automatically after a create, not by a direct user
+        action, and the VM Display tab itself already shows nothing.
+
+        Args:
+            exc: The exception raised by ``bridge.get_vnc_port``.
+        """
+        error_text = str(exc)
+        self._log(f"[-] VNC port query failed: {error_text}")
+        _logger.warning("sandbox_vnc_port_query_failed", sandbox_id=self.sandbox_id, error=error_text)
 
     def _on_vnc_port_received(self, result: object) -> None:
         """Handle VNC port retrieval.

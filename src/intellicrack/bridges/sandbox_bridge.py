@@ -62,6 +62,7 @@ def _get_analysis_module() -> types.ModuleType:
 
 _ERR_CREATE_FAILED = "Failed to create sandbox"
 _ERR_DESTROY_FAILED = "Failed to destroy sandbox"
+_ERR_RESTART_FAILED = "Failed to restart sandbox"
 _ERR_BINARY_NOT_FOUND = "Binary not found"
 _ERR_EXECUTION_FAILED = "Binary execution failed"
 _ERR_INSTANCE_NOT_FOUND = "Sandbox instance not found"
@@ -443,6 +444,42 @@ class SandboxBridge(ToolBridgeBase):
                         ),
                     ],
                     returns="Success confirmation",
+                ),
+                ToolFunction(
+                    name="sandbox.restart",
+                    description=(
+                        "Tear down a sandbox instance and create a fresh replacement of the "
+                        "same type in one operation. Use this to return a sandbox to a clean "
+                        "state between runs; the original instance is destroyed in every "
+                        "outcome, and no replacement is registered if the recreate fails."
+                    ),
+                    parameters=[
+                        ToolParameter(
+                            name="instance_id",
+                            type="string",
+                            description="ID of the sandbox instance to restart",
+                            required=True,
+                        ),
+                        ToolParameter(
+                            name="timeout_seconds",
+                            type="integer",
+                            description="Execution timeout in seconds for the replacement instance",
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="network_enabled",
+                            type="boolean",
+                            description="Whether the replacement instance may access the network",
+                            required=False,
+                        ),
+                        ToolParameter(
+                            name="memory_limit_mb",
+                            type="integer",
+                            description="Memory limit in megabytes for the replacement instance",
+                            required=False,
+                        ),
+                    ],
+                    returns="New instance_id, the previous_instance_id, type, status, and creation timestamp",
                 ),
                 ToolFunction(
                     name="sandbox.run_binary",
@@ -1165,6 +1202,89 @@ class SandboxBridge(ToolBridgeBase):
             self._vnc_passwords.pop(instance_id, None)
             self._active_pcap_captures.pop(instance_id, None)
             return {"success": True, "instance_id": instance_id}
+
+    async def restart(
+        self,
+        instance_id: str,
+        timeout_seconds: int = 300,
+        *,
+        network_enabled: bool = False,
+        memory_limit_mb: int = 2048,
+        qemu_config: QEMUConfig | None = None,
+    ) -> dict[str, Any]:
+        """Restart a sandbox instance as a single managed operation.
+
+        Delegates to :meth:`SandboxManager.restart`, so the teardown and the
+        recreate share the manager's failure semantics instead of being chained
+        by the caller: the original instance is gone in every outcome, and no
+        replacement is registered when the recreate fails.
+
+        ``qemu_config`` carries the QEMU-specific settings the generic
+        :class:`SandboxConfig` cannot express - most importantly the qcow2 disk
+        image. A QEMU instance restarted without it has no bootable disk and can
+        never start again, so callers restarting a QEMU sandbox must supply one.
+
+        Args:
+            instance_id: ID of the instance to restart.
+            timeout_seconds: Execution timeout in seconds for the replacement.
+            network_enabled: Whether the replacement may access the network.
+            memory_limit_mb: Memory limit in megabytes for the replacement.
+            qemu_config: QEMU backend configuration forwarded to the manager.
+                Ignored for the ``"windows"`` sandbox type.
+
+        Returns:
+            dict[str, Any]: Dictionary with the new ``instance_id``, the
+            ``previous_instance_id`` that was torn down, and the replacement's
+            type, status, and creation timestamp.
+
+        Raises:
+            ToolError: If the instance is unknown or the replacement could not
+                be created.
+        """
+        manager = self.ensure_manager()
+
+        config = SandboxConfig(
+            timeout_seconds=timeout_seconds,
+            network_enabled=network_enabled,
+            memory_limit_mb=memory_limit_mb,
+        )
+
+        self._vnc_passwords.pop(instance_id, None)
+        self._active_pcap_captures.pop(instance_id, None)
+
+        try:
+            instance = await manager.restart(instance_id, config=config, qemu_config=qemu_config)
+        except SandboxError as e:
+            _logger.warning("sandbox_restart_failed", instance_id=instance_id, error=str(e))
+            self.state = BridgeState(
+                connected=True,
+                tool_running=True,
+                binary_loaded=False,
+                process_attached=False,
+                target_path=None,
+                target_pid=None,
+                last_error=str(e),
+            )
+            msg = f"{_ERR_RESTART_FAILED}: {e}"
+            raise ToolError(msg) from e
+
+        _logger.info("sandbox_restarted", previous_instance_id=instance_id, instance_id=instance.id)
+        self.state = BridgeState(
+            connected=True,
+            tool_running=True,
+            binary_loaded=False,
+            process_attached=False,
+            target_path=None,
+            target_pid=None,
+            last_error=None,
+        )
+        return {
+            "instance_id": instance.id,
+            "previous_instance_id": instance_id,
+            "type": instance.sandbox_type,
+            "status": instance.state.status,
+            "created_at": instance.created_at.astimezone(UTC).isoformat(),
+        }
 
     async def run_binary(
         self,

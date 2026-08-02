@@ -45,7 +45,7 @@ if TYPE_CHECKING:
     from intellicrack.sandbox.base import SandboxConfig
 
 
-_EXPECTED_FUNC_COUNT: Final[int] = 29
+_EXPECTED_FUNC_COUNT: Final[int] = 30
 _MIN_DESC_LEN: Final[int] = 5
 _WIN_INSTANCE: Final[str] = "win-test-001"
 _QEMU_INSTANCE: Final[str] = "qemu-test-001"
@@ -246,6 +246,7 @@ class TestToolDefinition:
 
         created = await _dispatch("create", sandbox_type="qemu")
         assert created["type"] == "qemu"
+        assert (await _dispatch("restart", str(created["instance_id"])))["type"] == "qemu"
         assert (await _dispatch("run_binary", sys.executable, sandbox_type="windows"))["result"] == "success"
         assert (await _dispatch("destroy", _WIN_INSTANCE))["success"] is True
 
@@ -253,6 +254,34 @@ class TestToolDefinition:
             f"dispatch coverage drift: not exercised {sorted(definition_names - exercised)}, "
             f"unexpected {sorted(exercised - definition_names)}"
         )
+
+    @pytest.mark.asyncio
+    async def test_restart_replaces_the_instance_it_tore_down(
+        self,
+        sandbox_bridge: SandboxBridge,
+    ) -> None:
+        """``sandbox.restart`` must swap in a new instance and deregister the old one.
+
+        The dispatch-coverage test above only proves ``restart`` resolves and
+        returns its documented type. This asserts the operation's actual
+        contract against the real manager state: the replacement is a different
+        instance, the caller is told which id was torn down, and the original id
+        no longer resolves.
+
+        Args:
+            sandbox_bridge: SandboxBridge fixture with a real backing manager.
+        """
+        bridge = sandbox_bridge
+        created = await bridge.create(sandbox_type="qemu")
+        previous_id = str(created["instance_id"])
+
+        restarted = await bridge.restart(previous_id)
+
+        assert restarted["previous_instance_id"] == previous_id
+        assert restarted["instance_id"] != previous_id
+        live_ids = {entry["id"] for entry in cast("list[dict[str, Any]]", await getattr(bridge, "list")())}
+        assert previous_id not in live_ids, "restart must leave no trace of the instance it replaced"
+        assert restarted["instance_id"] in live_ids, "the replacement instance must be registered"
 
     def test_parameter_names_match_signatures(self) -> None:
         """Parameter names in tool definitions match method signatures."""
@@ -1260,7 +1289,7 @@ class _RealLocalManager:
 
     @property
     def instances(self) -> list[StubInstance]:
-        """Return all tracked instances.
+        """All tracked instances.
 
         Returns:
             list[StubInstance]: The live instance list.
@@ -1269,7 +1298,7 @@ class _RealLocalManager:
 
     @property
     def active_count(self) -> int:
-        """Return the number of running instances.
+        """Number of running instances.
 
         Returns:
             int: Count of instances whose status is ``running``.
