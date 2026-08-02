@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, ClassVar, Final, cast, override
 from PyQt6.QtCore import QObject, Qt, QThread, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -47,6 +48,26 @@ from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.subprocess_compat import CREATE_NO_WINDOW, PIPE, CompletedProcess, Popen, SubprocessError, TimeoutExpired
 from intellicrack.sandbox.base import SandboxConfig
+from intellicrack.sandbox.qemu import GuestOS
+from intellicrack.sandbox.settings import (
+    QEMU_ACCELERATION_KEY,
+    QEMU_AGENT_TIMEOUT_KEY,
+    QEMU_CPU_CORES_KEY,
+    QEMU_DEFAULT_AGENT_TIMEOUT,
+    QEMU_DEFAULT_CPU_CORES,
+    QEMU_DEFAULT_GUEST_OS,
+    QEMU_DEFAULT_MEMORY_MB,
+    QEMU_GUEST_OS_KEY,
+    QEMU_IMAGE_PATH_KEY,
+    QEMU_MAX_AGENT_TIMEOUT,
+    QEMU_MAX_CPU_CORES,
+    QEMU_MAX_MEMORY_MB,
+    QEMU_MEMORY_MB_KEY,
+    QEMU_MIN_AGENT_TIMEOUT,
+    QEMU_MIN_CPU_CORES,
+    QEMU_MIN_MEMORY_MB,
+    build_qemu_config,
+)
 from intellicrack.sandbox.windows import WindowsSandbox, find_sandbox_session_pid
 
 from .dialogs_helpers import show_info, show_warning
@@ -61,6 +82,8 @@ from .win32_embed import find_window_by_pid
 
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+
     from PyQt6.QtGui import QCloseEvent
 
     from intellicrack.sandbox.manager import SandboxManager
@@ -728,6 +751,8 @@ class SandboxConfigDialog(QDialog):
         folders_group.setLayout(folders_layout)
         layout.addWidget(folders_group)
 
+        layout.addWidget(self._build_qemu_group())
+
         button_layout = QHBoxLayout()
 
         self._test_btn = QPushButton("Test Sandbox")
@@ -748,6 +773,105 @@ class SandboxConfigDialog(QDialog):
         button_layout.addWidget(button_box)
 
         layout.addLayout(button_layout)
+
+    def _build_qemu_group(self) -> QGroupBox:
+        """Build the QEMU backend settings group.
+
+        These controls are intentionally kept outside
+        :meth:`_set_controls_enabled`, which gates the Windows Sandbox
+        controls on the Windows Sandbox availability probe. The QEMU backend
+        is independent of that feature, so a host without Windows Sandbox must
+        still be able to configure and use QEMU.
+
+        Returns:
+            QGroupBox: Group box holding the QEMU disk image, guest OS, CPU,
+            memory, acceleration, and guest-agent timeout controls.
+        """
+        qemu_group = QGroupBox("QEMU Backend")
+        qemu_layout = QFormLayout()
+
+        image_row = QHBoxLayout()
+        self._qemu_image_input = QLineEdit()
+        self._qemu_image_input.setPlaceholderText("Path to a qcow2 disk image")
+        self._qemu_image_input.setToolTip("QEMU cannot start without a bootable qcow2 disk image.")
+        image_row.addWidget(self._qemu_image_input)
+
+        self._qemu_browse_btn = QPushButton("Browse...")
+        self._qemu_browse_btn.clicked.connect(self._browse_qemu_image)
+        image_row.addWidget(self._qemu_browse_btn)
+
+        qemu_layout.addRow("Disk Image:", image_row)
+
+        self._qemu_guest_os_combo = QComboBox()
+        for guest_os in GuestOS:
+            self._qemu_guest_os_combo.addItem(guest_os.value.capitalize(), guest_os.value)
+        qemu_layout.addRow("Guest OS:", self._qemu_guest_os_combo)
+
+        self._qemu_cpu_spin = QSpinBox()
+        self._qemu_cpu_spin.setRange(QEMU_MIN_CPU_CORES, QEMU_MAX_CPU_CORES)
+        self._qemu_cpu_spin.setValue(QEMU_DEFAULT_CPU_CORES)
+        qemu_layout.addRow("CPU Cores:", self._qemu_cpu_spin)
+
+        self._qemu_memory_spin = QSpinBox()
+        self._qemu_memory_spin.setRange(QEMU_MIN_MEMORY_MB, QEMU_MAX_MEMORY_MB)
+        self._qemu_memory_spin.setValue(QEMU_DEFAULT_MEMORY_MB)
+        self._qemu_memory_spin.setSuffix(" MB")
+        self._qemu_memory_spin.setSingleStep(256)
+        qemu_layout.addRow("Guest Memory:", self._qemu_memory_spin)
+
+        self._qemu_accel_checkbox = QCheckBox("Use hardware acceleration when available")
+        self._qemu_accel_checkbox.setChecked(True)
+        qemu_layout.addRow(self._qemu_accel_checkbox)
+
+        self._qemu_agent_timeout_spin = QSpinBox()
+        self._qemu_agent_timeout_spin.setRange(int(QEMU_MIN_AGENT_TIMEOUT), int(QEMU_MAX_AGENT_TIMEOUT))
+        self._qemu_agent_timeout_spin.setValue(int(QEMU_DEFAULT_AGENT_TIMEOUT))
+        self._qemu_agent_timeout_spin.setSuffix(" seconds")
+        qemu_layout.addRow("Guest Agent Timeout:", self._qemu_agent_timeout_spin)
+
+        qemu_group.setLayout(qemu_layout)
+        return qemu_group
+
+    def _browse_qemu_image(self) -> None:
+        """Open a file browser for the QEMU disk image."""
+        _logger.debug("qemu_image_browse_opened")
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select QEMU Disk Image",
+            self._qemu_image_input.text(),
+            "QEMU disk images (*.qcow2 *.qcow *.img *.raw);;All files (*)",
+        )
+        if path:
+            _logger.debug("qemu_image_browse_selected", path=path)
+            self._qemu_image_input.setText(path)
+
+    def _apply_qemu_settings(self, settings: Mapping[str, object]) -> None:
+        """Apply persisted QEMU settings to the QEMU widgets.
+
+        Args:
+            settings: Parsed sandbox settings document.
+        """
+        qemu_config = build_qemu_config(settings)
+
+        self._qemu_image_input.setText(str(qemu_config.image_path) if qemu_config.image_path else "")
+        guest_index = self._qemu_guest_os_combo.findData(qemu_config.guest_os.value)
+        if guest_index >= 0:
+            self._qemu_guest_os_combo.setCurrentIndex(guest_index)
+        self._qemu_cpu_spin.setValue(qemu_config.cpu_cores)
+        self._qemu_memory_spin.setValue(qemu_config.memory_mb)
+        self._qemu_accel_checkbox.setChecked(qemu_config.enable_acceleration)
+        self._qemu_agent_timeout_spin.setValue(int(qemu_config.agent_connect_timeout))
+
+    def _selected_qemu_guest_os(self) -> str:
+        """Return the guest OS identifier selected in the QEMU group.
+
+        Returns:
+            str: Guest OS value such as ``"linux"`` or ``"windows"``.
+        """
+        data = self._qemu_guest_os_combo.currentData()
+        if isinstance(data, str):
+            return data
+        return QEMU_DEFAULT_GUEST_OS.value
 
     def _start_availability_check(self) -> None:
         """Probe Windows Sandbox availability off the GUI thread and update status.
@@ -885,6 +1009,7 @@ class SandboxConfigDialog(QDialog):
         self._block_telemetry_checkbox.setChecked(settings.get("block_telemetry", True))
         self._shared_folder_input.setText(settings.get("shared_folder", str(default_shared)))
         self._read_only_checkbox.setChecked(settings.get("shared_folder_read_only", False))
+        self._apply_qemu_settings(settings)
 
         _logger.info(
             "sandbox_config_loaded",
@@ -1275,6 +1400,12 @@ class SandboxConfigDialog(QDialog):
             "block_telemetry": self._block_telemetry_checkbox.isChecked(),
             "shared_folder": self._shared_folder_input.text(),
             "shared_folder_read_only": self._read_only_checkbox.isChecked(),
+            QEMU_IMAGE_PATH_KEY: self._qemu_image_input.text(),
+            QEMU_GUEST_OS_KEY: self._selected_qemu_guest_os(),
+            QEMU_CPU_CORES_KEY: self._qemu_cpu_spin.value(),
+            QEMU_MEMORY_MB_KEY: self._qemu_memory_spin.value(),
+            QEMU_ACCELERATION_KEY: self._qemu_accel_checkbox.isChecked(),
+            QEMU_AGENT_TIMEOUT_KEY: float(self._qemu_agent_timeout_spin.value()),
         }
 
     def is_sandbox_available(self) -> bool:
