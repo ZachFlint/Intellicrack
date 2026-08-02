@@ -69,6 +69,7 @@ from intellicrack.sandbox.settings import (
     build_qemu_config,
 )
 from intellicrack.sandbox.windows import WindowsSandbox, find_sandbox_session_pid
+from intellicrack.sandbox.wsb import WsbMappedFolder, build_wsb_configuration, render_wsb_configuration
 
 from .dialogs_helpers import show_info, show_warning
 from .panels.async_bridge import (
@@ -104,6 +105,8 @@ _SANDBOX_AVAILABILITY_TIMEOUT_SECONDS: Final[int] = 10
 _AVAILABILITY_RESULT_LEN: Final[int] = 2
 _WM_CLOSE: Final[int] = 0x0010
 _GRACEFUL_CLOSE_TIMEOUT_S: Final[float] = 5.0
+_TEST_SANDBOX_FOLDER: Final[str] = r"C:\Shared"
+_TEST_LOGON_COMMAND: Final[str] = 'cmd.exe /c "echo Intellicrack Sandbox Test && timeout /t 5"'
 
 
 def _windows_sandbox_binary_path() -> Path:
@@ -547,38 +550,35 @@ class SandboxTestWorker(QThread):
     def _generate_wsb_config(self) -> str:
         """Generate Windows Sandbox .wsb configuration XML.
 
+        Builds the document with the shared
+        :func:`~intellicrack.sandbox.wsb.build_wsb_configuration` generator that
+        the Windows Sandbox backend also uses, so the test configuration and the
+        production configuration agree on element spelling and both escape
+        caller-supplied text such as a shared-folder path containing ``&``.
+
         Returns:
             str: XML configuration string.
         """
-        config_lines = ["<Configuration>", "  <VGpu>Enable</VGpu>"]
-
-        if self._network_enabled:
-            config_lines.append("  <Networking>Enable</Networking>")
-        else:
-            config_lines.append("  <Networking>Disable</Networking>")
-
-        if self._memory_limit_mb > 0:
-            config_lines.append(f"  <MemoryInMB>{self._memory_limit_mb}</MemoryInMB>")
-
+        mapped_folders: list[WsbMappedFolder] = []
         if self._shared_folder:
             shared_path = Path(self._shared_folder)
             if shared_path.exists():
-                config_lines.extend((
-                    "  <MappedFolders>",
-                    "    <MappedFolder>",
-                    f"      <HostFolder>{shared_path}</HostFolder>",
-                    "      <SandboxFolder>C:\\Shared</SandboxFolder>",
-                    f"      <ReadOnly>{'true' if self._read_only else 'false'}</ReadOnly>",
-                    "    </MappedFolder>",
-                    "  </MappedFolders>",
-                ))
-        config_lines.extend((
-            "  <LogonCommand>",
-            '    <Command>cmd.exe /c "echo Intellicrack Sandbox Test &amp;&amp; timeout /t 5"</Command>',
-            "  </LogonCommand>",
-            "</Configuration>",
-        ))
-        return "\n".join(config_lines)
+                mapped_folders.append(
+                    WsbMappedFolder(
+                        host_folder=shared_path,
+                        sandbox_folder=_TEST_SANDBOX_FOLDER,
+                        read_only=self._read_only,
+                    ),
+                )
+
+        configuration = build_wsb_configuration(
+            logon_command=_TEST_LOGON_COMMAND,
+            mapped_folders=mapped_folders,
+            networking_enabled=self._network_enabled,
+            memory_limit_mb=self._memory_limit_mb,
+            video_enabled=True,
+        )
+        return render_wsb_configuration(configuration).decode("utf-8")
 
     def _terminate_sandbox_process(self) -> None:
         """Stop the launched sandbox client, preferring a graceful window close.
