@@ -121,6 +121,13 @@ _RETURNCODE_SUCCESS = 0
 _VNC_PORT_BASE: Final[int] = 5900
 _VNC_PORT_MAX: Final[int] = 5999
 
+# Windows QEMU builds implement neither -daemonize nor -pidfile, so the VM runs
+# as a foreground child for its whole lifetime. A launch that survives this
+# window is treated as started; one that exits inside it failed.
+_IS_WINDOWS: Final[bool] = platform.system() == "Windows"
+_WINDOWS_LAUNCH_GRACE_S: Final[float] = 3.0
+_ERR_QEMU_EXITED_EARLY = "QEMU exited immediately after launch"
+
 _ERR_NO_FREE_PORTS = "no free ports"
 _ERR_QEMU_PATH = "path not set"
 _ERR_NO_IMAGE_UNSET = (
@@ -1107,24 +1114,82 @@ class QEMUSandbox(SandboxBase):
         return await asyncio.to_thread(_find_existing)
 
     @staticmethod
+    def _hypervisor_present_unelevated() -> bool | None:
+        """Report whether a hypervisor is running, without requiring elevation.
+
+        ``Win32_ComputerSystem.HypervisorPresent`` is readable by an ordinary
+        user, unlike ``Get-WindowsOptionalFeature -Online`` and
+        ``bcdedit /enum``, both of which require an elevated token. It answers
+        the question that actually matters for WHPX - is the hypervisor
+        running right now - rather than whether an optional feature is
+        installed.
+
+        Returns:
+            bool | None: The hypervisor-present flag, or ``None`` when the
+            query could not be answered so the caller can fall back.
+        """
+        pwsh = shutil.which("pwsh") or shutil.which("powershell")
+        if pwsh is None:
+            _logger.debug("whpx_probe_no_powershell")
+            return None
+
+        try:
+            cim_result = _subprocess_run(
+                [
+                    pwsh,
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    "(Get-CimInstance -ClassName Win32_ComputerSystem -ErrorAction Stop).HypervisorPresent",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=_ACCEL_DETECT_TIMEOUT,
+                check=False,
+            )
+        except (OSError, _SubprocessTimeoutExpired) as e:
+            _logger.debug("whpx_hypervisor_present_probe_failed", error=str(e))
+            return None
+
+        answer = cim_result.stdout.strip().lower()
+        if answer == "true":
+            return True
+        if answer == "false":
+            return False
+        _logger.debug("whpx_hypervisor_present_unparsable", output=answer)
+        return None
+
+    @staticmethod
     def _probe_whpx_host_prerequisites() -> bool:
         """Verify that the host OS has Hyper-V Platform (WHPX) actually enabled.
 
         QEMU reports ``whpx`` in ``-accel help`` output whenever the binary was
         compiled with WHPX support, but the feature is useless unless the
-        Hyper-V hypervisor is *running*. This method performs two independent
-        checks that must both pass:
+        Hyper-V hypervisor is *running*.
 
-        1. ``Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform``
-           must report ``Enabled``.
-        2. ``bcdedit /enum {current}`` must show
-           ``hypervisorlaunchtype    Auto`` (not ``Off`` and not absent).
+        The primary signal is ``Win32_ComputerSystem.HypervisorPresent``, which
+        needs no elevation. The original checks -
+        ``Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform``
+        and ``bcdedit /enum {current}`` - both require an elevated token, so on
+        the ordinary unelevated run they failed, left stdout empty, and made
+        this method report "not enabled" on hosts where WHPX works perfectly.
+        They are retained only as a fallback for when the unelevated query
+        cannot answer.
 
         Returns:
-            bool: ``True`` only when both signals confirm WHPX is usable.
+            bool: ``True`` when the host is confirmed able to run WHPX.
         """
         if platform.system() != "Windows":
             return False
+
+        hypervisor_present = QEMUSandbox._hypervisor_present_unelevated()
+        if hypervisor_present is not None:
+            if not hypervisor_present:
+                _logger.debug("whpx_hypervisor_not_running")
+            return hypervisor_present
 
         pwsh = shutil.which("pwsh") or shutil.which("powershell")
         if pwsh is None:
@@ -1681,6 +1746,49 @@ class QEMUSandbox(SandboxBase):
             ),
         ]
 
+    def _shared_folder_args(self) -> list[str]:
+        """Build the argv exposing the host shared folder to the guest.
+
+        The transport is chosen by what the host QEMU actually supports rather
+        than by guest OS. virtio-9p (``-fsdev``/``virtio-9p-pci``) is compiled
+        out of every Windows QEMU build - ``-fsdev`` reports "fsdev support is
+        disabled" - so on Windows the folder is presented as a FAT-formatted
+        virtio block device instead, which both guest types can mount (Linux as
+        ``vfat`` by the ``SHARED`` label, Windows as a drive letter). Where 9p is
+        available it remains the transport because it maps host permissions and
+        handles writes reliably, neither of which QEMU's FAT emulation does.
+
+        Returns:
+            list[str]: The ``-drive`` or ``-fsdev``/``-device`` arguments.
+
+        Raises:
+            ValueError: If the configured guest OS is unsupported.
+        """
+        shared = self._shared_folder
+        if shared is None:
+            return []
+
+        if self._qemu_config.guest_os not in {GuestOS.WINDOWS, GuestOS.LINUX}:
+            _logger.error("qemu_command_build_failed_guest_os", guest_os=str(self._qemu_config.guest_os))
+            raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
+
+        if _IS_WINDOWS or self._qemu_config.guest_os == GuestOS.WINDOWS:
+            # ``label=`` is not a -drive option (raw format rejects it), so the
+            # volume is identified by QEMU's built-in FAT label instead. The
+            # drive is marked ``snapshot=off`` so guest writes target the host
+            # directory rather than a throwaway overlay.
+            return [
+                "-drive",
+                f"file=fat:rw:{shared},format=raw,if=virtio,snapshot=off",
+            ]
+
+        return [
+            "-fsdev",
+            f"local,id=fsdev0,path={shared},security_model=mapped-xattr",
+            "-device",
+            "virtio-9p-pci,fsdev=fsdev0,mount_tag=shared",
+        ]
+
     @staticmethod
     def _anti_evasion_smbios_entries(profile: str) -> list[dict[str, str]]:
         """Return SMBIOS entries for the selected anti-evasion profile.
@@ -1701,18 +1809,18 @@ class QEMUSandbox(SandboxBase):
             return [
                 {"type": "1", "manufacturer": manufacturer, "product": product, "serial": f"SVC{secrets.token_hex(5).upper()}"},
                 {"type": "2", "manufacturer": manufacturer, "product": "0WN7Y6"},
-                {"type": "3", "manufacturer": manufacturer, "chassis-type": "3"},
+                {"type": "3", "manufacturer": manufacturer, "asset": "0WN7Y6"},
             ]
         if profile == "laptop":
             return [
                 {"type": "1", "manufacturer": manufacturer, "product": product, "serial": f"PF{secrets.token_hex(5).upper()}"},
                 {"type": "2", "manufacturer": manufacturer, "product": "21AHS00000"},
-                {"type": "3", "manufacturer": manufacturer, "chassis-type": "10"},
+                {"type": "3", "manufacturer": manufacturer, "asset": "21AHS00000"},
             ]
         return [
             {"type": "1", "manufacturer": manufacturer, "product": product, "serial": f"MXL{secrets.token_hex(5).upper()}"},
             {"type": "2", "manufacturer": manufacturer, "product": "8767"},
-            {"type": "3", "manufacturer": manufacturer, "chassis-type": "3"},
+            {"type": "3", "manufacturer": manufacturer, "asset": "8767"},
         ]
 
     async def _build_qemu_command(self) -> list[str]:
@@ -1729,7 +1837,6 @@ class QEMUSandbox(SandboxBase):
 
         Raises:
             SandboxError: If configuration is invalid.
-            ValueError: If the guest OS type is unsupported.
         """
         if self._qemu_path is None:
             _logger.error("qemu_command_build_failed_no_path")
@@ -1745,14 +1852,29 @@ class QEMUSandbox(SandboxBase):
             msg = f"{_ERR_NO_IMAGE_MISSING}: {image_path}"
             raise SandboxError(msg)
 
-        if self._accelerator in {AcceleratorType.KVM, AcceleratorType.WHPX}:
+        if self._accelerator == AcceleratorType.WHPX:
+            # WHPX cannot virtualize the feature set of -cpu host or -cpu max
+            # (the guest triple-faults into "Unexpected VP exit code 4" during
+            # early boot). qemu64 is the richest base model WHPX accepts, and it
+            # still honours the anti-evasion masks.
+            cpu_arg = "qemu64,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
+        elif self._accelerator == AcceleratorType.KVM:
             cpu_arg = "host,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
         else:
             cpu_arg = "max,hv-vendor-id=AuthenticAMD,hypervisor=off"
 
+        # WHPX cannot service an in-kernel or split IRQ chip: with the q35
+        # default it raises "Unexpected VP exit code 4" / "injection failed"
+        # the moment the guest takes an interrupt. kernel-irqchip=off routes
+        # interrupt handling through userspace, which is the only mode WHPX
+        # supports.
+        machine_arg = f"q35,accel={self._accelerator.value}"
+        if self._accelerator == AcceleratorType.WHPX:
+            machine_arg += ",kernel-irqchip=off"
+
         cmd: list[str] = [
             str(self._qemu_path),
-            *["-machine", f"q35,accel={self._accelerator.value}"],
+            *["-machine", machine_arg],
             "-cpu",
             cpu_arg,
             *["-smp", f"cores={self._qemu_config.cpu_cores}"],
@@ -1788,21 +1910,7 @@ class QEMUSandbox(SandboxBase):
         netdev += f",hostfwd=tcp::{agent_port}-:4445"
 
         if self._shared_folder is not None:
-            if self._qemu_config.guest_os == GuestOS.WINDOWS:
-                cmd.extend([
-                    "-drive",
-                    f"file=fat:rw:{self._shared_folder},format=raw,if=virtio,label=SHARED",
-                ])
-            elif self._qemu_config.guest_os == GuestOS.LINUX:
-                cmd.extend([
-                    "-fsdev",
-                    f"local,id=fsdev0,path={self._shared_folder},security_model=mapped-xattr",
-                    "-device",
-                    "virtio-9p-pci,fsdev=fsdev0,mount_tag=shared",
-                ])
-            else:
-                _logger.error("qemu_command_build_failed_guest_os", guest_os=str(self._qemu_config.guest_os))
-                raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
+            cmd.extend(self._shared_folder_args())
 
         cmd.extend([
             "-netdev",
@@ -1821,11 +1929,14 @@ class QEMUSandbox(SandboxBase):
         if self._qemu_config.snapshot_name:
             cmd.extend(["-loadvm", self._qemu_config.snapshot_name])
 
-        if self._temp_dir is not None:
-            self._pidfile_path = self._temp_dir / "qemu.pid"
-            cmd.extend(["-pidfile", str(self._pidfile_path)])
-
-        cmd.append("-daemonize")
+        # Windows QEMU implements neither option: -daemonize is rejected outright
+        # ("invalid option") and -pidfile never produces a file, so the VM is
+        # tracked through the live child process instead.
+        if not _IS_WINDOWS:
+            if self._temp_dir is not None:
+                self._pidfile_path = self._temp_dir / "qemu.pid"
+                cmd.extend(["-pidfile", str(self._pidfile_path)])
+            cmd.append("-daemonize")
 
         self._qemu_config = QEMUConfig(
             guest_os=self._qemu_config.guest_os,
@@ -1910,9 +2021,16 @@ class QEMUSandbox(SandboxBase):
         await asyncio.to_thread((self._shared_folder / "monitor").mkdir, exist_ok=True)
 
     async def _spawn_qemu_process(self) -> None:
-        """Build the QEMU command line and run the launcher subprocess to completion.
+        """Build the QEMU command line and launch the virtual machine.
 
-        QEMU itself daemonizes by writing a PID file; the launcher process exits once the VM is running.
+        On platforms whose QEMU supports ``-daemonize`` the launcher exits once
+        the VM is running and its PID is read back from the PID file. Windows
+        QEMU supports neither option, so there the VM is a long-lived
+        foreground child that must not be waited on; it is retained on
+        :attr:`process` and its PID is the sandbox's PID.
+
+        Raises:
+            SandboxError: If QEMU exited instead of staying up.
         """
         cmd = await self._build_qemu_command()
         _logger.info("qemu_starting", command=" ".join(cmd))
@@ -1924,12 +2042,31 @@ class QEMUSandbox(SandboxBase):
             stderr=asyncio.subprocess.PIPE,
         )
 
-        _, stderr = await asyncio.wait_for(
-            process.communicate(),
-            timeout=_PROCESS_COMMUNICATE_TIMEOUT,
-        )
+        if not _IS_WINDOWS:
+            _, stderr = await asyncio.wait_for(
+                process.communicate(),
+                timeout=_PROCESS_COMMUNICATE_TIMEOUT,
+            )
+            self._check_qemu_started(process.returncode, stderr)
+            return
 
-        self._check_qemu_started(process.returncode, stderr)
+        self.process = process
+        try:
+            await asyncio.wait_for(process.wait(), timeout=_WINDOWS_LAUNCH_GRACE_S)
+        except TimeoutError:
+            _logger.info("qemu_running_foreground", pid=process.pid)
+            return
+
+        stderr_bytes = await process.stderr.read() if process.stderr is not None else b""
+        self._check_qemu_started(process.returncode, stderr_bytes)
+        # A zero exit is still a failed launch here: the VM was supposed to stay up.
+        _logger.error(
+            "qemu_exited_immediately",
+            returncode=process.returncode,
+            error=stderr_bytes.decode(errors="replace").strip(),
+        )
+        self.process = None
+        raise SandboxError(_ERR_QEMU_EXITED_EARLY)
 
     @staticmethod
     async def _read_pidfile_once(pidfile_path: Path) -> int | None:
@@ -1954,12 +2091,19 @@ class QEMUSandbox(SandboxBase):
             return None
 
     async def _resolve_qemu_pid(self) -> int | None:
-        """Poll the QEMU PID file with retry until a PID is read or attempts are exhausted.
+        """Determine the running QEMU process's PID.
+
+        Where QEMU daemonizes, the PID is polled out of the PID file it writes.
+        On Windows neither mechanism exists, so the PID is taken directly from
+        the foreground child retained by :meth:`_spawn_qemu_process` - which is
+        also more reliable, since it needs no file round-trip.
 
         Returns:
-            int | None: The QEMU PID once the file is parseable, or ``None``
-            if no PID file is configured or every attempt fails.
+            int | None: The QEMU PID, or ``None`` if it could not be resolved.
         """
+        if _IS_WINDOWS:
+            return self.process.pid if self.process is not None else None
+
         if self._pidfile_path is None:
             return None
 
@@ -2070,6 +2214,8 @@ class QEMUSandbox(SandboxBase):
             process_manager.unregister_external_pid(self._qemu_pid)
             self._qemu_pid = None
 
+        await self._reap_foreground_qemu()
+
         await self._cleanup()
 
         self._active_captures.clear()
@@ -2077,6 +2223,32 @@ class QEMUSandbox(SandboxBase):
         self.state.pid = None
         self._vnc_port = None
         _logger.info("qemu_sandbox_stopped", state=self.state.status)
+
+    async def _reap_foreground_qemu(self) -> None:
+        """Ensure the foreground QEMU child is gone and its handle released.
+
+        A QMP ``quit`` normally ends the process on its own, so this waits
+        briefly for that to land and only kills the child when it does not.
+        Without it the Windows VM would outlive the sandbox, because there is
+        no daemonized process for the PID-based teardown to act on.
+        """
+        process = self.process
+        if process is None:
+            return
+
+        if process.returncode is None:
+            try:
+                await asyncio.wait_for(process.wait(), timeout=_WINDOWS_LAUNCH_GRACE_S)
+            except TimeoutError:
+                _logger.warning("qemu_foreground_kill_required", pid=process.pid)
+                try:
+                    process.kill()
+                except ProcessLookupError:
+                    _logger.debug("qemu_foreground_already_gone", pid=process.pid)
+                else:
+                    await process.wait()
+
+        self.process = None
 
     async def stop(self) -> None:
         """Stop the QEMU virtual machine.

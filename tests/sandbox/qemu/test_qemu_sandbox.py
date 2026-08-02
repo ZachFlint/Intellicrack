@@ -1112,11 +1112,13 @@ class TestF0022F0029AntiEvasion:
         also drives the real ``_build_qemu_command`` with a laptop launch config
         and asserts the laptop identity strings appear in the ``-smbios`` argv:
         manufacturer ``Lenovo``, product ``ThinkPad T14 Gen 3``, the type-2
-        board product ``21AHS00000`` and the type-3 ``chassis-type=10`` (laptop
-        chassis per the SMBIOS spec). The default chassis-type ``3`` and HP
-        vendor must be absent. These literals are the documented laptop identity
-        (independent oracle), so confusing laptop with default/workstation trips
-        the gate.
+        board product ``21AHS00000`` and the type-3 ``asset=21AHS00000``. The
+        default type-3 asset ``8767`` and HP vendor must be absent. (SMBIOS
+        type-3 exposes no ``chassis-type`` parameter in QEMU - passing one is
+        rejected outright, S17-D19 - so the laptop chassis is distinguished by
+        its asset tag instead.) These literals are the documented laptop
+        identity (independent oracle), so confusing laptop with
+        default/workstation trips the gate.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -1149,9 +1151,14 @@ class TestF0022F0029AntiEvasion:
         assert "product=21AHS00000" in joined, (
             f"laptop profile must emit the laptop board product 21AHS00000; argv smbios entries were {smbios_values!r}"
         )
-        assert "chassis-type=10" in joined, f"laptop profile must emit laptop chassis-type=10; argv smbios entries were {smbios_values!r}"
-        assert "chassis-type=3" not in joined, (
-            f"laptop profile must not emit the desktop chassis-type=3; argv smbios entries were {smbios_values!r}"
+        assert "asset=21AHS00000" in joined, (
+            f"laptop profile must emit the laptop type-3 asset tag; argv smbios entries were {smbios_values!r}"
+        )
+        assert "asset=8767" not in joined, (
+            f"laptop profile must not emit the default desktop asset tag; argv smbios entries were {smbios_values!r}"
+        )
+        assert "chassis-type" not in joined, (
+            f"chassis-type is not a valid SMBIOS type-3 parameter and must never be emitted; argv smbios entries were {smbios_values!r}"
         )
         assert "manufacturer=HP" not in joined, (
             f"default HP vendor must not appear for laptop profile; argv smbios entries were {smbios_values!r}"
