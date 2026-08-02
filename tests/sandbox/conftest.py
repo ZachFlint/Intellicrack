@@ -188,7 +188,7 @@ class InMemorySandbox(SandboxBase):
 
     @property
     def vnc_port(self) -> int | None:
-        """Get the VNC port.
+        """VNC port.
 
         Returns:
             int | None: Always 5900 for testing.
@@ -551,7 +551,7 @@ class LocalProcessSandbox(SandboxBase):
 
     @property
     def workdir(self) -> Path:
-        """Return the sandbox work directory.
+        """Sandbox work directory.
 
         Returns:
             Path: The active work directory.
@@ -770,7 +770,7 @@ class StubInstance:
 
     @property
     def state(self) -> SandboxState:
-        """Get sandbox state.
+        """Sandbox state.
 
         Returns:
             SandboxState: The sandbox's internal state object.
@@ -798,7 +798,7 @@ class StubManager:
 
     @property
     def instances(self) -> list[StubInstance]:
-        """Get all instances.
+        """All instances.
 
         Returns:
             list[StubInstance]: List of stub instances.
@@ -807,7 +807,7 @@ class StubManager:
 
     @property
     def active_count(self) -> int:
-        """Get count of running instances.
+        """Count of running instances.
 
         Returns:
             int: Number of running sandboxes.
@@ -873,6 +873,42 @@ class StubManager:
             raise SandboxError(msg)
         inst = self._instances.pop(instance_id)
         await inst.sandbox.stop()
+
+    async def restart(
+        self,
+        instance_id: str,
+        config: SandboxConfig | None = None,
+        qemu_config: object = None,
+    ) -> StubInstance:
+        """Replace an instance with a fresh one of the same type.
+
+        Mirrors ``SandboxManager.restart``: the original is torn down first, so
+        it is gone in every outcome, and the replacement is a distinct instance.
+
+        Args:
+            instance_id: Identifier of the instance to replace.
+            config: Optional configuration for the replacement.
+            qemu_config: Optional QEMU config for the replacement.
+
+        Returns:
+            StubInstance: The replacement instance.
+
+        Raises:
+            SandboxError: If the instance is not found.
+        """
+        existing = self._instances.get(instance_id)
+        if existing is None:
+            msg = f"Instance not found: {instance_id}"
+            raise SandboxError(msg)
+        sandbox_type = existing.sandbox_type
+        binary_path = existing.binary_path
+        await self.destroy(instance_id)
+        return await self.create(
+            sandbox_type=sandbox_type,
+            config=config,
+            binary_path=binary_path,
+            qemu_config=qemu_config,
+        )
 
     async def destroy_all(self) -> None:
         """Destroy all instances."""

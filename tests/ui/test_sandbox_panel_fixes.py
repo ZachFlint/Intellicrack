@@ -124,8 +124,14 @@ class TestSandboxControlState:
 
     @staticmethod
     def test_set_controls_active_enables_buttons() -> None:
-        """Verify _set_sandbox_controls_active(active=True) enables sandbox buttons."""
+        """Verify _set_sandbox_controls_active(active=True) enables sandbox buttons.
+
+        The snapshot controls are asserted against the QEMU backend because the
+        Windows backend does not implement snapshots at all (S17-D10), so they
+        stay gated out there.
+        """
         panel = SandboxPanel()
+        panel.sandbox_type_combo.setCurrentText("QEMU")
         panel._set_sandbox_controls_active(active=True)
 
         assert not panel.create_btn.isEnabled()
@@ -134,6 +140,18 @@ class TestSandboxControlState:
         assert panel._run_btn.isEnabled()
         assert panel.snapshot_btn.isEnabled()
         assert panel.restore_btn.isEnabled()
+
+    @staticmethod
+    def test_set_controls_active_keeps_snapshots_gated_on_windows() -> None:
+        """Verify the Windows backend leaves the snapshot controls disabled (S17-D10)."""
+        panel = SandboxPanel()
+        panel.sandbox_type_combo.setCurrentText("Windows Sandbox")
+        panel._set_sandbox_controls_active(active=True)
+
+        assert panel.destroy_btn.isEnabled()
+        assert panel._run_btn.isEnabled()
+        assert not panel.snapshot_btn.isEnabled()
+        assert not panel.restore_btn.isEnabled()
 
     @staticmethod
     def test_set_controls_inactive_disables_buttons() -> None:

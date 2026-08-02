@@ -80,7 +80,7 @@ class SandboxInstance:
             binary_path: Path to the binary being analyzed in this sandbox.
         """
         self.id = str(uuid4())
-        self.sandbox_type = sandbox_type
+        self.sandbox_type: SandboxType = sandbox_type
         self.sandbox = sandbox
         self.created_at = datetime.now(UTC)
         self.last_used = datetime.now(UTC)
@@ -96,7 +96,7 @@ class SandboxInstance:
 
     @property
     def state(self) -> SandboxState:
-        """Get sandbox state.
+        """Current sandbox state.
 
         Returns:
             SandboxState: Current sandbox state.
@@ -140,7 +140,7 @@ class SandboxManager:
 
     @property
     def instances(self) -> list[SandboxInstance]:
-        """Get all managed instances.
+        """All managed instances.
 
         Returns:
             list[SandboxInstance]: List of sandbox instances.
@@ -149,7 +149,7 @@ class SandboxManager:
 
     @property
     def active_count(self) -> int:
-        """Get count of running instances.
+        """Number of running instances.
 
         Returns:
             int: Number of running sandboxes.
@@ -165,6 +165,35 @@ class SandboxManager:
         """
         return self._availability_cache
 
+    def _build_sandbox(
+        self,
+        sandbox_type: SandboxType,
+        config: SandboxConfig | None = None,
+        qemu_config: QEMUConfig | None = None,
+    ) -> SandboxBase:
+        """Construct the backend implementation for one sandbox type.
+
+        Single point of truth for mapping a sandbox type onto a concrete
+        backend class, shared by availability probing and instance creation so
+        the two can never drift apart.
+
+        Args:
+            sandbox_type: The sandbox type to construct.
+            config: Generic sandbox configuration handed to the backend. When
+                omitted the manager's default configuration is used.
+            qemu_config: QEMU-specific configuration. Consumed only by the QEMU
+                backend; the Windows backend takes no such settings.
+
+        Returns:
+            SandboxBase: A freshly constructed, unstarted backend instance.
+        """
+        effective_config = config or self._default_config
+        if sandbox_type == "windows":
+            return WindowsSandbox(effective_config)
+        if sandbox_type == "qemu":
+            return QEMUSandbox(effective_config, qemu_config)
+        assert_never(sandbox_type)
+
     async def _probe_type(self, sandbox_type: SandboxType) -> bool:
         """Execute a live availability check for one sandbox type without touching the cache.
 
@@ -178,13 +207,7 @@ class SandboxManager:
         Returns:
             bool: True if the sandbox type is currently available.
         """
-        sandbox: SandboxBase
-        if sandbox_type == "windows":
-            sandbox = WindowsSandbox(self._default_config)
-        elif sandbox_type == "qemu":
-            sandbox = QEMUSandbox(self._default_config, None)
-        else:
-            assert_never(sandbox_type)
+        sandbox = self._build_sandbox(sandbox_type)
 
         available = await sandbox.is_available()
         _logger.debug(
@@ -294,15 +317,7 @@ class SandboxManager:
                     _logger.error("sandbox_create_capacity_exhausted", max_instances=self._max_instances)
                     raise SandboxError(error_message)
 
-            effective_config = config or self._default_config
-
-            sandbox: SandboxBase
-            if sandbox_type == "windows":
-                sandbox = WindowsSandbox(effective_config)
-            elif sandbox_type == "qemu":
-                sandbox = QEMUSandbox(effective_config, qemu_config)
-            else:
-                assert_never(sandbox_type)
+            sandbox = self._build_sandbox(sandbox_type, config, qemu_config)
 
             if not await sandbox.is_available():
                 error_message = f"Sandbox type not available: {sandbox_type}"
@@ -389,6 +404,76 @@ class SandboxManager:
 
         del self._instances[instance_id]
         _logger.info("sandbox_instance_destroyed", instance_id=instance_id)
+
+    async def restart(
+        self,
+        instance_id: str,
+        config: SandboxConfig | None = None,
+        qemu_config: QEMUConfig | None = None,
+    ) -> SandboxInstance:
+        """Tear a sandbox instance down and bring an equivalent one back up.
+
+        The teardown and the recreate are owned by the manager so callers do not
+        have to chain :meth:`destroy` and :meth:`create` themselves and reinvent
+        the failure handling for the window between the two. The replacement
+        reuses the original instance's sandbox type and associated binary path,
+        so the only observable difference is the new instance identifier.
+
+        Failure semantics are total: once this call returns the original
+        instance is gone in every outcome. If the recreate step fails, no
+        replacement is registered either, so no caller can be left holding an
+        identifier that maps to a torn-down sandbox.
+
+        Args:
+            instance_id: Identifier of the instance to restart.
+            config: Optional configuration override applied to the replacement.
+                When omitted the manager default configuration is used.
+            qemu_config: Optional QEMU backend configuration for the
+                replacement. A QEMU sandbox needs it to receive its disk image;
+                the Windows backend ignores it.
+
+        Returns:
+            SandboxInstance: The freshly created replacement instance.
+
+        Raises:
+            SandboxError: If ``instance_id`` is unknown, or if the replacement
+                could not be created after the original was torn down.
+        """
+        instance = self._instances.get(instance_id)
+        if instance is None:
+            error_message = f"Sandbox instance not found: {instance_id}"
+            _logger.error("sandbox_restart_not_found", instance_id=instance_id)
+            raise SandboxError(error_message)
+
+        sandbox_type = instance.sandbox_type
+        binary_path = instance.binary_path
+        _logger.info("sandbox_restart_started", instance_id=instance_id, sandbox_type=sandbox_type)
+
+        await self.destroy(instance_id)
+
+        try:
+            replacement = await self.create(
+                sandbox_type=sandbox_type,
+                config=config,
+                binary_path=binary_path,
+                qemu_config=qemu_config,
+                auto_start=True,
+            )
+        except SandboxError:
+            _logger.warning(
+                "sandbox_restart_recreate_failed",
+                instance_id=instance_id,
+                sandbox_type=sandbox_type,
+            )
+            raise
+
+        _logger.info(
+            "sandbox_restarted",
+            previous_instance_id=instance_id,
+            instance_id=replacement.id,
+            sandbox_type=sandbox_type,
+        )
+        return replacement
 
     async def destroy_all(self) -> None:
         """Destroy all sandbox instances."""
