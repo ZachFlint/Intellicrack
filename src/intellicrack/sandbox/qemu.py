@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal
 import psutil
 
 from intellicrack.core._optional_imports import require_yara
+from intellicrack.core.config import get_project_root
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType
 from intellicrack.core.subprocess_compat import (
@@ -117,6 +118,8 @@ _ERR_LOGS_STABLE_POLL_DELAY = "poll_delay must be positive"
 _ERR_LOGS_STABLE_STABLE_POLLS = "stable_polls must be at least 1"
 _ERR_LOGS_STABLE_MAX_WAIT = "max_wait must be non-negative"
 _RETURNCODE_SUCCESS = 0
+_VNC_PORT_BASE: Final[int] = 5900
+_VNC_PORT_MAX: Final[int] = 5999
 
 _ERR_NO_FREE_PORTS = "no free ports"
 _ERR_QEMU_PATH = "path not set"
@@ -917,13 +920,14 @@ class QEMUSandbox(SandboxBase):
 
     Attributes:
         QEMU_EXE: QEMU executable name.
-        TOOLS_PATH: Default path to QEMU installation.
+        TOOLS_PATH: Bundled QEMU installation directory, resolved from the
+            installed project root rather than a fixed absolute location.
         GUEST_SHARED_PATH_WINDOWS: Shared path on Windows guest.
         GUEST_SHARED_PATH_LINUX: Shared path on Linux guest.
     """
 
     QEMU_EXE: Final[str] = "qemu-system-x86_64"
-    TOOLS_PATH: Final[Path] = Path("D:/Intellicrack/tools/qemu")
+    TOOLS_PATH: Final[Path] = get_project_root() / "tools" / "qemu"
     GUEST_SHARED_PATH_WINDOWS: Final[str] = "Z:\\"
     GUEST_SHARED_PATH_LINUX: Final[str] = "/mnt/shared"
 
@@ -962,7 +966,7 @@ class QEMUSandbox(SandboxBase):
 
     @property
     def qemu_config(self) -> QEMUConfig:
-        """Get QEMU configuration.
+        """QEMU configuration backing this sandbox.
 
         Returns:
             QEMUConfig: Current QEMU configuration.
@@ -971,7 +975,7 @@ class QEMUSandbox(SandboxBase):
 
     @property
     def vnc_port(self) -> int | None:
-        """Get the VNC port if VNC display is active.
+        """VNC port when the VNC display is active.
 
         Returns:
             int | None: VNC port number, or None if VNC is not enabled.
@@ -980,7 +984,7 @@ class QEMUSandbox(SandboxBase):
 
     @property
     def qmp(self) -> QMPClient | None:
-        """Get the QMP client, or None if not connected.
+        """QMP client, or None if not connected.
 
         Returns:
             QMPClient | None: Active QMP client, or None if the VM is not running.
@@ -989,7 +993,7 @@ class QEMUSandbox(SandboxBase):
 
     @property
     def agent(self) -> GuestAgentClient | None:
-        """Get the guest agent client, or None if not connected.
+        """Guest agent client, or None if not connected.
 
         Returns:
             GuestAgentClient | None: Active guest agent client, or None if the agent is not connected.
@@ -999,7 +1003,10 @@ class QEMUSandbox(SandboxBase):
     def enable_vnc_display(self) -> None:
         """Switch display mode to VNC for GUI embedding.
 
-        This must be called before ``start()`` to take effect. If the sandbox is already running, restart is required.
+        This must be called before ``start()`` to take effect. If the sandbox is already running, restart is required. A free VNC port is
+        chosen immediately so :attr:`vnc_port` is usable before the guest boots, and ``start()`` launches QEMU on that same port whenever
+        it is still free. Nothing binds the port in the meantime, so ``start()`` re-probes it and draws a replacement if something else
+        claimed it first.
         """
         self._qemu_config = QEMUConfig(
             guest_os=self._qemu_config.guest_os,
@@ -1016,6 +1023,7 @@ class QEMUSandbox(SandboxBase):
             anti_evasion_profile=self._qemu_config.anti_evasion_profile,
             agent_connect_timeout=self._qemu_config.agent_connect_timeout,
         )
+        self._vnc_port = self._get_free_port(_VNC_PORT_BASE, _VNC_PORT_MAX)
         _logger.info("vnc_display_enabled", vnc_port=self.vnc_port)
 
     def invalidate_accelerator_cache(self) -> None:
@@ -1337,8 +1345,45 @@ class QEMUSandbox(SandboxBase):
         _logger.info("using_tcg_software_emulation", accelerator="tcg")
         return AcceleratorType.TCG
 
+    def _resolve_vnc_port(self) -> int:
+        """Resolve the VNC port QEMU should bind, re-probing any earlier choice.
+
+        :meth:`enable_vnc_display` picks a port so :attr:`vnc_port` is readable
+        before the guest boots, but nothing binds it in the meantime and the
+        whole ``start()`` prologue runs in between. The earlier choice is
+        therefore re-probed here and replaced if something else took it, rather
+        than handed to QEMU to fail on.
+
+        Returns:
+            int: A port that was free at the moment the command line was built.
+        """
+        reserved = self._vnc_port
+        if reserved is not None and self._port_is_free(reserved):
+            return reserved
+        replacement = self._get_free_port(_VNC_PORT_BASE, _VNC_PORT_MAX)
+        if reserved is not None:
+            _logger.warning(
+                "vnc_port_reassigned",
+                previous_vnc_port=reserved,
+                vnc_port=replacement,
+            )
+        return replacement
+
     @staticmethod
-    def _get_free_port(start: int = 10000, end: int = 60000) -> int:
+    def _port_is_free(port: int) -> bool:
+        """Probe whether a TCP port currently has no listener.
+
+        Args:
+            port: Loopback port to probe.
+
+        Returns:
+            bool: True when nothing is listening on the port.
+        """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            return sock.connect_ex(("127.0.0.1", port)) != 0
+
+    @classmethod
+    def _get_free_port(cls, start: int = 10000, end: int = 60000) -> int:
         """Find an available port.
 
         Args:
@@ -1353,9 +1398,8 @@ class QEMUSandbox(SandboxBase):
         """
         for _ in range(100):
             port = secrets.randbelow(end - start) + start
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                if sock.connect_ex(("127.0.0.1", port)) != 0:
-                    return port
+            if cls._port_is_free(port):
+                return port
         _logger.error("free_port_search_exhausted", port_start=start, port_end=end)
         raise SandboxError(_ERR_NO_FREE_PORTS)
 
@@ -1726,14 +1770,14 @@ class QEMUSandbox(SandboxBase):
         if self._qemu_config.display == "none":
             cmd.extend(["-display", "none"])
         elif self._qemu_config.display == "vnc":
-            vnc_full_port = self._get_free_port(5900, 5999)
-            vnc_display = vnc_full_port - 5900
+            vnc_full_port = self._resolve_vnc_port()
+            vnc_display = vnc_full_port - _VNC_PORT_BASE
             self._vnc_port = vnc_full_port
             cmd.extend(["-vnc", f":{vnc_display}"])
         elif self._qemu_config.display == "sdl":
             cmd.extend(["-display", "sdl"])
         elif self._qemu_config.display == "spice":
-            spice_port = self._get_free_port(5900, 5999)
+            spice_port = self._get_free_port(_VNC_PORT_BASE, _VNC_PORT_MAX)
             cmd.extend(["-spice", f"port={spice_port},disable-ticketing=on"])
 
         ssh_port = self._qemu_config.ssh_port or self._get_free_port()
