@@ -184,6 +184,7 @@ class TestSandboxCreateConfigWiringL3:
         )
         mock_bridge.create.assert_called_once_with(
             sandbox_type="windows",
+            qemu_config=None,
             timeout_seconds=9999,
             network_enabled=True,
             memory_limit_mb=65536,
@@ -216,6 +217,7 @@ class TestSandboxCreateConfigWiringL3:
         assert dispatch_args
         mock_bridge.create.assert_called_once_with(
             sandbox_type="windows",
+            qemu_config=None,
             timeout_seconds=300,
             network_enabled=False,
             memory_limit_mb=2048,

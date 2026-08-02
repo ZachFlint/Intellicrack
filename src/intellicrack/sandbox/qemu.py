@@ -120,7 +120,10 @@ _RETURNCODE_SUCCESS = 0
 
 _ERR_NO_FREE_PORTS = "no free ports"
 _ERR_QEMU_PATH = "path not set"
-_ERR_NO_IMAGE = "image not found"
+_ERR_NO_IMAGE_UNSET = (
+    "No QEMU disk image is configured. Set a qcow2 disk image under Sandbox Settings -> QEMU Backend before creating a QEMU sandbox."
+)
+_ERR_NO_IMAGE_MISSING = "Configured QEMU disk image does not exist"
 _ERR_QEMU_NA = "QEMU not available"
 _ERR_QMP_CONNECT = "QMP connect failed"
 _ERR_NOT_RUNNING = "not running"
@@ -1688,12 +1691,15 @@ class QEMUSandbox(SandboxBase):
             _logger.error("qemu_command_build_failed_no_path")
             raise SandboxError(_ERR_QEMU_PATH)
 
-        if self._qemu_config.image_path is None or not await asyncio.to_thread(self._qemu_config.image_path.exists):
-            _logger.error(
-                "qemu_command_build_failed_no_image",
-                image_path=str(self._qemu_config.image_path) if self._qemu_config.image_path else None,
-            )
-            raise SandboxError(_ERR_NO_IMAGE)
+        image_path = self._qemu_config.image_path
+        if image_path is None:
+            _logger.error("qemu_command_build_failed_no_image", image_path=None)
+            raise SandboxError(_ERR_NO_IMAGE_UNSET)
+
+        if not await asyncio.to_thread(image_path.exists):
+            _logger.error("qemu_command_build_failed_no_image", image_path=str(image_path))
+            msg = f"{_ERR_NO_IMAGE_MISSING}: {image_path}"
+            raise SandboxError(msg)
 
         if self._accelerator in {AcceleratorType.KVM, AcceleratorType.WHPX}:
             cpu_arg = "host,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"

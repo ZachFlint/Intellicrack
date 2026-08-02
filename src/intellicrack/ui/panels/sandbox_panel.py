@@ -38,6 +38,7 @@ from PyQt6.QtWidgets import (
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.logging import get_logger
 from intellicrack.sandbox.qemu import QEMUSandbox
+from intellicrack.sandbox.settings import load_qemu_config
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine_logged
 from intellicrack.ui.panels.base_panel import AnalysisPanelBase, ToolMenuEntry
 from intellicrack.ui.panels.qt_compat import (
@@ -52,6 +53,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 if TYPE_CHECKING:
     from intellicrack.sandbox.base import ExecutionReport, SandboxBase
     from intellicrack.sandbox.manager import SandboxManager, SandboxType
+    from intellicrack.sandbox.qemu import QEMUConfig
 
 _logger = get_logger(__name__)
 
@@ -828,6 +830,26 @@ class SandboxPanel(AnalysisPanelBase):
             "memory_limit_mb": self._memory_limit_spin.value(),
         }
 
+    @staticmethod
+    def _qemu_create_config(sandbox_type: SandboxType) -> QEMUConfig | None:
+        """Build the QEMU backend configuration for a sandbox creation request.
+
+        The generic ``SandboxConfig`` built from the toolbar cannot express the
+        qcow2 disk image QEMU needs to boot, so it is read from the persisted
+        sandbox settings written by the configuration dialog. Without this the
+        backend receives no image and the QEMU sandbox can never start.
+
+        Args:
+            sandbox_type: Sandbox type selected in the toolbar.
+
+        Returns:
+            QEMUConfig | None: Configuration loaded from the persisted sandbox
+            settings for the ``"qemu"`` type, or None for other backends.
+        """
+        if sandbox_type != "qemu":
+            return None
+        return load_qemu_config()
+
     def _on_create(self) -> None:
         """Create a new sandbox environment."""
         if self._bridge is None:
@@ -837,10 +859,11 @@ class SandboxPanel(AnalysisPanelBase):
 
         sandbox_type = self._selected_sandbox_type()
         config = self._sandbox_create_config()
+        qemu_config = self._qemu_create_config(sandbox_type)
         _logger.debug("sandbox_create_via_bridge", sandbox_type=sandbox_type, **config)
         self.create_btn.setEnabled(False)
         run_bridge_coroutine_logged(
-            self._bridge.create(sandbox_type=sandbox_type, **config),
+            self._bridge.create(sandbox_type=sandbox_type, qemu_config=qemu_config, **config),
             on_success=self._on_bridge_create_success,
             on_error=self._on_create_error,
             parent=self,
@@ -971,8 +994,9 @@ class SandboxPanel(AnalysisPanelBase):
         self._restart_pending_destroy = True
         sandbox_type = self._selected_sandbox_type()
         config = self._sandbox_create_config()
+        qemu_config = self._qemu_create_config(sandbox_type)
         run_bridge_coroutine_logged(
-            self._bridge.create(sandbox_type=sandbox_type, **config),
+            self._bridge.create(sandbox_type=sandbox_type, qemu_config=qemu_config, **config),
             on_success=self._on_restart_create_success,
             on_error=self._on_restart_error,
             parent=self,

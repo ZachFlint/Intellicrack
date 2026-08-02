@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from types import TracebackType
 
-    from intellicrack.sandbox import ExecutionReport
+    from intellicrack.sandbox import ExecutionReport, QEMUConfig
 
 
 _logger = get_logger(__name__)
@@ -1047,6 +1047,7 @@ class SandboxBridge(ToolBridgeBase):
         *,
         network_enabled: bool = False,
         memory_limit_mb: int = 2048,
+        qemu_config: QEMUConfig | None = None,
     ) -> dict[str, Any]:
         """Create a new sandbox instance.
 
@@ -1056,11 +1057,18 @@ class SandboxBridge(ToolBridgeBase):
         orchestrator to spin up the wrong sandbox flavour; validating
         up-front surfaces the mistake to the caller immediately.
 
+        ``qemu_config`` carries the QEMU-specific settings the generic
+        :class:`SandboxConfig` cannot express - most importantly the qcow2
+        disk image. Without it a ``"qemu"`` sandbox has no bootable disk and
+        can never start, so callers creating a QEMU sandbox must supply one.
+
         Args:
             sandbox_type: Type of sandbox (``"windows"`` or ``"qemu"``).
             timeout_seconds: Execution timeout in seconds.
             network_enabled: Whether to enable network access.
             memory_limit_mb: Memory limit in megabytes.
+            qemu_config: QEMU backend configuration forwarded to the manager.
+                Ignored for the ``"windows"`` sandbox type.
 
         Returns:
             dict[str, Any]: Dictionary with instance_id and status.
@@ -1086,6 +1094,7 @@ class SandboxBridge(ToolBridgeBase):
             instance = await manager.create(
                 sandbox_type=sb_type,
                 config=config,
+                qemu_config=qemu_config,
                 auto_start=True,
             )
 
