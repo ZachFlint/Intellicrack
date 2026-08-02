@@ -34,7 +34,6 @@ from intellicrack.core._optional_imports import require_yara
 from intellicrack.core.logging import get_logger, log_sandbox_operation
 from intellicrack.core.process_manager import ProcessManager, ProcessType, pid_is_running
 from intellicrack.core.subprocess_compat import CREATE_NEW_CONSOLE, PIPE, CompletedProcess, Popen
-from intellicrack.core.xml_gen import Element, ElementTree, SubElement, indent
 from intellicrack.sandbox.base import (
     ExecutionReport,
     ExecutionResult,
@@ -57,6 +56,7 @@ from intellicrack.sandbox.log_parsers import (
     parse_resource_log,
     parse_service_log,
 )
+from intellicrack.sandbox.wsb import WsbMappedFolder, build_wsb_configuration, render_wsb_configuration
 
 
 if TYPE_CHECKING:
@@ -268,7 +268,7 @@ class _AntiEvasionProfile:
 
     @property
     def vendor(self) -> str:
-        """Return the Win32_ComputerSystemProduct.Vendor spoofed value.
+        """Spoofed value reported for Win32_ComputerSystemProduct.Vendor.
 
         Returns:
             str: For the built-in profiles this mirrors :attr:`manufacturer`.
@@ -1429,6 +1429,11 @@ class WindowsSandbox(SandboxBase):
     async def _generate_wsb_config(self) -> None:
         """Generate the .wsb configuration file.
 
+        The document itself is built by
+        :func:`~intellicrack.sandbox.wsb.build_wsb_configuration`, which is
+        shared with the configuration dialog's sandbox test so the two cannot
+        drift apart.
+
         Always emits a ``LogonCommand`` that launches the in-guest dispatcher,
         kicks off the monitor fleet, then runs any user-supplied startup
         commands. The dispatcher is the durable channel used by subsequent
@@ -1445,45 +1450,30 @@ class WindowsSandbox(SandboxBase):
             )
             raise SandboxError(_ERR_SANDBOX_PATHS_NOT_INIT)
 
-        config = Element("Configuration")
+        mapped_folders = [
+            WsbMappedFolder(
+                host_folder=self._shared_folder,
+                sandbox_folder=self.SANDBOX_SHARED_PATH,
+                read_only=False,
+            ),
+        ]
+        mapped_folders.extend(
+            WsbMappedFolder(host_folder=host_path, sandbox_folder=sandbox_path, read_only=read_only)
+            for host_path, sandbox_path, read_only in self._config.shared_folders
+        )
 
-        mapped_folders = SubElement(config, "MappedFolders")
-        folder = SubElement(mapped_folders, "MappedFolder")
-        SubElement(folder, "HostFolder").text = str(self._shared_folder)
-        SubElement(folder, "SandboxFolder").text = self.SANDBOX_SHARED_PATH
-        SubElement(folder, "ReadOnly").text = "false"
+        configuration = build_wsb_configuration(
+            logon_command=self._build_logon_command(),
+            mapped_folders=mapped_folders,
+            networking_enabled=self._config.network_enabled,
+            memory_limit_mb=self._config.memory_limit_mb,
+            video_enabled=self._config.video_enabled,
+            audio_enabled=self._config.audio_enabled,
+            clipboard_enabled=self._config.clipboard_enabled,
+            printer_enabled=self._config.printer_enabled,
+        )
 
-        for host_path, sandbox_path, read_only in self._config.shared_folders:
-            folder = SubElement(mapped_folders, "MappedFolder")
-            SubElement(folder, "HostFolder").text = str(host_path)
-            SubElement(folder, "SandboxFolder").text = sandbox_path
-            SubElement(folder, "ReadOnly").text = "true" if read_only else "false"
-
-        networking = "Enable" if self._config.network_enabled else "Disable"
-        SubElement(config, "Networking").text = networking
-
-        if self._config.memory_limit_mb > 0:
-            SubElement(config, "MemoryInMB").text = str(self._config.memory_limit_mb)
-
-        SubElement(config, "vGPU").text = "Enable" if self._config.video_enabled else "Disable"
-        SubElement(config, "AudioInput").text = "Enable" if self._config.audio_enabled else "Disable"
-        SubElement(config, "ClipboardRedirection").text = "Enable" if self._config.clipboard_enabled else "Disable"
-        SubElement(config, "PrinterRedirection").text = "Enable" if self._config.printer_enabled else "Disable"
-
-        logon_command = SubElement(config, "LogonCommand")
-        SubElement(logon_command, "Command").text = self._build_logon_command()
-
-        tree = ElementTree(config)
-        indent(tree, space="  ")
-
-        wsb_path = self._wsb_path
-
-        def _write_config() -> None:
-            """Serialize the generated WSB XML document to ``wsb_path``."""
-            with wsb_path.open("wb") as fh:
-                tree.write(fh, encoding="utf-8", xml_declaration=True)
-
-        await asyncio.to_thread(_write_config)
+        await asyncio.to_thread(self._wsb_path.write_bytes, render_wsb_configuration(configuration))
         _logger.debug("wsb_config_generated", path=str(self._wsb_path))
 
     def _build_logon_command(self) -> str:
