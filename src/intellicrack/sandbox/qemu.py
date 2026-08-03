@@ -11,6 +11,7 @@ binaries.
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import platform
 import secrets
@@ -25,7 +26,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, cast
 
 import psutil
 
@@ -180,6 +181,23 @@ _ERR_QEMU_GA_UNREACHABLE = (
 )
 _ERR_QEMU_GA_EXEC_FAILED = "qemu-guest-agent guest-exec failed to launch the monitor agent script"
 _ERR_QEMU_GA_EXEC_NO_PID = "qemu-guest-agent guest-exec reply did not include a process id"
+_ERR_QEMU_GA_SOCKET_UNREACHABLE = (
+    "qemu-guest-agent channel socket on 127.0.0.1:{port} refused the connection; "
+    "the QEMU chardev backing org.qemu.guest_agent.0 is not listening"
+)
+_ERR_QEMU_GA_SYNC_FAILED = "qemu-guest-agent did not echo the guest-sync-delimiter id; the channel could not be resynchronised"
+_ERR_QEMU_GA_EXEC_STATUS_FAILED = "qemu-guest-agent guest-exec-status reply could not be read"
+_ERR_QEMU_GA_NOT_CONNECTED = "qemu-guest-agent channel not connected"
+_ERR_GUEST_COMMAND_TIMEOUT = "guest command {command} did not exit within {timeout}s"
+_ERR_GUEST_SHARED_MOUNT_POINT = "could not create the shared-folder mount point {path} inside the guest"
+_ERR_GUEST_SHARED_DEVICE_ENUM = "could not enumerate guest block devices while locating the shared volume"
+_ERR_GUEST_SHARED_DEVICE_NOT_FOUND = (
+    "no unmounted {fs_type} block device labelled {label!r} is present in the guest; the FAT-backed shared volume never appeared"
+)
+_ERR_GUEST_SHARED_MOUNT_FAILED = "mounting the shared volume {source} at {mount_point} inside the guest failed"
+_ERR_GUEST_SHARED_LAUNCHER_MISSING = "the shared volume is mounted but the monitor launch script {path} is not present inside the guest"
+_ERR_GUEST_SHARED_DRIVE_ENUM = "could not enumerate guest drive letters while locating the shared volume"
+_ERR_GUEST_SHARED_DRIVE_NOT_FOUND = "no guest drive letter carries {relative}; the FAT-backed shared volume is not visible to the guest"
 _AGENT_CONNECT_TIMEOUT = 30.0
 _AGENT_CONNECT_RETRY_INTERVAL = 2.0
 _READINESS_POLL_INTERVAL = 0.5
@@ -188,8 +206,104 @@ _RESULT_PAYLOAD_SEPARATOR = "|IC_RESULT|"
 _QEMU_GA_PING_TIMEOUT = 90.0
 _QEMU_GA_PING_INTERVAL = 1.0
 _QEMU_GA_EXEC_TIMEOUT = 10.0
-_GUEST_AGENT_LAUNCH_PATH_WINDOWS = "Z:\\monitor\\start_agent.cmd"
-_GUEST_AGENT_LAUNCH_PATH_LINUX = "/mnt/shared/monitor/start_agent.sh"
+_QEMU_GA_CONNECT_TIMEOUT = 30.0
+_QEMU_GA_CONNECT_RETRY_INTERVAL: Final[float] = 1.0
+_QEMU_GA_RESYNC_TIMEOUT: Final[float] = 5.0
+
+# QEMU exposes the guest-agent virtio-serial chardev one port above the
+# Intellicrack agent's hostfwd port; see the -chardev argument built by
+# _build_qemu_command.
+_QGA_CHANNEL_PORT_OFFSET: Final[int] = 1
+
+# A lone 0xFF byte is the qemu-guest-agent parser reset marker: it cannot occur
+# inside valid JSON, so the agent discards whatever partial object a previous
+# client left behind when it sees one.
+_QGA_PARSER_FLUSH_BYTE: Final[bytes] = b"\xff"
+_QGA_SYNC_ID_BITS: Final[int] = 31
+
+# qemu-guest-agent caps each captured stream at GUEST_EXEC_MAX_OUTPUT
+# (16 MiB, ``qga/commands.c``) and base64-encodes stdout and stderr into the
+# same single-line ``guest-exec-status`` reply, so a reply the agent itself
+# considers legal is bounded by two base64 expansions of that cap plus the JSON
+# envelope. asyncio's StreamReader defaults to a 64 KiB line limit, which
+# ordinary captured guest output passes long before the agent's own cap does,
+# and a reader whose limit is exceeded raises a bare ValueError out of
+# readline(). The same limit is applied to the QMP monitor: QMP replies are not
+# bounded either - ``human-monitor-command`` returns whatever text the HMP
+# command produced and ``query-block`` grows with the block topology - and QEMU
+# imposes no line length of its own, so a 64 KiB ceiling would be just as
+# arbitrary there.
+_QGA_STREAM_CAPTURE_LIMIT: Final[int] = 16 * 1024 * 1024
+_JSON_LINE_ENVELOPE_ALLOWANCE: Final[int] = 64 * 1024
+_BASE64_INPUT_GROUP: Final[int] = 3
+_BASE64_OUTPUT_GROUP: Final[int] = 4
+_JSON_CAPTURED_STREAM_COUNT: Final[int] = 2
+_JSON_LINE_LIMIT: Final[int] = (
+    _JSON_CAPTURED_STREAM_COUNT * (((_QGA_STREAM_CAPTURE_LIMIT + _BASE64_INPUT_GROUP - 1) // _BASE64_INPUT_GROUP) * _BASE64_OUTPUT_GROUP)
+    + _JSON_LINE_ENVELOPE_ALLOWANCE
+)
+_ERR_JSON_LINE_TOO_LONG = "peer sent a JSON frame longer than the {limit}-byte channel limit; the stream can no longer be framed"
+
+_GUEST_SHARED_ROOT_WINDOWS: Final[str] = "Z:\\"
+_GUEST_SHARED_ROOT_LINUX: Final[str] = "/mnt/shared"
+_MONITOR_LAUNCH_RELATIVE_WINDOWS: Final[str] = "monitor\\start_agent.cmd"
+_MONITOR_LAUNCH_RELATIVE_LINUX: Final[str] = "monitor/start_agent.sh"
+
+# The guest-side command interpreters a shell command line has to be handed
+# to. The in-guest agents take an executable plus an argument vector and launch
+# it directly - PowerShell's ``& $cmd @cmdArgs`` on Windows, ``subprocess.run``
+# without a shell on Linux - so a line carrying redirections, ``&&`` or a
+# quoted path is only a shell line once one of these runs it.
+_WINDOWS_SHELL: Final[str] = "cmd.exe"
+_WINDOWS_SHELL_COMMAND_FLAG: Final[str] = "/c"
+_LINUX_SHELL: Final[str] = "/bin/bash"
+_LINUX_SHELL_COMMAND_FLAG: Final[str] = "-c"
+
+_SHARED_MOUNT_TAG: Final[str] = "shared"
+_GUEST_VFAT_FS_TYPE: Final[str] = "vfat"
+_GUEST_9P_FS_TYPE: Final[str] = "9p"
+_GUEST_VFAT_MOUNT_OPTIONS: Final[str] = "rw"
+_GUEST_9P_MOUNT_OPTIONS: Final[str] = "trans=virtio,version=9p2000.L,rw"
+_GUEST_BLOCK_DEVICE_COLUMNS: Final[str] = "PATH,FSTYPE,LABEL,MOUNTPOINT"
+_GUEST_BLOCK_DEVICE_MIN_FIELDS: Final[int] = 2
+_GUEST_BLOCK_DEVICE_LABEL_FIELD: Final[int] = 2
+_GUEST_BLOCK_DEVICE_MOUNTPOINT_FIELD: Final[int] = 3
+
+# QEMU's vvfat driver writes this exact 11-byte FAT volume label into both the
+# synthesised boot sector and the root-directory volume-label entry. The driver
+# does accept a ``label`` option in its full block-device form
+# (``-drive driver=vvfat,label=...``), but the ``file=fat:rw:<dir>`` shorthand
+# emitted by _shared_folder_args cannot carry one - everything after the
+# ``fat:rw:`` prefix is taken as the directory path - so every drive built here
+# ends up with vvfat's built-in default. It is what distinguishes the share
+# from the guest's own vfat partitions - a Debian cloud image's EFI System
+# Partition is vfat too, and is enumerated first - but it does not distinguish
+# the share from a second ``file=fat:`` drive, which carries the very same
+# label; only the guest's live mount table tells those two apart.
+_QEMU_VVFAT_VOLUME_LABEL: Final[str] = "QEMU VVFAT"
+
+# ``lsblk --raw`` separates columns with a single space and hex-escapes any
+# character that could be mistaken for that separator.
+_LSBLK_ESCAPE_PREFIX: Final[str] = "\\x"
+_LSBLK_ESCAPE_LENGTH: Final[int] = 4
+_LSBLK_ESCAPE_BASE: Final[int] = 16
+
+_GUEST_COMMAND_TIMEOUT: Final[float] = 60.0
+_GUEST_COMMAND_POLL_INTERVAL: Final[float] = 0.25
+_WINDOWS_SYSTEM_DRIVE: Final[str] = "C:"
+_WINDOWS_SYSTEM_ROOT: Final[str] = "C:\\Windows"
+_WINDOWS_DRIVE_SUFFIX: Final[str] = ":"
+_WINDOWS_SYSTEM_DRIVE_VARIABLE: Final[str] = "SystemDrive"
+_WINDOWS_SYSTEM_ROOT_VARIABLE: Final[str] = "SystemRoot"
+# Directories below %SystemDrive% and %SystemRoot% whose newly created files
+# the in-guest monitor mirrors into ``<share>\output\dropped``. The agent
+# script builds the same three paths from the same two variables, so the host
+# scan and the guest mirror always name one set of directories.
+_WINDOWS_DROP_WATCH_BELOW_SYSTEM_DRIVE: Final[tuple[str, ...]] = (
+    "Users\\Public\\Downloads",
+    "Users\\Default\\AppData\\Local\\Temp",
+)
+_WINDOWS_DROP_WATCH_BELOW_SYSTEM_ROOT: Final[tuple[str, ...]] = ("Temp",)
 _WINDOWS_REG_EXE_PATH = "C:\\Windows\\System32\\reg.exe"
 WINDOWS_REG_EXE_PATH: str = _WINDOWS_REG_EXE_PATH
 
@@ -383,6 +497,12 @@ class QEMUConfig:
         agent_connect_timeout: Total timeout in seconds that ``start()`` will
             wait for the in-guest agent TCP socket to become reachable before
             failing the sandbox launch.
+        guest_agent_ready_timeout: Total timeout in seconds allowed for
+            qemu-guest-agent to become usable: opening the
+            ``org.qemu.guest_agent.0`` channel, resynchronising it, and getting
+            an answer to ``guest-ping``. The whole budget is available to a
+            guest that is still booting, because QEMU binds the channel socket
+            before the guest runs.
     """
 
     guest_os: GuestOS = GuestOS.WINDOWS
@@ -398,6 +518,7 @@ class QEMUConfig:
     shared_folder: Path | None = None
     anti_evasion_profile: Literal["default", "workstation", "laptop"] = "default"
     agent_connect_timeout: float = 60.0
+    guest_agent_ready_timeout: float = _QEMU_GA_PING_TIMEOUT
 
 
 @dataclass
@@ -430,18 +551,88 @@ class GuestAgentMessage:
     data: dict[str, object] = field(default_factory=dict)
 
 
-class QMPClient:
-    """QEMU Machine Protocol client for VM control.
+@dataclass
+class GuestExecStatus:
+    """Outcome of a qemu-guest-agent ``guest-exec-status`` query.
 
-    Provides asynchronous communication with QEMU via QMP for VM control, snapshot management, and status queries.
+    Attributes:
+        exited: Whether the guest-side process has terminated.
+        exit_code: Process exit code, or None while it is still running or
+            when it was terminated by a signal.
+        signal: Terminating signal number, or None when the process was not
+            killed by a signal.
+        stdout: Decoded standard output captured by the agent.
+        stderr: Decoded standard error captured by the agent.
+        stdout_truncated: Whether the agent truncated the captured stdout.
+        stderr_truncated: Whether the agent truncated the captured stderr.
     """
 
+    exited: bool
+    exit_code: int | None = None
+    signal: int | None = None
+    stdout: str = ""
+    stderr: str = ""
+    stdout_truncated: bool = False
+    stderr_truncated: bool = False
+
+
+@dataclass(frozen=True)
+class _GuestBlockDevice:
+    """One row of the guest's ``lsblk --raw`` block-device listing.
+
+    Attributes:
+        path: Device node path such as ``/dev/vdb1``.
+        fs_type: Filesystem type blkid detected, empty when there is none.
+        label: Filesystem volume label with lsblk's escaping undone, empty
+            when the volume carries no label.
+        mountpoint: Where the device is currently mounted, empty when it is
+            not mounted anywhere.
+    """
+
+    path: str
+    fs_type: str
+    label: str
+    mountpoint: str
+
+
+class _JsonLineTooLongError(ConnectionError):
+    """Raised when a peer sent a JSON frame longer than the channel's limit.
+
+    ``StreamReader.readline`` reports the overrun as a bare :class:`ValueError`
+    and drops what it had buffered, while the remainder of the oversized frame
+    is still arriving on the socket: the stream can no longer be framed on
+    newlines, so the connection is finished. Subclassing
+    :class:`ConnectionError` is what says that, and lets every caller that
+    already handles a broken connection handle this too.
+    """
+
+
+class QemuJsonProtocolClient:
+    """Line-oriented JSON transport shared by QEMU's QMP and guest-agent sockets.
+
+    Both protocols carry one JSON object per line and shape their replies
+    identically (``{"return": ...}`` on success, ``{"error": {"class", "desc"}}``
+    on failure); they differ only in the handshake performed once the socket is
+    open and in how much of the incoming stream belongs to other conversations.
+    This class owns the socket, the serialisation lock, the request/response
+    exchange and the reply decoding. Subclasses override :meth:`_handshake` to
+    add protocol negotiation and :meth:`_read_reply` to change how a reply is
+    picked out of the stream.
+
+    Attributes:
+        connected: Whether a socket session is currently open.
+    """
+
+    connected: bool
+    _log_prefix: ClassVar[str] = "qemu_json"
+    _read_limit: ClassVar[int] = _JSON_LINE_LIMIT
+
     def __init__(self, host: str = "127.0.0.1", port: int = 4444) -> None:
-        """Initialize the QMP client.
+        """Initialize the protocol client.
 
         Args:
-            host: Host address where the QMP server is listening.
-            port: TCP port for the QMP server.
+            host: Host address where the server is listening.
+            port: TCP port for the server.
         """
         self._host = host
         self._port = port
@@ -449,53 +640,103 @@ class QMPClient:
         self._writer: asyncio.StreamWriter | None = None
         self.connected = False
         self._lock = asyncio.Lock()
-        _logger.debug("qmp_client_initialized", host=host, port=port)
+        _logger.debug(self._event("client_initialized"), host=host, port=port)
 
-    async def _open_qmp_session(self, time_limit: float) -> None:
-        """Open a QMP socket session and negotiate capabilities.
+    @classmethod
+    def _event(cls, suffix: str) -> str:
+        """Build a protocol-scoped structured-logging event name.
+
+        Args:
+            suffix: Event suffix appended to the protocol prefix.
+
+        Returns:
+            str: Fully qualified event name.
+        """
+        return f"{cls._log_prefix}_{suffix}"
+
+    @property
+    def host(self) -> str:
+        """Host address this client is bound to.
+
+        Returns:
+            str: Configured host address.
+        """
+        return self._host
+
+    @property
+    def port(self) -> int:
+        """TCP port this client is bound to.
+
+        Returns:
+            int: Configured TCP port.
+        """
+        return self._port
+
+    async def _handshake(self, time_limit: float) -> None:
+        """Negotiate the protocol once the socket is open.
+
+        The base transport needs no negotiation; subclasses override this to
+        read a greeting, exchange capabilities, or resynchronise the stream.
+
+        Args:
+            time_limit: Handshake timeout in seconds.
+        """
+
+    async def _open_session(self, time_limit: float) -> None:
+        """Open the socket and complete the protocol handshake.
+
+        The reader is given an explicit line limit sized for the largest reply
+        the peer is allowed to produce, because asyncio's 64 KiB default is far
+        below it and turns an ordinary large reply into a read failure.
 
         Args:
             time_limit: Connection timeout in seconds.
         """
         self._reader, self._writer = await asyncio.wait_for(
-            asyncio.open_connection(self._host, self._port),
+            asyncio.open_connection(self._host, self._port, limit=self._read_limit),
             timeout=time_limit,
         )
-
-        greeting = await asyncio.wait_for(
-            self._reader.readline(),
-            timeout=_QMP_READ_TIMEOUT,
-        )
-        _logger.debug("qmp_greeting_received", greeting=greeting.decode().strip())
-
-        await self._send_command({"execute": "qmp_capabilities"})
+        await self._handshake(time_limit)
         self.connected = True
-        _logger.info("qmp_connected", host=self._host, port=self._port)
+        _logger.info(self._event("connected"), host=self._host, port=self._port)
 
     async def connect(self, time_limit: float = 30.0) -> bool:
-        """Connect to QMP server.
+        """Connect to the server.
+
+        A socket that opened but whose handshake failed is closed again before
+        the failure is reported, so no half-open connection is left behind for
+        a retry to leak.
 
         Args:
             time_limit: Connection timeout in seconds.
 
         Returns:
-            bool: True if connected successfully.
+            bool: True if connected successfully, False if the socket could not
+            be opened within ``time_limit``.
+
+        Raises:
+            SandboxError: If the socket opened but the protocol handshake
+                failed.
         """
         try:
-            await self._open_qmp_session(time_limit)
+            await self._open_session(time_limit)
         except (OSError, TimeoutError, ConnectionError) as e:
-            _logger.warning("qmp_connection_failed", error=str(e))
+            _logger.warning(self._event("connection_failed"), error=str(e))
+            await self.disconnect()
             return False
+        except SandboxError:
+            await self.disconnect()
+            raise
         return True
 
     async def disconnect(self) -> None:
-        """Disconnect from QMP server."""
+        """Disconnect from the server."""
         if self._writer is not None:
             try:
                 self._writer.close()
                 await self._writer.wait_closed()
             except OSError as e:
-                _logger.warning("qmp_disconnect_error", error=str(e))
+                _logger.warning(self._event("disconnect_error"), error=str(e))
         self._reader = None
         self._writer = None
         self.connected = False
@@ -505,42 +746,72 @@ class QMPClient:
         command: dict[str, object],
         time_limit: float = 10.0,
     ) -> QMPResponse:
-        """Send a QMP command and get response.
+        """Send a command and get response.
 
         Args:
-            command: QMP command dictionary.
+            command: Command dictionary with an ``execute`` key.
             time_limit: Response timeout in seconds.
 
         Returns:
-            QMPResponse: QMP response.
+            QMPResponse: Decoded response.
         """
-        _logger.debug("qmp_command_send_called", command=command.get("execute"))
+        _logger.debug(self._event("command_send_called"), command=command.get("execute"))
         if self._reader is None or self._writer is None:
             return QMPResponse(success=False, error="Not connected")
 
         async with self._lock:
             try:
-                return await self._exchange_qmp_command(command, time_limit)
+                return await self._exchange_command(command, time_limit)
             except TimeoutError:
-                _logger.warning("qmp_command_timeout")
+                _logger.warning(self._event("command_timeout"))
+                await self._recover_from_command_timeout()
                 return QMPResponse(success=False, error="Command timed out")
+            except _JsonLineTooLongError as e:
+                _logger.warning(self._event("reply_line_too_long"), error=str(e), read_limit=self._read_limit)
+                await self.disconnect()
+                return QMPResponse(success=False, error=str(e))
             except (OSError, json.JSONDecodeError, ConnectionError) as e:
-                _logger.warning("qmp_command_failed", error=str(e), exc_info=True)
+                _logger.warning(self._event("command_failed"), error=str(e), exc_info=True)
                 return QMPResponse(success=False, error=str(e))
 
-    async def _exchange_qmp_command(
+    async def _recover_from_command_timeout(self) -> None:
+        """Run the protocol's timeout reaction without letting it escape.
+
+        :meth:`_on_command_timeout` talks to the peer, so it can fail for every
+        reason the timed-out command itself could - a reset channel, a closed
+        socket, an unanswerable resync. It runs from inside the caller's
+        ``except TimeoutError`` handler, where a sibling ``except`` clause
+        cannot catch anything it raises, so any such failure would escape
+        :meth:`_send_command` as an exception its callers do not expect.
+        A channel whose recovery failed is unusable and is closed instead, so
+        the next call opens a fresh one.
+        """
+        try:
+            await self._on_command_timeout()
+        except (OSError, ConnectionError, SandboxError) as e:
+            _logger.warning(self._event("command_timeout_recovery_failed"), error=str(e), port=self._port)
+            await self.disconnect()
+
+    async def _on_command_timeout(self) -> None:
+        """React to a command whose reply did not arrive in time.
+
+        The base transport has no way to realign a stream, so it does nothing;
+        subclasses whose protocol provides one override this.
+        """
+
+    async def _exchange_command(
         self,
         command: dict[str, object],
         time_limit: float,
     ) -> QMPResponse:
-        """Send a QMP command over the open connection and decode the response.
+        """Write a command over the open connection and decode its reply.
 
         Args:
-            command: QMP command dictionary.
+            command: Command dictionary.
             time_limit: Response timeout in seconds.
 
         Returns:
-            QMPResponse: Parsed response from the QMP server.
+            QMPResponse: Parsed response from the server.
         """
         if self._reader is None or self._writer is None:
             return QMPResponse(success=False, error="Not connected")
@@ -549,20 +820,149 @@ class QMPClient:
         self._writer.write(cmd_json.encode())
         await self._writer.drain()
 
-        response_line = await asyncio.wait_for(
+        return self._decode_reply(await self._read_reply(time_limit))
+
+    async def _read_line(self, time_limit: float) -> bytes:
+        """Read one newline-terminated frame within the channel's line limit.
+
+        Args:
+            time_limit: Read timeout in seconds.
+
+        Returns:
+            bytes: The raw frame, including its newline, or empty bytes when
+            the peer closed the connection.
+
+        Raises:
+            ConnectionError: If the socket is not open.
+            _JsonLineTooLongError: If the peer sent more than
+                :attr:`_read_limit` bytes without a newline.
+        """
+        if self._reader is None:
+            msg = "socket is not open"
+            raise ConnectionError(msg)
+
+        try:
+            return await asyncio.wait_for(self._reader.readline(), timeout=time_limit)
+        except ValueError as e:
+            raise _JsonLineTooLongError(_ERR_JSON_LINE_TOO_LONG.format(limit=self._read_limit)) from e
+
+    async def _read_reply(self, time_limit: float) -> dict[str, Any]:
+        """Read the reply to the command just written.
+
+        Args:
+            time_limit: Read timeout in seconds.
+
+        Returns:
+            dict[str, Any]: Decoded reply object.
+        """
+        return self._decode_line(await self._read_line(time_limit))
+
+    @classmethod
+    def _decode_line(cls, line: bytes) -> dict[str, Any]:
+        """Decode one newline-terminated JSON object.
+
+        Args:
+            line: Raw bytes read from the socket.
+
+        Returns:
+            dict[str, Any]: Decoded mapping, or an empty mapping when the line
+            holds a JSON value that is not an object.
+
+        Raises:
+            ConnectionError: If the peer closed the connection.
+        """
+        if not line:
+            msg = "connection closed by peer"
+            raise ConnectionError(msg)
+
+        decoded: object = json.loads(cls._decode_text(line))
+        if not isinstance(decoded, dict):
+            return {}
+        return cast("dict[str, Any]", decoded)
+
+    @staticmethod
+    def _decode_text(line: bytes) -> str:
+        """Extract the JSON text carried by one raw line.
+
+        QMP frames are strict UTF-8 and carry nothing but the object itself.
+        Protocols that prefix their frames override this.
+
+        Args:
+            line: Raw bytes read from the socket, including the newline.
+
+        Returns:
+            str: JSON text ready for :func:`json.loads`.
+        """
+        return line.decode()
+
+    @staticmethod
+    def _decode_reply(payload: dict[str, Any]) -> QMPResponse:
+        """Convert a decoded reply object into a :class:`QMPResponse`.
+
+        Args:
+            payload: Decoded reply mapping.
+
+        Returns:
+            QMPResponse: Response carrying either the ``return`` member or the
+            ``error`` description.
+        """
+        error: Any = payload.get("error")
+        if error is None:
+            return QMPResponse(success=True, data=payload.get("return"))
+
+        desc: Any = error
+        if isinstance(error, dict):
+            desc = cast("dict[str, Any]", error).get("desc", "Unknown error")
+        return QMPResponse(success=False, error=str(desc))
+
+    async def execute_command(
+        self,
+        command: dict[str, object],
+        time_limit: float = 10.0,
+    ) -> QMPResponse:
+        """Execute an arbitrary command on this protocol channel.
+
+        Public wrapper around the internal command dispatch for use by
+        the sandbox implementation when operations are needed that
+        do not have a dedicated convenience method.
+
+        Args:
+            command: Command dictionary with 'execute' key.
+            time_limit: Response timeout in seconds.
+
+        Returns:
+            QMPResponse: Response with success status and data.
+        """
+        return await self._send_command(command, time_limit)
+
+
+class QMPClient(QemuJsonProtocolClient):
+    """QEMU Machine Protocol client for VM control.
+
+    Provides asynchronous communication with QEMU via QMP for VM control, snapshot management, and status queries.
+    """
+
+    _log_prefix: ClassVar[str] = "qmp"
+
+    async def _handshake(self, time_limit: float) -> None:
+        """Read the QMP greeting banner and negotiate capabilities.
+
+        Args:
+            time_limit: Connection timeout in seconds. The greeting read and
+                the capability exchange use the protocol's own fixed timeouts,
+                so this value is not applied here.
+        """
+        del time_limit
+        if self._reader is None:
+            return
+
+        greeting = await asyncio.wait_for(
             self._reader.readline(),
-            timeout=time_limit,
+            timeout=_QMP_READ_TIMEOUT,
         )
+        _logger.debug("qmp_greeting_received", greeting=greeting.decode().strip())
 
-        response = json.loads(response_line.decode())
-
-        if "error" in response:
-            return QMPResponse(
-                success=False,
-                error=response["error"].get("desc", "Unknown error"),
-            )
-
-        return QMPResponse(success=True, data=response.get("return"))
+        await self._send_command({"execute": "qmp_capabilities"})
 
     async def query_status(self) -> QMPResponse:
         """Query VM status.
@@ -649,25 +1049,317 @@ class QMPClient:
             "arguments": {"command-line": "info snapshots"},
         })
 
-    async def execute_command(
-        self,
-        command: dict[str, object],
-        time_limit: float = 10.0,
-    ) -> QMPResponse:
-        """Execute an arbitrary QMP command.
 
-        Public wrapper around the internal command dispatch for use by
-        the sandbox implementation when QMP operations are needed that
-        do not have a dedicated convenience method.
+class QemuGuestAgentClient(QemuJsonProtocolClient):
+    r"""Client for the qemu-guest-agent (QGA) virtio-serial channel.
+
+    QGA is reached through the chardev socket QEMU exposes for the
+    ``org.qemu.guest_agent.0`` virtserialport, never through the QMP monitor:
+    the monitor rejects every ``guest-*`` command with ``CommandNotFound``.
+    The channel sends no greeting and negotiates no capabilities, so a client
+    starts issuing commands as soon as the socket is open.
+
+    Because the agent's JSON parser retains whatever a previous client left
+    behind - and because a guest reboot can leave a half-written object in
+    flight - a freshly attached client must resynchronise before its first
+    command, and again after any client-side timeout. Both halves of that
+    exchange matter:
+
+    * outbound, the client writes a lone ``0xFF`` byte, which cannot occur
+      inside valid JSON and makes the agent drop its partial input, then issues
+      ``guest-sync-delimiter`` with a unique id;
+    * inbound, the agent prepends the same ``0xFF`` sentinel to the reply that
+      carries the id (``qga/main.c`` ``send_response``). Everything received up
+      to and including that byte belongs to the previous conversation - a stale
+      reply, a line cut off mid-write, arbitrary non-UTF-8 noise - and is
+      discarded, which is what re-frames the stream. The client then reads
+      until the reply carrying its id arrives.
+
+    QGA carries no request ids and emits no asynchronous events, so a stale
+    reply is indistinguishable from a fresh one on its contents alone; the
+    sentinel resync is the only mechanism that realigns the stream.
+    """
+
+    _log_prefix: ClassVar[str] = "qemu_ga"
+
+    def __init__(self, host: str = "127.0.0.1", port: int = 4446) -> None:
+        """Initialize the qemu-guest-agent client.
 
         Args:
-            command: QMP command dictionary with 'execute' key.
+            host: Host address where the guest-agent chardev socket listens.
+            port: TCP port of the guest-agent chardev socket.
+        """
+        super().__init__(host=host, port=port)
+
+    @staticmethod
+    def _decode_text(line: bytes) -> str:
+        """Re-frame one raw agent line on the parser-flush sentinel.
+
+        The sentinel is the agent's own marker for "everything before this
+        belongs to a previous client", so the bytes ahead of the last one in
+        the line are dropped rather than parsed. Whatever survives may still be
+        a fragment of somebody else's object, so it is decoded leniently and
+        left for the caller to reject as malformed JSON.
+
+        Args:
+            line: Raw bytes read from the channel, including the newline.
+
+        Returns:
+            str: JSON text of the line that follows the last sentinel byte.
+        """
+        marker = line.rfind(_QGA_PARSER_FLUSH_BYTE)
+        payload = line if marker < 0 else line[marker + 1 :]
+        return payload.decode("utf-8", errors="replace")
+
+    async def _handshake(self, time_limit: float) -> None:
+        """Resynchronise the agent's parser and reply stream.
+
+        Args:
+            time_limit: Deadline in seconds for the sync reply.
+        """
+        await self._synchronise(time_limit)
+
+    async def _on_command_timeout(self) -> None:
+        """Re-issue the sync so a late reply cannot offset the stream.
+
+        The QGA schema requires ``guest-sync-delimiter`` "upon initial
+        connection, and after any client-side timeouts": the agent answers a
+        slow command eventually, and with no request id to match on, that reply
+        would be read as the answer to whatever command comes next. The resync
+        discards it.
+
+        Propagates the ``SandboxError`` raised by :meth:`_synchronise` when the
+        agent does not echo the fresh sync id, and whatever socket error the
+        exchange hits when the channel broke meanwhile;
+        :meth:`_recover_from_command_timeout` contains both and closes the
+        channel, so the next call opens a fresh one.
+        """
+        if self._reader is None or self._writer is None:
+            return
+        await self._synchronise(_QEMU_GA_RESYNC_TIMEOUT)
+
+    async def _synchronise(self, time_limit: float) -> None:
+        """Flush the agent parser and align the reply stream with this client.
+
+        Args:
+            time_limit: Deadline in seconds for the sync reply.
+
+        Raises:
+            SandboxError: If the socket is not open, or if the agent does not
+                echo the sync id before the deadline.
+        """
+        if self._reader is None or self._writer is None:
+            raise SandboxError(_ERR_QEMU_GA_SYNC_FAILED)
+
+        sync_id = secrets.randbits(_QGA_SYNC_ID_BITS)
+        request = json.dumps({
+            "execute": "guest-sync-delimiter",
+            "arguments": {"id": sync_id},
+        })
+        self._writer.write(_QGA_PARSER_FLUSH_BYTE + request.encode() + b"\n")
+        await self._writer.drain()
+
+        if await self._await_sync_id(sync_id, time_limit):
+            _logger.debug(self._event("sync_complete"), sync_id=sync_id, port=self._port)
+            return
+
+        _logger.warning(self._event("sync_failed"), sync_id=sync_id, host=self._host, port=self._port)
+        raise SandboxError(_ERR_QEMU_GA_SYNC_FAILED)
+
+    async def _await_sync_id(self, sync_id: int, time_limit: float) -> bool:
+        """Discard incoming lines until the sync reply for ``sync_id`` arrives.
+
+        Args:
+            sync_id: Delimiter id sent with ``guest-sync-delimiter``.
+            time_limit: Deadline in seconds for the sync reply.
+
+        Returns:
+            bool: True when the agent echoed ``sync_id``, False when the
+            deadline elapsed, the channel closed, or the agent sent a frame too
+            long to be read at all.
+        """
+        if self._reader is None:
+            return False
+
+        deadline = time.monotonic() + time_limit
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                return False
+            try:
+                line = await self._read_line(remaining)
+            except TimeoutError:
+                return False
+            except ConnectionError as e:
+                _logger.warning(self._event("sync_read_failed"), error=str(e), port=self._port)
+                return False
+            if not line:
+                return False
+            try:
+                payload = self._decode_line(line)
+            except (json.JSONDecodeError, ConnectionError):
+                _logger.debug(self._event("sync_line_discarded"), exc_info=True)
+                continue
+            if payload.get("return") == sync_id:
+                return True
+            _logger.debug(self._event("sync_line_skipped"), keys=sorted(payload))
+
+    async def _read_reply(self, time_limit: float) -> dict[str, Any]:
+        """Read the next command reply, skipping leftover stream noise.
+
+        A line is skipped when it does not decode to an object carrying a
+        ``return`` or an ``error`` member: a fragment left by a previous client
+        parses as malformed JSON or as a bare JSON value. Skipping cannot
+        separate a stale reply from a fresh one - QGA echoes no request id -
+        so a reply that arrives after its command timed out is discarded by the
+        resync :meth:`_on_command_timeout` performs, not here.
+
+        Args:
+            time_limit: Deadline in seconds for a usable reply.
+
+        Returns:
+            dict[str, Any]: First line that carries a ``return`` or ``error``
+            member.
+
+        Raises:
+            ConnectionError: If the channel is not open, if the agent closed
+                it, or if the agent sent a frame longer than the channel limit.
+            TimeoutError: If no usable reply arrives before the deadline.
+        """
+        if self._reader is None:
+            msg = "qemu-guest-agent channel is not open"
+            raise ConnectionError(msg)
+
+        deadline = time.monotonic() + time_limit
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError
+            line = await self._read_line(remaining)
+            try:
+                payload = self._decode_line(line)
+            except json.JSONDecodeError:
+                _logger.debug(self._event("reply_invalid_json_skipped"), exc_info=True)
+                continue
+            if "return" in payload or "error" in payload:
+                return payload
+            _logger.debug(self._event("reply_event_skipped"), keys=sorted(payload))
+
+    async def ping(self, time_limit: float = _QEMU_GA_EXEC_TIMEOUT) -> QMPResponse:
+        """Send ``guest-ping`` to verify the agent is answering.
+
+        Args:
             time_limit: Response timeout in seconds.
 
         Returns:
-            QMPResponse: QMP response with success status and data.
+            QMPResponse: Successful response when the agent replied.
         """
-        return await self._send_command(command, time_limit)
+        return await self.execute_command({"execute": "guest-ping"}, time_limit)
+
+    async def guest_exec(
+        self,
+        path: str,
+        args: Sequence[str],
+        *,
+        capture_output: bool = False,
+        time_limit: float = _QEMU_GA_EXEC_TIMEOUT,
+    ) -> QMPResponse:
+        """Launch a program inside the guest via ``guest-exec``.
+
+        Args:
+            path: Absolute executable path inside the guest.
+            args: Argument list passed to the executable.
+            capture_output: Whether the agent should buffer stdout/stderr for
+                later retrieval through :meth:`guest_exec_status`.
+            time_limit: Response timeout in seconds.
+
+        Returns:
+            QMPResponse: Response whose ``data`` carries the guest-side pid.
+        """
+        command: dict[str, object] = {
+            "execute": "guest-exec",
+            "arguments": {
+                "path": path,
+                "arg": list(args),
+                "capture-output": capture_output,
+            },
+        }
+        return await self.execute_command(command, time_limit)
+
+    async def guest_exec_status(
+        self,
+        pid: int,
+        time_limit: float = _QEMU_GA_EXEC_TIMEOUT,
+    ) -> GuestExecStatus:
+        """Query the state and captured output of a ``guest-exec`` process.
+
+        Args:
+            pid: Guest-side process id returned by :meth:`guest_exec`.
+            time_limit: Response timeout in seconds.
+
+        Returns:
+            GuestExecStatus: Exit state plus decoded stdout/stderr.
+
+        Raises:
+            SandboxError: If the agent reports an error or returns a payload
+                that is not a status object.
+        """
+        response = await self.execute_command(
+            {"execute": "guest-exec-status", "arguments": {"pid": pid}},
+            time_limit,
+        )
+        if not response.success or not isinstance(response.data, dict):
+            _logger.warning(
+                self._event("exec_status_unreadable"),
+                pid=pid,
+                error=response.error,
+            )
+            raise SandboxError(_ERR_QEMU_GA_EXEC_STATUS_FAILED)
+
+        return self._decode_exec_status(response.data)
+
+    @classmethod
+    def _decode_exec_status(cls, payload: dict[str, object]) -> GuestExecStatus:
+        """Decode a ``guest-exec-status`` return payload.
+
+        Args:
+            payload: ``return`` mapping from the agent reply.
+
+        Returns:
+            GuestExecStatus: Structured status with base64 output decoded.
+        """
+        exit_code = payload.get("exitcode")
+        signal_number = payload.get("signal")
+        return GuestExecStatus(
+            exited=bool(payload.get("exited")),
+            exit_code=exit_code if isinstance(exit_code, int) else None,
+            signal=signal_number if isinstance(signal_number, int) else None,
+            stdout=cls._decode_stream(payload, "out-data"),
+            stderr=cls._decode_stream(payload, "err-data"),
+            stdout_truncated=bool(payload.get("out-truncated")),
+            stderr_truncated=bool(payload.get("err-truncated")),
+        )
+
+    @classmethod
+    def _decode_stream(cls, payload: dict[str, object], key: str) -> str:
+        """Decode one base64-encoded output stream from a status payload.
+
+        Args:
+            payload: ``return`` mapping from the agent reply.
+            key: Member holding the base64 text (``out-data`` or ``err-data``).
+
+        Returns:
+            str: Decoded text, or an empty string when the member is absent,
+            empty, or not valid base64.
+        """
+        raw = payload.get(key)
+        if not isinstance(raw, str) or not raw:
+            return ""
+        try:
+            return base64.b64decode(raw, validate=True).decode("utf-8", errors="replace")
+        except ValueError as e:
+            _logger.warning(cls._event("exec_status_stream_undecodable"), stream=key, error=str(e))
+            return ""
 
 
 class GuestAgentClient:
@@ -675,6 +1367,8 @@ class GuestAgentClient:
 
     Provides bidirectional communication with the guest OS for command execution, file transfer, and behavioral monitoring.
     """
+
+    _read_limit: ClassVar[int] = _JSON_LINE_LIMIT
 
     def __init__(self, host: str = "127.0.0.1", port: int = 4445) -> None:
         """Initialize the guest agent client.
@@ -691,6 +1385,7 @@ class GuestAgentClient:
         self._lock = asyncio.Lock()
         self._message_queue: asyncio.Queue[GuestAgentMessage] = asyncio.Queue()
         self._reader_task: asyncio.Task[None] | None = None
+        self._read_failure: str | None = None
         _logger.debug("guest_agent_client_initialized", host=host, port=port)
 
     @property
@@ -705,13 +1400,19 @@ class GuestAgentClient:
     async def _open_agent_socket(self, retry_interval: float) -> None:
         """Open a single connection attempt to the guest agent.
 
+        The reader is given the same explicit line limit as the guest-agent
+        channel: a ``result`` message carries the whole stdout of an in-guest
+        command, which passes asyncio's 64 KiB default long before it reaches
+        any size the agent itself would refuse to send.
+
         Args:
             retry_interval: Per-attempt connect timeout in seconds.
         """
         self._reader, self._writer = await asyncio.wait_for(
-            asyncio.open_connection(self._host, self._port),
+            asyncio.open_connection(self._host, self._port, limit=self._read_limit),
             timeout=retry_interval,
         )
+        self._read_failure = None
         self.connected = True
         self._reader_task = asyncio.create_task(self._read_messages())
         _logger.info("guest_agent_connected", host=self._host, port=self._port)
@@ -766,37 +1467,80 @@ class GuestAgentClient:
     async def _enqueue_agent_line(self, line: bytes) -> None:
         """Decode a raw agent line and enqueue a parsed message.
 
+        A line whose bytes are not valid UTF-8 and a line that is not valid
+        JSON are each one unreadable message, not a broken stream: the newline
+        framing around them is intact, so both are logged and dropped and the
+        reader goes on to the next line.
+
         Args:
             line: Newline-terminated bytes received from the agent socket.
         """
         try:
-            data = json.loads(line.decode())
-            msg = GuestAgentMessage(
-                message_type=data.get("type", "unknown"),
-                timestamp=datetime.now(UTC),
-                data=data.get("data", {}),
-            )
-            await self._message_queue.put(msg)
+            text = line.decode()
+        except UnicodeDecodeError as e:
+            _logger.warning("agent_invalid_utf8", line=line.decode(errors="replace"), error=str(e))
+            return
+
+        try:
+            data = json.loads(text)
         except json.JSONDecodeError:
-            _logger.warning("agent_invalid_json", line=line.decode(errors="replace"))
+            _logger.warning("agent_invalid_json", line=text)
+            return
+
+        msg = GuestAgentMessage(
+            message_type=data.get("type", "unknown"),
+            timestamp=datetime.now(UTC),
+            data=data.get("data", {}),
+        )
+        await self._message_queue.put(msg)
+
+    def _stop_reading(self, reason: str) -> None:
+        """Mark the channel unusable and record why the reader stopped.
+
+        A command already waiting for a reply would otherwise sit out its whole
+        deadline on a channel that can no longer deliver one, and report a
+        timeout instead of the failure that really happened.
+
+        Args:
+            reason: Cause reported to a waiting command.
+        """
+        self._read_failure = reason
+        self.connected = False
 
     async def _read_messages(self) -> None:
-        """Background task to read messages from agent."""
+        """Background task to read messages from agent.
+
+        Only the read itself is guarded against :class:`ValueError`: that is how
+        ``StreamReader.readline`` reports a frame longer than the reader's
+        limit, and it leaves the rest of that frame unread, so the stream can no
+        longer be framed on newlines and the channel is finished. Decoding the
+        line that was read is not covered by that guard - a line the reader
+        delivered whole is a message-level problem, which
+        :meth:`_enqueue_agent_line` handles without ending the reader.
+        """
         if self._reader is None:
             return
 
         while self.connected:
             try:
                 line = await self._reader.readline()
-                if not line:
-                    break
-                await self._enqueue_agent_line(line)
             except asyncio.CancelledError:
                 _logger.debug("agent_read_cancelled", exc_info=True)
                 break
+            except ValueError as e:
+                _logger.warning("agent_read_line_too_long", error=str(e), read_limit=self._read_limit)
+                self._stop_reading(_ERR_JSON_LINE_TOO_LONG.format(limit=self._read_limit))
+                break
             except (OSError, ConnectionError) as e:
                 _logger.warning("agent_read_error", error=str(e))
+                self._stop_reading(str(e))
                 break
+
+            if not line:
+                _logger.debug("agent_channel_closed_by_peer", host=self._host, port=self._port)
+                break
+
+            await self._enqueue_agent_line(line)
 
     async def send_command(
         self,
@@ -864,11 +1608,12 @@ class GuestAgentClient:
 
         Returns:
             tuple[int, str, str]: ``(exit_code, stdout, stderr)`` from the
-            received result message, or a timeout marker triple if the deadline
-            elapses without a result.
+            received result message, the reason the reader stopped if the
+            channel failed while the reply was outstanding, or a timeout marker
+            triple if the deadline elapses without a result.
         """
         start_time = time.time()
-        while time.time() - start_time < time_limit:
+        while self.connected and time.time() - start_time < time_limit:
             try:
                 msg = await asyncio.wait_for(
                     self._message_queue.get(),
@@ -879,7 +1624,7 @@ class GuestAgentClient:
                 continue
             if msg.message_type == "result":
                 return self._decode_guest_result(msg)
-        return (-1, "", "Command timed out")
+        return (-1, "", self._read_failure or "Command timed out")
 
     async def _dispatch_guest_request(
         self,
@@ -929,14 +1674,17 @@ class QEMUSandbox(SandboxBase):
         QEMU_EXE: QEMU executable name.
         TOOLS_PATH: Bundled QEMU installation directory, resolved from the
             installed project root rather than a fixed absolute location.
-        GUEST_SHARED_PATH_WINDOWS: Shared path on Windows guest.
-        GUEST_SHARED_PATH_LINUX: Shared path on Linux guest.
+        GUEST_SHARED_PATH_WINDOWS: Default shared-volume root on a Windows
+            guest, used until :meth:`_mount_guest_shared_volume` has probed the
+            drive letter the guest really assigned.
+        GUEST_SHARED_PATH_LINUX: Default shared-volume mount point on a Linux
+            guest.
     """
 
     QEMU_EXE: Final[str] = "qemu-system-x86_64"
     TOOLS_PATH: Final[Path] = get_project_root() / "tools" / "qemu"
-    GUEST_SHARED_PATH_WINDOWS: Final[str] = "Z:\\"
-    GUEST_SHARED_PATH_LINUX: Final[str] = "/mnt/shared"
+    GUEST_SHARED_PATH_WINDOWS: Final[str] = _GUEST_SHARED_ROOT_WINDOWS
+    GUEST_SHARED_PATH_LINUX: Final[str] = _GUEST_SHARED_ROOT_LINUX
 
     def __init__(
         self,
@@ -953,6 +1701,7 @@ class QEMUSandbox(SandboxBase):
         self._qemu_config = qemu_config or QEMUConfig()
         self.process: asyncio.subprocess.Process | None = None
         self._qmp: QMPClient | None = None
+        self._qga: QemuGuestAgentClient | None = None
         self._agent: GuestAgentClient | None = None
         self._temp_dir: Path | None = None
         self._shared_folder: Path | None = None
@@ -964,6 +1713,9 @@ class QEMUSandbox(SandboxBase):
         self._active_captures: dict[str, Path] = {}
         self._accelerator_cached: bool = False
         self._agent_guest_pid: int | None = None
+        self._guest_shared_root: str | None = None
+        self._guest_system_drive_value: str | None = None
+        self._guest_system_root_value: str | None = None
         _logger.info(
             "qemu_sandbox_initialized",
             guest_os=self._qemu_config.guest_os.value,
@@ -1007,6 +1759,16 @@ class QEMUSandbox(SandboxBase):
         """
         return self._agent
 
+    @property
+    def qemu_guest_agent(self) -> QemuGuestAgentClient | None:
+        """qemu-guest-agent channel client, or None if not connected.
+
+        Returns:
+            QemuGuestAgentClient | None: Active qemu-guest-agent client, or
+            None while the guest-agent channel has not been opened.
+        """
+        return self._qga
+
     def enable_vnc_display(self) -> None:
         """Switch display mode to VNC for GUI embedding.
 
@@ -1029,6 +1791,7 @@ class QEMUSandbox(SandboxBase):
             shared_folder=self._qemu_config.shared_folder,
             anti_evasion_profile=self._qemu_config.anti_evasion_profile,
             agent_connect_timeout=self._qemu_config.agent_connect_timeout,
+            guest_agent_ready_timeout=self._qemu_config.guest_agent_ready_timeout,
         )
         self._vnc_port = self._get_free_port(_VNC_PORT_BASE, _VNC_PORT_MAX)
         _logger.info("vnc_display_enabled", vnc_port=self.vnc_port)
@@ -1513,6 +2276,93 @@ class QEMUSandbox(SandboxBase):
             _logger.warning("vm_status_query_failed", error=status.error)
             raise SandboxError(_ERR_VM_STATUS)
 
+    def _guest_agent_channel_port(self) -> int:
+        """Return the host TCP port QEMU exposes for the guest-agent channel.
+
+        Returns:
+            int: The resolved ``agent_port`` plus the channel offset used by
+            the ``-chardev`` argument built in :meth:`_build_qemu_command`.
+        """
+        return self._qemu_config.agent_port + _QGA_CHANNEL_PORT_OFFSET
+
+    async def _connect_guest_agent_channel(
+        self,
+        time_limit: float | None = None,
+        attempt_timeout: float = _QEMU_GA_CONNECT_TIMEOUT,
+        retry_interval: float = _QEMU_GA_CONNECT_RETRY_INTERVAL,
+    ) -> None:
+        """Open the qemu-guest-agent channel used for in-guest command dispatch.
+
+        The channel is the ``org.qemu.guest_agent.0`` chardev socket, which is
+        a different endpoint from the QMP monitor: QMP rejects every
+        ``guest-*`` command outright. QEMU binds that socket with
+        ``server,nowait`` while the VM is still in firmware, so a refused
+        connection or an unanswered ``guest-sync-delimiter`` means the guest
+        has not started qemu-guest-agent yet, not that it never will. Attempts
+        are therefore repeated until ``time_limit`` is spent, and every attempt
+        that fails closes its socket before the next one opens another.
+
+        Args:
+            time_limit: Total seconds to keep retrying before giving up;
+                defaults to ``QEMUConfig.guest_agent_ready_timeout``.
+            attempt_timeout: Per-attempt deadline covering the socket connect
+                and the ``guest-sync-delimiter`` handshake.
+            retry_interval: Delay in seconds between attempts.
+
+        Raises:
+            SandboxError: If the channel socket is still refusing connections
+                when the budget is spent, or if the agent never echoed the
+                sync id on any attempt.
+        """
+        if self._qga is not None and self._qga.connected:
+            return
+
+        budget = self._qemu_config.guest_agent_ready_timeout if time_limit is None else time_limit
+        channel_port = self._guest_agent_channel_port()
+        deadline = time.monotonic() + budget
+        sync_failed = False
+        while time.monotonic() < deadline:
+            remaining = deadline - time.monotonic()
+            sync_failed = await self._attempt_guest_agent_connect(channel_port, min(attempt_timeout, remaining))
+            if self._qga is not None and self._qga.connected:
+                return
+            await asyncio.sleep(min(retry_interval, max(deadline - time.monotonic(), 0.0)))
+
+        if sync_failed:
+            _logger.warning("qemu_ga_channel_sync_failed", channel_port=channel_port, time_limit=budget)
+            raise SandboxError(_ERR_QEMU_GA_SYNC_FAILED)
+        _logger.warning("qemu_ga_channel_unreachable", channel_port=channel_port, time_limit=budget)
+        raise SandboxError(_ERR_QEMU_GA_SOCKET_UNREACHABLE.format(port=channel_port))
+
+    async def _attempt_guest_agent_connect(self, channel_port: int, attempt_timeout: float) -> bool:
+        """Make one connect-and-resynchronise attempt on the guest-agent channel.
+
+        Args:
+            channel_port: Host TCP port of the guest-agent chardev socket.
+            attempt_timeout: Deadline in seconds for this attempt.
+
+        Returns:
+            bool: True when the socket opened but the agent did not complete
+            the ``guest-sync-delimiter`` handshake; False when the socket
+            itself could not be opened or the attempt succeeded.
+        """
+        client = self._qga
+        if client is None:
+            client = QemuGuestAgentClient(port=channel_port)
+            self._qga = client
+        else:
+            await client.disconnect()
+
+        try:
+            connected = await client.connect(time_limit=attempt_timeout)
+        except SandboxError as e:
+            _logger.debug("qemu_ga_channel_sync_retry", channel_port=channel_port, error=str(e))
+            return True
+
+        if not connected:
+            _logger.debug("qemu_ga_channel_connect_retry", channel_port=channel_port)
+        return False
+
     async def _wait_for_qemu_ga(
         self,
         ping_timeout: float = _QEMU_GA_PING_TIMEOUT,
@@ -1527,23 +2377,20 @@ class QEMUSandbox(SandboxBase):
                 ``guest-ping`` attempts.
 
         Raises:
-            SandboxError: If the QMP client is not connected, or if
+            SandboxError: If the guest-agent channel is not connected, or if
                 ``guest-ping`` never succeeds within ``ping_timeout``.
         """
-        if self._qmp is None:
-            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+        if self._qga is None:
+            raise SandboxError(_ERR_QEMU_GA_NOT_CONNECTED)
 
         deadline = time.monotonic() + ping_timeout
         last_error: str | None = None
         while time.monotonic() < deadline:
-            response = await self._qmp.execute_command(
-                {"execute": "guest-ping"},
-                time_limit=_QEMU_GA_EXEC_TIMEOUT,
-            )
+            response = await self._qga.ping(time_limit=_QEMU_GA_EXEC_TIMEOUT)
             if response.success:
                 _logger.debug(
                     "qemu_ga_ping_ok",
-                    monitor_port=self._qemu_config.monitor_port,
+                    channel_port=self._guest_agent_channel_port(),
                 )
                 return
             last_error = response.error
@@ -1561,14 +2408,14 @@ class QEMUSandbox(SandboxBase):
         )
         raise SandboxError(_ERR_QEMU_GA_UNREACHABLE)
 
-    async def _qmp_guest_exec(
+    async def _guest_agent_exec(
         self,
         path: str,
         args: list[str],
         *,
         capture_output: bool = False,
     ) -> int:
-        """Invoke ``guest-exec`` via qemu-guest-agent and return the guest PID.
+        """Invoke ``guest-exec`` on the guest-agent channel and return the guest PID.
 
         Args:
             path: Absolute executable path inside the guest.
@@ -1582,22 +2429,19 @@ class QEMUSandbox(SandboxBase):
             qemu-guest-agent.
 
         Raises:
-            SandboxError: If the QMP client is not connected, if the
+            SandboxError: If the guest-agent channel is not connected, if the
                 ``guest-exec`` invocation fails, or if the reply does not
                 include a PID.
         """
-        if self._qmp is None:
-            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+        if self._qga is None:
+            raise SandboxError(_ERR_QEMU_GA_NOT_CONNECTED)
 
-        command: dict[str, object] = {
-            "execute": "guest-exec",
-            "arguments": {
-                "path": path,
-                "arg": list(args),
-                "capture-output": capture_output,
-            },
-        }
-        response = await self._qmp.execute_command(command, time_limit=_QEMU_GA_EXEC_TIMEOUT)
+        response = await self._qga.guest_exec(
+            path,
+            args,
+            capture_output=capture_output,
+            time_limit=_QEMU_GA_EXEC_TIMEOUT,
+        )
         if not response.success:
             _logger.warning(
                 "qemu_ga_exec_failed",
@@ -1629,42 +2473,608 @@ class QEMUSandbox(SandboxBase):
 
         return pid_raw
 
+    async def _ensure_guest_agent_ready(self) -> None:
+        """Open the guest-agent channel and wait until the agent answers.
+
+        ``QEMUConfig.guest_agent_ready_timeout`` is the whole budget for a
+        booting guest: whatever the channel spends connecting and
+        resynchronising is taken off the time left for ``guest-ping``, so the
+        total wait is the configured one rather than a multiple of it.
+
+        Propagates the ``SandboxError`` raised by
+        :meth:`_connect_guest_agent_channel` when the channel never opens, and
+        by :meth:`_wait_for_qemu_ga` when the agent never answers
+        ``guest-ping`` within what is left of the budget.
+        """
+        deadline = time.monotonic() + self._qemu_config.guest_agent_ready_timeout
+        await self._connect_guest_agent_channel()
+        await self._wait_for_qemu_ga(
+            ping_timeout=max(deadline - time.monotonic(), 0.0),
+            poll_interval=_QEMU_GA_PING_INTERVAL,
+        )
+
+    async def _guest_run(
+        self,
+        path: str,
+        args: list[str],
+        time_limit: float = _GUEST_COMMAND_TIMEOUT,
+    ) -> GuestExecStatus:
+        """Run a command inside the guest and wait for its exit status.
+
+        Args:
+            path: Executable name or absolute path inside the guest.
+            args: Argument list passed to the executable.
+            time_limit: Maximum time in seconds to wait for the guest-side
+                process to terminate.
+
+        Returns:
+            GuestExecStatus: Terminal status including captured output.
+
+        Raises:
+            SandboxError: If the guest-agent channel is not connected, if
+                ``guest-exec`` fails, or if the process does not exit within
+                ``time_limit``.
+        """
+        if self._qga is None:
+            raise SandboxError(_ERR_QEMU_GA_NOT_CONNECTED)
+
+        pid = await self._guest_agent_exec(path, args, capture_output=True)
+        deadline = time.monotonic() + time_limit
+        while time.monotonic() < deadline:
+            status = await self._qga.guest_exec_status(pid)
+            if status.exited:
+                _logger.debug(
+                    "guest_command_completed",
+                    path=path,
+                    arg=list(args),
+                    exit_code=status.exit_code,
+                )
+                return status
+            await asyncio.sleep(_GUEST_COMMAND_POLL_INTERVAL)
+
+        _logger.warning("guest_command_timeout", path=path, arg=list(args), timeout=time_limit)
+        raise SandboxError(
+            _ERR_GUEST_COMMAND_TIMEOUT.format(command=" ".join([path, *args]), timeout=time_limit),
+        )
+
+    @staticmethod
+    def _windows_launch_path(guest_root: str) -> str:
+        r"""Build the Windows monitor launcher path under a guest share root.
+
+        Args:
+            guest_root: Guest-side root of the shared volume, including the
+                trailing backslash (for example ``E:\``).
+
+        Returns:
+            str: Absolute in-guest path of ``start_agent.cmd``.
+        """
+        return guest_root + _MONITOR_LAUNCH_RELATIVE_WINDOWS
+
+    @staticmethod
+    def _linux_launch_path(guest_root: str) -> str:
+        """Build the Linux monitor launcher path under a guest share root.
+
+        Args:
+            guest_root: Guest-side mount point of the shared volume, without
+                a trailing slash.
+
+        Returns:
+            str: Absolute in-guest path of ``start_agent.sh``.
+        """
+        return f"{guest_root}/{_MONITOR_LAUNCH_RELATIVE_LINUX}"
+
+    @staticmethod
+    def _decode_lsblk_value(raw: str) -> str:
+        r"""Undo the ``\xNN`` escaping ``lsblk --raw`` applies to a column value.
+
+        Args:
+            raw: One escaped column value as it appeared on the wire.
+
+        Returns:
+            str: The value with every well-formed escape expanded; a malformed
+            escape is kept verbatim rather than dropped.
+        """
+        decoded: list[str] = []
+        index = 0
+        while index < len(raw):
+            if not raw.startswith(_LSBLK_ESCAPE_PREFIX, index) or index + _LSBLK_ESCAPE_LENGTH > len(raw):
+                decoded.append(raw[index])
+                index += 1
+                continue
+            digits = raw[index + len(_LSBLK_ESCAPE_PREFIX) : index + _LSBLK_ESCAPE_LENGTH]
+            try:
+                code_point = int(digits, _LSBLK_ESCAPE_BASE)
+            except ValueError:
+                decoded.append(raw[index])
+                index += 1
+                continue
+            decoded.append(chr(code_point))
+            index += _LSBLK_ESCAPE_LENGTH
+        return "".join(decoded)
+
+    @classmethod
+    def _parse_guest_block_devices(cls, listing: str) -> list[_GuestBlockDevice]:
+        """Parse ``lsblk --raw`` output into structured rows.
+
+        Columns are separated by exactly one space and never contain one
+        themselves, so a row is split on the literal separator instead of on
+        runs of whitespace: that keeps an empty column empty rather than
+        shifting every column after it one position to the left.
+
+        Args:
+            listing: Standard output of the guest's ``lsblk`` invocation.
+
+        Returns:
+            list[_GuestBlockDevice]: One entry per device node reported.
+        """
+        devices: list[_GuestBlockDevice] = []
+        for line in listing.splitlines():
+            fields = line.rstrip("\r").split(" ")
+            if len(fields) < _GUEST_BLOCK_DEVICE_MIN_FIELDS or not fields[0].startswith("/"):
+                continue
+            devices.append(
+                _GuestBlockDevice(
+                    path=fields[0],
+                    fs_type=fields[1],
+                    label=cls._lsblk_field(fields, _GUEST_BLOCK_DEVICE_LABEL_FIELD),
+                    mountpoint=cls._lsblk_field(fields, _GUEST_BLOCK_DEVICE_MOUNTPOINT_FIELD),
+                ),
+            )
+        return devices
+
+    @classmethod
+    def _lsblk_field(cls, fields: list[str], index: int) -> str:
+        """Return one decoded optional column from a split ``lsblk`` row.
+
+        Args:
+            fields: Column values of one row, already split on the separator.
+            index: Zero-based column position to read.
+
+        Returns:
+            str: Decoded value, or an empty string when the row is shorter.
+        """
+        if index >= len(fields):
+            return ""
+        return cls._decode_lsblk_value(fields[index])
+
+    @classmethod
+    def _select_guest_block_device(cls, listing: str, fs_type: str, label: str) -> str | None:
+        """Pick the block device that carries the host shared folder.
+
+        Neither half of the test identifies the volume on its own, so both are
+        required:
+
+        * filesystem type and mount state are not enough, because an unmounted
+          ``vfat`` volume is an ordinary thing for a guest to own - a spare
+          data partition is one - and it does not carry vvfat's label;
+        * label and filesystem type are not enough either, because vvfat writes
+          the same label into every ``file=fat:`` drive, and because the share
+          has not been mounted yet at this point while any volume the guest
+          mounted itself already is.
+
+        Args:
+            listing: ``lsblk`` output with one ``PATH FSTYPE LABEL MOUNTPOINT``
+                row per device.
+            fs_type: Filesystem type the share is formatted with.
+            label: Volume label the share carries.
+
+        Returns:
+            str | None: Device path of the matching row, or None when the guest
+            reports no such volume.
+        """
+        for device in cls._parse_guest_block_devices(listing):
+            if device.fs_type != fs_type or device.mountpoint:
+                continue
+            if device.label == label:
+                return device.path
+        return None
+
+    @staticmethod
+    def _parse_windows_drive_letters(listing: str, system_drive: str) -> list[str]:
+        r"""Extract candidate drive letters from ``fsutil fsinfo drives`` output.
+
+        The guest's own system drive is skipped: the shared volume is always an
+        additional FAT drive, never the boot volume. Which drive that is comes
+        from the guest itself rather than from an assumption that Windows was
+        installed on ``C:``.
+
+        Args:
+            listing: Raw ``fsutil fsinfo drives`` standard output, of the form
+                ``Drives: C:\ D:\ E:\``.
+            system_drive: Designator of the guest's system drive, as reported
+                by ``%SystemDrive%``.
+
+        Returns:
+            list[str]: Drive designators such as ``["D:", "E:"]``, in the order
+            the guest reported them.
+        """
+        excluded = system_drive.rstrip("\\").upper()
+        letters: list[str] = []
+        for token in listing.split():
+            designator = token.rstrip("\\").upper()
+            if not designator.endswith(_WINDOWS_DRIVE_SUFFIX) or len(designator) != len(_WINDOWS_SYSTEM_DRIVE):
+                continue
+            if designator == excluded or designator in letters:
+                continue
+            letters.append(designator)
+        return letters
+
+    async def _guest_launcher_present(self, launch_path: str) -> bool:
+        """Report whether the monitor launcher exists inside the Linux guest.
+
+        Propagates the ``SandboxError`` raised by :meth:`_guest_run` when the
+        probe itself cannot be executed in the guest.
+
+        Args:
+            launch_path: Absolute in-guest path of ``start_agent.sh``.
+
+        Returns:
+            bool: True when ``test -f`` reports the file exists.
+        """
+        status = await self._guest_run("test", ["-f", launch_path])
+        return status.exit_code == 0
+
+    async def _discover_guest_vfat_device(self) -> str:
+        """Locate the FAT-backed shared volume among the guest's block devices.
+
+        The device node is discovered rather than assumed: the root image is
+        attached with ``if=virtio`` as well, so the shared drive's position in
+        the ``/dev/vd*`` ordering is not a contract. Neither is its filesystem
+        type on its own - the guest's EFI System Partition is ``vfat`` too and
+        is enumerated ahead of the share - so the volume label vvfat writes and
+        the guest's live mount table both take part in the decision.
+
+        Returns:
+            str: Device path of the guest's shared ``vfat`` volume.
+
+        Raises:
+            SandboxError: If the block devices cannot be enumerated or no
+                unmounted volume carries the vvfat label.
+        """
+        status = await self._guest_run(
+            "lsblk",
+            ["--noheadings", "--raw", "--output", _GUEST_BLOCK_DEVICE_COLUMNS],
+        )
+        if status.exit_code != 0:
+            _logger.warning(
+                "guest_block_device_enumeration_failed",
+                exit_code=status.exit_code,
+                stderr=status.stderr.strip(),
+            )
+            raise SandboxError(_ERR_GUEST_SHARED_DEVICE_ENUM)
+
+        device = self._select_guest_block_device(
+            status.stdout,
+            _GUEST_VFAT_FS_TYPE,
+            _QEMU_VVFAT_VOLUME_LABEL,
+        )
+        if device is None:
+            _logger.warning(
+                "guest_vfat_device_not_found",
+                listing=status.stdout.strip(),
+                volume_label=_QEMU_VVFAT_VOLUME_LABEL,
+            )
+            raise SandboxError(
+                _ERR_GUEST_SHARED_DEVICE_NOT_FOUND.format(
+                    fs_type=_GUEST_VFAT_FS_TYPE,
+                    label=_QEMU_VVFAT_VOLUME_LABEL,
+                ),
+            )
+
+        _logger.info("guest_vfat_device_discovered", device=device, volume_label=_QEMU_VVFAT_VOLUME_LABEL)
+        return device
+
+    async def _mount_linux_shared_volume(self) -> str:
+        """Mount the shared volume inside a Linux guest and verify the result.
+
+        The transport is chosen by :meth:`_uses_fat_shared_transport` so the
+        mount can never disagree with the argv built by
+        :meth:`_shared_folder_args`.
+
+        Returns:
+            str: Guest-side mount point of the shared volume.
+
+        Raises:
+            SandboxError: If the mount point cannot be created, if no shared
+                volume can be located, if the mount command fails, or if the
+                monitor launcher is missing once the volume is mounted.
+        """
+        mount_point = _GUEST_SHARED_ROOT_LINUX
+        launch_path = self._linux_launch_path(mount_point)
+        if await self._guest_launcher_present(launch_path):
+            _logger.info("guest_shared_volume_already_mounted", mount_point=mount_point)
+            return mount_point
+
+        mkdir_status = await self._guest_run("mkdir", ["-p", mount_point])
+        if mkdir_status.exit_code != 0:
+            _logger.warning(
+                "guest_shared_mount_point_failed",
+                mount_point=mount_point,
+                exit_code=mkdir_status.exit_code,
+                stderr=mkdir_status.stderr.strip(),
+            )
+            raise SandboxError(_ERR_GUEST_SHARED_MOUNT_POINT.format(path=mount_point))
+
+        if self._uses_fat_shared_transport():
+            source = await self._discover_guest_vfat_device()
+            fs_type = _GUEST_VFAT_FS_TYPE
+            options = _GUEST_VFAT_MOUNT_OPTIONS
+        else:
+            source = _SHARED_MOUNT_TAG
+            fs_type = _GUEST_9P_FS_TYPE
+            options = _GUEST_9P_MOUNT_OPTIONS
+
+        mount_status = await self._guest_run("mount", ["-t", fs_type, "-o", options, source, mount_point])
+        if mount_status.exit_code != 0:
+            _logger.warning(
+                "guest_shared_mount_failed",
+                source=source,
+                fs_type=fs_type,
+                mount_point=mount_point,
+                exit_code=mount_status.exit_code,
+                stderr=mount_status.stderr.strip(),
+            )
+            raise SandboxError(
+                _ERR_GUEST_SHARED_MOUNT_FAILED.format(source=source, mount_point=mount_point),
+            )
+
+        if not await self._guest_launcher_present(launch_path):
+            _logger.warning("guest_shared_launcher_missing", launch_path=launch_path, source=source)
+            raise SandboxError(_ERR_GUEST_SHARED_LAUNCHER_MISSING.format(path=launch_path))
+
+        _logger.info("guest_shared_volume_mounted", source=source, fs_type=fs_type, mount_point=mount_point)
+        return mount_point
+
+    async def _guest_expand_environment(self, variable: str) -> str:
+        """Expand one environment variable inside the Windows guest.
+
+        Propagates the ``SandboxError`` raised by :meth:`_guest_run` when the
+        query cannot be dispatched at all.
+
+        Args:
+            variable: Variable name without its surrounding percent signs.
+
+        Returns:
+            str: Expanded value with surrounding whitespace removed, or an
+            empty string when the guest reported a failure or left the
+            reference unexpanded because the variable is not set.
+        """
+        reference = f"%{variable}%"
+        status = await self._guest_run("cmd.exe", ["/c", "echo", reference])
+        value = status.stdout.strip()
+        if status.exit_code != 0 or not value or value == reference:
+            _logger.warning(
+                "guest_environment_unreadable",
+                variable=variable,
+                exit_code=status.exit_code,
+                stdout=value,
+            )
+            return ""
+        return value
+
+    async def _guest_system_drive(self) -> str:
+        """Ask the Windows guest which drive it booted from.
+
+        Windows does not have to be installed on ``C:``, and the share probe
+        has to skip whichever drive it really is. ``%SystemDrive%`` is expanded
+        by the guest's own ``cmd.exe``, so the answer comes from the guest
+        rather than from an assumption. A guest that cannot answer falls back
+        to the overwhelmingly common designator, which only ever costs one
+        wasted existence probe.
+
+        Propagates the ``SandboxError`` raised by :meth:`_guest_run` when the
+        query cannot be dispatched at all.
+
+        Returns:
+            str: Drive designator such as ``C:``.
+        """
+        designator = (await self._guest_expand_environment(_WINDOWS_SYSTEM_DRIVE_VARIABLE)).rstrip("\\").upper()
+        if len(designator) == len(_WINDOWS_SYSTEM_DRIVE) and designator.endswith(_WINDOWS_DRIVE_SUFFIX) and designator[0].isalpha():
+            _logger.debug("guest_system_drive_resolved", system_drive=designator)
+            return designator
+
+        _logger.warning("guest_system_drive_unreadable", stdout=designator, fallback=_WINDOWS_SYSTEM_DRIVE)
+        return _WINDOWS_SYSTEM_DRIVE
+
+    async def _guest_system_root(self) -> str:
+        r"""Ask the Windows guest where its own Windows directory lives.
+
+        The in-guest monitor watches ``%SystemRoot%\\Temp``, so the host has to
+        know the same directory to scan it; deriving it from the system drive
+        would assume the folder is called ``Windows``, which a guest is free
+        not to do. A guest that cannot answer falls back to
+        :data:`_WINDOWS_SYSTEM_ROOT`, and the agent script substitutes that
+        same literal for an unset ``%SystemRoot%`` before it builds any path
+        from it, so the two sides still name one directory.
+
+        Propagates the ``SandboxError`` raised by :meth:`_guest_run` when the
+        query cannot be dispatched at all.
+
+        Returns:
+            str: Absolute directory such as ``C:\\Windows``, without a trailing
+            separator.
+        """
+        value = (await self._guest_expand_environment(_WINDOWS_SYSTEM_ROOT_VARIABLE)).rstrip("\\")
+        if len(value) > len(_WINDOWS_SYSTEM_DRIVE) and value[1:2] == _WINDOWS_DRIVE_SUFFIX and value[0].isalpha():
+            _logger.debug("guest_system_root_resolved", system_root=value)
+            return value
+
+        _logger.warning("guest_system_root_unreadable", stdout=value, fallback=_WINDOWS_SYSTEM_ROOT)
+        return _WINDOWS_SYSTEM_ROOT
+
+    def _windows_drop_watch_roots(self) -> list[str]:
+        r"""Return the guest directories dropped files are collected from.
+
+        These must be exactly the directories the in-guest monitor mirrors into
+        ``<share>\output\dropped``: the agent script derives them from the
+        guest's own ``%SystemDrive%`` and ``%SystemRoot%``, so the host derives
+        them from the same two values, probed by
+        :meth:`_resolve_windows_shared_drive`, and falls back to the same two
+        literals the script falls back to. A guest that did not install Windows
+        on ``C:`` would otherwise leave the agent mirroring from one volume
+        while the host scanned another. Until the probe has run the compiled-in
+        defaults stand in, which is all a caller reached before the sandbox
+        started can use.
+
+        Returns:
+            list[str]: Absolute in-guest directories.
+        """
+        system_drive = self._guest_system_drive_value or _WINDOWS_SYSTEM_DRIVE
+        system_root = self._guest_system_root_value or _WINDOWS_SYSTEM_ROOT
+        return [
+            *(f"{system_drive}\\{relative}" for relative in _WINDOWS_DROP_WATCH_BELOW_SYSTEM_DRIVE),
+            *(f"{system_root}\\{relative}" for relative in _WINDOWS_DROP_WATCH_BELOW_SYSTEM_ROOT),
+        ]
+
+    async def _resolve_windows_shared_drive(self) -> str:
+        r"""Find the drive letter the FAT shared volume received in the guest.
+
+        QEMU does not control which letter Windows assigns to the FAT virtio
+        drive, so the letter is probed for rather than assumed. The guest's own
+        ``%SystemDrive%`` and ``%SystemRoot%`` are read in the same pass and
+        kept: the drive probe has to skip the boot volume, and
+        :meth:`_windows_drop_watch_roots` has to name the same directories the
+        in-guest monitor derives from those two variables.
+
+        Returns:
+            str: Guest-side root of the shared volume including the trailing
+            backslash, for example ``E:\``.
+
+        Raises:
+            SandboxError: If the guest's drive letters cannot be enumerated or
+                none of them carries the monitor launcher.
+        """
+        listing = await self._guest_run("cmd.exe", ["/c", "fsutil", "fsinfo", "drives"])
+        if listing.exit_code != 0:
+            _logger.warning(
+                "guest_drive_enumeration_failed",
+                exit_code=listing.exit_code,
+                stderr=listing.stderr.strip(),
+            )
+            raise SandboxError(_ERR_GUEST_SHARED_DRIVE_ENUM)
+
+        self._guest_system_drive_value = await self._guest_system_drive()
+        self._guest_system_root_value = await self._guest_system_root()
+        letters = self._parse_windows_drive_letters(listing.stdout, self._guest_system_drive_value)
+        if not letters:
+            _logger.warning("guest_drive_enumeration_empty", listing=listing.stdout.strip())
+            raise SandboxError(_ERR_GUEST_SHARED_DRIVE_ENUM)
+
+        for letter in letters:
+            guest_root = letter + "\\"
+            probe = await self._guest_run("cmd.exe", ["/c", "dir", "/b", self._windows_launch_path(guest_root)])
+            if probe.exit_code == 0:
+                _logger.info("guest_shared_drive_resolved", guest_root=guest_root)
+                return guest_root
+
+        _logger.warning("guest_shared_drive_not_found", candidates=letters)
+        raise SandboxError(
+            _ERR_GUEST_SHARED_DRIVE_NOT_FOUND.format(relative=_MONITOR_LAUNCH_RELATIVE_WINDOWS),
+        )
+
+    async def _mount_guest_shared_volume(self) -> None:
+        """Make the host shared folder reachable from inside the guest.
+
+        The host side attaches the folder either as a FAT virtio block device
+        or as a virtio-9p export, but neither is usable until the guest acts on
+        it: Linux must mount the volume at :data:`_GUEST_SHARED_ROOT_LINUX`,
+        and Windows assigns the FAT drive an arbitrary letter that has to be
+        discovered. Every step runs through ``guest-exec`` and its exit status
+        is read back, so a failure is detected here instead of surfacing later
+        as a monitor that never starts.
+
+        Raises:
+            SandboxError: If the guest agent is unreachable, if the volume
+                cannot be made reachable, or if the guest OS is unsupported.
+        """
+        if self._shared_folder is None:
+            _logger.debug("guest_shared_mount_skipped_no_share")
+            return
+
+        await self._ensure_guest_agent_ready()
+
+        guest_os = self._qemu_config.guest_os
+        if guest_os == GuestOS.LINUX:
+            self._guest_shared_root = await self._mount_linux_shared_volume()
+        elif guest_os == GuestOS.WINDOWS:
+            self._guest_shared_root = await self._resolve_windows_shared_drive()
+        else:
+            _logger.warning("guest_shared_mount_unsupported_guest_os", guest_os=str(guest_os))
+            raise SandboxError(_ERR_UNSUPPORTED_GUEST_OS)
+
+        _logger.info(
+            "guest_shared_volume_ready",
+            guest_os=guest_os.value,
+            guest_root=self._guest_shared_root,
+        )
+
+    def _guest_shared_root_for(self, guest_os: GuestOS) -> str:
+        r"""Return the in-guest root every shared-folder path must be built on.
+
+        Single source of truth for the guest side of the share. Windows assigns
+        the FAT volume whatever letter it likes, so the root is only known once
+        :meth:`_mount_guest_shared_volume` has probed for it; until then the
+        compiled-in default stands in, which is all that a caller reached before
+        the sandbox started can use.
+
+        Args:
+            guest_os: Guest family whose default root applies while no root has
+                been resolved.
+
+        Returns:
+            str: ``E:\`` style root on Windows (trailing separator included) or
+            ``/mnt/shared`` style root on Linux (no trailing separator).
+        """
+        if self._guest_shared_root is not None:
+            return self._guest_shared_root
+        if guest_os == GuestOS.WINDOWS:
+            return _GUEST_SHARED_ROOT_WINDOWS
+        return _GUEST_SHARED_ROOT_LINUX
+
+    def _guest_launch_command(self) -> tuple[str, list[str]]:
+        """Build the ``guest-exec`` invocation that starts the monitor agent.
+
+        The launcher path is built from the shared-volume root resolved by
+        :meth:`_mount_guest_shared_volume` when it is known, so a FAT volume
+        that landed on a letter other than ``Z:`` is still launched correctly.
+
+        Returns:
+            tuple[str, list[str]]: Executable and argument list to pass to
+            ``guest-exec``.
+
+        Raises:
+            SandboxError: If the configured guest OS is unsupported.
+        """
+        guest_os = self._qemu_config.guest_os
+        if guest_os == GuestOS.WINDOWS:
+            return ("cmd.exe", ["/c", self._windows_launch_path(self._guest_shared_root_for(guest_os))])
+        if guest_os == GuestOS.LINUX:
+            return ("/bin/bash", [self._linux_launch_path(self._guest_shared_root_for(guest_os))])
+
+        _logger.warning("bootstrap_guest_agent_unsupported_guest_os", guest_os=str(guest_os))
+        raise SandboxError(_ERR_UNSUPPORTED_GUEST_OS)
+
     async def _bootstrap_guest_agent(self) -> None:
         """Bootstrap monitor agent script inside the guest via qemu-ga.
 
-        Waits for qemu-guest-agent to be reachable via QMP ``guest-ping``,
-        then invokes ``guest-exec`` to run ``start_agent.cmd`` (Windows) or
+        Opens the ``org.qemu.guest_agent.0`` channel, waits for
+        qemu-guest-agent to answer ``guest-ping`` on it, then invokes
+        ``guest-exec`` to run ``start_agent.cmd`` (Windows) or
         ``start_agent.sh`` (Linux) inside the guest. The qemu-guest-agent
         binary must already be installed in the disk image and configured
         to start at boot; this method is the host-side trigger that runs
         the Intellicrack monitor scripts using the guest agent channel.
 
-        Raises:
-            SandboxError: If the QMP client is not connected, if the
-                qemu-guest-agent never responds to ``guest-ping`` within
-                the configured timeout, if ``guest-exec`` fails, or if the
-                guest OS is unsupported.
+        Propagates ``SandboxError`` when the guest-agent channel cannot be
+        opened, when qemu-guest-agent never responds to ``guest-ping`` within
+        the configured timeout, when ``guest-exec`` fails, or when the guest OS
+        is unsupported.
         """
-        if self._qmp is None:
-            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+        await self._ensure_guest_agent_ready()
 
-        await self._wait_for_qemu_ga()
-
+        exec_path, exec_args = self._guest_launch_command()
         guest_os = self._qemu_config.guest_os
-        if guest_os == GuestOS.WINDOWS:
-            exec_path = "cmd.exe"
-            exec_args: list[str] = ["/c", _GUEST_AGENT_LAUNCH_PATH_WINDOWS]
-        elif guest_os == GuestOS.LINUX:
-            exec_path = "/bin/bash"
-            exec_args = [_GUEST_AGENT_LAUNCH_PATH_LINUX]
-        else:
-            _logger.warning(
-                "bootstrap_guest_agent_unsupported_guest_os",
-                guest_os=str(guest_os),
-            )
-            raise SandboxError(_ERR_UNSUPPORTED_GUEST_OS)
-
-        guest_pid = await self._qmp_guest_exec(exec_path, exec_args, capture_output=False)
+        guest_pid = await self._guest_agent_exec(exec_path, exec_args, capture_output=False)
         self._agent_guest_pid = guest_pid
         _logger.info(
             "guest_agent_bootstrap_launched",
@@ -1746,6 +3156,22 @@ class QEMUSandbox(SandboxBase):
             ),
         ]
 
+    def _uses_fat_shared_transport(self) -> bool:
+        """Report whether the shared folder is carried by a FAT block device.
+
+        Single source of truth for the transport decision: the argv built by
+        :meth:`_shared_folder_args` and the in-guest mount performed by
+        :meth:`_mount_guest_shared_volume` must never disagree about which
+        transport is in play. virtio-9p is compiled out of every Windows QEMU
+        build, and a Windows guest cannot mount a 9p export at all, so either
+        condition forces the FAT-backed virtio block device.
+
+        Returns:
+            bool: True when the share is a FAT virtio drive, False when it is
+            a virtio-9p export.
+        """
+        return _IS_WINDOWS or self._qemu_config.guest_os == GuestOS.WINDOWS
+
     def _shared_folder_args(self) -> list[str]:
         """Build the argv exposing the host shared folder to the guest.
 
@@ -1753,10 +3179,12 @@ class QEMUSandbox(SandboxBase):
         than by guest OS. virtio-9p (``-fsdev``/``virtio-9p-pci``) is compiled
         out of every Windows QEMU build - ``-fsdev`` reports "fsdev support is
         disabled" - so on Windows the folder is presented as a FAT-formatted
-        virtio block device instead, which both guest types can mount (Linux as
-        ``vfat`` by the ``SHARED`` label, Windows as a drive letter). Where 9p is
-        available it remains the transport because it maps host permissions and
-        handles writes reliably, neither of which QEMU's FAT emulation does.
+        virtio block device instead, which both guest types can mount: Linux by
+        the ``QEMU VVFAT`` volume label that vvfat writes into the synthesised
+        boot sector and root directory, Windows as a drive letter it assigns
+        itself. Where 9p is available it remains the transport because it maps
+        host permissions and handles writes reliably, neither of which QEMU's
+        FAT emulation does.
 
         Returns:
             list[str]: The ``-drive`` or ``-fsdev``/``-device`` arguments.
@@ -1772,7 +3200,7 @@ class QEMUSandbox(SandboxBase):
             _logger.error("qemu_command_build_failed_guest_os", guest_os=str(self._qemu_config.guest_os))
             raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
 
-        if _IS_WINDOWS or self._qemu_config.guest_os == GuestOS.WINDOWS:
+        if self._uses_fat_shared_transport():
             # ``label=`` is not a -drive option (raw format rejects it), so the
             # volume is identified by QEMU's built-in FAT label instead. The
             # drive is marked ``snapshot=off`` so guest writes target the host
@@ -1786,7 +3214,7 @@ class QEMUSandbox(SandboxBase):
             "-fsdev",
             f"local,id=fsdev0,path={shared},security_model=mapped-xattr",
             "-device",
-            "virtio-9p-pci,fsdev=fsdev0,mount_tag=shared",
+            f"virtio-9p-pci,fsdev=fsdev0,mount_tag={_SHARED_MOUNT_TAG}",
         ]
 
     @staticmethod
@@ -1922,7 +3350,7 @@ class QEMUSandbox(SandboxBase):
             "-device",
             "virtio-serial-pci",
             "-chardev",
-            f"socket,id=agent,host=127.0.0.1,port={agent_port + 1},server,nowait",
+            f"socket,id=agent,host=127.0.0.1,port={agent_port + _QGA_CHANNEL_PORT_OFFSET},server,nowait",
             "-device",
             "virtserialport,chardev=agent,name=org.qemu.guest_agent.0",
         ])
@@ -1952,6 +3380,7 @@ class QEMUSandbox(SandboxBase):
             shared_folder=self._shared_folder,
             anti_evasion_profile=self._qemu_config.anti_evasion_profile,
             agent_connect_timeout=self._qemu_config.agent_connect_timeout,
+            guest_agent_ready_timeout=self._qemu_config.guest_agent_ready_timeout,
         )
 
         return cmd
@@ -2146,8 +3575,15 @@ class QEMUSandbox(SandboxBase):
         return verified_pid
 
     async def _attach_qemu_agents(self) -> None:
-        """Bring up QMP, bootstrap the guest agent, and wait for it to connect."""
+        """Bring up QMP, mount the share, bootstrap the agent, and await it.
+
+        The shared volume is mounted only once qemu-guest-agent answers, and
+        always before the monitor launcher is invoked: the launcher lives on
+        that volume, so bootstrapping first would exec a path that does not
+        exist yet.
+        """
         await self._connect_and_verify_qmp()
+        await self._mount_guest_shared_volume()
         await self._bootstrap_guest_agent()
 
         self._agent = GuestAgentClient(port=self._qemu_config.agent_port)
@@ -2201,6 +3637,10 @@ class QEMUSandbox(SandboxBase):
         if self._agent is not None:
             await self._agent.disconnect()
             self._agent = None
+
+        if self._qga is not None:
+            await self._qga.disconnect()
+            self._qga = None
 
         if self._qmp is not None:
             await self._qmp.quit()
@@ -2307,52 +3747,67 @@ class QEMUSandbox(SandboxBase):
 
         self._temp_dir = None
         self._shared_folder = None
+        self._guest_shared_root = None
+        self._guest_system_drive_value = None
+        self._guest_system_root_value = None
 
     @staticmethod
     def _windows_agent_script_content() -> str:
         r"""Return the Windows guest agent PowerShell script body.
 
-        The script (1) maps ``Z:`` via ``net use`` with three 2-second
-        retries before any logging or file polling, (2) launches the seven
-        bundled monitor scripts from ``Z:\monitor\`` with ``-LogDir Z:\logs``,
-        (3) listens on ``127.0.0.1:4445`` for argv-style command requests
-        validated against a short allowlist (``powershell``, ``cmd``, any
-        ``.exe`` under ``Z:\``, ``System32`` or ``SysWOW64``), and
-        (4) emits process, file, and extended network telemetry in the
-        ten-field schema parsed by
-        :func:`intellicrack.sandbox.log_parsers.parse_network_log`.
+        The script (1) locates the shared volume from its own location -
+        ``$PSScriptRoot`` is the ``monitor`` directory of the FAT drive the
+        guest mounted, whose parent is the share root - because the host
+        generates this file before the guest has assigned that drive a letter,
+        (2) launches the seven bundled monitor scripts from its own directory
+        with ``-LogDir <share>\logs``, (3) listens on ``127.0.0.1:4445`` for
+        argv-style command requests validated against a short allowlist
+        (``powershell``, ``cmd``, any ``.exe`` under the share root,
+        ``System32`` or ``SysWOW64``), (4) emits process, file, and
+        extended network telemetry in the ten-field schema parsed by
+        :func:`intellicrack.sandbox.log_parsers.parse_network_log`, and
+        (5) mirrors files created below ``%SystemDrive%`` and ``%SystemRoot%``
+        into ``<share>\output\dropped``. Those watched roots come from the
+        guest's own environment rather than from a hardcoded ``C:``, with
+        :data:`_WINDOWS_SYSTEM_DRIVE` and :data:`_WINDOWS_SYSTEM_ROOT`
+        substituted for either variable if the guest leaves it unset;
+        :meth:`_windows_drop_watch_roots` builds the host-side scan from the
+        same two values and the same two fallbacks, so both sides watch one set
+        of directories.
+
+        Nothing is mapped over SMB: QEMU's ``smb=`` netdev option needs a host
+        ``smbd``, which a Windows host does not have, so the FAT virtio drive
+        is the only share that exists.
 
         Returns:
             str: Full PowerShell script source (UTF-8).
         """
         return r"""$ErrorActionPreference = 'SilentlyContinue'
 
-$shareHost = '10.0.2.4'
-$shareName = 'qemu'
-$driveLetter = 'Z:'
-$shareMapped = $false
-for ($i = 0; $i -lt 3 -and -not $shareMapped; $i++) {
-    & net.exe use $driveLetter ('\\' + $shareHost + '\' + $shareName) /persistent:no 2>&1 | Out-Null
-    if (Test-Path $driveLetter) { $shareMapped = $true; break }
-    Start-Sleep -Seconds 2
-}
+$monitorDir = $PSScriptRoot
+$shareRoot = Split-Path -Parent $monitorDir
+$shareRootPrefix = $shareRoot
+if (-not $shareRootPrefix.EndsWith('\')) { $shareRootPrefix = $shareRootPrefix + '\' }
 
-$logDir = 'Z:\logs'
-$monitorDir = 'Z:\monitor'
-if ($shareMapped) {
-    if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
-    if (-not (Test-Path $monitorDir)) { New-Item -ItemType Directory -Path $monitorDir -Force | Out-Null }
-}
+$systemDrive = $env:SystemDrive
+if (-not $systemDrive) { $systemDrive = 'C:' }
+$systemRoot = $env:SystemRoot
+if (-not $systemRoot) { $systemRoot = 'C:\Windows' }
+
+$logDir = Join-Path $shareRoot 'logs'
+if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 
 $fileLog = Join-Path $logDir 'file_changes.log'
 $netLog = Join-Path $logDir 'network_activity.log'
 $procLog = Join-Path $logDir 'process_activity.log'
-$droppedMirror = 'Z:\output\dropped'
-if ($shareMapped) {
-    if (-not (Test-Path $droppedMirror)) { New-Item -ItemType Directory -Path $droppedMirror -Force | Out-Null }
-}
+$droppedMirror = Join-Path $shareRoot 'output\dropped'
+if (-not (Test-Path $droppedMirror)) { New-Item -ItemType Directory -Path $droppedMirror -Force | Out-Null }
 $Global:_IC_DroppedMirror = $droppedMirror
-$Global:_IC_DropWatchedRoots = @('C:\Users\Public\Downloads', 'C:\Windows\Temp', 'C:\Users\Default\AppData\Local\Temp')
+$Global:_IC_DropWatchedRoots = @(
+    (Join-Path $systemDrive 'Users\Public\Downloads'),
+    (Join-Path $systemRoot 'Temp'),
+    (Join-Path $systemDrive 'Users\Default\AppData\Local\Temp')
+)
 
 $monitorScripts = @(
     'api_trace.ps1',
@@ -2373,7 +3828,7 @@ foreach ($scriptName in $monitorScripts) {
 }
 
 $watcher = New-Object System.IO.FileSystemWatcher
-$watcher.Path = 'C:\'
+$watcher.Path = ($systemDrive + '\')
 $watcher.IncludeSubdirectories = $true
 $watcher.EnableRaisingEvents = $true
 $Global:_IC_FileLog = $fileLog
@@ -2410,7 +3865,7 @@ Register-ObjectEvent $watcher 'Deleted' -MessageData $fileLog -Action {
 } | Out-Null
 
 $allowedNames = @('powershell', 'powershell.exe', 'cmd', 'cmd.exe')
-$allowedRoots = @('Z:\', ($env:SystemRoot + '\System32\'), ($env:SystemRoot + '\SysWOW64\'))
+$allowedRoots = @($shareRootPrefix, ($systemRoot + '\System32\'), ($systemRoot + '\SysWOW64\'))
 function Test-AllowedCommand($cmdValue) {
     if ([string]::IsNullOrEmpty($cmdValue)) { return $false }
     $lower = $cmdValue.ToLower()
@@ -2551,11 +4006,14 @@ while ($true) {
         r"""Create guest agent scripts and stage bundled monitor scripts.
 
         On Windows, writes ``agent.ps1`` and ``start_agent.cmd`` into the
-        host-side shared folder's ``monitor`` subdirectory. The Windows
-        agent maps ``Z:`` on first tick, copies the seven bundled PS1
-        monitor scripts into ``Z:\monitor\``, and launches each with
-        ``-LogDir Z:\logs``. On Linux, writes the existing Python agent
-        and its startup shell script.
+        host-side shared folder's ``monitor`` subdirectory, alongside the seven
+        bundled PS1 monitor scripts. Both generated scripts derive the in-guest
+        share root from their own location rather than naming a drive letter,
+        because the guest has not assigned one yet when they are written: the
+        launcher resolves ``agent.ps1`` through ``%~dp0`` and the agent
+        resolves the logs, output and monitor directories through
+        ``$PSScriptRoot``. On Linux, writes the existing Python agent and its
+        startup shell script.
 
         Raises:
             ValueError: If an unsupported guest OS is configured.
@@ -2580,8 +4038,12 @@ while ($true) {
                     _logger.warning("monitor_script_missing", script=script_name, path=str(src))
 
             startup_script = monitor_dir / "start_agent.cmd"
+            # %~dp0 is the directory this launcher was started from, which is
+            # the share's own monitor directory whatever letter the guest gave
+            # the FAT volume. The letter cannot be known here: the file is
+            # written before QEMU is even launched.
             startup_content = (
-                '@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "Z:\\monitor\\agent.ps1"\r\n'
+                '@echo off\r\npowershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0agent.ps1"\r\n'
             )
         elif self._qemu_config.guest_os == GuestOS.LINUX:
             agent_script = monitor_dir / "agent.py"
@@ -2925,10 +4387,17 @@ python3 /mnt/shared/monitor/agent.py &
         time_limit: int | None = None,
         working_directory: str | None = None,
     ) -> tuple[int, str, str]:
-        """Execute a command in the sandbox.
+        """Execute a shell command line in the sandbox.
+
+        ``command`` is a command line for the guest's own shell: it may carry
+        redirections, ``&&`` and quoted paths, and a working directory is
+        applied by prefixing a ``cd``. The in-guest agent launches an
+        executable directly rather than through a shell, so the whole line is
+        handed to the guest's command interpreter instead of being sent as if
+        it were the name of a program.
 
         Args:
-            command: Command to execute.
+            command: Command line to execute.
             time_limit: Optional timeout override in seconds.
             working_directory: Optional working directory.
 
@@ -2947,7 +4416,8 @@ python3 /mnt/shared/monitor/agent.py &
         if self._agent is not None and self._agent.is_connected:
             if working_directory:
                 command = f"cd {working_directory} && {command}"
-            return await self._agent.send_command(command, time_limit=effective_timeout)
+            shell, shell_args = self._guest_shell_invocation(command)
+            return await self._agent.send_command(shell, shell_args, time_limit=effective_timeout)
 
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
@@ -2978,6 +4448,54 @@ python3 /mnt/shared/monitor/agent.py &
             script_path=script_path,
             time_limit=effective_timeout,
         )
+
+    def _guest_shell_invocation(self, command_line: str) -> tuple[str, list[str]]:
+        """Wrap a shell command line in the guest's own command interpreter.
+
+        Args:
+            command_line: Command line the guest's shell is to interpret.
+
+        Returns:
+            tuple[str, list[str]]: Executable and argument vector that run
+            ``command_line`` through the guest's shell.
+        """
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            return (_WINDOWS_SHELL, [_WINDOWS_SHELL_COMMAND_FLAG, command_line])
+        return (_LINUX_SHELL, [_LINUX_SHELL_COMMAND_FLAG, command_line])
+
+    async def _run_guest_program(
+        self,
+        executable: str,
+        args: Sequence[str],
+        time_limit: int,
+    ) -> tuple[int, str, str]:
+        r"""Run one in-guest program addressed by its own path.
+
+        The in-guest agent validates the executable it is handed against its
+        allowlist and then launches it directly, so the path travels unquoted
+        in the request's ``command`` field with the arguments in ``args``: a
+        path carrying spaces stays a single token that way, without quotes the
+        allowlist check would first have to undo. Only the shared-folder
+        fallback, where a generated script is interpreted by the guest's shell,
+        needs the invocation flattened into a command line - and there the
+        quotes are what hold such a path together.
+
+        Propagates the ``SandboxError`` raised by :meth:`run_command` when that
+        fallback cannot dispatch the invocation at all.
+
+        Args:
+            executable: Absolute in-guest path of the program to run.
+            args: Argument list passed to the program.
+            time_limit: Execution timeout in seconds.
+
+        Returns:
+            tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
+        """
+        if self._agent is not None and self._agent.is_connected:
+            return await self._agent.send_command(executable, args, time_limit=time_limit)
+
+        command_line = " ".join(f'"{token}"' for token in [executable, *args])
+        return await self.run_command(command_line, time_limit=time_limit)
 
     def _generate_execution_script(
         self,
@@ -3014,9 +4532,10 @@ python3 /mnt/shared/monitor/agent.py &
         """
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
             script_name = f"exec_{script_id}.cmd"
-            stdout_guest_path = f"{self.GUEST_SHARED_PATH_WINDOWS}output\\{stdout_name}"
-            stderr_guest_path = f"{self.GUEST_SHARED_PATH_WINDOWS}output\\{stderr_name}"
-            result_guest_path = f"{self.GUEST_SHARED_PATH_WINDOWS}output\\{result_name}"
+            guest_root = self._guest_shared_root_for(GuestOS.WINDOWS)
+            stdout_guest_path = f"{guest_root}output\\{stdout_name}"
+            stderr_guest_path = f"{guest_root}output\\{stderr_name}"
+            result_guest_path = f"{guest_root}output\\{result_name}"
             cd_line = f'cd /d "{working_directory}"' if working_directory else ""
             script_content = (
                 "@echo off\r\n"
@@ -3026,9 +4545,10 @@ python3 /mnt/shared/monitor/agent.py &
             )
         elif self._qemu_config.guest_os == GuestOS.LINUX:
             script_name = f"exec_{script_id}.sh"
-            stdout_guest_path = f"{self.GUEST_SHARED_PATH_LINUX}/output/{stdout_name}"
-            stderr_guest_path = f"{self.GUEST_SHARED_PATH_LINUX}/output/{stderr_name}"
-            result_guest_path = f"{self.GUEST_SHARED_PATH_LINUX}/output/{result_name}"
+            guest_root = self._guest_shared_root_for(GuestOS.LINUX)
+            stdout_guest_path = f"{guest_root}/output/{stdout_name}"
+            stderr_guest_path = f"{guest_root}/output/{stderr_name}"
+            result_guest_path = f"{guest_root}/output/{result_name}"
             cd_line = f'cd "{working_directory}"' if working_directory else ""
             script_content = (
                 f'#!/bin/bash\n{cd_line}\n( {command} ) > "{stdout_guest_path}" 2> "{stderr_guest_path}"\necho $? > "{result_guest_path}"\n'
@@ -3208,19 +4728,18 @@ python3 /mnt/shared/monitor/agent.py &
                 await asyncio.to_thread(log_file.unlink)
 
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
-            binary_sandbox_path = f"{self.GUEST_SHARED_PATH_WINDOWS}input\\{binary_path.name}"
+            binary_sandbox_path = f"{self._guest_shared_root_for(GuestOS.WINDOWS)}input\\{binary_path.name}"
         elif self._qemu_config.guest_os == GuestOS.LINUX:
-            binary_sandbox_path = f"{self.GUEST_SHARED_PATH_LINUX}/input/{binary_path.name}"
+            binary_sandbox_path = f"{self._guest_shared_root_for(GuestOS.LINUX)}/input/{binary_path.name}"
         else:
             raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
 
-        command = f'"{binary_sandbox_path}" {" ".join(f"{chr(34)}{a}{chr(34)}" for a in (args or []))}'
-
         result: ExecutionResult
         try:
-            exit_code, stdout, stderr = await self.run_command(
-                command,
-                time_limit=effective_timeout,
+            exit_code, stdout, stderr = await self._run_guest_program(
+                binary_sandbox_path,
+                args or [],
+                effective_timeout,
             )
             result = "success" if exit_code == 0 else "error"
         except SandboxTimeoutError as e:
@@ -3879,19 +5398,15 @@ python3 /mnt/shared/monitor/agent.py &
 
         guest_dirs: list[str]
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
-            guest_dirs = [
-                r"C:\Users\Public\Downloads",
-                r"C:\Windows\Temp",
-                r"C:\Users\Default\AppData\Local\Temp",
-            ]
-            shared_base = self.GUEST_SHARED_PATH_WINDOWS
+            guest_dirs = self._windows_drop_watch_roots()
+            shared_base = self._guest_shared_root_for(GuestOS.WINDOWS)
         else:
             guest_dirs = [
                 PurePosixPath("/", "tmp").as_posix(),
                 PurePosixPath("/", "var", "tmp").as_posix(),
                 "/home",
             ]
-            shared_base = self.GUEST_SHARED_PATH_LINUX
+            shared_base = self._guest_shared_root_for(GuestOS.LINUX)
 
         agent_used = False
         if self._agent is not None and self._agent.is_connected:
@@ -3899,13 +5414,10 @@ python3 /mnt/shared/monitor/agent.py &
             for guest_dir in guest_dirs:
                 if self._qemu_config.guest_os == GuestOS.WINDOWS:
                     inner_cmd = f'xcopy /S /E /Y /I "{guest_dir}" "{shared_base}output\\dropped_{extract_id}\\{Path(guest_dir).name}"'
-                    wrapped_command = "cmd.exe"
-                    wrapped_args: list[str] = ["/c", inner_cmd]
                 else:
                     dir_name = Path(guest_dir).name
                     inner_cmd = f'cp -r "{guest_dir}" "{shared_base}/output/dropped_{extract_id}/{dir_name}" 2>/dev/null'
-                    wrapped_command = "/bin/bash"
-                    wrapped_args = ["-c", inner_cmd]
+                wrapped_command, wrapped_args = self._guest_shell_invocation(inner_cmd)
                 exit_code, stdout, stderr = await self._agent.send_command(
                     wrapped_command,
                     args=wrapped_args,

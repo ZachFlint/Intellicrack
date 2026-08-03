@@ -97,29 +97,28 @@ def _oracle_expected_accelerator(qemu_exe: Path) -> AcceleratorType:
 
     combined = (result.stdout + result.stderr).lower()
 
-    if "whpx" in combined and platform.system() == "Windows":
-        if pwsh := shutil.which("pwsh") or shutil.which("powershell"):
-            try:
-                ps_result = subprocess.run(
-                    [
-                        pwsh,
-                        "-NoLogo",
-                        "-NoProfile",
-                        "-NonInteractive",
-                        "-ExecutionPolicy",
-                        "Bypass",
-                        "-Command",
-                        "(Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction Stop).State",
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=15,
-                    check=False,
-                )
-                if ps_result.stdout.strip().lower() == "enabled":
-                    return AcceleratorType.WHPX
-            except (OSError, subprocess.TimeoutExpired):
-                pass
+    if "whpx" in combined and platform.system() == "Windows" and (pwsh := shutil.which("pwsh") or shutil.which("powershell")):
+        try:
+            ps_result = subprocess.run(
+                [
+                    pwsh,
+                    "-NoLogo",
+                    "-NoProfile",
+                    "-NonInteractive",
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-Command",
+                    "(Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction Stop).State",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=15,
+                check=False,
+            )
+            if ps_result.stdout.strip().lower() == "enabled":
+                return AcceleratorType.WHPX
+        except (OSError, subprocess.TimeoutExpired):
+            pass
 
     return AcceleratorType.KVM if "kvm" in combined else AcceleratorType.TCG
 
