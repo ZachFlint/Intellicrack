@@ -185,7 +185,7 @@ _ERR_QEMU_GA_SOCKET_UNREACHABLE = (
     "qemu-guest-agent channel socket on 127.0.0.1:{port} refused the connection; "
     "the QEMU chardev backing org.qemu.guest_agent.0 is not listening"
 )
-_ERR_QEMU_GA_SYNC_FAILED = "qemu-guest-agent did not echo the guest-sync-delimiter id; the channel could not be resynchronised"
+_ERR_QEMU_GA_SYNC_FAILED = "qemu-guest-agent echoed no sync id for any supported sync command; the channel could not be resynchronised"
 _ERR_QEMU_GA_EXEC_STATUS_FAILED = "qemu-guest-agent guest-exec-status reply could not be read"
 _ERR_QEMU_GA_NOT_CONNECTED = "qemu-guest-agent channel not connected"
 _ERR_GUEST_COMMAND_TIMEOUT = "guest command {command} did not exit within {timeout}s"
@@ -220,6 +220,26 @@ _QGA_CHANNEL_PORT_OFFSET: Final[int] = 1
 # client left behind when it sees one.
 _QGA_PARSER_FLUSH_BYTE: Final[bytes] = b"\xff"
 _QGA_SYNC_ID_BITS: Final[int] = 31
+
+# The agent exposes two sync commands and not every build carries both, so the
+# handshake tries them in order. ``guest-sync-delimited`` prefixes its reply with
+# the parser reset marker, which is what lets a client discard a partial line a
+# previous client left in the output stream; ``guest-sync`` echoes the id with no
+# marker. Verified against qemu-guest-agent 10.0.11, whose ``guest-info`` command
+# table lists both under exactly these names.
+_QGA_SYNC_COMMANDS: Final[tuple[str, ...]] = ("guest-sync-delimited", "guest-sync")
+
+# Error class the agent reports for a command its build does not implement. It
+# is answered immediately, so treating it as definitive is what stops an
+# unsupported sync command from consuming the whole connection budget in silence.
+_QGA_COMMAND_NOT_FOUND_CLASS: Final[str] = "CommandNotFound"
+
+# Per-command slice of the sync budget. A reply can be lost outright when a
+# previous client left a partial line in the agent's output stream, since only
+# the delimited command's reply carries the sentinel that reframes it, so no
+# single command may consume the whole budget waiting for an answer that was
+# already swallowed.
+_QGA_SYNC_ATTEMPT_TIMEOUT: Final[float] = 5.0
 
 # qemu-guest-agent caps each captured stream at GUEST_EXEC_MAX_OUTPUT
 # (16 MiB, ``qga/commands.c``) and base64-encodes stdout and stderr into the
@@ -593,6 +613,24 @@ class _GuestBlockDevice:
     fs_type: str
     label: str
     mountpoint: str
+
+
+@dataclass(frozen=True)
+class _SyncOutcome:
+    """Result of waiting for one qemu-guest-agent sync reply.
+
+    Attributes:
+        matched: Whether the agent echoed the sync id that was sent.
+        unsupported: Whether the agent rejected the command as one this build
+            does not implement, which means another sync command may still
+            work and no time should be spent waiting on this one.
+        agent_error: Description the agent gave for the rejection, when it
+            gave one.
+    """
+
+    matched: bool
+    unsupported: bool = False
+    agent_error: str | None = None
 
 
 class _JsonLineTooLongError(ConnectionError):
@@ -1067,7 +1105,7 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
 
     * outbound, the client writes a lone ``0xFF`` byte, which cannot occur
       inside valid JSON and makes the agent drop its partial input, then issues
-      ``guest-sync-delimiter`` with a unique id;
+      ``guest-sync-delimited`` with a unique id;
     * inbound, the agent prepends the same ``0xFF`` sentinel to the reply that
       carries the id (``qga/main.c`` ``send_response``). Everything received up
       to and including that byte belongs to the previous conversation - a stale
@@ -1122,7 +1160,7 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
     async def _on_command_timeout(self) -> None:
         """Re-issue the sync so a late reply cannot offset the stream.
 
-        The QGA schema requires ``guest-sync-delimiter`` "upon initial
+        The QGA schema requires ``guest-sync-delimited`` "upon initial
         connection, and after any client-side timeouts": the agent answers a
         slow command eventually, and with no request id to match on, that reply
         would be read as the answer to whatever command comes next. The resync
@@ -1141,68 +1179,160 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
     async def _synchronise(self, time_limit: float) -> None:
         """Flush the agent parser and align the reply stream with this client.
 
+        Tries each command in :data:`_QGA_SYNC_COMMANDS` in turn. An agent that
+        does not implement one answers ``CommandNotFound`` straight away, which
+        moves on to the next name rather than waiting out the deadline.
+
         Args:
             time_limit: Deadline in seconds for the sync reply.
 
         Raises:
-            SandboxError: If the socket is not open, or if the agent does not
-                echo the sync id before the deadline.
+            SandboxError: If the socket is not open, if no sync command the
+                agent implements echoes its id before the deadline, or if the
+                agent implements none of them.
         """
         if self._reader is None or self._writer is None:
             raise SandboxError(_ERR_QEMU_GA_SYNC_FAILED)
 
+        deadline = time.monotonic() + time_limit
+        pending = list(_QGA_SYNC_COMMANDS)
+        while pending:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            for command in list(pending):
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                outcome = await self._attempt_sync(command, min(_QGA_SYNC_ATTEMPT_TIMEOUT, remaining))
+                if outcome.matched:
+                    return
+                if outcome.unsupported:
+                    pending.remove(command)
+                    _logger.debug(
+                        self._event("sync_command_unsupported"),
+                        command=command,
+                        error=outcome.agent_error,
+                        port=self._port,
+                    )
+
+        _logger.warning(
+            self._event("sync_failed"),
+            commands=list(_QGA_SYNC_COMMANDS),
+            host=self._host,
+            port=self._port,
+        )
+        raise SandboxError(_ERR_QEMU_GA_SYNC_FAILED)
+
+    async def _attempt_sync(self, command: str, time_limit: float) -> _SyncOutcome:
+        """Send one sync command and wait a bounded slice for its reply.
+
+        Each command gets a slice rather than the whole budget because a reply
+        can be lost before it is ever decodable: a partial line left in the
+        agent's output stream by a previous client swallows the reply appended
+        after it, and only the delimited command's reply carries the sentinel
+        that would let the stream be reframed. Bounding the wait lets the next
+        command have its turn, by which point the leftover has been consumed.
+
+        Args:
+            command: Sync command name to negotiate.
+            time_limit: Deadline in seconds for this attempt alone.
+
+        Returns:
+            _SyncOutcome: Result of this single attempt.
+        """
+        if self._writer is None:
+            return _SyncOutcome(matched=False)
+
         sync_id = secrets.randbits(_QGA_SYNC_ID_BITS)
-        request = json.dumps({
-            "execute": "guest-sync-delimiter",
-            "arguments": {"id": sync_id},
-        })
+        request = json.dumps({"execute": command, "arguments": {"id": sync_id}})
         self._writer.write(_QGA_PARSER_FLUSH_BYTE + request.encode() + b"\n")
         await self._writer.drain()
 
-        if await self._await_sync_id(sync_id, time_limit):
-            _logger.debug(self._event("sync_complete"), sync_id=sync_id, port=self._port)
-            return
+        outcome = await self._await_sync_id(sync_id, time_limit)
+        if outcome.matched:
+            _logger.debug(
+                self._event("sync_complete"),
+                command=command,
+                sync_id=sync_id,
+                port=self._port,
+            )
+        return outcome
 
-        _logger.warning(self._event("sync_failed"), sync_id=sync_id, host=self._host, port=self._port)
-        raise SandboxError(_ERR_QEMU_GA_SYNC_FAILED)
-
-    async def _await_sync_id(self, sync_id: int, time_limit: float) -> bool:
+    async def _await_sync_id(self, sync_id: int, time_limit: float) -> _SyncOutcome:
         """Discard incoming lines until the sync reply for ``sync_id`` arrives.
 
+        The parser reset marker written ahead of the request makes the agent
+        report the marker itself as a JSON parse error, so an error line is not
+        on its own a rejection of the sync. Only ``CommandNotFound`` is, and it
+        identifies a command this agent build does not implement.
+
         Args:
-            sync_id: Delimiter id sent with ``guest-sync-delimiter``.
+            sync_id: Sync id sent with the command being negotiated.
             time_limit: Deadline in seconds for the sync reply.
 
         Returns:
-            bool: True when the agent echoed ``sync_id``, False when the
-            deadline elapsed, the channel closed, or the agent sent a frame too
-            long to be read at all.
+            _SyncOutcome: Matched when the agent echoed ``sync_id``; unsupported
+            when the agent rejected the command outright; otherwise a plain
+            failure, meaning the deadline elapsed, the channel closed, or the
+            agent sent a frame too long to be read at all.
         """
         if self._reader is None:
-            return False
+            return _SyncOutcome(matched=False)
 
         deadline = time.monotonic() + time_limit
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                return False
+                return _SyncOutcome(matched=False)
             try:
                 line = await self._read_line(remaining)
             except TimeoutError:
-                return False
+                return _SyncOutcome(matched=False)
             except ConnectionError as e:
                 _logger.warning(self._event("sync_read_failed"), error=str(e), port=self._port)
-                return False
+                return _SyncOutcome(matched=False)
             if not line:
-                return False
+                return _SyncOutcome(matched=False)
             try:
                 payload = self._decode_line(line)
             except (json.JSONDecodeError, ConnectionError):
                 _logger.debug(self._event("sync_line_discarded"), exc_info=True)
                 continue
             if payload.get("return") == sync_id:
-                return True
-            _logger.debug(self._event("sync_line_skipped"), keys=sorted(payload))
+                return _SyncOutcome(matched=True)
+
+            error_class, description = self._sync_error_fields(payload)
+            if error_class == _QGA_COMMAND_NOT_FOUND_CLASS:
+                return _SyncOutcome(matched=False, unsupported=True, agent_error=description)
+            _logger.debug(
+                self._event("sync_line_skipped"),
+                keys=sorted(payload),
+                agent_error=description,
+            )
+
+    @staticmethod
+    def _sync_error_fields(payload: dict[str, Any]) -> tuple[str | None, str | None]:
+        """Extract the error class and description from a decoded agent reply.
+
+        Args:
+            payload: One decoded reply object from the agent.
+
+        Returns:
+            tuple[str | None, str | None]: Error class and human-readable
+            description, each None when the reply carries no error or the
+            member is not a string.
+        """
+        error = payload.get("error")
+        if not isinstance(error, dict):
+            return (None, None)
+        error_map = cast("dict[str, Any]", error)
+        error_class = error_map.get("class")
+        description = error_map.get("desc")
+        return (
+            error_class if isinstance(error_class, str) else None,
+            description if isinstance(description, str) else None,
+        )
 
     async def _read_reply(self, time_limit: float) -> dict[str, Any]:
         """Read the next command reply, skipping leftover stream noise.
@@ -2297,7 +2427,7 @@ class QEMUSandbox(SandboxBase):
         a different endpoint from the QMP monitor: QMP rejects every
         ``guest-*`` command outright. QEMU binds that socket with
         ``server,nowait`` while the VM is still in firmware, so a refused
-        connection or an unanswered ``guest-sync-delimiter`` means the guest
+        connection or an unanswered ``guest-sync-delimited`` means the guest
         has not started qemu-guest-agent yet, not that it never will. Attempts
         are therefore repeated until ``time_limit`` is spent, and every attempt
         that fails closes its socket before the next one opens another.
@@ -2306,7 +2436,7 @@ class QEMUSandbox(SandboxBase):
             time_limit: Total seconds to keep retrying before giving up;
                 defaults to ``QEMUConfig.guest_agent_ready_timeout``.
             attempt_timeout: Per-attempt deadline covering the socket connect
-                and the ``guest-sync-delimiter`` handshake.
+                and the ``guest-sync-delimited`` handshake.
             retry_interval: Delay in seconds between attempts.
 
         Raises:
@@ -2343,7 +2473,7 @@ class QEMUSandbox(SandboxBase):
 
         Returns:
             bool: True when the socket opened but the agent did not complete
-            the ``guest-sync-delimiter`` handshake; False when the socket
+            the ``guest-sync-delimited`` handshake; False when the socket
             itself could not be opened or the attempt succeeded.
         """
         client = self._qga

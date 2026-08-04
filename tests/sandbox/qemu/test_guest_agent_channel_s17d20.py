@@ -20,7 +20,7 @@ guest-agent gates through :mod:`tests.sandbox.qemu.guest_agent_server`:
   ``guest-*`` command exactly the way QEMU does. Routing guest-agent traffic
   back to the QMP client therefore turns these tests red.
 * :class:`GuestAgentProtocolServer` speaks genuine QGA - no banner, no
-  capability negotiation, no asynchronous events, a ``guest-sync-delimiter``
+  capability negotiation, no asynchronous events, a ``guest-sync-delimited``
   reply carrying the leading ``0xFF`` sentinel that ``qga/main.c`` prepends,
   the leftovers of a previous client ahead of that sentinel, and
   ``guest-ping``/``guest-exec``/``guest-exec-status`` replies with base64
@@ -44,6 +44,7 @@ from typing import TYPE_CHECKING, Any, ClassVar, Final, cast
 import pytest
 import pytest_asyncio
 
+from intellicrack.sandbox import qemu as qemu_module
 from intellicrack.sandbox.base import SandboxConfig, SandboxError
 from intellicrack.sandbox.qemu import (
     GuestAgentClient,
@@ -59,6 +60,9 @@ from tests.sandbox.qemu.guest_agent_server import (
     DEFAULT_GUEST_STDOUT,
     FLUSH_BYTE,
     STALE_DELIMITER_ID,
+    SYNC_COMMANDS,
+    SYNC_DELIMITED_COMMAND,
+    SYNC_PLAIN_COMMAND,
     UNDECODABLE_LINE,
     GuestAgentProtocolServer,
     GuestCommandResult,
@@ -82,6 +86,11 @@ _AGENT_STALL_S: Final[float] = 0.6
 _PING_GIVE_UP_S: Final[float] = 0.15
 _SOCKET_CLOSE_WAIT_S: Final[float] = 2.0
 _EXPECTED_SYNC_COUNT: Final[int] = 2
+
+# Read out of the production module rather than restated here, so a change to the
+# order or contents of the sync fallback chain is reflected in the assertion
+# instead of silently diverging from it.
+_EXPECTED_SYNC_ORDER: Final[tuple[str, ...]] = getattr(qemu_module, "_QGA_SYNC_COMMANDS")
 _TRUNCATED_STDOUT: Final[str] = "first 4096 bytes of monitor output"
 _TRUNCATED_STDERR: Final[str] = "first 4096 bytes of monitor errors"
 _STATUS_POLLS_BEFORE_EXIT: Final[int] = 3
@@ -92,7 +101,7 @@ _ASYNCIO_DEFAULT_STREAM_LIMIT: Final[int] = 64 * 1024
 _LARGE_OUTPUT_LINES: Final[int] = 3400
 _LARGE_GUEST_STDOUT: Final[str] = "".join(f"{index:06d}-captured-guest-output-line\n" for index in range(_LARGE_OUTPUT_LINES))
 _NARROW_READ_LIMIT: Final[int] = 4096
-_RESET_DURING_RESYNC: Final[str] = "channel reset while re-issuing guest-sync-delimiter"
+_RESET_DURING_RESYNC: Final[str] = "channel reset while re-issuing guest-sync-delimited"
 _COMMAND_TIMED_OUT: Final[str] = "Command timed out"
 _AGENT_RESULT_BUDGET_S: Final[float] = 2.0
 _OVERLONG_DEADLINE_S: Final[float] = 6.0
@@ -388,7 +397,7 @@ class TestSyncHandshake:
             assert raw.startswith(FLUSH_BYTE), f"first byte on the channel must be the 0xFF parser flush; got {raw[:16]!r}"
 
             first_request = decode_object(raw[1:].split(b"\n", 1)[0])
-            assert first_request["execute"] == "guest-sync-delimiter"
+            assert first_request["execute"] == "guest-sync-delimited"
             arguments = cast("dict[str, Any]", first_request["arguments"])
             sent_id = int(arguments["id"])
 
@@ -396,6 +405,62 @@ class TestSyncHandshake:
             assert sent_id != STALE_DELIMITER_ID, "client must not adopt the stale delimiter id already on the wire"
         finally:
             await sandbox.close_clients()
+
+    @pytest.mark.asyncio
+    async def test_agent_without_the_delimited_command_still_synchronises(self) -> None:
+        """An agent that rejects the delimited sync must still be usable.
+
+        Agent builds differ in which sync commands they carry, and one that does
+        not implement the preferred name answers ``CommandNotFound`` rather than
+        staying silent. The client must recognise that as a definitive rejection
+        of that command, fall back to the other name, and complete the handshake.
+        """
+        server = GuestAgentProtocolServer(unsupported_commands=frozenset({SYNC_DELIMITED_COMMAND}))
+        await server.start()
+        try:
+            client = QemuGuestAgentClient(port=server.port)
+            try:
+                connected = await client.connect(time_limit=10.0)
+                assert connected, "the client must fall back to a sync command the agent implements"
+                assert server.commands[:2] == [SYNC_DELIMITED_COMMAND, SYNC_PLAIN_COMMAND], (
+                    f"the rejected command must be followed by the fallback; saw {server.commands}"
+                )
+                assert server.sync_ids, "the accepted sync command must have recorded its id"
+                reply = await client.ping(time_limit=10.0)
+                assert reply.success, f"the channel must be usable after the fallback sync; error={reply.error}"
+            finally:
+                await client.disconnect()
+        finally:
+            await server.stop()
+
+    @pytest.mark.asyncio
+    async def test_rejected_sync_does_not_consume_the_connect_budget(self) -> None:
+        """A rejected sync command must fail fast, not wait out the deadline.
+
+        The agent answers ``CommandNotFound`` immediately. Treating that reply as
+        just another line to skip makes the client sit on its deadline for every
+        attempt, turning a legible rejection into a silent multi-minute stall.
+        """
+        server = GuestAgentProtocolServer(unsupported_commands=SYNC_COMMANDS)
+        await server.start()
+        budget = 30.0
+        try:
+            client = QemuGuestAgentClient(port=server.port)
+            started = time.monotonic()
+            with pytest.raises(SandboxError):
+                await client.connect(time_limit=budget)
+            elapsed = time.monotonic() - started
+            await client.disconnect()
+
+            assert elapsed < budget / 2, (
+                f"a rejected sync must be detected from the agent's reply, not by waiting out the "
+                f"budget; took {elapsed:.2f}s of a {budget}s budget"
+            )
+            assert set(server.commands) == set(_EXPECTED_SYNC_ORDER), (
+                f"every supported sync name must be tried before giving up; saw {server.commands}"
+            )
+        finally:
+            await server.stop()
 
     @pytest.mark.asyncio
     async def test_sync_reframes_on_the_sentinel_after_a_partial_line(
@@ -406,7 +471,7 @@ class TestSyncHandshake:
 
         The agent server reproduces ``qga/main.c``: the previous client left a
         complete delimiter reply and an object cut off mid-write in the output
-        stream, and the reply to ``guest-sync-delimiter`` is prefixed with the
+        stream, and the reply to ``guest-sync-delimited`` is prefixed with the
         raw ``0xFF`` sentinel byte. A client that decodes the line as strict
         UTF-8 without re-framing on that byte cannot even connect.
 
@@ -511,7 +576,7 @@ class TestClientTimeoutResynchronisation:
 
         The agent server holds the ``guest-ping`` reply back past the client's
         deadline and writes it afterwards, exactly as a loaded guest does.
-        Without a fresh ``guest-sync-delimiter`` the next command reads that
+        Without a fresh ``guest-sync-delimited`` the next command reads that
         stale reply and the channel stays one message behind for good.
 
         Args:
@@ -533,7 +598,7 @@ class TestClientTimeoutResynchronisation:
 
             assert pid == DEFAULT_GUEST_EXEC_PID
             assert len(ga_server.sync_ids) == _EXPECTED_SYNC_COUNT, (
-                f"guest-sync-delimiter must be re-issued after a client-side timeout; ids seen: {ga_server.sync_ids}"
+                f"guest-sync-delimited must be re-issued after a client-side timeout; ids seen: {ga_server.sync_ids}"
             )
             assert ga_server.sync_ids[0] != ga_server.sync_ids[1], "each resync must use a fresh delimiter id"
         finally:
@@ -817,7 +882,7 @@ class TestChannelFailureModes:
             with pytest.raises(SandboxError) as err:
                 await client.connect(time_limit=0.5)
 
-            assert "guest-sync-delimiter" in str(err.value)
+            assert "sync" in str(err.value), f"the failure must name the handshake that failed; got {err.value}"
             assert client.connected is False
 
             await _await_all_connections_closed(server)
@@ -909,7 +974,7 @@ class _ResetOnResyncGuestAgentClient(QemuGuestAgentClient):
     """Real client whose post-timeout resync hits a broken channel.
 
     :meth:`QemuGuestAgentClient._on_command_timeout` writes a fresh
-    ``guest-sync-delimiter`` and reads until the agent echoes it, so a channel
+    ``guest-sync-delimited`` and reads until the agent echoes it, so a channel
     that dropped while the timed-out command was outstanding makes it raise
     ``ConnectionResetError``. It runs from inside ``_send_command``'s
     ``except TimeoutError`` handler, where the sibling ``except`` clauses

@@ -12,7 +12,7 @@ fidelity lives in exactly one place.
 The guest-agent server reproduces the parts of ``qga/main.c`` that a client
 has to survive:
 
-* the reply to ``guest-sync-delimiter`` carries the leading ``0xFF`` sentinel
+* the reply to ``guest-sync-delimited`` carries the leading ``0xFF`` sentinel
   byte that ``send_response`` inserts while ``delimit_response`` is set, and no
   other reply carries it;
 * a freshly attached client can find whatever a previous client left in the
@@ -55,6 +55,14 @@ if TYPE_CHECKING:
 
 FLUSH_BYTE: Final[bytes] = b"\xff"
 STALE_DELIMITER_ID: Final[int] = 987654321
+
+# Both sync commands a real agent may expose. Captured from qemu-guest-agent
+# 10.0.11's own guest-info command table on a live Debian 13 guest: the names are
+# "guest-sync-delimited" and "guest-sync", and only the delimited form prefixes
+# its reply with the parser reset marker.
+SYNC_DELIMITED_COMMAND: Final[str] = "guest-sync-delimited"
+SYNC_PLAIN_COMMAND: Final[str] = "guest-sync"
+SYNC_COMMANDS: Final[frozenset[str]] = frozenset({SYNC_DELIMITED_COMMAND, SYNC_PLAIN_COMMAND})
 STALE_PARTIAL_LINE: Final[bytes] = b'{"return": {"pid": 31'
 DEFAULT_GUEST_EXEC_PID: Final[int] = 3131
 DEFAULT_GUEST_STDOUT: Final[str] = "monitor agent started\n"
@@ -418,7 +426,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
     does find in the stream is the wreckage of the previous one: a complete
     delimiter reply it never read, followed by an object cut off mid-write.
     Both sit ahead of the ``0xFF`` sentinel that ``send_response`` prepends to
-    the ``guest-sync-delimiter`` reply, which is the only marker a client can
+    the ``guest-sync-delimited`` reply, which is the only marker a client can
     use to re-frame the stream. Incoming bytes up to and including any ``0xFF``
     parser-flush marker are discarded, mirroring the agent's own parser reset.
 
@@ -456,6 +464,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
         stall_command: str | None = None,
         stall_seconds: float = 0.0,
         status_polls_before_exit: int = 0,
+        unsupported_commands: frozenset[str] = frozenset(),
     ) -> None:
         """Initialise the server with empty recording buffers.
 
@@ -476,8 +485,13 @@ class GuestAgentProtocolServer(_LoopbackServer):
                 per pid report the process as still running before it is
                 reported exited. A live agent answers ``{"exited": false}``
                 and nothing else while the process is alive.
+            unsupported_commands: Commands this agent build does not implement
+                and answers with ``CommandNotFound``. Agent builds differ in
+                which sync commands they carry, so a client cannot assume the
+                one it prefers exists.
         """
         super().__init__(listen_delay=listen_delay)
+        self.unsupported_commands = unsupported_commands
         self.received = bytearray()
         self.commands = []
         self.sync_ids = []
@@ -546,7 +560,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
         Args:
             payload: Reply envelope to serialise.
             sentinel: Whether the ``0xFF`` byte that follows a
-                ``guest-sync-delimiter`` request must lead the line.
+                ``guest-sync-delimited`` request must lead the line.
 
         Returns:
             bytes: Complete newline-terminated wire frame.
@@ -606,10 +620,14 @@ class GuestAgentProtocolServer(_LoopbackServer):
         args_map: dict[str, Any] = cast("dict[str, Any]", arguments) if isinstance(arguments, dict) else {}
         await self._apply_stall(name)
 
-        if name == "guest-sync-delimiter":
+        if name in SYNC_COMMANDS:
+            if name in self.unsupported_commands:
+                return [self._frame(command_not_found(name))]
             sync_id = int(args_map.get("id", 0))
             self.sync_ids.append(sync_id)
-            return [self._frame({"return": sync_id}, sentinel=True)]
+            # Only the delimited form prefixes its reply with the reset marker;
+            # plain guest-sync echoes the id unadorned. Verified on qemu-ga 10.0.11.
+            return [self._frame({"return": sync_id}, sentinel=name == SYNC_DELIMITED_COMMAND)]
         if name == "guest-ping":
             return [self._frame({"return": {}})]
         if name == "guest-exec":
@@ -791,7 +809,7 @@ class SilentGuestAgentServer(_LoopbackServer):
     """Real TCP server that accepts the channel but never answers the sync.
 
     Models a wedged agent: the socket is up, so the connection succeeds, but
-    the ``guest-sync-delimiter`` reply never arrives.
+    the ``guest-sync-delimited`` reply never arrives.
 
     Attributes:
         accepted: Number of connections accepted since ``start``.
