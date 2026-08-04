@@ -48,6 +48,10 @@ _LITERAL: Final = re.compile(r"'(?P<text>[^']*)'")
 _SPLIT_PARENT: Final = re.compile(r"Split-Path\s+-Parent\s+(?P<operand>.+)")
 _JOIN_PATH: Final = re.compile(r"Join-Path\s+(?P<base>.+?)\s+'(?P<leaf>[^']*)'")
 
+_BRACKET_PAIRS: Final[dict[str, str]] = {"(": ")", "{": "}"}
+
+_ERR_NOT_A_BRACKET: Final[str] = "a matching bracket was asked for from {char!r}, which is not an opening bracket"
+
 _ARRAY_OPENING: Final[str] = "@("
 _WINDOWS_SEPARATOR: Final[str] = "\\"
 _WINDOWS_DRIVE_SEPARATOR: Final[str] = ":"
@@ -132,17 +136,27 @@ def _split_top_level(text: str, separator: str) -> list[str]:
     return parts
 
 
-def _matching_parenthesis(text: str, start: int) -> int:
-    """Return the index of the parenthesis closing the one at ``start``.
+def matching_bracket(text: str, start: int) -> int:
+    """Return the index of the bracket closing the one at ``start``.
+
+    Brackets inside single-quoted strings are literal text and are skipped, so
+    a ``'{'`` in a PowerShell literal does not open a block.
 
     Args:
         text: Source text to scan.
-        start: Index of the opening parenthesis.
+        start: Index of the opening bracket, which must be ``(`` or ``{``.
 
     Returns:
-        int: Index of the matching closing parenthesis, or -1 when the text
-        ends before it.
+        int: Index of the matching closing bracket, or -1 when the text ends
+        before it.
+
+    Raises:
+        ValueError: If ``text[start]`` is not a bracket this function pairs.
     """
+    opening = text[start]
+    closing = _BRACKET_PAIRS.get(opening)
+    if closing is None:
+        raise ValueError(_ERR_NOT_A_BRACKET.format(char=opening))
     depth = 0
     quoted = False
     for index in range(start, len(text)):
@@ -152,9 +166,9 @@ def _matching_parenthesis(text: str, start: int) -> int:
             continue
         if quoted:
             continue
-        if char == "(":
+        if char == opening:
             depth += 1
-        elif char == ")":
+        elif char == closing:
             depth -= 1
             if depth == 0:
                 return index
@@ -170,7 +184,7 @@ def _strip_parentheses(expression: str) -> str:
     Returns:
         str: The inner expression, or ``expression`` when it is not wrapped.
     """
-    if not expression.startswith("(") or _matching_parenthesis(expression, 0) != len(expression) - 1:
+    if not expression.startswith("(") or matching_bracket(expression, 0) != len(expression) - 1:
         return expression
     return expression[1:-1].strip()
 
@@ -308,7 +322,7 @@ def _apply_assignment(
     if _ARRAY_OPENING not in remainder:
         return 0
     opening = remainder.index(_ARRAY_OPENING) + 1
-    closing = _matching_parenthesis(remainder, opening)
+    closing = matching_bracket(remainder, opening)
     if closing < 0:
         return 0
     values = _evaluate_array(remainder[opening + 1 : closing], script.variables, environment)

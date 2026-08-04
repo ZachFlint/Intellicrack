@@ -11,10 +11,18 @@ other:
 * **F-0022 (reg.exe allowlist miss).** ``apply_anti_evasion`` previously
   dispatched ``reg.exe`` to the guest agent as a bare command name. The
   Windows agent's ``Test-AllowedCommand`` allowlist accepts only entries in
-  ``allowedNames`` (``powershell``, ``powershell.exe``, ``cmd``, ``cmd.exe``)
-  or absolute ``.exe`` paths rooted at ``Z:\``, ``%SystemRoot%\System32\``,
-  or ``%SystemRoot%\SysWOW64\``. Bare ``reg.exe`` matched no rule, so every
-  registry patch silently failed with ``exit_code=-1``.
+  its ``$allowedNames``, or absolute ``.exe`` paths under one of its
+  ``$allowedRoots`` - the share root the guest derived from the agent's own
+  location, and ``System32`` and ``SysWOW64`` below the ``%SystemRoot%`` the
+  guest reports. Bare ``reg.exe`` matched no rule, so every registry patch
+  silently failed with ``exit_code=-1``.
+
+  What those arrays hold is a property of the guest, not of the host, so the
+  allowlist these tests apply is not restated here: it is read out of the very
+  script :meth:`QEMUSandbox._windows_agent_script_content` generates, and
+  executed by :mod:`tests.sandbox.qemu.guest_agent_allowlist` against a
+  modelled guest whose share drive and ``%SystemRoot%`` are named below. A
+  change to the in-guest helper changes what these tests accept.
 * **F-0029 (profile vs hardcoded HP identity).** The SMBIOS launch arguments
   switched manufacturer/product strings on the
   ``QEMUConfig.anti_evasion_profile`` field, but the registry writes
@@ -57,7 +65,8 @@ from intellicrack.sandbox.qemu import (
     QEMUSandbox,
     QMPClient,
 )
-from tests._helpers.guest_allowlist import is_windows_allowlisted
+from tests.sandbox.qemu.guest_agent_allowlist import GuestCommandAllowlist, guest_command_allowlist
+from tests.sandbox.qemu.powershell_script import join_path
 
 
 if TYPE_CHECKING:
@@ -66,6 +75,52 @@ if TYPE_CHECKING:
 
 
 ProfileName = Literal["default", "workstation", "laptop"]
+
+_MONITOR_DIRECTORY: Final[str] = "monitor"
+"""Directory of the shared volume the agent script runs from in the guest."""
+
+_ALLOWED_NAMES_VARIABLE: Final[str] = "allowedNames"
+_ALLOWED_ROOTS_VARIABLE: Final[str] = "allowedRoots"
+
+_GUEST_SHARE_ROOT: Final[str] = "E:\\"
+"""Root of the shared volume in the modelled guest.
+
+Deliberately not ``Z:``: the guest assigns the FAT volume whatever letter is
+free, the agent derives the share root it allows from its own location, and a
+test that assumed one fixed letter would pass against an agent that only ever
+allowed that letter.
+"""
+
+_GUEST_SYSTEM_DRIVE: Final[str] = "C:"
+_GUEST_SYSTEM_ROOT: Final[str] = "C:\\Windows"
+"""Windows directory of the modelled guest, which is where the production
+``WINDOWS_REG_EXE_PATH`` constant expects ``reg.exe`` to live."""
+
+_OTHER_GUEST_SHARE_ROOT: Final[str] = "Z:\\"
+_OTHER_GUEST_SYSTEM_ROOT: Final[str] = "D:\\WinNT"
+
+_EXECUTABLE_LEAF: Final[str] = "tool.exe"
+_NON_EXECUTABLE_LEAF: Final[str] = "tool.sys"
+
+
+def _agent_allowlist(share_root: str, system_root: str, system_drive: str) -> GuestCommandAllowlist:
+    """Read the real agent script's allowlist as one modelled guest sees it.
+
+    Args:
+        share_root: Root of the volume that guest mounted the shared folder as.
+        system_root: Value that guest reports for ``%SystemRoot%``.
+        system_drive: Value that guest reports for ``%SystemDrive%``.
+
+    Returns:
+        GuestCommandAllowlist: The decision ``Test-AllowedCommand`` makes in
+        that guest, executed from the generated script itself.
+    """
+    return guest_command_allowlist(
+        _AntiEvasionTestSandbox.agent_script_for_test(),
+        script_root=join_path(share_root, _MONITOR_DIRECTORY),
+        environment={"SystemDrive": system_drive, "SystemRoot": system_root},
+    )
+
 
 _EXPECTED_IDENTITY: Final[dict[ProfileName, tuple[str, str]]] = {
     "default": ("HP", "HP EliteDesk 800 G6"),
@@ -145,15 +200,35 @@ class _AntiEvasionTestSandbox(QEMUSandbox):
         """
         return asyncio.run(self._build_qemu_command())
 
+    @classmethod
+    def agent_script_for_test(cls) -> str:
+        """Return the Windows agent script the sandbox stages into the guest.
+
+        Returns:
+            str: The exact ``agent.ps1`` body
+            :meth:`QEMUSandbox._windows_agent_script_content` generates, whose
+            ``Test-AllowedCommand`` decides every dispatched command.
+        """
+        return cls._windows_agent_script_content()
+
+
+_WINDOWS_ALLOWLIST: Final[GuestCommandAllowlist] = _agent_allowlist(
+    _GUEST_SHARE_ROOT,
+    _GUEST_SYSTEM_ROOT,
+    _GUEST_SYSTEM_DRIVE,
+)
+"""``Test-AllowedCommand`` as the modelled guest runs it, from the real script."""
+
 
 class _RecordingAgent(GuestAgentClient):
     """``GuestAgentClient`` subclass that records every ``send_command`` call.
 
-    The agent reports as connected, replicates the in-guest allowlist
-    decision, and returns ``exit_code=0`` only for accepted commands. The
-    recorded ``(command, args)`` list lets tests assert that every dispatched
-    executable uses an allowlist-safe absolute path and carries the correct
-    profile identity.
+    The agent reports as connected, answers each dispatch by running the
+    generated script's own ``Test-AllowedCommand`` against it, and returns
+    ``exit_code=0`` only for the commands that helper accepts. The recorded
+    ``(command, args)`` list lets tests assert that every dispatched executable
+    uses an allowlist-safe absolute path and carries the correct profile
+    identity.
 
     Attributes:
         sent_commands: Ordered list of ``(command, args)`` tuples observed.
@@ -190,12 +265,12 @@ class _RecordingAgent(GuestAgentClient):
         args: Sequence[str] | None = None,
         time_limit: float = 30.0,
     ) -> tuple[int, str, str]:
-        """Record the dispatch and emulate ``Test-AllowedCommand`` semantics.
+        """Record the dispatch and answer it with the real ``Test-AllowedCommand``.
 
         Args:
             command: Command name or absolute path the sandbox dispatched.
             args: Argument list (recorded verbatim).
-            time_limit: Ignored; the in-process emulation is instant.
+            time_limit: Ignored; deciding the command in-process is instant.
 
         Returns:
             tuple[int, str, str]: ``(exit_code, stdout, stderr)`` with
@@ -205,7 +280,7 @@ class _RecordingAgent(GuestAgentClient):
         del time_limit
         arg_list: list[str] = list(args) if args else []
         self.sent_commands.append((command, arg_list))
-        if is_windows_allowlisted(command):
+        if _WINDOWS_ALLOWLIST.accepts(command):
             return (0, "", "")
         return (-1, "", f"command not in allowlist: {command}")
 
@@ -339,9 +414,10 @@ class TestF0022RegExeAllowlistSafe:
         4. **Bare-name exclusion**: the constant must contain at least one path
            separator so it cannot be a bare name like ``"reg.exe"`` (the pre-fix
            value).
-        5. **Allowlist acceptance**: the constant must satisfy
-           :func:`is_windows_allowlisted`. This is the end-to-end gate that
-           confirms the path the test pins is one the in-guest agent will accept.
+        5. **Allowlist acceptance**: the constant must be accepted by the
+           generated agent script's own ``Test-AllowedCommand``. This is the
+           end-to-end gate that confirms the path the test pins is one the
+           in-guest agent will accept.
 
         If the constant reverts to the pre-fix bare ``"reg.exe"`` value, oracles
         1-4 all fail independently of the allowlist, so no single oracle can be
@@ -376,36 +452,99 @@ class TestF0022RegExeAllowlistSafe:
             f"(pre-fix value was bare 'reg.exe' which the allowlist rejects) (F-0022)"
         )
 
-        assert is_windows_allowlisted(WINDOWS_REG_EXE_PATH), (
+        assert _WINDOWS_ALLOWLIST.accepts(WINDOWS_REG_EXE_PATH), (
             f"WINDOWS_REG_EXE_PATH {WINDOWS_REG_EXE_PATH!r} must satisfy the in-guest Test-AllowedCommand allowlist (F-0022)"
         )
 
-    def test_allowlist_oracle_boundary_decisions(self) -> None:
-        r"""Guard the host-side ``Test-AllowedCommand`` emulation at its boundaries.
+    def test_allowlist_boundary_decisions(self) -> None:
+        r"""Guard the generated agent's ``Test-AllowedCommand`` at its boundaries.
 
         Pins the decisions the end-to-end dispatch tests rely on so the oracle
-        itself is a trustworthy gate. Each assertion mirrors one branch of the
-        in-guest PowerShell helper: empty rejected, bare names rejected unless
-        explicitly allowlisted, ``.exe`` accepted only under the System32 /
-        SysWOW64 / ``Z:\`` roots, and non-``.exe`` files under a valid root
-        rejected. If any branch flips, the emulation would stop detecting an
-        F-0022 regression in :meth:`apply_anti_evasion`.
+        they share is a trustworthy gate. Each assertion drives one branch of
+        the in-guest PowerShell helper as the modelled guest runs it: empty
+        rejected, bare names rejected unless the script's own ``$allowedNames``
+        holds them, ``.exe`` accepted only under the script's own
+        ``$allowedRoots``, non-``.exe`` files under a valid root rejected, and
+        the whole decision case-insensitive. If any branch is dropped from the
+        helper, this test stops agreeing with it and fails, and the F-0022
+        gates below stop being able to detect an ``apply_anti_evasion``
+        regression.
         """
-        assert is_windows_allowlisted("") is False, "empty command must be rejected"
-        assert is_windows_allowlisted("reg.exe") is False, "bare 'reg.exe' must be rejected (F-0022 pre-fix value)"
-        assert is_windows_allowlisted("powershell.exe") is True, "allowlisted bare name 'powershell.exe' must be accepted"
-        assert is_windows_allowlisted("cmd") is True, "allowlisted bare name 'cmd' must be accepted"
-        assert is_windows_allowlisted(r"C:\Windows\System32\reg.exe") is True, "absolute System32 reg.exe must be accepted"
-        assert is_windows_allowlisted(r"C:\Windows\SysWOW64\reg.exe") is True, "absolute SysWOW64 reg.exe must be accepted"
-        assert is_windows_allowlisted(r"Z:\monitor\agent.exe") is True, "absolute Z:\\ .exe must be accepted"
-        assert is_windows_allowlisted(r"C:\Windows\System32\config.sys") is False, "non-.exe under System32 must be rejected"
-        assert is_windows_allowlisted(r"C:\Temp\reg.exe") is False, "reg.exe outside an allowed root must be rejected"
-        assert is_windows_allowlisted(WINDOWS_REG_EXE_PATH) is True, (
+        names = _WINDOWS_ALLOWLIST.array(_ALLOWED_NAMES_VARIABLE)
+        roots = _WINDOWS_ALLOWLIST.array(_ALLOWED_ROOTS_VARIABLE)
+
+        assert _WINDOWS_ALLOWLIST.accepts("") is False, "empty command must be rejected"
+        assert _WINDOWS_ALLOWLIST.accepts("reg.exe") is False, "bare 'reg.exe' must be rejected (F-0022 pre-fix value)"
+
+        assert names, "the agent script must declare at least one allowed bare name"
+        for name in names:
+            assert _WINDOWS_ALLOWLIST.accepts(name) is True, f"allowlisted bare name {name!r} must be accepted"
+            assert _WINDOWS_ALLOWLIST.accepts(name.upper()) is True, f"bare name {name!r} must be accepted case-insensitively"
+
+        assert roots, "the agent script must declare at least one allowed root"
+        for root in roots:
+            allowed = f"{root}{_EXECUTABLE_LEAF}"
+            rejected = f"{root}{_NON_EXECUTABLE_LEAF}"
+            assert _WINDOWS_ALLOWLIST.accepts(allowed) is True, f"an .exe under the allowed root {root!r} must be accepted"
+            assert _WINDOWS_ALLOWLIST.accepts(allowed.upper()) is True, f"{allowed!r} must be accepted case-insensitively"
+            assert _WINDOWS_ALLOWLIST.accepts(rejected) is False, f"a non-.exe under the allowed root {root!r} must be rejected"
+
+        assert _WINDOWS_ALLOWLIST.accepts(f"{_GUEST_SHARE_ROOT}{_MONITOR_DIRECTORY}\\agent.exe") is True, (
+            "an .exe on the share the guest mounted must be accepted"
+        )
+        assert _WINDOWS_ALLOWLIST.accepts(rf"{_GUEST_SYSTEM_ROOT}\System32\reg.exe") is True, "absolute System32 reg.exe must be accepted"
+        assert _WINDOWS_ALLOWLIST.accepts(rf"{_GUEST_SYSTEM_ROOT}\SysWOW64\reg.exe") is True, "absolute SysWOW64 reg.exe must be accepted"
+        assert _WINDOWS_ALLOWLIST.accepts(rf"{_GUEST_SYSTEM_ROOT}\System32\config.sys") is False, "non-.exe under System32 must be rejected"
+        assert _WINDOWS_ALLOWLIST.accepts(rf"{_GUEST_SYSTEM_DRIVE}\Temp\reg.exe") is False, (
+            "reg.exe outside an allowed root must be rejected"
+        )
+        assert _WINDOWS_ALLOWLIST.accepts(WINDOWS_REG_EXE_PATH) is True, (
             f"the production WINDOWS_REG_EXE_PATH constant {WINDOWS_REG_EXE_PATH!r} must be allowlist-safe"
         )
 
+    def test_allowed_roots_follow_the_guest_not_a_fixed_drive(self) -> None:
+        r"""The allowed roots must track the guest, not a hardcoded ``Z:\`` or ``C:``.
+
+        The guest assigns the shared FAT volume whatever drive letter is free
+        and may have installed Windows anywhere, so the agent derives its
+        allowed roots from ``$PSScriptRoot`` and ``%SystemRoot%``. This drives
+        the same generated script as a second guest - a different share letter
+        and a different Windows directory - and requires each guest to accept
+        exactly its own roots and reject the other's. An agent that went back
+        to a fixed ``Z:\`` or a fixed ``C:\Windows`` would accept both.
+        """
+        other = _agent_allowlist(_OTHER_GUEST_SHARE_ROOT, _OTHER_GUEST_SYSTEM_ROOT, _GUEST_SYSTEM_DRIVE)
+
+        share_executable = f"{_GUEST_SHARE_ROOT}{_MONITOR_DIRECTORY}\\agent.exe"
+        other_share_executable = f"{_OTHER_GUEST_SHARE_ROOT}{_MONITOR_DIRECTORY}\\agent.exe"
+        system_executable = rf"{_GUEST_SYSTEM_ROOT}\System32\reg.exe"
+        other_system_executable = rf"{_OTHER_GUEST_SYSTEM_ROOT}\System32\reg.exe"
+
+        assert other.accepts(other_share_executable) is True, (
+            f"a guest whose share is {_OTHER_GUEST_SHARE_ROOT!r} must accept {other_share_executable!r}"
+        )
+        assert other.accepts(other_system_executable) is True, (
+            f"a guest whose %SystemRoot% is {_OTHER_GUEST_SYSTEM_ROOT!r} must accept {other_system_executable!r}"
+        )
+
+        assert _WINDOWS_ALLOWLIST.accepts(other_share_executable) is False, (
+            f"a guest whose share is {_GUEST_SHARE_ROOT!r} must reject {other_share_executable!r}; "
+            f"the allowed share root is derived from the agent's own location, not fixed"
+        )
+        assert other.accepts(share_executable) is False, (
+            f"a guest whose share is {_OTHER_GUEST_SHARE_ROOT!r} must reject {share_executable!r}"
+        )
+        assert other.accepts(system_executable) is False, (
+            f"a guest whose %SystemRoot% is {_OTHER_GUEST_SYSTEM_ROOT!r} must reject {system_executable!r}; "
+            f"the allowed system roots are derived from %SystemRoot%, not fixed to C:\\Windows"
+        )
+        assert other.accepts(WINDOWS_REG_EXE_PATH) is False, (
+            f"a guest whose %SystemRoot% is {_OTHER_GUEST_SYSTEM_ROOT!r} must reject the C:\\Windows path "
+            f"{WINDOWS_REG_EXE_PATH!r}, which proves the roots are not hardcoded"
+        )
+
     def test_apply_anti_evasion_dispatches_only_allowlisted_commands(self) -> None:
-        """Every dispatched executable must pass the allowlist emulation.
+        """Every dispatched executable must pass the generated agent's allowlist.
 
         Drives the real ``apply_anti_evasion`` against a connected recording
         agent and asserts at least four ``reg.exe`` dispatches occurred, none
@@ -424,7 +563,7 @@ class TestF0022RegExeAllowlistSafe:
         assert len(reg_dispatches) == 4, f"expected exactly 4 reg.exe add dispatches, got {reg_dispatches!r}"
         for command, _args in agent.sent_commands:
             assert command != "reg.exe", "apply_anti_evasion dispatched bare 'reg.exe' (F-0022 regression)"
-            assert is_windows_allowlisted(command), f"command {command!r} would be rejected by the in-guest allowlist"
+            assert _WINDOWS_ALLOWLIST.accepts(command), f"command {command!r} would be rejected by the in-guest allowlist"
         for command, _args in reg_dispatches:
             assert command == WINDOWS_REG_EXE_PATH, (
                 f"reg.exe dispatch used {command!r}; F-0022 requires the absolute {WINDOWS_REG_EXE_PATH!r}"
@@ -507,7 +646,9 @@ class TestF0022RegExeAllowlistSafe:
             f"  actual:   {techniques!r}"
         )
 
-        accepted_reg_dispatches = sum(bool(args and args[0] == "add" and is_windows_allowlisted(cmd)) for cmd, args in agent.sent_commands)
+        accepted_reg_dispatches = sum(
+            bool(args and args[0] == "add" and _WINDOWS_ALLOWLIST.accepts(cmd)) for cmd, args in agent.sent_commands
+        )
         assert techniques.count("registry_patch") == accepted_reg_dispatches, (
             f"profile={profile!r}: each registry_patch technique must correspond to an accepted reg.exe dispatch: "
             f"techniques={techniques!r} accepted_reg_dispatches={accepted_reg_dispatches}"
