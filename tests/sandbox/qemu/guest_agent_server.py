@@ -66,6 +66,9 @@ SYNC_DELIMITED_COMMAND: Final[str] = "guest-sync-delimited"
 SYNC_PLAIN_COMMAND: Final[str] = "guest-sync"
 SYNC_COMMANDS: Final[frozenset[str]] = frozenset({SYNC_DELIMITED_COMMAND, SYNC_PLAIN_COMMAND})
 STALE_PARTIAL_LINE: Final[bytes] = b'{"return": {"pid": 31'
+# First handle handed out by guest-file-open. Non-zero so a client that treats
+# a falsy handle as "no handle" is not accidentally satisfied by the first one.
+_FIRST_GUEST_FILE_HANDLE: Final[int] = 1000
 DEFAULT_GUEST_EXEC_PID: Final[int] = 3131
 DEFAULT_GUEST_STDOUT: Final[str] = "monitor agent started\n"
 DEFAULT_GUEST_STDERR: Final[str] = "warning: 9p not present\n"
@@ -450,6 +453,13 @@ class GuestAgentProtocolServer(_LoopbackServer):
     agent enforces, and both are configurable so a client that ignores either
     can be caught.
 
+    The same model carries the agent's file commands. ``guest-file-open``
+    allocates a handle and an empty file, ``guest-file-write`` appends the
+    decoded ``buf-b64`` payload to it and answers with the byte count a live
+    agent reports, and ``guest-file-close`` releases the handle. The resulting
+    bytes are readable through :attr:`guest_files`, so a test can assert that
+    what arrived inside the guest is exactly what left the host.
+
     Attributes:
         received: Every raw byte received from the client.
         commands: Every ``execute`` name received, in arrival order.
@@ -457,6 +467,9 @@ class GuestAgentProtocolServer(_LoopbackServer):
         exec_arguments: ``arguments`` payload of every ``guest-exec``.
         exec_records: Structured record of every ``guest-exec``.
         exec_status_pids: Process ids queried through ``guest-exec-status``.
+        guest_files: In-guest path to the bytes written there, in write order.
+        file_writes: One entry per ``guest-file-write``, giving the in-guest
+            path and the size of that buffer, so chunking is observable.
     """
 
     received: bytearray
@@ -465,6 +478,8 @@ class GuestAgentProtocolServer(_LoopbackServer):
     exec_arguments: list[dict[str, Any]]
     exec_records: list[GuestExecRecord]
     exec_status_pids: list[int]
+    guest_files: dict[str, bytearray]
+    file_writes: list[tuple[str, int]]
 
     def __init__(
         self,
@@ -498,8 +513,8 @@ class GuestAgentProtocolServer(_LoopbackServer):
                 and nothing else while the process is alive.
             unsupported_commands: Commands this agent build does not implement
                 and answers with ``CommandNotFound``. Agent builds differ in
-                which sync commands they carry, so a client cannot assume the
-                one it prefers exists.
+                which commands they carry - the sync pair and the file commands
+                both vary - so a client cannot assume the one it prefers exists.
         """
         super().__init__(listen_delay=listen_delay)
         self.unsupported_commands = unsupported_commands
@@ -509,6 +524,10 @@ class GuestAgentProtocolServer(_LoopbackServer):
         self.exec_arguments = []
         self.exec_records = []
         self.exec_status_pids = []
+        self.guest_files = {}
+        self.file_writes = []
+        self._open_files: dict[int, str] = {}
+        self._next_file_handle: int = _FIRST_GUEST_FILE_HANDLE
         self._responder = responder
         self._base_pid = base_pid
         self._stall_command = stall_command
@@ -631,9 +650,13 @@ class GuestAgentProtocolServer(_LoopbackServer):
         args_map: dict[str, Any] = cast("dict[str, Any]", arguments) if isinstance(arguments, dict) else {}
         await self._apply_stall(name)
 
+        # Any command can be absent from a given agent build, not only the sync
+        # pair, so the refusal is decided before dispatch rather than inside one
+        # branch of it.
+        if name in self.unsupported_commands:
+            return [self._frame(command_not_found(name))]
+
         if name in SYNC_COMMANDS:
-            if name in self.unsupported_commands:
-                return [self._frame(command_not_found(name))]
             sync_id = int(args_map.get("id", 0))
             self.sync_ids.append(sync_id)
             # Only the delimited form prefixes its reply with the reset marker;
@@ -645,7 +668,46 @@ class GuestAgentProtocolServer(_LoopbackServer):
             return [self._frame({"return": {"pid": self._record_exec(args_map)}})]
         if name == "guest-exec-status":
             return [self._frame({"return": self._exec_status(int(args_map.get("pid", 0)))})]
+        if name == "guest-file-open":
+            return [self._frame({"return": self._open_guest_file(args_map)})]
+        if name == "guest-file-write":
+            return [self._frame({"return": self._write_guest_file(args_map)})]
+        if name == "guest-file-close":
+            self._open_files.pop(int(args_map.get("handle", 0)), None)
+            return [self._frame({"return": {}})]
         return [self._frame(command_not_found(name))]
+
+    def _open_guest_file(self, args_map: dict[str, Any]) -> int:
+        """Allocate a handle for one ``guest-file-open`` and truncate the file.
+
+        Args:
+            args_map: ``arguments`` payload of the request.
+
+        Returns:
+            int: Handle the client must use for later writes.
+        """
+        path = str(args_map.get("path", ""))
+        handle = self._next_file_handle
+        self._next_file_handle += 1
+        self._open_files[handle] = path
+        self.guest_files[path] = bytearray()
+        return handle
+
+    def _write_guest_file(self, args_map: dict[str, Any]) -> dict[str, Any]:
+        """Append one ``guest-file-write`` buffer to its open file.
+
+        Args:
+            args_map: ``arguments`` payload of the request.
+
+        Returns:
+            dict[str, Any]: The ``count``/``eof`` payload a live agent returns.
+        """
+        handle = int(args_map.get("handle", 0))
+        path = self._open_files.get(handle, "")
+        payload = base64.b64decode(str(args_map.get("buf-b64", "")))
+        self.guest_files.setdefault(path, bytearray()).extend(payload)
+        self.file_writes.append((path, len(payload)))
+        return {"count": len(payload), "eof": False}
 
     async def _apply_stall(self, name: str) -> None:
         """Hold back the first reply to the configured stalled command.
