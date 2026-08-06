@@ -36,6 +36,7 @@ from intellicrack.sandbox.qemu import (
     QEMUConfig,
     QEMUSandbox,
 )
+from tests.sandbox.qemu.guest_agent_server import IntellicrackAgentServer
 
 
 # ---------------------------------------------------------------------------
@@ -380,41 +381,27 @@ class TestF0002AgentConnectCalled:
     """
 
     def test_ensure_agent_connected_opens_real_socket(self) -> None:
-        """``_ensure_agent_connected`` connects a real agent to a live listener.
+        """``_ensure_agent_connected`` connects a real agent to a live agent.
 
-        A loopback ``asyncio`` server is bound on an ephemeral port; a real
-        ``GuestAgentClient`` is pointed at it and driven through the production
-        ``QEMUSandbox._ensure_agent_connected`` helper. The server records the
-        accepted peer, proving an actual TCP connection was established by the
-        production connect path.
+        A real in-guest monitor agent is bound on an ephemeral loopback port; a
+        real ``GuestAgentClient`` is pointed at it and driven through the
+        production ``QEMUSandbox._ensure_agent_connected`` helper. The peer
+        records the accepted connection, proving an actual TCP connection was
+        established by the production connect path. A socket that merely
+        accepts would not do: that is the dead hostfwd of S17-D25, and a client
+        that called it connected would pass a test written against one.
         """
 
         async def _run() -> tuple[bool, int]:
-            accepted: list[bool] = []
-            ready = asyncio.Event()
-
-            async def _handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-                del reader
-                accepted.append(True)
-                ready.set()
-                writer.close()
-                await writer.wait_closed()
-
-            server = await asyncio.start_server(_handle, host="127.0.0.1", port=0)
-            sockets = server.sockets
-            assert sockets, "loopback server must expose a bound socket"
-            port = sockets[0].getsockname()[1]
-
-            agent = GuestAgentClient(host="127.0.0.1", port=port)
+            server = IntellicrackAgentServer()
+            await server.start()
+            agent = GuestAgentClient(host="127.0.0.1", port=server.port)
             try:
-                async with server:
-                    await _TestQEMUSandbox.ensure_agent_connected_for_test(agent, 5.0)
-                    await asyncio.wait_for(ready.wait(), timeout=5.0)
-                    connected = agent.is_connected
-                    accept_count = len(accepted)
-                return connected, accept_count
+                await _TestQEMUSandbox.ensure_agent_connected_for_test(agent, 5.0)
+                return agent.is_connected, server.accepted
             finally:
                 await agent.disconnect()
+                await server.stop()
 
         connected, accept_count = asyncio.run(_run())
         assert connected is True, "_ensure_agent_connected must leave the agent in the connected state"
@@ -443,32 +430,24 @@ class TestF0002AgentConnectCalled:
         assert connected is False, "agent must remain disconnected after a failed connect"
 
     def test_real_agent_connect_returns_true_against_live_server(self) -> None:
-        """``GuestAgentClient.connect`` returns True only against a live listener.
+        """``GuestAgentClient.connect`` returns True only against a live agent.
 
-        Drives the real ``connect`` method (no override) against a real loopback
-        server and asserts both the boolean contract and ``is_connected``.
+        Drives the real ``connect`` method (no override) against a real
+        in-guest monitor agent on loopback and asserts both the boolean
+        contract and ``is_connected``.
         """
 
         async def _run() -> tuple[bool, bool, bool]:
-            async def _handle(reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-                del reader
-                writer.close()
-                await writer.wait_closed()
-
-            server = await asyncio.start_server(_handle, host="127.0.0.1", port=0)
-            sockets = server.sockets
-            assert sockets, "loopback server must expose a bound socket"
-            port = sockets[0].getsockname()[1]
-
-            agent = GuestAgentClient(host="127.0.0.1", port=port)
+            server = IntellicrackAgentServer()
+            await server.start()
+            agent = GuestAgentClient(host="127.0.0.1", port=server.port)
             before = agent.is_connected
             try:
-                async with server:
-                    ok = await agent.connect(time_limit=5.0, retry_interval=1.0)
-                    after = agent.is_connected
-                return before, ok, after
+                ok = await agent.connect(time_limit=5.0, retry_interval=1.0)
+                return before, ok, agent.is_connected
             finally:
                 await agent.disconnect()
+                await server.stop()
 
         before, ok, after = asyncio.run(_run())
         assert before is False, "precondition: agent starts disconnected"

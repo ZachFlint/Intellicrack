@@ -15,6 +15,7 @@ import base64
 import json
 import platform
 import secrets
+import shlex
 import shutil
 import socket
 import struct
@@ -200,6 +201,12 @@ _ERR_GUEST_SHARED_DRIVE_ENUM = "could not enumerate guest drive letters while lo
 _ERR_GUEST_SHARED_DRIVE_NOT_FOUND = "no guest drive letter carries {relative}; the FAT-backed shared volume is not visible to the guest"
 _AGENT_CONNECT_TIMEOUT = 30.0
 _AGENT_CONNECT_RETRY_INTERVAL = 2.0
+
+_ERR_AGENT_HANDSHAKE_NO_SOCKET = "guest agent handshake attempted without an open socket"
+_ERR_AGENT_HANDSHAKE_CLOSED = "guest agent channel closed before answering the readiness handshake"
+_ERR_AGENT_HANDSHAKE_TIMEOUT = "guest agent did not answer the readiness handshake within {timeout}s"
+_ERR_AGENT_HANDSHAKE_UNFRAMED = "guest agent readiness handshake could not be framed: {error}"
+_ERR_AGENT_CHANNEL_CLOSED = "guest agent closed the channel"
 _READINESS_POLL_INTERVAL = 0.5
 _READINESS_POLL_TIMEOUT = 60.0
 _RESULT_PAYLOAD_SEPARATOR = "|IC_RESULT|"
@@ -324,7 +331,13 @@ _WINDOWS_DROP_WATCH_BELOW_SYSTEM_DRIVE: Final[tuple[str, ...]] = (
     "Users\\Default\\AppData\\Local\\Temp",
 )
 _WINDOWS_DROP_WATCH_BELOW_SYSTEM_ROOT: Final[tuple[str, ...]] = ("Temp",)
-_WINDOWS_REG_EXE_PATH = "C:\\Windows\\System32\\reg.exe"
+# ``reg.exe`` below ``%SystemRoot%``. The in-guest agent's allowlist accepts an
+# executable only under ``System32``/``SysWOW64`` of the ``%SystemRoot%`` the
+# guest itself reports, so :meth:`QEMUSandbox._guest_reg_exe_path` joins this
+# suffix onto the probed system root per sandbox; the constants below give the
+# documented default for a guest whose Windows lives at ``C:\Windows``.
+_WINDOWS_REG_EXE_RELATIVE: Final[str] = "System32\\reg.exe"
+_WINDOWS_REG_EXE_PATH: str = f"{_WINDOWS_SYSTEM_ROOT}\\{_WINDOWS_REG_EXE_RELATIVE}"
 WINDOWS_REG_EXE_PATH: str = _WINDOWS_REG_EXE_PATH
 
 _ERR_PPM_INVALID_MAGIC = "invalid PPM magic; expected P6"
@@ -1496,7 +1509,25 @@ class GuestAgentClient:
     """Client for communicating with the QEMU guest agent.
 
     Provides bidirectional communication with the guest OS for command execution, file transfer, and behavioral monitoring.
+
+    Attributes:
+        PING_REQUEST_TYPE: Request type of the readiness handshake this client
+            sends the moment a socket opens. The agent is reached through a
+            QEMU SLIRP ``hostfwd``, which accepts the host-side TCP connection
+            unconditionally and only afterwards tries to reach a listener
+            inside the guest, so a successful ``connect`` proves nothing about
+            the guest; this exchange is the smallest one that does, because the
+            agent must have read a framed request and written a framed reply
+            for the answer to arrive at all.
+        PONG_MESSAGE_TYPE: Message type the agent answers
+            :attr:`PING_REQUEST_TYPE` with. Public because anything modelling
+            the in-guest agent - the generated agent scripts, and the test
+            servers that stand in for them - has to speak exactly these two
+            words.
     """
+
+    PING_REQUEST_TYPE: ClassVar[str] = "ping"
+    PONG_MESSAGE_TYPE: ClassVar[str] = "pong"
 
     _read_limit: ClassVar[int] = _JSON_LINE_LIMIT
 
@@ -1527,21 +1558,122 @@ class GuestAgentClient:
         """
         return self.connected
 
+    @classmethod
+    def _is_pong_line(cls, line: bytes) -> bool:
+        """Report whether one received line is the agent's readiness reply.
+
+        Args:
+            line: Newline-terminated bytes read from the agent socket.
+
+        Returns:
+            bool: True if the line is a well-formed pong message.
+        """
+        try:
+            parsed: object = json.loads(line.decode())
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return False
+        if not isinstance(parsed, dict):
+            return False
+        return cast("dict[str, object]", parsed).get("type") == cls.PONG_MESSAGE_TYPE
+
+    async def _await_readiness_reply(self, reader: asyncio.StreamReader, time_limit: float) -> None:
+        """Read agent lines until the readiness reply arrives or the budget ends.
+
+        Any other message the agent volunteers while the handshake is in flight
+        is queued rather than dropped, so telemetry the caller is owed does not
+        disappear into the handshake.
+
+        Args:
+            reader: Stream reader for the freshly opened agent socket.
+            time_limit: Total seconds the handshake may take.
+
+        Raises:
+            ConnectionError: If the peer closes the channel, sends a frame the
+                stream can no longer be framed around, or does not answer in
+                time.
+        """
+        deadline = time.monotonic() + time_limit
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ConnectionError(_ERR_AGENT_HANDSHAKE_TIMEOUT.format(timeout=time_limit))
+            try:
+                line = await asyncio.wait_for(reader.readline(), timeout=remaining)
+            except TimeoutError as e:
+                raise ConnectionError(_ERR_AGENT_HANDSHAKE_TIMEOUT.format(timeout=time_limit)) from e
+            except ValueError as e:
+                raise ConnectionError(_ERR_AGENT_HANDSHAKE_UNFRAMED.format(error=str(e))) from e
+
+            if not line:
+                raise ConnectionError(_ERR_AGENT_HANDSHAKE_CLOSED)
+            if self._is_pong_line(line):
+                return
+            await self._enqueue_agent_line(line)
+
+    async def _handshake(self, time_limit: float) -> None:
+        """Prove the in-guest agent is really answering on the open socket.
+
+        Args:
+            time_limit: Total seconds the handshake may take.
+
+        Raises:
+            ConnectionError: If no socket is open or the agent does not answer.
+        """
+        reader, writer = self._reader, self._writer
+        if reader is None or writer is None:
+            raise ConnectionError(_ERR_AGENT_HANDSHAKE_NO_SOCKET)
+
+        writer.write((json.dumps({"type": self.PING_REQUEST_TYPE}) + "\n").encode())
+        await writer.drain()
+        await self._await_readiness_reply(reader, time_limit)
+
+    async def _abandon_socket(self) -> None:
+        """Drop a socket that failed its handshake, leaving nothing connected."""
+        writer = self._writer
+        self._reader = None
+        self._writer = None
+        self.connected = False
+        if writer is None:
+            return
+        try:
+            writer.close()
+            await writer.wait_closed()
+        except OSError as e:
+            _logger.debug("guest_agent_abandon_socket_error", error=str(e))
+
     async def _open_agent_socket(self, retry_interval: float) -> None:
-        """Open a single connection attempt to the guest agent.
+        """Open one connection attempt to the guest agent and prove it is live.
 
         The reader is given the same explicit line limit as the guest-agent
         channel: a ``result`` message carries the whole stdout of an in-guest
         command, which passes asyncio's 64 KiB default long before it reaches
         any size the agent itself would refuse to send.
 
+        A connect to the QEMU hostfwd succeeds whether or not anything listens
+        inside the guest, so the socket is only reported connected once the
+        agent has answered the readiness handshake on it. An attempt that fails
+        that handshake is closed here and raised, which returns the caller to
+        :meth:`connect`'s retry loop rather than leaving a dead socket behind
+        that every later command would fail on.
+
         Args:
-            retry_interval: Per-attempt connect timeout in seconds.
+            retry_interval: Per-attempt connect and handshake timeout in
+                seconds.
+
+        Raises:
+            BaseException: Whatever the connect or the handshake raised, after
+                the half-open socket has been closed.
         """
         self._reader, self._writer = await asyncio.wait_for(
             asyncio.open_connection(self._host, self._port, limit=self._read_limit),
             timeout=retry_interval,
         )
+        try:
+            await self._handshake(retry_interval)
+        except BaseException:
+            await self._abandon_socket()
+            raise
+
         self._read_failure = None
         self.connected = True
         self._reader_task = asyncio.create_task(self._read_messages())
@@ -1667,7 +1799,8 @@ class GuestAgentClient:
                 break
 
             if not line:
-                _logger.debug("agent_channel_closed_by_peer", host=self._host, port=self._port)
+                _logger.warning("agent_channel_closed_by_peer", host=self._host, port=self._port)
+                self._stop_reading(_ERR_AGENT_CHANNEL_CLOSED)
                 break
 
             await self._enqueue_agent_line(line)
@@ -3056,6 +3189,28 @@ class QEMUSandbox(SandboxBase):
             *(f"{system_root}\\{relative}" for relative in _WINDOWS_DROP_WATCH_BELOW_SYSTEM_ROOT),
         ]
 
+    def _guest_reg_exe_path(self) -> str:
+        r"""Return the guest's ``reg.exe`` under the ``%SystemRoot%`` it reported.
+
+        The in-guest agent's ``Test-AllowedCommand`` accepts an executable only
+        when it sits under the share root or under ``System32``/``SysWOW64``
+        below the ``%SystemRoot%`` the guest itself reports, so a registry patch
+        dispatched at the compiled-in ``C:\Windows`` path is refused outright on
+        any guest whose Windows lives elsewhere. The path is therefore built on
+        the system root probed by :meth:`_resolve_windows_shared_drive` and
+        cached in :attr:`_guest_system_root_value`, exactly as
+        :meth:`_windows_drop_watch_roots` builds the watched directories, and
+        falls back to :data:`_WINDOWS_SYSTEM_ROOT` only when the guest could not
+        answer - the same literal the agent script substitutes for an unset
+        ``%SystemRoot%``, so both sides still name one executable.
+
+        Returns:
+            str: Absolute in-guest path to ``reg.exe``, for example
+            ``D:\WinNT\System32\reg.exe``.
+        """
+        system_root = self._guest_system_root_value or _WINDOWS_SYSTEM_ROOT
+        return f"{system_root}\\{_WINDOWS_REG_EXE_RELATIVE}"
+
     async def _resolve_windows_shared_drive(self) -> str:
         r"""Find the drive letter the FAT shared volume received in the guest.
 
@@ -3241,26 +3396,31 @@ class QEMUSandbox(SandboxBase):
         return ("HP", "HP EliteDesk 800 G6")
 
     @staticmethod
-    def _anti_evasion_registry_commands(profile: str, product_id: str) -> list[tuple[str, list[str]]]:
+    def _anti_evasion_registry_commands(profile: str, product_id: str, reg_exe_path: str) -> list[tuple[str, list[str]]]:
         r"""Return the Windows registry-patch commands for an anti-evasion profile.
 
         The returned list is consumed by :meth:`apply_anti_evasion` to dispatch
-        ``reg.exe add`` invocations through the guest agent. Each command uses
-        the absolute Windows System32 path for ``reg.exe`` so that the in-guest
-        :func:`Test-AllowedCommand` allowlist accepts the invocation (audit
-        finding F-0022). Manufacturer and product strings come from
-        :meth:`_anti_evasion_identity` so they agree with the SMBIOS launch
-        arguments (audit finding F-0029).
+        ``reg.exe add`` invocations through the guest agent. Each command names
+        ``reg.exe`` by the ``reg_exe_path`` the caller resolved from the guest's
+        own ``%SystemRoot%`` (see :meth:`_guest_reg_exe_path`) so that the
+        in-guest :func:`Test-AllowedCommand` allowlist - which accepts an
+        executable only under ``System32``/``SysWOW64`` of that same reported
+        root - accepts the invocation on any guest, not only one whose Windows
+        lives at ``C:\Windows`` (audit finding F-0022). Manufacturer and product
+        strings come from :meth:`_anti_evasion_identity` so they agree with the
+        SMBIOS launch arguments (audit finding F-0029).
 
         Args:
             profile: Anti-evasion profile name (``default``, ``workstation``,
                 or ``laptop``).
             product_id: Randomised product identifier written to
                 ``HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ProductId``.
+            reg_exe_path: Absolute in-guest path to ``reg.exe`` resolved from
+                the guest's probed ``%SystemRoot%``.
 
         Returns:
             list[tuple[str, list[str]]]: Ordered list of ``(executable, argv)``
-            pairs. ``executable`` is always :data:`_WINDOWS_REG_EXE_PATH`.
+            pairs. ``executable`` is always ``reg_exe_path``.
         """
         sep = "\\"
         bios_key = sep.join(["HKLM", "HARDWARE", "DESCRIPTION", "System", "BIOS"])
@@ -3269,19 +3429,19 @@ class QEMUSandbox(SandboxBase):
         identity_manufacturer, identity_product = QEMUSandbox._anti_evasion_identity(profile)
         return [
             (
-                _WINDOWS_REG_EXE_PATH,
+                reg_exe_path,
                 ["add", bios_key, "/v", "SystemManufacturer", "/t", "REG_SZ", "/d", identity_manufacturer, "/f"],
             ),
             (
-                _WINDOWS_REG_EXE_PATH,
+                reg_exe_path,
                 ["add", bios_key, "/v", "SystemProductName", "/t", "REG_SZ", "/d", identity_product, "/f"],
             ),
             (
-                _WINDOWS_REG_EXE_PATH,
+                reg_exe_path,
                 ["add", current_version_key, "/v", "ProductId", "/t", "REG_SZ", "/d", product_id, "/f"],
             ),
             (
-                _WINDOWS_REG_EXE_PATH,
+                reg_exe_path,
                 ["add", disk_enum_key, "/v", "0", "/t", "REG_SZ", "/d", "WDC WD10EZEX-00BBHA0", "/f"],
             ),
         ]
@@ -3893,7 +4053,16 @@ class QEMUSandbox(SandboxBase):
         with ``-LogDir <share>\logs``, (3) listens on ``127.0.0.1:4445`` for
         argv-style command requests validated against a short allowlist
         (``powershell``, ``cmd``, any ``.exe`` under the share root,
-        ``System32`` or ``SysWOW64``), (4) emits process, file, and
+        ``System32`` or ``SysWOW64``) and answers the host's
+        :attr:`GuestAgentClient.PING_REQUEST_TYPE` readiness probe with
+        :attr:`GuestAgentClient.PONG_MESSAGE_TYPE`, launching each accepted
+        command through ``System.Diagnostics.Process`` so its two streams are
+        captured separately and verbatim - PowerShell's own ``2>&1`` folds a
+        native child's standard error into the error stream this script's
+        ``$ErrorActionPreference`` discards, and ``Out-String`` re-renders
+        standard output with a line ending the command never wrote - and
+        terminating it if the request's own timeout elapses, (4) emits process,
+        file, and
         extended network telemetry in the ten-field schema parsed by
         :func:`intellicrack.sandbox.log_parsers.parse_network_log`, and
         (5) mirrors files created below ``%SystemDrive%`` and ``%SystemRoot%``
@@ -4007,6 +4176,55 @@ function Test-AllowedCommand($cmdValue) {
     return $false
 }
 
+$quoteChar = [char]34
+
+function ConvertTo-CommandLineArgument($value) {
+    $text = [string]$value
+    if ($text.Length -gt 0 -and $text.IndexOfAny([char[]]@([char]32, [char]9)) -lt 0) { return $text }
+    return $quoteChar + $text + $quoteChar
+}
+
+function Invoke-GuestCommand($commandPath, $commandArgs, $timeoutSeconds) {
+    $rendered = @()
+    foreach ($item in $commandArgs) { $rendered += (ConvertTo-CommandLineArgument $item) }
+
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $commandPath
+    $startInfo.Arguments = [string]::Join(' ', $rendered)
+    $startInfo.UseShellExecute = $false
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $startInfo.CreateNoWindow = $true
+
+    $proc = New-Object System.Diagnostics.Process
+    $proc.StartInfo = $startInfo
+    [void]$proc.Start()
+
+    $outTask = $proc.StandardOutput.ReadToEndAsync()
+    $errTask = $proc.StandardError.ReadToEndAsync()
+
+    $limitMs = -1
+    if ($timeoutSeconds) { $limitMs = [int]([double]$timeoutSeconds * 1000) }
+    $timedOut = -not $proc.WaitForExit($limitMs)
+    if ($timedOut) {
+        try { $proc.Kill() } catch { }
+        [void]$proc.WaitForExit()
+    }
+
+    $outTask.Wait()
+    $errTask.Wait()
+
+    $capturedError = $errTask.Result
+    if ($timedOut) {
+        $capturedError = $capturedError + 'command did not exit within ' + $timeoutSeconds + 's and was terminated'
+    }
+    return @{
+        StandardOutput = $outTask.Result
+        StandardError = $capturedError
+        ExitCode = $proc.ExitCode
+    }
+}
+
 $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse('127.0.0.1'), 4445)
 $listener.Start()
 
@@ -4031,7 +4249,13 @@ while ($true) {
                 $line = $reader.ReadLine()
                 if ($null -eq $line) { break }
                 $request = ConvertFrom-Json $line
-                if ($request.type -eq 'execute') {
+                if ($request.type -eq 'ping') {
+                    Send-Message $stream @{
+                        type = 'pong'
+                        data = @{}
+                    }
+                }
+                elseif ($request.type -eq 'execute') {
                     $cmd = [string]$request.command
                     $cmdArgs = @()
                     if ($request.args) { $cmdArgs = @($request.args) }
@@ -4043,8 +4267,10 @@ while ($true) {
                         $exitCode = -1
                     } else {
                         try {
-                            $output = & $cmd @cmdArgs 2>&1 | Out-String
-                            $exitCode = $LASTEXITCODE
+                            $captured = Invoke-GuestCommand $cmd $cmdArgs $request.timeout
+                            $output = $captured.StandardOutput
+                            $errorOutput = $captured.StandardError
+                            $exitCode = $captured.ExitCode
                             if ($null -eq $exitCode) { $exitCode = 0 }
                         } catch {
                             $errorOutput = $_.Exception.Message
@@ -4383,7 +4609,10 @@ def handle_client(conn: socket.socket) -> None:
                 _logger.warning("invalid_client_request", extra={"client_addr": client_addr, "error": str(parse_err)})
                 continue
 
-            if request.get("type") == "execute":
+            if request.get("type") == "ping":
+                pong_bytes = (json.dumps({"type": "pong", "data": {}}) + "\\n").encode("utf-8")
+                conn.send(pong_bytes)
+            elif request.get("type") == "execute":
                 response = _execute_command(request)
                 response_bytes = (json.dumps(response) + "\\n").encode("utf-8")
                 conn.send(response_bytes)
@@ -4521,10 +4750,16 @@ python3 /mnt/shared/monitor/agent.py &
 
         ``command`` is a command line for the guest's own shell: it may carry
         redirections, ``&&`` and quoted paths, and a working directory is
-        applied by prefixing a ``cd``. The in-guest agent launches an
+        applied by prefixing that interpreter's own ``cd``, quoted for it and
+        carrying whatever switch it needs to cross volumes (see
+        :meth:`_guest_change_directory_command`). The in-guest agent launches an
         executable directly rather than through a shell, so the whole line is
         handed to the guest's command interpreter instead of being sent as if
         it were the name of a program.
+
+        The agent captures that child's two streams separately and verbatim, so
+        the triple returned here carries the bytes the command really wrote on
+        each of them rather than a rendering of them.
 
         Args:
             command: Command line to execute.
@@ -4544,9 +4779,7 @@ python3 /mnt/shared/monitor/agent.py &
         effective_timeout = time_limit or self._config.timeout_seconds
 
         if self._agent is not None and self._agent.is_connected:
-            if working_directory:
-                command = f"cd {working_directory} && {command}"
-            shell, shell_args = self._guest_shell_invocation(command)
+            shell, shell_args = self._guest_shell_invocation(command, working_directory)
             return await self._agent.send_command(shell, shell_args, time_limit=effective_timeout)
 
         if self._shared_folder is None:
@@ -4579,16 +4812,53 @@ python3 /mnt/shared/monitor/agent.py &
             time_limit=effective_timeout,
         )
 
-    def _guest_shell_invocation(self, command_line: str) -> tuple[str, list[str]]:
+    def _guest_change_directory_command(self, working_directory: str) -> str:
+        r"""Build the guest command that enters ``working_directory``.
+
+        The quoting rules belong to the interpreter
+        :meth:`_guest_shell_invocation` selects, so both are decided by the one
+        guest-OS predicate. ``cmd.exe`` needs ``/d``: without it a directory on
+        a volume other than the shell's current one only changes that volume's
+        remembered directory and leaves the shell where it was, so everything
+        after the ``cd`` runs somewhere else while the ``cd`` still reports
+        success. Both interpreters need the path held together as one token -
+        ``cmd.exe`` accepts no quote inside a path because Windows forbids one
+        there, and ``/bin/bash`` gets the shell's own quoting from
+        :func:`shlex.quote` rather than a hand-rolled escape it would then
+        reinterpret.
+
+        Args:
+            working_directory: In-guest directory the command is to enter.
+
+        Returns:
+            str: Command line entering ``working_directory`` in the guest's own
+            interpreter.
+        """
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            return f'cd /d "{working_directory}"'
+        return f"cd {shlex.quote(working_directory)}"
+
+    def _guest_shell_invocation(
+        self,
+        command_line: str,
+        working_directory: str | None = None,
+    ) -> tuple[str, list[str]]:
         """Wrap a shell command line in the guest's own command interpreter.
+
+        A working directory is applied by prefixing the interpreter's own
+        ``cd`` (see :meth:`_guest_change_directory_command`), so the directory
+        is quoted for whichever interpreter is about to read it.
 
         Args:
             command_line: Command line the guest's shell is to interpret.
+            working_directory: Optional in-guest directory to run it from.
 
         Returns:
             tuple[str, list[str]]: Executable and argument vector that run
             ``command_line`` through the guest's shell.
         """
+        if working_directory:
+            command_line = f"{self._guest_change_directory_command(working_directory)} && {command_line}"
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
             return (_WINDOWS_SHELL, [_WINDOWS_SHELL_COMMAND_FLAG, command_line])
         return (_LINUX_SHELL, [_LINUX_SHELL_COMMAND_FLAG, command_line])
@@ -4666,7 +4936,7 @@ python3 /mnt/shared/monitor/agent.py &
             stdout_guest_path = f"{guest_root}output\\{stdout_name}"
             stderr_guest_path = f"{guest_root}output\\{stderr_name}"
             result_guest_path = f"{guest_root}output\\{result_name}"
-            cd_line = f'cd /d "{working_directory}"' if working_directory else ""
+            cd_line = self._guest_change_directory_command(working_directory) if working_directory else ""
             script_content = (
                 "@echo off\r\n"
                 f"{cd_line}\r\n"
@@ -4679,7 +4949,7 @@ python3 /mnt/shared/monitor/agent.py &
             stdout_guest_path = f"{guest_root}/output/{stdout_name}"
             stderr_guest_path = f"{guest_root}/output/{stderr_name}"
             result_guest_path = f"{guest_root}/output/{result_name}"
-            cd_line = f'cd "{working_directory}"' if working_directory else ""
+            cd_line = self._guest_change_directory_command(working_directory) if working_directory else ""
             script_content = (
                 f'#!/bin/bash\n{cd_line}\n( {command} ) > "{stdout_guest_path}" 2> "{stderr_guest_path}"\necho $? > "{result_guest_path}"\n'
             )
@@ -5399,7 +5669,11 @@ python3 /mnt/shared/monitor/agent.py &
         techniques.append("cpuid_hypervisor_mask_launch_arg")
 
         if self._agent is not None and self._agent.is_connected and self._qemu_config.guest_os == GuestOS.WINDOWS:
-            registry_commands = self._anti_evasion_registry_commands(current_profile, secrets.token_hex(8).upper())
+            registry_commands = self._anti_evasion_registry_commands(
+                current_profile,
+                secrets.token_hex(8).upper(),
+                self._guest_reg_exe_path(),
+            )
             for cmd_name, cmd_args in registry_commands:
                 exit_code, _, _ = await self._agent.send_command(cmd_name, cmd_args)
                 if exit_code == 0:

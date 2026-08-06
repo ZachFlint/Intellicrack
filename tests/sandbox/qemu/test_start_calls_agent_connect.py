@@ -25,11 +25,9 @@ Findings addressed
 
 from __future__ import annotations
 
-import asyncio
-import contextlib
 import math
 import socket
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 import pytest
 import pytest_asyncio
@@ -42,6 +40,7 @@ from intellicrack.sandbox.qemu import (
     QEMUConfig,
     QEMUSandbox,
 )
+from tests.sandbox.qemu.guest_agent_server import IntellicrackAgentServer
 
 
 if TYPE_CHECKING:
@@ -51,6 +50,11 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+# Long enough that the first connect attempts are genuinely refused, short
+# enough to stay well inside the 3 s budget the retry test allows.
+_AGENT_LISTEN_DELAY_S: Final[float] = 0.15
 
 
 def _free_port() -> int:
@@ -64,29 +68,6 @@ def _free_port() -> int:
         return int(s.getsockname()[1])
 
 
-async def _echo_server_handler(
-    reader: asyncio.StreamReader,
-    writer: asyncio.StreamWriter,
-) -> None:
-    """Accept a connection and stay open until the client closes it or 5 s elapse.
-
-    Reads from ``reader`` so that the handler exits promptly when the client
-    closes its side of the connection (EOF), keeping test teardown fast.
-
-    Args:
-        reader: Stream reader for the accepted connection.
-        writer: Stream writer for the accepted connection.
-    """
-    try:
-        await asyncio.wait_for(reader.read(1), timeout=5.0)
-    except (TimeoutError, asyncio.CancelledError, OSError):
-        pass
-    finally:
-        with contextlib.suppress(OSError):
-            writer.close()
-            await writer.wait_closed()
-
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -94,18 +75,24 @@ async def _echo_server_handler(
 
 @pytest_asyncio.fixture
 async def listening_server() -> AsyncIterator[int]:
-    """Start a real TCP server on a free port and yield the port number.
+    """Run a real in-guest monitor agent on loopback and yield its port.
 
-    The server accepts connections and keeps them alive, faithfully simulating
-    a reachable guest agent endpoint.
+    A bare TCP listener will not do. The agent is reached through a QEMU SLIRP
+    ``hostfwd``, which accepts a host-side connection whether or not anything
+    listens inside the guest, so a socket that only accepts is exactly the dead
+    channel S17-D25 was about - and a client that reported it connected would
+    pass a test written against it. This peer answers the agent's own protocol,
+    so ``connect`` returning True here means what it claims.
 
     Yields:
-        int: The TCP port the server is listening on.
+        int: The TCP port the agent is listening on.
     """
-    port = _free_port()
-    server = await asyncio.start_server(_echo_server_handler, "127.0.0.1", port)
-    async with server:
-        yield port
+    server = IntellicrackAgentServer()
+    await server.start()
+    try:
+        yield server.port
+    finally:
+        await server.stop()
 
 
 # ---------------------------------------------------------------------------
@@ -194,28 +181,18 @@ class TestGuestAgentClientConnectRealSocket:
         Starts the server *after* a delay to confirm that the retry loop
         actually keeps trying rather than failing immediately.
         """
-        port = _free_port()
-        connect_result: list[bool] = []
+        server = IntellicrackAgentServer(port=_free_port(), listen_delay=_AGENT_LISTEN_DELAY_S)
+        await server.start()
+        client = GuestAgentClient(host="127.0.0.1", port=server.port)
+        try:
+            result = await client.connect(time_limit=3.0, retry_interval=0.1)
 
-        async def _delayed_server() -> None:
-            await asyncio.sleep(0.15)
-            server = await asyncio.start_server(_echo_server_handler, "127.0.0.1", port)
-            async with server:
-                await asyncio.sleep(2.0)
-
-        server_task = asyncio.create_task(_delayed_server())
-        client = GuestAgentClient(host="127.0.0.1", port=port)
-        result = await client.connect(time_limit=3.0, retry_interval=0.1)
-        connect_result.append(result)
-
-        server_task.cancel()
-        with contextlib.suppress(asyncio.CancelledError, OSError):
-            await server_task
-
-        assert connect_result[0] is True, "connect() must eventually return True once server is reachable; retry loop is broken"
-        assert client.connected is True
-
-        await client.disconnect()
+            assert result is True, "connect() must eventually return True once the agent is reachable; retry loop is broken"
+            assert client.connected is True
+            assert server.handshakes >= 1, "connect() returned True without the agent ever answering a readiness probe"
+        finally:
+            await client.disconnect()
+            await server.stop()
 
     @pytest.mark.asyncio
     async def test_zero_time_limit_fails_even_when_server_is_listening(
