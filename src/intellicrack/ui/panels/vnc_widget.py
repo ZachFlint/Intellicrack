@@ -132,6 +132,9 @@ _PIXEL_FORMAT_32BIT: Final[bytes] = struct.pack(
     8,
     0,
 )
+_CLIENT_MSG_SET_PIXEL_FORMAT: Final[int] = 0
+_CLIENT_MSG_FRAMEBUFFER_UPDATE_REQUEST: Final[int] = 3
+_SET_PIXEL_FORMAT_MESSAGE: Final[bytes] = struct.pack("!Bxxx", _CLIENT_MSG_SET_PIXEL_FORMAT) + _PIXEL_FORMAT_32BIT
 
 
 class _ConnectOptions(TypedDict, total=False):
@@ -500,7 +503,7 @@ class RFBClient:
         width, height = struct.unpack("!HH", server_init[:4])
 
         _logger.debug("vnc_pixel_format_sending", width=width, height=height)
-        self._writer.write(_PIXEL_FORMAT_32BIT)
+        self._writer.write(_SET_PIXEL_FORMAT_MESSAGE)
         await self._writer.drain()
 
         name_len = struct.unpack("!I", server_init[20:24])[0]
@@ -520,7 +523,7 @@ class RFBClient:
 
         msg = struct.pack(
             "!BBHHHH",
-            3,
+            _CLIENT_MSG_FRAMEBUFFER_UPDATE_REQUEST,
             1 if incremental else 0,
             0,
             0,
@@ -1936,10 +1939,21 @@ class VNCWidget(QWidget):
         """Run the request/handle loop until the client disconnects or the task is cancelled.
 
         This is the body of :meth:`_pump_server` extracted into a helper so the outer method can keep its try/finally short.
+
+        The first request of every pump session is non-incremental. A server owes
+        a reply only to a request that asks for content it has not already sent,
+        so an incremental request against a screen that has not changed since the
+        connection opened is answered with nothing at all - which is exactly the
+        state of a guest sitting at a static console. Asking incrementally from
+        the start therefore leaves the display black indefinitely, however many
+        requests follow. Every later request stays incremental so the server
+        sends only the regions that actually changed.
         """
+        full_frame_requested = False
         while self.client.connected:
             try:
-                await self.client.request_framebuffer_update(incremental=True)
+                await self.client.request_framebuffer_update(incremental=full_frame_requested)
+                full_frame_requested = True
                 handled = await self.client.handle_server_message()
             except (OSError, struct.error):
                 _logger.exception("vnc_pump_error")
