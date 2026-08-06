@@ -1294,6 +1294,8 @@ class SandboxBridge(ToolBridgeBase):
         time_limit: int | None = None,
         *,
         monitor: bool = True,
+        qemu_config: QEMUConfig | None = None,
+        reuse_instance: bool = False,
     ) -> dict[str, Any]:
         """Execute a binary in a sandbox with monitoring.
 
@@ -1304,6 +1306,13 @@ class SandboxBridge(ToolBridgeBase):
         ``sandbox_type="Qemu"`` (capitalised) or future sandbox flavours
         silently behave as QEMU.
 
+        Both ``qemu_config`` and ``reuse_instance`` are forwarded to the
+        manager, which has always accepted them. Without the first, a QEMU
+        run reaches the backend with no disk image and cannot start at all;
+        without the second, a caller that already has a running sandbox gets
+        a second virtual machine booted beside it rather than its binary run
+        in the one it is looking at.
+
         Args:
             binary_path: Path to the binary to execute.
             args: Optional command line arguments.
@@ -1311,6 +1320,10 @@ class SandboxBridge(ToolBridgeBase):
                 ``"qemu"``).
             time_limit: Optional timeout override in seconds.
             monitor: Whether to monitor behavior.
+            qemu_config: QEMU-specific configuration, required for the
+                ``"qemu"`` type to reach a bootable disk image.
+            reuse_instance: Whether to run in an existing idle sandbox of the
+                same type instead of creating one.
 
         Returns:
             dict[str, Any]: ExecutionReport as dictionary.
@@ -1337,7 +1350,9 @@ class SandboxBridge(ToolBridgeBase):
                 args=args,
                 sandbox_type=sb_type,
                 time_limit=time_limit,
+                qemu_config=qemu_config,
                 monitor=monitor,
+                reuse_instance=reuse_instance,
             )
 
             _logger.info("binary_execution_completed", instance_id=instance.id, result=report.result, exit_code=report.exit_code)

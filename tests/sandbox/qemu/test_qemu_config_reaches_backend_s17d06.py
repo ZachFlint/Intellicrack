@@ -28,7 +28,12 @@ import pytest
 
 from intellicrack.bridges.sandbox_bridge import SandboxBridge
 from intellicrack.core.types import ToolError
-from intellicrack.sandbox.base import SandboxConfig, SandboxError
+from intellicrack.sandbox.base import (
+    ExecutionReport,
+    ExecutionResult,
+    SandboxConfig,
+    SandboxError,
+)
 from intellicrack.sandbox.manager import SandboxInstance, SandboxManager
 from intellicrack.sandbox.qemu import AcceleratorType, GuestOS, QEMUConfig, QEMUSandbox
 from intellicrack.sandbox.settings import (
@@ -49,6 +54,8 @@ if TYPE_CHECKING:
 
     from intellicrack.sandbox.manager import SandboxType
 
+
+_RUN_SUCCEEDED: ExecutionResult = "success"
 
 _EXPECTED_CPU_CORES = 6
 _EXPECTED_MEMORY_MB = 8192
@@ -100,7 +107,55 @@ def _make_disk_image(tmp_path: Path) -> Path:
 
 
 class _CommandBuildingSandbox(QEMUSandbox):
-    """QEMU sandbox exposing the real launch-command builder to tests."""
+    """QEMU sandbox exposing the real launch-command builder to tests.
+
+    Attributes:
+        executed: Every binary this backend was asked to run, in order.
+    """
+
+    executed: list[Path]
+
+    def __init__(self, config: SandboxConfig, qemu_config: QEMUConfig | None) -> None:
+        """Initialise the backend with an empty execution log.
+
+        Args:
+            config: General sandbox configuration.
+            qemu_config: QEMU-specific configuration under test.
+        """
+        super().__init__(config, qemu_config)
+        self.executed = []
+
+    async def run_binary(
+        self,
+        binary_path: Path,
+        args: list[str] | None = None,
+        time_limit: int | None = None,
+        *,
+        monitor: bool = True,
+    ) -> ExecutionReport:
+        """Record the requested execution without booting a guest.
+
+        Only the guest boot is skipped; the configuration this backend was
+        constructed from - the thing under test - is untouched.
+
+        Args:
+            binary_path: Binary the manager asked to run.
+            args: Command line arguments, unused.
+            time_limit: Timeout override, unused.
+            monitor: Whether behaviour monitoring was requested, unused.
+
+        Returns:
+            ExecutionReport: A real, empty-activity report.
+        """
+        del args, time_limit, monitor
+        self.executed.append(binary_path)
+        return ExecutionReport(
+            result=_RUN_SUCCEEDED,
+            exit_code=0,
+            stdout="",
+            stderr="",
+            duration_seconds=0.0,
+        )
 
     def prepare(self, qemu_path: Path) -> None:
         """Install a resolved QEMU binary path and accelerator for building.
@@ -179,6 +234,11 @@ class _BackendBuildingManager(SandboxManager):
             binary_path=binary_path,
         )
         instance.is_busy = mark_busy
+        # Registered exactly as the real create does, and marked running, so
+        # the inherited run_binary can genuinely find it: a manager that never
+        # registered anything would make the reuse assertion unfalsifiable.
+        instance.state.status = "running"
+        self._instances[instance.id] = instance
         return instance
 
 
@@ -385,6 +445,126 @@ class TestBridgeForwardsQemuConfig:
         bridge.attach_manager(manager)
 
         asyncio.run(bridge.create(sandbox_type="qemu"))
+
+        sandbox = manager.created_sandbox
+        assert sandbox is not None
+        assert sandbox.qemu_config.image_path is None
+
+        with pytest.raises(SandboxError):
+            sandbox.build_command()
+
+
+class TestRunBinaryForwardsQemuConfig:
+    """S17-D28/D29: the run path must carry the same configuration as create.
+
+    ``SandboxBridge.create`` was given ``qemu_config`` when S17-D06 was fixed,
+    but ``run_binary`` was left calling ``SandboxManager.run_binary`` without
+    it - and without ``reuse_instance``, which that method has always accepted.
+    Found live on 2026-08-05: with a QEMU sandbox running and its guest agent
+    answering, "Run in Sandbox" reported *Failed to start sandbox* because the
+    run booted a **second** virtual machine and built its command line from a
+    default ``QEMUConfig`` whose ``image_path`` is None.
+
+    ``SandboxManager.run_binary`` is the real one here; only the host probe and
+    the guest boot are replaced, so what the bridge forwards is what a real
+    backend is constructed from.
+    """
+
+    def test_configured_image_reaches_the_backend_the_run_creates(self, tmp_path: Path) -> None:
+        """A run with no reusable instance still builds a bootable command line.
+
+        Args:
+            tmp_path: Per-test temporary directory.
+        """
+        image = _make_disk_image(tmp_path)
+        qemu_path = tmp_path / "qemu-system-x86_64.exe"
+        qemu_path.write_bytes(b"MZ")
+        binary = tmp_path / "target.bin"
+        binary.write_bytes(b"\x7fELF")
+
+        manager = _BackendBuildingManager(qemu_path)
+        bridge = SandboxBridge()
+        bridge.attach_manager(manager)
+
+        asyncio.run(
+            bridge.run_binary(
+                str(binary),
+                sandbox_type="qemu",
+                qemu_config=QEMUConfig(guest_os=GuestOS.LINUX, image_path=image),
+            ),
+        )
+
+        sandbox = manager.created_sandbox
+        assert sandbox is not None
+        assert sandbox.qemu_config.image_path == image, "the run path dropped the configured disk image"
+
+        drive = _drive_argument(sandbox.build_command())
+        assert str(image) in drive, f"configured disk image missing from -drive: {drive!r}"
+
+    def test_a_running_sandbox_is_reused_instead_of_booting_another(self, tmp_path: Path) -> None:
+        """With ``reuse_instance`` the run must land in the existing sandbox.
+
+        The panel always has an instance in front of the user when the Run
+        button is enabled, so booting a second virtual machine beside it is
+        both wrong and expensive. The gate is that no new backend is built and
+        the binary is recorded against the instance that already existed.
+
+        Args:
+            tmp_path: Per-test temporary directory.
+        """
+        image = _make_disk_image(tmp_path)
+        qemu_path = tmp_path / "qemu-system-x86_64.exe"
+        qemu_path.write_bytes(b"MZ")
+        binary = tmp_path / "target.bin"
+        binary.write_bytes(b"\x7fELF")
+
+        manager = _BackendBuildingManager(qemu_path)
+        bridge = SandboxBridge()
+        bridge.attach_manager(manager)
+
+        existing = asyncio.run(
+            bridge.create(
+                sandbox_type="qemu",
+                qemu_config=QEMUConfig(guest_os=GuestOS.LINUX, image_path=image),
+            ),
+        )
+        created_for_the_first_time = manager.created_sandbox
+
+        asyncio.run(
+            bridge.run_binary(
+                str(binary),
+                sandbox_type="qemu",
+                qemu_config=QEMUConfig(guest_os=GuestOS.LINUX, image_path=image),
+                reuse_instance=True,
+            ),
+        )
+
+        assert manager.created_sandbox is created_for_the_first_time, (
+            "the run booted a second sandbox instead of reusing the one already running"
+        )
+        reused = asyncio.run(manager.get(str(existing["instance_id"])))
+        assert reused is not None
+        assert reused.binary_path == binary, f"the reused instance was not given the binary; got {reused.binary_path}"
+
+    def test_a_run_without_the_config_still_cannot_boot(self, tmp_path: Path) -> None:
+        """Omitting the config leaves the run's backend with no image.
+
+        This is the state the live failure was in, pinned so the forwarding
+        cannot quietly become a default that hides a missing image.
+
+        Args:
+            tmp_path: Per-test temporary directory.
+        """
+        qemu_path = tmp_path / "qemu-system-x86_64.exe"
+        qemu_path.write_bytes(b"MZ")
+        binary = tmp_path / "target.bin"
+        binary.write_bytes(b"\x7fELF")
+
+        manager = _BackendBuildingManager(qemu_path)
+        bridge = SandboxBridge()
+        bridge.attach_manager(manager)
+
+        asyncio.run(bridge.run_binary(str(binary), sandbox_type="qemu"))
 
         sandbox = manager.created_sandbox
         assert sandbox is not None
