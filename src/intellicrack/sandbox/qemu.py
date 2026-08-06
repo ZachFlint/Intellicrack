@@ -189,6 +189,10 @@ _ERR_QEMU_GA_SOCKET_UNREACHABLE = (
 _ERR_QEMU_GA_SYNC_FAILED = "qemu-guest-agent echoed no sync id for any supported sync command; the channel could not be resynchronised"
 _ERR_QEMU_GA_EXEC_STATUS_FAILED = "qemu-guest-agent guest-exec-status reply could not be read"
 _ERR_QEMU_GA_NOT_CONNECTED = "qemu-guest-agent channel not connected"
+_ERR_GUEST_FILE_OPEN_FAILED = "qemu-guest-agent could not open {path} inside the guest for writing: {error}"
+_ERR_GUEST_FILE_NO_HANDLE = "qemu-guest-agent opened {path} inside the guest but returned no file handle"
+_ERR_GUEST_FILE_WRITE_FAILED = "qemu-guest-agent could not write {path} inside the guest: {error}"
+_ERR_GUEST_FILE_SHORT_WRITE = "qemu-guest-agent wrote {written} of {expected} bytes to {path} inside the guest"
 _ERR_GUEST_COMMAND_TIMEOUT = "guest command {command} did not exit within {timeout}s"
 _ERR_GUEST_SHARED_MOUNT_POINT = "could not create the shared-folder mount point {path} inside the guest"
 _ERR_GUEST_SHARED_DEVICE_ENUM = "could not enumerate guest block devices while locating the shared volume"
@@ -215,6 +219,11 @@ _QEMU_GA_PING_INTERVAL = 1.0
 _QEMU_GA_EXEC_TIMEOUT = 10.0
 _QEMU_GA_CONNECT_TIMEOUT = 30.0
 _QEMU_GA_CONNECT_RETRY_INTERVAL: Final[float] = 1.0
+# Payload bytes per guest-file-write. The buffer travels base64-encoded inside
+# one JSON line, so this is about 88 KiB on the wire - comfortably inside the
+# agent's own line limit while keeping the number of round trips low.
+_QGA_FILE_WRITE_CHUNK: Final[int] = 65536
+_QGA_FILE_COMMAND_TIMEOUT: Final[float] = 30.0
 _QEMU_GA_RESYNC_TIMEOUT: Final[float] = 5.0
 
 # QEMU exposes the guest-agent virtio-serial chardev one port above the
@@ -5326,6 +5335,132 @@ python3 /mnt/shared/monitor/agent.py &
         except OSError as e:
             _logger.warning("copy_to_sandbox_failed", error=str(e), source=str(source), dest=dest)
             raise SandboxError(_ERR_COPY_TO_SANDBOX) from e
+
+        await self._stage_file_in_guest(source, dest)
+
+    def _guest_shared_path(self, relative: str) -> str:
+        """Return the in-guest absolute path of a share-relative destination.
+
+        Args:
+            relative: Destination path relative to the shared folder, written
+                with forward slashes.
+
+        Returns:
+            str: Absolute path of that destination inside the guest.
+        """
+        root = self._guest_shared_root_for(self._qemu_config.guest_os)
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            return root + relative.replace("/", "\\")
+        return f"{root}/{relative}"
+
+    async def _open_guest_file(self, path: str) -> int:
+        """Open a guest file for writing through qemu-guest-agent.
+
+        Args:
+            path: Absolute in-guest path to create or truncate.
+
+        Returns:
+            int: The agent's handle for the opened file.
+
+        Raises:
+            SandboxError: If the agent refuses the open or returns no handle.
+        """
+        if self._qga is None:
+            raise SandboxError(_ERR_QEMU_GA_NOT_CONNECTED)
+        reply = await self._qga.execute_command(
+            {"execute": "guest-file-open", "arguments": {"path": path, "mode": "wb"}},
+            _QGA_FILE_COMMAND_TIMEOUT,
+        )
+        if not reply.success:
+            raise SandboxError(_ERR_GUEST_FILE_OPEN_FAILED.format(path=path, error=reply.error or "unknown error"))
+        # QMPResponse.data carries the reply's "return" member itself, which
+        # for guest-file-open is the bare handle rather than an object.
+        handle: object = reply.data
+        if not isinstance(handle, int):
+            raise SandboxError(_ERR_GUEST_FILE_NO_HANDLE.format(path=path))
+        return handle
+
+    async def _write_guest_file_chunk(self, handle: int, chunk: bytes, path: str) -> None:
+        """Write one buffer to an open guest file through qemu-guest-agent.
+
+        Args:
+            handle: Agent handle returned by :meth:`_open_guest_file`.
+            chunk: Raw bytes to append.
+            path: In-guest path, used only for failure messages.
+
+        Raises:
+            SandboxError: If the agent refuses the write or accepts less than
+                the whole buffer.
+        """
+        if self._qga is None:
+            raise SandboxError(_ERR_QEMU_GA_NOT_CONNECTED)
+        reply = await self._qga.execute_command(
+            {
+                "execute": "guest-file-write",
+                "arguments": {"handle": handle, "buf-b64": base64.b64encode(chunk).decode("ascii")},
+            },
+            _QGA_FILE_COMMAND_TIMEOUT,
+        )
+        if not reply.success:
+            raise SandboxError(_ERR_GUEST_FILE_WRITE_FAILED.format(path=path, error=reply.error or "unknown error"))
+        payload: object = reply.data
+        written = payload.get("count") if isinstance(payload, dict) else None
+        if isinstance(written, int) and written != len(chunk):
+            raise SandboxError(_ERR_GUEST_FILE_SHORT_WRITE.format(written=written, expected=len(chunk), path=path))
+
+    async def _close_guest_file(self, handle: int) -> None:
+        """Close a guest file handle, tolerating a channel that has gone away.
+
+        Args:
+            handle: Agent handle returned by :meth:`_open_guest_file`.
+        """
+        if self._qga is None:
+            return
+        reply = await self._qga.execute_command(
+            {"execute": "guest-file-close", "arguments": {"handle": handle}},
+            _QGA_FILE_COMMAND_TIMEOUT,
+        )
+        if not reply.success:
+            _logger.warning("guest_file_close_failed", handle=handle, error=reply.error)
+
+    async def _stage_file_in_guest(self, source: Path, dest: str) -> None:
+        """Write a staged file into the running guest over qemu-guest-agent.
+
+        The host-side copy alone is not enough once the VM is up. On Windows
+        hosts the shared folder reaches the guest as a QEMU **vvfat** block
+        device, and vvfat presents the directory as it was when QEMU started:
+        anything the host writes afterwards never appears inside the guest, so
+        a binary staged for a run is simply not there when the agent tries to
+        execute it. Files staged *before* the VM boots are in that snapshot and
+        need nothing further, which is why this is a no-op until the agent
+        channel exists.
+
+        Writing through the agent also puts the file under the share root the
+        guest already trusts, so the in-guest allowlist accepts the executable
+        exactly as it would have accepted a pre-boot copy.
+
+        A guest file that cannot be created or filled surfaces as the
+        ``SandboxError`` raised by :meth:`_open_guest_file` or
+        :meth:`_write_guest_file_chunk`, rather than as a run that later fails
+        with a misleading "not found" from inside the guest.
+
+        Args:
+            source: Host file whose bytes are to be written.
+            dest: Destination path relative to the shared folder.
+        """
+        if self._qga is None or not self._qga.connected:
+            return
+
+        guest_path = self._guest_shared_path(dest)
+        payload = await asyncio.to_thread(source.read_bytes)
+        handle = await self._open_guest_file(guest_path)
+        try:
+            for start in range(0, len(payload), _QGA_FILE_WRITE_CHUNK):
+                await self._write_guest_file_chunk(handle, payload[start : start + _QGA_FILE_WRITE_CHUNK], guest_path)
+        finally:
+            await self._close_guest_file(handle)
+
+        _logger.info("file_staged_in_guest", guest_path=guest_path, size_bytes=len(payload))
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
         """Copy a file from the sandbox.
