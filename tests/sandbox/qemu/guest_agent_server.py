@@ -49,6 +49,8 @@ import socket
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, Protocol, cast
 
+from intellicrack.sandbox.qemu import GuestAgentClient
+
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -70,6 +72,15 @@ DEFAULT_GUEST_STDERR: Final[str] = "warning: 9p not present\n"
 # A complete line - it ends in a newline - whose payload is not valid UTF-8:
 # 0xFF and 0xFE cannot begin a UTF-8 sequence.
 UNDECODABLE_LINE: Final[bytes] = b'{"type": "result", "data": {"stdout": "\xff\xfe"}}\n'
+
+# The readiness handshake this in-guest agent answers is taken from the module
+# that generates the real agent scripts, never restated here: a rename in
+# production has to move this server with it rather than leave a double that
+# still answers a word the guest no longer speaks.
+AGENT_REQUEST_PING: Final[str] = GuestAgentClient.PING_REQUEST_TYPE
+AGENT_MESSAGE_PONG: Final[str] = GuestAgentClient.PONG_MESSAGE_TYPE
+AGENT_REQUEST_EXECUTE: Final[str] = "execute"
+AGENT_MESSAGE_RESULT: Final[str] = "result"
 
 
 class GuestAgentServerError(AssertionError):
@@ -716,24 +727,45 @@ class IntellicrackAgentServer(_LoopbackServer):
 
     ``agent.ps1`` listens on ``127.0.0.1:4445`` inside the guest and answers
     newline-delimited ``{"type": "execute", "command", "args"}`` requests with
-    ``{"type": "result", "data": {"exit_code", "stdout", "stderr"}}``. That is
-    the protocol :class:`intellicrack.sandbox.qemu.GuestAgentClient` speaks, so
-    this server is what its ``send_command`` really talks to. The outcome of
+    ``{"type": "result", "data": {"exit_code", "stdout", "stderr"}}``, and the
+    client's readiness probe with a bare pong. That is the protocol
+    :class:`intellicrack.sandbox.qemu.GuestAgentClient` speaks, so this server
+    is what its ``connect`` and ``send_command`` really talk to. The outcome of
     each request comes from the same :class:`GuestCommandResponder` guest
     models the guest-agent server uses.
 
+    The channel this agent is reached through is a QEMU SLIRP ``hostfwd``,
+    which accepts the host-side TCP connection unconditionally and only then
+    tries to reach the in-guest listener. ``dead_connections`` models the
+    window before the in-guest agent calls ``listen``: the connection is
+    accepted and immediately closed without a byte crossing it, exactly what
+    SLIRP does when nothing answers inside the guest. ``close_after_replies``
+    models the other end of the same channel's life - an agent that answered
+    and then went away - so a client that assumes a connected socket stays
+    connected can be caught.
+
     Attributes:
         requests: Every ``(command, args)`` pair received, in arrival order.
+        accepted: Number of connections accepted since ``start``, including
+            the ones closed straight away.
+        handshakes: Number of readiness probes answered since ``start``. A
+            handshake is not a command, so it never lands in ``requests`` and
+            never counts towards ``close_after_replies``.
     """
 
     requests: list[tuple[str, tuple[str, ...]]]
+    accepted: int
+    handshakes: int
 
     def __init__(
         self,
         responder: GuestCommandResponder | None = None,
         port: int = 0,
         *,
+        listen_delay: float = 0.0,
         undecodable_lines: int = 0,
+        dead_connections: int = 0,
+        close_after_replies: int = 0,
     ) -> None:
         """Initialise the server with an empty request log.
 
@@ -741,27 +773,48 @@ class IntellicrackAgentServer(_LoopbackServer):
             responder: Guest model deciding the outcome of each command. When
                 omitted every command succeeds with the default output.
             port: TCP port to claim, or 0 to let the OS pick a free one.
+            listen_delay: Seconds after ``start`` before the port is bound and
+                connections stop being refused, modelling a guest whose agent
+                has not come up yet.
             undecodable_lines: How many replies are preceded by a complete,
                 newline-terminated line whose bytes are not valid UTF-8. The
                 framing around such a line is intact, so it is one message the
                 client cannot read rather than a stream it can no longer follow.
+            dead_connections: How many of the first accepted connections are
+                closed immediately without reading or writing anything, the way
+                a hostfwd behaves while the in-guest agent has not reached
+                ``listen`` yet. A count above any number of attempts models a
+                guest whose agent never comes up at all.
+            close_after_replies: How many replies one connection carries before
+                the agent hangs up. Zero leaves the connection open until the
+                client closes it.
         """
-        super().__init__(port=port)
+        super().__init__(listen_delay=listen_delay, port=port)
         self.requests = []
+        self.accepted = 0
+        self.handshakes = 0
         self._responder = responder
         self._undecodable_lines = undecodable_lines
+        self._dead_connections = dead_connections
+        self._close_after_replies = close_after_replies
 
     async def _serve(
         self,
         reader: asyncio.StreamReader,
         writer: asyncio.StreamWriter,
     ) -> None:
-        """Answer execute requests until the client goes away.
+        """Answer execute requests until the client or the agent goes away.
 
         Args:
             reader: Stream reader for the accepted connection.
             writer: Stream writer for the accepted connection.
         """
+        self.accepted += 1
+        if self._dead_connections > 0:
+            self._dead_connections -= 1
+            return
+
+        replies = 0
         while True:
             line = await reader.readline()
             if not line:
@@ -769,14 +822,20 @@ class IntellicrackAgentServer(_LoopbackServer):
             reply = self._reply_for(line.strip())
             if reply is None:
                 continue
-            if self._undecodable_lines > 0:
+            is_command_reply = str(reply.get("type", "")) == AGENT_MESSAGE_RESULT
+            if is_command_reply and self._undecodable_lines > 0:
                 self._undecodable_lines -= 1
                 writer.write(UNDECODABLE_LINE)
             writer.write(json.dumps(reply).encode() + b"\n")
             await writer.drain()
+            if not is_command_reply:
+                continue
+            replies += 1
+            if 0 < self._close_after_replies <= replies:
+                return
 
     def _reply_for(self, payload: bytes) -> dict[str, Any] | None:
-        """Compute the ``result`` message for one received request line.
+        """Compute the reply message for one received request line.
 
         Args:
             payload: Raw request bytes without the trailing newline.
@@ -788,7 +847,11 @@ class IntellicrackAgentServer(_LoopbackServer):
         if not payload:
             return None
         request = decode_object(payload)
-        if str(request.get("type", "")) != "execute":
+        request_type = str(request.get("type", ""))
+        if request_type == AGENT_REQUEST_PING:
+            self.handshakes += 1
+            return {"type": AGENT_MESSAGE_PONG, "data": {}}
+        if request_type != AGENT_REQUEST_EXECUTE:
             return None
         command = str(request.get("command", ""))
         raw_args: Any = request.get("args")
@@ -796,7 +859,7 @@ class IntellicrackAgentServer(_LoopbackServer):
         self.requests.append((command, tuple(args)))
         result = GuestCommandResult() if self._responder is None else self._responder(command, args)
         return {
-            "type": "result",
+            "type": AGENT_MESSAGE_RESULT,
             "data": {
                 "exit_code": result.exit_code,
                 "stdout": result.stdout,

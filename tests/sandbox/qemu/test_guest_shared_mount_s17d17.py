@@ -159,6 +159,15 @@ _EXPECTED_LOG_DIR: Final[str] = "E:\\logs"
 _EXPECTED_DROPPED_MIRROR: Final[str] = "E:\\output\\dropped"
 _RUN_BINARY_TIMEOUT_S: Final[int] = 5
 
+# S17-D22: the anti-evasion registry writes must reach the guest's own
+# reg.exe. This guest's Windows is D:\WinNT, so the only allowlist-safe path is
+# below that reported root - a patch built on C:\Windows is refused by the
+# guest's own Test-AllowedCommand.
+_ANTI_EVASION_PROFILE: Final[str] = "default"
+_EXPECTED_REG_EXE_PATH: Final[str] = f"{_GUEST_SYSTEM_ROOT}\\System32\\reg.exe"
+_REG_ADD_SUBCOMMAND: Final[str] = "add"
+_EXPECTED_REG_DISPATCH_COUNT: Final[int] = 4
+
 
 @dataclass(frozen=True)
 class _GuestDevice:
@@ -1184,6 +1193,24 @@ class _MountTestSandbox(QEMUSandbox):
         """
         return self._guest_shared_root
 
+    def guest_system_root(self) -> str | None:
+        """Return the guest ``%SystemRoot%`` the mount probe cached.
+
+        Returns:
+            str | None: Probed system root, or None when the probe has not run.
+        """
+        return self._guest_system_root_value
+
+    def anti_evasion_reg_exe_path(self) -> str:
+        """Return the real ``reg.exe`` path the anti-evasion writes would use.
+
+        Returns:
+            str: In-guest ``reg.exe`` path
+            :meth:`QEMUSandbox._guest_reg_exe_path` builds from the probed
+            ``%SystemRoot%``.
+        """
+        return self._guest_reg_exe_path()
+
     @classmethod
     def parse_block_devices(cls, listing: str) -> list[tuple[str, str, str, str]]:
         """Return the real parse of one ``lsblk --raw`` listing.
@@ -2129,3 +2156,58 @@ class TestGeneratedGuestScriptsNeedNoSmbExport:
 
         assert not _NET_USE.search(script), "the agent still maps a network drive over an SMB export that does not exist"
         assert "10.0.2.4" not in script, "the agent still references QEMU's built-in SMB server address"
+
+
+class TestAntiEvasionRegistryFollowsTheProbedSystemRoot:
+    """S17-D22: reg.exe must be dispatched under the guest's own %SystemRoot%."""
+
+    @pytest.mark.asyncio
+    async def test_registry_patches_target_the_probed_reg_exe(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        r"""``apply_anti_evasion`` dispatches ``reg.exe`` from the probed root.
+
+        The modelled guest boots from ``D:`` with ``%SystemRoot%`` at
+        ``D:\WinNT``, and the in-guest agent's ``Test-AllowedCommand`` - read
+        here out of the ``agent.ps1`` the sandbox really staged and evaluated
+        against that same environment - accepts ``reg.exe`` only under
+        ``System32``/``SysWOW64`` below the reported root. A registry patch
+        built on the compiled-in ``C:\Windows`` path is therefore refused by
+        the guest's own allowlist, exactly as it is on any guest whose Windows
+        is not at ``C:\Windows``. Driving the real ``apply_anti_evasion``
+        against the real agent peer proves every dispatched ``reg.exe`` names
+        the probed root and survives that allowlist.
+
+        Args:
+            tmp_path: Host directory the shared folder is staged under.
+        """
+        shared = _staged_share(tmp_path)
+        guest = _WindowsGuestModel(shared)
+        agent_guest = _WindowsAgentGuest(shared)
+        async with _guest_session(guest, GuestOS.WINDOWS, shared, agent_responder=agent_guest) as (sandbox, _ga_server):
+            await sandbox.create_agent_scripts()
+            await sandbox.attach_agents()
+            sandbox.mark_running()
+
+            await sandbox.apply_anti_evasion(profile=_ANTI_EVASION_PROFILE)
+
+            assert sandbox.guest_system_root() == _GUEST_SYSTEM_ROOT, (
+                f"the mount probe did not cache the guest's own %SystemRoot%: {sandbox.guest_system_root()!r}"
+            )
+            assert sandbox.anti_evasion_reg_exe_path() == _EXPECTED_REG_EXE_PATH, (
+                f"the resolved reg.exe path left the probed system root: {sandbox.anti_evasion_reg_exe_path()!r}"
+            )
+
+            reg_dispatches = [(command, args) for command, args in agent_guest.commands if args[:1] == (_REG_ADD_SUBCOMMAND,)]
+            assert len(reg_dispatches) == _EXPECTED_REG_DISPATCH_COUNT, (
+                f"apply_anti_evasion dispatched {len(reg_dispatches)} reg.exe add commands, "
+                f"expected {_EXPECTED_REG_DISPATCH_COUNT}: {agent_guest.commands}"
+            )
+            reg_paths = {command for command, _args in reg_dispatches}
+            assert reg_paths == {_EXPECTED_REG_EXE_PATH}, (
+                f"the registry patches did not all name the probed reg.exe {_EXPECTED_REG_EXE_PATH!r}: {reg_paths}"
+            )
+            assert agent_guest.rejected == [], (
+                f"the guest's own allowlist refused a dispatched command - a reg.exe path off the probed root: {agent_guest.rejected}"
+            )
