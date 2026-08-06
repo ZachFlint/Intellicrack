@@ -1162,7 +1162,14 @@ class SandboxPanel(AnalysisPanelBase):
             self._binary_path_input.setText(path_str)
 
     def _on_run_binary(self) -> None:
-        """Execute the selected binary inside the sandbox."""
+        """Execute the selected binary inside the sandbox.
+
+        The run is given the same backend configuration ``Create`` and
+        ``Restart`` already build, because a QEMU run that reaches the backend
+        without a disk image cannot start a virtual machine at all, and it
+        asks to reuse the instance the panel is already showing rather than
+        booting a second one beside it.
+        """
         if self._bridge is None:
             self._log("[!] No sandbox bridge active")
             return
@@ -1192,6 +1199,8 @@ class SandboxPanel(AnalysisPanelBase):
                 binary_path=binary_path,
                 args=args_list,
                 sandbox_type=sandbox_type,
+                qemu_config=self._qemu_create_config(sandbox_type),
+                reuse_instance=True,
             ),
             on_success=self._on_run_binary_success,
             on_error=self._on_run_binary_error,
