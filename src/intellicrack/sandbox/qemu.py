@@ -226,6 +226,14 @@ _QGA_FILE_WRITE_CHUNK: Final[int] = 65536
 _QGA_FILE_COMMAND_TIMEOUT: Final[float] = 30.0
 _QEMU_GA_RESYNC_TIMEOUT: Final[float] = 5.0
 
+# The guest-shutdown mode that powers the guest off rather than rebooting or
+# halting it. qemu-guest-agent sends no reply to this command, so the real
+# evidence of compliance is QEMU exiting.
+_QGA_SHUTDOWN_MODE: Final[str] = "powerdown"
+
+# Seconds given to a QMP quit before the foreground child handle is reaped.
+_QEMU_QUIT_SETTLE_S: Final[float] = 2.0
+
 # QEMU exposes the guest-agent virtio-serial chardev one port above the
 # Intellicrack agent's hostfwd port; see the -chardev argument built by
 # _build_qemu_command.
@@ -550,6 +558,13 @@ class QEMUConfig:
             an answer to ``guest-ping``. The whole budget is available to a
             guest that is still booting, because QEMU binds the channel socket
             before the guest runs.
+        guest_shutdown_timeout: Total time in seconds ``stop()`` allows the
+            guest to power itself off before QEMU is terminated outright. The
+            budget is split evenly across the shutdown channels that are open,
+            so a dead qemu-guest-agent cannot consume the whole of it and leave
+            nothing for the ACPI power button. Set it to zero to skip the
+            request entirely and yank the power, which loses whatever the
+            in-guest monitors had not yet flushed.
     """
 
     guest_os: GuestOS = GuestOS.WINDOWS
@@ -566,6 +581,7 @@ class QEMUConfig:
     anti_evasion_profile: Literal["default", "workstation", "laptop"] = "default"
     agent_connect_timeout: float = 60.0
     guest_agent_ready_timeout: float = _QEMU_GA_PING_TIMEOUT
+    guest_shutdown_timeout: float = 120.0
 
 
 @dataclass
@@ -1412,6 +1428,36 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
             QMPResponse: Successful response when the agent replied.
         """
         return await self.execute_command({"execute": "guest-ping"}, time_limit)
+
+    async def guest_shutdown(self, mode: str = _QGA_SHUTDOWN_MODE) -> bool:
+        """Ask the guest operating system to power itself off.
+
+        ``guest-shutdown`` is the one agent command that has no reply: the
+        agent hands the request to the guest's own shutdown path and the
+        channel dies with the guest. Reading for an answer would therefore
+        always spend the full reply timeout and then drive this client into a
+        resync against a guest that is already going down, so the request is
+        written and not read back. Whether the guest obeyed is decided by
+        watching QEMU exit, which it does once its guest powers off.
+
+        Args:
+            mode: Shutdown mode - ``powerdown``, ``reboot`` or ``halt``.
+
+        Returns:
+            bool: True when the request reached the wire.
+        """
+        if self._writer is None:
+            return False
+
+        payload = json.dumps({"execute": "guest-shutdown", "arguments": {"mode": mode}}) + "\n"
+        async with self._lock:
+            try:
+                self._writer.write(payload.encode())
+                await self._writer.drain()
+            except (OSError, ConnectionError) as error:
+                _logger.warning(self._event("guest_shutdown_write_failed"), error=str(error))
+                return False
+        return True
 
     async def guest_exec(
         self,
@@ -3962,8 +4008,120 @@ class QEMUSandbox(SandboxBase):
             _logger.warning("qemu_sandbox_start_failed", error=str(e))
             raise SandboxError(_ERR_SANDBOX_START) from e
 
+    async def _request_agent_shutdown(self) -> bool:
+        """Ask qemu-guest-agent to power the guest off.
+
+        Returns:
+            bool: True when the request was written to an open agent channel.
+        """
+        if self._qga is None or not self._qga.connected:
+            return False
+        return await self._qga.guest_shutdown()
+
+    async def _request_acpi_powerdown(self) -> bool:
+        """Press the guest's virtual ACPI power button over QMP.
+
+        Returns:
+            bool: True when QEMU accepted ``system_powerdown``.
+        """
+        if self._qmp is None or not self._qmp.connected:
+            return False
+
+        response = await self._qmp.execute_command({"execute": "system_powerdown"})
+        if not response.success:
+            _logger.warning("qemu_system_powerdown_failed", error=response.error)
+            return False
+        return True
+
+    async def _await_qemu_exit(self, time_limit: float) -> bool:
+        """Wait for the QEMU process to exit of its own accord.
+
+        QEMU exits once its guest powers off, so the process is the completion
+        signal for a graceful shutdown. A foreground child is waited on
+        directly; a daemonized QEMU is only known by PID and is polled.
+
+        Args:
+            time_limit: Seconds to wait before giving up.
+
+        Returns:
+            bool: True when QEMU is no longer running.
+        """
+        process = self.process
+        if process is not None:
+            if process.returncode is not None:
+                return True
+            try:
+                await asyncio.wait_for(process.wait(), timeout=time_limit)
+            except TimeoutError:
+                return False
+            return True
+
+        if self._qemu_pid is None or self._qemu_pid < 0:
+            return False
+
+        try:
+            await asyncio.to_thread(psutil.Process(self._qemu_pid).wait, time_limit)
+        except psutil.NoSuchProcess:
+            return True
+        except psutil.TimeoutExpired:
+            return False
+        except psutil.Error as error:
+            _logger.warning("qemu_exit_wait_failed", pid=self._qemu_pid, error=str(error))
+            return False
+        return True
+
+    async def _shut_down_guest(self) -> bool:
+        """Ask the guest to power itself off and wait for QEMU to exit.
+
+        Two independent channels can carry the request. qemu-guest-agent's
+        ``guest-shutdown`` is tried first because it runs inside the guest and
+        does not depend on the guest honouring ACPI; QMP's ``system_powerdown``
+        presses the virtual power button and covers a guest whose agent is gone.
+        Each open channel gets an equal share of
+        :attr:`QEMUConfig.guest_shutdown_timeout`, so an agent that never
+        complies cannot consume the whole budget.
+
+        Returns:
+            bool: True when the QEMU process is no longer running, so no forced
+            termination is needed.
+        """
+        budget = self._qemu_config.guest_shutdown_timeout
+        if budget <= 0:
+            return False
+
+        agent_open = self._qga is not None and self._qga.connected
+        monitor_open = self._qmp is not None and self._qmp.connected
+        channels = int(agent_open) + int(monitor_open)
+        if channels == 0:
+            return False
+        share = budget / channels
+
+        if await self._await_qemu_exit(0.0):
+            _logger.info("qemu_already_exited_before_shutdown_request")
+            return True
+
+        if agent_open and await self._request_agent_shutdown() and await self._await_qemu_exit(share):
+            _logger.info("qemu_guest_powered_off", channel="guest-agent")
+            return True
+
+        if monitor_open and await self._request_acpi_powerdown() and await self._await_qemu_exit(share):
+            _logger.info("qemu_guest_powered_off", channel="qmp-system-powerdown")
+            return True
+
+        _logger.warning("qemu_guest_shutdown_not_honoured", budget=budget)
+        return False
+
     async def _stop_impl(self) -> None:
-        """Execute the full QEMU sandbox stop sequence."""
+        """Execute the full QEMU sandbox stop sequence.
+
+        The guest is asked to power itself off first, and given a bounded time
+        to do it, because terminating QEMU while the guest runs is a power-cord
+        yank: whatever the in-guest monitors have not yet flushed to the shared
+        volume is lost, and the guest filesystem is left dirty for the next
+        boot. Only a guest that will not comply is cut off.
+        """
+        powered_off = await self._shut_down_guest()
+
         if self._agent is not None:
             await self._agent.disconnect()
             self._agent = None
@@ -3973,11 +4131,13 @@ class QEMUSandbox(SandboxBase):
             self._qga = None
 
         if self._qmp is not None:
-            await self._qmp.quit()
+            if not powered_off:
+                await self._qmp.quit()
             await self._qmp.disconnect()
             self._qmp = None
 
-        await asyncio.sleep(2)
+        if not powered_off:
+            await asyncio.sleep(_QEMU_QUIT_SETTLE_S)
 
         if self._qemu_pid is not None:
             process_manager = ProcessManager.get_instance()
