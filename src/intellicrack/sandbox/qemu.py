@@ -138,6 +138,11 @@ _ERR_QEMU_HOST_PORT = (
     "them. Leave the QEMU port settings at 0 to have Intellicrack allocate ports it has verified it can bind."
 )
 _ERR_QEMU_PATH = "path not set"
+_ERR_QEMU_IMG_MISSING = (
+    "qemu-img was not found next to the QEMU binary, so no per-instance disk overlay could be created. Intellicrack will not "
+    "attach the configured disk image directly, because QEMU does not lock it and a second sandbox would corrupt it."
+)
+_ERR_OVERLAY_CREATE = "could not create the per-instance disk overlay"
 _ERR_NO_IMAGE_UNSET = (
     "No QEMU disk image is configured. Set a qcow2 disk image under Sandbox Settings -> QEMU Backend before creating a QEMU sandbox."
 )
@@ -581,6 +586,14 @@ class QEMUConfig:
             allocates an adjacent pair that are both bindable.
         enable_acceleration: Whether to use hardware acceleration.
         snapshot_name: Snapshot to restore on start.
+        disk_overlay: Whether each sandbox gets its own copy-on-write overlay
+            over ``image_path`` instead of writing to it directly. On by
+            default, and the only safe setting when more than one sandbox can
+            exist: QEMU does not lock the image on Windows, so two guests
+            attached to one file write over each other and corrupt it. Turning
+            this off makes a sandbox's changes persist into the configured
+            image, which is destructive and is only appropriate when a single
+            sandbox is deliberately being used to modify that image.
         shared_folder: Path to shared folder on host.
         anti_evasion_profile: Anti-evasion profile applied at launch via
             ``-smbios`` / ``-cpu`` command-line arguments. One of
@@ -613,6 +626,7 @@ class QEMUConfig:
     agent_port: int = 0
     enable_acceleration: bool = True
     snapshot_name: str | None = None
+    disk_overlay: bool = True
     shared_folder: Path | None = None
     anti_evasion_profile: Literal["default", "workstation", "laptop"] = "default"
     agent_connect_timeout: float = 60.0
@@ -2108,6 +2122,8 @@ class QEMUSandbox(SandboxBase):
 
     Attributes:
         QEMU_EXE: QEMU executable name.
+        QEMU_IMG_EXE: qemu-img executable name, used to build the per-instance
+            disk overlay.
         TOOLS_PATH: Bundled QEMU installation directory, resolved from the
             installed project root rather than a fixed absolute location.
         GUEST_SHARED_PATH_WINDOWS: Default shared-volume root on a Windows
@@ -2118,6 +2134,7 @@ class QEMUSandbox(SandboxBase):
     """
 
     QEMU_EXE: Final[str] = "qemu-system-x86_64"
+    QEMU_IMG_EXE: Final[str] = "qemu-img"
     TOOLS_PATH: Final[Path] = get_project_root() / "tools" / "qemu"
     GUEST_SHARED_PATH_WINDOWS: Final[str] = _GUEST_SHARED_ROOT_WINDOWS
     GUEST_SHARED_PATH_LINUX: Final[str] = _GUEST_SHARED_ROOT_LINUX
@@ -2741,6 +2758,86 @@ class QEMUSandbox(SandboxBase):
         port = self._claim_free_port(1, start, end)
         self._claimed_host_ports.add(port)
         return port
+
+    def _resolve_qemu_img(self) -> Path:
+        """Locate the ``qemu-img`` that belongs to the QEMU being launched.
+
+        It is looked for beside the QEMU binary rather than on ``PATH``, so a
+        bundled QEMU cannot end up paired with an unrelated qemu-img.
+
+        Returns:
+            Path: Path to the qemu-img executable.
+
+        Raises:
+            SandboxError: If qemu-img is not present beside the QEMU binary.
+        """
+        if self._qemu_path is None:
+            raise SandboxError(_ERR_QEMU_PATH)
+
+        suffix = self._qemu_path.suffix
+        candidate = self._qemu_path.with_name(f"{self.QEMU_IMG_EXE}{suffix}")
+        if candidate.exists():
+            return candidate
+
+        _logger.error("qemu_img_missing", searched=str(candidate))
+        raise SandboxError(_ERR_QEMU_IMG_MISSING)
+
+    async def _create_disk_overlay(self, image_path: Path) -> Path:
+        """Build a copy-on-write overlay over the configured disk image.
+
+        The sandbox writes to the overlay and the configured image is only
+        ever read, which is what keeps two concurrent sandboxes from writing
+        over each other. QEMU does not take an image lock on Windows, so
+        nothing else stops that from happening, and the damage is silent: both
+        guests appear to run normally and the corruption only surfaces later.
+
+        The overlay lives in this instance's temporary directory, so it is
+        removed with the rest of the instance's state.
+
+        Args:
+            image_path: The configured backing image, which is not modified.
+
+        Returns:
+            Path: Path to the newly created overlay.
+
+        Raises:
+            SandboxError: If qemu-img could not create the overlay.
+        """
+        if self._temp_dir is None:
+            # start() normally creates this first, but the command can also be
+            # built on its own; the directory is recorded either way, so
+            # _cleanup removes the overlay with the rest of the instance.
+            self._temp_dir = Path(await asyncio.to_thread(tempfile.mkdtemp, prefix="intellicrack_qemu_"))
+
+        qemu_img = self._resolve_qemu_img()
+        overlay = self._temp_dir / "disk-overlay.qcow2"
+        # qemu-img records the backing path as given, and the guest resolves it
+        # relative to the overlay's own directory, so it has to be absolute.
+        backing = await asyncio.to_thread(image_path.resolve)
+        argv = [
+            str(qemu_img),
+            "create",
+            *["-f", "qcow2"],
+            *["-b", str(backing)],
+            *["-F", "qcow2"],
+            str(overlay),
+        ]
+
+        process = await asyncio.create_subprocess_exec(
+            *argv,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        _, stderr = await process.communicate()
+
+        if process.returncode != _RETURNCODE_SUCCESS:
+            detail = stderr.decode(errors="replace").strip() if stderr else "no output"
+            _logger.error("disk_overlay_create_failed", image_path=str(image_path), error=detail)
+            message = f"{_ERR_OVERLAY_CREATE}: {detail}"
+            raise SandboxError(message)
+
+        _logger.info("disk_overlay_created", backing_image=str(image_path), overlay=str(overlay))
+        return overlay
 
     @staticmethod
     def _check_qemu_started(returncode: int | None, stderr: bytes | None) -> None:
@@ -3832,6 +3929,11 @@ class QEMUSandbox(SandboxBase):
             msg = f"{_ERR_NO_IMAGE_MISSING}: {image_path}"
             raise SandboxError(msg)
 
+        # What the guest actually writes to. Directing it at an overlay is what
+        # keeps a second sandbox from corrupting the configured image, which
+        # QEMU will not prevent - it takes no lock on it.
+        disk_path = await self._create_disk_overlay(image_path) if self._qemu_config.disk_overlay else image_path
+
         if self._accelerator == AcceleratorType.WHPX:
             # WHPX cannot virtualize the feature set of -cpu host or -cpu max
             # (the guest triple-faults into "Unexpected VP exit code 4" during
@@ -3872,7 +3974,7 @@ class QEMUSandbox(SandboxBase):
             *["-m", str(self._qemu_config.memory_mb)],
             *[
                 "-drive",
-                f"file={self._qemu_config.image_path},format=qcow2,if=virtio",
+                f"file={disk_path},format=qcow2,if=virtio",
             ],
         ]
 
