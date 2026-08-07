@@ -4059,7 +4059,7 @@ class QEMUSandbox(SandboxBase):
         guest mounted, whose parent is the share root - because the host
         generates this file before the guest has assigned that drive a letter,
         (2) launches the seven bundled monitor scripts from its own directory
-        with ``-LogDir <share>\logs``, (3) listens on ``127.0.0.1:4445`` for
+        with ``-LogDir <share>\logs``, (3) listens on ``0.0.0.0:4445`` for
         argv-style command requests validated against a short allowlist
         (``powershell``, ``cmd``, any ``.exe`` under the share root,
         ``System32`` or ``SysWOW64``) and answers the host's
@@ -4234,7 +4234,7 @@ function Invoke-GuestCommand($commandPath, $commandArgs, $timeoutSeconds) {
     }
 }
 
-$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse('127.0.0.1'), 4445)
+$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, 4445)
 $listener.Start()
 
 function Send-Message($stream, $data) {
