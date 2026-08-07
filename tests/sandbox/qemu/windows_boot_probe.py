@@ -56,6 +56,10 @@ _DOCKER_QUERY_TIMEOUT_SECONDS: Final[float] = 30.0
 _CDROM_DRIVE_ID: Final[str] = "icboot"
 _CDROM_BUS: Final[str] = "ide.0"
 
+_QCOW2_MAGIC: Final[bytes] = b"QFI\xfb"
+_QCOW2_VERSION_3: Final[bytes] = (3).to_bytes(4, "big")
+_QCOW2_HEADER_PADDING: Final[int] = 64
+
 _MONITOR_CONNECT_TIMEOUT_SECONDS: Final[float] = 10.0
 _MONITOR_READ_TIMEOUT_SECONDS: Final[float] = 15.0
 _MONITOR_PROMPT: Final[bytes] = b"(qemu)"
@@ -386,6 +390,37 @@ def capture_screen(monitor_port: int, destination: Path) -> bool:
     return destination.is_file() and destination.stat().st_size > 0
 
 
+def monitor_query(monitor_port: int, command: str) -> str:
+    """Run one human-monitor command and return what the monitor printed.
+
+    The monitor echoes each keystroke back with terminal control sequences, so
+    the reply carries the command itself several times over. Callers should look
+    for a substring rather than parse the text as lines.
+
+    Args:
+        monitor_port: Port the guest's human monitor listens on.
+        command: Monitor command to run.
+
+    Returns:
+        str: The monitor's output, or an empty string if it could not be read.
+    """
+    try:
+        sock = socket.create_connection(("127.0.0.1", monitor_port), timeout=_MONITOR_CONNECT_TIMEOUT_SECONDS)
+    except OSError:
+        return ""
+    try:
+        sock.settimeout(_MONITOR_READ_TIMEOUT_SECONDS)
+        _read_until_prompt(sock)
+        sock.sendall(f"{command}\n".encode())
+        answer = _read_until_prompt(sock)
+    except OSError:
+        return ""
+    finally:
+        with contextlib.suppress(OSError):
+            sock.close()
+    return answer.decode("utf-8", "replace")
+
+
 def non_black_coverage(ppm_path: Path) -> float:
     """Return the fraction of a PPM frame that is not background black.
 
@@ -502,6 +537,41 @@ def observe_rendering(
         returncode=process.returncode if exited else None,
         output=output or "",
     )
+
+
+def empty_qcow2(destination: Path) -> Path:
+    """Write a minimal but structurally valid qcow2 v3 header file.
+
+    ``_build_qemu_command`` only requires the configured image to exist; it
+    never parses it. A real header is written anyway so the fixture is a genuine
+    qcow2 rather than arbitrary bytes.
+
+    Args:
+        destination: Path the header is written to.
+
+    Returns:
+        Path: The created file.
+    """
+    destination.write_bytes(_QCOW2_MAGIC + _QCOW2_VERSION_3 + bytes(_QCOW2_HEADER_PADDING))
+    return destination
+
+
+def launcher_argv_for(accelerator: AcceleratorType, image: Path, qemu_path: Path) -> list[str]:
+    """Build the launcher command line for one accelerator without hardware.
+
+    Args:
+        accelerator: Accelerator the command builder should select for.
+        image: Existing disk image recorded on the configuration.
+        qemu_path: Path recorded as the resolved QEMU executable.
+
+    Returns:
+        list[str]: The argv the production builder emits.
+    """
+    config = QEMUConfig(guest_os=GuestOS.WINDOWS, image_path=image, display="none")
+    sandbox = LauncherSandbox(config=SandboxConfig(), qemu_config=config)
+    sandbox.force_accelerator(accelerator)
+    sandbox.set_qemu_path(qemu_path)
+    return sandbox.build_command()
 
 
 def whpx_launcher_argv(image: Path) -> list[str]:
