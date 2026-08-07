@@ -16,6 +16,8 @@ identical regardless of where it is constructed.
 
 from __future__ import annotations
 
+import os
+import secrets
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import PurePosixPath
@@ -24,6 +26,23 @@ from typing import cast
 
 _CONTAINER_WORKSPACE = PurePosixPath("C:/app")
 _CONTAINER_REPORTS = _CONTAINER_WORKSPACE / "reports" / "tests"
+_RUN_ID_ENTROPY_BYTES = 3
+
+
+def new_run_id() -> str:
+    """Return a fresh identity component unique to a single sandbox run.
+
+    The component pairs the launching host process id with a short random
+    suffix, so two runs never share a container name, spec file, exit-code
+    file, or report filename -- not across two driver processes, and not
+    across two runs started from the same process within the same minute.
+    Only characters valid in both Windows filenames and Docker container
+    names are emitted.
+
+    Returns:
+        str: Run identity component, for example ``p20164-9fa3c1``.
+    """
+    return f"p{os.getpid()}-{secrets.token_hex(_RUN_ID_ENTROPY_BYTES)}"
 
 
 class TestType(StrEnum):
@@ -77,6 +96,9 @@ class TestRunSpec:
         extra_args: Additional pytest arguments for :attr:`TestType.CUSTOM` or
             operator overrides.
         timeout_seconds: Hard timeout applied by the host driver.
+        run_id: Identity component distinguishing this run from every other
+            run, including one started in the same minute with the same test
+            type. Defaults to a freshly generated value.
     """
 
     test_type: TestType
@@ -84,14 +106,34 @@ class TestRunSpec:
     module: str | None = None
     extra_args: tuple[str, ...] = field(default_factory=tuple)
     timeout_seconds: int = 7200
+    run_id: str = field(default_factory=new_run_id)
+
+
+def run_token(spec: TestRunSpec) -> str:
+    """Return the token that identifies one run across every artifact.
+
+    Every per-run name derived by the host driver, the container entrypoint,
+    and the report harvester is built from this token, so a single definition
+    keeps the three sides consistent.
+
+    Args:
+        spec: The active run specification.
+
+    Returns:
+        str: ``<test_type>_<timestamp>_<run_id>``.
+    """
+    return f"{spec.test_type.value}_{spec.timestamp}_{spec.run_id}"
 
 
 def _artifact_paths(spec: TestRunSpec) -> dict[str, PurePosixPath]:
     """Return the per-run artifact paths inside the container.
 
     All artifacts live flat under ``reports/tests/`` with filenames of the form
-    ``<kind>_<test_type>_<mm-dd-yyyy_HH-MM>.<ext>``. The ``test-log.txt`` file
-    is shared across every run and appended to; it is not part of this mapping.
+    ``<kind>_<test_type>_<mm-dd-yyyy_HH-MM>_<run_id>.<ext>``. The run id keeps
+    two runs started in the same minute from overwriting each other. The
+    per-run ``log`` is written by the container; the aggregate
+    ``test-log.txt`` history is appended host-side once the container has
+    exited, so no two containers hold the same handle across the bind mount.
 
     Args:
         spec: The active run specification.
@@ -99,9 +141,9 @@ def _artifact_paths(spec: TestRunSpec) -> dict[str, PurePosixPath]:
     Returns:
         dict[str, PurePosixPath]: Mapping from artifact kind to its container
             path. Keys: ``junit``, ``coverage_xml``, ``coverage_html``,
-            ``html_report``, ``summary``, ``bench``, ``shared_log``.
+            ``html_report``, ``summary``, ``bench``, ``log``, ``shared_log``.
     """
-    suffix = f"{spec.test_type.value}_{spec.timestamp}"
+    suffix = run_token(spec)
     return {
         "junit": _CONTAINER_REPORTS / f"junit_{suffix}.xml",
         "coverage_xml": _CONTAINER_REPORTS / f"coverage_{suffix}.xml",
@@ -109,6 +151,7 @@ def _artifact_paths(spec: TestRunSpec) -> dict[str, PurePosixPath]:
         "html_report": _CONTAINER_REPORTS / f"report_{suffix}.html",
         "summary": _CONTAINER_REPORTS / f"summary_{suffix}.json",
         "bench": _CONTAINER_REPORTS / f"bench_{suffix}.json",
+        "log": _CONTAINER_REPORTS / f"test-log_{suffix}.txt",
         "shared_log": _CONTAINER_REPORTS / "test-log.txt",
     }
 
@@ -285,11 +328,16 @@ def spec_to_dict(spec: TestRunSpec) -> dict[str, object]:
         "module": spec.module,
         "extra_args": list(spec.extra_args),
         "timeout_seconds": spec.timeout_seconds,
+        "run_id": spec.run_id,
     }
 
 
 def spec_from_dict(data: dict[str, object]) -> TestRunSpec:
     """Deserialize a spec produced by :func:`spec_to_dict`.
+
+    A payload written before per-run identities existed carries no ``run_id``;
+    a fresh one is generated so the reconstructed spec still resolves to
+    collision-free artifact names.
 
     Args:
         data: Dictionary previously produced by :func:`spec_to_dict`.
@@ -326,6 +374,8 @@ def spec_from_dict(data: dict[str, object]) -> TestRunSpec:
     extra_args = tuple(str(item) for item in typed_extra)
     raw_timeout = data.get("timeout_seconds", 7200)
     timeout = int(raw_timeout) if isinstance(raw_timeout, (int, float, str)) else 7200
+    raw_run_id = data.get("run_id")
+    run_id = raw_run_id if isinstance(raw_run_id, str) and raw_run_id else new_run_id()
 
     try:
         resolved_type = TestType(raw_type)
@@ -339,4 +389,5 @@ def spec_from_dict(data: dict[str, object]) -> TestRunSpec:
         module=module,
         extra_args=extra_args,
         timeout_seconds=timeout,
+        run_id=run_id,
     )
