@@ -3582,22 +3582,33 @@ class QEMUSandbox(SandboxBase):
         if self._accelerator == AcceleratorType.WHPX:
             # WHPX cannot virtualize the feature set of -cpu host or -cpu max
             # (the guest triple-faults into "Unexpected VP exit code 4" during
-            # early boot). qemu64 is the richest base model WHPX accepts, and it
-            # still honours the anti-evasion masks.
-            cpu_arg = "qemu64,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
+            # early boot), so the model is qemu64 plus the two features named
+            # explicitly. Both are required: Windows 11 24H2 refuses to boot
+            # without SSE4.2 and POPCNT, and bare qemu64 advertises neither, so
+            # a Windows guest triple-faulted with the same WHPX exit code
+            # before its boot manager produced any output. WHPX accepts them
+            # named individually - what it rejects is the whole host feature
+            # set. The anti-evasion masks ride along unchanged.
+            cpu_arg = "qemu64,+sse4.2,+popcnt,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
         elif self._accelerator == AcceleratorType.KVM:
             cpu_arg = "host,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
         else:
             cpu_arg = "max,hv-vendor-id=AuthenticAMD,hypervisor=off"
 
-        # WHPX cannot service an in-kernel or split IRQ chip: with the q35
-        # default it raises "Unexpected VP exit code 4" / "injection failed"
-        # the moment the guest takes an interrupt. kernel-irqchip=off routes
-        # interrupt handling through userspace, which is the only mode WHPX
-        # supports.
+        # WHPX emulates the local APIC inside the hypervisor - QEMU announces
+        # "WHPX: setting APIC emulation mode in the hypervisor" when asked for
+        # it - and a Windows guest needs that mode. Routing interrupts through
+        # userspace instead starves it: measured on Windows 11 24H2 install
+        # media, the guest reached its own kernel and then spun forever in a
+        # backward-jmp loop at ring 0 with interrupts enabled, never advancing
+        # the boot spinner by a single frame, while QEMU's own ioapic counted
+        # tens of thousands of undelivered IRQ 0 events. The same media with
+        # kernel-irqchip=on reaches Windows Setup in about a minute. The
+        # earlier "Unexpected VP exit code 4" that this option was blamed for
+        # was the CPU model, not the IRQ chip.
         machine_arg = f"q35,accel={self._accelerator.value}"
         if self._accelerator == AcceleratorType.WHPX:
-            machine_arg += ",kernel-irqchip=off"
+            machine_arg += ",kernel-irqchip=on"
 
         cmd: list[str] = [
             str(self._qemu_path),

@@ -1705,8 +1705,10 @@ def runtime_machine_argument(accelerator: str) -> str:
     """Build the ``-machine`` value the sandbox launcher uses.
 
     Mirrors ``QEMUSandbox._build_qemu_command``: q35 with the requested
-    accelerator, plus ``kernel-irqchip=off`` under WHPX, which cannot service
-    an in-kernel or split IRQ chip.
+    accelerator, plus ``kernel-irqchip=on`` under WHPX, whose in-hypervisor
+    local APIC is the only mode that delivers interrupts to a Windows guest.
+    With the userspace IRQ chip the installer starts its kernel and then spins
+    at ring 0 forever without ever advancing the boot spinner.
 
     Args:
         accelerator: Accelerator name.
@@ -1716,7 +1718,7 @@ def runtime_machine_argument(accelerator: str) -> str:
     """
     machine = f"q35,accel={accelerator}"
     if accelerator == "whpx":
-        machine += ",kernel-irqchip=off"
+        machine += ",kernel-irqchip=on"
     return machine
 
 
@@ -1724,8 +1726,11 @@ def runtime_cpu_argument(accelerator: str) -> str:
     """Build the ``-cpu`` value the sandbox launcher uses.
 
     Mirrors ``QEMUSandbox._build_qemu_command``: WHPX cannot virtualize the
-    feature set of ``host`` or ``max``, so ``qemu64`` is the richest base
-    model it accepts, and the anti-evasion masks ride along on every model.
+    feature set of ``host`` or ``max``, so the model is ``qemu64`` plus the
+    two features Windows 11 24H2 refuses to boot without - it triple-faults
+    into WHPX exit code 4 before its boot manager prints anything if either
+    is missing, and bare ``qemu64`` advertises neither. The anti-evasion masks
+    ride along on every model.
 
     Args:
         accelerator: Accelerator name.
@@ -1734,7 +1739,7 @@ def runtime_cpu_argument(accelerator: str) -> str:
         str: Value for ``-cpu``.
     """
     if accelerator == "whpx":
-        return "qemu64,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
+        return "qemu64,+sse4.2,+popcnt,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
     if accelerator == "kvm":
         return "host,hv-vendor-id=AuthenticAMD,kvm=off,hypervisor=off"
     return "max,hv-vendor-id=AuthenticAMD,hypervisor=off"
