@@ -62,11 +62,7 @@ from typing import TYPE_CHECKING, Final
 import pytest
 
 from scripts.sandbox.provision_windows_guest import (
-    DEFAULT_ADMIN_CREDENTIAL,
-    DEFAULT_ADMIN_USER,
-    QEMU_GUEST_AGENT_LIBRARIES,
     VIRTIO_MARKER_DIRECTORIES,
-    UnattendSettings,
     first_logon_commands,
     render_driver_installer,
     stage_answer_tree,
@@ -74,6 +70,8 @@ from scripts.sandbox.provision_windows_guest import (
 from tests.sandbox.qemu.virtio_installer_harness import (
     PNPUTIL_COMMAND,
     Node,
+    answer_settings,
+    build_bundled_tools,
     build_medium,
     combinations,
     dump_syntax_tree,
@@ -153,27 +151,6 @@ def syntax_tree(powershell: Path, installer: Path, tmp_path: Path) -> tuple[Node
         tuple[Node, ...]: Every syntax node the dumper reports.
     """
     return dump_syntax_tree(powershell, installer, tmp_path)
-
-
-def _settings() -> UnattendSettings:
-    """Build answer file settings equivalent to what the provisioner emits.
-
-    Returns:
-        UnattendSettings: Settings for a Windows 11 amd64 sandbox guest.
-    """
-    return UnattendSettings(
-        image_name="Windows 11 Pro",
-        product_key=None,
-        admin_user=DEFAULT_ADMIN_USER,
-        admin_password=DEFAULT_ADMIN_CREDENTIAL,
-        computer_name="IC-SANDBOX",
-        locale="en-US",
-        timezone="UTC",
-        driver_letters=("C", "D", "E", "F", "G", "H"),
-        driver_subpaths=("viostor\\w11\\amd64", "vioserial\\w11\\amd64", "NetKVM\\w11\\amd64"),
-        disable_guest_firewall=True,
-        answer_script="scripts\\install-guest-agent.cmd",
-    )
 
 
 class TestTheGeneratedInstallerScopesToThisGuest:
@@ -378,14 +355,9 @@ class TestTheAnswerMediumRunsTheDriverInstaller:
         """
         staging = tmp_path / "staging"
         staging.mkdir()
-        tools = tmp_path / "tools"
-        tools.mkdir()
-        agent = tools / "qemu-ga.exe"
-        agent.write_bytes(b"MZ")
-        for library in QEMU_GUEST_AGENT_LIBRARIES:
-            (tools / library).write_bytes(b"MZ")
+        tools = build_bundled_tools(tmp_path / "tools")
 
-        stage_answer_tree(staging, _settings(), agent, tools)
+        stage_answer_tree(staging, answer_settings(), tools / "qemu-ga.exe", tools, tmp_path / "virtio-win.iso")
 
         expected = render_driver_installer().encode("ascii")
         staged = [path for path in staging.rglob("*") if path.is_file() and path.read_bytes() == expected]
@@ -405,14 +377,9 @@ class TestTheAnswerMediumRunsTheDriverInstaller:
         """
         staging = tmp_path / "staging"
         staging.mkdir()
-        tools = tmp_path / "tools"
-        tools.mkdir()
-        agent = tools / "qemu-ga.exe"
-        agent.write_bytes(b"MZ")
-        for library in QEMU_GUEST_AGENT_LIBRARIES:
-            (tools / library).write_bytes(b"MZ")
-        settings = _settings()
-        stage_answer_tree(staging, settings, agent, tools)
+        tools = build_bundled_tools(tmp_path / "tools")
+        settings = answer_settings()
+        stage_answer_tree(staging, settings, tools / "qemu-ga.exe", tools, tmp_path / "virtio-win.iso")
         expected = render_driver_installer().encode("ascii")
         staged = next(path for path in staging.rglob("*") if path.is_file() and path.read_bytes() == expected)
         relative = str(staged.relative_to(staging)).replace("/", "\\")

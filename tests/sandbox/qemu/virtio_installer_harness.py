@@ -26,7 +26,15 @@ from typing import Final
 
 import pytest
 
-from scripts.sandbox.provision_windows_guest import VIRTIO_MARKER_DIRECTORIES, render_driver_installer
+from scripts.sandbox.provision_windows_guest import (
+    DEFAULT_ADMIN_CREDENTIAL,
+    DEFAULT_ADMIN_USER,
+    QEMU_GUEST_AGENT_LIBRARIES,
+    QEMU_GUEST_AGENT_SPAWN_HELPERS,
+    VIRTIO_MARKER_DIRECTORIES,
+    UnattendSettings,
+    render_driver_installer,
+)
 
 
 MEDIUM_FAMILIES: Final[tuple[str, ...]] = ("2k12", "2k16", "2k19", "2k22", "2k25", "w10", "w11")
@@ -235,6 +243,66 @@ def build_medium(root: Path, pairs: tuple[tuple[str, str], ...], catalog: Path |
             package.mkdir(parents=True, exist_ok=True)
             (package / f"{driver}.inf").write_text("this is not a valid inf\r\n", encoding="ascii")
             (package / f"{driver}.cat").write_bytes(payload)
+    return root
+
+
+def answer_settings() -> UnattendSettings:
+    """Build answer file settings equivalent to what the provisioner emits.
+
+    Returns:
+        UnattendSettings: Settings for a Windows 11 amd64 sandbox guest.
+    """
+    return UnattendSettings(
+        image_name="Windows 11 Pro",
+        product_key=None,
+        admin_user=DEFAULT_ADMIN_USER,
+        admin_password=DEFAULT_ADMIN_CREDENTIAL,
+        computer_name="IC-SANDBOX",
+        locale="en-US",
+        timezone="UTC",
+        driver_letters=("C", "D", "E", "F", "G", "H"),
+        driver_subpaths=("viostor\\w11\\amd64", "vioserial\\w11\\amd64", "NetKVM\\w11\\amd64"),
+        disable_guest_firewall=True,
+        answer_script="scripts\\install-guest-agent.cmd",
+    )
+
+
+def bundled_payload(name: str) -> bytes:
+    """Produce distinct bytes for one file of a stand-in bundled QEMU tree.
+
+    Every file gets its own content so a gate can prove a specific file was
+    copied rather than merely created with the right name.
+
+    Args:
+        name: File name the bytes belong to.
+
+    Returns:
+        bytes: Content unique to that name.
+    """
+    return b"MZ" + name.encode("ascii")
+
+
+def build_bundled_tools(root: Path, *, spawn_helpers: bool = True) -> Path:
+    """Lay out a directory shaped like Intellicrack's bundled QEMU tree.
+
+    The agent binary, its runtime libraries and GLib's spawn helpers are the
+    files :func:`stage_answer_tree` copies onto the answer medium; the names
+    come from the provisioner rather than being restated here.
+
+    Args:
+        root: Directory to populate; created if absent.
+        spawn_helpers: Whether the tree carries GLib's spawn helpers. QEMU's
+            own Windows build does not, which is S17-D47.
+
+    Returns:
+        Path: ``root``, populated.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    names = ["qemu-ga.exe", *QEMU_GUEST_AGENT_LIBRARIES]
+    if spawn_helpers:
+        names.extend(QEMU_GUEST_AGENT_SPAWN_HELPERS)
+    for name in names:
+        (root / name).write_bytes(bundled_payload(name))
     return root
 
 

@@ -37,6 +37,15 @@ that binary registers the ``qemu-ga`` service with ``-s install`` and defaults
 to the ``\\.\Global\org.qemu.guest_agent.0`` path the sandbox opens. Staging
 the bundled binary keeps guest and host agent versions identical.
 
+That bundle is not self-sufficient, though. ``guest-exec`` spawns through
+GLib, and GLib on Windows never spawns directly: it re-launches through
+``gspawn-win64-helper.exe``, which it looks for beside its own
+``libglib-2.0-0.dll``. QEMU's Windows build ships no ``gspawn`` helper at all,
+so an agent staged from it answers every single ``guest-exec`` with
+``Failed to execute helper program (No such file or directory)``. The virtio-win
+medium's ``guest-agent`` MSI does carry the helpers, so they are taken from
+there and staged alongside the bundled agent.
+
 Invoke via ``pixi run python -m scripts.sandbox.provision_windows_guest --help``.
 """
 
@@ -139,6 +148,16 @@ QEMU_GUEST_AGENT_LIBRARIES: Final[tuple[str, ...]] = (
     "libssp-0.dll",
     "libgcc_s_seh-1.dll",
 )
+QEMU_GUEST_AGENT_SPAWN_HELPERS: Final[tuple[str, ...]] = (
+    "gspawn-win64-helper.exe",
+    "gspawn-win64-helper-console.exe",
+)
+"""GLib's Windows re-launch helpers, without which every ``guest-exec`` fails."""
+
+_GUEST_AGENT_MEDIA_DIRECTORY: Final[str] = "guest-agent"
+_GUEST_AGENT_PACKAGE_SUFFIX: Final[str] = ".msi"
+_GUEST_AGENT_PACKAGE_ARCHITECTURES: Final[tuple[str, ...]] = ("x86_64", "amd64", "x64")
+_MSI_EXECUTABLE: Final[str] = "msiexec.exe"
 _QEMU_GUEST_AGENT_SERVICE: Final[str] = "qemu-ga"
 _QEMU_GUEST_AGENT_INSTALL_DIR: Final[str] = "qemu-ga"
 _QEMU_GUEST_AGENT_LOG: Final[str] = "C:\\ProgramData\\qemu-ga\\qemu-ga.log"
@@ -1831,7 +1850,124 @@ def author_iso(tool: str, executable: Path | None, source: Path, output: Path, l
     _LOGGER.info("answer_iso_created", path=str(output), tool=tool, size_bytes=output.stat().st_size)
 
 
-def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Path, tools_path: Path) -> str:
+def select_guest_agent_package(media_root: Path) -> Path:
+    """Pick the 64-bit guest agent installer off a mounted virtio-win medium.
+
+    Args:
+        media_root: Root directory of the mounted virtio-win volume.
+
+    Returns:
+        Path: The installer package to extract.
+
+    Raises:
+        ProvisioningError: If the medium carries no 64-bit agent package.
+    """
+    directory = media_root / _GUEST_AGENT_MEDIA_DIRECTORY
+    packages = sorted(directory.glob(f"*{_GUEST_AGENT_PACKAGE_SUFFIX}")) if directory.is_dir() else []
+    for package in packages:
+        name = package.name.lower()
+        if any(token in name for token in _GUEST_AGENT_PACKAGE_ARCHITECTURES):
+            return package
+    found = ", ".join(package.name for package in packages) or "<none>"
+    message = (
+        f"{media_root} carries no 64-bit guest agent package under {_GUEST_AGENT_MEDIA_DIRECTORY}: found {found}. "
+        f"The GLib spawn helpers {', '.join(QEMU_GUEST_AGENT_SPAWN_HELPERS)} come from that package, and qemu-ga "
+        "cannot run a single guest command without them."
+    )
+    raise ProvisioningError(message)
+
+
+def extract_msi_payload(package: Path, destination: Path) -> None:
+    """Unpack an installer package's files without installing it.
+
+    Args:
+        package: Installer package to unpack.
+        destination: Directory the payload is written to.
+
+    Raises:
+        ProvisioningError: If the administrative install fails.
+    """
+    destination.mkdir(parents=True, exist_ok=True)
+    argv = [_MSI_EXECUTABLE, "/a", str(package), "/qn", f"TARGETDIR={destination}"]
+    result = _run_process(argv, timeout=_MOUNT_TIMEOUT_SECONDS)
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "no output"
+        message = f"unpacking {package} failed ({result.returncode}): {detail}"
+        raise ProvisioningError(message)
+    _LOGGER.info("guest_agent_package_extracted", package=str(package), destination=str(destination))
+
+
+def collect_named_files(root: Path, names: tuple[str, ...]) -> dict[str, Path]:
+    """Find each named file anywhere below a directory tree.
+
+    Args:
+        root: Directory to search.
+        names: File names to look for.
+
+    Returns:
+        dict[str, Path]: The names that were found, mapped to their location.
+    """
+    located: dict[str, Path] = {}
+    for name in names:
+        for candidate in root.rglob(name):
+            if candidate.is_file():
+                located[name] = candidate
+                break
+    return located
+
+
+def stage_spawn_helpers(tools_path: Path, virtio_iso: Path, destination: Path) -> tuple[Path, ...]:
+    """Place GLib's Windows spawn helpers beside the staged guest agent.
+
+    ``guest-exec`` is the only way Intellicrack runs anything inside a Windows
+    guest, and GLib refuses to spawn without these helpers, so a guest built
+    without them can never be driven. The bundled QEMU tree is preferred when
+    it happens to carry them; otherwise they are unpacked from the virtio-win
+    medium's guest agent package.
+
+    Args:
+        tools_path: Directory holding the bundled QEMU build.
+        virtio_iso: virtio-win medium to fall back to.
+        destination: Directory the helpers are copied into.
+
+    Returns:
+        tuple[Path, ...]: The staged helper paths, in declaration order.
+
+    Raises:
+        ProvisioningError: If a helper cannot be obtained from either source.
+    """
+    outstanding = [name for name in QEMU_GUEST_AGENT_SPAWN_HELPERS if not (tools_path / name).is_file()]
+    for name in QEMU_GUEST_AGENT_SPAWN_HELPERS:
+        if name not in outstanding:
+            shutil.copy2(tools_path / name, destination / name)
+
+    if outstanding:
+        with tempfile.TemporaryDirectory(prefix="intellicrack_guest_agent_") as raw_payload:
+            payload = Path(raw_payload)
+            media_root = mount_disk_image(virtio_iso)
+            try:
+                package = select_guest_agent_package(media_root)
+                extract_msi_payload(package, payload)
+            finally:
+                dismount_disk_image(virtio_iso)
+            located = collect_named_files(payload, tuple(outstanding))
+            missing = [name for name in outstanding if name not in located]
+            if missing:
+                message = (
+                    f"{package.name} on {virtio_iso} does not contain {', '.join(missing)}, and the bundled QEMU "
+                    f"tree at {tools_path} does not either. Without them qemu-ga answers every guest-exec with "
+                    "'Failed to execute helper program'."
+                )
+                raise ProvisioningError(message)
+            for name, source in located.items():
+                shutil.copy2(source, destination / name)
+
+    staged = tuple(destination / name for name in QEMU_GUEST_AGENT_SPAWN_HELPERS)
+    _LOGGER.info("guest_agent_spawn_helpers_staged", helpers=[str(path) for path in staged], extracted=outstanding)
+    return staged
+
+
+def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Path, tools_path: Path, virtio_iso: Path) -> str:
     """Populate the staging directory that becomes the answer medium.
 
     Args:
@@ -1839,6 +1975,7 @@ def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Pat
         settings: Answer file settings.
         qemu_agent: Bundled ``qemu-ga.exe`` to stage into the guest.
         tools_path: Directory holding the agent's runtime libraries.
+        virtio_iso: virtio-win medium carrying the GLib spawn helpers.
 
     Returns:
         str: The generated ``autounattend.xml`` text.
@@ -1867,6 +2004,7 @@ def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Pat
     if missing:
         message = f"bundled qemu-ga runtime libraries missing from {tools_path}: {', '.join(missing)}"
         raise ProvisioningError(message)
+    stage_spawn_helpers(tools_path, virtio_iso, agent_dir)
 
     _LOGGER.info("answer_tree_staged", staging=str(staging), agent=str(qemu_agent))
     return autounattend
@@ -2110,6 +2248,7 @@ def build_answer_medium(
     settings: UnattendSettings,
     qemu_agent: Path,
     tools_path: Path,
+    virtio_iso: Path,
     answer_iso: Path,
     preferred_tool: str | None,
 ) -> tuple[str, str]:
@@ -2119,6 +2258,7 @@ def build_answer_medium(
         settings: Answer file settings.
         qemu_agent: Bundled ``qemu-ga.exe`` to stage into the guest.
         tools_path: Directory holding the agent's runtime libraries.
+        virtio_iso: virtio-win medium carrying the GLib spawn helpers.
         answer_iso: Destination ISO path.
         preferred_tool: ISO authoring tool to force, or None to autodetect.
 
@@ -2129,7 +2269,7 @@ def build_answer_medium(
     tool_name, tool_executable = resolve_iso_authoring_tool(preferred_tool)
     with tempfile.TemporaryDirectory(prefix="intellicrack_answer_") as raw_staging:
         staging = Path(raw_staging)
-        autounattend = stage_answer_tree(staging, settings, qemu_agent, tools_path)
+        autounattend = stage_answer_tree(staging, settings, qemu_agent, tools_path, virtio_iso)
         author_iso(tool_name, tool_executable, staging, answer_iso, _ANSWER_ISO_LABEL)
     return (autounattend, tool_name)
 
@@ -2189,7 +2329,14 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
     create_guest_disk(qemu_img, disk_image, args.disk_size_gb, force=args.force)
 
     answer_iso = images_dir / args.answer_iso_name
-    autounattend, tool_name = build_answer_medium(build_unattend_settings(args), qemu_agent, tools_path, answer_iso, args.iso_tool)
+    autounattend, tool_name = build_answer_medium(
+        build_unattend_settings(args),
+        qemu_agent,
+        tools_path,
+        virtio_iso,
+        answer_iso,
+        args.iso_tool,
+    )
 
     spec = InstallCommandSpec(
         qemu_executable=qemu_system,
