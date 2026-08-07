@@ -373,19 +373,32 @@ class QmpProtocolServer(_LoopbackServer):
     """Real TCP server speaking the QMP monitor protocol.
 
     Performs the greeting + ``qmp_capabilities`` handshake, answers
-    ``query-status``, and rejects any ``guest-*`` command the way QEMU's
-    monitor does.
+    ``query-status``, ``system_powerdown`` and ``quit``, and rejects any
+    ``guest-*`` command the way QEMU's monitor does.
+
+    ``system_powerdown`` and ``quit`` both answer ``{"return": {}}`` on a live
+    monitor, so neither reply says anything about what became of the guest -
+    the first presses the virtual ACPI power button and returns immediately,
+    and only the process exiting shows whether the guest obeyed. The two
+    events published here let a test wire that consequence up to a real
+    process.
 
     Attributes:
         commands: Every ``execute`` name received, in arrival order.
+        powerdown_requested: Set when ``system_powerdown`` arrives.
+        quit_requested: Set when ``quit`` arrives.
     """
 
     commands: list[str]
+    powerdown_requested: asyncio.Event
+    quit_requested: asyncio.Event
 
     def __init__(self) -> None:
         """Initialise the server with an empty command log."""
         super().__init__()
         self.commands = []
+        self.powerdown_requested = asyncio.Event()
+        self.quit_requested = asyncio.Event()
 
     async def _serve(
         self,
@@ -429,6 +442,12 @@ class QmpProtocolServer(_LoopbackServer):
             return {"return": {}}
         if name == "query-status":
             return {"return": {"status": "running", "running": True, "singlestep": False}}
+        if name == "system_powerdown":
+            self.powerdown_requested.set()
+            return {"return": {}}
+        if name == "quit":
+            self.quit_requested.set()
+            return {"return": {}}
         return command_not_found(name)
 
 
@@ -460,6 +479,11 @@ class GuestAgentProtocolServer(_LoopbackServer):
     bytes are readable through :attr:`guest_files`, so a test can assert that
     what arrived inside the guest is exactly what left the host.
 
+    ``guest-shutdown`` is answered with silence, because a live agent is
+    already powering the guest off when the reply would have been written. The
+    request is still recorded and :attr:`shutdown_requested` is set, so a test
+    can wire the consequence - QEMU exiting - to a real process.
+
     Attributes:
         received: Every raw byte received from the client.
         commands: Every ``execute`` name received, in arrival order.
@@ -470,6 +494,8 @@ class GuestAgentProtocolServer(_LoopbackServer):
         guest_files: In-guest path to the bytes written there, in write order.
         file_writes: One entry per ``guest-file-write``, giving the in-guest
             path and the size of that buffer, so chunking is observable.
+        shutdown_modes: ``mode`` argument of every ``guest-shutdown``.
+        shutdown_requested: Set when the first ``guest-shutdown`` arrives.
     """
 
     received: bytearray
@@ -480,6 +506,8 @@ class GuestAgentProtocolServer(_LoopbackServer):
     exec_status_pids: list[int]
     guest_files: dict[str, bytearray]
     file_writes: list[tuple[str, int]]
+    shutdown_modes: list[str]
+    shutdown_requested: asyncio.Event
 
     def __init__(
         self,
@@ -526,6 +554,8 @@ class GuestAgentProtocolServer(_LoopbackServer):
         self.exec_status_pids = []
         self.guest_files = {}
         self.file_writes = []
+        self.shutdown_modes = []
+        self.shutdown_requested = asyncio.Event()
         self._open_files: dict[int, str] = {}
         self._next_file_handle: int = _FIRST_GUEST_FILE_HANDLE
         self._responder = responder
@@ -664,6 +694,12 @@ class GuestAgentProtocolServer(_LoopbackServer):
             return [self._frame({"return": sync_id}, sentinel=name == SYNC_DELIMITED_COMMAND)]
         if name == "guest-ping":
             return [self._frame({"return": {}})]
+        if name == "guest-shutdown":
+            # A live agent writes nothing back: it is already powering the guest
+            # off when the reply would have been produced.
+            self.shutdown_modes.append(str(args_map.get("mode", "")))
+            self.shutdown_requested.set()
+            return []
         if name == "guest-exec":
             return [self._frame({"return": {"pid": self._record_exec(args_map)}})]
         if name == "guest-exec-status":
