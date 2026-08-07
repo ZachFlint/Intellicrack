@@ -744,6 +744,13 @@ class QemuJsonProtocolClient:
     _log_prefix: ClassVar[str] = "qemu_json"
     _read_limit: ClassVar[int] = _JSON_LINE_LIMIT
 
+    # Whether a socket whose handshake failed is worth keeping. A QMP monitor
+    # re-listens after every disconnect, so dropping the socket costs nothing
+    # and leaves no half-open connection behind. A chardev socket does not: it
+    # is accepted once for the life of the VM, so closing it forfeits the only
+    # channel there is.
+    _retain_socket_on_handshake_failure: ClassVar[bool] = False
+
     def __init__(self, host: str = "127.0.0.1", port: int = 4444) -> None:
         """Initialize the protocol client.
 
@@ -817,12 +824,28 @@ class QemuJsonProtocolClient:
         self.connected = True
         _logger.info(self._event("connected"), host=self._host, port=self._port)
 
+    @property
+    def socket_open(self) -> bool:
+        """Whether the transport socket is still open.
+
+        This is weaker than :attr:`connected`, which additionally requires the
+        protocol handshake to have completed. A socket that is open but not yet
+        synchronised is the normal state of a guest-agent channel opened while
+        the guest is still booting.
+
+        Returns:
+            bool: True when a writer is attached.
+        """
+        return self._writer is not None
+
     async def connect(self, time_limit: float = 30.0) -> bool:
         """Connect to the server.
 
         A socket that opened but whose handshake failed is closed again before
         the failure is reported, so no half-open connection is left behind for
-        a retry to leak.
+        a retry to leak - unless the peer will only ever accept one connection,
+        in which case closing it forfeits the channel and
+        :attr:`_retain_socket_on_handshake_failure` keeps it open instead.
 
         Args:
             time_limit: Connection timeout in seconds.
@@ -842,7 +865,8 @@ class QemuJsonProtocolClient:
             await self.disconnect()
             return False
         except SandboxError:
-            await self.disconnect()
+            if not self._retain_socket_on_handshake_failure:
+                await self.disconnect()
             raise
         return True
 
@@ -900,14 +924,23 @@ class QemuJsonProtocolClient:
         ``except TimeoutError`` handler, where a sibling ``except`` clause
         cannot catch anything it raises, so any such failure would escape
         :meth:`_send_command` as an exception its callers do not expect.
-        A channel whose recovery failed is unusable and is closed instead, so
-        the next call opens a fresh one.
+
+        A broken socket is closed, so the next call opens a fresh one. An
+        unanswered resync is a different thing: the peer is still reachable and
+        merely slow, and on a channel the peer hands out only once - see
+        :attr:`_retain_socket_on_handshake_failure` - closing it would turn a
+        slow guest into a permanently unreachable one. Such a channel is kept
+        and the next command resynchronises again.
         """
         try:
             await self._on_command_timeout()
-        except (OSError, ConnectionError, SandboxError) as e:
+        except (OSError, ConnectionError) as e:
             _logger.warning(self._event("command_timeout_recovery_failed"), error=str(e), port=self._port)
             await self.disconnect()
+        except SandboxError as e:
+            _logger.warning(self._event("command_timeout_resync_unanswered"), error=str(e), port=self._port)
+            if not self._retain_socket_on_handshake_failure:
+                await self.disconnect()
 
     async def _on_command_timeout(self) -> None:
         """React to a command whose reply did not arrive in time.
@@ -1199,6 +1232,11 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
 
     _log_prefix: ClassVar[str] = "qemu_ga"
 
+    # QEMU accepts this chardev socket once. Reconnecting is not a retry, it is
+    # a forfeit: every later connect is refused for the life of the VM, as an
+    # independent client outside the app confirms. See :meth:`resynchronise`.
+    _retain_socket_on_handshake_failure: ClassVar[bool] = True
+
     def __init__(self, host: str = "127.0.0.1", port: int = 4446) -> None:
         """Initialize the qemu-guest-agent client.
 
@@ -1236,6 +1274,44 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
         """
         await self._synchronise(time_limit)
 
+    async def resynchronise(self, time_limit: float) -> bool:
+        """Retry the handshake on the channel that is already open.
+
+        An unanswered ``guest-sync-delimited`` says the guest has not started
+        qemu-guest-agent yet, which is the ordinary state of a Windows guest
+        for the first minutes of a cold boot. It says nothing about the host
+        side of the channel, which QEMU bound before the guest left firmware -
+        so the retry belongs on the open socket. Opening a new one is not
+        merely wasteful: QEMU accepts this socket once, and the second connect
+        is refused for the life of the VM.
+
+        Only a socket that has genuinely broken is closed here, which lets the
+        caller open a fresh one for the case where that can still work.
+
+        Args:
+            time_limit: Deadline in seconds for the sync reply.
+
+        Returns:
+            bool: True when the agent echoed the sync id and the channel is
+            usable.
+        """
+        if self._reader is None or self._writer is None:
+            return False
+
+        try:
+            await self._synchronise(time_limit)
+        except SandboxError as error:
+            _logger.debug(self._event("resync_retry"), port=self._port, error=str(error))
+            return False
+        except (OSError, ConnectionError) as error:
+            _logger.warning(self._event("resync_channel_lost"), port=self._port, error=str(error))
+            await self.disconnect()
+            return False
+
+        self.connected = True
+        _logger.info(self._event("connected"), host=self._host, port=self._port)
+        return True
+
     async def _on_command_timeout(self) -> None:
         """Re-issue the sync so a late reply cannot offset the stream.
 
@@ -1247,9 +1323,10 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
 
         Propagates the ``SandboxError`` raised by :meth:`_synchronise` when the
         agent does not echo the fresh sync id, and whatever socket error the
-        exchange hits when the channel broke meanwhile;
-        :meth:`_recover_from_command_timeout` contains both and closes the
-        channel, so the next call opens a fresh one.
+        exchange hits when the channel broke meanwhile.
+        :meth:`_recover_from_command_timeout` contains both, and treats them
+        differently: a broken socket is closed, an unanswered resync leaves the
+        channel open because QEMU will not hand this one out a second time.
         """
         if self._reader is None or self._writer is None:
             return
@@ -2738,8 +2815,10 @@ class QEMUSandbox(SandboxBase):
         ``server,nowait`` while the VM is still in firmware, so a refused
         connection or an unanswered ``guest-sync-delimited`` means the guest
         has not started qemu-guest-agent yet, not that it never will. Attempts
-        are therefore repeated until ``time_limit`` is spent, and every attempt
-        that fails closes its socket before the next one opens another.
+        are therefore repeated until ``time_limit`` is spent - but on the socket
+        already open, never on a new one. QEMU accepts that socket once for the
+        life of the VM, so a retry that reconnects is refused, and so is every
+        retry after it.
 
         Args:
             time_limit: Total seconds to keep retrying before giving up;
@@ -2786,6 +2865,13 @@ class QEMUSandbox(SandboxBase):
             itself could not be opened or the attempt succeeded.
         """
         client = self._qga
+        if client is not None and client.socket_open:
+            # The channel is up; only the guest is not ready. Retry there.
+            if await client.resynchronise(attempt_timeout):
+                return False
+            _logger.debug("qemu_ga_channel_sync_retry", channel_port=channel_port, error=_ERR_QEMU_GA_SYNC_FAILED)
+            return True
+
         if client is None:
             client = QemuGuestAgentClient(port=channel_port)
             self._qga = client
