@@ -105,8 +105,15 @@ def test_no_daemonize_or_pidfile_on_windows(tmp_path: Path) -> None:
     assert "-pidfile" not in argv, "Windows QEMU never produces a pidfile, so it must not be requested"
 
 
-def test_whpx_uses_userspace_irqchip_and_a_compatible_cpu(tmp_path: Path) -> None:
+def test_whpx_pins_a_supported_irqchip_mode_and_a_compatible_cpu(tmp_path: Path) -> None:
     """The WHPX machine and CPU must be ones WHPX can actually run.
+
+    WHPX supports exactly two interrupt-chip modes: ``on`` puts the local APIC
+    in the hypervisor and ``off`` routes it through userspace. ``split`` is
+    rejected outright ("WHPX: split irqchip currently not supported"), and
+    leaving the mode unpinned lets the q35 default decide it. Which of the two
+    supported modes actually carries a guest is settled against a live guest by
+    the S17-D37 gate, not by restating the chosen spelling here.
 
     Args:
         tmp_path: Per-test temporary directory.
@@ -115,7 +122,9 @@ def test_whpx_uses_userspace_irqchip_and_a_compatible_cpu(tmp_path: Path) -> Non
     machine = argv[argv.index("-machine") + 1]
     cpu = argv[argv.index("-cpu") + 1]
     assert "accel=whpx" in machine
-    assert "kernel-irqchip=off" in machine, "WHPX cannot service the q35 in-kernel IRQ chip"
+    irqchip_modes = [token.split("=", 1)[1] for token in machine.split(",") if token.startswith("kernel-irqchip=")]
+    assert irqchip_modes, f"WHPX must pin an interrupt-chip mode rather than inherit the q35 default; got {machine!r}"
+    assert irqchip_modes[-1] in {"on", "off"}, f"WHPX only implements the on and off interrupt chips; got {irqchip_modes[-1]!r}"
     assert cpu.startswith("qemu64"), f"WHPX cannot virtualize -cpu host/max; got {cpu!r}"
     assert "hypervisor=off" in cpu, "the anti-evasion CPU masks must survive the WHPX-compatible model"
 
