@@ -33,10 +33,16 @@ $ProgressPreference = 'SilentlyContinue'
 
 $WorkspaceRoot = 'C:\app'
 $ReportsRoot = Join-Path $WorkspaceRoot 'reports\tests'
-$SpecPath = if ($env:SANDBOX_SPEC_PATH) { $env:SANDBOX_SPEC_PATH } else { Join-Path $ReportsRoot '_run_spec.json' }
+# Every artifact this container writes is keyed on the run id the host driver
+# forwards, so two containers sharing the reports bind mount never contend for
+# the same file. An empty run id keeps the pre-run-identity filenames.
+$RunId = $env:SANDBOX_RUN_ID
+$RunSuffix = if ($RunId) { "_$RunId" } else { '' }
+$SpecPath = if ($env:SANDBOX_SPEC_PATH) { $env:SANDBOX_SPEC_PATH } else { Join-Path $ReportsRoot "_run_spec${RunSuffix}.json" }
+$ExitCodePath = if ($env:SANDBOX_EXITCODE_PATH) { $env:SANDBOX_EXITCODE_PATH } else { Join-Path $ReportsRoot "_last_exitcode${RunSuffix}" }
 $PixiPython = Join-Path $WorkspaceRoot '.pixi\envs\default\python.exe'
 $PixiExe = 'pixi.exe'
-$ContainerEventsLog = Join-Path $ReportsRoot '_container_events.jsonl'
+$ContainerEventsLog = Join-Path $ReportsRoot "_container_events${RunSuffix}.jsonl"
 $CacheRoot = 'C:\cache'
 
 function Initialize-ContainerDirs {
@@ -97,14 +103,18 @@ function Initialize-ReportLayout {
     if (-not (Test-Path $ReportsRoot)) {
         New-Item -ItemType Directory -Path $ReportsRoot -Force | Out-Null
     }
-    $suffix = "${Type}_${Timestamp}"
+    # $RunSuffix carries the host-assigned run id; including it keeps two runs
+    # started in the same minute from overwriting each other's reports. The log
+    # is per-run too: the host folds it into the aggregate test-log.txt after
+    # this container exits, so no two containers append to one handle.
+    $suffix = "${Type}_${Timestamp}${RunSuffix}"
     return [pscustomobject]@{
         Suffix = $suffix
         Junit = Join-Path $ReportsRoot "junit_${suffix}.xml"
         CoverageXml = Join-Path $ReportsRoot "coverage_${suffix}.xml"
         CoverageHtml = Join-Path $ReportsRoot "coverage-html_${suffix}"
         HtmlReport = Join-Path $ReportsRoot "report_${suffix}.html"
-        Log = Join-Path $ReportsRoot 'test-log.txt'
+        Log = Join-Path $ReportsRoot "test-log_${suffix}.txt"
         Summary = Join-Path $ReportsRoot "summary_${suffix}.json"
         BenchJson = Join-Path $ReportsRoot "bench_${suffix}.json"
     }
@@ -308,6 +318,7 @@ function Write-SummaryJson {
     $payload = [ordered]@{
         test_type = $TestType
         timestamp = $Timestamp
+        run_id = $RunId
         generated_at = (Get-Date).ToUniversalTime().ToString('o')
         exit_code = $ExitCode
         counts = [ordered]@{
@@ -336,8 +347,7 @@ function Write-SummaryJson {
 
 function Write-LastExitCode {
     param([Parameter(Mandatory = $true)][int]$Code)
-    $target = Join-Path $ReportsRoot '_last_exitcode'
-    Set-Content -Path $target -Value ([string]$Code) -Encoding ascii -Force
+    Set-Content -Path $ExitCodePath -Value ([string]$Code) -Encoding ascii -Force
 }
 
 function Invoke-Pytest {
@@ -464,6 +474,7 @@ $Timestamp = Get-Timestamp
 Write-SandboxLog -Level 'info' -Event 'entrypoint_started' -Context @{
     test_type = $TestType
     timestamp = $Timestamp
+    run_id = $RunId
     module = $Module
     spec_path = $SpecPath
 }

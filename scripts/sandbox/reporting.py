@@ -12,11 +12,19 @@ absolute host paths for every artifact produced by the run. A companion
 helper :func:`print_host_summary` prints the record to the operator's
 console in a format that preserves the information surfaced by the prior
 Windows Sandbox harness.
+
+Every artifact name carries the run's identity token, so two containers
+running at the same time never write to the same file. The aggregate
+``test-log.txt`` history operators rely on is preserved by
+:func:`merge_run_log_into_shared`, which appends a finished run's own log to
+it host-side -- after the container exited and no writer still holds the
+handle across the Windows bind mount.
 """
 
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -31,7 +39,9 @@ if TYPE_CHECKING:
 
 _PROJECT_ROOT = Path("D:/Intellicrack")
 _REPORTS_ROOT = _PROJECT_ROOT / "reports" / "tests"
-_SHARED_LOG = _REPORTS_ROOT / "test-log.txt"
+_SHARED_LOG_NAME = "test-log.txt"
+_SHARED_LOG_APPEND_ATTEMPTS = 5
+_SHARED_LOG_RETRY_SECONDS = 0.2
 _COLOR_RESET = "\033[0m"
 _COLOR_CYAN = "\033[36m"
 _COLOR_GREEN = "\033[32m"
@@ -70,9 +80,11 @@ class ReportPaths:
         coverage_xml: Path to the coverage XML report, if present.
         coverage_html: Path to the coverage HTML directory, if present.
         html_report: Path to the pytest-html report, if present.
-        log: Path to the shared append-only ``test-log.txt``.
+        log: Path to this run's own ``test-log_<token>.txt``, if present.
         summary: Path to the structured JSON summary, if present.
         bench: Path to the pytest-benchmark JSON, if present.
+        shared_log: Path to the aggregate append-only ``test-log.txt`` history,
+            if present.
     """
 
     junit: Path | None = None
@@ -82,6 +94,7 @@ class ReportPaths:
     log: Path | None = None
     summary: Path | None = None
     bench: Path | None = None
+    shared_log: Path | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,6 +110,7 @@ class SummaryRecord:
         paths: Host-visible paths for each artifact produced by the run.
         module: Module argument when the run targeted a specific module.
         extra_args: Extra pytest arguments forwarded to the container.
+        run_id: Identity component that made this run's artifact names unique.
     """
 
     test_type: str
@@ -107,6 +121,7 @@ class SummaryRecord:
     paths: ReportPaths = field(default_factory=ReportPaths)
     module: str | None = None
     extra_args: tuple[str, ...] = field(default_factory=tuple)
+    run_id: str = ""
 
 
 def _parse_junit(junit_path: Path) -> TestCounts:
@@ -195,29 +210,124 @@ def _first_existing(candidates: list[Path]) -> Path | None:
     return None
 
 
-def _resolve_report_paths(test_type: str, timestamp: str) -> ReportPaths:
+def artifact_suffix(test_type: str, timestamp: str, run_id: str) -> str:
+    """Compose the filename suffix shared by a run's artifacts.
+
+    Args:
+        test_type: Test mode identifier.
+        timestamp: Run timestamp ``mm-dd-yyyy_HH-MM``.
+        run_id: Per-run identity component.
+
+    Returns:
+        str: ``<test_type>_<timestamp>_<run_id>``.
+    """
+    return f"{test_type}_{timestamp}_{run_id}"
+
+
+def run_log_path(test_type: str, timestamp: str, run_id: str) -> Path:
+    """Return the host path of a run's own container log.
+
+    Args:
+        test_type: Test mode identifier.
+        timestamp: Run timestamp ``mm-dd-yyyy_HH-MM``.
+        run_id: Per-run identity component.
+
+    Returns:
+        Path: Absolute host path to ``test-log_<suffix>.txt``.
+    """
+    return _REPORTS_ROOT / f"test-log_{artifact_suffix(test_type, timestamp, run_id)}.txt"
+
+
+def shared_log_path() -> Path:
+    """Return the host path of the aggregate append-only test log.
+
+    Returns:
+        Path: Absolute host path to ``test-log.txt``.
+    """
+    return _REPORTS_ROOT / _SHARED_LOG_NAME
+
+
+def _append_bytes(destination: Path, payload: bytes) -> bool:
+    """Append raw bytes to a file, reporting whether the write succeeded.
+
+    Args:
+        destination: File to append to; created when missing.
+        payload: Bytes to append.
+
+    Returns:
+        bool: ``True`` on success, ``False`` when the file could not be opened
+            or written (for example while another process holds it open).
+    """
+    try:
+        with destination.open("ab") as handle:
+            handle.write(payload)
+    except OSError:
+        return False
+    return True
+
+
+def merge_run_log_into_shared(run_log: Path) -> bool:
+    """Append a finished run's log to the aggregate ``test-log.txt`` history.
+
+    Each container writes its own ``test-log_<suffix>.txt`` so two concurrent
+    runs never contend for one handle across the Windows bind mount, which
+    previously produced sharing violations. The operator-facing aggregate
+    history is preserved by folding the run's log into ``test-log.txt`` once
+    the container has exited. Two host drivers can still reach this point at
+    the same instant, so a locked destination is retried a bounded number of
+    times before giving up.
+
+    Args:
+        run_log: Path to the per-run log written by the container.
+
+    Returns:
+        bool: ``True`` when the run's output was appended; ``False`` when the
+            per-run log is absent or empty, or the shared file stayed locked
+            for the whole retry window.
+    """
+    if not run_log.is_file():
+        return False
+    payload = run_log.read_bytes()
+    if not payload:
+        return False
+    destination = shared_log_path()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    for attempt in range(_SHARED_LOG_APPEND_ATTEMPTS):
+        if _append_bytes(destination, payload):
+            return True
+        if attempt < _SHARED_LOG_APPEND_ATTEMPTS - 1:
+            time.sleep(_SHARED_LOG_RETRY_SECONDS)
+    return False
+
+
+def _resolve_report_paths(test_type: str, timestamp: str, run_id: str) -> ReportPaths:
     """Locate all artifacts produced for a given run.
 
     The layout is flat: every artifact lives directly under ``reports/tests/``
-    with a filename of the form ``<kind>_<testtype>_<timestamp>.<ext>``. The
-    shared text log ``test-log.txt`` is appended to by every run.
+    with a filename of the form ``<kind>_<testtype>_<timestamp>_<run_id>.<ext>``.
+    The run id keeps runs started within the same minute apart. The run's own
+    ``test-log_<suffix>.txt`` is reported as :attr:`ReportPaths.log`; the
+    aggregate ``test-log.txt`` history is reported as
+    :attr:`ReportPaths.shared_log`.
 
     Args:
         test_type: Test mode identifier used in the filename stem.
         timestamp: Timestamp ``mm-dd-yyyy_HH-MM`` forming the filename suffix.
+        run_id: Per-run identity component completing the filename suffix.
 
     Returns:
         ReportPaths: Populated paths for artifacts that exist on disk.
     """
-    suffix = f"{test_type}_{timestamp}"
+    suffix = artifact_suffix(test_type, timestamp, run_id)
     return ReportPaths(
         junit=_first_existing([_REPORTS_ROOT / f"junit_{suffix}.xml"]),
         coverage_xml=_first_existing([_REPORTS_ROOT / f"coverage_{suffix}.xml"]),
         coverage_html=_first_existing([_REPORTS_ROOT / f"coverage-html_{suffix}"]),
         html_report=_first_existing([_REPORTS_ROOT / f"report_{suffix}.html"]),
-        log=_first_existing([_SHARED_LOG]),
+        log=_first_existing([_REPORTS_ROOT / f"test-log_{suffix}.txt"]),
         summary=_first_existing([_REPORTS_ROOT / f"summary_{suffix}.json"]),
         bench=_first_existing([_REPORTS_ROOT / f"bench_{suffix}.json"]),
+        shared_log=_first_existing([shared_log_path()]),
     )
 
 
@@ -226,6 +336,7 @@ def harvest_reports(
     timestamp: str,
     exit_code: int,
     *,
+    run_id: str,
     module: str | None = None,
     extra_args: tuple[str, ...] = (),
 ) -> SummaryRecord:
@@ -236,6 +347,7 @@ def harvest_reports(
             produced the run.
         timestamp: Run timestamp matching the artifact filenames.
         exit_code: Pytest exit code reported by the container entrypoint.
+        run_id: Per-run identity component matching the artifact filenames.
         module: Module argument used for module-scoped runs.
         extra_args: Extra pytest arguments forwarded to the container.
 
@@ -244,7 +356,7 @@ def harvest_reports(
             export.
     """
     type_value = test_type.value
-    paths = _resolve_report_paths(type_value, timestamp)
+    paths = _resolve_report_paths(type_value, timestamp, run_id)
     counts = _parse_junit(paths.junit) if paths.junit else TestCounts()
     coverage = _parse_coverage(paths.coverage_xml) if paths.coverage_xml else None
 
@@ -257,6 +369,7 @@ def harvest_reports(
         paths=paths,
         module=module,
         extra_args=extra_args,
+        run_id=run_id,
     )
 
 
@@ -272,6 +385,7 @@ def write_summary_json(record: SummaryRecord, destination: Path) -> None:
     payload: dict[str, object] = {
         "test_type": record.test_type,
         "timestamp": record.timestamp,
+        "run_id": record.run_id,
         "generated_at": datetime.now(UTC).isoformat(),
         "exit_code": record.exit_code,
         "counts": {
@@ -293,6 +407,7 @@ def write_summary_json(record: SummaryRecord, destination: Path) -> None:
             "log": str(record.paths.log) if record.paths.log else None,
             "summary": str(record.paths.summary) if record.paths.summary else None,
             "bench": str(record.paths.bench) if record.paths.bench else None,
+            "shared_log": str(record.paths.shared_log) if record.paths.shared_log else None,
         },
     }
     destination.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -330,6 +445,8 @@ def print_host_summary(record: SummaryRecord) -> None:
     print()
     print(header)
     print(f"  timestamp      : {record.timestamp}")
+    if record.run_id:
+        print(f"  run id         : {record.run_id}")
     print(
         "  counts         : "
         f"total={record.counts.tests} "
@@ -353,7 +470,8 @@ def print_host_summary(record: SummaryRecord) -> None:
         ("pytest html", record.paths.html_report),
         ("bench", record.paths.bench),
         ("summary", record.paths.summary),
-        ("shared log", record.paths.log),
+        ("run log", record.paths.log),
+        ("shared log", record.paths.shared_log),
     ):
         if value is not None:
             print(f"    {label:<14} {value}")
