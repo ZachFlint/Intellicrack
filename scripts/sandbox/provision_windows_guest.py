@@ -1414,6 +1414,17 @@ def _render_oobe_pass(root: Element, settings: UnattendSettings) -> None:
         settings: Answer file settings.
     """
     oobe_system = SubElement(root, "settings", {"pass": "oobeSystem"})
+
+    # The locale component in windowsPE only settles Setup's own UI. OOBE reads
+    # this one, and without it Windows 11 24H2 stops on "Is this the right
+    # country or region?" and "Is this the right keyboard layout?" no matter
+    # what the Hide* flags below say, because those cover different pages. A
+    # guest parked there needs a human with a mouse, which is exactly what an
+    # unattended install exists to avoid.
+    international = _component(oobe_system, "Microsoft-Windows-International-Core")
+    for tag in ("InputLocale", "SystemLocale", "UILanguage", "UserLocale"):
+        _text_element(international, tag, settings.locale)
+
     shell_oobe = _component(oobe_system, "Microsoft-Windows-Shell-Setup")
     _text_element(shell_oobe, "TimeZone", settings.timezone)
 
