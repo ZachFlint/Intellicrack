@@ -130,7 +130,7 @@ _SCAN_SKIP_DIRECTORY_NAMES: Final[frozenset[str]] = frozenset({
 _QEMU_EXECUTABLE_NAME: Final[str] = "qemu-system-x86_64.exe"
 _QEMU_IMG_EXECUTABLE_NAME: Final[str] = "qemu-img.exe"
 _QEMU_GUEST_AGENT_EXECUTABLE: Final[str] = "qemu-ga.exe"
-_QEMU_GUEST_AGENT_LIBRARIES: Final[tuple[str, ...]] = (
+QEMU_GUEST_AGENT_LIBRARIES: Final[tuple[str, ...]] = (
     "libglib-2.0-0.dll",
     "libintl-8.dll",
     "libiconv-2.dll",
@@ -145,10 +145,11 @@ _QEMU_GUEST_AGENT_LOG: Final[str] = "C:\\ProgramData\\qemu-ga\\qemu-ga.log"
 
 _ANSWER_ISO_LABEL: Final[str] = "IC_ANSWER"
 _ANSWER_SCRIPT_RELATIVE: Final[str] = "scripts\\install-guest-agent.cmd"
+_DRIVER_SCRIPT_RELATIVE: Final[str] = "scripts\\install-virtio-drivers.ps1"
+_DRIVER_INSTALL_LOG: Final[str] = "C:\\ProgramData\\intellicrack\\virtio-drivers.log"
 _GUEST_DRIVE_LETTERS: Final[str] = "C D E F G H I J K L M N O P Q R S T U V W X Y Z"
 
-_VIRTIO_MARKER_DIRECTORIES: Final[tuple[str, ...]] = ("viostor", "vioserial", "NetKVM")
-_VIRTIO_PROBE_DIRECTORY: Final[str] = "vioserial"
+VIRTIO_MARKER_DIRECTORIES: Final[tuple[str, ...]] = ("viostor", "vioserial", "NetKVM")
 _VIRTIO_DRIVER_SUBPATHS: Final[tuple[str, ...]] = (
     "viostor\\w11\\amd64",
     "vioserial\\w11\\amd64",
@@ -206,6 +207,7 @@ _VNC_PORT_BASE: Final[int] = 5900
 _VNC_PORT_MAX: Final[int] = 5999
 _DEFAULT_AGENT_PORT: Final[int] = 4445
 _QGA_CHANNEL_PORT_OFFSET: Final[int] = 1
+_USB_CONTROLLER_ID: Final[str] = "icusb"
 
 _ISO_AUTHORING_TOOLS: Final[tuple[str, ...]] = ("oscdimg", "xorriso", "mkisofs", "genisoimage", "pycdlib")
 _PYCDLIB_TOOL: Final[str] = "pycdlib"
@@ -981,7 +983,7 @@ def looks_like_virtio_media(root: Path) -> bool:
     Returns:
         bool: True when the marker driver directories are all present.
     """
-    return all((root / name).is_dir() for name in _VIRTIO_MARKER_DIRECTORIES)
+    return all((root / name).is_dir() for name in VIRTIO_MARKER_DIRECTORIES)
 
 
 def discover_virtio_media(roots: tuple[Path, ...], max_depth: int, budget: int) -> Path | None:
@@ -1018,7 +1020,7 @@ def verify_virtio_contents(path: Path) -> None:
     finally:
         dismount_disk_image(path)
     if not recognised:
-        message = f"{path} mounted but carries none of the expected virtio driver directories: {', '.join(_VIRTIO_MARKER_DIRECTORIES)}"
+        message = f"{path} mounted but carries none of the expected virtio driver directories: {', '.join(VIRTIO_MARKER_DIRECTORIES)}"
         raise ProvisioningError(message)
     _LOGGER.info("virtio_media_verified", image=str(path))
 
@@ -1296,10 +1298,10 @@ def first_logon_commands(settings: UnattendSettings) -> tuple[tuple[str, str], .
         ("powercfg.exe /change hibernate-timeout-ac 0", "Never hibernate the guest"),
         (
             (
-                f'cmd.exe /c for %d in ({letters}) do @if exist "%d:\\{_VIRTIO_PROBE_DIRECTORY}" '
-                'pnputil.exe /add-driver "%d:\\*.inf" /subdirs /install'
+                f'cmd.exe /c for %d in ({letters}) do @if exist "%d:\\{_DRIVER_SCRIPT_RELATIVE}" '
+                f'powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%d:\\{_DRIVER_SCRIPT_RELATIVE}"'
             ),
-            "Install every virtio-win driver from the driver medium",
+            "Trust the driver publisher, then install this guest's virtio-win packages",
         ),
         (
             f'cmd.exe /c for %d in ({letters}) do @if exist "%d:\\{settings.answer_script}" call "%d:\\{settings.answer_script}"',
@@ -1502,6 +1504,136 @@ def render_guest_agent_installer() -> str:
     return "\r\n".join(lines) + "\r\n"
 
 
+def render_driver_installer() -> str:
+    """Generate the PowerShell script that installs the virtio drivers in-guest.
+
+    Two things this script does that a bare ``pnputil /add-driver *.inf
+    /subdirs`` sweep cannot.
+
+    First it establishes publisher trust. A virtio-win catalog is Authenticode
+    signed by Red Hat, and a stock Windows guest has no Red Hat certificate in
+    its ``TrustedPublisher`` store, so ``pnputil`` either fails outright with
+    "The publisher of an Authenticode(tm) signed catalog was not established as
+    trusted" or raises the interactive "Would you like to install this device
+    software?" dialog - once per package, blocking an unattended install behind
+    a modal window that no one is there to click. Lifting the signer out of a
+    catalog on the medium and adding it to the machine store removes both.
+
+    Second it installs only the packages that belong to this guest. The medium
+    carries every driver for every Windows edition and all three architectures;
+    handing an ARM64 or Server 2012 package to a Windows 11 amd64 guest fails
+    with a catalog mismatch that reads alarmingly like corruption. The guest
+    resolves its own virtio-win directory name from its product type and build
+    number rather than being told at authoring time, so the same medium works
+    for any guest the provisioner is later pointed at.
+
+    Returns:
+        str: PowerShell source with CRLF line endings.
+    """
+    markers = ", ".join(f"'{marker}'" for marker in VIRTIO_MARKER_DIRECTORIES)
+    lines = (
+        "[CmdletBinding()]",
+        "param(",
+        "    [string]$Medium,",
+        f"    [string]$LogPath = '{_DRIVER_INSTALL_LOG}'",
+        ")",
+        "$ErrorActionPreference = 'Stop'",
+        "$logDirectory = Split-Path -Parent $LogPath",
+        "if (-not (Test-Path $logDirectory)) { New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null }",
+        "function Write-Step([string]$message) {",
+        "    Add-Content -Path $LogPath -Value \"$([DateTimeOffset]::UtcNow.ToString('o')) $message\"",
+        "}",
+        "",
+        f"$markers = @({markers})",
+        "function Test-Medium([string]$root) {",
+        "    $present = @($markers | Where-Object { Test-Path (Join-Path $root $_) })",
+        "    return $present.Count -eq $markers.Count",
+        "}",
+        "$mediumRoot = $null",
+        "if ($Medium) {",
+        "    if (-not (Test-Medium $Medium)) {",
+        "        Write-Step \"$Medium carries none of $($markers -join ', '); refusing to guess\"",
+        "        exit 1",
+        "    }",
+        "    $mediumRoot = $Medium",
+        "} else {",
+        "    foreach ($volume in [System.IO.DriveInfo]::GetDrives()) {",
+        "        if (-not $volume.IsReady) { continue }",
+        "        $root = $volume.RootDirectory.FullName",
+        "        if (Test-Medium $root) { $mediumRoot = $root; break }",
+        "    }",
+        "}",
+        "if ($null -eq $mediumRoot) {",
+        "    Write-Step 'no virtio-win medium found; nothing to install'",
+        "    exit 0",
+        "}",
+        'Write-Step "virtio-win medium at $mediumRoot"',
+        "",
+        "switch ($env:PROCESSOR_ARCHITECTURE) {",
+        "    'AMD64' { $architecture = 'amd64' }",
+        "    'ARM64' { $architecture = 'ARM64' }",
+        "    default { $architecture = 'x86' }",
+        "}",
+        "$osInfo = Get-CimInstance -ClassName Win32_OperatingSystem",
+        "$build = [int]($osInfo.BuildNumber)",
+        "if ($osInfo.ProductType -eq 1) {",
+        "    $family = if ($build -ge 22000) { 'w11' } else { 'w10' }",
+        "} elseif ($build -ge 26100) { $family = '2k25' }",
+        "elseif ($build -ge 20348) { $family = '2k22' }",
+        "elseif ($build -ge 17763) { $family = '2k19' }",
+        "else { $family = '2k16' }",
+        'Write-Step "guest is build $build product type $($osInfo.ProductType): $family\\$architecture"',
+        "",
+        "$packages = @()",
+        "foreach ($driver in Get-ChildItem -Path $mediumRoot -Directory) {",
+        "    $candidate = Join-Path $driver.FullName (Join-Path $family $architecture)",
+        "    if (-not (Test-Path $candidate)) { continue }",
+        "    if (-not (Get-ChildItem -Path $candidate -Filter *.inf -File)) { continue }",
+        "    $packages += $candidate",
+        "}",
+        "if ($packages.Count -eq 0) {",
+        '    Write-Step "medium carries no $family\\$architecture packages"',
+        "    exit 0",
+        "}",
+        "Write-Step \"selected $($packages.Count) packages: $($packages -join '; ')\"",
+        "",
+        "$certificates = @{}",
+        "foreach ($package in $packages) {",
+        "    foreach ($catalog in Get-ChildItem -Path $package -Filter *.cat -File) {",
+        "        $signature = Get-AuthenticodeSignature -FilePath $catalog.FullName",
+        "        if ($null -eq $signature.SignerCertificate) { continue }",
+        "        $certificate = $signature.SignerCertificate",
+        "        if ($certificates.ContainsKey($certificate.Thumbprint)) { continue }",
+        "        $certificates[$certificate.Thumbprint] = $certificate",
+        '        Write-Step "publisher $($certificate.Subject) signs $($catalog.Name)"',
+        "    }",
+        "}",
+        "if ($certificates.Count -eq 0) {",
+        "    Write-Step 'no signed catalog yielded a publisher certificate; the install may raise a trust prompt'",
+        "} else {",
+        "    try {",
+        "        $store = [System.Security.Cryptography.X509Certificates.X509Store]::new('TrustedPublisher', 'LocalMachine')",
+        "        $store.Open('ReadWrite')",
+        "        foreach ($certificate in $certificates.Values) { $store.Add($certificate) }",
+        "        $store.Close()",
+        '        Write-Step "trusted $($certificates.Count) publisher certificates"',
+        "    } catch {",
+        '        Write-Step "could not trust publisher certificates: $($_.Exception.Message)"',
+        "    }",
+        "}",
+        "",
+        "$failures = 0",
+        "foreach ($package in $packages) {",
+        '    $output = & pnputil.exe /add-driver "$package\\*.inf" /install 2>&1 | Out-String',
+        '    Write-Step "pnputil $package exit $LASTEXITCODE`r`n$output"',
+        "    if ($LASTEXITCODE -ne 0) { $failures++ }",
+        "}",
+        'Write-Step "installed $($packages.Count - $failures) of $($packages.Count) packages"',
+        "exit $(if ($failures -eq $packages.Count) { 1 } else { 0 })",
+    )
+    return "\r\n".join(lines) + "\r\n"
+
+
 def _resolve_single_tool(name: str) -> tuple[str, Path | None] | None:
     """Resolve one ISO authoring tool by name.
 
@@ -1668,12 +1800,13 @@ def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Pat
     scripts_dir = staging / "scripts"
     scripts_dir.mkdir(parents=True, exist_ok=True)
     (scripts_dir / "install-guest-agent.cmd").write_bytes(render_guest_agent_installer().encode("ascii"))
+    (scripts_dir / "install-virtio-drivers.ps1").write_bytes(render_driver_installer().encode("ascii"))
 
     agent_dir = staging / _QEMU_GUEST_AGENT_INSTALL_DIR
     agent_dir.mkdir(parents=True, exist_ok=True)
     shutil.copy2(qemu_agent, agent_dir / qemu_agent.name)
     missing: list[str] = []
-    for library in _QEMU_GUEST_AGENT_LIBRARIES:
+    for library in QEMU_GUEST_AGENT_LIBRARIES:
         source = tools_path / library
         if source.is_file():
             shutil.copy2(source, agent_dir / library)
@@ -1772,6 +1905,11 @@ def build_install_command(spec: InstallCommandSpec) -> list[str]:
     stops a prompt-free installation medium from reinstalling on every
     reboot.
 
+    The xHCI controller and tablet mirror the launcher for the same reason it
+    carries them: q35 offers no USB bus and no absolute pointing device, so
+    without them the guest sees only a relative PS/2 mouse and pointer input
+    lands wherever its cursor has drifted rather than where it was aimed.
+
     Args:
         spec: Install parameters.
 
@@ -1798,6 +1936,8 @@ def build_install_command(spec: InstallCommandSpec) -> list[str]:
         *["-device", "virtio-serial-pci"],
         *["-chardev", f"socket,id=agent,host=127.0.0.1,port={channel_port},server,nowait"],
         *["-device", "virtserialport,chardev=agent,name=org.qemu.guest_agent.0"],
+        *["-device", f"qemu-xhci,id={_USB_CONTROLLER_ID}"],
+        *["-device", f"usb-tablet,bus={_USB_CONTROLLER_ID}.0"],
     ]
     if spec.display == "vnc":
         command.extend(["-vnc", f":{spec.vnc_port - _VNC_PORT_BASE}"])
