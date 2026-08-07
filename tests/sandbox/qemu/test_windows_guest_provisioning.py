@@ -859,6 +859,43 @@ class TestAnswerFileGeneration:
         assert _texts(accounts, "LocalAccounts/LocalAccount/Name") == ["analyst"]
         assert _texts(shell, "OOBE/HideOnlineAccountScreens") == ["true"]
 
+    def test_oobe_pass_settles_the_locale_so_oobe_asks_nothing(self) -> None:
+        """OOBE must get its own locale component, not just Setup's (S17-D40).
+
+        ``Microsoft-Windows-International-Core-WinPE`` in the ``windowsPE`` pass
+        only settles Setup's own UI. OOBE reads the non-WinPE component in the
+        ``oobeSystem`` pass, and without it Windows 11 24H2 stops on the region
+        and keyboard-layout pages regardless of the ``Hide*`` flags, which cover
+        different pages entirely. Measured: a guest installed from an answer
+        file without this sat at "Is this the right keyboard layout?" waiting
+        for a mouse, which is precisely what an unattended install must avoid.
+        """
+        settings = _settings()
+        international = _component(_answer_tree(), "oobeSystem", "Microsoft-Windows-International-Core")
+
+        for tag in ("InputLocale", "SystemLocale", "UILanguage", "UserLocale"):
+            assert _texts(international, tag) == [settings.locale], (
+                f"the oobeSystem locale component must set {tag} to the configured locale "
+                f"{settings.locale!r}, otherwise OOBE prompts for it (S17-D40)"
+            )
+
+    def test_the_winpe_locale_component_is_not_reused_for_oobe(self) -> None:
+        """The WinPE-scoped component must not stand in for the OOBE one.
+
+        This is the discriminator for the test above: the two components differ
+        only by a ``-WinPE`` suffix, and putting the WinPE one in ``oobeSystem``
+        would look right while leaving OOBE prompting. It also pins the WinPE
+        component to the pass it belongs in, so neither can be moved silently.
+        """
+        root = _answer_tree()
+        oobe_pass = next(settings for settings in root.findall(f"{{{_UNATTEND_NS}}}settings") if settings.get("pass") == "oobeSystem")
+        names = [component.get("name") for component in oobe_pass.findall(f"{{{_UNATTEND_NS}}}component")]
+
+        assert "Microsoft-Windows-International-Core-WinPE" not in names, (
+            f"the WinPE locale component does not drive OOBE and must not appear in oobeSystem; got {names}"
+        )
+        assert _component(root, "windowsPE", "Microsoft-Windows-International-Core-WinPE") is not None
+
     def test_first_logon_installs_drivers_and_the_guest_agent(self) -> None:
         """First logon adds the virtio drivers and starts the guest agent."""
         settings = _settings()
