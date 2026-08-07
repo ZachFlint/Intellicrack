@@ -156,6 +156,12 @@ _VIRTIO_DRIVER_SUBPATHS: Final[tuple[str, ...]] = (
     "NetKVM\\w11\\amd64",
     "Balloon\\w11\\amd64",
 )
+UNTRUSTED_CHAIN_STATUSES: Final[tuple[str, ...]] = ("UntrustedRoot", "PartialChain")
+"""``X509ChainStatusFlags`` names that mean the guest cannot validate a catalog's chain."""
+
+DRIVER_ALREADY_CURRENT_EXIT: Final[int] = 259
+"""``ERROR_NO_MORE_ITEMS`` from ``pnputil``: the package is staged and no device needed it."""
+
 _WINPE_DRIVER_LETTERS: Final[tuple[str, ...]] = ("C", "D", "E", "F", "G", "H")
 _VIRTIO_WIN_URL: Final[str] = "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
 _VIRTIO_WIN_APPROXIMATE_MB: Final[int] = 676
@@ -1510,14 +1516,27 @@ def render_driver_installer() -> str:
     Two things this script does that a bare ``pnputil /add-driver *.inf
     /subdirs`` sweep cannot.
 
-    First it establishes publisher trust. A virtio-win catalog is Authenticode
-    signed by Red Hat, and a stock Windows guest has no Red Hat certificate in
-    its ``TrustedPublisher`` store, so ``pnputil`` either fails outright with
-    "The publisher of an Authenticode(tm) signed catalog was not established as
+    First it establishes trust for each catalog's whole certificate chain, not
+    just its signer. A stock Windows guest has no Red Hat certificate in its
+    ``TrustedPublisher`` store, so ``pnputil`` either fails outright with "The
+    publisher of an Authenticode(tm) signed catalog was not established as
     trusted" or raises the interactive "Would you like to install this device
     software?" dialog - once per package, blocking an unattended install behind
-    a modal window that no one is there to click. Lifting the signer out of a
-    catalog on the medium and adding it to the machine store removes both.
+    a modal window that no one is there to click. Trusting the signer alone is
+    not enough, because it says nothing about the root: most virtio-win
+    catalogs are signed by the Microsoft Windows Hardware Compatibility
+    Publisher and chain to a root the guest already trusts, but at least one
+    (``smbus.cat`` on 0.1.285) is signed by a self-signed ``CN=Red Hat Inc.``
+    development certificate, and that package fails ``0x800B0109``
+    ``CERT_E_UNTRUSTEDROOT`` however trusted its publisher is. So each signer's
+    chain is built and, only when it does not validate, its terminal element is
+    added to ``Root`` and any intermediates to ``CA``. A catalog whose chain
+    already validates causes no write to the machine root store at all.
+
+    ``pnputil`` exit 259 is ``ERROR_NO_MORE_ITEMS``: the package is staged and
+    no present device needed it. That is the expected result for the drivers
+    WinPE already injected to make the installer's own disk visible, so it
+    counts as success rather than failure.
 
     Second it installs only the packages that belong to this guest. The medium
     carries every driver for every Windows edition and all three architectures;
@@ -1531,6 +1550,7 @@ def render_driver_installer() -> str:
         str: PowerShell source with CRLF line endings.
     """
     markers = ", ".join(f"'{marker}'" for marker in VIRTIO_MARKER_DIRECTORIES)
+    broken_statuses = ", ".join(f"'{status}'" for status in UNTRUSTED_CHAIN_STATUSES)
     lines = (
         "[CmdletBinding()]",
         "param(",
@@ -1542,6 +1562,28 @@ def render_driver_installer() -> str:
         "if (-not (Test-Path $logDirectory)) { New-Item -ItemType Directory -Path $logDirectory -Force | Out-Null }",
         "function Write-Step([string]$message) {",
         "    Add-Content -Path $LogPath -Value \"$([DateTimeOffset]::UtcNow.ToString('o')) $message\"",
+        "}",
+        "function Test-DriverExit([int]$code) {",
+        "    if ($code -eq 0) { return $true }",
+        f"    if ($code -eq {DRIVER_ALREADY_CURRENT_EXIT}) {{ return $true }}",
+        "    return $false",
+        "}",
+        "function Get-TrustPlacement([System.Security.Cryptography.X509Certificates.X509Certificate2]$certificate) {",
+        "    $chain = [System.Security.Cryptography.X509Certificates.X509Chain]::new()",
+        "    $chain.ChainPolicy.RevocationMode = 'NoCheck'",
+        "    [void]$chain.Build($certificate)",
+        "    $elements = @($chain.ChainElements | ForEach-Object { $_.Certificate })",
+        f"    $broken = @($chain.ChainStatus | Where-Object {{ @({broken_statuses}) -contains $_.Status.ToString() }})",
+        "    $decided = @()",
+        "    if ($broken.Count -gt 0 -and $elements.Count -gt 0) {",
+        "        $reason = $broken.Status -join ', '",
+        "        $decided += [pscustomobject]@{ Certificate = $elements[$elements.Count - 1]; Store = 'Root'; Reason = $reason }",
+        "        for ($index = 1; $index -lt $elements.Count - 1; $index++) {",
+        "            $decided += [pscustomobject]@{ Certificate = $elements[$index]; Store = 'CA'; Reason = '' }",
+        "        }",
+        "    }",
+        "    $decided += [pscustomobject]@{ Certificate = $certificate; Store = 'TrustedPublisher'; Reason = '' }",
+        "    return $decided",
         "}",
         "",
         f"$markers = @({markers})",
@@ -1610,23 +1652,33 @@ def render_driver_installer() -> str:
         "}",
         "if ($certificates.Count -eq 0) {",
         "    Write-Step 'no signed catalog yielded a publisher certificate; the install may raise a trust prompt'",
-        "} else {",
+        "}",
+        "",
+        "$placements = @()",
+        "foreach ($certificate in $certificates.Values) {",
+        "    $placements += @(Get-TrustPlacement $certificate)",
+        "}",
+        "foreach ($placement in $placements) {",
+        "    if ($placement.Reason) {",
+        '        Write-Step "the chain for $($placement.Certificate.Subject) is $($placement.Reason)"',
+        "    }",
+        '    Write-Step "placing $($placement.Certificate.Subject) in $($placement.Store)"',
         "    try {",
-        "        $store = [System.Security.Cryptography.X509Certificates.X509Store]::new('TrustedPublisher', 'LocalMachine')",
+        "        $store = [System.Security.Cryptography.X509Certificates.X509Store]::new($placement.Store, 'LocalMachine')",
         "        $store.Open('ReadWrite')",
-        "        foreach ($certificate in $certificates.Values) { $store.Add($certificate) }",
+        "        $store.Add($placement.Certificate)",
         "        $store.Close()",
-        '        Write-Step "trusted $($certificates.Count) publisher certificates"',
         "    } catch {",
-        '        Write-Step "could not trust publisher certificates: $($_.Exception.Message)"',
+        '        Write-Step "could not add $($placement.Certificate.Subject) to $($placement.Store): $($_.Exception.Message)"',
         "    }",
         "}",
         "",
         "$failures = 0",
         "foreach ($package in $packages) {",
         '    $output = & pnputil.exe /add-driver "$package\\*.inf" /install 2>&1 | Out-String',
-        '    Write-Step "pnputil $package exit $LASTEXITCODE`r`n$output"',
-        "    if ($LASTEXITCODE -ne 0) { $failures++ }",
+        "    $status = $LASTEXITCODE",
+        '    Write-Step "pnputil $package exit $status`r`n$output"',
+        "    if (-not (Test-DriverExit $status)) { $failures++ }",
         "}",
         'Write-Step "installed $($packages.Count - $failures) of $($packages.Count) packages"',
         "exit $(if ($failures -eq $packages.Count) { 1 } else { 0 })",

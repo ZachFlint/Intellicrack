@@ -44,21 +44,20 @@ goes through the real PowerShell parser and asserts on the syntax tree rather
 than on substrings, so a comment or a log message mentioning ``pnputil`` cannot
 satisfy it.
 
-Running the script needs a Windows PowerShell interpreter and ``pnputil.exe``,
-neither of which the test container is guaranteed to have, so that class is
-registered in :mod:`tests._helpers.host_native`.
+Running the script needs a PowerShell interpreter, which the Windows test
+container provides; :func:`~tests.sandbox.qemu.virtio_installer_harness.resolve_powershell`
+skips loudly rather than silently passing if one is ever absent.
 :class:`TestTheAnswerMediumRunsTheDriverInstaller` is pure file and string work
 and runs anywhere.
+
+The chain-trust half of the same generated script is gated separately, in
+:mod:`tests.sandbox.qemu.test_virtio_chain_trust_s17d45`.
 """
 
 from __future__ import annotations
 
 import os
-import shutil
-import subprocess
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 import pytest
 
@@ -72,22 +71,26 @@ from scripts.sandbox.provision_windows_guest import (
     render_driver_installer,
     stage_answer_tree,
 )
+from tests.sandbox.qemu.virtio_installer_harness import (
+    PNPUTIL_COMMAND,
+    Node,
+    build_medium,
+    combinations,
+    dump_syntax_tree,
+    guest_combination,
+    resolve_powershell,
+    run_installer,
+    selected_packages,
+    write_installer,
+)
 
 
-_MEDIUM_FAMILIES: Final[tuple[str, ...]] = ("2k12", "2k16", "2k19", "2k22", "2k25", "w10", "w11")
-"""Guest families a real virtio-win medium carries, one directory each."""
+if TYPE_CHECKING:
+    from pathlib import Path
 
-_MEDIUM_ARCHITECTURES: Final[tuple[str, ...]] = ("amd64", "x86", "ARM64")
-"""Architectures a real virtio-win medium carries under every family."""
 
 _BLIND_SWEEP_SWITCH: Final[str] = "/subdirs"
 """The ``pnputil`` switch that made the old command install everything."""
-
-_SELECTION_PREFIX: Final[str] = "selected "
-"""Log prefix the installer writes before touching a single package."""
-
-_SELECTION_SEPARATOR: Final[str] = "; "
-"""How the installer joins the package paths it chose."""
 
 _NOTHING_SELECTED_MARKER: Final[str] = "carries no "
 """Log text the installer writes when the medium holds nothing for this guest."""
@@ -95,47 +98,11 @@ _NOTHING_SELECTED_MARKER: Final[str] = "carries no "
 _UNTRUSTED_MARKER: Final[str] = "publisher"
 """Log text every branch of the trust step contains."""
 
-_PNPUTIL_COMMAND: Final[str] = "pnputil"
-"""Command that performs the install, and the ordering anchor for the AST gate."""
-
 _SIGNATURE_COMMAND: Final[str] = "Get-AuthenticodeSignature"
 """Command that lifts the publisher certificate out of a catalog."""
 
 _TRUSTED_PUBLISHER_STORE: Final[str] = "TrustedPublisher"
 """Certificate store a guest consults before accepting a signed catalog."""
-
-_INSTALLER_TIMEOUT_SECONDS: Final[float] = 300.0
-
-_AST_DUMPER: Final[str] = """\
-param([Parameter(Mandatory=$true)][string]$Path)
-$tokens = $null
-$errors = $null
-$ast = [System.Management.Automation.Language.Parser]::ParseFile($Path, [ref]$tokens, [ref]$errors)
-if ($errors -and $errors.Count -gt 0) { throw "the generated script does not parse: $($errors[0].Message)" }
-foreach ($node in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.CommandAst] }, $true)) {
-    $parts = @($node.CommandElements | Select-Object -Skip 1 | ForEach-Object { $_.Extent.Text -replace '\\s+', ' ' })
-    "command`t$($node.Extent.StartOffset)`t$($node.GetCommandName())`t$($parts -join '|')"
-}
-foreach ($node in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.InvokeMemberExpressionAst] }, $true)) {
-    "member`t$($node.Extent.StartOffset)`t$($node.Member.Extent.Text)`t$($node.Extent.Text -replace '\\s+', ' ')"
-}
-foreach ($node in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.ParameterAst] }, $true)) {
-    "declared`t$($node.Extent.StartOffset)`t$($node.Name.VariablePath.UserPath)`t"
-}
-foreach ($node in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.AssignmentStatementAst] }, $true)) {
-    if ($node.Left -is [System.Management.Automation.Language.VariableExpressionAst]) {
-        "declared`t$($node.Extent.StartOffset)`t$($node.Left.VariablePath.UserPath)`t"
-    }
-}
-foreach ($node in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.ForEachStatementAst] }, $true)) {
-    "declared`t$($node.Extent.StartOffset)`t$($node.Variable.VariablePath.UserPath)`t"
-}
-foreach ($node in $ast.FindAll({ param($n) $n -is [System.Management.Automation.Language.VariableExpressionAst] }, $true)) {
-    if ($node.VariablePath.IsDriveQualified) { continue }
-    "used`t$($node.Extent.StartOffset)`t$($node.VariablePath.UserPath)`t"
-}
-"""
-"""Emits one tab-separated line per syntax node, using PowerShell's own parser."""
 
 _AUTOMATIC_VARIABLES: Final[frozenset[str]] = frozenset({
     "_",
@@ -149,158 +116,6 @@ _AUTOMATIC_VARIABLES: Final[frozenset[str]] = frozenset({
 })
 """Variables PowerShell itself supplies, so the script never declares them."""
 
-_AST_FIELD_COUNT: Final[int] = 4
-"""Kind, offset, name and detail - the fields :data:`_AST_DUMPER` emits per node."""
-
-_ARGUMENT_SEPARATOR: Final[str] = "|"
-"""How :data:`_AST_DUMPER` joins a command's arguments."""
-
-
-@dataclass(frozen=True)
-class _Node:
-    """One syntax node lifted out of the generated installer.
-
-    Attributes:
-        kind: ``command`` or ``member``.
-        offset: Character offset of the node in the script, for ordering.
-        name: Command name, or the invoked member name.
-        detail: Joined argument texts, or the member expression's own text.
-    """
-
-    kind: str
-    offset: int
-    name: str
-    detail: str
-
-    @property
-    def arguments(self) -> tuple[str, ...]:
-        """Split the detail field back into individual argument texts.
-
-        Returns:
-            tuple[str, ...]: The command's arguments, empty for a member node.
-        """
-        return tuple(part for part in self.detail.split(_ARGUMENT_SEPARATOR) if part)
-
-
-def _parse_nodes(payload: str) -> tuple[_Node, ...]:
-    """Turn the AST dumper's output back into typed nodes.
-
-    Args:
-        payload: The dumper's standard output.
-
-    Returns:
-        tuple[_Node, ...]: One entry per emitted syntax node.
-    """
-    nodes: list[_Node] = []
-    for line in payload.splitlines():
-        fields = line.split("\t")
-        if len(fields) != _AST_FIELD_COUNT:
-            continue
-        kind, offset, name, detail = fields
-        nodes.append(_Node(kind=kind, offset=int(offset), name=name, detail=detail))
-    assert nodes, f"the AST dumper emitted no syntax nodes, so nothing about the generated installer was inspected: {payload!r}"
-    return tuple(nodes)
-
-
-def _combinations() -> tuple[tuple[str, str], ...]:
-    """Enumerate every family and architecture pair a real medium carries.
-
-    Returns:
-        tuple[tuple[str, str], ...]: ``(family, architecture)`` pairs.
-    """
-    return tuple((family, architecture) for family in _MEDIUM_FAMILIES for architecture in _MEDIUM_ARCHITECTURES)
-
-
-def _build_medium(root: Path, combinations: tuple[tuple[str, str], ...]) -> Path:
-    """Lay out a virtio-win medium holding the given family and architecture pairs.
-
-    The marker directories are the ones the installer uses to recognise a medium
-    at all, so they are taken from the provisioner rather than restated here.
-
-    Args:
-        root: Directory to populate; created if absent.
-        combinations: ``(family, architecture)`` pairs to create under every
-            driver directory.
-
-    Returns:
-        Path: ``root``, populated.
-    """
-    for driver in VIRTIO_MARKER_DIRECTORIES:
-        for family, architecture in combinations:
-            package = root / driver / family / architecture
-            package.mkdir(parents=True, exist_ok=True)
-            (package / f"{driver}.inf").write_text("this is not a valid inf\r\n", encoding="ascii")
-            (package / f"{driver}.cat").write_bytes(b"this is not a valid catalog\r\n")
-    return root
-
-
-def _run_installer(shell: Path, script: Path, medium: Path, log: Path) -> tuple[int, list[str]]:
-    """Run the generated installer against a medium and read back its log.
-
-    Args:
-        shell: PowerShell interpreter to run the script with.
-        script: The generated installer.
-        medium: Root of the virtio-win medium to install from.
-        log: Path the installer should write its log to.
-
-    Returns:
-        tuple[int, list[str]]: The installer's exit status and its log lines.
-    """
-    completed = subprocess.run(
-        [
-            str(shell),
-            "-NoProfile",
-            "-NonInteractive",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-            str(script),
-            "-Medium",
-            str(medium),
-            "-LogPath",
-            str(log),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=_INSTALLER_TIMEOUT_SECONDS,
-        check=False,
-    )
-    lines = log.read_text(encoding="utf-8").splitlines() if log.is_file() else []
-    return completed.returncode, lines
-
-
-def _selected_packages(lines: list[str]) -> list[str]:
-    """Extract the package directories the installer reported choosing.
-
-    Args:
-        lines: The installer's log lines.
-
-    Returns:
-        list[str]: Absolute package paths, empty when it selected nothing.
-    """
-    for line in lines:
-        marker = line.find(_SELECTION_PREFIX)
-        if marker < 0 or ":" not in line[marker:]:
-            continue
-        payload = line[marker:].split(":", 1)[1].strip()
-        return [entry.strip() for entry in payload.split(_SELECTION_SEPARATOR) if entry.strip()]
-    return []
-
-
-def _guest_combination(paths: list[str]) -> tuple[str, str]:
-    """Read the one family and architecture the installer chose.
-
-    Args:
-        paths: Package directories the installer selected.
-
-    Returns:
-        tuple[str, str]: The shared ``(family, architecture)`` suffix.
-    """
-    suffixes = {tuple(path.replace("\\", "/").rsplit("/", 2)[-2:]) for path in paths}
-    assert len(suffixes) == 1, f"the installer mixed families or architectures, which is exactly S17-D43: {paths}"
-    family, architecture = next(iter(suffixes))
-    return family, architecture
-
 
 @pytest.fixture
 def powershell() -> Path:
@@ -309,46 +124,7 @@ def powershell() -> Path:
     Returns:
         Path: The interpreter's path.
     """
-    for candidate in ("pwsh", "powershell"):
-        resolved = shutil.which(candidate)
-        if resolved is not None:
-            return Path(resolved)
-    pytest.skip("no PowerShell interpreter on PATH, so the generated installer cannot be run")
-
-
-@pytest.fixture
-def syntax_tree(powershell: Path, installer: Path, tmp_path: Path) -> tuple[_Node, ...]:
-    """Parse the generated installer with PowerShell's own parser.
-
-    Args:
-        powershell: Resolved PowerShell interpreter.
-        installer: The generated installer script.
-        tmp_path: Per-test temporary directory for the dumper.
-
-    Returns:
-        tuple[_Node, ...]: Every syntax node the dumper reports.
-    """
-    dumper = tmp_path / "dump-ast.ps1"
-    dumper.write_text(_AST_DUMPER, encoding="ascii", newline="\r\n")
-    completed = subprocess.run(
-        [
-            str(powershell),
-            "-NoProfile",
-            "-NonInteractive",
-            "-ExecutionPolicy",
-            "Bypass",
-            "-File",
-            str(dumper),
-            "-Path",
-            str(installer),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=_INSTALLER_TIMEOUT_SECONDS,
-        check=False,
-    )
-    assert completed.returncode == 0, f"PowerShell could not parse the generated installer: {completed.stderr}"
-    return _parse_nodes(completed.stdout)
+    return resolve_powershell()
 
 
 @pytest.fixture
@@ -361,9 +137,22 @@ def installer(tmp_path: Path) -> Path:
     Returns:
         Path: The written script.
     """
-    script = tmp_path / "install-virtio-drivers.ps1"
-    script.write_bytes(render_driver_installer().encode("ascii"))
-    return script
+    return write_installer(tmp_path)
+
+
+@pytest.fixture
+def syntax_tree(powershell: Path, installer: Path, tmp_path: Path) -> tuple[Node, ...]:
+    """Parse the generated installer with PowerShell's own parser.
+
+    Args:
+        powershell: Resolved PowerShell interpreter.
+        installer: The generated installer script.
+        tmp_path: Per-test temporary directory for the dumper.
+
+    Returns:
+        tuple[Node, ...]: Every syntax node the dumper reports.
+    """
+    return dump_syntax_tree(powershell, installer, tmp_path)
 
 
 def _settings() -> UnattendSettings:
@@ -403,19 +192,19 @@ class TestTheGeneratedInstallerScopesToThisGuest:
             installer: The generated installer script.
             tmp_path: Per-test temporary directory.
         """
-        combinations = _combinations()
-        medium = _build_medium(tmp_path / "medium", combinations)
-        available = len(VIRTIO_MARKER_DIRECTORIES) * len(combinations)
+        pairs = combinations()
+        medium = build_medium(tmp_path / "medium", pairs)
+        available = len(VIRTIO_MARKER_DIRECTORIES) * len(pairs)
 
-        _status, lines = _run_installer(powershell, installer, medium, tmp_path / "install.log")
-        selected = _selected_packages(lines)
+        _status, lines = run_installer(powershell, installer, medium, tmp_path / "install.log")
+        selected = selected_packages(lines)
 
         assert selected, f"the installer selected nothing from a medium carrying {available} packages:\n" + "\n".join(lines)
         assert len(selected) == len(VIRTIO_MARKER_DIRECTORIES), (
             f"the installer chose {len(selected)} of {available} packages rather than one per driver, so it is still "
             f"feeding this guest packages built for other editions (S17-D43): {selected}"
         )
-        _family, architecture = _guest_combination(selected)
+        _family, architecture = guest_combination(selected)
         assert architecture.lower() == os.environ["PROCESSOR_ARCHITECTURE"].lower(), (
             f"the installer chose {architecture} packages on a {os.environ['PROCESSOR_ARCHITECTURE']} guest, which "
             f"pnputil rejects as a catalog mismatch (S17-D43): {selected}"
@@ -437,12 +226,12 @@ class TestTheGeneratedInstallerScopesToThisGuest:
             installer: The generated installer script.
             tmp_path: Per-test temporary directory.
         """
-        medium = _build_medium(tmp_path / "medium", _combinations())
+        medium = build_medium(tmp_path / "medium", combinations())
 
-        _status, lines = _run_installer(powershell, installer, medium, tmp_path / "install.log")
+        _status, lines = run_installer(powershell, installer, medium, tmp_path / "install.log")
 
         trust = next((index for index, line in enumerate(lines) if _UNTRUSTED_MARKER in line), None)
-        install = next((index for index, line in enumerate(lines) if _PNPUTIL_COMMAND in line), None)
+        install = next((index for index, line in enumerate(lines) if PNPUTIL_COMMAND in line), None)
         report = "\n".join(lines)
         assert install is not None, f"the installer never reached pnputil, so nothing about ordering was observed:\n{report}"
         assert trust is not None, (
@@ -472,18 +261,18 @@ class TestTheGeneratedInstallerScopesToThisGuest:
             installer: The generated installer script.
             tmp_path: Per-test temporary directory.
         """
-        full = _build_medium(tmp_path / "full", _combinations())
-        _status, lines = _run_installer(powershell, installer, full, tmp_path / "full.log")
-        guest = _guest_combination(_selected_packages(lines))
+        full = build_medium(tmp_path / "full", combinations())
+        _status, lines = run_installer(powershell, installer, full, tmp_path / "full.log")
+        guest = guest_combination(selected_packages(lines))
 
-        remaining = tuple(pair for pair in _combinations() if pair != guest)
+        remaining = tuple(pair for pair in combinations() if pair != guest)
         assert remaining, "the medium layout offers no pair other than this guest's, so the discriminator is empty"
-        decoys = _build_medium(tmp_path / "decoys", remaining)
+        decoys = build_medium(tmp_path / "decoys", remaining)
         assert any(decoys.rglob("*.inf")), f"the decoy medium holds no packages at all, so installing none of them proves nothing: {decoys}"
 
-        status, decoy_lines = _run_installer(powershell, installer, decoys, tmp_path / "decoys.log")
+        status, decoy_lines = run_installer(powershell, installer, decoys, tmp_path / "decoys.log")
 
-        assert not _selected_packages(decoy_lines), (
+        assert not selected_packages(decoy_lines), (
             f"the installer selected packages from a medium that carries nothing for {guest[0]}\\{guest[1]}, so it is "
             f"still sweeping other editions into this guest (S17-D43):\n" + "\n".join(decoy_lines)
         )
@@ -509,12 +298,12 @@ class TestTheGeneratedInstallerScopesToThisGuest:
         empty = tmp_path / "not-a-medium"
         empty.mkdir()
 
-        status, lines = _run_installer(powershell, installer, empty, tmp_path / "empty.log")
+        status, lines = run_installer(powershell, installer, empty, tmp_path / "empty.log")
 
         assert status != 0, f"the installer accepted {empty} as a virtio-win medium and exited cleanly:\n" + "\n".join(lines)
         assert lines, "the installer refused the path without recording why, leaving an unattended install undiagnosable"
 
-    def test_publisher_trust_is_established_before_pnputil_runs(self, syntax_tree: tuple[_Node, ...]) -> None:
+    def test_publisher_trust_is_established_before_pnputil_runs(self, syntax_tree: tuple[Node, ...]) -> None:
         """The script's syntax tree carries the trust machinery, ahead of the install.
 
         Args:
@@ -523,17 +312,18 @@ class TestTheGeneratedInstallerScopesToThisGuest:
         commands = [node for node in syntax_tree if node.kind == "command"]
         members = [node for node in syntax_tree if node.kind == "member"]
 
-        installs = [node for node in commands if node.name.lower().startswith(_PNPUTIL_COMMAND)]
-        assert installs, f"the generated installer never invokes {_PNPUTIL_COMMAND}, so it installs nothing at all"
+        installs = [node for node in commands if node.name.lower().startswith(PNPUTIL_COMMAND)]
+        assert installs, f"the generated installer never invokes {PNPUTIL_COMMAND}, so it installs nothing at all"
         for node in installs:
             arguments = [argument.lower() for argument in node.arguments]
             assert _BLIND_SWEEP_SWITCH not in arguments, (
-                f"the generated installer still passes {_BLIND_SWEEP_SWITCH} to {_PNPUTIL_COMMAND}, which hands this "
+                f"the generated installer still passes {_BLIND_SWEEP_SWITCH} to {PNPUTIL_COMMAND}, which hands this "
                 f"guest every package on the medium (S17-D43): {node}"
             )
         first_install = min(node.offset for node in installs)
 
-        stores = [node for node in members if _TRUSTED_PUBLISHER_STORE in node.detail]
+        literals = [node for node in syntax_tree if node.kind == "literal"]
+        stores = [node for node in literals if node.name == _TRUSTED_PUBLISHER_STORE]
         adds = [node for node in members if node.name == "Add"]
         signatures = [node for node in commands if node.name == _SIGNATURE_COMMAND]
         for label, found in (
@@ -546,11 +336,11 @@ class TestTheGeneratedInstallerScopesToThisGuest:
                 f"does not trust still raises the modal dialog that blocks the unattended install (S17-D42)"
             )
             assert min(node.offset for node in found) < first_install, (
-                f"the generated installer reaches {label} only after calling {_PNPUTIL_COMMAND}, so the first package "
+                f"the generated installer reaches {label} only after calling {PNPUTIL_COMMAND}, so the first package "
                 f"is offered to an untrusted-publisher prompt (S17-D42)"
             )
 
-    def test_every_variable_is_spelled_the_way_it_was_declared(self, syntax_tree: tuple[_Node, ...]) -> None:
+    def test_every_variable_is_spelled_the_way_it_was_declared(self, syntax_tree: tuple[Node, ...]) -> None:
         """No variable is read under a name nothing ever assigns.
 
         PowerShell resolves variable names case-insensitively, so a script that
