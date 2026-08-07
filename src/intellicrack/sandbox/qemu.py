@@ -20,10 +20,11 @@ import shutil
 import socket
 import struct
 import tempfile
+import threading
 import time
 import zipfile
 import zlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path, PurePosixPath
@@ -131,6 +132,11 @@ _WINDOWS_LAUNCH_GRACE_S: Final[float] = 3.0
 _ERR_QEMU_EXITED_EARLY = "QEMU exited immediately after launch"
 
 _ERR_NO_FREE_PORTS = "no free ports"
+_ERR_QEMU_HOST_PORT = (
+    "QEMU could not bind one of its host ports. On Windows a port can be unusable while nothing is listening on it, because "
+    "Hyper-V reserves ranges that are redrawn at every boot; run 'netsh int ipv4 show excludedportrange protocol=tcp' to see "
+    "them. Leave the QEMU port settings at 0 to have Intellicrack allocate ports it has verified it can bind."
+)
 _ERR_QEMU_PATH = "path not set"
 _ERR_NO_IMAGE_UNSET = (
     "No QEMU disk image is configured. Set a qcow2 disk image under Sandbox Settings -> QEMU Backend before creating a QEMU sandbox."
@@ -238,6 +244,27 @@ _QEMU_QUIT_SETTLE_S: Final[float] = 2.0
 # Intellicrack agent's hostfwd port; see the -chardev argument built by
 # _build_qemu_command.
 _QGA_CHANNEL_PORT_OFFSET: Final[int] = 1
+
+# Host port allocation. The range sits above the ephemeral ports most services
+# take and below the top of the dynamic range, and every candidate drawn from it
+# is confirmed bindable before it is used, so a range Windows has reserved is
+# skipped rather than handed to QEMU to fail on.
+_HOST_PORT_RANGE_START: Final[int] = 10000
+_HOST_PORT_RANGE_END: Final[int] = 60000
+_HOST_PORT_SEARCH_ATTEMPTS: Final[int] = 100
+
+# QEMU's SLIRP hostfwd binds the wildcard address, so a probe that is to predict
+# whether QEMU can bind a port has to bind the same address. Derived from the
+# platform's own INADDR_ANY rather than written out.
+_WILDCARD_BIND_ADDRESS: Final[str] = socket.inet_ntoa(struct.pack("!I", socket.INADDR_ANY))
+
+# QEMU's wording when a host-side bind fails, for the two sockets it binds by
+# way of a command-line argument rather than a listening service.
+_QEMU_BIND_FAILURE_MARKERS: Final[tuple[str, ...]] = (
+    "Could not set up host forwarding rule",
+    "Failed to bind socket",
+    "address already in use",
+)
 
 # A lone 0xFF byte is the qemu-guest-agent parser reset marker: it cannot occur
 # inside valid JSON, so the agent discards whatever partial object a previous
@@ -540,9 +567,18 @@ class QEMUConfig:
         cpu_cores: Number of CPU cores.
         memory_mb: Memory in megabytes.
         display: Display output mode.
-        ssh_port: Port forwarding for SSH.
-        monitor_port: Port for QMP monitor.
-        agent_port: Port for guest agent.
+        ssh_port: Host port forwarded to the guest's SSH port. Zero - the
+            default - allocates one that the host has been confirmed able to
+            bind, which is the only safe choice on Windows: Hyper-V reserves
+            port ranges that are redrawn at every boot, so a fixed port works
+            or does not work depending on where the reservations landed that
+            morning, and no two sandboxes could run at once. Set it non-zero
+            only to pin a port deliberately; a pinned port is used as given.
+        monitor_port: Host port for the QMP monitor. Zero allocates one, as
+            for ``ssh_port``.
+        agent_port: Host port forwarded to the in-guest Intellicrack agent.
+            The qemu-guest-agent channel is bound one port above it, so zero
+            allocates an adjacent pair that are both bindable.
         enable_acceleration: Whether to use hardware acceleration.
         snapshot_name: Snapshot to restore on start.
         shared_folder: Path to shared folder on host.
@@ -572,9 +608,9 @@ class QEMUConfig:
     cpu_cores: int = 2
     memory_mb: int = 4096
     display: Literal["none", "vnc", "sdl", "spice"] = "none"
-    ssh_port: int = 2222
-    monitor_port: int = 4444
-    agent_port: int = 4445
+    ssh_port: int = 0
+    monitor_port: int = 0
+    agent_port: int = 0
     enable_acceleration: bool = True
     snapshot_name: str | None = None
     shared_folder: Path | None = None
@@ -2009,6 +2045,9 @@ class QEMUSandbox(SandboxBase):
     GUEST_SHARED_PATH_WINDOWS: Final[str] = _GUEST_SHARED_ROOT_WINDOWS
     GUEST_SHARED_PATH_LINUX: Final[str] = _GUEST_SHARED_ROOT_LINUX
 
+    _reserved_host_ports: ClassVar[set[int]] = set()
+    _port_reservation_lock: ClassVar[threading.Lock] = threading.Lock()
+
     def __init__(
         self,
         config: SandboxConfig | None = None,
@@ -2033,6 +2072,7 @@ class QEMUSandbox(SandboxBase):
         self._pidfile_path: Path | None = None
         self._qemu_pid: int | None = None
         self._vnc_port: int | None = None
+        self._claimed_host_ports: set[int] = set()
         self._active_captures: dict[str, Path] = {}
         self._accelerator_cached: bool = False
         self._agent_guest_pid: int | None = None
@@ -2510,9 +2550,14 @@ class QEMUSandbox(SandboxBase):
         """
         reserved = self._vnc_port
         if reserved is not None and self._port_is_free(reserved):
+            with self._port_reservation_lock:
+                self._reserved_host_ports.add(reserved)
+            self._claimed_host_ports.add(reserved)
             return reserved
         replacement = self._get_free_port(_VNC_PORT_BASE, _VNC_PORT_MAX)
         if reserved is not None:
+            self._claimed_host_ports.discard(reserved)
+            self._release_host_ports({reserved})
             _logger.warning(
                 "vnc_port_reassigned",
                 previous_vnc_port=reserved,
@@ -2522,37 +2567,103 @@ class QEMUSandbox(SandboxBase):
 
     @staticmethod
     def _port_is_free(port: int) -> bool:
-        """Probe whether a TCP port currently has no listener.
+        """Probe whether a TCP port can actually be bound on this host.
+
+        The question that matters is "can QEMU bind this", not "is anyone
+        listening on it", and on Windows the two answers differ. Hyper-V
+        reserves port ranges that carry no listener at all yet refuse a bind
+        with ``WSAEACCES``, and those ranges are redrawn at every boot. A
+        connect probe reports every one of them as free, so this binds the port
+        for real and immediately releases it. The wildcard address is used
+        because that is what a SLIRP ``hostfwd`` binds, and it is the stricter
+        test: a port held on the loopback address alone would still fail here.
 
         Args:
-            port: Loopback port to probe.
+            port: TCP port to probe.
 
         Returns:
-            bool: True when nothing is listening on the port.
+            bool: True when the port was bindable at the moment of the probe.
         """
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            return sock.connect_ex(("127.0.0.1", port)) != 0
+            try:
+                sock.bind((_WILDCARD_BIND_ADDRESS, port))
+            except OSError:
+                return False
+        return True
 
     @classmethod
-    def _get_free_port(cls, start: int = 10000, end: int = 60000) -> int:
-        """Find an available port.
+    def _claim_free_port(cls, span: int = 1, start: int = _HOST_PORT_RANGE_START, end: int = _HOST_PORT_RANGE_END) -> int:
+        """Reserve a run of consecutive host ports that are all bindable.
+
+        Reservations are held process-wide because nothing binds an allocated
+        port between the probe and QEMU's own bind, so two sandboxes started
+        back to back would otherwise draw the same number and the second one
+        would fail to launch.
 
         Args:
-            start: Start of port range.
-            end: End of port range.
+            span: How many consecutive ports to claim, starting at the returned
+                one. The guest-agent channel sits one above the agent port, so
+                that pair is claimed as a span of two.
+            start: First port of the search range.
+            end: One past the last port of the search range.
 
         Returns:
-            int: Available port number.
+            int: The first port of the claimed run.
 
         Raises:
-            SandboxError: If no free ports are available after 100 attempts.
+            SandboxError: If no suitable run was found within the attempt
+                budget.
         """
-        for _ in range(100):
-            port = secrets.randbelow(end - start) + start
-            if cls._port_is_free(port):
+        width = end - start - span
+        for _ in range(_HOST_PORT_SEARCH_ATTEMPTS):
+            port = secrets.randbelow(width) + start
+            wanted = set(range(port, port + span))
+            with cls._port_reservation_lock:
+                if wanted & cls._reserved_host_ports:
+                    continue
+                if not all(cls._port_is_free(candidate) for candidate in wanted):
+                    continue
+                cls._reserved_host_ports |= wanted
                 return port
-        _logger.error("free_port_search_exhausted", port_start=start, port_end=end)
+        _logger.error("free_port_search_exhausted", port_start=start, port_end=end, span=span)
         raise SandboxError(_ERR_NO_FREE_PORTS)
+
+    @classmethod
+    def _release_host_ports(cls, ports: set[int]) -> None:
+        """Give reserved host ports back to the allocator.
+
+        Args:
+            ports: Ports previously returned by :meth:`_claim_free_port`.
+        """
+        with cls._port_reservation_lock:
+            cls._reserved_host_ports -= ports
+
+    def _allocate_host_port(self, span: int = 1) -> int:
+        """Claim a host port for this sandbox and remember it for release.
+
+        Args:
+            span: How many consecutive ports to claim.
+
+        Returns:
+            int: The first port of the claimed run.
+        """
+        port = self._claim_free_port(span)
+        self._claimed_host_ports |= set(range(port, port + span))
+        return port
+
+    def _get_free_port(self, start: int = _HOST_PORT_RANGE_START, end: int = _HOST_PORT_RANGE_END) -> int:
+        """Claim a single free host port for this sandbox.
+
+        Args:
+            start: First port of the search range.
+            end: One past the last port of the search range.
+
+        Returns:
+            int: An allocated, reserved port.
+        """
+        port = self._claim_free_port(1, start, end)
+        self._claimed_host_ports.add(port)
+        return port
 
     @staticmethod
     def _check_qemu_started(returncode: int | None, stderr: bytes | None) -> None:
@@ -2568,6 +2679,11 @@ class QEMUSandbox(SandboxBase):
         if returncode != _RETURNCODE_SUCCESS:
             error_msg = stderr.decode() if stderr else "Unknown error"
             _logger.warning("qemu_start_failed", error=error_msg)
+            lowered = error_msg.lower()
+            if any(marker.lower() in lowered for marker in _QEMU_BIND_FAILURE_MARKERS):
+                _logger.warning("qemu_host_port_bind_failed", error=error_msg)
+                bind_message = f"{_ERR_QEMU_HOST_PORT} QEMU reported: {error_msg.strip()}"
+                raise SandboxError(bind_message)
             raise SandboxError(_ERR_QEMU_START)
 
     async def _verify_qemu_pid(self, qemu_pid: int | None) -> None:
@@ -3691,9 +3807,11 @@ class QEMUSandbox(SandboxBase):
             spice_port = self._get_free_port(_VNC_PORT_BASE, _VNC_PORT_MAX)
             cmd.extend(["-spice", f"port={spice_port},disable-ticketing=on"])
 
-        ssh_port = self._qemu_config.ssh_port or self._get_free_port()
-        monitor_port = self._qemu_config.monitor_port or self._get_free_port()
-        agent_port = self._qemu_config.agent_port or self._get_free_port()
+        # A configured port is honoured as given; zero means allocate. The
+        # agent claims two, because the guest-agent chardev binds one above it.
+        ssh_port = self._qemu_config.ssh_port or self._allocate_host_port()
+        monitor_port = self._qemu_config.monitor_port or self._allocate_host_port()
+        agent_port = self._qemu_config.agent_port or self._allocate_host_port(1 + _QGA_CHANNEL_PORT_OFFSET)
 
         netdev = f"user,id=net0,hostfwd=tcp::{ssh_port}-:22"
         netdev += f",hostfwd=tcp::{agent_port}-:4445"
@@ -4215,8 +4333,34 @@ class QEMUSandbox(SandboxBase):
         except psutil.NoSuchProcess:
             _logger.debug("cleanup_orphan_already_exited", pid=pid, exc_info=True)
 
+    def _release_claimed_host_ports(self) -> None:
+        """Return this sandbox's allocated host ports to the allocator.
+
+        Ports the caller pinned explicitly are left alone; only the ones this
+        sandbox allocated are released, and the configuration fields holding
+        them are reset to zero so a later start allocates afresh rather than
+        reusing a number another sandbox may since have taken.
+        """
+        claimed = self._claimed_host_ports
+        if not claimed:
+            return
+
+        self._release_host_ports(claimed)
+        config = self._qemu_config
+        self._qemu_config = replace(
+            config,
+            ssh_port=0 if config.ssh_port in claimed else config.ssh_port,
+            monitor_port=0 if config.monitor_port in claimed else config.monitor_port,
+            agent_port=0 if config.agent_port in claimed else config.agent_port,
+        )
+        if self._vnc_port in claimed:
+            self._vnc_port = None
+        self._claimed_host_ports = set()
+
     async def _cleanup(self) -> None:
         """Clean up temporary files and resources."""
+        self._release_claimed_host_ports()
+
         if self._temp_dir is not None:
             pid_path = self._temp_dir / "qemu.pid"
             if await asyncio.to_thread(pid_path.exists):
