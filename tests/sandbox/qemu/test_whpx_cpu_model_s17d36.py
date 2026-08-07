@@ -52,14 +52,14 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
-from intellicrack.sandbox.base import SandboxConfig
-from intellicrack.sandbox.qemu import AcceleratorType, GuestOS, QEMUConfig
+from intellicrack.sandbox.qemu import AcceleratorType
 from scripts.sandbox.provision_windows_guest import runtime_cpu_argument, runtime_machine_argument
 from tests.sandbox.qemu.windows_boot_probe import (
     WHPX_ABORT_MARKER,
-    LauncherSandbox,
     argument_value,
+    empty_qcow2,
     images_directory,
+    launcher_argv_for,
     make_scratch_disk,
     observe_boot,
     replace_argument_value,
@@ -87,10 +87,6 @@ _BOOT_ABORT_SECONDS: Final[float] = 75.0
 
 _CPU_FLAG_PREFIX: Final[str] = "+"
 
-_QCOW2_MAGIC: Final[bytes] = b"QFI\xfb"
-_QCOW2_VERSION_3: Final[bytes] = (3).to_bytes(4, "big")
-_QCOW2_HEADER_PADDING: Final[int] = 64
-
 
 def _without_named_features(cpu_argument: str) -> str:
     """Strip every explicitly named CPU feature from a ``-cpu`` value.
@@ -114,41 +110,6 @@ def _without_named_features(cpu_argument: str) -> str:
         f"the launcher's -cpu value {cpu_argument!r} names no +feature, so the WHPX Windows-start discriminator cannot be built (S17-D36)"
     )
     return ",".join(kept)
-
-
-def _empty_qcow2(destination: Path) -> Path:
-    """Write a minimal but structurally valid qcow2 v3 header file.
-
-    ``_build_qemu_command`` only requires the configured image to exist; it
-    never parses it. A real header is written anyway so the fixture is a
-    genuine qcow2 rather than arbitrary bytes.
-
-    Args:
-        destination: Path the header is written to.
-
-    Returns:
-        Path: The created file.
-    """
-    destination.write_bytes(_QCOW2_MAGIC + _QCOW2_VERSION_3 + bytes(_QCOW2_HEADER_PADDING))
-    return destination
-
-
-def _launcher_argv_for(accelerator: AcceleratorType, image: Path, qemu_path: Path) -> list[str]:
-    """Build the launcher command line for one accelerator without hardware.
-
-    Args:
-        accelerator: Accelerator the command builder should select for.
-        image: Existing disk image recorded on the configuration.
-        qemu_path: Path recorded as the resolved QEMU executable.
-
-    Returns:
-        list[str]: The argv the production builder emits.
-    """
-    config = QEMUConfig(guest_os=GuestOS.WINDOWS, image_path=image, display="none")
-    sandbox = LauncherSandbox(config=SandboxConfig(), qemu_config=config)
-    sandbox.force_accelerator(accelerator)
-    sandbox.set_qemu_path(qemu_path)
-    return sandbox.build_command()
 
 
 @pytest.fixture
@@ -260,7 +221,7 @@ class TestTheLauncherAndProvisionerAgreeOnTheWhpxCpuModel:
             accelerator: Accelerator under test.
             tmp_path: Per-test temporary directory for the image fixture.
         """
-        argv = _launcher_argv_for(accelerator, _empty_qcow2(tmp_path / "disk.qcow2"), tmp_path / "qemu-system-x86_64.exe")
+        argv = launcher_argv_for(accelerator, empty_qcow2(tmp_path / "disk.qcow2"), tmp_path / "qemu-system-x86_64.exe")
 
         assert argument_value(argv, "-cpu") == runtime_cpu_argument(accelerator.value), (
             f"accelerator={accelerator.value}: the provisioner installs against a different processor than the launcher boots on (S17-D36)"
@@ -278,7 +239,7 @@ class TestTheLauncherAndProvisionerAgreeOnTheWhpxCpuModel:
             accelerator: Accelerator under test.
             tmp_path: Per-test temporary directory for the image fixture.
         """
-        argv = _launcher_argv_for(accelerator, _empty_qcow2(tmp_path / "disk.qcow2"), tmp_path / "qemu-system-x86_64.exe")
+        argv = launcher_argv_for(accelerator, empty_qcow2(tmp_path / "disk.qcow2"), tmp_path / "qemu-system-x86_64.exe")
 
         assert argument_value(argv, "-machine") == runtime_machine_argument(accelerator.value), (
             f"accelerator={accelerator.value}: the provisioner installs on a different machine type than the launcher boots on (S17-D37)"

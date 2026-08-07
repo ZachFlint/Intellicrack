@@ -295,6 +295,11 @@ _WINDOWS_SHELL_COMMAND_FLAG: Final[str] = "/c"
 _LINUX_SHELL: Final[str] = "/bin/bash"
 _LINUX_SHELL_COMMAND_FLAG: Final[str] = "-c"
 
+# Identifier for the xHCI controller that carries the guest's absolute pointing
+# device. q35 provides no USB bus of its own, so the controller has to be added
+# before a tablet has anywhere to attach.
+_USB_CONTROLLER_ID: Final[str] = "icusb"
+
 _SHARED_MOUNT_TAG: Final[str] = "shared"
 _GUEST_VFAT_FS_TYPE: Final[str] = "vfat"
 _GUEST_9P_FS_TYPE: Final[str] = "9p"
@@ -3650,6 +3655,17 @@ class QEMUSandbox(SandboxBase):
         if self._shared_folder is not None:
             cmd.extend(self._shared_folder_args())
 
+        # The tablet is what makes the VM Display usable. RFB PointerEvent
+        # carries absolute framebuffer coordinates, but a guest whose only
+        # pointing device is the q35 board's PS/2 mouse can accept relative
+        # motion, so QEMU has to synthesize deltas from a cursor position it
+        # can only guess at while the guest applies its own acceleration and
+        # edge clamping. The two cursors diverge on the first movement and
+        # never resync, and clicks land wherever the guest's cursor drifted
+        # to - which reads as a display that ignores input. An absolute device
+        # passes the coordinates through untouched. It costs nothing in
+        # anti-evasion terms: this guest already carries virtio NIC, serial
+        # and 9p devices, so a HID tablet reveals nothing new.
         cmd.extend([
             "-netdev",
             netdev,
@@ -3663,6 +3679,10 @@ class QEMUSandbox(SandboxBase):
             f"socket,id=agent,host=127.0.0.1,port={agent_port + _QGA_CHANNEL_PORT_OFFSET},server,nowait",
             "-device",
             "virtserialport,chardev=agent,name=org.qemu.guest_agent.0",
+            "-device",
+            f"qemu-xhci,id={_USB_CONTROLLER_ID}",
+            "-device",
+            f"usb-tablet,bus={_USB_CONTROLLER_ID}.0",
         ])
         if self._qemu_config.snapshot_name:
             cmd.extend(["-loadvm", self._qemu_config.snapshot_name])

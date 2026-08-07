@@ -62,6 +62,7 @@ _API_TRACE: Final[str] = "tests/sandbox/monitors/test_api_trace.py"
 _SERVICE_MONITOR: Final[str] = "tests/sandbox/monitors/test_service_monitor.py"
 _WHPX_CPU_MODEL: Final[str] = "tests/sandbox/qemu/test_whpx_cpu_model_s17d36.py"
 _WHPX_IRQCHIP: Final[str] = "tests/sandbox/qemu/test_whpx_irqchip_s17d37.py"
+_ABSOLUTE_POINTER: Final[str] = "tests/sandbox/qemu/test_absolute_pointer_s17d41.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -85,6 +86,7 @@ HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
         (_OLLAMA_PROVIDER, "TestOllamaModelListing"),
         (_WHPX_CPU_MODEL, "TestTheWhpxCpuModelStartsAWindowsKernel"),
         (_WHPX_IRQCHIP, "TestTheWhpxInterruptChipReachesAWindowsGuest"),
+        (_ABSOLUTE_POINTER, "TestTheGuestGetsAnAbsolutePointingDevice"),
     },
 )
 
