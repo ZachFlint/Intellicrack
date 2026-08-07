@@ -65,6 +65,9 @@ if TYPE_CHECKING:
     from xml.etree.ElementTree import Element
 
 
+_DRIVER_INSTALLER_NAME: Final[str] = "install-virtio-drivers.ps1"
+"""Guest-side script the answer medium carries; see ``test_virtio_driver_scope_s17d42``."""
+
 _SECTOR: Final[int] = 2048
 _UNATTEND_NS: Final[str] = "urn:schemas-microsoft-com:unattend"
 _WCM_NS: Final[str] = "http://schemas.microsoft.com/WMIConfig/2002/State"
@@ -902,7 +905,7 @@ class TestAnswerFileGeneration:
         shell = _component(_answer_tree(), "oobeSystem", "Microsoft-Windows-Shell-Setup")
         commands = _texts(shell, "FirstLogonCommands/SynchronousCommand/CommandLine")
 
-        assert any("pnputil.exe /add-driver" in command for command in commands), commands
+        assert any(_DRIVER_INSTALLER_NAME in command for command in commands), commands
         assert any(settings.answer_script in command for command in commands), commands
         orders = _texts(shell, "FirstLogonCommands/SynchronousCommand/Order")
         assert orders == [str(index) for index in range(1, len(commands) + 1)]
