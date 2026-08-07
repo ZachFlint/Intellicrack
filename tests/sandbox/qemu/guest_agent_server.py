@@ -820,6 +820,82 @@ class GuestAgentProtocolServer(_LoopbackServer):
         return payload
 
 
+class OneShotGuestAgentChannelServer(GuestAgentProtocolServer):
+    """Real server modelling QEMU's guest-agent chardev socket.
+
+    ``-chardev socket,...,server,nowait`` is handed out **once**. QEMU accepts
+    a single connection and refuses every later one with a reset for the whole
+    life of the VM. Measured against QEMU 10.1.0 on Windows: with the app's
+    channel closed and reopened, an independent client outside the application
+    was refused three times in a row while ``Get-NetTCPConnection`` still
+    showed the QEMU process listening on that port with no peer attached.
+
+    The channel and the guest are modelled separately, because they fail for
+    unrelated reasons. The channel is up from the moment QEMU binds it. The
+    guest's agent is not: for the first ``silent_syncs`` resync requests this
+    server writes nothing back, which is exactly what a host sees while the
+    guest is still booting and no process inside it is reading the
+    virtio-serial port yet.
+
+    Attributes:
+        accepted: Number of connections accepted since ``start``. A second one
+            is impossible by construction, so this is 0 or 1.
+        refused_syncs: Number of resync requests deliberately left unanswered.
+    """
+
+    accepted: int
+    refused_syncs: int
+
+    def __init__(self, silent_syncs: int = 0) -> None:
+        """Initialise the channel with a guest that is not ready yet.
+
+        Args:
+            silent_syncs: How many resync requests go unanswered before the
+                guest's agent starts replying.
+        """
+        super().__init__()
+        self.accepted = 0
+        self.refused_syncs = 0
+        self._silent_syncs = silent_syncs
+
+    async def _serve(
+        self,
+        reader: asyncio.StreamReader,
+        writer: asyncio.StreamWriter,
+    ) -> None:
+        """Take the one connection this channel will ever accept.
+
+        The listening socket is closed on accept, so a client that hangs up and
+        reconnects finds the port refusing connections - QEMU's behaviour, and
+        the whole point of this server.
+
+        Args:
+            reader: Stream reader for the accepted connection.
+            writer: Stream writer for the accepted connection.
+        """
+        self.accepted += 1
+        if self._server is not None:
+            self._server.close()
+        await super()._serve(reader, writer)
+
+    async def _replies_for(self, line: bytes) -> list[bytes]:
+        """Answer one request, staying silent while the guest is not up.
+
+        Args:
+            line: Raw request bytes without the trailing newline.
+
+        Returns:
+            list[bytes]: Wire frames to write back, empty while silent.
+        """
+        request = decode_object(line.strip()) if line.strip() else {}
+        if str(request.get("execute", "")) in SYNC_COMMANDS and self._silent_syncs > 0:
+            self._silent_syncs -= 1
+            self.refused_syncs += 1
+            self.commands.append(str(request.get("execute", "")))
+            return []
+        return await super()._replies_for(line)
+
+
 class IntellicrackAgentServer(_LoopbackServer):
     """Real TCP server speaking the in-guest Intellicrack monitor protocol.
 
