@@ -428,7 +428,7 @@ async def test_generate_timeline_orders_real_events(tmp_path: Path) -> None:
     assert timestamps == sorted(timestamps), "timeline must be sorted chronologically"
 
     categories = {ev["category"] for ev in timeline}
-    assert categories <= {"file", "registry", "network", "process", "api", "service", "kernel", "dll", "injection", "clipboard"}
+    assert categories <= {"file", "registry", "network", "process", "api", "service", "kernel", "dll", "injection", "clipboard", "resource"}
     assert categories & {"process", "network"}, f"expected process/network timeline categories from real capture; saw {categories}"
 
     process_only = generate_timeline(report, categories=["process"])

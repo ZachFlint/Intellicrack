@@ -4377,8 +4377,24 @@ while ($true) {
         because the guest has not assigned one yet when they are written: the
         launcher resolves ``agent.ps1`` through ``%~dp0`` and the agent
         resolves the logs, output and monitor directories through
-        ``$PSScriptRoot``. On Linux, writes the existing Python agent and its
-        startup shell script.
+        ``$PSScriptRoot``. On Linux, writes the Python agent and its startup
+        shell script.
+
+        The Linux agent runs four monitors. Beside the file and process
+        monitors it samples the kernel socket tables into
+        ``network_activity.log`` in the ten-field schema parsed by
+        :func:`intellicrack.sandbox.log_parsers.parse_network_log` - hex
+        endpoints decoded to printable addresses and ports, state codes decoded
+        to the same state vocabulary the Windows monitor emits, and each socket
+        inode attributed to its owning process by walking the per-process
+        file-descriptor links - and samples ``/proc`` counters into
+        ``resource_monitor.log`` in the seven-field schema parsed by
+        :func:`intellicrack.sandbox.log_parsers.parse_resource_log`, taking two
+        readings so the CPU column is a real busy percentage and the disk and
+        network columns are real per-second rates rather than counters. Both
+        logs were previously written only by the Windows monitor path, which
+        left the Network Activity and Resources report tabs permanently empty
+        for a Linux guest.
 
         Raises:
             ValueError: If an unsupported guest OS is configured.
@@ -4418,6 +4434,8 @@ while ($true) {
 This agent runs inside the QEMU guest VM to:
 - Monitor process creation and termination
 - Track file system changes (if inotify available)
+- Record kernel socket tables as network activity
+- Sample CPU, memory, disk and network resource usage
 - Execute commands from the host and return results
 """
 from __future__ import annotations
@@ -4441,6 +4459,56 @@ PORT: int = 4445
 RECV_BUFFER_SIZE: int = 65536
 DEFAULT_COMMAND_TIMEOUT: int = 30
 MONITOR_POLL_INTERVAL: float = 1.0
+RESOURCE_SAMPLE_INTERVAL: float = 5.0
+PROC_ROOT: Path = Path("/proc")
+NETWORK_LOG_NAME: str = "network_activity.log"
+RESOURCE_LOG_NAME: str = "resource_monitor.log"
+PROC_NET_TABLES: tuple[tuple[str, str], ...] = (
+    ("net/tcp", "tcp"),
+    ("net/tcp6", "tcp"),
+    ("net/udp", "udp"),
+    ("net/udp6", "udp"),
+)
+PROC_NET_MIN_FIELDS: int = 10
+PROC_NET_INODE_INDEX: int = 9
+SOCKET_LINK_PREFIX: str = "socket:["
+CONNECTION_KEY_CAP: int = 8192
+IPV4_PACKED_LENGTH: int = 4
+IPV6_PACKED_LENGTH: int = 16
+IPV6_WORD_LENGTH: int = 4
+TCP_STATE_NAMES: dict[str, str] = {
+    "01": "Established",
+    "02": "SynSent",
+    "03": "SynReceived",
+    "04": "FinWait1",
+    "05": "FinWait2",
+    "06": "TimeWait",
+    "07": "Closed",
+    "08": "CloseWait",
+    "09": "LastAck",
+    "0A": "Listen",
+    "0B": "Closing",
+    "0C": "SynReceived",
+}
+UNKNOWN_STATE: str = "Unknown"
+ESTABLISHED_STATE: str = "Established"
+LISTEN_STATE: str = "Listen"
+CONNECTION_OPERATION: str = "connection"
+BIND_OPERATION: str = "bind"
+PROC_STAT_MIN_FIELDS: int = 5
+CPU_IDLE_INDEX: int = 3
+CPU_IOWAIT_INDEX: int = 4
+KIB_PER_MIB: float = 1024.0
+DISK_SECTOR_BYTES: int = 512
+DISKSTATS_MIN_FIELDS: int = 14
+DISKSTATS_NAME_INDEX: int = 2
+DISKSTATS_SECTORS_READ_INDEX: int = 5
+DISKSTATS_SECTORS_WRITTEN_INDEX: int = 9
+DISK_EXCLUDED_PREFIXES: tuple[str, ...] = ("loop", "ram", "zram", "dm-")
+NET_DEV_MIN_FIELDS: int = 16
+NET_DEV_RECV_BYTES_INDEX: int = 0
+NET_DEV_SENT_BYTES_INDEX: int = 8
+NET_EXCLUDED_INTERFACES: tuple[str, ...] = ("lo",)
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -4590,6 +4658,558 @@ def _log_process_activity(
         _logger.debug("process_activity_log_write_failed", extra={"error": str(write_err)})
 
 
+def _log_field(value: object) -> str:
+    """Render one value as a pipe-delimited monitor-log field.
+
+    Args:
+        value: Value to render.
+
+    Returns:
+        Field text with the delimiter and any line breaks neutralised.
+    """
+    text = str(value)
+    text = text.replace("|", "_")
+    text = text.replace("\\r", " ")
+    return text.replace("\\n", " ")
+
+
+def _append_log(name: str, line: str) -> None:
+    """Append one record to a monitor log in the shared log directory.
+
+    Args:
+        name: Log file name under the shared log directory.
+        line: Fully rendered record without its trailing newline.
+    """
+    try:
+        log_path = LOG_DIR / name
+        with log_path.open("a", encoding="utf-8") as log_file:
+            log_file.write(line + "\\n")
+    except OSError as write_err:
+        _logger.debug("monitor_log_write_failed", extra={"log": name, "error": str(write_err)})
+
+
+def _read_proc_text(relative: str, proc_root: Path = PROC_ROOT) -> str:
+    """Read a file below the proc filesystem, tolerating an unreadable entry.
+
+    Args:
+        relative: Path of the file relative to the proc mount point.
+        proc_root: Mount point of the proc filesystem.
+
+    Returns:
+        File contents, or an empty string when the file cannot be read.
+    """
+    try:
+        return (proc_root / relative).read_text(encoding="utf-8", errors="replace")
+    except OSError as read_err:
+        _logger.debug("proc_read_failed", extra={"path": relative, "error": str(read_err)})
+        return ""
+
+
+def decode_proc_ip(hex_address: str) -> str:
+    """Decode a proc-filesystem hexadecimal address into printable form.
+
+    The kernel prints each 32-bit word of an address in host byte order, so
+    every four-byte group is reversed before it is formatted.
+
+    Args:
+        hex_address: Hexadecimal address exactly as the kernel printed it.
+
+    Returns:
+        Dotted-quad or colon-separated address, or an empty string when the
+        token is not a recognised address width.
+    """
+    try:
+        packed = bytes.fromhex(hex_address)
+    except ValueError:
+        return ""
+    if len(packed) == IPV4_PACKED_LENGTH:
+        return socket.inet_ntop(socket.AF_INET, packed[::-1])
+    if len(packed) == IPV6_PACKED_LENGTH:
+        regrouped = b"".join(
+            packed[offset:offset + IPV6_WORD_LENGTH][::-1]
+            for offset in range(0, IPV6_PACKED_LENGTH, IPV6_WORD_LENGTH)
+        )
+        return socket.inet_ntop(socket.AF_INET6, regrouped)
+    return ""
+
+
+def decode_proc_endpoint(raw: str) -> str:
+    """Decode a proc-filesystem ``address:port`` token into printable form.
+
+    IPv6 addresses are bracketed so the address and the port stay separable.
+
+    Args:
+        raw: Hexadecimal ``address:port`` token from a kernel socket table.
+
+    Returns:
+        Endpoint text, or an empty string when the address cannot be decoded.
+    """
+    hex_address, _, hex_port = raw.partition(":")
+    try:
+        port = int(hex_port, 16)
+    except ValueError:
+        port = 0
+    address = decode_proc_ip(hex_address)
+    if not address:
+        return ""
+    if ":" in address:
+        return "[" + address + "]:" + str(port)
+    return address + ":" + str(port)
+
+
+def socket_inode_owners(proc_root: Path = PROC_ROOT) -> dict[str, tuple[int, str]]:
+    """Map socket inode numbers to the process that holds each socket open.
+
+    Every process file-descriptor directory is walked and each descriptor that
+    points at ``socket:[inode]`` attributes that inode to the owning process.
+
+    Args:
+        proc_root: Mount point of the proc filesystem.
+
+    Returns:
+        Mapping of inode number to the owning process id and name.
+    """
+    owners: dict[str, tuple[int, str]] = {}
+    try:
+        entries = os.listdir(proc_root)
+    except OSError as list_err:
+        _logger.debug("proc_pid_list_failed", extra={"error": str(list_err)})
+        return owners
+    for pid_str in entries:
+        if not pid_str.isdigit():
+            continue
+        fd_dir = proc_root / pid_str / "fd"
+        try:
+            fd_names = os.listdir(fd_dir)
+        except OSError as fd_err:
+            _logger.debug("proc_fd_list_failed", extra={"pid": pid_str, "error": str(fd_err)})
+            continue
+        pid = int(pid_str)
+        process_name = _read_proc_text(pid_str + "/comm", proc_root).strip()
+        for fd_name in fd_names:
+            try:
+                target = os.readlink(fd_dir / fd_name)
+            except OSError:
+                continue
+            if target.startswith(SOCKET_LINK_PREFIX) and target.endswith("]"):
+                owners[target[len(SOCKET_LINK_PREFIX):-1]] = (pid, process_name)
+    return owners
+
+
+def parse_proc_net_table(text: str, protocol: str) -> list[tuple[str, str, str, str, str]]:
+    """Parse one kernel socket table into decoded connection rows.
+
+    Args:
+        text: Full contents of a proc-filesystem socket table.
+        protocol: Transport protocol the table describes.
+
+    Returns:
+        One tuple of protocol, local endpoint, remote endpoint, state name and
+        socket inode per decodable row.
+    """
+    rows: list[tuple[str, str, str, str, str]] = []
+    for raw_line in text.splitlines():
+        fields = raw_line.split()
+        if len(fields) < PROC_NET_MIN_FIELDS or not fields[0].endswith(":"):
+            continue
+        local_endpoint = decode_proc_endpoint(fields[1])
+        if not local_endpoint:
+            continue
+        remote_endpoint = decode_proc_endpoint(fields[2])
+        state = TCP_STATE_NAMES.get(fields[3].upper(), UNKNOWN_STATE)
+        rows.append((protocol, local_endpoint, remote_endpoint, state, fields[PROC_NET_INODE_INDEX]))
+    return rows
+
+
+def format_connection_record(
+    timestamp: str,
+    protocol: str,
+    local_endpoint: str,
+    remote_endpoint: str,
+    state: str,
+    pid: int | None,
+    process_name: str,
+) -> str:
+    """Render one socket observation in the ten-field network log schema.
+
+    Datagram sockets carry the same state column as stream sockets, so an
+    unconnected datagram socket is reported as a bind in the listening state
+    and a connected one as a connection in the established state. Neither the
+    kernel socket tables nor their Windows counterpart expose per-socket byte
+    counters, so both byte columns are reported as zero rather than invented.
+
+    Args:
+        timestamp: Observation timestamp.
+        protocol: Transport protocol of the socket.
+        local_endpoint: Local ``address:port`` endpoint.
+        remote_endpoint: Remote ``address:port`` endpoint.
+        state: Decoded socket state name.
+        pid: Owning process id, or None when the socket could not be attributed.
+        process_name: Owning process name, empty when unknown.
+
+    Returns:
+        Pipe-delimited record ready to append to the network activity log.
+    """
+    if protocol == "udp":
+        connected = state == ESTABLISHED_STATE
+        operation = CONNECTION_OPERATION if connected else BIND_OPERATION
+        rendered_state = ESTABLISHED_STATE if connected else LISTEN_STATE
+    else:
+        operation = CONNECTION_OPERATION
+        rendered_state = state
+    return "|".join([
+        _log_field(timestamp),
+        operation,
+        _log_field(local_endpoint),
+        _log_field(remote_endpoint),
+        _log_field(rendered_state),
+        _log_field(protocol),
+        "0",
+        "0",
+        "" if pid is None else str(pid),
+        _log_field(process_name),
+    ])
+
+
+def collect_network_records(
+    timestamp: str,
+    seen_keys: dict[str, bool],
+    proc_root: Path = PROC_ROOT,
+) -> list[str]:
+    """Collect newly observed sockets as network activity log records.
+
+    Args:
+        timestamp: Observation timestamp applied to every new record.
+        seen_keys: Mutable set of connection keys already reported; updated in
+            place and cleared once it exceeds its cap.
+        proc_root: Mount point of the proc filesystem.
+
+    Returns:
+        Pipe-delimited records for sockets not previously reported.
+    """
+    owners = socket_inode_owners(proc_root)
+    records: list[str] = []
+    for relative, protocol in PROC_NET_TABLES:
+        table = _read_proc_text(relative, proc_root)
+        if not table:
+            continue
+        for row in parse_proc_net_table(table, protocol):
+            row_protocol, local_endpoint, remote_endpoint, state, inode = row
+            key = "|".join([row_protocol, local_endpoint, remote_endpoint, state])
+            if key in seen_keys:
+                continue
+            seen_keys[key] = True
+            owner = owners.get(inode)
+            records.append(
+                format_connection_record(
+                    timestamp,
+                    row_protocol,
+                    local_endpoint,
+                    remote_endpoint,
+                    state,
+                    None if owner is None else owner[0],
+                    "" if owner is None else owner[1],
+                ),
+            )
+    if len(seen_keys) > CONNECTION_KEY_CAP:
+        seen_keys.clear()
+    return records
+
+
+def network_monitor(proc_root: Path = PROC_ROOT) -> None:
+    """Poll the kernel socket tables and log newly observed connections.
+
+    Args:
+        proc_root: Mount point of the proc filesystem.
+    """
+    seen_keys: dict[str, bool] = {}
+    _logger.info("network_monitoring_started", extra={"poll_interval": MONITOR_POLL_INTERVAL})
+    while True:
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        for record in collect_network_records(timestamp, seen_keys, proc_root):
+            _append_log(NETWORK_LOG_NAME, record)
+        time.sleep(MONITOR_POLL_INTERVAL)
+
+
+def read_cpu_totals(proc_root: Path = PROC_ROOT) -> tuple[int, int]:
+    """Read the aggregate CPU time counters from the kernel statistics file.
+
+    Args:
+        proc_root: Mount point of the proc filesystem.
+
+    Returns:
+        Total and idle CPU time in kernel ticks; both zero when unavailable.
+    """
+    for raw_line in _read_proc_text("stat", proc_root).splitlines():
+        fields = raw_line.split()
+        if not fields or fields[0] != "cpu":
+            continue
+        values = [int(field) for field in fields[1:] if field.isdigit()]
+        if len(values) < PROC_STAT_MIN_FIELDS:
+            return (0, 0)
+        return (sum(values), values[CPU_IDLE_INDEX] + values[CPU_IOWAIT_INDEX])
+    return (0, 0)
+
+
+def read_memory_used_mb(proc_root: Path = PROC_ROOT) -> float:
+    """Read physical memory currently in use, in mebibytes.
+
+    Args:
+        proc_root: Mount point of the proc filesystem.
+
+    Returns:
+        Used memory in mebibytes, rounded to two decimal places.
+    """
+    total_kib = 0
+    available_kib = 0
+    for raw_line in _read_proc_text("meminfo", proc_root).splitlines():
+        label, _, remainder = raw_line.partition(":")
+        fields = remainder.split()
+        if not fields or not fields[0].isdigit():
+            continue
+        if label == "MemTotal":
+            total_kib = int(fields[0])
+        elif label == "MemAvailable":
+            available_kib = int(fields[0])
+    used_kib = total_kib - available_kib
+    if used_kib < 0:
+        used_kib = 0
+    return round(used_kib / KIB_PER_MIB, 2)
+
+
+def _is_partition_of(name: str, device_names: set[str]) -> bool:
+    """Report whether a block device name is a partition of another device.
+
+    Args:
+        name: Block device name to classify.
+        device_names: Every block device name present in the statistics file.
+
+    Returns:
+        True when the name is a partition of another listed device.
+    """
+    for candidate in device_names:
+        if candidate == name or not name.startswith(candidate):
+            continue
+        suffix = name[len(candidate):]
+        if suffix.isdigit():
+            return True
+        if suffix.startswith("p") and suffix[1:].isdigit():
+            return True
+    return False
+
+
+def read_process_io_totals(proc_root: Path = PROC_ROOT) -> tuple[int, int]:
+    """Sum storage bytes read and written across every readable process.
+
+    This is the fallback source used when the kernel exposes no block device
+    statistics to the guest.
+
+    Args:
+        proc_root: Mount point of the proc filesystem.
+
+    Returns:
+        Cumulative bytes read and written by all processes.
+    """
+    read_bytes = 0
+    write_bytes = 0
+    try:
+        entries = os.listdir(proc_root)
+    except OSError as list_err:
+        _logger.debug("proc_pid_list_failed", extra={"error": str(list_err)})
+        return (0, 0)
+    for pid_str in entries:
+        if not pid_str.isdigit():
+            continue
+        for raw_line in _read_proc_text(pid_str + "/io", proc_root).splitlines():
+            label, _, remainder = raw_line.partition(":")
+            value = remainder.strip()
+            if not value.isdigit():
+                continue
+            if label == "read_bytes":
+                read_bytes += int(value)
+            elif label == "write_bytes":
+                write_bytes += int(value)
+    return (read_bytes, write_bytes)
+
+
+def read_disk_totals(proc_root: Path = PROC_ROOT) -> tuple[int, int]:
+    """Read cumulative bytes read and written across whole block devices.
+
+    Partitions, loop, ram and device-mapper entries are skipped so the totals
+    count each physical transfer once.
+
+    Args:
+        proc_root: Mount point of the proc filesystem.
+
+    Returns:
+        Cumulative bytes read and written since boot.
+    """
+    entries: list[tuple[str, int, int]] = []
+    for raw_line in _read_proc_text("diskstats", proc_root).splitlines():
+        fields = raw_line.split()
+        if len(fields) < DISKSTATS_MIN_FIELDS:
+            continue
+        name = fields[DISKSTATS_NAME_INDEX]
+        if name.startswith(DISK_EXCLUDED_PREFIXES):
+            continue
+        sectors_read = fields[DISKSTATS_SECTORS_READ_INDEX]
+        sectors_written = fields[DISKSTATS_SECTORS_WRITTEN_INDEX]
+        if not (sectors_read.isdigit() and sectors_written.isdigit()):
+            continue
+        entries.append((name, int(sectors_read), int(sectors_written)))
+    if not entries:
+        return read_process_io_totals(proc_root)
+    device_names = {entry[0] for entry in entries}
+    read_bytes = 0
+    write_bytes = 0
+    for name, sectors_read, sectors_written in entries:
+        if _is_partition_of(name, device_names):
+            continue
+        read_bytes += sectors_read * DISK_SECTOR_BYTES
+        write_bytes += sectors_written * DISK_SECTOR_BYTES
+    return (read_bytes, write_bytes)
+
+
+def read_net_totals(proc_root: Path = PROC_ROOT) -> tuple[int, int]:
+    """Read cumulative bytes sent and received on non-loopback interfaces.
+
+    Args:
+        proc_root: Mount point of the proc filesystem.
+
+    Returns:
+        Cumulative bytes sent and bytes received since boot.
+    """
+    sent_bytes = 0
+    received_bytes = 0
+    for raw_line in _read_proc_text("net/dev", proc_root).splitlines():
+        name, separator, remainder = raw_line.partition(":")
+        if not separator:
+            continue
+        interface = name.strip()
+        if not interface or interface in NET_EXCLUDED_INTERFACES:
+            continue
+        fields = remainder.split()
+        if len(fields) < NET_DEV_MIN_FIELDS:
+            continue
+        received_field = fields[NET_DEV_RECV_BYTES_INDEX]
+        sent_field = fields[NET_DEV_SENT_BYTES_INDEX]
+        if not (received_field.isdigit() and sent_field.isdigit()):
+            continue
+        received_bytes += int(received_field)
+        sent_bytes += int(sent_field)
+    return (sent_bytes, received_bytes)
+
+
+def read_resource_counters(proc_root: Path = PROC_ROOT) -> tuple[int, int, int, int, int, int]:
+    """Read every cumulative counter a resource sample is derived from.
+
+    Args:
+        proc_root: Mount point of the proc filesystem.
+
+    Returns:
+        Total CPU ticks, idle CPU ticks, disk bytes read, disk bytes written,
+        network bytes sent and network bytes received.
+    """
+    cpu_total, cpu_idle = read_cpu_totals(proc_root)
+    disk_read, disk_write = read_disk_totals(proc_root)
+    net_sent, net_received = read_net_totals(proc_root)
+    return (cpu_total, cpu_idle, disk_read, disk_write, net_sent, net_received)
+
+
+def cpu_percent_between(previous: tuple[int, int], current: tuple[int, int]) -> float:
+    """Compute busy CPU percentage between two CPU time readings.
+
+    Args:
+        previous: Total and idle CPU ticks from the earlier reading.
+        current: Total and idle CPU ticks from the later reading.
+
+    Returns:
+        Percentage of the elapsed CPU time that was not idle.
+    """
+    total_delta = current[0] - previous[0]
+    idle_delta = current[1] - previous[1]
+    if total_delta <= 0:
+        return 0.0
+    busy_delta = total_delta - idle_delta
+    if busy_delta < 0:
+        busy_delta = 0
+    return round(busy_delta * 100.0 / total_delta, 2)
+
+
+def _counter_rate(previous: int, current: int, elapsed: float) -> int:
+    """Convert a pair of cumulative counter readings into a per-second rate.
+
+    Args:
+        previous: Counter value from the earlier reading.
+        current: Counter value from the later reading.
+        elapsed: Seconds between the two readings.
+
+    Returns:
+        Bytes per second, or zero when the counter did not advance.
+    """
+    if elapsed <= 0.0:
+        return 0
+    delta = current - previous
+    if delta < 0:
+        return 0
+    return int(delta / elapsed)
+
+
+def format_resource_sample(
+    timestamp: str,
+    previous: tuple[int, int, int, int, int, int],
+    current: tuple[int, int, int, int, int, int],
+    elapsed: float,
+    memory_mb: float,
+) -> str:
+    """Render one resource sample in the seven-field resource log schema.
+
+    Args:
+        timestamp: Sample timestamp.
+        previous: Counters from the earlier reading.
+        current: Counters from the later reading.
+        elapsed: Seconds between the two readings.
+        memory_mb: Physical memory in use at the later reading.
+
+    Returns:
+        Pipe-delimited record ready to append to the resource monitor log.
+    """
+    return "|".join([
+        _log_field(timestamp),
+        str(cpu_percent_between((previous[0], previous[1]), (current[0], current[1]))),
+        str(memory_mb),
+        str(_counter_rate(previous[2], current[2], elapsed)),
+        str(_counter_rate(previous[3], current[3], elapsed)),
+        str(_counter_rate(previous[4], current[4], elapsed)),
+        str(_counter_rate(previous[5], current[5], elapsed)),
+    ])
+
+
+def resource_monitor(proc_root: Path = PROC_ROOT) -> None:
+    """Sample CPU, memory, disk and network usage and log real deltas.
+
+    Args:
+        proc_root: Mount point of the proc filesystem.
+    """
+    previous = read_resource_counters(proc_root)
+    previous_at = time.monotonic()
+    _logger.info("resource_monitoring_started", extra={"sample_interval": RESOURCE_SAMPLE_INTERVAL})
+    while True:
+        time.sleep(RESOURCE_SAMPLE_INTERVAL)
+        current = read_resource_counters(proc_root)
+        sampled_at = time.monotonic()
+        record = format_resource_sample(
+            time.strftime("%Y-%m-%d %H:%M:%S"),
+            previous,
+            current,
+            sampled_at - previous_at,
+            read_memory_used_mb(proc_root),
+        )
+        _append_log(RESOURCE_LOG_NAME, record)
+        previous = current
+        previous_at = sampled_at
+
+
 def handle_client(conn: socket.socket) -> None:
     """Handle a client connection from the host.
 
@@ -4709,6 +5329,12 @@ def main() -> None:
 
     file_thread = threading.Thread(target=file_monitor, daemon=True)
     file_thread.start()
+
+    network_thread = threading.Thread(target=network_monitor, daemon=True)
+    network_thread.start()
+
+    resource_thread = threading.Thread(target=resource_monitor, daemon=True)
+    resource_thread.start()
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

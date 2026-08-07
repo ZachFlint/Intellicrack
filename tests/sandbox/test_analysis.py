@@ -1146,7 +1146,7 @@ class TestGenerateTimeline:
         assert "(Default)" in events[0]["summary"]
 
     def test_full_sample_report(self, sample_report: ExecutionReport) -> None:
-        """Full sample report produces events for all ten monitoring categories.
+        """Full sample report produces events for all eleven monitoring categories.
 
         The ``sample_report`` fixture is built from sub-fixtures that each
         contribute at least one entry to a distinct category:
@@ -1161,8 +1161,9 @@ class TestGenerateTimeline:
         - ``sample_dll_loads``         → ``dll``        (1 entry)
         - ``sample_injection_events``  → ``injection``  (1 entry)
         - ``sample_clipboard_events``  → ``clipboard``  (2 entries)
+        - ``sample_resource_samples``  → ``resource``   (1 entry)
 
-        The expected set of ten category names is derived independently by
+        The expected set of eleven category names is derived independently by
         reading the fixture definitions in ``conftest.py`` and the category
         label assigned in each ``_timeline_add_*`` helper.  Any implementation
         change that omits a category (e.g. no longer emitting ``dll`` events)
@@ -1184,6 +1185,7 @@ class TestGenerateTimeline:
             "dll",
             "injection",
             "clipboard",
+            "resource",
         }
         assert categories == expected_categories, f"Expected timeline categories {expected_categories!r}, got {categories!r}"
 
