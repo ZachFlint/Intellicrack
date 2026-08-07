@@ -644,5 +644,4 @@ def _list_pwsh_pids(pwsh: str) -> set[int]:
     )
     if output := (completed.stdout or "").strip():
         return {int(p) for p in output.split(",") if p.strip().isdigit()}
-    else:
-        return set()
+    return set()
