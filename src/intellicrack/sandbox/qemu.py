@@ -59,7 +59,15 @@ from intellicrack.sandbox.base import (
     SandboxTimeoutError,
     ServiceChange,
 )
-from intellicrack.sandbox.log_helpers import format_yara_match as _format_yara_match
+from intellicrack.sandbox.log_helpers import (
+    ERR_YARA_NO_ARTIFACTS,
+    ERR_YARA_NO_MEMORY_DUMP,
+    ERR_YARA_UNKNOWN_TARGET,
+    YARA_SCAN_TARGETS,
+    YARA_TARGET_MEMORY,
+    format_yara_match as _format_yara_match,
+    scannable_output_files,
+)
 from intellicrack.sandbox.log_parsers import (
     parse_api_trace_log,
     parse_clipboard_log,
@@ -91,6 +99,10 @@ _SNAPSHOT_DISK_FORMAT = "qcow2"
 _JOB_STATUS_CONCLUDED = "concluded"
 _QMP_COMMAND_ID_PREFIX = "intellicrack-"
 _ERR_NOT_CONNECTED = "Not connected"
+_DUMP_POLL_INTERVAL_S = 0.5
+_DUMP_STATUS_NONE = "none"
+_DUMP_STATUS_ACTIVE = "active"
+_DUMP_STATUS_COMPLETED = "completed"
 _SCREENSHOT_STABILITY_POLL_DELAY_S = 0.05
 _SCREENSHOT_STABILITY_MAX_POLLS = 100
 _SCREENSHOT_INITIAL_DELAY_S = 0.05
@@ -190,6 +202,10 @@ _ERR_ANTI_EVASION_PROFILE_MISMATCH = (
     "QEMUConfig.anti_evasion_profile before launching to use a different profile."
 )
 _ERR_MEMORY_DUMP_FAILED = "memory dump failed"
+_ERR_MEMORY_DUMP_REFUSED = "QEMU refused the request"
+_ERR_MEMORY_DUMP_UNREADABLE = "the dump status could not be read, so the outcome is unknown"
+_ERR_MEMORY_DUMP_EMPTY = "QEMU reported the dump as complete but wrote nothing to {path}"
+_ERR_MEMORY_DUMP_TIMEOUT = "the dump had written {completed} bytes and was still running after {budget:.0f}s"
 _ERR_EXTRACT_FILES_FAILED = "dropped file extraction failed"
 _ERR_YARA_SCAN_FAILED = "YARA scan failed"
 _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
@@ -430,6 +446,21 @@ def _as_mapping(value: object) -> dict[str, object] | None:
     return None
 
 
+def _file_size_or_zero(path: Path) -> int:
+    """Report a file's size, treating an absent file as empty.
+
+    Args:
+        path: File to measure.
+
+    Returns:
+        int: Size in bytes, or 0 when the file does not exist.
+    """
+    try:
+        return path.stat().st_size
+    except OSError:
+        return 0
+
+
 def _as_sequence(value: object) -> list[object] | None:
     """Narrow a decoded JSON value to a list.
 
@@ -660,6 +691,10 @@ class QEMUConfig:
             the operation is reported as failed. Saving a snapshot writes the
             guest's whole RAM image, so this budget scales with ``memory_mb``
             rather than being an interactive timeout.
+        memory_dump_timeout: Total time in seconds a guest memory dump may run
+            before the operation is reported as failed. Like a snapshot this
+            writes the guest's whole RAM, and measured against QEMU 10.1.0 a
+            1024 MB guest took 3.6 s, so the budget scales with ``memory_mb``.
     """
 
     guest_os: GuestOS = GuestOS.WINDOWS
@@ -679,6 +714,7 @@ class QEMUConfig:
     guest_agent_ready_timeout: float = _QEMU_GA_PING_TIMEOUT
     guest_shutdown_timeout: float = 120.0
     snapshot_timeout: float = 600.0
+    memory_dump_timeout: float = 1800.0
 
 
 @dataclass
@@ -7439,17 +7475,28 @@ python3 /mnt/shared/monitor/agent.py &
         dump_id = secrets.token_hex(8)
         dump_path = self._shared_folder / "output" / f"memdump_{dump_id}.raw"
 
+        # Detached deliberately. A synchronous dump-guest-memory does not answer
+        # until the guest's whole RAM is on disk - measured at 3.6 s for a
+        # 1024 MB guest against QEMU 10.1.0, so roughly half a minute for the
+        # 8192 MB guests this backend runs - which is far past any sane reply
+        # timeout and holds the monitor lock for the duration, stalling every
+        # other query. Detached, the reply lands in about two milliseconds and
+        # the real progress is read from query-dump.
         result = await self._qmp.execute_command({
             "execute": "dump-guest-memory",
             "arguments": {
                 "paging": False,
                 "protocol": f"file:{dump_path}",
+                "detach": True,
             },
         })
 
         if not result.success:
-            _logger.warning("memory_dump_failed", error=result.error)
-            raise SandboxError(_ERR_MEMORY_DUMP_FAILED)
+            _logger.warning("memory_dump_rejected", error=result.error)
+            message = f"{_ERR_MEMORY_DUMP_FAILED}: {result.error or _ERR_MEMORY_DUMP_REFUSED}"
+            raise SandboxError(message)
+
+        await self._await_memory_dump(dump_path)
 
         _logger.info("memory_dump_created", path=str(dump_path))
 
@@ -7460,6 +7507,68 @@ python3 /mnt/shared/monitor/agent.py &
             return output_path
 
         return dump_path
+
+    async def _await_memory_dump(self, dump_path: Path) -> None:
+        """Wait for a detached guest memory dump and report what really happened.
+
+        ``query-dump`` carries global, sticky state: measured against QEMU
+        10.1.0 it reports ``status: "none"`` before any dump, and after a
+        *rejected* request it still reports the previous dump's ``completed``.
+        That is why the request's own reply is checked before this method is
+        entered - polling alone cannot tell a refused dump from a finished one.
+
+        Args:
+            dump_path: File the dump is being written to.
+
+        Raises:
+            SandboxError: If the monitor is gone, the dump failed, the status
+                could not be read, the budget ran out, or nothing was written.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        budget = self._qemu_config.memory_dump_timeout
+        deadline = time.monotonic() + budget
+        progress = 0
+        while time.monotonic() < deadline:
+            reply = await self._qmp.execute_command({"execute": "query-dump"})
+            state = _as_mapping(reply.data) if reply.success else None
+            if state is None:
+                _logger.warning("memory_dump_status_unreadable", error=reply.error)
+                message = f"{_ERR_MEMORY_DUMP_FAILED}: {reply.error or _ERR_MEMORY_DUMP_UNREADABLE}"
+                raise SandboxError(message)
+
+            status = state.get("status")
+            completed = state.get("completed")
+            if isinstance(completed, int):
+                progress = completed
+
+            # "none" is the state QEMU reports before a dump has started, and
+            # the accepted request has not necessarily reached the dump thread
+            # by the time this first poll goes out. The request's own reply was
+            # already checked, so here it means "not started yet", not "no dump
+            # was asked for".
+            if status in {_DUMP_STATUS_ACTIVE, _DUMP_STATUS_NONE}:
+                await asyncio.sleep(_DUMP_POLL_INTERVAL_S)
+                continue
+
+            if status != _DUMP_STATUS_COMPLETED:
+                _logger.warning("memory_dump_failed", status=str(status), completed=progress)
+                message = f"{_ERR_MEMORY_DUMP_FAILED}: QEMU reported the dump as {status}"
+                raise SandboxError(message)
+
+            written = await asyncio.to_thread(_file_size_or_zero, dump_path)
+            if written == 0:
+                _logger.warning("memory_dump_empty", path=str(dump_path))
+                message = f"{_ERR_MEMORY_DUMP_FAILED}: {_ERR_MEMORY_DUMP_EMPTY.format(path=dump_path)}"
+                raise SandboxError(message)
+
+            _logger.info("memory_dump_finished", path=str(dump_path), bytes_written=written)
+            return
+
+        _logger.warning("memory_dump_timed_out", budget=budget, completed=progress)
+        message = f"{_ERR_MEMORY_DUMP_FAILED}: {_ERR_MEMORY_DUMP_TIMEOUT.format(budget=budget, completed=progress)}"
+        raise SandboxError(message)
 
     async def extract_dropped_files(self, output_path: Path | None = None) -> Path:
         """Extract files created by the binary during execution.
@@ -7660,6 +7769,11 @@ python3 /mnt/shared/monitor/agent.py &
     ) -> list[dict[str, Any]]:
         """Run YARA rules against sandbox artifacts.
 
+        An empty result means the rules matched nothing in artifacts that were
+        really scanned. Having nothing to scan is a different outcome and is
+        raised rather than returned, so a scan that never reached the guest
+        cannot be mistaken for a clean one.
+
         Args:
             rules_path: Path to YARA rules file. Uses built-in rules if None.
             scan_target: What to scan - 'files' for dropped files, 'memory' for memory dump.
@@ -7668,9 +7782,16 @@ python3 /mnt/shared/monitor/agent.py &
             list[dict[str, Any]]: List of YARA match dictionaries.
 
         Raises:
-            SandboxError: If scan fails.
+            SandboxError: If the scan target is unknown, the sandbox has no
+                shared folder, or there is nothing of the requested kind to
+                scan.
         """
         _logger.info("qemu_yara_scan_started", rules_path=rules_path, scan_target=scan_target)
+        if scan_target not in YARA_SCAN_TARGETS:
+            _logger.warning("yara_scan_unknown_target", scan_target=scan_target)
+            raise SandboxError(
+                ERR_YARA_UNKNOWN_TARGET.format(target=scan_target, expected=", ".join(YARA_SCAN_TARGETS)),
+            )
         yara = require_yara()
 
         if self._shared_folder is None:
@@ -7710,8 +7831,11 @@ rule PackedBinary {
         matches: list[dict[str, Any]] = []
         output_dir = self._shared_folder / "output"
 
-        if scan_target == "memory":
+        if scan_target == YARA_TARGET_MEMORY:
             dump_files = await asyncio.to_thread(lambda: list(output_dir.glob("memdump_*.raw")))
+            if not dump_files:
+                _logger.warning("yara_scan_no_memory_dump", output_dir=str(output_dir))
+                raise SandboxError(ERR_YARA_NO_MEMORY_DUMP.format(path=output_dir))
             for dump_file in dump_files:
                 file_matches: list[Any] = await asyncio.to_thread(compiled_rules.match, filepath=str(dump_file))
                 matches.extend(_format_yara_match(ym, str(dump_file), "memory") for ym in file_matches)
@@ -7737,7 +7861,11 @@ rule PackedBinary {
 
                 scan_files = await asyncio.to_thread(_extract_zips)
             else:
-                scan_files = []
+                scan_files = await asyncio.to_thread(scannable_output_files, output_dir)
+
+            if not scan_files:
+                _logger.warning("yara_scan_no_artifacts", output_dir=str(output_dir))
+                raise SandboxError(ERR_YARA_NO_ARTIFACTS.format(path=output_dir))
 
             for scan_file in scan_files:
                 try:

@@ -1355,10 +1355,14 @@ class TestF0028YaraScanFallback:
     """F-0028: yara_scan fallback must scan dropped-file zips, not the input folder."""
 
     def test_yara_scan_uses_output_dir_not_input_on_no_zip(self, tmp_path: Path) -> None:
-        """When no dropped-file zip exists, scan_files must be empty, not the input dir.
+        """With no dropped-file zip the scan reads collected output, never the input dir.
 
-        The old bug fell back to scanning shared/input/ which contains
-        whatever the user originally submitted, not sandbox artifacts.
+        The old bug fell back to scanning shared/input/, which holds whatever
+        the user originally submitted rather than anything the guest produced.
+        Both files here carry content the built-in rules match, so a scan that
+        strayed into the input directory would say so in its own results: the
+        real engine runs, and the only rule that may come back is the one from
+        the collected artifact.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -1370,48 +1374,16 @@ class TestF0028YaraScanFallback:
         output_dir.mkdir(parents=True)
 
         user_file = input_dir / "user_submitted.exe"
-        user_file.write_bytes(b"\x4d\x5a" + b"\x00" * 62)
-
-        scanned_paths: list[str] = []
-
-        class _FakeRules:
-            def match(self, filepath: str) -> list[object]:
-                """Record scanned filepath.
-
-                Args:
-                    filepath: File being scanned.
-
-                Returns:
-                    list[object]: Empty match list.
-                """
-                scanned_paths.append(filepath)
-                return []
-
-        class _FakeYara:
-            @staticmethod
-            def compile(**_kwargs: object) -> _FakeRules:
-                """Return fake compiled rules.
-
-                Args:
-                    **_kwargs: Ignored.
-
-                Returns:
-                    _FakeRules: Fake rules object.
-                """
-                return _FakeRules()
-
-        import yara as _real_yara  # noqa: PLC0415
+        user_file.write_bytes(b"MZ" + b"\x00" * 32 + b"CreateRemoteThread\x00")
+        collected = output_dir / "collected.bin"
+        collected.write_bytes(b"MZ" + b"\x00" * 32 + b"UPX!" + b"\x00" * 16)
 
         sb = _make_sandbox(shared_folder=shared)
+        matches = asyncio.run(sb.yara_scan(scan_target="files"))
 
-        async def _run() -> list[dict[str, Any]]:
-            with patch.object(_real_yara, "compile", side_effect=_FakeYara.compile):
-                return await sb.yara_scan(scan_target="files")
-
-        asyncio.run(_run())
-
-        for p in scanned_paths:
-            assert "user_submitted" not in p, f"yara_scan must not scan user input; found '{p}' in scan_files"
+        sources = {Path(str(match["source"])).resolve() for match in matches}
+        assert sources == {collected.resolve()}, f"yara_scan scanned something other than the collected artifact: {sources}"
+        assert {match["rule"] for match in matches} == {"PackedBinary"}
 
     def test_yara_scan_scans_zip_artifacts_when_present(self, tmp_path: Path) -> None:
         """When a dropped-file zip exists, yara_scan uses it not the input dir.

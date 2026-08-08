@@ -18,11 +18,10 @@ Verifies the pure-Python primitives shared between
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
-from typing import Final, Protocol
+from typing import Any, Final, cast
 
+from intellicrack.core._optional_imports import require_yara
 from intellicrack.sandbox.log_helpers import (
-    YARA_MATCH_MIN_FIELDS,
     coerce_protocol,
     format_yara_match,
     infer_direction,
@@ -30,34 +29,6 @@ from intellicrack.sandbox.log_helpers import (
     safe_int,
     split_addr_port,
 )
-
-
-class _YaraStringsEntry(Protocol):
-    """Tuple-shaped duck type expected by ``format_yara_match``.
-
-    Attributes are accessed positionally via ``__getitem__`` and the
-    entry length is reported via ``__len__``; entries shorter than
-    ``YARA_MATCH_MIN_FIELDS`` are skipped.
-    """
-
-    def __len__(self) -> int:
-        """Return the number of tuple-like fields.
-
-        Returns:
-            int: Field count consumed by ``format_yara_match``.
-        """
-        ...
-
-    def __getitem__(self, index: int) -> int | str | bytes:
-        """Return the value at ``index``.
-
-        Args:
-            index: Zero-based field index.
-
-        Returns:
-            int | str | bytes: Field value at ``index``.
-        """
-        ...
 
 
 _IPV4_OFFSET: Final[int] = 0x1000
@@ -241,139 +212,93 @@ class TestSafeFloat:
         assert _approx_equal(safe_float("-1.5"), -1.5)
 
 
-@dataclass(frozen=True)
-class _MatchString:
-    """Tuple-shaped mimic of the legacy ``yara.Match`` strings entry.
-
-    Attributes:
-        offset: Byte offset where the match occurred.
-        identifier: YARA string identifier (``$name``).
-        data: Matched data, either ``bytes`` or text.
-    """
-
-    offset: int
-    identifier: str
-    data: bytes | str
-
-    def __len__(self) -> int:
-        """Return the entry length for ``len()`` compatibility.
-
-        Returns:
-            int: Always 3 (matching the legacy YARA tuple shape).
-        """
-        return 3
-
-    def __getitem__(self, index: int) -> int | str | bytes:
-        """Provide tuple-style indexed access.
-
-        Args:
-            index: Zero-based field index.
-
-        Returns:
-            int | str | bytes: The value at ``index``.
-        """
-        return (self.offset, self.identifier, self.data)[index]
-
-
-@dataclass
-class _Match:
-    """Minimal duck-typed yara.Match used by the helpers.
-
-    Attributes:
-        rule: YARA rule name.
-        namespace: Namespace label.
-        tags: Sequence of tag strings.
-        strings: Match-string entries.
-    """
-
-    rule: str
-    namespace: str
-    tags: list[str] = field(default_factory=list)
-    strings: list[_YaraStringsEntry] = field(default_factory=list)
-
-
-@dataclass(frozen=True)
-class _ShortEntry:
-    """Two-element entry that should be skipped by the formatter.
-
-    Attributes:
-        offset: Byte offset (used to mimic the YARA tuple).
-        identifier: Identifier text.
-    """
-
-    offset: int
-    identifier: str
-
-    def __len__(self) -> int:
-        """Return the entry length.
-
-        Returns:
-            int: Always 2 (below ``YARA_MATCH_MIN_FIELDS``).
-        """
-        return 2
-
-    def __getitem__(self, index: int) -> int | str:
-        """Return tuple-like fallback values.
-
-        Args:
-            index: Field index.
-
-        Returns:
-            int | str: Value at ``index``.
-        """
-        return (self.offset, self.identifier)[index]
-
-
 class _Bare:
     """Object with no YARA attributes (forces all defaults)."""
 
 
+_TAGGED_RULE: Final[str] = """
+rule DetectMZ : pe windows {
+    strings:
+        $mz = "MZ"
+        $marker = "IntellicrackMarker"
+    condition:
+        any of them
+}
+"""
+
+_REPEATED_RULE: Final[str] = """
+rule Repeated {
+    strings:
+        $needle = "CreateRemoteThread"
+    condition:
+        $needle
+}
+"""
+
+_SAMPLE_BYTES: Final[bytes] = b"MZ\x90\x00padding-IntellicrackMarker-tail"
+_REPEATED_BYTES: Final[bytes] = b"..CreateRemoteThread..CreateRemoteThread.."
+
+
+def _only_match(source: str, data: bytes) -> object:
+    """Compile a rule with the real engine and return its single match.
+
+    Args:
+        source: YARA rule source.
+        data: Bytes to scan.
+
+    Returns:
+        object: The ``yara.Match`` the real engine produced.
+    """
+    yara_compile: Any = require_yara().compile
+    rules: Any = yara_compile(source=source)
+    produced: Any = rules.match(data=data)
+    matches: list[object] = list(cast("list[object]", produced))
+    assert len(matches) == 1, f"the rule was expected to produce exactly one match, got {len(matches)}"
+    return matches[0]
+
+
 class TestFormatYaraMatch:
-    """Tests for the ``format_yara_match`` helper."""
+    """Tests for the ``format_yara_match`` helper.
 
-    def test_minimum_field_constant(self) -> None:
-        """Sanity check that the public minimum-field constant is 3."""
-        assert YARA_MATCH_MIN_FIELDS == 3
+    These run against real ``yara.Match`` objects produced by the installed
+    engine. An earlier version of this suite described the match with
+    tuple-shaped doubles, which is a shape yara-python has not produced since
+    the 4.3 series: the helper indexed those doubles happily and raised
+    ``TypeError: object of type 'yara.StringMatch' has no len()`` on every real
+    match, which no double-based test could ever have caught.
+    """
 
-    def test_full_match_with_bytes(self) -> None:
-        """Bytes ``data`` is returned as a hex-encoded string."""
-        match = _Match(
-            "DetectMZ",
-            "default",
-            ["pe", "windows"],
-            [_MatchString(_IPV4_OFFSET, "$mz", b"MZ")],
-        )
-        result = format_yara_match(match, "C:\\sample.exe", "files")
+    def test_a_real_match_is_described_by_rule_namespace_and_tags(self) -> None:
+        """The identifying fields come straight off the real match object."""
+        result = format_yara_match(_only_match(_TAGGED_RULE, _SAMPLE_BYTES), "C:\\sample.exe", "files")
+
         assert result["rule"] == "DetectMZ"
         assert result["namespace"] == "default"
         assert result["tags"] == ["pe", "windows"]
         assert result["source"] == "C:\\sample.exe"
         assert result["scan_type"] == "files"
-        assert result["strings"] == [
-            {
-                "offset": _IPV4_OFFSET,
-                "identifier": "$mz",
-                "data": "4d5a",
-            },
-        ]
 
-    def test_text_data_is_stringified(self) -> None:
-        """Non-bytes ``data`` is coerced via ``str``."""
-        match = _Match(
-            "TextRule",
-            "ns",
-            [],
-            [_MatchString(0x100, "$t", "literal")],
-        )
-        result = format_yara_match(match, "memdump.raw", "memory")
-        assert result["strings"][0]["data"] == "literal"
+    def test_a_real_match_reports_every_matched_string_with_its_offset(self) -> None:
+        """Each matched string is reported at the offset it really occupies."""
+        result = format_yara_match(_only_match(_TAGGED_RULE, _SAMPLE_BYTES), "sample.bin", "files")
+
+        found = {entry["identifier"]: entry for entry in result["strings"]}
+        assert set(found) == {"$mz", "$marker"}
+        assert found["$mz"]["offset"] == _SAMPLE_BYTES.index(b"MZ")
+        assert found["$mz"]["data"] == b"MZ".hex()
+        assert found["$marker"]["offset"] == _SAMPLE_BYTES.index(b"IntellicrackMarker")
+        assert found["$marker"]["data"] == b"IntellicrackMarker".hex()
+
+    def test_a_string_found_twice_is_reported_twice(self) -> None:
+        """One record per occurrence, not one per string identifier."""
+        result = format_yara_match(_only_match(_REPEATED_RULE, _REPEATED_BYTES), "memdump.raw", "memory")
+
+        offsets = sorted(entry["offset"] for entry in result["strings"])
+        needle = b"CreateRemoteThread"
+        assert offsets == [_REPEATED_BYTES.index(needle), _REPEATED_BYTES.rindex(needle)]
+        assert {entry["identifier"] for entry in result["strings"]} == {"$needle"}
+        assert {entry["data"] for entry in result["strings"]} == {needle.hex()}
         assert result["scan_type"] == "memory"
-
-    def test_skips_short_strings_entry(self) -> None:
-        """Tuple-like entries shorter than 3 fields are skipped."""
-        match = _Match("Skip", "ns", [], [_ShortEntry(0, "$x")])
-        result = format_yara_match(match, "f", "files")
-        assert result["strings"] == []
 
     def test_missing_attributes_default(self) -> None:
         """Missing optional attributes default to empty/blank values."""
@@ -384,19 +309,3 @@ class TestFormatYaraMatch:
         assert result["strings"] == []
         assert result["source"] == "src"
         assert result["scan_type"] == "files"
-
-    def test_multiple_strings_preserve_order(self) -> None:
-        """Multiple matched strings appear in input order."""
-        match = _Match(
-            "Multi",
-            "ns",
-            [],
-            [
-                _MatchString(0x10, "$a", b"\x00\x01"),
-                _MatchString(0x20, "$b", "abc"),
-            ],
-        )
-        result = format_yara_match(match, "src", "files")
-        assert [s["identifier"] for s in result["strings"]] == ["$a", "$b"]
-        assert result["strings"][0]["data"] == "0001"
-        assert result["strings"][1]["data"] == "abc"

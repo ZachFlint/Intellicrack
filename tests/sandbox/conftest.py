@@ -924,6 +924,7 @@ class StubManager:
         config: SandboxConfig | None = None,
         time_limit: int | None = None,
         qemu_config: object = None,
+        instance_id: str | None = None,
         *,
         monitor: bool = True,
         reuse_instance: bool = False,
@@ -938,14 +939,26 @@ class StubManager:
             time_limit: Optional timeout.
             qemu_config: Optional QEMU config (kept as ``object`` for compatibility
                 with callers that import ``QEMUConfig`` from sandbox.qemu).
+            instance_id: Instance the caller directed the run at. Like the real
+                manager, a named instance is used instead of creating one, and
+                naming an unknown instance fails rather than falling back.
             monitor: Whether to monitor.
             reuse_instance: Whether to reuse an existing instance.
 
         Returns:
             tuple[StubInstance, ExecutionReport]: Instance and report.
+
+        Raises:
+            KeyError: If a named instance does not exist.
         """
         del reuse_instance, config, qemu_config
-        inst = await self.create(sandbox_type=sandbox_type, auto_start=True)
+        if instance_id is not None:
+            if instance_id not in self._instances:
+                msg = f"unknown instance: {instance_id}"
+                raise KeyError(msg)
+            inst = self._instances[instance_id]
+        else:
+            inst = await self.create(sandbox_type=sandbox_type, auto_start=True)
         inst.binary_path = binary_path
         report = await inst.sandbox.run_binary(
             binary_path=binary_path,

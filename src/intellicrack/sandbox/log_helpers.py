@@ -13,14 +13,27 @@ operate purely on strings and YARA match objects so they can be reused across bo
 
 from __future__ import annotations
 
-from typing import Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 
-YARA_MATCH_MIN_FIELDS: Final[int] = 3
-"""Minimum tuple length for a usable ``yara.Match`` strings entry.
+if TYPE_CHECKING:
+    from pathlib import Path
 
-Each entry is expected to be ``(offset, identifier, data)``; entries with fewer than three positional members are skipped.
-"""
+
+YARA_TARGET_FILES: Final[str] = "files"
+YARA_TARGET_MEMORY: Final[str] = "memory"
+YARA_SCAN_TARGETS: Final[tuple[str, str]] = (YARA_TARGET_FILES, YARA_TARGET_MEMORY)
+YARA_NON_ARTIFACT_SUFFIXES: Final[frozenset[str]] = frozenset({".txt", ".log"})
+MEMORY_DUMP_PREFIX: Final[str] = "memdump_"
+
+ERR_YARA_UNKNOWN_TARGET: Final[str] = "unknown scan target {target!r}; expected one of {expected}"
+ERR_YARA_NO_MEMORY_DUMP: Final[str] = (
+    "no guest memory dump to scan in {path}; run dump_memory() on the running guest before scanning memory"
+)
+ERR_YARA_NO_ARTIFACTS: Final[str] = (
+    "no collected artifacts to scan in {path}; the guest produced no dropped-file archive and the output directory holds nothing scannable"
+)
+
 
 def split_addr_port(value: str) -> tuple[str, int]:
     """Split an ``address:port`` literal into its components.
@@ -136,6 +149,61 @@ def safe_float(value: str) -> float:
         return 0.0
 
 
+def scannable_output_files(output_dir: Path) -> list[Path]:
+    """Collect the guest artifacts a file-target YARA scan should read.
+
+    The dropped-file archive is the preferred input, but a guest that never
+    dropped anything still leaves collected artifacts in the output directory.
+    Monitor transcripts and guest memory dumps are excluded: the transcripts are
+    the sandbox's own text output rather than the guest's, and the dumps belong
+    to the memory target.
+
+    Args:
+        output_dir: Shared-folder output directory the guest writes into.
+
+    Returns:
+        list[Path]: Regular files worth scanning; empty when there are none.
+    """
+    if not output_dir.is_dir():
+        return []
+    return [
+        entry
+        for entry in output_dir.rglob("*")
+        if entry.is_file() and entry.suffix.lower() not in YARA_NON_ARTIFACT_SUFFIXES and not entry.name.startswith(MEMORY_DUMP_PREFIX)
+    ]
+
+
+def format_yara_string_instances(entry: object) -> list[dict[str, Any]]:
+    """Flatten one matched YARA string into one record per occurrence.
+
+    ``yara.Match.strings`` holds a ``StringMatch`` per string identifier, and
+    each of those holds a ``StringMatchInstance`` per place the string was
+    found, carrying the offset and the bytes that matched. A string found four
+    times therefore produces four records.
+
+    Args:
+        entry: A ``yara.StringMatch`` as produced by ``yara-python``.
+
+    Returns:
+        list[dict[str, Any]]: One ``offset``/``identifier``/``data`` record per
+        occurrence, with byte data hex-encoded so the result stays
+        JSON-serialisable.
+    """
+    identifier = str(getattr(entry, "identifier", ""))
+    instances: list[object] = list(getattr(entry, "instances", []))
+    records: list[dict[str, Any]] = []
+    for instance in instances:
+        data: object = getattr(instance, "matched_data", b"")
+        records.append(
+            {
+                "offset": getattr(instance, "offset", 0),
+                "identifier": identifier,
+                "data": data.hex() if isinstance(data, bytes) else str(data),
+            },
+        )
+    return records
+
+
 def format_yara_match(m: object, source: str, scan_type: str) -> dict[str, Any]:
     """Normalize a YARA match object into a serializable dictionary.
 
@@ -158,18 +226,10 @@ def format_yara_match(m: object, source: str, scan_type: str) -> dict[str, Any]:
     rule: str = getattr(m, "rule", "")
     namespace: str = getattr(m, "namespace", "")
     tags: list[str] = list(getattr(m, "tags", []))
-    raw_strings: list[Any] = list(getattr(m, "strings", []))
+    raw_strings: list[object] = list(getattr(m, "strings", []))
     formatted: list[dict[str, Any]] = []
-    for s in raw_strings:
-        if len(s) >= YARA_MATCH_MIN_FIELDS:
-            data_val: Any = s[2]
-            formatted.append(
-                {
-                    "offset": s[0],
-                    "identifier": s[1],
-                    "data": data_val.hex() if isinstance(data_val, bytes) else str(data_val),
-                },
-            )
+    for entry in raw_strings:
+        formatted.extend(format_yara_string_instances(entry))
     return {
         "rule": rule,
         "namespace": namespace,
@@ -181,11 +241,20 @@ def format_yara_match(m: object, source: str, scan_type: str) -> dict[str, Any]:
 
 
 __all__: list[str] = [
-    "YARA_MATCH_MIN_FIELDS",
+    "ERR_YARA_NO_ARTIFACTS",
+    "ERR_YARA_NO_MEMORY_DUMP",
+    "ERR_YARA_UNKNOWN_TARGET",
+    "MEMORY_DUMP_PREFIX",
+    "YARA_NON_ARTIFACT_SUFFIXES",
+    "YARA_SCAN_TARGETS",
+    "YARA_TARGET_FILES",
+    "YARA_TARGET_MEMORY",
     "coerce_protocol",
     "format_yara_match",
+    "format_yara_string_instances",
     "infer_direction",
     "safe_float",
     "safe_int",
+    "scannable_output_files",
     "split_addr_port",
 ]
