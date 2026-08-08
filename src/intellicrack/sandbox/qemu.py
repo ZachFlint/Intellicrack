@@ -230,6 +230,10 @@ _ERR_GUEST_FILE_NO_HANDLE = "qemu-guest-agent opened {path} inside the guest but
 _ERR_GUEST_FILE_WRITE_FAILED = "qemu-guest-agent could not write {path} inside the guest: {error}"
 _ERR_GUEST_FILE_SHORT_WRITE = "qemu-guest-agent wrote {written} of {expected} bytes to {path} inside the guest"
 _ERR_GUEST_COMMAND_TIMEOUT = "guest command {command} did not exit within {timeout}s"
+_ERR_QEMU_GA_EXEC_NOT_READY = (
+    "qemu-guest-agent answered guest-ping but ran no command inside the guest within {budget:.0f}s; last failure: {reason}"
+)
+_ERR_QEMU_GA_EXEC_NOT_ATTEMPTED = "the readiness budget was already spent before a command could be tried"
 _ERR_GUEST_SHARED_MOUNT_POINT = "could not create the shared-folder mount point {path} inside the guest"
 _ERR_GUEST_SHARED_DEVICE_ENUM = "could not enumerate guest block devices while locating the shared volume"
 _ERR_GUEST_SHARED_DEVICE_NOT_FOUND = (
@@ -252,9 +256,13 @@ _READINESS_POLL_TIMEOUT = 60.0
 _RESULT_PAYLOAD_SEPARATOR = "|IC_RESULT|"
 _QEMU_GA_PING_TIMEOUT = 90.0
 _QEMU_GA_PING_INTERVAL = 1.0
-_QEMU_GA_EXEC_TIMEOUT = 10.0
+# Reply deadline for one guest-agent request. Public because it is the contract
+# a caller has to reason about: a guest that has not answered within it is a
+# guest whose command was lost, not a guest that failed.
+QEMU_GA_EXEC_TIMEOUT: Final[float] = 10.0
 _QEMU_GA_CONNECT_TIMEOUT = 30.0
 _QEMU_GA_CONNECT_RETRY_INTERVAL: Final[float] = 1.0
+_QEMU_GA_EXEC_PROBE_INTERVAL: Final[float] = 2.0
 # Payload bytes per guest-file-write. The buffer travels base64-encoded inside
 # one JSON line, so this is about 88 KiB on the wire - comfortably inside the
 # agent's own line limit while keeping the number of round trips low.
@@ -396,6 +404,11 @@ _LSBLK_ESCAPE_BASE: Final[int] = 16
 
 _GUEST_COMMAND_TIMEOUT: Final[float] = 60.0
 _GUEST_COMMAND_POLL_INTERVAL: Final[float] = 0.25
+# The smallest command each guest family can run: it spawns a process, exits
+# immediately and touches nothing, so completing it proves the agent's spawn
+# path works without depending on anything the sandbox has not set up yet.
+_GUEST_EXEC_PROBE_WINDOWS: Final[tuple[str, tuple[str, ...]]] = ("cmd.exe", ("/c", "exit", "0"))
+_GUEST_EXEC_PROBE_LINUX: Final[tuple[str, tuple[str, ...]]] = ("/bin/sh", ("-c", "exit 0"))
 _WINDOWS_SYSTEM_DRIVE: Final[str] = "C:"
 _WINDOWS_SYSTEM_ROOT: Final[str] = "C:\\Windows"
 _WINDOWS_DRIVE_SUFFIX: Final[str] = ":"
@@ -1804,7 +1817,7 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
                 return payload
             _logger.debug(self._event("reply_event_skipped"), keys=sorted(payload))
 
-    async def ping(self, time_limit: float = _QEMU_GA_EXEC_TIMEOUT) -> QMPResponse:
+    async def ping(self, time_limit: float = QEMU_GA_EXEC_TIMEOUT) -> QMPResponse:
         """Send ``guest-ping`` to verify the agent is answering.
 
         Args:
@@ -1851,7 +1864,7 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
         args: Sequence[str],
         *,
         capture_output: bool = False,
-        time_limit: float = _QEMU_GA_EXEC_TIMEOUT,
+        time_limit: float = QEMU_GA_EXEC_TIMEOUT,
     ) -> QMPResponse:
         """Launch a program inside the guest via ``guest-exec``.
 
@@ -1878,7 +1891,7 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
     async def guest_exec_status(
         self,
         pid: int,
-        time_limit: float = _QEMU_GA_EXEC_TIMEOUT,
+        time_limit: float = QEMU_GA_EXEC_TIMEOUT,
     ) -> GuestExecStatus:
         """Query the state and captured output of a ``guest-exec`` process.
 
@@ -2433,6 +2446,7 @@ class QEMUSandbox(SandboxBase):
         self._guest_shared_root: str | None = None
         self._guest_system_drive_value: str | None = None
         self._guest_system_root_value: str | None = None
+        self._guest_exec_ready: bool = False
         _logger.info(
             "qemu_sandbox_initialized",
             guest_os=self._qemu_config.guest_os.value,
@@ -3268,7 +3282,7 @@ class QEMUSandbox(SandboxBase):
         deadline = time.monotonic() + ping_timeout
         last_error: str | None = None
         while time.monotonic() < deadline:
-            response = await self._qga.ping(time_limit=_QEMU_GA_EXEC_TIMEOUT)
+            response = await self._qga.ping(time_limit=QEMU_GA_EXEC_TIMEOUT)
             if response.success:
                 _logger.debug(
                     "qemu_ga_ping_ok",
@@ -3322,7 +3336,7 @@ class QEMUSandbox(SandboxBase):
             path,
             args,
             capture_output=capture_output,
-            time_limit=_QEMU_GA_EXEC_TIMEOUT,
+            time_limit=QEMU_GA_EXEC_TIMEOUT,
         )
         if not response.success:
             _logger.warning(
@@ -3356,17 +3370,21 @@ class QEMUSandbox(SandboxBase):
         return pid_raw
 
     async def _ensure_guest_agent_ready(self) -> None:
-        """Open the guest-agent channel and wait until the agent answers.
+        """Open the guest-agent channel and wait until the agent runs commands.
 
         ``QEMUConfig.guest_agent_ready_timeout`` is the whole budget for a
         booting guest: whatever the channel spends connecting and
-        resynchronising is taken off the time left for ``guest-ping``, so the
-        total wait is the configured one rather than a multiple of it.
+        resynchronising is taken off the time left for ``guest-ping``, and
+        whatever is left after that is what the guest gets to prove it can run
+        a command, so the total wait is the configured one rather than a
+        multiple of it.
 
         Propagates the ``SandboxError`` raised by
-        :meth:`_connect_guest_agent_channel` when the channel never opens, and
-        by :meth:`_wait_for_qemu_ga` when the agent never answers
-        ``guest-ping`` within what is left of the budget.
+        :meth:`_connect_guest_agent_channel` when the channel never opens, by
+        :meth:`_wait_for_qemu_ga` when the agent never answers ``guest-ping``
+        within what is left of the budget, and by
+        :meth:`_wait_for_guest_exec` when it answers pings but never runs
+        anything.
         """
         deadline = time.monotonic() + self._qemu_config.guest_agent_ready_timeout
         await self._connect_guest_agent_channel()
@@ -3374,6 +3392,72 @@ class QEMUSandbox(SandboxBase):
             ping_timeout=max(deadline - time.monotonic(), 0.0),
             poll_interval=_QEMU_GA_PING_INTERVAL,
         )
+        await self._wait_for_guest_exec(deadline)
+
+    def _guest_exec_probe(self) -> tuple[str, list[str]]:
+        """Return the smallest command that proves the agent can spawn a process.
+
+        Returns:
+            tuple[str, list[str]]: Executable and argument list for the
+            configured guest family.
+
+        Raises:
+            SandboxError: If the configured guest family is not supported.
+        """
+        guest_os = self._qemu_config.guest_os
+        if guest_os == GuestOS.WINDOWS:
+            path, args = _GUEST_EXEC_PROBE_WINDOWS
+        elif guest_os == GuestOS.LINUX:
+            path, args = _GUEST_EXEC_PROBE_LINUX
+        else:
+            _logger.warning("guest_exec_probe_unsupported_guest_os", guest_os=str(guest_os))
+            raise SandboxError(_ERR_UNSUPPORTED_GUEST_OS)
+        return path, list(args)
+
+    async def _wait_for_guest_exec(self, deadline: float) -> None:
+        """Wait until the guest agent really runs a command, not just answers pings.
+
+        ``guest-ping`` is answered by the agent's dispatch loop and proves
+        nothing about ``guest-exec``, which has to reach the guest's process
+        creation path. On a Windows guest those two become usable minutes
+        apart: measured on a cold ``windows11-intellicrack-v4`` boot the agent
+        answered ping twelve seconds in and left the next ``guest-exec``
+        unanswered past its ten-second reply deadline, which aborted the whole
+        start with almost the entire readiness budget unspent. Since the
+        backend's very next act is always to run something inside the guest,
+        readiness has to mean a command completed, and a command that times out
+        while the budget still has room is a retry rather than a failure.
+
+        Args:
+            deadline: Monotonic clock value at which the readiness budget for
+                the whole agent handshake expires.
+
+        Raises:
+            SandboxError: If no command completed before ``deadline``.
+        """
+        if self._guest_exec_ready:
+            return
+
+        path, args = self._guest_exec_probe()
+        reason = _ERR_QEMU_GA_EXEC_NOT_ATTEMPTED
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            try:
+                status = await self._guest_run(path, args, time_limit=min(remaining, _GUEST_COMMAND_TIMEOUT))
+            except SandboxError as e:
+                reason = str(e)
+                _logger.debug("guest_exec_probe_retry", path=path, arg=list(args), error=reason)
+            else:
+                _logger.info("guest_exec_probe_completed", path=path, exit_code=status.exit_code)
+                self._guest_exec_ready = True
+                return
+            await asyncio.sleep(min(_QEMU_GA_EXEC_PROBE_INTERVAL, max(deadline - time.monotonic(), 0.0)))
+
+        budget = self._qemu_config.guest_agent_ready_timeout
+        _logger.warning("guest_exec_probe_failed", time_limit=budget, error=reason)
+        raise SandboxError(_ERR_QEMU_GA_EXEC_NOT_READY.format(budget=budget, reason=reason))
 
     async def _guest_run(
         self,
@@ -4861,6 +4945,7 @@ class QEMUSandbox(SandboxBase):
         self._guest_shared_root = None
         self._guest_system_drive_value = None
         self._guest_system_root_value = None
+        self._guest_exec_ready = False
 
     @staticmethod
     def _windows_agent_script_content() -> str:
