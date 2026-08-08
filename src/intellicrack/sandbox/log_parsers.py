@@ -27,7 +27,7 @@ abandoning a partial report on a single bad line.
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Final
 
 from intellicrack.core.logging import get_logger
 from intellicrack.sandbox.base import (
@@ -60,6 +60,12 @@ if TYPE_CHECKING:
 
 
 _logger = get_logger(__name__)
+
+# PowerShell's default Out-File/Add-Content encoding stamps a UTF-8
+# byte-order-mark onto every in-guest monitor log. Decoding with
+# "utf-8-sig" removes it from the file, and stripping it per line covers
+# the logs this app did not write.
+_BOM: Final[str] = "\ufeff"
 
 FILE_LOG_MIN_PARTS: int = 3
 REGISTRY_LOG_MIN_PARTS: int = 3
@@ -109,13 +115,13 @@ async def read_log_lines(shared_folder: Path | None, name: str) -> list[str]:
     try:
         raw = await asyncio.to_thread(
             log_path.read_text,
-            encoding="utf-8",
+            encoding="utf-8-sig",
             errors="ignore",
         )
     except OSError as err:
         _logger.warning("log_read_failed", log=name, error=str(err))
         return []
-    return [line for line in (ln.strip() for ln in raw.splitlines()) if line]
+    return [line for line in (ln.strip().lstrip(_BOM) for ln in raw.splitlines()) if line]
 
 
 async def parse_file_log(
