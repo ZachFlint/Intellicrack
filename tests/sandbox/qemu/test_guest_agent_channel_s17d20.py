@@ -66,6 +66,7 @@ from tests.sandbox.qemu.guest_agent_server import (
     UNDECODABLE_LINE,
     GuestAgentProtocolServer,
     GuestCommandResult,
+    GuestExecRecord,
     IntellicrackAgentServer,
     QmpProtocolServer,
     SilentGuestAgentServer,
@@ -178,6 +179,15 @@ class _ChannelTestSandbox(QEMUSandbox):
         """
         return self._agent_guest_pid
 
+    def probe_command(self) -> tuple[str, list[str]]:
+        """Return the readiness probe the backend runs before the launcher.
+
+        Returns:
+            tuple[str, list[str]]: Executable and argument list of the
+            production readiness probe for the configured guest family.
+        """
+        return self._guest_exec_probe()
+
     async def close_clients(self) -> None:
         """Disconnect both protocol clients if they were opened."""
         if self._qga is not None:
@@ -263,6 +273,28 @@ async def _settle_socket_state(server: SilentGuestAgentServer) -> None:
         return
 
 
+def _launcher_exec_records(
+    server: GuestAgentProtocolServer,
+    probe: tuple[str, list[str]],
+) -> list[GuestExecRecord]:
+    """Return the recorded guest-execs that are not the readiness probe.
+
+    Readiness costs one ``guest-exec`` of its own before any real work runs
+    (S17-D65). ``probe`` is taken from the sandbox under test rather than
+    restated here, so a change to the probe cannot leave this filter quietly
+    matching the wrong invocation.
+
+    Args:
+        server: Agent server that recorded the invocations.
+        probe: Executable and argument list of the production readiness probe.
+
+    Returns:
+        list[GuestExecRecord]: Records for every non-probe ``guest-exec``.
+    """
+    probe_path, probe_args = probe
+    return [record for record in server.exec_records if not (record.path == probe_path and list(record.args) == probe_args)]
+
+
 class TestGuestAgentTrafficUsesTheAgentChannel:
     """guest-* commands must reach the agent channel and never the monitor."""
 
@@ -283,12 +315,14 @@ class TestGuestAgentTrafficUsesTheAgentChannel:
             await sandbox.connect_qmp()
             await sandbox.bootstrap()
 
+            launchers = _launcher_exec_records(ga_server, sandbox.probe_command())
+
             assert sandbox.channel_port() == ga_server.port
-            assert sandbox.agent_guest_pid() == DEFAULT_GUEST_EXEC_PID
             assert "guest-ping" in ga_server.commands
-            assert ga_server.commands.count("guest-exec") == 1
-            assert ga_server.exec_arguments[0]["path"] == "/bin/bash"
-            assert ga_server.exec_arguments[0]["arg"] == [_LINUX_LAUNCH_PATH]
+            assert len(launchers) == 1, f"bootstrap ran more than the launcher: {ga_server.command_lines()}"
+            assert sandbox.agent_guest_pid() == launchers[0].pid
+            assert launchers[0].path == "/bin/bash"
+            assert list(launchers[0].args) == [_LINUX_LAUNCH_PATH]
 
             guest_commands_on_monitor = [name for name in qmp_server.commands if name.startswith("guest-")]
             assert not guest_commands_on_monitor, (

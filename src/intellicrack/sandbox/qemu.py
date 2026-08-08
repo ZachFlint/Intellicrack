@@ -108,18 +108,22 @@ _SCREENSHOT_STABILITY_MAX_POLLS = 100
 _SCREENSHOT_INITIAL_DELAY_S = 0.05
 _ERR_SCREENSHOT_NOT_STABLE = "PPM file did not stabilize before timeout"
 _ERR_SCREENSHOT_CONVERSION_FAILED = "PPM to PNG conversion failed"
-_MONITOR_SCRIPT_NAMES: Final[tuple[str, ...]] = (
+# Public because which collectors a guest receives is part of what this backend
+# promises a caller, not an implementation detail: a report tab can only ever
+# have content if the collector feeding it is in this list.
+MONITOR_SCRIPT_NAMES: Final[tuple[str, ...]] = (
     "api_trace.ps1",
     "clipboard_monitor.ps1",
     "dll_monitor.ps1",
     "injection_monitor.ps1",
     "kernel_object_monitor.ps1",
+    "registry_monitor.ps1",
     "resource_monitor.ps1",
     "service_monitor.ps1",
 )
 _MONITORING_LOG_NAMES: Final[tuple[str, ...]] = (
     "file_changes.log",
-    "registry_changes.log",
+    "registry_monitor.log",
     "network_activity.log",
     "process_activity.log",
     "api_trace.log",
@@ -4955,7 +4959,7 @@ class QEMUSandbox(SandboxBase):
         ``$PSScriptRoot`` is the ``monitor`` directory of the FAT drive the
         guest mounted, whose parent is the share root - because the host
         generates this file before the guest has assigned that drive a letter,
-        (2) launches the seven bundled monitor scripts from its own directory
+        (2) launches the eight bundled monitor scripts from its own directory
         with ``-LogDir <share>\logs``, (3) listens on ``0.0.0.0:4445`` for
         argv-style command requests validated against a short allowlist
         (``powershell``, ``cmd``, any ``.exe`` under the share root,
@@ -5020,6 +5024,7 @@ $monitorScripts = @(
     'dll_monitor.ps1',
     'injection_monitor.ps1',
     'kernel_object_monitor.ps1',
+    'registry_monitor.ps1',
     'resource_monitor.ps1',
     'service_monitor.ps1'
 )
@@ -5254,7 +5259,7 @@ while ($true) {
 """
 
     @staticmethod
-    def _bundled_scripts_dir() -> Path:
+    def bundled_scripts_dir() -> Path:
         """Return the on-disk directory that contains bundled monitor PS1 scripts.
 
         Returns:
@@ -5268,7 +5273,7 @@ while ($true) {
         r"""Create guest agent scripts and stage bundled monitor scripts.
 
         On Windows, writes ``agent.ps1`` and ``start_agent.cmd`` into the
-        host-side shared folder's ``monitor`` subdirectory, alongside the seven
+        host-side shared folder's ``monitor`` subdirectory, alongside the eight
         bundled PS1 monitor scripts. Both generated scripts derive the in-guest
         share root from their own location rather than naming a drive letter,
         because the guest has not assigned one yet when they are written: the
@@ -5306,8 +5311,8 @@ while ($true) {
             agent_content = self._windows_agent_script_content()
             await asyncio.to_thread(agent_script.write_text, agent_content, encoding="utf-8")
 
-            scripts_src = await asyncio.to_thread(self._bundled_scripts_dir)
-            for script_name in _MONITOR_SCRIPT_NAMES:
+            scripts_src = await asyncio.to_thread(self.bundled_scripts_dir)
+            for script_name in MONITOR_SCRIPT_NAMES:
                 src = scripts_src / script_name
                 dst = monitor_dir / script_name
                 if await asyncio.to_thread(src.exists):
@@ -6725,7 +6730,7 @@ python3 /mnt/shared/monitor/agent.py &
         shared = self._shared_folder
         return _MonitoringLogs(
             file_changes=await parse_file_log(shared, "file_changes.log"),
-            registry_changes=await parse_registry_log(shared, "registry_changes.log"),
+            registry_changes=await parse_registry_log(shared, "registry_monitor.log"),
             network_activity=await parse_network_log(shared, "network_activity.log"),
             process_activity=await parse_process_log(shared, "process_activity.log"),
             api_calls=await parse_api_trace_log(shared, "api_trace.log"),
@@ -6975,6 +6980,15 @@ python3 /mnt/shared/monitor/agent.py &
             return
 
         guest_path = self._guest_shared_path(dest)
+        relative_parent = PurePosixPath(dest).parent
+        # A single path component - "input", "output", "logs" or "monitor" -
+        # is one of the shared folder's own top-level subdirectories, created
+        # host-side before the guest ever boots, so a guest-exec to create it
+        # would be a wasted round trip on every copy. Anything deeper is not
+        # guaranteed to exist and must be created inside the guest first.
+        if len(relative_parent.parts) > 1:
+            await self._ensure_guest_directory(self._guest_shared_path(str(relative_parent)))
+
         payload = await asyncio.to_thread(source.read_bytes)
         handle = await self._open_guest_file(guest_path)
         try:
@@ -6984,6 +6998,51 @@ python3 /mnt/shared/monitor/agent.py &
             await self._close_guest_file(handle)
 
         _logger.info("file_staged_in_guest", guest_path=guest_path, size_bytes=len(payload))
+
+    def _guest_mkdir_command(self, guest_dir: str) -> tuple[str, list[str]]:
+        """Build the guest-exec invocation that creates a directory tree.
+
+        ``cmd.exe``'s ``mkdir`` creates every missing intermediate directory in
+        one call on Windows, and ``mkdir -p`` does the same on Linux, so a
+        single invocation is enough regardless of how many path components are
+        missing.
+
+        Args:
+            guest_dir: Absolute in-guest path of the directory to create.
+
+        Returns:
+            tuple[str, list[str]]: Executable and argument list for the
+            configured guest family.
+        """
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            return "cmd.exe", ["/c", "mkdir", guest_dir]
+        return "mkdir", ["-p", guest_dir]
+
+    async def _ensure_guest_directory(self, guest_dir: str) -> None:
+        """Create a directory, and any missing parents, inside the guest.
+
+        The creation is best-effort: a directory that already exists makes the
+        guest-side ``mkdir`` fail, which is not an error, and a directory that
+        genuinely could not be created still surfaces through the
+        :class:`SandboxError` :meth:`_open_guest_file` raises immediately
+        afterward when the write that depends on it cannot proceed either.
+
+        Args:
+            guest_dir: Absolute in-guest path of the directory to create.
+        """
+        path, args = self._guest_mkdir_command(guest_dir)
+        try:
+            status = await self._guest_run(path, args)
+        except SandboxError as e:
+            _logger.debug("guest_directory_create_failed", guest_dir=guest_dir, error=str(e))
+            return
+        if status.exit_code != 0:
+            _logger.debug(
+                "guest_directory_create_nonzero_exit",
+                guest_dir=guest_dir,
+                exit_code=status.exit_code,
+                stderr=status.stderr.strip(),
+            )
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
         """Copy a file from the sandbox.

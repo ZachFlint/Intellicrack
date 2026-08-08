@@ -116,6 +116,8 @@ class _FakeGuestAgentClient(QemuGuestAgentClient):
             return self._ping_responses[0]
         if execute == "guest-exec":
             return self._exec_response
+        if execute == "guest-exec-status":
+            return QMPResponse(success=True, data={"exited": True, "exitcode": 0})
         return QMPResponse(success=False, error=f"unexpected command: {execute!r}")
 
 
@@ -135,6 +137,15 @@ class _BootstrapTestSandbox(QEMUSandbox):
                 as the active guest-agent transport.
         """
         self._qga = client
+
+    def probe_command(self) -> tuple[str, list[str]]:
+        """Return the readiness probe the backend runs before the launcher.
+
+        Returns:
+            tuple[str, list[str]]: Executable and argument list of the
+            production readiness probe for the configured guest family.
+        """
+        return self._guest_exec_probe()
 
     def get_agent_guest_pid(self) -> int | None:
         """Return the recorded guest-side agent process id.
@@ -192,27 +203,64 @@ def _make_sandbox(guest_os: GuestOS) -> _BootstrapTestSandbox:
     return _BootstrapTestSandbox(config=SandboxConfig(), qemu_config=cfg)
 
 
-def _guest_exec_arguments(
+def _launcher_exec_arguments(
     invocations: list[tuple[dict[str, object], float]],
+    probe: tuple[str, list[str]],
 ) -> dict[str, object]:
-    """Return the ``arguments`` payload of the first recorded guest-exec.
+    """Return the ``arguments`` payload of the recorded launcher guest-exec.
+
+    Readiness costs one ``guest-exec`` of its own before the launcher runs
+    (S17-D65), so the launcher is the first recorded invocation that is not
+    that probe. ``probe`` comes from the sandbox under test rather than from
+    a constant restated here, so a change to the probe cannot silently make
+    this helper start reporting the wrong invocation.
 
     Args:
         invocations: Recorded fake guest-agent invocations from the test client.
+        probe: Executable and argument list of the production readiness probe.
 
     Returns:
-        dict[str, object]: The ``arguments`` mapping from the first
+        dict[str, object]: The ``arguments`` mapping of the launcher's
         ``guest-exec`` invocation.
 
     Raises:
-        AssertionError: If no ``guest-exec`` invocation was recorded.
+        AssertionError: If no launcher ``guest-exec`` invocation was recorded.
     """
+    probe_path, probe_args = probe
     for command, _timeout in invocations:
-        if command.get("execute") == "guest-exec":
-            arguments: object = command.get("arguments")
-            return _coerce_guest_exec_arguments(arguments)
-    msg = "no guest-exec invocation recorded"
+        if command.get("execute") != "guest-exec":
+            continue
+        arguments = _coerce_guest_exec_arguments(command.get("arguments"))
+        if arguments.get("path") == probe_path and arguments.get("arg") == probe_args:
+            continue
+        return arguments
+    msg = "no launcher guest-exec invocation recorded"
     raise AssertionError(msg)
+
+
+def _launcher_exec_count(
+    invocations: list[tuple[dict[str, object], float]],
+    probe: tuple[str, list[str]],
+) -> int:
+    """Count recorded ``guest-exec`` invocations that are not the readiness probe.
+
+    Args:
+        invocations: Recorded fake guest-agent invocations from the test client.
+        probe: Executable and argument list of the production readiness probe.
+
+    Returns:
+        int: Number of recorded ``guest-exec`` invocations other than the probe.
+    """
+    probe_path, probe_args = probe
+    launcher_calls = 0
+    for command, _timeout in invocations:
+        if command.get("execute") != "guest-exec":
+            continue
+        arguments = _coerce_guest_exec_arguments(command.get("arguments"))
+        if arguments.get("path") == probe_path and arguments.get("arg") == probe_args:
+            continue
+        launcher_calls += 1
+    return launcher_calls
 
 
 def _coerce_guest_exec_arguments(payload: object) -> dict[str, object]:
@@ -255,7 +303,7 @@ def test_bootstrap_windows_guest_exec_uses_cmd_exe_and_z_drive_script() -> None:
 
     asyncio.run(sandbox.bootstrap_for_test())
 
-    arguments = _guest_exec_arguments(fake_agent.invocations)
+    arguments = _launcher_exec_arguments(fake_agent.invocations, sandbox.probe_command())
     assert arguments["path"] == "cmd.exe"
     arg_list = arguments["arg"]
     assert isinstance(arg_list, list)
@@ -263,9 +311,8 @@ def test_bootstrap_windows_guest_exec_uses_cmd_exe_and_z_drive_script() -> None:
     assert arguments["capture-output"] is False
 
     ping_calls = [cmd for cmd, _ in fake_agent.invocations if cmd.get("execute") == "guest-ping"]
-    exec_calls = [cmd for cmd, _ in fake_agent.invocations if cmd.get("execute") == "guest-exec"]
     assert ping_calls
-    assert len(exec_calls) == 1
+    assert _launcher_exec_count(fake_agent.invocations, sandbox.probe_command()) == 1
     assert sandbox.get_agent_guest_pid() == 4242
 
 
@@ -280,7 +327,7 @@ def test_bootstrap_linux_guest_exec_uses_bash_and_shared_script() -> None:
 
     asyncio.run(sandbox.bootstrap_for_test())
 
-    arguments = _guest_exec_arguments(fake_agent.invocations)
+    arguments = _launcher_exec_arguments(fake_agent.invocations, sandbox.probe_command())
     assert arguments["path"] == "/bin/bash"
     arg_list = arguments["arg"]
     assert isinstance(arg_list, list)
@@ -333,9 +380,8 @@ def test_bootstrap_retries_guest_ping_until_success() -> None:
     asyncio.run(_drive())
 
     ping_calls = [cmd for cmd, _ in fake_agent.invocations if cmd.get("execute") == "guest-ping"]
-    exec_calls = [cmd for cmd, _ in fake_agent.invocations if cmd.get("execute") == "guest-exec"]
     assert len(ping_calls) >= 3
-    assert len(exec_calls) == 1
+    assert _launcher_exec_count(fake_agent.invocations, sandbox.probe_command()) == 1
     assert sandbox.get_agent_guest_pid() == 99
 
 
