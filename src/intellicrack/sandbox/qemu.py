@@ -86,7 +86,11 @@ _AGENT_POLL_TIMEOUT = 1.0
 _ACCEL_DETECT_TIMEOUT = 10
 _ACCEL_TEST_TIMEOUT = 5
 _PROCESS_COMMUNICATE_TIMEOUT = 30
-_SNAPSHOT_LINE_MIN_PARTS = 2
+_SNAPSHOT_JOB_POLL_INTERVAL_S = 0.5
+_SNAPSHOT_DISK_FORMAT = "qcow2"
+_JOB_STATUS_CONCLUDED = "concluded"
+_QMP_COMMAND_ID_PREFIX = "intellicrack-"
+_ERR_NOT_CONNECTED = "Not connected"
 _SCREENSHOT_STABILITY_POLL_DELAY_S = 0.05
 _SCREENSHOT_STABILITY_MAX_POLLS = 100
 _SCREENSHOT_INITIAL_DELAY_S = 0.05
@@ -165,6 +169,11 @@ _ERR_COPY_FROM_SANDBOX = "copy from sandbox failed"
 _ERR_SNAPSHOT_CREATE = "snapshot create failed"
 _ERR_SNAPSHOT_RESTORE = "snapshot restore failed"
 _ERR_SNAPSHOT_DELETE = "snapshot delete failed"
+_ERR_SNAPSHOT_NO_DISK = "the running guest exposes no writable qcow2 disk, so there is nothing that can hold a snapshot"
+_ERR_SNAPSHOT_JOB_GONE = "QEMU stopped reporting job {job_id} before it finished"
+_ERR_SNAPSHOT_JOB_TIMEOUT = "job {job_id} had not finished after {budget:.0f}s"
+_ERR_SNAPSHOT_JOB_UNREADABLE = "the job list could not be read, so the outcome is unknown"
+_ERR_SNAPSHOT_JOB_REFUSED = "QEMU refused the request"
 _PIDFILE_MAX_RETRIES = 3
 _PIDFILE_RETRY_DELAY = 2.0
 PIDFILE_MAX_RETRIES: int = _PIDFILE_MAX_RETRIES
@@ -402,6 +411,39 @@ _PPM_EXPECTED_MAXVAL = 255
 _PPM_WHITESPACE: frozenset[int] = frozenset(b" \t\r\n")
 
 
+def _as_mapping(value: object) -> dict[str, object] | None:
+    """Narrow a decoded JSON value to a string-keyed mapping.
+
+    A bare ``isinstance(value, dict)`` on an ``object`` leaves the key and value
+    types unknown, which is not usable. Everything this module narrows came out
+    of :func:`json.loads`, where an object's keys are strings by definition.
+
+    Args:
+        value: Decoded JSON value.
+
+    Returns:
+        dict[str, object] | None: The mapping, or None when the value is not
+        one.
+    """
+    if isinstance(value, dict):
+        return cast("dict[str, object]", value)
+    return None
+
+
+def _as_sequence(value: object) -> list[object] | None:
+    """Narrow a decoded JSON value to a list.
+
+    Args:
+        value: Decoded JSON value.
+
+    Returns:
+        list[object] | None: The list, or None when the value is not one.
+    """
+    if isinstance(value, list):
+        return cast("list[object]", value)
+    return None
+
+
 def _read_ppm_token(data: bytes, pos: int) -> tuple[str, int]:
     """Read the next whitespace-delimited token from PPM header.
 
@@ -614,6 +656,10 @@ class QEMUConfig:
             nothing for the ACPI power button. Set it to zero to skip the
             request entirely and yank the power, which loses whatever the
             in-guest monitors had not yet flushed.
+        snapshot_timeout: Total time in seconds a snapshot job may run before
+            the operation is reported as failed. Saving a snapshot writes the
+            guest's whole RAM image, so this budget scales with ``memory_mb``
+            rather than being an interactive timeout.
     """
 
     guest_os: GuestOS = GuestOS.WINDOWS
@@ -632,6 +678,7 @@ class QEMUConfig:
     agent_connect_timeout: float = 60.0
     guest_agent_ready_timeout: float = _QEMU_GA_PING_TIMEOUT
     guest_shutdown_timeout: float = 120.0
+    snapshot_timeout: float = 600.0
 
 
 @dataclass
@@ -640,12 +687,15 @@ class QMPResponse:
 
     Attributes:
         success: Whether the command succeeded.
-        data: Response data if successful.
+        data: The reply's ``return`` member verbatim. QMP defines its shape per
+            command, so this is not always a mapping: ``query-block`` answers
+            with a list and ``human-monitor-command`` with the monitor's output
+            text. Callers must narrow it before use.
         error: Error message if failed.
     """
 
     success: bool
-    data: dict[str, object] | None = None
+    data: object | None = None
     error: str | None = None
 
 
@@ -912,7 +962,7 @@ class QemuJsonProtocolClient:
         """
         _logger.debug(self._event("command_send_called"), command=command.get("execute"))
         if self._reader is None or self._writer is None:
-            return QMPResponse(success=False, error="Not connected")
+            return QMPResponse(success=False, error=_ERR_NOT_CONNECTED)
 
         async with self._lock:
             try:
@@ -978,7 +1028,7 @@ class QemuJsonProtocolClient:
             QMPResponse: Parsed response from the server.
         """
         if self._reader is None or self._writer is None:
-            return QMPResponse(success=False, error="Not connected")
+            return QMPResponse(success=False, error=_ERR_NOT_CONNECTED)
 
         cmd_json = json.dumps(command) + "\n"
         self._writer.write(cmd_json.encode())
@@ -1108,6 +1158,87 @@ class QMPClient(QemuJsonProtocolClient):
 
     _log_prefix: ClassVar[str] = "qmp"
 
+    def __init__(self, host: str = "127.0.0.1", port: int = 4444) -> None:
+        """Initialize the monitor client and its command-id counter.
+
+        Args:
+            host: Host address where the monitor is listening.
+            port: TCP port for the monitor.
+        """
+        super().__init__(host=host, port=port)
+        self._command_serial = 0
+
+    async def _exchange_command(
+        self,
+        command: dict[str, object],
+        time_limit: float,
+    ) -> QMPResponse:
+        """Write a command tagged with a unique id and read back its own reply.
+
+        QMP is not a request/response protocol on its own: QEMU pushes
+        asynchronous events onto the same socket whenever the machine changes
+        state, so the next line after a command is frequently not that
+        command's reply. Reading it as one is what made a ``snapshot-save``
+        report ``{"return": None}`` and success - the frame actually read was
+        ``JOB_STATUS_CHANGE`` - and it left every later command reading the
+        previous command's answer for the life of the connection.
+
+        The protocol's own remedy is the optional ``id`` member, which QEMU
+        echoes verbatim on the reply and never puts on an event. Tagging every
+        command lets its reply be picked out of the stream positively rather
+        than positionally, which also discards the late reply to a command that
+        already timed out instead of handing it to the next caller.
+
+        Args:
+            command: Command dictionary with an ``execute`` key.
+            time_limit: Response timeout in seconds.
+
+        Returns:
+            QMPResponse: Parsed reply to this command.
+        """
+        if self._reader is None or self._writer is None:
+            return QMPResponse(success=False, error=_ERR_NOT_CONNECTED)
+
+        self._command_serial += 1
+        token = f"{_QMP_COMMAND_ID_PREFIX}{self._command_serial}"
+        tagged: dict[str, object] = {**command, "id": token}
+        self._writer.write((json.dumps(tagged) + "\n").encode())
+        await self._writer.drain()
+
+        return self._decode_reply(await self._read_tagged_reply(token, time_limit))
+
+    async def _read_tagged_reply(self, token: str, time_limit: float) -> dict[str, Any]:
+        """Read frames until the one carrying this command's id arrives.
+
+        Args:
+            token: Command id to match on.
+            time_limit: Total time allowed for the reply to arrive, shared
+                across however many events precede it.
+
+        Returns:
+            dict[str, Any]: The decoded reply frame.
+
+        Raises:
+            TimeoutError: If no frame carrying ``token`` arrived in time.
+        """
+        deadline = time.monotonic() + time_limit
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError
+
+            frame = self._decode_line(await self._read_line(remaining))
+            name = frame.get("event")
+            if name is not None:
+                _logger.debug(self._event("async_event"), qmp_event=str(name), data=frame.get("data"))
+                continue
+
+            reply_id = frame.get("id")
+            if reply_id == token:
+                return frame
+
+            _logger.warning(self._event("unmatched_reply_discarded"), expected=token, received=str(reply_id))
+
     async def _handshake(self, time_limit: float) -> None:
         """Read the QMP greeting banner and negotiate capabilities.
 
@@ -1211,6 +1342,98 @@ class QMPClient(QemuJsonProtocolClient):
         return await self._send_command({
             "execute": "human-monitor-command",
             "arguments": {"command-line": "info snapshots"},
+        })
+
+    async def query_block(self) -> QMPResponse:
+        """List the guest-visible block devices and what each currently holds.
+
+        This is the only query that distinguishes the disk the guest writes to
+        from the images behind it. ``query-named-block-nodes`` reports every
+        layer, so on the copy-on-write chain each instance now runs on it
+        offers the read-only backing image as an equally plausible qcow2 node -
+        and writing a snapshot there would put state back into the image
+        S17-D58 stopped sharing.
+
+        Returns:
+            QMPResponse: A list of device records, each carrying an
+            ``inserted`` member describing its topmost node.
+        """
+        return await self._send_command({"execute": "query-block"})
+
+    async def query_jobs(self) -> QMPResponse:
+        """Report the state of every background job QEMU is tracking.
+
+        Returns:
+            QMPResponse: A list of job records. A finished job has
+            ``status: "concluded"`` and carries an ``error`` member only when
+            it failed.
+        """
+        return await self._send_command({"execute": "query-jobs"})
+
+    async def job_dismiss(self, job_id: str) -> QMPResponse:
+        """Drop a concluded job so it stops being reported.
+
+        Args:
+            job_id: Identifier the job was created with.
+
+        Returns:
+            QMPResponse: Command response.
+        """
+        return await self._send_command({"execute": "job-dismiss", "arguments": {"id": job_id}})
+
+    async def snapshot_save(self, job_id: str, tag: str, vmstate: str, devices: list[str]) -> QMPResponse:
+        """Start a job that saves an internal snapshot.
+
+        Unlike the ``savevm`` monitor command this replaces, the outcome is
+        reported through :meth:`query_jobs` rather than as monitor text inside
+        a successful reply.
+
+        Args:
+            job_id: Identifier to track the job by.
+            tag: Snapshot name.
+            vmstate: Node name the RAM state is written to.
+            devices: Node names to snapshot.
+
+        Returns:
+            QMPResponse: Whether QEMU accepted the request. Completion is a
+            separate question, answered by :meth:`query_jobs`.
+        """
+        return await self._send_command({
+            "execute": "snapshot-save",
+            "arguments": {"job-id": job_id, "tag": tag, "vmstate": vmstate, "devices": devices},
+        })
+
+    async def snapshot_load(self, job_id: str, tag: str, vmstate: str, devices: list[str]) -> QMPResponse:
+        """Start a job that restores an internal snapshot.
+
+        Args:
+            job_id: Identifier to track the job by.
+            tag: Snapshot name.
+            vmstate: Node name the RAM state is read from.
+            devices: Node names to restore.
+
+        Returns:
+            QMPResponse: Whether QEMU accepted the request.
+        """
+        return await self._send_command({
+            "execute": "snapshot-load",
+            "arguments": {"job-id": job_id, "tag": tag, "vmstate": vmstate, "devices": devices},
+        })
+
+    async def snapshot_delete(self, job_id: str, tag: str, devices: list[str]) -> QMPResponse:
+        """Start a job that deletes an internal snapshot.
+
+        Args:
+            job_id: Identifier to track the job by.
+            tag: Snapshot name.
+            devices: Node names to delete it from.
+
+        Returns:
+            QMPResponse: Whether QEMU accepted the request.
+        """
+        return await self._send_command({
+            "execute": "snapshot-delete",
+            "arguments": {"job-id": job_id, "tag": tag, "devices": devices},
         })
 
 
@@ -1638,7 +1861,8 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
             {"execute": "guest-exec-status", "arguments": {"pid": pid}},
             time_limit,
         )
-        if not response.success or not isinstance(response.data, dict):
+        payload = _as_mapping(response.data)
+        if not response.success or payload is None:
             _logger.warning(
                 self._event("exec_status_unreadable"),
                 pid=pid,
@@ -1646,7 +1870,7 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
             )
             raise SandboxError(_ERR_QEMU_GA_EXEC_STATUS_FAILED)
 
-        return self._decode_exec_status(response.data)
+        return self._decode_exec_status(payload)
 
     @classmethod
     def _decode_exec_status(cls, payload: dict[str, object]) -> GuestExecStatus:
@@ -3073,13 +3297,13 @@ class QEMUSandbox(SandboxBase):
             )
             raise SandboxError(_ERR_QEMU_GA_EXEC_FAILED)
 
-        data = response.data
-        if not isinstance(data, dict) or "pid" not in data:
+        data = _as_mapping(response.data)
+        if data is None or "pid" not in data:
             _logger.warning(
                 "qemu_ga_exec_no_pid",
                 path=path,
                 arg=list(args),
-                response_payload=data,
+                response_payload=response.data,
             )
             raise SandboxError(_ERR_QEMU_GA_EXEC_NO_PID)
 
@@ -3900,7 +4124,33 @@ class QEMUSandbox(SandboxBase):
             {"type": "3", "manufacturer": manufacturer, "asset": "8767"},
         ]
 
-    async def _build_qemu_command(self) -> list[str]:
+    async def _launch_disk_path(self) -> Path:
+        """Provision the disk this launch will attach, and say where it is.
+
+        Directing the guest at a per-instance overlay is what keeps a second
+        sandbox from corrupting the configured image, which QEMU will not
+        prevent - it takes no lock on it. Provisioning that overlay is an act
+        performed once per launch, so it belongs to the launch and not to
+        assembling an argument vector; keeping it here is also what lets the
+        argv contract be exercised on a host with no ``qemu-img``.
+
+        Returns:
+            Path: The image QEMU should attach read-write.
+
+        Raises:
+            SandboxError: If no image is configured.
+        """
+        image_path = self._qemu_config.image_path
+        if image_path is None:
+            _logger.error("qemu_launch_disk_unset")
+            raise SandboxError(_ERR_NO_IMAGE_UNSET)
+
+        if not self._qemu_config.disk_overlay:
+            return image_path
+
+        return await self._create_disk_overlay(image_path)
+
+    async def _build_qemu_command(self, disk_path: Path | None = None) -> list[str]:
         """Build QEMU command line.
 
         Adds ``-smbios`` entries and a masked ``-cpu`` string for
@@ -3908,6 +4158,12 @@ class QEMUSandbox(SandboxBase):
         :class:`QEMUConfig.anti_evasion_profile`. The CPU argument includes
         ``hv-vendor-id``, ``kvm=off`` and ``hypervisor=off`` to reduce
         hypervisor detection via CPUID.
+
+        Args:
+            disk_path: Image to attach read-write, as provisioned by
+                :meth:`_launch_disk_path`. Omitting it attaches the configured
+                image itself, which is only safe when no second sandbox can be
+                sharing it.
 
         Returns:
             list[str]: QEMU command as list of arguments.
@@ -3929,10 +4185,7 @@ class QEMUSandbox(SandboxBase):
             msg = f"{_ERR_NO_IMAGE_MISSING}: {image_path}"
             raise SandboxError(msg)
 
-        # What the guest actually writes to. Directing it at an overlay is what
-        # keeps a second sandbox from corrupting the configured image, which
-        # QEMU will not prevent - it takes no lock on it.
-        disk_path = await self._create_disk_overlay(image_path) if self._qemu_config.disk_overlay else image_path
+        attached_disk = disk_path if disk_path is not None else image_path
 
         if self._accelerator == AcceleratorType.WHPX:
             # WHPX cannot virtualize the feature set of -cpu host or -cpu max
@@ -3974,7 +4227,7 @@ class QEMUSandbox(SandboxBase):
             *["-m", str(self._qemu_config.memory_mb)],
             *[
                 "-drive",
-                f"file={disk_path},format=qcow2,if=virtio",
+                f"file={attached_disk},format=qcow2,if=virtio",
             ],
         ]
 
@@ -4143,7 +4396,7 @@ class QEMUSandbox(SandboxBase):
         Raises:
             SandboxError: If QEMU exited instead of staying up.
         """
-        cmd = await self._build_qemu_command()
+        cmd = await self._build_qemu_command(await self._launch_disk_path())
         _logger.info("qemu_starting", command=" ".join(cmd))
         _logger.info("subprocess_spawning", argv=cmd, executable=cmd[0] if cmd else None)
 
@@ -6552,8 +6805,8 @@ python3 /mnt/shared/monitor/agent.py &
         )
         if not reply.success:
             raise SandboxError(_ERR_GUEST_FILE_WRITE_FAILED.format(path=path, error=reply.error or "unknown error"))
-        payload: object = reply.data
-        written = payload.get("count") if isinstance(payload, dict) else None
+        payload = _as_mapping(reply.data)
+        written = payload.get("count") if payload is not None else None
         if isinstance(written, int) and written != len(chunk):
             raise SandboxError(_ERR_GUEST_FILE_SHORT_WRITE.format(written=written, expected=len(chunk), path=path))
 
@@ -6640,6 +6893,162 @@ python3 /mnt/shared/monitor/agent.py &
             _logger.warning("copy_from_sandbox_failed", error=str(e), source=source, dest=str(dest))
             raise SandboxError(_ERR_COPY_FROM_SANDBOX) from e
 
+    async def _query_guest_block_devices(self) -> list[dict[str, object]]:
+        """Read the topmost node of every guest-visible block device.
+
+        Returns:
+            list[dict[str, object]]: One ``inserted`` record per device that
+            currently has media, in QEMU's order.
+
+        Raises:
+            SandboxError: If the monitor is not connected or refuses the query.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        result = await self._qmp.query_block()
+        if not result.success:
+            _logger.warning("query_block_failed", error=result.error)
+            raise SandboxError(_ERR_SNAPSHOT_NO_DISK)
+
+        devices = _as_sequence(result.data) or []
+        inserted: list[dict[str, object]] = []
+        for device in devices:
+            record = _as_mapping(device)
+            if record is None:
+                continue
+            medium = _as_mapping(record.get("inserted"))
+            if medium is not None:
+                inserted.append(medium)
+        return inserted
+
+    async def _snapshot_target_nodes(self) -> list[str]:
+        """Resolve the block nodes an internal snapshot may be written to.
+
+        Only a writable qcow2 can hold one, which rules out both the read-only
+        install media a guest may still have attached and, importantly, the
+        backing image behind each instance's copy-on-write overlay. The
+        overlay and its backing image are both qcow2, so a filter on format
+        alone would offer the shared base - the very image S17-D58 stopped
+        instances from writing to.
+
+        Returns:
+            list[str]: Node names, in QEMU's device order.
+
+        Raises:
+            SandboxError: If the guest exposes no disk that can hold one.
+        """
+        nodes = [
+            name
+            for medium in await self._query_guest_block_devices()
+            if medium.get("drv") == _SNAPSHOT_DISK_FORMAT and medium.get("ro") is False and isinstance(name := medium.get("node-name"), str)
+        ]
+        if not nodes:
+            _logger.warning("snapshot_no_capable_disk")
+            raise SandboxError(_ERR_SNAPSHOT_NO_DISK)
+        return nodes
+
+    @staticmethod
+    def _new_snapshot_job_id(action: str) -> str:
+        """Mint an identifier for one snapshot job.
+
+        Args:
+            action: Short verb naming the operation, used only for readability
+                in QEMU's job list and this module's logs.
+
+        Returns:
+            str: A job id unique to this operation.
+        """
+        return f"intellicrack-{action}-{secrets.token_hex(4)}"
+
+    async def _await_snapshot_job(self, job_id: str, failure: str) -> None:
+        """Wait for a snapshot job to conclude and surface what it really did.
+
+        The job-based snapshot commands answer immediately with an empty
+        object; whether the work succeeded is reported separately, as an
+        ``error`` member on the concluded job. Reading that member is the whole
+        point of using these commands instead of ``savevm``/``loadvm``/
+        ``delvm``, whose failures arrive as monitor text inside a *successful*
+        QMP reply and so cannot be told from success at all.
+
+        The job is dismissed either way, because a concluded job QEMU is still
+        tracking would otherwise accumulate for the life of the VM.
+
+        Args:
+            job_id: Identifier the job was started with.
+            failure: Message prefix describing the operation.
+
+        Raises:
+            SandboxError: If the job failed, disappeared, or never finished.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        budget = self._qemu_config.snapshot_timeout
+        deadline = time.monotonic() + budget
+        while time.monotonic() < deadline:
+            listing = await self._qmp.query_jobs()
+            if not listing.success:
+                _logger.warning("snapshot_job_query_failed", job_id=job_id, error=listing.error)
+                message = f"{failure}: {listing.error or _ERR_SNAPSHOT_JOB_UNREADABLE}"
+                raise SandboxError(message)
+
+            record = self._find_job(listing.data, job_id)
+            if record is None:
+                _logger.warning("snapshot_job_vanished", job_id=job_id)
+                message = f"{failure}: {_ERR_SNAPSHOT_JOB_GONE.format(job_id=job_id)}"
+                raise SandboxError(message)
+
+            if record.get("status") == _JOB_STATUS_CONCLUDED:
+                error = record.get("error")
+                await self._qmp.job_dismiss(job_id)
+                if isinstance(error, str):
+                    _logger.warning("snapshot_job_failed", job_id=job_id, error=error)
+                    message = f"{failure}: {error}"
+                    raise SandboxError(message)
+                return
+
+            await asyncio.sleep(_SNAPSHOT_JOB_POLL_INTERVAL_S)
+
+        _logger.warning("snapshot_job_timed_out", job_id=job_id, budget=budget)
+        message = f"{failure}: {_ERR_SNAPSHOT_JOB_TIMEOUT.format(job_id=job_id, budget=budget)}"
+        raise SandboxError(message)
+
+    @staticmethod
+    def _find_job(payload: object, job_id: str) -> dict[str, object] | None:
+        """Pick one job out of a ``query-jobs`` reply.
+
+        Args:
+            payload: The reply's ``return`` member.
+            job_id: Identifier to look for.
+
+        Returns:
+            dict[str, object] | None: The job record, or None if absent.
+        """
+        for entry in _as_sequence(payload) or []:
+            record = _as_mapping(entry)
+            if record is not None and record.get("id") == job_id:
+                return record
+        return None
+
+    async def _run_snapshot_job(self, action: str, failure: str, request: QMPResponse, job_id: str) -> None:
+        """Check that QEMU accepted a snapshot job, then wait for its outcome.
+
+        Args:
+            action: Short verb naming the operation, for logging.
+            failure: Message prefix describing the operation.
+            request: The reply to the command that started the job.
+            job_id: Identifier the job was started with.
+
+        Raises:
+            SandboxError: If the command was refused or the job failed.
+        """
+        if not request.success:
+            _logger.warning("snapshot_job_rejected", action=action, job_id=job_id, error=request.error)
+            message = f"{failure}: {request.error or _ERR_SNAPSHOT_JOB_REFUSED}"
+            raise SandboxError(message)
+        await self._await_snapshot_job(job_id, failure)
+
     async def take_snapshot(self, name: str) -> str:
         """Take a snapshot of the VM state.
 
@@ -6656,12 +7065,12 @@ python3 /mnt/shared/monitor/agent.py &
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
-        result = await self._qmp.savevm(name)
-        if not result.success:
-            _logger.warning("snapshot_create_failed", error=result.error)
-            raise SandboxError(_ERR_SNAPSHOT_CREATE)
+        nodes = await self._snapshot_target_nodes()
+        job_id = self._new_snapshot_job_id("save")
+        request = await self._qmp.snapshot_save(job_id, name, nodes[0], nodes)
+        await self._run_snapshot_job("save", _ERR_SNAPSHOT_CREATE, request, job_id)
 
-        _logger.info("snapshot_created", snapshot_name=name)
+        _logger.info("snapshot_created", snapshot_name=name, nodes=nodes)
         return name
 
     async def restore_snapshot(self, snapshot_id: str) -> None:
@@ -6677,34 +7086,44 @@ python3 /mnt/shared/monitor/agent.py &
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
-        result = await self._qmp.loadvm(snapshot_id)
-        if not result.success:
-            _logger.warning("snapshot_restore_failed", error=result.error)
-            raise SandboxError(_ERR_SNAPSHOT_RESTORE)
+        nodes = await self._snapshot_target_nodes()
+        job_id = self._new_snapshot_job_id("load")
+        request = await self._qmp.snapshot_load(job_id, snapshot_id, nodes[0], nodes)
+        await self._run_snapshot_job("load", _ERR_SNAPSHOT_RESTORE, request, job_id)
 
         _logger.info("snapshot_restored", snapshot_id=snapshot_id)
 
     async def list_snapshots(self) -> list[str]:
         """List available snapshots.
 
+        The names come from the block layer's own records rather than from the
+        ``info snapshots`` monitor table. That table was parsed by column, and
+        rows were kept only when the first column was numeric - but QEMU prints
+        ``--`` there for these snapshots, so every row was discarded and the
+        list came back empty for a disk that plainly held snapshots.
+
         Returns:
-            list[str]: List of snapshot names.
+            list[str]: Snapshot names, in the order the disks report them and
+            without repeating a name that spans several disks. Empty when the
+            monitor is not connected.
         """
         if self._qmp is None:
             return []
 
-        result = await self._qmp.info_snapshots()
-        if not result.success or result.data is None:
-            return []
+        names: list[str] = []
+        for medium in await self._query_guest_block_devices():
+            image = _as_mapping(medium.get("image"))
+            if image is None:
+                continue
+            for entry in _as_sequence(image.get("snapshots")) or []:
+                record = _as_mapping(entry)
+                if record is None:
+                    continue
+                name = record.get("name")
+                if isinstance(name, str) and name not in names:
+                    names.append(name)
 
-        output = str(result.data)
-        snapshots: list[str] = []
-        for line in output.splitlines():
-            parts = line.split()
-            if len(parts) >= _SNAPSHOT_LINE_MIN_PARTS and parts[0].isdigit():
-                snapshots.append(parts[1])
-
-        return snapshots
+        return names
 
     async def delete_snapshot(self, name: str) -> None:
         """Delete a snapshot.
@@ -6718,10 +7137,10 @@ python3 /mnt/shared/monitor/agent.py &
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
-        result = await self._qmp.delvm(name)
-        if not result.success:
-            _logger.warning("snapshot_delete_failed", error=result.error)
-            raise SandboxError(_ERR_SNAPSHOT_DELETE)
+        nodes = await self._snapshot_target_nodes()
+        job_id = self._new_snapshot_job_id("delete")
+        request = await self._qmp.snapshot_delete(job_id, name, nodes)
+        await self._run_snapshot_job("delete", _ERR_SNAPSHOT_DELETE, request, job_id)
 
         _logger.info("snapshot_deleted", snapshot_name=name)
 

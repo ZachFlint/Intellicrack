@@ -429,6 +429,12 @@ class QmpProtocolServer(_LoopbackServer):
     def _reply_for(self, line: bytes) -> dict[str, Any]:
         """Compute the QMP reply for one received command line.
 
+        A real monitor echoes the request's optional ``id`` member verbatim on
+        the reply and never puts one on an event - measured against QEMU
+        10.1.0, ``{"execute":"qmp_capabilities","id":"cap"}`` comes back as
+        ``{"return": {}, "id": "cap"}``. That echo is how the client tells its
+        own answer from an asynchronous event, so this server reproduces it.
+
         Args:
             line: Raw newline-terminated request bytes.
 
@@ -438,6 +444,21 @@ class QmpProtocolServer(_LoopbackServer):
         request = decode_object(line.strip())
         name = str(request.get("execute", ""))
         self.commands.append(name)
+        reply = self._result_for(name)
+        request_id = request.get("id")
+        if request_id is not None:
+            reply["id"] = request_id
+        return reply
+
+    def _result_for(self, name: str) -> dict[str, Any]:
+        """Build the ``return``/``error`` body for one command name.
+
+        Args:
+            name: The ``execute`` member of the request.
+
+        Returns:
+            dict[str, Any]: Reply body without the correlation id.
+        """
         if name == "qmp_capabilities":
             return {"return": {}}
         if name == "query-status":
