@@ -37,6 +37,8 @@ SandboxType = Literal["windows", "qemu"]
 
 FAILURE_CACHE_TTL_SECONDS: float = 60.0
 
+_RUNNING_STATUS = "running"
+
 
 @dataclass
 class AvailabilityCacheEntry:
@@ -492,14 +494,25 @@ class SandboxManager:
         config: SandboxConfig | None = None,
         time_limit: int | None = None,
         qemu_config: QEMUConfig | None = None,
+        instance_id: str | None = None,
         *,
         monitor: bool = True,
         reuse_instance: bool = False,
     ) -> tuple[SandboxInstance, ExecutionReport]:
         """Run a binary in a sandbox.
 
-        Creates a new sandbox (or reuses an existing one), runs the binary,
-        and returns the execution report.
+        Creates a new sandbox (or uses an existing one), runs the binary, and
+        returns the execution report.
+
+        There are three ways to choose where the binary runs, in descending
+        order of precedence. ``instance_id`` names one exactly. Failing that,
+        ``reuse_instance`` takes whichever idle instance of the right type
+        comes first. Failing both, a new sandbox is created.
+
+        Naming an instance is the only option that can produce two comparable
+        runs, because ``reuse_instance`` cannot express a preference: with
+        several sandboxes running it always lands on the same one, so a caller
+        wanting to diff two runs got two reports from a single instance.
 
         Args:
             binary_path: Path to the binary to run.
@@ -508,6 +521,7 @@ class SandboxManager:
             config: Optional configuration override.
             time_limit: Optional timeout override in seconds.
             qemu_config: Optional QEMU-specific configuration.
+            instance_id: Identifier of an existing instance to run in.
             monitor: Whether to monitor behavior.
             reuse_instance: Whether to reuse an existing idle instance.
 
@@ -517,11 +531,15 @@ class SandboxManager:
         Raises:
             OSError: If a system-level I/O error occurs.
             RuntimeError: If a runtime error occurs during sandbox operations.
-            SandboxError: If binary execution fails in the sandbox.
+            SandboxError: If binary execution fails in the sandbox, or the
+                named instance does not exist, is not running, or is busy.
         """
         instance: SandboxInstance | None = None
 
-        if reuse_instance:
+        if instance_id is not None:
+            async with self._lock:
+                instance = self._claim_named_instance(instance_id, binary_path)
+        elif reuse_instance:
             async with self._lock:
                 candidate = await self._find_idle_instance(sandbox_type)
                 if candidate is not None:
@@ -557,6 +575,45 @@ class SandboxManager:
 
         instance.last_report = report
         return (instance, report)
+
+    def _claim_named_instance(self, instance_id: str, binary_path: Path) -> SandboxInstance:
+        """Take an existing instance for a run, by name.
+
+        Must be called with the manager lock held, so that checking an
+        instance is free and marking it busy cannot interleave with another
+        caller doing the same.
+
+        Args:
+            instance_id: Identifier of the instance to run in.
+            binary_path: Binary the instance is about to run.
+
+        Returns:
+            SandboxInstance: The claimed instance, marked busy.
+
+        Raises:
+            SandboxError: If no such instance exists, it is not running, or
+                another run already holds it.
+        """
+        instance = self._instances.get(instance_id)
+        if instance is None:
+            error_message = f"Sandbox instance not found: {instance_id}"
+            _logger.warning("sandbox_run_instance_not_found", instance_id=instance_id)
+            raise SandboxError(error_message)
+
+        if instance.state.status != _RUNNING_STATUS:
+            error_message = f"Sandbox instance {instance_id} is {instance.state.status}, not running"
+            _logger.warning("sandbox_run_instance_not_running", instance_id=instance_id, status=instance.state.status)
+            raise SandboxError(error_message)
+
+        if instance.is_busy:
+            error_message = f"Sandbox instance {instance_id} is already running a binary"
+            _logger.warning("sandbox_run_instance_busy", instance_id=instance_id)
+            raise SandboxError(error_message)
+
+        instance.is_busy = True
+        instance.binary_path = binary_path
+        instance.touch()
+        return instance
 
     async def _find_idle_instance(
         self,
