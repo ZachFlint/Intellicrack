@@ -169,19 +169,27 @@ _DRIVER_INSTALL_LOG: Final[str] = "C:\\ProgramData\\intellicrack\\virtio-drivers
 _GUEST_DRIVE_LETTERS: Final[str] = "C D E F G H I J K L M N O P Q R S T U V W X Y Z"
 
 VIRTIO_MARKER_DIRECTORIES: Final[tuple[str, ...]] = ("viostor", "vioserial", "NetKVM")
-_VIRTIO_DRIVER_SUBPATHS: Final[tuple[str, ...]] = (
-    "viostor\\w11\\amd64",
-    "vioserial\\w11\\amd64",
-    "NetKVM\\w11\\amd64",
-    "Balloon\\w11\\amd64",
-)
+WINPE_DRIVER_DIRECTORIES: Final[tuple[str, ...]] = (*VIRTIO_MARKER_DIRECTORIES, "Balloon")
+"""Driver directories whose packages the WinPE answer file points Setup at.
+
+The three markers are the devices the sandbox launcher actually builds:
+``viostor`` backs ``if=virtio`` and is boot critical, ``NetKVM`` backs
+``-device virtio-net-pci``, and ``vioserial`` backs the ``virtio-serial-pci``
+guest agent channel. ``Balloon`` completes the set the medium's memory device
+needs. Every other package on the medium is left to the in-guest installer,
+which runs once and installs from a directory it resolves itself, whereas each
+entry here is multiplied by every candidate WinPE drive letter.
+"""
 UNTRUSTED_CHAIN_STATUSES: Final[tuple[str, ...]] = ("UntrustedRoot", "PartialChain")
 """``X509ChainStatusFlags`` names that mean the guest cannot validate a catalog's chain."""
 
 DRIVER_ALREADY_CURRENT_EXIT: Final[int] = 259
 """``ERROR_NO_MORE_ITEMS`` from ``pnputil``: the package is staged and no device needed it."""
 
-_WINPE_DRIVER_LETTERS: Final[tuple[str, ...]] = ("C", "D", "E", "F", "G", "H")
+_DRIVER_INF_SUFFIX: Final[str] = ".inf"
+WINPE_DRIVER_LETTERS: Final[tuple[str, ...]] = ("C", "D", "E", "F", "G", "H")
+"""Drive letters the answer file searches, because WinPE assigns them itself."""
+
 _VIRTIO_WIN_URL: Final[str] = "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
 _VIRTIO_WIN_APPROXIMATE_MB: Final[int] = 676
 
@@ -431,6 +439,20 @@ class MediaContent:
 
 
 @dataclass(frozen=True)
+class VirtioMedium:
+    r"""A located virtio-win medium and the driver layout read off it.
+
+    Attributes:
+        path: The virtio-win ISO itself.
+        driver_subpaths: ``<driver>\\<family>\\<arch>`` directories the medium
+            really carries for the guest's architecture, in sorted order.
+    """
+
+    path: Path
+    driver_subpaths: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class UnattendSettings:
     """Inputs that shape the generated ``autounattend.xml``.
 
@@ -448,8 +470,9 @@ class UnattendSettings:
             the sandbox launcher passes no ``-rtc base=localtime``.
         driver_letters: Candidate WinPE drive letters searched for virtio
             drivers, because WinPE assigns CD-ROM letters unpredictably.
-        driver_subpaths: Per-driver directories appended to each candidate
-            letter.
+        driver_subpaths: Driver package directories appended to each candidate
+            letter, enumerated off the virtio-win medium so every emitted path
+            resolves to a directory that is really there.
         disable_guest_firewall: Whether to turn the guest firewall off so the
             forwarded agent port is reachable from the host.
         answer_script: Path of the guest agent installer relative to the
@@ -1030,24 +1053,87 @@ def discover_virtio_media(roots: tuple[Path, ...], max_depth: int, budget: int) 
     return None
 
 
-def verify_virtio_contents(path: Path) -> None:
-    """Mount a virtio-win medium and confirm it carries the needed drivers.
+def enumerate_virtio_driver_subpaths(medium_root: Path, architecture: str) -> tuple[str, ...]:
+    r"""Enumerate the driver package directories WinPE can really be pointed at.
+
+    The medium lays its packages out as ``<driver>\\<family>\\<arch>``, and the
+    families genuinely differ per driver: on virtio-win 0.1.285 ``viostor``
+    ships fifteen families, ``w11`` has no ``x86`` at all, and most server
+    families are ``amd64`` only. Naming one fixed family therefore emits paths
+    that exist on no medium for most guests, and WinPE loads no ``viostor`` at
+    all, so Setup sees no disk. Every directory that does exist for the guest's
+    architecture is emitted instead: an extra family costs one INF that matches
+    no hardware, a missing one costs the system disk.
+
+    Args:
+        medium_root: Root of the mounted virtio-win medium.
+        architecture: Architecture directory name to keep, matched without
+            regard to case, for example ``amd64``.
+
+    Returns:
+        tuple[str, ...]: Sorted ``<driver>\\<family>\\<arch>`` subpaths that
+        exist on the medium and carry at least one INF.
+    """
+    subpaths: list[str] = []
+    for driver in WINPE_DRIVER_DIRECTORIES:
+        driver_root = medium_root / driver
+        if not driver_root.is_dir():
+            continue
+        for family in driver_root.iterdir():
+            if not family.is_dir():
+                continue
+            subpaths.extend(
+                f"{driver}\\{family.name}\\{package.name}"
+                for package in family.iterdir()
+                if package.is_dir() and package.name.casefold() == architecture.casefold() and _holds_driver_package(package)
+            )
+    return tuple(sorted(subpaths))
+
+
+def _holds_driver_package(directory: Path) -> bool:
+    r"""Report whether a directory carries an installable driver package.
+
+    Args:
+        directory: Candidate ``<driver>\\<family>\\<arch>`` directory.
+
+    Returns:
+        bool: True when at least one INF file sits directly inside it.
+    """
+    return any(entry.is_file() and entry.suffix.casefold() == _DRIVER_INF_SUFFIX for entry in directory.iterdir())
+
+
+def verify_virtio_contents(path: Path, architecture: str = _COMPONENT_ARCHITECTURE) -> tuple[str, ...]:
+    """Mount a virtio-win medium, confirm its drivers, and map its packages.
 
     Args:
         path: Driver ISO to verify.
+        architecture: Architecture directory name the guest needs.
+
+    Returns:
+        tuple[str, ...]: WinPE driver subpaths the medium really carries for
+        ``architecture``.
 
     Raises:
-        ProvisioningError: If the medium lacks the marker driver directories.
+        ProvisioningError: If the medium lacks the marker driver directories,
+            or carries no package for ``architecture``.
     """
     root = mount_disk_image(path)
     try:
         recognised = looks_like_virtio_media(root)
+        subpaths = enumerate_virtio_driver_subpaths(root, architecture) if recognised else ()
     finally:
         dismount_disk_image(path)
     if not recognised:
         message = f"{path} mounted but carries none of the expected virtio driver directories: {', '.join(VIRTIO_MARKER_DIRECTORIES)}"
         raise ProvisioningError(message)
-    _LOGGER.info("virtio_media_verified", image=str(path))
+    if not subpaths:
+        message = (
+            f"{path} carries no {architecture} driver package under any of "
+            f"{', '.join(WINPE_DRIVER_DIRECTORIES)}, so WinPE would have nothing to load"
+        )
+        raise ProvisioningError(message)
+    _LOGGER.info("virtio_media_verified", image=str(path), driver_subpaths=len(subpaths))
+    return subpaths
 
 
 def require_virtio_media(
@@ -1101,6 +1187,33 @@ def require_virtio_media(
         "pointing at it."
     )
     raise ProvisioningError(message)
+
+
+def resolve_virtio_medium(
+    explicit: Path | None,
+    roots: tuple[Path, ...],
+    max_depth: int,
+    budget: int,
+    architecture: str,
+) -> VirtioMedium:
+    """Locate the virtio-win medium and read its driver layout in one mount.
+
+    Propagates the ``ProvisioningError`` raised when no virtio-win medium is
+    available, when the located medium is not one, or when it carries no
+    package for ``architecture``.
+
+    Args:
+        explicit: Operator-supplied path, or None to search.
+        roots: Filesystem roots to scan when searching.
+        max_depth: Maximum directory depth below each root.
+        budget: Maximum number of directories to enumerate.
+        architecture: Architecture directory name the guest needs.
+
+    Returns:
+        VirtioMedium: The located medium and the driver subpaths it carries.
+    """
+    path = require_virtio_media(explicit, roots, max_depth, budget, verify_contents=False)
+    return VirtioMedium(path=path, driver_subpaths=verify_virtio_contents(path, architecture))
 
 
 def resolve_qemu_tools(tools_path: Path) -> tuple[Path, Path, Path]:
@@ -2220,11 +2333,13 @@ def stage_install_media(probe: IsoStructure, images_dir: Path) -> IsoStructure:
     return probe_iso_structure(destination)
 
 
-def build_unattend_settings(args: argparse.Namespace) -> UnattendSettings:
+def build_unattend_settings(args: argparse.Namespace, driver_subpaths: tuple[str, ...]) -> UnattendSettings:
     """Translate parsed arguments into answer file settings.
 
     Args:
         args: Parsed command line arguments.
+        driver_subpaths: Driver directories enumerated off the virtio-win
+            medium, which WinPE searches under every candidate drive letter.
 
     Returns:
         UnattendSettings: Settings for :func:`render_autounattend`.
@@ -2237,8 +2352,8 @@ def build_unattend_settings(args: argparse.Namespace) -> UnattendSettings:
         computer_name=args.computer_name,
         locale=args.locale,
         timezone=args.timezone,
-        driver_letters=_WINPE_DRIVER_LETTERS,
-        driver_subpaths=_VIRTIO_DRIVER_SUBPATHS,
+        driver_letters=WINPE_DRIVER_LETTERS,
+        driver_subpaths=driver_subpaths,
         disable_guest_firewall=not args.keep_guest_firewall,
         answer_script=_ANSWER_SCRIPT_RELATIVE,
     )
@@ -2317,12 +2432,12 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
 
     probe, content = resolve_install_media(args, images_dir)
 
-    virtio_iso = require_virtio_media(
+    virtio = resolve_virtio_medium(
         Path(args.virtio_iso) if args.virtio_iso else None,
         available_drive_roots(),
         args.scan_depth,
         args.scan_budget,
-        verify_contents=not args.skip_content_verify,
+        _COMPONENT_ARCHITECTURE,
     )
 
     disk_image = images_dir / args.disk_name
@@ -2330,10 +2445,10 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
 
     answer_iso = images_dir / args.answer_iso_name
     autounattend, tool_name = build_answer_medium(
-        build_unattend_settings(args),
+        build_unattend_settings(args, virtio.driver_subpaths),
         qemu_agent,
         tools_path,
-        virtio_iso,
+        virtio.path,
         answer_iso,
         args.iso_tool,
     )
@@ -2346,7 +2461,7 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
         disk_image=disk_image,
         install_iso=probe.path,
         answer_iso=answer_iso,
-        virtio_iso=virtio_iso,
+        virtio_iso=virtio.path,
         display=args.display,
         vnc_port=find_free_port(_VNC_PORT_BASE, _VNC_PORT_MAX),
         agent_port=_DEFAULT_AGENT_PORT,
@@ -2355,7 +2470,7 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
     plan = ProvisionPlan(
         install_media=probe,
         media_content=content,
-        virtio_iso=virtio_iso,
+        virtio_iso=virtio.path,
         disk_image=disk_image,
         answer_iso=answer_iso,
         authoring_tool=tool_name,
@@ -2434,7 +2549,14 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scan-depth", type=int, default=_DEFAULT_SCAN_DEPTH, help="Maximum directory depth when scanning for media.")
     parser.add_argument("--scan-budget", type=int, default=_DEFAULT_SCAN_BUDGET, help="Maximum directories enumerated when scanning.")
     parser.add_argument("--force", action="store_true", help="Replace an existing guest system disk.")
-    parser.add_argument("--skip-content-verify", action="store_true", help="Do not mount the install medium to inspect its tree.")
+    parser.add_argument(
+        "--skip-content-verify",
+        action="store_true",
+        help=(
+            "Do not mount the Windows install medium to inspect its tree. The virtio-win medium is inspected "
+            "regardless, because the answer file's WinPE driver paths are enumerated from its real layout."
+        ),
+    )
     parser.add_argument("--keep-guest-firewall", action="store_true", help="Leave the guest firewall enabled.")
     parser.add_argument("--json", action="store_true", help="Emit the plan as JSON instead of human-readable text.")
     parser.add_argument("--print-autounattend", action="store_true", help="Also print the generated answer file.")
