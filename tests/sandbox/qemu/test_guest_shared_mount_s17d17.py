@@ -1193,6 +1193,16 @@ class _MountTestSandbox(QEMUSandbox):
         """
         return self._guest_shared_root
 
+    def probe_command_line(self) -> str:
+        """Return the readiness probe as the agent server records it.
+
+        Returns:
+            str: Executable and arguments of the production readiness probe,
+            joined the way :meth:`GuestExecRecord.command_line` joins them.
+        """
+        path, args = self._guest_exec_probe()
+        return " ".join([path, *args])
+
     def guest_system_root(self) -> str | None:
         """Return the guest ``%SystemRoot%`` the mount probe cached.
 
@@ -1829,7 +1839,13 @@ class TestWindowsGuestResolvesTheDriveLetter:
             command_lines = ga_server.command_lines()
             for probe in (f"echo {_SYSTEM_DRIVE_REFERENCE}", f"echo {_SYSTEM_ROOT_REFERENCE}"):
                 assert _index_of(command_lines, probe) >= 0, f"the guest was never asked for {probe}: {command_lines}"
-            allowed = ("fsutil", "dir /b", f"echo {_SYSTEM_DRIVE_REFERENCE}", f"echo {_SYSTEM_ROOT_REFERENCE}")
+            allowed = (
+                "fsutil",
+                "dir /b",
+                f"echo {_SYSTEM_DRIVE_REFERENCE}",
+                f"echo {_SYSTEM_ROOT_REFERENCE}",
+                sandbox.probe_command_line(),
+            )
             unexpected = [line for line in command_lines if not any(token in line for token in allowed)]
             assert not unexpected, f"only drive enumeration and existence probes may run: {unexpected}"
 

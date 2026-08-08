@@ -105,14 +105,17 @@ public class ClipboardListener : Form {
             if (owner != IntPtr.Zero) {
                 GetWindowThreadProcessId(owner, out pid);
             }
-            ClipboardChanged?.Invoke(this, new ClipboardChangedEventArgs(pid));
+            EventHandler<ClipboardChangedEventArgs> handler = ClipboardChanged;
+            if (handler != null) {
+                handler(this, new ClipboardChangedEventArgs(pid));
+            }
         }
         base.WndProc(ref m);
     }
 }
 
 public class ClipboardChangedEventArgs : EventArgs {
-    public uint OwnerPid { get; }
+    public uint OwnerPid { get; private set; }
     public ClipboardChangedEventArgs(uint ownerPid) {
         OwnerPid = ownerPid;
     }
