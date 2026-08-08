@@ -27,12 +27,14 @@ abandoning a partial report on a single bad line.
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import TYPE_CHECKING, Final
 
 from intellicrack.core.logging import get_logger
 from intellicrack.sandbox.base import (
     ApiCall,
     ClipboardEvent,
+    CollectorOutage,
     DllLoadEvent,
     FileChange,
     InjectionEvent,
@@ -78,6 +80,14 @@ INJECTION_LOG_MIN_PARTS: int = 7
 RESOURCE_LOG_MIN_PARTS: int = 7
 CLIPBOARD_LOG_MIN_PARTS: int = 7
 API_LOG_MIN_PARTS: int = 7
+LIFECYCLE_LOG_MIN_PARTS: int = 4
+
+_LIFECYCLE_STATE_IDX: Final[int] = 2
+_LIFECYCLE_DETAIL_IDX: Final[int] = 3
+_LIFECYCLE_STATE_STARTED: Final[str] = "started"
+_LIFECYCLE_STATE_STOPPED: Final[str] = "stopped"
+_LIFECYCLE_EXIT_CODE_RE: Final[re.Pattern[str]] = re.compile(r"exit_code=(-?\d+)")
+_ERR_COLLECTOR_NEVER_STARTED: Final[str] = "never reported starting"
 
 _FILE_LOG_OLD_PATH_IDX = 3
 _FILE_LOG_SIZE_IDX = 4
@@ -554,3 +564,64 @@ async def parse_api_trace_log(
             ),
         )
     return out
+
+
+async def parse_collector_lifecycle(
+    shared_folder: Path | None,
+    collector: str,
+    log_name: str,
+) -> CollectorOutage | None:
+    """Detect whether a monitoring collector suffered an outage during a run.
+
+    Log format: ``timestamp|collector|state|detail``, written by the collector
+    itself once when it begins (``state`` is ``started``) and once more, from
+    a ``finally`` block, whenever it terminates for any reason (``state`` is
+    ``stopped``). Nothing in this application's run orchestration signals a
+    collector to stop mid-run - collectors run for the guest's whole
+    lifetime - so a ``stopped`` line observed while collecting a run's logs
+    means the collector exited on its own before the run finished, and a
+    missing or empty lifecycle log means the collector process never reached
+    its first line of execution. Either case means the collector's data log
+    for this run holds no trustworthy observations, even if it contains
+    lines: a collector that fails after opening its log can, and does, write
+    its own failure as a data record for lack of any other channel.
+
+    Args:
+        shared_folder: Sandbox shared folder root.
+        collector: Human-readable collector name recorded on the outage, for
+            example ``"api_trace"``.
+        log_name: Lifecycle log file name under ``<shared_folder>/logs/``.
+
+    Returns:
+        CollectorOutage | None: An outage record if the collector never
+        reported starting or reported stopping before the run finished, with
+        ``exit_code`` parsed from the stop detail when the collector recorded
+        one; ``None`` if the collector reported starting and has not since
+        reported stopping.
+    """
+    started = False
+    stop_detail: str | None = None
+    for line in await read_log_lines(shared_folder, log_name):
+        parts = line.split("|", 3)
+        if len(parts) < LIFECYCLE_LOG_MIN_PARTS:
+            continue
+        state = parts[_LIFECYCLE_STATE_IDX]
+        if state == _LIFECYCLE_STATE_STARTED:
+            started = True
+        elif state == _LIFECYCLE_STATE_STOPPED:
+            stop_detail = parts[_LIFECYCLE_DETAIL_IDX]
+
+    if not started:
+        return CollectorOutage(collector=collector, reason=_ERR_COLLECTOR_NEVER_STARTED, exit_code=None)
+    if stop_detail is None:
+        return None
+
+    exit_code: int | None = None
+    match = _LIFECYCLE_EXIT_CODE_RE.search(stop_detail)
+    if match:
+        exit_code = int(match.group(1))
+    return CollectorOutage(
+        collector=collector,
+        reason=f"stopped before the run finished ({stop_detail})",
+        exit_code=exit_code,
+    )

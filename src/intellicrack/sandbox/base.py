@@ -246,6 +246,22 @@ class ClipboardEvent(TypedDict):
     process_name: str
 
 
+class CollectorOutage(TypedDict):
+    """Represents a monitoring collector that did not observe for the full run.
+
+    A recorder that never reported starting, or that reported stopping while
+    the sandboxed process was still being monitored, produced no trustworthy
+    observations for its report section. Surfacing that distinctly lets a
+    report consumer tell "the sample made no calls this collector watches
+    for" apart from "this collector never watched", which a collector's own
+    data log cannot express on its own.
+    """
+
+    collector: str
+    reason: str
+    exit_code: int | None
+
+
 class IOCEntry(TypedDict):
     """Represents an Indicator of Compromise extracted from sandbox analysis."""
 
@@ -343,6 +359,10 @@ class ExecutionReport:
         injection_events: Process injection events detected.
         resource_samples: Resource usage samples collected.
         clipboard_events: Clipboard activity detected.
+        collector_outages: Monitoring collectors that did not observe for
+            the full run - never started, or stopped early - so the
+            corresponding report section(s) should be shown as unavailable
+            rather than as a record of what the sample did.
     """
 
     result: ExecutionResult
@@ -361,6 +381,7 @@ class ExecutionReport:
     injection_events: list[InjectionEvent] = field(default_factory=list)
     resource_samples: list[ResourceSample] = field(default_factory=list)
     clipboard_events: list[ClipboardEvent] = field(default_factory=list)
+    collector_outages: list[CollectorOutage] = field(default_factory=list)
 
 
 class SandboxBase:
@@ -380,7 +401,7 @@ class SandboxBase:
 
     @property
     def state(self) -> SandboxState:
-        """Get current sandbox state.
+        """Current sandbox state.
 
         Returns:
             SandboxState: Current SandboxState.
@@ -389,7 +410,7 @@ class SandboxBase:
 
     @property
     def config(self) -> SandboxConfig:
-        """Get sandbox configuration.
+        """Sandbox configuration this instance was built with.
 
         Returns:
             SandboxConfig: Current SandboxConfig.
@@ -398,7 +419,7 @@ class SandboxBase:
 
     @property
     def vnc_port(self) -> int | None:
-        """Get the VNC port if available.
+        """VNC port this backend exposes, if it exposes one at all.
 
         Returns:
             int | None: VNC port number, or None if not supported.
