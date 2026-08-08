@@ -1629,13 +1629,27 @@ class WindowsSandbox(SandboxBase):
         ]
         return "\r\n".join(lines)
 
+    @staticmethod
+    def bundled_scripts_dir() -> Path:
+        """Return the on-disk directory holding the bundled monitor scripts.
+
+        Returns:
+            Path: Absolute path to the ``sandbox/scripts`` directory whose
+            contents :meth:`_create_monitor_scripts` stages into the guest.
+            The path is resolved from this module's location, so it is safe
+            to compute synchronously even from async callers.
+        """
+        return _SCRIPTS_DIR
+
     async def _create_monitor_scripts(self) -> None:
         """Stage the monitor fleet into the shared folder.
 
         Copies every PowerShell monitor bundled in ``sandbox/scripts`` plus
         the ``start_monitors.cmd`` launcher into the guest-accessible monitor
-        directory, then emits the inline process / file / registry / network
-        monitors used for base telemetry.
+        directory, then emits the inline process / file / network monitors
+        used for base telemetry. Registry telemetry comes from the bundled
+        ``registry_monitor.ps1`` copied above, so nothing is emitted inline
+        for it.
 
         Raises:
             SandboxError: If sandbox paths are not initialized.
@@ -1655,7 +1669,7 @@ class WindowsSandbox(SandboxBase):
             Raises:
                 SandboxError: If the host scripts directory is missing.
             """
-            scripts_dir = _SCRIPTS_DIR
+            scripts_dir = WindowsSandbox.bundled_scripts_dir()
             if not scripts_dir.is_dir():
                 _logger.error("monitor_scripts_dir_not_found", scripts_dir=str(scripts_dir))
                 raise SandboxError(_ERR_SCRIPTS_NOT_FOUND)
@@ -1677,17 +1691,20 @@ class WindowsSandbox(SandboxBase):
         )
 
     async def _emit_inline_monitors(self) -> None:
-        """Write the file, registry, network, and process baseline monitors.
+        """Write the file, network, and process baseline monitors.
 
-        These cover the core FileChange / RegistryChange / NetworkActivity / ProcessActivity telemetry that the :class:`ExecutionReport`
+        These cover the core FileChange / NetworkActivity / ProcessActivity telemetry that the :class:`ExecutionReport`
         always expects; they complement the external PowerShell monitors.
+        RegistryChange telemetry deliberately has no inline monitor: the
+        bundled ``sandbox/scripts/registry_monitor.ps1`` staged by
+        :meth:`_create_monitor_scripts` is its single source of truth, and an
+        inline copy here would overwrite the staged file.
         """
         if self._monitor_folder is None:
             return
 
         monitors: list[tuple[str, str]] = [
             ("file_monitor.ps1", self._file_monitor_source()),
-            ("registry_monitor.ps1", self._registry_monitor_source()),
             ("network_monitor.ps1", self._network_monitor_source()),
             ("process_monitor.ps1", self._process_monitor_source()),
         ]
@@ -1740,91 +1757,6 @@ class WindowsSandbox(SandboxBase):
             "    Register-ObjectEvent $w 'Renamed' -Action $action -MessageData $logPath | Out-Null\n"
             "}\n"
             "while ($true) { Start-Sleep -Seconds 1 }\n"
-        )
-
-    @staticmethod
-    def _registry_monitor_source() -> str:
-        """Return PowerShell source for the baseline registry monitor.
-
-        Returns:
-            str: PowerShell script source text.
-        """
-        return (
-            "param([string]$LogDir = '.')\n"
-            "$ErrorActionPreference = 'SilentlyContinue'\n"
-            "if (-not (Test-Path -LiteralPath $LogDir)) {\n"
-            "    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null\n"
-            "}\n"
-            "$logPath = Join-Path -Path $LogDir -ChildPath 'registry_monitor.log'\n"
-            "$watchedRoots = @(\n"
-            "    'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run',\n"
-            "    'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce',\n"
-            "    'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run',\n"
-            "    'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce',\n"
-            "    'HKLM:\\SYSTEM\\CurrentControlSet\\Services'\n"
-            ")\n"
-            "$baseline = @{}\n"
-            "function Get-RegValueType {\n"
-            "    param([string]$RegPath, [string]$ValueName)\n"
-            "    try {\n"
-            "        $item = Get-Item -LiteralPath $RegPath -ErrorAction Stop\n"
-            "        $kind = $item.GetValueKind($ValueName)\n"
-            "        return [string]$kind\n"
-            "    } catch { return 'Unknown' }\n"
-            "}\n"
-            "function Snapshot-Values {\n"
-            "    param([string]$Root)\n"
-            "    $snap = @{}\n"
-            "    try {\n"
-            "        $items = Get-ChildItem -LiteralPath $Root -Recurse -ErrorAction SilentlyContinue\n"
-            "        foreach ($it in $items) {\n"
-            "            $props = $null\n"
-            "            try { $props = Get-ItemProperty -LiteralPath $it.PSPath -ErrorAction Stop } catch { continue }\n"
-            "            foreach ($p in $props.PSObject.Properties) {\n"
-            "                if ($p.Name -match '^PS') { continue }\n"
-            "                $vtype = Get-RegValueType -RegPath $it.PSPath -ValueName $p.Name\n"
-            "                $key = $it.PSPath + '::' + $p.Name + '::' + $vtype\n"
-            "                $snap[$key] = [string]$p.Value\n"
-            "            }\n"
-            "        }\n"
-            "    } catch {}\n"
-            "    return $snap\n"
-            "}\n"
-            "foreach ($root in $watchedRoots) {\n"
-            "    $snap = Snapshot-Values -Root $root\n"
-            "    foreach ($k in $snap.Keys) { $baseline[$k] = $snap[$k] }\n"
-            "}\n"
-            "while ($true) {\n"
-            "    Start-Sleep -Seconds 3\n"
-            "    $ts = (Get-Date).ToString('o')\n"
-            "    foreach ($root in $watchedRoots) {\n"
-            "        $current = Snapshot-Values -Root $root\n"
-            "        foreach ($k in $current.Keys) {\n"
-            "            $full = $k -split '::', 3\n"
-            "            $path = $full[0]\n"
-            "            $name = if ($full.Count -gt 1) { $full[1] } else { '' }\n"
-            "            $rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }\n"
-            "            $val = ($current[$k] -replace '\\|','_')\n"
-            "            if (-not $baseline.ContainsKey($k)) {\n"
-            '                "$ts|created|$path|$name|$rtype|$val" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
-            "                $baseline[$k] = $current[$k]\n"
-            "            } elseif ($baseline[$k] -ne $current[$k]) {\n"
-            '                "$ts|modified|$path|$name|$rtype|$val" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
-            "                $baseline[$k] = $current[$k]\n"
-            "            }\n"
-            "        }\n"
-            "        foreach ($k in @($baseline.Keys)) {\n"
-            "            if ($k -like ($root + '*') -and -not $current.ContainsKey($k)) {\n"
-            "                $full = $k -split '::', 3\n"
-            "                $path = $full[0]\n"
-            "                $name = if ($full.Count -gt 1) { $full[1] } else { '' }\n"
-            "                $rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }\n"
-            '                "$ts|deleted|$path|$name|$rtype|" | Out-File -Append -FilePath $logPath -Encoding utf8\n'
-            "                $baseline.Remove($k)\n"
-            "            }\n"
-            "        }\n"
-            "    }\n"
-            "}\n"
         )
 
     @staticmethod

@@ -116,73 +116,93 @@ class TestNetworkMonitorSource:
         assert source.count("$ownerPid|$name") == 2
 
 
+def _bundled_registry_monitor_source() -> str:
+    """Return the text of the bundled registry monitor the backend stages.
+
+    S17-D66 converged the Windows Sandbox backend onto the single bundled
+    ``sandbox/scripts/registry_monitor.ps1``. The divergent inline copy these
+    tests previously inspected no longer exists, so F-0019's requirements are
+    now checked against the surviving script - the one production actually
+    copies into the guest monitor directory.
+
+    Returns:
+        str: PowerShell source text of the bundled registry monitor.
+    """
+    return (WindowsSandbox.bundled_scripts_dir() / "registry_monitor.ps1").read_text(encoding="utf-8")
+
+
 class TestRegistryMonitorSource:
     """Tests for F-0019: registry monitor must detect actual value type."""
 
     def test_no_hardcoded_reg_sz(self) -> None:
-        """Registry monitor must not hardcode REG_SZ; type must come from $vtype/$rtype.
+        """Registry monitor must not hardcode REG_SZ; type must come from $vtype.
 
         Absence of ``|REG_SZ|`` alone is insufficient to prove dynamic detection:
         the source could hardcode a different literal (``|REG_DWORD|``) or omit
         the type entirely and the old assertion would still pass.  The two
         additional assertions confirm that the emitted log lines interpolate the
-        dynamically-computed ``$rtype`` variable rather than any literal type
+        dynamically-computed ``$vtype`` variable rather than any literal type
         token, binding the prohibition on hardcoded literals to the positive
         requirement for variable interpolation.
         """
-        source = getattr(WindowsSandbox, "_registry_monitor_source")()
+        source = _bundled_registry_monitor_source()
         assert "|REG_SZ|" not in source
-        assert "$ts|created|$path|$name|$rtype|$val" in source
-        assert "$ts|modified|$path|$name|$rtype|$val" in source
+        assert '"$ts|created|$path|$name|$vtype|$val"' in source
+        assert '"$ts|modified|$path|$name|$vtype|$val"' in source
 
     def test_get_reg_value_type_function(self) -> None:
         """Registry monitor must define Get-RegValueType helper."""
-        source = getattr(WindowsSandbox, "_registry_monitor_source")()
+        source = _bundled_registry_monitor_source()
         assert "function Get-RegValueType" in source
 
     def test_dynamic_type_in_snapshot(self) -> None:
-        """Snapshot-Values must invoke Get-RegValueType per value and store the result.
+        """Get-ValueSnapshot must invoke Get-RegValueType per value and store the result.
 
         Presence of the function name and the variable ``$vtype`` anywhere in the
         source does not prove the function is actually called per value: it could
         be defined but never invoked.  The assignment ``$vtype = Get-RegValueType``
         with the argument ``-RegPath`` is the concrete artifact that proves the
-        per-value call exists; the composite key that embeds ``$vtype`` confirms
-        the result flows into the snapshot record rather than being discarded.
+        per-value call exists; the snapshot record's ``Type`` member confirms the
+        result flows into the snapshot rather than being discarded.
         """
-        source = getattr(WindowsSandbox, "_registry_monitor_source")()
+        source = _bundled_registry_monitor_source()
         assert "$vtype = Get-RegValueType -RegPath" in source
-        assert "$it.PSPath + '::' + $p.Name + '::' + $vtype" in source
+        assert "Type  = $vtype" in source
 
     def test_type_included_in_log_entry(self) -> None:
-        """Log lines must embed $rtype in both the changed-values and deleted-values loops.
+        """Log lines must embed $vtype in both the changed-values and deleted-values loops.
 
-        The variable ``$rtype`` alone anywhere in the source is not a gate: it
-        could live in a dead branch.  The F-0019 fix requires that ``$rtype`` is
-        extracted from the composite key via ``-split '::', 3`` in TWO separate
-        loops — one for created/modified values and one for deleted values — and
-        then interpolated directly inside the ``Out-File`` log-line in both.
-        Asserting a plain substring for the extraction assignment is not
-        sufficient because both loops share the same extraction expression: if
-        one loop's extraction were removed the ``in source`` check would still
-        pass because the other occurrence satisfies it.  Requiring exactly two
-        occurrences of the extraction assignment pins both loops; additionally
-        asserting that the deleted log line also carries ``$rtype`` confirms the
-        deleted-values loop's emit is not regressed independently.
+        The variable ``$vtype`` alone anywhere in the source is not a gate: it
+        could live in a dead branch.  Every emit must carry the type it read
+        from the snapshot record, so this pins the deleted-values emit as well
+        as the created and modified ones; the deleted loop reads its fields
+        from its own baseline entry, which is what makes a deletion reportable
+        at all.
         """
-        source = getattr(WindowsSandbox, "_registry_monitor_source")()
-        assert source.count("$rtype = if ($full.Count -gt 2) { $full[2] } else { 'Unknown' }") == 2
-        assert "$ts|created|$path|$name|$rtype|$val" in source
-        assert "$ts|deleted|$path|$name|$rtype|" in source
+        source = _bundled_registry_monitor_source()
+        assert source.count("$vtype = ConvertTo-LogField -Text $entry.Type") == 2
+        assert '"$ts|created|$path|$name|$vtype|$val"' in source
+        assert '"$ts|deleted|$path|$name|$vtype|"' in source
 
-    def test_key_split_on_three_parts(self) -> None:
-        """Key must be split into 3 parts (path :: name :: type)."""
-        source = getattr(WindowsSandbox, "_registry_monitor_source")()
-        assert "-split '::', 3" in source
+    def test_key_field_is_a_hive_path_not_a_provider_path(self) -> None:
+        r"""The emitted key must be normalised out of PowerShell's provider form.
+
+        S17-D66: the removed inline copy built its tracking key by joining the
+        provider-qualified ``PSPath`` with ``'::'`` and split it back with
+        ``-split '::', 3``.  ``PSPath`` already contains ``'::'``, so the key
+        column reported the constant ``Microsoft.PowerShell.Core\Registry`` on
+        every row.  The surviving script must therefore neither build nor split
+        such a composite key, and must run ``ConvertTo-HivePath`` over the
+        provider path before it reaches the log.
+        """
+        source = _bundled_registry_monitor_source()
+        assert "-split '::'" not in source
+        assert "+ '::' +" not in source
+        assert "Path  = ConvertTo-HivePath -ProviderPath $it.PSPath" in source
 
     def test_set_item_property_not_new_item_property(self) -> None:
         """Registry monitor must not use New-ItemProperty (unapproved verb)."""
-        source = getattr(WindowsSandbox, "_registry_monitor_source")()
+        source = _bundled_registry_monitor_source()
         assert "New-ItemProperty" not in source
 
 
