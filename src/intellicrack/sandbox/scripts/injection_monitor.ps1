@@ -105,6 +105,38 @@ function Write-InjectionDiagnostic {
     Add-Content -LiteralPath $script:diagPathRef -Value $line -Encoding utf8
 }
 
+#region TraceEventDependencyResolver
+function Register-TraceEventDependencyResolver {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$AssemblyDir
+    )
+
+    Get-ChildItem -LiteralPath $AssemblyDir -Filter '*.dll' -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne 'Microsoft.Diagnostics.Tracing.TraceEvent.dll' } |
+        ForEach-Object {
+            $dependencyFile = $_
+            try {
+                [System.Reflection.Assembly]::LoadFrom($dependencyFile.FullName) | Out-Null
+            } catch {
+                $ts = Get-Date -Format 'o'
+                Write-InjectionDiagnostic -Timestamp $ts -Category 'traceevent_dependency_load_failed' `
+                    -Detail "$($dependencyFile.Name): $($_.Exception.Message)"
+            }
+        }
+
+    $resolver = [System.ResolveEventHandler] {
+        param($resolveSender, $resolveArgs)
+        $requestedName = ([System.Reflection.AssemblyName]$resolveArgs.Name).Name
+        foreach ($loaded in [System.AppDomain]::CurrentDomain.GetAssemblies()) {
+            if ($loaded.GetName().Name -eq $requestedName) { return $loaded }
+        }
+        return $null
+    }
+    [System.AppDomain]::CurrentDomain.add_AssemblyResolve($resolver)
+}
+#endregion TraceEventDependencyResolver
+
 $traceEventAssembly = $null
 $searchRoots = @()
 if ($PSScriptRoot) { $searchRoots += $PSScriptRoot }
@@ -133,6 +165,9 @@ if (-not $traceEventAssembly) {
         -Detail "searched=$([string]::Join(';', $searchRoots))"
     throw 'Microsoft.Diagnostics.Tracing.TraceEvent.dll not found in any search root'
 }
+
+$traceEventDir = Split-Path -Parent $traceEventAssembly
+Register-TraceEventDependencyResolver -AssemblyDir $traceEventDir
 
 try {
     Add-Type -Path $traceEventAssembly

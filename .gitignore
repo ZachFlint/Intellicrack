@@ -342,6 +342,8 @@ tools/qemu-w64-setup-*.exe
 *.ini
 Qt*.dll
 vcruntime*.dll
+# Vendored ETW assemblies the in-guest monitors load; see vendor/traceevent/PROVENANCE.md
+!vendor/traceevent/**/*.dll
 
 # Java tools
 *.jar

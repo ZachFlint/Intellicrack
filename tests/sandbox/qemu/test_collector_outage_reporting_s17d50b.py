@@ -387,16 +387,21 @@ class _FullyStagedWindowsAgentSandbox(QEMUSandbox):
 class TestARealDeadRecorderIsReportedAsAnOutageEvenWithAssembliesStaged:
     """The S17-D50(b) outage guarantee must hold against today's real, fully-staged agent bundle.
 
-    S17-D50(a) fixes assembly *discovery*; a distinct, already-tracked
-    load-time gap documented in
-    ``test_traceevent_provisioning_s17d50a.py::TestKnownResidualLoadGap``
-    means both real ETW-based collectors still fail today even with every
-    vendored assembly staged. This is the strongest gate for S17-D50(b): it
-    proves the outage guarantee holds against production's actual current
-    behaviour - the real :meth:`QEMUSandbox._create_guest_agent_script`
-    staging everything it stages today - not only against the deliberately
-    DLL-less staging variant above, which isolates outage detection from
-    whatever S17-D50(a) does or does not fully resolve.
+    S17-D50(a) fixes assembly *discovery* and *load*: with every vendored
+    assembly staged, both scripts' dependency resolver (see
+    ``test_traceevent_provisioning_s17d50a.py::TestAddTypeLoadsTheVendoredAssemblyUnderTheDesktopCLR``)
+    lets ``Add-Type`` succeed, so each real ETW-based collector now reaches
+    the point of creating an actual kernel/session-based ETW trace inside
+    this container - and that step itself still fails there (a real ETW
+    session needs privilege this sandboxed environment does not grant), so
+    both collectors still end up reported as outages, just past a later
+    stage than before the load fix. This is the strongest gate for
+    S17-D50(b): it proves the outage guarantee holds against production's
+    actual current behaviour - the real
+    :meth:`QEMUSandbox._create_guest_agent_script` staging everything it
+    stages today - not only against the deliberately DLL-less staging
+    variant above, which isolates outage detection from whatever
+    S17-D50(a) does or does not fully resolve.
     """
 
     async def test_fully_staged_recorders_still_surface_as_outages_not_records(self, tmp_path: Path) -> None:

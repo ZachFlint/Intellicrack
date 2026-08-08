@@ -126,17 +126,17 @@ MONITOR_SCRIPT_NAMES: Final[tuple[str, ...]] = (
 # api_trace.ps1 and injection_monitor.ps1 both load this assembly by
 # searching $PSScriptRoot among other locations - staging it beside them
 # under the same name they already search for is what lets S17-D50(a) work
-# without editing either script. KernelTraceControl.dll keeps its amd64/
-# subdirectory because TraceEvent resolves that native dependency relative
-# to its own assembly directory by architecture, the same layout the NuGet
-# package ships it in.
-TRACE_EVENT_ASSEMBLY_FILES: Final[tuple[str, ...]] = (
-    "Microsoft.Diagnostics.Tracing.TraceEvent.dll",
-    "Microsoft.Diagnostics.FastSerialization.dll",
-    "Dia2Lib.dll",
-    "TraceReloggerLib.dll",
-    "amd64/KernelTraceControl.dll",
-)
+# without editing either script. Every other file under vendor/traceevent/
+# is staged alongside it (see enumerate_traceevent_assembly_files) because
+# TraceEvent 3.2.5 ships no net4x build: it depends on the whole .NET
+# Standard 2.0 support-pack closure to load under the Desktop CLR, and both
+# scripts pre-load that closure and install an AssemblyResolve handler
+# before Add-Type. KernelTraceControl.dll keeps its amd64/ subdirectory
+# because TraceEvent resolves that native dependency relative to its own
+# assembly directory by architecture, the same layout the NuGet package
+# ships it in. PROVENANCE.md is the only vendored file excluded from
+# staging - it documents the assemblies, it is not one of them.
+_TRACE_EVENT_STAGING_EXCLUDED_NAMES: Final[frozenset[str]] = frozenset({"PROVENANCE.md"})
 _MONITORING_LOG_NAMES: Final[tuple[str, ...]] = (
     "file_changes.log",
     "registry_monitor.log",
@@ -619,6 +619,34 @@ def _ppm_p6_to_png(ppm_path: Path, png_path: Path) -> None:
         size=len(png_bytes),
         width=width,
         height=height,
+    )
+
+
+def enumerate_traceevent_assembly_files(vendor_dir: Path) -> tuple[str, ...]:
+    """Enumerate every vendored TraceEvent assembly that must reach the guest.
+
+    Walking the vendored directory rather than naming each file in a
+    hand-maintained list means a newly vendored assembly is staged
+    automatically the next time a guest boots, and none can silently be
+    left behind by a list that drifted out of sync with what
+    ``vendor/traceevent/`` actually contains.
+
+    Args:
+        vendor_dir: Root of the vendored ``vendor/traceevent`` directory.
+
+    Returns:
+        tuple[str, ...]: Every file under ``vendor_dir`` except documentation,
+        as paths relative to ``vendor_dir`` using forward slashes, sorted for
+        deterministic staging order. Empty if ``vendor_dir`` does not exist.
+    """
+    if not vendor_dir.is_dir():
+        return ()
+    return tuple(
+        sorted(
+            path.relative_to(vendor_dir).as_posix()
+            for path in vendor_dir.rglob("*")
+            if path.is_file() and path.name not in _TRACE_EVENT_STAGING_EXCLUDED_NAMES
+        ),
     )
 
 
@@ -5329,14 +5357,18 @@ while ($true) {
         left the Network Activity and Resources report tabs permanently empty
         for a Linux guest.
 
-        The Windows agent bundle also carries the vendored ETW assemblies
-        named by :data:`TRACE_EVENT_ASSEMBLY_FILES` into the same monitor
-        directory as ``api_trace.ps1`` and ``injection_monitor.ps1``: both
-        scripts search their own directory (``$PSScriptRoot``) for
+        The Windows agent bundle also carries every vendored ETW assembly
+        found by :func:`enumerate_traceevent_assembly_files` into the same
+        monitor directory as ``api_trace.ps1`` and ``injection_monitor.ps1``:
+        both scripts search their own directory (``$PSScriptRoot``) for
         ``Microsoft.Diagnostics.Tracing.TraceEvent.dll`` among other
-        locations, so staging it there is what lets either script load ETW
+        locations, so staging it there is what lets either script find ETW
         at all rather than exiting within a second of starting with "DLL not
-        found".
+        found". Both scripts also pre-load every other assembly staged
+        alongside it and install an ``AssemblyResolve`` handler before
+        loading it, which is what lets ``Add-Type`` actually load the
+        library under Windows PowerShell 5.1's Desktop CLR rather than
+        failing past discovery with a ``ReflectionTypeLoadException``.
 
         Raises:
             ValueError: If an unsupported guest OS is configured.
@@ -5361,14 +5393,14 @@ while ($true) {
                     _logger.warning("monitor_script_missing", script=script_name, path=str(src))
 
             traceevent_src = await asyncio.to_thread(self.traceevent_assemblies_dir)
-            for assembly_rel_path in TRACE_EVENT_ASSEMBLY_FILES:
+            assembly_rel_paths = await asyncio.to_thread(enumerate_traceevent_assembly_files, traceevent_src)
+            if not assembly_rel_paths:
+                _logger.warning("traceevent_assemblies_missing", path=str(traceevent_src))
+            for assembly_rel_path in assembly_rel_paths:
                 src = traceevent_src / assembly_rel_path
                 dst = monitor_dir / assembly_rel_path
-                if await asyncio.to_thread(src.exists):
-                    await asyncio.to_thread(dst.parent.mkdir, parents=True, exist_ok=True)
-                    await asyncio.to_thread(shutil.copy2, src, dst)
-                else:
-                    _logger.warning("traceevent_assembly_missing", assembly=assembly_rel_path, path=str(src))
+                await asyncio.to_thread(dst.parent.mkdir, parents=True, exist_ok=True)
+                await asyncio.to_thread(shutil.copy2, src, dst)
 
             startup_script = monitor_dir / "start_agent.cmd"
             # %~dp0 is the directory this launcher was started from, which is

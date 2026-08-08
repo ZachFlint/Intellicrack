@@ -86,6 +86,36 @@ function Find-TraceEventAssembly {
     return $null
 }
 
+#region TraceEventDependencyResolver
+function Register-TraceEventDependencyResolver {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$AssemblyDir
+    )
+
+    Get-ChildItem -LiteralPath $AssemblyDir -Filter '*.dll' -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne 'Microsoft.Diagnostics.Tracing.TraceEvent.dll' } |
+        ForEach-Object {
+            $dependencyFile = $_
+            try {
+                [System.Reflection.Assembly]::LoadFrom($dependencyFile.FullName) | Out-Null
+            } catch {
+                Write-TraceError -Stage 'dependency_load' -Message "$($dependencyFile.Name): $($_.Exception.Message)"
+            }
+        }
+
+    $resolver = [System.ResolveEventHandler] {
+        param($resolveSender, $resolveArgs)
+        $requestedName = ([System.Reflection.AssemblyName]$resolveArgs.Name).Name
+        foreach ($loaded in [System.AppDomain]::CurrentDomain.GetAssemblies()) {
+            if ($loaded.GetName().Name -eq $requestedName) { return $loaded }
+        }
+        return $null
+    }
+    [System.AppDomain]::CurrentDomain.add_AssemblyResolve($resolver)
+}
+#endregion TraceEventDependencyResolver
+
 function Get-AuditApiName {
     [CmdletBinding()]
     [OutputType([string])]
@@ -214,6 +244,9 @@ function Invoke-ApiTrace {
         Write-TraceFatal -Code 2 -Stage 'unavailable' -Message 'Microsoft.Diagnostics.Tracing.TraceEvent.dll not found in $env:TRACE_EVENT_DLL, $PSScriptRoot, $env:USERPROFILE\.nuget\packages\microsoft.diagnostics.tracing.traceevent, or C:\Program Files\TraceEvent'
         return
     }
+
+    $traceEventDir = Split-Path -Parent $traceEventDll
+    Register-TraceEventDependencyResolver -AssemblyDir $traceEventDir
 
     try {
         Add-Type -LiteralPath $traceEventDll -ErrorAction Stop
