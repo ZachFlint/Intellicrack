@@ -8,7 +8,7 @@ r"""Real-data coverage for the inline ``WindowsSandbox`` monitor sources.
 Audit shard 12 (Category 5) flagged that the inline PowerShell monitor
 sources baked into ``src/intellicrack/sandbox/windows.py``
 (``_process_monitor_source``, ``_network_monitor_source``,
-``_file_monitor_source``, ``_registry_monitor_source``) were only
+``_file_monitor_source``) were only
 validated by source-string inspection in
 ``tests/test_audit4/a4_windows_sandbox/test_ps_sources.py`` and were
 never executed against a live Windows kernel.
@@ -401,7 +401,12 @@ async def test_file_monitor_source_captures_real_filesystem_event(tmp_path: Path
 
 @pytest.mark.asyncio
 async def test_registry_monitor_source_runs_and_produces_parsable_log(tmp_path: Path) -> None:
-    """The inline registry monitor source executes and yields a parsable log.
+    """The bundled registry monitor executes and yields a parsable log.
+
+    S17-D66 converged the Windows Sandbox backend onto the single bundled
+    ``sandbox/scripts/registry_monitor.ps1``, so the script exercised here is
+    the one :meth:`WindowsSandbox._create_monitor_scripts` stages into a guest
+    rather than the removed inline copy.
 
     The registry monitor diffs watched ``Run``/``Services`` hives. Without
     deliberately mutating those protected hives (which requires elevation
@@ -415,7 +420,7 @@ async def test_registry_monitor_source_runs_and_produces_parsable_log(tmp_path: 
     """
     pwsh = _resolve_pwsh()
     shared, _stdout, stderr = _capture_monitor(
-        _monitor_source("_registry_monitor_source"),
+        (WindowsSandbox.bundled_scripts_dir() / "registry_monitor.ps1").read_text(encoding="utf-8"),
         "registry_monitor.ps1",
         tmp_path,
         pwsh,
