@@ -106,6 +106,9 @@ _RESET_DURING_RESYNC: Final[str] = "channel reset while re-issuing guest-sync-de
 _COMMAND_TIMED_OUT: Final[str] = "Command timed out"
 _AGENT_RESULT_BUDGET_S: Final[float] = 2.0
 _OVERLONG_DEADLINE_S: Final[float] = 6.0
+# The connection the overlong frame killed, plus the one the client opens in its
+# place: a stream that can no longer be framed has to be dropped, not reused.
+_CHANNEL_REPLACED_CONNECTIONS: Final[int] = 2
 _FAILED_COMMAND_EXIT: Final[int] = -1
 
 
@@ -1139,6 +1142,11 @@ class TestAgentReaderSurvivesWhatItCanAndStopsAtWhatItCannot:
         framed on newlines. Unguarded it kills the reader task with an
         exception nobody is waiting on, and the command that is waiting sits
         out its whole deadline before reporting a timeout it never suffered.
+
+        The command that hit the overrun still fails - its reply is gone - and
+        the socket it arrived on is finished, so the client must have dropped
+        that connection and opened another rather than gone on reading a stream
+        it can no longer frame.
         """
         server = IntellicrackAgentServer(_large_output_guest)
         await server.start()
@@ -1158,7 +1166,9 @@ class TestAgentReaderSurvivesWhatItCanAndStopsAtWhatItCannot:
             assert exit_code == _FAILED_COMMAND_EXIT
             assert not stdout
             assert "channel limit" in stderr, f"the command reported something other than the framing failure: {stderr!r}"
-            assert agent.is_connected is False, "a channel that can no longer be framed must be closed"
+            assert server.accepted == _CHANNEL_REPLACED_CONNECTIONS, (
+                f"a channel that can no longer be framed must be closed and replaced, not kept; server.accepted={server.accepted}"
+            )
             assert elapsed < _OVERLONG_DEADLINE_S, f"the command waited out its whole deadline instead of failing: {elapsed:.3f}s"
         finally:
             await agent.disconnect()

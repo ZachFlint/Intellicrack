@@ -939,8 +939,20 @@ class IntellicrackAgentServer(_LoopbackServer):
     and then went away - so a client that assumes a connected socket stays
     connected can be caught.
 
+    ``drop_requests`` models the harder half of that failure: the request
+    crossed the channel and the agent took delivery of it, and the connection
+    died before any reply could come back. The command is recorded in
+    :attr:`requests` and in :attr:`dropped_requests` exactly as a live agent
+    would have received it, because from the guest's side it did arrive. A
+    client that answers a lost channel by simply sending the command again
+    therefore shows up as a second entry in :attr:`requests`, which is the only
+    way to tell a genuine recovery from a re-execution.
+
     Attributes:
-        requests: Every ``(command, args)`` pair received, in arrival order.
+        requests: Every ``(command, args)`` pair received, in arrival order,
+            whether or not a reply was ever written for it.
+        dropped_requests: The subset of ``requests`` the agent took delivery of
+            and then never answered because the connection went down.
         accepted: Number of connections accepted since ``start``, including
             the ones closed straight away.
         handshakes: Number of readiness probes answered since ``start``. A
@@ -949,6 +961,7 @@ class IntellicrackAgentServer(_LoopbackServer):
     """
 
     requests: list[tuple[str, tuple[str, ...]]]
+    dropped_requests: list[tuple[str, tuple[str, ...]]]
     accepted: int
     handshakes: int
 
@@ -961,6 +974,7 @@ class IntellicrackAgentServer(_LoopbackServer):
         undecodable_lines: int = 0,
         dead_connections: int = 0,
         close_after_replies: int = 0,
+        drop_requests: int = 0,
     ) -> None:
         """Initialise the server with an empty request log.
 
@@ -983,15 +997,21 @@ class IntellicrackAgentServer(_LoopbackServer):
             close_after_replies: How many replies one connection carries before
                 the agent hangs up. Zero leaves the connection open until the
                 client closes it.
+            drop_requests: How many commands the agent takes delivery of and
+                then abandons, closing the connection without writing their
+                reply. The budget is spent across the whole server rather than
+                per connection, so a later connection answers normally.
         """
         super().__init__(listen_delay=listen_delay, port=port)
         self.requests = []
+        self.dropped_requests = []
         self.accepted = 0
         self.handshakes = 0
         self._responder = responder
         self._undecodable_lines = undecodable_lines
         self._dead_connections = dead_connections
         self._close_after_replies = close_after_replies
+        self._drop_requests = drop_requests
 
     async def _serve(
         self,
@@ -1018,6 +1038,8 @@ class IntellicrackAgentServer(_LoopbackServer):
             if reply is None:
                 continue
             is_command_reply = str(reply.get("type", "")) == AGENT_MESSAGE_RESULT
+            if is_command_reply and self._abandon_last_request():
+                return
             if is_command_reply and self._undecodable_lines > 0:
                 self._undecodable_lines -= 1
                 writer.write(UNDECODABLE_LINE)
@@ -1028,6 +1050,19 @@ class IntellicrackAgentServer(_LoopbackServer):
             replies += 1
             if 0 < self._close_after_replies <= replies:
                 return
+
+    def _abandon_last_request(self) -> bool:
+        """Spend one ``drop_requests`` budget on the command just received.
+
+        Returns:
+            bool: True if this command's reply must never be written and the
+            connection must go down instead.
+        """
+        if self._drop_requests <= 0:
+            return False
+        self._drop_requests -= 1
+        self.dropped_requests.append(self.requests[-1])
+        return True
 
     def _reply_for(self, payload: bytes) -> dict[str, Any] | None:
         """Compute the reply message for one received request line.

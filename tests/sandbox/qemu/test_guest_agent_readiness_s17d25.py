@@ -24,8 +24,9 @@ Two properties are gated here, both against real sockets:
   The same peer coming up part-way through must still end in a usable channel,
   so "never report connected" is not a passing answer either.
 * **A peer close is not silently swallowed.** Once the agent hangs up,
-  ``is_connected`` has to become False so the next command reports a clear
-  not-connected failure instead of the caller believing the channel is alive.
+  ``is_connected`` has to become False on its own, because that is the only
+  signal anything has - a caller, or the client's own channel recovery - that
+  the socket in hand is finished rather than merely quiet.
 
 Both use the real :class:`IntellicrackAgentServer` from
 :mod:`tests.sandbox.qemu.guest_agent_server`, which speaks the in-guest agent's
@@ -84,8 +85,9 @@ _CLOSE_OBSERVED_BUDGET_S: Final[float] = 5.0
 _CLOSE_POLL_INTERVAL_S: Final[float] = 0.02
 
 _EXPECTED_EXIT_CODE: Final[int] = 0
-_FAILED_COMMAND_EXIT: Final[int] = -1
-_NOT_CONNECTED_TEXT: Final[str] = "not connected"
+# Only the connection the agent hung up on. Recovery is driven by a command, so
+# until one is issued the client must still be sitting on the dead channel.
+_CONNECTIONS_BEFORE_RECOVERY: Final[int] = 1
 _QEMU_PID_STANDIN: Final[int] = -1
 
 _ECHO_COMMAND: Final[str] = "cmd.exe"
@@ -446,13 +448,16 @@ class TestPeerCloseEndsTheChannel:
     """A channel the agent hung up on must stop reporting itself connected."""
 
     @pytest.mark.asyncio
-    async def test_close_clears_connected_and_the_next_command_says_so(self) -> None:
+    async def test_close_clears_connected_before_the_next_command_runs(self) -> None:
         """After the agent hangs up the client must admit it is disconnected.
 
         The first command proves the channel was genuinely live, so the state
-        that follows is produced by the peer's close and nothing else. The
-        second command must report that plainly instead of writing into a dead
-        socket and sitting out its deadline.
+        that follows is produced by the peer's close and nothing else. Nothing
+        may paper over that close: ``is_connected`` has to go False on its own,
+        because that is the only signal anything - a caller, or the client's
+        own recovery - has that the socket in hand is finished. What happens to
+        the command issued afterwards is S17-D55's subject and is gated in
+        :mod:`tests.sandbox.qemu.test_agent_channel_reconnect_s17d55`.
         """
         server = IntellicrackAgentServer(close_after_replies=1)
         await server.start()
@@ -466,21 +471,13 @@ class TestPeerCloseEndsTheChannel:
             waited = await _wait_for_channel_close(client, _CLOSE_OBSERVED_BUDGET_S)
 
             assert client.is_connected is False, (
-                f"the agent closed the channel {waited:.2f}s ago and the client still reports it connected; nothing will ever reconnect it"
+                f"the agent closed the channel {waited:.2f}s ago and the client still reports it connected; "
+                f"nothing can tell that the socket in hand is dead"
             )
-
-            started = time.monotonic()
-            exit_code, stdout, stderr = await client.send_command(
-                _ECHO_COMMAND,
-                _ECHO_ARGS,
-                time_limit=_COMMAND_BUDGET_S,
+            assert server.accepted == _CONNECTIONS_BEFORE_RECOVERY, (
+                f"the close was observed without a command having been issued, so nothing may have reconnected yet; "
+                f"server.accepted={server.accepted}"
             )
-            elapsed = time.monotonic() - started
-
-            assert exit_code == _FAILED_COMMAND_EXIT
-            assert not stdout, f"a command on a closed channel cannot have produced output: {stdout!r}"
-            assert _NOT_CONNECTED_TEXT in stderr.lower(), f"the caller was not told the channel is gone; got {stderr!r}"
-            assert elapsed < _COMMAND_BUDGET_S, f"the command waited out its deadline on a channel known to be closed: {elapsed:.2f}s"
         finally:
             await client.disconnect()
             await server.stop()

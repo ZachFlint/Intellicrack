@@ -271,6 +271,18 @@ _ERR_AGENT_HANDSHAKE_CLOSED = "guest agent channel closed before answering the r
 _ERR_AGENT_HANDSHAKE_TIMEOUT = "guest agent did not answer the readiness handshake within {timeout}s"
 _ERR_AGENT_HANDSHAKE_UNFRAMED = "guest agent readiness handshake could not be framed: {error}"
 _ERR_AGENT_CHANNEL_CLOSED = "guest agent closed the channel"
+_ERR_AGENT_NOT_CONNECTED = "Not connected to guest agent"
+_ERR_AGENT_COMMAND_TIMED_OUT = "Command timed out"
+_ERR_AGENT_LOST_AFTER_DISPATCH = (
+    "the guest agent channel was lost after the command was dispatched, so the guest may already be running it; "
+    "it was not sent again ({reason})"
+)
+_ERR_AGENT_RECONNECT_FAILED = "the guest agent channel could not be re-established after it failed ({reason})"
+_ERR_AGENT_DISPATCH_EXHAUSTED = "the guest agent channel failed on all {attempts} dispatch attempts ({reason})"
+_AGENT_RESULT_MESSAGE_TYPE = "result"
+_AGENT_RECONNECT_TIME_LIMIT = 30.0
+_AGENT_RECONNECT_RETRY_INTERVAL = 1.0
+_AGENT_DISPATCH_ATTEMPTS = 2
 _READINESS_POLL_INTERVAL = 0.5
 _READINESS_POLL_TIMEOUT = 60.0
 _RESULT_PAYLOAD_SEPARATOR = "|IC_RESULT|"
@@ -876,6 +888,29 @@ class _SyncOutcome:
     agent_error: str | None = None
 
 
+@dataclass(frozen=True)
+class _DispatchAttempt:
+    """What became of one attempt to run a request over the guest agent channel.
+
+    The distinction ``dispatched`` draws is the whole reason this type exists.
+    A request the host never managed to write is a request the guest cannot
+    have run, so sending it again is free. A request that did leave the host
+    and then lost its channel may already be executing inside the guest, and
+    re-sending it would run the analysis target a second time.
+
+    Attributes:
+        result: Process triple to report to the caller, or None when the
+            attempt produced no reply at all.
+        dispatched: Whether the request reached the agent before the channel
+            failed.
+        reason: Why the channel failed, when it did.
+    """
+
+    result: tuple[int, str, str] | None
+    dispatched: bool
+    reason: str
+
+
 class _JsonLineTooLongError(ConnectionError):
     """Raised when a peer sent a JSON frame longer than the channel's limit.
 
@@ -1035,13 +1070,19 @@ class QemuJsonProtocolClient:
         return True
 
     async def disconnect(self) -> None:
-        """Disconnect from the server."""
+        """Disconnect from the server.
+
+        A peer that has already gone - the guest powering off, or a forwarded
+        connection that was reset - makes the close itself fail, which is the
+        expected ending for this socket rather than a fault a caller could do
+        anything about. It is recorded at debug level for that reason.
+        """
         if self._writer is not None:
             try:
                 self._writer.close()
                 await self._writer.wait_closed()
             except OSError as e:
-                _logger.warning(self._event("disconnect_error"), error=str(e))
+                _logger.debug(self._event("disconnect_error"), error=str(e))
         self._reader = None
         self._writer = None
         self.connected = False
@@ -2035,10 +2076,23 @@ class GuestAgentClient:
             the in-guest agent - the generated agent scripts, and the test
             servers that stand in for them - has to speak exactly these two
             words.
+        RECONNECT_TIME_LIMIT: Total seconds one attempt to re-establish a
+            failed channel may spend before the command that triggered it is
+            reported failed. Public because it bounds how long a caller can be
+            held by a channel that is never coming back.
+        RECONNECT_RETRY_INTERVAL: Seconds between connect attempts while the
+            channel is being re-established.
+        MAX_DISPATCH_ATTEMPTS: How many times one command may be written to the
+            channel. Only a request that provably never reached the agent is
+            written again, so this bounds recovery rather than enabling a
+            retry.
     """
 
     PING_REQUEST_TYPE: ClassVar[str] = "ping"
     PONG_MESSAGE_TYPE: ClassVar[str] = "pong"
+    RECONNECT_TIME_LIMIT: ClassVar[float] = _AGENT_RECONNECT_TIME_LIMIT
+    RECONNECT_RETRY_INTERVAL: ClassVar[float] = _AGENT_RECONNECT_RETRY_INTERVAL
+    MAX_DISPATCH_ATTEMPTS: ClassVar[int] = _AGENT_DISPATCH_ATTEMPTS
 
     _read_limit: ClassVar[int] = _JSON_LINE_LIMIT
 
@@ -2217,7 +2271,14 @@ class GuestAgentClient:
         return connected
 
     async def disconnect(self) -> None:
-        """Disconnect from guest agent."""
+        """Disconnect from guest agent.
+
+        A socket the peer has already reset cannot be closed cleanly, and that
+        is the ordinary state of this channel at teardown: the guest is on its
+        way down, or the forwarded connection died and is what brought the
+        caller here. Failing to close it changes nothing a caller can act on,
+        so it is recorded at debug level rather than reported as a fault.
+        """
         if self._reader_task is not None:
             self._reader_task.cancel()
             try:
@@ -2231,7 +2292,7 @@ class GuestAgentClient:
                 self._writer.close()
                 await self._writer.wait_closed()
             except OSError as e:
-                _logger.warning("agent_disconnect_error", error=str(e))
+                _logger.debug("agent_disconnect_error", error=str(e))
 
         self._reader = None
         self._writer = None
@@ -2324,6 +2385,13 @@ class GuestAgentClient:
     ) -> tuple[int, str, str]:
         """Send a command to execute in the guest.
 
+        A channel that has died since the last command is re-established here
+        rather than ending the session: the forwarded socket this travels over
+        can be reset while the guest itself is perfectly healthy, and every
+        later command would otherwise fail on a connection nothing reopens.
+        What is never repeated is a command that already reached the agent -
+        see :meth:`_run_with_channel_recovery`.
+
         Args:
             command: Command to execute.
             args: Command arguments.
@@ -2338,9 +2406,6 @@ class GuestAgentClient:
             args_count=len(args) if args else 0,
             time_limit=time_limit,
         )
-        if self._writer is None or not self.connected:
-            return (-1, "", "Not connected to guest agent")
-
         request = {
             "type": "execute",
             "command": command,
@@ -2349,11 +2414,150 @@ class GuestAgentClient:
         }
 
         async with self._lock:
+            return await self._run_with_channel_recovery(request, time_limit)
+
+    async def _run_with_channel_recovery(
+        self,
+        request: Mapping[str, object],
+        time_limit: float,
+    ) -> tuple[int, str, str]:
+        """Run one request, re-opening the channel around a failure of it.
+
+        Recovery is deliberately asymmetric. A request that never left the host
+        cannot have run inside the guest, so a fresh channel is opened and it is
+        written again. A request that did leave the host may already be
+        executing - the sandbox's whole purpose is to run an analysis target,
+        and running one twice is worse than reporting that a run's outcome is
+        unknown - so the channel is re-opened for the commands that follow but
+        this one is reported failed and never repeated.
+
+        Args:
+            request: Serializable request payload to send.
+            time_limit: Total wall-clock deadline for the response.
+
+        Returns:
+            tuple[int, str, str]: ``(exit_code, stdout, stderr)`` from the
+            guest agent's reply, or a failure triple explaining what became of
+            the channel.
+        """
+        reason = _ERR_AGENT_NOT_CONNECTED
+        for attempt in range(self.MAX_DISPATCH_ATTEMPTS):
+            outcome = await self._attempt_dispatch(request, time_limit)
+            if outcome.result is not None:
+                return outcome.result
+            reason = outcome.reason
+            if outcome.dispatched:
+                await self._reestablish_channel(reason)
+                return (-1, "", _ERR_AGENT_LOST_AFTER_DISPATCH.format(reason=reason))
+            if attempt + 1 >= self.MAX_DISPATCH_ATTEMPTS:
+                break
+            if not await self._reestablish_channel(reason):
+                return (-1, "", _ERR_AGENT_RECONNECT_FAILED.format(reason=reason))
+        return (
+            -1,
+            "",
+            _ERR_AGENT_DISPATCH_EXHAUSTED.format(attempts=self.MAX_DISPATCH_ATTEMPTS, reason=reason),
+        )
+
+    async def _attempt_dispatch(
+        self,
+        request: Mapping[str, object],
+        time_limit: float,
+    ) -> _DispatchAttempt:
+        """Write one request to the open channel and wait for its reply.
+
+        The dispatch boundary is the drain that follows the write: until it
+        returns, the request is still the host's, and every failure up to that
+        point leaves the guest untouched. Once it has returned the bytes are on
+        their way and nothing the host can observe afterwards distinguishes a
+        request the agent never saw from one it is running right now.
+
+        Args:
+            request: Serializable request payload to send.
+            time_limit: Total wall-clock deadline for the response.
+
+        Returns:
+            _DispatchAttempt: The reply, or why no reply arrived and whether
+            the request had already been dispatched when the channel failed.
+        """
+        writer = self._writer
+        if writer is None or not self.connected:
+            return _DispatchAttempt(None, dispatched=False, reason=self._read_failure or _ERR_AGENT_NOT_CONNECTED)
+
+        try:
+            writer.write((json.dumps(request) + "\n").encode())
+            await writer.drain()
+        except (OSError, ConnectionError) as e:
+            _logger.warning("guest_command_dispatch_failed", error=str(e), exc_info=True)
+            return _DispatchAttempt(None, dispatched=False, reason=str(e))
+
+        msg = await self._await_guest_result(time_limit)
+        if msg is not None:
+            return _DispatchAttempt(self._decode_guest_result(msg), dispatched=True, reason="")
+        if self.connected:
+            return _DispatchAttempt((-1, "", _ERR_AGENT_COMMAND_TIMED_OUT), dispatched=True, reason="")
+        return _DispatchAttempt(None, dispatched=True, reason=self._read_failure or _ERR_AGENT_CHANNEL_CLOSED)
+
+    async def _reestablish_channel(self, reason: str) -> bool:
+        """Replace a failed channel with a freshly handshaken one.
+
+        The existing :meth:`connect` path is what runs here, so a re-opened
+        channel is proven live by the same readiness handshake a first connect
+        is, and is bounded by the same retry loop.
+
+        Args:
+            reason: Why the previous channel failed, for the log record.
+
+        Returns:
+            bool: True if a live channel is open again.
+        """
+        _logger.warning(
+            "guest_agent_channel_reconnecting",
+            host=self._host,
+            port=self._port,
+            reason=reason,
+        )
+        await self.disconnect()
+        self._read_failure = None
+        self._discard_orphaned_results()
+
+        reconnected = await self.connect(
+            time_limit=self.RECONNECT_TIME_LIMIT,
+            retry_interval=self.RECONNECT_RETRY_INTERVAL,
+        )
+        if not reconnected:
+            _logger.warning("guest_agent_channel_reconnect_failed", host=self._host, port=self._port, reason=reason)
+        return reconnected
+
+    def _discard_orphaned_results(self) -> int:
+        """Drop queued results belonging to a channel that no longer exists.
+
+        A reply left in the queue by a dead channel answers a command that has
+        already returned. Handing it to the next command would report one
+        command's outcome as another's, so results are dropped while every
+        other message the agent volunteered is put back in arrival order.
+
+        Returns:
+            int: How many orphaned result messages were discarded.
+        """
+        retained: list[GuestAgentMessage] = []
+        discarded = 0
+        while not self._message_queue.empty():
             try:
-                return await self._dispatch_guest_request(request, time_limit)
-            except (OSError, ConnectionError) as e:
-                _logger.warning("guest_command_execution_failed", error=str(e), exc_info=True)
-                return (-1, "", str(e))
+                msg = self._message_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                _logger.debug("message_queue_empty", exc_info=True)
+                break
+            if msg.message_type == _AGENT_RESULT_MESSAGE_TYPE:
+                discarded += 1
+                continue
+            retained.append(msg)
+
+        for msg in retained:
+            self._message_queue.put_nowait(msg)
+        if discarded:
+            _logger.debug("guest_agent_orphaned_results_discarded", count=discarded)
+        return discarded
 
     @staticmethod
     def _decode_guest_result(msg: GuestAgentMessage) -> tuple[int, str, str]:
@@ -2374,17 +2578,20 @@ class GuestAgentClient:
             str(msg.data.get("stderr", "")),
         )
 
-    async def _poll_guest_result(self, time_limit: float) -> tuple[int, str, str]:
-        """Poll the message queue until a result message is observed or the deadline elapses.
+    async def _await_guest_result(self, time_limit: float) -> GuestAgentMessage | None:
+        """Poll the message queue until a result message arrives or the deadline elapses.
+
+        A reply that reached the queue before the channel died is still that
+        command's answer, so the queue is swept once more after the loop ends
+        rather than discarding a result because the socket failed immediately
+        behind it.
 
         Args:
             time_limit: Total wall-clock deadline in seconds.
 
         Returns:
-            tuple[int, str, str]: ``(exit_code, stdout, stderr)`` from the
-            received result message, the reason the reader stopped if the
-            channel failed while the reply was outstanding, or a timeout marker
-            triple if the deadline elapses without a result.
+            GuestAgentMessage | None: The result message, or None when the
+            deadline elapsed or the channel failed with no reply queued.
         """
         start_time = time.time()
         while self.connected and time.time() - start_time < time_limit:
@@ -2396,30 +2603,33 @@ class GuestAgentClient:
             except TimeoutError:
                 _logger.debug("guest_command_poll_timeout", exc_info=True)
                 continue
-            if msg.message_type == "result":
-                return self._decode_guest_result(msg)
-        return (-1, "", self._read_failure or "Command timed out")
+            if msg.message_type == _AGENT_RESULT_MESSAGE_TYPE:
+                return msg
+        return self._take_queued_result()
 
-    async def _dispatch_guest_request(
-        self,
-        request: Mapping[str, object],
-        time_limit: float,
-    ) -> tuple[int, str, str]:
-        """Write a guest agent request and poll for its corresponding result.
-
-        Args:
-            request: Serializable request payload to send.
-            time_limit: Total wall-clock deadline for the response.
+    def _take_queued_result(self) -> GuestAgentMessage | None:
+        """Remove and return the first result message already sitting in the queue.
 
         Returns:
-            tuple[int, str, str]: ``(exit_code, stdout, stderr)`` from the
-            guest agent's reply.
+            GuestAgentMessage | None: The queued result, or None if there is
+            none. Every message ahead of it is put back in arrival order.
         """
-        if self._writer is None:
-            return (-1, "", "Not connected to guest agent")
-        self._writer.write((json.dumps(request) + "\n").encode())
-        await self._writer.drain()
-        return await self._poll_guest_result(time_limit)
+        retained: list[GuestAgentMessage] = []
+        found: GuestAgentMessage | None = None
+        while not self._message_queue.empty():
+            try:
+                msg = self._message_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                _logger.debug("message_queue_empty", exc_info=True)
+                break
+            if found is None and msg.message_type == _AGENT_RESULT_MESSAGE_TYPE:
+                found = msg
+                continue
+            retained.append(msg)
+
+        for msg in retained:
+            self._message_queue.put_nowait(msg)
+        return found
 
     async def get_pending_messages(self) -> list[GuestAgentMessage]:
         """Get all pending messages from the agent.
