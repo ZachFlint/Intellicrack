@@ -67,6 +67,7 @@ _SPAWN_HELPER: Final[str] = "tests/sandbox/qemu/test_guest_agent_spawn_helper_s1
 _DISK_OVERLAY: Final[str] = "tests/sandbox/qemu/test_disk_overlay_isolation_s17d58.py"
 _SNAPSHOT_OUTCOME: Final[str] = "tests/sandbox/qemu/test_snapshot_outcome_s17d59.py"
 _QMP_EVENT_DEMUX: Final[str] = "tests/sandbox/qemu/test_qmp_event_demux_s17d63.py"
+_MEMORY_DUMP_OUTCOME: Final[str] = "tests/sandbox/qemu/test_memory_dump_outcome_s17d61.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -95,6 +96,7 @@ HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
         (_DISK_OVERLAY, "TestTwoSandboxesNeverOpenTheSameWritableDisk"),
         (_SNAPSHOT_OUTCOME, "TestSnapshotOperationsReportTheRealOutcome"),
         (_QMP_EVENT_DEMUX, "TestQmpRepliesSurviveAsynchronousEvents"),
+        (_MEMORY_DUMP_OUTCOME, "TestAMemoryDumpReportsItsRealOutcome"),
     },
 )
 

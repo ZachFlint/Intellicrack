@@ -173,11 +173,14 @@ def wait_for_monitor(port: int) -> None:
     raise RuntimeError(message)
 
 
-def start_live_qemu(workdir: Path) -> Iterator[LiveQemu]:
+def start_live_qemu(workdir: Path, memory_mb: str = GUEST_MEMORY_MB) -> Iterator[LiveQemu]:
     """Start a real QEMU on a fresh qcow2 and yield it until the caller is done.
 
     Args:
         workdir: Directory the image is created in.
+        memory_mb: Guest RAM in megabytes. Gates that measure work proportional
+            to guest memory - a full memory dump, for one - need more than the
+            minimum this module defaults to.
 
     Yields:
         LiveQemu: The running QEMU and the image it holds.
@@ -196,7 +199,7 @@ def start_live_qemu(workdir: Path) -> Iterator[LiveQemu]:
         str(qemu_tool("qemu-system-x86_64")),
         *["-machine", "q35"],
         *["-accel", "tcg"],
-        *["-m", GUEST_MEMORY_MB],
+        *["-m", memory_mb],
         *["-display", "none"],
         "-nodefaults",
         *["-drive", f"file={image},format=qcow2,if=virtio"],

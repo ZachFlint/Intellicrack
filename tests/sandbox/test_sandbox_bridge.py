@@ -1324,6 +1324,7 @@ class _RealLocalManager:
         config: SandboxConfig | None = None,
         time_limit: int | None = None,
         qemu_config: object = None,
+        instance_id: str | None = None,
         *,
         monitor: bool = True,
         reuse_instance: bool = False,
@@ -1337,20 +1338,27 @@ class _RealLocalManager:
             config: Unused sandbox configuration.
             time_limit: Optional timeout in seconds.
             qemu_config: Unused QEMU configuration.
+            instance_id: Instance the caller directed the run at, if any.
             monitor: Whether to diff the work directory for file changes.
             reuse_instance: Unused reuse flag.
 
         Returns:
             tuple[StubInstance, ExecutionReport]: The instance and the real report.
+
+        Raises:
+            KeyError: If a named instance does not exist.
         """
         del config, qemu_config, reuse_instance, sandbox_type
+        if instance_id is not None and instance_id not in self._instances:
+            msg = f"unknown instance: {instance_id}"
+            raise KeyError(msg)
         report = await self._sandbox.run_binary(
             binary_path=binary_path,
             args=args,
             time_limit=time_limit,
             monitor=monitor,
         )
-        inst = self._instances[_REAL_INSTANCE]
+        inst = self._instances[instance_id or _REAL_INSTANCE]
         inst.binary_path = binary_path
         inst.last_report = report
         return (inst, report)

@@ -42,7 +42,15 @@ from intellicrack.sandbox.base import (
     SandboxError,
     SandboxTimeoutError,
 )
-from intellicrack.sandbox.log_helpers import format_yara_match as _format_yara_match
+from intellicrack.sandbox.log_helpers import (
+    ERR_YARA_NO_ARTIFACTS,
+    ERR_YARA_NO_MEMORY_DUMP,
+    ERR_YARA_UNKNOWN_TARGET,
+    YARA_SCAN_TARGETS,
+    YARA_TARGET_MEMORY,
+    format_yara_match as _format_yara_match,
+    scannable_output_files,
+)
 from intellicrack.sandbox.log_parsers import (
     parse_api_trace_log,
     parse_clipboard_log,
@@ -2825,6 +2833,11 @@ class WindowsSandbox(SandboxBase):
     ) -> list[dict[str, Any]]:
         """Run YARA rules against sandbox artifacts.
 
+        An empty result means the rules matched nothing in artifacts that were
+        really scanned. Having nothing to scan is a different outcome and is
+        raised rather than returned, so a scan that never reached the guest
+        cannot be mistaken for a clean one.
+
         Args:
             rules_path: Path to YARA rules file. Uses built-in rules if None.
             scan_target: What to scan - 'files' for dropped files, 'memory' for memory dump.
@@ -2833,9 +2846,16 @@ class WindowsSandbox(SandboxBase):
             list[dict[str, Any]]: List of YARA match dictionaries.
 
         Raises:
-            SandboxError: If scan fails.
+            SandboxError: If the scan target is unknown, the sandbox has no
+                shared folder, or there is nothing of the requested kind to
+                scan.
         """
         _logger.info("windows_sandbox_yara_scan_started", rules_path=rules_path, scan_target=scan_target)
+        if scan_target not in YARA_SCAN_TARGETS:
+            _logger.warning("yara_scan_unknown_target", scan_target=scan_target)
+            raise SandboxError(
+                ERR_YARA_UNKNOWN_TARGET.format(target=scan_target, expected=", ".join(YARA_SCAN_TARGETS)),
+            )
         yara = require_yara()
 
         if self._shared_folder is None:
@@ -2853,10 +2873,13 @@ class WindowsSandbox(SandboxBase):
         matches: list[dict[str, Any]] = []
         output_dir = self._shared_folder / "output"
 
-        if scan_target == "memory":
+        if scan_target == YARA_TARGET_MEMORY:
             dump_files = await asyncio.to_thread(
                 lambda: list(output_dir.glob("memdump_*.dmp")),
             )
+            if not dump_files:
+                _logger.warning("yara_scan_no_memory_dump", output_dir=str(output_dir))
+                raise SandboxError(ERR_YARA_NO_MEMORY_DUMP.format(path=output_dir))
             for dump_file in dump_files:
                 file_matches: list[Any] = await asyncio.to_thread(
                     compiled_rules.match,
@@ -2887,9 +2910,11 @@ class WindowsSandbox(SandboxBase):
 
                 scan_files = await asyncio.to_thread(_extract_zips)
             else:
-                scan_files = await asyncio.to_thread(
-                    lambda: [f for f in output_dir.rglob("*") if f.is_file() and f.suffix.lower() not in {".txt", ".log"}],
-                )
+                scan_files = await asyncio.to_thread(scannable_output_files, output_dir)
+
+            if not scan_files:
+                _logger.warning("yara_scan_no_artifacts", output_dir=str(output_dir))
+                raise SandboxError(ERR_YARA_NO_ARTIFACTS.format(path=output_dir))
 
             for scan_file in scan_files:
                 try:
