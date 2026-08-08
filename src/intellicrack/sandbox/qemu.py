@@ -43,6 +43,7 @@ from intellicrack.core.subprocess_compat import (
 from intellicrack.sandbox.base import (
     ApiCall,
     ClipboardEvent,
+    CollectorOutage,
     DllLoadEvent,
     ExecutionReport,
     ExecutionResult,
@@ -71,6 +72,7 @@ from intellicrack.sandbox.log_helpers import (
 from intellicrack.sandbox.log_parsers import (
     parse_api_trace_log,
     parse_clipboard_log,
+    parse_collector_lifecycle,
     parse_dll_log,
     parse_file_log,
     parse_injection_log,
@@ -120,6 +122,20 @@ MONITOR_SCRIPT_NAMES: Final[tuple[str, ...]] = (
     "registry_monitor.ps1",
     "resource_monitor.ps1",
     "service_monitor.ps1",
+)
+# api_trace.ps1 and injection_monitor.ps1 both load this assembly by
+# searching $PSScriptRoot among other locations - staging it beside them
+# under the same name they already search for is what lets S17-D50(a) work
+# without editing either script. KernelTraceControl.dll keeps its amd64/
+# subdirectory because TraceEvent resolves that native dependency relative
+# to its own assembly directory by architecture, the same layout the NuGet
+# package ships it in.
+TRACE_EVENT_ASSEMBLY_FILES: Final[tuple[str, ...]] = (
+    "Microsoft.Diagnostics.Tracing.TraceEvent.dll",
+    "Microsoft.Diagnostics.FastSerialization.dll",
+    "Dia2Lib.dll",
+    "TraceReloggerLib.dll",
+    "amd64/KernelTraceControl.dll",
 )
 _MONITORING_LOG_NAMES: Final[tuple[str, ...]] = (
     "file_changes.log",
@@ -637,6 +653,8 @@ class _MonitoringLogs:
         injection_events: Parsed injection event records.
         resource_samples: Parsed resource usage samples.
         clipboard_events: Parsed clipboard event records.
+        collector_outages: Monitoring collectors that did not observe for
+            the full run, per :func:`intellicrack.sandbox.log_parsers.parse_collector_lifecycle`.
     """
 
     file_changes: list[FileChange] = field(default_factory=list)
@@ -650,6 +668,7 @@ class _MonitoringLogs:
     injection_events: list[InjectionEvent] = field(default_factory=list)
     resource_samples: list[ResourceSample] = field(default_factory=list)
     clipboard_events: list[ClipboardEvent] = field(default_factory=list)
+    collector_outages: list[CollectorOutage] = field(default_factory=list)
 
 
 @dataclass
@@ -5269,6 +5288,18 @@ while ($true) {
         """
         return Path(__file__).resolve().parent / "scripts"
 
+    @staticmethod
+    def traceevent_assemblies_dir() -> Path:
+        """Return the on-disk directory that contains vendored ETW tracing assemblies.
+
+        Returns:
+            Path: Absolute path to ``vendor/traceevent`` at the repository
+            root, resolved via :func:`intellicrack.core.config.get_project_root`
+            so it is correct regardless of the working directory the sandbox
+            backend is invoked from.
+        """
+        return get_project_root() / "vendor" / "traceevent"
+
     async def _create_guest_agent_script(self) -> None:
         r"""Create guest agent scripts and stage bundled monitor scripts.
 
@@ -5298,6 +5329,15 @@ while ($true) {
         left the Network Activity and Resources report tabs permanently empty
         for a Linux guest.
 
+        The Windows agent bundle also carries the vendored ETW assemblies
+        named by :data:`TRACE_EVENT_ASSEMBLY_FILES` into the same monitor
+        directory as ``api_trace.ps1`` and ``injection_monitor.ps1``: both
+        scripts search their own directory (``$PSScriptRoot``) for
+        ``Microsoft.Diagnostics.Tracing.TraceEvent.dll`` among other
+        locations, so staging it there is what lets either script load ETW
+        at all rather than exiting within a second of starting with "DLL not
+        found".
+
         Raises:
             ValueError: If an unsupported guest OS is configured.
         """
@@ -5319,6 +5359,16 @@ while ($true) {
                     await asyncio.to_thread(shutil.copy2, src, dst)
                 else:
                     _logger.warning("monitor_script_missing", script=script_name, path=str(src))
+
+            traceevent_src = await asyncio.to_thread(self.traceevent_assemblies_dir)
+            for assembly_rel_path in TRACE_EVENT_ASSEMBLY_FILES:
+                src = traceevent_src / assembly_rel_path
+                dst = monitor_dir / assembly_rel_path
+                if await asyncio.to_thread(src.exists):
+                    await asyncio.to_thread(dst.parent.mkdir, parents=True, exist_ok=True)
+                    await asyncio.to_thread(shutil.copy2, src, dst)
+                else:
+                    _logger.warning("traceevent_assembly_missing", assembly=assembly_rel_path, path=str(src))
 
             startup_script = monitor_dir / "start_agent.cmd"
             # %~dp0 is the directory this launcher was started from, which is
@@ -6715,6 +6765,7 @@ python3 /mnt/shared/monitor/agent.py &
             injection_events=logs.injection_events,
             resource_samples=logs.resource_samples,
             clipboard_events=logs.clipboard_events,
+            collector_outages=logs.collector_outages,
         )
 
     async def _collect_monitoring_logs(self) -> _MonitoringLogs:
@@ -6725,9 +6776,20 @@ python3 /mnt/shared/monitor/agent.py &
             the shared ``logs`` folder. Each field is populated from the
             corresponding parser in :mod:`intellicrack.sandbox.log_parsers`
             and defaults to an empty list when the matching log file is
-            absent.
+            absent. ``collector_outages`` is only populated for a Windows
+            guest, since only the Windows agent stages the ETW-based
+            ``api_trace`` and ``injection_monitor`` collectors it reports on.
         """
         shared = self._shared_folder
+        collector_outages: list[CollectorOutage] = []
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            for collector, lifecycle_log in (
+                ("api_trace", "api_trace.lifecycle.log"),
+                ("injection_monitor", "injection_monitor.lifecycle.log"),
+            ):
+                outage = await parse_collector_lifecycle(shared, collector, lifecycle_log)
+                if outage is not None:
+                    collector_outages.append(outage)
         return _MonitoringLogs(
             file_changes=await parse_file_log(shared, "file_changes.log"),
             registry_changes=await parse_registry_log(shared, "registry_monitor.log"),
@@ -6738,6 +6800,7 @@ python3 /mnt/shared/monitor/agent.py &
             kernel_objects=await parse_kernel_object_log(shared, "kernel_object_monitor.log"),
             dll_loads=await parse_dll_log(shared, "dll_monitor.log"),
             injection_events=await parse_injection_log(shared, "injection_monitor.log"),
+            collector_outages=collector_outages,
             resource_samples=await parse_resource_log(shared, "resource_monitor.log"),
             clipboard_events=await parse_clipboard_log(shared, "clipboard_monitor.log"),
         )
