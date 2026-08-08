@@ -1296,6 +1296,7 @@ class SandboxBridge(ToolBridgeBase):
         monitor: bool = True,
         qemu_config: QEMUConfig | None = None,
         reuse_instance: bool = False,
+        instance_id: str | None = None,
     ) -> dict[str, Any]:
         """Execute a binary in a sandbox with monitoring.
 
@@ -1313,6 +1314,13 @@ class SandboxBridge(ToolBridgeBase):
         a second virtual machine booted beside it rather than its binary run
         in the one it is looking at.
 
+        ``instance_id`` is stronger than ``reuse_instance`` and is what a
+        caller needs to compare two runs. ``reuse_instance`` cannot express
+        *which* sandbox to use - it takes whichever idle one of that type
+        comes first - so with two sandboxes running, two successive calls both
+        land on the same instance and :meth:`diff` has only one report to work
+        from.
+
         Args:
             binary_path: Path to the binary to execute.
             args: Optional command line arguments.
@@ -1324,6 +1332,8 @@ class SandboxBridge(ToolBridgeBase):
                 ``"qemu"`` type to reach a bootable disk image.
             reuse_instance: Whether to run in an existing idle sandbox of the
                 same type instead of creating one.
+            instance_id: Identifier of the existing sandbox to run in. Takes
+                precedence over ``reuse_instance``.
 
         Returns:
             dict[str, Any]: ExecutionReport as dictionary.
@@ -1351,6 +1361,7 @@ class SandboxBridge(ToolBridgeBase):
                 sandbox_type=sb_type,
                 time_limit=time_limit,
                 qemu_config=qemu_config,
+                instance_id=instance_id,
                 monitor=monitor,
                 reuse_instance=reuse_instance,
             )

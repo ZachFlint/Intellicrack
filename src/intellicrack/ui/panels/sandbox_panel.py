@@ -1166,9 +1166,16 @@ class SandboxPanel(AnalysisPanelBase):
 
         The run is given the same backend configuration ``Create`` and
         ``Restart`` already build, because a QEMU run that reaches the backend
-        without a disk image cannot start a virtual machine at all, and it
-        asks to reuse the instance the panel is already showing rather than
-        booting a second one beside it.
+        without a disk image cannot start a virtual machine at all.
+
+        It is also directed at the instance this panel is showing, by id.
+        ``reuse_instance`` alone cannot say *which* one: it takes whichever
+        idle sandbox of that type comes first, so with more than one running
+        the binary executed somewhere other than where the operator was
+        watching, and the report that came back overwrote the displayed
+        instance's tabs. ``reuse_instance`` stays set for the case where
+        nothing has been created yet, where it still avoids booting a second
+        virtual machine beside the first.
         """
         if self._bridge is None:
             self._log("[!] No sandbox bridge active")
@@ -1201,6 +1208,7 @@ class SandboxPanel(AnalysisPanelBase):
                 sandbox_type=sandbox_type,
                 qemu_config=self._qemu_create_config(sandbox_type),
                 reuse_instance=True,
+                instance_id=self.sandbox_id,
             ),
             on_success=self._on_run_binary_success,
             on_error=self._on_run_binary_error,
