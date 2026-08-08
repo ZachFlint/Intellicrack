@@ -35,6 +35,7 @@ from intellicrack.sandbox.qemu import (
     GuestOS,
     QEMUConfig,
     QEMUSandbox,
+    QMPResponse,
 )
 from tests.sandbox.qemu.guest_agent_server import IntellicrackAgentServer
 
@@ -1159,104 +1160,157 @@ class TestF0022F0029AntiEvasion:
 
 
 # ---------------------------------------------------------------------------
-# F-0023: list_snapshots parses QMP response correctly
+# F-0023 / S17-D59: list_snapshots reads the block layer, not a monitor table
 # ---------------------------------------------------------------------------
 
 
-class _SnapshotQMPResult:
-    """Minimal QMP result for snapshot list tests.
+def _snapshot_record(name: str) -> dict[str, object]:
+    """Build one snapshot record in QEMU's own shape.
+
+    Args:
+        name: Snapshot tag.
+
+    Returns:
+        dict[str, object]: A record with the members QEMU reports.
+    """
+    return {
+        "vm-clock-nsec": 931606000,
+        "name": name,
+        "date-sec": 1786140936,
+        "date-nsec": 624721000,
+        "vm-clock-sec": 1,
+        "id": "1",
+        "vm-state-size": 910100,
+    }
+
+
+def _block_device(node_name: str, snapshots: list[dict[str, object]] | None) -> dict[str, object]:
+    """Build one ``query-block`` device record in QEMU's own shape.
+
+    Args:
+        node_name: Node name of the device's topmost layer.
+        snapshots: Snapshot records the image holds, or None for an image
+            that reports no ``snapshots`` member at all.
+
+    Returns:
+        dict[str, object]: A device record with an ``inserted`` medium.
+    """
+    image: dict[str, object] = {"filename": "guest.qcow2", "format": "qcow2"}
+    if snapshots is not None:
+        image["snapshots"] = snapshots
+    return {
+        "device": "virtio0",
+        "locked": False,
+        "removable": False,
+        "inserted": {"node-name": node_name, "drv": "qcow2", "ro": False, "image": image},
+    }
+
+
+class _RecordedQueryBlock:
+    """QMP stand-in that answers ``query-block`` with a real reply shape.
+
+    The payloads are the ones a real QEMU 10.1 returns, captured from a live
+    monitor. This deliberately exposes no ``info_snapshots``: an implementation
+    that went back to parsing the monitor's text table would find nothing to
+    call.
 
     Attributes:
-        success: Whether the command succeeded.
-        error: Error message if failed.
-        data: Response text payload.
+        devices: Device records to return.
+        success: Whether the query is reported as having succeeded.
     """
 
+    devices: list[dict[str, object]]
     success: bool
-    error: str
-    data: str
 
-    def __init__(self, text: str, *, success: bool = True) -> None:
-        """Initialise with response text.
+    def __init__(self, devices: list[dict[str, object]], *, success: bool = True) -> None:
+        """Record what the monitor should answer.
 
         Args:
-            text: Snapshot output text to return as data.
-            success: Whether the result represents success.
+            devices: Device records to return.
+            success: Whether the query is reported as having succeeded.
         """
+        self.devices = devices
         self.success = success
-        self.error = ""
-        self.data = text
 
-
-class _FakeQMPForSnapshots:
-    """Minimal QMP client for list_snapshots testing.
-
-    Attributes:
-        output_text: Text returned as the snapshot listing.
-    """
-
-    output_text: str
-
-    def __init__(self, output_text: str) -> None:
-        """Initialise with the output text.
-
-        Args:
-            output_text: Text the fake QMP returns in info_snapshots.
-        """
-        self.output_text = output_text
-
-    async def info_snapshots(self) -> _SnapshotQMPResult:
-        """Return the configured snapshot listing.
+    async def query_block(self) -> QMPResponse:
+        """Answer the block-device query.
 
         Returns:
-            _SnapshotQMPResult: Result containing output_text as data.
+            QMPResponse: The recorded reply.
         """
-        return _SnapshotQMPResult(self.output_text)
+        return QMPResponse(success=self.success, data=list(self.devices))
 
 
-class TestF0023ListSnapshotsParsing:
-    """F-0023: list_snapshots must parse QMP info-snapshots output correctly."""
+class TestListSnapshotsReadsTheBlockLayer:
+    """S17-D59: the snapshot list must come from structured block-layer data.
 
-    def test_parses_numeric_leading_tag_rows(self) -> None:
-        """Rows whose first token is a digit are parsed as snapshot names."""
-        qmp_output = (
-            " ID        TAG                 VM SIZE                DATE       VM CLOCK\n"
-            " 1         clean_state            385M 2026-04-01 10:00:00   00:01:23.456\n"
-            " 2         post_install           390M 2026-04-01 10:05:00   00:02:00.000\n"
+    The previous implementation parsed the ``info snapshots`` monitor table by
+    column and kept only rows whose first field was numeric. QEMU 10.1 prints
+    ``--`` in that column, so every row was discarded and the list came back
+    empty for a disk that plainly held snapshots - which is what produced the
+    live ``count: 0`` immediately after a snapshot was created.
+    """
+
+    def test_names_come_back_from_a_real_query_block_reply(self) -> None:
+        """Every snapshot the block layer reports must be listed."""
+        sb = _make_sandbox()
+        sb.set_qmp(
+            _RecordedQueryBlock([
+                _block_device("#block190", [_snapshot_record("clean_state"), _snapshot_record("post_install")]),
+            ]),
         )
-        sb = _make_sandbox()
-        sb.set_qmp(_FakeQMPForSnapshots(qmp_output))
 
         async def _run() -> list[str]:
             return await sb.list_snapshots()
 
         result = asyncio.run(_run())
-        assert "clean_state" in result, f"Expected 'clean_state' in {result}"
-        assert "post_install" in result, f"Expected 'post_install' in {result}"
+        assert result == ["clean_state", "post_install"], f"expected both snapshots in device order; got {result}"
 
-    def test_header_row_excluded(self) -> None:
-        """Header rows (non-digit first token) must not appear in the result."""
-        qmp_output = " ID        TAG\n 1         mysnap\n"
+    def test_a_disk_holding_no_snapshots_contributes_nothing(self) -> None:
+        """An image with no ``snapshots`` member yields no names."""
         sb = _make_sandbox()
-        sb.set_qmp(_FakeQMPForSnapshots(qmp_output))
+        sb.set_qmp(_RecordedQueryBlock([_block_device("#block190", None)]))
 
         async def _run() -> list[str]:
             return await sb.list_snapshots()
 
         result = asyncio.run(_run())
-        assert "ID" not in result, f"Header 'ID' must not appear in snapshot list: {result}"
-        assert "TAG" not in result, f"Header 'TAG' must not appear in snapshot list: {result}"
+        assert result == [], f"expected [] for a disk with no snapshots; got {result}"
 
-    def test_empty_output_returns_empty_list(self) -> None:
-        """Empty QMP output returns an empty snapshot list."""
+    def test_a_name_spanning_two_disks_is_listed_once(self) -> None:
+        """A snapshot taken across several disks is one snapshot, not several.
+
+        ``snapshot-save`` writes the tag into every device it is given, so a
+        two-disk guest reports the same name twice.
+        """
         sb = _make_sandbox()
-        sb.set_qmp(_FakeQMPForSnapshots(""))
+        sb.set_qmp(
+            _RecordedQueryBlock([
+                _block_device("#block190", [_snapshot_record("checkpoint")]),
+                _block_device("#block240", [_snapshot_record("checkpoint")]),
+            ]),
+        )
 
         async def _run() -> list[str]:
             return await sb.list_snapshots()
 
         result = asyncio.run(_run())
-        assert result == [], f"Expected [] for empty QMP output; got {result}"
+        assert result == ["checkpoint"], f"a snapshot spanning two disks must be listed once; got {result}"
+
+    def test_a_refused_query_is_not_reported_as_an_empty_list(self) -> None:
+        """A monitor that refuses the query must not look like "no snapshots".
+
+        This is the same false-negative shape as the defect itself: "there are
+        none" and "I could not find out" must not be the same answer.
+        """
+        sb = _make_sandbox()
+        sb.set_qmp(_RecordedQueryBlock([], success=False))
+
+        async def _run() -> list[str]:
+            return await sb.list_snapshots()
+
+        with pytest.raises(SandboxError):
+            asyncio.run(_run())
 
 
 # ---------------------------------------------------------------------------

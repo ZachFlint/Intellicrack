@@ -246,11 +246,13 @@ def _make_sandbox(
     return _ChannelTestSandbox(config=SandboxConfig(), qemu_config=cfg)
 
 
-async def _await_all_connections_closed(server: SilentGuestAgentServer) -> None:
-    """Wait until the server observes every accepted connection closed.
+async def _settle_socket_state(server: SilentGuestAgentServer) -> None:
+    """Give the server time to observe a close, so an open socket means one.
 
-    Returning without the event having fired is not an error here; the caller's
-    assertion on :attr:`SilentGuestAgentServer.open_connections` is the gate.
+    Waiting for the close event and finding it never fires is the expected
+    outcome under the S17-D57 contract: a failed handshake keeps the channel.
+    The wait exists so that "still open" is a settled observation rather than a
+    race against a close that simply had not been processed yet.
 
     Args:
         server: Silent agent server whose connections are being watched.
@@ -874,7 +876,14 @@ class TestChannelFailureModes:
 
     @pytest.mark.asyncio
     async def test_agent_that_never_answers_sync_raises_sandbox_error(self) -> None:
-        """A connectable but silent agent fails the sync and closes its socket."""
+        """A silent agent fails the sync, and the channel it was reached on survives.
+
+        Keeping the socket is the S17-D57 contract: QEMU accepts the
+        ``org.qemu.guest_agent.0`` chardev once for the life of the VM, so a
+        client that closes it on a failed handshake has thrown away the only
+        channel there is. A guest that has not started its agent yet is exactly
+        the case that must be retried in place.
+        """
         server = SilentGuestAgentServer()
         await server.start()
         client = QemuGuestAgentClient(port=server.port)
@@ -885,22 +894,26 @@ class TestChannelFailureModes:
             assert "sync" in str(err.value), f"the failure must name the handshake that failed; got {err.value}"
             assert client.connected is False
 
-            await _await_all_connections_closed(server)
-            assert server.open_connections == 0, "the failed handshake left its socket open"
+            await _settle_socket_state(server)
+            assert server.open_connections == 1, (
+                f"the failed handshake forfeited the one channel QEMU hands out; {server.open_connections} open"
+            )
         finally:
             await client.disconnect()
             await server.stop()
 
     @pytest.mark.asyncio
-    async def test_failed_sync_leaves_no_socket_behind(
+    async def test_failed_sync_keeps_the_only_channel_it_has(
         self,
         qmp_server: QmpProtocolServer,
     ) -> None:
-        """A channel whose sync fails must not keep the connection open.
+        """A channel whose sync fails must hold the connection it already has.
 
-        The channel keeps the client instance so a later call can retry, and
-        that call opens a fresh socket; the socket of the failed attempt has to
-        be closed or the guest-agent chardev accumulates dead connections.
+        The sandbox keeps the client instance so a later call can retry, and
+        under S17-D57 that retry must reuse the open socket rather than opening
+        a fresh one: QEMU accepts the guest-agent chardev a single time per VM
+        and refuses every reconnection with a reset, so dropping it here ends
+        all guest communication for the life of the guest.
 
         Args:
             qmp_server: Real QMP-shaped server.
@@ -919,10 +932,10 @@ class TestChannelFailureModes:
             assert agent.connected is False
             assert server.accepted >= 1
 
-            await _await_all_connections_closed(server)
-            assert server.open_connections == 0, (
+            await _settle_socket_state(server)
+            assert server.open_connections == 1, (
                 f"{server.accepted} connection(s) were accepted and {server.open_connections} are still open; "
-                "a failed sync must close the channel socket before returning"
+                "a failed sync must keep the one channel socket QEMU hands out"
             )
         finally:
             await sandbox.close_clients()

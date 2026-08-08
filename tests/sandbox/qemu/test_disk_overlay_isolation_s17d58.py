@@ -20,10 +20,11 @@ The damage is silent - both guests appeared to run normally.
 This became reachable only once S17-D56 allowed two instances to exist, and the
 GUI's Compare control needs two runs, so the documented workflow led into it.
 
-The gate drives the real :meth:`QEMUSandbox._build_qemu_command` on two
-sandboxes sharing one image and checks the disk each guest would actually open.
-It needs a real ``qemu-img`` to build and verify overlays, which the test
-container does not carry, so it runs in the host-native pass.
+The gate drives the real launch composition - provision the launch disk, then
+assemble the argv around it - on two sandboxes sharing one image, and checks
+the disk each guest would actually open. It needs a real ``qemu-img`` to build
+and verify overlays, which the test container does not carry, so it runs in the
+host-native pass.
 """
 
 from __future__ import annotations
@@ -132,12 +133,17 @@ class _OverlaySandbox(QEMUSandbox):
         await self._prepare_qemu_shared_folders()
 
     async def build_command(self) -> list[str]:
-        """Drive the real :meth:`QEMUSandbox._build_qemu_command`.
+        """Drive the real launch path that decides which disk QEMU opens.
+
+        This is the same composition :meth:`QEMUSandbox._spawn_qemu_process`
+        performs - provision the launch disk, then assemble the argv around it
+        - so the gate judges what a real launch would attach rather than what
+        the argument builder does on its own.
 
         Returns:
             list[str]: The assembled QEMU argument vector.
         """
-        return await self._build_qemu_command()
+        return await self._build_qemu_command(await self._launch_disk_path())
 
     async def clean_up(self) -> None:
         """Release this sandbox's temporary state and host ports."""
