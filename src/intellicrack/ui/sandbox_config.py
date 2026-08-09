@@ -45,7 +45,7 @@ from PyQt6.QtWidgets import (
 
 from intellicrack.core.config import get_config_dir, get_config_file, get_project_root
 from intellicrack.core.logging import get_logger
-from intellicrack.core.process_manager import ProcessManager, ProcessType
+from intellicrack.core.process_manager import ProcessManager, ProcessType, pid_is_running
 from intellicrack.core.subprocess_compat import CREATE_NO_WINDOW, PIPE, CompletedProcess, Popen, SubprocessError, TimeoutExpired
 from intellicrack.sandbox.base import SandboxConfig
 from intellicrack.sandbox.qemu import GuestOS
@@ -105,6 +105,7 @@ _SANDBOX_AVAILABILITY_TIMEOUT_SECONDS: Final[int] = 10
 _AVAILABILITY_RESULT_LEN: Final[int] = 2
 _WM_CLOSE: Final[int] = 0x0010
 _GRACEFUL_CLOSE_TIMEOUT_S: Final[float] = 5.0
+_SESSION_CLOSE_POLL_INTERVAL_S: Final[float] = 0.25
 _TEST_SANDBOX_FOLDER: Final[str] = r"C:\Shared"
 _TEST_LOGON_COMMAND: Final[str] = 'cmd.exe /c "echo Intellicrack Sandbox Test && timeout /t 5"'
 
@@ -347,6 +348,7 @@ class SandboxTestWorker(QThread):
         self._read_only = read_only
         self._wsb_file: Path | None = None
         self._process: Popen[bytes] | None = None
+        self._session_pid: int | None = None
 
     def _launch_sandbox_test(self) -> bool:
         """Generate the WSB config, launch Windows Sandbox, and wait for it.
@@ -416,7 +418,12 @@ class SandboxTestWorker(QThread):
                 self.finished.emit(failed, f"Windows Sandbox failed to start: {normalized}")
                 return True
 
-            if find_sandbox_session_pid(wsb_name) is not None:
+            if (session_pid := find_sandbox_session_pid(wsb_name)) is not None:
+                # Keep the session's pid: it is the process that actually owns
+                # the Host Compute Service session, and it is the only handle
+                # the teardown has on it. Discarding it left a full sandbox VM
+                # running after every test (S17-D80).
+                self._session_pid = session_pid
                 self.output.emit("Sandbox session is running")
                 return False
 
@@ -593,7 +600,13 @@ class SandboxTestWorker(QThread):
         unregisters the process from ``ProcessManager`` afterwards so no
         leaked tracking entry survives regardless of which path terminated
         it. No-op when no process was launched or it has already exited.
+
+        Reaps the sandbox session first via :meth:`_terminate_sandbox_session`,
+        because the launcher this method handles does not own the session and
+        has usually exited by now, so everything below would otherwise return
+        at the liveness guard and leave a sandbox running (S17-D80).
         """
+        self._terminate_sandbox_session()
         if self._process is None or self._process.poll() is not None:
             return
         pid = self._process.pid
@@ -612,6 +625,41 @@ class SandboxTestWorker(QThread):
             except (OSError, TimeoutExpired):
                 _logger.exception("sandbox_test_termination_error", pid=pid)
         ProcessManager.get_instance().unregister(pid)
+
+    def _terminate_sandbox_session(self) -> None:
+        """Close the sandbox session the test started, if one is still running.
+
+        The launcher is fire-and-forget and has normally exited by the time
+        the test finishes, so terminating it reaps nothing: the session host
+        is a separate process that outlives it and holds the Host Compute
+        Service session. Windows Sandbox permits one session at a time and
+        shares HCS with the QEMU backend and the Docker engine, so a session
+        left behind is not merely untidy - it denies the machine to every
+        later sandbox operation. ``WM_CLOSE`` is posted first for the same
+        reason the launcher path posts it, so Windows Sandbox runs its own
+        teardown rather than being killed out from under HCS, with a forced
+        tree termination as the fallback. No-op when no session was observed
+        or it has already gone.
+        """
+        session_pid = self._session_pid
+        if session_pid is None:
+            return
+        self._session_pid = None
+        deadline = time.monotonic() + _GRACEFUL_CLOSE_TIMEOUT_S
+        if _post_wm_close(session_pid):
+            while time.monotonic() < deadline:
+                if not pid_is_running(session_pid):
+                    _logger.info("sandbox_test_session_graceful_close_ok", session_pid=session_pid)
+                    return
+                time.sleep(_SESSION_CLOSE_POLL_INTERVAL_S)
+            _logger.warning("sandbox_test_session_graceful_close_timeout", session_pid=session_pid)
+        if not pid_is_running(session_pid):
+            return
+        try:
+            ProcessManager.terminate_tree(session_pid, graceful_timeout=5.0, force_timeout=3.0)
+            _logger.info("sandbox_test_session_terminated", session_pid=session_pid)
+        except (OSError, TimeoutExpired):
+            _logger.exception("sandbox_test_session_termination_error", session_pid=session_pid)
 
     def stop(self) -> None:
         """Stop the sandbox test and terminate the process."""
