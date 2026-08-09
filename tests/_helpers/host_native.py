@@ -73,6 +73,7 @@ _SNAPSHOT_WHPX_DISK_ONLY: Final[str] = "tests/sandbox/qemu/test_snapshot_whpx_di
 _TEST_SANDBOX_SESSION_REAPED: Final[str] = "tests/sandbox/windows/test_sandbox_test_session_reaped_s17d80.py"
 _QMP_EVENT_DEMUX: Final[str] = "tests/sandbox/qemu/test_qmp_event_demux_s17d63.py"
 _MEMORY_DUMP_OUTCOME: Final[str] = "tests/sandbox/qemu/test_memory_dump_outcome_s17d61.py"
+_GUEST_COMPUTER_NAME: Final[str] = "tests/sandbox/qemu/test_guest_computer_name_s17d46.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -107,6 +108,7 @@ HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
         (_TEST_SANDBOX_SESSION_REAPED, "TestTheTestSandboxPathLeavesNoSessionRunning"),
         (_QMP_EVENT_DEMUX, "TestQmpRepliesSurviveAsynchronousEvents"),
         (_MEMORY_DUMP_OUTCOME, "TestAMemoryDumpReportsItsRealOutcome"),
+        (_GUEST_COMPUTER_NAME, "TestTheEnforcementCommandRenamesARealGuest"),
     },
 )
 
