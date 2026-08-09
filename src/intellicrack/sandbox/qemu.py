@@ -215,6 +215,8 @@ _ERR_SNAPSHOT_CREATE = "snapshot create failed"
 _ERR_SNAPSHOT_RESTORE = "snapshot restore failed"
 _ERR_SNAPSHOT_DELETE = "snapshot delete failed"
 _ERR_SNAPSHOT_NO_DISK = "the running guest exposes no writable qcow2 disk, so there is nothing that can hold a snapshot"
+_ERR_SNAPSHOT_ABSENT = "no snapshot named {name!r} exists on this sandbox's disks"
+_ERR_SNAPSHOT_SURVIVED = "QEMU reported the deletion of {name!r} as finished, but the tag is still on the disk"
 _ERR_SNAPSHOT_JOB_GONE = "QEMU stopped reporting job {job_id} before it finished"
 _ERR_SNAPSHOT_JOB_TIMEOUT = "job {job_id} had not finished after {budget:.0f}s"
 _ERR_SNAPSHOT_JOB_UNREADABLE = "the job list could not be read, so the outcome is unknown"
@@ -8373,16 +8375,30 @@ python3 /mnt/shared/monitor/agent.py &
         return names
 
     async def delete_snapshot(self, name: str) -> None:
-        """Delete a snapshot.
+        """Delete a snapshot, and refuse to pretend one that never existed is gone.
+
+        QEMU's job-based ``snapshot-delete`` is lenient where its siblings are
+        not: it finishes ``concluded`` with no error for a tag no disk holds,
+        while ``snapshot-load`` of that same tag fails loudly and the
+        block-layer command refuses it outright. Passing that leniency on lets
+        an operator delete a tag they misspelled and be told it worked, so the
+        tag is checked against the block layer's own records before the job is
+        started and again after it reports finishing.
 
         Args:
             name: Snapshot name to delete.
 
         Raises:
-            SandboxError: If deletion fails.
+            SandboxError: If the monitor is not connected, no such snapshot
+                exists, the deletion fails, or the tag outlives a job that
+                reported success.
         """
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        if name not in await self.list_snapshots():
+            _logger.warning("snapshot_delete_absent", snapshot_name=name)
+            raise SandboxError(_ERR_SNAPSHOT_ABSENT.format(name=name))
 
         nodes = await self._snapshot_target_nodes()
         job_id = self._new_snapshot_job_id("delete")
@@ -8393,6 +8409,10 @@ python3 /mnt/shared/monitor/agent.py &
             lambda: monitor.snapshot_delete(job_id, name, nodes),
             job_id,
         )
+
+        if name in await self.list_snapshots():
+            _logger.error("snapshot_delete_ineffective", snapshot_name=name, nodes=nodes)
+            raise SandboxError(_ERR_SNAPSHOT_SURVIVED.format(name=name))
 
         _logger.info("snapshot_deleted", snapshot_name=name)
 
