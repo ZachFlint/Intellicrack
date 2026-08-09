@@ -43,8 +43,12 @@ if TYPE_CHECKING:
 _GUEST_SHARED_ROOT: Final[str] = "/mnt/shared"
 _WINDOWS_SHARED_ROOT: Final[str] = "E:\\"
 _STAGED_RELATIVE: Final[str] = "input/true_x86_64"
-_EXPECTED_GUEST_PATH: Final[str] = "/mnt/shared/input/true_x86_64"
-_EXPECTED_WINDOWS_GUEST_PATH: Final[str] = "E:\\input\\true_x86_64"
+# Since S17-D69 the share is read-only to the guest - vvfat's write-back path
+# aborts the machine - so a file staged into a running guest lands on the
+# guest's own disk under the work root, which the in-guest allowlist trusts for
+# exactly the same reason it trusts the share root.
+_EXPECTED_GUEST_PATH: Final[str] = "/var/lib/intellicrack/input/true_x86_64"
+_EXPECTED_WINDOWS_GUEST_PATH: Final[str] = "C:\\intellicrack\\input\\true_x86_64"
 
 _AGENT_CONNECT_TIMEOUT: Final[float] = 10.0
 # Larger than one guest-file-write buffer, so a client that sends the payload
@@ -79,6 +83,7 @@ class _StagingSandbox(QEMUSandbox):
             raise AssertionError(msg)
         self._qga = client
         self._guest_shared_root = guest_root
+        self.state.status = "running"
 
     def use_share(self, share: Path) -> None:
         """Point the sandbox at a host-side shared folder.
@@ -117,9 +122,11 @@ class TestStagedFileReachesTheRunningGuest:
     async def test_staged_bytes_arrive_at_the_in_guest_path(self, tmp_path: Path) -> None:
         """The staged file appears inside the guest with the source's bytes.
 
-        The host-side copy is not the assertion: it was always written, and
-        writing it is exactly what S17-D30 proved insufficient. What is gated
-        is that the bytes crossed the agent channel into the guest.
+        The host-side copy was never the point: writing it is exactly what
+        S17-D30 proved insufficient, and since S17-D69 writing into a directory
+        vvfat is actively mapping is the hazard that took the machine down. So
+        the gate is both halves - the bytes crossed the agent channel into the
+        guest, and nothing was written onto the share to get them there.
 
         Args:
             tmp_path: Per-test temporary directory.
@@ -144,7 +151,8 @@ class TestStagedFileReachesTheRunningGuest:
             assert bytes(server.guest_files[_EXPECTED_GUEST_PATH]) == payload, (
                 "the bytes that arrived inside the guest are not the bytes that left the host"
             )
-            assert (share / _STAGED_RELATIVE).read_bytes() == payload, "the host-side copy was dropped"
+            written_to_share = [path for path in share.rglob("*") if path.is_file()]
+            assert not written_to_share, f"the host wrote onto the share vvfat is mapping: {written_to_share!r} (S17-D69)"
         finally:
             await sandbox.release_agent()
             await server.stop()

@@ -17,6 +17,16 @@ The audit7 fix introduces two requirements:
 
 When both paths produce zero files, the call must raise ``SandboxError`` rather
 than returning an empty zip and a misleading success.
+
+Both requirements belong to the virtio-9p transport, which is what carries the
+share wherever QEMU supports it. S17-D69 made the FAT transport - every Windows
+host, and every Windows guest - expose the share read-only, because vvfat's
+write-back path aborts the whole machine. A guest that cannot write to the share
+cannot mirror anything host-visible into it, so on that transport there is no
+host-side fallback to reach for and the gathered tree comes back over the guest
+agent's file commands instead. The tests below therefore run the 9p transport on
+a POSIX host, which is the configuration those two requirements describe, and
+pin the FAT transport separately to the contract it really has.
 """
 
 from __future__ import annotations
@@ -29,6 +39,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from intellicrack.core.types import SandboxError
+from intellicrack.sandbox import qemu as qemu_module
 from intellicrack.sandbox.base import SandboxConfig
 from intellicrack.sandbox.qemu import (
     AcceleratorType,
@@ -46,6 +57,26 @@ if TYPE_CHECKING:
 _ALLOWED_NAMES: frozenset[str] = frozenset({"powershell", "powershell.exe", "cmd", "cmd.exe"})
 _ALLOWED_ROOTS_WIN: tuple[str, ...] = ("z:\\", "c:\\windows\\system32\\", "c:\\windows\\syswow64\\")
 _ALLOWED_POSIX_SHELLS: frozenset[str] = frozenset({"/bin/bash", "/bin/sh"})
+_HOST_PLATFORM_FLAG: str = "_IS_WINDOWS"
+_GUEST_WORK_ROOT_WINDOWS: str = "C:\\intellicrack"
+# The watcher's own mirror is gathered alongside the watched roots, so a file
+# the sample created and then deleted is still collected.
+_GATHERED_MIRRORS: int = 1
+
+
+@pytest.fixture
+def posix_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Run the sandbox as if the host were POSIX, so 9p carries the share.
+
+    ``_uses_fat_shared_transport`` reads the module-level platform constant on
+    every call, so redirecting it selects the transport under test without
+    touching any behaviour: virtio-9p is compiled out of QEMU's Windows builds,
+    which is the only reason a Windows host takes the FAT path at all.
+
+    Args:
+        monkeypatch: Fixture used to redirect the platform constant.
+    """
+    monkeypatch.setattr(qemu_module, _HOST_PLATFORM_FLAG, False)
 
 
 def _is_windows_allowlisted(command: str) -> bool:
@@ -99,6 +130,14 @@ class _TestQEMUSandbox(QEMUSandbox):
             agent: Agent instance, or ``None`` to disable the agent path.
         """
         self._agent = agent
+
+    def drop_watch_roots(self) -> list[str]:
+        """Return the guest directories the real implementation gathers from.
+
+        Returns:
+            list[str]: Absolute in-guest directories for the configured guest.
+        """
+        return self._drop_watch_roots()
 
 
 class _RecordingAgent(GuestAgentClient):
@@ -296,12 +335,22 @@ class TestScenarioAAgentPathWraps:
         Both the executable name and the wrapped invocation must pass the
         ``Test-AllowedCommand`` allowlist; bare ``xcopy`` would be rejected.
 
+        A Windows guest is always on the FAT transport, so the gather runs
+        against the guest's own work root rather than the share, and the copy
+        the guest performs is invisible to the host until it is pulled back
+        over the guest agent's file commands. With no such channel open the
+        call must fail rather than hand back an archive built from a share the
+        guest has not been able to write to since S17-D69.
+
         Args:
             tmp_path: Pytest temp directory used as the shared folder.
         """
         shared = tmp_path / "shared"
         (shared / "input").mkdir(parents=True)
         (shared / "output").mkdir(parents=True)
+        stale_mirror = shared / "output" / "dropped"
+        stale_mirror.mkdir(parents=True)
+        (stale_mirror / "stale_from_the_share.bin").write_bytes(b"\x00\x01")
 
         agent = _RecordingAgent(
             connected=True,
@@ -314,9 +363,8 @@ class TestScenarioAAgentPathWraps:
         async def _go() -> Path:
             return await sb.extract_dropped_files()
 
-        result = _run(_go())
-        assert isinstance(result, Path)
-        assert result.exists()
+        with pytest.raises(SandboxError):
+            _run(_go())
 
         assert agent.sent_commands, "agent path must dispatch at least one command"
         for command, args in agent.sent_commands:
@@ -324,18 +372,36 @@ class TestScenarioAAgentPathWraps:
             assert _is_windows_allowlisted(command), f"{command!r} must pass the in-guest allowlist"
             assert len(args) == 2, f"expected /c + inner_cmd; got {args!r}"
             assert args[0] == "/c", f"first arg must be /c; got {args[0]!r}"
-            assert "xcopy" in args[1], f"inner command must invoke xcopy; got {args[1]!r}"
-            assert "/S /E /Y /I" in args[1], f"inner command must use xcopy flags; got {args[1]!r}"
 
-        with zipfile.ZipFile(result) as zf:
-            assert any("agent_sentinel.bin" in n for n in zf.namelist()), "agent-path dispatch must populate the staging directory"
+        payloads = [args[1] for _command, args in agent.sent_commands]
+        gathers = [payload for payload in payloads if "xcopy" in payload]
+        expected_gathers = len(sb.drop_watch_roots()) + _GATHERED_MIRRORS
+        assert len(gathers) == expected_gathers, f"every watched root plus the guest's own mirror must be gathered; got {payloads!r}"
+        for payload in gathers:
+            assert "/S /E /Y /I" in payload, f"inner command must use xcopy flags; got {payload!r}"
+            destination = _extract_destination(payload)
+            assert destination is not None, f"the gather must name a destination; got {payload!r}"
+            assert destination.startswith(_GUEST_WORK_ROOT_WINDOWS), (
+                f"the guest must gather onto its own disk, not the read-only share: {destination!r} (S17-D69)"
+            )
 
-    def test_linux_agent_path_uses_bash_wrapper(self, tmp_path: Path) -> None:
+        listings = [payload for payload in payloads if payload.startswith("dir ")]
+        assert listings, f"the gathered tree must be read back out of the guest, not off the share: {payloads!r}"
+        assert all(f'"{_GUEST_WORK_ROOT_WINDOWS}\\output\\dropped_' in payload for payload in listings), (
+            f"the pull must list the guest's own work root: {listings!r} (S17-D69)"
+        )
+
+        produced = list(tmp_path.rglob("*.zip"))
+        assert not produced, f"no archive may be built from a share the guest cannot write to: {produced}"
+
+    def test_linux_agent_path_uses_bash_wrapper(self, posix_host: None, tmp_path: Path) -> None:
         """On Linux the agent must receive ``/bin/bash`` plus a ``-c`` arg.
 
         Args:
+            posix_host: Fixture selecting the virtio-9p transport.
             tmp_path: Pytest temp directory used as the shared folder.
         """
+        del posix_host
         shared = tmp_path / "shared"
         (shared / "input").mkdir(parents=True)
         (shared / "output").mkdir(parents=True)
@@ -370,12 +436,15 @@ class TestScenarioAAgentPathWraps:
 class TestScenarioBHostFallback:
     """Scenario B: when the agent is absent the host-side fallback collects files."""
 
-    def test_host_fallback_collects_real_files(self, tmp_path: Path) -> None:
+    def test_host_fallback_collects_real_files(self, posix_host: None, tmp_path: Path) -> None:
         """Files mirrored under ``output/dropped`` end up in the produced zip.
 
         Args:
+            posix_host: Fixture selecting the virtio-9p transport, the only one
+                whose share the guest can mirror into.
             tmp_path: Pytest temp directory used as the shared folder.
         """
+        del posix_host
         shared = tmp_path / "shared"
         (shared / "input").mkdir(parents=True)
         (shared / "output").mkdir(parents=True)
@@ -387,7 +456,7 @@ class TestScenarioBHostFallback:
         nested.mkdir()
         (nested / "beta.txt").write_text("dropped-file-content", encoding="utf-8")
 
-        sb = _make_sandbox(guest_os=GuestOS.WINDOWS, shared_folder=shared)
+        sb = _make_sandbox(guest_os=GuestOS.LINUX, shared_folder=shared)
         sb.set_agent(None)
 
         async def _go() -> Path:
@@ -409,13 +478,15 @@ class TestScenarioBHostFallback:
         assert alpha_payload == b"\x01\x02\x03"
         assert beta_payload == b"dropped-file-content"
 
-    def test_output_path_redirect_with_host_fallback(self, tmp_path: Path) -> None:
+    def test_output_path_redirect_with_host_fallback(self, posix_host: None, tmp_path: Path) -> None:
         """``output_path`` argument must receive a copy of the host-collected zip.
 
         Args:
+            posix_host: Fixture selecting the virtio-9p transport.
             tmp_path: Pytest temp directory used for both the shared folder and
                 the redirect destination.
         """
+        del posix_host
         shared = tmp_path / "shared"
         (shared / "output").mkdir(parents=True)
         mirror = shared / "output" / "dropped"
@@ -424,7 +495,7 @@ class TestScenarioBHostFallback:
 
         destination = tmp_path / "out" / "result.zip"
 
-        sb = _make_sandbox(guest_os=GuestOS.WINDOWS, shared_folder=shared)
+        sb = _make_sandbox(guest_os=GuestOS.LINUX, shared_folder=shared)
         sb.set_agent(None)
 
         async def _go() -> Path:
@@ -441,17 +512,19 @@ class TestScenarioBHostFallback:
 class TestScenarioCEmptyFailure:
     """Scenario C: missing agent + empty mirror must raise instead of silently succeed."""
 
-    def test_empty_extraction_raises_sandbox_error(self, tmp_path: Path) -> None:
+    def test_empty_extraction_raises_sandbox_error(self, posix_host: None, tmp_path: Path) -> None:
         """Both paths producing zero files must raise ``SandboxError``.
 
         Args:
+            posix_host: Fixture selecting the virtio-9p transport.
             tmp_path: Pytest temp directory used as the shared folder.
         """
+        del posix_host
         shared = tmp_path / "shared"
         (shared / "input").mkdir(parents=True)
         (shared / "output").mkdir(parents=True)
 
-        sb = _make_sandbox(guest_os=GuestOS.WINDOWS, shared_folder=shared)
+        sb = _make_sandbox(guest_os=GuestOS.LINUX, shared_folder=shared)
         sb.set_agent(None)
 
         async def _go() -> Path:
@@ -463,12 +536,14 @@ class TestScenarioCEmptyFailure:
         leftover = list((shared / "output").glob("dropped_*"))
         assert not leftover, f"empty staging dirs must be cleaned up; found {leftover}"
 
-    def test_disconnected_agent_falls_back_to_host(self, tmp_path: Path) -> None:
+    def test_disconnected_agent_falls_back_to_host(self, posix_host: None, tmp_path: Path) -> None:
         """An agent reporting ``is_connected == False`` must trigger host fallback.
 
         Args:
+            posix_host: Fixture selecting the virtio-9p transport.
             tmp_path: Pytest temp directory used as the shared folder.
         """
+        del posix_host
         shared = tmp_path / "shared"
         (shared / "output").mkdir(parents=True)
         mirror = shared / "output" / "dropped"
@@ -476,7 +551,7 @@ class TestScenarioCEmptyFailure:
         (mirror / "delta.bin").write_bytes(b"\x42")
 
         agent = _RecordingAgent(connected=False)
-        sb = _make_sandbox(guest_os=GuestOS.WINDOWS, shared_folder=shared)
+        sb = _make_sandbox(guest_os=GuestOS.LINUX, shared_folder=shared)
         sb.set_agent(agent)
 
         async def _go() -> Path:

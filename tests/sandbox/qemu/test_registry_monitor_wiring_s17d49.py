@@ -60,6 +60,7 @@ _REGISTRY_SCRIPT_NAME: Final[str] = "registry_monitor.ps1"
 _REGISTRY_LOG_NAME: Final[str] = "registry_monitor.log"
 _MONITOR_DIR_NAME: Final[str] = "monitor"
 _LOGS_DIR_NAME: Final[str] = "logs"
+_COLLECTED_DIR_NAME: Final[str] = "collected"
 _MONITOR_SCRIPTS_ARRAY_RE: Final[re.Pattern[str]] = re.compile(r"\$monitorScripts\s*=\s*@\((.*?)\)", re.DOTALL)
 _QUOTED_NAME_RE: Final[re.Pattern[str]] = re.compile(r"'([^']+)'")
 
@@ -106,12 +107,20 @@ class _WindowsAgentSandbox(QEMUSandbox):
 class _ReportReadingSandbox(QEMUSandbox):
     """``QEMUSandbox`` that reads monitor logs from a chosen shared folder."""
 
-    def use_shared_folder(self, share: Path) -> None:
-        """Point the sandbox at the folder holding the guest's monitor logs.
+    def use_workspace(self, temp_dir: Path, share: Path) -> None:
+        """Point the sandbox at its working directory and its shared folder.
+
+        Since S17-D69 the guest's logs are pulled out of the guest and land
+        under the working directory's ``collected`` tree rather than on the
+        share, which the guest cannot write to, so both are needed for the
+        reader to find anything.
 
         Args:
-            share: Shared folder root.
+            temp_dir: Working directory whose ``collected`` tree holds the
+                logs pulled back from the guest.
+            share: Shared folder root the agent scripts were staged into.
         """
+        self._temp_dir = temp_dir
         self._shared_folder = share
 
     async def collect_registry_changes(self) -> list[RegistryChange]:
@@ -282,7 +291,9 @@ class TestARealRegistryWriteReachesTheReportedChangeList:
         await stage_sandbox.stage_monitor_directory(share)
 
         script_path = share / _MONITOR_DIR_NAME / _REGISTRY_SCRIPT_NAME
-        logs_dir = share / _LOGS_DIR_NAME
+        # Where the host's collection deposits what it pulled out of the guest,
+        # which is where the reader looks since the share went read-only.
+        logs_dir = tmp_path / _COLLECTED_DIR_NAME / _LOGS_DIR_NAME
         logs_dir.mkdir(parents=True, exist_ok=True)
         log_path = logs_dir / _REGISTRY_LOG_NAME
 
@@ -332,7 +343,7 @@ class TestARealRegistryWriteReachesTheReportedChangeList:
         )
 
         read_sandbox = _make_report_reading_sandbox()
-        read_sandbox.use_shared_folder(share)
+        read_sandbox.use_workspace(tmp_path, share)
         registry_changes = await read_sandbox.collect_registry_changes()
 
         matching = [change for change in registry_changes if _TEST_SUBKEY_NAME in (change["key"] or "")]

@@ -8,6 +8,14 @@
 These tests verify that the readiness check correctly waits until the
 monitoring log files have stopped growing, replacing the prior hardcoded
 ``asyncio.sleep(2)`` in ``run_binary``.
+
+The growth being watched here is a file on the host side of the share, which is
+where the guest writes its logs on the virtio-9p transport. Since S17-D69 the
+FAT transport - every Windows host - exposes that share read-only and the guest
+writes to its own disk instead, so the sizes are read out of the guest over the
+agent rather than stat'ed here; that path is gated in
+``test_readonly_share_transport_s17d69.py``. These tests therefore select the 9p
+transport, which is the one whose logs land in the directory they write to.
 """
 
 from __future__ import annotations
@@ -19,12 +27,28 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from intellicrack.sandbox import qemu as qemu_module
 from intellicrack.sandbox.base import SandboxConfig
-from intellicrack.sandbox.qemu import QEMUConfig, QEMUSandbox
+from intellicrack.sandbox.qemu import GuestOS, QEMUConfig, QEMUSandbox
 
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+
+@pytest.fixture(autouse=True)
+def posix_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Select the virtio-9p transport, whose logs land on the host share.
+
+    ``_uses_fat_shared_transport`` reads the module-level platform constant on
+    every call, so redirecting it chooses the transport under test without
+    altering any behaviour: virtio-9p is compiled out of QEMU's Windows builds,
+    which is the only reason a Windows host takes the FAT path at all.
+
+    Args:
+        monkeypatch: Fixture used to redirect the platform constant.
+    """
+    monkeypatch.setattr(qemu_module, "_IS_WINDOWS", False)
 
 
 class _TestQEMUSandbox(QEMUSandbox):
@@ -80,7 +104,7 @@ def _build_sandbox(shared_folder: Path) -> _TestQEMUSandbox:
         _TestQEMUSandbox: Instance whose shared folder is set to
         ``shared_folder`` and which is otherwise default-initialised.
     """
-    sandbox = _TestQEMUSandbox(config=SandboxConfig(), qemu_config=QEMUConfig())
+    sandbox = _TestQEMUSandbox(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.LINUX))
     sandbox.set_shared_folder(shared_folder)
     return sandbox
 

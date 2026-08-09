@@ -53,6 +53,7 @@ _COLLECTOR: Final[str] = "api_trace"
 
 _MONITOR_DIR_NAME: Final[str] = "monitor"
 _LOGS_DIR_NAME: Final[str] = "logs"
+_COLLECTED_DIR_NAME: Final[str] = "collected"
 _API_TRACE_SCRIPT_NAME: Final[str] = "api_trace.ps1"
 _INJECTION_MONITOR_SCRIPT_NAME: Final[str] = "injection_monitor.ps1"
 
@@ -273,12 +274,19 @@ class _WindowsAgentSandboxWithoutTraceEvent(QEMUSandbox):
 class _ReportReadingSandbox(QEMUSandbox):
     """``QEMUSandbox`` that reads monitor logs from a chosen shared folder."""
 
-    def use_shared_folder(self, share: Path) -> None:
-        """Point the sandbox at the folder holding the guest's monitor logs.
+    def use_workspace(self, temp_dir: Path, share: Path) -> None:
+        """Point the sandbox at its working directory and its shared folder.
+
+        Since S17-D69 the guest's logs are pulled out of the guest and land
+        under the working directory's ``collected`` tree rather than on the
+        share, which the guest cannot write to.
 
         Args:
-            share: Shared folder root.
+            temp_dir: Working directory whose ``collected`` tree holds the
+                logs pulled back from the guest.
+            share: Shared folder root the agent scripts were staged into.
         """
+        self._temp_dir = temp_dir
         self._shared_folder = share
 
     async def collect_outages(self) -> list[CollectorOutage]:
@@ -328,7 +336,7 @@ class TestARealDeadRecorderIsReportedAsAnOutageNotARecord:
         stage_sandbox = _WindowsAgentSandboxWithoutTraceEvent(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.WINDOWS))
         await stage_sandbox.stage_scripts_without_traceevent(share)
 
-        logs_dir = share / _LOGS_DIR_NAME
+        logs_dir = tmp_path / _COLLECTED_DIR_NAME / _LOGS_DIR_NAME
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         api_trace_stdout, api_trace_stderr = await _run_to_completion(
@@ -343,7 +351,7 @@ class TestARealDeadRecorderIsReportedAsAnOutageNotARecord:
         )
 
         read_sandbox = _ReportReadingSandbox(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.WINDOWS))
-        read_sandbox.use_shared_folder(share)
+        read_sandbox.use_workspace(tmp_path, share)
         outages = await read_sandbox.collect_outages()
         by_collector = {outage["collector"]: outage for outage in outages}
 
@@ -418,7 +426,7 @@ class TestARealDeadRecorderIsReportedAsAnOutageEvenWithAssembliesStaged:
         stage_sandbox = _FullyStagedWindowsAgentSandbox(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.WINDOWS))
         await stage_sandbox.stage_monitor_directory(share)
 
-        logs_dir = share / _LOGS_DIR_NAME
+        logs_dir = tmp_path / _COLLECTED_DIR_NAME / _LOGS_DIR_NAME
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         api_trace_stdout, api_trace_stderr = await _run_to_completion(
@@ -433,7 +441,7 @@ class TestARealDeadRecorderIsReportedAsAnOutageEvenWithAssembliesStaged:
         )
 
         read_sandbox = _ReportReadingSandbox(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.WINDOWS))
-        read_sandbox.use_shared_folder(share)
+        read_sandbox.use_workspace(tmp_path, share)
         outages = await read_sandbox.collect_outages()
         by_collector = {outage["collector"]: outage for outage in outages}
 
@@ -466,7 +474,7 @@ class TestCollectorOutagesAreWindowsOnly:
         (share / _LOGS_DIR_NAME).mkdir(parents=True, exist_ok=True)
 
         read_sandbox = _ReportReadingSandbox(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.LINUX))
-        read_sandbox.use_shared_folder(share)
+        read_sandbox.use_workspace(tmp_path, share)
         outages = await read_sandbox.collect_outages()
         assert outages == [], (
             f"a Linux guest has no api_trace/injection_monitor collectors and must report no outages for them: {outages!r}"

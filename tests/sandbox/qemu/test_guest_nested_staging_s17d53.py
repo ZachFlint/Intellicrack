@@ -23,6 +23,12 @@ that: a nested destination must produce a guest-exec that creates the parent
 directory, using exactly the invocation
 :meth:`intellicrack.sandbox.qemu.QEMUSandbox._guest_mkdir_command` builds,
 before the file is opened for writing.
+
+The destination itself moved with S17-D69: the share is now read-only to the
+guest, because vvfat's write-back path calls ``abort()`` and took the whole
+machine down, so a file staged into a running guest lands on the guest's own
+disk under the work root. That makes directory creation the rule rather than
+the exception - the work root has no pre-existing subdirectories at all.
 """
 
 from __future__ import annotations
@@ -43,15 +49,20 @@ if TYPE_CHECKING:
 _WINDOWS_SHARED_ROOT: Final[str] = "D:\\"
 _LINUX_SHARED_ROOT: Final[str] = "/mnt/shared"
 _WINDOWS_NESTED_RELATIVE: Final[str] = "input/en-US/ipconfig.exe.mui"
-_EXPECTED_WINDOWS_GUEST_PATH: Final[str] = "D:\\input\\en-US\\ipconfig.exe.mui"
-_EXPECTED_WINDOWS_PARENT: Final[str] = "D:\\input\\en-US"
+# Since S17-D69 a file staged into a running guest lands on the guest's own
+# disk under the work root, because the share is read-only to it.
+_LINUX_TOP_LEVEL_RELATIVE: Final[str] = "input/true_x86_64"
+_EXPECTED_LINUX_TOP_LEVEL_PARENT: Final[str] = "/var/lib/intellicrack/input"
+_EXPECTED_WINDOWS_GUEST_PATH: Final[str] = "C:\\intellicrack\\input\\en-US\\ipconfig.exe.mui"
+_EXPECTED_WINDOWS_PARENT: Final[str] = "C:\\intellicrack\\input\\en-US"
 _LINUX_NESTED_RELATIVE: Final[str] = "input/sub/dir/payload.bin"
-_EXPECTED_LINUX_GUEST_PATH: Final[str] = "/mnt/shared/input/sub/dir/payload.bin"
-_EXPECTED_LINUX_PARENT: Final[str] = "/mnt/shared/input/sub/dir"
+_EXPECTED_LINUX_GUEST_PATH: Final[str] = "/var/lib/intellicrack/input/sub/dir/payload.bin"
+_EXPECTED_LINUX_PARENT: Final[str] = "/var/lib/intellicrack/input/sub/dir"
 
 _AGENT_CONNECT_TIMEOUT: Final[float] = 10.0
 _GUEST_EXEC: Final[str] = "guest-exec"
 _GUEST_FILE_OPEN: Final[str] = "guest-file-open"
+_ONE_DIRECTORY_COMMAND: Final[int] = 1
 
 
 class _NestedStagingSandbox(QEMUSandbox):
@@ -80,6 +91,7 @@ class _NestedStagingSandbox(QEMUSandbox):
             raise AssertionError(msg)
         self._qga = client
         self._guest_shared_root = guest_root
+        self.state.status = "running"
 
     def use_share(self, share: Path) -> None:
         """Point the sandbox at a host-side shared folder.
@@ -233,12 +245,14 @@ class TestNestedDestinationDirectoryIsCreated:
 
 
 @pytest.mark.asyncio
-async def test_a_top_level_destination_issues_no_directory_command(tmp_path: Path) -> None:
-    """A destination with no subdirectory must not send a spurious mkdir.
+async def test_a_top_level_destination_issues_one_directory_command(tmp_path: Path) -> None:
+    """A destination with no subdirectory costs exactly one directory command.
 
-    The shared folder's own subdirectories (``input``, ``output``, ``logs``)
-    already exist before the guest boots, so staging directly into one of
-    them must not cost every copy an extra guest command.
+    The share's own subdirectories existed host-side before the guest booted,
+    but the work root the guest is staged into since S17-D69 is on the guest's
+    own disk and nothing creates it ahead of the first copy. One ``mkdir`` of
+    the destination's parent is therefore required - and one is all that is
+    allowed, since a per-level walk would cost a round trip per component.
 
     Args:
         tmp_path: pytest-provided temporary directory fixture.
@@ -253,11 +267,16 @@ async def test_a_top_level_destination_issues_no_directory_command(tmp_path: Pat
     sandbox = _make_sandbox(share, GuestOS.LINUX)
     try:
         await sandbox.attach_agent(server.port, _LINUX_SHARED_ROOT)
+        expected_mkdir = sandbox.mkdir_command_line(_EXPECTED_LINUX_TOP_LEVEL_PARENT)
 
-        await sandbox.copy_to_sandbox(source, "input/true_x86_64")
+        await sandbox.copy_to_sandbox(source, _LINUX_TOP_LEVEL_RELATIVE)
 
-        assert _GUEST_EXEC not in server.commands, (
-            f"a top-level destination triggered an unnecessary directory command: {server.command_lines()}"
+        issued = server.command_lines()
+        assert issued == [expected_mkdir], (
+            f"a top-level destination issued {issued!r} rather than one mkdir of {_EXPECTED_LINUX_TOP_LEVEL_PARENT!r}"
+        )
+        assert server.commands.count(_GUEST_EXEC) == _ONE_DIRECTORY_COMMAND, (
+            f"the staging path walked the destination component by component: {server.commands!r}"
         )
     finally:
         await sandbox.release_agent()

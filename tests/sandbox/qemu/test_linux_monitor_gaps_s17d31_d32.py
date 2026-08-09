@@ -73,6 +73,7 @@ if TYPE_CHECKING:
 _MONITOR_DIRECTORY: Final[str] = "monitor"
 _LINUX_AGENT_NAME: Final[str] = "agent.py"
 _LOGS_DIRECTORY: Final[str] = "logs"
+_COLLECTED_DIRECTORY: Final[str] = "collected"
 _SHARE_DIRECTORY: Final[str] = "share"
 
 _LOGGER_NAME: Final[str] = "_logger"
@@ -231,12 +232,20 @@ class _LinuxAgentSandbox(QEMUSandbox):
 class _ReportReadingSandbox(QEMUSandbox):
     """``QEMUSandbox`` that reads monitor logs from a chosen shared folder."""
 
-    def use_shared_folder(self, share: Path) -> None:
-        """Point the sandbox at the folder the guest agent wrote its logs into.
+    def use_workspace(self, temp_dir: Path, share: Path) -> None:
+        """Point the sandbox at its working directory and its shared folder.
+
+        Since S17-D69 the guest writes its logs to its own disk - the share is
+        read-only to it, because vvfat's write-back path aborts the machine -
+        and the host pulls them into the working directory's ``collected``
+        tree, which is where the reader looks.
 
         Args:
-            share: Shared folder root.
+            temp_dir: Working directory whose ``collected`` tree holds the
+                logs pulled back from the guest.
+            share: Shared folder root the agent scripts were staged into.
         """
+        self._temp_dir = temp_dir
         self._shared_folder = share
 
     async def collect_network_activity(self) -> list[NetworkActivity]:
@@ -450,7 +459,7 @@ def _host_reader(tmp_path: Path) -> _ReportReadingSandbox:
         _ReportReadingSandbox: Sandbox pointed at that shared folder.
     """
     sandbox = _ReportReadingSandbox(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.LINUX))
-    sandbox.use_shared_folder(tmp_path / _SHARE_DIRECTORY)
+    sandbox.use_workspace(tmp_path, tmp_path / _SHARE_DIRECTORY)
     return sandbox
 
 
@@ -461,13 +470,17 @@ async def _agent_module_for(tmp_path: Path) -> ModuleType:
         tmp_path: Directory the shared folder and lifted module live under.
 
     Returns:
-        ModuleType: The imported agent module, logging into ``<tmp>/share/logs``.
+        ModuleType: The imported agent module, logging into the directory the
+        host collects the guest's logs into.
     """
     sandbox = _LinuxAgentSandbox(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.LINUX))
     share = tmp_path / _SHARE_DIRECTORY
     script = await sandbox.generate_linux_agent(share)
     module = _lift_agent_module(script, tmp_path / "lifted_agent.py")
-    logs = share / _LOGS_DIRECTORY
+    # The real agent's own LOG_DIR is on the guest's disk, which this host
+    # cannot be; it is redirected to where the host's collection deposits what
+    # it pulled back out of the guest, which is where the reader looks.
+    logs = tmp_path / _COLLECTED_DIRECTORY / _LOGS_DIRECTORY
     logs.mkdir(parents=True, exist_ok=True)
     setattr(module, _LOG_DIR_NAME, logs)
     return module
