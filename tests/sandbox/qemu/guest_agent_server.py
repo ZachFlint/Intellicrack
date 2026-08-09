@@ -538,6 +538,8 @@ class GuestAgentProtocolServer(_LoopbackServer):
             the end of a file is observable too.
         shutdown_modes: ``mode`` argument of every ``guest-shutdown``.
         shutdown_requested: Set when the first ``guest-shutdown`` arrives.
+        resident_commands: Executables whose process outlives the request that
+            started it, so this guest never reaps it.
     """
 
     received: bytearray
@@ -551,6 +553,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
     file_reads: list[tuple[str, int]]
     shutdown_modes: list[str]
     shutdown_requested: asyncio.Event
+    resident_commands: frozenset[str]
 
     def __init__(
         self,
@@ -562,6 +565,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
         stall_seconds: float = 0.0,
         status_polls_before_exit: int = 0,
         unsupported_commands: frozenset[str] = frozenset(),
+        resident_commands: frozenset[str] = frozenset(),
     ) -> None:
         """Initialise the server with empty recording buffers.
 
@@ -586,6 +590,10 @@ class GuestAgentProtocolServer(_LoopbackServer):
                 and answers with ``CommandNotFound``. Agent builds differ in
                 which commands they carry - the sync pair and the file commands
                 both vary - so a client cannot assume the one it prefers exists.
+            resident_commands: Executables whose process outlives the request
+                that started it. A live agent never reaps such a child, so it
+                answers ``{"exited": false}`` for its pid for as long as the
+                guest runs, whatever the responder said the outcome would be.
         """
         super().__init__(listen_delay=listen_delay)
         self.unsupported_commands = unsupported_commands
@@ -609,6 +617,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
         self._stall_seconds = stall_seconds
         self._stalled = False
         self._status_polls_before_exit = status_polls_before_exit
+        self.resident_commands = resident_commands
         self._results: dict[int, GuestCommandResult] = {}
         self._records_by_pid: dict[int, GuestExecRecord] = {}
         self._status_polls: dict[int, int] = {}
@@ -875,7 +884,9 @@ class GuestAgentProtocolServer(_LoopbackServer):
 
         A process that has not finished yet is reported as ``{"exited": false}``
         with no exit code and no captured output, because a live agent has none
-        to report until it reaps the child. Once it has exited, the captured
+        to report until it reaps the child - and a resident child, one that runs
+        for as long as the guest does, is never reaped at all. Once it has
+        exited, the captured
         streams appear only when the ``guest-exec`` that started it asked for
         ``capture-output``: without that flag the agent inherits the guest's own
         handles and buffers nothing. The truncation members are optional in the
@@ -891,12 +902,12 @@ class GuestAgentProtocolServer(_LoopbackServer):
         self.exec_status_pids.append(pid)
         polls = self._status_polls.get(pid, 0)
         self._status_polls[pid] = polls + 1
-        if polls < self._status_polls_before_exit:
+        record = self._records_by_pid.get(pid)
+        if polls < self._status_polls_before_exit or (record is not None and record.path in self.resident_commands):
             return {"exited": False}
 
         result = self._results.get(pid, GuestCommandResult())
         payload: dict[str, Any] = {"exited": True, "exitcode": result.exit_code}
-        record = self._records_by_pid.get(pid)
         if record is not None and not record.capture_output:
             return payload
 
@@ -1007,6 +1018,12 @@ class IntellicrackAgentServer(_LoopbackServer):
     and then went away - so a client that assumes a connected socket stays
     connected can be caught.
 
+    ``reply_delay`` models the ordinary case none of the failure knobs cover: a
+    command that takes real time inside the guest. The connection stays open
+    and healthy across the wait, so a client polling for the reply spends real
+    poll slices on a request that is going to succeed - which is the only way
+    to observe what those slices cost a caller, or a log.
+
     ``drop_requests`` models the harder half of that failure: the request
     crossed the channel and the agent took delivery of it, and the connection
     died before any reply could come back. The command is recorded in
@@ -1043,6 +1060,7 @@ class IntellicrackAgentServer(_LoopbackServer):
         dead_connections: int = 0,
         close_after_replies: int = 0,
         drop_requests: int = 0,
+        reply_delay: float = 0.0,
     ) -> None:
         """Initialise the server with an empty request log.
 
@@ -1069,6 +1087,10 @@ class IntellicrackAgentServer(_LoopbackServer):
                 then abandons, closing the connection without writing their
                 reply. The budget is spent across the whole server rather than
                 per connection, so a later connection answers normally.
+            reply_delay: Seconds the agent spends running each command before
+                its reply is written, modelling work that takes real time in
+                the guest. The readiness handshake is never delayed, because a
+                guest agent answers it without running anything.
         """
         super().__init__(listen_delay=listen_delay, port=port)
         self.requests = []
@@ -1080,6 +1102,7 @@ class IntellicrackAgentServer(_LoopbackServer):
         self._dead_connections = dead_connections
         self._close_after_replies = close_after_replies
         self._drop_requests = drop_requests
+        self._reply_delay = reply_delay
 
     async def _serve(
         self,
@@ -1108,6 +1131,8 @@ class IntellicrackAgentServer(_LoopbackServer):
             is_command_reply = str(reply.get("type", "")) == AGENT_MESSAGE_RESULT
             if is_command_reply and self._abandon_last_request():
                 return
+            if is_command_reply and self._reply_delay > 0.0:
+                await asyncio.sleep(self._reply_delay)
             if is_command_reply and self._undecodable_lines > 0:
                 self._undecodable_lines -= 1
                 writer.write(UNDECODABLE_LINE)

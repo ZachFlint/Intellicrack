@@ -74,6 +74,7 @@ _TEST_SANDBOX_SESSION_REAPED: Final[str] = "tests/sandbox/windows/test_sandbox_t
 _QMP_EVENT_DEMUX: Final[str] = "tests/sandbox/qemu/test_qmp_event_demux_s17d63.py"
 _MEMORY_DUMP_OUTCOME: Final[str] = "tests/sandbox/qemu/test_memory_dump_outcome_s17d61.py"
 _GUEST_COMPUTER_NAME: Final[str] = "tests/sandbox/qemu/test_guest_computer_name_s17d46.py"
+_LINUX_AGENT_BOOTSTRAP: Final[str] = "tests/sandbox/qemu/test_linux_agent_bootstrap_s17d82.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -109,6 +110,7 @@ HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
         (_QMP_EVENT_DEMUX, "TestQmpRepliesSurviveAsynchronousEvents"),
         (_MEMORY_DUMP_OUTCOME, "TestAMemoryDumpReportsItsRealOutcome"),
         (_GUEST_COMPUTER_NAME, "TestTheEnforcementCommandRenamesARealGuest"),
+        (_LINUX_AGENT_BOOTSTRAP, "TestTheDebianGuestReachesAgentReady"),
     },
 )
 
