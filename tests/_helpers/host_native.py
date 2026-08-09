@@ -68,6 +68,7 @@ _VIRTIO_SUBPATHS: Final[str] = "tests/sandbox/qemu/test_virtio_driver_subpaths_s
 _DISK_OVERLAY: Final[str] = "tests/sandbox/qemu/test_disk_overlay_isolation_s17d58.py"
 _SNAPSHOT_OUTCOME: Final[str] = "tests/sandbox/qemu/test_snapshot_outcome_s17d59.py"
 _SNAPSHOT_RUN_STATE: Final[str] = "tests/sandbox/qemu/test_snapshot_run_state_s17d74.py"
+_SNAPSHOT_DELETE_OUTCOME: Final[str] = "tests/sandbox/qemu/test_snapshot_delete_outcome_s17d76.py"
 _QMP_EVENT_DEMUX: Final[str] = "tests/sandbox/qemu/test_qmp_event_demux_s17d63.py"
 _MEMORY_DUMP_OUTCOME: Final[str] = "tests/sandbox/qemu/test_memory_dump_outcome_s17d61.py"
 
@@ -99,6 +100,7 @@ HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
         (_DISK_OVERLAY, "TestTwoSandboxesNeverOpenTheSameWritableDisk"),
         (_SNAPSHOT_OUTCOME, "TestSnapshotOperationsReportTheRealOutcome"),
         (_SNAPSHOT_RUN_STATE, "TestAFailedSnapshotLeavesTheMachineRunning"),
+        (_SNAPSHOT_DELETE_OUTCOME, "TestDeletingASnapshotReportsWhatHappened"),
         (_QMP_EVENT_DEMUX, "TestQmpRepliesSurviveAsynchronousEvents"),
         (_MEMORY_DUMP_OUTCOME, "TestAMemoryDumpReportsItsRealOutcome"),
     },
