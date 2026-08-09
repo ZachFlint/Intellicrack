@@ -24,6 +24,7 @@ import threading
 import time
 import zipfile
 import zlib
+from collections import deque
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
@@ -86,7 +87,7 @@ from intellicrack.sandbox.log_parsers import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Callable, Mapping, Sequence
 
 _logger = get_logger(__name__)
 
@@ -166,6 +167,10 @@ _VNC_PORT_MAX: Final[int] = 5999
 _IS_WINDOWS: Final[bool] = platform.system() == "Windows"
 _WINDOWS_LAUNCH_GRACE_S: Final[float] = 3.0
 _ERR_QEMU_EXITED_EARLY = "QEMU exited immediately after launch"
+_ERR_QEMU_PROCESS_GONE = "the QEMU process is no longer running, so the guest it hosted no longer exists: {detail}"
+_QEMU_EXIT_UNKNOWN_OUTPUT = "QEMU produced no output before it stopped"
+_QEMU_OUTPUT_TAIL_LINES = 200
+_QEMU_OUTPUT_READ_SIZE = 4096
 
 _ERR_NO_FREE_PORTS = "no free ports"
 _ERR_QEMU_HOST_PORT = (
@@ -276,6 +281,9 @@ _ERR_AGENT_COMMAND_TIMED_OUT = "Command timed out"
 _ERR_AGENT_LOST_AFTER_DISPATCH = (
     "the guest agent channel was lost after the command was dispatched, so the guest may already be running it; "
     "it was not sent again ({reason})"
+)
+_ERR_AGENT_LOST_VM_GONE = (
+    "the guest agent channel was lost because the virtual machine stopped, so nothing is running in the guest any more: {detail}"
 )
 _ERR_AGENT_RECONNECT_FAILED = "the guest agent channel could not be re-established after it failed ({reason})"
 _ERR_AGENT_DISPATCH_EXHAUSTED = "the guest agent channel failed on all {attempts} dispatch attempts ({reason})"
@@ -1150,8 +1158,7 @@ class QemuJsonProtocolClient:
     async def _on_command_timeout(self) -> None:
         """React to a command whose reply did not arrive in time.
 
-        The base transport has no way to realign a stream, so it does nothing;
-        subclasses whose protocol provides one override this.
+        The base transport has no way to realign a stream, so it does nothing; subclasses whose protocol provides one override this.
         """
 
     async def _exchange_command(
@@ -2096,15 +2103,25 @@ class GuestAgentClient:
 
     _read_limit: ClassVar[int] = _JSON_LINE_LIMIT
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 4445) -> None:
+    def __init__(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 4445,
+        vm_terminated: Callable[[], QemuTermination | None] | None = None,
+    ) -> None:
         """Initialize the guest agent client.
 
         Args:
             host: Host address where the guest agent is reachable.
             port: TCP port for the guest agent server.
+            vm_terminated: Optional probe answering whether the virtual machine
+                hosting the agent has stopped. A channel failure means
+                something very different depending on the answer, so the client
+                consults it before deciding what a failure was.
         """
         self._host = host
         self._port = port
+        self._vm_terminated = vm_terminated
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self.connected = False
@@ -2431,6 +2448,12 @@ class GuestAgentClient:
         unknown - so the channel is re-opened for the commands that follow but
         this one is reported failed and never repeated.
 
+        Both of those presume there is still a guest on the other end. When the
+        virtual machine itself has stopped, no reconnection can succeed and
+        nothing is still executing, so that is reported as what it is rather
+        than spending the reconnect budget dialling a socket that no longer has
+        a listener.
+
         Args:
             request: Serializable request payload to send.
             time_limit: Total wall-clock deadline for the response.
@@ -2446,6 +2469,10 @@ class GuestAgentClient:
             if outcome.result is not None:
                 return outcome.result
             reason = outcome.reason
+            stopped = self._vm_termination_detail()
+            if stopped is not None:
+                _logger.warning("guest_agent_channel_lost_with_vm", reason=reason, detail=stopped)
+                return (-1, "", _ERR_AGENT_LOST_VM_GONE.format(detail=stopped))
             if outcome.dispatched:
                 await self._reestablish_channel(reason)
                 return (-1, "", _ERR_AGENT_LOST_AFTER_DISPATCH.format(reason=reason))
@@ -2497,6 +2524,18 @@ class GuestAgentClient:
         if self.connected:
             return _DispatchAttempt((-1, "", _ERR_AGENT_COMMAND_TIMED_OUT), dispatched=True, reason="")
         return _DispatchAttempt(None, dispatched=True, reason=self._read_failure or _ERR_AGENT_CHANNEL_CLOSED)
+
+    def _vm_termination_detail(self) -> str | None:
+        """Describe the hosting virtual machine's death, if it has died.
+
+        Returns:
+            str | None: A one-line account of how the virtual machine stopped,
+            or ``None`` when it is still running or cannot be observed.
+        """
+        if self._vm_terminated is None:
+            return None
+        termination = self._vm_terminated()
+        return termination.describe() if termination is not None else None
 
     async def _reestablish_channel(self, reason: str) -> bool:
         """Replace a failed channel with a freshly handshaken one.
@@ -2648,6 +2687,155 @@ class GuestAgentClient:
         return messages
 
 
+@dataclass(frozen=True)
+class QemuTermination:
+    """How the QEMU process stopped and what it said on the way out.
+
+    Attributes:
+        returncode: Exit status QEMU reported.
+        output_tail: The last lines QEMU wrote to stdout or stderr, oldest
+            first, each already tagged with the stream it came from.
+    """
+
+    returncode: int
+    output_tail: tuple[str, ...]
+
+    def describe(self) -> str:
+        """Render the termination as one line fit for an error message.
+
+        Returns:
+            str: The exit status followed by QEMU's parting output.
+        """
+        tail = " | ".join(self.output_tail) if self.output_tail else _QEMU_EXIT_UNKNOWN_OUTPUT
+        return f"QEMU exited with code {self.returncode}; {tail}"
+
+
+class QemuOutputRecorder:
+    """Drain a running QEMU's output streams and remember how it ended.
+
+    A foreground QEMU child is spawned with piped stdout and stderr, and
+    nothing else in the sandbox reads them for the life of the guest. Two
+    things follow from leaving them unread. The operating system's pipe buffer
+    is a fixed size, so a QEMU that keeps writing eventually blocks inside
+    ``write`` and the guest freezes with no record of why. And when QEMU dies
+    on its own - a rejected instruction, an accelerator fault, a guest triple
+    fault - the exit status and the message explaining it are discarded, which
+    is exactly the evidence needed to explain the death.
+
+    Draining continuously fixes both: the pipes never fill, every line reaches
+    the log as QEMU emits it, and a bounded tail is retained so the last thing
+    QEMU said survives the process that said it.
+    """
+
+    def __init__(self, process: asyncio.subprocess.Process, tail_lines: int = _QEMU_OUTPUT_TAIL_LINES) -> None:
+        """Prepare a recorder for one QEMU process.
+
+        Args:
+            process: The spawned QEMU child whose streams are drained.
+            tail_lines: How many of the most recent output lines to retain.
+        """
+        self._process = process
+        self._tail: deque[str] = deque(maxlen=tail_lines)
+        self._task: asyncio.Task[None] | None = None
+        self._termination: QemuTermination | None = None
+        self._exit_expected = False
+
+    @property
+    def termination(self) -> QemuTermination | None:
+        """The recorded termination, or ``None`` while QEMU is still running.
+
+        Returns:
+            QemuTermination | None: How QEMU ended, once it has ended.
+        """
+        return self._termination
+
+    def start(self) -> None:
+        """Begin draining both output streams in the background."""
+        if self._task is None:
+            self._task = asyncio.create_task(self._record())
+
+    def expect_exit(self) -> None:
+        """Note that an upcoming exit is a deliberate shutdown, not a failure."""
+        self._exit_expected = True
+
+    async def aclose(self) -> None:
+        """Stop draining, waiting briefly for the reader to finish on its own."""
+        task = self._task
+        self._task = None
+        if task is None:
+            return
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            _logger.debug("qemu_output_recorder_cancelled")
+        except (OSError, ConnectionError, ValueError) as error:
+            # Reported rather than raised: draining QEMU's output is a
+            # diagnostic aid, and a fault in it must not turn tearing the
+            # sandbox down into a failure of its own.
+            _logger.warning("qemu_output_recorder_failed", error=str(error), exc_info=True)
+
+    async def _record(self) -> None:
+        """Drain both streams to exhaustion, then record how QEMU ended."""
+        await asyncio.gather(
+            self._pump(self._process.stdout, "stdout"),
+            self._pump(self._process.stderr, "stderr"),
+        )
+        returncode = await self._process.wait()
+        self._termination = QemuTermination(returncode=returncode, output_tail=tuple(self._tail))
+        if self._exit_expected:
+            _logger.info("qemu_process_exited", returncode=returncode)
+            return
+        _logger.warning(
+            "qemu_process_exited_unexpectedly",
+            returncode=returncode,
+            output_tail=list(self._tail),
+        )
+
+    async def _pump(self, stream: asyncio.StreamReader | None, channel: str) -> None:
+        """Read one stream to EOF, logging and retaining whole lines.
+
+        Fixed-size reads are used rather than ``readline`` because QEMU is free
+        to emit a line longer than the stream reader's buffer limit, and a
+        recorder that raises on unusually long output would defeat its own
+        purpose at exactly the moment the output matters.
+
+        Args:
+            stream: The stream to drain; ``None`` when it was never piped.
+            channel: Stream name recorded alongside each line.
+        """
+        if stream is None:
+            return
+        pending = ""
+        while True:
+            try:
+                chunk = await stream.read(_QEMU_OUTPUT_READ_SIZE)
+            except (OSError, ConnectionError) as error:
+                _logger.debug("qemu_output_read_failed", channel=channel, error=str(error))
+                return
+            if not chunk:
+                break
+            pending += chunk.decode(errors="replace")
+            *lines, pending = pending.split("\n")
+            for line in lines:
+                self._retain(line, channel)
+        if pending.strip():
+            self._retain(pending, channel)
+
+    def _retain(self, line: str, channel: str) -> None:
+        """Log one output line and keep it in the bounded tail.
+
+        Args:
+            line: The line QEMU emitted, without its terminator.
+            channel: Stream name the line arrived on.
+        """
+        text = line.strip()
+        if not text:
+            return
+        _logger.debug("qemu_output", channel=channel, line=text)
+        self._tail.append(f"{channel}: {text}")
+
+
 class QEMUSandbox(SandboxBase):
     """QEMU-based sandbox for cross-platform binary analysis.
 
@@ -2690,6 +2878,7 @@ class QEMUSandbox(SandboxBase):
         super().__init__(config)
         self._qemu_config = qemu_config or QEMUConfig()
         self.process: asyncio.subprocess.Process | None = None
+        self._output_recorder: QemuOutputRecorder | None = None
         self._qmp: QMPClient | None = None
         self._qga: QemuGuestAgentClient | None = None
         self._agent: GuestAgentClient | None = None
@@ -2753,7 +2942,7 @@ class QEMUSandbox(SandboxBase):
 
     @property
     def qemu_guest_agent(self) -> QemuGuestAgentClient | None:
-        """qemu-guest-agent channel client, or None if not connected.
+        """Qemu-guest-agent channel client, or None if not connected.
 
         Returns:
             QemuGuestAgentClient | None: Active qemu-guest-agent client, or
@@ -2765,9 +2954,9 @@ class QEMUSandbox(SandboxBase):
         """Switch display mode to VNC for GUI embedding.
 
         This must be called before ``start()`` to take effect. If the sandbox is already running, restart is required. A free VNC port is
-        chosen immediately so :attr:`vnc_port` is usable before the guest boots, and ``start()`` launches QEMU on that same port whenever
-        it is still free. Nothing binds the port in the meantime, so ``start()`` re-probes it and draws a replacement if something else
-        claimed it first.
+        chosen immediately so :attr:`vnc_port` is usable before the guest boots, and ``start()`` launches QEMU on that same port whenever it
+        is still free. Nothing binds the port in the meantime, so ``start()`` re-probes it and draws a replacement if something else claimed
+        it first.
         """
         self._qemu_config = QEMUConfig(
             guest_os=self._qemu_config.guest_os,
@@ -4306,18 +4495,13 @@ class QEMUSandbox(SandboxBase):
     async def _bootstrap_guest_agent(self) -> None:
         """Bootstrap monitor agent script inside the guest via qemu-ga.
 
-        Opens the ``org.qemu.guest_agent.0`` channel, waits for
-        qemu-guest-agent to answer ``guest-ping`` on it, then invokes
-        ``guest-exec`` to run ``start_agent.cmd`` (Windows) or
-        ``start_agent.sh`` (Linux) inside the guest. The qemu-guest-agent
-        binary must already be installed in the disk image and configured
-        to start at boot; this method is the host-side trigger that runs
-        the Intellicrack monitor scripts using the guest agent channel.
+        Opens the ``org.qemu.guest_agent.0`` channel, waits for qemu-guest-agent to answer ``guest-ping`` on it, then invokes ``guest-exec``
+        to run ``start_agent.cmd`` (Windows) or ``start_agent.sh`` (Linux) inside the guest. The qemu-guest-agent binary must already be
+        installed in the disk image and configured to start at boot; this method is the host-side trigger that runs the Intellicrack monitor
+        scripts using the guest agent channel.
 
-        Propagates ``SandboxError`` when the guest-agent channel cannot be
-        opened, when qemu-guest-agent never responds to ``guest-ping`` within
-        the configured timeout, when ``guest-exec`` fails, or when the guest OS
-        is unsupported.
+        Propagates ``SandboxError`` when the guest-agent channel cannot be opened, when qemu-guest-agent never responds to ``guest-ping``
+        within the configured timeout, when ``guest-exec`` fails, or when the guest OS is unsupported.
         """
         await self._ensure_guest_agent_ready()
 
@@ -4800,6 +4984,9 @@ class QEMUSandbox(SandboxBase):
             await asyncio.wait_for(process.wait(), timeout=_WINDOWS_LAUNCH_GRACE_S)
         except TimeoutError:
             _logger.info("qemu_running_foreground", pid=process.pid)
+            recorder = QemuOutputRecorder(process)
+            recorder.start()
+            self._output_recorder = recorder
             return
 
         stderr_bytes = await process.stderr.read() if process.stderr is not None else b""
@@ -4902,7 +5089,10 @@ class QEMUSandbox(SandboxBase):
         await self._mount_guest_shared_volume()
         await self._bootstrap_guest_agent()
 
-        self._agent = GuestAgentClient(port=self._qemu_config.agent_port)
+        self._agent = GuestAgentClient(
+            port=self._qemu_config.agent_port,
+            vm_terminated=self.qemu_termination,
+        )
         await self._ensure_agent_connected(
             self._agent,
             self._qemu_config.agent_connect_timeout,
@@ -5025,6 +5215,9 @@ class QEMUSandbox(SandboxBase):
             bool: True when the QEMU process is no longer running, so no forced
             termination is needed.
         """
+        if self._output_recorder is not None:
+            self._output_recorder.expect_exit()
+
         budget = self._qemu_config.guest_shutdown_timeout
         if budget <= 0:
             return False
@@ -5050,6 +5243,28 @@ class QEMUSandbox(SandboxBase):
 
         _logger.warning("qemu_guest_shutdown_not_honoured", budget=budget)
         return False
+
+    def qemu_termination(self) -> QemuTermination | None:
+        """Report whether the QEMU process has stopped, and how.
+
+        Every guest operation depends on QEMU still running, so a caller that
+        is about to wait on the guest can ask first whether there is still a
+        guest to wait for. The recorder's account is preferred because it
+        carries QEMU's parting output; the process's own exit status is the
+        fallback for a QEMU that was never recorded, so a death is still
+        reported rather than mistaken for a running machine.
+
+        Returns:
+            QemuTermination | None: How QEMU ended, or ``None`` while it is
+            still running or is not observable as a child of this process.
+        """
+        recorder = self._output_recorder
+        if recorder is not None and recorder.termination is not None:
+            return recorder.termination
+        process = self.process
+        if process is not None and process.returncode is not None:
+            return QemuTermination(returncode=process.returncode, output_tail=())
+        return None
 
     async def _stop_impl(self) -> None:
         """Execute the full QEMU sandbox stop sequence.
@@ -5086,6 +5301,10 @@ class QEMUSandbox(SandboxBase):
 
         await self._reap_foreground_qemu()
 
+        if self._output_recorder is not None:
+            await self._output_recorder.aclose()
+            self._output_recorder = None
+
         await self._cleanup()
 
         self._active_captures.clear()
@@ -5097,10 +5316,9 @@ class QEMUSandbox(SandboxBase):
     async def _reap_foreground_qemu(self) -> None:
         """Ensure the foreground QEMU child is gone and its handle released.
 
-        A QMP ``quit`` normally ends the process on its own, so this waits
-        briefly for that to land and only kills the child when it does not.
-        Without it the Windows VM would outlive the sandbox, because there is
-        no daemonized process for the PID-based teardown to act on.
+        A QMP ``quit`` normally ends the process on its own, so this waits briefly for that to land and only kills the child when it does
+        not. Without it the Windows VM would outlive the sandbox, because there is no daemonized process for the PID-based teardown to act
+        on.
         """
         process = self.process
         if process is None:
@@ -5158,10 +5376,8 @@ class QEMUSandbox(SandboxBase):
     def _release_claimed_host_ports(self) -> None:
         """Return this sandbox's allocated host ports to the allocator.
 
-        Ports the caller pinned explicitly are left alone; only the ones this
-        sandbox allocated are released, and the configuration fields holding
-        them are reset to zero so a later start allocates afresh rather than
-        reusing a number another sandbox may since have taken.
+        Ports the caller pinned explicitly are left alone; only the ones this sandbox allocated are released, and the configuration fields
+        holding them are reset to zero so a later start allocates afresh rather than reusing a number another sandbox may since have taken.
         """
         claimed = self._claimed_host_ports
         if not claimed:
@@ -6605,6 +6821,11 @@ python3 /mnt/shared/monitor/agent.py &
         if self.state.status != "running":
             raise SandboxError(_ERR_NOT_RUNNING)
 
+        termination = self.qemu_termination()
+        if termination is not None:
+            _logger.warning("qemu_stopped_before_command", returncode=termination.returncode)
+            raise SandboxError(_ERR_QEMU_PROCESS_GONE.format(detail=termination.describe()))
+
         effective_timeout = time_limit or self._config.timeout_seconds
 
         if self._agent is not None and self._agent.is_connected:
@@ -6639,6 +6860,7 @@ python3 /mnt/shared/monitor/agent.py &
             stderr_path=stderr_path,
             script_path=script_path,
             time_limit=effective_timeout,
+            vm_terminated=self.qemu_termination,
         )
 
     def _guest_change_directory_command(self, working_directory: str) -> str:
@@ -6799,6 +7021,7 @@ python3 /mnt/shared/monitor/agent.py &
         stdout_path: Path | None = None,
         stderr_path: Path | None = None,
         script_path: Path | None = None,
+        vm_terminated: Callable[[], QemuTermination | None] | None = None,
     ) -> tuple[int, str, str]:
         """Poll the shared folder for command execution results.
 
@@ -6816,11 +7039,16 @@ python3 /mnt/shared/monitor/agent.py &
             stderr_path: Optional path to the stderr sidecar file.
             script_path: Optional path to the originating execution script,
                 cleaned up alongside the result and sidecars.
+            vm_terminated: Optional probe answering whether the virtual machine
+                expected to write the result has stopped. A result can only
+                arrive from a running guest, so once the machine is gone there
+                is nothing left to wait for.
 
         Returns:
             tuple[int, str, str]: Tuple of (exit_code, stdout, stderr).
 
         Raises:
+            SandboxError: If the virtual machine stopped before writing a result.
             SandboxTimeoutError: If the command times out.
         """
         start_time = time.time()
@@ -6846,6 +7074,16 @@ python3 /mnt/shared/monitor/agent.py &
                     script_path=script_path,
                 )
                 return (exit_code, stdout_text, stderr_text)
+
+            if vm_terminated is not None:
+                termination = vm_terminated()
+                if termination is not None:
+                    _logger.warning(
+                        "qemu_stopped_while_awaiting_result",
+                        returncode=termination.returncode,
+                        output_tail=list(termination.output_tail),
+                    )
+                    raise SandboxError(_ERR_QEMU_PROCESS_GONE.format(detail=termination.describe()))
 
         _logger.warning("command_timed_out", timeout_seconds=time_limit)
         raise SandboxTimeoutError(_ERR_CMD_TIMEOUT, timeout_seconds=time_limit)
