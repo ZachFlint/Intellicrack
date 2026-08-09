@@ -1062,7 +1062,10 @@ class TestF0022F0029AntiEvasion:
         )
 
         sb.state.status = "running"
-        sb.set_agent(_ConnectableAgent(connected=False))
+        # A connected agent whose guest-side commands succeed: apply_anti_evasion
+        # now refuses to report a clean success when the guest-side hardening it
+        # attempted did not run (S17-D77), so a disconnected agent would raise.
+        sb.set_agent(_ConnectableAgent(connected=True))
 
         async def _run() -> dict[str, Any]:
             sb.set_qmp(MagicMock())
@@ -1152,7 +1155,10 @@ class TestF0022F0029AntiEvasion:
         )
 
         sb.state.status = "running"
-        sb.set_agent(_ConnectableAgent(connected=False))
+        # A connected agent whose guest-side commands succeed: apply_anti_evasion
+        # now refuses to report a clean success when the guest-side hardening it
+        # attempted did not run (S17-D77), so a disconnected agent would raise.
+        sb.set_agent(_ConnectableAgent(connected=True))
 
         async def _run() -> dict[str, Any]:
             sb.set_qmp(MagicMock())
