@@ -1420,6 +1420,29 @@ def _driver_paths(parent: Element, settings: UnattendSettings) -> None:
             key += 1
 
 
+def computer_name_enforcement_command(computer_name: str) -> str:
+    """Build the guest command that asserts the declared computer name.
+
+    Setup applies the ``specialize`` pass ``ComputerName`` and then requires a
+    reboot before OOBE to realise it; the name in force after that reboot is a
+    Windows-generated one, so the declared name has to be re-asserted from
+    inside the finished guest. ``Rename-Computer`` is deliberately run without
+    ``-Restart``: it writes the pending name immediately and the provisioner
+    keeps control of when the guest shuts down.
+
+    Args:
+        computer_name: NetBIOS name the guest is meant to answer to.
+
+    Returns:
+        str: Command line to run as a first-logon command.
+    """
+    quoted = computer_name.replace("'", "''")
+    return (
+        "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "
+        f"\"if ($env:COMPUTERNAME -ne '{quoted}') {{ Rename-Computer -NewName '{quoted}' -Force }}\""
+    )
+
+
 def first_logon_commands(settings: UnattendSettings) -> tuple[tuple[str, str], ...]:
     """Build the ordered first-logon commands run inside the new guest.
 
@@ -1444,6 +1467,10 @@ def first_logon_commands(settings: UnattendSettings) -> tuple[tuple[str, str], .
         (
             f'cmd.exe /c for %d in ({letters}) do @if exist "%d:\\{settings.answer_script}" call "%d:\\{settings.answer_script}"',
             "Install and start the QEMU guest agent service",
+        ),
+        (
+            computer_name_enforcement_command(settings.computer_name),
+            "Assert the declared computer name, which Setup does not keep past the pre-OOBE reboot",
         ),
     ]
     if settings.disable_guest_firewall:
