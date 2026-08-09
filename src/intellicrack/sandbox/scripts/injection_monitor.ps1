@@ -98,11 +98,43 @@ function Write-InjectionDiagnostic {
     param(
         [string]$Timestamp,
         [string]$Category,
-        [string]$Detail
+        [string]$Detail,
+        [System.Management.Automation.ErrorRecord]$ErrorRecord
     )
-    $safeDetail = ($Detail -replace '\|', '_' -replace '[\r\n]+', ' ')
+    # $_.Exception.Message alone named neither the statement nor the line, so a
+    # null-receiver failure could not be located (S17-D79). The error record's
+    # InvocationInfo carries the offending source line and its number; folding
+    # them into the detail makes the diagnostic point at the exact statement.
+    $located = $Detail
+    if ($null -ne $ErrorRecord -and $null -ne $ErrorRecord.InvocationInfo) {
+        $info = $ErrorRecord.InvocationInfo
+        $statement = ([string]$info.Line).Trim()
+        $scriptLeaf = if ($info.ScriptName) { Split-Path -Leaf -Path $info.ScriptName } else { 'injection_monitor.ps1' }
+        $located = '{0} [at {1}:{2}: {3}]' -f $Detail, $scriptLeaf, $info.ScriptLineNumber, $statement
+    }
+    $safeDetail = ($located -replace '\|', '_' -replace '[\r\n]+', ' ')
     $line = "$Timestamp|$Category|$safeDetail"
     Add-Content -LiteralPath $script:diagPathRef -Value $line -Encoding utf8
+}
+
+function Assert-TraceObject {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][AllowNull()][object]$Value,
+        [Parameter(Mandatory = $true)][string]$Category,
+        [Parameter(Mandatory = $true)][string]$Detail
+    )
+    # A null Source or Kernel is the shape S17-D79 saw live: reading a property
+    # off $null never throws, so the null propagated silently to the first
+    # method call on the parser and surfaced three lines on as an unlocated
+    # "call a method on a null-valued expression". Failing at the read itself,
+    # with a named category, states the real cause where it happens.
+    if ($null -eq $Value) {
+        $ts = Get-Date -Format 'o'
+        Write-InjectionDiagnostic -Timestamp $ts -Category $Category -Detail $Detail
+        throw $Detail
+    }
+    return $Value
 }
 
 #region TraceEventDependencyResolver
@@ -354,8 +386,10 @@ try {
         Write-Warning "Microsoft-Windows-Threat-Intelligence provider unavailable: $($_.Exception.Message)"
     }
 
-    $source = $session.Source
-    $kernelParser = $source.Kernel
+    $source = Assert-TraceObject -Value $session.Source -Category 'trace_source_null' `
+        -Detail 'TraceEventSession.Source returned null; the real-time ETW source was not created, so no parser can be built'
+    $kernelParser = Assert-TraceObject -Value $source.Kernel -Category 'trace_kernel_parser_null' `
+        -Detail 'ETWTraceEventSource.Kernel returned null; the kernel event handlers cannot be registered'
     $dynamicParser = New-Object Microsoft.Diagnostics.Tracing.Parsers.DynamicTraceEventParser($source)
 
     $kernelParser.add_ThreadStart({
@@ -535,7 +569,7 @@ try {
     Write-InjectionRecord -Timestamp $ts -SourcePid 0 -SourceName 'tracer' `
         -InjectedPid 0 -InjectedName '' -InjectionType 'ERROR' `
         -ApiCalls "trace session failed: $msg"
-    Write-InjectionDiagnostic -Timestamp $ts -Category 'trace_session_failed' -Detail $_.Exception.Message
+    Write-InjectionDiagnostic -Timestamp $ts -Category 'trace_session_failed' -Detail $_.Exception.Message -ErrorRecord $_
     throw
 } finally {
     if ($null -ne $script:StopWatchTimer) {
