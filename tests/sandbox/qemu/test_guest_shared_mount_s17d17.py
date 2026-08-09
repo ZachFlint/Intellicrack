@@ -119,6 +119,10 @@ _XCOPY_OPERAND_COUNT: Final[int] = 2
 # that derives the directory from the system drive instead of asking the guest
 # for %SystemRoot% names one that is not there.
 _GUEST_SYSTEM_ROOT: Final[str] = "D:\\WinNT"
+# The two directories every Windows installation keeps its own tools in. They
+# hang off whatever %SystemRoot% reports, which is the whole point: a host that
+# builds a tool path on the compiled-in C:\Windows names neither of them.
+_WINDOWS_SYSTEM_DIRECTORIES: Final[tuple[str, ...]] = ("System32", "SysWOW64")
 _GUEST_DROP_ROOTS: Final[tuple[str, ...]] = (
     "D:\\Users\\Public\\Downloads",
     "D:\\Users\\Default\\AppData\\Local\\Temp",
@@ -253,6 +257,18 @@ _UNLABELLED_ESP_DEVICES: Final[tuple[_GuestDevice, ...]] = (
     _GuestDevice("/dev/vdb"),
     _GuestDevice(_SHARE_DEVICE, "vfat", _VVFAT_LABEL),
 )
+
+
+def _is_bare_name(executable: str) -> bool:
+    """Report whether a command names no directory and so is resolved on PATH.
+
+    Args:
+        executable: Command field the host dispatched.
+
+    Returns:
+        bool: True when the name carries neither a drive nor a separator.
+    """
+    return "\\" not in executable and "/" not in executable and ":" not in executable
 
 
 def _escape_lsblk_value(value: str) -> str:
@@ -908,7 +924,9 @@ class _WindowsAgentGuest:
 
     It shares the modelled guest's filesystem: the share drive is backed by the
     staged host directory, and the only directories that exist below the boot
-    volume are the ones the agent's own file watcher mirrors from. An ``xcopy``
+    volume are the ones the agent's own file watcher mirrors from, plus the
+    ``System32`` and ``SysWOW64`` that hang off the ``%SystemRoot%`` this guest
+    reports and carry the tools Windows ships. An ``xcopy``
     whose source is one of those copies a file into its destination; a source
     anywhere else finds nothing, which is what a host scanning a volume the
     guest never wrote to gets back. A program is only runnable when it really
@@ -948,6 +966,8 @@ class _WindowsAgentGuest:
         self._share_host_root = share_host_root
         self._share_drive = share_drive
         self._populated = {directory.upper() for directory in populated_directories}
+        root = system_root.rstrip("\\")
+        self._system_directories = tuple(f"{root}\\{name}\\".upper() for name in _WINDOWS_SYSTEM_DIRECTORIES)
         self._environment = _guest_environment(system_drive, system_root)
         self._guest_files: dict[str, bytearray] = {}
         self.commands = []
@@ -1121,7 +1141,13 @@ class _WindowsAgentGuest:
         one name, so it is resolved verbatim: nothing splits it on spaces and
         nothing strips quotes from it. It is looked for on the guest's own disk
         first - where the host stages a sample over the guest agent since
-        S17-D69 - and on the share drive after that.
+        S17-D69 - then among the tools Windows itself ships below the
+        ``%SystemRoot%`` *this* guest reports, and on the share drive after
+        that. A tool path built on some other Windows directory is found in
+        none of the three, which is what a guest whose Windows is not where the
+        host assumed answers. A name carrying no directory at all is resolved
+        the way the launcher resolves it, on the guest's own ``PATH``, which is
+        how ``powershell.exe`` runs on any Windows guest.
 
         Args:
             executable: In-guest path of the program to run.
@@ -1131,6 +1157,9 @@ class _WindowsAgentGuest:
             GuestCommandResult: Exit 0 when the executable is really there.
         """
         if executable in self._guest_files:
+            invocation = " ".join([PureWindowsPath(executable).name, *argv])
+            return GuestCommandResult(exit_code=0, stdout=f"ran {invocation}\n", stderr="")
+        if executable.upper().startswith(self._system_directories) or _is_bare_name(executable):
             invocation = " ".join([PureWindowsPath(executable).name, *argv])
             return GuestCommandResult(exit_code=0, stdout=f"ran {invocation}\n", stderr="")
         host_file = _guest_to_host(executable, self._share_drive, self._share_host_root)
@@ -1198,6 +1227,15 @@ class _MountTestSandbox(QEMUSandbox):
     async def bootstrap(self) -> None:
         """Drive the real :meth:`QEMUSandbox._bootstrap_guest_agent`."""
         await self._bootstrap_guest_agent()
+
+    def guest_launch_executable(self) -> str:
+        """Return the interpreter the real launch command names.
+
+        Returns:
+            str: Executable ``guest-exec`` is asked to start the monitor with.
+        """
+        executable, _arguments = self._guest_launch_command()
+        return executable
 
     async def attach_agents(self) -> None:
         """Drive the real :meth:`QEMUSandbox._attach_qemu_agents`."""
@@ -1463,6 +1501,12 @@ async def _guest_session(
         ),
     )
     sandbox.use_shared_folder(shared_folder)
+    if guest_os == GuestOS.LINUX:
+        # The Linux launcher execs the agent rather than backgrounding it, so
+        # the process qemu-guest-agent reports is the agent itself and it runs
+        # for as long as the sandbox does. A guest that reaps it the moment the
+        # host asks is modelling the defect S17-D82 removed.
+        ga_server.resident_commands = frozenset({sandbox.guest_launch_executable()})
     try:
         yield sandbox, ga_server
     finally:

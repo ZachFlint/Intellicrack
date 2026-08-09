@@ -255,6 +255,12 @@ _ERR_YARA_NOT_AVAILABLE = "yara-python not installed"
 _ERR_GUEST_AGENT_NOT_CONNECTED = "Guest agent not connected"
 _ERR_GUEST_SCAN_FAILED = "guest YARA scan failed"
 _ERR_AGENT_CONNECT_FAILED = "guest agent failed to connect within {timeout}s"
+_ERR_AGENT_BOOTSTRAP_DIED = (
+    "the monitor agent exited {exit_code} while the host was waiting for it to listen, so nothing was ever going "
+    "to answer on the agent port; the guest recorded: {diagnostic}"
+)
+_BOOTSTRAP_LOG_ABSENT = "this guest OS keeps no bootstrap log"
+_BOOTSTRAP_LOG_EMPTY = "nothing - the bootstrap log is empty"
 _ERR_QEMU_GA_UNREACHABLE = (
     "qemu-guest-agent did not respond to guest-ping within the configured timeout; "
     "ensure the guest disk image has qemu-guest-agent installed and enabled at boot"
@@ -438,6 +444,15 @@ _GUEST_WORK_ROOT_WINDOWS_RELATIVE: Final[str] = "intellicrack"
 _GUEST_WORK_ROOT_LINUX: Final[str] = "/var/lib/intellicrack"
 _MONITOR_LAUNCH_RELATIVE_WINDOWS: Final[str] = "monitor\\start_agent.cmd"
 _MONITOR_LAUNCH_RELATIVE_LINUX: Final[str] = "monitor/start_agent.sh"
+_MONITOR_AGENT_RELATIVE_LINUX: Final[str] = "monitor/agent.py"
+
+# Where the Linux launcher records what happened while it started the agent, and
+# how long the agent is given to still be running afterwards. The agent runs for
+# as long as the sandbox does, so a launcher process that has already exited can
+# only mean it never reached its accept loop.
+_GUEST_AGENT_LOG_DIR_RELATIVE: Final[str] = "logs"
+_GUEST_BOOTSTRAP_LOG_NAME: Final[str] = "agent_bootstrap.log"
+_BOOTSTRAP_LOG_LINES: Final[int] = 40
 
 # The guest-side command interpreters a shell command line has to be handed
 # to. The in-guest agents take an executable plus an argument vector and launch
@@ -4665,6 +4680,93 @@ class QEMUSandbox(SandboxBase):
             arg=exec_args,
         )
 
+    async def _guest_bootstrap_diagnostic(self) -> str:
+        """Read back whatever the guest recorded while starting the monitor agent.
+
+        Propagates the ``SandboxError`` raised by :meth:`_guest_run` when the
+        read itself cannot be dispatched into the guest.
+
+        Returns:
+            str: Tail of the guest-side bootstrap log, the guest's complaint
+            about reading it, or a note that this guest OS keeps no such log.
+        """
+        if self._qemu_config.guest_os != GuestOS.LINUX:
+            return _BOOTSTRAP_LOG_ABSENT
+
+        log_path = f"{_GUEST_WORK_ROOT_LINUX}/{_GUEST_AGENT_LOG_DIR_RELATIVE}/{_GUEST_BOOTSTRAP_LOG_NAME}"
+        status = await self._guest_run("tail", ["-n", str(_BOOTSTRAP_LOG_LINES), log_path])
+        return status.stdout.strip() or status.stderr.strip() or _BOOTSTRAP_LOG_EMPTY
+
+    async def _await_bootstrap_death(self, guest_pid: int) -> str:
+        """Wait until the launched monitor agent exits, and say how.
+
+        Runs alongside the wait for the agent's socket so that a guest-side
+        failure ends that wait at once instead of letting it run out. The agent
+        serves for as long as the sandbox does, so its process exiting at all is
+        the failure - there is no time limit here, only the caller's.
+
+        Args:
+            guest_pid: Process qemu-guest-agent reported for the launcher.
+
+        Returns:
+            str: Description of the exit, carrying the guest's own record of it.
+        """
+        while True:
+            await asyncio.sleep(_GUEST_COMMAND_POLL_INTERVAL)
+            if self._qga is None:
+                continue
+
+            status = await self._qga.guest_exec_status(guest_pid)
+            if not status.exited:
+                continue
+
+            diagnostic = await self._guest_bootstrap_diagnostic()
+            _logger.warning(
+                "guest_agent_bootstrap_died",
+                guest_pid=guest_pid,
+                exit_code=status.exit_code,
+                diagnostic=diagnostic,
+            )
+            return _ERR_AGENT_BOOTSTRAP_DIED.format(exit_code=status.exit_code, diagnostic=diagnostic)
+
+    async def _await_agent_or_bootstrap_failure(self, agent: GuestAgentClient, time_limit: float) -> None:
+        """Wait for the agent to answer, and stop early if it has died.
+
+        The connect wait on its own can only ever report that the budget ran
+        out, which for a guest whose agent died on its first statement means
+        minutes of waiting under a message that names neither the agent nor
+        what stopped it. Watching the process the bootstrap started turns that
+        into an immediate failure carrying the guest's own diagnostic.
+
+        Args:
+            agent: Guest agent client to connect.
+            time_limit: Total seconds to wait for the agent to become
+                reachable.
+
+        Raises:
+            SandboxError: If the agent cannot be reached within ``time_limit``,
+                or if the process serving it exited first.
+        """
+        guest_pid = self._agent_guest_pid
+        if self._qga is None or guest_pid is None:
+            await self._ensure_agent_connected(agent, time_limit)
+            return
+
+        connecting = asyncio.create_task(self._ensure_agent_connected(agent, time_limit))
+        watching = asyncio.create_task(self._await_bootstrap_death(guest_pid))
+        try:
+            done, _ = await asyncio.wait({connecting, watching}, return_when=asyncio.FIRST_COMPLETED)
+        finally:
+            for task in (connecting, watching):
+                if not task.done():
+                    task.cancel()
+
+        if connecting in done:
+            await connecting
+            return
+
+        raise SandboxError(await watching)
+
     @staticmethod
     def _anti_evasion_identity(profile: str) -> tuple[str, str]:
         """Return the manufacturer/product identity strings for an anti-evasion profile.
@@ -5243,7 +5345,7 @@ class QEMUSandbox(SandboxBase):
             port=self._qemu_config.agent_port,
             vm_terminated=self.qemu_termination,
         )
-        await self._ensure_agent_connected(
+        await self._await_agent_or_bootstrap_failure(
             self._agent,
             self._qemu_config.agent_connect_timeout,
         )
@@ -6134,6 +6236,12 @@ NET_DEV_RECV_BYTES_INDEX: int = 0
 NET_DEV_SENT_BYTES_INDEX: int = 8
 NET_EXCLUDED_INTERFACES: tuple[str, ...] = ("lo",)
 
+# Before the handler, not in main(): a FileHandler opens its file as it is
+# constructed, and this runs at import. A guest that has not run the agent
+# before has no work root at all, so leaving this to main() meant the agent died
+# of FileNotFoundError before a line of it ran.
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -6945,7 +7053,6 @@ def _execute_command(request: dict[str, Any]) -> dict[str, Any]:
 
 def main() -> None:
     """Main entry point for the guest agent."""
-    LOG_DIR.mkdir(parents=True, exist_ok=True)
     _logger.info("guest_agent_starting", extra={"port": PORT})
 
     process_thread = threading.Thread(target=process_monitor, daemon=True)
@@ -6987,15 +7094,28 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 '''
-            await asyncio.to_thread(agent_script.write_text, agent_content, encoding="utf-8")
+            await asyncio.to_thread(agent_script.write_text, agent_content, encoding="utf-8", newline="")
 
             startup_script = monitor_dir / "start_agent.sh"
-            startup_content = """#!/bin/bash
-python3 /mnt/shared/monitor/agent.py &
-"""
+            agent_path = f"{_GUEST_SHARED_ROOT_LINUX}/{_MONITOR_AGENT_RELATIVE_LINUX}"
+            log_dir = f"{_GUEST_WORK_ROOT_LINUX}/{_GUEST_AGENT_LOG_DIR_RELATIVE}"
+            # ``exec`` rather than a background job, and a redirect rather than a
+            # discarded stream: backgrounding made the shell exit 0 whatever
+            # became of the agent, so the pid qemu-guest-agent reported belonged
+            # to a shell that had already succeeded and the agent's own failure
+            # went nowhere. Now the reported pid is the agent, and whatever it
+            # said on its way out is on the guest's disk.
+            startup_content = (
+                f"#!/bin/bash\nmkdir -p '{log_dir}'\nexec python3 '{agent_path}' >>'{log_dir}/{_GUEST_BOOTSTRAP_LOG_NAME}' 2>&1\n"
+            )
         else:
             raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
-        await asyncio.to_thread(startup_script.write_text, startup_content, encoding="utf-8")
+
+        # Verbatim, because the host writing these is a Windows one and text
+        # mode would otherwise turn every "\n" into "\r\n". Each launcher above
+        # already carries the terminators its own interpreter needs, and a
+        # shell script full of carriage returns is one bash refuses to run.
+        await asyncio.to_thread(startup_script.write_text, startup_content, encoding="utf-8", newline="")
 
         _logger.debug("guest_agent_scripts_created", path=str(monitor_dir))
 
