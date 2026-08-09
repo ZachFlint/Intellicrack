@@ -46,8 +46,13 @@ MONITOR_DIR_LINE: Final[str] = "$monitorDir ="
 SHARE_ROOT_LINE: Final[str] = "$shareRoot ="
 SHARE_ROOT_PREFIX_LINE: Final[str] = "$shareRootPrefix ="
 SHARE_ROOT_PREFIX_FALLBACK_LINE: Final[str] = "if (-not $shareRootPrefix"
+SYSTEM_DRIVE_LINE: Final[str] = "$systemDrive ="
+SYSTEM_DRIVE_FALLBACK_LINE: Final[str] = "if (-not $systemDrive)"
 SYSTEM_ROOT_LINE: Final[str] = "$systemRoot ="
 SYSTEM_ROOT_FALLBACK_LINE: Final[str] = "if (-not $systemRoot)"
+WORK_ROOT_LINE: Final[str] = "$workRoot ="
+WORK_ROOT_PREFIX_LINE: Final[str] = "$workRootPrefix ="
+WORK_ROOT_PREFIX_FALLBACK_LINE: Final[str] = "if (-not $workRootPrefix"
 ALLOWED_NAMES_LINE: Final[str] = "$allowedNames ="
 ALLOWED_ROOTS_LINE: Final[str] = "$allowedRoots ="
 QUOTE_CHAR_LINE: Final[str] = "$quoteChar ="
@@ -58,8 +63,18 @@ EXECUTE_BRANCH_HEADER: Final[str] = "elseif ($request.type -eq 'execute') {"
 
 ALLOWLIST_FUNCTION: Final = re.compile(r"function\s+Test-AllowedCommand\s*\([^)]*\)\s*\{")
 SEND_MESSAGE_FUNCTION: Final = re.compile(r"function\s+Send-Message\s*\([^)]*\)\s*\{")
+SHELL_CALLEE_FUNCTION: Final = re.compile(r"function\s+Test-ShellParsedCallee\s*\([^)]*\)\s*\{")
+SHELL_ARGUMENT_FUNCTION: Final = re.compile(r"function\s+ConvertTo-ShellCommandLineArgument\s*\([^)]*\)\s*\{")
 ARGUMENT_FUNCTION: Final = re.compile(r"function\s+ConvertTo-CommandLineArgument\s*\([^)]*\)\s*\{")
 INVOKE_FUNCTION: Final = re.compile(r"function\s+Invoke-GuestCommand\s*\([^)]*\)\s*\{")
+
+_DECLARED_FUNCTION: Final = re.compile(r"^function\s+(?P<name>[A-Za-z]+-[A-Za-z]+)\s*\(", re.MULTILINE)
+_TOP_LEVEL_ASSIGNMENT: Final = re.compile(r"^\$(?P<name>\w+)\s*=", re.MULTILINE)
+_ERR_INCOMPLETE_LIFT: Final[str] = (
+    "the peer lifts code that uses {kind} {name!r} without lifting its declaration; "
+    "PowerShell resolves it late and the agent sets $ErrorActionPreference to SilentlyContinue, "
+    "so the peer would answer with the wrong result rather than fail"
+)
 
 LOOPBACK_LISTENER_STATEMENT: Final[str] = (
     "$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Parse('127.0.0.1'), $Port)"
@@ -154,6 +169,41 @@ def script_branch(script: str, header: str) -> str:
     return script_block(script, start, start + len(header) - 1, header)
 
 
+def verify_lift_is_complete(agent_script: str, peer_script: str) -> None:
+    """Fail unless the peer carries the declaration of everything it lifted.
+
+    The generated agent sets ``$ErrorActionPreference`` to ``SilentlyContinue``
+    and PowerShell binds both function calls and variables late, so a fragment
+    lifted without something it depends on does not fail: the call is skipped or
+    the variable reads as ``$null``, and the peer answers with a result that
+    looks exactly like the behaviour under test. That has already happened once
+    - ``ConvertTo-CommandLineArgument`` was lifted while a global it used was
+    not, and its output was byte-identical to the defect it was meant to gate.
+    So the dependency set is checked here rather than trusted.
+
+    Only names the generated agent itself declares are considered, so this
+    cannot mistake a harness statement or a PowerShell built-in for a missing
+    lift.
+
+    Args:
+        agent_script: Full text of the generated ``agent.ps1``.
+        peer_script: The assembled peer script.
+
+    Raises:
+        AssertionError: If the peer uses an agent function or an agent global
+            whose declaration it does not carry.
+    """
+    for name in {match["name"] for match in _DECLARED_FUNCTION.finditer(agent_script)}:
+        if name in peer_script and not re.search(rf"^function\s+{re.escape(name)}\s*\(", peer_script, re.MULTILINE):
+            raise AssertionError(_ERR_INCOMPLETE_LIFT.format(kind="the function", name=name))
+
+    for name in {match["name"] for match in _TOP_LEVEL_ASSIGNMENT.finditer(agent_script)}:
+        used = re.search(rf"\${re.escape(name)}\b", peer_script)
+        assigned = re.search(rf"\${re.escape(name)}\s*=[^=]", peer_script)
+        if used is not None and assigned is None:
+            raise AssertionError(_ERR_INCOMPLETE_LIFT.format(kind="the variable", name=f"${name}"))
+
+
 def build_peer_script(agent_script: str, *, listener_statement: str) -> str:
     """Build the in-guest agent peer out of the generated agent's own statements.
 
@@ -177,7 +227,7 @@ def build_peer_script(agent_script: str, *, listener_statement: str) -> str:
     Returns:
         str: A runnable PowerShell script that answers the agent protocol.
     """
-    return (
+    peer_script = (
         "\r\n".join(
             [
                 "param([int]$Port)",
@@ -186,13 +236,20 @@ def build_peer_script(agent_script: str, *, listener_statement: str) -> str:
                 script_line(agent_script, SHARE_ROOT_LINE),
                 script_line(agent_script, SHARE_ROOT_PREFIX_LINE),
                 script_line(agent_script, SHARE_ROOT_PREFIX_FALLBACK_LINE),
+                script_line(agent_script, SYSTEM_DRIVE_LINE),
+                script_line(agent_script, SYSTEM_DRIVE_FALLBACK_LINE),
                 script_line(agent_script, SYSTEM_ROOT_LINE),
                 script_line(agent_script, SYSTEM_ROOT_FALLBACK_LINE),
+                script_line(agent_script, WORK_ROOT_LINE),
+                script_line(agent_script, WORK_ROOT_PREFIX_LINE),
+                script_line(agent_script, WORK_ROOT_PREFIX_FALLBACK_LINE),
                 script_line(agent_script, ALLOWED_NAMES_LINE),
                 script_line(agent_script, ALLOWED_ROOTS_LINE),
                 script_line(agent_script, QUOTE_CHAR_LINE),
                 script_function(agent_script, ALLOWLIST_FUNCTION),
                 script_function(agent_script, SEND_MESSAGE_FUNCTION),
+                script_function(agent_script, SHELL_CALLEE_FUNCTION),
+                script_function(agent_script, SHELL_ARGUMENT_FUNCTION),
                 script_function(agent_script, ARGUMENT_FUNCTION),
                 script_function(agent_script, INVOKE_FUNCTION),
                 listener_statement,
@@ -213,6 +270,8 @@ def build_peer_script(agent_script: str, *, listener_statement: str) -> str:
         )
         + "\r\n"
     )
+    verify_lift_is_complete(agent_script, peer_script)
+    return peer_script
 
 
 class GeneratedAgentPeer:
