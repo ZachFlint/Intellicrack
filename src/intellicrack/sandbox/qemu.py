@@ -5685,15 +5685,73 @@ function Test-AllowedCommand($cmdValue) {
 
 $quoteChar = [char]34
 
-function ConvertTo-CommandLineArgument($value) {
+# Which of the two renderings below an argument needs is decided by the callee,
+# because the two parsers are genuinely different and neither escape survives
+# the other. Everything reached here is a real executable, so only the command
+# interpreter itself reads its tail by its own rules.
+function Test-ShellParsedCallee($commandPath) {
+    if ([string]::IsNullOrEmpty($commandPath)) { return $false }
+    $leaf = [System.IO.Path]::GetFileName([string]$commandPath).ToLower()
+    return ($leaf -eq 'cmd' -or $leaf -eq 'cmd.exe')
+}
+
+# cmd.exe never sees an argv: it re-parses its own tail, where a backslash is an
+# ordinary path character and only quotes group. Escaping for CommandLineToArgvW
+# here would hand it 'cd /d \"C:\dir\"' and it would answer 'The filename,
+# directory name, or volume label syntax is incorrect'. So an argument for the
+# interpreter is held together and otherwise left exactly as the caller wrote
+# it - a shell command line's internal quoting is the caller's own.
+function ConvertTo-ShellCommandLineArgument($value) {
     $text = [string]$value
     if ($text.Length -gt 0 -and $text.IndexOfAny([char[]]@([char]32, [char]9)) -lt 0) { return $text }
     return $quoteChar + $text + $quoteChar
 }
 
+# Every other callee splits this command line by CommandLineToArgvW's rules, so
+# an argument only survives if it is escaped by them: a quote inside the
+# argument has to be written as backslash-quote, and any run of backslashes
+# immediately before a quote - including the closing one this adds - has to be
+# doubled, or the last of them escapes that quote instead of standing for
+# itself. Wrapping without either escape is what silently rewrote arguments
+# before (S17-D73): a quoted value lost its quotes and split, and a path ending
+# in a separator swallowed the argument after it.
+function ConvertTo-CommandLineArgument($value) {
+    $backslashChar = [char]92
+    $text = [string]$value
+    if ($text.Length -gt 0 -and $text.IndexOfAny([char[]]@([char]32, [char]9, $quoteChar)) -lt 0) { return $text }
+    $builder = New-Object System.Text.StringBuilder
+    [void]$builder.Append($quoteChar)
+    $index = 0
+    while ($index -lt $text.Length) {
+        $slashes = 0
+        while ($index -lt $text.Length -and $text[$index] -eq $backslashChar) {
+            $slashes++
+            $index++
+        }
+        if ($index -eq $text.Length) {
+            [void]$builder.Append([string]::new($backslashChar, $slashes * 2))
+            break
+        }
+        if ($text[$index] -eq $quoteChar) {
+            [void]$builder.Append([string]::new($backslashChar, $slashes * 2 + 1))
+            [void]$builder.Append($quoteChar)
+        } else {
+            [void]$builder.Append([string]::new($backslashChar, $slashes))
+            [void]$builder.Append($text[$index])
+        }
+        $index++
+    }
+    [void]$builder.Append($quoteChar)
+    return $builder.ToString()
+}
+
 function Invoke-GuestCommand($commandPath, $commandArgs, $timeoutSeconds) {
+    $shellParsed = Test-ShellParsedCallee $commandPath
     $rendered = @()
-    foreach ($item in $commandArgs) { $rendered += (ConvertTo-CommandLineArgument $item) }
+    foreach ($item in $commandArgs) {
+        if ($shellParsed) { $rendered += (ConvertTo-ShellCommandLineArgument $item) }
+        else { $rendered += (ConvertTo-CommandLineArgument $item) }
+    }
 
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
     $startInfo.FileName = $commandPath

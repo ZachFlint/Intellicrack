@@ -265,10 +265,16 @@ function Invoke-ApiTrace {
     }
 
     try {
-        # Real-time only: passing $null as the file path keeps everything in-memory
-        # and lets the in-process callbacks consume each event. No ETL file is
-        # produced, so no out-of-band harvest is required.
-        $script:Session = $sessionType::new($sessionName, $null)
+        # Real-time only: the in-process callbacks consume each event, so no ETL
+        # file is produced and no out-of-band harvest is required. The overload
+        # has to be named explicitly to get that. TraceEvent 3.2.5 declares no
+        # (name, fileName) constructor at all - only (name, options) and
+        # (name, fileName, options) - so passing $null as a second argument
+        # bound the options parameter to null and produced a *file* session with
+        # no file. Construction still succeeded; the first EnableProvider then
+        # failed with ERROR_BAD_PATHNAME (0x800700A1), one call away from the
+        # cause, and the whole API Calls tab was empty (S17-D70).
+        $script:Session = $sessionType::new($sessionName, [Microsoft.Diagnostics.Tracing.Session.TraceEventSessionOptions]::Create)
         $script:Session.StopOnDispose = $true
     } catch {
         Write-TraceFatal -Code 4 -Stage 'session_create' -Message "TraceEventSession constructor failed: $($_.Exception.Message)"

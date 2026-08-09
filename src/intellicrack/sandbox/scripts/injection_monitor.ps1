@@ -416,7 +416,14 @@ try {
         }
     })
 
-    $kernelParser.add_VirtualMemVirtualAlloc({
+    # KernelTraceEventParser calls these VirtualMemAlloc/VirtualMemFree, both
+    # carrying VirtualAllocTraceData. There is no VirtualMemVirtualAlloc, and
+    # PowerShell resolves add_* late, so registering that name did not fail at
+    # load: the monitor started, reported itself healthy, enabled its kernel
+    # provider and then died on this line about a second in - taking the
+    # narrowed Kernel-Process fallback with it and leaving the Injections tab
+    # empty on every run (S17-D71).
+    $kernelParser.add_VirtualMemAlloc({
         param($evt)
         try {
             $evtPid = [int]$evt.ProcessID
@@ -437,7 +444,7 @@ try {
         }
     })
 
-    $kernelParser.add_VirtualMemVirtualFree({
+    $kernelParser.add_VirtualMemFree({
         param($evt)
         try {
             $threadId = [int]$evt.ThreadID
