@@ -215,6 +215,7 @@ _ERR_SNAPSHOT_CREATE = "snapshot create failed"
 _ERR_SNAPSHOT_RESTORE = "snapshot restore failed"
 _ERR_SNAPSHOT_DELETE = "snapshot delete failed"
 _ERR_SNAPSHOT_NO_DISK = "the running guest exposes no writable qcow2 disk, so there is nothing that can hold a snapshot"
+_ERR_SNAPSHOT_DISK_ONLY_FAILED = "disk-only snapshot of device {device!r} failed: {error}"
 _ERR_SNAPSHOT_ABSENT = "no snapshot named {name!r} exists on this sandbox's disks"
 _ERR_SNAPSHOT_SURVIVED = "QEMU reported the deletion of {name!r} as finished, but the tag is still on the disk"
 _ERR_SNAPSHOT_JOB_GONE = "QEMU stopped reporting job {job_id} before it finished"
@@ -1634,6 +1635,28 @@ class QMPClient(QemuJsonProtocolClient):
         return await self._send_command({
             "execute": "snapshot-delete",
             "arguments": {"job-id": job_id, "tag": tag, "devices": devices},
+        })
+
+    async def blockdev_snapshot_internal_sync(self, device: str, name: str) -> QMPResponse:
+        """Take a disk-only internal snapshot of one block device, synchronously.
+
+        Unlike ``snapshot-save`` this stores no CPU or RAM state, only the qcow2
+        contents, so an accelerator that blocks machine-state migration - WHPX -
+        permits it. The command is not a job: its outcome is on this reply, not
+        in :meth:`query_jobs`. It takes ``device``, the id from
+        :meth:`query_block`, not a node name (a node name is refused with
+        ``Parameter 'device' is missing``).
+
+        Args:
+            device: Block device id, as reported by ``query-block``.
+            name: Snapshot name to write into the qcow2.
+
+        Returns:
+            QMPResponse: Whether the snapshot was taken.
+        """
+        return await self._send_command({
+            "execute": "blockdev-snapshot-internal-sync",
+            "arguments": {"device": device, "name": name},
         })
 
 
@@ -8077,6 +8100,79 @@ python3 /mnt/shared/monitor/agent.py &
                 inserted.append(medium)
         return inserted
 
+    async def _snapshot_target_devices(self) -> list[str]:
+        """Resolve the block-device ids a disk-only snapshot may be written to.
+
+        ``blockdev-snapshot-internal-sync`` addresses a device by its
+        ``query-block`` id rather than its node name, so this pairs the writable
+        qcow2 media that :meth:`_snapshot_target_nodes` selects by node with the
+        outer device id ``query-block`` reports for the same medium. The same
+        writable-qcow2 filter keeps the read-only install media and the shared
+        copy-on-write backing image (S17-D58) out of the set.
+
+        Returns:
+            list[str]: Device ids, in QEMU's device order.
+
+        Raises:
+            SandboxError: If the monitor is not connected, refuses the query, or
+                the guest exposes no disk that can hold a snapshot.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        result = await self._qmp.query_block()
+        if not result.success:
+            _logger.warning("query_block_failed", error=result.error)
+            raise SandboxError(_ERR_SNAPSHOT_NO_DISK)
+
+        devices: list[str] = []
+        for entry in _as_sequence(result.data) or []:
+            record = _as_mapping(entry)
+            if record is None:
+                continue
+            medium = _as_mapping(record.get("inserted"))
+            device = record.get("device")
+            if (
+                medium is not None
+                and medium.get("drv") == _SNAPSHOT_DISK_FORMAT
+                and medium.get("ro") is False
+                and isinstance(device, str)
+                and device
+            ):
+                devices.append(device)
+
+        if not devices:
+            _logger.warning("snapshot_no_capable_disk")
+            raise SandboxError(_ERR_SNAPSHOT_NO_DISK)
+        return devices
+
+    async def _take_disk_only_snapshot(self, name: str) -> None:
+        """Snapshot the qcow2 contents of every writable disk, without machine state.
+
+        This is the create path for an accelerator that blocks machine-state
+        snapshots. It is synchronous - each device's outcome is on its own
+        reply, not in the job list - and it stores no CPU or RAM state, so a
+        restore of it cannot resume a running guest the way a full snapshot
+        could; that is the weaker guarantee the caller is told about.
+
+        Args:
+            name: Snapshot name to write into each qcow2.
+
+        Raises:
+            SandboxError: If the monitor is not connected or any device refuses
+                the snapshot.
+        """
+        if self._qmp is None:
+            raise SandboxError(_ERR_QMP_NOT_CONNECTED)
+
+        for device in await self._snapshot_target_devices():
+            reply = await self._qmp.blockdev_snapshot_internal_sync(device, name)
+            if not reply.success:
+                _logger.warning("snapshot_disk_only_failed", device=device, snapshot_name=name, error=reply.error)
+                raise SandboxError(
+                    _ERR_SNAPSHOT_DISK_ONLY_FAILED.format(device=device, error=reply.error or _ERR_SNAPSHOT_JOB_REFUSED),
+                )
+
     async def _snapshot_target_nodes(self) -> list[str]:
         """Resolve the block nodes an internal snapshot may be written to.
 
@@ -8292,7 +8388,17 @@ python3 /mnt/shared/monitor/agent.py &
         return (f"{message}{fate}", _VM_STATE_RUNNING if running else _VM_STATE_STOPPED)
 
     async def take_snapshot(self, name: str) -> str:
-        """Take a snapshot of the VM state.
+        """Take a snapshot of the VM.
+
+        A full snapshot serialises CPU and RAM state as well as the disk. WHPX -
+        the only accelerator Windows guests run under here - registers migration
+        blockers against exactly that machine state, so ``snapshot-save`` can
+        never conclude under it and the whole Snapshots surface would be dead on
+        Windows. When the accelerator blocks machine state, a disk-only internal
+        snapshot is taken instead: it stores the qcow2 contents and nothing of
+        the running machine, which WHPX permits. A disk-only snapshot is a
+        weaker guarantee - it cannot resume a running guest on restore - so
+        which kind was taken is logged rather than passed off as the same thing.
 
         Args:
             name: Snapshot name.
@@ -8307,6 +8413,11 @@ python3 /mnt/shared/monitor/agent.py &
         if self._qmp is None:
             raise SandboxError(_ERR_QMP_NOT_CONNECTED)
 
+        if self._accelerator == AcceleratorType.WHPX:
+            await self._take_disk_only_snapshot(name)
+            _logger.info("snapshot_created", snapshot_name=name, kind="disk_only")
+            return name
+
         nodes = await self._snapshot_target_nodes()
         job_id = self._new_snapshot_job_id("save")
         monitor = self._qmp
@@ -8317,7 +8428,7 @@ python3 /mnt/shared/monitor/agent.py &
             job_id,
         )
 
-        _logger.info("snapshot_created", snapshot_name=name, nodes=nodes)
+        _logger.info("snapshot_created", snapshot_name=name, kind="full", nodes=nodes)
         return name
 
     async def restore_snapshot(self, snapshot_id: str) -> None:
