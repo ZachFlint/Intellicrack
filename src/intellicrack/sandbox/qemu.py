@@ -88,7 +88,7 @@ from intellicrack.sandbox.log_parsers import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping, Sequence
+    from collections.abc import Awaitable, Callable, Mapping, Sequence
 
 _logger = get_logger(__name__)
 
@@ -219,6 +219,10 @@ _ERR_SNAPSHOT_JOB_GONE = "QEMU stopped reporting job {job_id} before it finished
 _ERR_SNAPSHOT_JOB_TIMEOUT = "job {job_id} had not finished after {budget:.0f}s"
 _ERR_SNAPSHOT_JOB_UNREADABLE = "the job list could not be read, so the outcome is unknown"
 _ERR_SNAPSHOT_JOB_REFUSED = "QEMU refused the request"
+_SNAPSHOT_MACHINE_RESUMED = "; the machine was left stopped by the failed job and has been resumed"
+_SNAPSHOT_MACHINE_STUCK = "; the machine was left stopped by the failed job and could not be resumed: {reason}"
+_VM_STATE_RUNNING = "running"
+_VM_STATE_STOPPED = "stopped"
 _PIDFILE_MAX_RETRIES = 3
 _PIDFILE_RETRY_DELAY = 2.0
 PIDFILE_MAX_RETRIES: int = _PIDFILE_MAX_RETRIES
@@ -8177,23 +8181,110 @@ python3 /mnt/shared/monitor/agent.py &
                 return record
         return None
 
-    async def _run_snapshot_job(self, action: str, failure: str, request: QMPResponse, job_id: str) -> None:
-        """Check that QEMU accepted a snapshot job, then wait for its outcome.
+    async def _machine_is_running(self) -> bool:
+        """Report whether the machine's processors are executing right now.
+
+        Returns:
+            bool: True only if QEMU says so. An unreadable status answers
+            False, because this decides whether to start a machine, and
+            starting one the operator deliberately stopped is worse than
+            declining to.
+        """
+        if self._qmp is None:
+            return False
+        reply = await self._qmp.query_status()
+        if not reply.success:
+            _logger.warning("snapshot_run_state_unreadable", error=reply.error)
+            return False
+        record = _as_mapping(reply.data)
+        return record is not None and record.get("running") is True
+
+    async def _resume_after_failed_snapshot_job(self, action: str, *, was_running: bool) -> str:
+        """Start the machine again if the failed job is what stopped it.
+
+        Args:
+            action: Short verb naming the operation, for logging.
+            was_running: Whether the machine was executing before the job.
+
+        Returns:
+            str: A clause naming the machine's fate, to be appended to the
+            failure the caller is about to raise, or an empty string when the
+            job left the machine as it found it.
+        """
+        if not was_running or self._qmp is None or await self._machine_is_running():
+            return ""
+
+        resumed = await self._qmp.cont()
+        if not resumed.success or not await self._machine_is_running():
+            reason = resumed.error or _ERR_SNAPSHOT_JOB_UNREADABLE
+            _logger.error("snapshot_machine_left_stopped", action=action, error=reason)
+            return _SNAPSHOT_MACHINE_STUCK.format(reason=reason)
+
+        _logger.warning("snapshot_machine_resumed", action=action)
+        return _SNAPSHOT_MACHINE_RESUMED
+
+    async def _run_snapshot_job(
+        self,
+        action: str,
+        failure: str,
+        start: Callable[[], Awaitable[QMPResponse]],
+        job_id: str,
+    ) -> None:
+        """Run one snapshot job and leave the machine as the job found it.
+
+        QEMU stops the machine to load a snapshot and does not start it again
+        when the job fails. A refused restore therefore costs the caller the
+        guest itself: the processors never run again, every later guest command
+        spends its whole budget timing out, and the sandbox goes on reporting
+        itself as running. Measured against QEMU 10.1.0, ``query-status`` after
+        a ``snapshot-load`` of a tag that does not exist is ``restore-vm`` with
+        ``running: false``, and it stays there.
+
+        The run state is read before the command is even issued, because the
+        stop happens inside the job - the command itself is accepted and
+        answers immediately - so reading it afterwards would be a race against
+        the very thing being measured.
 
         Args:
             action: Short verb naming the operation, for logging.
             failure: Message prefix describing the operation.
-            request: The reply to the command that started the job.
+            start: Issues the command that creates the job.
             job_id: Identifier the job was started with.
 
         Raises:
             SandboxError: If the command was refused or the job failed.
         """
+        was_running = await self._machine_is_running()
+        request = await start()
+
         if not request.success:
             _logger.warning("snapshot_job_rejected", action=action, job_id=job_id, error=request.error)
-            message = f"{failure}: {request.error or _ERR_SNAPSHOT_JOB_REFUSED}"
-            raise SandboxError(message)
-        await self._await_snapshot_job(job_id, failure)
+            refused = f"{failure}: {request.error or _ERR_SNAPSHOT_JOB_REFUSED}"
+            detail, state = await self._snapshot_failure_detail(action, refused, was_running=was_running)
+            raise SandboxError(detail, vm_state=state)
+
+        try:
+            await self._await_snapshot_job(job_id, failure)
+        except SandboxError as failed:
+            detail, state = await self._snapshot_failure_detail(action, failed.message, was_running=was_running)
+            raise SandboxError(detail, vm_state=state) from failed
+
+    async def _snapshot_failure_detail(self, action: str, message: str, *, was_running: bool) -> tuple[str, str]:
+        """Repair the machine a failed snapshot job stopped, then describe both.
+
+        Args:
+            action: Short verb naming the operation, for logging.
+            message: What went wrong with the job itself.
+            was_running: Whether the machine was executing before the job.
+
+        Returns:
+            tuple[str, str]: The failure text to raise, and the machine's run
+            state afterwards, so a caller can tell a refused operation from a
+            lost guest.
+        """
+        fate = await self._resume_after_failed_snapshot_job(action, was_running=was_running)
+        running = await self._machine_is_running()
+        return (f"{message}{fate}", _VM_STATE_RUNNING if running else _VM_STATE_STOPPED)
 
     async def take_snapshot(self, name: str) -> str:
         """Take a snapshot of the VM state.
@@ -8213,8 +8304,13 @@ python3 /mnt/shared/monitor/agent.py &
 
         nodes = await self._snapshot_target_nodes()
         job_id = self._new_snapshot_job_id("save")
-        request = await self._qmp.snapshot_save(job_id, name, nodes[0], nodes)
-        await self._run_snapshot_job("save", _ERR_SNAPSHOT_CREATE, request, job_id)
+        monitor = self._qmp
+        await self._run_snapshot_job(
+            "save",
+            _ERR_SNAPSHOT_CREATE,
+            lambda: monitor.snapshot_save(job_id, name, nodes[0], nodes),
+            job_id,
+        )
 
         _logger.info("snapshot_created", snapshot_name=name, nodes=nodes)
         return name
@@ -8234,8 +8330,13 @@ python3 /mnt/shared/monitor/agent.py &
 
         nodes = await self._snapshot_target_nodes()
         job_id = self._new_snapshot_job_id("load")
-        request = await self._qmp.snapshot_load(job_id, snapshot_id, nodes[0], nodes)
-        await self._run_snapshot_job("load", _ERR_SNAPSHOT_RESTORE, request, job_id)
+        monitor = self._qmp
+        await self._run_snapshot_job(
+            "load",
+            _ERR_SNAPSHOT_RESTORE,
+            lambda: monitor.snapshot_load(job_id, snapshot_id, nodes[0], nodes),
+            job_id,
+        )
 
         _logger.info("snapshot_restored", snapshot_id=snapshot_id)
 
@@ -8285,8 +8386,13 @@ python3 /mnt/shared/monitor/agent.py &
 
         nodes = await self._snapshot_target_nodes()
         job_id = self._new_snapshot_job_id("delete")
-        request = await self._qmp.snapshot_delete(job_id, name, nodes)
-        await self._run_snapshot_job("delete", _ERR_SNAPSHOT_DELETE, request, job_id)
+        monitor = self._qmp
+        await self._run_snapshot_job(
+            "delete",
+            _ERR_SNAPSHOT_DELETE,
+            lambda: monitor.snapshot_delete(job_id, name, nodes),
+            job_id,
+        )
 
         _logger.info("snapshot_deleted", snapshot_name=name)
 
