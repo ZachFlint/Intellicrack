@@ -49,7 +49,7 @@ from intellicrack.sandbox.settings import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from pathlib import Path
 
     from intellicrack.sandbox.manager import SandboxType
@@ -130,6 +130,7 @@ class _CommandBuildingSandbox(QEMUSandbox):
         binary_path: Path,
         args: list[str] | None = None,
         time_limit: int | None = None,
+        companions: Sequence[Path] | None = None,
         *,
         monitor: bool = True,
     ) -> ExecutionReport:
@@ -142,12 +143,13 @@ class _CommandBuildingSandbox(QEMUSandbox):
             binary_path: Binary the manager asked to run.
             args: Command line arguments, unused.
             time_limit: Timeout override, unused.
+            companions: Files to stage beside the binary, unused.
             monitor: Whether behaviour monitoring was requested, unused.
 
         Returns:
             ExecutionReport: A real, empty-activity report.
         """
-        del args, time_limit, monitor
+        del args, time_limit, companions, monitor
         self.executed.append(binary_path)
         return ExecutionReport(
             result=_RUN_SUCCEEDED,

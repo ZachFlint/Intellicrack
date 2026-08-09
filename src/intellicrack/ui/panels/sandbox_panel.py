@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
+    QMenu,
     QPlainTextEdit,
     QPushButton,
     QSpinBox,
@@ -64,6 +65,11 @@ _SPLIT_LEFT: Final[int] = 200
 _SPLIT_RIGHT: Final[int] = 400
 _MIN_FIELD_WIDTH: Final[int] = 160
 _MIN_SPIN_WIDTH: Final[int] = 110
+
+# Companion paths are separated by ';' rather than by whitespace, because a
+# Windows path routinely carries a space and splitting on one would turn a
+# single companion into two that do not exist.
+_COMPANION_SEPARATOR: Final[str] = ";"
 
 _TIMEOUT_MIN_SECONDS: Final[int] = 1
 _TIMEOUT_MAX_SECONDS: Final[int] = 86400
@@ -449,12 +455,34 @@ class SandboxPanel(AnalysisPanelBase):
         self._args_input.setMinimumWidth(_MIN_FIELD_WIDTH)
         args_row.addWidget(self._args_input)
 
+        exec_layout.addLayout(args_row)
+
+        companions_row = QHBoxLayout()
+        companions_label = QLabel("Companions:")
+        companions_label.setObjectName("toolbar_label")
+        companions_row.addWidget(companions_label)
+
+        self._companions_input = QLineEdit()
+        self._companions_input.setFont(fm.get_code_font(9))
+        self._companions_input.setMinimumWidth(_MIN_FIELD_WIDTH)
+        self._companions_input.setPlaceholderText("Files or folders the target needs beside it, separated by ;")
+        self._companions_input.setToolTip(
+            "Anything the target loads from its own directory - a DLL, a resource or locale folder, a config file.\n"
+            "Staged without them a target still runs and still exits 0 while doing nothing.",
+        )
+        companions_row.addWidget(self._companions_input)
+
+        self._companions_browse_btn = QPushButton("Add...")
+        self._companions_browse_btn.setObjectName("secondary_button")
+        self._companions_browse_btn.clicked.connect(self._on_browse_companions)
+        companions_row.addWidget(self._companions_browse_btn)
+
         self._run_btn = QPushButton("Run in Sandbox")
         self._run_btn.setObjectName("tool_button")
         self._run_btn.setEnabled(False)
         self._run_btn.clicked.connect(self._on_run_binary)
-        args_row.addWidget(self._run_btn)
-        exec_layout.addLayout(args_row)
+        companions_row.addWidget(self._run_btn)
+        exec_layout.addLayout(companions_row)
 
         cmd_row = QHBoxLayout()
         cmd_label = QLabel("Command:")
@@ -1161,21 +1189,47 @@ class SandboxPanel(AnalysisPanelBase):
         if path_str:
             self._binary_path_input.setText(path_str)
 
+    def _append_companions(self, paths: list[str]) -> None:
+        """Add paths to the companions field without dropping what is there.
+
+        Args:
+            paths: Host paths to add. Ones already listed are not repeated.
+        """
+        existing = [entry.strip() for entry in self._companions_input.text().split(_COMPANION_SEPARATOR) if entry.strip()]
+        existing.extend(path for path in paths if path not in existing)
+        self._companions_input.setText(_COMPANION_SEPARATOR.join(existing))
+
+    def _on_browse_companions(self) -> None:
+        """Offer the two shapes a companion really takes: files, or a folder.
+
+        A resource or locale tree has to arrive whole, and picking its members
+        one by one would flatten it, so a folder is its own choice rather than
+        a multi-selection of files.
+        """
+        menu = QMenu(self)
+        files_action = menu.addAction("Files...")
+        folder_action = menu.addAction("Folder...")
+        chosen = menu.exec(self._companions_browse_btn.mapToGlobal(self._companions_browse_btn.rect().bottomLeft()))
+
+        if chosen is files_action:
+            paths, _ = QFileDialog.getOpenFileNames(self, "Select companion files", "", "All Files (*)")
+            if paths:
+                self._append_companions(paths)
+        elif chosen is folder_action:
+            folder = QFileDialog.getExistingDirectory(self, "Select companion folder")
+            if folder:
+                self._append_companions([folder])
+
     def _on_run_binary(self) -> None:
         """Execute the selected binary inside the sandbox.
 
-        The run is given the same backend configuration ``Create`` and
-        ``Restart`` already build, because a QEMU run that reaches the backend
-        without a disk image cannot start a virtual machine at all.
+        The run is given the same backend configuration ``Create`` and ``Restart`` already build, because a QEMU run that reaches the
+        backend without a disk image cannot start a virtual machine at all.
 
-        It is also directed at the instance this panel is showing, by id.
-        ``reuse_instance`` alone cannot say *which* one: it takes whichever
-        idle sandbox of that type comes first, so with more than one running
-        the binary executed somewhere other than where the operator was
-        watching, and the report that came back overwrote the displayed
-        instance's tabs. ``reuse_instance`` stays set for the case where
-        nothing has been created yet, where it still avoids booting a second
-        virtual machine beside the first.
+        It is also directed at the instance this panel is showing, by id. ``reuse_instance`` alone cannot say *which* one: it takes
+        whichever idle sandbox of that type comes first, so with more than one running the binary executed somewhere other than where the
+        operator was watching, and the report that came back overwrote the displayed instance's tabs. ``reuse_instance`` stays set for the
+        case where nothing has been created yet, where it still avoids booting a second virtual machine beside the first.
         """
         if self._bridge is None:
             self._log("[!] No sandbox bridge active")
@@ -1195,6 +1249,12 @@ class SandboxPanel(AnalysisPanelBase):
         args_list = args.split() if args else None
         sandbox_type = self._selected_sandbox_type()
 
+        companions = [entry.strip() for entry in self._companions_input.text().split(_COMPANION_SEPARATOR) if entry.strip()]
+        missing = [entry for entry in companions if not Path(entry).exists()]
+        if missing:
+            self._log(f"[!] Companion not found: {', '.join(missing)}")
+            return
+
         self._log(f"[*] Executing: {binary.name} {args}")
         self._clear_report_tabs()
         self._run_btn.setEnabled(False)
@@ -1206,6 +1266,7 @@ class SandboxPanel(AnalysisPanelBase):
                 binary_path=binary_path,
                 args=args_list,
                 sandbox_type=sandbox_type,
+                companions=companions or None,
                 qemu_config=self._qemu_create_config(sandbox_type),
                 reuse_instance=True,
                 instance_id=self.sandbox_id,
@@ -1218,6 +1279,7 @@ class SandboxPanel(AnalysisPanelBase):
             level="info",
             binary_path=str(binary_path),
             arg_count=len(args_list) if args_list is not None else 0,
+            companion_count=len(companions),
             sandbox_type=sandbox_type,
         )
 

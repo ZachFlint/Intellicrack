@@ -28,6 +28,7 @@ from intellicrack.sandbox.windows import WindowsSandbox
 
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
 
@@ -495,6 +496,7 @@ class SandboxManager:
         time_limit: int | None = None,
         qemu_config: QEMUConfig | None = None,
         instance_id: str | None = None,
+        companions: Sequence[Path] | None = None,
         *,
         monitor: bool = True,
         reuse_instance: bool = False,
@@ -522,6 +524,8 @@ class SandboxManager:
             time_limit: Optional timeout override in seconds.
             qemu_config: Optional QEMU-specific configuration.
             instance_id: Identifier of an existing instance to run in.
+            companions: Optional files or directories to place beside the
+                binary, for a target that cannot run alone.
             monitor: Whether to monitor behavior.
             reuse_instance: Whether to reuse an existing idle instance.
 
@@ -564,6 +568,7 @@ class SandboxManager:
                 binary_path=binary_path,
                 args=args,
                 time_limit=time_limit,
+                companions=companions,
                 monitor=monitor,
             )
 

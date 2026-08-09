@@ -18,7 +18,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Final, cast
+from typing import TYPE_CHECKING, Any, Final, cast
 from unittest.mock import patch
 
 import pytest
@@ -33,6 +33,10 @@ from intellicrack.sandbox.base import (
 from intellicrack.sandbox.manager import SandboxInstance, SandboxManager
 
 from .conftest import InMemorySandbox
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 _MAX_INSTANCES: Final[int] = 3
@@ -71,7 +75,7 @@ class _TestableManager:
 
     @property
     def instances(self) -> list[Any]:
-        """Get all instances.
+        """All instances currently tracked by the manager.
 
         Returns:
             list[Any]: List of instance objects.
@@ -80,7 +84,7 @@ class _TestableManager:
 
     @property
     def active_count(self) -> int:
-        """Get count of running instances.
+        """Number of tracked instances whose sandbox is running.
 
         Returns:
             int: Number of running sandboxes.
@@ -158,6 +162,7 @@ class _TestableManager:
         binary_path: Path,
         args: list[str] | None = None,
         time_limit: int | None = None,
+        companions: Sequence[Path] | None = None,
         *,
         monitor: bool = True,
     ) -> tuple[_TestInstance, ExecutionReport]:
@@ -167,6 +172,7 @@ class _TestableManager:
             binary_path: Path to the binary.
             args: Optional command line arguments.
             time_limit: Optional timeout.
+            companions: Files to place beside the binary.
             monitor: Whether to monitor.
 
         Returns:
@@ -178,6 +184,7 @@ class _TestableManager:
             binary_path=binary_path,
             args=args,
             time_limit=time_limit,
+            companions=companions,
             monitor=monitor,
         )
         inst.last_report = report
@@ -249,7 +256,7 @@ class _TestInstance:
 
     @property
     def state(self) -> SandboxState:
-        """Get sandbox state.
+        """Current state of the underlying sandbox.
 
         Returns:
             SandboxState: Current sandbox state.

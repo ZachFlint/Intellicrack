@@ -42,6 +42,8 @@ from tests.sandbox.conftest import LocalProcessSandbox, StubInstance
 
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from intellicrack.sandbox.base import SandboxConfig
 
 
@@ -1224,6 +1226,7 @@ class TestReportToDict:
             "injection_events",
             "resource_samples",
             "clipboard_events",
+            "collector_outages",
         }
         assert expected_keys == set(result.keys())
 
@@ -1325,6 +1328,7 @@ class _RealLocalManager:
         time_limit: int | None = None,
         qemu_config: object = None,
         instance_id: str | None = None,
+        companions: Sequence[Path] | None = None,
         *,
         monitor: bool = True,
         reuse_instance: bool = False,
@@ -1339,6 +1343,7 @@ class _RealLocalManager:
             time_limit: Optional timeout in seconds.
             qemu_config: Unused QEMU configuration.
             instance_id: Instance the caller directed the run at, if any.
+            companions: Files to place beside the binary, forwarded whole.
             monitor: Whether to diff the work directory for file changes.
             reuse_instance: Unused reuse flag.
 
@@ -1356,6 +1361,7 @@ class _RealLocalManager:
             binary_path=binary_path,
             args=args,
             time_limit=time_limit,
+            companions=companions,
             monitor=monitor,
         )
         inst = self._instances[instance_id or _REAL_INSTANCE]

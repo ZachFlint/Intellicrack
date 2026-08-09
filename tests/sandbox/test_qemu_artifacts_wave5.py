@@ -24,7 +24,8 @@ from typing import Protocol, cast
 import pytest
 
 import intellicrack.sandbox.qemu as _qemu_mod
-from intellicrack.sandbox.qemu import QEMUSandbox
+from intellicrack.sandbox.base import SandboxConfig
+from intellicrack.sandbox.qemu import QEMUConfig, QEMUSandbox
 
 
 _parse_ppm_p6: Callable[[bytes], tuple[int, int, bytes]] = cast(
@@ -219,7 +220,7 @@ class TestCollectMonitoringLogs:
         fields are empty.  Mutation: skipping the None guard and trying to build
         a path from ``None / "logs" / name`` raises ``TypeError`` before returning.
         """
-        sandbox = _TestableQEMUSandbox.__new__(_TestableQEMUSandbox)
+        sandbox = _TestableQEMUSandbox(SandboxConfig(), QEMUConfig())
         sandbox.set_shared_folder(None)
 
         result = asyncio.run(sandbox.collect_monitoring_logs())
@@ -244,7 +245,7 @@ class TestCollectMonitoringLogs:
         empty when the shared folder exists but has no log files.  Mutation:
         raising an exception on missing log files would crash before returning.
         """
-        sandbox = _TestableQEMUSandbox.__new__(_TestableQEMUSandbox)
+        sandbox = _TestableQEMUSandbox(SandboxConfig(), QEMUConfig())
         sandbox.set_shared_folder(tmp_path)
 
         result = asyncio.run(sandbox.collect_monitoring_logs())
