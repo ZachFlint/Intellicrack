@@ -60,7 +60,7 @@ from intellicrack.sandbox.base import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
 
     from intellicrack.sandbox.manager import SandboxManager
 
@@ -236,6 +236,7 @@ class InMemorySandbox(SandboxBase):
         binary_path: Path,
         args: list[str] | None = None,
         time_limit: int | None = None,
+        companions: Sequence[Path] | None = None,
         *,
         monitor: bool = True,
     ) -> ExecutionReport:
@@ -245,12 +246,13 @@ class InMemorySandbox(SandboxBase):
             binary_path: Path to the binary.
             args: Optional command line arguments.
             time_limit: Optional timeout override.
+            companions: Files or directories to place beside the binary.
             monitor: Whether to monitor behavior.
 
         Returns:
             ExecutionReport: Report with sample monitoring data.
         """
-        del args, time_limit, monitor
+        del args, time_limit, companions, monitor
         return ExecutionReport(
             result="success",
             exit_code=0,
@@ -628,6 +630,7 @@ class LocalProcessSandbox(SandboxBase):
         binary_path: Path,
         args: list[str] | None = None,
         time_limit: int | None = None,
+        companions: Sequence[Path] | None = None,
         *,
         monitor: bool = True,
     ) -> ExecutionReport:
@@ -637,10 +640,15 @@ class LocalProcessSandbox(SandboxBase):
         returned ``file_changes`` reflect artefacts the process actually wrote,
         not fabricated entries.
 
+        Companions are really placed, into the work directory the process runs
+        from, since this sandbox runs the binary where it already lives rather
+        than staging it.
+
         Args:
             binary_path: Path to the binary to execute.
             args: Optional command-line arguments.
             time_limit: Optional timeout in seconds.
+            companions: Files or directories the target needs alongside it.
             monitor: Whether to diff the work directory for file changes.
 
         Returns:
@@ -650,6 +658,8 @@ class LocalProcessSandbox(SandboxBase):
         Raises:
             SandboxError: If the binary times out.
         """
+        if companions:
+            await self.stage_companions(companions, binary_path, "")
         before = _snapshot_tree(self.workdir) if monitor else {}
         argv = [str(binary_path), *(args or [])]
         started = time.monotonic()
@@ -925,6 +935,7 @@ class StubManager:
         time_limit: int | None = None,
         qemu_config: object = None,
         instance_id: str | None = None,
+        companions: Sequence[Path] | None = None,
         *,
         monitor: bool = True,
         reuse_instance: bool = False,
@@ -942,6 +953,7 @@ class StubManager:
             instance_id: Instance the caller directed the run at. Like the real
                 manager, a named instance is used instead of creating one, and
                 naming an unknown instance fails rather than falling back.
+            companions: Files to place beside the binary, forwarded whole.
             monitor: Whether to monitor.
             reuse_instance: Whether to reuse an existing instance.
 
@@ -964,6 +976,7 @@ class StubManager:
             binary_path=binary_path,
             args=args,
             time_limit=time_limit,
+            companions=companions,
             monitor=monitor,
         )
         inst.last_report = report

@@ -1292,6 +1292,7 @@ class SandboxBridge(ToolBridgeBase):
         args: list[str] | None = None,
         sandbox_type: str = "windows",
         time_limit: int | None = None,
+        companions: list[str] | None = None,
         *,
         monitor: bool = True,
         qemu_config: QEMUConfig | None = None,
@@ -1327,6 +1328,10 @@ class SandboxBridge(ToolBridgeBase):
             sandbox_type: Type of sandbox to use (``"windows"`` or
                 ``"qemu"``).
             time_limit: Optional timeout override in seconds.
+            companions: Paths to files or directories the target needs beside
+                it, each placed in the sandbox under its own name. A target
+                staged without one of these still launches and still exits
+                ``0`` while doing nothing.
             monitor: Whether to monitor behavior.
             qemu_config: QEMU-specific configuration, required for the
                 ``"qemu"`` type to reach a bootable disk image.
@@ -1353,6 +1358,8 @@ class SandboxBridge(ToolBridgeBase):
             msg = f"{_ERR_BINARY_NOT_FOUND}: {binary_path}"
             raise ToolError(msg)
 
+        companion_paths = [Path(companion) for companion in companions] if companions else None
+
         try:
             sb_type: SandboxType = cast("SandboxType", sandbox_type)
             instance, report = await manager.run_binary(
@@ -1362,6 +1369,7 @@ class SandboxBridge(ToolBridgeBase):
                 time_limit=time_limit,
                 qemu_config=qemu_config,
                 instance_id=instance_id,
+                companions=companion_paths,
                 monitor=monitor,
                 reuse_instance=reuse_instance,
             )

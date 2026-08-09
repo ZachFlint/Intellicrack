@@ -9,6 +9,7 @@ This module defines the base class for sandbox implementations that provide isol
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal, TypedDict
 
@@ -17,6 +18,7 @@ from intellicrack.core.types import SandboxError, SandboxTimeoutError
 
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from datetime import datetime
     from pathlib import Path
 
@@ -26,11 +28,28 @@ __all__ = ["SandboxError", "SandboxTimeoutError"]
 
 _logger = get_logger(__name__)
 
+
+def _files_under(root: Path) -> list[Path]:
+    """List every file in a directory tree, deepest paths included.
+
+    Args:
+        root: Directory to walk.
+
+    Returns:
+        list[Path]: Every file under ``root``, in a stable order.
+    """
+    return sorted(path for path in root.rglob("*") if path.is_file())
+
+
 _ERR_SANDBOX_NOT_IMPL = "Sandbox not implemented"
 _ERR_SANDBOX_NOT_IMPL_DETAIL = "Use a concrete sandbox implementation like WindowsSandbox"
 _ERR_EXEC_NOT_IMPL = "Sandbox execution not implemented"
 _ERR_BINARY_EXEC_NOT_IMPL = "Binary execution not implemented"
 _ERR_FILE_COPY_NOT_IMPL = "File copy not implemented"
+_ERR_COMPANION_NOT_FOUND = "Companion file not found"
+_ERR_COMPANION_EMPTY_DIR = "Companion directory holds no files"
+_ERR_COMPANION_COLLISION = "Two companions claim the same destination"
+_ERR_COMPANION_SHADOWS_TARGET = "A companion would overwrite the target binary"
 _ERR_SNAPSHOTS_NOT_SUPPORTED = "Snapshots not supported by this sandbox type"
 _ERR_PCAP_NOT_IMPL = "Packet capture not implemented"
 _ERR_SCREENSHOT_NOT_IMPL = "Screenshot capture not implemented"
@@ -249,12 +268,9 @@ class ClipboardEvent(TypedDict):
 class CollectorOutage(TypedDict):
     """Represents a monitoring collector that did not observe for the full run.
 
-    A recorder that never reported starting, or that reported stopping while
-    the sandboxed process was still being monitored, produced no trustworthy
-    observations for its report section. Surfacing that distinctly lets a
-    report consumer tell "the sample made no calls this collector watches
-    for" apart from "this collector never watched", which a collector's own
-    data log cannot express on its own.
+    A recorder that never reported starting, or that reported stopping while the sandboxed process was still being monitored, produced no
+    trustworthy observations for its report section. Surfacing that distinctly lets a report consumer tell "the sample made no calls this
+    collector watches for" apart from "this collector never watched", which a collector's own data log cannot express on its own.
     """
 
     collector: str
@@ -502,6 +518,7 @@ class SandboxBase:
         binary_path: Path,
         args: list[str] | None = None,
         time_limit: int | None = None,
+        companions: Sequence[Path] | None = None,
         *,
         monitor: bool = True,
     ) -> ExecutionReport:
@@ -511,6 +528,8 @@ class SandboxBase:
             binary_path: Path to the binary to run.
             args: Optional command line arguments.
             time_limit: Optional timeout override in seconds.
+            companions: Optional files or directories to place beside the
+                binary, for a target that cannot run alone.
             monitor: Whether to monitor behavior.
 
         Returns:
@@ -524,11 +543,86 @@ class SandboxBase:
             class_name=type(self).__name__,
             binary_path=str(binary_path),
         )
-        del args, time_limit, monitor
+        del args, time_limit, companions, monitor
         raise SandboxError(
             _ERR_BINARY_EXEC_NOT_IMPL,
             _ERR_SANDBOX_NOT_IMPL_DETAIL,
         )
+
+    async def stage_companions(
+        self,
+        companions: Sequence[Path],
+        binary_path: Path,
+        destination_prefix: str,
+    ) -> int:
+        """Place a target's companion files beside it in the sandbox.
+
+        Real targets are rarely one file. A DLL next to the executable, a
+        resource subtree, a config directory, a MUI sidecar - any of them
+        missing and the target still launches, still exits ``0``, and still
+        does nothing, which a sandbox reports as a successful run. So a
+        companion that cannot be placed fails the run here rather than being
+        skipped: an incomplete staging is not a smaller version of the same
+        analysis, it is a different program.
+
+        Each entry is staged under its own base name beside the binary, which
+        is the layout a target expects of its own directory. A directory is
+        staged whole, keeping the tree underneath it, so a locale or resource
+        subtree arrives the shape the target looks for.
+
+        The copying itself is :meth:`copy_to_sandbox`, so each backend places
+        the files by whatever transport it really uses.
+
+        Args:
+            companions: Host paths to place beside the binary. Each may be a
+                file or a directory.
+            binary_path: The target these accompany, whose own staged name they
+                may not take.
+            destination_prefix: Sandbox-relative directory the binary was
+                staged into. Empty places them at the sandbox root.
+
+        Returns:
+            int: Number of files placed.
+
+        Raises:
+            SandboxError: If a companion does not exist, if a directory holds
+                no files, if two companions claim one destination, or if a
+                companion would overwrite the binary.
+        """
+        planned: dict[str, Path] = {}
+        prefix = f"{destination_prefix}/" if destination_prefix else ""
+        target_destination = f"{prefix}{binary_path.name}"
+
+        for companion in companions:
+            if not await asyncio.to_thread(companion.exists):
+                raise SandboxError(_ERR_COMPANION_NOT_FOUND, str(companion))
+
+            if await asyncio.to_thread(companion.is_dir):
+                sources = await asyncio.to_thread(_files_under, companion)
+                if not sources:
+                    raise SandboxError(_ERR_COMPANION_EMPTY_DIR, str(companion))
+                pairs = [(f"{prefix}{companion.name}/{source.relative_to(companion).as_posix()}", source) for source in sources]
+            else:
+                pairs = [(f"{prefix}{companion.name}", companion)]
+
+            for destination, source in pairs:
+                if destination == target_destination:
+                    raise SandboxError(_ERR_COMPANION_SHADOWS_TARGET, str(source))
+                claimed = planned.get(destination)
+                if claimed is not None:
+                    raise SandboxError(_ERR_COMPANION_COLLISION, f"{claimed} and {source} both map to {destination}")
+                planned[destination] = source
+
+        for destination, source in planned.items():
+            await self.copy_to_sandbox(source, destination)
+
+        _logger.info(
+            "companions_staged",
+            binary=binary_path.name,
+            entry_count=len(companions),
+            file_count=len(planned),
+        )
+        return len(planned)
 
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
         """Copy a file into the sandbox.

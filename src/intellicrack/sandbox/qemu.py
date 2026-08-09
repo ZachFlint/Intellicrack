@@ -7345,6 +7345,7 @@ python3 /mnt/shared/monitor/agent.py &
         binary_path: Path,
         args: list[str] | None = None,
         time_limit: int | None = None,
+        companions: Sequence[Path] | None = None,
         *,
         monitor: bool = True,
     ) -> ExecutionReport:
@@ -7354,6 +7355,8 @@ python3 /mnt/shared/monitor/agent.py &
             binary_path: Path to the binary to run.
             args: Optional command line arguments.
             time_limit: Optional timeout override in seconds.
+            companions: Optional files or directories to place beside the
+                binary, for a target that cannot run alone.
             monitor: Whether to monitor behavior.
 
         Returns:
@@ -7378,6 +7381,8 @@ python3 /mnt/shared/monitor/agent.py &
         start_time = time.time()
 
         await self.copy_to_sandbox(binary_path, f"input/{binary_path.name}")
+        if companions:
+            await self.stage_companions(companions, binary_path, "input")
 
         if monitor:
             collected = self._collected_root()
