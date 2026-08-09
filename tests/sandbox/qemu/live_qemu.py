@@ -39,6 +39,20 @@ QEMU_EXIT_TIMEOUT_S: Final[float] = 30.0
 POLL_INTERVAL_S: Final[float] = 0.2
 SUCCESS: Final[int] = 0
 
+ACCEL_TCG: Final[str] = "tcg"
+ACCEL_WHPX: Final[str] = "whpx"
+# WHPX needs a real feature set to initialise and a Windows guest needs its APIC
+# emulated in the hypervisor; these mirror the production launch in
+# QEMUSandbox._build_qemu_command. WHPX registers the migration blockers that
+# make a machine-state snapshot impossible at init, with no guest running, so a
+# ``-S`` machine is enough to exercise the disk-only path.
+_WHPX_MACHINE: Final[str] = "q35,accel=whpx,kernel-irqchip=on"
+_WHPX_CPU: Final[str] = "qemu64,+sse4.2,+popcnt"
+
+
+class QemuLaunchError(RuntimeError):
+    """QEMU exited before its monitor came up - e.g. the accelerator is absent."""
+
 
 def qemu_tool(name: str) -> Path:
     """Locate a QEMU executable, preferring the copy Intellicrack bundles.
@@ -153,17 +167,23 @@ class LiveQemu:
             self._process.wait(timeout=QEMU_EXIT_TIMEOUT_S)
 
 
-def wait_for_monitor(port: int) -> None:
+def wait_for_monitor(port: int, process: subprocess.Popen[bytes]) -> None:
     """Block until the QMP monitor accepts a connection.
 
     Args:
         port: Monitor port.
+        process: The QEMU process, so an early exit is told from a slow start.
 
     Raises:
-        RuntimeError: If the monitor never came up.
+        QemuLaunchError: If QEMU exited before the monitor came up.
+        RuntimeError: If the monitor never came up though QEMU is still alive.
     """
     deadline = time.monotonic() + QEMU_READY_TIMEOUT_S
     while time.monotonic() < deadline:
+        if process.poll() is not None:
+            stderr = process.stderr.read().decode(errors="replace") if process.stderr else ""
+            message = f"QEMU exited with code {process.returncode} before its monitor came up: {stderr.strip() or '(no output)'}"
+            raise QemuLaunchError(message)
         try:
             with socket.create_connection(("127.0.0.1", port), timeout=1.0):
                 return
@@ -173,14 +193,63 @@ def wait_for_monitor(port: int) -> None:
     raise RuntimeError(message)
 
 
-def start_live_qemu(workdir: Path, memory_mb: str = GUEST_MEMORY_MB) -> Iterator[LiveQemu]:
+def _live_qemu_argv(image: Path, memory_mb: str, port: int, accel: str) -> list[str]:
+    """Build the argv for a disposable live QEMU on one accelerator.
+
+    Args:
+        image: The qcow2 to attach.
+        memory_mb: Guest RAM in megabytes.
+        port: Host port for the QMP monitor.
+        accel: Accelerator name, :data:`ACCEL_TCG` or :data:`ACCEL_WHPX`.
+
+    Returns:
+        list[str]: The full command line.
+    """
+    qemu = str(qemu_tool("qemu-system-x86_64"))
+    drive = f"file={image},format=qcow2,if=virtio"
+    monitor = f"tcp:127.0.0.1:{port},server=on,wait=off"
+    if accel == ACCEL_WHPX:
+        # ``-S`` leaves the machine paused: the migration blockers this gate
+        # needs are registered by WHPX at init, not by anything a guest does.
+        return [
+            qemu,
+            *["-machine", _WHPX_MACHINE],
+            *["-cpu", _WHPX_CPU],
+            *["-m", memory_mb],
+            *["-display", "none"],
+            "-nodefaults",
+            "-S",
+            *["-drive", drive],
+            *["-qmp", monitor],
+        ]
+    return [
+        qemu,
+        *["-machine", "q35"],
+        *["-accel", ACCEL_TCG],
+        *["-m", memory_mb],
+        *["-display", "none"],
+        "-nodefaults",
+        *["-drive", drive],
+        *["-qmp", monitor],
+    ]
+
+
+def start_live_qemu(workdir: Path, memory_mb: str = GUEST_MEMORY_MB, accel: str = ACCEL_TCG) -> Iterator[LiveQemu]:
     """Start a real QEMU on a fresh qcow2 and yield it until the caller is done.
+
+    :meth:`wait_for_monitor` raises :class:`QemuLaunchError` when QEMU exits
+    before its monitor comes up, which on the WHPX path means the accelerator is
+    not usable on this host; that propagates to the caller.
 
     Args:
         workdir: Directory the image is created in.
         memory_mb: Guest RAM in megabytes. Gates that measure work proportional
             to guest memory - a full memory dump, for one - need more than the
             minimum this module defaults to.
+        accel: Accelerator to launch under. :data:`ACCEL_TCG` (the default)
+            keeps the machine running with no accelerator; :data:`ACCEL_WHPX`
+            launches paused under the Windows accelerator, for gates that must
+            observe what WHPX permits.
 
     Yields:
         LiveQemu: The running QEMU and the image it holds.
@@ -195,20 +264,10 @@ def start_live_qemu(workdir: Path, memory_mb: str = GUEST_MEMORY_MB) -> Iterator
         raise RuntimeError(message)
 
     port = bindable_port()
-    argv = [
-        str(qemu_tool("qemu-system-x86_64")),
-        *["-machine", "q35"],
-        *["-accel", "tcg"],
-        *["-m", memory_mb],
-        *["-display", "none"],
-        "-nodefaults",
-        *["-drive", f"file={image},format=qcow2,if=virtio"],
-        *["-qmp", f"tcp:127.0.0.1:{port},server=on,wait=off"],
-    ]
-    process = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(_live_qemu_argv(image, memory_mb, port, accel), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     running = LiveQemu(image=image, monitor_port=port, process=process)
     try:
-        wait_for_monitor(port)
+        wait_for_monitor(port, process)
         yield running
     finally:
         running.stop()
