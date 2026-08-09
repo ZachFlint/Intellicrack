@@ -89,6 +89,17 @@ _LIFECYCLE_STATE_STOPPED: Final[str] = "stopped"
 _LIFECYCLE_EXIT_CODE_RE: Final[re.Pattern[str]] = re.compile(r"exit_code=(-?\d+)")
 _ERR_COLLECTOR_NEVER_STARTED: Final[str] = "never reported starting"
 
+# The injection monitor has no channel but its own data log in which to report
+# that its trace session died, so it writes the failure as a record whose type
+# is this marker (``injection_monitor.ps1``, the catch around the session). It
+# is telemetry about the collector, not about the sample, and reading it as an
+# injection turns a dead collector into a critical finding against whatever
+# happened to be running. The outage itself is not lost by skipping it here -
+# it is reported through :func:`parse_collector_lifecycle`, which is the
+# channel built for it.
+_INJECTION_TYPE_COLLECTOR_ERROR: Final[str] = "ERROR"
+_INJECTION_LOG_TYPE_IDX: Final[int] = 5
+
 _FILE_LOG_OLD_PATH_IDX = 3
 _FILE_LOG_SIZE_IDX = 4
 _REGISTRY_LOG_VALUE_NAME_IDX = 3
@@ -432,6 +443,9 @@ async def parse_injection_log(
     ``timestamp|source_pid|source_name|target_pid|target_name|injection_type|api_calls``.
     The ``api_calls`` field is a comma-separated list of API names.
 
+    Records the monitor wrote about *itself* are not injections and are left
+    out: see :data:`_INJECTION_TYPE_COLLECTOR_ERROR`.
+
     Args:
         shared_folder: Sandbox shared folder root.
         log_name: Log file name under ``<shared_folder>/logs/``.
@@ -443,6 +457,8 @@ async def parse_injection_log(
     for line in await read_log_lines(shared_folder, log_name):
         parts = line.split("|")
         if len(parts) < INJECTION_LOG_MIN_PARTS:
+            continue
+        if parts[_INJECTION_LOG_TYPE_IDX] == _INJECTION_TYPE_COLLECTOR_ERROR:
             continue
         api_calls = [c.strip() for c in parts[6].split(",") if c.strip()]
         out.append(
