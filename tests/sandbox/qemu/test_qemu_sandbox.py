@@ -29,12 +29,15 @@ from intellicrack.sandbox.base import SandboxConfig, SandboxError, SandboxTimeou
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+from intellicrack.core._optional_imports import require_yara
+from intellicrack.sandbox import qemu as qemu_module
 from intellicrack.sandbox.qemu import (
     AcceleratorType,
     GuestAgentClient,
     GuestOS,
     QEMUConfig,
     QEMUSandbox,
+    QMPClient,
     QMPResponse,
 )
 from tests.sandbox.qemu.guest_agent_server import IntellicrackAgentServer
@@ -100,8 +103,6 @@ class _TestQEMUSandbox(QEMUSandbox):
         Args:
             qmp: QMP client instance.
         """
-        from intellicrack.sandbox.qemu import QMPClient  # noqa: PLC0415
-
         if isinstance(qmp, QMPClient) or qmp is None:
             self._qmp = qmp
         else:
@@ -875,7 +876,11 @@ class TestF0005SharedFolderWindowsCompatible:
     """F-0005: On Windows host the shared folder must use the FAT drive method."""
 
     def test_windows_guest_uses_fat_drive_not_smb(self, tmp_path: Path) -> None:
-        """Windows-guest shared folder is -drive fat:rw:..., not SMB or 9p.
+        """Windows-guest shared folder is a read-only FAT drive, not SMB or 9p.
+
+        The volume is ``fat:`` rather than ``fat:rw:`` because vvfat's
+        write-back path aborts the virtual machine (S17-D69); the guest writes
+        to its own disk instead.
 
         Args:
             tmp_path: Pytest temp directory.
@@ -903,7 +908,9 @@ class TestF0005SharedFolderWindowsCompatible:
         cmd = asyncio.run(sb.build_qemu_command_for_test())
         cmd_str = " ".join(cmd)
 
-        assert "fat:rw:" in cmd_str, "Expected FAT-drive shared folder for Windows guest"
+        assert "file=fat:" in cmd_str, "Expected FAT-drive shared folder for Windows guest"
+        assert "readonly=on" in cmd_str, "the FAT share must be read-only or vvfat can abort the VM (S17-D69)"
+        assert "fat:rw:" not in cmd_str, "a writable vvfat share is what S17-D69 removed"
         assert "9p" not in cmd_str, "9p is not supported on Windows host QEMU"
 
 
@@ -1431,12 +1438,12 @@ class TestF0028YaraScanFallback:
                 """
                 return _FakeRules2()
 
-        import yara as _real_yara  # noqa: PLC0415
+        yara_module = require_yara()
 
         sb = _make_sandbox(shared_folder=shared)
 
         async def _run() -> list[dict[str, Any]]:
-            with patch.object(_real_yara, "compile", side_effect=_FakeYara2.compile):
+            with patch.object(yara_module, "compile", side_effect=_FakeYara2.compile):
                 return await sb.yara_scan(scan_target="files")
 
         asyncio.run(_run())
@@ -1679,16 +1686,22 @@ class TestF0015AcceleratorNotRedoneOnStart:
 class TestF0007ExtractDroppedFiles:
     """F-0007: extract_dropped_files must produce a valid zip when files are present."""
 
-    def test_extract_produces_zip_without_agent(self, tmp_path: Path) -> None:
+    def test_extract_produces_zip_without_agent(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """extract_dropped_files uses the host-side dropped mirror when no agent.
 
         The fixed implementation (audit7 U07) requires the guest's monitor to
         mirror dropped files to ``<shared>/output/dropped/`` so the host-side
-        fallback can collect them when the agent is disconnected.
+        fallback can collect them when the agent is disconnected. That mirror
+        only exists on the virtio-9p transport: since S17-D69 the FAT transport
+        exposes the share read-only, because vvfat's write-back path aborts the
+        machine, so the host constant is redirected here to select the
+        transport whose contract this is.
 
         Args:
+            monkeypatch: Fixture used to select the virtio-9p transport.
             tmp_path: Pytest temp directory.
         """
+        monkeypatch.setattr(qemu_module, "_IS_WINDOWS", False)
         shared = tmp_path / "shared"
         (shared / "input").mkdir(parents=True)
         (shared / "output").mkdir(parents=True)
@@ -1696,7 +1709,7 @@ class TestF0007ExtractDroppedFiles:
         mirror.mkdir(parents=True)
         (mirror / "dropped_sample.bin").write_bytes(b"\xde\xad\xbe\xef")
 
-        sb = _make_sandbox(guest_os=GuestOS.WINDOWS, shared_folder=shared)
+        sb = _make_sandbox(guest_os=GuestOS.LINUX, shared_folder=shared)
         sb.state.status = "running"
         sb.set_agent(None)
 

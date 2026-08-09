@@ -122,6 +122,18 @@ def decode_object(raw: bytes) -> dict[str, Any]:
     return cast("dict[str, Any]", decoded)
 
 
+def guest_file_error(description: str) -> dict[str, Any]:
+    """Build the error a live guest agent returns for a refused file command.
+
+    Args:
+        description: Human-readable reason, as the agent's ``desc`` member.
+
+    Returns:
+        dict[str, Any]: QMP error envelope with the agent's own error class.
+    """
+    return {"error": {"class": "GenericError", "desc": description}}
+
+
 def command_not_found(name: str) -> dict[str, Any]:
     """Build the exact error QEMU returns for an unknown monitor command.
 
@@ -493,12 +505,18 @@ class GuestAgentProtocolServer(_LoopbackServer):
     agent enforces, and both are configurable so a client that ignores either
     can be caught.
 
-    The same model carries the agent's file commands. ``guest-file-open``
-    allocates a handle and an empty file, ``guest-file-write`` appends the
-    decoded ``buf-b64`` payload to it and answers with the byte count a live
-    agent reports, and ``guest-file-close`` releases the handle. The resulting
-    bytes are readable through :attr:`guest_files`, so a test can assert that
-    what arrived inside the guest is exactly what left the host.
+    The same model carries the agent's file commands. ``guest-file-open`` in a
+    write mode allocates a handle and an empty file, ``guest-file-write``
+    appends the decoded ``buf-b64`` payload to it and answers with the byte
+    count a live agent reports, and ``guest-file-close`` releases the handle.
+    The resulting bytes are readable through :attr:`guest_files`, so a test can
+    assert that what arrived inside the guest is exactly what left the host.
+
+    Reading works the same way in the other direction. ``guest-file-open`` in a
+    read mode refuses a path the guest does not have, and ``guest-file-read``
+    returns at most ``count`` bytes from the current offset with the ``eof``
+    flag a live agent sets once the offset reaches the end - so a host that
+    stops at the first short read, or that never advances, is caught.
 
     ``guest-shutdown`` is answered with silence, because a live agent is
     already powering the guest off when the reply would have been written. The
@@ -515,6 +533,9 @@ class GuestAgentProtocolServer(_LoopbackServer):
         guest_files: In-guest path to the bytes written there, in write order.
         file_writes: One entry per ``guest-file-write``, giving the in-guest
             path and the size of that buffer, so chunking is observable.
+        file_reads: One entry per ``guest-file-read``, giving the in-guest path
+            and the size of the buffer returned, so a host that never reaches
+            the end of a file is observable too.
         shutdown_modes: ``mode`` argument of every ``guest-shutdown``.
         shutdown_requested: Set when the first ``guest-shutdown`` arrives.
     """
@@ -527,6 +548,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
     exec_status_pids: list[int]
     guest_files: dict[str, bytearray]
     file_writes: list[tuple[str, int]]
+    file_reads: list[tuple[str, int]]
     shutdown_modes: list[str]
     shutdown_requested: asyncio.Event
 
@@ -575,9 +597,11 @@ class GuestAgentProtocolServer(_LoopbackServer):
         self.exec_status_pids = []
         self.guest_files = {}
         self.file_writes = []
+        self.file_reads = []
         self.shutdown_modes = []
         self.shutdown_requested = asyncio.Event()
         self._open_files: dict[int, str] = {}
+        self._read_offsets: dict[int, int] = {}
         self._next_file_handle: int = _FIRST_GUEST_FILE_HANDLE
         self._responder = responder
         self._base_pid = base_pid
@@ -726,29 +750,73 @@ class GuestAgentProtocolServer(_LoopbackServer):
         if name == "guest-exec-status":
             return [self._frame({"return": self._exec_status(int(args_map.get("pid", 0)))})]
         if name == "guest-file-open":
-            return [self._frame({"return": self._open_guest_file(args_map)})]
+            return [self._frame(self._open_guest_file(args_map))]
         if name == "guest-file-write":
             return [self._frame({"return": self._write_guest_file(args_map)})]
+        if name == "guest-file-read":
+            return [self._frame(self._read_guest_file(args_map))]
         if name == "guest-file-close":
-            self._open_files.pop(int(args_map.get("handle", 0)), None)
+            handle = int(args_map.get("handle", 0))
+            self._open_files.pop(handle, None)
+            self._read_offsets.pop(handle, None)
             return [self._frame({"return": {}})]
         return [self._frame(command_not_found(name))]
 
-    def _open_guest_file(self, args_map: dict[str, Any]) -> int:
-        """Allocate a handle for one ``guest-file-open`` and truncate the file.
+    def _open_guest_file(self, args_map: dict[str, Any]) -> dict[str, Any]:
+        """Answer one ``guest-file-open`` the way a live agent answers it.
+
+        A write mode creates the file and truncates whatever was there; a read
+        mode does neither and fails outright when the path does not exist,
+        which is how the agent reports a log a collector never produced.
 
         Args:
             args_map: ``arguments`` payload of the request.
 
         Returns:
-            int: Handle the client must use for later writes.
+            dict[str, Any]: Envelope carrying the handle, or the agent's error
+            for a file that could not be opened.
         """
         path = str(args_map.get("path", ""))
+        mode = str(args_map.get("mode", "r"))
+        reading = "r" in mode and "+" not in mode
+        if reading and path not in self.guest_files:
+            return guest_file_error(f"failed to open file '{path}', error: No such file or directory")
         handle = self._next_file_handle
         self._next_file_handle += 1
         self._open_files[handle] = path
-        self.guest_files[path] = bytearray()
-        return handle
+        if reading:
+            self._read_offsets[handle] = 0
+        else:
+            self.guest_files[path] = bytearray()
+        return {"return": handle}
+
+    def _read_guest_file(self, args_map: dict[str, Any]) -> dict[str, Any]:
+        """Answer one ``guest-file-read`` from the modelled guest's bytes.
+
+        Args:
+            args_map: ``arguments`` payload of the request.
+
+        Returns:
+            dict[str, Any]: Envelope carrying the agent's ``count``/``buf-b64``
+            /``eof`` payload, or its error for a handle never opened to read.
+        """
+        handle = int(args_map.get("handle", 0))
+        if handle not in self._read_offsets:
+            return guest_file_error(f"handle {handle} is not open for reading")
+        path = self._open_files.get(handle, "")
+        content = self.guest_files.get(path, bytearray())
+        offset = self._read_offsets[handle]
+        count = int(args_map.get("count", 0))
+        chunk = bytes(content[offset : offset + count])
+        self._read_offsets[handle] = offset + len(chunk)
+        self.file_reads.append((path, len(chunk)))
+        return {
+            "return": {
+                "count": len(chunk),
+                "buf-b64": base64.b64encode(chunk).decode(),
+                "eof": self._read_offsets[handle] >= len(content),
+            },
+        }
 
     def _write_guest_file(self, args_map: dict[str, Any]) -> dict[str, Any]:
         """Append one ``guest-file-write`` buffer to its open file.

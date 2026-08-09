@@ -48,6 +48,7 @@ import socket
 import zipfile
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from pathlib import PureWindowsPath
 from typing import TYPE_CHECKING, Final
 
 import pytest
@@ -142,21 +143,29 @@ _ALLOWLIST_REJECT_EXIT: Final[int] = -1
 _SHELL_COMMAND_FLAG: Final[str] = "/c"
 _GUEST_DROP_FILE_NAME: Final[str] = "dropped_payload.bin"
 _GUEST_DROP_PAYLOAD: Final[bytes] = b"written by the sample under analysis\n"
+# The work root is on the guest's own boot volume, which this guest reports as
+# D:. Since S17-D69 the share is read-only, so a staged sample lands here and
+# not on E:. The drive still discriminates: a host that assumed the compiled-in
+# C: default names a volume this guest does not boot from.
+_GUEST_WORK_ROOT: Final[str] = "D:\\intellicrack"
 _GUEST_BINARY_NAME: Final[str] = "sample.exe"
-_GUEST_BINARY_PATH: Final[str] = "E:\\input\\sample.exe"
+_GUEST_BINARY_PATH: Final[str] = "D:\\intellicrack\\input\\sample.exe"
+# The agent itself still runs from the read-only share, so the share root stays
+# an allowed root even though nothing the guest writes lands there any more.
+_SHARE_BINARY_PATH: Final[str] = "E:\\input\\sample.exe"
 # A sample whose own name carries spaces. The in-guest agent takes the
 # executable as one field and its arguments as another, so the path needs no
 # quoting - and a caller that quotes it anyway names a file that is not there.
 _SPACED_BINARY_NAME: Final[str] = "sample with space.exe"
-_SPACED_BINARY_PATH: Final[str] = "E:\\input\\sample with space.exe"
+_SPACED_BINARY_PATH: Final[str] = "D:\\intellicrack\\input\\sample with space.exe"
 _SPACED_BINARY_ARGS: Final[tuple[str, str]] = ("--report", "C:\\out dir\\report.txt")
 _MZ_HEADER: Final[bytes] = b"MZ" + b"\x00" * 62
 _HOST_LOG_LINE: Final[str] = "2026-07-30 11:22:33|created|D:\\Users\\Public\\Downloads\\dropped_payload.bin"
 _HOST_LOG_PATH: Final[str] = "D:\\Users\\Public\\Downloads\\dropped_payload.bin"
 _FILE_CHANGES_LOG: Final[str] = "file_changes.log"
 _HOST_DROPPED_MIRROR_FILE: Final[str] = "mirrored_by_the_guest.bin"
-_EXPECTED_LOG_DIR: Final[str] = "E:\\logs"
-_EXPECTED_DROPPED_MIRROR: Final[str] = "E:\\output\\dropped"
+_EXPECTED_LOG_DIR: Final[str] = "D:\\intellicrack\\logs"
+_EXPECTED_DROPPED_MIRROR: Final[str] = "D:\\intellicrack\\output\\dropped"
 _RUN_BINARY_TIMEOUT_S: Final[int] = 5
 
 # S17-D22: the anti-evasion registry writes must reach the guest's own
@@ -940,9 +949,18 @@ class _WindowsAgentGuest:
         self._share_drive = share_drive
         self._populated = {directory.upper() for directory in populated_directories}
         self._environment = _guest_environment(system_drive, system_root)
+        self._guest_files: dict[str, bytearray] = {}
         self.commands = []
         self.rejected = []
         self.copied = []
+
+    def share_guest_files(self, guest_files: dict[str, bytearray]) -> None:
+        """Adopt the guest filesystem the qemu-guest-agent writes into.
+
+        Args:
+            guest_files: In-guest path to bytes, owned by the agent server.
+        """
+        self._guest_files = guest_files
 
     def __call__(self, path: str, args: Sequence[str]) -> GuestCommandResult:
         """Execute one dispatched command against the modelled guest.
@@ -1017,36 +1035,49 @@ class _WindowsAgentGuest:
         """
         tokens = _split_command_line(line)
         name = tokens[0].lower() if tokens else ""
+        switches = {token.lower() for token in tokens[1:] if token.startswith("/")}
         operands = [token for token in tokens[1:] if not token.startswith("/")]
         if name == "xcopy":
             return self._run_xcopy(operands)
         if name == "dir":
-            return self._run_dir(operands)
+            return self._run_dir(operands, recursive="/s" in switches)
         return GuestCommandResult(
             exit_code=_COMMAND_NOT_FOUND_EXIT,
             stdout="",
             stderr=f"'{tokens[0] if tokens else ''}' is not recognized as an internal or external command",
         )
 
-    def _run_dir(self, operands: list[str]) -> GuestCommandResult:
-        """List one guest directory the share drive really backs.
+    def _run_dir(self, operands: list[str], *, recursive: bool = False) -> GuestCommandResult:
+        """List one guest directory, on the share drive or on the guest's disk.
+
+        ``dir /b /s`` prints one absolute path per line, which is how the host
+        enumerates what it is about to pull back out of the work root.
 
         Args:
             operands: Non-switch operands of the ``dir`` invocation.
+            recursive: Whether ``/s`` was given, so full paths are printed.
 
         Returns:
             GuestCommandResult: Exit 0 with one file name per line, or the
             not-found status for a path this guest does not have.
         """
-        target = _guest_to_host(operands[0], self._share_drive, self._share_host_root) if operands else None
-        if target is None or not target.is_dir():
-            return GuestCommandResult(
-                exit_code=_NOT_FOUND_EXIT,
-                stdout="",
-                stderr="The system cannot find the path specified.",
-            )
-        names = sorted(entry.name for entry in target.iterdir())
-        return GuestCommandResult(exit_code=0, stdout="".join(f"{name}\n" for name in names), stderr="")
+        requested = operands[0] if operands else ""
+        target = _guest_to_host(requested, self._share_drive, self._share_host_root) if requested else None
+        if target is not None and target.is_dir():
+            names = sorted(entry.name for entry in target.iterdir())
+            return GuestCommandResult(exit_code=0, stdout="".join(f"{name}\n" for name in names), stderr="")
+
+        prefix = requested.rstrip("\\") + "\\"
+        held = sorted(path for path in self._guest_files if path.startswith(prefix))
+        if held:
+            listed = held if recursive else [PureWindowsPath(path).name for path in held]
+            return GuestCommandResult(exit_code=0, stdout="".join(f"{entry}\n" for entry in listed), stderr="")
+
+        return GuestCommandResult(
+            exit_code=_NOT_FOUND_EXIT,
+            stdout="",
+            stderr="The system cannot find the path specified.",
+        )
 
     def _run_xcopy(self, operands: list[str]) -> GuestCommandResult:
         """Copy one guest directory into the share, when it exists.
@@ -1068,19 +1099,29 @@ class _WindowsAgentGuest:
                 stderr=f"File not found - {source}",
             )
         host_destination = _guest_to_host(destination, self._share_drive, self._share_host_root)
-        if host_destination is None:
-            return GuestCommandResult(exit_code=_XCOPY_NOT_FOUND_EXIT, stdout="", stderr=f"Invalid drive specification: {destination}")
-        host_destination.mkdir(parents=True, exist_ok=True)
-        (host_destination / _GUEST_DROP_FILE_NAME).write_bytes(_GUEST_DROP_PAYLOAD)
-        self.copied.append((source, destination))
-        return GuestCommandResult(exit_code=0, stdout="1 File(s) copied\n", stderr="")
+        if host_destination is not None:
+            host_destination.mkdir(parents=True, exist_ok=True)
+            (host_destination / _GUEST_DROP_FILE_NAME).write_bytes(_GUEST_DROP_PAYLOAD)
+            self.copied.append((source, destination))
+            return GuestCommandResult(exit_code=0, stdout="1 File(s) copied\n", stderr="")
+
+        if destination.upper().startswith(_GUEST_WORK_ROOT.upper()):
+            # The gather destination is on the guest's own disk since S17-D69,
+            # where only the guest and the guest agent can see it.
+            self._guest_files[f"{destination}\\{_GUEST_DROP_FILE_NAME}"] = bytearray(_GUEST_DROP_PAYLOAD)
+            self.copied.append((source, destination))
+            return GuestCommandResult(exit_code=0, stdout="1 File(s) copied\n", stderr="")
+
+        return GuestCommandResult(exit_code=_XCOPY_NOT_FOUND_EXIT, stdout="", stderr=f"Invalid drive specification: {destination}")
 
     def _run_program(self, executable: str, argv: list[str]) -> GuestCommandResult:
         """Run a program the host addressed by its in-guest path.
 
         ``& $cmd @cmdArgs`` hands the command field to the process launcher as
         one name, so it is resolved verbatim: nothing splits it on spaces and
-        nothing strips quotes from it.
+        nothing strips quotes from it. It is looked for on the guest's own disk
+        first - where the host stages a sample over the guest agent since
+        S17-D69 - and on the share drive after that.
 
         Args:
             executable: In-guest path of the program to run.
@@ -1089,6 +1130,9 @@ class _WindowsAgentGuest:
         Returns:
             GuestCommandResult: Exit 0 when the executable is really there.
         """
+        if executable in self._guest_files:
+            invocation = " ".join([PureWindowsPath(executable).name, *argv])
+            return GuestCommandResult(exit_code=0, stdout=f"ran {invocation}\n", stderr="")
         host_file = _guest_to_host(executable, self._share_drive, self._share_host_root)
         if host_file is None or not host_file.is_file():
             return GuestCommandResult(
@@ -1248,6 +1292,18 @@ class _MountTestSandbox(QEMUSandbox):
         logs = await self._collect_monitoring_logs()
         return logs.file_changes
 
+    async def collect_guest_logs(self) -> None:
+        """Drive the real :meth:`QEMUSandbox._collect_guest_logs`."""
+        await self._collect_guest_logs()
+
+    def guest_dropped_mirror(self) -> str:
+        """Return the in-guest mirror directory the host gathers from.
+
+        Returns:
+            str: Absolute in-guest path the host addresses when collecting.
+        """
+        return self._guest_work_path("output/dropped")
+
     async def collect_dropped_mirror(self, staging_dir: Path) -> None:
         """Drive the real :meth:`QEMUSandbox._host_collect_dropped_files`.
 
@@ -1390,6 +1446,10 @@ async def _guest_session(
         test and the agent server recording its commands.
     """
     ga_server, neighbour = await _start_agent_channel(responder, agent_responder)
+    if isinstance(agent_responder, _WindowsAgentGuest):
+        # One guest, one filesystem: a file the host writes through the
+        # qemu-guest-agent is a file the in-guest monitor agent can then run.
+        agent_responder.share_guest_files(ga_server.guest_files)
     qmp_server = QmpProtocolServer()
     await qmp_server.start()
     connect_timeout = _AGENT_CONNECT_TIMEOUT if agent_responder is None else _LIVE_AGENT_CONNECT_TIMEOUT
@@ -1454,7 +1514,7 @@ class TestLinuxFatShareIsMountedInTheGuest:
             await sandbox.bootstrap()
 
             assert guest.mounted is True
-            assert guest.mount_argv == [("-t", "vfat", "-o", "rw", _SHARE_DEVICE, _LINUX_MOUNT_POINT)]
+            assert guest.mount_argv == [("-t", "vfat", "-o", "ro", _SHARE_DEVICE, _LINUX_MOUNT_POINT)]
             assert guest.launched == [_LINUX_LAUNCH_PATH]
             assert sandbox.guest_shared_root() == _LINUX_MOUNT_POINT
 
@@ -1562,7 +1622,7 @@ class TestLinuxFatShareIsMountedInTheGuest:
         async with _guest_session(guest, GuestOS.LINUX, tmp_path) as (sandbox, ga_server):
             await sandbox.mount_shared_volume()
 
-            assert guest.mount_argv == [("-t", "vfat", "-o", "rw", _SHARE_DEVICE, _LINUX_MOUNT_POINT)], (
+            assert guest.mount_argv == [("-t", "vfat", "-o", "ro", _SHARE_DEVICE, _LINUX_MOUNT_POINT)], (
                 f"the spare {_FOREIGN_VFAT_LABEL} partition was mounted instead of the share: {guest.mount_argv}"
             )
             assert guest.mounted_source == _SHARE_DEVICE
@@ -1591,7 +1651,7 @@ class TestLinuxFatShareIsMountedInTheGuest:
         async with _guest_session(guest, GuestOS.LINUX, tmp_path) as (sandbox, ga_server):
             await sandbox.mount_shared_volume()
 
-            assert guest.mount_argv == [("-t", "vfat", "-o", "rw", _THIRD_DISK_SHARE_DEVICE, _LINUX_MOUNT_POINT)], (
+            assert guest.mount_argv == [("-t", "vfat", "-o", "ro", _THIRD_DISK_SHARE_DEVICE, _LINUX_MOUNT_POINT)], (
                 f"the already-mounted vvfat drive was remounted over the share: {guest.mount_argv}"
             )
             assert guest.mounted_source == _THIRD_DISK_SHARE_DEVICE
@@ -1615,7 +1675,7 @@ class TestLinuxFatShareIsMountedInTheGuest:
         async with _guest_session(guest, GuestOS.LINUX, tmp_path) as (sandbox, _ga_server):
             await sandbox.mount_shared_volume()
 
-            assert guest.mount_argv == [("-t", "vfat", "-o", "rw", _SHARE_DEVICE, _LINUX_MOUNT_POINT)]
+            assert guest.mount_argv == [("-t", "vfat", "-o", "ro", _SHARE_DEVICE, _LINUX_MOUNT_POINT)]
             assert sandbox.guest_shared_root() == _LINUX_MOUNT_POINT
 
     def test_empty_label_column_does_not_swallow_the_mountpoint(self) -> None:
@@ -1696,7 +1756,11 @@ class TestMountTransportFollowsTheLaunchArguments:
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """A FAT host attaches ``-drive fat:rw:`` and the guest mounts vfat.
+        """A FAT host attaches a read-only ``-drive fat:`` and mounts vfat.
+
+        The volume is read-only in both places since S17-D69: vvfat's
+        write-back path aborts the whole virtual machine, so nothing in the
+        guest is allowed to write here.
 
         Args:
             tmp_path: Host directory standing in for the shared folder.
@@ -1707,11 +1771,13 @@ class TestMountTransportFollowsTheLaunchArguments:
         async with _guest_session(guest, GuestOS.LINUX, tmp_path) as (sandbox, ga_server):
             launch_args = " ".join(sandbox.shared_folder_args())
             assert sandbox.uses_fat_transport() is True
-            assert "fat:rw:" in launch_args
+            assert "file=fat:" in launch_args
+            assert "readonly=on" in launch_args
+            assert "fat:rw:" not in launch_args
 
             await sandbox.mount_shared_volume()
 
-            assert guest.mount_argv == [("-t", "vfat", "-o", "rw", _SHARE_DEVICE, _LINUX_MOUNT_POINT)]
+            assert guest.mount_argv == [("-t", "vfat", "-o", "ro", _SHARE_DEVICE, _LINUX_MOUNT_POINT)]
             assert _index_of(ga_server.command_lines(), "lsblk") >= 0
 
 
@@ -1970,8 +2036,9 @@ class TestWindowsDataPlaneFollowsTheProbedRoot:
         The in-guest monitor derives the directories it mirrors from
         ``%SystemDrive%`` and ``%SystemRoot%``; this guest booted from ``D:``,
         so a host that scans ``C:`` scans a volume the guest never writes to.
-        The staging destination has to be on the probed share root for the same
-        reason: the guest cannot write to a drive it does not have.
+        Since S17-D69 the gather destination is on that same volume rather than
+        on the share, which the guest can no longer write to at all, and the
+        files come back to the host over the guest agent.
 
         Args:
             tmp_path: Host directory the shared folder is staged under.
@@ -1990,66 +2057,67 @@ class TestWindowsDataPlaneFollowsTheProbedRoot:
             assert copied_sources == sorted(_GUEST_DROP_ROOTS), (
                 f"the host asked the guest for directories it does not mirror from: {agent_guest.commands}"
             )
-            outside = [destination for _source, destination in agent_guest.copied if not destination.startswith(_WINDOWS_SHARE_ROOT)]
-            assert not outside, f"dropped files were staged outside the probed share root: {outside}"
+            outside = [destination for _source, destination in agent_guest.copied if not destination.startswith(_GUEST_WORK_ROOT)]
+            assert not outside, f"dropped files were gathered outside the guest's own work root: {outside} (S17-D69)"
             with zipfile.ZipFile(archive) as archive_file:
                 names = archive_file.namelist()
             assert [name for name in names if _GUEST_DROP_FILE_NAME in name], f"the archive carries none of the dropped files: {names}"
 
 
-class TestGeneratedAgentScriptResolvesItsOwnShareRoot:
-    """The staged agent must write where the host reads, on any drive letter."""
+class TestGeneratedAgentScriptResolvesItsOwnWorkRoot:
+    """The staged agent must write where the host collects, on any drive letter."""
 
     @pytest.mark.asyncio
-    async def test_agent_output_directories_land_where_the_host_reads_them(
+    async def test_agent_output_directories_land_where_the_host_collects_them(
         self,
         tmp_path: Path,
     ) -> None:
-        """``$PSScriptRoot`` resolution must put the logs and mirror on the share root.
+        r"""The agent's own directories are on the guest's disk and reachable.
 
         The generated ``agent.ps1`` is written before the guest has assigned
-        the FAT volume a letter, so it derives everything from its own
-        location. Both constructs it uses for that - ``$PSScriptRoot`` and
-        ``Split-Path -Parent`` - are evaluated here against the real script
-        text, and the directories they produce are handed to the host readers
-        that really consume them.
+        the FAT volume a letter, so it derives its location from
+        ``$PSScriptRoot`` and ``Split-Path -Parent``, which are evaluated here
+        against the real script text. Since S17-D69 it writes nothing back
+        there: the share is a read-only vvfat volume whose write-back path
+        aborts the machine, so the logs and the dropped-file mirror are built
+        on ``%SystemDrive%\intellicrack`` instead.
+
+        The whole round trip is exercised rather than described: the log is
+        placed inside the modelled guest at the path the evaluated script
+        computes, and the host's real collection is what has to find it.
 
         Args:
             tmp_path: Host directory the shared folder is staged under.
         """
         shared = _staged_share(tmp_path)
         guest = _WindowsGuestModel(shared)
-        async with _guest_session(guest, GuestOS.WINDOWS, shared) as (sandbox, _ga_server):
+        async with _guest_session(guest, GuestOS.WINDOWS, shared) as (sandbox, ga_server):
             await sandbox.create_agent_scripts()
             await sandbox.mount_shared_volume()
             await sandbox.bootstrap()
 
             variables = guest.script.variables
             assert variables["PSScriptRoot"] == f"{_WINDOWS_SHARE_ROOT}monitor"
-            assert variables["logDir"] == _EXPECTED_LOG_DIR, f"the agent writes its logs outside the share root: {variables}"
+            assert variables["workRoot"] == _GUEST_WORK_ROOT, f"the agent did not build its work root on the guest's own disk: {variables}"
+            assert variables["logDir"] == _EXPECTED_LOG_DIR, f"the agent writes its logs somewhere the host does not collect: {variables}"
             assert variables["droppedMirror"] == _EXPECTED_DROPPED_MIRROR, (
-                f"the agent mirrors dropped files outside the share root: {variables}"
+                f"the agent mirrors dropped files somewhere the host does not collect: {variables}"
+            )
+            assert not variables["logDir"].startswith(_WINDOWS_SHARE_ROOT), (
+                f"the agent still writes onto the share, which is what vvfat aborts on: {variables['logDir']!r} (S17-D69)"
+            )
+            assert sandbox.guest_dropped_mirror() == variables["droppedMirror"], (
+                f"the host gathers from {sandbox.guest_dropped_mirror()!r} while the agent mirrors into {variables['droppedMirror']!r}"
             )
 
-            log_dir = _guest_to_host(variables["logDir"], _WINDOWS_SHARE_DRIVE, shared)
-            mirror_dir = _guest_to_host(variables["droppedMirror"], _WINDOWS_SHARE_DRIVE, shared)
-            assert log_dir is not None
-            assert mirror_dir is not None
-            log_dir.mkdir(parents=True, exist_ok=True)
-            mirror_dir.mkdir(parents=True, exist_ok=True)
-            (log_dir / _FILE_CHANGES_LOG).write_text(f"{_HOST_LOG_LINE}\n", encoding="utf-8")
-            (mirror_dir / _HOST_DROPPED_MIRROR_FILE).write_bytes(_GUEST_DROP_PAYLOAD)
+            ga_server.guest_files[f"{variables['logDir']}\\{_FILE_CHANGES_LOG}"] = bytearray(
+                f"{_HOST_LOG_LINE}\n".encode(),
+            )
+            await sandbox.collect_guest_logs()
 
             changes = await sandbox.collected_file_changes()
             assert [change["path"] for change in changes] == [_HOST_LOG_PATH], (
-                f"the host reads its monitor logs from somewhere the agent does not write: {changes}"
-            )
-
-            staging = tmp_path / "staging"
-            staging.mkdir()
-            await sandbox.collect_dropped_mirror(staging)
-            assert (staging / _HOST_DROPPED_MIRROR_FILE).read_bytes() == _GUEST_DROP_PAYLOAD, (
-                "the host reads its dropped-file mirror from somewhere the agent does not write"
+                f"the host collects its monitor logs from somewhere the agent does not write: {changes}"
             )
 
 
@@ -2070,7 +2138,9 @@ class TestTheModelledAgentEnforcesTheScriptsAllowlist:
         the script the sandbox really staged - which is why the ``System32``
         below this guest's own ``%SystemRoot%`` is accepted even though the
         model has no file there, while the same executable one directory up is
-        not.
+        not. Both roots a sample can be staged under since S17-D69 are covered:
+        the read-only share the agent boots from, and the guest-local work root
+        the host stages into over the agent.
 
         Args:
             tmp_path: Host directory the shared folder is staged under.
@@ -2081,13 +2151,16 @@ class TestTheModelledAgentEnforcesTheScriptsAllowlist:
         await sandbox.create_agent_scripts()
         (shared / "input" / _GUEST_BINARY_NAME).write_bytes(_MZ_HEADER)
         agent_guest = _WindowsAgentGuest(shared)
+        agent_guest.share_guest_files({_GUEST_BINARY_PATH: bytearray(_MZ_HEADER)})
 
-        accepted = agent_guest(_GUEST_BINARY_PATH, [])
+        on_work_root = agent_guest(_GUEST_BINARY_PATH, [])
+        on_share = agent_guest(_SHARE_BINARY_PATH, [])
         quoted = agent_guest(f'"{_GUEST_BINARY_PATH}" ', [])
         elsewhere = agent_guest(f"{_GUEST_SYSTEM_DRIVE}\\Users\\Public\\tool.exe", [])
         system32 = agent_guest(f"{_GUEST_SYSTEM_ROOT}\\System32\\reg.exe", ["query", "HKLM"])
 
-        assert accepted.exit_code == 0, f"an executable on the share root must run: {accepted.stderr!r}"
+        assert on_work_root.exit_code == 0, f"an executable on the guest's own work root must run: {on_work_root.stderr!r} (S17-D69)"
+        assert on_share.exit_code == 0, f"an executable on the share root must run: {on_share.stderr!r}"
         assert quoted.exit_code == _ALLOWLIST_REJECT_EXIT, "a quoted path is not a name the allowlist accepts"
         assert elsewhere.exit_code == _ALLOWLIST_REJECT_EXIT, "an executable outside every allowed root must be refused"
         assert agent_guest.rejected == [f'"{_GUEST_BINARY_PATH}" ', f"{_GUEST_SYSTEM_DRIVE}\\Users\\Public\\tool.exe"]

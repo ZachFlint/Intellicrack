@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import binascii
 import json
 import platform
 import secrets
@@ -28,7 +29,7 @@ from collections import deque
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from enum import Enum
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, cast
 
 import psutil
@@ -151,6 +152,13 @@ _MONITORING_LOG_NAMES: Final[tuple[str, ...]] = (
     "resource_monitor.log",
     "clipboard_monitor.log",
 )
+# Written by the two ETW-based Windows collectors alongside their data logs and
+# read by parse_collector_lifecycle, so they are collected from the guest with
+# the rest rather than being the one set the host never fetches.
+_COLLECTOR_LIFECYCLE_LOG_NAMES: Final[tuple[str, ...]] = (
+    "api_trace.lifecycle.log",
+    "injection_monitor.lifecycle.log",
+)
 _LOGS_STABLE_POLL_DELAY_S: Final[float] = 0.25
 _LOGS_STABLE_REQUIRED_POLLS: Final[int] = 4
 _LOGS_STABLE_MAX_WAIT_S: Final[float] = 30.0
@@ -254,6 +262,11 @@ _ERR_GUEST_FILE_OPEN_FAILED = "qemu-guest-agent could not open {path} inside the
 _ERR_GUEST_FILE_NO_HANDLE = "qemu-guest-agent opened {path} inside the guest but returned no file handle"
 _ERR_GUEST_FILE_WRITE_FAILED = "qemu-guest-agent could not write {path} inside the guest: {error}"
 _ERR_GUEST_FILE_SHORT_WRITE = "qemu-guest-agent wrote {written} of {expected} bytes to {path} inside the guest"
+_ERR_GUEST_FILE_READ_OPEN_FAILED = "qemu-guest-agent could not open {path} inside the guest for reading: {error}"
+_ERR_GUEST_FILE_READ_FAILED = "qemu-guest-agent could not read {path} inside the guest: {error}"
+_ERR_GUEST_FILE_READ_MALFORMED = "qemu-guest-agent returned an unreadable answer while reading {path} inside the guest"
+_ERR_GUEST_FILE_TOO_LARGE = "{path} inside the guest is larger than the {limit} bytes the host will collect in one read"
+_ERR_GUEST_EXEC_NO_EXIT_CODE = "qemu-guest-agent reported {command} as finished inside the guest but gave it no exit status"
 _ERR_GUEST_COMMAND_TIMEOUT = "guest command {command} did not exit within {timeout}s"
 _ERR_QEMU_GA_EXEC_NOT_READY = (
     "qemu-guest-agent answered guest-ping but ran no command inside the guest within {budget:.0f}s; last failure: {reason}"
@@ -307,6 +320,13 @@ _QEMU_GA_EXEC_PROBE_INTERVAL: Final[float] = 2.0
 # one JSON line, so this is about 88 KiB on the wire - comfortably inside the
 # agent's own line limit while keeping the number of round trips low.
 _QGA_FILE_WRITE_CHUNK: Final[int] = 65536
+# Payload bytes requested per guest-file-read. The agent answers with base64,
+# so the same size keeps a read reply the same order as a write request.
+_QGA_FILE_READ_CHUNK: Final[int] = 65536
+# A guest file the host is willing to pull in one go. Monitor logs are the
+# reason this exists: a runaway collector can produce an unbounded log, and a
+# host that read it without limit would trade one hang for another.
+_QGA_FILE_READ_LIMIT: Final[int] = 64 * 1024 * 1024
 _QGA_FILE_COMMAND_TIMEOUT: Final[float] = 30.0
 _QEMU_GA_RESYNC_TIMEOUT: Final[float] = 5.0
 
@@ -395,6 +415,17 @@ _ERR_JSON_LINE_TOO_LONG = "peer sent a JSON frame longer than the {limit}-byte c
 
 _GUEST_SHARED_ROOT_WINDOWS: Final[str] = "Z:\\"
 _GUEST_SHARED_ROOT_LINUX: Final[str] = "/mnt/shared"
+
+# Everything the guest writes goes here, on the guest's own disk, and never to
+# the share. QEMU's vvfat driver aborts the whole virtual machine when it tries
+# to commit a guest's directory changes back to the host directory - measured as
+# exit code 3 preceded by ``cluster 0 used more than once`` and ``Error handling
+# renames (-5)`` - and the append-heavy monitor logs plus the write-then-rename
+# used to publish a result are exactly what provokes it. The share is mounted
+# read-only instead, so that commit path is never entered, and the host collects
+# what the guest produced over the guest-agent file commands.
+_GUEST_WORK_ROOT_WINDOWS_RELATIVE: Final[str] = "intellicrack"
+_GUEST_WORK_ROOT_LINUX: Final[str] = "/var/lib/intellicrack"
 _MONITOR_LAUNCH_RELATIVE_WINDOWS: Final[str] = "monitor\\start_agent.cmd"
 _MONITOR_LAUNCH_RELATIVE_LINUX: Final[str] = "monitor/start_agent.sh"
 
@@ -416,7 +447,7 @@ _USB_CONTROLLER_ID: Final[str] = "icusb"
 _SHARED_MOUNT_TAG: Final[str] = "shared"
 _GUEST_VFAT_FS_TYPE: Final[str] = "vfat"
 _GUEST_9P_FS_TYPE: Final[str] = "9p"
-_GUEST_VFAT_MOUNT_OPTIONS: Final[str] = "rw"
+_GUEST_VFAT_MOUNT_OPTIONS: Final[str] = "ro"
 _GUEST_9P_MOUNT_OPTIONS: Final[str] = "trans=virtio,version=9p2000.L,rw"
 _GUEST_BLOCK_DEVICE_COLUMNS: Final[str] = "PATH,FSTYPE,LABEL,MOUNTPOINT"
 _GUEST_BLOCK_DEVICE_MIN_FIELDS: Final[int] = 2
@@ -444,6 +475,18 @@ _LSBLK_ESCAPE_BASE: Final[int] = 16
 
 _GUEST_COMMAND_TIMEOUT: Final[float] = 60.0
 _GUEST_COMMAND_POLL_INTERVAL: Final[float] = 0.25
+# What every POSIX shell adds to a terminating signal number to express it as
+# an exit code, used when the guest agent reports a signal instead of a code.
+_SIGNAL_EXIT_CODE_BASE: Final[int] = 128
+_DROPPED_COPY_TIMEOUT: Final[int] = 30
+_DROPPED_LIST_TIMEOUT: Final[int] = 30
+_LOG_SIZE_PROBE_TIMEOUT: Final[int] = 20
+# Bounds on what one extraction pulls back over the guest agent, which carries
+# every byte base64-encoded through the monitor socket. A run that filled the
+# watched directories would otherwise stall the whole extraction; the trim is
+# logged with its counts rather than passed off as a complete collection.
+_DROPPED_PULL_MAX_FILES: Final[int] = 512
+_DROPPED_PULL_MAX_BYTES: Final[int] = 256 * 1024 * 1024
 # The smallest command each guest family can run: it spawns a process, exits
 # immediately and touches nothing, so completing it proves the agent's spawn
 # path works without depending on anything the sandbox has not set up yet.
@@ -3954,6 +3997,35 @@ class QEMUSandbox(SandboxBase):
         )
 
     @staticmethod
+    def _guest_exit_code(status: GuestExecStatus, command: str) -> int:
+        """Reduce a terminal guest-exec status to a single exit code.
+
+        ``guest-exec-status`` reports either an exit code or a terminating
+        signal, never both, so a process the guest killed carries no code of
+        its own. It is reported the way every POSIX shell reports one, as
+        ``128 + signal``, which keeps a killed command distinguishable from
+        one that chose to fail. A status that carries neither is the agent
+        contradicting itself and is refused rather than smoothed over into a
+        success.
+
+        Args:
+            status: Terminal status returned by :meth:`_guest_run`.
+            command: Command line the status belongs to, used in the error.
+
+        Returns:
+            int: Exit code, or ``128 + signal`` for a signalled process.
+
+        Raises:
+            SandboxError: If the status reports neither an exit code nor a
+                terminating signal.
+        """
+        if status.exit_code is not None:
+            return status.exit_code
+        if status.signal is not None:
+            return _SIGNAL_EXIT_CODE_BASE + status.signal
+        raise SandboxError(_ERR_GUEST_EXEC_NO_EXIT_CODE.format(command=command))
+
+    @staticmethod
     def _windows_launch_path(guest_root: str) -> str:
         r"""Build the Windows monitor launcher path under a guest share root.
 
@@ -4322,7 +4394,7 @@ class QEMUSandbox(SandboxBase):
         r"""Return the guest directories dropped files are collected from.
 
         These must be exactly the directories the in-guest monitor mirrors into
-        ``<share>\output\dropped``: the agent script derives them from the
+        ``<work root>\output\dropped``: the agent script derives them from the
         guest's own ``%SystemDrive%`` and ``%SystemRoot%``, so the host derives
         them from the same two values, probed by
         :meth:`_resolve_windows_shared_drive`, and falls back to the same two
@@ -4468,6 +4540,50 @@ class QEMUSandbox(SandboxBase):
         if guest_os == GuestOS.WINDOWS:
             return _GUEST_SHARED_ROOT_WINDOWS
         return _GUEST_SHARED_ROOT_LINUX
+
+    def _guest_work_root_for(self, guest_os: GuestOS) -> str:
+        r"""Return the in-guest root everything the guest writes is built on.
+
+        The share cannot hold it. QEMU presents the host directory to a Windows
+        host's guest through the ``vvfat`` driver, whose write-back path aborts
+        the whole virtual machine rather than fail a write, so a guest that
+        appends to a log or renames a file into place on the share kills the
+        machine it is running in. The share is mounted read-only for that
+        reason, and this is where the guest's own output lives instead: monitor
+        logs, mirrored dropped files, staged binaries and command results.
+
+        It is on the guest's own disk, so it is writable, private to the guest,
+        and survives for as long as the guest does. The host reads back from it
+        over the guest agent's file commands rather than through the share.
+
+        Args:
+            guest_os: Guest family whose work root applies.
+
+        Returns:
+            str: ``C:\intellicrack`` style root on Windows, built on the
+            ``%SystemDrive%`` the guest itself reported, or
+            ``/var/lib/intellicrack`` on Linux. No trailing separator.
+        """
+        if guest_os == GuestOS.WINDOWS:
+            system_drive = self._guest_system_drive_value or _WINDOWS_SYSTEM_DRIVE
+            return f"{system_drive}\\{_GUEST_WORK_ROOT_WINDOWS_RELATIVE}"
+        return _GUEST_WORK_ROOT_LINUX
+
+    def _guest_work_path(self, relative: str) -> str:
+        """Return the in-guest absolute path of a work-root-relative name.
+
+        Args:
+            relative: Path relative to the work root, written with forward
+                slashes.
+
+        Returns:
+            str: Absolute path of that destination inside the guest.
+        """
+        root = self._guest_work_root_for(self._qemu_config.guest_os)
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            windows_relative = relative.replace("/", "\\")
+            return f"{root}\\{windows_relative}"
+        return f"{root}/{relative}"
 
     def _guest_launch_command(self) -> tuple[str, list[str]]:
         """Build the ``guest-exec`` invocation that starts the monitor agent.
@@ -4641,11 +4757,13 @@ class QEMUSandbox(SandboxBase):
         if self._uses_fat_shared_transport():
             # ``label=`` is not a -drive option (raw format rejects it), so the
             # volume is identified by QEMU's built-in FAT label instead. The
-            # drive is marked ``snapshot=off`` so guest writes target the host
-            # directory rather than a throwaway overlay.
+            # volume is read-only - ``fat:`` rather than ``fat:rw:`` - because
+            # vvfat's write-back path aborts the whole virtual machine when it
+            # commits a guest's directory changes, taking the guest with it.
+            # Nothing in the guest writes here; see _guest_work_root_for.
             return [
                 "-drive",
-                f"file=fat:rw:{shared},format=raw,if=virtio,snapshot=off",
+                f"file=fat:{shared},format=raw,if=virtio,readonly=on",
             ]
 
         return [
@@ -5476,13 +5594,18 @@ if (-not $systemDrive) { $systemDrive = 'C:' }
 $systemRoot = $env:SystemRoot
 if (-not $systemRoot) { $systemRoot = 'C:\Windows' }
 
-$logDir = Join-Path $shareRoot 'logs'
+$workRoot = Join-Path $systemDrive 'intellicrack'
+if (-not (Test-Path $workRoot)) { New-Item -ItemType Directory -Path $workRoot -Force | Out-Null }
+$workRootPrefix = $workRoot
+if (-not $workRootPrefix.EndsWith('\')) { $workRootPrefix = $workRootPrefix + '\' }
+
+$logDir = Join-Path $workRoot 'logs'
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 
 $fileLog = Join-Path $logDir 'file_changes.log'
 $netLog = Join-Path $logDir 'network_activity.log'
 $procLog = Join-Path $logDir 'process_activity.log'
-$droppedMirror = Join-Path $shareRoot 'output\dropped'
+$droppedMirror = Join-Path $workRoot 'output\dropped'
 if (-not (Test-Path $droppedMirror)) { New-Item -ItemType Directory -Path $droppedMirror -Force | Out-Null }
 $Global:_IC_DroppedMirror = $droppedMirror
 $Global:_IC_DropWatchedRoots = @(
@@ -5548,7 +5671,7 @@ Register-ObjectEvent $watcher 'Deleted' -MessageData $fileLog -Action {
 } | Out-Null
 
 $allowedNames = @('powershell', 'powershell.exe', 'cmd', 'cmd.exe')
-$allowedRoots = @($shareRootPrefix, ($systemRoot + '\System32\'), ($systemRoot + '\SysWOW64\'))
+$allowedRoots = @($shareRootPrefix, $workRootPrefix, ($systemRoot + '\System32\'), ($systemRoot + '\SysWOW64\'))
 function Test-AllowedCommand($cmdValue) {
     if ([string]::IsNullOrEmpty($cmdValue)) { return $false }
     $lower = $cmdValue.ToLower()
@@ -5862,8 +5985,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-LOG_DIR: Path = Path("/mnt/shared/logs")
-DROPPED_MIRROR_DIR: Path = Path("/mnt/shared/output/dropped")
+WORK_ROOT: Path = Path("/var/lib/intellicrack")
+LOG_DIR: Path = WORK_ROOT / "logs"
+DROPPED_MIRROR_DIR: Path = WORK_ROOT / "output" / "dropped"
 DROPPED_WATCH_ROOTS: tuple[str, ...] = ("/tmp", "/var/tmp", "/home")
 PORT: int = 4445
 RECV_BUFFER_SIZE: int = 65536
@@ -6828,9 +6952,18 @@ python3 /mnt/shared/monitor/agent.py &
 
         effective_timeout = time_limit or self._config.timeout_seconds
 
+        shell, shell_args = self._guest_shell_invocation(command, working_directory)
         if self._agent is not None and self._agent.is_connected:
-            shell, shell_args = self._guest_shell_invocation(command, working_directory)
             return await self._agent.send_command(shell, shell_args, time_limit=effective_timeout)
+
+        if self._uses_fat_shared_transport():
+            # The share is a read-only vvfat volume on this transport, so the
+            # guest cannot publish a result file onto it and the host cannot
+            # make a newly written script appear inside a running guest. The
+            # command goes over the guest agent instead, which is the only
+            # channel that reaches a live guest at all.
+            status = await self._guest_run(shell, shell_args, time_limit=effective_timeout)
+            return (self._guest_exit_code(status, command), status.stdout, status.stderr)
 
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
@@ -7189,15 +7322,15 @@ python3 /mnt/shared/monitor/agent.py &
         await self.copy_to_sandbox(binary_path, f"input/{binary_path.name}")
 
         if monitor:
-            logs_folder = self._shared_folder / "logs"
-            log_files = await asyncio.to_thread(lambda: list(logs_folder.glob("*.log")))
-            for log_file in log_files:
-                await asyncio.to_thread(log_file.unlink)
+            collected = self._collected_root()
+            if collected is not None:
+                logs_folder = collected / "logs"
+                log_files = await asyncio.to_thread(lambda: list(logs_folder.glob("*.log")))
+                for log_file in log_files:
+                    await asyncio.to_thread(log_file.unlink)
 
-        if self._qemu_config.guest_os == GuestOS.WINDOWS:
-            binary_sandbox_path = f"{self._guest_shared_root_for(GuestOS.WINDOWS)}input\\{binary_path.name}"
-        elif self._qemu_config.guest_os == GuestOS.LINUX:
-            binary_sandbox_path = f"{self._guest_shared_root_for(GuestOS.LINUX)}/input/{binary_path.name}"
+        if self._qemu_config.guest_os in {GuestOS.WINDOWS, GuestOS.LINUX}:
+            binary_sandbox_path = self._guest_work_path(f"input/{binary_path.name}")
         else:
             raise ValueError(_ERR_UNSUPPORTED_GUEST_OS)
 
@@ -7226,6 +7359,7 @@ python3 /mnt/shared/monitor/agent.py &
         logs = _MonitoringLogs()
         if monitor:
             await self._wait_for_logs_stable()
+            await self._collect_guest_logs()
             logs = await self._collect_monitoring_logs()
 
         return ExecutionReport(
@@ -7248,19 +7382,75 @@ python3 /mnt/shared/monitor/agent.py &
             collector_outages=logs.collector_outages,
         )
 
+    def _collected_root(self) -> Path | None:
+        """Return the host directory the guest's own output is collected into.
+
+        Deliberately not the shared folder. That directory backs a read-only
+        vvfat volume the guest is still reading, and writing into a directory
+        vvfat has already built its FAT over is how this whole class of failure
+        started. The collected copies therefore live beside it instead.
+
+        Returns:
+            Path | None: The collection root, or ``None`` before the sandbox
+            has anywhere on the host to put one.
+        """
+        if self._temp_dir is not None:
+            return self._temp_dir / "collected"
+        # The share is created inside the working directory, so its parent is
+        # that directory. Deriving it this way means a sandbox holding a share
+        # always has somewhere to collect into, in whichever order the two were
+        # established.
+        if self._shared_folder is not None:
+            return self._shared_folder.parent / "collected"
+        return None
+
+    async def _collect_guest_logs(self) -> None:
+        """Copy every monitor log out of the guest and onto the host.
+
+        The guest writes its logs to its own disk (see
+        :meth:`_guest_work_root_for`), so there is nothing on the share for the
+        host to read and the files have to be fetched over the guest agent. A
+        log that is simply absent - a collector that never ran, or a guest
+        without the Windows-only ETW collectors - is not an error and leaves no
+        file behind, which the parsers already treat as "no records".
+        """
+        collected = self._collected_root()
+        if collected is None or self._qga is None or not self._qga.connected:
+            return
+
+        logs_dir = collected / "logs"
+        await asyncio.to_thread(logs_dir.mkdir, parents=True, exist_ok=True)
+        names = (*_MONITORING_LOG_NAMES, *_COLLECTOR_LIFECYCLE_LOG_NAMES)
+        for name in names:
+            guest_path = self._guest_work_path(f"logs/{name}")
+            try:
+                payload = await self._read_guest_file(guest_path)
+            except SandboxError as error:
+                # Absent logs are the normal case for collectors that a given
+                # guest does not run, so this is reported at debug and the
+                # parser is left to see no file at all.
+                _logger.debug("guest_log_not_collected", name=name, guest_path=guest_path, error=str(error))
+                continue
+            await asyncio.to_thread((logs_dir / name).write_bytes, payload)
+            _logger.debug("guest_log_collected", name=name, size_bytes=len(payload))
+
     async def _collect_monitoring_logs(self) -> _MonitoringLogs:
         """Parse every monitor log file into a :class:`_MonitoringLogs` aggregate.
 
+        The logs are read from the host-side collection root rather than the
+        share, because the guest writes them to its own disk and
+        :meth:`_collect_guest_logs` is what brings them across.
+
         Returns:
             _MonitoringLogs: All monitor-log parse results collected from
-            the shared ``logs`` folder. Each field is populated from the
+            the guest's ``logs`` folder. Each field is populated from the
             corresponding parser in :mod:`intellicrack.sandbox.log_parsers`
             and defaults to an empty list when the matching log file is
             absent. ``collector_outages`` is only populated for a Windows
             guest, since only the Windows agent stages the ETW-based
             ``api_trace`` and ``injection_monitor`` collectors it reports on.
         """
-        shared = self._shared_folder
+        shared = self._collected_root()
         collector_outages: list[CollectorOutage] = []
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
             for collector, lifecycle_log in (
@@ -7294,15 +7484,16 @@ python3 /mnt/shared/monitor/agent.py &
     ) -> None:
         """Wait until all monitoring log files have stopped growing.
 
-        Polls every log file under ``self._shared_folder / "logs"`` and treats
-        the set as stable when each file's size has been unchanged for
+        Polls every log in :data:`_MONITORING_LOG_NAMES` through
+        :meth:`_current_log_sizes` - which reads the guest's own disk on the
+        FAT transport and the host side of the share otherwise - and treats the
+        set as stable when each file's size has been unchanged for
         ``stable_polls`` consecutive polls. Caps total wait at ``max_wait``
-        seconds. The tracked file set is :data:`_MONITORING_LOG_NAMES`; files
-        that do not yet exist are treated as having size ``0`` so that
-        long-quiescent monitors do not block the readiness check.
+        seconds. Files that do not yet exist are treated as having size ``0``
+        so that long-quiescent monitors do not block the readiness check.
 
-        File ``stat`` calls are dispatched via :func:`asyncio.to_thread` so
-        the event loop is not blocked. Elapsed time is measured with
+        Host-side ``stat`` calls are dispatched via :func:`asyncio.to_thread`
+        so the event loop is not blocked. Elapsed time is measured with
         :func:`time.monotonic`.
 
         Args:
@@ -7330,36 +7521,19 @@ python3 /mnt/shared/monitor/agent.py &
             _logger.warning("wait_for_logs_stable_no_shared_folder")
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
-        logs_folder = self._shared_folder / "logs"
-        log_paths: tuple[Path, ...] = tuple(logs_folder / name for name in _MONITORING_LOG_NAMES)
-
-        previous_sizes: dict[Path, int] = dict.fromkeys(log_paths, -1)
-        unchanged_counts: dict[Path, int] = dict.fromkeys(log_paths, 0)
-
-        def _stat_size(path: Path) -> int:
-            """Return ``path.stat().st_size``, or ``0`` if the file is absent.
-
-            Args:
-                path: File whose size to read.
-
-            Returns:
-                int: File size in bytes, or ``0`` if the file does not exist.
-            """
-            try:
-                return path.stat().st_size
-            except FileNotFoundError:
-                _logger.warning("logs_stable_stat_missing", path=str(path))
-                return 0
+        previous_sizes: dict[str, int] = dict.fromkeys(_MONITORING_LOG_NAMES, -1)
+        unchanged_counts: dict[str, int] = dict.fromkeys(_MONITORING_LOG_NAMES, 0)
 
         start = time.monotonic()
         while True:
-            for path in log_paths:
-                current_size = await asyncio.to_thread(_stat_size, path)
-                if current_size == previous_sizes[path]:
-                    unchanged_counts[path] += 1
+            sizes = await self._current_log_sizes()
+            for name in _MONITORING_LOG_NAMES:
+                current_size = sizes.get(name, 0)
+                if current_size == previous_sizes[name]:
+                    unchanged_counts[name] += 1
                 else:
-                    unchanged_counts[path] = 1
-                    previous_sizes[path] = current_size
+                    unchanged_counts[name] = 1
+                    previous_sizes[name] = current_size
 
             if all(count >= stable_polls for count in unchanged_counts.values()):
                 _logger.debug(
@@ -7379,8 +7553,84 @@ python3 /mnt/shared/monitor/agent.py &
 
             await asyncio.sleep(poll_delay)
 
+    @staticmethod
+    def _stat_log_size(path: Path) -> int:
+        """Return a log file's size, treating an absent file as empty.
+
+        Args:
+            path: File whose size to read.
+
+        Returns:
+            int: File size in bytes, or ``0`` if the file does not exist.
+        """
+        try:
+            return path.stat().st_size
+        except FileNotFoundError:
+            _logger.warning("logs_stable_stat_missing", path=str(path))
+            return 0
+
+    async def _guest_log_sizes(self) -> dict[str, int]:
+        """Read the size of every log the guest is currently writing.
+
+        Returns:
+            dict[str, int]: Log file name to size in bytes. A guest that has
+            produced no logs yet, or that cannot be asked, contributes nothing
+            and is therefore seen as unchanged.
+        """
+        logs_dir = self._guest_work_path("logs")
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            # ``%~nxI`` is the name with extension and ``%~zI`` the size. They
+            # are separated by a space rather than a pipe because cmd.exe would
+            # read a pipe here as a redirection before ``for`` ever ran.
+            command = f'for %I in ("{logs_dir}\\*.log") do @echo %~nxI %~zI'
+        else:
+            command = f'find "{logs_dir}" -maxdepth 1 -type f -name "*.log" -printf "%f %s\\n"'
+        try:
+            exit_code, stdout, _ = await self.run_command(command, time_limit=_LOG_SIZE_PROBE_TIMEOUT)
+        except SandboxError as error:
+            _logger.debug("guest_log_sizes_unavailable", error=str(error))
+            return {}
+        if exit_code != 0:
+            return {}
+
+        sizes: dict[str, int] = {}
+        for line in stdout.splitlines():
+            name, separator, raw = line.strip().rpartition(" ")
+            if not separator or not raw.isdigit():
+                continue
+            sizes[name] = int(raw)
+        return sizes
+
+    async def _current_log_sizes(self) -> dict[str, int]:
+        """Read the current size of every monitor log, wherever it is written.
+
+        On the FAT transport the guest writes to its own disk and the host side
+        of the share never changes, so a size read there would report every log
+        as instantly stable. The guest is asked directly instead.
+
+        Returns:
+            dict[str, int]: Log file name to size in bytes, zero for a log that
+            does not exist yet.
+        """
+        if self._uses_fat_shared_transport():
+            guest_sizes = await self._guest_log_sizes()
+            return {name: guest_sizes.get(name, 0) for name in _MONITORING_LOG_NAMES}
+
+        folder = self._shared_folder
+        if folder is None:
+            return dict.fromkeys(_MONITORING_LOG_NAMES, 0)
+        logs_folder = folder / "logs"
+        return {name: await asyncio.to_thread(self._stat_log_size, logs_folder / name) for name in _MONITORING_LOG_NAMES}
+
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
         """Copy a file into the sandbox.
+
+        Once a FAT-transport guest is running, the file goes only into that
+        guest's work root over the guest agent. vvfat fixed its view of the
+        share when QEMU started, so a host write there would be invisible to
+        the guest, and it would be mutating a directory vvfat is actively
+        mapping. A guest agent that is not connected therefore fails the copy
+        rather than leaving the caller with a file the guest cannot see.
 
         Args:
             source: Local source path.
@@ -7397,6 +7647,12 @@ python3 /mnt/shared/monitor/agent.py &
             _logger.warning("source_file_not_found", path=str(source))
             raise SandboxError(_ERR_SOURCE_NOT_FOUND)
 
+        if self._uses_fat_shared_transport() and self.state.status == "running":
+            if self._qga is None or not self._qga.connected:
+                raise SandboxError(_ERR_QEMU_GA_NOT_CONNECTED)
+            await self._stage_file_in_guest(source, dest)
+            return
+
         dest_path = self._shared_folder / dest
         await asyncio.to_thread(dest_path.parent.mkdir, parents=True, exist_ok=True)
 
@@ -7408,21 +7664,6 @@ python3 /mnt/shared/monitor/agent.py &
             raise SandboxError(_ERR_COPY_TO_SANDBOX) from e
 
         await self._stage_file_in_guest(source, dest)
-
-    def _guest_shared_path(self, relative: str) -> str:
-        """Return the in-guest absolute path of a share-relative destination.
-
-        Args:
-            relative: Destination path relative to the shared folder, written
-                with forward slashes.
-
-        Returns:
-            str: Absolute path of that destination inside the guest.
-        """
-        root = self._guest_shared_root_for(self._qemu_config.guest_os)
-        if self._qemu_config.guest_os == GuestOS.WINDOWS:
-            return root + relative.replace("/", "\\")
-        return f"{root}/{relative}"
 
     async def _open_guest_file(self, path: str) -> int:
         """Open a guest file for writing through qemu-guest-agent.
@@ -7479,6 +7720,100 @@ python3 /mnt/shared/monitor/agent.py &
         if isinstance(written, int) and written != len(chunk):
             raise SandboxError(_ERR_GUEST_FILE_SHORT_WRITE.format(written=written, expected=len(chunk), path=path))
 
+    async def _open_guest_file_for_read(self, path: str) -> int:
+        """Open a guest file for reading through qemu-guest-agent.
+
+        Args:
+            path: Absolute in-guest path to open.
+
+        Returns:
+            int: The agent's handle for the opened file.
+
+        Raises:
+            SandboxError: If the agent refuses the open or returns no handle.
+        """
+        if self._qga is None:
+            raise SandboxError(_ERR_QEMU_GA_NOT_CONNECTED)
+        reply = await self._qga.execute_command(
+            {"execute": "guest-file-open", "arguments": {"path": path, "mode": "rb"}},
+            _QGA_FILE_COMMAND_TIMEOUT,
+        )
+        if not reply.success:
+            raise SandboxError(_ERR_GUEST_FILE_READ_OPEN_FAILED.format(path=path, error=reply.error or "unknown error"))
+        handle: object = reply.data
+        if not isinstance(handle, int):
+            raise SandboxError(_ERR_GUEST_FILE_NO_HANDLE.format(path=path))
+        return handle
+
+    async def _read_guest_file_chunk(self, handle: int, path: str) -> tuple[bytes, bool]:
+        """Read one buffer from an open guest file through qemu-guest-agent.
+
+        Args:
+            handle: Agent handle returned by :meth:`_open_guest_file_for_read`.
+            path: In-guest path, used only for failure messages.
+
+        Returns:
+            tuple[bytes, bool]: The bytes read and whether the file ended. An
+            empty buffer with ``False`` cannot occur: the agent reports the end
+            of the file explicitly, so a short read is not mistaken for one.
+
+        Raises:
+            SandboxError: If the agent refuses the read or answers with
+                something other than the documented ``buf-b64``/``eof`` pair.
+        """
+        if self._qga is None:
+            raise SandboxError(_ERR_QEMU_GA_NOT_CONNECTED)
+        reply = await self._qga.execute_command(
+            {"execute": "guest-file-read", "arguments": {"handle": handle, "count": _QGA_FILE_READ_CHUNK}},
+            _QGA_FILE_COMMAND_TIMEOUT,
+        )
+        if not reply.success:
+            raise SandboxError(_ERR_GUEST_FILE_READ_FAILED.format(path=path, error=reply.error or "unknown error"))
+        payload = _as_mapping(reply.data)
+        if payload is None:
+            raise SandboxError(_ERR_GUEST_FILE_READ_MALFORMED.format(path=path))
+        encoded = payload.get("buf-b64")
+        eof = payload.get("eof")
+        if not isinstance(eof, bool) or not isinstance(encoded, str):
+            raise SandboxError(_ERR_GUEST_FILE_READ_MALFORMED.format(path=path))
+        try:
+            chunk = base64.b64decode(encoded, validate=True)
+        except binascii.Error as error:
+            raise SandboxError(_ERR_GUEST_FILE_READ_MALFORMED.format(path=path)) from error
+        return (chunk, eof)
+
+    async def _read_guest_file(self, guest_path: str) -> bytes:
+        """Read a whole guest file over qemu-guest-agent.
+
+        This is the only way the host gets at what the guest produced. The
+        share is read-only to the guest (see :meth:`_guest_work_root_for`), so
+        a file the guest wrote exists on the guest's own disk and nowhere the
+        host can open directly.
+
+        Args:
+            guest_path: Absolute in-guest path to read.
+
+        Returns:
+            bytes: The file's contents.
+
+        Raises:
+            SandboxError: If the agent refuses the open or a read, or the file
+                exceeds :data:`_QGA_FILE_READ_LIMIT`.
+        """
+        handle = await self._open_guest_file_for_read(guest_path)
+        collected = bytearray()
+        try:
+            while True:
+                chunk, eof = await self._read_guest_file_chunk(handle, guest_path)
+                collected.extend(chunk)
+                if len(collected) > _QGA_FILE_READ_LIMIT:
+                    raise SandboxError(_ERR_GUEST_FILE_TOO_LARGE.format(path=guest_path, limit=_QGA_FILE_READ_LIMIT))
+                if eof:
+                    break
+        finally:
+            await self._close_guest_file(handle)
+        return bytes(collected)
+
     async def _close_guest_file(self, handle: int) -> None:
         """Close a guest file handle, tolerating a channel that has gone away.
 
@@ -7506,9 +7841,12 @@ python3 /mnt/shared/monitor/agent.py &
         need nothing further, which is why this is a no-op until the agent
         channel exists.
 
-        Writing through the agent also puts the file under the share root the
-        guest already trusts, so the in-guest allowlist accepts the executable
-        exactly as it would have accepted a pre-boot copy.
+        The file lands under the guest's work root rather than on the share.
+        The share is mounted read-only precisely so that vvfat's write-back
+        path is never entered (see :meth:`_guest_work_root_for`), so the agent
+        could not write there even if it wanted to. The in-guest allowlist
+        accepts the work root for the same reason it accepts the share root, so
+        a binary staged here is executable exactly as a pre-boot copy would be.
 
         A guest file that cannot be created or filled surfaces as the
         ``SandboxError`` raised by :meth:`_open_guest_file` or
@@ -7517,20 +7855,21 @@ python3 /mnt/shared/monitor/agent.py &
 
         Args:
             source: Host file whose bytes are to be written.
-            dest: Destination path relative to the shared folder.
+            dest: Destination path relative to the work root.
         """
         if self._qga is None or not self._qga.connected:
             return
 
-        guest_path = self._guest_shared_path(dest)
+        guest_path = self._guest_work_path(dest)
+        # The work root is on the guest's own disk and nothing creates it ahead
+        # of this, so every parent in the destination is created first. That
+        # includes the single-component case - unlike the share, whose top-level
+        # subdirectories existed host-side before the guest booted.
         relative_parent = PurePosixPath(dest).parent
-        # A single path component - "input", "output", "logs" or "monitor" -
-        # is one of the shared folder's own top-level subdirectories, created
-        # host-side before the guest ever boots, so a guest-exec to create it
-        # would be a wasted round trip on every copy. Anything deeper is not
-        # guaranteed to exist and must be created inside the guest first.
-        if len(relative_parent.parts) > 1:
-            await self._ensure_guest_directory(self._guest_shared_path(str(relative_parent)))
+        if relative_parent.parts:
+            await self._ensure_guest_directory(self._guest_work_path(str(relative_parent)))
+        else:
+            await self._ensure_guest_directory(self._guest_work_root_for(self._qemu_config.guest_os))
 
         payload = await asyncio.to_thread(source.read_bytes)
         handle = await self._open_guest_file(guest_path)
@@ -7588,16 +7927,37 @@ python3 /mnt/shared/monitor/agent.py &
             )
 
     async def copy_from_sandbox(self, source: str, dest: Path) -> None:
-        """Copy a file from the sandbox.
+        """Copy a file out of the sandbox.
+
+        Where the guest can write to the share the file is read from the host
+        side of it directly. A running FAT-transport guest cannot: the share is
+        a read-only vvfat volume (see :meth:`_guest_work_root_for`), so
+        anything it produced lives under its work root on its own disk and is
+        fetched over the guest agent instead. A path the caller gave relative
+        to the share resolves against the work root, which is where the same
+        ``input/``, ``output/`` and ``logs/`` tree now lives. With no guest
+        running there is nothing to ask, and the host side of the share is
+        read as before.
 
         Args:
-            source: Source path relative to shared folder.
+            source: Source path relative to the shared folder.
             dest: Local destination path.
 
         Raises:
             SandboxError: If copy fails.
         """
         _logger.info("qemu_copy_from_sandbox_started", source=source, dest=str(dest))
+        if self._uses_fat_shared_transport() and self.state.status == "running":
+            payload = await self._read_guest_file(self._guest_work_path(source))
+            await asyncio.to_thread(dest.parent.mkdir, parents=True, exist_ok=True)
+            try:
+                await asyncio.to_thread(dest.write_bytes, payload)
+            except OSError as e:
+                _logger.warning("copy_from_sandbox_failed", error=str(e), source=source, dest=str(dest))
+                raise SandboxError(_ERR_COPY_FROM_SANDBOX) from e
+            _logger.debug("file_copied_from_guest", source=source, dest=str(dest), size=len(payload))
+            return
+
         if self._shared_folder is None:
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
@@ -8260,20 +8620,23 @@ python3 /mnt/shared/monitor/agent.py &
     async def extract_dropped_files(self, output_path: Path | None = None) -> Path:
         """Extract files created by the binary during execution.
 
-        Tries two extraction paths in order:
+        Which extraction path runs is decided by the transport:
 
-        1. Agent path: when the guest agent is connected, dispatches an
-           allowlisted shell wrapper (``cmd.exe /c "xcopy ..."`` on Windows
-           or ``/bin/bash -c "cp -r ..."`` on Linux) for each watched guest
+        1. FAT transport: the share is read-only to the guest, so the guest
+           gathers the watched directories and the watcher's mirror into its
+           own work root and the host pulls that tree back over the guest
+           agent. There is no host-visible copy to fall back to.
+        2. virtio-9p transport, agent connected: dispatches an allowlisted
+           shell wrapper (``cmd.exe /c "xcopy ..."`` on Windows or
+           ``/bin/bash -c "cp -r ..."`` on Linux) for each watched guest
            directory so the guest copies created files into the per-call
            staging directory under the shared folder.
-        2. Host fallback: when the agent is unreachable, copies any files
-           the guest's monitor has mirrored under
-           ``<shared>/output/dropped/`` into the staging directory using
-           ``shutil.copy2``.
+        3. virtio-9p transport, agent unreachable: copies any files the
+           guest's monitor has mirrored under ``<shared>/output/dropped/``
+           into the staging directory using ``shutil.copy2``.
 
-        After both paths run, the staging directory must contain at least
-        one file or the call is treated as a genuine failure.
+        Whichever path ran, the staging directory must contain at least one
+        file or the call is treated as a genuine failure.
 
         Args:
             output_path: Optional path to save the ZIP archive.
@@ -8296,24 +8659,23 @@ python3 /mnt/shared/monitor/agent.py &
             raise SandboxError(_ERR_NO_SHARED_FOLDER)
 
         extract_id = secrets.token_hex(8)
-        staging_dir = self._shared_folder / "output" / f"dropped_{extract_id}"
+        staging_dir = self._staging_root_for(extract_id)
         await asyncio.to_thread(staging_dir.mkdir, parents=True, exist_ok=True)
 
-        guest_dirs: list[str]
-        if self._qemu_config.guest_os == GuestOS.WINDOWS:
-            guest_dirs = self._windows_drop_watch_roots()
-            shared_base = self._guest_shared_root_for(GuestOS.WINDOWS)
-        else:
-            guest_dirs = [
-                PurePosixPath("/", "tmp").as_posix(),
-                PurePosixPath("/", "var", "tmp").as_posix(),
-                "/home",
-            ]
-            shared_base = self._guest_shared_root_for(GuestOS.LINUX)
+        guest_dirs = self._drop_watch_roots()
 
         agent_used = False
-        if self._agent is not None and self._agent.is_connected:
+        if self._uses_fat_shared_transport():
+            # The guest cannot copy anything onto a read-only share, so it
+            # gathers into its own work root and the host pulls the result back
+            # over the guest agent. That pull is the only channel there is here,
+            # so there is no host-side fallback to fall back to.
             agent_used = True
+            await self._gather_dropped_in_guest(guest_dirs, extract_id)
+            await self._pull_guest_directory(self._guest_work_path(f"output/dropped_{extract_id}"), staging_dir)
+        elif self._agent is not None and self._agent.is_connected:
+            agent_used = True
+            shared_base = self._guest_shared_root_for(self._qemu_config.guest_os)
             for guest_dir in guest_dirs:
                 if self._qemu_config.guest_os == GuestOS.WINDOWS:
                     inner_cmd = f'xcopy /S /E /Y /I "{guest_dir}" "{shared_base}output\\dropped_{extract_id}\\{Path(guest_dir).name}"'
@@ -8324,7 +8686,7 @@ python3 /mnt/shared/monitor/agent.py &
                 exit_code, stdout, stderr = await self._agent.send_command(
                     wrapped_command,
                     args=wrapped_args,
-                    time_limit=30.0,
+                    time_limit=_DROPPED_COPY_TIMEOUT,
                 )
                 _logger.debug(
                     "dropfile_agent_copy_dispatched",
@@ -8363,7 +8725,7 @@ python3 /mnt/shared/monitor/agent.py &
             raise SandboxError(_ERR_EXTRACT_FILES_FAILED)
 
         zip_filename = f"dropped_files_{extract_id}.zip"
-        zip_path = self._shared_folder / "output" / zip_filename
+        zip_path = staging_dir.parent / zip_filename
 
         def _create_zip() -> None:
             """Write the staging directory contents into a zip archive at ``zip_path``."""
@@ -8388,6 +8750,135 @@ python3 /mnt/shared/monitor/agent.py &
             return output_path
 
         return zip_path
+
+    def _staging_root_for(self, extract_id: str) -> Path:
+        """Return the host directory one extraction gathers its files into.
+
+        On the FAT transport this is under the collection root rather than the
+        share: the share backs a read-only vvfat volume the guest is still
+        reading, and writing into a directory vvfat has already built its FAT
+        over is the failure this whole transport change exists to avoid.
+
+        Args:
+            extract_id: Identifier making this extraction's directory unique.
+
+        Returns:
+            Path: Directory the extraction stages into, not yet created.
+
+        Raises:
+            SandboxError: If the sandbox has no working directory or shared
+                folder to stage beneath.
+        """
+        if self._uses_fat_shared_transport():
+            collected = self._collected_root()
+            if collected is None:
+                raise SandboxError(_ERR_NO_SHARED_FOLDER)
+            return collected / "dropped" / f"dropped_{extract_id}"
+        if self._shared_folder is None:
+            raise SandboxError(_ERR_NO_SHARED_FOLDER)
+        return self._shared_folder / "output" / f"dropped_{extract_id}"
+
+    def _drop_watch_roots(self) -> list[str]:
+        """Return the guest directories dropped files are collected from.
+
+        Returns:
+            list[str]: Absolute in-guest directories for the configured guest.
+        """
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            return self._windows_drop_watch_roots()
+        return [
+            PurePosixPath("/", "tmp").as_posix(),
+            PurePosixPath("/", "var", "tmp").as_posix(),
+            "/home",
+        ]
+
+    async def _gather_dropped_in_guest(self, guest_dirs: list[str], extract_id: str) -> None:
+        """Have the guest copy every watched directory into its own work root.
+
+        The watcher's mirror is copied in as well, so a file the guest created
+        and then deleted during the run is still collected.
+
+        Args:
+            guest_dirs: Absolute in-guest directories to gather from.
+            extract_id: Identifier of the extraction being gathered.
+        """
+        target = self._guest_work_path(f"output/dropped_{extract_id}")
+        mirror = self._guest_work_path("output/dropped")
+        windows = self._qemu_config.guest_os == GuestOS.WINDOWS
+        separator = "\\" if windows else "/"
+        for guest_dir in [*guest_dirs, mirror]:
+            leaf = PureWindowsPath(guest_dir).name if windows else PurePosixPath(guest_dir).name
+            destination = f"{target}{separator}{leaf}"
+            command = f'xcopy /S /E /Y /I "{guest_dir}" "{destination}"' if windows else f'cp -r "{guest_dir}" "{destination}" 2>/dev/null'
+            exit_code, stdout, stderr = await self.run_command(command, time_limit=_DROPPED_COPY_TIMEOUT)
+            _logger.debug(
+                "dropfile_guest_copy_dispatched",
+                guest_dir=guest_dir,
+                exit_code=exit_code,
+                stdout_len=len(stdout),
+                stderr_len=len(stderr),
+            )
+
+    async def _list_guest_directory(self, guest_dir: str) -> list[str]:
+        """List every regular file beneath a guest directory, recursively.
+
+        Args:
+            guest_dir: Absolute in-guest directory to walk.
+
+        Returns:
+            list[str]: Absolute in-guest paths, empty when the directory holds
+            no files or does not exist.
+        """
+        command = f'dir /b /s /a-d "{guest_dir}"' if self._qemu_config.guest_os == GuestOS.WINDOWS else f'find "{guest_dir}" -type f'
+        exit_code, stdout, _ = await self.run_command(command, time_limit=_DROPPED_LIST_TIMEOUT)
+        if exit_code != 0:
+            # An empty or missing directory is how both listers report "nothing
+            # here", so it is not distinguishable from - and is treated as - a
+            # run that dropped nothing.
+            _logger.debug("dropfile_listing_empty", guest_dir=guest_dir, exit_code=exit_code)
+            return []
+        return [line.strip() for line in stdout.splitlines() if line.strip()]
+
+    async def _pull_guest_directory(self, guest_dir: str, destination: Path) -> int:
+        """Copy every file beneath a guest directory onto the host.
+
+        Args:
+            guest_dir: Absolute in-guest directory to pull.
+            destination: Host directory the tree is reproduced under.
+
+        Returns:
+            int: Number of files written to the host.
+        """
+        prefix_length = len(guest_dir) + 1
+        pulled = 0
+        pulled_bytes = 0
+        listing = await self._list_guest_directory(guest_dir)
+        for guest_path in listing:
+            if pulled >= _DROPPED_PULL_MAX_FILES or pulled_bytes >= _DROPPED_PULL_MAX_BYTES:
+                _logger.warning(
+                    "dropfile_pull_capped",
+                    guest_dir=guest_dir,
+                    listed=len(listing),
+                    pulled=pulled,
+                    pulled_bytes=pulled_bytes,
+                    skipped=len(listing) - pulled,
+                )
+                break
+            relative = guest_path[prefix_length:].replace("\\", "/").strip("/")
+            if not relative:
+                continue
+            try:
+                payload = await self._read_guest_file(guest_path)
+            except SandboxError as error:
+                _logger.debug("dropfile_pull_failed", guest_path=guest_path, error=str(error))
+                continue
+            target = destination / relative
+            await asyncio.to_thread(target.parent.mkdir, parents=True, exist_ok=True)
+            await asyncio.to_thread(target.write_bytes, payload)
+            pulled += 1
+            pulled_bytes += len(payload)
+        _logger.debug("dropfile_pull_completed", guest_dir=guest_dir, pulled=pulled, pulled_bytes=pulled_bytes)
+        return pulled
 
     async def _host_collect_dropped_files(self, staging_dir: Path) -> None:
         """Copy guest-mirrored dropped files into the staging directory host-side.

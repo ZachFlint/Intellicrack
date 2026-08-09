@@ -43,6 +43,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from intellicrack.sandbox import qemu as qemu_module
 from intellicrack.sandbox.base import SandboxConfig
 from intellicrack.sandbox.qemu import (
     AcceleratorType,
@@ -426,13 +427,27 @@ class TestCopyRoundTripRealBinary:
 class TestExtractDroppedRealBinary:
     """``extract_dropped_files`` must archive REAL collected binaries faithfully."""
 
-    def test_real_pe_in_mirror_is_zipped_with_intact_bytes(self, tmp_path: Path, real_pe_dll: Path) -> None:
+    def test_real_pe_in_mirror_is_zipped_with_intact_bytes(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        real_pe_dll: Path,
+    ) -> None:
         """A real PE in the host mirror is collected into a ZIP with intact bytes.
 
+        The host-visible mirror belongs to the virtio-9p transport. Since
+        S17-D69 the FAT transport exposes the share read-only - vvfat's
+        write-back path aborts the machine rather than failing a write - so a
+        guest on it cannot mirror anything here and the tree comes back over
+        the guest agent instead. The platform constant is redirected so this
+        exercises the transport whose mirror this is.
+
         Args:
+            monkeypatch: Fixture used to select the virtio-9p transport.
             tmp_path: Pytest temp directory used as the shared folder root.
             real_pe_dll: Real System32 PE DLL fixture.
         """
+        monkeypatch.setattr(qemu_module, "_IS_WINDOWS", False)
         shared = tmp_path / "shared"
         (shared / "output").mkdir(parents=True)
         mirror = shared / "output" / "dropped"
@@ -440,7 +455,7 @@ class TestExtractDroppedRealBinary:
         dropped = mirror / real_pe_dll.name
         shutil.copy2(real_pe_dll, dropped)
 
-        sb = _make_sandbox(shared_folder=shared)
+        sb = _make_sandbox(guest_os=GuestOS.LINUX, shared_folder=shared)
         sb.set_running()
 
         async def _go() -> Path:

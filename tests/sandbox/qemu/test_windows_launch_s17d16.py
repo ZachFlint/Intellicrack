@@ -132,6 +132,10 @@ def test_whpx_pins_a_supported_irqchip_mode_and_a_compatible_cpu(tmp_path: Path)
 def test_linux_shared_folder_uses_fat_not_9p_on_windows(tmp_path: Path) -> None:
     """The Linux shared folder must not use virtio-9p, which Windows QEMU lacks.
 
+    The FAT volume that replaces it is exposed read-only: vvfat's write-back
+    path calls ``abort()`` rather than failing a write, which took the whole
+    machine down mid-run (S17-D69).
+
     Args:
         tmp_path: Per-test temporary directory.
     """
@@ -139,7 +143,9 @@ def test_linux_shared_folder_uses_fat_not_9p_on_windows(tmp_path: Path) -> None:
     joined = " ".join(argv)
     assert "-fsdev" not in argv, "virtio-9p (-fsdev) is compiled out of Windows QEMU"
     assert "virtio-9p-pci" not in joined
-    assert "fat:rw:" in joined, "the shared folder must be a FAT block device on Windows"
+    assert "file=fat:" in joined, "the shared folder must be a FAT block device on Windows"
+    assert "fat:rw:" not in joined, "a writable vvfat volume aborts QEMU from its commit path (S17-D69)"
+    assert "readonly=on" in joined, "the FAT shared folder must be exposed read-only (S17-D69)"
 
 
 def test_smbios_entries_carry_no_invalid_chassis_type(tmp_path: Path) -> None:
