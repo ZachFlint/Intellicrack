@@ -13,12 +13,19 @@ constructed with. These tests verify that:
 * When ``profile`` differs, the call raises :class:`SandboxError` with a clear
   message containing both profile names, rather than silently returning a
   misleading success payload.
+
+The matching-profile case is exercised on a Linux guest. A Linux guest has no
+guest-side hardening step, so the only techniques are the launch-time SMBIOS
+and CPUID arguments - exactly what this test asserts - and the call succeeds
+without an agent. On a Windows guest the same launch-time-only result would now
+be a failure, because S17-D77 makes ``apply_anti_evasion`` refuse to report a
+clean success when guest-side hardening was expected but never ran.
 """
 
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import Any, Literal, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -26,15 +33,10 @@ import pytest
 from intellicrack.sandbox.base import SandboxConfig, SandboxError
 from intellicrack.sandbox.qemu import (
     AcceleratorType,
-    GuestAgentClient,
     GuestOS,
     QEMUConfig,
     QEMUSandbox,
 )
-
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
 
 
 class _AntiEvasionTestSandbox(QEMUSandbox):
@@ -61,14 +63,6 @@ class _AntiEvasionTestSandbox(QEMUSandbox):
         """
         setattr(self, "_qmp", qmp)
 
-    def set_agent(self, agent: GuestAgentClient | None) -> None:
-        """Set the guest agent client for tests.
-
-        Args:
-            agent: Guest agent client or None to disable the agent path.
-        """
-        self._agent = agent
-
     def set_qemu_config(self, cfg: QEMUConfig) -> None:
         """Override the QEMU config for tests.
 
@@ -78,78 +72,33 @@ class _AntiEvasionTestSandbox(QEMUSandbox):
         self._qemu_config = cfg
 
 
-class _DisconnectedAgent(GuestAgentClient):
-    """GuestAgentClient that reports as disconnected without performing I/O.
+def _make_sandbox(
+    *,
+    anti_evasion_profile: Literal["default", "workstation", "laptop"],
+    guest_os: GuestOS = GuestOS.WINDOWS,
+) -> _AntiEvasionTestSandbox:
+    """Construct a sandbox in ``running`` state with a stubbed QMP and no agent.
 
-    Causes :meth:`QEMUSandbox.apply_anti_evasion` to skip the agent-side
-    registry-patch branch, leaving only the launch-time technique reporting
-    so the test can assert profile-driven SMBIOS/CPUID entries without
-    stubbing every reg.exe / PowerShell call.
-    """
-
-    def __init__(self) -> None:
-        """Initialise the disconnected agent without opening a socket."""
-        super().__init__(host="127.0.0.1", port=4445)
-        self.connected = False
-
-    async def connect(self, time_limit: float = 60.0, retry_interval: float = 2.0) -> bool:
-        """Return False without attempting to connect.
-
-        Args:
-            time_limit: Ignored.
-            retry_interval: Ignored.
-
-        Returns:
-            bool: Always False; agent stays disconnected.
-        """
-        del time_limit, retry_interval
-        return False
-
-    async def disconnect(self) -> None:
-        """No-op disconnect for the disconnected agent."""
-        self.connected = False
-
-    async def send_command(
-        self,
-        command: str,
-        args: Sequence[str] | None = None,
-        time_limit: float = 30.0,
-    ) -> tuple[int, str, str]:
-        """Fail the call to detect any accidental invocation in tests.
-
-        Args:
-            command: Command name (ignored).
-            args: Optional argument list (ignored).
-            time_limit: Timeout in seconds (ignored).
-
-        Returns:
-            tuple[int, str, str]: Never returns; always raises.
-
-        Raises:
-            AssertionError: Always; the test must not reach this path.
-        """
-        del command, args, time_limit
-        msg = "send_command must not be invoked when the agent is disconnected"
-        raise AssertionError(msg)
-
-
-def _make_sandbox(*, anti_evasion_profile: Literal["default", "workstation", "laptop"]) -> _AntiEvasionTestSandbox:
-    """Construct a sandbox in ``running`` state with a stubbed QMP and agent.
+    The agent is deliberately left unset. On a Linux guest that is the whole
+    guest-side story - there is none - so the call reports only launch-time
+    techniques and succeeds. On a Windows guest with no agent the call now
+    fails, which is what the mismatched-profile scenario relies on: its
+    ``SandboxError`` must come from the profile check, so it is raised before
+    the guest-side path is ever reached.
 
     Args:
         anti_evasion_profile: Profile to set on :class:`QEMUConfig`. Restricted
             to the literal set accepted by :class:`QEMUConfig`.
+        guest_os: Guest OS to launch the sandbox as.
 
     Returns:
-        _AntiEvasionTestSandbox: Sandbox ready for ``apply_anti_evasion``
-        invocation with the agent path disabled.
+        _AntiEvasionTestSandbox: Sandbox ready for ``apply_anti_evasion``.
     """
-    cfg = QEMUConfig(guest_os=GuestOS.WINDOWS, anti_evasion_profile=anti_evasion_profile)
+    cfg = QEMUConfig(guest_os=guest_os, anti_evasion_profile=anti_evasion_profile)
     sb = _AntiEvasionTestSandbox(config=SandboxConfig(), qemu_config=cfg)
     sb.set_accelerator(AcceleratorType.TCG)
     sb.state.status = "running"
     sb.set_qmp(MagicMock())
-    sb.set_agent(_DisconnectedAgent())
     return sb
 
 
@@ -159,10 +108,12 @@ class TestF0029AntiEvasionProfileHonoured:
     def test_matching_profile_returns_success_with_actual_config_techniques(self) -> None:
         """Scenario A: matching profile succeeds and reports real techniques.
 
-        Given a sandbox launched with ``anti_evasion_profile='default'`` and a
-        caller passing ``profile='default'``, the method must succeed and the
-        reported launch-time techniques (SMBIOS types, CPUID mask) must
-        correspond to the frozen audit-specified SMBIOS type numbers.
+        Given a Linux sandbox launched with ``anti_evasion_profile='default'``
+        and a caller passing ``profile='default'``, the method must succeed and
+        the reported launch-time techniques (SMBIOS types, CPUID mask) must
+        correspond to the frozen audit-specified SMBIOS type numbers. A Linux
+        guest has no guest-side hardening step, so the launch-time arguments are
+        the whole result and the call succeeds without an agent.
 
         The independent oracle is the frozen set ``{"1", "2", "3"}``: the three
         SMBIOS table types that ``_anti_evasion_smbios_entries`` must emit for
@@ -184,7 +135,7 @@ class TestF0029AntiEvasionProfileHonoured:
             "cpuid_hypervisor_mask_launch_arg",
         ]
 
-        sb = _make_sandbox(anti_evasion_profile="default")
+        sb = _make_sandbox(anti_evasion_profile="default", guest_os=GuestOS.LINUX)
 
         result: dict[str, Any] = asyncio.run(sb.apply_anti_evasion(profile="default"))
 

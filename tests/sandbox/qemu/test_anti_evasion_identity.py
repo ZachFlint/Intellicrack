@@ -692,13 +692,16 @@ class TestF0022RegExeAllowlistSafe:
                 f"profile='default': SystemManufacturer must not be 'Lenovo': got {actual_manufacturer!r}"
             )
 
-    def test_registry_patch_omitted_when_agent_rejects_commands(self) -> None:
-        """A rejecting agent yields zero ``registry_patch`` techniques.
+    def test_apply_anti_evasion_raises_when_agent_rejects_commands(self) -> None:
+        """A rejecting agent makes the call fail rather than report a clean success.
 
-        Confirms the count is not hardcoded: an agent whose allowlist rejects
-        every command (the pre-fix world) returns ``-1`` for each dispatch, so
-        no ``registry_patch`` technique may be recorded while launch-time
-        techniques remain. This proves the success test above is falsifiable.
+        Confirms the success test above is falsifiable and that guest-side
+        failures are not silently dropped: an agent whose allowlist rejects
+        every command returns ``-1`` for each dispatch, so no guest-side
+        hardening actually ran. Reporting only the launch-time techniques as a
+        success was the S17-D77 defect; the call must now raise
+        :class:`SandboxError` naming the profile, and it must still have
+        attempted every command.
         """
 
         class _RejectingAgent(_RecordingAgent):
@@ -727,14 +730,11 @@ class TestF0022RegExeAllowlistSafe:
         agent = _RejectingAgent()
         sb = _make_sandbox(anti_evasion_profile="default", agent=agent)
 
-        result: dict[str, Any] = asyncio.run(sb.apply_anti_evasion(profile="default"))
+        with pytest.raises(SandboxError) as raised:
+            asyncio.run(sb.apply_anti_evasion(profile="default"))
 
-        raw_techniques: object = result["techniques"]
-        assert isinstance(raw_techniques, list)
-        techniques = [cast("str", t) for t in cast("list[object]", raw_techniques)]
-        assert "registry_patch" not in techniques, f"rejected dispatches must record no registry_patch: {techniques!r}"
-        assert "mac_address_randomize" not in techniques, f"rejected MAC dispatch must record no technique: {techniques!r}"
-        assert techniques == _EXPECTED_LAUNCH_TECHNIQUES, f"only launch-time techniques should survive rejection: {techniques!r}"
+        assert "default" in str(raised.value), f"the failure must name the profile: {raised.value}"
+        assert agent.sent_commands, "the production code never attempted any guest-side command"
 
 
 class TestF0029IdentityProfileConsistency:

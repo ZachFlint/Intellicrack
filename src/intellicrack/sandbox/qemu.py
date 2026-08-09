@@ -240,6 +240,9 @@ _ERR_ANTI_EVASION_PROFILE_MISMATCH = (
     "{current!r}. SMBIOS/CPUID masking is fixed at QEMU launch; set "
     "QEMUConfig.anti_evasion_profile before launching to use a different profile."
 )
+_ERR_ANTI_EVASION_AGENT_ABSENT = "the guest agent is not connected, so no guest-side hardening could be attempted"
+_ERR_ANTI_EVASION_COMMAND_FAILED = "{name} exited {exit_code}"
+_ERR_ANTI_EVASION_GUEST_SIDE_FAILED = "guest-side anti-evasion for profile {profile!r} did not succeed: {reasons}"
 _ERR_MEMORY_DUMP_FAILED = "memory dump failed"
 _ERR_MEMORY_DUMP_REFUSED = "QEMU refused the request"
 _ERR_MEMORY_DUMP_UNREADABLE = "the dump status could not be read, so the outcome is unknown"
@@ -8637,44 +8640,82 @@ python3 /mnt/shared/monitor/agent.py &
                 ),
             )
 
-        applied: dict[str, Any] = {"profile": current_profile, "techniques": []}
-        techniques: list[str] = []
-
-        techniques.extend(f"smbios_type_{entry['type']}_launch_arg" for entry in self._anti_evasion_smbios_entries(current_profile))
+        techniques: list[str] = [f"smbios_type_{entry['type']}_launch_arg" for entry in self._anti_evasion_smbios_entries(current_profile)]
         techniques.append("cpuid_hypervisor_mask_launch_arg")
 
-        if self._agent is not None and self._agent.is_connected and self._qemu_config.guest_os == GuestOS.WINDOWS:
-            registry_commands = self._anti_evasion_registry_commands(
-                current_profile,
-                secrets.token_hex(8).upper(),
-                self._guest_reg_exe_path(),
-            )
-            for cmd_name, cmd_args in registry_commands:
-                exit_code, _, _ = await self._agent.send_command(cmd_name, cmd_args)
-                if exit_code == 0:
-                    techniques.append("registry_patch")
+        failures: list[str] = []
+        if self._qemu_config.guest_os == GuestOS.WINDOWS:
+            failures = await self._apply_windows_anti_evasion(current_profile, techniques)
 
-            mac_octets = [f"{secrets.randbelow(256):02X}" for _ in range(5)]
-            mac_literal = "00-" + "-".join(mac_octets)
-            mac_ps_command = f"Set-NetAdapter -Name Ethernet -MacAddress '{mac_literal}' -Confirm:$false"
-            mac_exit_code, _, _ = await self._agent.send_command(
-                "powershell.exe",
-                [
-                    "-NoProfile",
-                    "-NonInteractive",
-                    "-ExecutionPolicy",
-                    "Bypass",
-                    "-Command",
-                    mac_ps_command,
-                ],
+        if failures:
+            reasons = "; ".join(failures)
+            _logger.error(
+                "anti_evasion_guest_side_failed",
+                profile=current_profile,
+                technique_count=len(techniques),
+                failures=failures,
             )
-            if mac_exit_code == 0:
-                techniques.append("mac_address_randomize")
+            raise SandboxError(_ERR_ANTI_EVASION_GUEST_SIDE_FAILED.format(profile=current_profile, reasons=reasons))
 
-        applied["techniques"] = techniques
-        applied["count"] = len(techniques)
         _logger.info("anti_evasion_applied", profile=current_profile, technique_count=len(techniques))
-        return applied
+        return {"profile": current_profile, "techniques": techniques, "count": len(techniques)}
+
+    async def _apply_windows_anti_evasion(self, profile: str, techniques: list[str]) -> list[str]:
+        """Apply the guest-side Windows hardening, recording every part that failed.
+
+        The launch-time techniques the caller already holds cannot fail - they
+        are read off the fixed launch profile - but the registry patches and the
+        MAC randomisation run real commands in the guest and can. Appending only
+        the successes and dropping the failures on the floor let a run in which
+        the agent was never connected, or every command timed out, report the
+        same clean success as one in which everything worked. The failures are
+        gathered and returned so the caller can refuse to call that a success.
+
+        Args:
+            profile: The active launch-time profile.
+            techniques: Accumulator the successful guest-side techniques are
+                appended to, in place.
+
+        Returns:
+            list[str]: One human-readable reason per guest-side step that did
+            not succeed. Empty when every attempted step worked.
+        """
+        if self._agent is None or not self._agent.is_connected:
+            return [_ERR_ANTI_EVASION_AGENT_ABSENT]
+
+        failures: list[str] = []
+        registry_commands = self._anti_evasion_registry_commands(
+            profile,
+            secrets.token_hex(8).upper(),
+            self._guest_reg_exe_path(),
+        )
+        for cmd_name, cmd_args in registry_commands:
+            exit_code, _, _ = await self._agent.send_command(cmd_name, cmd_args)
+            if exit_code == 0:
+                techniques.append("registry_patch")
+            else:
+                failures.append(_ERR_ANTI_EVASION_COMMAND_FAILED.format(name=cmd_name, exit_code=exit_code))
+
+        mac_octets = [f"{secrets.randbelow(256):02X}" for _ in range(5)]
+        mac_literal = "00-" + "-".join(mac_octets)
+        mac_ps_command = f"Set-NetAdapter -Name Ethernet -MacAddress '{mac_literal}' -Confirm:$false"
+        mac_exit_code, _, _ = await self._agent.send_command(
+            "powershell.exe",
+            [
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                mac_ps_command,
+            ],
+        )
+        if mac_exit_code == 0:
+            techniques.append("mac_address_randomize")
+        else:
+            failures.append(_ERR_ANTI_EVASION_COMMAND_FAILED.format(name="mac_address_randomize", exit_code=mac_exit_code))
+
+        return failures
 
     async def dump_memory(
         self,
