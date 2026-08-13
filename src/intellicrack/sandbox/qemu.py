@@ -2385,13 +2385,17 @@ class GuestAgentClient:
         way down, or the forwarded connection died and is what brought the
         caller here. Failing to close it changes nothing a caller can act on,
         so it is recorded at debug level rather than reported as a fault.
+
+        The reader stopping is likewise not a fault: the cancellation it raises
+        is this method's own, and rendering its traceback would put a stack
+        trace in the log of every clean teardown.
         """
         if self._reader_task is not None:
             self._reader_task.cancel()
             try:
                 await self._reader_task
             except asyncio.CancelledError:
-                _logger.debug("guest_agent_disconnect_cancelled", exc_info=True)
+                _logger.debug("guest_agent_disconnect_cancelled")
             self._reader_task = None
 
         if self._writer is not None:
@@ -2466,14 +2470,14 @@ class GuestAgentClient:
             try:
                 line = await self._reader.readline()
             except asyncio.CancelledError:
-                _logger.debug("agent_read_cancelled", exc_info=True)
+                _logger.debug("agent_read_cancelled")
                 break
             except ValueError as e:
                 _logger.warning("agent_read_line_too_long", error=str(e), read_limit=self._read_limit)
                 self._stop_reading(_ERR_JSON_LINE_TOO_LONG.format(limit=self._read_limit))
                 break
             except (OSError, ConnectionError) as e:
-                _logger.warning("agent_read_error", error=str(e))
+                _logger.warning("agent_read_error", error=str(e), exc_info=True)
                 self._stop_reading(str(e))
                 break
 
@@ -2675,7 +2679,7 @@ class GuestAgentClient:
             try:
                 msg = self._message_queue.get_nowait()
             except asyncio.QueueEmpty:
-                _logger.debug("message_queue_empty", exc_info=True)
+                _logger.debug("message_queue_empty")
                 break
             if msg.message_type == _AGENT_RESULT_MESSAGE_TYPE:
                 discarded += 1
@@ -2715,6 +2719,13 @@ class GuestAgentClient:
         rather than discarding a result because the socket failed immediately
         behind it.
 
+        The queue is read in short slices so a channel that dies under a
+        waiting command is noticed within a slice rather than at the deadline.
+        A slice that expires empty is this loop's ordinary continue path - the
+        guest is still working on the command - and carries no diagnostic
+        value, so it is counted rather than logged. What is reported is the
+        wait ending with nothing, once, naming which of the two ways it ended.
+
         Args:
             time_limit: Total wall-clock deadline in seconds.
 
@@ -2723,6 +2734,7 @@ class GuestAgentClient:
             deadline elapsed or the channel failed with no reply queued.
         """
         start_time = time.time()
+        idle_polls = 0
         while self.connected and time.time() - start_time < time_limit:
             try:
                 msg = await asyncio.wait_for(
@@ -2730,11 +2742,45 @@ class GuestAgentClient:
                     timeout=_AGENT_POLL_TIMEOUT,
                 )
             except TimeoutError:
-                _logger.debug("guest_command_poll_timeout", exc_info=True)
+                idle_polls += 1
                 continue
             if msg.message_type == _AGENT_RESULT_MESSAGE_TYPE:
                 return msg
-        return self._take_queued_result()
+
+        queued = self._take_queued_result()
+        if queued is None:
+            self._report_absent_result(time.time() - start_time, idle_polls, time_limit)
+        return queued
+
+    def _report_absent_result(self, waited: float, idle_polls: int, time_limit: float) -> None:
+        """Report a wait that ended without the command's reply.
+
+        The two ways that happens are worth telling apart. A channel still open
+        means the guest did not answer inside the budget it was given, and the
+        command is what failed. A closed one means the answer can no longer
+        arrive at all, and the reason the reader recorded is the real fault -
+        the exception behind it was already logged with its traceback where it
+        was raised, so it is named here rather than re-rendered.
+
+        Args:
+            waited: Seconds spent waiting for the reply.
+            idle_polls: How many poll slices expired with nothing queued.
+            time_limit: Deadline the wait was given, in seconds.
+        """
+        if self.connected:
+            _logger.warning(
+                "guest_command_result_timeout",
+                waited_seconds=round(waited, 3),
+                time_limit=time_limit,
+                idle_polls=idle_polls,
+            )
+            return
+        _logger.warning(
+            "guest_command_channel_closed_before_result",
+            waited_seconds=round(waited, 3),
+            idle_polls=idle_polls,
+            reason=self._read_failure or _ERR_AGENT_CHANNEL_CLOSED,
+        )
 
     def _take_queued_result(self) -> GuestAgentMessage | None:
         """Remove and return the first result message already sitting in the queue.
@@ -2749,7 +2795,7 @@ class GuestAgentClient:
             try:
                 msg = self._message_queue.get_nowait()
             except asyncio.QueueEmpty:
-                _logger.debug("message_queue_empty", exc_info=True)
+                _logger.debug("message_queue_empty")
                 break
             if found is None and msg.message_type == _AGENT_RESULT_MESSAGE_TYPE:
                 found = msg
@@ -2772,7 +2818,7 @@ class GuestAgentClient:
                 msg = self._message_queue.get_nowait()
                 messages.append(msg)
             except asyncio.QueueEmpty:
-                _logger.debug("message_queue_empty", exc_info=True)
+                _logger.debug("message_queue_empty")
                 break
         return messages
 
