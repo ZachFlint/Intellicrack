@@ -49,8 +49,10 @@ from intellicrack.core.subprocess_compat import (
 
 _REPO_ROOT: Final[Path] = Path(__file__).resolve().parents[3]
 _SCRIPT_PATH: Final[Path] = _REPO_ROOT / "src" / "intellicrack" / "sandbox" / "scripts" / "injection_monitor.ps1"
-_PWSH_LAUNCH_TIMEOUT_SEC: Final[float] = 4.0
+_EVENT_DWELL_SEC: Final[float] = 4.0
 _PWSH_KILL_GRACE_SEC: Final[float] = 3.0
+_SCRIPT_SETTLE_TIMEOUT_SEC: Final[float] = 120.0
+_SCRIPT_POLL_INTERVAL_SEC: Final[float] = 0.1
 _LOG_NAME: Final[str] = "injection_monitor.log"
 _DIAG_NAME: Final[str] = "injection_monitor.diag.log"
 _LIFECYCLE_NAME: Final[str] = "injection_monitor.lifecycle.log"
@@ -136,6 +138,53 @@ def _start_script(
         errors="replace",
         env=env,
     )
+
+
+def _await_script_exit(proc: Popen[str]) -> None:
+    """Block until the script process exits of its own accord.
+
+    The script needs roughly 1.5s of ``Add-Type``/assembly-load work
+    before it writes anything, and that stretches to ~2.4s under an
+    8-way concurrent load. A fixed sleep of a few seconds therefore
+    races the suite it runs in: at the tail of a full host-native pass
+    both live-run tests here terminated ``pwsh`` mid-startup and saw an
+    empty log directory and an empty ``stderr``. Waiting for the exit
+    the script performs by itself removes the race without relaxing a
+    single assertion - and it makes the observed return code the one
+    the script chose, rather than the 1 that ``TerminateProcess``
+    stamps on a killed child.
+
+    Returns without raising if the budget expires, leaving the caller's
+    own assertions to report what the script failed to produce.
+
+    Args:
+        proc: The running script process.
+    """
+    deadline = time.monotonic() + _SCRIPT_SETTLE_TIMEOUT_SEC
+    while time.monotonic() < deadline and proc.poll() is None:
+        time.sleep(_SCRIPT_POLL_INTERVAL_SEC)
+
+
+def _await_script_output(proc: Popen[str], log_dir: Path, expected: tuple[str, ...]) -> None:
+    """Block until a still-running script has written every expected log file.
+
+    Companion to :func:`_await_script_exit` for the monitoring path,
+    where the script never exits on its own and the caller must instead
+    wait for evidence that startup finished before it begins its dwell.
+
+    Args:
+        proc: The running script process.
+        log_dir: Directory passed to the script via ``-LogDir``.
+        expected: Log file names, relative to ``log_dir``, that the
+            script must have produced before the caller may proceed.
+    """
+    deadline = time.monotonic() + _SCRIPT_SETTLE_TIMEOUT_SEC
+    while time.monotonic() < deadline:
+        if proc.poll() is not None:
+            return
+        if all((log_dir / name).exists() for name in expected):
+            return
+        time.sleep(_SCRIPT_POLL_INTERVAL_SEC)
 
 
 def _terminate(proc: Popen[str]) -> tuple[str, str, int | None]:
@@ -271,7 +320,7 @@ def test_script_throws_when_traceevent_dll_missing(tmp_path: Path) -> None:
             "ISO_TEDIR": str(isolated_dotnet),
         },
         check=False,
-        timeout=_PWSH_LAUNCH_TIMEOUT_SEC + _PWSH_KILL_GRACE_SEC,
+        timeout=_SCRIPT_SETTLE_TIMEOUT_SEC,
     )
 
     assert completed.returncode != 0, (
@@ -345,7 +394,8 @@ def test_script_does_not_label_normal_thread_starts_as_shellcode_injection(
     proc = _start_script(log_dir, pwsh, target_pid=0)
     helper = _spawn_thread_helper(pwsh)
     try:
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC + 4.0)
+        _await_script_output(proc, log_dir, (_LOG_NAME,))
+        time.sleep(_EVENT_DWELL_SEC)
     finally:
         _terminate(helper)
         _terminate(proc)
@@ -398,7 +448,7 @@ def test_script_emits_threat_intel_unavailable_warning_when_not_admin(
 
     proc = _start_script(log_dir, pwsh)
     try:
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
+        _await_script_exit(proc)
     finally:
         _, stderr, returncode = _terminate(proc)
 
@@ -428,15 +478,17 @@ def test_smoke_lifecycle_records_started_and_stopped(tmp_path: Path) -> None:
     """Lifecycle log must contain both ``started`` and ``stopped`` structured records.
 
     ``Write-InjectionLifecycle`` is called unconditionally at startup
-    (line 272 of the script) and in the ``finally`` block (line 517).
-    Both paths must produce a pipe-delimited record whose third field
-    (index 2) equals the expected state token.
+    and again in the ``finally`` block. Both paths must produce a
+    pipe-delimited record whose third field (index 2) equals the
+    expected state token.
 
     Mutation that falsifies this test: removing either
-    ``Write-InjectionLifecycle -State 'started'`` (line 272) or
-    ``Write-InjectionLifecycle -State 'stopped'`` (line 517) from the
-    production script causes the corresponding assertion to fail because
-    the lifecycle file would then lack that state token.
+    ``Write-InjectionLifecycle -State 'started'`` or
+    ``Write-InjectionLifecycle -State 'stopped'`` from the production
+    script causes the corresponding assertion to fail because the
+    lifecycle file would then lack that state token. Verified on
+    2026-08-12: removing the ``stopped`` call fails the run with
+    ``states={'started'}``.
 
     Args:
         tmp_path: Pytest-provided temp directory used as ``-LogDir``.
@@ -447,7 +499,7 @@ def test_smoke_lifecycle_records_started_and_stopped(tmp_path: Path) -> None:
 
     proc = _start_script(log_dir, pwsh)
     try:
-        time.sleep(_PWSH_LAUNCH_TIMEOUT_SEC)
+        _await_script_exit(proc)
     finally:
         stdout, stderr, returncode = _terminate(proc)
 
@@ -472,9 +524,9 @@ def test_smoke_lifecycle_records_started_and_stopped(tmp_path: Path) -> None:
     states = {ln.split("|")[2] for ln in records if ln.count("|") >= 3}
     assert "started" in states, (
         f"lifecycle log missing 'started' record; states={states!r} raw={raw!r}; "
-        f"falsified by removing Write-InjectionLifecycle -State 'started' at line 272 of the script"
+        f"falsified by removing the Write-InjectionLifecycle -State 'started' call from the script"
     )
     assert "stopped" in states, (
         f"lifecycle log missing 'stopped' record; states={states!r} raw={raw!r}; "
-        f"falsified by removing Write-InjectionLifecycle -State 'stopped' at line 517 of the script"
+        f"falsified by removing the Write-InjectionLifecycle -State 'stopped' call from the script"
     )
