@@ -37,6 +37,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import psutil
+
 from intellicrack.core.logging import IntellicrackLogger, get_logger
 
 from .reporting import (
@@ -93,6 +95,20 @@ _DOCKER_DESKTOP_PATHS: tuple[Path, ...] = (
 _DOCKER_DAEMON_TIMEOUT_SECONDS = 180
 _DOCKER_DAEMON_POLL_INTERVAL = 3.0
 _DOCKER_PROBE_TIMEOUT_SECONDS = 20.0
+
+# Windows containers, WHPX virtual machines and Windows Sandbox sessions all run
+# on the Host Compute Service, and interleaving them bugchecked this host on
+# 2026-08-02. The WHPX boot gates already refuse to start a VM while a container
+# is running; without the mirror image of that check the interlock is only
+# one-directional, and a container started here while a VM is live is the same
+# collision from the other side.
+_HCS_VM_PROCESS_PREFIXES: tuple[str, ...] = (
+    "qemu-system",
+    "windowssandboxremotesession",
+    "windowssandboxserver",
+)
+_HCS_VM_WAIT_TIMEOUT_SECONDS = 900.0
+_HCS_VM_POLL_INTERVAL = 5.0
 
 _TIMESTAMP_FORMAT = "%m-%d-%Y_%H-%M"
 
@@ -436,6 +452,68 @@ def ensure_docker_running() -> None:
         elapsed += _DOCKER_DAEMON_POLL_INTERVAL
         _LOGGER.debug("docker_ready_wait", elapsed_seconds=round(elapsed, 1))
     message = f"Docker did not become ready to run containers within {_DOCKER_DAEMON_TIMEOUT_SECONDS}s"
+    raise SandboxError(message)
+
+
+def running_hcs_vm_processes() -> tuple[tuple[int, str], ...]:
+    """Return every live process that shares the Host Compute Service with containers.
+
+    Enumeration tolerates processes that exit mid-walk and those this account
+    cannot open: a process that cannot be inspected is not evidence of a VM,
+    and treating it as one would wedge every run on this host.
+
+    Returns:
+        tuple[tuple[int, str], ...]: ``(pid, name)`` for each running QEMU or
+        Windows Sandbox process, empty when none are running.
+    """
+    found: list[tuple[int, str]] = []
+    for process in psutil.process_iter():
+        try:
+            name = process.name()
+            pid = process.pid
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        if name.lower().removesuffix(".exe").startswith(_HCS_VM_PROCESS_PREFIXES):
+            found.append((pid, name))
+    return tuple(found)
+
+
+def ensure_no_hcs_vm_running(*, timeout: float = _HCS_VM_WAIT_TIMEOUT_SECONDS) -> None:
+    """Block until no Host Compute Service virtual machine is running.
+
+    Waits rather than refusing outright, because the collision is transient by
+    nature: the sibling session's VM gates finish and the container run can then
+    proceed. The wait is bounded so a VM that never exits surfaces as a failure
+    naming the processes holding the host, instead of a run that hangs forever.
+
+    Args:
+        timeout: Seconds to wait for the host to clear before giving up.
+
+    Raises:
+        SandboxError: If a VM process is still running when the budget expires.
+    """
+    running = running_hcs_vm_processes()
+    if not running:
+        return
+    print(
+        f"[sandbox] {len(running)} Host Compute Service VM process(es) running; "
+        f"waiting up to {timeout:.0f}s before starting a container ...",
+        file=sys.stderr,
+    )
+    _LOGGER.info("hcs_vm_wait_started", processes=[f"{pid}:{name}" for pid, name in running])
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        time.sleep(_HCS_VM_POLL_INTERVAL)
+        running = running_hcs_vm_processes()
+        if not running:
+            _LOGGER.info("hcs_vm_wait_cleared")
+            print("[sandbox] Host clear; starting container.", file=sys.stderr)
+            return
+    detail = ", ".join(f"{name} (pid {pid})" for pid, name in running)
+    message = (
+        f"a Host Compute Service virtual machine is still running after {timeout:.0f}s, and Windows "
+        f"containers cannot be started alongside one without risking a host bugcheck: {detail}"
+    )
     raise SandboxError(message)
 
 
@@ -1033,6 +1111,9 @@ class DockerSandbox:
         Returns:
             str: Tag of the ready image.
         """
+        # Before Docker is even woken up: Docker Desktop starts its own utility
+        # VM, so launching it is already a Host Compute Service operation.
+        ensure_no_hcs_vm_running()
         ensure_docker_running()
         _ensure_windows_engine()
         tag = _compute_image_tag()
