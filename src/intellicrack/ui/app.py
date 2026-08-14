@@ -50,6 +50,7 @@ from intellicrack.core.config import get_config_dir, get_config_file
 from intellicrack.core.logging import get_logger, log_tool_call
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.script_gen import ScriptGenerator, ScriptManager
+from intellicrack.core.session import Session
 from intellicrack.core.types import (
     BinaryInfo,
     BridgeAnalysisSummary,
@@ -1929,28 +1930,83 @@ class MainWindow(QMainWindow):
         """
         _logger.info("session_load_dialog_opened")
         dialog = SessionManagerDialog(parent=self)
+        dispatched: list[str] = []
+        dialog.session_loaded.connect(dispatched.append)
         dialog.session_loaded.connect(self._on_session_load_requested)
         dialog.session_deleted.connect(self._on_session_deleted)
-        if dialog.exec() and (session_id := dialog.get_selected_session_id()):
+        if dialog.exec() and (session_id := dialog.get_selected_session_id()) and session_id not in dispatched:
             _logger.info("session_load_dialog_selection", session_id=session_id)
             self._on_session_load_requested(session_id)
 
     def _on_session_load_requested(self, session_id: str) -> None:
         """Load a session by ID through the orchestrator.
 
+        The chat and tool panels are left alone until the load actually
+        succeeds. Clearing them up front discarded the history
+        :meth:`SessionManagerDialog._restore_session_to_ui` had already
+        rendered, and blanked the window when the load failed.
+
         Args:
             session_id: Identifier of the session to load.
         """
         _logger.info("session_load_requested", session_id=session_id)
-
-        async def load_session() -> None:
-            """Load the selected session into the orchestrator."""
-            await self._orchestrator.load_session(session_id)
-
-        self._chat_panel.clear_messages()
-        self.tool_panel.clear_all()
         self.status_update.emit(f"Loading session {session_id}...")
-        self._run_async(load_session())
+        run_bridge_coroutine_logged(
+            self._orchestrator.load_session(session_id),
+            lambda result: self._on_session_loaded(session_id, result),
+            lambda error: self._on_session_load_failed(session_id, error),
+            self,
+            event="session_load",
+            logger=_logger,
+            level="info",
+            session_id=session_id,
+        )
+
+    def _on_session_loaded(self, session_id: str, result: object) -> None:
+        """Render a freshly loaded session into the chat and analysis panels.
+
+        Args:
+            session_id: Identifier of the session that was loaded.
+            result: The ``Session`` returned by the orchestrator.
+        """
+        if not isinstance(result, Session):
+            self._on_session_load_failed(session_id, RuntimeError("session load returned no session"))
+            return
+
+        self._stream_append = None
+        self.tool_panel.clear_all()
+        self._chat_panel.restore_messages(result.messages)
+        self._chat_panel.set_input_enabled(enabled=True)
+
+        active_binary = result.active_binary
+        if active_binary is not None:
+            self._on_binary_loaded(active_binary)
+        else:
+            self.current_binary = None
+            for button in self._binary_dependent_buttons:
+                button.setEnabled(False)
+            self._set_status_label(self._binary_label, "No binary loaded")
+
+        _logger.info(
+            "session_loaded",
+            session_id=session_id,
+            message_count=len(result.messages),
+            has_binary=active_binary is not None,
+        )
+        self.status_update.emit(f"Session loaded: {result.name}")
+
+    def _on_session_load_failed(self, session_id: str, error: object) -> None:
+        """Report a failed session load without disturbing the current one.
+
+        Args:
+            session_id: Identifier of the session that failed to load.
+            error: Exception or error payload from the bridge worker.
+        """
+        message = str(error) if isinstance(error, BaseException) else repr(error)
+        _logger.warning("session_load_failed", session_id=session_id, error=message)
+        self._chat_panel.set_input_enabled(enabled=True)
+        self.status_update.emit("Session load failed")
+        QMessageBox.warning(self, "Load Session", f"Could not load session {session_id}: {message}")
 
     def _on_session_deleted(self, session_id: str) -> None:
         """Handle a session deletion broadcast from the dialog.
