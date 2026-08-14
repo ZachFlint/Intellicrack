@@ -38,7 +38,7 @@ if TYPE_CHECKING:
     from structlog.stdlib import BoundLogger
 
     from intellicrack.core.config import Config, LogConfig
-    from intellicrack.core.orchestrator import Orchestrator
+    from intellicrack.core.orchestrator import Orchestrator, OrchestratorConfig
     from intellicrack.core.process_manager import ProcessManager
     from intellicrack.core.script_gen import (
         ScriptGenerator,
@@ -75,6 +75,7 @@ class _SetupLoggingFn(Protocol):
                 in which case ``setup_logging`` falls back to its portable
                 default (``Path.cwd() / "logs"``).
         """
+
 
 _EARLY_SPLASH_BG: Final[str] = "#1e1e2e"
 _EARLY_SPLASH_WIDTH: Final[int] = 600
@@ -307,6 +308,16 @@ def _import_orchestrator() -> type[Orchestrator]:
     """
     mod = importlib.import_module("intellicrack.core.orchestrator")
     return cast("type[Orchestrator]", mod.Orchestrator)
+
+
+def _import_orchestrator_config() -> type[OrchestratorConfig]:
+    """Import the OrchestratorConfig class dynamically.
+
+    Returns:
+        type[OrchestratorConfig]: The OrchestratorConfig class.
+    """
+    mod = importlib.import_module("intellicrack.core.orchestrator")
+    return cast("type[OrchestratorConfig]", mod.OrchestratorConfig)
 
 
 def _import_session_classes() -> tuple[type[SessionManager], type[SessionStore]]:
@@ -1295,6 +1306,7 @@ async def _run_application(
         provider_registry=provider_registry,
         tool_registry=tool_registry,
         session_manager=session_manager,
+        config=_import_orchestrator_config()(confirmation_level=config.confirmation_level),
     )
 
     splash.set_progress(90, "Initializing script engine...")
