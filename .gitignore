@@ -494,6 +494,9 @@ gha-creds-*.json
 /CLI Launcher.lnk
 /CLI Coding/
 
+# Shortcut created by `just build-hexbench` (absolute path, machine-specific)
+/Hexbench.lnk
+
 # Auto-regenerated knowledge-graph artifacts (never tracked)
 IntellicrackKnowledgeGraph.html
 scripts/knowledge-graph/IntellicrackKnowledgeGraph.dot

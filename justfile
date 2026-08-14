@@ -57,6 +57,7 @@ build-hexbench:
     @if (-not (Test-Path 'src/hexbench/hexbench.spec')) { Write-Host 'src/hexbench is missing, so Hexbench cannot be built' -ForegroundColor Red; exit 1 }
     {{ pixi }} pyinstaller --noconfirm --distpath dist/hexbench --workpath build/hexbench src/hexbench/hexbench.spec
     @Write-Host "==> dist/hexbench/Hexbench.exe" -ForegroundColor Green
+    @$exe = (Resolve-Path 'dist/hexbench/Hexbench.exe').ProviderPath; $link = Join-Path (Get-Location).ProviderPath 'Hexbench.lnk'; $shell = New-Object -ComObject WScript.Shell; $sc = $shell.CreateShortcut($link); $sc.TargetPath = $exe; $sc.WorkingDirectory = Split-Path -Parent $exe; $sc.IconLocation = "$exe,0"; $sc.Description = 'Hexbench standalone hex editor'; $sc.Save(); Write-Host "==> $link" -ForegroundColor Green
 
 [doc('Run the Hexbench quality gates (lint, types, docstrings, tests)')]
 [group('test')]

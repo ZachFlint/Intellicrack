@@ -4,8 +4,9 @@
 """E2E tests for HexEditorBridge compare_files operation.
 
 ``HexEditorBridge.compare_files`` wraps the native ``diff_files`` engine and
-returns a dict with exactly three keys: ``files_identical`` (bool),
-``total_differences`` (int), and ``regions`` (list of ``offset_a``/``offset_b``/
+returns a dict with exactly five keys: ``files_identical`` (bool),
+``total_differences`` (int), ``size_a`` / ``size_b`` (the byte counts actually
+compared), and ``regions`` (list of ``offset_a``/``offset_b``/
 ``length``/``length_a``/``length_b``/``diff_type`` dicts). ``length_a`` and
 ``length_b`` are the true per-side spans consumed in each file; for a
 size-changing ``modified`` region these differ from one another, and
@@ -76,11 +77,13 @@ def _write_bin(directory: Path, name: str, data: bytes) -> Path:
 def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[str, Any]]:
     """Validate the compare_files result schema and return its regions list.
 
-    Asserts the result has exactly the three documented keys with correctly
+    Asserts the result has exactly the five documented keys with correctly
     typed values and well-formed regions bounded by the input lengths.
     ``length_a`` and ``length_b`` are the true per-side spans -- for a
     size-changing ``modified`` region they differ from one another and from
-    ``length``, which must equal ``max(length_a, length_b)``.
+    ``length``, which must equal ``max(length_a, length_b)``. ``size_a`` and
+    ``size_b`` report the byte counts actually compared, so they must equal
+    the input lengths exactly.
 
     Args:
         result: The dict returned by ``compare_files``.
@@ -90,9 +93,17 @@ def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[
     Returns:
         list[dict[str, Any]]: The validated ``regions`` list.
     """
-    assert set(result.keys()) == {"files_identical", "total_differences", "regions"}
+    assert set(result.keys()) == {
+        "files_identical",
+        "total_differences",
+        "regions",
+        "size_a",
+        "size_b",
+    }
     assert isinstance(result["files_identical"], bool)
     assert isinstance(result["total_differences"], int)
+    assert result["size_a"] == len_a
+    assert result["size_b"] == len_b
     regions: list[dict[str, Any]] = result["regions"]
     assert isinstance(regions, list)
     for region in regions:

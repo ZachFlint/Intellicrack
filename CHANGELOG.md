@@ -9,6 +9,33 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **hexbench:** Add hexbench web ui and harden hexcore concurrency (`2ac5a1a`)
+Introduce the Hexbench standalone browser-based hex editor UI alongside major concurrency, safety, and performance enhancements across the `intellicrack-hexcore` Rust engine and Intellicrack bridges. Hexbench provides a local web-based binary analysis and manipulation workspace featuring a virtualized hex grid, interactive visual analysis charts, command palette, and dynamically generated operation forms.
+To support high-throughput analysis and eliminate runtime borrowing exceptions in multi-threaded contexts, `HexDocument` in `intellicrack-hexcore` has been refactored from an exclusive PyO3 borrow model to a frozen class backed by `parking_lot::RwLock`. Zero-copy memory mapping via `mmap` is extended across document piece tables with automatic piece coalescing during byte insertions. Furthermore, bulk binary analysis methods now offer packed byte buffer accessors (`*_bytes`) to avoid per-element Python object conversion overhead.
+The template evaluation engine and patch import/export pipelines have been hardened against untrusted and malformed inputs. Parsing routines across Mach-O, PE, ZIP, and BPS/UPS engines now enforce strict integer bounds, nesting recursion limits, and size validation on dynamic arrays, while diff serialization explicitly segregates per-side span lengths.
+Key changes included in this update:
+Hexcore Engine & Rust Core:
+- Refactored `HexDocument` in `src/intellicrack-hexcore/src/lib.rs` to a frozen `#[pyclass]` with internal `parking_lot::RwLock` and generation tracking (`touch()`), enabling concurrent read operations.
+- Added zero-copy packed binary buffer accessors (`entropy_map_bytes`, `byte_distribution_bytes`, `digram_matrix_bytes`, `read_window`) in `src/intellicrack-hexcore/src/lib.rs` and bridged them into `src/intellicrack/bridges/hex_editor.py`.
+- Implemented zero-copy `Mmap` backing and adjacent single-byte edit coalescing in `src/intellicrack-hexcore/src/piece_table.rs` and fixed rename error handling in `src/intellicrack-hexcore/src/mmap_io.rs`.
+- Added integer overflow protection (`checked_add`), bounds checks, and OOM guards during BPS/UPS patch parsing in `src/intellicrack-hexcore/src/bps_ups.rs`.
+- Enhanced `UndoManager` in `src/intellicrack-hexcore/src/undo.rs` with `Operation::SwapBlocks` optimization and `SaveMarker` transaction tracking.
+- Expanded Mach-O structural templates in `src/intellicrack-hexcore/src/templates/macho.rs` with big-endian variants (`_BE`), signed CPU type fixes, and accurate `DYLIB_COMMAND` string sizing.
+- Added full data directory parsing to PE optional header templates (`pe.rs`) and enforced static element sizing and recursion depth limits in template evaluation (`eval.rs`, `json_schema.rs`).
+- Resolved terminator offset collision edge cases against EOF/EEOF delimiters in IPS/IPS32 patch exporters in `src/intellicrack-hexcore/src/patch_export.rs`.
+Hexbench Backend & Application Shell:
+- Added `src/hexbench/api.py`, `dispatch.py`, `catalog.py`, `codec.py`, and `registry.py` to route HTTP requests, register documents, encode typed operation arguments, and dynamically dispatch engine commands.
+- Implemented background job execution and queue eviction safeguards in `src/hexbench/jobs.py` along with embedded desktop window management in `src/hexbench/window.py` and `shell.py`.
+- Added `src/hexbench/design/build_cards.py` along with static standalone design system preview cards (`src/hexbench/design/cards/*.html`) showcasing panels, palettes, charts, and editor states.
+Hexbench Frontend UI:
+- Added `src/hexbench/static/grid.js` implementing a virtualized, recycled-DOM editable hex grid with caret navigation and scroller scaling.
+- Added `src/hexbench/static/shell.js`, `panels.js`, and `forms.js` for workspace layout management, dockable analysis panels, and dynamic schema-driven form generation.
+- Added `src/hexbench/static/charts.js`, `renderers.js`, `palette.js`, `scalar.js`, and `win32.js` for rendering entropy/histogram visualizations, command palette search, scalar compaction, and Win32 memory mask decoding.
+- Added canonical stylesheet `src/hexbench/static/app.css` containing application tokens, hex grids, status bars, and UI layouts.
+Intellicrack Bridges & Test Suite:
+- Updated binary diff engine and schemas to output distinct `length_a` and `length_b` per-side spans in `tests/hexpat/e2e/test_binary_diff.py` and `test_bridge_compare_files.py`.
+- Added extensive end-to-end and unit test suites covering concurrency (`test_concurrency.py`, `test_hexcore_shared_document.py`), search routines (`test_search.py`), patch handling (`test_patches.py`), and server error classification across Python and JavaScript runtimes.
+
 - **sandbox:** Let a run bring the files its target cannot run without (`45f9ab4`)
 run_binary staged exactly one file. Real targets are not one file - a DLL next
 to the executable, a resource subtree under it, a config file beside it - and a
@@ -393,33 +420,6 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
-
-- **hexbench:** Add hexbench web ui and harden hexcore concurrency (``)
-Introduce the Hexbench standalone browser-based hex editor UI alongside major concurrency, safety, and performance enhancements across the `intellicrack-hexcore` Rust engine and Intellicrack bridges. Hexbench provides a local web-based binary analysis and manipulation workspace featuring a virtualized hex grid, interactive visual analysis charts, command palette, and dynamically generated operation forms.
-To support high-throughput analysis and eliminate runtime borrowing exceptions in multi-threaded contexts, `HexDocument` in `intellicrack-hexcore` has been refactored from an exclusive PyO3 borrow model to a frozen class backed by `parking_lot::RwLock`. Zero-copy memory mapping via `mmap` is extended across document piece tables with automatic piece coalescing during byte insertions. Furthermore, bulk binary analysis methods now offer packed byte buffer accessors (`*_bytes`) to avoid per-element Python object conversion overhead.
-The template evaluation engine and patch import/export pipelines have been hardened against untrusted and malformed inputs. Parsing routines across Mach-O, PE, ZIP, and BPS/UPS engines now enforce strict integer bounds, nesting recursion limits, and size validation on dynamic arrays, while diff serialization explicitly segregates per-side span lengths.
-Key changes included in this update:
-Hexcore Engine & Rust Core:
-- Refactored `HexDocument` in `src/intellicrack-hexcore/src/lib.rs` to a frozen `#[pyclass]` with internal `parking_lot::RwLock` and generation tracking (`touch()`), enabling concurrent read operations.
-- Added zero-copy packed binary buffer accessors (`entropy_map_bytes`, `byte_distribution_bytes`, `digram_matrix_bytes`, `read_window`) in `src/intellicrack-hexcore/src/lib.rs` and bridged them into `src/intellicrack/bridges/hex_editor.py`.
-- Implemented zero-copy `Mmap` backing and adjacent single-byte edit coalescing in `src/intellicrack-hexcore/src/piece_table.rs` and fixed rename error handling in `src/intellicrack-hexcore/src/mmap_io.rs`.
-- Added integer overflow protection (`checked_add`), bounds checks, and OOM guards during BPS/UPS patch parsing in `src/intellicrack-hexcore/src/bps_ups.rs`.
-- Enhanced `UndoManager` in `src/intellicrack-hexcore/src/undo.rs` with `Operation::SwapBlocks` optimization and `SaveMarker` transaction tracking.
-- Expanded Mach-O structural templates in `src/intellicrack-hexcore/src/templates/macho.rs` with big-endian variants (`_BE`), signed CPU type fixes, and accurate `DYLIB_COMMAND` string sizing.
-- Added full data directory parsing to PE optional header templates (`pe.rs`) and enforced static element sizing and recursion depth limits in template evaluation (`eval.rs`, `json_schema.rs`).
-- Resolved terminator offset collision edge cases against EOF/EEOF delimiters in IPS/IPS32 patch exporters in `src/intellicrack-hexcore/src/patch_export.rs`.
-Hexbench Backend & Application Shell:
-- Added `src/hexbench/api.py`, `dispatch.py`, `catalog.py`, `codec.py`, and `registry.py` to route HTTP requests, register documents, encode typed operation arguments, and dynamically dispatch engine commands.
-- Implemented background job execution and queue eviction safeguards in `src/hexbench/jobs.py` along with embedded desktop window management in `src/hexbench/window.py` and `shell.py`.
-- Added `src/hexbench/design/build_cards.py` along with static standalone design system preview cards (`src/hexbench/design/cards/*.html`) showcasing panels, palettes, charts, and editor states.
-Hexbench Frontend UI:
-- Added `src/hexbench/static/grid.js` implementing a virtualized, recycled-DOM editable hex grid with caret navigation and scroller scaling.
-- Added `src/hexbench/static/shell.js`, `panels.js`, and `forms.js` for workspace layout management, dockable analysis panels, and dynamic schema-driven form generation.
-- Added `src/hexbench/static/charts.js`, `renderers.js`, `palette.js`, `scalar.js`, and `win32.js` for rendering entropy/histogram visualizations, command palette search, scalar compaction, and Win32 memory mask decoding.
-- Added canonical stylesheet `src/hexbench/static/app.css` containing application tokens, hex grids, status bars, and UI layouts.
-Intellicrack Bridges & Test Suite:
-- Updated binary diff engine and schemas to output distinct `length_a` and `length_b` per-side spans in `tests/hexpat/e2e/test_binary_diff.py` and `test_bridge_compare_files.py`.
-- Added extensive end-to-end and unit test suites covering concurrency (`test_concurrency.py`, `test_hexcore_shared_document.py`), search routines (`test_search.py`), patch handling (`test_patches.py`), and server error classification across Python and JavaScript runtimes.
 
 
 ### Changed
@@ -1041,6 +1041,96 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **ui:** Share one ScriptManager between the Scripts panel and orchestrator (`50f8b45`)
+MainWindow._configure_orchestrator built a ScriptManager rooted at
+<project>/.intellicrack/scripts and handed it to the orchestrator, which
+records the outcome of every successful tool call against it. Startup then
+wired a *different* ScriptManager -- the one main.py builds over
+config.data_directory/scripts -- into the Scripts panel, and that call never
+reached the orchestrator. Two managers, two directories, two registries.
+record_execution looks the script up in its own in-memory registry and
+returns False when it is absent, so every execution of a script the user
+authored in the Scripts panel was silently dropped by the orchestrator.
+wire_script_manager now re-points the orchestrator at the same manager it
+wires into the panel, so a panel-authored script is recordable and the record
+lands on the panel's own script object.
+
+- **ui:** Stop logging a routine provider failure as a worker crash (`e7fd98d`)
+BridgeCallWorker.run logged every caught exception through logger.exception,
+so a bad API key, a rate limit or a bridge that is not connected each stamped
+a full traceback under async_bridge_worker_failed at error level. Those are
+anticipated outcomes of the call, delivered to the caller''s on_error for
+display -- not faults in the worker. A healthy session''s log filled with
+error-level tracebacks, and the ones that meant the worker plumbing really had
+broken had nothing to stand out from.
+Domain errors (IntellicrackError and subclasses) now log at warning with the
+error and its type, matching run_bridge_coroutine_logged. Everything else
+keeps its traceback and its crash classification.
+Gated in both directions against the rendered log file the production pipeline
+writes: a provider error must leave no traceback and no crash event, and an
+unexpected failure must still carry both. caplog cannot see this -- the module
+logs through structlog, and a caplog block around the same worker collects
+nothing while the record is plainly rendered -- so the gate reads the artifact
+a live run would produce.
+Also drops the duplicated docstrings from the two run_bridge_coroutine
+overload declarations, which the docstring gate rejects on a signature-only
+stub and which restated the implementation''s own docstring.
+
+- **providers:** Surface why a provider rejected a call, with the key redacted (`c8f6cb6`)
+httpx composes HTTPStatusError''s message from the status line and URL alone,
+so translating the exception straight through told the user only
+"Client error ''401 Unauthorized'' for url ''...''". The reason -- which the API
+states plainly in the response body -- was sitting on the response at the
+raise site and was thrown away, in the logs as well as the dialog. Diagnosing
+a rejected call meant reproducing it outside the app.
+The body cannot simply be forwarded: providers routinely echo the request
+back, so an Authorization header or an api_key field arrives inside the very
+text being surfaced. Bodies now pass through redact_secrets and a length cap
+before they reach a log, a message or an exception -- covering both
+key-shaped tokens (sk-, hf_, xai-, AIza, gh[pousr]_, bearer) and
+credential-named JSON fields.
+Gated by running the real provider over an httpx.MockTransport: both the
+connect and chat paths must carry the API''s own message and must not carry
+the key. Each half is falsifiable on its own -- dropping the body fails the
+first assertion, dropping the redaction fails the second. The test''s tokens
+are assembled at import so the file holds no literal that reads as a
+credential.
+
+- **ui:** Let the confirmation-level setting actually reach the orchestrator (`44fb453`)
+Preferences offers never / only destructive / every call, persists the choice
+correctly, and nothing forwarded it to the object that acts on it.
+_on_preferences_changed swapped MainWindow's own Config copy and stopped
+there, and the toolbar auto-approve button was the sole caller of
+Orchestrator.set_confirmation_level -- stamping DESTRUCTIVE whenever it was
+switched off, which silently discarded a user who had chosen ALL or NONE. The
+setting was inert in both directions: it never applied, and toggling the
+button overwrote it.
+The button is an override, not a second setting, so the effective level is now
+resolved in one place: NONE while auto-approve is on, the configured level
+otherwise. Startup, the Preferences dialog and the toggle all route through
+it, and main.py seeds the orchestrator with the configured level so a fresh
+launch honours it before the window touches anything.
+Gated through a real MainWindow driving a real Orchestrator, asserting on the
+orchestrator's own configuration rather than on the window's copy of it.
+
+- **session:** Keep a bridge analysis complete across a save and load (`6bf23d1`)
+BridgeAnalysisSummary.complete is what Full Analysis reads to decide whether
+to tell the user no disassembler backend contributed. Both halves of
+SessionStore's bridge-analysis codec omitted it: the serializer never wrote
+the field and the deserializer never read it, so the dataclass default (False)
+silently replaced the real value on every load. A session saved with a
+genuinely complete analysis came back claiming no bridge had run, and the
+panel then advertised a backend problem that did not exist.
+Gated against a real on-disk SQLite store and a real JSON export, with a
+control that an incomplete analysis stays incomplete -- so the flag cannot be
+"fixed" by defaulting it to True on read.
+
+- **sandbox:** Pick the harness network from what the engine actually defines (`ee20fce`)
+
+- **ui:** Stop the Analysis panel 32-bit address signal breaking its own construction (`361c541`)
+
+- **ui:** Repopulate the chat panel when a saved session is loaded (`40a23c0`)
 
 - **sandbox:** Stop the container harness starting a VM's neighbour on shared HCS (`472533c`)
 Windows containers, WHPX virtual machines and Windows Sandbox sessions all run
@@ -5106,5 +5196,16 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
+
+- **hex-editor:** Align binary diff panel with engine schema (``)
+Fix diff result rendering where mismatched dictionary keys caused rows
+to display zero offsets and unknown types. Exclude identical match runs
+from the results tree and include input buffer sizes in the comparison
+payload.
+* Expose `size_a` and `size_b` from native diff results and bridge
+* Add `diff_region_rows` to format offset spans and filter match runs
+* Store raw navigate offset in item user data to prevent text re-parsing
+* Update comparison E2E tests and add UI diff rendering unit tests
+* Fix pipeline ordering test by setting `in_place=False`
 
 
