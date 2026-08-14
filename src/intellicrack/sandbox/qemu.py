@@ -298,7 +298,8 @@ _ERR_GUEST_SHARED_LAUNCHER_MISSING = "the shared volume is mounted but the monit
 _ERR_GUEST_SHARED_DRIVE_ENUM = "could not enumerate guest drive letters while locating the shared volume"
 _ERR_GUEST_SHARED_DRIVE_NOT_FOUND = "no guest drive letter carries {relative}; the FAT-backed shared volume is not visible to the guest"
 _AGENT_CONNECT_TIMEOUT = 30.0
-_AGENT_CONNECT_RETRY_INTERVAL = 2.0
+_AGENT_CONNECT_RETRY_INTERVAL = 15.0
+_AGENT_CONNECT_BACKOFF_INTERVAL = 2.0
 
 _ERR_AGENT_HANDSHAKE_NO_SOCKET = "guest agent handshake attempted without an open socket"
 _ERR_AGENT_HANDSHAKE_CLOSED = "guest agent channel closed before answering the readiness handshake"
@@ -2351,27 +2352,54 @@ class GuestAgentClient:
         self._reader_task = asyncio.create_task(self._read_messages())
         _logger.info("guest_agent_connected", host=self._host, port=self._port)
 
-    async def connect(self, time_limit: float = 60.0, retry_interval: float = 2.0) -> bool:
+    async def connect(
+        self,
+        time_limit: float = 60.0,
+        retry_interval: float = 2.0,
+        backoff_interval: float | None = None,
+    ) -> bool:
         """Connect to guest agent with retry.
+
+        How long one attempt may take and how long to wait before the next one
+        are separate questions, and a caller that widens the first does not
+        mean to widen the second. Waiting out a slow in-guest agent needs a
+        generous per-attempt budget; noticing the moment an agent finally
+        reaches ``listen`` needs frequent attempts. Tying the two together
+        would spend a whole handshake budget sleeping after every refused
+        connection, which inside a 30 s total budget is the difference between
+        a dozen chances to catch the agent coming up and two.
+
+        Both are clamped to what is left of ``time_limit``, so no combination
+        of the two can overrun the deadline the caller asked for.
 
         Args:
             time_limit: Total timeout in seconds for connection attempts.
-            retry_interval: Interval between retries.
+            retry_interval: Per-attempt budget for the connect and the
+                readiness handshake.
+            backoff_interval: Seconds to wait between attempts. Defaults to
+                ``retry_interval``, which is the historical behaviour.
 
         Returns:
             bool: True if connected successfully.
         """
-        start_time = time.time()
+        backoff_interval = retry_interval if backoff_interval is None else backoff_interval
+        deadline = time.monotonic() + time_limit
 
         connected = False
-        while time.time() - start_time < time_limit:
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0.0:
+                break
             try:
-                await self._open_agent_socket(retry_interval)
+                await self._open_agent_socket(min(retry_interval, remaining))
                 connected = True
                 break
             except (TimeoutError, OSError):
                 _logger.warning("guest_agent_connect_retry", host=self._host, port=self._port)
-                await asyncio.sleep(retry_interval)
+                backoff = min(backoff_interval, deadline - time.monotonic())
+                if backoff <= 0.0:
+                    break
+                await asyncio.sleep(backoff)
 
         if not connected:
             _logger.warning("guest_agent_connection_failed", timeout_seconds=time_limit)
@@ -5204,6 +5232,28 @@ class QEMUSandbox(SandboxBase):
         Wraps the connect call so that ``QEMUSandbox.start`` does not raise
         ``SandboxError`` from inside a ``try`` block (ruff ``TRY301``).
 
+        The per-attempt budget is widened to
+        :data:`_AGENT_CONNECT_RETRY_INTERVAL` rather than left at
+        ``GuestAgentClient.connect``'s 2 s default because the Windows monitor
+        agent services its listener only once per main-loop iteration, and each
+        iteration also runs a full ``Get-Process`` / ``Get-NetTCPConnection`` /
+        ``Get-NetUDPEndpoint`` sweep and a one-second sleep. Under WHPX that
+        iteration routinely exceeds two seconds, so a 2 s handshake window
+        abandons every freshly opened socket before the agent ever accepts and
+        answers it - the connection then piles up as a dead socket the agent
+        reaps on its next accept, and a healthy, listening agent is declared
+        unreachable for the whole ``time_limit``. A budget comfortably longer
+        than one serve iteration lets the first post-bind attempt complete the
+        readiness handshake.
+
+        The wait *between* attempts stays short
+        (:data:`_AGENT_CONNECT_BACKOFF_INTERVAL`), because the two intervals
+        answer different questions. Before the agent binds, its port is refused
+        outright and an attempt costs nothing, so what decides how quickly the
+        sandbox notices the agent coming up is the backoff alone - and spending
+        a whole handshake budget asleep after each refusal would leave only a
+        couple of chances inside the default budget.
+
         Args:
             agent: Guest agent client to connect.
             time_limit: Total seconds to wait for the agent to become
@@ -5216,7 +5266,11 @@ class QEMUSandbox(SandboxBase):
         """
         connect_error: BaseException | None = None
         try:
-            connected = await agent.connect(time_limit=time_limit)
+            connected = await agent.connect(
+                time_limit=time_limit,
+                retry_interval=_AGENT_CONNECT_RETRY_INTERVAL,
+                backoff_interval=_AGENT_CONNECT_BACKOFF_INTERVAL,
+            )
         except (OSError, asyncio.CancelledError, TimeoutError) as agent_error:
             _logger.warning(
                 "guest_agent_connect_exception",
