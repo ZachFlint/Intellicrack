@@ -2499,7 +2499,6 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Raises:
             ToolError: If connection fails.
         """
-
         async with self._pipe_connect_lock:
             if self._pipe_client is not None and self._pipe_client.is_connected:
                 return
@@ -6289,8 +6288,12 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
     async def set_label(self, address: int, text: str) -> dict[str, Any]:
         """Set a debug label at an address and verify the label was applied.
 
-        After queuing the ``lblset`` console command, reads the label
-        back via the ``lbl_list`` plugin RPC and compares it against
+        The label text is wrapped in double quotes before it is handed to
+        the ``lblset`` console command: x64dbg's command tokenizer strips
+        internal whitespace from an unquoted argument, so a spaced label
+        such as ``"main loop"`` would otherwise be stored as ``mainloop``
+        (live 6F re-drive finding). After queuing the command, reads the
+        label back via the ``lbl_list`` plugin RPC and compares it against
         ``text``. The wrapper used to claim ``success: True`` without
         inspecting the result of the queued console command
         (audit7.md F-0001).
@@ -6312,7 +6315,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
                 window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="lblset", address=hex(address), label_text=text)
-        await self._send_pipe_command("exec", {"command": f"lblset {hex(address)}, {text}"})
+        await self._send_pipe_command("exec", {"command": f'lblset {hex(address)}, "{text}"'})
         observed = await self._lookup_label_text(address)
         if observed is None:
             return {"address": hex(address), "text": text, "success": True, "verified": False}
@@ -6367,11 +6370,15 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
     async def set_comment(self, address: int, text: str) -> dict[str, Any]:
         """Set a debug comment at an address and verify the comment was applied.
 
-        After queuing the ``cmtset`` console command, reads the comment
-        back via the ``cmt_list`` plugin RPC and compares it against
-        ``text``. The wrapper used to claim ``success: True`` without
-        inspecting the result of the queued console command
-        (audit7.md F-0001).
+        The comment text is wrapped in double quotes before it is handed
+        to the ``cmtset`` console command: x64dbg's command tokenizer
+        strips internal whitespace from an unquoted argument, so a spaced
+        comment such as ``"loop body"`` would otherwise be stored as
+        ``loopbody`` (live 6F re-drive finding). After queuing the
+        command, reads the comment back via the ``cmt_list`` plugin RPC
+        and compares it against ``text``. The wrapper used to claim
+        ``success: True`` without inspecting the result of the queued
+        console command (audit7.md F-0001).
 
         Args:
             address: Address for the comment.
@@ -6390,7 +6397,7 @@ class _X64DbgAnalysisMixin(_X64DbgBridgeBase):
                 window elapses.
         """
         _logger.debug("x64dbg_command_queued", command="cmtset", address=hex(address))
-        await self._send_pipe_command("exec", {"command": f"cmtset {hex(address)}, {text}"})
+        await self._send_pipe_command("exec", {"command": f'cmtset {hex(address)}, "{text}"'})
         observed = await self._lookup_comment_text(address)
         if observed is None:
             return {"address": hex(address), "text": text, "success": True, "verified": False}
@@ -7040,10 +7047,15 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
     async def patch_instruction(self, address: int, instruction: str) -> dict[str, Any]:
         """Assemble and write an instruction at address, then verify the patch.
 
-        Issues the plugin's ``assemble`` RPC and, when attached, reads
-        memory back at ``address`` to confirm the bytes actually
-        changed. Returns the post-patch byte string so callers can
-        correlate the assembled output with the requested mnemonic
+        Issues the plugin's ``assemble`` RPC and, when attached, polls
+        memory back at ``address`` via :meth:`_await_memory_change` to
+        confirm the bytes actually changed. The read-back is polled
+        rather than read once because the ``assemble`` RPC returns as
+        soon as the asynchronous ``asm`` console command is queued, so an
+        immediate single read can race the write and observe the
+        pre-patch bytes on a patch that in fact succeeded (live 6F
+        re-drive finding). Returns the post-patch byte string so callers
+        can correlate the assembled output with the requested mnemonic
         (audit6.md F-0001).
 
         Args:
@@ -7067,7 +7079,7 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
             "assemble",
             {"address": hex(address), "instruction": instruction},
         )
-        patched = await self._read_memory_for_verification(address, 16)
+        patched = await self._await_memory_change(address, 16, original)
         if original is not None and patched is not None and original == patched:
             msg = f"patch_instruction verification failed: memory at {hex(address)} is unchanged after assemble"
             raise ToolError(
@@ -7168,6 +7180,45 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
                 error=str(exc),
             )
             return None
+
+    async def _await_memory_change(self, address: int, size: int, original: bytes | None) -> bytes | None:
+        """Poll memory at ``address`` until it diverges from ``original``.
+
+        The plugin's ``assemble`` RPC issues an asynchronous
+        ``DbgCmdExec("asm ...")`` and returns as soon as the command is
+        queued, not once x64dbg has rewritten the target bytes. A single
+        immediate read-back therefore races the assemble and can observe
+        the pre-patch bytes even when the patch ultimately succeeds - the
+        live 6F re-drive saw exactly this (unchanged on the first read,
+        the ``mov eax, 1`` encoding present ~0.4s later). Polling for up
+        to :attr:`VERIFY_TIMEOUT` absorbs that race so a genuine patch is
+        not misreported as "memory unchanged".
+
+        Args:
+            address: Address that was just assembled.
+            size: Number of bytes to read back.
+            original: Bytes read before the assemble, or ``None`` when a
+                pre-patch read was not possible (verification skipped).
+
+        Returns:
+            bytes | None: The most recent read-back once it differs from
+            ``original`` (or the final read when the window elapses), or
+            ``None`` when the bridge cannot read memory in the current
+            environment.
+        """
+        latest = await self._read_memory_for_verification(address, size)
+        if original is None or latest is None or latest != original:
+            return latest
+        deadline = asyncio.get_running_loop().time() + self.VERIFY_TIMEOUT
+        while asyncio.get_running_loop().time() < deadline:
+            await asyncio.sleep(self.VERIFY_POLL_INTERVAL)
+            current = await self._read_memory_for_verification(address, size)
+            if current is None:
+                return latest
+            latest = current
+            if latest != original:
+                return latest
+        return latest
 
     async def get_module_imports(self, module_name: str) -> list[dict[str, Any]]:
         """Get imports of a loaded module via the plugin.
