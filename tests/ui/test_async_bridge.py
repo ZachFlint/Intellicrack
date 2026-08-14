@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING
 
 import pytest
 
+from intellicrack.core.logging import IntellicrackLogger, get_logger, get_stdlib_root_logger
+from intellicrack.core.types import RateLimitError
 from intellicrack.ui.panels import async_bridge as async_bridge_mod
 from intellicrack.ui.panels.async_bridge import (
     BridgeCallWorker,
@@ -28,6 +30,7 @@ from intellicrack.ui.panels.async_bridge import (
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from pathlib import Path
 
     from PyQt6.QtWidgets import QApplication
 
@@ -36,6 +39,14 @@ ASYNC_RETURN_VALUE = 42
 ASYNC_WAIT_MS = 50
 POLL_INTERVAL_MS = 10
 MAX_WAIT_MS = 3000
+
+_LOG_LEVEL = "DEBUG"
+_LOG_FILENAME = "intellicrack.log"
+# Emitted by both the rich renderer structlog prefers and the plain fallback it
+# uses when rich is absent, so the check does not depend on which one ran.
+_TRACEBACK_MARKER = "Traceback (most recent call last)"
+_CALL_ERROR_EVENT = "async_bridge_call_error"
+_WORKER_FAILED_EVENT = "async_bridge_worker_failed"
 
 
 @pytest.fixture(autouse=True, scope="session")
@@ -48,6 +59,83 @@ def _cleanup_bridge_loop() -> Generator[None]:
     yield
     shutdown_bridge_loop()
     time.sleep(0.1)
+
+
+@pytest.fixture
+def rendered_bridge_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Generator[Path]:
+    """Point the real logging pipeline at a file and hand back its path.
+
+    ``caplog`` is useless here: the module logs through structlog, and a
+    ``caplog.at_level`` block around a worker collected an empty record list on
+    a run whose own stdout carried the rendered event. The rendering also
+    matters in its own right -- ``exc_info`` only becomes the traceback block
+    seen in live logs once the production renderer formats it -- so the file
+    written here is the artifact under test rather than a stand-in for it.
+
+    The module's logger is rebound because structlog caches a bound logger on
+    first use and never revisits that decision, so a module already used under
+    an earlier test's configuration would keep writing there. The replacement
+    comes from the same production factory under the same name.
+
+    Args:
+        tmp_path: Per-test directory the log is written into.
+        monkeypatch: Fixture used to rebind the module logger for the test.
+
+    Yields:
+        Path: The log file the production pipeline writes to.
+    """
+    log_dir = tmp_path / "logs"
+    IntellicrackLogger.configure(
+        level=_LOG_LEVEL,
+        log_dir=log_dir,
+        file_enabled=True,
+        console_enabled=False,
+        json_file=False,
+    )
+    monkeypatch.setattr(async_bridge_mod, "_logger", get_logger(async_bridge_mod.__name__))
+    try:
+        yield log_dir / _LOG_FILENAME
+    finally:
+        root_logger = get_stdlib_root_logger()
+        for handler in list(root_logger.handlers):
+            root_logger.removeHandler(handler)
+            handler.close()
+
+
+def _read_bridge_log(log_file: Path, required_event: str) -> str:
+    """Read back what the production pipeline rendered, proving it wrote here.
+
+    Args:
+        log_file: The log file the pipeline wrote to.
+        required_event: An event the run under test must have produced. Without
+            it, an absent traceback or absent crash event would be satisfied by
+            a log this module never reached.
+
+    Returns:
+        str: The rendered log, including any traceback blocks.
+    """
+    assert log_file.exists(), "the logging pipeline wrote no file, so nothing was observed"
+    text = log_file.read_text(encoding="utf-8")
+    assert required_event in text, (
+        f"the log holds no {required_event!r} record, so the worker was not writing to this file "
+        "and anything missing from it proves nothing"
+    )
+    return text
+
+
+def _run_worker_to_error(worker: BridgeCallWorker, qapp: QApplication, errors: list[object]) -> None:
+    """Start a worker and pump the event loop until its error is delivered.
+
+    Args:
+        worker: The worker under test, with ``call_error`` already connected.
+        qapp: Qt application fixture used to pump queued signals.
+        errors: The list ``call_error`` appends to, polled for delivery.
+    """
+    worker.start()
+    deadline = time.monotonic() + MAX_WAIT_MS / 1000
+    while not errors and time.monotonic() < deadline:
+        qapp.processEvents()
+        time.sleep(POLL_INTERVAL_MS / 1000)
 
 
 @pytest.mark.usefixtures("qapp")
@@ -248,6 +336,71 @@ class TestBridgeCallWorker:
 
         assert len(errors) == 1
         assert isinstance(errors[0], RuntimeError)
+
+    @staticmethod
+    def test_provider_error_is_logged_as_a_call_error_not_a_worker_crash(
+        qapp: QApplication,
+        rendered_bridge_log: Path,
+    ) -> None:
+        """A ``ProviderError`` is routine, so it must not log a worker-crash traceback.
+
+        Bad credentials, rate limits and unreachable bridges all reach this
+        handler as ``IntellicrackError`` subclasses and are handed to the
+        caller's ``on_error`` for display. Logging every one of them through
+        ``logger.exception`` stamped a full traceback under a generic
+        "worker failed" event, which buried the tracebacks that mean something.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+            rendered_bridge_log: Log file the production pipeline renders into.
+        """
+        errors: list[object] = []
+
+        async def rate_limited() -> None:
+            await asyncio.sleep(0)
+            msg = "rate limit exceeded for model claude-opus-5"
+            raise RateLimitError(msg)
+
+        worker = BridgeCallWorker(rate_limited())
+        worker.call_error.connect(errors.append)
+        _run_worker_to_error(worker, qapp, errors)
+
+        assert len(errors) == 1, "the provider error never reached the caller"
+        assert isinstance(errors[0], RateLimitError), f"call_error carried {type(errors[0]).__name__}"
+
+        text = _read_bridge_log(rendered_bridge_log, _CALL_ERROR_EVENT)
+        assert _WORKER_FAILED_EVENT not in text, "a routine provider error was logged as an unexpected worker failure"
+        assert _TRACEBACK_MARKER not in text, "a routine provider error rendered a full traceback into the log"
+
+    @staticmethod
+    def test_unexpected_failure_still_logs_a_worker_crash_with_traceback(
+        qapp: QApplication,
+        rendered_bridge_log: Path,
+    ) -> None:
+        """A non-domain exception must keep its traceback and crash classification.
+
+        The counterpart to the provider-error gate: narrowing the traceback to
+        domain errors only is correct, silencing it for everything is not.
+
+        Args:
+            qapp: Qt application fixture used to pump the event loop.
+            rendered_bridge_log: Log file the production pipeline renders into.
+        """
+        errors: list[object] = []
+
+        async def boom() -> None:
+            await asyncio.sleep(0)
+            msg = "worker plumbing broke"
+            raise RuntimeError(msg)
+
+        worker = BridgeCallWorker(boom())
+        worker.call_error.connect(errors.append)
+        _run_worker_to_error(worker, qapp, errors)
+
+        assert len(errors) == 1, "the unexpected failure never reached the caller"
+
+        text = _read_bridge_log(rendered_bridge_log, _WORKER_FAILED_EVENT)
+        assert _TRACEBACK_MARKER in text, "an unexpected worker failure was logged without a traceback"
 
 
 @pytest.mark.usefixtures("qapp")

@@ -80,6 +80,7 @@ out of ``BridgeCallWorker.run`` and terminate the worker thread without emitting
 the process panel's "Refreshing..." button) stuck indefinitely with no result and no surfaced error.
 """
 
+
 class _LoopState:
     """Module-level mutable state for the persistent event loop."""
 
@@ -304,7 +305,18 @@ class BridgeCallWorker(_RetainedWorker):
 
     @override
     def run(self) -> None:
-        """Execute the coroutine on the persistent event loop."""
+        """Execute the coroutine on the persistent event loop.
+
+        An ``IntellicrackError`` reaching this handler is an anticipated
+        outcome of the call, not a fault in the worker: a bad API key, a rate
+        limit, or a bridge that is not connected all arrive as domain errors
+        and are delivered to the caller's ``on_error`` for display. Those are
+        logged at warning with the error and its type, matching
+        :func:`run_bridge_coroutine_logged`. A traceback under a generic
+        "worker failed" event is reserved for exceptions that really do mean
+        the worker plumbing broke, so routine provider failures stop burying
+        the real ones.
+        """
         try:
             loop = _ensure_loop()
             future = asyncio.run_coroutine_threadsafe(self._coro, loop)
@@ -312,7 +324,14 @@ class BridgeCallWorker(_RetainedWorker):
             if completed:
                 self.call_finished.emit(result)
         except _BRIDGE_CALL_EXCEPTIONS as exc:
-            _logger.exception("async_bridge_worker_failed")
+            if isinstance(exc, IntellicrackError):
+                _logger.warning(
+                    "async_bridge_call_error",
+                    error=str(exc),
+                    error_type=type(exc).__name__,
+                )
+            else:
+                _logger.exception("async_bridge_worker_failed")
             self.call_error.emit(exc)
 
 
@@ -379,34 +398,15 @@ class GenericCallableWorker(_RetainedWorker):
         self.call_finished.emit(result)
 
 
+# The two overloads carry no docstring of their own: they are signature
+# declarations for the positional and keyword call forms, and the behaviour
+# both describe is documented once on the implementation below.
 @overload
-def run_bridge_coroutine[T](coro: Coroutine[object, object, T], /, *, timeout_s: float | None = None) -> T | None:
-    """Run a bridge coroutine passed positionally from a synchronous Qt context.
-
-    Args:
-        coro: Awaitable bridge operation to execute on the background loop.
-        timeout_s: Optional wall-clock wait ceiling in seconds.
-
-    Returns:
-        T | None: Coroutine result, or ``None`` when scheduled without a
-        blocking wait.
-    """
-    ...
+def run_bridge_coroutine[T](coro: Coroutine[object, object, T], /, *, timeout_s: float | None = None) -> T | None: ...
 
 
 @overload
-def run_bridge_coroutine[T](*, coro: Coroutine[object, object, T], timeout_s: float | None = None) -> T | None:
-    """Run a bridge coroutine passed by keyword from a synchronous Qt context.
-
-    Args:
-        coro: Awaitable bridge operation to execute on the background loop.
-        timeout_s: Optional wall-clock wait ceiling in seconds.
-
-    Returns:
-        T | None: Coroutine result, or ``None`` when scheduled without a
-        blocking wait.
-    """
-    ...
+def run_bridge_coroutine[T](*, coro: Coroutine[object, object, T], timeout_s: float | None = None) -> T | None: ...
 
 
 def run_bridge_coroutine(
