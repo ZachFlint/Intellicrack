@@ -33,16 +33,38 @@ from intellicrack.core.types import (
     ToolDefinition,
 )
 from intellicrack.providers.base import (
+    MAX_ERROR_BODY_CHARS,
     HttpErrorMessages,
     LLMProviderBase,
     ToolCallBufferManager,
     UsageInfo,
     map_thinking_budget_to_effort,
+    redact_secrets,
 )
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+
+def _response_body_text(response: httpx.Response) -> str:
+    """Read a failed response's body without letting the read itself fail.
+
+    ``httpx`` refuses ``.text`` on a response whose content was never read
+    (a streaming response, or one closed early), raising ``ResponseNotRead``.
+    Losing the body is acceptable there; losing the underlying HTTP error to a
+    secondary exception is not.
+
+    Args:
+        response: The response carried by the failing ``HTTPStatusError``.
+
+    Returns:
+        str: The decoded body, or an empty string when it is unavailable.
+    """
+    try:
+        return response.text
+    except (httpx.ResponseNotRead, httpx.StreamError, UnicodeDecodeError):
+        return ""
 
 
 _ERR_NOT_CONNECTED = "Not connected to OpenRouter"
@@ -193,12 +215,14 @@ class OpenRouterProvider(LLMProviderBase):
             if self.client is not None:
                 await self.client.aclose()
                 self.client = None
+            detail = self._http_error_detail(e, _response_body_text(e.response))
             self._logger.warning(
                 "openrouter_connect_failed",
                 status_code=e.response.status_code,
+                detail=detail,
             )
-            self._raise_typed_for_status(e.response.status_code, e, messages=_REST_HTTP_MSGS)
-            raise ProviderError(_ERR_CONNECT_FAILED % e) from e
+            self._raise_typed_for_status(e.response.status_code, e, messages=_REST_HTTP_MSGS, detail=detail)
+            raise ProviderError(_ERR_CONNECT_FAILED % detail) from e
         except (ConnectionError, TimeoutError, OSError, httpx.HTTPError) as e:
             self.connected = False
             self._api_key = None
@@ -523,13 +547,15 @@ class OpenRouterProvider(LLMProviderBase):
         try:
             response.raise_for_status()
         except httpx.HTTPStatusError as e:
+            detail = self._http_error_detail(e, _response_body_text(e.response))
             self._logger.warning(
                 "openrouter_chat_http_error",
                 model=model,
                 status_code=e.response.status_code,
+                detail=detail,
             )
-            self._raise_typed_for_status(e.response.status_code, e, messages=_REST_HTTP_MSGS)
-            raise ProviderError(_ERR_API_ERROR % e) from e
+            self._raise_typed_for_status(e.response.status_code, e, messages=_REST_HTTP_MSGS, detail=detail)
+            raise ProviderError(_ERR_API_ERROR % detail) from e
         return response
 
     @staticmethod
@@ -637,9 +663,9 @@ class OpenRouterProvider(LLMProviderBase):
                 helper does not translate to a more specific typed
                 exception.
         """
-        stream_detail = f"HTTP {status_code}: {body_text}"
+        stream_detail = f"HTTP {status_code}: {redact_secrets(body_text)[:MAX_ERROR_BODY_CHARS]}"
         stream_exc = ProviderError(stream_detail)
-        cls._raise_typed_for_status(status_code, stream_exc, messages=_REST_HTTP_MSGS)
+        cls._raise_typed_for_status(status_code, stream_exc, messages=_REST_HTTP_MSGS, detail=stream_detail)
         raise ProviderError(_ERR_STREAM_FAILED % stream_detail) from stream_exc
 
     @staticmethod
@@ -876,7 +902,7 @@ class OpenRouterProvider(LLMProviderBase):
                     model=model,
                     status_code=response.status_code,
                     response_size=len(body_bytes),
-                    response_excerpt=body_text[:256],
+                    response_excerpt=redact_secrets(body_text)[:256],
                 )
                 self._raise_for_stream_status(response.status_code, body_text)
             async for line in response.aiter_lines():
