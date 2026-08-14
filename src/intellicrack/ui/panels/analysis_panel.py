@@ -58,10 +58,15 @@ class BridgeAnalysisPanel(QWidget):
 
     Attributes:
         address_navigate: Signal emitted with an address when a cell with
-            an address value is double-clicked.
+            an address value is double-clicked. Declared as ``qint64`` (not
+            the default 32-bit C++ ``int``) both so image-based x64 virtual
+            addresses survive the emission and so the signal can be connected
+            to ``ToolOutputPanel.address_clicked``, which is itself
+            ``qint64``; PyQt refuses a signal-to-signal connection whose
+            argument types differ.
     """
 
-    address_navigate = pyqtSignal(int)
+    address_navigate = pyqtSignal("qint64")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the AnalysisPanel widget.
