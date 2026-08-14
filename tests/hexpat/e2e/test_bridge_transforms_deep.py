@@ -164,7 +164,12 @@ class TestApplyPipelineMultiStep:
         assert result == binascii.hexlify(payload).decode("ascii")
 
     def test_pipeline_ordering_matters(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """Reversing step order in a non-symmetric pipeline must produce different output.
+        """Reversing step order in a non-commutative pipeline must produce different output.
+
+        Both pipelines run with ``in_place=False`` so each reads the same
+        original bytes; running in place would feed the second pipeline the
+        first one's output and measure accumulated document state instead of
+        step ordering.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -190,8 +195,8 @@ class TestApplyPipelineMultiStep:
             {"name": "xor_single", "params": {"key": "AA"}},
         ])
 
-        result_ab = _run(bridge.apply_pipeline(pipeline_ab, 0, 4))
-        result_ba = _run(bridge.apply_pipeline(pipeline_ba, 0, 4))
+        result_ab = _run(bridge.apply_pipeline(pipeline_ab, 0, 4, in_place=False))
+        result_ba = _run(bridge.apply_pipeline(pipeline_ba, 0, 4, in_place=False))
 
         assert result_ab == "4b4b4b4b"
         assert result_ba == "b4b4b4b4"

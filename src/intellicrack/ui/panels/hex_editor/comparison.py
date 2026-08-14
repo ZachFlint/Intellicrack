@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, cast
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFileDialog,
     QLabel,
@@ -26,9 +27,93 @@ from intellicrack.ui.panels.async_bridge import GenericCallableWorker, run_bridg
 
 _logger = get_logger(__name__)
 
+MATCH_DIFF_TYPE = "match"
+
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     from intellicrack.bridges.hex_editor import HexEditorBridge
+
+
+class DiffRow(NamedTuple):
+    """One rendered row of the diff results tree.
+
+    Attributes:
+        offset: Offset cell text, carrying both sides when they diverge.
+        length: Length cell text, carrying both sides when they diverge.
+        diff_type: The region's diff type as reported by the engine.
+        details: Human-readable byte span for the region.
+        navigate_offset: Offset in the open document to jump to on activation.
+    """
+
+    offset: str
+    length: str
+    diff_type: str
+    details: str
+    navigate_offset: int
+
+
+def _span(offset: int, length: int) -> str:
+    """Render a half-open byte span.
+
+    Args:
+        offset: Start offset of the span.
+        length: Number of bytes in the span.
+
+    Returns:
+        str: The span as ``0xSTART - 0xEND``.
+    """
+    return f"{offset:#010x} - {offset + length:#010x}"
+
+
+def diff_region_rows(regions: Sequence[Mapping[str, Any]]) -> list[DiffRow]:
+    """Build the tree rows for the differing regions of an engine diff result.
+
+    The engine reports every region it walked, including the ``match`` runs
+    that are byte-identical on both sides; those are dropped here so the tree
+    and its count both mean differences. An inserted or deleted run has a
+    different offset and length on each side, so both are shown whenever they
+    diverge rather than collapsing to one side's value.
+
+    Args:
+        regions: The ``regions`` list from a ``diff_files``/``diff_bytes``
+            result.
+
+    Returns:
+        list[DiffRow]: One row per differing region, in engine order.
+    """
+    rows: list[DiffRow] = []
+    for region in regions:
+        diff_type = str(region.get("diff_type", "unknown"))
+        if diff_type == MATCH_DIFF_TYPE:
+            continue
+
+        offset_a = int(region.get("offset_a", 0))
+        offset_b = int(region.get("offset_b", 0))
+        length = int(region.get("length", 0))
+        length_a = int(region.get("length_a", length))
+        length_b = int(region.get("length_b", length))
+
+        offset_text = (
+            f"0x{offset_a:08X}" if offset_a == offset_b else f"0x{offset_a:08X} / 0x{offset_b:08X}"
+        )
+        length_text = str(length_a) if length_a == length_b else f"{length_a} → {length_b}"
+        details = (
+            f"Bytes {_span(offset_a, length_a)}"
+            if offset_a == offset_b and length_a == length_b
+            else f"A {_span(offset_a, length_a)}  |  B {_span(offset_b, length_b)}"
+        )
+        rows.append(
+            DiffRow(
+                offset=offset_text,
+                length=length_text,
+                diff_type=diff_type,
+                details=details,
+                navigate_offset=offset_a,
+            ),
+        )
+    return rows
 
 
 def execute_diff(bridge: HexEditorBridge, path_a: str, path_b: str) -> dict[str, Any]:
@@ -234,32 +319,26 @@ class ComparisonMixin:
 
         self._diff_results_tree.clear()
 
-        regions = result.get("regions", [])
+        regions = cast("Sequence[Mapping[str, Any]]", result.get("regions", []))
         total = result.get("total_differences", 0)
         identical = result.get("files_identical", False)
+        rows = diff_region_rows(regions)
 
         if self._diff_summary_label is not None:
             if identical:
                 self._diff_summary_label.setText("Files are identical")
             else:
                 self._diff_summary_label.setText(
-                    f"{len(regions)} region(s), {total} byte(s) differ  [{result.get('size_a', 0)} vs {result.get('size_b', 0)} bytes]",
+                    f"{len(rows)} region(s), {total} byte(s) differ  "
+                    f"[{result.get('size_a', 0)} vs {result.get('size_b', 0)} bytes]",
                 )
 
-        for region in regions:
-            offset = region.get("offset", 0)
-            length = region.get("length", 0)
-            rtype = region.get("type", "unknown")
-            details = f"Bytes {offset:#010x} - {offset + length:#010x}"
-            item = QTreeWidgetItem([
-                f"0x{offset:08X}",
-                str(length),
-                rtype,
-                details,
-            ])
+        for row in rows:
+            item = QTreeWidgetItem([row.offset, row.length, row.diff_type, row.details])
+            item.setData(0, Qt.ItemDataRole.UserRole, row.navigate_offset)
             self._diff_results_tree.addTopLevelItem(item)
 
-        _logger.info("diff_complete", regions=len(regions), total_diffs=total)
+        _logger.info("diff_complete", regions=len(rows), total_diffs=total)
 
     def _on_diff_error(self, error: str) -> None:
         """Handle diff computation failure.
@@ -281,10 +360,8 @@ class ComparisonMixin:
             column: The clicked column index.
         """
         _ = column
-        offset_text = item.text(0)
-        try:
-            offset = int(offset_text, 16)
-        except ValueError:
-            _logger.exception("diff_offset_parse_failed", offset_text=offset_text)
+        stored: object = item.data(0, Qt.ItemDataRole.UserRole)
+        if not isinstance(stored, int):
+            _logger.warning("diff_row_carries_no_offset", offset_text=item.text(0))
             return
-        self.goto_offset(offset)
+        self.goto_offset(stored)

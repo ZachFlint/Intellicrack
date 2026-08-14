@@ -1921,6 +1921,8 @@ fn diff_result_to_py(py: Python<'_>, data_a: &[u8], data_b: &[u8]) -> PyResult<P
     let dict = PyDict::new(py);
     dict.set_item("total_differences", result.total_differences)?;
     dict.set_item("files_identical", result.files_identical)?;
+    dict.set_item("size_a", data_a.len())?;
+    dict.set_item("size_b", data_b.len())?;
 
     let regions = PyList::empty(py);
     for region in &result.regions {

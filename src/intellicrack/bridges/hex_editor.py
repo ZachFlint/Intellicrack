@@ -4955,7 +4955,8 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
             path_b: Path to the second file.
 
         Returns:
-            dict[str, Any]: Dict with regions, total_differences, and files_identical.
+            dict[str, Any]: Dict with regions, total_differences, files_identical,
+                and the compared byte counts as size_a and size_b.
 
         Raises:
             RuntimeError: If the Rust core is not available.
@@ -4969,7 +4970,13 @@ class HexEditorFileMixin(_HexEditorBridgeBase):
         result = _hexcore_mod.diff_files(path_a, path_b)
         if isinstance(result, dict):
             return cast("dict[str, Any]", result)
-        return {"regions": [], "total_differences": 0, "files_identical": True}
+        return {
+            "regions": [],
+            "total_differences": 0,
+            "files_identical": True,
+            "size_a": 0,
+            "size_b": 0,
+        }
 
     async def save(self, path: str | None = None) -> bool:
         """Save the document.

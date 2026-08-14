@@ -4,10 +4,11 @@
 """E2E tests for binary diff operations via diff_bytes and diff_files.
 
 The native ``diff_bytes`` / ``diff_files`` functions return a dict with exactly
-three keys: ``files_identical`` (bool), ``total_differences`` (int) and
-``regions`` (a list of region dicts, each with ``offset_a``, ``offset_b``,
-``length``, ``length_a``, ``length_b`` and ``diff_type``). ``diff_type`` is one
-of ``"match"``, ``"modified"``, ``"inserted_a"`` or ``"inserted_b"``.
+five keys: ``files_identical`` (bool), ``total_differences`` (int),
+``size_a`` / ``size_b`` (the byte counts actually compared) and ``regions``
+(a list of region dicts, each with ``offset_a``, ``offset_b``, ``length``,
+``length_a``, ``length_b`` and ``diff_type``). ``diff_type`` is one of
+``"match"``, ``"modified"``, ``"inserted_a"`` or ``"inserted_b"``.
 
 The native engine emits a Myers edit script (via the ``similar`` crate) where
 contiguous matched runs become ``match`` regions, replaced runs become
@@ -39,7 +40,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 _DIFF_TYPES: frozenset[str] = frozenset({"match", "modified", "inserted_a", "inserted_b"})
-_RESULT_KEYS: frozenset[str] = frozenset({"files_identical", "total_differences", "regions"})
+_RESULT_KEYS: frozenset[str] = frozenset({
+    "files_identical",
+    "total_differences",
+    "regions",
+    "size_a",
+    "size_b",
+})
 _NON_MATCH_TYPES: frozenset[str] = frozenset({"modified", "inserted_a", "inserted_b"})
 
 
@@ -62,13 +69,15 @@ def _write_bin(directory: Path, name: str, data: bytes) -> Path:
 def _assert_well_formed_regions(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[str, Any]]:
     """Validate that a diff result has the exact schema and well-formed regions.
 
-    The result must carry exactly the three documented top-level keys with the
+    The result must carry exactly the five documented top-level keys with the
     correct value types. Each region must carry exactly the six documented
     keys, a known ``diff_type`` tag, integer offsets and lengths, and
     offsets/spans that stay inside the respective input bounds. ``length_a``
     and ``length_b`` are the true per-side spans -- for a size-changing
     ``modified`` region they differ from one another and from ``length``,
-    which must equal ``max(length_a, length_b)``.
+    which must equal ``max(length_a, length_b)``. ``size_a`` and ``size_b``
+    report the byte counts actually compared, so they must equal the input
+    lengths exactly.
 
     Args:
         result: The dict returned by ``diff_bytes`` / ``diff_files``.
@@ -82,6 +91,8 @@ def _assert_well_formed_regions(result: dict[str, Any], len_a: int, len_b: int) 
     assert isinstance(result["files_identical"], bool)
     assert isinstance(result["total_differences"], int)
     assert result["total_differences"] >= 0
+    assert result["size_a"] == len_a
+    assert result["size_b"] == len_b
     regions: list[dict[str, Any]] = result["regions"]
     assert isinstance(regions, list)
     for region in regions:
