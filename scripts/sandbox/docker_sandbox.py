@@ -95,6 +95,12 @@ _DOCKER_DESKTOP_PATHS: tuple[Path, ...] = (
 _DOCKER_DAEMON_TIMEOUT_SECONDS = 180
 _DOCKER_DAEMON_POLL_INTERVAL = 3.0
 _DOCKER_PROBE_TIMEOUT_SECONDS = 20.0
+_NETWORK_QUERY_TIMEOUT_SECONDS = 20.0
+
+# The built-in connected network carries a different name per engine: the
+# Windows container engine creates "nat", the Linux engine creates "bridge".
+# Ordered most-specific-first for this host, which runs Windows containers.
+_CONNECTED_NETWORK_CANDIDATES: tuple[str, ...] = ("nat", "bridge")
 
 # Windows containers, WHPX virtual machines and Windows Sandbox sessions all run
 # on the Host Compute Service, and interleaving them bugchecked this host on
@@ -647,7 +653,8 @@ def _build_docker_run_argv(
         memory: Memory reservation (``docker run --memory``).
         cpus: CPU quota (``docker run --cpus``).
         network: Docker network name, typically ``none`` for offline runs or
-            ``bridge`` for integration/e2e runs.
+            the engine's connected network (``nat`` on Windows containers,
+            ``bridge`` on Linux) for integration/e2e runs.
         writable_workspace: When ``True`` the workspace mount is writable.
         interactive: When ``True`` allocate an interactive TTY and keep stdin
             open for shell sessions.
@@ -1390,7 +1397,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--network",
         default=None,
-        help="Docker network (default: bridge for integration/e2e, none otherwise).",
+        help="Docker network (default: the engine's connected network for integration/e2e, none otherwise).",
     )
     parser.add_argument(
         "--timeout",
@@ -1412,6 +1419,58 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _existing_networks() -> frozenset[str]:
+    """List the Docker networks the active engine currently defines.
+
+    Returns:
+        frozenset[str]: Network names reported by ``docker network ls``, empty
+            when the CLI call fails so the caller reports the shortfall with
+            run context instead of this shim surfacing a bare CLI error.
+    """
+    proc = _run_docker(
+        ["network", "ls", "--format", "{{.Name}}"],
+        check=False,
+        timeout=_NETWORK_QUERY_TIMEOUT_SECONDS,
+    )
+    if proc.returncode != 0:
+        _LOGGER.warning("docker_network_list_failed", detail=proc.stderr.strip())
+        return frozenset()
+    return frozenset(line.strip() for line in proc.stdout.splitlines() if line.strip())
+
+
+def select_connected_network(available: frozenset[str], label: str) -> str:
+    """Pick the connected network to attach from the engine's own network list.
+
+    The built-in connected network carries a different name per engine: the
+    Windows container engine creates ``nat`` while the Linux engine creates
+    ``bridge``. Naming one that the engine does not define makes ``docker run``
+    fail with ``network ... not found`` before a single test is collected, so
+    the candidates are matched against what the engine reports.
+
+    Args:
+        available: Network names the engine currently defines.
+        label: Run-mode name used in the failure message.
+
+    Returns:
+        str: The first candidate network the engine actually defines.
+
+    Raises:
+        SandboxError: When the engine defines none of the known connected
+            networks.
+    """
+    for candidate in _CONNECTED_NETWORK_CANDIDATES:
+        if candidate in available:
+            return candidate
+
+    found = ", ".join(sorted(available)) or "nothing"
+    message = (
+        f"{label} needs a connected network but the engine defines none of "
+        f"{', '.join(_CONNECTED_NETWORK_CANDIDATES)} (found: {found}); "
+        "pass --network explicitly"
+    )
+    raise SandboxError(message)
+
+
 def _default_network(test_type: TestType | None) -> str:
     """Select a default Docker network for the given test type.
 
@@ -1419,11 +1478,15 @@ def _default_network(test_type: TestType | None) -> str:
         test_type: Active test type or ``None`` when running a shell.
 
     Returns:
-        str: ``"bridge"`` for network-requiring modes, ``"none"`` otherwise.
+        str: The engine's connected-network name for network-requiring modes,
+            or ``"none"`` for isolated modes.
     """
-    if test_type in {TestType.INTEGRATION, TestType.E2E}:
-        return "bridge"
-    return "none"
+    if test_type is None:
+        return "none"
+    if test_type not in {TestType.INTEGRATION, TestType.E2E}:
+        return "none"
+
+    return select_connected_network(_existing_networks(), test_type.value)
 
 
 def _resolve_test_type(args: argparse.Namespace) -> TestType:
