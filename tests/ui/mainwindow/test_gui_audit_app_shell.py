@@ -22,19 +22,22 @@ after remediation:
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING, cast
+from contextlib import contextmanager
+from typing import TYPE_CHECKING, cast, override
 
 import pytest
-from PyQt6.QtCore import QSignalBlocker
+from PyQt6.QtCore import QSettings, QSignalBlocker, QTimer
+from PyQt6.QtWidgets import QPushButton
 
 from intellicrack.core.config import Config
 from intellicrack.core.orchestrator import Orchestrator
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ConfirmationLevel, ProviderName
+from intellicrack.core.types import BridgeAnalysisSummary, ConfirmationLevel, ProviderName, StringInfo
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui import app as app_module
 from intellicrack.ui.app import MainWindow
+from intellicrack.ui.tools import ToolOutputPanel
 
 
 if TYPE_CHECKING:
@@ -42,6 +45,10 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from PyQt6.QtCore import QCoreApplication
+
+
+_ANALYSIS_STRING_ADDRESS: int = 0x140002100
+_ANALYSIS_STRING_VALUE: str = "h1-display-slot-marker"
 
 
 class _ToolPanelRecorder:
@@ -86,26 +93,6 @@ class _SignalRecorder:
         self.emitted.append(payload)
 
 
-class _AutoApproveButton:
-    """Minimal auto-approve toggle double exposing ``isChecked``."""
-
-    def __init__(self, *, checked: bool) -> None:
-        """Store the checked state.
-
-        Args:
-            checked: Whether the toggle is checked.
-        """
-        self._checked = checked
-
-    def isChecked(self) -> bool:  # noqa: N802 - Qt API name
-        """Return the toggle state.
-
-        Returns:
-            bool: The stored checked state.
-        """
-        return self._checked
-
-
 class _OrchestratorLevelRecorder:
     """Records ``set_confirmation_level`` calls."""
 
@@ -131,6 +118,46 @@ class _AnalysisCallbackHolder:
         self.bridge_analysis_received: _SignalRecorder = _SignalRecorder()
 
 
+class _RealPanelHolder:
+    """Holder exposing a real ``ToolOutputPanel`` to the GUI-thread slot."""
+
+    def __init__(self, tool_panel: ToolOutputPanel) -> None:
+        """Store the panel the slot will mutate.
+
+        Args:
+            tool_panel: Real output panel under test.
+        """
+        self.tool_panel: ToolOutputPanel = tool_panel
+
+
+def _build_analysis_summary() -> BridgeAnalysisSummary:
+    """Build a summary whose fields are individually observable in the panel.
+
+    Returns:
+        BridgeAnalysisSummary: Summary carrying one distinctive string row.
+    """
+    return BridgeAnalysisSummary(
+        binary_name="h1-display-slot.exe",
+        strings=[
+            StringInfo(
+                address=_ANALYSIS_STRING_ADDRESS,
+                value=_ANALYSIS_STRING_VALUE,
+                encoding="ascii",
+                section=".rdata",
+            ),
+        ],
+        imports=[],
+        exports=[],
+        sections=[],
+        functions=[],
+        format_info="PE32+",
+        architecture="x86_64",
+        source_bridges=["rizin"],
+        analysis_notes=["h1 display slot gate"],
+        complete=True,
+    )
+
+
 class _ConfirmationHolder:
     """Holder exposing ``confirmation_requested`` for the confirmation gate."""
 
@@ -143,12 +170,15 @@ class _AutoApproveHolder:
     """Holder exposing the attributes ``_apply_restored_auto_approve`` reads."""
 
     def __init__(self, *, checked: bool) -> None:
-        """Build the holder with a toggle double and a level recorder.
+        """Build the holder with a real toggle button and a level recorder.
 
         Args:
             checked: The auto-approve toggle state.
         """
-        self._auto_approve_btn: _AutoApproveButton = _AutoApproveButton(checked=checked)
+        button = QPushButton()
+        button.setCheckable(True)
+        button.setChecked(checked)
+        self._auto_approve_btn: QPushButton = button
         self._orchestrator: _OrchestratorLevelRecorder = _OrchestratorLevelRecorder()
 
 
@@ -163,13 +193,36 @@ def test_h1_callback_only_emits_no_direct_widget_mutation() -> None:
     assert holder.tool_panel.display_calls == []
 
 
+@pytest.mark.usefixtures("qapp")
 def test_h1_display_slot_performs_the_tab_update() -> None:
-    """H1: the GUI-thread slot performs the clear/redisplay that moved out of the callback."""
-    holder = _AnalysisCallbackHolder()
-    getattr(MainWindow, "_on_bridge_analysis_displayed")(cast("MainWindow", holder), "summary-payload")
+    """H1: the GUI-thread slot renders the summary into the real analysis panel.
 
-    assert holder.tool_panel.clear_calls == ["analysis"]
-    assert holder.tool_panel.display_calls == [("analysis", "summary-payload")]
+    The panel update the worker-thread callback must not perform lives here.
+    It is asserted against a real ``ToolOutputPanel`` rather than a recorder,
+    so the gate covers the whole route the running application takes: the
+    structured ``BridgeAnalysisSummary`` reaches ``BridgeAnalysisPanel``, its
+    tables populate, and the Analysis tab is brought to the front.
+    """
+    panel = ToolOutputPanel()
+    try:
+        analysis_panel = panel.add_analysis_panel()
+        holder = _RealPanelHolder(panel)
+        summary = _build_analysis_summary()
+
+        getattr(MainWindow, "_on_bridge_analysis_displayed")(cast("MainWindow", holder), summary)
+
+        assert analysis_panel.get_current_analysis() is summary, "the summary never reached BridgeAnalysisPanel.set_analysis"
+        strings_table = analysis_panel._strings_table
+        assert strings_table.rowCount() == 1, f"expected one strings row, got {strings_table.rowCount()}"
+        value_item = strings_table.item(0, 1)
+        assert value_item is not None, "the summary's string row was never inserted into the strings table"
+        assert value_item.text() == _ANALYSIS_STRING_VALUE, (
+            f"the strings table rendered {value_item.text()!r} instead of the summary's string"
+        )
+        active_tab = panel.tab_widget.tabText(panel.tab_widget.currentIndex())
+        assert active_tab == "Analysis", f"the Analysis tab was not activated; active tab is {active_tab!r}"
+    finally:
+        panel.close()
 
 
 def test_confirmation_marshals_via_signal_not_singleshot(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -183,9 +236,18 @@ def test_confirmation_marshals_via_signal_not_singleshot(monkeypatch: pytest.Mon
     """
     single_shot_calls: list[object] = []
 
-    class _QTimerSpy:
+    class _QTimerSpy(QTimer):
+        """Real ``QTimer`` whose ``singleShot`` records instead of scheduling."""
+
+        @override
         @staticmethod
-        def singleShot(*args: object, **kwargs: object) -> None:  # noqa: N802 - Qt API name
+        def singleShot(*args: object, **kwargs: object) -> None:
+            """Record a scheduling attempt.
+
+            Args:
+                *args: Positional arguments the caller passed.
+                **kwargs: Keyword arguments the caller passed.
+            """
             single_shot_calls.append((args, kwargs))
 
     monkeypatch.setattr(app_module, "QTimer", _QTimerSpy)
@@ -209,6 +271,7 @@ def test_confirmation_marshals_via_signal_not_singleshot(monkeypatch: pytest.Mon
         asyncio.set_event_loop(None)
 
 
+@pytest.mark.usefixtures("qapp")
 def test_m12_apply_restored_auto_approve_sets_level() -> None:
     """M12: the restore helper maps the toggle state to the orchestrator level."""
     on_holder = _AutoApproveHolder(checked=True)
@@ -220,26 +283,30 @@ def test_m12_apply_restored_auto_approve_sets_level() -> None:
     assert getattr(off_holder, "_orchestrator").levels == [ConfirmationLevel.DESTRUCTIVE]
 
 
-class _FakeSettings:
-    """QSettings double that reports auto-approve as enabled."""
+@contextmanager
+def _redirected_settings_store(store_dir: Path) -> Generator[QSettings]:
+    """Point every ``QSettings`` built by production code at a temporary store.
 
-    def __init__(self, *_args: object) -> None:
-        """Accept and ignore the organisation/application names."""
+    The window constructs its own ``QSettings("Intellicrack", "MainWindow")``,
+    so the only way to drive the restore path from a known state without a
+    double is to relocate the backing store. The default format and the
+    user-scope search path are switched to an INI file beneath ``store_dir``
+    and restored afterwards, leaving the machine's real settings untouched.
 
-    def value(self, key: str, defaultValue: object = None) -> object:  # noqa: N803 - Qt API name
-        """Return ``True`` for the auto-approve key, else the default.
+    Args:
+        store_dir: Directory to hold the temporary INI store.
 
-        Args:
-            key: The settings key requested.
-            defaultValue: The fallback value.
-
-        Returns:
-            object: ``True`` for ``"auto_approve"`` otherwise ``defaultValue``.
-        """
-        return True if key == "auto_approve" else defaultValue
-
-    def setValue(self, *_args: object) -> None:  # noqa: N802 - Qt API name
-        """Ignore persistence writes."""
+    Yields:
+        QSettings: A handle on the same relocated store the window will read.
+    """
+    previous_format = QSettings.defaultFormat()
+    ini = QSettings.Format.IniFormat
+    QSettings.setDefaultFormat(ini)
+    QSettings.setPath(ini, QSettings.Scope.UserScope, str(store_dir))
+    try:
+        yield QSettings("Intellicrack", "MainWindow")
+    finally:
+        QSettings.setDefaultFormat(previous_format)
 
 
 def _build_window(tmp_path: Path) -> tuple[MainWindow, Orchestrator]:
@@ -275,7 +342,7 @@ def window_factory(qapp: QCoreApplication, tmp_path: Path) -> Generator[MainWind
         tmp_path: Pytest temporary directory fixture.
 
     Yields:
-        Generator[MainWindow]: The constructed window.
+        MainWindow: The constructed window.
     """
     del qapp
     window, _orch = _build_window(tmp_path)
@@ -288,23 +355,25 @@ def window_factory(qapp: QCoreApplication, tmp_path: Path) -> Generator[MainWind
 def test_m12_restored_on_state_applied_to_orchestrator_at_startup(
     qapp: QCoreApplication,
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """M12: constructing the window with auto_approve=ON leaves the orchestrator at NONE.
 
     Args:
         qapp: Qt application fixture.
         tmp_path: Pytest temporary directory fixture.
-        monkeypatch: Pytest monkeypatch fixture.
     """
     del qapp
-    monkeypatch.setattr(app_module, "QSettings", _FakeSettings)
-    window, orch = _build_window(tmp_path)
-    try:
-        assert getattr(window, "_auto_approve_btn").isChecked() is True
-        assert getattr(orch, "_config").confirmation_level == ConfirmationLevel.NONE
-    finally:
-        window.close()
+    auto_approve_on: bool = True
+    with _redirected_settings_store(tmp_path / "settings") as settings:
+        settings.setValue("auto_approve", auto_approve_on)
+        settings.sync()
+
+        window, orch = _build_window(tmp_path)
+        try:
+            assert getattr(window, "_auto_approve_btn").isChecked() is True
+            assert getattr(orch, "_config").confirmation_level == ConfirmationLevel.NONE
+        finally:
+            window.close()
 
 
 class _ConnectableSignal:
