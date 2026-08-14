@@ -14,6 +14,7 @@ import asyncio
 import contextlib
 import json
 import random
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -51,6 +52,48 @@ _T = TypeVar("_T")
 
 _logger = get_logger(__name__)
 _secure_rng = random.SystemRandom()
+
+REDACTION_MARKER: Final[str] = "[REDACTED]"
+MAX_ERROR_BODY_CHARS: Final[int] = 500
+
+_SECRET_SUBSTITUTIONS: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
+    (
+        re.compile(
+            r'(?i)("?(?:api[_-]?key|access[_-]?token|refresh[_-]?token|authorization|x-api-key|secret)"?\s*[:=]\s*"?)'
+            r'([^"\s,}\]]{4,})',
+        ),
+        rf"\1{REDACTION_MARKER}",
+    ),
+    (re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/=-]{8,}"), f"Bearer {REDACTION_MARKER}"),
+    (re.compile(r"\bsk-[A-Za-z0-9_-]{8,}"), REDACTION_MARKER),
+    (re.compile(r"\bhf_[A-Za-z0-9]{8,}"), REDACTION_MARKER),
+    (re.compile(r"\bxai-[A-Za-z0-9]{8,}"), REDACTION_MARKER),
+    (re.compile(r"\bAIza[A-Za-z0-9_-]{10,}"), REDACTION_MARKER),
+    (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}"), REDACTION_MARKER),
+)
+
+
+def redact_secrets(text: str) -> str:
+    """Blank out credential-shaped tokens in provider-supplied text.
+
+    A provider's error body routinely echoes back what was sent: an
+    ``Authorization`` header, an ``api_key`` field, or a key embedded in a
+    URL. That text is about to reach a log file and a user-visible message,
+    so every recognised credential shape is replaced before it travels. Both
+    key/value fields and bare key prefixes are covered, because an echoed key
+    can arrive either way.
+
+    Args:
+        text: Raw text from a provider response, header, or exception.
+
+    Returns:
+        str: The text with every recognised credential shape replaced by
+        :data:`REDACTION_MARKER`.
+    """
+    redacted = text
+    for pattern, replacement in _SECRET_SUBSTITUTIONS:
+        redacted = pattern.sub(replacement, redacted)
+    return redacted
 
 
 @dataclass(slots=True)
@@ -978,12 +1021,37 @@ class LLMProviderBase(ABC):
         return "\n\n".join(system_parts) if system_parts else None
 
     @staticmethod
+    def _http_error_detail(exc: Exception, body: str) -> str:
+        """Combine an HTTP exception with its response body for display.
+
+        ``httpx`` builds ``HTTPStatusError``'s message from the status line and
+        URL only, so on its own it tells the user nothing about *why* the call
+        was rejected. The provider's own message lives in the response body,
+        which is redacted and truncated here before it is allowed anywhere near
+        a log or a dialog.
+
+        Args:
+            exc: The originating HTTP exception.
+            body: Raw response body text, or an empty string when unavailable.
+
+        Returns:
+            str: ``str(exc)`` alone when the body is empty, otherwise the
+            exception text followed by the redacted, truncated body.
+        """
+        stripped = body.strip()
+        if not stripped:
+            return str(exc)
+        redacted = redact_secrets(stripped)[:MAX_ERROR_BODY_CHARS]
+        return f"{exc}: {redacted}"
+
+    @staticmethod
     def _raise_typed_for_status(
         status_code: int,
         exc: Exception,
         *,
         messages: HttpErrorMessages,
         extract_503_message: Callable[[Exception], str] | None = None,
+        detail: str | None = None,
     ) -> None:
         """Raise an Intellicrack typed exception for a known HTTP status code.
 
@@ -1001,7 +1069,8 @@ class LLMProviderBase(ABC):
             status_code: HTTP status code from the failing response.
             exc: The originating exception that the helper chains via
                 ``raise ... from exc``. Its ``str(exc)`` is also
-                interpolated into the matching message template.
+                interpolated into the matching message template when
+                ``detail`` is not supplied.
             messages: Provider-specific :class:`HttpErrorMessages`
                 carrying the printf-style templates raised by the
                 helper.
@@ -1012,6 +1081,12 @@ class LLMProviderBase(ABC):
                 ``messages.service_unavailable`` and a
                 :class:`ProviderError` is raised. When omitted, HTTP
                 503 falls through to the caller's default handling.
+            detail: Pre-built, already redacted failure text to
+                interpolate instead of ``str(exc)``. Callers that can
+                reach the response body pass it here (see
+                :meth:`_http_error_detail`), because the transport
+                exception's own text carries only the status line and
+                URL, never the provider's explanation.
 
         Raises:
             AuthenticationError: When ``status_code`` is 401 or 403.
@@ -1019,10 +1094,11 @@ class LLMProviderBase(ABC):
                 ``extract_503_message`` is supplied.
             RateLimitError: When ``status_code`` is 429.
         """
+        described = detail if detail is not None else str(exc)
         if status_code in _AUTH_STATUS_CODES:
-            raise AuthenticationError(messages.auth_invalid % exc) from exc
+            raise AuthenticationError(messages.auth_invalid % described) from exc
         if status_code == HTTP_RATE_LIMITED:
-            raise RateLimitError(messages.rate_limited % exc) from exc
+            raise RateLimitError(messages.rate_limited % described) from exc
         if status_code == HTTP_SERVICE_UNAVAILABLE and extract_503_message is not None:
             raise ProviderError(messages.service_unavailable % extract_503_message(exc)) from exc
 
