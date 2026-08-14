@@ -55,7 +55,7 @@ class TestType(StrEnum):
         ALL: Full test suite across ``tests/``.
         COVERAGE: Full suite with coverage collection and a 95% gate.
         INTEGRATION: Integration-marker tests under ``tests/test_integration``.
-        E2E: End-to-end scenarios under ``tests/test_hexcore_e2e``.
+        E2E: End-to-end scenarios under ``tests/hexpat/e2e``.
         SMOKE: Minimal smoke subset completing in under two minutes.
         PARALLEL: Full suite distributed via ``pytest-xdist``.
         FAILED: Re-run only the last failing tests.
@@ -253,7 +253,7 @@ def build_pytest_args(spec: TestRunSpec) -> list[str]:
                 *base,
             ]
         case TestType.E2E:
-            args = ["tests/test_hexcore_e2e/", *base]
+            args = ["tests/hexpat/e2e/", *base]
         case TestType.SMOKE:
             args = [
                 "tests/",

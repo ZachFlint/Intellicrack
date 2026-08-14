@@ -105,9 +105,7 @@ class TestResetAnalysisClearsFunctionsAndXrefs:
 
             panel.reset_analysis()
 
-            assert panel.func_list.get_functions() == [], (
-                "reset_analysis left the previous binary's functions in the right-hand navigator"
-            )
+            assert panel.func_list.get_functions() == [], "reset_analysis left the previous binary's functions in the right-hand navigator"
             assert panel.func_list.list_widget.count() == 0
         finally:
             panel.deleteLater()

@@ -532,7 +532,9 @@ def test_script_captures_transient_mutex(tmp_path: Path) -> None:
     helper_err = ""
     matching_lines: list[str] = []
     try:
-        helper_proc, helper_pid, helper_out, helper_err, matching_lines = _run_mutex_helper_and_collect(pwsh, mutex_name, lifecycle_log, log_path)
+        helper_proc, helper_pid, helper_out, helper_err, matching_lines = _run_mutex_helper_and_collect(
+            pwsh, mutex_name, lifecycle_log, log_path
+        )
         if helper_proc is None:
             pytest.fail(
                 f"monitor did not complete its first sweep within {_FIRST_SWEEP_TIMEOUT_SEC} s; cannot test transient capture",

@@ -1,3 +1,6 @@
+use memmap2::Mmap;
+use std::sync::Arc;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PieceSource {
     Original,
@@ -11,9 +14,15 @@ pub struct Piece {
     pub length: usize,
 }
 
+#[derive(Debug, Clone)]
+pub enum OriginalBuffer {
+    Owned(Vec<u8>),
+    Mapped(Arc<Mmap>),
+}
+
 pub struct PieceTable {
     pieces: Vec<Piece>,
-    original: Vec<u8>,
+    original: OriginalBuffer,
     add_buffer: Vec<u8>,
     total_length: usize,
 }
@@ -34,7 +43,28 @@ impl PieceTable {
 
         Self {
             pieces,
-            original: data.to_vec(),
+            original: OriginalBuffer::Owned(data.to_vec()),
+            add_buffer: Vec::new(),
+            total_length: length,
+        }
+    }
+
+    #[must_use]
+    pub fn from_mmap(mmap: Arc<Mmap>) -> Self {
+        let length = mmap.len();
+        let pieces = if length > 0 {
+            vec![Piece {
+                source: PieceSource::Original,
+                start: 0,
+                length,
+            }]
+        } else {
+            Vec::new()
+        };
+
+        Self {
+            pieces,
+            original: OriginalBuffer::Mapped(mmap),
             add_buffer: Vec::new(),
             total_length: length,
         }
@@ -66,9 +96,66 @@ impl PieceTable {
         None
     }
 
+    /// Returns the address of the original buffer's first byte.
+    ///
+    /// Callers use this to confirm the table reads an existing mapping in place
+    /// rather than a copy of it.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn original_ptr(&self) -> *const u8 {
+        match &self.original {
+            OriginalBuffer::Owned(vec) => vec.as_ptr(),
+            OriginalBuffer::Mapped(mmap) => mmap.as_ptr(),
+        }
+    }
+
+    /// Returns the current number of pieces in the table.
+    ///
+    /// Test-only: used to confirm that adjacent edits coalesce instead of
+    /// growing the piece list without bound.
+    #[cfg(test)]
+    #[must_use]
+    pub(crate) fn piece_count(&self) -> usize {
+        self.pieces.len()
+    }
+
+    /// Merges `self.pieces[idx]` into `self.pieces[idx + 1]` when both
+    /// describe contiguous bytes from the same source buffer, collapsing
+    /// runs of pieces produced by adjacent edits (e.g. repeated single-byte
+    /// overwrites) so the piece list does not grow without bound. No-op if
+    /// `idx + 1` is out of range or the pair cannot be merged.
+    fn try_merge_at(&mut self, idx: usize) {
+        let Some(next) = self.pieces.get(idx + 1) else {
+            return;
+        };
+        let cur = &self.pieces[idx];
+        if cur.source != next.source || cur.start + cur.length != next.start {
+            return;
+        }
+        let next_length = next.length;
+        self.pieces[idx].length += next_length;
+        self.pieces.remove(idx + 1);
+    }
+
+    /// Attempts to coalesce the piece at `idx` with both of its neighbors.
+    ///
+    /// Called after `insert`/`delete` touch the piece list around `idx`, the
+    /// only place a new adjacency could have been created.
+    fn coalesce_neighbors(&mut self, idx: usize) {
+        if idx + 1 < self.pieces.len() {
+            self.try_merge_at(idx);
+        }
+        if idx > 0 {
+            self.try_merge_at(idx - 1);
+        }
+    }
+
     fn get_buffer(&self, source: PieceSource) -> &[u8] {
         match source {
-            PieceSource::Original => &self.original,
+            PieceSource::Original => match &self.original {
+                OriginalBuffer::Owned(vec) => vec.as_slice(),
+                OriginalBuffer::Mapped(mmap) => &mmap[..],
+            },
             PieceSource::AddBuffer => &self.add_buffer,
         }
     }
@@ -132,10 +219,12 @@ impl PieceTable {
             length: data.len(),
         };
 
-        if self.pieces.is_empty() || offset >= self.total_length {
+        let new_piece_idx = if self.pieces.is_empty() || offset >= self.total_length {
             self.pieces.push(new_piece);
+            self.pieces.len() - 1
         } else if offset == 0 {
             self.pieces.insert(0, new_piece);
+            0
         } else {
             let (piece_idx, inner_offset) = self
                 .find_piece(offset)
@@ -143,6 +232,7 @@ impl PieceTable {
 
             if inner_offset == 0 {
                 self.pieces.insert(piece_idx, new_piece);
+                piece_idx
             } else {
                 let old_piece = self.pieces[piece_idx].clone();
 
@@ -160,10 +250,12 @@ impl PieceTable {
                 self.pieces[piece_idx] = left;
                 self.pieces.insert(piece_idx + 1, new_piece);
                 self.pieces.insert(piece_idx + 2, right);
+                piece_idx + 1
             }
-        }
+        };
 
         self.total_length += data.len();
+        self.coalesce_neighbors(new_piece_idx);
     }
 
     pub fn overwrite(&mut self, offset: usize, data: &[u8]) {
@@ -221,6 +313,8 @@ impl PieceTable {
             });
         }
 
+        let left_len = new_pieces.len();
+
         let piece = &self.pieces[end_piece_idx];
         if end_inner < piece.length {
             new_pieces.push(Piece {
@@ -236,6 +330,10 @@ impl PieceTable {
 
         self.pieces = new_pieces;
         self.total_length -= actual_length;
+
+        if left_len > 0 {
+            self.coalesce_neighbors(left_len - 1);
+        }
     }
 
     #[must_use]
@@ -394,6 +492,38 @@ mod tests {
         pt.overwrite(0, b"h");
         let mat = pt.materialize();
         assert_eq!(mat, b"hello World".to_vec());
+    }
+
+    /// F-0074 regression: neither `insert` nor `delete` ever merged
+    /// adjacent, contiguous pieces from the same source, so a run of
+    /// sequential single-byte overwrites (each internally a delete+insert
+    /// pair) left one tiny `AddBuffer` piece per byte instead of coalescing
+    /// them into a single run.
+    #[test]
+    fn test_adjacent_single_byte_overwrites_coalesce_pieces() {
+        let mut pt = PieceTable::new(&[0u8; 8]);
+        let before = pt.piece_count();
+
+        for i in 0..8 {
+            pt.overwrite(i, &[0xFFu8]);
+        }
+
+        assert_eq!(pt.read(0, 8), vec![0xFFu8; 8]);
+        assert!(
+            pt.piece_count() <= before + 1,
+            "8 adjacent single-byte overwrites left {} pieces; expected them \
+             to coalesce down to at most {}",
+            pt.piece_count(),
+            before + 1
+        );
+    }
+
+    #[test]
+    fn test_non_adjacent_edits_do_not_incorrectly_merge() {
+        let mut pt = PieceTable::new(b"AAAAAAAAAA");
+        pt.overwrite(1, b"X");
+        pt.overwrite(5, b"Y");
+        assert_eq!(pt.read(0, 10), b"AXAAAYAAAA".to_vec());
     }
 
     #[test]

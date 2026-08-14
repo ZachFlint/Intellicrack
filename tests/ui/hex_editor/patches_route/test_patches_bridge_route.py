@@ -317,9 +317,7 @@ class TestExportRoutesThroughBridge:
         assert bridge.export_calls == [("ips", None)], (
             "panel must call bridge.export_patches with the right format and no original_path for IPS"
         )
-        assert _wait_until(stub_save_dialog_ips.exists), (
-            f"export must write the decoded patch file within {_ASYNC_WAIT_TIMEOUT_S}s"
-        )
+        assert _wait_until(stub_save_dialog_ips.exists), f"export must write the decoded patch file within {_ASYNC_WAIT_TIMEOUT_S}s"
         written = stub_save_dialog_ips.read_bytes()
         assert written == _PATCH_BYTES, "panel must base64-decode the bridge payload and write the raw bytes verbatim"
 
@@ -374,9 +372,7 @@ class TestExportRoutesThroughBridge:
             f"after waiting {_ASYNC_WAIT_TIMEOUT_S}s for the background bridge worker"
         )
         assert bridge.export_calls == [("bps", str(original))], "panel must pass the resolved original file path to the bridge"
-        assert _wait_until(stub_save_dialog_bps.exists), (
-            f"export must write the decoded patch file within {_ASYNC_WAIT_TIMEOUT_S}s"
-        )
+        assert _wait_until(stub_save_dialog_bps.exists), f"export must write the decoded patch file within {_ASYNC_WAIT_TIMEOUT_S}s"
         assert stub_save_dialog_bps.read_bytes() == _BPS_BYTES
 
 

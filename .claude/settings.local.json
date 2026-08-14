@@ -43,7 +43,9 @@
       "Bash(git reset:*)",
       "Bash(git worktree:*)",
       "Bash(git branch:*)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "mcp__Windows-MCP__Snapshot",
+      "mcp__Windows-MCP__Click"
     ],
     "deny": [],
     "ask": [

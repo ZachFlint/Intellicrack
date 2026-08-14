@@ -14,6 +14,8 @@ pub struct DiffRegion {
     pub offset_a: usize,
     pub offset_b: usize,
     pub length: usize,
+    pub length_a: usize,
+    pub length_b: usize,
     pub diff_type: DiffType,
 }
 
@@ -44,6 +46,8 @@ fn identical_result(len: usize) -> DiffResult {
             offset_a: 0,
             offset_b: 0,
             length: len,
+            length_a: len,
+            length_b: len,
             diff_type: DiffType::Match,
         }],
         total_differences: 0,
@@ -70,6 +74,8 @@ fn op_to_region(op: &DiffOp, base_a: usize, base_b: usize) -> (DiffRegion, usize
                 offset_a: base_a + old_index,
                 offset_b: base_b + new_index,
                 length: len,
+                length_a: len,
+                length_b: len,
                 diff_type: DiffType::Match,
             },
             0,
@@ -83,6 +89,8 @@ fn op_to_region(op: &DiffOp, base_a: usize, base_b: usize) -> (DiffRegion, usize
                 offset_a: base_a + old_index,
                 offset_b: base_b + new_index,
                 length: old_len,
+                length_a: old_len,
+                length_b: 0,
                 diff_type: DiffType::InsertedA,
             },
             old_len,
@@ -96,6 +104,8 @@ fn op_to_region(op: &DiffOp, base_a: usize, base_b: usize) -> (DiffRegion, usize
                 offset_a: base_a + old_index,
                 offset_b: base_b + new_index,
                 length: new_len,
+                length_a: 0,
+                length_b: new_len,
                 diff_type: DiffType::InsertedB,
             },
             new_len,
@@ -112,6 +122,8 @@ fn op_to_region(op: &DiffOp, base_a: usize, base_b: usize) -> (DiffRegion, usize
                     offset_a: base_a + old_index,
                     offset_b: base_b + new_index,
                     length,
+                    length_a: old_len,
+                    length_b: new_len,
                     diff_type: DiffType::Modified,
                 },
                 length,
@@ -136,6 +148,8 @@ fn diff_slice_with_base(
             offset_a: base_a,
             offset_b: base_b,
             length: data_b.len(),
+            length_a: 0,
+            length_b: data_b.len(),
             diff_type: DiffType::InsertedB,
         });
         *total_diffs += data_b.len();
@@ -146,6 +160,8 @@ fn diff_slice_with_base(
             offset_a: base_a,
             offset_b: base_b,
             length: data_a.len(),
+            length_a: data_a.len(),
+            length_b: 0,
             diff_type: DiffType::InsertedA,
         });
         *total_diffs += data_a.len();
@@ -156,6 +172,8 @@ fn diff_slice_with_base(
             offset_a: base_a,
             offset_b: base_b,
             length: data_a.len(),
+            length_a: data_a.len(),
+            length_b: data_b.len(),
             diff_type: DiffType::Match,
         });
         return;
@@ -200,7 +218,7 @@ fn roll_adler32(a: u32, b: u32, out_byte: u8, in_byte: u8, window: u32) -> (u32,
     let new_a = (a + inv + ADLER_MOD - out) % ADLER_MOD;
     let window_mod = window % ADLER_MOD;
     let decrement = (window_mod * out) % ADLER_MOD;
-    let new_b = (b + new_a + 2 * ADLER_MOD - decrement - a) % ADLER_MOD;
+    let new_b = (b + new_a + 2 * ADLER_MOD - decrement - 1) % ADLER_MOD;
     (new_a, new_b)
 }
 
@@ -645,7 +663,7 @@ mod tests {
     }
 
     #[test]
-    fn test_op_to_region_replace_uses_max_length_and_modified() {
+    fn test_op_to_region_replace_reports_true_per_side_lengths() {
         // old_len < new_len
         let (region, count) = op_to_region(
             &similar::DiffOp::Replace {
@@ -660,10 +678,15 @@ mod tests {
         assert_eq!(region.diff_type, DiffType::Modified);
         assert_eq!(region.offset_a, 102);
         assert_eq!(region.offset_b, 204);
+        // length_a/length_b must reflect the true per-side span (old_len/new_len),
+        // not the max shared by both sides -- offset_a=102 covers only 3 bytes of
+        // data_a ([102,105)), not 5.
+        assert_eq!(region.length_a, 3);
+        assert_eq!(region.length_b, 5);
         assert_eq!(region.length, 5);
         assert_eq!(count, 5);
 
-        // old_len > new_len -> length is still the max
+        // old_len > new_len -> length is still the max, but per-side lengths differ
         let (region2, count2) = op_to_region(
             &similar::DiffOp::Replace {
                 old_index: 0,
@@ -674,6 +697,8 @@ mod tests {
             0,
             0,
         );
+        assert_eq!(region2.length_a, 9);
+        assert_eq!(region2.length_b, 2);
         assert_eq!(region2.length, 9);
         assert_eq!(count2, 9);
     }
@@ -745,6 +770,66 @@ mod tests {
         let anchors_b = [(70u32, 7usize), (80u32, 8usize)];
         let sync = find_sync_points(&anchors_a, &anchors_b);
         assert!(sync.is_empty());
+    }
+
+    #[test]
+    fn test_op_to_region_delete_insert_report_zero_length_on_absent_side() {
+        let (del_region, del_count) = op_to_region(
+            &similar::DiffOp::Delete {
+                old_index: 4,
+                old_len: 2,
+                new_index: 4,
+            },
+            0,
+            0,
+        );
+        assert_eq!(del_region.diff_type, DiffType::InsertedA);
+        assert_eq!(del_region.length_a, 2);
+        assert_eq!(del_region.length_b, 0);
+        assert_eq!(del_count, 2);
+
+        let (ins_region, ins_count) = op_to_region(
+            &similar::DiffOp::Insert {
+                old_index: 4,
+                new_index: 4,
+                new_len: 3,
+            },
+            0,
+            0,
+        );
+        assert_eq!(ins_region.diff_type, DiffType::InsertedB);
+        assert_eq!(ins_region.length_a, 0);
+        assert_eq!(ins_region.length_b, 3);
+        assert_eq!(ins_count, 3);
+    }
+
+    #[test]
+    fn test_roll_adler32_matches_direct_window_recompute() {
+        // Cross-check the incremental rolling update against a from-scratch
+        // Adler-32 computed over the shifted window, byte by byte, for
+        // several windows. If `b`'s subtrahend regresses to the old running
+        // `a` (the bug this guards against) this diverges almost immediately
+        // because the error term depends on the specific bytes seen.
+        let mut data = [0u8; 64];
+        for (idx, byte) in data.iter_mut().enumerate() {
+            *byte = u8::try_from((idx * 37 + 11) & 0xFF)
+                .expect("mask with 0xFF guarantees value fits in u8");
+        }
+        let window = 8usize;
+        let window_u32 = u32::try_from(window).expect("window fits in u32");
+
+        let (mut a, mut b) = initial_adler32(&data[0..window]);
+        for start in 0..(data.len() - window) {
+            let out_byte = data[start];
+            let in_byte = data[start + window];
+            let (na, nb) = roll_adler32(a, b, out_byte, in_byte, window_u32);
+            let (expected_a, expected_b) = initial_adler32(&data[start + 1..start + 1 + window]);
+            let next_start = start + 1;
+            assert_eq!(na, expected_a, "a mismatch at window start {next_start}");
+            assert_eq!(nb, expected_b, "b mismatch at window start {next_start}");
+            a = na;
+            b = nb;
+        }
     }
 
     #[test]

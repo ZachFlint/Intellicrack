@@ -16,6 +16,7 @@ pub mod undo;
 
 use std::collections::HashMap;
 
+use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
 
@@ -56,8 +57,12 @@ impl Bookmark {
     }
 }
 
-#[pyclass]
-pub struct HexDocument {
+/// Everything one open document owns, with no synchronisation of its own.
+///
+/// Only [`HexDocument`] may hold one of these, and only behind its lock, so the
+/// methods here are free to take `&mut self` exactly as they did when this was
+/// itself the `#[pyclass]`.
+pub struct DocumentState {
     inner: MmapDocument,
     undo_mgr: UndoManager,
     bookmarks: Vec<Bookmark>,
@@ -65,11 +70,58 @@ pub struct HexDocument {
     va_mappings: Vec<(usize, u64, usize)>,
     chunk_size_hint: usize,
     memory_budget_hint: usize,
+    generation: u64,
 }
 
-#[pymethods]
+/// One open document, safe to share across threads.
+///
+/// This is `frozen` so `PyO3` hands out `&self` and never an exclusive borrow.
+/// Before that change, the 28 mutating methods forced `PyO3` to take a `RefCell`
+/// borrow for the duration of the call, and because the long analyses hold that
+/// borrow across `Python::detach`, any second thread touching the same document
+/// got `RuntimeError: Already borrowed`. Callers worked around it by serialising
+/// every call behind a lock of their own, which also serialised the read-only
+/// analyses that could safely have run together.
+///
+/// # Locking
+///
+/// Every acquisition of `state` **must** happen inside `Python::detach`, which
+/// is what [`HexDocument::read`] and [`HexDocument::write`] do. Taking the lock
+/// while still holding the GIL deadlocks: a writer that is inside `detach` has
+/// released the GIL but still holds this lock, so a second thread that blocks on
+/// the lock *while holding the GIL* stops the writer from ever re-acquiring the
+/// GIL to finish and release. This is why `parking_lot` is used with
+/// `send_guard`, and why several methods below take a `Python` token they would
+/// not otherwise need.
+///
+/// For the same reason no `#[pymethods]` function may call another: it would
+/// take the lock twice and `RwLock` is not reentrant. The facade delegates to
+/// [`DocumentState`] instead, which is where the logic lives.
+#[pyclass(frozen)]
+pub struct HexDocument {
+    state: RwLock<DocumentState>,
+}
+
 impl HexDocument {
-    #[new]
+    /// Wrap freshly built state.
+    fn wrap(state: DocumentState) -> Self {
+        Self {
+            state: RwLock::new(state),
+        }
+    }
+
+    /// Borrow the document for reading, releasing the GIL while blocking.
+    fn lock_read(&self, py: Python<'_>) -> RwLockReadGuard<'_, DocumentState> {
+        py.detach(|| self.state.read())
+    }
+
+    /// Borrow the document for writing, releasing the GIL while blocking.
+    fn lock_write(&self, py: Python<'_>) -> RwLockWriteGuard<'_, DocumentState> {
+        py.detach(|| self.state.write())
+    }
+}
+
+impl DocumentState {
     fn new() -> Self {
         Self {
             inner: MmapDocument::new_empty(),
@@ -79,10 +131,10 @@ impl HexDocument {
             va_mappings: Vec::new(),
             chunk_size_hint: 4 * 1024 * 1024,
             memory_budget_hint: 512 * 1024 * 1024,
+            generation: 0,
         }
     }
 
-    #[staticmethod]
     fn open(path: &str) -> PyResult<Self> {
         let doc = MmapDocument::open(path)
             .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
@@ -94,10 +146,10 @@ impl HexDocument {
             va_mappings: Vec::new(),
             chunk_size_hint: 4 * 1024 * 1024,
             memory_budget_hint: 512 * 1024 * 1024,
+            generation: 0,
         })
     }
 
-    #[staticmethod]
     fn open_bytes(data: &[u8]) -> Self {
         Self {
             inner: MmapDocument::from_bytes(data),
@@ -107,7 +159,17 @@ impl HexDocument {
             va_mappings: Vec::new(),
             chunk_size_hint: 4 * 1024 * 1024,
             memory_budget_hint: 512 * 1024 * 1024,
+            generation: 0,
         }
+    }
+
+    /// Record that the bytes changed.
+    ///
+    /// Only content edits advance this. Saving, bookmarks, VA mappings,
+    /// templates and the size hints leave it alone, so a client may treat it as
+    /// a version for the bytes themselves and cache reads against it.
+    fn touch(&mut self) {
+        self.generation = self.generation.wrapping_add(1);
     }
 
     fn save(&mut self, path: &str) -> PyResult<()> {
@@ -160,6 +222,7 @@ impl HexDocument {
             old_data,
             new_data: data[..actual_len].to_vec(),
         });
+        self.touch();
         Ok(())
     }
 
@@ -177,6 +240,7 @@ impl HexDocument {
             offset,
             data: data.to_vec(),
         });
+        self.touch();
         Ok(())
     }
 
@@ -196,15 +260,24 @@ impl HexDocument {
             offset,
             deleted_data,
         });
+        self.touch();
         Ok(())
     }
 
     fn undo(&mut self) -> bool {
-        self.undo_mgr.undo(&mut self.inner)
+        let changed = self.undo_mgr.undo(&mut self.inner);
+        if changed {
+            self.touch();
+        }
+        changed
     }
 
     fn redo(&mut self) -> bool {
-        self.undo_mgr.redo(&mut self.inner)
+        let changed = self.undo_mgr.redo(&mut self.inner);
+        if changed {
+            self.touch();
+        }
+        changed
     }
 
     fn can_undo(&self) -> bool {
@@ -232,8 +305,7 @@ impl HexDocument {
 
     fn search_hex(&self, py: Python<'_>, pattern: &str, max_results: usize) -> Vec<(usize, usize)> {
         let data = self.inner.read_all();
-        let results =
-            py.detach(|| search::search_hex_with_wildcards(&data, pattern, max_results));
+        let results = py.detach(|| search::search_hex_with_wildcards(&data, pattern, max_results));
         results.into_iter().map(|r| (r.offset, r.length)).collect()
     }
 
@@ -272,9 +344,12 @@ impl HexDocument {
         results.into_iter().map(|r| (r.offset, r.length)).collect()
     }
 
-    fn replace_bytes(&mut self, pattern: &[u8], replacement: &[u8]) -> usize {
+    fn replace_bytes(&mut self, py: Python<'_>, pattern: &[u8], replacement: &[u8]) -> usize {
         let data = self.inner.read_all();
-        let (new_data, count) = search::replace_all(&data, pattern, replacement);
+        let pattern_owned = pattern.to_vec();
+        let replacement_owned = replacement.to_vec();
+        let (new_data, count) =
+            py.detach(|| search::replace_all(&data, &pattern_owned, &replacement_owned));
         if count > 0 {
             let old_data = data;
             self.inner = MmapDocument::from_bytes(&new_data);
@@ -283,6 +358,7 @@ impl HexDocument {
                 old_data,
                 new_data,
             });
+            self.touch();
         }
         count
     }
@@ -300,20 +376,17 @@ impl HexDocument {
 
     fn compute_hash(&self, py: Python<'_>, algorithm: &str) -> PyResult<String> {
         let doc_size = self.inner.document_size();
-        let chunk_size: usize = 65536;
-        let mut all_data = Vec::with_capacity(doc_size);
+        let chunk_size = self.chunk_size_hint.max(65536);
+        let mut hasher = hash::StreamingHasher::new(algorithm)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
         let mut offset: usize = 0;
         while offset < doc_size {
             let len = chunk_size.min(doc_size - offset);
-            all_data.extend_from_slice(&self.inner.read(offset, len));
+            let chunk = self.inner.read(offset, len);
+            py.detach(|| hasher.update(&chunk));
             offset += len;
         }
-        let algo = algorithm.to_string();
-        let result = py.detach(|| hash::compute_hash(&all_data, &algo));
-        match result {
-            Ok(r) => Ok(r.hex_digest),
-            Err(e) => Err(pyo3::exceptions::PyValueError::new_err(e.to_string())),
-        }
+        Ok(hasher.finalize().hex_digest)
     }
 
     fn compute_hash_range(
@@ -338,17 +411,19 @@ impl HexDocument {
         }
     }
 
-    fn byte_statistics(&self) -> Vec<(u8, usize)> {
+    fn byte_statistics(&self, py: Python<'_>) -> Vec<(u8, usize)> {
         let mut counts = [0usize; 256];
         let doc_size = self.inner.document_size();
-        let chunk_size: usize = 65536;
+        let chunk_size = self.chunk_size_hint.max(65536);
         let mut offset: usize = 0;
         while offset < doc_size {
             let len = chunk_size.min(doc_size - offset);
             let chunk = self.inner.read(offset, len);
-            for &b in &chunk {
-                counts[b as usize] += 1;
-            }
+            py.detach(|| {
+                for &b in &chunk {
+                    counts[b as usize] += 1;
+                }
+            });
             offset += len;
         }
         counts
@@ -363,13 +438,17 @@ impl HexDocument {
     }
 
     fn add_bookmark(&mut self, offset: usize, length: usize, label: &str, color: &str) -> usize {
-        let idx = self.bookmarks.len();
-        self.bookmarks.push(Bookmark {
+        self.add_bookmark_object(Bookmark {
             offset,
             length,
             label: label.to_string(),
             color: color.to_string(),
-        });
+        })
+    }
+
+    fn add_bookmark_object(&mut self, bookmark: Bookmark) -> usize {
+        let idx = self.bookmarks.len();
+        self.bookmarks.push(bookmark);
         idx
     }
 
@@ -387,6 +466,24 @@ impl HexDocument {
             .iter()
             .map(|b| (b.offset, b.length, b.label.clone(), b.color.clone()))
             .collect()
+    }
+
+    fn get_bookmarks(&self) -> Vec<Bookmark> {
+        self.bookmarks.clone()
+    }
+
+    fn get_bookmark(&self, index: usize) -> Option<Bookmark> {
+        self.bookmarks.get(index).cloned()
+    }
+
+    fn update_bookmark(&mut self, index: usize, bookmark: Bookmark) -> bool {
+        match self.bookmarks.get_mut(index) {
+            Some(slot) => {
+                *slot = bookmark;
+                true
+            }
+            None => false,
+        }
     }
 
     fn apply_template(&self, py: Python<'_>, name: &str, offset: usize) -> PyResult<Py<PyAny>> {
@@ -491,6 +588,57 @@ impl HexDocument {
         py.detach(|| entropy::content_classification(&data, block_size))
     }
 
+    fn entropy_map_buffer(&self, py: Python<'_>, block_size: usize) -> Vec<u8> {
+        let data = self.inner.read_all();
+        py.detach(|| {
+            entropy::entropy_map(&data, block_size)
+                .iter()
+                .flat_map(|value| value.to_le_bytes())
+                .collect()
+        })
+    }
+
+    fn byte_distribution_buffer(&self, py: Python<'_>) -> Vec<u8> {
+        let data = self.inner.read_all();
+        py.detach(|| {
+            entropy::byte_distribution(&data)
+                .iter()
+                .flat_map(|count| count.to_le_bytes())
+                .collect()
+        })
+    }
+
+    fn digram_matrix_buffer(&self, py: Python<'_>) -> Vec<u8> {
+        let data = self.inner.read_all();
+        py.detach(|| {
+            entropy::digram_matrix(&data)
+                .iter()
+                .flat_map(|count| count.to_le_bytes())
+                .collect()
+        })
+    }
+
+    fn read_window(
+        &self,
+        py: Python<'_>,
+        offset: usize,
+        length: usize,
+    ) -> PyResult<(Vec<u8>, Vec<u8>, u64, usize)> {
+        let size = self.inner.document_size();
+        if offset > size {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "offset {offset} beyond document size {size}"
+            )));
+        }
+        let data = self.inner.read(offset, length);
+        let classes = py.detach(|| entropy::classify_bytes(&data));
+        Ok((data, classes, self.generation, size))
+    }
+
+    fn current_generation(&self) -> u64 {
+        self.generation
+    }
+
     fn transform_data(
         &self,
         py: Python<'_>,
@@ -501,12 +649,10 @@ impl HexDocument {
     ) -> PyResult<Vec<u8>> {
         let data = self.inner.read(offset, length);
         let name_owned = name.to_string();
-        let result =
-            py.detach(move || transforms::apply_transform(&name_owned, &data, &params));
+        let result = py.detach(move || transforms::apply_transform(&name_owned, &data, &params));
         result.map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
-    #[staticmethod]
     fn list_transforms() -> Vec<(String, String, String)> {
         transforms::list_transforms()
             .into_iter()
@@ -521,14 +667,14 @@ impl HexDocument {
     fn export_patches_ips(&self) -> PyResult<Vec<u8>> {
         let ops = self.undo_mgr.get_overwrite_patches();
         let records = patch_export::extract_patches_from_overwrites(&ops);
-        patch_export::export_ips(&records)
+        patch_export::export_ips(&records, &|offset| self.inner.read_byte(offset).ok())
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
     fn export_patches_ips32(&self) -> PyResult<Vec<u8>> {
         let ops = self.undo_mgr.get_overwrite_patches();
         let records = patch_export::extract_patches_from_overwrites(&ops);
-        patch_export::export_ips32(&records)
+        patch_export::export_ips32(&records, &|offset| self.inner.read_byte(offset).ok())
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
@@ -548,9 +694,10 @@ impl HexDocument {
     fn import_patches_ips(&mut self, data: &[u8]) -> PyResult<usize> {
         let records = patch_export::import_ips(data)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
-        let count = records.len();
+        let mut applied_count: usize = 0;
         for record in records {
             if record.offset < self.inner.document_size() {
+                applied_count += 1;
                 let actual_len = record
                     .data
                     .len()
@@ -565,7 +712,10 @@ impl HexDocument {
                 });
             }
         }
-        Ok(count)
+        if applied_count > 0 {
+            self.touch();
+        }
+        Ok(applied_count)
     }
 
     fn decode_text(&self, offset: usize, length: usize, encoding: &str) -> PyResult<String> {
@@ -575,13 +725,11 @@ impl HexDocument {
         Ok(text)
     }
 
-    #[staticmethod]
     fn encode_text_to_bytes(text: &str, encoding: &str) -> PyResult<Vec<u8>> {
         encodings::encode_text(text, encoding)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
-    #[staticmethod]
     fn list_encodings() -> Vec<(String, String)> {
         encodings::list_encodings()
     }
@@ -710,7 +858,6 @@ impl HexDocument {
         result.map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
     }
 
-    #[staticmethod]
     fn from_process_memory(pid: u32, address: usize, size: usize) -> PyResult<Self> {
         #[cfg(windows)]
         {
@@ -728,6 +875,7 @@ impl HexDocument {
                 va_mappings: Vec::new(),
                 chunk_size_hint: 4 * 1024 * 1024,
                 memory_budget_hint: 512 * 1024 * 1024,
+                generation: 0,
             })
         }
         #[cfg(not(windows))]
@@ -739,7 +887,6 @@ impl HexDocument {
         }
     }
 
-    #[staticmethod]
     fn list_process_memory_regions(pid: u32) -> PyResult<Vec<(usize, usize, u32, u32)>> {
         #[cfg(windows)]
         {
@@ -789,6 +936,7 @@ impl HexDocument {
         self.inner = MmapDocument::from_bytes(&target);
         self.undo_mgr = UndoManager::new();
         self.undo_mgr.mark_unsaved();
+        self.touch();
         Ok(target_len)
     }
 
@@ -814,6 +962,7 @@ impl HexDocument {
         self.inner = MmapDocument::from_bytes(&target);
         self.undo_mgr = UndoManager::new();
         self.undo_mgr.mark_unsaved();
+        self.touch();
         Ok(target_len)
     }
 
@@ -826,7 +975,7 @@ impl HexDocument {
             ));
         }
         let doc_len = self.inner.document_size();
-        if offset + length > doc_len {
+        if offset.checked_add(length).is_none_or(|end| end > doc_len) {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "block exceeds document size",
             ));
@@ -839,12 +988,19 @@ impl HexDocument {
             old_data,
             new_data: fill,
         });
+        self.touch();
         Ok(())
     }
 
     fn copy_block(&mut self, src_offset: usize, length: usize, dst_offset: usize) -> PyResult<()> {
         let doc_len = self.inner.document_size();
-        if src_offset + length > doc_len || dst_offset + length > doc_len {
+        if src_offset
+            .checked_add(length)
+            .is_none_or(|end| end > doc_len)
+            || dst_offset
+                .checked_add(length)
+                .is_none_or(|end| end > doc_len)
+        {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "block exceeds document size",
             ));
@@ -857,12 +1013,19 @@ impl HexDocument {
             old_data: old_dst,
             new_data: data,
         });
+        self.touch();
         Ok(())
     }
 
     fn move_block(&mut self, src_offset: usize, length: usize, dst_offset: usize) -> PyResult<()> {
         let doc_len = self.inner.document_size();
-        if src_offset + length > doc_len || dst_offset + length > doc_len {
+        if src_offset
+            .checked_add(length)
+            .is_none_or(|end| end > doc_len)
+            || dst_offset
+                .checked_add(length)
+                .is_none_or(|end| end > doc_len)
+        {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "block exceeds document size",
             ));
@@ -883,6 +1046,7 @@ impl HexDocument {
             moved_data: data,
             old_dst_data: old_dst,
         });
+        self.touch();
         Ok(())
     }
 
@@ -899,7 +1063,9 @@ impl HexDocument {
             )));
         }
         let doc_len = self.inner.document_size();
-        if offset_a + len_a > doc_len || offset_b + len_b > doc_len {
+        if offset_a.checked_add(len_a).is_none_or(|end| end > doc_len)
+            || offset_b.checked_add(len_b).is_none_or(|end| end > doc_len)
+        {
             return Err(pyo3::exceptions::PyValueError::new_err(
                 "block exceeds document size",
             ));
@@ -911,16 +1077,13 @@ impl HexDocument {
         let data_b = self.inner.read(offset_b, len_b);
         self.inner.overwrite(offset_a, &data_b);
         self.inner.overwrite(offset_b, &data_a);
-        self.undo_mgr.record(undo::Operation::Overwrite {
-            offset: offset_a,
-            old_data: data_a.clone(),
-            new_data: data_b.clone(),
+        self.undo_mgr.record(undo::Operation::SwapBlocks {
+            offset_a,
+            offset_b,
+            data_a,
+            data_b,
         });
-        self.undo_mgr.record(undo::Operation::Overwrite {
-            offset: offset_b,
-            old_data: data_b,
-            new_data: data_a,
-        });
+        self.touch();
         Ok(())
     }
 
@@ -935,7 +1098,7 @@ impl HexDocument {
         let byte = self
             .inner
             .read_byte(offset)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+            .map_err(|e| pyo3::exceptions::PyIndexError::new_err(e.to_string()))?;
         Ok(byte & (1 << bit_index) != 0)
     }
 
@@ -948,7 +1111,7 @@ impl HexDocument {
         let old_byte = self
             .inner
             .read_byte(offset)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+            .map_err(|e| pyo3::exceptions::PyIndexError::new_err(e.to_string()))?;
         let new_byte = if value {
             old_byte | (1 << bit_index)
         } else {
@@ -960,6 +1123,7 @@ impl HexDocument {
             old_data: vec![old_byte],
             new_data: vec![new_byte],
         });
+        self.touch();
         Ok(())
     }
 
@@ -972,7 +1136,7 @@ impl HexDocument {
         let old_byte = self
             .inner
             .read_byte(offset)
-            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+            .map_err(|e| pyo3::exceptions::PyIndexError::new_err(e.to_string()))?;
         let new_byte = old_byte ^ (1 << bit_index);
         self.inner.overwrite(offset, &[new_byte]);
         self.undo_mgr.record(undo::Operation::Overwrite {
@@ -980,6 +1144,7 @@ impl HexDocument {
             old_data: vec![old_byte],
             new_data: vec![new_byte],
         });
+        self.touch();
         Ok(new_byte & (1 << bit_index) != 0)
     }
 
@@ -1077,6 +1242,7 @@ impl HexDocument {
             old_data: old_bytes,
             new_data: checksum_bytes.to_vec(),
         });
+        self.touch();
         Ok(())
     }
 
@@ -1103,7 +1269,7 @@ impl HexDocument {
     }
 }
 
-impl HexDocument {
+impl DocumentState {
     /// Memory-map ``source_path`` and feed it to ``encoder``.
     ///
     /// Shared implementation for `export_patches_bps_from_path` and
@@ -1138,6 +1304,600 @@ impl HexDocument {
     }
 }
 
+/// The Python-facing surface.
+///
+/// Every method here does the same three things: take the lock through
+/// [`HexDocument::lock_read`] or [`HexDocument::lock_write`], delegate to
+/// [`DocumentState`], and return. No method calls another, because the lock is
+/// not reentrant; where the old code chained two entry points together
+/// (`save_as` onto `save`, `add_bookmark` onto `add_bookmark_object`) the chain
+/// now happens one level down, inside `DocumentState`.
+#[pymethods]
+impl HexDocument {
+    #[new]
+    fn py_new() -> Self {
+        Self::wrap(DocumentState::new())
+    }
+
+    #[staticmethod]
+    fn open(path: &str) -> PyResult<Self> {
+        DocumentState::open(path).map(Self::wrap)
+    }
+
+    #[staticmethod]
+    fn open_bytes(data: &[u8]) -> Self {
+        Self::wrap(DocumentState::open_bytes(data))
+    }
+
+    #[staticmethod]
+    fn from_process_memory(pid: u32, address: usize, size: usize) -> PyResult<Self> {
+        DocumentState::from_process_memory(pid, address, size).map(Self::wrap)
+    }
+
+    #[staticmethod]
+    fn list_process_memory_regions(pid: u32) -> PyResult<Vec<(usize, usize, u32, u32)>> {
+        DocumentState::list_process_memory_regions(pid)
+    }
+
+    #[staticmethod]
+    fn list_transforms() -> Vec<(String, String, String)> {
+        DocumentState::list_transforms()
+    }
+
+    #[staticmethod]
+    fn encode_text_to_bytes(text: &str, encoding: &str) -> PyResult<Vec<u8>> {
+        DocumentState::encode_text_to_bytes(text, encoding)
+    }
+
+    #[staticmethod]
+    fn list_encodings() -> Vec<(String, String)> {
+        DocumentState::list_encodings()
+    }
+
+    fn save(&self, py: Python<'_>, path: &str) -> PyResult<()> {
+        self.lock_write(py).save(path)
+    }
+
+    fn save_as(&self, py: Python<'_>, path: &str) -> PyResult<()> {
+        self.lock_write(py).save_as(path)
+    }
+
+    fn length(&self, py: Python<'_>) -> usize {
+        self.lock_read(py).length()
+    }
+
+    fn read(&self, py: Python<'_>, offset: usize, length: usize) -> PyResult<Vec<u8>> {
+        self.lock_read(py).read(offset, length)
+    }
+
+    fn read_byte(&self, py: Python<'_>, offset: usize) -> PyResult<u8> {
+        self.lock_read(py).read_byte(offset)
+    }
+
+    /// Read a run of bytes together with a class tag for each one.
+    ///
+    /// The tags are [`entropy::byte_class`] values, the third member is the
+    /// document generation the bytes were read at and the fourth is how long
+    /// the document was. All four come from a single acquisition of the lock,
+    /// so a caller caching the window cannot pair it with a generation the
+    /// bytes never had, and one clamping a scroll position against the length
+    /// cannot clamp against a length the bytes were never read under.
+    fn read_window(
+        &self,
+        py: Python<'_>,
+        offset: usize,
+        length: usize,
+    ) -> PyResult<(Vec<u8>, Vec<u8>, u64, usize)> {
+        self.lock_read(py).read_window(py, offset, length)
+    }
+
+    /// How many times the bytes of this document have changed.
+    ///
+    /// Advanced by content edits only. Saving, bookmarks, VA mappings,
+    /// templates and the size hints leave it alone.
+    fn generation(&self, py: Python<'_>) -> u64 {
+        self.lock_read(py).current_generation()
+    }
+
+    fn write_bytes(&self, py: Python<'_>, offset: usize, data: &[u8]) -> PyResult<()> {
+        self.lock_write(py).write_bytes(offset, data)
+    }
+
+    fn insert_bytes(&self, py: Python<'_>, offset: usize, data: &[u8]) -> PyResult<()> {
+        self.lock_write(py).insert_bytes(offset, data)
+    }
+
+    fn delete_bytes(&self, py: Python<'_>, offset: usize, length: usize) -> PyResult<()> {
+        self.lock_write(py).delete_bytes(offset, length)
+    }
+
+    fn undo(&self, py: Python<'_>) -> bool {
+        self.lock_write(py).undo()
+    }
+
+    fn redo(&self, py: Python<'_>) -> bool {
+        self.lock_write(py).redo()
+    }
+
+    fn can_undo(&self, py: Python<'_>) -> bool {
+        self.lock_read(py).can_undo()
+    }
+
+    fn can_redo(&self, py: Python<'_>) -> bool {
+        self.lock_read(py).can_redo()
+    }
+
+    fn is_modified(&self, py: Python<'_>) -> bool {
+        self.lock_read(py).is_modified()
+    }
+
+    fn search_bytes(
+        &self,
+        py: Python<'_>,
+        pattern: Vec<u8>,
+        max_results: usize,
+    ) -> Vec<(usize, usize)> {
+        self.lock_read(py).search_bytes(py, pattern, max_results)
+    }
+
+    fn search_hex(&self, py: Python<'_>, pattern: &str, max_results: usize) -> Vec<(usize, usize)> {
+        self.lock_read(py).search_hex(py, pattern, max_results)
+    }
+
+    fn search_text(
+        &self,
+        py: Python<'_>,
+        text: &str,
+        encoding: &str,
+        case_sensitive: bool,
+        max_results: usize,
+    ) -> Vec<(usize, usize)> {
+        self.lock_read(py)
+            .search_text(py, text, encoding, case_sensitive, max_results)
+    }
+
+    fn search_regex(
+        &self,
+        py: Python<'_>,
+        pattern: &str,
+        max_results: usize,
+    ) -> Vec<(usize, usize)> {
+        self.lock_read(py).search_regex(py, pattern, max_results)
+    }
+
+    fn search_text_encoded(
+        &self,
+        py: Python<'_>,
+        text: &str,
+        encoding: &str,
+        case_sensitive: bool,
+        max_results: usize,
+    ) -> Vec<(usize, usize)> {
+        self.lock_read(py)
+            .search_text_encoded(py, text, encoding, case_sensitive, max_results)
+    }
+
+    fn search_numeric(
+        &self,
+        py: Python<'_>,
+        value: i64,
+        size: usize,
+        signed: bool,
+        big_endian: bool,
+        alignment: usize,
+        max_results: usize,
+    ) -> Vec<(usize, usize)> {
+        self.lock_read(py).search_numeric(
+            py,
+            value,
+            size,
+            signed,
+            big_endian,
+            alignment,
+            max_results,
+        )
+    }
+
+    fn search_numeric_float(
+        &self,
+        py: Python<'_>,
+        value: f64,
+        size: usize,
+        big_endian: bool,
+        tolerance: f64,
+        alignment: usize,
+        max_results: usize,
+    ) -> Vec<(usize, usize)> {
+        self.lock_read(py).search_numeric_float(
+            py,
+            value,
+            size,
+            big_endian,
+            tolerance,
+            alignment,
+            max_results,
+        )
+    }
+
+    fn search_numeric_range(
+        &self,
+        py: Python<'_>,
+        value_range: (i64, i64),
+        size: usize,
+        signed: bool,
+        big_endian: bool,
+        alignment: usize,
+        max_results: usize,
+    ) -> Vec<(usize, usize)> {
+        self.lock_read(py).search_numeric_range(
+            py,
+            value_range,
+            size,
+            signed,
+            big_endian,
+            alignment,
+            max_results,
+        )
+    }
+
+    fn replace_bytes(&self, py: Python<'_>, pattern: &[u8], replacement: &[u8]) -> usize {
+        self.lock_write(py).replace_bytes(py, pattern, replacement)
+    }
+
+    fn inspect_at(&self, py: Python<'_>, offset: usize) -> PyResult<Py<PyAny>> {
+        self.lock_read(py).inspect_at(py, offset)
+    }
+
+    fn compute_hash(&self, py: Python<'_>, algorithm: &str) -> PyResult<String> {
+        self.lock_read(py).compute_hash(py, algorithm)
+    }
+
+    fn compute_hash_range(
+        &self,
+        py: Python<'_>,
+        start: usize,
+        end: usize,
+        algorithm: &str,
+    ) -> PyResult<String> {
+        self.lock_read(py)
+            .compute_hash_range(py, start, end, algorithm)
+    }
+
+    fn compute_hash_custom_crc(
+        &self,
+        py: Python<'_>,
+        byte_range: (usize, usize),
+        poly: u64,
+        init: u64,
+        width: u8,
+        reflect: (bool, bool),
+        xorout: u64,
+    ) -> PyResult<String> {
+        self.lock_read(py)
+            .compute_hash_custom_crc(py, byte_range, poly, init, width, reflect, xorout)
+    }
+
+    fn byte_statistics(&self, py: Python<'_>) -> Vec<(u8, usize)> {
+        self.lock_read(py).byte_statistics(py)
+    }
+
+    fn add_bookmark(
+        &self,
+        py: Python<'_>,
+        offset: usize,
+        length: usize,
+        label: &str,
+        color: &str,
+    ) -> usize {
+        self.lock_write(py)
+            .add_bookmark(offset, length, label, color)
+    }
+
+    fn add_bookmark_object(&self, py: Python<'_>, bookmark: Bookmark) -> usize {
+        self.lock_write(py).add_bookmark_object(bookmark)
+    }
+
+    fn remove_bookmark(&self, py: Python<'_>, index: usize) -> bool {
+        self.lock_write(py).remove_bookmark(index)
+    }
+
+    fn list_bookmarks(&self, py: Python<'_>) -> Vec<(usize, usize, String, String)> {
+        self.lock_read(py).list_bookmarks()
+    }
+
+    fn get_bookmarks(&self, py: Python<'_>) -> Vec<Bookmark> {
+        self.lock_read(py).get_bookmarks()
+    }
+
+    fn get_bookmark(&self, py: Python<'_>, index: usize) -> Option<Bookmark> {
+        self.lock_read(py).get_bookmark(index)
+    }
+
+    fn update_bookmark(&self, py: Python<'_>, index: usize, bookmark: Bookmark) -> bool {
+        self.lock_write(py).update_bookmark(index, bookmark)
+    }
+
+    fn apply_template(&self, py: Python<'_>, name: &str, offset: usize) -> PyResult<Py<PyAny>> {
+        self.lock_read(py).apply_template(py, name, offset)
+    }
+
+    fn list_templates(&self, py: Python<'_>) -> Vec<(String, String)> {
+        self.lock_read(py).list_templates()
+    }
+
+    fn register_json_template(&self, py: Python<'_>, json_str: &str) -> PyResult<String> {
+        self.lock_write(py).register_json_template(json_str)
+    }
+
+    fn remove_template(&self, py: Python<'_>, name: &str) -> bool {
+        self.lock_write(py).remove_template(name)
+    }
+
+    fn export_template_json(&self, py: Python<'_>, name: &str) -> PyResult<String> {
+        self.lock_read(py).export_template_json(name)
+    }
+
+    fn list_templates_detailed(&self, py: Python<'_>) -> Vec<(String, String, String, usize)> {
+        self.lock_read(py).list_templates_detailed()
+    }
+
+    fn file_path(&self, py: Python<'_>) -> Option<String> {
+        self.lock_read(py).file_path()
+    }
+
+    fn entropy(&self, py: Python<'_>) -> f64 {
+        self.lock_read(py).entropy(py)
+    }
+
+    fn entropy_map(&self, py: Python<'_>, block_size: usize) -> Vec<f64> {
+        self.lock_read(py).entropy_map(py, block_size)
+    }
+
+    /// `entropy_map` as little-endian `f64`, eight bytes per block.
+    ///
+    /// The same numbers as [`HexDocument::entropy_map`], in a form that crosses
+    /// into a typed array without being built as a list of Python floats first.
+    fn entropy_map_bytes(&self, py: Python<'_>, block_size: usize) -> Vec<u8> {
+        self.lock_read(py).entropy_map_buffer(py, block_size)
+    }
+
+    fn byte_distribution_full(&self, py: Python<'_>) -> Vec<u64> {
+        self.lock_read(py).byte_distribution_full(py)
+    }
+
+    /// `byte_distribution_full` as little-endian `u64`, 2048 bytes.
+    fn byte_distribution_bytes(&self, py: Python<'_>) -> Vec<u8> {
+        self.lock_read(py).byte_distribution_buffer(py)
+    }
+
+    fn byte_type_distribution(&self, py: Python<'_>) -> (u64, u64, u64, u64) {
+        self.lock_read(py).byte_type_distribution(py)
+    }
+
+    fn digram_matrix(&self, py: Python<'_>) -> Vec<u64> {
+        self.lock_read(py).digram_matrix(py)
+    }
+
+    /// `digram_matrix` as little-endian `u64`, 512 KiB for the 256x256 grid.
+    fn digram_matrix_bytes(&self, py: Python<'_>) -> Vec<u8> {
+        self.lock_read(py).digram_matrix_buffer(py)
+    }
+
+    fn content_classification(&self, py: Python<'_>, block_size: usize) -> Vec<u8> {
+        self.lock_read(py).content_classification(py, block_size)
+    }
+
+    fn transform_data(
+        &self,
+        py: Python<'_>,
+        name: &str,
+        offset: usize,
+        length: usize,
+        params: HashMap<String, Vec<u8>>,
+    ) -> PyResult<Vec<u8>> {
+        self.lock_read(py)
+            .transform_data(py, name, offset, length, params)
+    }
+
+    fn get_patches(&self, py: Python<'_>) -> Vec<(usize, Vec<u8>)> {
+        self.lock_read(py).get_patches()
+    }
+
+    fn export_patches_ips(&self, py: Python<'_>) -> PyResult<Vec<u8>> {
+        self.lock_read(py).export_patches_ips()
+    }
+
+    fn export_patches_ips32(&self, py: Python<'_>) -> PyResult<Vec<u8>> {
+        self.lock_read(py).export_patches_ips32()
+    }
+
+    fn export_patches_cod(&self, py: Python<'_>) -> Vec<u8> {
+        self.lock_read(py).export_patches_cod()
+    }
+
+    fn export_patches_json(&self, py: Python<'_>) -> PyResult<String> {
+        self.lock_read(py).export_patches_json()
+    }
+
+    fn import_patches_ips(&self, py: Python<'_>, data: &[u8]) -> PyResult<usize> {
+        self.lock_write(py).import_patches_ips(data)
+    }
+
+    fn export_patches_bps(&self, py: Python<'_>, source_data: &[u8]) -> PyResult<Vec<u8>> {
+        self.lock_read(py).export_patches_bps(source_data)
+    }
+
+    fn export_patches_bps_from_path(&self, py: Python<'_>, source_path: &str) -> PyResult<Vec<u8>> {
+        self.lock_read(py).export_patches_bps_from_path(source_path)
+    }
+
+    fn import_patches_bps(
+        &self,
+        py: Python<'_>,
+        patch_data: &[u8],
+        source_data: &[u8],
+    ) -> PyResult<usize> {
+        self.lock_write(py)
+            .import_patches_bps(patch_data, source_data)
+    }
+
+    fn export_patches_ups(&self, py: Python<'_>, source_data: &[u8]) -> PyResult<Vec<u8>> {
+        self.lock_read(py).export_patches_ups(source_data)
+    }
+
+    fn export_patches_ups_from_path(&self, py: Python<'_>, source_path: &str) -> PyResult<Vec<u8>> {
+        self.lock_read(py).export_patches_ups_from_path(source_path)
+    }
+
+    fn import_patches_ups(
+        &self,
+        py: Python<'_>,
+        patch_data: &[u8],
+        source_data: &[u8],
+    ) -> PyResult<usize> {
+        self.lock_write(py)
+            .import_patches_ups(patch_data, source_data)
+    }
+
+    fn decode_text(
+        &self,
+        py: Python<'_>,
+        offset: usize,
+        length: usize,
+        encoding: &str,
+    ) -> PyResult<String> {
+        self.lock_read(py).decode_text(offset, length, encoding)
+    }
+
+    fn fill_block(
+        &self,
+        py: Python<'_>,
+        offset: usize,
+        length: usize,
+        pattern: &[u8],
+    ) -> PyResult<()> {
+        self.lock_write(py).fill_block(offset, length, pattern)
+    }
+
+    fn copy_block(
+        &self,
+        py: Python<'_>,
+        src_offset: usize,
+        length: usize,
+        dst_offset: usize,
+    ) -> PyResult<()> {
+        self.lock_write(py)
+            .copy_block(src_offset, length, dst_offset)
+    }
+
+    fn move_block(
+        &self,
+        py: Python<'_>,
+        src_offset: usize,
+        length: usize,
+        dst_offset: usize,
+    ) -> PyResult<()> {
+        self.lock_write(py)
+            .move_block(src_offset, length, dst_offset)
+    }
+
+    fn swap_blocks(
+        &self,
+        py: Python<'_>,
+        offset_a: usize,
+        len_a: usize,
+        offset_b: usize,
+        len_b: usize,
+    ) -> PyResult<()> {
+        self.lock_write(py)
+            .swap_blocks(offset_a, len_a, offset_b, len_b)
+    }
+
+    fn get_bit(&self, py: Python<'_>, offset: usize, bit_index: u8) -> PyResult<bool> {
+        self.lock_read(py).get_bit(offset, bit_index)
+    }
+
+    fn set_bit(&self, py: Python<'_>, offset: usize, bit_index: u8, value: bool) -> PyResult<()> {
+        self.lock_write(py).set_bit(offset, bit_index, value)
+    }
+
+    fn toggle_bit(&self, py: Python<'_>, offset: usize, bit_index: u8) -> PyResult<bool> {
+        self.lock_write(py).toggle_bit(offset, bit_index)
+    }
+
+    fn add_va_mapping(
+        &self,
+        py: Python<'_>,
+        file_offset: usize,
+        virtual_address: u64,
+        length: usize,
+    ) {
+        self.lock_write(py)
+            .add_va_mapping(file_offset, virtual_address, length);
+    }
+
+    fn remove_va_mapping(&self, py: Python<'_>, index: usize) -> bool {
+        self.lock_write(py).remove_va_mapping(index)
+    }
+
+    fn list_va_mappings(&self, py: Python<'_>) -> Vec<(usize, u64, usize)> {
+        self.lock_read(py).list_va_mappings()
+    }
+
+    fn file_offset_to_va(&self, py: Python<'_>, offset: usize) -> Option<u64> {
+        self.lock_read(py).file_offset_to_va(offset)
+    }
+
+    fn va_to_file_offset(&self, py: Python<'_>, va: u64) -> Option<usize> {
+        self.lock_read(py).va_to_file_offset(va)
+    }
+
+    fn extract_strings(
+        &self,
+        py: Python<'_>,
+        min_length: usize,
+        include_ascii: bool,
+        include_utf16: bool,
+        max_results: usize,
+    ) -> PyResult<Py<PyAny>> {
+        self.lock_read(py).extract_strings(
+            py,
+            min_length,
+            include_ascii,
+            include_utf16,
+            max_results,
+        )
+    }
+
+    fn verify_pe_checksum(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        self.lock_read(py).verify_pe_checksum(py)
+    }
+
+    fn repair_pe_checksum(&self, py: Python<'_>) -> PyResult<()> {
+        self.lock_write(py).repair_pe_checksum()
+    }
+
+    fn get_document_memory_usage(&self, py: Python<'_>) -> usize {
+        self.lock_read(py).get_document_memory_usage()
+    }
+
+    fn set_chunk_size_hint(&self, py: Python<'_>, size: usize) {
+        self.lock_write(py).set_chunk_size_hint(size);
+    }
+
+    fn get_chunk_size_hint(&self, py: Python<'_>) -> usize {
+        self.lock_read(py).get_chunk_size_hint()
+    }
+
+    fn set_memory_budget_hint(&self, py: Python<'_>, budget: usize) {
+        self.lock_write(py).set_memory_budget_hint(budget);
+    }
+
+    fn get_memory_budget_hint(&self, py: Python<'_>) -> usize {
+        self.lock_read(py).get_memory_budget_hint()
+    }
+}
+
 #[pyfunction]
 fn diff_files(py: Python<'_>, path_a: &str, path_b: &str) -> PyResult<Py<PyAny>> {
     let data_a = std::fs::read(path_a).map_err(|e| {
@@ -1168,6 +1928,8 @@ fn diff_result_to_py(py: Python<'_>, data_a: &[u8], data_b: &[u8]) -> PyResult<P
         r.set_item("offset_a", region.offset_a)?;
         r.set_item("offset_b", region.offset_b)?;
         r.set_item("length", region.length)?;
+        r.set_item("length_a", region.length_a)?;
+        r.set_item("length_b", region.length_b)?;
         r.set_item(
             "diff_type",
             match region.diff_type {
@@ -1191,4 +1953,109 @@ fn intellicrack_hexcore(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(diff_files, m)?)?;
     m.add_function(wrap_pyfunction!(diff_bytes, m)?)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// F-0004/F-0048 regression: `offset + length` used raw `usize` addition
+    /// for the bounds check, so a huge `offset` chosen to wrap the sum below
+    /// `doc_len` bypassed validation entirely. `usize::MAX - 3` and `length =
+    /// 10` wrap to `6`, which passes `6 > doc_len` for an 8-byte document.
+    #[test]
+    fn test_fill_block_rejects_wrapped_offset_length_overflow() {
+        let mut doc = DocumentState::open_bytes(b"ABCDEFGH");
+        let result = doc.fill_block(usize::MAX - 3, 10, b"A");
+        assert!(
+            result.is_err(),
+            "offset+length overflow must not bypass the bounds check"
+        );
+    }
+
+    #[test]
+    fn test_copy_block_rejects_wrapped_offset_length_overflow() {
+        let mut doc = DocumentState::open_bytes(b"ABCDEFGH");
+        let result = doc.copy_block(usize::MAX - 3, 8, 0);
+        assert!(
+            result.is_err(),
+            "src_offset+length overflow must not bypass the bounds check"
+        );
+    }
+
+    #[test]
+    fn test_move_block_rejects_wrapped_offset_length_overflow() {
+        let mut doc = DocumentState::open_bytes(b"ABCDEFGH");
+        let result = doc.move_block(usize::MAX - 3, 8, 0);
+        assert!(
+            result.is_err(),
+            "src_offset+length overflow must not bypass the bounds check"
+        );
+    }
+
+    #[test]
+    fn test_swap_blocks_rejects_wrapped_offset_length_overflow() {
+        let mut doc = DocumentState::open_bytes(b"ABCDEFGH");
+        let result = doc.swap_blocks(usize::MAX - 3, 8, 0, 8);
+        assert!(
+            result.is_err(),
+            "offset_a+len_a overflow must not bypass the bounds check"
+        );
+    }
+
+    #[test]
+    fn test_fill_block_valid_range_still_succeeds() {
+        let mut doc = DocumentState::open_bytes(b"AAAAAAAA");
+        doc.fill_block(2, 3, b"X").unwrap();
+        assert_eq!(doc.read(0, 8).unwrap(), b"AAXXXAAA".to_vec());
+    }
+
+    /// F-0017 regression: `swap_blocks` used to record two independent
+    /// `Overwrite` entries, so a single `undo()` only reverted the second
+    /// region and left the same bytes duplicated at both offsets.
+    #[test]
+    fn test_swap_blocks_single_undo_restores_both_regions() {
+        let mut doc = DocumentState::open_bytes(b"AAAABBBB");
+        doc.swap_blocks(0, 4, 4, 4).unwrap();
+        assert_eq!(doc.read(0, 8).unwrap(), b"BBBBAAAA".to_vec());
+
+        assert!(doc.undo());
+        assert_eq!(
+            doc.read(0, 8).unwrap(),
+            b"AAAABBBB".to_vec(),
+            "a single undo() after swap_blocks must restore both swapped regions"
+        );
+        assert!(
+            !doc.can_undo(),
+            "swap_blocks must record exactly one undo-stack entry"
+        );
+    }
+
+    /// F-0018 regression: the returned count used to be `records.len()`
+    /// (every record parsed from the IPS file), not the number of records
+    /// actually applied to the document, hiding silently-skipped
+    /// out-of-bounds records from the caller.
+    #[test]
+    fn test_import_patches_ips_returns_applied_not_total_record_count() {
+        let mut doc = DocumentState::open_bytes(b"ABCD");
+        let records = vec![
+            patch_export::PatchRecord {
+                offset: 0,
+                data: vec![0x58],
+            },
+            patch_export::PatchRecord {
+                offset: 100,
+                data: vec![0x59],
+            },
+        ];
+        let ips = patch_export::export_ips(&records, &|_| None).unwrap();
+
+        let applied = doc.import_patches_ips(&ips).unwrap();
+        assert_eq!(
+            applied, 1,
+            "import_patches_ips must report the number of records actually \
+             applied, not the total record count parsed from the file"
+        );
+        assert_eq!(doc.read(0, 1).unwrap(), vec![0x58]);
+    }
 }

@@ -9,6 +9,53 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **sandbox:** Let a run bring the files its target cannot run without (`45f9ab4`)
+run_binary staged exactly one file. Real targets are not one file - a DLL next
+to the executable, a resource subtree under it, a config file beside it - and a
+target staged without those does not fail. It launches, exits 0, and does
+nothing, which the sandbox reported as a successful run over an empty report.
+Companions now travel the whole way down, bridge to manager to both backends,
+staged by one SandboxBase.stage_companions so each backend places them over the
+transport it really uses. Each lands beside the binary under its own name, a
+directory keeping its tree, and one that cannot be placed fails the run rather
+than being skipped: an incomplete staging is a different program, not a smaller
+analysis. Two companions claiming one destination, or one that would overwrite
+the target, are refused outright. The panel's Run grew a Companions field, since
+a capability nothing can reach is not one.
+The gate reproduces the measurement that found this rather than describing it:
+the real ipconfig.exe, staged by the production backend with only run_command
+replaced, prints nothing staged alone and prints everything with its resource
+sidecar beside it. The control passes on its own terms, so the treatment is a
+real inversion rather than a test that would agree either way.
+Also repairs two tests in the same tree that were already red for their own
+reasons: one built its backend with __new__ and so missed an attribute a later
+commit made the production code read, and one still expected the report keys
+from before collector_outages was added.
+
+- **sandbox:** Provision a Windows QEMU guest from discovered install media (`4c2fbe7`)
+The QEMU backend could only ever be driven with a Linux guest, so the six
+Windows-only report tabs - Registry Changes, API Calls, DLL Loads, Services,
+Kernel Objects, Injections - had no way to be exercised against real data.
+provision_windows_guest discovers install media by structure rather than by
+path: Windows ISOs are UDF-bridged, so the ISO9660 side carries only a stub
+README and a "does the root contain sources/?" check reports False on genuine
+Microsoft media. Candidates are validated by reading the ISO9660 primary
+volume descriptor at LBA 16, the UDF NSR descriptor in the LBA 16-64
+descriptor set, and the El Torito boot catalog reached through the boot record
+at LBA 17. No drive letter or path is hardcoded anywhere.
+It then authors a real unattended-install ISO - autounattend.xml with the
+LabConfig bypasses the bundled QEMU forces (it ships edk2 but no TPM, and
+_build_qemu_command passes neither -bios nor -drive if=pflash, so guests boot
+SeaBIOS in legacy BIOS/MBR mode), the guest-agent installer, and the qemu-ga
+already bundled in tools/qemu - and emits an install command whose machine,
+cpu, disk and NIC arguments match _build_qemu_command exactly, because a
+mismatch on the virtio disk controller yields a guest the application itself
+cannot boot. virtio-win is attached as a third CD: with if=virtio, WinPE
+cannot see the system disk without viostor, the NIC needs NetKVM and the
+guest-agent channel needs vioserial.
+oscdimg is the authoring tool on this host; xorriso, mkisofs, genisoimage and
+pycdlib are implemented as fallbacks and selected by probing.
+
 - Implement layout restoration toggle and model persistence (`921c7a4`)
 Introduce opt-in window layout restoration and per-provider model selection persistence via QSettings to improve session continuity. Additionally, scale up the Docker sandbox default resource limits to support full-suite coverage runs and clean up legacy audit documentation.
 - Add `restore_layout` toggle to UI configuration and preferences
@@ -346,6 +393,33 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
+
+- **hexbench:** Add hexbench web ui and harden hexcore concurrency (``)
+Introduce the Hexbench standalone browser-based hex editor UI alongside major concurrency, safety, and performance enhancements across the `intellicrack-hexcore` Rust engine and Intellicrack bridges. Hexbench provides a local web-based binary analysis and manipulation workspace featuring a virtualized hex grid, interactive visual analysis charts, command palette, and dynamically generated operation forms.
+To support high-throughput analysis and eliminate runtime borrowing exceptions in multi-threaded contexts, `HexDocument` in `intellicrack-hexcore` has been refactored from an exclusive PyO3 borrow model to a frozen class backed by `parking_lot::RwLock`. Zero-copy memory mapping via `mmap` is extended across document piece tables with automatic piece coalescing during byte insertions. Furthermore, bulk binary analysis methods now offer packed byte buffer accessors (`*_bytes`) to avoid per-element Python object conversion overhead.
+The template evaluation engine and patch import/export pipelines have been hardened against untrusted and malformed inputs. Parsing routines across Mach-O, PE, ZIP, and BPS/UPS engines now enforce strict integer bounds, nesting recursion limits, and size validation on dynamic arrays, while diff serialization explicitly segregates per-side span lengths.
+Key changes included in this update:
+Hexcore Engine & Rust Core:
+- Refactored `HexDocument` in `src/intellicrack-hexcore/src/lib.rs` to a frozen `#[pyclass]` with internal `parking_lot::RwLock` and generation tracking (`touch()`), enabling concurrent read operations.
+- Added zero-copy packed binary buffer accessors (`entropy_map_bytes`, `byte_distribution_bytes`, `digram_matrix_bytes`, `read_window`) in `src/intellicrack-hexcore/src/lib.rs` and bridged them into `src/intellicrack/bridges/hex_editor.py`.
+- Implemented zero-copy `Mmap` backing and adjacent single-byte edit coalescing in `src/intellicrack-hexcore/src/piece_table.rs` and fixed rename error handling in `src/intellicrack-hexcore/src/mmap_io.rs`.
+- Added integer overflow protection (`checked_add`), bounds checks, and OOM guards during BPS/UPS patch parsing in `src/intellicrack-hexcore/src/bps_ups.rs`.
+- Enhanced `UndoManager` in `src/intellicrack-hexcore/src/undo.rs` with `Operation::SwapBlocks` optimization and `SaveMarker` transaction tracking.
+- Expanded Mach-O structural templates in `src/intellicrack-hexcore/src/templates/macho.rs` with big-endian variants (`_BE`), signed CPU type fixes, and accurate `DYLIB_COMMAND` string sizing.
+- Added full data directory parsing to PE optional header templates (`pe.rs`) and enforced static element sizing and recursion depth limits in template evaluation (`eval.rs`, `json_schema.rs`).
+- Resolved terminator offset collision edge cases against EOF/EEOF delimiters in IPS/IPS32 patch exporters in `src/intellicrack-hexcore/src/patch_export.rs`.
+Hexbench Backend & Application Shell:
+- Added `src/hexbench/api.py`, `dispatch.py`, `catalog.py`, `codec.py`, and `registry.py` to route HTTP requests, register documents, encode typed operation arguments, and dynamically dispatch engine commands.
+- Implemented background job execution and queue eviction safeguards in `src/hexbench/jobs.py` along with embedded desktop window management in `src/hexbench/window.py` and `shell.py`.
+- Added `src/hexbench/design/build_cards.py` along with static standalone design system preview cards (`src/hexbench/design/cards/*.html`) showcasing panels, palettes, charts, and editor states.
+Hexbench Frontend UI:
+- Added `src/hexbench/static/grid.js` implementing a virtualized, recycled-DOM editable hex grid with caret navigation and scroller scaling.
+- Added `src/hexbench/static/shell.js`, `panels.js`, and `forms.js` for workspace layout management, dockable analysis panels, and dynamic schema-driven form generation.
+- Added `src/hexbench/static/charts.js`, `renderers.js`, `palette.js`, `scalar.js`, and `win32.js` for rendering entropy/histogram visualizations, command palette search, scalar compaction, and Win32 memory mask decoding.
+- Added canonical stylesheet `src/hexbench/static/app.css` containing application tokens, hex grids, status bars, and UI layouts.
+Intellicrack Bridges & Test Suite:
+- Updated binary diff engine and schemas to output distinct `length_a` and `length_b` per-side spans in `tests/hexpat/e2e/test_binary_diff.py` and `test_bridge_compare_files.py`.
+- Added extensive end-to-end and unit test suites covering concurrency (`test_concurrency.py`, `test_hexcore_shared_document.py`), search routines (`test_search.py`), patch handling (`test_patches.py`), and server error classification across Python and JavaScript runtimes.
 
 
 ### Changed
@@ -967,6 +1041,1301 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **sandbox:** Stop the container harness starting a VM's neighbour on shared HCS (`472533c`)
+Windows containers, WHPX virtual machines and Windows Sandbox sessions all run
+on the Host Compute Service, and interleaving them bugchecked this host on
+2026-08-02. The WHPX boot gates already refuse to start a VM while a container
+is running, so that hazard looked handled - but the check was only ever
+one-directional. Nothing stopped docker_sandbox from starting a container while
+a virtual machine was live, which is the same collision from the other side.
+Found while a concurrent session's container repeatedly blocked the WHPX gates:
+their guard protected them from me, and nothing protected them from me.
+DockerSandbox.ensure_image now waits for the host to clear first, ahead of
+ensure_docker_running because starting Docker Desktop is itself an HCS
+operation - it brings up its own utility VM. It waits rather than refusing,
+since the collision is transient by nature: a sibling session's VM gates finish
+and the run proceeds. The wait is bounded, so a VM that never exits surfaces as
+a failure naming the processes holding the host instead of a run that hangs.
+Gate tests/sandbox/test_docker_sandbox_hcs_interlock.py (5) uses a real
+process: a copy of cmd.exe under a QEMU process name, which the production
+enumerator sees exactly as it sees a real qemu-system-x86_64.exe because it
+matches on the name and nothing else. A lone copy of the Python interpreter
+cannot start away from its DLLs, which is why cmd.exe is the stand-in. The
+wiring is gated separately by reading ensure_image's own syntax tree, since
+exercising it for real needs a Docker engine the container does not have.
+Falsifiability, two mutations, each hitting only its own half: dropping
+qemu-system from the process prefixes reddens the three behaviour tests and
+leaves the wiring test and the clear-host control green; deleting the
+ensure_no_hcs_vm_running call from ensure_image reddens only the wiring test.
+Restored, 5/5 green.
+
+- **sandbox:** Stop a routine guest-agent poll from logging a traceback (`a45b974`)
+_await_guest_result reads the message queue in one-second slices so a channel
+that dies under a waiting command is noticed within a slice rather than at the
+deadline. Every slice that expired empty - the loop's ordinary continue path
+while the guest is still working - was logged with exc_info=True, so the
+rendered log grew a full traceback per second of guest-side work: wait_for into
+Queue.get, a CancelledError chained into a TimeoutError, and a table of locals.
+Measured driving live Windows guests on 2026-08-09, several such blocks appeared
+per run, including during an ordinary destroy, on runs that finished with
+qemu_process_exited returncode=0.
+Nothing failed because of it, which is the point: a healthy run's log became
+indistinguishable from a crashing one, and a real traceback had nowhere to stand
+out from. Three sibling sites in the same channel did the same thing on every
+run - agent_read_cancelled and guest_agent_disconnect_cancelled report a
+cancellation this code raised itself, one per teardown, and the
+message_queue_empty drains guard a while-not-empty loop.
+The wait now counts idle slices and reports once when it ends with nothing,
+naming which of the two ways it ended: guest_command_result_timeout while the
+channel is still open, so the guest missed its budget, and
+guest_command_channel_closed_before_result when the answer can no longer arrive,
+carrying the reason the reader recorded. Going the other way, agent_read_error
+gained the traceback it never had - the OSError that actually kills the channel
+was being reported without one.
+The gate renders the real pipeline to a real file, because exc_info only becomes
+that block once the production ConsoleRenderer formats it, and reads back what a
+live run would have produced against a real TCP server speaking the in-guest
+agent's protocol. A reset channel needs raw sockets: the stream transport shuts
+a socket down before closing it, which sends a FIN and turns the reset into a
+plain end of stream no matter what SO_LINGER says.
+
+- **sandbox:** Let a Linux guest actually reach a listening monitor agent (`cc0b790`)
+Booting the provisioned Debian guest through SandboxBridge failed with
+"guest agent failed to connect within 300.0s", and that message was the only
+evidence it ever produced. Three separate faults, each sufficient alone.
+The generated agent configures logging at module scope, but the mkdir for
+its log directory sat in main(). FileHandler opens its file as it is
+constructed, so on a guest that has never run the agent - which has no work
+root at all since the guest-local root arrived in f2455cb7 - every run died
+of FileNotFoundError at import, before a statement of it ran. Nothing bound
+the agent port.
+The launcher could not report that: it backgrounded the agent, so the shell
+exited 0 whatever became of it and the pid recorded belonged to a process
+that had already succeeded, while the traceback went to a discarded stream.
+It now execs the agent into a log on the guest's own disk, and the connect
+wait races a watcher on that pid so a dead agent ends the wait at once
+carrying the guest's own words instead of running the budget out.
+Both launchers are written verbatim. Text mode on a Windows host turned
+every newline into a carriage-return pair, which bash reads as part of the
+last word on the line.
+
+- **sandbox:** Make the provisioned guest answer to the name it was given (`cbb3dd9`)
+The declared ComputerName is delivered and accepted -- setupact.log records
+MarkUnattendSettingAsProcessed for UserData\ComputerName and UnattendGC records
+"[Shell Unattend] ComputerName set to IC-SANDBOX" -- and then does not survive
+the reboot Setup itself demands:
+OrchestrateDetermineComputerNameChange:
+Did Setup change computer name? TRUE
+Could OOBE change computer name? FALSE
+Reboot required after setup.exe and PostSysprep commands, before OOBE.
+The name in force afterwards matched none of the four names Setup handled
+(MININT-44HQ1TL in WinPE, ANALYST-R1TB08F generated from the account's full
+name and written offline by DismSetMachineNameInternal, WIN-TUQUTF8JI6U
+generated then skipped as already set offline, and IC-SANDBOX), so the answer
+file was never the place to fix this and is left alone.
+The finished guest now asserts the name itself from a first-logon command,
+without -Restart so the provisioner keeps control of when the guest shuts down.
+
+- **sandbox:** Reap the sandbox session the Test Sandbox run started (`32679b3`)
+The teardown targeted self._process, which is WindowsSandbox.exe -- the
+fire-and-forget launcher that exits 0 as soon as it hands the session off.
+By teardown time its poll() was never None, so _terminate_sandbox_process
+returned at its own liveness guard and reaped nothing, leaving a live
+WindowsSandboxRemoteSession.exe after every run. Windows Sandbox permits one
+session at a time and shares the Host Compute Service with the QEMU backend
+and the Docker engine, so each press denied the host to every later sandbox
+operation.
+_verify_sandbox_session now keeps the pid find_sandbox_session_pid already
+resolved instead of discarding it, and _terminate_sandbox_session posts
+WM_CLOSE to that session before falling back to terminate_tree.
+
+- **sandbox:** Make the injection monitor's failure diagnostic name its statement (`a991b7d`)
+The injection monitor recorded a trace-session failure as $_.Exception.Message
+alone, so a null-receiver error ("You cannot call a method on a null-valued
+expression") named neither the failing statement nor its line and could not be
+located on a live Windows run (S17-D79).
+Write-InjectionDiagnostic now takes the error record and folds its
+InvocationInfo -- the offending source line and its number -- into the detail,
+and the trace_session_failed catch passes -ErrorRecord $_. The two property
+reads that could return null and propagate silently ($session.Source,
+$source.Kernel) are guarded by Assert-TraceObject, which reports the null
+through the diagnostic with a named category and aborts at the read itself
+rather than surfacing three lines on as an unlocated method call.
+
+- **sandbox:** Take a disk-only snapshot when the accelerator blocks machine state (`4ef8545`)
+A full snapshot serialises CPU and RAM state as well as the disk. WHPX -
+the only accelerator a Windows guest runs under here - registers migration
+blockers against exactly that machine state, so snapshot-save can never
+conclude under it. Measured against a WHPX machine with no guest running,
+the job concludes "State blocked due to non-migratable CPUID feature
+support, dirty memory tracking support, and XSAVE/XRSTOR support" and stays
+blocked. The whole Snapshots surface was therefore dead on Windows, which
+is why the earlier snapshot gates, run under TCG, never saw it.
+A disk-only internal snapshot stores the qcow2 contents and nothing of the
+running machine, and WHPX permits it. take_snapshot now takes that path
+under WHPX - blockdev-snapshot-internal-sync on each writable qcow2 device,
+addressed by the query-block device id the command requires - and logs
+which kind of snapshot it took, since a disk-only one cannot resume a
+running guest on restore and should not be passed off as a full one. The
+full path is unchanged under TCG and KVM.
+
+- **sandbox:** Stop reporting anti-evasion success when the guest work failed (`584dcd6`)
+apply_anti_evasion reports two kinds of technique. The SMBIOS and CPUID
+arguments are read off the fixed launch profile and cannot fail. The
+Windows registry patches and the MAC randomisation run real commands in
+the guest and can. The code appended a technique only on a zero exit code
+and did nothing otherwise, so a run whose agent was never connected - or
+whose every guest command timed out - reported the same clean success,
+naming only the launch-time arguments, as a run in which everything
+worked. Measured live, the call ran 151.5 s against a guest that could not
+execute a command and returned count 4 while the panel printed
+"Anti-evasion applied".
+The guest-side work now lives in _apply_windows_anti_evasion, which
+gathers every step that did not run instead of dropping it. When guest-side
+hardening was expected but did not succeed, the call raises SandboxError
+naming the profile and the failures, so a caller can tell a hardened guest
+from one the agent never reached.
+Three existing tests asserted the old contract - a Windows guest with a
+disconnected or rejecting agent reporting a clean success - and are
+corrected: the profile test proves launch-time-only success on a Linux
+guest, where there is no guest-side step; the identity test's rejecting
+agent now expects the raise; and the two SMBIOS-argv tests use a connected
+agent whose commands succeed.
+
+- **sandbox:** Stop reporting the deletion of a snapshot that never existed (`9269c76`)
+QEMU has room to be lenient here that the sandbox does not. Its job-based
+snapshot-delete concludes without error for a tag no disk holds, while
+snapshot-load of the same missing tag fails loudly and the block-layer
+command refuses it outright. delete_snapshot passed that leniency straight
+through, so an operator who misspelled a tag - or deleted the same one
+twice - was told the deletion had happened. Measured live, a delete of
+"audit-h07" returned success immediately after the snapshot list for that
+instance had come back empty.
+The tag is now checked against the block layer's own records before the
+job starts, and again once it reports finishing, so a delete reports
+success only when there was something to delete and it is really gone.
+
+- **sandbox:** Stop a dead injection monitor from accusing the sample (`e447e45`)
+The injection monitor has no channel but its own data log in which to say
+its ETW trace session died, so its failure paths write that as a record
+with the type ERROR and the source name "tracer". The report pipeline read
+those rows as injection events, and the behaviour matcher turned each one
+into a critical T1055 "Process Injection" finding. On a real Windows 11
+guest run that was the only finding produced: source tracer PID 0, target
+blank PID 0, type ERROR - against a sample that had injected into nothing.
+Those rows are telemetry about the collector, not about the sample, so
+they are left out of the injection events. Nothing is lost by it: the
+outage is already reported through parse_collector_lifecycle, which is the
+channel built for exactly this and which the report renders as an
+unavailable section rather than as a record of what the sample did.
+
+- **sandbox:** Start the machine again when a snapshot job stops it and fails (`5aacc7a`)
+QEMU stops the processors to load a snapshot. When the load then fails -
+which under WHPX it always does, since the accelerator blocks machine
+state - the job settles at status "restore-vm" with running false and
+nothing ever starts the machine again. The sandbox kept reporting the
+instance as running, so every later guest command sat there until its
+timeout: measured 0.1s before a failed restore and 120.7s after, against
+a QEMU burning 0.000 CPU-seconds over 12 seconds of wall clock.
+A snapshot job now reads the run state before issuing its command, since
+the stop happens inside the job once the command has been accepted, and
+resumes the machine if the failed job is what stopped it. The error says
+which of the two happened and carries it on SandboxError.vm_state, so a
+caller can tell a refused operation from a lost guest.
+
+- **sandbox:** Make the guest agent and its two ETW collectors work at all (`c12171e`)
+The first Windows sandbox session that ran from boot to shutdown finally let
+three collectors speak for themselves, and all three were broken.
+The guest agent wrapped an argument in quotes when it held a space and escaped
+nothing, so an embedded quote split the argument and a trailing backslash ate
+the next one. Escaping is now chosen by the callee, because the two parsers are
+genuinely different: CommandLineToArgvW's rules for an executable, and grouping
+only for cmd.exe, which never sees an argv and re-parses its own tail.
+api_trace built its session as new(name, $null), but TraceEvent declares no
+(name, fileName) constructor - only (name, options) - so it got a file session
+with no file and the first EnableProvider failed ERROR_BAD_PATHNAME, one call
+away from the cause. injection_monitor registered add_VirtualMemVirtualAlloc,
+which KernelTraceEventParser does not have; PowerShell binds add_* late, so the
+monitor started, called itself healthy and died a second in.
+The peer harness now checks that it lifted the declaration of everything it
+uses. The first fix here passed its gate while behaving identically to the
+defect, because a lifted function used a global the peer had not lifted and
+SilentlyContinue swallowed the error. That check immediately found an older
+instance of the same thing: the allowlist had been lifted without its work-root
+prefix, leaving a dead arm in every test using it.
+
+- **sandbox:** Stop asking vvfat to write, since it aborts the whole machine (`f2455cb`)
+QEMU exposed the shared folder as `fat:rw:` and the in-guest agent wrote
+everything it produced there: monitor logs appended line by line, a mirror
+of every dropped file, and the write-then-rename that publishes a command
+result. `block/vvfat.c` commits those changes back to the host directory,
+and its commit path does not fail a write - it calls `abort()`, right after
+logging `Error handling renames`, having already reported `cluster 0 used
+more than once`. Under MSVCRT that leaves exit code 3, so a normal session
+drove the guest straight into killing the machine it was running in.
+The share is read-only now, so the commit path is never entered. Everything
+the guest writes moved to a work root on its own disk, and the host reads it
+back over the guest agent's file commands: the monitor logs into a collected
+tree, a sandbox read from the guest rather than from the share vvfat froze
+at boot, log sizes from the guest so readiness watches a file that is really
+growing, and dropped files gathered in-guest and pulled back. A read-only
+share cannot carry a host-visible mirror, so on that transport there is no
+host-side fallback left to reach for.
+The pre-existing gates that described the writable share were re-scoped
+rather than dropped: the ones about a host-visible mirror or host-side log
+polling now select virtio-9p, which is the transport whose contract that is.
+
+- **sandbox:** Notice when the QEMU hosting a run has died (`0e9ec55`)
+A foreground QEMU is spawned with piped stdout and stderr, and nothing
+read either pipe for the life of the guest. Two things followed. The
+pipe buffer is a fixed size, so a QEMU that kept writing blocked inside
+write and the guest froze with no record of why. And when QEMU died on
+its own, its exit status and its parting message went into a pipe no one
+read and were discarded.
+Every diagnosis downstream was then worse than silence. run_command sat
+out its full ninety-second deadline and reported that the command had
+timed out, as if the guest were merely slow. The channel-recovery path
+spent its reconnect budget dialling a socket with no listener and then
+reported that the guest "may already be running" the command - of a
+machine that no longer existed.
+QemuOutputRecorder drains both streams for the life of the VM, logs each
+line as QEMU emits it, keeps a bounded tail, and records the exit status
+with that tail when the process ends. qemu_termination() reports it,
+falling back to the process's own status so a death is never mistaken
+for a running machine. run_command consults it before doing any work,
+_poll_for_result consults it each iteration so a death during a wait
+ends the wait, and the agent client reports the machine's death instead
+of reconnecting to a socket that is not there.
+This immediately paid for itself: the first run with it recorded exit
+code 3 preceded by "cluster 0 used more than once" and "Error handling
+renames (-5)", which root-caused a failure that had been unexplained
+across the whole audit.
+
+- **sandbox:** Let a session survive losing the guest channel, without rerunning work (`1e6d4bc`)
+The forwarded connection to the in-guest agent sometimes goes away mid-session.
+When it did, every remaining command in that session failed. The code to open
+the channel and prove the agent answers on it was already there and already
+correct; it was only ever called at startup, so a channel that died once
+stayed dead until the sandbox was torn down.
+A command now recovers the channel through that same path, which means a
+re-opened channel is proven the same way the first one was.
+What it deliberately does not do is resend blindly. A command that may already
+be running in the guest is a binary that would be run twice, and a sandbox
+that silently executes its target twice is worse than one that admits it lost
+track. The line is the drain that follows the write: before it returns the
+bytes never left, so the request goes out again on a fresh channel and the
+caller never knows; after it returns, nothing here can tell a request the
+agent never saw from one it is running right now, so the channel is restored
+for later commands and that command is reported lost, saying plainly that the
+guest may already be running it. Telling those two cases apart is why the
+write and the wait, previously one function, are now two.
+Recovery happens as part of the failing command rather than lazily, because
+several callers decide whether to use the channel at all by asking whether it
+is connected, and a channel left dead would divert them to the shared folder,
+which the guest only sees as it was at boot.
+Two existing tests asserted that the command after a drop must fail, which is
+the behaviour this changes. Each keeps its own claim: one now proves the dead
+socket was replaced rather than merely abandoned, measured on the agent side,
+which is a stronger statement than the one it replaces.
+
+- **sandbox:** Point WinPE at the driver folders the medium actually has (`657350a`)
+The answer file told WinPE to look for virtio drivers in four folders named
+for Windows 11 on a 64-bit CPU. Aim the provisioner at anything else - a
+Windows 10 medium, a server edition - and all four name folders that are not
+there, so no storage driver loads and Setup stops on a machine it thinks has
+no disk, with nothing in the log connecting that to the answer file.
+Guessing a folder name was never necessary. The medium is already mounted and
+inspected during provisioning, so the folders can simply be read off it. The
+layout is driver, then Windows family, then architecture, and the families are
+not uniform: on the medium here the storage driver ships fifteen of them,
+Windows 11 has no 32-bit build at all, and most server families are 64-bit
+only. Enumerating what is present, filtered to the architecture being
+installed and to folders that actually carry a driver, replaces four guesses
+with every real answer.
+Four drivers are offered to WinPE: storage, network, the serial channel the
+guest agent speaks over, and the balloon device the previous list already
+named. Everything else on the medium is left to the installer that runs inside
+the guest, which finds its own folder once, rather than being multiplied by
+every drive letter WinPE might have assigned the disc.
+One consequence worth stating plainly: the medium is now inspected even when
+content verification is skipped, because the answer file cannot be written
+without knowing what is on it. The flag still governs the Windows install
+medium, and says so.
+
+- **sandbox:** Stop overwriting the good registry collector with the broken one (`c08f614`)
+Every row of a Windows Sandbox run's Registry Changes tab named the same key,
+because that column held a constant. The collector tracked each value under a
+key it built by joining the registry path, the value name and the type with
+'::', then split back apart into three. But a PowerShell provider path already
+contains '::', so the split landed on the wrong boundaries: the key column got
+the provider prefix, the value-name column got the key path, and the type
+column got the name and type run together.
+The same script decided a value had been deleted by testing whether its
+tracking key started with the watched root. One of those is a provider path
+and the other a drive path, so they never share a prefix and the branch could
+not be taken. A deleted registry value has never been reported at all.
+Neither bug needed fixing twice. The backend already copies the corrected
+bundled collector into the guest and then writes an inline copy over the top of
+it, so the guest has always run the broken one. Removing that write leaves the
+bundled script standing, which is a drop-in match on parameters, log name and
+line format, and the duplicated implementation goes with it - one collector
+where there were two that disagreed.
+Two older tests read the deleted implementation directly. They now read the
+surviving script, keeping the dynamic-type requirements they were written for.
+The assertion that pinned the split is replaced by one that forbids building
+such a key at all and requires the path be normalised to a hive form first,
+which is a stricter thing to ask than what it replaces.
+
+- **sandbox:** Let the guest's ETW recorders actually load the library they need (`41b5f9e`)
+Staging the TraceEvent assemblies got both recorders as far as finding the
+library and no further. Windows PowerShell 5.1 runs on the Desktop CLR, and
+TraceEvent 3.2.5 ships only a netstandard2.0 build, so Add-Type walked the
+assembly's types and threw naming three .NET Standard support-pack assemblies
+that no Windows version carries. Neither recorder ever started.
+The whole dependency closure is vendored now, resolved by restoring a throwaway
+net472 project against the package rather than picked by hand, and both scripts
+pre-load it before their own Add-Type. Presence beside the library is not
+enough on its own: the CLR probes the host application's base directory, which
+for these is PowerShell's own, and a strong-named reference binds to an exact
+version that no binding redirect corrects here. So the scripts also install an
+AssemblyResolve handler matching on simple name against what is already loaded.
+That handler must never call LoadFrom - doing so re-enters resolution for the
+loaded assembly's own references and recurses until the process dies of a stack
+overflow. All of this is measured, not inferred, and written down beside the
+binaries.
+Which files reach the guest is no longer a hand-maintained list. The staging
+step walks the vendored directory, so an assembly added there later travels
+without a code change, and none can be left behind by a list that drifted.
+The binaries themselves were being ignored. A blanket *.dll rule meant the
+previous commit shipped the provenance notes and nothing else, so the fix
+existed on one machine and in no checkout. The rule now makes an exception for
+this directory, the same way it already does for the injector's.
+The gap this closes was previously pinned by an expected failure; that is now a
+passing test, driven by extracting the resolver verbatim out of the staged
+script and running it under a real powershell.exe, so a future change that
+neuters it is caught by the code no longer working rather than by a marker.
+
+- **sandbox:** Stop a dead recorder from looking like a quiet one (`f388121`)
+The API Calls and Injections sections of a guest report could each hold
+exactly one row, and that row was the recorder's own failure text. Two
+separate things were wrong.
+The ETW library those two recorders load was never placed inside the guest.
+Both search their own directory first, and nothing ever put the assemblies
+there, so each exited within a second of starting. The vendored TraceEvent
+assemblies are now staged alongside the monitor scripts, with the native
+KernelTraceControl kept in its architecture-named subdirectory because that
+is where TraceEvent looks for it.
+The worse half was that a recorder which never observed anything was
+indistinguishable, in the report, from a recorder that observed nothing
+happening. A collector that dies after opening its log has no channel but
+that log, so it writes its own failure as though it were data. The guest
+already records a lifecycle line when each recorder starts and stops; those
+are now read, and a recorder that never started or that stopped before the
+run finished is carried out as an outage rather than as a record. Absence of
+evidence stops being rendered as evidence of absence.
+Staging the assemblies fixes discovery but not loading: under the Desktop CLR
+that Windows PowerShell 5.1 uses, Add-Type walks every type in the assembly
+and throws on three .NET Standard support-pack facades that this package does
+not carry. That gap is pinned by a strict xfail so vendoring the facades
+turns into a loud failure here rather than going unnoticed, and the outage
+reporting above means the report says the section is unavailable meanwhile.
+Also fixes three property docstrings in base.py that ruff rejects, since that
+file is touched here.
+
+- **sandbox:** Give a QEMU guest run its registry, clipboard and nested staging back (`7ac26ef`)
+Three defects a live Windows 11 guest run exposed, all of them showing up in
+the report as a section that simply has nothing in it.
+The Registry Changes tab could never have content: seven telemetry collectors
+were staged into the guest and none of them watched the registry, while the
+host side dutifully parsed a log nothing wrote. Ports the Windows Sandbox
+backend's collector over as a bundled script and converges the two backends
+on one log name. The ported source carried a latent bug of its own - it
+joined its tracked fields with "::" and split them back apart later, but
+PowerShell's PSPath is itself provider-qualified and already contains "::",
+so the key, value name and type all landed in the wrong columns. The fields
+now travel structurally, and the reported key is a hive path an analyst can
+act on rather than Microsoft.PowerShell.Core\Registry::HKEY_...
+The clipboard section was empty for a different reason: its C# helper has
+never once compiled. Add-Type under Windows PowerShell 5.1 uses the CodeDom
+C#5 provider, and the helper used a get-only auto-property and a
+null-conditional invoke, both C#6. The collector logged the compiler error
+and fell back to a polling path that found nothing.
+copy_to_sandbox could not place a file into a guest directory that did not
+exist yet, so staging a sample together with anything it needs - a DLL beside
+it, a resource subtree - always failed. The guest-agent file-open creates the
+file but not the directories above it; the tree is now created first, and
+only when the destination is deeper than the share's own top-level
+subdirectories, which already exist before the guest boots.
+Also repairs three older agent tests that S17-D65 regressed. Readiness now
+costs one guest-exec of its own before any real work runs, which those tests
+did not account for: one modelled a guest agent that answered guest-exec but
+not guest-exec-status, and the others pinned the launcher to the first
+recorded exec or to a fixed guest pid. Each now derives the probe from the
+sandbox under test instead of restating it.
+
+- **sandbox:** Stop a byte-order mark corrupting the first record of every monitor log (`4fc8934`)
+
+- **sandbox:** Make a ready guest agent one that has actually run a command (`ecaebb3`)
+
+- **sandbox:** Stop reporting "nothing found" for scans and dumps that never ran (`aa53ac4`)
+Three findings from the same corner of the sandbox surface, all of the same
+kind: an operation that could not do its job answered as though it had.
+memory_dump sent dump-guest-memory synchronously, and a synchronous dump does
+not answer until the whole of guest RAM is on disk. Measured against QEMU
+10.1.0: 3.61 s for a 1024 MB guest, 7.4 s for 4096 MB - so a real 8192 MB guest
+runs past execute_command's 10 s budget and the command times out on a dump
+that is proceeding perfectly well. The handler then raised a bare "memory dump
+failed", throwing away result.error, so QEMU's own words - "Could not create
+'<path>': No such file or directory", returned in two milliseconds - never
+reached the operator. And because the monitor lock is held for the command's
+whole duration, status polling, the VNC port lookup and the guest-agent channel
+all stalled behind a running dump.
+The dump now goes out detached, which is answered in about two milliseconds.
+query-dump state is global and sticky - after a rejected request it still
+reports the previous dump's byte count - so the request's own reply is checked
+before any polling, and only then is progress followed under
+QEMUConfig.memory_dump_timeout, treating "none" as not-yet-started, anything
+but "completed" as failure, and confirming bytes really reached the file.
+yara_scan returned an empty list for three different situations a caller cannot
+tell apart: the rules matched nothing; scan_target="files" with no dropped-file
+archive, where the file list was hard-coded to [] and nothing was opened even
+though the guest's collected artifacts sat in that same directory; and
+scan_target="memory" with no dump, where the loop had no iterations. Any target
+string other than "memory" silently fell into the files branch, so a typo
+scanned the wrong thing and still reported success. The empty list is what the
+GUI shows as "no threats found". Now the file scan falls back to the real
+collected artifacts, an unknown target is rejected, and having nothing of the
+requested kind to scan raises with the directory named. The Windows backend
+carried the same ambiguity; both backends now share one set of targets, one
+artifact selector and one set of messages.
+The gate for that found a third one. format_yara_match indexed each strings
+entry as a (offset, identifier, data) tuple behind a len(s) >= 3 guard.
+Installed yara-python is 4.5.4, where Match.strings holds a StringMatch per
+identifier with an instances list - no __len__, no indexing - so the guard
+itself raised, and since neither scan loop catches TypeError, every positive
+YARA hit propagated out of yara_scan on both backends. Only a scan that matched
+nothing could return. It survived because the tests described the match with
+hand-written tuple-shaped doubles, validating the helper against a shape the
+real library never hands it. The formatter now reads the real API, one record
+per occurrence, and those tests compile real rules and scan real bytes.
+Falsifiability, each fix reverted on its own:
+memory dump   3 passed -> 3 failed -> 3 passed (host-native, real 8192 MB
+QEMU guest; the revert run shows error='Command timed out')
+yara outcome  7 passed -> 5 failed / 2 passed -> 7 passed (the two that hold
+pin that a real scan may still legitimately return nothing)
+yara format   46 passed -> 5 failed -> 46 passed, all with
+"TypeError: object of type 'yara.StringMatch' has no len()"
+Two manager doubles are also brought up to the manager's current signature -
+they still predated run_binary's instance_id and so raised TypeError once the
+bridge started forwarding it - and they honour it the way the real manager does,
+using the named instance and refusing an unknown one.
+Closes S17-D60, S17-D61, S17-D64.
+
+- **sandbox:** Let a caller say which sandbox a binary should run in (`6b4f658`)
+run_binary could only say "make me a new sandbox" or "reuse an idle one". The
+reuse branch resolves through _find_idle_instance, a next() over the instance
+registry, so with several sandboxes running every reuse request landed on the
+first-inserted one.
+Two things fall out of that, and the second is the worse one.
+Compare is unreachable. SandboxBridge.diff takes two instance ids, but nothing
+could produce two reports in two different instances. Measured with instances
+7306f4ec and 0b0b8e09 both running: two successive reuse runs both landed on
+the first, its binary field became hostname.exe while the other stayed null,
+and diff then raised "No execution report available for this instance" without
+comparing anything. A GUI control with no reachable way to make its own inputs.
+And the panel ran the binary somewhere other than where the operator was
+watching. self.sandbox_id - the instance whose VNC display, report tabs and
+Destroy button are on screen - was never consulted, yet the panel seeds the
+diff field from it. So with more than one sandbox up, Run in Sandbox executed
+against a different guest and the report that came back overwrote the displayed
+instance's tabs.
+run_binary now takes an instance_id that outranks reuse_instance, claimed by
+_claim_named_instance under the manager lock so that checking an instance is
+free and marking it busy cannot interleave with another caller doing the same.
+Naming an instance that does not exist, is not running, or is already executing
+a binary raises rather than quietly falling back to some other sandbox - the
+whole point is that the caller cares which one. The bridge forwards it and the
+panel passes the instance it is displaying. Undirected reuse is unchanged.
+The gate drives the real SandboxManager over two real LocalProcessSandbox
+instances, each owning a genuinely separate work directory, and runs a real
+interpreter that really writes a marker file into the directory it was started
+in - so where the run landed is read off the filesystem rather than from
+anything the test arranged. Falsifiability: 36 passed; with the instance_id
+dispatch branch removed, 4 failed; restored, 36 passed.
+Closes S17-D62.
+
+- **sandbox:** Make a snapshot say what QEMU actually did with it (`4713223`)
+Taking, restoring and deleting a snapshot all went out as QMP
+human-monitor-command and were judged by QMPResponse.success. That is not a
+judgement: QEMU answers an HMP request with a successful reply whose return
+member carries the monitor's text, error included. Measured against QEMU
+10.1.0, "loadvm nosuch" comes back as
+{"return": "Error: Snapshot 'nosuch' does not exist in one or more devices"}
+which is the same reply shape a completed savevm produces. Live through the
+GUI: snapshot_create returned in 0.0s on a running 8192 MB guest, the list
+that followed reported zero snapshots, and restore then reported success for
+a tag that had never existed - an operator told a guest was rolled back when
+it was not.
+Snapshots now go out as the job-based snapshot-save / snapshot-load /
+snapshot-delete, whose real outcome arrives through query-jobs as a concluded
+job carrying an error member only on failure. The job is dismissed either way
+so concluded jobs do not accumulate for the life of the VM. Deleting a tag
+that does not exist still succeeds, because both APIs define delete as
+idempotent and inventing a failure there would be its own defect.
+The zero-count list was a second, separable fault: list_snapshots kept only
+monitor table rows whose first column isdigit(), and QEMU 10.1 prints "--" in
+that column, so every row was discarded for a disk that demonstrably held
+snapshots. It now reads query-block's structured image.snapshots.
+Node selection became load-bearing with the per-instance overlay from 30478c8d.
+A running sandbox has two qcow2 nodes over a backing chain and only one may be
+written; query-named-block-nodes lists both, so a format-only filter would
+offer the shared backing image as a snapshot target - exactly the corruption
+the overlay removed. query-block names the guest-visible device's topmost node
+and carries the snapshot list in the same reply.
+Proving that work exposed a deeper defect underneath it. QMP is not a bare
+request/response protocol: QEMU pushes events onto the same socket whenever the
+machine changes state, and the client read exactly one line after each command
+and decoded it as that command's reply. An event frame has no error member, so
+it decoded as success with no data - a successful-looking answer to a command
+that had not been answered at all - and the real reply stayed in the stream, so
+every later command was handed the previous command's answer for the rest of
+the connection. Measured raw, "stop" really does put {"event":"STOP"} in front
+of its reply and snapshot-save puts four events in front of its reply, which is
+why the snapshot work surfaced this and ordinary pause/query traffic did not.
+The blast radius is the whole monitor surface: RESET, SHUTDOWN, POWERDOWN,
+RTC_CHANGE, VNC_CONNECTED and the rest can all land on an unrelated command,
+and a VNC client connecting is an ordinary GUI action.
+Every command now carries the id member QMP defines for exactly this - QEMU
+echoes it on the reply and never puts it on an event - and the client reads
+frames until the matching one arrives, logging and skipping events and
+discarding the late reply to a command that already timed out.
+QMPResponse.data is widened from a mapping to object, which is what the wire
+has always carried: query-block answers with an array, human-monitor-command
+with text. The three sites that indexed it narrow through _as_mapping now.
+Two consequences of that work land here as well, both of them the previous
+commit's debt.
+The overlay is now provisioned by the launcher rather than by the argument
+builder. 30478c8d put _create_disk_overlay inside _build_qemu_command, which
+made assembling an argv depend on a real qemu-img and turned 42 container tests
+red - every test that checks the pointer device, the SMBIOS identity, the
+firmware or the shared-folder shape had to have a working qemu-img to get an
+argv at all. Provisioning a disk is something a launch does once; the argv is
+just a description. _spawn_qemu_process now provisions then describes, the
+overlay protection stays exactly where launches happen, and the D58 gate drives
+the same composition rather than the builder alone.
+The QMP test double now echoes the id member, as a real monitor does. It did
+not, so with the fix in place every command against it waited out its full
+timeout - which is also what made the sandbox test run hang rather than fail.
+The two S17-D20 channel tests that asserted a failed handshake closes its
+socket are rewritten to the S17-D57 contract they now contradict: QEMU hands
+out the guest-agent chardev once per VM, so a client that drops it on a failed
+sync has ended guest communication for the life of the guest. They now assert
+the channel survives, which is the same assertion inverted and just as
+falsifiable.
+Gates run host-native against a real TCG QEMU with a real qcow2, checking
+ground truth with qemu-img outside QEMU entirely. Falsifiability, measured:
+both fixes present, 7 passed; D63's demux removed, 6 failed; D59 reverted to
+HMP with the demux kept, 4 failed; restored, 7 passed. tests/sandbox/qemu in
+the container: 319 passed, 1 skipped, 0 failed, from 45 failed before.
+Closes S17-D59, S17-D63.
+
+- **sandbox:** Stop every sandbox writing to the one configured disk image (`30478c8`)
+_build_qemu_command attached the configured qcow2 read-write with no
+per-instance overlay and no snapshot=on, so every instance built from one
+QEMUConfig got a byte-identical -drive line pointing at the same file. QEMU
+takes no image lock on Windows, so nothing refused the second open: two guests
+simply wrote over each other.
+
+- **sandbox:** Stop spending the one guest-agent connection QEMU will give us (`97ace8b`)
+QEMU hands out the org.qemu.guest_agent.0 chardev socket once. It accepts a
+single connection and refuses every later one with a reset for the rest of the
+VM's life. The app closed and reopened that socket on every failed handshake,
+in two places, so the first retry forfeited the channel and every retry after
+it was refused - the app then spent its whole budget reconnecting to a port
+that would never accept again.
+The reasoning above the retry loop was right and the response did not follow
+from it. An unanswered guest-sync-delimited means the guest has not started
+qemu-guest-agent yet, which is the ordinary state of a Windows guest for the
+first minutes of a cold boot. But QEMU binds the host side of that channel
+before the guest leaves firmware, so the guest's readiness says nothing about
+the socket, and reconnecting cannot make the guest readier while it does cost
+the only connection there is.
+Measured on a cold windows11-intellicrack-v4 boot: connect at 10:46:55, two
+expected sync failures while the guest booted, then from 10:47:59 every attempt
+answered '[WinError 1225] The remote computer refused the network connection'
+once every three seconds until the budget ran out. QEMU was alive and still
+listening on that port with no peer attached, and an independent client outside
+the application was refused three times in a row - so the channel was genuinely
+gone, not merely unreachable from the app.
+Retrying now happens on the socket already open, via resynchronise(). Whether a
+failed handshake is worth keeping is a property of the peer, not of the
+transport: a QMP monitor re-listens after every disconnect so dropping its
+socket costs nothing, and it keeps the old behaviour. Only the guest-agent
+client retains. The same distinction applies to command-timeout recovery, which
+closed the channel on any failure 'so the next call opens a fresh one' - on this
+channel there is no fresh one to open, so a broken socket is still closed but an
+unanswered resync leaves it alone.
+The gate models the contract rather than restating it: the test server closes
+its listener on accept, so a client that reconnects to retry cannot pass, and
+models the booting guest separately by leaving the first few syncs unanswered.
+
+- **sandbox:** Let the host pick QEMU's ports instead of hoping three are free (`a25cd30`)
+The QEMU backend asked for ports 2222, 4444 and 4445 every time. It never
+allocated: _get_free_port existed but the non-zero defaults meant the 'or'
+guarding each call never reached it, so the code that was meant to make this
+adaptive had been dead since it was written.
+On Windows that is not a preference, it is a coin flip. Hyper-V reserves TCP
+ranges that carry no listener yet refuse a bind with WSAEACCES, and it redraws
+them at every boot. After this morning's reboot 2208-2307 was reserved, which
+covers 2222, so 'Could not set up host forwarding rule tcp::2222-:22' killed
+every QEMU sandbox at launch - on a host where nothing at all was listening on
+that port. Two sandboxes could never coexist either, which is what makes a
+diff of two runs unreachable rather than merely awkward.
+The probe was asking the wrong question as well: connect_ex answers 'is anyone
+listening', and a reserved range answers that with 'no' while still refusing
+the bind. Measured on this host: 2222 and 21500 both read free and both fail
+to bind; 4444, 4445, 4446 and 55123 read free and bind. So the probe now binds
+the port for real, on the wildcard address SLIRP's hostfwd uses, and releases
+it again.
+Ports default to zero and are allocated from a process-wide reservation set,
+because nothing holds an allocated port between the probe and QEMU's own bind.
+The agent claims two, since the guest-agent chardev sits one above it. A port
+given explicitly is still used exactly as given. Teardown returns what this
+sandbox claimed and zeroes the fields, so a later start allocates afresh
+rather than reusing a number somebody else has since taken.
+QEMU's own bind failures are no longer flattened into 'QEMU start failed';
+the message now names the reservation mechanism and the netsh command that
+lists it, because nothing else on the host explains why a free port is not.
+
+- **sandbox:** Ask the guest to power off before ending its QEMU (`99dba1d`)
+Stopping a sandbox disconnected both agent channels and then sent QMP
+quit, which ends QEMU immediately with the guest never told anything.
+system_powerdown and the guest agent's own guest-shutdown both existed
+and neither was used.
+Two consequences. The Windows monitors write their logs onto the shared
+volume from inside the guest, so every stop discarded whatever the guest
+had buffered and not yet flushed. And the image did not survive it:
+windows11-intellicrack-v3 booted under the app in 37s and answered
+run_command with real output, that run ended in quit, and the next
+launch sat in Windows Recovery reporting the installation could not be
+repaired.
+_shut_down_guest now asks the guest to power itself off over
+qemu-guest-agent first and the ACPI power button second, splitting
+guest_shutdown_timeout evenly across whichever channels are open so a
+dead agent cannot consume the whole budget, and waits on the QEMU
+process - which exits on its own once its guest powers off. quit is
+reached only by a guest that will not comply.
+guest-shutdown is written without reading for a reply, because a live
+agent sends none: it is already powering the guest off when the reply
+would have been written, so waiting would spend the budget and then
+drive the client into a resync against a dying guest.
+Measured live: the production client took the running v4 Windows guest
+down and QEMU exited on its own in 15s, and the app then started and
+stopped that same image three times consecutively without ever failing
+to boot - the sequence that had destroyed v3.
+
+- **sandbox:** Give the guest agent the helper GLib needs to spawn anything (`71d42eb`)
+Every guest-exec on a provisioned Windows guest failed with "Failed to
+execute helper program (No such file or directory)" - for every command,
+not a particular one - while guest-info still advertised the command as
+enabled. That string is GLib's: qemu-ga spawns through
+g_spawn_async_with_pipes, and GLib on Windows re-launches through
+gspawn-win64-helper.exe, which it resolves beside its own
+libglib-2.0-0.dll. The bundled QEMU tree the provisioner stages from
+carries the DLL and no gspawn helper at all.
+The app's whole Windows bootstrap runs through guest-exec, so no shared
+volume was mounted, the in-guest agent was never installed, no monitor
+ever started, and no Windows-only report tab could populate.
+Causality was measured, not inferred: writing the two helpers into a
+running guest over the agent's own file commands - no restart, nothing
+else changed - took the identical probe from refused to exitcode=0.
+The helpers come from the virtio-win medium's own guest-agent package,
+which the provisioner already locates, mounts and verifies. The bundled
+tree is still preferred when it happens to carry them.
+The gates judge the staged tree the way GLib does - the helpers must be
+siblings of the library that looks them up - and expand the guest-side
+installer's own copy pattern against the real staged tree to prove they
+reach the guest. A host-native class unpacks the real package off the
+real medium and checks the results are genuine PE images.
+
+- **sandbox:** Trust a driver catalog's whole chain, not just its signer (`6ce0f25`)
+Measured in a real Windows 11 guest right after the publisher-trust step
+landed: 16 of 17 virtio-win packages installed and smbus failed 0x800B0109
+CERT_E_UNTRUSTEDROOT. Adding a signer to TrustedPublisher settles who signed
+the catalog and says nothing about the root. smbus.cat is signed by a
+self-signed CN=Red Hat Inc. development certificate whose chain is one
+element long; every other catalog on that medium chains three elements to
+Microsoft Root Certificate Authority 2010, which the guest already trusts.
+Get-TrustPlacement now builds each signer's chain and places every element
+in the store its position calls for - terminal element in Root,
+intermediates in CA, signer in TrustedPublisher - and reaches Root only
+when the chain does not already validate, so a Microsoft-rooted catalog
+causes no machine-wide trust write at all.
+Same measurement, second defect: pnputil exit 259 is ERROR_NO_MORE_ITEMS,
+meaning the package is staged and no present device needed it. That is the
+expected result for the drivers WinPE already injected, and counting it as
+a failure is what reported a complete install as "installed 12 of 17".
+Test-DriverExit now tallies it as success.
+Both decisions are generated PowerShell functions, and the gates lift them
+out of the generated script with PowerShell's own parser and execute that
+exact source against real inputs - a certificate from this machine's own
+LocalMachine\Root store, a freshly minted self-signed one, and the real
+pnputil statuses - so no policy is written twice. A third gate runs the
+whole installer against a medium carrying a genuinely signed catalog,
+which is what proves the decision is wired in rather than merely present.
+Reverting either fix turns exactly its own gates red (3 failed / 14 passed);
+restored, tests/sandbox/qemu is 292 passed / 1 skipped.
+
+- **sandbox:** Give the guest a pointer that can be aimed (`656bb67`)
+S17-D41. The VM Display was reported deaf to mouse input. It is not: the
+widget packs RFB PointerEvent exactly as RFC 6143 7.5.5 specifies, with
+absolute framebuffer coordinates. The guest simply had nothing that could
+accept them. _build_qemu_command attached virtio NIC, virtio-serial and
+virtio-9p and no pointing device at all, and usb-tablet appeared nowhere in
+the repository, so every guest fell back to the q35 board's PS/2 mouse.
+Measured on the live guest over its human monitor:
+(qemu) info mice
+* Mouse #2: QEMU PS/2 Mouse
+(qemu) info usb
+Error: USB support not enabled
+A PS/2 mouse is relative. Handed absolute coordinates, QEMU has to synthesize
+deltas from a cursor position it can only guess at while the guest applies its
+own acceleration and clamps at the screen edges. The two cursors diverge on
+the first movement and never resync, so a click lands wherever the guest's
+cursor drifted rather than where the operator aimed. From the operator's seat
+that is indistinguishable from a display that ignores input, which is how it
+was first reported - this is the root cause of S17-D39 symptom 2.
+q35 supplies no USB bus, so the tablet needs a controller before it has
+anywhere to attach: -device qemu-xhci plus -device usb-tablet. Both are in the
+bundled QEMU's -device help. Anti-evasion is not a reason to withhold it - the
+guest already carries virtio-net-pci, virtio-serial-pci and virtio-9p-pci
+unconditionally, so a HID tablet reveals nothing a scanner cannot already see.
+Naming the device in an argv proves only that a string is present, so the gate
+starts a real machine from the production argv and asks the monitor what mice
+it has, then starts the identical machine with the tablet removed and requires
+the absolute device to be gone - a discriminator that re-proves on every run
+that the pointer comes from the tablet rather than from something the host
+would have supplied anyway. It reads presence, not the * marker, because QEMU
+leaves * on PS/2 until a guest driver enumerates the tablet. The container-safe
+half pins the two argv builders to each other and checks the tablet's bus
+resolves to a controller id that is actually present.
+empty_qcow2 and launcher_argv_for move out of the S17-D36 test into
+windows_boot_probe so both suites share one copy.
+
+- **sandbox:** Install the virtio drivers this guest needs, without a prompt (`219f2f9`)
+The unattended Windows install used one first-logon command for drivers:
+pnputil /add-driver "%d:\*.inf" /subdirs /install
+Measured against a real guest and a real virtio-win medium, that fails two
+ways at once.
+
+- **sandbox:** Give OOBE its own locale so the install finishes unattended (`bba65cb`)
+The answer file carried exactly one locale component,
+Microsoft-Windows-International-Core-WinPE, in the windowsPE pass. That
+component governs Setup's own UI and nothing after it. OOBE reads the
+non-WinPE Microsoft-Windows-International-Core from oobeSystem, and with
+that absent Windows 11 24H2 stops on "Is this the right country or
+region?" and then "Is this the right keyboard layout?" - pages none of
+the Hide* flags in Shell-Setup cover.
+So the provisioner did not produce an unattended guest. It produced one
+that boots in 30 seconds and then waits for a human with a mouse, which
+is the one thing an unattended install exists to prevent.
+Measured on windows11-intellicrack.qcow2: framebuffer coverage 0.9964
+after 30s, parked on the keyboard-layout page, and a single QEMU-monitor
+mouse_button click advanced it a whole page. The guest was healthy; the
+answer file was the defect.
+Gated by TestAnswerFileGeneration::test_oobe_pass_settles_the_locale_so_
+oobe_asks_nothing, which drives the real renderer and reads the four
+locale tags back out of the oobeSystem pass, plus a discriminator that
+rejects the plausible wrong fix of reusing the -WinPE-suffixed name
+there. Falsifiability: with the component removed the positive gate is
+red on the missing component; with the -WinPE name substituted both
+tests are red. Restored, tests/sandbox/qemu is 271 passed / 1 skipped.
+
+- **sandbox:** Give a Windows guest the CPU and the interrupt chip it needs (`8a3c1f9`)
+Two independent WHPX defects in _build_qemu_command, each of which alone
+stops a Windows guest dead. Together they are why the QEMU backend had
+never run one, which is what hid S17-D35 behind them.
+S17-D36 - the -cpu model. WHPX rejects -cpu host and -cpu max, and the
+comment on that line drew the wrong lesson: it settled on bare qemu64 as
+"the richest base model WHPX accepts". But qemu64 advertises neither
+SSE4.2 nor POPCNT, and Windows 11 24H2 refuses to boot without both, so
+the guest triple-faulted into "WHPX: Unexpected VP exit code 4" in under
+20 seconds - before its boot manager printed anything. WHPX accepts
+features named individually; what it rejects is the whole host feature
+set. Naming +sse4.2,+popcnt gets the guest into its own kernel.
+S17-D37 - the interrupt chip. kernel-irqchip was forced to off, and the
+comment blamed the same exit code 4 that D36 turned out to be, so it was
+almost certainly disabled for a fault it never caused. Measured: with the
+userspace chip the guest reaches its kernel and then spins forever at
+ring 0 with RFL=0x202, framebuffer byte-identical across 90s, disk not
+growing past 0.38 MB in 15 minutes, while QEMU's own ioapic counted 45080
+undelivered IRQ 0 events. WHPX emulates the local APIC in the hypervisor
+and that is the only mode that delivers to a Windows guest; split is
+rejected outright. With it on, the same media reaches Windows Setup in
+about a minute.
+Ruled out by sweep before landing on the IRQ chip: vCPU count, an
+extended feature set, dropping the anti-evasion masks, and -machine pc
+vs q35. UEFI is not reachable here at all - edk2 via pflash dies with
+"Failed to emulate MMIO access".
+Gates. Both are host-native: the container has no hypervisor. Each drives
+the real _build_qemu_command argv against live Windows install media and
+carries its own live discriminator, so neither can pass vacuously - D36
+strips the named features and requires the triple fault; D37 flips the
+one token back and requires the guest to render nothing. The
+discriminators fail loudly if the launcher regresses to a value they can
+no longer mutate. Rendering is read as non-black framebuffer coverage off
+screendump over the QEMU human monitor: the boot logo measures under 1%
+and the Setup dialog about 90%, so the 10% line sits an order of
+magnitude from both.
+Falsifiability, measured both ways:
+D36 revert -> 2 RED (guest aborts exit 4; discriminator cannot build)
+restore -> GREEN
+D37 revert -> 2 RED (peak coverage 0.0079 over 24 frames in 240s;
+discriminator cannot build) -> restore -> GREEN
+restored, all four: 4 passed in 364s
+scripts/sandbox/provision_windows_guest.py mirrors both values and a
+container-safe gate holds the two in agreement across every accelerator.
+Also replaces the assertion at test_windows_launch_s17d16.py:118, which
+restated kernel-irqchip=off as a constant - it pinned the wrong value and
+could never have caught this. It now asserts what is actually true of
+WHPX: a mode must be pinned, and it must be one of the two WHPX
+implements. Which of those two carries a guest is settled live by D37.
+Still open, filed as S17-D38: with the chip on, QEMU reports a lost
+MSI (0, 0) on every Windows run, and the guest can either die with exit
+code 4 mid-install or survive to OOBE and go deaf to all VNC input.
+Not yet root-caused; vectors=0 on both virtio devices does not suppress
+it.
+
+- **sandbox:** Let the Windows guest agent listen where the forward delivers (`41941a7`)
+The generated Windows agent bound its command listener to 127.0.0.1. QEMU's
+SLIRP does not hand a hostfwd connection to the guest's loopback interface - it
+opens the guest-side connection to the guest's own address on the virtual
+network (10.0.2.15) - so nothing arriving over hostfwd=tcp::<host>-:4445 could
+ever reach it. The Windows guest command channel had therefore never worked,
+which is why every live proof in this program was obtained on a Linux guest;
+the generated Linux agent binds 0.0.0.0 and always did.
+The listener now binds [System.Net.IPAddress]::Any, matching the Linux half.
+This is not the same defect as S17-D25: the readiness handshake added there
+correctly fails on a Windows guest rather than false-greening, but the channel
+was still dead. The qemu-guest-agent channel is unaffected, being a
+virtio-serial chardev rather than a forwarded port.
+The defect survived the earlier agent gates because the listener is the one
+statement they do not use: S17-D26's peer lifts the generated declarations,
+allowlist, framing and both dispatch branches but writes its own listener so it
+can be given a free port. That harness moves to tests/sandbox/qemu/
+generated_agent_peer.py with the listener as a parameter, so the new gate can
+run the generated statement itself, unedited, under a real powershell.exe and
+handshake the production GuestAgentClient against it over a local address that
+is not 127.0.0.1 - the property the guest situation reduces to. Three further
+gates cover the Linux bind address, the two agents agreeing, and the guest-side
+port of the real hostfwd rule matching what each agent binds.
+
+- **sandbox:** Make the monitor launcher wait for the monitors it started (`3de3e5c`)
+start_monitors.cmd reported success whenever every Start-Process call returned,
+so a monitor that started and then died - a bad -LogDir, a missing dependency,
+a syntax error in the script body - left the launcher exiting 0 and the run
+proceeding with a silently absent monitor. Its one liveness check sampled the
+process list at a fixed 250ms offset after the last launch, which is inside
+PowerShell's own cold start: on a six-monitor fleet the doomed monitor was
+measured dying at 6015-8662ms, thousands of milliseconds after the sample had
+already declared it alive.
+The fixed-offset sample is replaced with a readiness gate that runs after the
+launch loop and waits on real process handles, polling HasExited every 100ms
+until each monitor has either outlived the grace period or exited. The grace
+is derived rather than guessed: the gate measures its own cold start from
+(Get-Date) - (Get-Process -Id $PID).StartTime and waits AUTO_GRACE_FACTOR (3x)
+that, clamped to [2000, 45000] ms, so a slower host gets proportionally more
+time instead of a constant tuned on one machine. A second positional argument
+pins a fixed grace of 1-300 seconds for a caller that needs determinism.
+The measured cold start and the grace it produced are written to
+.start_monitors.gate.info next to the logs, so a run that fails this gate can
+be told apart from one that was never given long enough.
+
+- **sandbox:** Let a Linux guest fill the Network Activity and Resources tabs (`43302ee`)
+Two of the report's seventeen tabs were permanently empty whenever the QEMU
+guest ran Linux. _collect_monitoring_logs reads network_activity.log and
+resource_monitor.log, and both files were written only by the Windows agent
+and the bundled resource_monitor.ps1; the generated Linux agent.py wrote
+file_changes.log and process_activity.log and nothing else. Neither gap is a
+Linux limitation - /proc carries every field both schemas need.
+The generated Linux agent now runs a network monitor and a resource monitor
+against real /proc: connections from /proc/net/tcp, tcp6, udp and udp6 with
+the owning pid recovered by matching each socket inode against the
+socket:[inode] symlinks in every /proc/<pid>/fd, and samples built from
+/proc/stat, /proc/meminfo, per-process /proc/<pid>/io and /proc/net/dev.
+The two schemas are not invented here: ten pipe-delimited fields for
+parse_network_log and seven for parse_resource_log, with the state vocabulary
+taken from the canonical Windows monitors. bytes_sent and bytes_received are
+emitted as 0 because /proc/net/tcp's tx_queue:rx_queue are queue depths, not
+cumulative counters - reporting them as totals would be a fabrication, and the
+Windows monitor leaves the same two columns empty for the same reason.
+The two analysis tests learn "resource" as a produced category, which the
+Linux path had never been able to produce.
+
+- **sandbox:** Give every harness run its own identity so runs stop killing each other (`f1beac6`)
+docker_sandbox could not run twice at once. Four pieces of per-run state were
+shared across every run of a given test type: the container name
+(intellicrack-sandbox-<type>), the spec file holding the pytest argv, the
+exit-code file, and the aggregate test-log. A second run overwrote the first
+run's spec before its container had read it, so a container could execute
+another run's argv, and stale-container reaping force-removed a live sibling
+by name.
+TestRunSpec now carries a run_id (p<hostpid>-<6 hex>) and run_token() derives
+every per-run path and name from it. Reaping queries by label and status and
+feeds a pure _select_removable_containers(), which never targets a running
+sibling but still reaps genuine orphans. The aggregate test-log survives via
+reporting.merge_run_log_into_shared(), appended after the container exits -
+the only moment no container holds the handle across the bind mount. Control
+files are reaped on start and discarded on a zero exit; a nonzero exit retains
+them, because a container that dies before pytest starts writes no log banner
+and the spec file is then the only record of what it was asked to run.
+Verified live: three same-type, same-minute containers ran simultaneously,
+each reading its own spec and executing its own argv.
+
+- **sandbox:** Stage a run's binary into the guest, not into a snapshot (`0cd22c6`)
+copy_to_sandbox only ever wrote into the host-side shared directory. On a
+Windows host that directory reaches the guest as a QEMU vvfat block device -
+virtio-9p is compiled out of every Windows QEMU build, which is why the share
+became a FAT drive in the first place - and vvfat presents the directory as it
+was when QEMU started. Anything staged after boot never appears inside the
+guest, so run_binary on the QEMU backend could not execute its target at all.
+Measured against a booted Debian 13 guest: the host wrote input/true_x86_64 and
+the run came back "Command not found: /mnt/shared/input/true_x86_64", while
+ls -la /mnt/shared/input inside that same guest listed only . and .. on
+/dev/vdb1 type vfat.
+The staging now goes through the qemu-guest-agent file commands, which write
+inside the guest itself and put the file under the share root the in-guest
+allowlist already trusts. A file staged before the VM boots is in the snapshot
+it boots with, so that path stays a plain host-side copy. A guest that cannot
+create or fill the file fails the copy, naming the path, rather than leaving a
+run to fail later with a misleading "not found".
+Gated by tests/sandbox/qemu/test_guest_file_staging_s17d30.py against the real
+QGA protocol server, which now models the agent's file commands and keeps the
+bytes it was handed: the assertions are on what arrived on the far side of the
+channel. Making the staging a no-op again reddens exactly the four tests that
+gate it and leaves the pre-boot path green.
+Live re-proof: Create then Run in Sandbox on a real ELF now returns
+"[+] Execution completed / Exit code: 0" - that binary's own exit status.
+Resolves S17-D30.
+
+- **sandbox:** Let a run reach the sandbox that is already running (`57a9a71`)
+SandboxBridge.run_binary called SandboxManager.run_binary without two
+arguments that method has always accepted, so "Run in Sandbox" was unusable on
+QEMU. Without qemu_config the run built its backend from a default QEMUConfig
+whose image_path is None and died in _build_qemu_command; without
+reuse_instance it booted a second virtual machine beside the one the user was
+looking at rather than running the binary in it. Found live with a healthy
+sandbox Active and its guest agent answering: the panel reported "Failed to
+start sandbox".
+This is S17-D06 left half-fixed - create and restart were given qemu_config,
+run_binary was not - so the panel now passes the same _qemu_create_config it
+already builds for those two, and asks to reuse.
+Gated by TestRunBinaryForwardsQemuConfig against the real
+SandboxManager.run_binary: dropping either forwarded argument in memory
+reddens exactly its own test.
+Live re-proof: with instance 1b377e35 running, the run produced
+"[*] Executing: true_x86_64 / [+] Execution completed" and no second
+sandbox_instance_created. It surfaced the next defect underneath, S17-D30,
+recorded in the audit table: QEMU vvfat snapshots the shared directory at VM
+start, so a binary staged afterwards is invisible to the guest.
+Resolves S17-D28 and S17-D29.
+
+- **sandbox:** Prove the guest agent channel is live and report what ran on it (`6d994f9`)
+Four defects on the QEMU guest-agent path, all found driving a real Debian
+guest through the GUI.
+
+- **ui:** Make the VM Display ask for a frame it can actually be given (`e12075f`)
+The sandbox VM Display had never shown a single frame. Driving a real booted
+Debian guest through the GUI produced 616 FramebufferUpdateRequests, 615
+timeouts and zero decoded frames in nine minutes, with the tab black throughout.
+Two independent protocol defects were in the way, and either one alone is enough
+to keep it black.
+
+- **sandbox:** Negotiate the guest-agent sync against what the agent really implements (`798bac3`)
+The guest-agent handshake sent guest-sync-delimiter. No such command exists;
+the real name is guest-sync-delimited. A live Debian 13 guest running
+qemu-guest-agent 10.0.11 answered CommandNotFound, and because the client
+skipped any line that was not the echoed sync id, the rejection was discarded
+as noise and every attempt waited out its full deadline. The sandbox spent the
+whole 90 s budget across three retries and aborted the start, so the guest data
+plane had never come up.
+Four adversarial review rounds and 184 passing tests did not catch this. They
+could not: the test harness was written from the same misspelling as the code,
+so the peer and the client agreed perfectly about a command that does not
+exist. A double authored from the same assumption as the implementation cannot
+falsify that assumption. Only the live guest could, and did.
+Ground truth captured from that guest's own guest-info command table and from
+raw wire probes, and the fix follows it rather than the documentation:
+- the two sync commands are guest-sync-delimited and guest-sync; agent builds
+differ in which they carry, so the handshake now negotiates rather than
+assuming, and falls back when one is rejected
+- only the delimited form prefixes its reply with the 0xFF sentinel; plain
+guest-sync echoes the id unadorned, so sentinel framing cannot be required
+- a bare inbound 0xFF is not silently swallowed: the agent answers with a JSON
+parse error and then parses correctly, so the parser flush works but its own
+error line must be skipped. The fast path therefore keys on the
+CommandNotFound error class, never on "an error arrived" - keying on the
+latter would abort on the flush byte's own reply
+- CommandNotFound is answered immediately, so it now ends that command's turn
+at once instead of consuming the budget in silence
+Each command gets a bounded slice of the budget rather than all of it, and the
+commands rotate until the deadline. That is not defensive padding: a reply can
+be lost before it is ever decodable, because a partial line left in the agent's
+output stream by a previous client swallows whatever is appended after it, and
+only the delimited command's reply carries the sentinel that would reframe the
+stream. Bounding each attempt lets the next command have its turn, by which
+point the leftover has been consumed.
+_await_sync_id now reports why it failed - matched, rejected, or neither -
+instead of returning a bare bool, and the skipped-line log carries the agent's
+own error description. The previous logging recorded only the reply's key names
+("keys=['error']"), which is what hid this defect for four rounds.
+The harness now models the real agent: both sync commands, the sentinel on the
+delimited reply only, and a configurable set of commands answered with
+CommandNotFound so an agent build missing one is a case tests can express. Two
+new gates cover the fallback completing the handshake and a rejection being
+detected from the reply rather than by timeout.
+Verified live end to end on a real guest, which is the only verification that
+counts here: sync completes, /dev/vdb1 is discovered past the vfat EFI System
+Partition, mounts at /mnt/shared, the launcher becomes reachable (test -f
+returns 1 before the mount and 0 after), the monitor agent starts and connects
+back on 4445, and the sandbox reports running in about seven seconds.
+ruff / basedpyright / pydoclint clean, no suppressions. The sandbox suite has
+not been re-run since the rotation change was written; the previous run took
+the host down when a WHPX guest and a Windows container contended for the
+hypervisor, and it is not re-run here.
+
+- **sandbox:** Put qemu-guest-agent on its own channel and make the guest reach the share (`8cfa4d0`)
+The QEMU guest-agent data plane had never worked. Commit 06aecc8b got a real
+Debian guest booting on Windows, but everything downstream of the boot was
+broken in three independent ways, and the last of them had been dead since the
+Windows-guest path was written.
+S17-D20 - wrong channel. guest-ping and guest-exec were sent through the QMP
+monitor socket, but they are qemu-guest-agent commands whose channel is the
+separate org.qemu.guest_agent.0 chardev at agent_port + 1. QEMU answered "The
+command guest-ping has not been found", so _bootstrap_guest_agent failed on
+every start and the in-guest monitor never ran. QemuGuestAgentClient now speaks
+the real QGA protocol on that socket: no greeting, no qmp_capabilities, a
+guest-sync-delimiter handshake, and inbound framing that resets on the 0xFF
+sentinel qga/main.c prepends to the sync reply - without which json.loads on a
+strict-UTF-8 line raises an uncaught UnicodeDecodeError against any real agent.
+Because the chardev is server,nowait the host port listens before the guest has
+booted, so connect+sync now retries across the whole configured budget instead
+of failing after one attempt, and re-syncs after a client-side timeout so a late
+reply cannot leave the stream permanently offset. QMPClient keeps its exact
+public surface; the two clients share one transport base.
+S17-D17 guest side - the share was attached but never mounted. The Linux
+launcher path assumed /mnt/shared already existed and the Windows path assumed
+drive Z:. A raw virtio FAT volume is mounted by nothing, so start_agent.sh could
+never be found. The share is now mounted inside the guest, verified through
+guest-exec plus guest-exec-status rather than fire-and-forget, before the
+launcher is exec'd. Device discovery required care: a Debian genericcloud image
+carries a vfat EFI System Partition at /dev/vda15 enumerated ahead of the share,
+and taking the first vfat row silently remounts the guest's boot partition, so
+the share is identified by being unmounted and carrying vvfat's QEMU VVFAT label
+(verified against a real vvfat image built with the bundled qemu-img). The
+Windows guest resolves its own drive letter and %SystemDrive%/%SystemRoot% from
+the guest instead of assuming C:, and every in-guest path - launcher,
+run_binary, execution script, dropped-file staging - follows the resolved root.
+run_binary had never worked on a Windows guest. It flattened the invocation into
+a quoted command line that the in-guest agent's own Test-AllowedCommand rejects:
+the string is not an allowed name, does not end in .exe (it ends in quote-space)
+and does not start with the share root (it starts with a quote). The executable
+now travels unquoted in the request's command field with its arguments in args,
+which is both what the agent dispatches and what lets a path containing spaces
+survive; run_command, whose contract is a shell command line, wraps that line in
+the guest's own interpreter. The generated agent.ps1 no longer maps Z: over an
+SMB export that _build_qemu_command never emitted, and derives its watched roots
+from the same probed values the host scans, so the two sides cannot drift.
+
+- **sandbox:** Make the QEMU backend launch on Windows (`06aecc8`)
+The QEMU backend had never started on Windows. Its command line and process
+model carried Unix assumptions that make QEMU exit before the VM boots. Every
+finding here was confirmed by building the argv with the application's own
+QEMUSandbox._build_qemu_command and handing that exact argv to the real QEMU
+binary, then walked forward one blocker at a time until a real Debian guest
+booted under the application with WHPX acceleration and an open QMP channel.
+S17-D16 - process model. Windows QEMU implements neither -daemonize (rejected
+as "invalid option") nor -pidfile (never written). Both are now emitted only
+off-Windows; on Windows the VM is a long-lived foreground child retained on
+self.process, its PID read straight from that child, and torn down by an
+explicit reap that waits for QMP quit then kills if needed.
+S17-D17 - Linux shared folder. virtio-9p (-fsdev / virtio-9p-pci) is compiled
+out of every Windows QEMU build ("fsdev support is disabled"), so the Linux
+branch aborted the launch. _shared_folder_args now selects the transport by
+host capability: a FAT-backed virtio block device on Windows (which both guest
+types can mount), virtio-9p only where it is actually available. This is the
+host-side transport fix; wiring the in-guest monitor agent over it is separate
+open work (see below).
+S17-D18 - WHPX was never selected on the normal unelevated run.
+_probe_whpx_host_prerequisites gated on Get-WindowsOptionalFeature -Online and
+bcdedit /enum, both of which require an elevated token; unelevated they threw,
+left stdout empty, and the "" != "enabled" check silently fell back to TCG
+(~20x slower). The primary signal is now Win32_ComputerSystem.HypervisorPresent,
+which needs no elevation; the elevated checks remain only as a fallback. This
+also refutes the earlier audit note "WHPX unavailable on this host" - that was
+this defect, not the host.
+S17-D19 - -smbios type=3 used chassis-type=N, which is not a valid SMBIOS
+type-3 parameter in QEMU ("Invalid parameter 'chassis-type'"), rejected on both
+the bundled 10.1.0 and system 11.0.50 builds. The type-3 entries now carry an
+asset tag instead, preserving the per-profile distinction the anti-evasion
+identity provides.
+Three further launch blockers surfaced in the same walk and are fixed here
+because the VM cannot boot without them:
+- -cpu host / -cpu max make WHPX triple-fault into "Unexpected VP exit code 4"
+during early boot; WHPX accepts qemu64 as its richest base model, and it
+still honours the anti-evasion masks (verified: qemu64 boots to login, host
+and max both VP-exit).
+- the q35 default in-kernel IRQ chip is unsupported under WHPX
+("injection failed ... lost"); the machine now sets kernel-irqchip=off for
+WHPX so interrupts route through userspace.
+- label= is not a -drive option (raw format rejects it); it was in the existing
+Windows-guest FAT path too, so that path had never launched either.
+Verified live on an unelevated host: a prepared Debian 13 guest boots through
+QEMUSandbox.start with accelerator=whpx and QMP connected. This unlocks the
+QMP- and VNC-based surfaces (VM Display, Snapshots, Pause/Continue) for the
+Phase B audit. The guest-agent data plane - the qemu-guest-agent command
+channel (guest-ping/guest-exec are sent over the QMP monitor instead of the
+org.qemu.guest_agent.0 socket) and the in-guest monitor bootstrap over the new
+FAT share - is a distinct subsystem tracked as follow-up work.
+Gate (Docker Windows sandbox, four assertions proven RED on revert, restored
+GREEN): tests/sandbox/qemu/test_windows_launch_s17d16.py 5/5. It builds the real
+argv with a WHPX accelerator and asserts no -daemonize/-pidfile, WHPX ->
+qemu64 + kernel-irqchip=off, the Linux share as a FAT drive not -fsdev, no
+chassis-type in any -smbios entry, and the Windows PID resolved from a real
+foreground child that reap actually terminates. Reverting all five source
+changes turns four of the five RED (the fifth is the process-model test the
+argv mutations do not touch).
+
+- **sandbox,ui:** Surface sandbox failures, gate controls by backend, own restart (`2e0c146`)
+Four defects in the sandbox panel and the layer beneath it.
+S17-D09 - the panel had no error dialogs at all. Every failure appended "[-] ..."
+to the Console tab and nothing else, across 2665 lines with zero QMessageBox or
+show_error matches, so a failed Create was invisible from any of the other 16
+tabs. The user-initiated failure paths now raise a dialog through the existing
+intellicrack.ui.dialogs_helpers.show_error, which sandbox_config.py already uses.
+Console logging is kept alongside it, and the recurring status-poll timer is
+deliberately excluded so it cannot spam a modal.
+S17-D10 - controls were not gated by backend. _set_sandbox_controls_active
+enabled everything whenever an instance was active, so on Windows Sandbox the
+QEMU-only surfaces were live but guaranteed to fail. The gated set is now exactly
+the set of SandboxBridge operations that reject a non-QEMU instance outright:
+snapshot_create, snapshot_restore, snapshot_list, snapshot_delete, stop, cont,
+get_pending_messages, pcap_start, screenshot, anti_evasion, extract_dropped_files
+and get_vnc_port - twelve, not the eight that are obvious from the backend class
+alone. Screenshot, PCAP, Extract Dropped Files and Apply Anti-Evasion are gated
+in the bridge rather than in WindowsSandbox, which is why they read as shared
+controls until the bridge is checked.
+S17-D11 - silent failures. The VNC-port query dropped its error into an inline
+on_error=lambda _: _logger.debug("vnc_port_query_failed") that discarded the
+exception text entirely, and _poll_status discarded its exception. Both now
+report the real error at warning level and to the Console, without repeating
+identically forever.
+S17-D14 - no SandboxManager.restart. The panel synthesised one from destroy then
+create across four callbacks, so the semantics of the window between teardown and
+recreate lived in the GUI where nothing headless could reuse or test them. A real
+SandboxManager.restart and SandboxBridge.restart now own it, and the panel issues
+a single call. The restart path forwards qemu_config, so it does not silently
+re-break S17-D06.
+Also, because they were found while gating the above:
+- sandbox.restart is registered in tool_definition. Without it the operation
+existed but was unreachable from ToolRegistry and the LLM, which is the whole
+point of the bridge layer; the existing completeness check only walks
+definition -> method, so nothing caught it.
+- _on_destroy_error and _on_restart_error settle panel state before raising the
+dialog. A modal runs a nested Qt event loop, so raising it first left the poll
+timer dispatching against a destroyed instance for as long as the dialog stayed
+open.
+- _on_restart_success re-attaches the VNC display and re-seeds the diff selector.
+The replacement is a different instance on a different port, so the view was
+left pointing at the destroyed VM.
+- StubManager grew a faithful restart so the conftest stub still mirrors the real
+manager surface.
+Gates (Docker sandbox, each proven RED on revert and restored GREEN):
+tests/ui/test_sandbox_panel_error_dialogs_s17d09.py      13/13
+tests/ui/test_sandbox_panel_backend_gating_s17d10.py      7/7
+tests/ui/test_sandbox_panel_silent_failures_s17d11.py
+tests/ui/test_sandbox_panel_restart_s17d14.py
+tests/sandbox/manager/test_manager_restart_s17d14.py
+tests/bridges/test_sandbox_bridge_restart_s17d14.py
+tests/bridges/test_sandbox_bridge_qemu_only_ops_s17d10.py 10/10
+Reverting the four newly gated controls to unconditional gives
+"AssertionError: controls the Windows backend cannot service are enabled:
+['screenshot_btn', 'pcap_btn', 'extract_files_btn', '_anti_evasion_btn']".
+Removing the tool registration gives "assert 29 == 30" and "dispatch coverage
+drift: unexpected ['restart']". The manager gate was driven RED with a semantic
+mutation (dropping binary_path and qemu_config from the recreate), not merely by
+deleting the method, so it gates behaviour rather than existence.
+The D10 bridge gate is the anchor for the panel gate: it drives the real bridge
+against a real manager and shows the same operation being refused for a Windows
+instance and accepted for a QEMU one, so the panel gate is tied to observed
+bridge behaviour instead of an assumption about it.
+
+- **sandbox:** Derive QEMU tools path from the project root, log the real VNC port (`2a788b4`)
+
+- **sandbox,ui:** Converge the two divergent .wsb generators (`e19ef7a`)
+
+- **sandbox,ui:** Make the QEMU backend reachable from the GUI (`ec6713d`)
+
+- **sandbox:** Test Sandbox must verify a session, not process liveness (`6585609`)
+"Test Sandbox" reported success on a host where creating a sandbox was
+impossible. It treated process liveness as the success condition:
+try:
+self._process.wait(timeout=10)
+except TimeoutExpired:
+self.output.emit("Sandbox is running normally")
+return False                              # -> SUCCESS
+return self._handle_sandbox_exit_status()     # rc == 0 -> SUCCESS
+Both branches passed. WindowsSandbox.exe is fire-and-forget and exits 0 within
+a second of handing off, so the rc==0 path is taken on every run including runs
+where the session never comes up; and a launch failing 0x800706d9 leaves a
+process alive on a modal dialog, which is the TimeoutExpired path. Only a
+non-zero exit or an exception could fail.
+This is why audit wave 6H recorded H-09 "Sandbox test passed!" next to H-01
+Create failing 0x800706d9 on the same host. The probe could not detect that
+failure class, and the contradiction was read as host flakiness rather than as
+a bug, for two audit waves.
+Success is now a real session host process existing for this instance's .wsb,
+with no failure dialog on screen. Failure reports the dialog text, so the user
+sees the actual error instead of a green tick.
+Rather than add a second detector, the existing backend detection is reused:
+- find_sandbox_session_pid() is promoted to a module-level function in
+sandbox/windows.py and is now the single implementation; the backend's
+async _find_session_pid delegates to it via asyncio.to_thread.
+- WindowsSandbox.detect_failure_dialog() exposes the existing Win32 #32770
+dialog scan the backend already uses during startup.
+
+- **sandbox:** Launch WindowsSandbox.exe, not the connection client (`e996961`)
+Every Windows Sandbox create failed with 0x800706D9. The backend launched
+WindowsSandboxClient.exe, which on current Windows builds is only the
+connection client: started on its own it cannot create a session. Prior audits
+attributed this to host Hyper-V/HCS state and recommended a reboot; that was
+wrong.
+Isolated on Windows 11 build 26220 from a verified-clean process state:
+WindowsSandboxClient.exe minimal.wsb -> exit -2147023143 (0x800706D9),
+no VM, no window.
+WindowsSandbox.exe minimal.wsb -> exit 0, spawning
+WindowsSandboxRemoteSession.exe (which receives the .wsb path on its own
+command line) -> WindowsSandboxServer.exe -> vmmemWindowsSandbox, with a
+live rendering window and full guest provisioning logged by HCS.
+Switching the binary alone is not enough, because the launcher is
+fire-and-forget:
+- Resolve the launcher at runtime, preferring WindowsSandbox.exe and falling
+back to WindowsSandboxClient.exe on older builds that only ship it.
+- Bind the instance to its session by matching the RemoteSession process whose
+command line carries this instance's .wsb path, an exact handle rather than
+a newest-wins heuristic that can attach to the wrong session.
+- Stop treating a launcher exit of 0 as a crashed client; judge liveness on the
+session process instead.
+- Map an exit code of 0x800706D9 to the actionable message. From a clean state
+the failure arrives as an exit code rather than a dialog, so it previously
+surfaced only as "client exit code -2147023143".
+- Rewrite that guidance to name the real causes, the single-instance limit and
+the wrong launcher, instead of directing users to reboot the host.
+- Close the session gracefully on stop. Force-killing the session processes
+leaves vmmemWindowsSandbox resident, and a leaked VM blocks the next create.
+Adds pid_is_running() to process_manager as a public wrapper over the existing
+private PID probe; the private name is retained for its current callers.
 
 - **bridges,ui:** Enumerate real x64 exception handlers for SEH tab (`5fe1cf4`)
 

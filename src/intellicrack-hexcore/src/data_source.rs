@@ -194,6 +194,13 @@ impl ProcessDataSource {
 impl DataSource for ProcessDataSource {
     fn read(&self, offset: usize, length: usize) -> Result<Vec<u8>, DataSourceError> {
         use windows_sys::Win32::System::Diagnostics::Debug::ReadProcessMemory;
+        if offset > self.region_size {
+            return Err(DataSourceError::OutOfBounds {
+                offset,
+                length: self.region_size,
+            });
+        }
+        let length = length.min(self.region_size - offset);
         if length == 0 {
             return Ok(Vec::new());
         }
@@ -223,6 +230,14 @@ impl DataSource for ProcessDataSource {
         if !self.writable {
             return Err(DataSourceError::ReadOnly);
         }
+        if offset > self.region_size {
+            return Err(DataSourceError::OutOfBounds {
+                offset,
+                length: self.region_size,
+            });
+        }
+        let max_len = self.region_size - offset;
+        let data = &data[..data.len().min(max_len)];
         if data.is_empty() {
             return Ok(());
         }
@@ -317,7 +332,13 @@ mod tests {
         let src = BufferDataSource::new(vec![0x01u8, 0x02, 0x03], false);
         let err = src.read(4, 1).unwrap_err();
         assert!(
-            matches!(err, DataSourceError::OutOfBounds { offset: 4, length: 3 }),
+            matches!(
+                err,
+                DataSourceError::OutOfBounds {
+                    offset: 4,
+                    length: 3
+                }
+            ),
             "expected OutOfBounds{{offset:4, length:3}}, got {err:?}"
         );
     }
@@ -351,7 +372,13 @@ mod tests {
         let mut src = BufferDataSource::new(vec![0xAAu8, 0xBB, 0xCC], true);
         let err = src.write(10, &[0xFFu8]).unwrap_err();
         assert!(
-            matches!(err, DataSourceError::OutOfBounds { offset: 10, length: 3 }),
+            matches!(
+                err,
+                DataSourceError::OutOfBounds {
+                    offset: 10,
+                    length: 3
+                }
+            ),
             "expected OutOfBounds{{offset:10, length:3}}, got {err:?}"
         );
     }
@@ -431,7 +458,8 @@ mod tests {
         // Covers the `#[from] std::io::Error` conversion on DataSourceError::Io.
         // Mutation caught: dropping the `#[from]` attribute breaks the `?`/`.into()` path;
         // altering the Display format string fails the prefix/content assertions.
-        let io_err = std::io::Error::new(std::io::ErrorKind::PermissionDenied, "mapped view failed");
+        let io_err =
+            std::io::Error::new(std::io::ErrorKind::PermissionDenied, "mapped view failed");
         let ds_err: DataSourceError = io_err.into();
         assert!(
             matches!(ds_err, DataSourceError::Io(ref e) if e.kind() == std::io::ErrorKind::PermissionDenied),
@@ -465,15 +493,18 @@ mod process_tests {
         assert_eq!(cloned.region_type, 0x2_0000);
         let dbg = format!("{region:?}");
         assert!(dbg.contains("MemoryRegion"), "unexpected Debug: {dbg}");
-        assert!(dbg.contains("65536"), "base_address missing from Debug: {dbg}");
+        assert!(
+            dbg.contains("65536"),
+            "base_address missing from Debug: {dbg}"
+        );
     }
 
     #[test]
     fn test_attach_readonly_sets_access_flags_and_metadata() {
         // read_only=true takes the PROCESS_VM_READ|PROCESS_QUERY_INFORMATION access branch.
         // Mutation caught: setting writable:!read_only wrong flips is_writable().
-        let src =
-            ProcessDataSource::attach(std::process::id(), 0, 4096, true).expect("self-attach failed");
+        let src = ProcessDataSource::attach(std::process::id(), 0, 4096, true)
+            .expect("self-attach failed");
         assert!(!src.is_writable());
         assert_eq!(src.length(), 4096);
         assert_eq!(src.source_type(), "process");
@@ -522,7 +553,8 @@ mod process_tests {
     fn test_read_zero_length_returns_empty_without_syscall() {
         // length==0 early-return path.
         // Mutation caught: removing the guard issues ReadProcessMemory(len=0) which fails -> Err.
-        let src = ProcessDataSource::attach(std::process::id(), 0, 16, true).expect("attach failed");
+        let src =
+            ProcessDataSource::attach(std::process::id(), 0, 16, true).expect("attach failed");
         assert_eq!(src.read(0, 0).unwrap(), Vec::<u8>::new());
     }
 
@@ -556,8 +588,79 @@ mod process_tests {
         let base = payload.as_ptr() as usize;
         let mut src = ProcessDataSource::attach(std::process::id(), base, payload.len(), false)
             .expect("self-attach (writable) failed");
-        src.write(1, &[0xAB, 0xCD]).expect("WriteProcessMemory failed");
+        src.write(1, &[0xAB, 0xCD])
+            .expect("WriteProcessMemory failed");
         assert_eq!(payload, vec![0x00, 0xAB, 0xCD, 0x00]);
+    }
+
+    /// F-0047 regression: `read`/`write` forwarded straight into
+    /// ReadProcessMemory/WriteProcessMemory without ever comparing the
+    /// requested range against the declared `region_size`. The underlying
+    /// heap allocation has 4 real bytes, but the source only declares a
+    /// 2-byte window; without the bounds check the read spills into the
+    /// extra 2 bytes just because the underlying memory happens to be valid.
+    #[test]
+    fn test_read_beyond_declared_region_size_is_clamped() {
+        let payload: Vec<u8> = vec![0xDE, 0xAD, 0xBE, 0xEF];
+        let base = payload.as_ptr() as usize;
+        let src =
+            ProcessDataSource::attach(std::process::id(), base, 2, true).expect("attach failed");
+        let result = src.read(0, 4).unwrap();
+        assert_eq!(
+            result,
+            vec![0xDE, 0xAD],
+            "read must clamp to the declared region_size, not spill into adjacent valid memory"
+        );
+        assert_eq!(payload.len(), 4, "keep payload alive until after the read");
+    }
+
+    #[test]
+    fn test_read_offset_beyond_region_size_returns_out_of_bounds() {
+        let src =
+            ProcessDataSource::attach(std::process::id(), 0, 16, true).expect("attach failed");
+        let err = src.read(32, 4).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                DataSourceError::OutOfBounds {
+                    offset: 32,
+                    length: 16
+                }
+            ),
+            "expected OutOfBounds{{offset:32, length:16}}, got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_write_beyond_declared_region_size_is_clamped() {
+        let payload: Vec<u8> = vec![0u8; 4];
+        let base = payload.as_ptr() as usize;
+        let mut src = ProcessDataSource::attach(std::process::id(), base, 2, false)
+            .expect("self-attach (writable) failed");
+        src.write(0, &[0xAA, 0xBB, 0xCC, 0xDD])
+            .expect("WriteProcessMemory failed");
+        assert_eq!(
+            payload,
+            vec![0xAA, 0xBB, 0x00, 0x00],
+            "write must clamp to the declared region_size, not spill into adjacent valid memory"
+        );
+    }
+
+    #[test]
+    fn test_write_offset_beyond_region_size_returns_out_of_bounds() {
+        let mut src =
+            ProcessDataSource::attach(std::process::id(), 0, 16, false).expect("attach failed");
+        let err = src.write(32, &[0xFF]).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                DataSourceError::OutOfBounds {
+                    offset: 32,
+                    length: 16
+                }
+            ),
+            "expected OutOfBounds{{offset:32, length:16}}, got {err:?}"
+        );
     }
 
     #[test]

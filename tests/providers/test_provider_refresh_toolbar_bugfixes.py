@@ -365,7 +365,9 @@ class TestRefreshModelsReusesConnectedProvider:
         """
         worker_cls = self._run(monkeypatch, provider_name=ProviderName.OPENAI, registry_provider=None)
 
-        assert worker_cls.last_provider_arg is None, f"an unregistered provider must pass provider=None; got {worker_cls.last_provider_arg!r}"
+        assert worker_cls.last_provider_arg is None, (
+            f"an unregistered provider must pass provider=None; got {worker_cls.last_provider_arg!r}"
+        )
 
 
 class TestOpenAIChatModelFilterExcludesMediaModels:

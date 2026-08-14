@@ -339,10 +339,8 @@ def get_desktop_handle_for_pid(pid: int) -> int | None:
 class HiddenDesktop:
     """A Win32 desktop object that is created but never made the input desktop.
 
-    Windows placed on this desktop are never composited to the screen, so any
-    process launched against it is fully invisible to the user for its entire
-    lifetime. The desktop's ``name`` is set at construction and the handle is
-    released with :meth:`close`.
+    Windows placed on this desktop are never composited to the screen, so any process launched against it is fully invisible to the user for
+    its entire lifetime. The desktop's ``name`` is set at construction and the handle is released with :meth:`close`.
     """
 
     def __init__(self) -> None:
@@ -396,11 +394,9 @@ class HiddenDesktop:
 class DesktopProcess:
     """A ``CreateProcessW`` child bound to a :class:`HiddenDesktop`.
 
-    Mirrors the subset of :class:`subprocess.Popen` that Intellicrack's process
-    bookkeeping uses (:attr:`pid`, :attr:`returncode`, :meth:`poll`,
-    :meth:`wait`, :meth:`terminate`, :meth:`kill`) so callers can treat it
-    interchangeably. The owned desktop is released when the process handles are
-    closed via :meth:`close`.
+    Mirrors the subset of :class:`subprocess.Popen` that Intellicrack's process bookkeeping uses (:attr:`pid`, :attr:`returncode`,
+    :meth:`poll`, :meth:`wait`, :meth:`terminate`, :meth:`kill`) so callers can treat it interchangeably. The owned desktop is released when
+    the process handles are closed via :meth:`close`.
     """
 
     def __init__(self, info: _ProcessInformation, desktop: HiddenDesktop) -> None:

@@ -99,11 +99,12 @@ _STREAMING_TOOL_CALL_PROVIDERS: frozenset[ProviderName] = frozenset(
         ProviderName.LOCAL_TRANSFORMERS,
     },
 )
-"""Providers whose ``chat_stream()`` implementation populates ``get_pending_tool_calls()``
-from streamed deltas, so a tools-on initial turn can be safely streamed without losing a
-tool call the model emits mid-stream. A provider added in the future that cannot yet
-finalize tool calls from a stream is simply left out of this set, so ``_should_use_streaming``
-falls back to the non-streaming path for its initial tools-on turn until it is added here."""
+"""Providers whose ``chat_stream()`` implementation populates ``get_pending_tool_calls()`` from streamed deltas, so a tools-on initial turn
+can be safely streamed without losing a tool call the model emits mid-stream.
+
+A provider added in the future that cannot yet finalize tool calls from a stream is simply left out of this set, so
+``_should_use_streaming`` falls back to the non-streaming path for its initial tools-on turn until it is added here.
+"""
 
 _MAX_TOOL_RESULT_CHARS: int = 8000
 """Maximum serialized characters of a single tool result re-fed to the model.
@@ -562,7 +563,6 @@ Each entry maps a :class:`ToolName` to the exact method-name leaves (the part af
 classify as destructive. Method names not present in the relevant set are read-only. Bridges absent from this map default to ``unknown``
 classification, which the orchestrator treats as destructive so that newly added bridges fail safe until their methods are catalogued here.
 """
-
 
 def _split_tool_function_name(call: ToolCall) -> tuple[str, str]:
     """Resolve a tool call to a ``(tool_name, method_leaf)`` pair.

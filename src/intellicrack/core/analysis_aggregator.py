@@ -4,8 +4,8 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Bridge analysis aggregator for Intellicrack.
 
-Queries connected bridges and aggregates their output into a unified BridgeAnalysisSummary
-by delegating all actual analysis to the bridge layer.
+Queries connected bridges and aggregates their output into a unified BridgeAnalysisSummary by delegating all actual analysis to the bridge
+layer.
 """
 
 from __future__ import annotations

@@ -591,11 +591,9 @@ class FridaPanel(AnalysisPanelBase):
     def _drain_frida_message_queue(self) -> None:
         """Flush queued Frida messages to the console in a bounded per-tick batch.
 
-        Runs on the GUI thread as the ``_console_drain_timer`` callback. Pops
-        at most ``_CONSOLE_DRAIN_BATCH_SIZE`` messages per tick so a chatty
-        script hook cannot monopolize the Qt event loop and starve process
-        controls like Detach/Flush, then renders a "messages dropped" notice
-        if the bounded queue overflowed since the previous drain.
+        Runs on the GUI thread as the ``_console_drain_timer`` callback. Pops at most ``_CONSOLE_DRAIN_BATCH_SIZE`` messages per tick so a
+        chatty script hook cannot monopolize the Qt event loop and starve process controls like Detach/Flush, then renders a "messages
+        dropped" notice if the bounded queue overflowed since the previous drain.
         """
         with self._frida_message_lock:
             batch_size = min(_CONSOLE_DRAIN_BATCH_SIZE, len(self._frida_message_queue))

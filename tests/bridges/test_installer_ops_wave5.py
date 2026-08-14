@@ -337,9 +337,7 @@ class TestBuildX64dbgPluginCommandConstruction:
         assert x64_configure[a_idx + 1] == "x64", f"Architecture mismatch: expected 'x64', got {x64_configure[a_idx + 1]!r}"
 
         expected_x64dbg_sdk_flag = f"-DX64DBG_SDK_PATH={sdk_path}"
-        assert expected_x64dbg_sdk_flag in x64_configure, (
-            f"-DX64DBG_SDK_PATH not set correctly in configure call: {x64_configure}"
-        )
+        assert expected_x64dbg_sdk_flag in x64_configure, f"-DX64DBG_SDK_PATH not set correctly in configure call: {x64_configure}"
 
     def test_cmake_build_command_uses_release_config(
         self,

@@ -173,6 +173,8 @@ pub enum TemplateError {
     ValidationFailed(String),
     #[error("unknown type in sizeof(): {0}")]
     UnknownType(String),
+    #[error("field type has no statically known size: {0}")]
+    UnsizedFieldType(String),
 }
 
 pub struct TemplateRegistry {
@@ -284,18 +286,32 @@ impl Default for TemplateRegistry {
     }
 }
 
+/// Compute the static byte size of a `FieldType`, when one exists.
+///
+/// Returns `None` for `FieldType` variants whose size can only be known by
+/// evaluating them against real binary data (`DynamicArray`, `Union`,
+/// `Conditional`, `StructRef`, `Computed`, `EndiannessSwitch`) — these are
+/// dispatched to dedicated handlers in `eval.rs` that compute their own real
+/// sizes and must never be sized via a flat multiplication or added to a
+/// running struct offset. `Array`'s size is `None` whenever its element type
+/// is itself unsized, or when `element_size * count` would overflow `usize`
+/// (checked via `checked_mul` rather than a plain `*`).
+///
+/// `Some(0)` is a distinct, legitimate outcome (e.g. `Bytes(0)`,
+/// `Padding(0)`, `FixedString(0)`, or an `Array` of such zero-length
+/// elements) and must never be conflated with the "cannot be sized" case.
 #[must_use]
-pub fn field_size(ft: &FieldType) -> usize {
+pub fn field_size(ft: &FieldType) -> Option<usize> {
     match ft {
-        FieldType::UInt8 | FieldType::Int8 | FieldType::Bool | FieldType::Char => 1,
-        FieldType::UInt16 | FieldType::Int16 => 2,
-        FieldType::UInt32 | FieldType::Int32 | FieldType::Float32 => 4,
-        FieldType::UInt64 | FieldType::Int64 | FieldType::Float64 => 8,
-        FieldType::Bytes(n) | FieldType::FixedString(n) | FieldType::Padding(n) => *n,
+        FieldType::UInt8 | FieldType::Int8 | FieldType::Bool | FieldType::Char => Some(1),
+        FieldType::UInt16 | FieldType::Int16 => Some(2),
+        FieldType::UInt32 | FieldType::Int32 | FieldType::Float32 => Some(4),
+        FieldType::UInt64 | FieldType::Int64 | FieldType::Float64 => Some(8),
+        FieldType::Bytes(n) | FieldType::FixedString(n) | FieldType::Padding(n) => Some(*n),
         FieldType::Array {
             element_type,
             count,
-        } => field_size(element_type) * count,
+        } => field_size(element_type).and_then(|elem_size| elem_size.checked_mul(*count)),
         FieldType::Bitfield { backing_type, .. } | FieldType::Enum { backing_type, .. } => {
             field_size(backing_type)
         }
@@ -305,7 +321,7 @@ pub fn field_size(ft: &FieldType) -> usize {
         | FieldType::Conditional { .. }
         | FieldType::StructRef(_)
         | FieldType::Computed { .. }
-        | FieldType::EndiannessSwitch { .. } => 0,
+        | FieldType::EndiannessSwitch { .. } => None,
     }
 }
 
@@ -514,6 +530,62 @@ pub fn field_type_name(ft: &FieldType) -> &'static str {
     }
 }
 
+/// Narrows an IEEE-754 double to `i64`, truncating toward zero and saturating
+/// at the integer bounds.
+///
+/// Every scalar field is reported to callers as an `i64`, so a float field has
+/// to be narrowed somewhere. This walks the sign, exponent and mantissa apart
+/// rather than leaning on a lossy primitive cast, which gives the edges of the
+/// range answers that are part of the contract instead of incidental: `NaN`
+/// reads as `0`, and a magnitude beyond the integer range clamps to `i64::MIN`
+/// or `i64::MAX` rather than wrapping.
+fn float_to_i64_saturating(value: f64) -> i64 {
+    const MANTISSA_BITS: u64 = 52;
+    const EXPONENT_BIAS: u64 = 1023;
+    const EXPONENT_MASK: u64 = 0x7ff;
+    const MANTISSA_MASK: u64 = (1u64 << MANTISSA_BITS) - 1;
+    const SIGN_SHIFT: u64 = 63;
+    const MAGNITUDE_BITS: u64 = 63;
+
+    let bits = value.to_bits();
+    let negative = (bits >> SIGN_SHIFT) != 0;
+    let biased = (bits >> MANTISSA_BITS) & EXPONENT_MASK;
+    let mantissa = bits & MANTISSA_MASK;
+
+    if biased == EXPONENT_MASK {
+        if mantissa != 0 {
+            return 0;
+        }
+        return if negative { i64::MIN } else { i64::MAX };
+    }
+
+    if biased < EXPONENT_BIAS {
+        return 0;
+    }
+    let exponent = biased - EXPONENT_BIAS;
+
+    if exponent >= MAGNITUDE_BITS {
+        if negative && exponent == MAGNITUDE_BITS && mantissa == 0 {
+            return i64::MIN;
+        }
+        return if negative { i64::MIN } else { i64::MAX };
+    }
+
+    let significand = (1u64 << MANTISSA_BITS) | mantissa;
+    let magnitude = if exponent >= MANTISSA_BITS {
+        significand << (exponent - MANTISSA_BITS)
+    } else {
+        significand >> (MANTISSA_BITS - exponent)
+    };
+
+    let magnitude = i64::try_from(magnitude).unwrap_or(i64::MAX);
+    if negative {
+        -magnitude
+    } else {
+        magnitude
+    }
+}
+
 #[must_use]
 pub fn read_numeric_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> i64 {
     match ft {
@@ -557,6 +629,26 @@ pub fn read_numeric_value(ft: &FieldType, raw: &[u8], endian: Endianness) -> i64
                 raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
             ]),
         },
+        FieldType::Float32 => {
+            let v = match endian {
+                Endianness::Little => f32::from_le_bytes([raw[0], raw[1], raw[2], raw[3]]),
+                Endianness::Big => f32::from_be_bytes([raw[0], raw[1], raw[2], raw[3]]),
+            };
+            float_to_i64_saturating(f64::from(v))
+        }
+        FieldType::Float64 => {
+            let v = match endian {
+                Endianness::Little => f64::from_le_bytes([
+                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
+                ]),
+                Endianness::Big => f64::from_be_bytes([
+                    raw[0], raw[1], raw[2], raw[3], raw[4], raw[5], raw[6], raw[7],
+                ]),
+            };
+            float_to_i64_saturating(v)
+        }
+        // Bytes/FixedString/Array/Padding carry no single scalar value; 0 is
+        // the only sensible placeholder for a field with no numeric meaning.
         _ => 0,
     }
 }
@@ -606,7 +698,10 @@ mod tests {
     fn test_insufficient_data() {
         let reg = TemplateRegistry::new();
         let result = reg.apply("IMAGE_DOS_HEADER", &[0u8; 10], 0);
-        assert!(matches!(result, Err(TemplateError::InsufficientData { .. })));
+        assert!(matches!(
+            result,
+            Err(TemplateError::InsufficientData { .. })
+        ));
     }
 
     #[test]
@@ -718,17 +813,38 @@ mod tests {
         // e_magic, e_cblp, e_cp, e_crlc, e_cparhdr, e_minalloc, e_maxalloc, e_ss, e_sp,
         // e_csum, e_ip, e_cs, e_lfarlc, e_ovno, e_res[4], e_oemid, e_oeminfo, e_res2[10],
         // e_lfanew.  Deleting any field registration changes this count and fails the gate.
-        assert_eq!(dos.3, 19, "IMAGE_DOS_HEADER must expose exactly 19 fields in list_detailed");
+        assert_eq!(
+            dos.3, 19,
+            "IMAGE_DOS_HEADER must expose exactly 19 fields in list_detailed"
+        );
     }
 
     #[test]
     fn test_format_field_value_integers_little_endian() {
-        assert_eq!(format_field_value(&FieldType::UInt8, &[0x2A], Endianness::Little), "42 (0x2A)");
-        assert_eq!(format_field_value(&FieldType::Int8, &[0xFF], Endianness::Little), "-1 (0xFF)");
-        assert_eq!(format_field_value(&FieldType::Bool, &[0x01], Endianness::Little), "true");
-        assert_eq!(format_field_value(&FieldType::Bool, &[0x00], Endianness::Little), "false");
-        assert_eq!(format_field_value(&FieldType::Char, &[0x41], Endianness::Little), "'A' (0x41)");
-        assert_eq!(format_field_value(&FieldType::Char, &[0x01], Endianness::Little), "0x01");
+        assert_eq!(
+            format_field_value(&FieldType::UInt8, &[0x2A], Endianness::Little),
+            "42 (0x2A)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Int8, &[0xFF], Endianness::Little),
+            "-1 (0xFF)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Bool, &[0x01], Endianness::Little),
+            "true"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Bool, &[0x00], Endianness::Little),
+            "false"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Char, &[0x41], Endianness::Little),
+            "'A' (0x41)"
+        );
+        assert_eq!(
+            format_field_value(&FieldType::Char, &[0x01], Endianness::Little),
+            "0x01"
+        );
         assert_eq!(
             format_field_value(&FieldType::UInt16, &[0x34, 0x12], Endianness::Little),
             "4660 (0x1234)"
@@ -738,15 +854,27 @@ mod tests {
             "-1 (0xFFFF)"
         );
         assert_eq!(
-            format_field_value(&FieldType::UInt32, &[0x78, 0x56, 0x34, 0x12], Endianness::Little),
+            format_field_value(
+                &FieldType::UInt32,
+                &[0x78, 0x56, 0x34, 0x12],
+                Endianness::Little
+            ),
             "305419896 (0x12345678)"
         );
         assert_eq!(
-            format_field_value(&FieldType::Int32, &[0xFF, 0xFF, 0xFF, 0xFF], Endianness::Little),
+            format_field_value(
+                &FieldType::Int32,
+                &[0xFF, 0xFF, 0xFF, 0xFF],
+                Endianness::Little
+            ),
             "-1 (0xFFFFFFFF)"
         );
         assert_eq!(
-            format_field_value(&FieldType::UInt64, &[1, 0, 0, 0, 0, 0, 0, 0], Endianness::Little),
+            format_field_value(
+                &FieldType::UInt64,
+                &[1, 0, 0, 0, 0, 0, 0, 0],
+                Endianness::Little
+            ),
             "1 (0x0000000000000001)"
         );
         assert_eq!(
@@ -754,11 +882,19 @@ mod tests {
             "-1 (0xFFFFFFFFFFFFFFFF)"
         );
         assert_eq!(
-            format_field_value(&FieldType::Float32, &1.5f32.to_le_bytes(), Endianness::Little),
+            format_field_value(
+                &FieldType::Float32,
+                &1.5f32.to_le_bytes(),
+                Endianness::Little
+            ),
             "1.5"
         );
         assert_eq!(
-            format_field_value(&FieldType::Float64, &2.5f64.to_le_bytes(), Endianness::Little),
+            format_field_value(
+                &FieldType::Float64,
+                &2.5f64.to_le_bytes(),
+                Endianness::Little
+            ),
             "2.5"
         );
     }
@@ -774,15 +910,27 @@ mod tests {
             "-1 (0xFFFF)"
         );
         assert_eq!(
-            format_field_value(&FieldType::UInt32, &[0x12, 0x34, 0x56, 0x78], Endianness::Big),
+            format_field_value(
+                &FieldType::UInt32,
+                &[0x12, 0x34, 0x56, 0x78],
+                Endianness::Big
+            ),
             "305419896 (0x12345678)"
         );
         assert_eq!(
-            format_field_value(&FieldType::Int32, &[0xFF, 0xFF, 0xFF, 0xFF], Endianness::Big),
+            format_field_value(
+                &FieldType::Int32,
+                &[0xFF, 0xFF, 0xFF, 0xFF],
+                Endianness::Big
+            ),
             "-1 (0xFFFFFFFF)"
         );
         assert_eq!(
-            format_field_value(&FieldType::UInt64, &[0, 0, 0, 0, 0, 0, 0, 1], Endianness::Big),
+            format_field_value(
+                &FieldType::UInt64,
+                &[0, 0, 0, 0, 0, 0, 0, 1],
+                Endianness::Big
+            ),
             "1 (0x0000000000000001)"
         );
         assert_eq!(
@@ -802,17 +950,28 @@ mod tests {
     #[test]
     fn test_format_composite_value_all_variants() {
         assert_eq!(
-            format_field_value(&FieldType::Bytes(3), &[0xAA, 0xBB, 0xCC], Endianness::Little),
+            format_field_value(
+                &FieldType::Bytes(3),
+                &[0xAA, 0xBB, 0xCC],
+                Endianness::Little
+            ),
             "AA BB CC"
         );
         // Null-truncation + non-graphic byte -> '.'.
         assert_eq!(
-            format_field_value(&FieldType::FixedString(4), &[0x41, 0x01, 0x42, 0x00], Endianness::Little),
+            format_field_value(
+                &FieldType::FixedString(4),
+                &[0x41, 0x01, 0x42, 0x00],
+                Endianness::Little
+            ),
             "\"A.B\""
         );
         assert_eq!(
             format_field_value(
-                &FieldType::Array { element_type: Box::new(FieldType::UInt8), count: 4 },
+                &FieldType::Array {
+                    element_type: Box::new(FieldType::UInt8),
+                    count: 4
+                },
                 &[],
                 Endianness::Little
             ),
@@ -824,7 +983,10 @@ mod tests {
         );
         assert_eq!(
             format_field_value(
-                &FieldType::DynamicArray { element_type: Box::new(FieldType::UInt8), count_field: "count".to_string() },
+                &FieldType::DynamicArray {
+                    element_type: Box::new(FieldType::UInt8),
+                    count_field: "count".to_string()
+                },
                 &[],
                 Endianness::Little
             ),
@@ -832,7 +994,11 @@ mod tests {
         );
         assert_eq!(
             format_field_value(
-                &FieldType::Bitfield { bit_width: 3, backing_type: Box::new(FieldType::UInt8), flags: None },
+                &FieldType::Bitfield {
+                    bit_width: 3,
+                    backing_type: Box::new(FieldType::UInt8),
+                    flags: None
+                },
                 &[],
                 Endianness::Little
             ),
@@ -871,7 +1037,10 @@ mod tests {
     fn test_format_composite_value_reference_variants() {
         assert_eq!(
             format_field_value(
-                &FieldType::Enum { backing_type: Box::new(FieldType::UInt16), values: vec![] },
+                &FieldType::Enum {
+                    backing_type: Box::new(FieldType::UInt16),
+                    values: vec![]
+                },
                 &[],
                 Endianness::Little
             ),
@@ -879,7 +1048,10 @@ mod tests {
         );
         assert_eq!(
             format_field_value(
-                &FieldType::Pointer { pointer_type: Box::new(FieldType::UInt32), target_template: "FOO".to_string() },
+                &FieldType::Pointer {
+                    pointer_type: Box::new(FieldType::UInt32),
+                    target_template: "FOO".to_string()
+                },
                 &[],
                 Endianness::Little
             ),
@@ -899,12 +1071,19 @@ mod tests {
             "if(flag)"
         );
         assert_eq!(
-            format_field_value(&FieldType::StructRef("BAR".to_string()), &[], Endianness::Little),
+            format_field_value(
+                &FieldType::StructRef("BAR".to_string()),
+                &[],
+                Endianness::Little
+            ),
             "struct BAR"
         );
         assert_eq!(
             format_field_value(
-                &FieldType::Computed { expression: "a+b".to_string(), display_type: Box::new(FieldType::UInt32) },
+                &FieldType::Computed {
+                    expression: "a+b".to_string(),
+                    display_type: Box::new(FieldType::UInt32)
+                },
                 &[],
                 Endianness::Little
             ),
@@ -912,7 +1091,10 @@ mod tests {
         );
         assert_eq!(
             format_field_value(
-                &FieldType::EndiannessSwitch { peek_offset: 4, big_value: 0xAB },
+                &FieldType::EndiannessSwitch {
+                    peek_offset: 4,
+                    big_value: 0xAB
+                },
                 &[],
                 Endianness::Little
             ),
@@ -922,43 +1104,179 @@ mod tests {
 
     #[test]
     fn test_read_numeric_value_all_types_both_endian() {
-        assert_eq!(read_numeric_value(&FieldType::UInt8, &[0x2A], Endianness::Little), 42);
-        assert_eq!(read_numeric_value(&FieldType::Bool, &[0x01], Endianness::Little), 1);
-        assert_eq!(read_numeric_value(&FieldType::Char, &[0x41], Endianness::Little), 65);
-        assert_eq!(read_numeric_value(&FieldType::Int8, &[0xFF], Endianness::Little), -1);
-        assert_eq!(read_numeric_value(&FieldType::UInt16, &[0x34, 0x12], Endianness::Little), 4660);
-        assert_eq!(read_numeric_value(&FieldType::UInt16, &[0x12, 0x34], Endianness::Big), 4660);
-        assert_eq!(read_numeric_value(&FieldType::Int16, &[0xFF, 0xFF], Endianness::Little), -1);
-        assert_eq!(read_numeric_value(&FieldType::Int16, &[0xFF, 0xFF], Endianness::Big), -1);
         assert_eq!(
-            read_numeric_value(&FieldType::UInt32, &[0x78, 0x56, 0x34, 0x12], Endianness::Little),
-            0x1234_5678
+            read_numeric_value(&FieldType::UInt8, &[0x2A], Endianness::Little),
+            42
         );
         assert_eq!(
-            read_numeric_value(&FieldType::UInt32, &[0x12, 0x34, 0x56, 0x78], Endianness::Big),
-            0x1234_5678
-        );
-        assert_eq!(
-            read_numeric_value(&FieldType::Int32, &[0xFF, 0xFF, 0xFF, 0xFF], Endianness::Little),
-            -1
-        );
-        assert_eq!(
-            read_numeric_value(&FieldType::Int32, &[0xFF, 0xFF, 0xFF, 0xFF], Endianness::Big),
-            -1
-        );
-        assert_eq!(
-            read_numeric_value(&FieldType::UInt64, &[1, 0, 0, 0, 0, 0, 0, 0], Endianness::Little),
+            read_numeric_value(&FieldType::Bool, &[0x01], Endianness::Little),
             1
         );
         assert_eq!(
-            read_numeric_value(&FieldType::UInt64, &[0, 0, 0, 0, 0, 0, 0, 1], Endianness::Big),
+            read_numeric_value(&FieldType::Char, &[0x41], Endianness::Little),
+            65
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::Int8, &[0xFF], Endianness::Little),
+            -1
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::UInt16, &[0x34, 0x12], Endianness::Little),
+            4660
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::UInt16, &[0x12, 0x34], Endianness::Big),
+            4660
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::Int16, &[0xFF, 0xFF], Endianness::Little),
+            -1
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::Int16, &[0xFF, 0xFF], Endianness::Big),
+            -1
+        );
+        assert_eq!(
+            read_numeric_value(
+                &FieldType::UInt32,
+                &[0x78, 0x56, 0x34, 0x12],
+                Endianness::Little
+            ),
+            0x1234_5678
+        );
+        assert_eq!(
+            read_numeric_value(
+                &FieldType::UInt32,
+                &[0x12, 0x34, 0x56, 0x78],
+                Endianness::Big
+            ),
+            0x1234_5678
+        );
+        assert_eq!(
+            read_numeric_value(
+                &FieldType::Int32,
+                &[0xFF, 0xFF, 0xFF, 0xFF],
+                Endianness::Little
+            ),
+            -1
+        );
+        assert_eq!(
+            read_numeric_value(
+                &FieldType::Int32,
+                &[0xFF, 0xFF, 0xFF, 0xFF],
+                Endianness::Big
+            ),
+            -1
+        );
+        assert_eq!(
+            read_numeric_value(
+                &FieldType::UInt64,
+                &[1, 0, 0, 0, 0, 0, 0, 0],
+                Endianness::Little
+            ),
             1
         );
-        assert_eq!(read_numeric_value(&FieldType::Int64, &[0xFF; 8], Endianness::Little), -1);
-        assert_eq!(read_numeric_value(&FieldType::Int64, &[0xFF; 8], Endianness::Big), -1);
-        // Non-numeric (float/composite) types fall through to 0.
-        assert_eq!(read_numeric_value(&FieldType::Float32, &[0; 4], Endianness::Little), 0);
-        assert_eq!(read_numeric_value(&FieldType::Bytes(2), &[0; 2], Endianness::Little), 0);
+        assert_eq!(
+            read_numeric_value(
+                &FieldType::UInt64,
+                &[0, 0, 0, 0, 0, 0, 0, 1],
+                Endianness::Big
+            ),
+            1
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::Int64, &[0xFF; 8], Endianness::Little),
+            -1
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::Int64, &[0xFF; 8], Endianness::Big),
+            -1
+        );
+        // Zero-valued Float32 truncates to 0 (coincidental with the fallback
+        // used by genuinely non-numeric composite types below).
+        assert_eq!(
+            read_numeric_value(&FieldType::Float32, &[0; 4], Endianness::Little),
+            0
+        );
+        // Non-numeric composite types (no single scalar value) fall through to 0.
+        assert_eq!(
+            read_numeric_value(&FieldType::Bytes(2), &[0; 2], Endianness::Little),
+            0
+        );
+    }
+
+    /// Audit F-0054 regression: `Float32`/`Float64` must be truncated to
+    /// their real integer value, not silently substituted with 0 via the
+    /// generic composite-type fallback.
+    #[test]
+    fn test_read_numeric_value_float_truncates_to_real_value() {
+        assert_eq!(
+            read_numeric_value(
+                &FieldType::Float32,
+                &7.9f32.to_le_bytes(),
+                Endianness::Little
+            ),
+            7
+        );
+        assert_eq!(
+            read_numeric_value(
+                &FieldType::Float64,
+                &(-3.9f64).to_le_bytes(),
+                Endianness::Little
+            ),
+            -3
+        );
+        assert_eq!(
+            read_numeric_value(&FieldType::Float32, &7.9f32.to_be_bytes(), Endianness::Big),
+            7
+        );
+    }
+
+    /// Audit F-0008/F-0026 regression: `field_size` must distinguish
+    /// "no static size" (`None`) from a legitimate zero-byte size
+    /// (`Some(0)`), and must report `Array` count overflow as `None`
+    /// rather than silently wrapping.
+    #[test]
+    fn test_field_size_option_semantics() {
+        assert_eq!(field_size(&FieldType::UInt32), Some(4));
+        assert_eq!(field_size(&FieldType::Padding(0)), Some(0));
+        assert_eq!(field_size(&FieldType::StructRef("X".to_string())), None);
+        assert_eq!(
+            field_size(&FieldType::Computed {
+                expression: "1".to_string(),
+                display_type: Box::new(FieldType::UInt8),
+            }),
+            None
+        );
+
+        // Array of a statically sized element resolves normally.
+        assert_eq!(
+            field_size(&FieldType::Array {
+                element_type: Box::new(FieldType::UInt32),
+                count: 5,
+            }),
+            Some(20)
+        );
+
+        // Array whose element type has no static size propagates None
+        // instead of the old flat-0 sentinel that corrupted sibling offsets.
+        assert_eq!(
+            field_size(&FieldType::Array {
+                element_type: Box::new(FieldType::StructRef("Elem".to_string())),
+                count: 3,
+            }),
+            None
+        );
+
+        // Array size overflow (element_size * count > usize::MAX) is
+        // reported as None rather than silently wrapping to a small value.
+        assert_eq!(
+            field_size(&FieldType::Array {
+                element_type: Box::new(FieldType::UInt64),
+                count: usize::MAX / 4,
+            }),
+            None
+        );
     }
 
     #[test]
@@ -975,7 +1293,13 @@ mod tests {
         assert_eq!(field_type_name(&FieldType::Float64), "float64");
         assert_eq!(field_type_name(&FieldType::Bytes(1)), "bytes");
         assert_eq!(field_type_name(&FieldType::FixedString(1)), "string");
-        assert_eq!(field_type_name(&FieldType::Array { element_type: Box::new(FieldType::UInt8), count: 1 }), "array");
+        assert_eq!(
+            field_type_name(&FieldType::Array {
+                element_type: Box::new(FieldType::UInt8),
+                count: 1
+            }),
+            "array"
+        );
         assert_eq!(field_type_name(&FieldType::Bool), "bool");
         assert_eq!(field_type_name(&FieldType::Char), "char");
         assert_eq!(field_type_name(&FieldType::Padding(1)), "padding");
@@ -984,20 +1308,36 @@ mod tests {
     #[test]
     fn test_field_type_name_composite_variants() {
         assert_eq!(
-            field_type_name(&FieldType::DynamicArray { element_type: Box::new(FieldType::UInt8), count_field: "c".to_string() }),
+            field_type_name(&FieldType::DynamicArray {
+                element_type: Box::new(FieldType::UInt8),
+                count_field: "c".to_string()
+            }),
             "dynamic_array"
         );
         assert_eq!(
-            field_type_name(&FieldType::Bitfield { bit_width: 1, backing_type: Box::new(FieldType::UInt8), flags: None }),
+            field_type_name(&FieldType::Bitfield {
+                bit_width: 1,
+                backing_type: Box::new(FieldType::UInt8),
+                flags: None
+            }),
             "bitfield"
         );
-        assert_eq!(field_type_name(&FieldType::Union { variants: vec![] }), "union");
         assert_eq!(
-            field_type_name(&FieldType::Enum { backing_type: Box::new(FieldType::UInt8), values: vec![] }),
+            field_type_name(&FieldType::Union { variants: vec![] }),
+            "union"
+        );
+        assert_eq!(
+            field_type_name(&FieldType::Enum {
+                backing_type: Box::new(FieldType::UInt8),
+                values: vec![]
+            }),
             "enum"
         );
         assert_eq!(
-            field_type_name(&FieldType::Pointer { pointer_type: Box::new(FieldType::UInt8), target_template: "t".to_string() }),
+            field_type_name(&FieldType::Pointer {
+                pointer_type: Box::new(FieldType::UInt8),
+                target_template: "t".to_string()
+            }),
             "pointer"
         );
         assert_eq!(
@@ -1009,13 +1349,22 @@ mod tests {
             }),
             "conditional"
         );
-        assert_eq!(field_type_name(&FieldType::StructRef("s".to_string())), "struct_ref");
         assert_eq!(
-            field_type_name(&FieldType::Computed { expression: "e".to_string(), display_type: Box::new(FieldType::UInt8) }),
+            field_type_name(&FieldType::StructRef("s".to_string())),
+            "struct_ref"
+        );
+        assert_eq!(
+            field_type_name(&FieldType::Computed {
+                expression: "e".to_string(),
+                display_type: Box::new(FieldType::UInt8)
+            }),
             "computed"
         );
         assert_eq!(
-            field_type_name(&FieldType::EndiannessSwitch { peek_offset: 0, big_value: 0 }),
+            field_type_name(&FieldType::EndiannessSwitch {
+                peek_offset: 0,
+                big_value: 0
+            }),
             "endianness_switch"
         );
     }
@@ -1027,6 +1376,93 @@ mod tests {
         assert!(
             matches!(&err, TemplateError::NotFound(n) if n == "NO_SUCH_TEMPLATE"),
             "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn test_float_to_i64_truncates_toward_zero() {
+        assert_eq!(float_to_i64_saturating(0.0), 0);
+        assert_eq!(float_to_i64_saturating(-0.0), 0);
+        assert_eq!(float_to_i64_saturating(0.5), 0);
+        assert_eq!(float_to_i64_saturating(-0.5), 0);
+        assert_eq!(float_to_i64_saturating(f64::from_bits(1)), 0);
+        assert_eq!(float_to_i64_saturating(3.75), 3);
+        assert_eq!(float_to_i64_saturating(-3.75), -3);
+        assert_eq!(float_to_i64_saturating(1.0), 1);
+        assert_eq!(float_to_i64_saturating(-1.0), -1);
+        assert_eq!(float_to_i64_saturating(1.0e15), 1_000_000_000_000_000);
+        assert_eq!(float_to_i64_saturating(-1.0e15), -1_000_000_000_000_000);
+    }
+
+    #[test]
+    fn test_float_to_i64_saturates_at_bounds() {
+        assert_eq!(float_to_i64_saturating(f64::NAN), 0);
+        assert_eq!(float_to_i64_saturating(-f64::NAN), 0);
+        assert_eq!(float_to_i64_saturating(f64::INFINITY), i64::MAX);
+        assert_eq!(float_to_i64_saturating(f64::NEG_INFINITY), i64::MIN);
+        assert_eq!(float_to_i64_saturating(f64::MAX), i64::MAX);
+        assert_eq!(float_to_i64_saturating(f64::MIN), i64::MIN);
+
+        assert_eq!(
+            float_to_i64_saturating(4_611_686_018_427_387_904.0),
+            4_611_686_018_427_387_904
+        );
+        assert_eq!(
+            float_to_i64_saturating(9_223_372_036_854_774_784.0),
+            9_223_372_036_854_774_784
+        );
+        assert_eq!(
+            float_to_i64_saturating(-9_223_372_036_854_774_784.0),
+            -9_223_372_036_854_774_784
+        );
+
+        assert_eq!(
+            float_to_i64_saturating(9_223_372_036_854_775_808.0),
+            i64::MAX
+        );
+        assert_eq!(
+            float_to_i64_saturating(-9_223_372_036_854_775_808.0),
+            i64::MIN
+        );
+    }
+
+    #[test]
+    fn test_read_numeric_value_floats() {
+        let little_double = 3.75f64.to_le_bytes();
+        assert_eq!(
+            read_numeric_value(&FieldType::Float64, &little_double, Endianness::Little),
+            3
+        );
+        let big_double = (-3.75f64).to_be_bytes();
+        assert_eq!(
+            read_numeric_value(&FieldType::Float64, &big_double, Endianness::Big),
+            -3
+        );
+        let unbounded_double = f64::NEG_INFINITY.to_le_bytes();
+        assert_eq!(
+            read_numeric_value(&FieldType::Float64, &unbounded_double, Endianness::Little),
+            i64::MIN
+        );
+
+        let little_single = 1.0e9f32.to_le_bytes();
+        assert_eq!(
+            read_numeric_value(&FieldType::Float32, &little_single, Endianness::Little),
+            1_000_000_000
+        );
+        let big_single = (-2.5f32).to_be_bytes();
+        assert_eq!(
+            read_numeric_value(&FieldType::Float32, &big_single, Endianness::Big),
+            -2
+        );
+        let undefined_single = f32::NAN.to_le_bytes();
+        assert_eq!(
+            read_numeric_value(&FieldType::Float32, &undefined_single, Endianness::Little),
+            0
+        );
+        let overlarge_single = 1.0e30f32.to_le_bytes();
+        assert_eq!(
+            read_numeric_value(&FieldType::Float32, &overlarge_single, Endianness::Little),
+            i64::MAX
         );
     }
 }

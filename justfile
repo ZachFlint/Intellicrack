@@ -9,9 +9,10 @@ src := "src/intellicrack"
 src_and_tests := "src/intellicrack/ tests/"
 mdlint2 := "node node_modules/markdownlint-cli2/markdownlint-cli2-bin.mjs"
 
-# Complete installation with all post-install tasks
+# build-hexbench runs afterwards, since it needs the environment this installs
+[doc('Complete installation with all post-install tasks, then build Hexbench')]
 [group('install')]
-install:
+install: && build-hexbench
     @& scripts/install-all.ps1
 
 [doc('Install Node.js dev-tooling dependencies (markdownlint-cli2, jsonlint) via yarn')]
@@ -24,6 +25,7 @@ install-yarn:
 update:
     @Write-Host '==> pixi upgrade' -ForegroundColor Cyan; pixi upgrade
     @Write-Host '==> cargo (hexcore)' -ForegroundColor Cyan; Push-Location 'src/intellicrack-hexcore'; cargo upgrade --incompatible --pinned -vv; cargo update --recursive -vv; cargo fetch -vv; Pop-Location
+    @Write-Host '==> hexbench dependencies' -ForegroundColor Cyan; & src/hexbench/update-deps.ps1
     @Write-Host '==> cargo (CLI launcher)' -ForegroundColor Cyan; Push-Location 'CLI Coding/launcher'; cargo upgrade --incompatible --pinned -vv; cargo update --recursive -vv; cargo fetch -vv; Pop-Location
     @Write-Host '==> yarn up' -ForegroundColor Cyan; yarn up '*'
     @Write-Host '==> yarn dedupe' -ForegroundColor Cyan; yarn dedupe
@@ -48,6 +50,18 @@ install-radare2:
 [group('build')]
 build-hexcore:
     $env:RUSTFLAGS = '-C target-cpu=meteorlake'; cd src/intellicrack-hexcore && {{ pixi }} maturin develop --release
+
+[doc('Build the standalone Hexbench hex editor executable (PyInstaller onefile)')]
+[group('build')]
+build-hexbench:
+    @if (-not (Test-Path 'src/hexbench/hexbench.spec')) { Write-Host 'src/hexbench is missing, so Hexbench cannot be built' -ForegroundColor Red; exit 1 }
+    {{ pixi }} pyinstaller --noconfirm --distpath dist/hexbench --workpath build/hexbench src/hexbench/hexbench.spec
+    @Write-Host "==> dist/hexbench/Hexbench.exe" -ForegroundColor Green
+
+[doc('Run the Hexbench quality gates (lint, types, docstrings, tests)')]
+[group('test')]
+test-hexbench:
+    @& src/hexbench/gate.ps1
 
 [doc('Run Rust hex editor core tests')]
 [group('test')]

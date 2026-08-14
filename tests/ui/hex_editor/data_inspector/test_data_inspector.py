@@ -643,8 +643,7 @@ class TestEncodeTextWithDocRoutesThroughBridge:
         h.run_encode_text()
 
         assert _wait_until(lambda: bool(enc_output.text())), (
-            f"encode_output must be populated by the async bridge worker's on_success callback "
-            f"within {_ASYNC_WAIT_TIMEOUT_S}s; still empty"
+            f"encode_output must be populated by the async bridge worker's on_success callback within {_ASYNC_WAIT_TIMEOUT_S}s; still empty"
         )
         result = enc_output.text()
         assert result == "DE AD BE EF", f"output must be the bridge result formatted as spaced hex; got {result!r}"

@@ -402,12 +402,9 @@ class MainWindow(QMainWindow):
     def _restore_window_state(self) -> None:
         """Restore window geometry, splitter sizes, and tab state from QSettings.
 
-        No-op unless ``ui.restore_layout`` is enabled. By default the GUI
-        resets to its smart-sized default layout on each launch, discarding the
-        previous session's window geometry, splitter sizes, open tool tabs, and
-        detached panels. The layout is still persisted by
-        :meth:`_save_window_state` regardless, so enabling the toggle restores
-        the most recent layout on the next launch.
+        No-op unless ``ui.restore_layout`` is enabled. By default the GUI resets to its smart-sized default layout on each launch,
+        discarding the previous session's window geometry, splitter sizes, open tool tabs, and detached panels. The layout is still
+        persisted by :meth:`_save_window_state` regardless, so enabling the toggle restores the most recent layout on the next launch.
         """
         if not self._config.ui.restore_layout:
             _logger.debug("window_state_restore_skipped_layout_reset")
@@ -511,12 +508,9 @@ class MainWindow(QMainWindow):
     def _persist_current_model(self) -> None:
         """Persist the toolbar's current provider and model to QSettings.
 
-        Stores the model per-provider under ``last_model/<provider>`` and the
-        provider under ``last_provider`` so the selection is restored on the
-        next launch. No-op when no provider enum is selected or the model field
-        is empty. Wired to the model combo's ``activated`` signal (user picks
-        only, never programmatic repopulation) and invoked from the typed and
-        browsed selection paths.
+        Stores the model per-provider under ``last_model/<provider>`` and the provider under ``last_provider`` so the selection is restored
+        on the next launch. No-op when no provider enum is selected or the model field is empty. Wired to the model combo's ``activated``
+        signal (user picks only, never programmatic repopulation) and invoked from the typed and browsed selection paths.
         """
         provider_data: object = self._provider_combo.currentData()
         if not isinstance(provider_data, ProviderName):
@@ -2572,13 +2566,9 @@ class MainWindow(QMainWindow):
     def _on_refresh_models(self) -> None:
         """Handle refresh models action.
 
-        Prefers the already-connected provider instance (if any) so the
-        refresh reuses its authenticated client and resolved endpoint
-        (e.g. the HuggingFace token already verified at connect time, or
-        the Ollama cloud endpoint when local Ollama is not running)
-        instead of re-deriving credentials and falling back to a bare
-        HTTP probe against a possibly-empty token or an unreachable local
-        endpoint.
+        Prefers the already-connected provider instance (if any) so the refresh reuses its authenticated client and resolved endpoint (e.g.
+        the HuggingFace token already verified at connect time, or the Ollama cloud endpoint when local Ollama is not running) instead of
+        re-deriving credentials and falling back to a bare HTTP probe against a possibly-empty token or an unreachable local endpoint.
         """
         provider_data: object = self._provider_combo.currentData()
         if not provider_data:

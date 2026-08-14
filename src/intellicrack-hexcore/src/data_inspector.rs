@@ -100,6 +100,20 @@ fn decode_sleb128(data: &[u8], offset: usize) -> Option<(i64, usize)> {
     None
 }
 
+fn utf8_seq_len(lead: u8) -> Option<usize> {
+    if lead & 0x80 == 0 {
+        Some(1)
+    } else if lead & 0xE0 == 0xC0 {
+        Some(2)
+    } else if lead & 0xF0 == 0xE0 {
+        Some(3)
+    } else if lead & 0xF8 == 0xF0 {
+        Some(4)
+    } else {
+        None
+    }
+}
+
 fn is_leap_year(year: i64) -> bool {
     (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
 }
@@ -118,11 +132,13 @@ fn inspect_8bit(
         values.insert("ascii_char".to_string(), format!("{}", byte as char));
     }
 
-    if remaining >= 1 {
-        if let Ok(s) = std::str::from_utf8(&data[offset..offset + remaining.min(4)]) {
-            if let Some(ch) = s.chars().next() {
-                if !ch.is_control() {
-                    values.insert("utf8_char".to_string(), ch.to_string());
+    if let Some(seq_len) = utf8_seq_len(byte) {
+        if seq_len <= remaining {
+            if let Ok(s) = std::str::from_utf8(&data[offset..offset + seq_len]) {
+                if let Some(ch) = s.chars().next() {
+                    if !ch.is_control() {
+                        values.insert("utf8_char".to_string(), ch.to_string());
+                    }
                 }
             }
         }
@@ -387,23 +403,52 @@ fn inspect_128bit(values: &mut HashMap<String, String>, data: &[u8], offset: usi
         ),
     );
 
-    let segments: Vec<u16> = (0..8)
-        .map(|i| u16::from_be_bytes([d[i * 2], d[i * 2 + 1]]))
+    let mut segments = [0u16; 8];
+    for (i, segment) in segments.iter_mut().enumerate() {
+        *segment = u16::from_be_bytes([d[i * 2], d[i * 2 + 1]]);
+    }
+    values.insert("ipv6".to_string(), format_ipv6(&segments));
+}
+
+fn format_ipv6(segments: &[u16; 8]) -> String {
+    let mut best_start: Option<usize> = None;
+    let mut best_len: usize = 0;
+    let mut cur_start: Option<usize> = None;
+    let mut cur_len: usize = 0;
+
+    for (i, &segment) in segments.iter().enumerate() {
+        if segment == 0 {
+            let start = cur_start.get_or_insert(i);
+            cur_len += 1;
+            if cur_len > best_len {
+                best_len = cur_len;
+                best_start = Some(*start);
+            }
+        } else {
+            cur_start = None;
+            cur_len = 0;
+        }
+    }
+
+    if best_len < 2 {
+        return segments
+            .iter()
+            .map(|segment| format!("{segment:x}"))
+            .collect::<Vec<_>>()
+            .join(":");
+    }
+
+    let start = best_start.expect("best_len >= 2 implies best_start was recorded");
+    let end = start + best_len;
+    let head: Vec<String> = segments[..start]
+        .iter()
+        .map(|segment| format!("{segment:x}"))
         .collect();
-    values.insert(
-        "ipv6".to_string(),
-        format!(
-            "{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}",
-            segments[0],
-            segments[1],
-            segments[2],
-            segments[3],
-            segments[4],
-            segments[5],
-            segments[6],
-            segments[7]
-        ),
-    );
+    let tail: Vec<String> = segments[end..]
+        .iter()
+        .map(|segment| format!("{segment:x}"))
+        .collect();
+    format!("{}::{}", head.join(":"), tail.join(":"))
 }
 
 fn inspect_wide_string(
@@ -648,14 +693,51 @@ mod tests {
     }
 
     #[test]
-    fn test_inspect_ipv6() {
+    fn test_inspect_ipv6_compresses_longest_zero_run() {
         let data = [
             0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x01,
         ];
         let result = inspect_at(&data, 0);
         let ipv6 = result.values.get("ipv6").unwrap();
-        assert_eq!(ipv6, "2001:db8:0:0:0:0:0:1");
+        assert_eq!(ipv6, "2001:db8::1");
+    }
+
+    #[test]
+    fn test_inspect_ipv6_all_zero_is_double_colon() {
+        let data = [0u8; 16];
+        let result = inspect_at(&data, 0);
+        assert_eq!(result.values.get("ipv6").unwrap(), "::");
+    }
+
+    #[test]
+    fn test_inspect_ipv6_leading_and_trailing_runs() {
+        // Leading zero run: 0:0:0:1:2:3:4:5 -> "::1:2:3:4:5"
+        let data = [
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04,
+            0x00, 0x05,
+        ];
+        let result = inspect_at(&data, 0);
+        assert_eq!(result.values.get("ipv6").unwrap(), "::1:2:3:4:5");
+
+        // Trailing zero run: 1:2:3:4:5:0:0:0 -> "1:2:3:4:5::"
+        let data2 = [
+            0x00, 0x01, 0x00, 0x02, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+        ];
+        let result2 = inspect_at(&data2, 0);
+        assert_eq!(result2.values.get("ipv6").unwrap(), "1:2:3:4:5::");
+    }
+
+    #[test]
+    fn test_inspect_ipv6_single_zero_segment_not_compressed() {
+        // A lone zero hextet (run length 1) must NOT be replaced with "::" per RFC 5952.
+        let data = [
+            0x00, 0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x05, 0x00, 0x06,
+            0x00, 0x07,
+        ];
+        let result = inspect_at(&data, 0);
+        assert_eq!(result.values.get("ipv6").unwrap(), "1:2:0:3:4:5:6:7");
     }
 
     #[test]
@@ -709,7 +791,11 @@ mod tests {
         let filetime: u64 = 133_485_408_000_000_000;
         let data = filetime.to_le_bytes();
         let result = inspect_at(&data, 0);
-        assert!(result.values.get("filetime").unwrap().starts_with("2024-01-01"));
+        assert!(result
+            .values
+            .get("filetime")
+            .unwrap()
+            .starts_with("2024-01-01"));
     }
 
     #[test]
@@ -793,5 +879,28 @@ mod tests {
         // UTF-8 encoding of 'é' (U+00E9).
         let result = inspect_at(&[0xC3, 0xA9], 0);
         assert_eq!(result.values.get("utf8_char").unwrap(), "é");
+    }
+
+    #[test]
+    fn test_inspect_8bit_ascii_char_followed_by_invalid_utf8_bytes() {
+        // 'A' is a complete, valid 1-byte UTF-8 character on its own, even
+        // though 0xFF (never a valid UTF-8 lead or continuation byte) follows.
+        // A whole-window decode would fail and silently drop utf8_char here.
+        let result = inspect_at(&[0x41, 0xFF, 0xFF, 0xFF], 0);
+        assert_eq!(result.values.get("utf8_char").unwrap(), "A");
+    }
+
+    #[test]
+    fn test_inspect_8bit_multibyte_utf8_char_truncated_by_remaining() {
+        // Lead byte declares a 2-byte sequence but only 1 byte remains in the
+        // buffer -- must not decode past the end of `data`.
+        let result = inspect_at(&[0xC3], 0);
+        assert!(!result.values.contains_key("utf8_char"));
+    }
+
+    #[test]
+    fn test_inspect_8bit_lone_continuation_byte_no_utf8_char() {
+        let result = inspect_at(&[0x80, 0x41], 0);
+        assert!(!result.values.contains_key("utf8_char"));
     }
 }

@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="hexbench-token" content="__HEXBENCH_TOKEN__">
+<title>Hexbench</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+/* Layout the application supplies for itself: the scroll machinery the grid
+   needs, and the centring for overlays the design system leaves to its host. */
+
+.hbx-spacer {
+  width: 1px;
+  pointer-events: none;
+}
+
+.hbx-viewport {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  min-width: 100%;
+  will-change: transform;
+}
+
+.hbx-busy {
+  position: absolute;
+  inset: 0;
+  z-index: var(--hb-z-sticky);
+}
+
+.hbx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--hb-z-scrim);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 11vh;
+  pointer-events: none;
+}
+
+.hbx-overlay[hidden] {
+  display: none;
+}
+
+.hbx-overlay > * {
+  pointer-events: auto;
+}
+
+.hbx-dialog-wide {
+  width: min(760px, 92vw);
+}
+</style>
+</head>
+<body>
+<div class="hb-app">
+
+  <div class="hb-menubar" id="menubar">
+    <div class="hb-menubar-brand">
+      <span class="hb-menubar-mark"></span>
+      <span>Hexbench</span>
+    </div>
+    <div class="hb-menu" data-menu="file"><button type="button" class="hb-menu-item">File</button></div>
+    <div class="hb-menu" data-menu="edit"><button type="button" class="hb-menu-item">Edit</button></div>
+    <div class="hb-menu" data-menu="view"><button type="button" class="hb-menu-item">View</button></div>
+    <div class="hb-menu" data-menu="search"><button type="button" class="hb-menu-item">Search</button></div>
+    <div class="hb-menu" data-menu="analyze"><button type="button" class="hb-menu-item">Analyze</button></div>
+    <div class="hb-menu" data-menu="patch"><button type="button" class="hb-menu-item">Patch</button></div>
+    <div class="hb-menu" data-menu="tools"><button type="button" class="hb-menu-item">Tools</button></div>
+    <div class="hb-menu" data-menu="help"><button type="button" class="hb-menu-item">Help</button></div>
+  </div>
+
+  <div class="hb-toolbar" id="toolbar">
+    <div class="hb-tool-group">
+      <button type="button" class="hb-tool-btn" data-command="file.open" title="Open a path (Ctrl+O)">
+        <span class="hb-tool-icon">▤</span><span>Open</span>
+      </button>
+      <button type="button" class="hb-tool-btn" data-command="file.save" title="Save (Ctrl+S)">
+        <span class="hb-tool-icon">⤓</span><span>Save</span>
+      </button>
+    </div>
+    <div class="hb-tool-sep"></div>
+    <div class="hb-tool-group">
+      <button type="button" class="hb-tool-btn" data-command="edit.undo" title="Undo (Ctrl+Z)"><span class="hb-tool-icon">↶</span></button>
+      <button type="button" class="hb-tool-btn" data-command="edit.redo" title="Redo (Ctrl+Y)"><span class="hb-tool-icon">↷</span></button>
+    </div>
+    <div class="hb-tool-sep"></div>
+    <div class="hb-tool-group">
+      <button type="button" class="hb-tool-btn" data-command="search.find" title="Find (Ctrl+F)"><span class="hb-tool-icon">⌕</span><span>Find</span></button>
+      <button type="button" class="hb-tool-btn" data-command="search.findNext" title="Find next (F3)"><span class="hb-tool-icon">›</span></button>
+      <button type="button" class="hb-tool-btn" data-command="search.replace" title="Replace (Ctrl+H)"><span class="hb-tool-icon">⇄</span></button>
+    </div>
+    <div class="hb-tool-sep"></div>
+    <div class="hb-tool-group">
+      <button type="button" class="hb-tool-btn" data-command="edit.toggleInsert" title="Insert or overwrite (Ins)"><span class="hb-tool-icon">⌶</span><span>Insert</span></button>
+      <button type="button" class="hb-tool-btn" data-command="analyze.strings" title="Extract strings"><span class="hb-tool-icon">≡</span></button>
+      <button type="button" class="hb-tool-btn" data-command="tools.palette" title="Command palette (Ctrl+Shift+P)"><span class="hb-tool-icon">⌘</span></button>
+    </div>
+    <div class="hb-tool-spacer"></div>
+    <span class="hb-tool-label">Go to</span>
+    <label class="hb-tool-field">
+      <span class="hb-sr-only">Go to offset</span>
+      <input class="hb-input is-mono is-narrow" id="toolbar-goto" type="text" spellcheck="false" autocomplete="off" placeholder="0000A0">
+    </label>
+    <div class="hb-tool-sep"></div>
+    <button type="button" class="hb-tool-btn" data-command="view.theme" title="Toggle theme"><span class="hb-tool-icon">◐</span></button>
+  </div>
+
+  <div class="hb-tabstrip" id="tabstrip"></div>
+
+  <div class="hb-workspace" id="workspace">
+    <div class="hb-main" id="editor-host"></div>
+    <div class="hb-splitter hb-splitter-v" id="splitter-v" role="separator" aria-orientation="vertical"></div>
+    <div class="hb-splitter hb-splitter-h" id="splitter-h" role="separator" aria-orientation="horizontal"></div>
+    <div class="hb-dock hb-dock-bottom" id="dock-bottom">
+      <div class="hb-dock-tabs"></div>
+      <div class="hb-dock-body"></div>
+    </div>
+    <div class="hb-dock hb-dock-right" id="dock-right">
+      <div class="hb-dock-tabs"></div>
+      <div class="hb-dock-body"></div>
+    </div>
+  </div>
+
+  <div class="hb-statusbar" id="statusbar">
+    <span class="hb-status-dot is-ready" id="status-dot"></span>
+    <span class="hb-status-item"><span class="hb-status-value" id="status-state">ready</span></span>
+    <span class="hb-status-sep"></span>
+    <span class="hb-status-item"><span class="hb-status-key">caret</span><span class="hb-status-value" id="status-offset">—</span></span>
+    <span class="hb-status-item"><span class="hb-status-key">pane</span><span class="hb-status-value" id="status-pane">hex hi</span></span>
+    <span class="hb-status-sep"></span>
+    <span class="hb-status-item"><span class="hb-status-key">sel</span><span class="hb-status-value" id="status-selection">none</span></span>
+    <span class="hb-status-item"><span class="hb-status-key">hits</span><span class="hb-status-value" id="status-hits">—</span></span>
+    <span class="hb-status-sep"></span>
+    <span class="hb-status-item"><span class="hb-status-key">size</span><span class="hb-status-value" id="status-size">—</span></span>
+    <span class="hb-status-item is-accent"><span class="hb-status-key">entropy</span><span class="hb-status-value" id="status-entropy">—</span></span>
+    <span class="hb-status-item" id="status-scale-item" hidden><span class="hb-status-key">scale</span><span class="hb-status-value" id="status-scale">—</span></span>
+    <span class="hb-status-grow"></span>
+    <span class="hb-status-item" id="status-modified-item"><span class="hb-status-value" id="status-modified">clean</span></span>
+    <span class="hb-status-sep"></span>
+    <span class="hb-status-item"><span class="hb-status-value" id="status-mode">OVR</span></span>
+  </div>
+
+</div>
+
+<div id="overlays"></div>
+<div class="hb-toast-stack" id="toasts"></div>
+
+<script type="module" src="/static/app.js"></script>
+<script type="module" src="/static/panels.js"></script>
+</body>
+</html>

@@ -176,24 +176,25 @@ class TestApplyPipelineMultiStep:
 
         transforms = _run(bridge.list_transforms())
         names = [t["name"] for t in transforms]
-        if "bitwise_not" not in names:
-            pytest.skip("bitwise_not transform not available")
+        assert "bit_rotate_left" in names, f"engine must expose bit_rotate_left; got {sorted(names)}"
 
         payload = b"\x0f\x0f\x0f\x0f"
         _open_with_payload(bridge, tmp_path / "order.bin", payload)
 
         pipeline_ab = json.dumps([
             {"name": "xor_single", "params": {"key": "AA"}},
-            {"name": "bitwise_not", "params": {}},
+            {"name": "bit_rotate_left", "params": {"count": "01"}},
         ])
         pipeline_ba = json.dumps([
-            {"name": "bitwise_not", "params": {}},
+            {"name": "bit_rotate_left", "params": {"count": "01"}},
             {"name": "xor_single", "params": {"key": "AA"}},
         ])
 
         result_ab = _run(bridge.apply_pipeline(pipeline_ab, 0, 4))
         result_ba = _run(bridge.apply_pipeline(pipeline_ba, 0, 4))
 
+        assert result_ab == "4b4b4b4b"
+        assert result_ba == "b4b4b4b4"
         assert result_ab != result_ba
 
     def test_three_step_pipeline_produces_output(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -325,7 +326,7 @@ class TestApplyTransformDeep:
         assert all(b == 0x00 for b in transformed)
 
     def test_apply_transform_rot13_on_text_bytes(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
-        """apply_transform with rot13 must rotate alphabetic ASCII bytes by 13 positions.
+        """apply_transform with rot_n at shift 13 must rotate only alphabetic ASCII bytes.
 
         Args:
             bridge: An initialized HexEditorBridge fixture.
@@ -333,17 +334,20 @@ class TestApplyTransformDeep:
         """
         transforms = _run(bridge.list_transforms())
         names = [t["name"] for t in transforms]
-        if "rot13" not in names:
-            pytest.skip("rot13 transform not available")
+        assert "rot_n" in names, f"engine must expose rot_n; got {sorted(names)}"
 
-        text = "HELLO"
+        text = "Hello, World!"
         payload = text.encode("ascii") + b"\x00" * 8
         _open_with_payload(bridge, tmp_path / "rot13.bin", payload)
 
-        result = _run(bridge.apply_transform("rot13", 0, len(text), "{}"))
+        rot13 = json.dumps({"shift": "0d"})
+        result = _run(bridge.apply_transform("rot_n", 0, len(text), rot13))
 
         transformed = bytes.fromhex(result).decode("ascii")
-        assert transformed == "URYYB"
+        assert transformed == "Uryyb, Jbeyq!"
+
+        round_trip = _run(bridge.apply_transform("rot_n", 0, len(text), rot13))
+        assert bytes.fromhex(round_trip).decode("ascii") == text
 
     def test_apply_transform_base64_encode_produces_valid_base64(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """apply_transform with base64_encode must produce a validly decodable hex output.

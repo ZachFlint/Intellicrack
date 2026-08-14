@@ -1252,9 +1252,8 @@ class SessionManager:
     async def save(self) -> None:
         """Save the current session.
 
-        Like ``update``, the SQLite work is run via ``asyncio.to_thread`` under
-        the same lock so ``save`` and ``update`` cannot interleave their
-        transactions.
+        Like ``update``, the SQLite work is run via ``asyncio.to_thread`` under the same lock so ``save`` and ``update`` cannot interleave
+        their transactions.
         """
         if self._current is None:
             return
@@ -1266,8 +1265,7 @@ class SessionManager:
     async def close(self) -> None:
         """Close the current session.
 
-        Stops the auto-save worker (safe from any event loop), flushes the
-        current session once, then clears it.
+        Stops the auto-save worker (safe from any event loop), flushes the current session once, then clears it.
         """
         await self._stop_auto_save()
 
@@ -1402,10 +1400,8 @@ class SessionManager:
     async def stop_auto_save(self) -> None:
         """Stop the auto-save background worker.
 
-        Public counterpart to :meth:`_stop_auto_save` for callers (test
-        harnesses, embedding applications) that need to cleanly stop the
-        background save loop without reaching into private members. No-op when
-        no worker is currently running.
+        Public counterpart to :meth:`_stop_auto_save` for callers (test harnesses, embedding applications) that need to cleanly stop the
+        background save loop without reaching into private members. No-op when no worker is currently running.
         """
         await self._stop_auto_save()
 
@@ -1466,13 +1462,10 @@ class SessionManager:
     def _auto_save_worker(self) -> None:
         """Periodically persist the current session on a background thread.
 
-        The loop is wrapped in a broad exception guard because it has to keep
-        running across transient failure modes (filesystem hiccups, locked
-        SQLite databases, exhausted disk, intermittent permission errors). A
-        single uncaught exception would otherwise terminate the worker and
-        silently leave the application without auto-save until restart. Stop
-        is cooperative via :attr:`_autosave_stop` so callers on any event loop
-        can shut the worker down without awaiting a loop-bound task.
+        The loop is wrapped in a broad exception guard because it has to keep running across transient failure modes (filesystem hiccups,
+        locked SQLite databases, exhausted disk, intermittent permission errors). A single uncaught exception would otherwise terminate the
+        worker and silently leave the application without auto-save until restart. Stop is cooperative via :attr:`_autosave_stop` so callers
+        on any event loop can shut the worker down without awaiting a loop-bound task.
         """
         interval = max(float(self.save_interval), 0.0)
         while not self._autosave_stop.wait(timeout=interval):

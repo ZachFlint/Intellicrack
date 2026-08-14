@@ -26,8 +26,13 @@ fn is_printable_ascii(b: u8) -> bool {
     (0x20..=0x7E).contains(&b) || b == b'\t' || b == b'\n' || b == b'\r'
 }
 
-fn extract_ascii_strings(data: &[u8], min_length: usize) -> Vec<StringMatch> {
-    let mut results = Vec::new();
+struct RawAsciiRun {
+    offset: usize,
+    content: String,
+}
+
+fn extract_ascii_runs_unfiltered(data: &[u8]) -> Vec<RawAsciiRun> {
+    let mut runs = Vec::new();
     let mut start: Option<usize> = None;
 
     for (i, &byte) in data.iter().enumerate() {
@@ -36,34 +41,35 @@ fn extract_ascii_strings(data: &[u8], min_length: usize) -> Vec<StringMatch> {
                 start = Some(i);
             }
         } else if let Some(s) = start {
-            let len = i - s;
-            if len >= min_length {
-                let content = String::from_utf8_lossy(&data[s..i]).to_string();
-                results.push(StringMatch {
-                    offset: s,
-                    length: len,
-                    encoding: "ascii".to_string(),
-                    content,
-                });
-            }
+            runs.push(RawAsciiRun {
+                offset: s,
+                content: String::from_utf8_lossy(&data[s..i]).to_string(),
+            });
             start = None;
         }
     }
 
     if let Some(s) = start {
-        let len = data.len() - s;
-        if len >= min_length {
-            let content = String::from_utf8_lossy(&data[s..]).to_string();
-            results.push(StringMatch {
-                offset: s,
-                length: len,
-                encoding: "ascii".to_string(),
-                content,
-            });
-        }
+        runs.push(RawAsciiRun {
+            offset: s,
+            content: String::from_utf8_lossy(&data[s..]).to_string(),
+        });
     }
 
-    results
+    runs
+}
+
+fn extract_ascii_strings(data: &[u8], min_length: usize) -> Vec<StringMatch> {
+    extract_ascii_runs_unfiltered(data)
+        .into_iter()
+        .filter(|r| r.content.len() >= min_length)
+        .map(|r| StringMatch {
+            offset: r.offset,
+            length: r.content.len(),
+            encoding: "ascii".to_string(),
+            content: r.content,
+        })
+        .collect()
 }
 
 fn extract_ascii_strings_parallel(data: &[u8], min_length: usize) -> Vec<StringMatch> {
@@ -73,14 +79,44 @@ fn extract_ascii_strings_parallel(data: &[u8], min_length: usize) -> Vec<StringM
         .map(|(i, chunk)| (i * PARALLEL_CHUNK_SIZE, chunk))
         .collect();
 
-    let mut all_results: Vec<StringMatch> = chunks
+    let mut chunk_runs: Vec<Vec<RawAsciiRun>> = chunks
         .par_iter()
-        .flat_map(|(base_offset, chunk)| {
-            let mut chunk_results = extract_ascii_strings(chunk, min_length);
-            for r in &mut chunk_results {
+        .map(|(base_offset, chunk)| {
+            let mut runs = extract_ascii_runs_unfiltered(chunk);
+            for r in &mut runs {
                 r.offset += base_offset;
             }
-            chunk_results
+            runs
+        })
+        .collect();
+
+    // Stitch runs that abut a chunk seam back into a single continuous run before
+    // the min_length filter is applied, so a string split across the 64 KiB chunk
+    // boundary is neither fragmented nor dropped.
+    let mut stitched: Vec<RawAsciiRun> = Vec::new();
+    for (chunk_idx, (base_offset, _)) in chunks.iter().enumerate() {
+        for run in std::mem::take(&mut chunk_runs[chunk_idx]) {
+            let touches_left_edge = run.offset == *base_offset;
+            if touches_left_edge {
+                if let Some(prev) = stitched.last_mut() {
+                    if prev.offset + prev.content.len() == *base_offset {
+                        prev.content.push_str(&run.content);
+                        continue;
+                    }
+                }
+            }
+            stitched.push(run);
+        }
+    }
+
+    let mut all_results: Vec<StringMatch> = stitched
+        .into_iter()
+        .filter(|r| r.content.len() >= min_length)
+        .map(|r| StringMatch {
+            offset: r.offset,
+            length: r.content.len(),
+            encoding: "ascii".to_string(),
+            content: r.content,
         })
         .collect();
 
@@ -143,7 +179,7 @@ fn extract_utf16le_strings(data: &[u8], min_length: usize) -> Vec<StringMatch> {
                  start: usize,
                  end: usize,
                  results: &mut Vec<StringMatch>| {
-        if *char_count >= min_length {
+        if *char_count > 0 && *char_count >= min_length {
             results.push(StringMatch {
                 offset: start,
                 length: end - start,
@@ -366,8 +402,8 @@ mod tests {
 
     #[test]
     fn test_ascii_parallel_large_buffer_offset_stitching_and_sort() {
-        // > 1 MiB drives the rayon path; a 20-byte run straddles the 65536 chunk seam
-        // and is reported as two fragments with correct absolute offsets.
+        // > 1 MiB drives the rayon path; a 20-byte run straddling the 65536 chunk seam
+        // must be stitched back into a single match with correct absolute offset.
         let total = 2 * 1024 * 1024;
         let mut data = vec![0u8; total];
         data[100..111].copy_from_slice(b"FIRSTSTRING");
@@ -376,17 +412,33 @@ mod tests {
         }
         data[200_000..200_010].copy_from_slice(b"LASTSTRING");
         let results = extract_strings(&data, 4, true, false, 100);
-        let got: Vec<(usize, String)> =
-            results.iter().map(|r| (r.offset, r.content.clone())).collect();
+        let got: Vec<(usize, String)> = results
+            .iter()
+            .map(|r| (r.offset, r.content.clone()))
+            .collect();
         assert_eq!(
             got,
             vec![
                 (100, "FIRSTSTRING".to_string()),
-                (65530, "AAAAAA".to_string()),
-                (65536, "AAAAAAAAAAAAAA".to_string()),
+                (65530, "A".repeat(20)),
                 (200_000, "LASTSTRING".to_string()),
             ]
         );
+    }
+
+    #[test]
+    fn test_ascii_parallel_boundary_stitch_recovers_run_below_per_chunk_min_length() {
+        // A 6-byte run split 3/3 across the chunk seam: each half is below
+        // min_length=4 in isolation but the stitched whole must be reported.
+        let total = 2 * 1024 * 1024;
+        let mut data = vec![0u8; total];
+        for b in &mut data[PARALLEL_CHUNK_SIZE - 3..PARALLEL_CHUNK_SIZE + 3] {
+            *b = b'B';
+        }
+        let results = extract_strings(&data, 4, true, false, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, PARALLEL_CHUNK_SIZE - 3);
+        assert_eq!(results[0].content, "BBBBBB");
     }
 
     #[test]
@@ -414,6 +466,25 @@ mod tests {
     }
 
     #[test]
+    fn test_utf16le_min_length_zero_no_spurious_empty_matches() {
+        // A run of NUL-terminated control units flushes with nothing accumulated;
+        // min_length=0 must not fabricate empty-content matches at every terminator.
+        let data = vec![0u8; 40];
+        let results = extract_strings(&data, 0, false, true, 100);
+        assert!(results.is_empty());
+    }
+
+    #[test]
+    fn test_utf16le_min_length_zero_still_reports_real_strings() {
+        let mut data: Vec<u8> = vec![0, 0];
+        data.extend_from_slice(&encode_utf16le("Hi"));
+        data.extend_from_slice(&[0, 0]);
+        let results = extract_strings(&data, 0, false, true, 100);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].content, "Hi");
+    }
+
+    #[test]
     fn test_utf16le_mid_string_control_char_flushes() {
         // "ABCD" then U+0001 (control, flush) then "EFGH".
         let mut data: Vec<u8> = vec![0, 0];
@@ -438,8 +509,12 @@ mod tests {
         data.extend_from_slice(&[0, 0]);
 
         let results = extract_strings(&data, 4, true, true, 100);
-        assert!(results.iter().any(|r| r.encoding == "ascii" && r.content == "ASCIISTR"));
-        assert!(results.iter().any(|r| r.encoding == "utf16le" && r.content == "UNICODE"));
+        assert!(results
+            .iter()
+            .any(|r| r.encoding == "ascii" && r.content == "ASCIISTR"));
+        assert!(results
+            .iter()
+            .any(|r| r.encoding == "utf16le" && r.content == "UNICODE"));
         // offsets must be globally sorted after the merge
         assert!(results.windows(2).all(|w| w[0].offset <= w[1].offset));
 

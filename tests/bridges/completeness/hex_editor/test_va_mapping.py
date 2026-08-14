@@ -413,8 +413,9 @@ class TestPerformanceSettingsEntryPointDispatchesRealBridgeL3:
             )
             pump_until(
                 qapp,
-                lambda: (usage := _run(bridge.get_memory_usage()))["chunk_size"] == 128 * 1024
-                and usage["memory_budget"] == 8 * 1024 * 1024,
+                lambda: (
+                    (usage := _run(bridge.get_memory_usage()))["chunk_size"] == 128 * 1024 and usage["memory_budget"] == 8 * 1024 * 1024
+                ),
             )
             applied = _run(bridge.get_memory_usage())
             assert applied["chunk_size"] == 128 * 1024, "accepted dialog's new chunk size must be applied via set_chunk_size"
