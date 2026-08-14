@@ -50,6 +50,11 @@ if TYPE_CHECKING:
 _ANALYSIS_STRING_ADDRESS: int = 0x140002100
 _ANALYSIS_STRING_VALUE: str = "h1-display-slot-marker"
 
+# A level that is neither the auto-approve override (NONE) nor the value the
+# pre-fix code hardcoded for the off state (DESTRUCTIVE), so the off-case
+# assertion falsifies a regression back to that hardcode.
+_CONFIGURED_LEVEL: ConfirmationLevel = ConfirmationLevel.ALL
+
 
 class _ToolPanelRecorder:
     """Records analysis-tab mutations so off-thread calls can be detected."""
@@ -166,8 +171,30 @@ class _ConfirmationHolder:
         self.confirmation_requested: _SignalRecorder = _SignalRecorder()
 
 
+class _ConfirmationConfigDouble:
+    """Config double exposing the ``confirmation_level`` the slot reads."""
+
+    def __init__(self, level: ConfirmationLevel) -> None:
+        """Store the configured confirmation level.
+
+        Args:
+            level: The level ``_effective_confirmation_level`` returns while the
+                auto-approve override is off.
+        """
+        self.confirmation_level: ConfirmationLevel = level
+
+
 class _AutoApproveHolder:
-    """Holder exposing the attributes ``_apply_restored_auto_approve`` reads."""
+    """Holder exposing the attributes ``_apply_restored_auto_approve`` reads.
+
+    ``_apply_restored_auto_approve`` delegates through the real
+    ``_apply_confirmation_level`` and ``_effective_confirmation_level`` helpers,
+    so the holder binds those production functions rather than restating their
+    logic: the gate exercises the same resolution the running window performs.
+    """
+
+    _apply_confirmation_level = getattr(MainWindow, "_apply_confirmation_level")
+    _effective_confirmation_level = getattr(MainWindow, "_effective_confirmation_level")
 
     def __init__(self, *, checked: bool) -> None:
         """Build the holder with a real toggle button and a level recorder.
@@ -179,6 +206,7 @@ class _AutoApproveHolder:
         button.setCheckable(True)
         button.setChecked(checked)
         self._auto_approve_btn: QPushButton = button
+        self._config: _ConfirmationConfigDouble = _ConfirmationConfigDouble(_CONFIGURED_LEVEL)
         self._orchestrator: _OrchestratorLevelRecorder = _OrchestratorLevelRecorder()
 
 
@@ -273,14 +301,21 @@ def test_confirmation_marshals_via_signal_not_singleshot(monkeypatch: pytest.Mon
 
 @pytest.mark.usefixtures("qapp")
 def test_m12_apply_restored_auto_approve_sets_level() -> None:
-    """M12: the restore helper maps the toggle state to the orchestrator level."""
+    """M12: the restore helper maps the toggle state to the orchestrator level.
+
+    Auto-approve is an override, not a second setting: a restored ON toggle
+    suppresses every prompt (``NONE``), while a restored OFF toggle must hand
+    the orchestrator the user's *configured* level rather than a hardcoded
+    default. The off-case asserts the configured ``ALL`` flows through, which
+    fails if the pre-fix hardcoded ``DESTRUCTIVE`` is ever reintroduced.
+    """
     on_holder = _AutoApproveHolder(checked=True)
     getattr(MainWindow, "_apply_restored_auto_approve")(cast("MainWindow", on_holder))
     assert getattr(on_holder, "_orchestrator").levels == [ConfirmationLevel.NONE]
 
     off_holder = _AutoApproveHolder(checked=False)
     getattr(MainWindow, "_apply_restored_auto_approve")(cast("MainWindow", off_holder))
-    assert getattr(off_holder, "_orchestrator").levels == [ConfirmationLevel.DESTRUCTIVE]
+    assert getattr(off_holder, "_orchestrator").levels == [_CONFIGURED_LEVEL]
 
 
 @contextmanager

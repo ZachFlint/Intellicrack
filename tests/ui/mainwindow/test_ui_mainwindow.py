@@ -53,6 +53,7 @@ from PyQt6.QtWidgets import (
     QMainWindow,
     QMenu,
     QMessageBox,
+    QPushButton,
     QTabWidget,
     QWidget,
 )
@@ -61,7 +62,7 @@ from intellicrack.core.config import Config
 from intellicrack.core.orchestrator import Orchestrator
 from intellicrack.core.session import SessionManager, SessionStore
 from intellicrack.core.tools import ToolRegistry
-from intellicrack.core.types import ModelInfo, ProviderError, ProviderName
+from intellicrack.core.types import ConfirmationLevel, ModelInfo, ProviderError, ProviderName
 from intellicrack.providers.registry import ProviderRegistry
 from intellicrack.ui import (
     app as app_module,
@@ -1450,13 +1451,36 @@ class _ThemeManagerRecorder:
         self.applied.append(theme)
 
 
+class _OrchestratorLevelSink:
+    """Orchestrator double recording :meth:`set_confirmation_level` calls."""
+
+    def __init__(self) -> None:
+        """Initialise the recorded-level list."""
+        self.levels: list[ConfirmationLevel] = []
+
+    def set_confirmation_level(self, level: ConfirmationLevel) -> None:
+        """Record a confirmation-level change.
+
+        Args:
+            level: The level passed by the slot.
+        """
+        self.levels.append(level)
+
+
 class _PreferencesHolder:
     """Holder driving :meth:`MainWindow._on_preferences_changed` against a stub.
 
     The slot reads ``self._config.ui.theme`` and ``new_config.ui.theme`` to
     detect a theme change, so the held config is a :class:`_ConfigDouble`
-    rather than a bare object.
+    rather than a bare object. It also pushes the effective confirmation level
+    onto the orchestrator through the real ``_apply_confirmation_level`` and
+    ``_effective_confirmation_level`` helpers, which the holder binds from
+    production rather than restating; the toggle is held ON so that resolution
+    is exercised without the theme/model machinery a full window would drag in.
     """
+
+    _apply_confirmation_level = getattr(MainWindow, "_apply_confirmation_level")
+    _effective_confirmation_level = getattr(MainWindow, "_effective_confirmation_level")
 
     def __init__(self) -> None:
         """Initialise tracking attributes."""
@@ -1464,6 +1488,11 @@ class _PreferencesHolder:
         self._theme_manager = _ThemeManagerRecorder()
         self.status_update = _StatusEmissionRecorder()
         self.cache_called: bool = False
+        button = QPushButton()
+        button.setCheckable(True)
+        button.setChecked(True)
+        self._auto_approve_btn: QPushButton = button
+        self._orchestrator: _OrchestratorLevelSink = _OrchestratorLevelSink()
 
     def _initialize_model_cache(self) -> None:
         """Record that the model cache initializer ran."""
