@@ -32,7 +32,7 @@ from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
 
     from PyQt6.QtGui import QKeyEvent, QResizeEvent
 
@@ -475,19 +475,13 @@ class ChatPanel(QFrame):
 
         self.setObjectName("chat_panel")
 
-    def add_message(self, message: Message) -> None:
-        """Add a message to the chat.
+    def _append_bubble(self, message: Message) -> None:
+        """Record a message and insert its bubble ahead of the trailing stretch.
 
         Args:
-            message: Message to add.
+            message: Message to record and render.
         """
         self._messages.append(message)
-        _logger.debug(
-            "chat_message_added",
-            role=message.role,
-            has_tool_calls=message.tool_calls is not None,
-            has_tool_results=message.tool_results is not None,
-        )
 
         bubble = MessageBubble(message)
         self._messages_layout.insertWidget(
@@ -495,6 +489,38 @@ class ChatPanel(QFrame):
             bubble,
         )
 
+    def add_message(self, message: Message) -> None:
+        """Add a message to the chat.
+
+        Args:
+            message: Message to add.
+        """
+        self._append_bubble(message)
+        _logger.debug(
+            "chat_message_added",
+            role=message.role,
+            has_tool_calls=message.tool_calls is not None,
+            has_tool_results=message.tool_results is not None,
+        )
+
+        self._scroll_to_bottom()
+
+    def restore_messages(self, messages: Sequence[Message]) -> None:
+        """Replace the visible conversation with a previously saved history.
+
+        Renders through the same bubble construction live turns use, so a
+        restored session is indistinguishable from one built up
+        interactively, and scrolls once at the end rather than once per
+        message.
+
+        Args:
+            messages: Ordered conversation history to display.
+        """
+        self.clear_messages()
+        for message in messages:
+            self._append_bubble(message)
+
+        _logger.info("chat_messages_restored", count=len(messages))
         self._scroll_to_bottom()
 
     def add_streaming_message(self) -> Callable[[str], None]:
