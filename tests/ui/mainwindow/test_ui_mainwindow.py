@@ -68,6 +68,7 @@ from intellicrack.ui import (
     preferences as preferences_module,
 )
 from intellicrack.ui.app import MainWindow
+from intellicrack.ui.panels.async_bridge import drain_bridge_workers_for
 from intellicrack.ui.provider_config import (
     ModelSelectionDialog,
     ProviderConfigDialog,
@@ -1313,10 +1314,14 @@ class TestOrphanSignalWiringRuntime:
         """A real ``SandboxConfigDialog.settings_updated`` emission rebuilds the manager.
 
         ``_on_sandbox_settings_updated`` reads ``sender().get_settings()`` and
-        routes through ``_apply_sandbox_settings``, which replaces
-        ``self.sandbox_manager`` with a freshly built :class:`SandboxManager`.
-        Asserting the manager object identity changed independently verifies the
-        slot ran end-to-end (a missing connection leaves the original instance).
+        routes through ``_apply_sandbox_settings``, which tears down live
+        instances on a background bridge worker and then replaces
+        ``self.sandbox_manager`` with a freshly built :class:`SandboxManager`
+        from the worker's queued completion signal. The rebuild is therefore
+        never synchronous with the emission, so the worker is joined and its
+        queued signal delivered before the identity is read. Asserting the
+        manager object identity changed independently verifies the slot ran
+        end-to-end (a missing connection leaves the original instance).
 
         Args:
             real_window: Real MainWindow fixture.
@@ -1331,6 +1336,10 @@ class TestOrphanSignalWiringRuntime:
 
         manager_before = getattr(real_window, "sandbox_manager")
         dialogs[0].settings_updated.emit()
+        _ = drain_bridge_workers_for(real_window)
+        app = QApplication.instance()
+        if app is not None:
+            app.processEvents()
         manager_after = getattr(real_window, "sandbox_manager")
         assert manager_after is not manager_before, (
             "settings_updated emission did not reach _on_sandbox_settings_updated (manager was not rebuilt)"
