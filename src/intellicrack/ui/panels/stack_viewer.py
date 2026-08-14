@@ -523,10 +523,12 @@ class StackViewerPanel(QWidget):
     with auto-refresh during debugging.
 
     Attributes:
-        address_navigate: Qt signal for address navigate.
+        address_navigate: Qt signal carrying the address of a selected stack
+            frame. Declared as ``qint64`` (not the default 32-bit C++ ``int``)
+            so a return address on an image-based x64 stack is not truncated.
     """
 
-    address_navigate = pyqtSignal(int)
+    address_navigate = pyqtSignal("qint64")
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the StackViewerPanel widget.
