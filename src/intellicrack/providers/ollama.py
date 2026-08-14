@@ -1716,6 +1716,7 @@ class OllamaProvider(LLMProviderBase):
         Yields:
             str: Content chunks as they arrive.
         """
+
         async with client.stream(
             "POST",
             f"{base_url}{endpoint}",

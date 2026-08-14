@@ -10,6 +10,8 @@ pub enum PatchError {
     InvalidIps(String),
     #[error("patch too large for IPS format (offset > 0xFFFFFF)")]
     PatchTooLarge,
+    #[error("cannot resolve IPS terminator collision at offset {0:#x}: original byte unavailable")]
+    UnresolvedTerminatorCollision(usize),
 }
 
 #[derive(Debug, Clone)]
@@ -26,10 +28,23 @@ struct JsonPatchEntry {
 
 /// Exports patch records in IPS format (24-bit offsets).
 ///
+/// When a record's write offset lands exactly on the reserved terminator
+/// value (`IPS_TERMINATOR_OFFSET`), the record is shifted back by one byte
+/// to avoid emitting a header that a parser would misread as the `EOF`
+/// marker. The true byte value at that preceding position is either taken
+/// from data already queued in the same record, or, when the record starts
+/// exactly at the terminator, obtained from `original_byte_at`.
+///
 /// # Errors
 ///
 /// Returns `PatchError::PatchTooLarge` if any patch offset exceeds `0x00FF_FFFF`.
-pub fn export_ips(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
+/// Returns `PatchError::UnresolvedTerminatorCollision` if a record starts
+/// exactly at the terminator offset and `original_byte_at` cannot supply the
+/// real byte value that belongs immediately before it.
+pub fn export_ips(
+    patches: &[PatchRecord],
+    original_byte_at: &dyn Fn(usize) -> Option<u8>,
+) -> Result<Vec<u8>, PatchError> {
     let mut output = Vec::new();
     output.extend_from_slice(b"PATCH");
 
@@ -48,6 +63,13 @@ pub fn export_ips(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
 
             if current_offset == IPS_TERMINATOR_OFFSET {
                 let prev_offset = IPS_TERMINATOR_OFFSET - 1;
+                let prev_byte = if current_offset > patch.offset {
+                    patch.data[prev_offset - patch.offset]
+                } else {
+                    original_byte_at(prev_offset).ok_or(
+                        PatchError::UnresolvedTerminatorCollision(IPS_TERMINATOR_OFFSET),
+                    )?
+                };
                 let merged_len = (chunk_size + 1).min(0xFFFF);
                 let offset_bytes = prev_offset.to_be_bytes();
                 let offset_start = offset_bytes.len() - 3;
@@ -55,7 +77,7 @@ pub fn export_ips(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
                 let size_bytes = merged_len.to_be_bytes();
                 let size_start = size_bytes.len() - 2;
                 output.extend_from_slice(&size_bytes[size_start..]);
-                output.push(0x00);
+                output.push(prev_byte);
                 let consumed = merged_len - 1;
                 output.extend_from_slice(&remaining[..consumed]);
                 remaining = &remaining[consumed..];
@@ -92,10 +114,22 @@ pub fn export_ips(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
 
 /// Exports patch records in IPS32 format (32-bit offsets).
 ///
+/// When a record's write offset lands exactly on the reserved terminator
+/// value (`IPS32_TERMINATOR_OFFSET`), the record is shifted back by one byte
+/// to avoid emitting a header that a parser would misread as the `EEOF`
+/// marker. The true byte value at that preceding position is either taken
+/// from data already queued in the same record, or, when the record starts
+/// exactly at the terminator, obtained from `original_byte_at`.
+///
 /// # Errors
 ///
-/// Returns `PatchError` if the export fails.
-pub fn export_ips32(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
+/// Returns `PatchError::UnresolvedTerminatorCollision` if a record starts
+/// exactly at the terminator offset and `original_byte_at` cannot supply the
+/// real byte value that belongs immediately before it.
+pub fn export_ips32(
+    patches: &[PatchRecord],
+    original_byte_at: &dyn Fn(usize) -> Option<u8>,
+) -> Result<Vec<u8>, PatchError> {
     let mut output = Vec::new();
     output.extend_from_slice(b"IPS32");
 
@@ -108,6 +142,13 @@ pub fn export_ips32(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
 
             if current_offset == IPS32_TERMINATOR_OFFSET {
                 let prev_offset = IPS32_TERMINATOR_OFFSET - 1;
+                let prev_byte = if current_offset > patch.offset {
+                    patch.data[prev_offset - patch.offset]
+                } else {
+                    original_byte_at(prev_offset).ok_or(
+                        PatchError::UnresolvedTerminatorCollision(IPS32_TERMINATOR_OFFSET),
+                    )?
+                };
                 let merged_len = (chunk_size + 1).min(0xFFFF);
                 let offset_bytes = prev_offset.to_be_bytes();
                 let offset_start = offset_bytes.len() - 4;
@@ -115,7 +156,7 @@ pub fn export_ips32(patches: &[PatchRecord]) -> Result<Vec<u8>, PatchError> {
                 let size_bytes = merged_len.to_be_bytes();
                 let size_start = size_bytes.len() - 2;
                 output.extend_from_slice(&size_bytes[size_start..]);
-                output.push(0x00);
+                output.push(prev_byte);
                 let consumed = merged_len - 1;
                 output.extend_from_slice(&remaining[..consumed]);
                 remaining = &remaining[consumed..];
@@ -374,6 +415,10 @@ pub fn extract_patches_from_overwrites(operations: &[(usize, Vec<u8>)]) -> Vec<P
 mod tests {
     use super::*;
 
+    fn no_original(_offset: usize) -> Option<u8> {
+        None
+    }
+
     #[test]
     fn test_ips_roundtrip() {
         let patches = vec![
@@ -386,7 +431,7 @@ mod tests {
                 data: vec![0x90, 0x90],
             },
         ];
-        let exported = export_ips(&patches).unwrap();
+        let exported = export_ips(&patches, &no_original).unwrap();
         assert!(exported.starts_with(b"PATCH"));
         assert!(exported.ends_with(b"EOF"));
 
@@ -404,7 +449,7 @@ mod tests {
             offset: 0x0100_0000,
             data: vec![0xDE, 0xAD],
         }];
-        let exported = export_ips32(&patches).unwrap();
+        let exported = export_ips32(&patches, &no_original).unwrap();
         assert!(exported.starts_with(b"IPS32"));
         assert!(exported.ends_with(b"EEOF"));
 
@@ -420,12 +465,15 @@ mod tests {
             offset: 0x0100_0000,
             data: vec![0x00],
         }];
-        assert!(matches!(export_ips(&patches), Err(PatchError::PatchTooLarge)));
+        assert!(matches!(
+            export_ips(&patches, &no_original),
+            Err(PatchError::PatchTooLarge)
+        ));
     }
 
     #[test]
     fn test_empty_patches() {
-        let exported = export_ips(&[]).unwrap();
+        let exported = export_ips(&[], &no_original).unwrap();
         assert_eq!(exported, b"PATCHEOF");
         let imported = import_ips(&exported).unwrap();
         assert!(imported.is_empty());
@@ -538,15 +586,48 @@ mod tests {
 
     #[test]
     fn test_ips_collision_no_record_at_terminator_offset() {
+        // The byte immediately before the terminator offset is NOT part of
+        // this record's data, so the exporter must obtain it from
+        // `original_byte_at` rather than fabricating a 0x00. Regressing to
+        // a hardcoded 0x00 would make the assertion on PREV_BYTE fail.
+        const PREV_BYTE: u8 = 0x77;
         let patches = vec![PatchRecord {
             offset: IPS_TERMINATOR_OFFSET,
             data: vec![0x11, 0x22, 0x33],
         }];
-        let exported = export_ips(&patches).unwrap();
+        let original_at =
+            |offset: usize| (offset == IPS_TERMINATOR_OFFSET - 1).then_some(PREV_BYTE);
+        let exported = export_ips(&patches, &original_at).unwrap();
 
         let header_end = exported.len() - 3;
         let body = &exported[5..header_end];
         assert!(!contains_header_with_offset_3(body, IPS_TERMINATOR_OFFSET));
+
+        let imported = import_ips(&exported).unwrap();
+        let mut reconstructed = vec![0u8; IPS_TERMINATOR_OFFSET + 4];
+        for rec in &imported {
+            reconstructed[rec.offset..rec.offset + rec.data.len()].copy_from_slice(&rec.data);
+        }
+        assert_eq!(reconstructed[IPS_TERMINATOR_OFFSET - 1], PREV_BYTE);
+        assert_eq!(
+            &reconstructed[IPS_TERMINATOR_OFFSET..IPS_TERMINATOR_OFFSET + 3],
+            &[0x11, 0x22, 0x33]
+        );
+    }
+
+    #[test]
+    fn test_ips_collision_unresolved_returns_error() {
+        // Record starts exactly at the terminator offset and no original
+        // byte is available -- must fail loudly instead of fabricating 0x00.
+        let patches = vec![PatchRecord {
+            offset: IPS_TERMINATOR_OFFSET,
+            data: vec![0x11, 0x22, 0x33],
+        }];
+        let err = export_ips(&patches, &no_original).unwrap_err();
+        assert!(
+            matches!(err, PatchError::UnresolvedTerminatorCollision(offset) if offset == IPS_TERMINATOR_OFFSET),
+            "got {err:?}"
+        );
     }
 
     #[test]
@@ -555,7 +636,7 @@ mod tests {
             offset: IPS_TERMINATOR_OFFSET - 2,
             data: vec![0xAA, 0xBB, 0xCC, 0xDD],
         }];
-        let exported = export_ips(&patches).unwrap();
+        let exported = export_ips(&patches, &no_original).unwrap();
         let header_end = exported.len() - 3;
         let body = &exported[5..header_end];
         assert!(!contains_header_with_offset_3(body, IPS_TERMINATOR_OFFSET));
@@ -573,26 +654,47 @@ mod tests {
 
     #[test]
     fn test_ips32_collision_no_record_at_terminator_offset() {
+        const PREV_BYTE: u8 = 0x99;
         let patches = vec![PatchRecord {
             offset: IPS32_TERMINATOR_OFFSET,
             data: vec![0x11, 0x22, 0x33],
         }];
-        let exported = export_ips32(&patches).unwrap();
+        let original_at =
+            |offset: usize| (offset == IPS32_TERMINATOR_OFFSET - 1).then_some(PREV_BYTE);
+        let exported = export_ips32(&patches, &original_at).unwrap();
         let header_end = exported.len() - 4;
         let body = &exported[5..header_end];
         assert!(!contains_header_with_offset_4(
             body,
             IPS32_TERMINATOR_OFFSET
         ));
+
+        let imported = import_ips(&exported).unwrap();
+        let mut reconstructed = vec![0u8; IPS32_TERMINATOR_OFFSET + 4];
+        for rec in &imported {
+            reconstructed[rec.offset..rec.offset + rec.data.len()].copy_from_slice(&rec.data);
+        }
+        assert_eq!(reconstructed[IPS32_TERMINATOR_OFFSET - 1], PREV_BYTE);
+        assert_eq!(
+            &reconstructed[IPS32_TERMINATOR_OFFSET..IPS32_TERMINATOR_OFFSET + 3],
+            &[0x11, 0x22, 0x33]
+        );
     }
 
     #[test]
     fn test_ips32_collision_roundtrip() {
+        // Regression guard for a fabricated filler byte: reconstruct into a
+        // NON-zero-filled scratch buffer, so a hardcoded 0x00 filler would
+        // not coincidentally match the expected PREV_BYTE value and the test
+        // would go red instead of passing by accident.
+        const PREV_BYTE: u8 = 0x5A;
         let patches = vec![PatchRecord {
             offset: IPS32_TERMINATOR_OFFSET,
             data: vec![0xDE, 0xAD, 0xBE, 0xEF],
         }];
-        let exported = export_ips32(&patches).unwrap();
+        let original_at =
+            |offset: usize| (offset == IPS32_TERMINATOR_OFFSET - 1).then_some(PREV_BYTE);
+        let exported = export_ips32(&patches, &original_at).unwrap();
         let header_end = exported.len() - 4;
         let body = &exported[5..header_end];
         assert!(!contains_header_with_offset_4(
@@ -602,10 +704,11 @@ mod tests {
 
         let imported = import_ips(&exported).unwrap();
 
-        let mut reconstructed = vec![0u8; IPS32_TERMINATOR_OFFSET + 5];
+        let mut reconstructed = vec![0xCCu8; IPS32_TERMINATOR_OFFSET + 5];
         for rec in &imported {
             reconstructed[rec.offset..rec.offset + rec.data.len()].copy_from_slice(&rec.data);
         }
+        assert_eq!(reconstructed[IPS32_TERMINATOR_OFFSET - 1], PREV_BYTE);
         assert_eq!(
             &reconstructed[IPS32_TERMINATOR_OFFSET..IPS32_TERMINATOR_OFFSET + 4],
             &[0xDE, 0xAD, 0xBE, 0xEF]
@@ -642,26 +745,61 @@ mod tests {
 
     #[test]
     fn test_import_ips_truncation_errors() {
-        assert!(import_ips(b"AB").unwrap_err().to_string().contains("data too short"));
-        assert!(import_ips(b"PATCH\x00\x00").unwrap_err().to_string().contains("unexpected end of data"));
-        assert!(import_ips(b"PATCH\x00\x00\x10").unwrap_err().to_string().contains("truncated record header"));
+        assert!(import_ips(b"AB")
+            .unwrap_err()
+            .to_string()
+            .contains("data too short"));
+        assert!(import_ips(b"PATCH\x00\x00")
+            .unwrap_err()
+            .to_string()
+            .contains("unexpected end of data"));
+        assert!(import_ips(b"PATCH\x00\x00\x10")
+            .unwrap_err()
+            .to_string()
+            .contains("truncated record header"));
         // size 0 RLE with fewer than 3 trailing bytes
-        let rle = [b'P', b'A', b'T', b'C', b'H', 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00];
-        assert!(import_ips(&rle).unwrap_err().to_string().contains("truncated RLE record"));
+        let rle = [
+            b'P', b'A', b'T', b'C', b'H', 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00,
+        ];
+        assert!(import_ips(&rle)
+            .unwrap_err()
+            .to_string()
+            .contains("truncated RLE record"));
         // size 3 with only 1 data byte
-        let dat = [b'P', b'A', b'T', b'C', b'H', 0x00, 0x00, 0x10, 0x00, 0x03, 0xAA];
-        assert!(import_ips(&dat).unwrap_err().to_string().contains("truncated record data"));
+        let dat = [
+            b'P', b'A', b'T', b'C', b'H', 0x00, 0x00, 0x10, 0x00, 0x03, 0xAA,
+        ];
+        assert!(import_ips(&dat)
+            .unwrap_err()
+            .to_string()
+            .contains("truncated record data"));
     }
 
     #[test]
     fn test_import_ips32_truncation_errors() {
-        assert!(import_ips(b"IPS32\x00\x00").unwrap_err().to_string().contains("unexpected end of IPS32 data"));
+        assert!(import_ips(b"IPS32\x00\x00")
+            .unwrap_err()
+            .to_string()
+            .contains("unexpected end of IPS32 data"));
         let hdr = [b'I', b'P', b'S', b'3', b'2', 0x00, 0x00, 0x00, 0x10];
-        assert!(import_ips(&hdr).unwrap_err().to_string().contains("truncated IPS32 record header"));
-        let rle = [b'I', b'P', b'S', b'3', b'2', 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00];
-        assert!(import_ips(&rle).unwrap_err().to_string().contains("truncated IPS32 RLE record"));
-        let dat = [b'I', b'P', b'S', b'3', b'2', 0x00, 0x00, 0x00, 0x10, 0x00, 0x03, 0xAA];
-        assert!(import_ips(&dat).unwrap_err().to_string().contains("truncated IPS32 record data"));
+        assert!(import_ips(&hdr)
+            .unwrap_err()
+            .to_string()
+            .contains("truncated IPS32 record header"));
+        let rle = [
+            b'I', b'P', b'S', b'3', b'2', 0x00, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00,
+        ];
+        assert!(import_ips(&rle)
+            .unwrap_err()
+            .to_string()
+            .contains("truncated IPS32 RLE record"));
+        let dat = [
+            b'I', b'P', b'S', b'3', b'2', 0x00, 0x00, 0x00, 0x10, 0x00, 0x03, 0xAA,
+        ];
+        assert!(import_ips(&dat)
+            .unwrap_err()
+            .to_string()
+            .contains("truncated IPS32 record data"));
     }
 
     #[test]
@@ -671,7 +809,7 @@ mod tests {
             offset: 0x00FF_FFFE,
             data: vec![0xAB; 0x10000],
         }];
-        let err = export_ips(&patches).unwrap_err();
+        let err = export_ips(&patches, &no_original).unwrap_err();
         assert!(matches!(err, PatchError::PatchTooLarge), "got {err:?}");
     }
 
@@ -679,8 +817,11 @@ mod tests {
     fn test_export_ips_multi_chunk_single_patch_roundtrip() {
         // data > 0xFFFF forces the chunk loop to iterate more than once.
         let original = vec![0xABu8; 0x10000];
-        let patches = vec![PatchRecord { offset: 0x100, data: original.clone() }];
-        let exported = export_ips(&patches).unwrap();
+        let patches = vec![PatchRecord {
+            offset: 0x100,
+            data: original.clone(),
+        }];
+        let exported = export_ips(&patches, &no_original).unwrap();
         let imported = import_ips(&exported).unwrap();
         assert!(imported.len() >= 2, "expected multiple chunk records");
         let mut recon = vec![0u8; 0x100 + original.len()];
@@ -692,7 +833,10 @@ mod tests {
 
     #[test]
     fn test_export_cod_offset_truncated_to_u32_max() {
-        let records = vec![PatchRecord { offset: 0x1_0000_0000, data: vec![0xAA] }];
+        let records = vec![PatchRecord {
+            offset: 0x1_0000_0000,
+            data: vec![0xAA],
+        }];
         let out = export_cod(&records);
         assert_eq!(&out[0..4], &[0xFF, 0xFF, 0xFF, 0xFF]);
         assert_eq!(&out[4..8], &[0x00, 0x00, 0x00, 0x01]);

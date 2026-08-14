@@ -29,40 +29,70 @@ pub enum HashError {
     InvalidCrcWidth(u8),
 }
 
-fn fnv1_32(data: &[u8]) -> u32 {
-    let mut hash: u32 = 0x811c_9dc5;
+const FNV32_INIT: u32 = 0x811c_9dc5;
+const FNV64_INIT: u64 = 0xcbf2_9ce4_8422_2325;
+const FNV32_PRIME: u32 = 0x0100_0193;
+const FNV64_PRIME: u64 = 0x0000_0100_0000_01B3;
+
+static CRC8_ALGO: crc::Crc<u8> = crc::Crc::<u8>::new(&crc::CRC_8_SMBUS);
+static CRC16_ALGO: crc::Crc<u16> = crc::Crc::<u16>::new(&crc::CRC_16_IBM_SDLC);
+static CRC64_ALGO: crc::Crc<u64> = crc::Crc::<u64>::new(&crc::CRC_64_ECMA_182);
+
+fn fnv1_32_step(mut hash: u32, data: &[u8]) -> u32 {
     for &byte in data {
-        hash = hash.wrapping_mul(0x0100_0193);
+        hash = hash.wrapping_mul(FNV32_PRIME);
         hash ^= u32::from(byte);
     }
     hash
+}
+
+fn fnv1_64_step(mut hash: u64, data: &[u8]) -> u64 {
+    for &byte in data {
+        hash = hash.wrapping_mul(FNV64_PRIME);
+        hash ^= u64::from(byte);
+    }
+    hash
+}
+
+fn fnv1a_32_step(mut hash: u32, data: &[u8]) -> u32 {
+    for &byte in data {
+        hash ^= u32::from(byte);
+        hash = hash.wrapping_mul(FNV32_PRIME);
+    }
+    hash
+}
+
+fn fnv1a_64_step(mut hash: u64, data: &[u8]) -> u64 {
+    for &byte in data {
+        hash ^= u64::from(byte);
+        hash = hash.wrapping_mul(FNV64_PRIME);
+    }
+    hash
+}
+
+fn fnv1_32(data: &[u8]) -> u32 {
+    fnv1_32_step(FNV32_INIT, data)
 }
 
 fn fnv1_64(data: &[u8]) -> u64 {
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for &byte in data {
-        hash = hash.wrapping_mul(0x0000_0100_0000_01B3);
-        hash ^= u64::from(byte);
-    }
-    hash
+    fnv1_64_step(FNV64_INIT, data)
 }
 
 fn fnv1a_32(data: &[u8]) -> u32 {
-    let mut hash: u32 = 0x811c_9dc5;
-    for &byte in data {
-        hash ^= u32::from(byte);
-        hash = hash.wrapping_mul(0x0100_0193);
-    }
-    hash
+    fnv1a_32_step(FNV32_INIT, data)
 }
 
 fn fnv1a_64(data: &[u8]) -> u64 {
-    let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for &byte in data {
-        hash ^= u64::from(byte);
-        hash = hash.wrapping_mul(0x0000_0100_0000_01B3);
+    fnv1a_64_step(FNV64_INIT, data)
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    let mut hex = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let _ = write!(hex, "{byte:02x}");
     }
-    hash
+    hex
 }
 
 /// Compute the hash digest for the given data using the specified algorithm.
@@ -108,13 +138,166 @@ pub fn compute_hash(data: &[u8], algorithm: &str) -> Result<HashResult, HashErro
 fn compute_digest_hash<D: Digest>(data: &[u8]) -> String {
     let mut hasher = D::new();
     hasher.update(data);
-    let result = hasher.finalize();
-    let mut hex = String::with_capacity(result.len() * 2);
-    for byte in result {
-        use std::fmt::Write;
-        let _ = write!(hex, "{byte:02x}");
+    hex_encode(&hasher.finalize())
+}
+
+enum HasherState {
+    Md5(Box<Md5>),
+    Sha1(Box<Sha1>),
+    Sha224(Box<Sha224>),
+    Sha256(Box<Sha256>),
+    Sha384(Box<Sha384>),
+    Sha512(Box<Sha512>),
+    Sha3_256(Box<Sha3_256>),
+    Sha3_512(Box<Sha3_512>),
+    Blake2b(Box<Blake2b256>),
+    Blake2s(Box<Blake2s256>),
+    Xxh32(xxhash_rust::xxh32::Xxh32),
+    Xxh64(xxhash_rust::xxh64::Xxh64),
+    Xxh3(Box<xxhash_rust::xxh3::Xxh3>),
+    SipHash64(siphasher::sip::SipHasher24),
+    SipHash128(siphasher::sip128::SipHasher24),
+    Adler32(adler2::Adler32),
+    Crc8(crc::Digest<'static, u8>),
+    Crc16(crc::Digest<'static, u16>),
+    Crc32(crc32fast::Hasher),
+    Crc64(crc::Digest<'static, u64>),
+    Fnv1_32(u32),
+    Fnv1_64(u64),
+    Fnv1a32(u32),
+    Fnv1a64(u64),
+}
+
+/// Incremental hasher that consumes a document in chunks.
+///
+/// Produces digests identical to [`compute_hash`] over the concatenation of
+/// every chunk passed to [`StreamingHasher::update`], without requiring the
+/// whole input to be resident in memory.
+pub struct StreamingHasher {
+    algorithm: String,
+    state: HasherState,
+}
+
+impl StreamingHasher {
+    /// Creates an incremental hasher for the named algorithm.
+    ///
+    /// # Errors
+    ///
+    /// Returns `HashError::UnsupportedAlgorithm` if the algorithm name is not recognized.
+    pub fn new(algorithm: &str) -> Result<Self, HashError> {
+        let normalized = algorithm.to_lowercase();
+        let state = match normalized.as_str() {
+            "md5" => HasherState::Md5(Box::new(Md5::new())),
+            "sha1" => HasherState::Sha1(Box::new(Sha1::new())),
+            "sha224" | "sha-224" => HasherState::Sha224(Box::new(Sha224::new())),
+            "sha256" | "sha-256" => HasherState::Sha256(Box::new(Sha256::new())),
+            "sha384" | "sha-384" => HasherState::Sha384(Box::new(Sha384::new())),
+            "sha512" | "sha-512" => HasherState::Sha512(Box::new(Sha512::new())),
+            "sha3-256" | "sha3_256" => HasherState::Sha3_256(Box::new(Sha3_256::new())),
+            "sha3-512" | "sha3_512" => HasherState::Sha3_512(Box::new(Sha3_512::new())),
+            "blake2b" | "blake2b-256" | "blake2b256" => {
+                HasherState::Blake2b(Box::new(Blake2b256::new()))
+            }
+            "blake2s" | "blake2s-256" | "blake2s256" => {
+                HasherState::Blake2s(Box::new(Blake2s256::new()))
+            }
+            "xxhash32" | "xxh32" => HasherState::Xxh32(xxhash_rust::xxh32::Xxh32::new(0)),
+            "xxhash64" | "xxh64" => HasherState::Xxh64(xxhash_rust::xxh64::Xxh64::new(0)),
+            "xxh3" | "xxh3-64" => HasherState::Xxh3(Box::new(xxhash_rust::xxh3::Xxh3::new())),
+            "siphash64" | "siphash-2-4" | "siphash" => {
+                HasherState::SipHash64(siphasher::sip::SipHasher24::new())
+            }
+            "siphash128" | "siphash-2-4-128" => {
+                HasherState::SipHash128(siphasher::sip128::SipHasher24::new())
+            }
+            "adler32" => HasherState::Adler32(adler2::Adler32::new()),
+            "crc8" => HasherState::Crc8(CRC8_ALGO.digest()),
+            "crc16" => HasherState::Crc16(CRC16_ALGO.digest()),
+            "crc32" => HasherState::Crc32(crc32fast::Hasher::new()),
+            "crc64" | "crc64-ecma" => HasherState::Crc64(CRC64_ALGO.digest()),
+            "fnv1-32" | "fnv1_32" => HasherState::Fnv1_32(FNV32_INIT),
+            "fnv1-64" | "fnv1_64" => HasherState::Fnv1_64(FNV64_INIT),
+            "fnv1a-32" | "fnv1a_32" => HasherState::Fnv1a32(FNV32_INIT),
+            "fnv1a-64" | "fnv1a_64" => HasherState::Fnv1a64(FNV64_INIT),
+            other => return Err(HashError::UnsupportedAlgorithm(other.to_string())),
+        };
+
+        Ok(Self {
+            algorithm: normalized,
+            state,
+        })
     }
-    hex
+
+    /// Feeds the next chunk of input into the running digest.
+    pub fn update(&mut self, data: &[u8]) {
+        use std::hash::Hasher as _;
+
+        match &mut self.state {
+            HasherState::Md5(h) => h.update(data),
+            HasherState::Sha1(h) => h.update(data),
+            HasherState::Sha224(h) => h.update(data),
+            HasherState::Sha256(h) => h.update(data),
+            HasherState::Sha384(h) => h.update(data),
+            HasherState::Sha512(h) => h.update(data),
+            HasherState::Sha3_256(h) => h.update(data),
+            HasherState::Sha3_512(h) => h.update(data),
+            HasherState::Blake2b(h) => h.update(data),
+            HasherState::Blake2s(h) => h.update(data),
+            HasherState::Xxh32(h) => h.update(data),
+            HasherState::Xxh64(h) => h.update(data),
+            HasherState::Xxh3(h) => h.update(data),
+            HasherState::SipHash64(h) => h.write(data),
+            HasherState::SipHash128(h) => h.write(data),
+            HasherState::Adler32(h) => h.write_slice(data),
+            HasherState::Crc8(h) => h.update(data),
+            HasherState::Crc16(h) => h.update(data),
+            HasherState::Crc32(h) => h.update(data),
+            HasherState::Crc64(h) => h.update(data),
+            HasherState::Fnv1_32(h) => *h = fnv1_32_step(*h, data),
+            HasherState::Fnv1_64(h) => *h = fnv1_64_step(*h, data),
+            HasherState::Fnv1a32(h) => *h = fnv1a_32_step(*h, data),
+            HasherState::Fnv1a64(h) => *h = fnv1a_64_step(*h, data),
+        }
+    }
+
+    /// Consumes the hasher and returns the final digest.
+    #[must_use]
+    pub fn finalize(self) -> HashResult {
+        use std::hash::Hasher as _;
+
+        let hex_digest = match self.state {
+            HasherState::Md5(h) => hex_encode(&h.finalize()),
+            HasherState::Sha1(h) => hex_encode(&h.finalize()),
+            HasherState::Sha224(h) => hex_encode(&h.finalize()),
+            HasherState::Sha256(h) => hex_encode(&h.finalize()),
+            HasherState::Sha384(h) => hex_encode(&h.finalize()),
+            HasherState::Sha512(h) => hex_encode(&h.finalize()),
+            HasherState::Sha3_256(h) => hex_encode(&h.finalize()),
+            HasherState::Sha3_512(h) => hex_encode(&h.finalize()),
+            HasherState::Blake2b(h) => hex_encode(&h.finalize()),
+            HasherState::Blake2s(h) => hex_encode(&h.finalize()),
+            HasherState::Xxh32(h) => format!("{:08x}", h.digest()),
+            HasherState::Xxh64(h) => format!("{:016x}", h.digest()),
+            HasherState::Xxh3(h) => format!("{:016x}", h.digest()),
+            HasherState::SipHash64(h) => format!("{:016x}", h.finish()),
+            HasherState::SipHash128(h) => {
+                let hash = h.finish128();
+                format!("{:016x}{:016x}", hash.h1, hash.h2)
+            }
+            HasherState::Adler32(h) => format!("{:08x}", h.checksum()),
+            HasherState::Crc8(h) => format!("{:02x}", h.finalize()),
+            HasherState::Crc16(h) => format!("{:04x}", h.finalize()),
+            HasherState::Crc32(h) => format!("{:08x}", h.finalize()),
+            HasherState::Crc64(h) => format!("{:016x}", h.finalize()),
+            HasherState::Fnv1_32(h) | HasherState::Fnv1a32(h) => format!("{h:08x}"),
+            HasherState::Fnv1_64(h) | HasherState::Fnv1a64(h) => format!("{h:016x}"),
+        };
+
+        HashResult {
+            algorithm: self.algorithm,
+            hex_digest,
+        }
+    }
 }
 
 fn compute_xxh32(data: &[u8]) -> String {
@@ -670,8 +853,14 @@ mod tests {
     #[test]
     fn test_fnv1_and_fnv1a_nonempty_published_vectors() {
         // Non-empty input drives the FNV loop bodies; canonical published vectors for "a".
-        assert_eq!(compute_hash(b"a", "fnv1-32").unwrap().hex_digest, "050c5d7e");
-        assert_eq!(compute_hash(b"a", "fnv1a-32").unwrap().hex_digest, "e40c292c");
+        assert_eq!(
+            compute_hash(b"a", "fnv1-32").unwrap().hex_digest,
+            "050c5d7e"
+        );
+        assert_eq!(
+            compute_hash(b"a", "fnv1a-32").unwrap().hex_digest,
+            "e40c292c"
+        );
         assert_eq!(
             compute_hash(b"a", "fnv1-64").unwrap().hex_digest,
             "af63bd4c8601b7be"
@@ -687,7 +876,14 @@ mod tests {
         // Isolates the `start > end` sub-condition (end is within bounds).
         let err = compute_hash_range(b"ABCDE", 4, 2, "md5").unwrap_err();
         assert!(
-            matches!(err, HashError::InvalidRange { start: 4, end: 2, data_len: 5 }),
+            matches!(
+                err,
+                HashError::InvalidRange {
+                    start: 4,
+                    end: 2,
+                    data_len: 5
+                }
+            ),
             "expected InvalidRange{{4,2,5}}, got {err:?}"
         );
     }
@@ -773,6 +969,78 @@ mod tests {
         assert_eq!(bad.calculated, calc);
         assert_eq!(bad.stored, calc.wrapping_add(1));
         assert!(!bad.valid);
+    }
+
+    const STREAMING_ALGORITHMS: &[&str] = &[
+        "md5",
+        "sha1",
+        "sha224",
+        "sha256",
+        "sha384",
+        "sha512",
+        "sha3-256",
+        "sha3-512",
+        "blake2b",
+        "blake2s",
+        "xxhash32",
+        "xxhash64",
+        "xxh3",
+        "siphash64",
+        "siphash128",
+        "adler32",
+        "crc8",
+        "crc16",
+        "crc32",
+        "crc64",
+        "fnv1-32",
+        "fnv1-64",
+        "fnv1a-32",
+        "fnv1a-64",
+    ];
+
+    #[test]
+    fn test_streaming_hasher_matches_oneshot_across_chunk_sizes() {
+        let data: Vec<u8> = (0..1000u32)
+            .map(|i| u8::try_from((i.wrapping_mul(37).wrapping_add(11)) % 256).unwrap())
+            .collect();
+
+        for algorithm in STREAMING_ALGORITHMS {
+            let expected = compute_hash(&data, algorithm).unwrap().hex_digest;
+
+            for chunk_size in [1usize, 3, 7, 64, 127, 512, 1000] {
+                let mut hasher = StreamingHasher::new(algorithm).unwrap();
+                for chunk in data.chunks(chunk_size) {
+                    hasher.update(chunk);
+                }
+                let streamed = hasher.finalize();
+
+                assert_eq!(
+                    streamed.hex_digest, expected,
+                    "{algorithm} diverged at chunk size {chunk_size}"
+                );
+                assert_eq!(streamed.algorithm, *algorithm);
+            }
+        }
+    }
+
+    #[test]
+    fn test_streaming_hasher_empty_input_matches_oneshot() {
+        for algorithm in STREAMING_ALGORITHMS {
+            let expected = compute_hash(&[], algorithm).unwrap().hex_digest;
+            let streamed = StreamingHasher::new(algorithm).unwrap().finalize();
+            assert_eq!(streamed.hex_digest, expected, "{algorithm} empty mismatch");
+        }
+    }
+
+    #[test]
+    fn test_streaming_hasher_rejects_unsupported_algorithm() {
+        let Err(err) = StreamingHasher::new("not-a-real-hash") else {
+            panic!("expected unsupported algorithm error");
+        };
+        assert!(
+            matches!(&err, HashError::UnsupportedAlgorithm(name) if name == "not-a-real-hash"),
+            "got {err:?}"
+        );
     }
 
     #[test]

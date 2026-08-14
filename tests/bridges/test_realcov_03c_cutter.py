@@ -939,7 +939,9 @@ class TestRealPipeSerializationGate:
             pytest.skip("rizin/radare2 backend not discoverable on PATH")
         binary_name, binary_path = resolved
         suffix = ".exe" if os.name == "nt" else ""
-        executable = binary_path if binary_path.name.lower() == f"{binary_name}{suffix}".lower() else binary_path.parent / f"{binary_name}{suffix}"
+        executable = (
+            binary_path if binary_path.name.lower() == f"{binary_name}{suffix}".lower() else binary_path.parent / f"{binary_name}{suffix}"
+        )
 
         bridge = CutterBridge()
         raw_pipe = _RawUnlockedR2Pipe(executable, str(real_pe_dll))

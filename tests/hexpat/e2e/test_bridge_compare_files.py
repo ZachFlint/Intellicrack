@@ -6,10 +6,13 @@
 ``HexEditorBridge.compare_files`` wraps the native ``diff_files`` engine and
 returns a dict with exactly three keys: ``files_identical`` (bool),
 ``total_differences`` (int), and ``regions`` (list of ``offset_a``/``offset_b``/
-``length``/``diff_type`` dicts). Expected region layouts and difference counts
-are cross-checked against Python's ``difflib.SequenceMatcher`` (an independent
-reference for the same Myers edit-script family) so the oracle is never the
-engine's own output.
+``length``/``length_a``/``length_b``/``diff_type`` dicts). ``length_a`` and
+``length_b`` are the true per-side spans consumed in each file; for a
+size-changing ``modified`` region these differ from one another, and
+``length`` is ``max(length_a, length_b)``. Expected region layouts and
+difference counts are cross-checked against Python's
+``difflib.SequenceMatcher`` (an independent reference for the same Myers
+edit-script family) so the oracle is never the engine's own output.
 """
 
 from __future__ import annotations
@@ -73,8 +76,11 @@ def _write_bin(directory: Path, name: str, data: bytes) -> Path:
 def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[str, Any]]:
     """Validate the compare_files result schema and return its regions list.
 
-    Asserts the result has exactly the three documented keys with correctly typed
-    values and well-formed regions bounded by the input lengths.
+    Asserts the result has exactly the three documented keys with correctly
+    typed values and well-formed regions bounded by the input lengths.
+    ``length_a`` and ``length_b`` are the true per-side spans -- for a
+    size-changing ``modified`` region they differ from one another and from
+    ``length``, which must equal ``max(length_a, length_b)``.
 
     Args:
         result: The dict returned by ``compare_files``.
@@ -90,14 +96,29 @@ def _assert_schema(result: dict[str, Any], len_a: int, len_b: int) -> list[dict[
     regions: list[dict[str, Any]] = result["regions"]
     assert isinstance(regions, list)
     for region in regions:
-        assert set(region.keys()) == {"offset_a", "offset_b", "length", "diff_type"}
+        assert set(region.keys()) == {"offset_a", "offset_b", "length", "length_a", "length_b", "diff_type"}
         assert region["diff_type"] in _DIFF_TYPES
         assert isinstance(region["offset_a"], int)
         assert isinstance(region["offset_b"], int)
         assert isinstance(region["length"], int)
+        assert isinstance(region["length_a"], int)
+        assert isinstance(region["length_b"], int)
         assert 0 <= region["offset_a"] <= len_a
         assert 0 <= region["offset_b"] <= len_b
         assert region["length"] >= 0
+        assert region["length_a"] >= 0
+        assert region["length_b"] >= 0
+        assert region["length"] == max(region["length_a"], region["length_b"])
+        assert region["offset_a"] + region["length_a"] <= len_a
+        assert region["offset_b"] + region["length_b"] <= len_b
+        if region["diff_type"] == "match":
+            assert region["length_a"] == region["length_b"] == region["length"]
+        elif region["diff_type"] == "inserted_a":
+            assert region["length_a"] == region["length"]
+            assert region["length_b"] == 0
+        elif region["diff_type"] == "inserted_b":
+            assert region["length_b"] == region["length"]
+            assert region["length_a"] == 0
     return regions
 
 
@@ -132,7 +153,7 @@ class TestBridgeCompareFiles:
         regions = _assert_schema(result, len(data), len(data))
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
-        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 128, "diff_type": "match"}]
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 128, "length_a": 128, "length_b": 128, "diff_type": "match"}]
 
     def test_identical_files_have_zero_differences(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify identical files report exactly zero total_differences with no non-match regions.
@@ -175,9 +196,9 @@ class TestBridgeCompareFiles:
         assert result["files_identical"] is False
         assert result["total_differences"] == 1
         assert regions == [
-            {"offset_a": 0, "offset_b": 0, "length": 32, "diff_type": "match"},
-            {"offset_a": 32, "offset_b": 32, "length": 1, "diff_type": "modified"},
-            {"offset_a": 33, "offset_b": 33, "length": 31, "diff_type": "match"},
+            {"offset_a": 0, "offset_b": 0, "length": 32, "length_a": 32, "length_b": 32, "diff_type": "match"},
+            {"offset_a": 32, "offset_b": 32, "length": 1, "length_a": 1, "length_b": 1, "diff_type": "modified"},
+            {"offset_a": 33, "offset_b": 33, "length": 31, "length_a": 31, "length_b": 31, "diff_type": "match"},
         ]
 
     def test_modified_tail_region_pinpointed(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -204,7 +225,7 @@ class TestBridgeCompareFiles:
         assert result["files_identical"] is False
         assert result["total_differences"] == 50
         modified = [r for r in regions if r["diff_type"] == "modified"]
-        assert modified == [{"offset_a": 50, "offset_b": 50, "length": 50, "diff_type": "modified"}]
+        assert modified == [{"offset_a": 50, "offset_b": 50, "length": 50, "length_a": 50, "length_b": 50, "diff_type": "modified"}]
         match_total = sum(r["length"] for r in regions if r["diff_type"] == "match")
         assert match_total == 50
 
@@ -231,8 +252,8 @@ class TestBridgeCompareFiles:
         assert result["files_identical"] is False
         assert result["total_differences"] == 128
         assert regions == [
-            {"offset_a": 0, "offset_b": 0, "length": 128, "diff_type": "match"},
-            {"offset_a": 128, "offset_b": 128, "length": 128, "diff_type": "inserted_a"},
+            {"offset_a": 0, "offset_b": 0, "length": 128, "length_a": 128, "length_b": 128, "diff_type": "match"},
+            {"offset_a": 128, "offset_b": 128, "length": 128, "length_a": 128, "length_b": 0, "diff_type": "inserted_a"},
         ]
 
     def test_empty_files_are_identical(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
@@ -263,7 +284,7 @@ class TestBridgeCompareFiles:
         regions = _assert_schema(result, len(data), len(data))
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
-        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 32, "diff_type": "match"}]
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 32, "length_a": 32, "length_b": 32, "diff_type": "match"}]
 
     def test_pe_vs_elf_not_identical(self, bridge: HexEditorBridge, pe_binary: Path, elf_binary: Path) -> None:
         """Verify comparing a real PE binary to a real ELF binary reports a real difference.
@@ -323,7 +344,9 @@ class TestBridgeCompareFiles:
         assert result["files_identical"] is False
         assert result["total_differences"] == 1
         modified = [r for r in regions if r["diff_type"] == "modified"]
-        assert modified == [{"offset_a": patch_offset, "offset_b": patch_offset, "length": 1, "diff_type": "modified"}]
+        assert modified == [
+            {"offset_a": patch_offset, "offset_b": patch_offset, "length": 1, "length_a": 1, "length_b": 1, "diff_type": "modified"},
+        ]
 
     def test_completely_different_files_single_modified_region(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify two fully disjoint same-length files yield one modified region.
@@ -347,7 +370,48 @@ class TestBridgeCompareFiles:
         regions = _assert_schema(result, 64, 64)
         assert result["files_identical"] is False
         assert result["total_differences"] == 64
-        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "diff_type": "modified"}]
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "length_a": 64, "length_b": 64, "diff_type": "modified"}]
+
+    def test_replace_with_differing_lengths_reports_true_per_side_spans(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
+        """Verify a size-changing replace reports independent length_a/length_b spans.
+
+        When a modified span consumes a different number of bytes in each file
+        (``old_len != new_len``), the region must report ``length_a`` as the
+        exact span replaced in the first file and ``length_b`` as the exact
+        span replaced in the second, rather than collapsing both to
+        ``max(old_len, new_len)`` -- doing so would claim a byte range in the
+        first file that runs past the bytes actually replaced there. The
+        difflib oracle confirms the single replace opcode has ``old_len == 5``
+        and ``new_len == 8``.
+
+        Args:
+            bridge: An initialized HexEditorBridge fixture.
+            tmp_path: Pytest temporary directory.
+        """
+        prefix = bytes(range(16))
+        suffix = bytes(range(200, 216))
+        data_a = prefix + b"\x11" * 5 + suffix
+        data_b = prefix + b"\x22" * 8 + suffix
+        matcher = difflib.SequenceMatcher(a=data_a, b=data_b, autojunk=False)
+        replaces = [(i1, i2, j1, j2) for tag, i1, i2, j1, j2 in matcher.get_opcodes() if tag == "replace"]
+        assert len(replaces) == 1, f"oracle expected exactly one replace span, got {replaces}"
+        i1, i2, j1, j2 = replaces[0]
+        assert (i1, i2 - i1, j1, j2 - j1) == (16, 5, 16, 8)
+
+        f_a = _write_bin(tmp_path, "ra.bin", data_a)
+        f_b = _write_bin(tmp_path, "rb.bin", data_b)
+        result: dict[str, Any] = _run(bridge.compare_files(str(f_a), str(f_b)))
+        regions = _assert_schema(result, len(data_a), len(data_b))
+        assert result["files_identical"] is False
+        assert regions == [
+            {"offset_a": 0, "offset_b": 0, "length": 16, "length_a": 16, "length_b": 16, "diff_type": "match"},
+            {"offset_a": 16, "offset_b": 16, "length": 8, "length_a": 5, "length_b": 8, "diff_type": "modified"},
+            {"offset_a": 21, "offset_b": 24, "length": 16, "length_a": 16, "length_b": 16, "diff_type": "match"},
+        ]
+        modified = regions[1]
+        assert modified["length_a"] != modified["length_b"]
+        assert modified["offset_a"] + modified["length_a"] == len(data_a) - len(suffix)
+        assert modified["offset_b"] + modified["length_b"] == len(data_b) - len(suffix)
 
     def test_missing_file_raises_oserror(self, bridge: HexEditorBridge, tmp_path: Path) -> None:
         """Verify compare_files surfaces an OSError when an input file is missing.

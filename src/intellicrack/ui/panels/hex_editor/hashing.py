@@ -38,15 +38,12 @@ _PE_CHECKSUM_LEN: Final[int] = 4
 _PE_CHECKSUM_REPAIR_SYNC_WAIT_MS: Final[int] = 100
 """Bounded join, in milliseconds, ``_on_repair_pe_checksum`` waits on the repair worker before returning.
 
-The repair worker still runs ``document.repair_pe_checksum`` on a background
-``GenericCallableWorker`` thread so a multi-gigabyte image never blocks the Qt
-event loop. For the vast majority of PE images the repair (a header write plus
-a checksum scan) completes in well under this budget, so joining briefly lets
-the caller observe the finished write and the fired notification immediately
-instead of only after the GUI thread's event loop happens to process the
-worker's queued completion signal. Genuinely large images simply time out this
-short join and continue asynchronously exactly as before."""
-
+The repair worker still runs ``document.repair_pe_checksum`` on a background ``GenericCallableWorker`` thread so a multi-gigabyte image
+never blocks the Qt event loop. For the vast majority of PE images the repair (a header write plus a checksum scan) completes in well under
+this budget, so joining briefly lets the caller observe the finished write and the fired notification immediately instead of only after the
+GUI thread's event loop happens to process the worker's queued completion signal. Genuinely large images simply time out this short join and
+continue asynchronously exactly as before.
+"""
 
 def _format_hash_result(document: object, algo: str) -> str:
     """Compute the document hash and format it for display.

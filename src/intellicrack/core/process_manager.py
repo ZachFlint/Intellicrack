@@ -278,11 +278,9 @@ class TrackedProcess:
 class TrackedEntry:
     """Unified, serializable view of a tracked process or external PID.
 
-    Produced by :meth:`ProcessManager.get_all_tracked_entries`, combining
-    subprocess-backed :class:`TrackedProcess` entries with PIDs registered
-    via :meth:`ProcessManager.register_external_pid` into a single shape so
-    UI consumers (e.g. the Tracked tab) can render both categories without
-    knowing which backing store an entry came from.
+    Produced by :meth:`ProcessManager.get_all_tracked_entries`, combining subprocess-backed :class:`TrackedProcess` entries with PIDs
+    registered via :meth:`ProcessManager.register_external_pid` into a single shape so UI consumers (e.g. the Tracked tab) can render both
+    categories without knowing which backing store an entry came from.
     """
 
     pid: int

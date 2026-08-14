@@ -2499,6 +2499,7 @@ class _X64DbgBridgeBase(DebuggerBridge):
         Raises:
             ToolError: If connection fails.
         """
+
         async with self._pipe_connect_lock:
             if self._pipe_client is not None and self._pipe_client.is_connected:
                 return
@@ -2520,12 +2521,9 @@ class _X64DbgBridgeBase(DebuggerBridge):
     async def _reconnect_pipe_client_locked(self) -> None:
         """Discard any existing pipe client and connect a fresh one.
 
-        Callers must hold ``_pipe_connect_lock`` for the duration of this
-        call; it is a private helper for :meth:`_connect` split out purely
-        to keep that method's exception-translation ``try`` block small.
-        Any exception from the underlying ``NamedPipeClient.close``/
-        ``connect`` calls propagates to the caller unmodified so
-        :meth:`_connect` can classify and wrap it.
+        Callers must hold ``_pipe_connect_lock`` for the duration of this call; it is a private helper for :meth:`_connect` split out purely
+        to keep that method's exception-translation ``try`` block small. Any exception from the underlying ``NamedPipeClient.close``/
+        ``connect`` calls propagates to the caller unmodified so :meth:`_connect` can classify and wrap it.
         """
         if self._pipe_client is not None:
             await self._pipe_client.close()

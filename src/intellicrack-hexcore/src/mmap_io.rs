@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use memmap2::Mmap;
 use thiserror::Error;
@@ -18,7 +19,7 @@ pub enum IoError {
 }
 
 pub struct MmapDocument {
-    mmap: Option<Mmap>,
+    mmap: Option<Arc<Mmap>>,
     path: Option<PathBuf>,
     piece_table: PieceTable,
     modified: bool,
@@ -46,8 +47,8 @@ impl MmapDocument {
             });
         }
 
-        let mmap = unsafe { Mmap::map(&file)? };
-        let piece_table = PieceTable::new(&mmap[..]);
+        let mmap = Arc::new(unsafe { Mmap::map(&file)? });
+        let piece_table = PieceTable::from_mmap(Arc::clone(&mmap));
 
         Ok(Self {
             mmap: Some(mmap),
@@ -151,17 +152,20 @@ impl MmapDocument {
         file.sync_all()?;
         drop(file);
 
+        if let Err(e) = fs::rename(&temp_path, &path) {
+            let _ = fs::remove_file(&temp_path);
+            return Err(e.into());
+        }
+
         self.mmap = None;
-
-        fs::rename(&temp_path, &path)?;
-
         self.path = Some(path.clone());
         self.piece_table = PieceTable::new(&data);
 
         if let Ok(f) = fs::File::open(&path) {
             if let Ok(m) = unsafe { Mmap::map(&f) } {
-                self.piece_table = PieceTable::new(&m[..]);
-                self.mmap = Some(m);
+                let mmap = Arc::new(m);
+                self.piece_table = PieceTable::from_mmap(Arc::clone(&mmap));
+                self.mmap = Some(mmap);
             }
         }
 
@@ -274,5 +278,80 @@ mod tests {
         doc.insert(5, b" World");
         let all = doc.read_all();
         assert_eq!(all, b"Hello World".to_vec());
+    }
+
+    #[test]
+    fn test_piece_table_zero_copy_mmap() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("hexcore_zero_copy_test.bin");
+        {
+            let mut f = fs::File::create(&path).unwrap();
+            f.write_all(b"ZeroCopyMmapTestBytes").unwrap();
+        }
+
+        let doc = MmapDocument::open(&path).unwrap();
+        let mmap = doc.mmap.as_ref().expect("open must retain the mapping");
+
+        // The piece table must read the mapping itself, not a copy of it.
+        assert!(
+            std::ptr::eq(doc.piece_table.original_ptr(), mmap.as_ptr()),
+            "original buffer is a copy, not the mapping"
+        );
+
+        assert_eq!(doc.document_size(), 21);
+        assert_eq!(doc.read(0, 21), b"ZeroCopyMmapTestBytes".to_vec());
+
+        // An in-memory document still owns its buffer, so the two constructors
+        // stay distinguishable.
+        let owned = MmapDocument::from_bytes(b"ZeroCopyMmapTestBytes");
+        assert!(!std::ptr::eq(
+            owned.piece_table.original_ptr(),
+            mmap.as_ptr()
+        ));
+
+        let _ = fs::remove_file(&path);
+    }
+
+    /// F-0073 regression: `save()` used to clear `self.mmap` before the
+    /// fallible `fs::rename`, so a rename failure (e.g. destination locked
+    /// or, as forced here, a directory in the way) left `mmap` cleared even
+    /// though nothing was actually saved, and never cleaned up the temp file.
+    #[test]
+    fn test_save_failed_rename_preserves_mmap_and_removes_temp_file() {
+        let dir = std::env::temp_dir();
+        let path = dir.join("hexcore_test_mmap_rename_fail_src.bin");
+        {
+            let mut f = fs::File::create(&path).unwrap();
+            f.write_all(b"Original content").unwrap();
+        }
+
+        let mut doc = MmapDocument::open(&path).unwrap();
+        assert!(doc.mmap.is_some(), "open must retain the mapping");
+
+        let blocked_target = dir.join("hexcore_test_mmap_rename_fail_target_dir");
+        let _ = fs::remove_dir_all(&blocked_target);
+        fs::create_dir(&blocked_target).unwrap();
+
+        let temp_path = dir.join(format!(
+            ".{}.tmp",
+            blocked_target.file_name().unwrap().to_string_lossy()
+        ));
+
+        let result = doc.save(&blocked_target);
+        assert!(
+            result.is_err(),
+            "renaming a file onto an existing directory must fail"
+        );
+        assert!(
+            doc.mmap.is_some(),
+            "mmap must not be cleared when the rename itself failed"
+        );
+        assert!(
+            !temp_path.exists(),
+            "the temp file must be cleaned up after a failed rename"
+        );
+
+        let _ = fs::remove_file(&path);
+        let _ = fs::remove_dir_all(&blocked_target);
     }
 }

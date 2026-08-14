@@ -691,7 +691,11 @@ mod tests {
         assert!(window_matches_case_insensitive(&[0xC1], "a", "ebcdic"));
         assert!(!window_matches_case_insensitive(&[0xC2], "a", "ebcdic"));
         // resolve_encoding error -> reject
-        assert!(!window_matches_case_insensitive(&[0x41], "a", "no-such-enc"));
+        assert!(!window_matches_case_insensitive(
+            &[0x41],
+            "a",
+            "no-such-enc"
+        ));
         // decode had_errors (lone Shift_JIS lead byte) -> reject
         assert!(!window_matches_case_insensitive(&[0x81], "x", "shift_jis"));
     }
@@ -734,7 +738,10 @@ mod tests {
             "koi8-u",
         ];
         for n in names {
-            assert!(decode_text(&[0x41], n).is_ok(), "encoding {n} should resolve");
+            assert!(
+                decode_text(&[0x41], n).is_ok(),
+                "encoding {n} should resolve"
+            );
         }
     }
 }

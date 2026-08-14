@@ -263,20 +263,28 @@ _SEH_TERMINAL_64 = 0xFFFFFFFFFFFFFFFF
 
 _PE_DATA_DIR_EXCEPTION: Final[int] = 3
 """``IMAGE_DIRECTORY_ENTRY_EXCEPTION`` data-directory index (the ``.pdata`` ``RUNTIME_FUNCTION`` table)."""
+
 _RUNTIME_FUNCTION_SIZE: Final[int] = 12
 """Size in bytes of one x64 ``RUNTIME_FUNCTION`` entry (BeginAddress/EndAddress/UnwindInfoAddress, each u32 RVA)."""
+
 _UNWIND_INFO_HEADER_SIZE: Final[int] = 4
 """Size in bytes of the fixed ``UNWIND_INFO`` header (Version+Flags, SizeOfProlog, CountOfCodes, FrameRegister+FrameOffset)."""
+
 _UNWIND_FLAG_EHANDLER: Final[int] = 0x1
 """``UNW_FLAG_EHANDLER``: the function has a language-specific exception handler."""
+
 _UNWIND_FLAG_UHANDLER: Final[int] = 0x2
 """``UNW_FLAG_UHANDLER``: the function has a language-specific termination handler."""
+
 _MAX_RUNTIME_FUNCTIONS_PER_MODULE: Final[int] = 65536
 """Upper bound on ``RUNTIME_FUNCTION`` entries read from a single module's exception directory."""
+
 _MAX_HANDLERS_PER_MODULE: Final[int] = 2048
 """Upper bound on handler-carrying entries collected from a single module."""
+
 _MAX_TOTAL_X64_HANDLERS: Final[int] = 8192
 """Upper bound on handler-carrying entries collected across all modules of a process."""
+
 _REG_TYPE_DWORD = 4
 _REG_TYPE_QWORD = 11
 _REG_TYPE_SZ = 1
@@ -459,8 +467,8 @@ class TEB64(ctypes.Structure):
     """64-bit Thread Environment Block layout through TlsExpansionSlots.
 
     MS-documented offsets for ntdll!_TEB on amd64/arm64 targets. Gaps between named fields are filled with reserved byte arrays so that
-    ctypes.sizeof(TEB64) equals the true in-memory size and buffer allocation covers TlsSlots[64] at +0x1480, TlsExpansionSlots at
-    +0x1780, and SameTebFlags at +0x17EE.
+    ctypes.sizeof(TEB64) equals the true in-memory size and buffer allocation covers TlsSlots[64] at +0x1480, TlsExpansionSlots at +0x1780,
+    and SameTebFlags at +0x17EE.
     """
 
     _fields_: ClassVar = [
@@ -1603,12 +1611,9 @@ class _ProcessBridgeBase(ToolBridgeBase):
     def _configure_current_process_token_prototypes(self) -> None:
         """Configure ctypes prototypes for the ``GetCurrentProcess`` token path.
 
-        Declares ``GetCurrentProcess`` as returning a ``HANDLE`` and
-        ``OpenProcessToken`` with explicit ``argtypes`` so the 64-bit
-        ``(HANDLE)-1`` pseudo-handle that ``GetCurrentProcess`` returns is
-        marshalled as a pointer-sized value instead of overflowing a default
-        C ``int`` argument (which raises ``OverflowError`` on the no-pid
-        privilege paths).
+        Declares ``GetCurrentProcess`` as returning a ``HANDLE`` and ``OpenProcessToken`` with explicit ``argtypes`` so the 64-bit
+        ``(HANDLE)-1`` pseudo-handle that ``GetCurrentProcess`` returns is marshalled as a pointer-sized value instead of overflowing a
+        default C ``int`` argument (which raises ``OverflowError`` on the no-pid privilege paths).
         """
         if self._kernel32 is None or self._advapi32 is None:
             return

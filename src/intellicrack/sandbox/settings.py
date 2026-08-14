@@ -4,16 +4,12 @@
 # This file is part of Intellicrack. See LICENSE for details.
 """Persisted sandbox settings shared by the configuration dialog and the sandbox panel.
 
-The sandbox configuration dialog writes a JSON settings document. The sandbox
-panel reads that document back when creating a QEMU sandbox so the disk image
-and guest parameters chosen in the dialog actually reach the QEMU backend
-instead of being discarded, which previously left ``QEMUConfig.image_path``
-permanently unset and made the QEMU sandbox impossible to start from the GUI.
+The sandbox configuration dialog writes a JSON settings document. The sandbox panel reads that document back when creating a QEMU sandbox so
+the disk image and guest parameters chosen in the dialog actually reach the QEMU backend instead of being discarded, which previously left
+``QEMUConfig.image_path`` permanently unset and made the QEMU sandbox impossible to start from the GUI.
 
-This module deliberately contains no Qt imports so that both the dialog
-(``intellicrack.ui.sandbox_config``) and the panel
-(``intellicrack.ui.panels.sandbox_panel``) can depend on it without creating an
-import cycle through the ``intellicrack.ui`` package.
+This module deliberately contains no Qt imports so that both the dialog (``intellicrack.ui.sandbox_config``) and the panel
+(``intellicrack.ui.panels.sandbox_panel``) can depend on it without creating an import cycle through the ``intellicrack.ui`` package.
 """
 
 from __future__ import annotations

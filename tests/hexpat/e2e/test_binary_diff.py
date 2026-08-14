@@ -6,15 +6,18 @@
 The native ``diff_bytes`` / ``diff_files`` functions return a dict with exactly
 three keys: ``files_identical`` (bool), ``total_differences`` (int) and
 ``regions`` (a list of region dicts, each with ``offset_a``, ``offset_b``,
-``length`` and ``diff_type``). ``diff_type`` is one of ``"match"``,
-``"modified"``, ``"inserted_a"`` or ``"inserted_b"``.
+``length``, ``length_a``, ``length_b`` and ``diff_type``). ``diff_type`` is one
+of ``"match"``, ``"modified"``, ``"inserted_a"`` or ``"inserted_b"``.
 
 The native engine emits a Myers edit script (via the ``similar`` crate) where
-contiguous matched runs become ``match`` regions, equal-length replaced runs
-become ``modified`` regions (length = ``max(old_len, new_len)``), bytes present
-only in A become ``inserted_a`` regions and bytes present only in B become
-``inserted_b`` regions. ``total_differences`` is the summed length of every
-non-match region.
+contiguous matched runs become ``match`` regions, replaced runs become
+``modified`` regions, bytes present only in A become ``inserted_a`` regions and
+bytes present only in B become ``inserted_b`` regions. ``length_a`` and
+``length_b`` are the true per-side spans actually consumed in A and B
+respectively; for a ``modified`` region whose ``old_len`` and ``new_len``
+differ, these are NOT equal. ``length`` is ``max(length_a, length_b)``, kept
+for backward compatibility, and ``total_differences`` is the summed ``length``
+of every non-match region.
 
 Expected region layouts are cross-checked against Python's
 ``difflib.SequenceMatcher`` (the same Myers edit-script family the Rust engine
@@ -60,9 +63,12 @@ def _assert_well_formed_regions(result: dict[str, Any], len_a: int, len_b: int) 
     """Validate that a diff result has the exact schema and well-formed regions.
 
     The result must carry exactly the three documented top-level keys with the
-    correct value types. Each region must carry exactly the four documented
-    keys, a known ``diff_type`` tag, integer offsets and length, and
-    offsets/spans that stay inside the respective input bounds.
+    correct value types. Each region must carry exactly the six documented
+    keys, a known ``diff_type`` tag, integer offsets and lengths, and
+    offsets/spans that stay inside the respective input bounds. ``length_a``
+    and ``length_b`` are the true per-side spans -- for a size-changing
+    ``modified`` region they differ from one another and from ``length``,
+    which must equal ``max(length_a, length_b)``.
 
     Args:
         result: The dict returned by ``diff_bytes`` / ``diff_files``.
@@ -79,21 +85,34 @@ def _assert_well_formed_regions(result: dict[str, Any], len_a: int, len_b: int) 
     regions: list[dict[str, Any]] = result["regions"]
     assert isinstance(regions, list)
     for region in regions:
-        assert set(region.keys()) == {"offset_a", "offset_b", "length", "diff_type"}
+        assert set(region.keys()) == {"offset_a", "offset_b", "length", "length_a", "length_b", "diff_type"}
         assert region["diff_type"] in _DIFF_TYPES
         offset_a: int = region["offset_a"]
         offset_b: int = region["offset_b"]
         length: int = region["length"]
+        length_a: int = region["length_a"]
+        length_b: int = region["length_b"]
         assert isinstance(offset_a, int)
         assert isinstance(offset_b, int)
         assert isinstance(length, int)
+        assert isinstance(length_a, int)
+        assert isinstance(length_b, int)
         assert 0 <= offset_a <= len_a
         assert 0 <= offset_b <= len_b
         assert length >= 0
-        if region["diff_type"] in {"match", "inserted_a"}:
-            assert offset_a + length <= len_a
-        if region["diff_type"] in {"match", "inserted_b"}:
-            assert offset_b + length <= len_b
+        assert length_a >= 0
+        assert length_b >= 0
+        assert length == max(length_a, length_b)
+        assert offset_a + length_a <= len_a
+        assert offset_b + length_b <= len_b
+        if region["diff_type"] == "match":
+            assert length_a == length_b == length
+        elif region["diff_type"] == "inserted_a":
+            assert length_a == length
+            assert length_b == 0
+        elif region["diff_type"] == "inserted_b":
+            assert length_b == length
+            assert length_a == 0
     return regions
 
 
@@ -148,7 +167,7 @@ class TestDiffBytes:
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
         regions = _assert_well_formed_regions(result, len(data), len(data))
-        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "diff_type": "match"}]
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "length_a": 64, "length_b": 64, "diff_type": "match"}]
         _assert_total_differences_consistent(result)
 
     def test_completely_different_bytes_is_single_modified_region(self, hexcore: types.ModuleType) -> None:
@@ -171,7 +190,7 @@ class TestDiffBytes:
         assert result["files_identical"] is False
         assert result["total_differences"] == 64
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
-        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "diff_type": "modified"}]
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "length_a": 64, "length_b": 64, "diff_type": "modified"}]
         _assert_total_differences_consistent(result)
 
     def test_diff_bytes_match_then_modified_region_layout(self, hexcore: types.ModuleType) -> None:
@@ -196,8 +215,8 @@ class TestDiffBytes:
         assert result["total_differences"] == 8
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
         assert regions == [
-            {"offset_a": 0, "offset_b": 0, "length": 16, "diff_type": "match"},
-            {"offset_a": 16, "offset_b": 16, "length": 8, "diff_type": "modified"},
+            {"offset_a": 0, "offset_b": 0, "length": 16, "length_a": 16, "length_b": 16, "diff_type": "match"},
+            {"offset_a": 16, "offset_b": 16, "length": 8, "length_a": 8, "length_b": 8, "diff_type": "modified"},
         ]
         _assert_total_differences_consistent(result)
 
@@ -222,8 +241,8 @@ class TestDiffBytes:
         assert result["total_differences"] == 50
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
         assert regions == [
-            {"offset_a": 0, "offset_b": 0, "length": 50, "diff_type": "match"},
-            {"offset_a": 50, "offset_b": 50, "length": 50, "diff_type": "modified"},
+            {"offset_a": 0, "offset_b": 0, "length": 50, "length_a": 50, "length_b": 50, "diff_type": "match"},
+            {"offset_a": 50, "offset_b": 50, "length": 50, "length_a": 50, "length_b": 50, "diff_type": "modified"},
         ]
         _assert_total_differences_consistent(result)
 
@@ -257,7 +276,45 @@ class TestDiffBytes:
         assert result["files_identical"] is False
         assert result["total_differences"] == 3
         regions = _assert_well_formed_regions(result, len(data_a), 0)
-        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 3, "diff_type": "inserted_a"}]
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 3, "length_a": 3, "length_b": 0, "diff_type": "inserted_a"}]
+        _assert_total_differences_consistent(result)
+
+    def test_diff_bytes_replace_with_differing_lengths_reports_true_per_side_spans(self, hexcore: types.ModuleType) -> None:
+        """Verify a size-changing replace reports independent length_a/length_b spans.
+
+        When a modified span consumes a different number of bytes in each
+        buffer (``old_len != new_len``), the region must report ``length_a``
+        as the exact A-side span and ``length_b`` as the exact B-side span
+        rather than collapsing both to ``max(old_len, new_len)`` -- doing so
+        would claim a byte range in A that runs past the bytes actually
+        replaced there. The difflib oracle confirms the single replace opcode
+        has ``old_len == 5`` and ``new_len == 8``.
+
+        Args:
+            hexcore: The native module fixture.
+        """
+        prefix = bytes(range(16))
+        suffix = bytes(range(200, 216))
+        data_a = prefix + b"\x11" * 5 + suffix
+        data_b = prefix + b"\x22" * 8 + suffix
+        matcher = difflib.SequenceMatcher(a=data_a, b=data_b, autojunk=False)
+        replaces = [(i1, i2, j1, j2) for tag, i1, i2, j1, j2 in matcher.get_opcodes() if tag == "replace"]
+        assert len(replaces) == 1, f"oracle expected exactly one replace span, got {replaces}"
+        i1, i2, j1, j2 = replaces[0]
+        assert (i1, i2 - i1, j1, j2 - j1) == (16, 5, 16, 8)
+
+        result: dict[str, Any] = hexcore.diff_bytes(data_a, data_b)
+        assert result["files_identical"] is False
+        regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
+        assert regions == [
+            {"offset_a": 0, "offset_b": 0, "length": 16, "length_a": 16, "length_b": 16, "diff_type": "match"},
+            {"offset_a": 16, "offset_b": 16, "length": 8, "length_a": 5, "length_b": 8, "diff_type": "modified"},
+            {"offset_a": 21, "offset_b": 24, "length": 16, "length_a": 16, "length_b": 16, "diff_type": "match"},
+        ]
+        modified = regions[1]
+        assert modified["length_a"] != modified["length_b"]
+        assert modified["offset_a"] + modified["length_a"] == len(data_a) - len(suffix)
+        assert modified["offset_b"] + modified["length_b"] == len(data_b) - len(suffix)
         _assert_total_differences_consistent(result)
 
 
@@ -278,7 +335,7 @@ class TestDiffFiles:
         assert result["files_identical"] is True
         assert result["total_differences"] == 0
         regions = _assert_well_formed_regions(result, len(data), len(data))
-        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "diff_type": "match"}]
+        assert regions == [{"offset_a": 0, "offset_b": 0, "length": 64, "length_a": 64, "length_b": 64, "diff_type": "match"}]
         _assert_total_differences_consistent(result)
 
     def test_diff_files_result_has_full_schema_with_valid_values(self, hexcore: types.ModuleType, tmp_path: Path) -> None:
@@ -339,8 +396,8 @@ class TestDiffFiles:
 
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
         assert regions == [
-            {"offset_a": 0, "offset_b": 0, "length": 50, "diff_type": "match"},
-            {"offset_a": 50, "offset_b": 50, "length": 50, "diff_type": "modified"},
+            {"offset_a": 0, "offset_b": 0, "length": 50, "length_a": 50, "length_b": 50, "diff_type": "match"},
+            {"offset_a": 50, "offset_b": 50, "length": 50, "length_a": 50, "length_b": 50, "diff_type": "modified"},
         ]
         covering = [r for r in regions if r["diff_type"] == "modified" and r["offset_a"] == 50 and r["offset_a"] + r["length"] == 100]
         assert len(covering) == 1
@@ -371,8 +428,8 @@ class TestDiffFiles:
 
         regions = _assert_well_formed_regions(result, len(data_a), len(data_b))
         assert regions == [
-            {"offset_a": 0, "offset_b": 0, "length": 100, "diff_type": "match"},
-            {"offset_a": 100, "offset_b": 100, "length": 100, "diff_type": "inserted_a"},
+            {"offset_a": 0, "offset_b": 0, "length": 100, "length_a": 100, "length_b": 100, "diff_type": "match"},
+            {"offset_a": 100, "offset_b": 100, "length": 100, "length_a": 100, "length_b": 0, "diff_type": "inserted_a"},
         ]
         _assert_total_differences_consistent(result)
 
@@ -415,9 +472,9 @@ class TestDiffFiles:
 
         regions = _assert_well_formed_regions(result, 64, 64)
         assert regions == [
-            {"offset_a": 0, "offset_b": 0, "length": 32, "diff_type": "match"},
-            {"offset_a": 32, "offset_b": 32, "length": 1, "diff_type": "modified"},
-            {"offset_a": 33, "offset_b": 33, "length": 31, "diff_type": "match"},
+            {"offset_a": 0, "offset_b": 0, "length": 32, "length_a": 32, "length_b": 32, "diff_type": "match"},
+            {"offset_a": 32, "offset_b": 32, "length": 1, "length_a": 1, "length_b": 1, "diff_type": "modified"},
+            {"offset_a": 33, "offset_b": 33, "length": 31, "length_a": 31, "length_b": 31, "diff_type": "match"},
         ]
         _assert_total_differences_consistent(result)
 

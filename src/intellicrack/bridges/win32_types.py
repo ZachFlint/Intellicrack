@@ -309,12 +309,9 @@ THREAD_STATE_NAMES: Final[dict[int, str]] = {
 class OVERLAPPED(ctypes.Structure):
     """Windows OVERLAPPED structure for asynchronous (overlapped) file I/O.
 
-    Required alongside ``FILE_FLAG_OVERLAPPED`` for ``ReadFile``/
-    ``WriteFile``/``ConnectNamedPipe`` calls that must be able to run
-    concurrently on one handle from different threads (for example a
-    named-pipe client's background reader thread and its command-writer
-    thread) without one operation blocking the other's completion, which a
-    synchronous (non-overlapped) handle does not support safely.
+    Required alongside ``FILE_FLAG_OVERLAPPED`` for ``ReadFile``/ ``WriteFile``/``ConnectNamedPipe`` calls that must be able to run
+    concurrently on one handle from different threads (for example a named-pipe client's background reader thread and its command-writer
+    thread) without one operation blocking the other's completion, which a synchronous (non-overlapped) handle does not support safely.
     """
 
     _fields_: ClassVar = [

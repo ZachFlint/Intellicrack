@@ -312,7 +312,9 @@ struct BpsValidation {
 }
 
 fn validate_bps_patch(patch: &[u8], source: &[u8]) -> io::Result<BpsValidation> {
-    if patch.len() < 12 {
+    // Minimum well-formed size: 4-byte magic + at least 1 byte each for the
+    // source-size, target-size, and metadata-size varints + 12-byte footer.
+    if patch.len() < 19 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "BPS patch too short",
@@ -429,7 +431,10 @@ fn apply_source_copy(
     let negative = offset_data & 1 != 0;
     let offset_val = i64::try_from(offset_data >> 1)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "source copy offset overflow"))?;
-    *source_rel_offset += if negative { -offset_val } else { offset_val };
+    let delta = if negative { -offset_val } else { offset_val };
+    *source_rel_offset = source_rel_offset
+        .checked_add(delta)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "source copy offset overflow"))?;
     let length_i64 = i64::try_from(length)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "source copy length overflow"))?;
     let end_src = source_rel_offset
@@ -479,7 +484,10 @@ fn apply_target_copy(
     let negative = offset_data & 1 != 0;
     let offset_val = i64::try_from(offset_data >> 1)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "target copy offset overflow"))?;
-    *target_rel_offset += if negative { -offset_val } else { offset_val };
+    let delta = if negative { -offset_val } else { offset_val };
+    *target_rel_offset = target_rel_offset
+        .checked_add(delta)
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "target copy offset overflow"))?;
     let tgt_start = usize::try_from(*target_rel_offset).map_err(|_| {
         io::Error::new(
             io::ErrorKind::InvalidData,
@@ -533,7 +541,14 @@ pub fn import_bps(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
 
     let target_len = usize::try_from(target_size)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "target size overflow"))?;
-    let mut target = vec![0u8; target_len];
+    let mut target = Vec::new();
+    target.try_reserve_exact(target_len).map_err(|e| {
+        io::Error::new(
+            io::ErrorKind::OutOfMemory,
+            format!("failed to reserve target buffer of {target_len} bytes: {e}"),
+        )
+    })?;
+    target.resize(target_len, 0);
     let mut output_offset: usize = 0;
     let mut source_rel_offset: i64 = 0;
     let mut target_rel_offset: i64 = 0;
@@ -666,7 +681,9 @@ pub fn export_ups(source: &[u8], target: &[u8]) -> io::Result<Vec<u8>> {
 /// Returns `io::Error` if the patch is malformed, CRC32 validation fails,
 /// or the source data does not match the expected checksum.
 pub fn import_ups(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
-    if patch.len() < 16 {
+    // Minimum well-formed size: 4-byte magic + at least 1 byte each for the
+    // source-size and target-size varints + 12-byte footer.
+    if patch.len() < 18 {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "UPS patch too short",
@@ -721,14 +738,28 @@ pub fn import_ups(patch: &[u8], source: &[u8]) -> io::Result<Vec<u8>> {
     let target_len = usize::try_from(target_size)
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "target size overflow"))?;
     let mut target = source.to_vec();
+    let needed_extra = target_len.saturating_sub(target.len());
+    if needed_extra > 0 {
+        target.try_reserve_exact(needed_extra).map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::OutOfMemory,
+                format!(
+                    "failed to reserve additional target capacity of {needed_extra} bytes: {e}"
+                ),
+            )
+        })?;
+    }
     target.resize(target_len, 0);
 
     let mut offset: usize = 0;
 
     while pos < footer_start {
         let rel_offset = decode_var_int(patch, &mut pos)?;
-        offset += usize::try_from(rel_offset)
+        let rel_offset_usize = usize::try_from(rel_offset)
             .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "offset overflow"))?;
+        offset = offset
+            .checked_add(rel_offset_usize)
+            .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "offset overflow"))?;
 
         while pos < footer_start {
             let xor_byte = patch[pos];
@@ -949,6 +980,12 @@ mod tests {
         );
     }
 
+    /// Encodes a BPS action header the same way the writer does: the low two
+    /// bits carry the command and the remaining bits carry `length - 1`.
+    const fn action_header(command: u64, length: u64) -> u64 {
+        ((length - 1) << 2) | command
+    }
+
     fn assemble_bps(source: &[u8], target: &[u8], metadata: &[u8], actions: &[u8]) -> Vec<u8> {
         let mut body = Vec::new();
         body.extend_from_slice(b"BPS1");
@@ -981,8 +1018,20 @@ mod tests {
     }
 
     #[test]
+    fn test_validate_bps_min_length_rejects_undersized_header() {
+        // 15 bytes clears the old `< 12` gate but is shorter than the mandatory
+        // magic(4) + 3 minimum-size varints(3) + footer(12) = 19 bytes a
+        // well-formed BPS patch requires. Under the old bound, footer_start
+        // (len-12=3) would undercut the 4-byte magic, letting header bytes
+        // double as footer bytes instead of being rejected outright.
+        let p = vec![0u8; 15];
+        let err = import_bps(&p, b"").unwrap_err();
+        assert!(err.to_string().contains("too short"), "got {err}");
+    }
+
+    #[test]
     fn test_validate_bps_bad_magic() {
-        let mut p = vec![0u8; 16];
+        let mut p = vec![0u8; 19];
         p[..4].copy_from_slice(b"XPS1");
         let err = import_bps(&p, b"src").unwrap_err();
         assert!(err.to_string().contains("not a BPS1 patch"), "got {err}");
@@ -993,14 +1042,20 @@ mod tests {
         let mut p = export_bps(b"source", b"target").unwrap();
         p[6] ^= 0xFF; // corrupt a body byte, leave the trailing patch CRC intact
         let err = import_bps(&p, b"source").unwrap_err();
-        assert!(err.to_string().contains("patch CRC32 mismatch"), "got {err}");
+        assert!(
+            err.to_string().contains("patch CRC32 mismatch"),
+            "got {err}"
+        );
     }
 
     #[test]
     fn test_validate_bps_source_crc_mismatch() {
         let p = export_bps(b"source", b"target").unwrap();
         let err = import_bps(&p, b"a completely different source").unwrap_err();
-        assert!(err.to_string().contains("source CRC32 mismatch"), "got {err}");
+        assert!(
+            err.to_string().contains("source CRC32 mismatch"),
+            "got {err}"
+        );
     }
 
     #[test]
@@ -1012,7 +1067,10 @@ mod tests {
         let new_crc = crc32_compute(&p[..body_len]);
         p[body_len..].copy_from_slice(&new_crc.to_le_bytes());
         let err = import_bps(&p, b"source").unwrap_err();
-        assert!(err.to_string().contains("target CRC32 mismatch"), "got {err}");
+        assert!(
+            err.to_string().contains("target CRC32 mismatch"),
+            "got {err}"
+        );
     }
 
     #[test]
@@ -1077,6 +1135,49 @@ mod tests {
         assert!(err.to_string().contains("too short"), "got {err}");
     }
 
+    fn assemble_ups(source: &[u8], target_len: usize, records: &[u8]) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(b"UPS1");
+        body.extend_from_slice(&encode_var_int(source.len() as u64));
+        body.extend_from_slice(&encode_var_int(target_len as u64));
+        body.extend_from_slice(records);
+        body.extend_from_slice(&crc32_compute(source).to_le_bytes());
+        body.extend_from_slice(&0u32.to_le_bytes());
+        let pc = crc32_compute(&body);
+        body.extend_from_slice(&pc.to_le_bytes());
+        body
+    }
+
+    #[test]
+    fn test_import_ups_offset_accumulation_overflow_rejected() {
+        // First record's immediate terminator advances offset to 1; the
+        // second record's rel_offset is u64::MAX, so accumulating it onto
+        // the running usize offset overflows. Without checked_add this
+        // panics in a debug build instead of returning a clean io::Error.
+        let source: &[u8] = b"";
+        let mut records = Vec::new();
+        records.extend_from_slice(&encode_var_int(0)); // rel_offset 0
+        records.push(0x00); // immediate terminator -> offset becomes 1
+        records.extend_from_slice(&encode_var_int(u64::MAX)); // overflowing rel_offset
+        let patch = assemble_ups(source, 4, &records);
+        let err = import_ups(&patch, source).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(
+            err.to_string().contains("offset overflow"),
+            "expected the offset-accumulation overflow guard to fire, got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_validate_ups_min_length_rejects_undersized_header() {
+        // 15 bytes clears the old `< 16` gate but is shorter than the mandatory
+        // magic(4) + 2 minimum-size varints(2) + footer(12) = 18 bytes a
+        // well-formed UPS patch requires.
+        let p = vec![0u8; 15];
+        let err = import_ups(&p, b"").unwrap_err();
+        assert!(err.to_string().contains("too short"), "got {err}");
+    }
+
     #[test]
     fn test_validate_ups_bad_magic() {
         let mut p = vec![0u8; 20];
@@ -1090,14 +1191,20 @@ mod tests {
         let mut p = export_ups(b"ABCDEFGH", b"AbCdEfGh").unwrap();
         p[6] ^= 0xFF;
         let err = import_ups(&p, b"ABCDEFGH").unwrap_err();
-        assert!(err.to_string().contains("patch CRC32 mismatch"), "got {err}");
+        assert!(
+            err.to_string().contains("patch CRC32 mismatch"),
+            "got {err}"
+        );
     }
 
     #[test]
     fn test_validate_ups_source_crc_mismatch() {
         let p = export_ups(b"ABCDEFGH", b"AbCdEfGh").unwrap();
         let err = import_ups(&p, b"different source data here").unwrap_err();
-        assert!(err.to_string().contains("source CRC32 mismatch"), "got {err}");
+        assert!(
+            err.to_string().contains("source CRC32 mismatch"),
+            "got {err}"
+        );
     }
 
     #[test]
@@ -1109,7 +1216,10 @@ mod tests {
         let new_crc = crc32_compute(&p[..body_len]);
         p[body_len..].copy_from_slice(&new_crc.to_le_bytes());
         let err = import_ups(&p, b"ABCDEFGH").unwrap_err();
-        assert!(err.to_string().contains("target CRC32 mismatch"), "got {err}");
+        assert!(
+            err.to_string().contains("target CRC32 mismatch"),
+            "got {err}"
+        );
     }
 
     #[test]
@@ -1121,7 +1231,10 @@ mod tests {
         let patch = assemble_bps(b"", b"AB", &[], &actions);
         let err = import_bps(&patch, b"").unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("TargetRead") && msg.contains("OOB"), "got {msg}");
+        assert!(
+            msg.contains("TargetRead") && msg.contains("OOB"),
+            "got {msg}"
+        );
     }
 
     #[test]
@@ -1156,7 +1269,10 @@ mod tests {
         let patch = assemble_bps(source, &[0u8; 4], &[], &actions);
         let err = import_bps(&patch, source).unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("SourceCopy") && msg.contains("OOB"), "got {msg}");
+        assert!(
+            msg.contains("SourceCopy") && msg.contains("OOB"),
+            "got {msg}"
+        );
     }
 
     #[test]
@@ -1168,7 +1284,55 @@ mod tests {
         let patch = assemble_bps(b"", &[0u8; 4], &[], &actions);
         let err = import_bps(&patch, b"").unwrap_err();
         let msg = err.to_string();
-        assert!(msg.contains("TargetCopy") && msg.contains("OOB"), "got {msg}");
+        assert!(
+            msg.contains("TargetCopy") && msg.contains("OOB"),
+            "got {msg}"
+        );
+    }
+
+    #[test]
+    fn test_apply_source_copy_offset_accumulation_overflow_rejected() {
+        // First SourceCopy leaves source_rel_offset at a small value (4); the
+        // second SourceCopy's delta is i64::MAX, so accumulating it onto the
+        // running offset overflows i64::MAX. Without checked_add this panics
+        // in a debug build (Rust's default overflow-checks) instead of
+        // returning a clean io::Error -- unwrap_err() below would itself
+        // panic on a raw `+=` regression, failing the test either way.
+        let source = vec![0u8; 8];
+        let mut actions = Vec::new();
+        actions.extend_from_slice(&encode_var_int(((4 - 1) << 2) | 2)); // SourceCopy len 4
+        actions.extend_from_slice(&encode_var_int(encode_rel_offset(4))); // delta +4
+        actions.extend_from_slice(&encode_var_int(((4 - 1) << 2) | 2)); // SourceCopy len 4
+        actions.extend_from_slice(&encode_var_int(encode_rel_offset(i64::MAX))); // overflowing delta
+        let patch = assemble_bps(&source, &[0u8; 8], &[], &actions);
+        let err = import_bps(&patch, &source).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(
+            err.to_string().contains("source copy offset overflow"),
+            "expected the offset-accumulation overflow guard to fire, got: {err}"
+        );
+    }
+
+    #[test]
+    fn test_apply_target_copy_offset_accumulation_overflow_rejected() {
+        // TargetRead establishes output_offset=1, a TargetCopy with delta 0
+        // leaves target_rel_offset at 1, then a second TargetCopy with delta
+        // i64::MAX overflows the accumulating add.
+        let target = [0u8; 8];
+        let mut actions = Vec::new();
+        actions.extend_from_slice(&encode_var_int(1)); // TargetRead len 1 -> action 1
+        actions.push(0xAB);
+        actions.extend_from_slice(&encode_var_int(action_header(3, 1))); // TargetCopy len 1
+        actions.extend_from_slice(&encode_var_int(encode_rel_offset(0))); // delta 0
+        actions.extend_from_slice(&encode_var_int(action_header(3, 1))); // TargetCopy len 1
+        actions.extend_from_slice(&encode_var_int(encode_rel_offset(i64::MAX))); // overflowing delta
+        let patch = assemble_bps(b"", &target, &[], &actions);
+        let err = import_bps(&patch, b"").unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+        assert!(
+            err.to_string().contains("target copy offset overflow"),
+            "expected the offset-accumulation overflow guard to fire, got: {err}"
+        );
     }
 
     #[test]
@@ -1197,5 +1361,59 @@ mod tests {
         assert!(!patch_contains_command(&patch, 3));
         // Sanity: the patch still round-trips.
         assert_eq!(import_bps(&patch, source).unwrap(), target);
+    }
+
+    const HUGE_TARGET_SIZE: u64 = 1 << 40;
+
+    /// Rewrites the target-size field of a real BPS or UPS patch to
+    /// `HUGE_TARGET_SIZE` and repairs the trailing patch CRC32.
+    ///
+    /// Both formats place the target-size varint directly after the 4-byte
+    /// magic and the source-size varint, and both end with a CRC32 over
+    /// everything preceding it, so the same surgery applies to each. The
+    /// existing field's extent is located with the production `decode_var_int`
+    /// rather than assumed, so this follows any change to the encoding.
+    fn splice_huge_target_size(patch: &[u8], source_len: usize) -> Vec<u8> {
+        let field_start = 4 + encode_var_int(source_len as u64).len();
+        let mut field_end = field_start;
+        decode_var_int(patch, &mut field_end).expect("patch must carry a target-size varint");
+
+        let mut spliced = Vec::with_capacity(patch.len());
+        spliced.extend_from_slice(&patch[..field_start]);
+        spliced.extend_from_slice(&encode_var_int(HUGE_TARGET_SIZE));
+        spliced.extend_from_slice(&patch[field_end..]);
+
+        let body_len = spliced.len() - 4;
+        let repaired_crc = crc32_compute(&spliced[..body_len]);
+        spliced[body_len..].copy_from_slice(&repaired_crc.to_le_bytes());
+        spliced
+    }
+
+    #[test]
+    fn test_import_bps_oom_returns_err() {
+        let source = b"test_source";
+        let target = b"test_target";
+        let patch = export_bps(source, target).unwrap();
+
+        // Precondition: the unmutated patch applies cleanly, so an error below
+        // cannot be a malformed-patch rejection masquerading as the OOM guard.
+        assert_eq!(import_bps(&patch, source).unwrap(), target);
+
+        let oversized = splice_huge_target_size(&patch, source.len());
+        let err = import_bps(&oversized, source).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::OutOfMemory);
+    }
+
+    #[test]
+    fn test_import_ups_oom_returns_err() {
+        let source = b"test_source";
+        let target = b"test_target";
+        let patch = export_ups(source, target).unwrap();
+
+        assert_eq!(import_ups(&patch, source).unwrap(), target);
+
+        let oversized = splice_huge_target_size(&patch, source.len());
+        let err = import_ups(&oversized, source).unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::OutOfMemory);
     }
 }

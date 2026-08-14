@@ -19,6 +19,7 @@ _logger = get_logger(__name__)
 
 if TYPE_CHECKING:
     from intellicrack.bridges.hex_state import HexDocumentState
+    from intellicrack.core.types import BookmarkLike
 
 
 class BookmarksMixin:
@@ -104,14 +105,14 @@ class BookmarksMixin:
         if index >= 0:
             _logger.info("bookmark_remove_started", index=index)
             try:
-                bookmarks = self.document.list_bookmarks()
+                bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
             except (RuntimeError, OSError):
                 _logger.exception("bookmark_list_failed", context="remove_bookmark_lookup")
                 return
 
             if index < len(bookmarks):
-                bm_offset: int = int(bookmarks[index][0])
-                bm_length: int = int(bookmarks[index][1])
+                bm_offset: int = int(bookmarks[index].offset)
+                bm_length: int = int(bookmarks[index].length)
             else:
                 bm_offset = 0
                 bm_length = 1
@@ -133,15 +134,15 @@ class BookmarksMixin:
 
         self._bookmarks_tree.clear()
         try:
-            bookmarks = self.document.list_bookmarks()
+            bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
         except (RuntimeError, OSError):
             _logger.exception("bookmark_list_failed", context="refresh_bookmarks")
             return
 
         for bm in bookmarks:
-            offset_str = f"0x{bm[0]:08X}"
-            length_str = str(bm[1])
-            label = str(bm[2])
+            offset_str = f"0x{bm.offset:08X}"
+            length_str = str(bm.length)
+            label = str(bm.label)
             item = QTreeWidgetItem([offset_str, length_str, label])
             self._bookmarks_tree.addTopLevelItem(item)
         _logger.debug("bookmarks_refreshed", count=len(bookmarks))

@@ -54,19 +54,14 @@ _PATTERN_FIELD_LIGHT: Final[str] = "#E65100"
 _PATTERN_APPLY_SYNC_WAIT_MS: Final[int] = 100
 """Bounded join, in milliseconds, ``_apply_via_interpreter`` waits on the apply worker before returning.
 
-The interpreter still runs ``execute`` on a background ``GenericCallableWorker``
-thread so a pattern with large or deeply nested arrays never freezes the Qt
-event loop. Most patterns applied through this panel finish well inside this
-budget, so joining briefly here lets a caller that immediately re-applies (or
-inspects the freshly cached interpreter) observe a finished, reusable worker
-instead of racing the background thread's startup. When the join succeeds the
-worker's already-queued completion signal is flushed immediately (see
-``_apply_via_interpreter``) so the decoded fields, the notifications, and the
-buffered print output are all visible by the time this method returns. A
-pattern that genuinely takes longer simply outlives this short join and keeps
-running fully asynchronously exactly as before, delivering its result via the
-worker's queued signals whenever the GUI event loop next pumps."""
-
+The interpreter still runs ``execute`` on a background ``GenericCallableWorker`` thread so a pattern with large or deeply nested arrays
+never freezes the Qt event loop. Most patterns applied through this panel finish well inside this budget, so joining briefly here lets a
+caller that immediately re-applies (or inspects the freshly cached interpreter) observe a finished, reusable worker instead of racing the
+background thread's startup. When the join succeeds the worker's already-queued completion signal is flushed immediately (see
+``_apply_via_interpreter``) so the decoded fields, the notifications, and the buffered print output are all visible by the time this method
+returns. A pattern that genuinely takes longer simply outlives this short join and keeps running fully asynchronously exactly as before,
+delivering its result via the worker's queued signals whenever the GUI event loop next pumps.
+"""
 
 def _get_default_pattern_field_color() -> str:
     """Return a theme-appropriate highlight color for pattern editor fields.

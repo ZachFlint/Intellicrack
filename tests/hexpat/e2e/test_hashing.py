@@ -8,12 +8,15 @@ from __future__ import annotations
 import binascii
 import hashlib
 import string
+import zlib
 from typing import TYPE_CHECKING
 
 import pytest
 
 
 if TYPE_CHECKING:
+    import types
+
     from intellicrack_hexcore import HexDocument
 
 
@@ -455,3 +458,126 @@ class TestCustomCRC:
             0xFFFFFFFF,
         )
         assert crc_a != crc_b
+
+
+MULTI_CHUNK_LENGTH = 200_003
+CHUNK_FLOOR = 65536
+
+
+@pytest.fixture
+def multi_chunk_bytes() -> bytes:
+    """Provide a payload spanning several hash chunks.
+
+    The length exceeds the chunk floor and is deliberately not a multiple of
+    it, so streaming must also handle a short trailing chunk.
+
+    Returns:
+        bytes: A deterministic payload of MULTI_CHUNK_LENGTH bytes.
+    """
+    return bytes((i * 37 + 11) % 256 for i in range(MULTI_CHUNK_LENGTH))
+
+
+@pytest.fixture
+def multi_chunk_doc(hexcore: types.ModuleType, multi_chunk_bytes: bytes) -> HexDocument:
+    """Create a HexDocument spanning several hash chunks.
+
+    Args:
+        hexcore: The native module fixture.
+        multi_chunk_bytes: The multi-chunk payload fixture.
+
+    Returns:
+        HexDocument: HexDocument created via open_bytes.
+    """
+    return hexcore.HexDocument.open_bytes(multi_chunk_bytes)
+
+
+class TestMultiChunkHashStreaming:
+    """Gates compute_hash where the document spans more than one chunk.
+
+    compute_hash consumes the document incrementally, so a digest is correct
+    only if hasher state carries across chunk boundaries. Payloads below the
+    chunk floor exercise a single chunk and cannot detect that defect class.
+    """
+
+    def test_sha256_multi_chunk_matches_hashlib(
+        self,
+        multi_chunk_doc: HexDocument,
+        multi_chunk_bytes: bytes,
+    ) -> None:
+        """Verify a multi-chunk SHA-256 digest matches hashlib over the payload.
+
+        Args:
+            multi_chunk_doc: HexDocument spanning several chunks.
+            multi_chunk_bytes: The payload backing the document.
+        """
+        expected: str = hashlib.sha256(multi_chunk_bytes).hexdigest()
+        assert multi_chunk_doc.compute_hash("sha256").lower() == expected
+
+    def test_md5_multi_chunk_matches_hashlib(
+        self,
+        multi_chunk_doc: HexDocument,
+        multi_chunk_bytes: bytes,
+    ) -> None:
+        """Verify a multi-chunk MD5 digest matches hashlib over the payload.
+
+        Args:
+            multi_chunk_doc: HexDocument spanning several chunks.
+            multi_chunk_bytes: The payload backing the document.
+        """
+        expected: str = hashlib.new("md5", multi_chunk_bytes, usedforsecurity=False).hexdigest()
+        assert multi_chunk_doc.compute_hash("md5").lower() == expected
+
+    def test_crc32_multi_chunk_matches_binascii(
+        self,
+        multi_chunk_doc: HexDocument,
+        multi_chunk_bytes: bytes,
+    ) -> None:
+        """Verify a multi-chunk CRC-32 matches binascii over the payload.
+
+        Args:
+            multi_chunk_doc: HexDocument spanning several chunks.
+            multi_chunk_bytes: The payload backing the document.
+        """
+        expected: int = binascii.crc32(multi_chunk_bytes) & 0xFFFFFFFF
+        assert int(multi_chunk_doc.compute_hash("crc32"), 16) == expected
+
+    def test_adler32_multi_chunk_matches_zlib(
+        self,
+        multi_chunk_doc: HexDocument,
+        multi_chunk_bytes: bytes,
+    ) -> None:
+        """Verify a multi-chunk Adler-32 matches zlib over the payload.
+
+        Args:
+            multi_chunk_doc: HexDocument spanning several chunks.
+            multi_chunk_bytes: The payload backing the document.
+        """
+        expected: int = zlib.adler32(multi_chunk_bytes) & 0xFFFFFFFF
+        assert int(multi_chunk_doc.compute_hash("adler32"), 16) == expected
+
+    @pytest.mark.parametrize(
+        "algorithm",
+        ["xxh3", "xxhash64", "xxhash32", "siphash128", "siphash64", "fnv1a-64", "crc64", "crc8"],
+    )
+    def test_digest_invariant_across_chunk_sizes(
+        self,
+        multi_chunk_doc: HexDocument,
+        algorithm: str,
+    ) -> None:
+        """Verify the digest does not depend on how the payload is chunked.
+
+        The chunk size is floored at CHUNK_FLOOR, so these hints split the
+        payload into four, two, and one chunk respectively. Algorithms with no
+        standard-library reference are gated here: a hasher that mishandles a
+        chunk boundary yields different digests for different splits.
+
+        Args:
+            multi_chunk_doc: HexDocument spanning several chunks.
+            algorithm: Hash algorithm name to evaluate.
+        """
+        digests: list[str] = []
+        for hint in (CHUNK_FLOOR, CHUNK_FLOOR * 2, CHUNK_FLOOR * 4):
+            multi_chunk_doc.set_chunk_size_hint(hint)
+            digests.append(multi_chunk_doc.compute_hash(algorithm))
+
+        assert len(set(digests)) == 1, f"{algorithm} digest varied by chunk size: {digests}"

@@ -325,16 +325,11 @@ class BridgeAnalysisPanel(QWidget):
     def _on_user_notes_changed(self) -> None:
         """Persist edits made in the editable user-notes box.
 
-        ``BridgeAnalysisSummary`` carries only bridge-generated diagnostic
-        strings (``analysis_notes``); it has no field for free-form user
-        text and this panel must not add one, since that would mean editing
-        :mod:`intellicrack.core.types` and the session serializer that
-        reads it field-by-field. Instead, user notes are kept in the
-        panel's own per-binary cache (:attr:`_user_notes_by_binary`), the
-        one piece of state this panel already owns and that already
-        survives a refresh/reload of the analysis (:meth:`set_analysis` or
-        :meth:`mark_loaded` called again for the same binary against the
-        long-lived singleton panel instance the application keeps per
+        ``BridgeAnalysisSummary`` carries only bridge-generated diagnostic strings (``analysis_notes``); it has no field for free-form user
+        text and this panel must not add one, since that would mean editing :mod:`intellicrack.core.types` and the session serializer that
+        reads it field-by-field. Instead, user notes are kept in the panel's own per-binary cache (:attr:`_user_notes_by_binary`), the one
+        piece of state this panel already owns and that already survives a refresh/reload of the analysis (:meth:`set_analysis` or
+        :meth:`mark_loaded` called again for the same binary against the long-lived singleton panel instance the application keeps per
         session) without discarding what the user typed.
         """
         text = self._user_notes_edit.toPlainText()

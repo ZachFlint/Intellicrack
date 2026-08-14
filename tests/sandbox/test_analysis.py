@@ -17,6 +17,7 @@ Tests validate:
 from __future__ import annotations
 
 import importlib
+import ipaddress
 import math
 from typing import TYPE_CHECKING, Any, Final, Literal, cast
 
@@ -47,6 +48,8 @@ from .conftest import make_sample_report, ts_offset
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+
+_UNSPECIFIED_IPV4: Final[str] = str(ipaddress.IPv4Address(0))
 
 _analysis_mod = importlib.import_module("intellicrack.sandbox.analysis")
 _is_private_ip = cast("Callable[[str], bool]", getattr(_analysis_mod, "_is_private_ip"))
@@ -183,8 +186,8 @@ class TestHelperFunctions:
         assert _is_private_ip("127.255.255.255") is True
 
     def test_private_ip_unspecified(self) -> None:
-        """0.0.0.0 is private."""
-        assert _is_private_ip("0.0.0.0") is True  # noqa: S104
+        """The unspecified address 0.0.0.0 is private."""
+        assert _is_private_ip(_UNSPECIFIED_IPV4) is True
 
     def test_public_ip(self) -> None:
         """203.0.113.1 is public."""
@@ -207,8 +210,8 @@ class TestHelperFunctions:
         assert _is_valid_ipv4("192.168.1.1") is True
 
     def test_valid_ipv4_all_zeros(self) -> None:
-        """0.0.0.0 is a valid IPv4 address."""
-        assert _is_valid_ipv4("0.0.0.0") is True  # noqa: S104
+        """The unspecified address 0.0.0.0 is a valid IPv4 address."""
+        assert _is_valid_ipv4(_UNSPECIFIED_IPV4) is True
 
     def test_valid_ipv4_all_255(self) -> None:
         """255.255.255.255 is a valid IPv4 address (broadcast)."""

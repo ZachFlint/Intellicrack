@@ -128,14 +128,11 @@ _IS_WIN32: Final[bool] = sys.platform == "win32"
 class _DesktopWindowBindings:
     """Lazily bound ``user32`` entry points for desktop-scoped window lookup.
 
-    x64dbg is launched on a dedicated, never-visible desktop (see
-    :mod:`intellicrack.core.win32_desktop_process`) so its windows never flash
-    on screen. ``EnumWindows`` only ever enumerates windows belonging to the
-    calling thread's own current desktop, so locating x64dbg's window for
-    embedding requires ``EnumDesktopWindows`` against that desktop's own
-    handle instead. Bound lazily on first use, never at import, so importing
-    this panel performs no ``ctypes`` work on non-Windows platforms or in
-    headless test environments that never open the embed tab.
+    x64dbg is launched on a dedicated, never-visible desktop (see :mod:`intellicrack.core.win32_desktop_process`) so its windows never flash
+    on screen. ``EnumWindows`` only ever enumerates windows belonging to the calling thread's own current desktop, so locating x64dbg's
+    window for embedding requires ``EnumDesktopWindows`` against that desktop's own handle instead. Bound lazily on first use, never at
+    import, so importing this panel performs no ``ctypes`` work on non-Windows platforms or in headless test environments that never open
+    the embed tab.
     """
 
     def __init__(self) -> None:
@@ -1621,9 +1618,8 @@ class X64DbgPanel(AnalysisPanelBase):
     def _reset_debug_views(self) -> None:
         """Clear stale disassembly, registers, and embedded-window state after debugging stops.
 
-        Runs from the stop-success path so the panel does not keep showing a
-        previous debuggee's disassembly listing, register values, or embedded
-        x64dbg window once no process is attached.
+        Runs from the stop-success path so the panel does not keep showing a previous debuggee's disassembly listing, register values, or
+        embedded x64dbg window once no process is attached.
         """
         self._disasm_view.clear()
         with QSignalBlocker(self._reg_table):

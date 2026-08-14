@@ -223,6 +223,91 @@ fn optional_header_tail_fields(stack_type: FieldType) -> Vec<FieldDefinition> {
     ]
 }
 
+fn image_data_directory_fields() -> Vec<FieldDefinition> {
+    vec![
+        fd(
+            "ExportTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Export Table (.edata) - IMAGE_DIRECTORY_ENTRY_EXPORT",
+        ),
+        fd(
+            "ImportTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Import Table (.idata) - IMAGE_DIRECTORY_ENTRY_IMPORT",
+        ),
+        fd(
+            "ResourceTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Resource Table (.rsrc) - IMAGE_DIRECTORY_ENTRY_RESOURCE",
+        ),
+        fd(
+            "ExceptionTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Exception Table (.pdata) - IMAGE_DIRECTORY_ENTRY_EXCEPTION",
+        ),
+        fd(
+            "CertificateTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Attribute Certificate Table - IMAGE_DIRECTORY_ENTRY_SECURITY",
+        ),
+        fd(
+            "BaseRelocationTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Base Relocation Table (.reloc) - IMAGE_DIRECTORY_ENTRY_BASERELOC",
+        ),
+        fd(
+            "Debug",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Debug Data - IMAGE_DIRECTORY_ENTRY_DEBUG",
+        ),
+        fd(
+            "Architecture",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Reserved, must be 0 - IMAGE_DIRECTORY_ENTRY_ARCHITECTURE",
+        ),
+        fd(
+            "GlobalPtr",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "RVA of the value to be stored in the global pointer register - IMAGE_DIRECTORY_ENTRY_GLOBALPTR",
+        ),
+        fd(
+            "TLSTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Thread Local Storage Table - IMAGE_DIRECTORY_ENTRY_TLS",
+        ),
+        fd(
+            "LoadConfigTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Load Configuration Table - IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG",
+        ),
+        fd(
+            "BoundImportTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Bound Import Table - IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT",
+        ),
+        fd(
+            "ImportAddressTable",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Import Address Table - IMAGE_DIRECTORY_ENTRY_IAT",
+        ),
+        fd(
+            "DelayImportDescriptor",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Delay Import Descriptor - IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT",
+        ),
+        fd(
+            "CLRRuntimeHeader",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "CLR Runtime Header (.cormeta) - IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR",
+        ),
+        fd(
+            "Reserved",
+            FieldType::StructRef("IMAGE_DATA_DIRECTORY".to_string()),
+            "Reserved, must be 0",
+        ),
+    ]
+}
+
 fn image_optional_header32() -> StructTemplate {
     let mut fields = vec![fd(
         "Magic",
@@ -241,6 +326,7 @@ fn image_optional_header32() -> StructTemplate {
         "Preferred image base address",
     ));
     fields.extend(optional_header_tail_fields(FieldType::UInt32));
+    fields.extend(image_data_directory_fields());
 
     StructTemplate {
         name: "IMAGE_OPTIONAL_HEADER32".to_string(),
@@ -267,6 +353,7 @@ fn image_optional_header64() -> StructTemplate {
         "Preferred image base address",
     ));
     fields.extend(optional_header_tail_fields(FieldType::UInt64));
+    fields.extend(image_data_directory_fields());
 
     StructTemplate {
         name: "IMAGE_OPTIONAL_HEADER64".to_string(),
@@ -444,5 +531,115 @@ fn fd(name: &str, field_type: FieldType, description: &str) -> FieldDefinition {
         description: description.to_string(),
         color: None,
         validation: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::TemplateRegistry;
+
+    const DATA_DIR_NAMES: [&str; 16] = [
+        "ExportTable",
+        "ImportTable",
+        "ResourceTable",
+        "ExceptionTable",
+        "CertificateTable",
+        "BaseRelocationTable",
+        "Debug",
+        "Architecture",
+        "GlobalPtr",
+        "TLSTable",
+        "LoadConfigTable",
+        "BoundImportTable",
+        "ImportAddressTable",
+        "DelayImportDescriptor",
+        "CLRRuntimeHeader",
+        "Reserved",
+    ];
+
+    /// Gate for finding #27: `IMAGE_OPTIONAL_HEADER32` must expose the full
+    /// 16-entry `DataDirectory` array (128 bytes) after `NumberOfRvaAndSizes`,
+    /// wired to the existing `IMAGE_DATA_DIRECTORY` template via `StructRef`.
+    ///
+    /// Mutation caught: removing `fields.extend(image_data_directory_fields())`
+    /// from `image_optional_header32()` makes `.find(|f| f.name == "ExportTable")`
+    /// return `None` (panicking the `.expect`), and the byte total falls from
+    /// 224 to 96.
+    #[test]
+    fn test_image_optional_header32_includes_data_directories() {
+        let reg = TemplateRegistry::new();
+        let mut data = vec![0u8; 224];
+        data[0] = 0x0B;
+        data[1] = 0x01; // Magic = 0x10B (PE32)
+
+        // ExportTable (index 0) at offset 96: VirtualAddress=0x1000, Size=0x50
+        data[96..100].copy_from_slice(&0x0000_1000u32.to_le_bytes());
+        data[100..104].copy_from_slice(&0x0000_0050u32.to_le_bytes());
+
+        let fields = reg.apply("IMAGE_OPTIONAL_HEADER32", &data, 0).unwrap();
+
+        let total_size: usize = fields.iter().map(|f| f.size).sum();
+        assert_eq!(
+            total_size, 224,
+            "IMAGE_OPTIONAL_HEADER32 must consume the full 96-byte standard header \
+             plus the 128-byte DataDirectory array"
+        );
+
+        for (i, name) in DATA_DIR_NAMES.into_iter().enumerate() {
+            let entry = fields
+                .iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("data directory entry '{name}' must be present"));
+            assert_eq!(entry.offset, 96 + i * 8);
+            assert_eq!(entry.size, 8);
+            assert_eq!(entry.children.len(), 2);
+            assert_eq!(entry.children[0].name, "VirtualAddress");
+            assert_eq!(entry.children[1].name, "Size");
+        }
+
+        let export = fields.iter().find(|f| f.name == "ExportTable").unwrap();
+        // Independent oracle: u32::from_le_bytes([0x00,0x10,0x00,0x00]) = 4096
+        assert!(export.children[0].display_value.contains("4096"));
+        // Independent oracle: u32::from_le_bytes([0x50,0x00,0x00,0x00]) = 80
+        assert!(export.children[1].display_value.contains("80"));
+    }
+
+    /// Gate for finding #27: `IMAGE_OPTIONAL_HEADER64` must expose the same
+    /// 16-entry `DataDirectory` array, starting after the 112-byte PE32+
+    /// standard fields.
+    #[test]
+    fn test_image_optional_header64_includes_data_directories() {
+        let reg = TemplateRegistry::new();
+        let mut data = vec![0u8; 240];
+        data[0] = 0x0B;
+        data[1] = 0x02; // Magic = 0x20B (PE32+)
+
+        // ExportTable (index 0) at offset 112: VirtualAddress=0x2000, Size=0x60
+        data[112..116].copy_from_slice(&0x0000_2000u32.to_le_bytes());
+        data[116..120].copy_from_slice(&0x0000_0060u32.to_le_bytes());
+
+        let fields = reg.apply("IMAGE_OPTIONAL_HEADER64", &data, 0).unwrap();
+
+        let total_size: usize = fields.iter().map(|f| f.size).sum();
+        assert_eq!(
+            total_size, 240,
+            "IMAGE_OPTIONAL_HEADER64 must consume the full 112-byte standard header \
+             plus the 128-byte DataDirectory array"
+        );
+
+        for (i, name) in DATA_DIR_NAMES.into_iter().enumerate() {
+            let entry = fields
+                .iter()
+                .find(|f| f.name == name)
+                .unwrap_or_else(|| panic!("data directory entry '{name}' must be present"));
+            assert_eq!(entry.offset, 112 + i * 8);
+            assert_eq!(entry.size, 8);
+        }
+
+        let export = fields.iter().find(|f| f.name == "ExportTable").unwrap();
+        // Independent oracle: u32::from_le_bytes([0x00,0x20,0x00,0x00]) = 8192
+        assert!(export.children[0].display_value.contains("8192"));
+        // Independent oracle: u32::from_le_bytes([0x60,0x00,0x00,0x00]) = 96
+        assert!(export.children[1].display_value.contains("96"));
     }
 }

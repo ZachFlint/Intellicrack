@@ -73,21 +73,44 @@ pub fn byte_distribution(data: &[u8]) -> [u64; 256] {
 
 #[must_use]
 pub fn byte_type_distribution(data: &[u8]) -> (u64, u64, u64, u64) {
-    let mut null_count: u64 = 0;
-    let mut printable_count: u64 = 0;
-    let mut control_count: u64 = 0;
-    let mut high_count: u64 = 0;
-
+    let mut counts = [0u64; BYTE_CLASS_COUNT];
     for &b in data {
-        match b {
-            0x00 => null_count += 1,
-            0x20..=0x7E => printable_count += 1,
-            0x01..=0x1F | 0x7F => control_count += 1,
-            0x80..=0xFF => high_count += 1,
-        }
+        counts[usize::from(byte_class(b))] += 1;
     }
+    (counts[0], counts[1], counts[2], counts[3])
+}
 
-    (null_count, printable_count, control_count, high_count)
+/// A byte that is exactly zero.
+pub const BYTE_CLASS_NULL: u8 = 0;
+/// A byte in the printable ASCII range.
+pub const BYTE_CLASS_PRINTABLE: u8 = 1;
+/// A C0 control byte, or delete.
+pub const BYTE_CLASS_CONTROL: u8 = 2;
+/// A byte with the high bit set.
+pub const BYTE_CLASS_HIGH: u8 = 3;
+/// How many classes [`byte_class`] can return.
+pub const BYTE_CLASS_COUNT: usize = 4;
+
+/// Classify one byte.
+///
+/// The returned tag is the index of that class within
+/// [`byte_type_distribution`]'s tuple, which is the single definition of these
+/// four ranges; a caller tinting bytes and a caller counting them therefore
+/// cannot disagree.
+#[must_use]
+pub fn byte_class(byte: u8) -> u8 {
+    match byte {
+        0x00 => BYTE_CLASS_NULL,
+        0x20..=0x7E => BYTE_CLASS_PRINTABLE,
+        0x01..=0x1F | 0x7F => BYTE_CLASS_CONTROL,
+        0x80..=0xFF => BYTE_CLASS_HIGH,
+    }
+}
+
+/// Classify every byte in `data`, one tag per byte.
+#[must_use]
+pub fn classify_bytes(data: &[u8]) -> Vec<u8> {
+    data.iter().copied().map(byte_class).collect()
 }
 
 #[must_use]
@@ -341,7 +364,12 @@ mod tests {
     fn test_classify_block_category_2_moderate_low_printable() {
         // Four distinct high bytes -> entropy 2.0, printable 0, null 0.
         // Fails every earlier arm and every entropy band -> falls through to 2.
-        let block: Vec<u8> = [0x80u8, 0x81, 0x82, 0x83].iter().copied().cycle().take(256).collect();
+        let block: Vec<u8> = [0x80u8, 0x81, 0x82, 0x83]
+            .iter()
+            .copied()
+            .cycle()
+            .take(256)
+            .collect();
         assert_eq!(classify_block(&block), 2);
     }
 
@@ -368,5 +396,52 @@ mod tests {
     #[test]
     fn test_content_classification_block_size_zero_guard() {
         assert!(content_classification(b"abc", 0).is_empty());
+    }
+
+    #[test]
+    fn test_byte_class_agrees_with_byte_type_distribution() {
+        // Counting every byte value once must put exactly one tally in each
+        // class per byte, so the tuple and the tags cannot disagree about any
+        // of the 256 values. Widen or narrow either range alone and this fails.
+        let all: Vec<u8> = (0..=255u8).collect();
+        let (nulls, printable, control, high) = byte_type_distribution(&all);
+        let tags = classify_bytes(&all);
+
+        let tally = |wanted: u8| -> u64 {
+            tags.iter()
+                .fold(0u64, |total, &tag| total + u64::from(tag == wanted))
+        };
+
+        assert_eq!(tally(BYTE_CLASS_NULL), nulls);
+        assert_eq!(tally(BYTE_CLASS_PRINTABLE), printable);
+        assert_eq!(tally(BYTE_CLASS_CONTROL), control);
+        assert_eq!(tally(BYTE_CLASS_HIGH), high);
+        assert_eq!(nulls + printable + control + high, 256);
+    }
+
+    #[test]
+    fn test_byte_class_boundaries() {
+        assert_eq!(byte_class(0x00), BYTE_CLASS_NULL);
+        assert_eq!(byte_class(0x01), BYTE_CLASS_CONTROL);
+        assert_eq!(byte_class(0x1F), BYTE_CLASS_CONTROL);
+        assert_eq!(byte_class(0x20), BYTE_CLASS_PRINTABLE);
+        assert_eq!(byte_class(0x7E), BYTE_CLASS_PRINTABLE);
+        assert_eq!(byte_class(0x7F), BYTE_CLASS_CONTROL);
+        assert_eq!(byte_class(0x80), BYTE_CLASS_HIGH);
+        assert_eq!(byte_class(0xFF), BYTE_CLASS_HIGH);
+    }
+
+    #[test]
+    fn test_classify_bytes_is_one_tag_per_byte_in_order() {
+        let data = b"\x00A\x1F\xFF";
+        assert_eq!(
+            classify_bytes(data),
+            vec![
+                BYTE_CLASS_NULL,
+                BYTE_CLASS_PRINTABLE,
+                BYTE_CLASS_CONTROL,
+                BYTE_CLASS_HIGH
+            ]
+        );
     }
 }

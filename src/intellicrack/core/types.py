@@ -49,6 +49,19 @@ class HexDocumentLike(Protocol):
         ...  # protocol body
 
 
+class BookmarkLike(Protocol):
+    """Protocol for hex document bookmark objects.
+
+    Describes the attribute surface of the native ``Bookmark`` class so consumers can be typed without importing the optional hexcore
+    module.
+    """
+
+    offset: int
+    length: int
+    label: str
+    color: str
+
+
 @runtime_checkable
 class HexDocumentFull(HexDocumentLike, Protocol):
     """Protocol for full HexDocument with template and write support."""

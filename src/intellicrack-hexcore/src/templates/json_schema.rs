@@ -44,6 +44,11 @@ fn validate_field_type(ft: &super::FieldType) -> Result<(), TemplateError> {
                 ));
             }
             validate_field_type(element_type)?;
+            if super::field_size(element_type).is_none() {
+                return Err(TemplateError::InvalidFieldReference(
+                    "DynamicArray element_type must have a statically known size".to_string(),
+                ));
+            }
         }
         super::FieldType::Conditional {
             condition_field,
@@ -75,8 +80,25 @@ fn validate_field_type(ft: &super::FieldType) -> Result<(), TemplateError> {
                 "StructRef name cannot be empty".to_string(),
             ));
         }
-        super::FieldType::Array { element_type, .. } => {
+        super::FieldType::Array {
+            element_type,
+            count,
+        } => {
             validate_field_type(element_type)?;
+            match super::field_size(element_type) {
+                None => {
+                    return Err(TemplateError::InvalidFieldReference(
+                        "Array element_type must have a statically known size".to_string(),
+                    ));
+                }
+                Some(elem_size) => {
+                    if elem_size.checked_mul(*count).is_none() {
+                        return Err(TemplateError::InvalidFieldReference(
+                            "Array element_type size multiplied by count overflows".to_string(),
+                        ));
+                    }
+                }
+            }
         }
         super::FieldType::Bitfield { backing_type, .. }
         | super::FieldType::Enum { backing_type, .. } => {
@@ -184,6 +206,54 @@ mod tests {
             condition_op: ConditionOp::Eq,
             fields: vec![fdef(bad_ptr())],
         });
+    }
+
+    /// Audit F-0008 regression: an `Array` whose element type has no
+    /// static size (composite/self-recursive) must be rejected at
+    /// registration time rather than silently sizing to 0 and corrupting
+    /// every later sibling field's offset at evaluation time.
+    #[test]
+    fn test_validate_array_element_type_must_be_sized() {
+        let ft = FieldType::Array {
+            element_type: Box::new(FieldType::StructRef("Foo".to_string())),
+            count: 3,
+        };
+        let err = validate_field_type(&ft).unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::InvalidFieldReference(m) if m.contains("statically known size")),
+            "got {err:?}"
+        );
+    }
+
+    /// Audit F-0023 regression: a `DynamicArray` whose element type has no
+    /// static size defeats the runtime `InsufficientData` guard (its size
+    /// multiplies to 0 regardless of `count`); reject it up front.
+    #[test]
+    fn test_validate_dynamic_array_element_type_must_be_sized() {
+        let ft = FieldType::DynamicArray {
+            element_type: Box::new(FieldType::Union { variants: vec![] }),
+            count_field: "n".to_string(),
+        };
+        let err = validate_field_type(&ft).unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::InvalidFieldReference(m) if m.contains("statically known size")),
+            "got {err:?}"
+        );
+    }
+
+    /// Audit F-0026 regression: an `Array` whose `element_size * count`
+    /// would overflow `usize` must be rejected at registration time.
+    #[test]
+    fn test_validate_array_count_overflow_rejected() {
+        let ft = FieldType::Array {
+            element_type: Box::new(FieldType::UInt64),
+            count: usize::MAX / 4,
+        };
+        let err = validate_field_type(&ft).unwrap_err();
+        assert!(
+            matches!(&err, TemplateError::InvalidFieldReference(m) if m.contains("overflows")),
+            "got {err:?}"
+        );
     }
 
     #[test]

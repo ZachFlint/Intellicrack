@@ -216,9 +216,7 @@ class TestAutoSaveLoopSurvivesFailures:
         assert manager.is_auto_saving is False, "auto-save must stop after close"
         loaded = store.load(session_id)
         assert loaded is not None, "session must remain readable after cross-loop close"
-        assert loaded.notes == "flushed-on-cross-loop-close", (
-            f"final flush must persist notes; got {loaded.notes!r}"
-        )
+        assert loaded.notes == "flushed-on-cross-loop-close", f"final flush must persist notes; got {loaded.notes!r}"
 
     @staticmethod
     @pytest.mark.asyncio
@@ -266,9 +264,7 @@ class TestAutoSaveLoopSurvivesFailures:
 
         loaded = store.load(session_id)
         assert loaded is not None, "session must load after close"
-        assert loaded.notes == "post-create-mutation", (
-            f"close must flush mutations; got {loaded.notes!r}"
-        )
+        assert loaded.notes == "post-create-mutation", f"close must flush mutations; got {loaded.notes!r}"
         assert manager.is_auto_saving is False
 
     @staticmethod

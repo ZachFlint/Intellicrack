@@ -1886,10 +1886,8 @@ class ProviderConfigDialog(QDialog):
     def create_env_template(self) -> None:
         """Write or merge a .env credential template, then report the outcome.
 
-        Never truncates an existing `.env`: pre-existing content is backed
-        up to a timestamped ``.env.<timestamp>.bak`` file and only template
-        variables missing from the file are appended, so any real
-        credential already saved there is preserved.
+        Never truncates an existing `.env`: pre-existing content is backed up to a timestamped ``.env.<timestamp>.bak`` file and only
+        template variables missing from the file are appended, so any real credential already saved there is preserved.
         """
         _logger.info("env_template_creation_starting", path=".env")
         try:

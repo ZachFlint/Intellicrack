@@ -56,12 +56,9 @@ _MAX_RESULT_DISPLAY_LEN = 200
 class _MarkdownView(QTextBrowser):
     """Read-only rich-text view that renders CommonMark markdown content.
 
-    Replaces a plain ``QLabel`` for message bubble content so headings, bold
-    and italic text, lists, inline code, and fenced code blocks render as
-    formatted rich text instead of literal markdown syntax. The view has no
-    frame or internal scrollbars and auto-sizes its height to the rendered
-    document so it behaves like a word-wrapping label inside the bubble's
-    ``QVBoxLayout``.
+    Replaces a plain ``QLabel`` for message bubble content so headings, bold and italic text, lists, inline code, and fenced code blocks
+    render as formatted rich text instead of literal markdown syntax. The view has no frame or internal scrollbars and auto-sizes its height
+    to the rendered document so it behaves like a word-wrapping label inside the bubble's ``QVBoxLayout``.
     """
 
     def __init__(self, parent: QWidget | None = None) -> None:

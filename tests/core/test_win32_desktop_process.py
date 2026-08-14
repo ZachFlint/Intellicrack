@@ -120,12 +120,8 @@ def test_child_runs_on_hidden_desktop(tmp_path: Path) -> None:
 
     assert exit_code == 0, f"child exited {exit_code}"
     child_desktop = report.read_text(encoding="utf-8").strip()
-    assert child_desktop == proc.desktop_name, (
-        f"child ran on {child_desktop!r}, expected hidden desktop {proc.desktop_name!r}"
-    )
-    assert child_desktop != get_thread_desktop_name(), (
-        "child must not share the test process's visible desktop"
-    )
+    assert child_desktop == proc.desktop_name, f"child ran on {child_desktop!r}, expected hidden desktop {proc.desktop_name!r}"
+    assert child_desktop != get_thread_desktop_name(), "child must not share the test process's visible desktop"
 
 
 def test_child_receives_supplied_environment(tmp_path: Path) -> None:

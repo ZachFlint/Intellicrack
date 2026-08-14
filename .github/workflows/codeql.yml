@@ -62,13 +62,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      #   uses: actions/setup-example@v1
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
         # Add any setup steps before running the `github/codeql-action/init` action.
 
-        # - name: Setup runtime (example)
+        #   uses: actions/setup-example@v1
 
+        # - name: Setup runtime (example)
         # or others). This is typically only required for manual builds.
         # This includes steps like installing compilers or runtimes (`actions/setup-node`
         uses: github/codeql-action/init@v4

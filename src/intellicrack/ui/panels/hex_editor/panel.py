@@ -90,6 +90,7 @@ if TYPE_CHECKING:
     from intellicrack.bridges.hex_editor import HexEditorBridge
     from intellicrack.bridges.hex_state import HexDocumentState
     from intellicrack.core.hexpat.completer import HexPatCompleter
+    from intellicrack.core.types import BookmarkLike
     from intellicrack.ui.panels.async_bridge import GenericCallableWorker
     from intellicrack.ui.panels.hex_editor.pattern_code_editor import PatternCodeEditor
 
@@ -1425,9 +1426,11 @@ class HexEditorPanel(
             return
         self._bookmarks_tree.clear()
         try:
-            bookmarks: list[tuple[int, int, str, str]] = self.document.list_bookmarks()
-            for offset, length, label, _color in bookmarks:
-                item = QTreeWidgetItem([f"0x{offset:08X}", str(length), label])
+            bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
+            for bookmark in bookmarks:
+                item = QTreeWidgetItem(
+                    [f"0x{bookmark.offset:08X}", str(bookmark.length), bookmark.label],
+                )
                 self._bookmarks_tree.addTopLevelItem(item)
         except (AttributeError, ValueError):
             _logger.debug("panel_refresh_bookmarks_list_failed", exc_info=True)

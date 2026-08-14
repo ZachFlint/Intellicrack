@@ -851,7 +851,10 @@ mod tests {
         let data = [0x01, 0x02, 0x03, 0x04, 0xAA, 0xBB, 0xCC, 0xDD];
         let empty = HashMap::new();
         let swapped = apply_transform("byte_swap_32", &data, &empty).unwrap();
-        assert_eq!(swapped, vec![0x04, 0x03, 0x02, 0x01, 0xDD, 0xCC, 0xBB, 0xAA]);
+        assert_eq!(
+            swapped,
+            vec![0x04, 0x03, 0x02, 0x01, 0xDD, 0xCC, 0xBB, 0xAA]
+        );
     }
 
     #[test]
@@ -859,7 +862,10 @@ mod tests {
         let data = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
         let empty = HashMap::new();
         let swapped = apply_transform("byte_swap_64", &data, &empty).unwrap();
-        assert_eq!(swapped, vec![0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]);
+        assert_eq!(
+            swapped,
+            vec![0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01]
+        );
     }
 
     #[test]
@@ -882,21 +888,30 @@ mod tests {
     fn test_mask_missing_pattern_errors() {
         let empty = HashMap::new();
         let err = apply_transform("mask_and", &[0x01], &empty).unwrap_err();
-        assert!(err.to_string().contains("missing parameter: pattern"), "got {err}");
+        assert!(
+            err.to_string().contains("missing parameter: pattern"),
+            "got {err}"
+        );
     }
 
     #[test]
     fn test_mask_empty_pattern_errors() {
         let params = make_params(&[("pattern", &[])]);
         let err = apply_transform("mask_or", &[0x01], &params).unwrap_err();
-        assert!(err.to_string().contains("pattern must not be empty"), "got {err}");
+        assert!(
+            err.to_string().contains("pattern must not be empty"),
+            "got {err}"
+        );
     }
 
     #[test]
     fn test_xor_repeating_empty_key_errors() {
         let params = make_params(&[("key", &[])]);
         let err = apply_transform("xor_repeating", b"data", &params).unwrap_err();
-        assert!(err.to_string().contains("key must not be empty"), "got {err}");
+        assert!(
+            err.to_string().contains("key must not be empty"),
+            "got {err}"
+        );
     }
 
     #[test]
@@ -913,7 +928,10 @@ mod tests {
         // xor_single reads its key via get_param_u8; an empty value hits the empty guard.
         let params = make_params(&[("key", &[])]);
         let err = apply_transform("xor_single", b"data", &params).unwrap_err();
-        assert!(err.to_string().contains("key must not be empty"), "got {err}");
+        assert!(
+            err.to_string().contains("key must not be empty"),
+            "got {err}"
+        );
     }
 
     #[test]
@@ -935,7 +953,8 @@ mod tests {
         let params = make_params(&[("key", &[0u8; 10]), ("padding", b"none")]);
         let err = apply_transform("aes_ecb_encrypt", &[0u8; 16], &params).unwrap_err();
         assert!(
-            err.to_string().contains("AES key must be 16, 24, or 32 bytes"),
+            err.to_string()
+                .contains("AES key must be 16, 24, or 32 bytes"),
             "got {err}"
         );
     }
@@ -958,11 +977,19 @@ mod tests {
         // Empty ciphertext is a multiple of 16; strip must reject empty plaintext.
         let pkcs7 = make_params(&[("key", &key), ("padding", b"pkcs7")]);
         let err = apply_transform("aes_ecb_decrypt", &[], &pkcs7).unwrap_err();
-        assert!(err.to_string().contains("PKCS#7 padding requires non-empty"), "got {err}");
+        assert!(
+            err.to_string()
+                .contains("PKCS#7 padding requires non-empty"),
+            "got {err}"
+        );
 
         let iso = make_params(&[("key", &key), ("padding", b"iso10126")]);
         let err2 = apply_transform("aes_ecb_decrypt", &[], &iso).unwrap_err();
-        assert!(err2.to_string().contains("ISO 10126 padding requires non-empty"), "got {err2}");
+        assert!(
+            err2.to_string()
+                .contains("ISO 10126 padding requires non-empty"),
+            "got {err2}"
+        );
     }
 
     #[test]
@@ -974,7 +1001,10 @@ mod tests {
         let ciphertext = apply_transform("aes_ecb_encrypt", &[0x41u8; 16], &none).unwrap();
         let iso = make_params(&[("key", &key), ("padding", b"iso10126")]);
         let err = apply_transform("aes_ecb_decrypt", &ciphertext, &iso).unwrap_err();
-        assert!(err.to_string().contains("invalid ISO 10126 padding length"), "got {err}");
+        assert!(
+            err.to_string().contains("invalid ISO 10126 padding length"),
+            "got {err}"
+        );
     }
 
     #[test]

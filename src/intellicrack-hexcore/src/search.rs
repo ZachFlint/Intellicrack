@@ -247,6 +247,9 @@ fn search_masked_single(
     base_offset: usize,
 ) -> Vec<SearchResult> {
     let plen = pattern.len();
+    if data.len() < plen {
+        return Vec::new();
+    }
     let mut results = Vec::new();
 
     for i in 0..=data.len().saturating_sub(plen) {
@@ -286,10 +289,27 @@ pub fn search_text(
         return Vec::new();
     }
 
-    let encoded: Vec<u8> = match encoding.to_lowercase().as_str() {
+    let lower_encoding = encoding.to_lowercase();
+    let encoded: Vec<u8> = match lower_encoding.as_str() {
         "utf-16le" | "utf16le" => text.encode_utf16().flat_map(u16::to_le_bytes).collect(),
         "utf-16be" | "utf16be" => text.encode_utf16().flat_map(u16::to_be_bytes).collect(),
-        _ => text.as_bytes().to_vec(),
+        "utf-8" | "utf8" => text.as_bytes().to_vec(),
+        "ascii" => {
+            if !text.is_ascii() {
+                return Vec::new();
+            }
+            text.as_bytes().to_vec()
+        }
+        _ => {
+            let Some(enc) = encoding_rs::Encoding::for_label(encoding.as_bytes()) else {
+                return Vec::new();
+            };
+            let (cow, _, had_unmappable) = enc.encode(text);
+            if had_unmappable {
+                return Vec::new();
+            }
+            cow.into_owned()
+        }
     };
 
     if encoded.is_empty() {
@@ -305,7 +325,7 @@ pub fn search_text(
         return Vec::new();
     }
 
-    let step = match encoding.to_lowercase().as_str() {
+    let step = match lower_encoding.as_str() {
         "utf-16le" | "utf16le" | "utf-16be" | "utf16be" => 2,
         _ => 1,
     };
@@ -322,10 +342,8 @@ pub fn search_text(
                 length: plen,
                 matched_bytes: window.to_vec(),
             });
-            i += plen.max(step);
-        } else {
-            i += step;
         }
+        i += step;
     }
     results
 }
@@ -415,15 +433,18 @@ pub fn replace_all(data: &[u8], pattern: &[u8], replacement: &[u8]) -> (Vec<u8>,
         return (data.to_vec(), 0);
     }
 
-    let count = matches.len();
-    let new_len = data.len() + count * replacement.len() - count * pattern.len();
-    let mut result = Vec::with_capacity(new_len);
+    let mut result = Vec::with_capacity(data.len());
     let mut last_end: usize = 0;
+    let mut count: usize = 0;
 
     for m in &matches {
+        if m.offset < last_end {
+            continue;
+        }
         result.extend_from_slice(&data[last_end..m.offset]);
         result.extend_from_slice(replacement);
         last_end = m.offset + m.length;
+        count += 1;
     }
     result.extend_from_slice(&data[last_end..]);
 
@@ -466,7 +487,19 @@ fn decode_uint(bytes: &[u8], size: usize, big_endian: bool) -> u64 {
                 u64::from_le_bytes(arr)
             }
         }
-        _ => 0,
+        _ => {
+            let mut value: u64 = 0;
+            if big_endian {
+                for &b in &bytes[..size] {
+                    value = (value << 8) | u64::from(b);
+                }
+            } else {
+                for &b in bytes[..size].iter().rev() {
+                    value = (value << 8) | u64::from(b);
+                }
+            }
+            value
+        }
     }
 }
 
@@ -488,7 +521,11 @@ fn sign_extend(raw: u64, size: usize) -> i64 {
             let word = u32::try_from(raw & 0xFFFF_FFFF).unwrap();
             i64::from(word.cast_signed())
         }
-        _ => raw.cast_signed(),
+        8 => raw.cast_signed(),
+        _ => {
+            let shift = 64 - u32::try_from(size * 8).unwrap();
+            (raw << shift).cast_signed() >> shift
+        }
     }
 }
 
@@ -800,12 +837,22 @@ pub fn search_numeric_range(
 
     let in_range = |bytes: &[u8]| -> bool {
         let raw = decode_uint(bytes, size, big_endian);
-        let decoded: i64 = if signed {
-            sign_extend(raw, size)
+        if signed {
+            let decoded = sign_extend(raw, size);
+            decoded >= min_val && decoded <= max_val
         } else {
-            i64::try_from(raw).unwrap_or(i64::MAX)
-        };
-        decoded >= min_val && decoded <= max_val
+            let min_u = if min_val < 0 {
+                0
+            } else {
+                min_val.cast_unsigned()
+            };
+            let max_u = if max_val < 0 {
+                0
+            } else {
+                max_val.cast_unsigned()
+            };
+            raw >= min_u && raw <= max_u
+        }
     };
 
     if data.len() > CHUNK_SIZE {
@@ -884,6 +931,18 @@ mod tests {
     }
 
     #[test]
+    fn test_search_hex_wildcards_short_trailing_chunk() {
+        let mut data = vec![0u8; CHUNK_SIZE + 2];
+        data[100..105].copy_from_slice(&[0xAA, 0x11, 0xBB, 0xCC, 0xDD]);
+        data[CHUNK_SIZE] = 0xAA;
+        data[CHUNK_SIZE + 1] = 0x11;
+
+        let results = search_hex_with_wildcards(&data, "AA ?? BB CC DD", 16);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 100);
+    }
+
+    #[test]
     fn test_search_bytes_no_match() {
         let data = b"Hello World";
         let results = search_bytes(data, b"xyz", 10);
@@ -934,6 +993,15 @@ mod tests {
         let data = b"Hello hello HELLO";
         let results = search_text(data, "hello", "utf-8", false, 10);
         assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn test_search_text_case_insensitive_overlapping_matches() {
+        // Case-insensitive overlap semantics must match the case-sensitive engine:
+        // search_bytes(b"aaaa", b"aa", ..) legitimately returns [0, 1, 2].
+        let results = search_text(b"aaaa", "aa", "utf-8", false, 10);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![0, 1, 2]);
     }
 
     #[test]
@@ -996,6 +1064,25 @@ mod tests {
         let (result, count) = replace_all(data, b"XY", b"Z");
         assert_eq!(count, 0);
         assert_eq!(result, data.to_vec());
+    }
+
+    #[test]
+    fn test_replace_all_overlapping_matches_no_panic_or_abort() {
+        // search_bytes(b"aaaa", b"aa", ..) legitimately returns overlapping matches
+        // [0, 1, 2]; replace_all must only apply the non-overlapping ones ([0, 2])
+        // rather than panicking on a reversed slice range.
+        let (result, count) = replace_all(b"aaaa", b"aa", b"X");
+        assert_eq!(count, 2);
+        assert_eq!(result, b"XX".to_vec());
+    }
+
+    #[test]
+    fn test_replace_all_overlapping_matches_shrinking_replacement_no_abort() {
+        // A shrinking replacement on overlapping matches must not integer-underflow
+        // a capacity computation (which would abort the whole process).
+        let (result, count) = replace_all(b"aaaa", b"aa", b"");
+        assert_eq!(count, 2);
+        assert_eq!(result, b"".to_vec());
     }
 
     #[test]
@@ -1219,6 +1306,19 @@ mod tests {
     }
 
     #[test]
+    fn test_search_text_windows1252_encoding_matches_real_bytes() {
+        // "café" in windows-1252 is the 4 bytes 63 61 66 E9 (single-byte 'é' = 0xE9),
+        // not the 5-byte UTF-8 encoding of the query text.
+        let mut data = vec![0u8; 4];
+        data.extend_from_slice(&[0x63, 0x61, 0x66, 0xE9]);
+        data.extend_from_slice(&[0u8; 4]);
+        let results = search_text(&data, "café", "windows-1252", true, 10);
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].offset, 4);
+        assert_eq!(results[0].length, 4);
+    }
+
+    #[test]
     fn test_search_text_ci_data_shorter_than_needle_returns_empty() {
         // Case-insensitive branch: data.len() < encoded.len() -> early empty.
         let results = search_text(b"ab", "abcdef", "utf-8", false, 10);
@@ -1304,8 +1404,19 @@ mod tests {
         let eight = [1u8, 2, 3, 4, 5, 6, 7, 8];
         assert_eq!(decode_uint(&eight, 8, true), 0x0102_0304_0506_0708);
         assert_eq!(decode_uint(&eight, 8, false), 0x0807_0605_0403_0201);
-        // Unsupported width (5/6/7) falls through to 0.
-        assert_eq!(decode_uint(&[1, 2, 3, 4, 5], 5, false), 0);
+        // Widths 5/6/7 are genuinely decoded (not silently zeroed).
+        assert_eq!(decode_uint(&[1, 2, 3, 4, 5], 5, false), 0x05_0403_0201);
+        assert_eq!(decode_uint(&[1, 2, 3, 4, 5], 5, true), 0x01_0203_0405);
+        assert_eq!(decode_uint(&[1, 2, 3, 4, 5, 6], 6, false), 0x0605_0403_0201);
+        assert_eq!(decode_uint(&[1, 2, 3, 4, 5, 6], 6, true), 0x0102_0304_0506);
+        assert_eq!(
+            decode_uint(&[1, 2, 3, 4, 5, 6, 7], 7, false),
+            0x0007_0605_0403_0201
+        );
+        assert_eq!(
+            decode_uint(&[1, 2, 3, 4, 5, 6, 7], 7, true),
+            0x0001_0203_0405_0607
+        );
     }
 
     #[test]
@@ -1316,8 +1427,15 @@ mod tests {
         assert_eq!(sign_extend(0xFF_FFFF, 3), -1);
         assert_eq!(sign_extend(0x80_0000, 3), -8_388_608);
         assert_eq!(sign_extend(0xFFFF_FFFF, 4), -1);
-        // Width 8 (and unsupported widths) just reinterpret the bits.
         assert_eq!(sign_extend(u64::MAX, 8), -1);
+        // Widths 5/6/7 are genuinely sign-extended from their own top bit.
+        assert_eq!(sign_extend(0xFF_FFFF_FFFF, 5), -1);
+        assert_eq!(sign_extend(0x80_0000_0000, 5), -549_755_813_888);
+        assert_eq!(sign_extend(0x7F_FFFF_FFFF, 5), 549_755_813_887);
+        assert_eq!(sign_extend(0xFFFF_FFFF_FFFF, 6), -1);
+        assert_eq!(sign_extend(0x8000_0000_0000, 6), -140_737_488_355_328);
+        assert_eq!(sign_extend(0xFF_FFFF_FFFF_FFFF, 7), -1);
+        assert_eq!(sign_extend(0x80_0000_0000_0000, 7), -36_028_797_018_963_968);
     }
 
     #[test]
@@ -1325,8 +1443,14 @@ mod tests {
         assert_eq!(encode_uint_target(200, 1, false, false), Some(vec![200]));
         assert_eq!(encode_uint_target(256, 1, false, false), None);
         assert_eq!(encode_uint_target(-1, 1, false, false), None);
-        assert_eq!(encode_uint_target(0x1234, 2, false, true), Some(vec![0x12, 0x34]));
-        assert_eq!(encode_uint_target(0x1234, 2, false, false), Some(vec![0x34, 0x12]));
+        assert_eq!(
+            encode_uint_target(0x1234, 2, false, true),
+            Some(vec![0x12, 0x34])
+        );
+        assert_eq!(
+            encode_uint_target(0x1234, 2, false, false),
+            Some(vec![0x34, 0x12])
+        );
         assert_eq!(encode_uint_target(0x1_0000, 2, false, false), None);
         assert_eq!(
             encode_uint_target(0x0012_3456, 3, false, true),
@@ -1354,19 +1478,27 @@ mod tests {
     fn test_encode_uint_target_signed_widths_and_overflow() {
         assert_eq!(encode_uint_target(-1, 1, true, false), Some(vec![0xFF]));
         assert_eq!(encode_uint_target(200, 1, true, false), None);
-        assert_eq!(encode_uint_target(-1, 2, true, true), Some(vec![0xFF, 0xFF]));
-        assert_eq!(encode_uint_target(8_388_607, 3, true, false).unwrap().len(), 3);
+        assert_eq!(
+            encode_uint_target(-1, 2, true, true),
+            Some(vec![0xFF, 0xFF])
+        );
+        assert_eq!(
+            encode_uint_target(8_388_607, 3, true, false).unwrap().len(),
+            3
+        );
         assert_eq!(encode_uint_target(8_388_608, 3, true, false), None);
-        assert_eq!(encode_uint_target(-8_388_608, 3, true, false).unwrap().len(), 3);
+        assert_eq!(
+            encode_uint_target(-8_388_608, 3, true, false)
+                .unwrap()
+                .len(),
+            3
+        );
         assert_eq!(encode_uint_target(-8_388_609, 3, true, false), None);
         assert_eq!(
             encode_uint_target(-1, 4, true, false),
             Some(vec![0xFF, 0xFF, 0xFF, 0xFF])
         );
-        assert_eq!(
-            encode_uint_target(-1, 8, true, true),
-            Some(vec![0xFF; 8])
-        );
+        assert_eq!(encode_uint_target(-1, 8, true, true), Some(vec![0xFF; 8]));
         assert_eq!(encode_uint_target(1, 7, true, false), None);
     }
 
@@ -1414,5 +1546,29 @@ mod tests {
         let results = search_numeric_range(&data, -100, -1, 4, true, false, 4, 10);
         let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
         assert_eq!(found, vec![4]);
+    }
+
+    #[test]
+    fn test_search_numeric_range_five_byte_width_no_spurious_matches() {
+        // All-0xFF filler: a buggy 5-byte decode that silently falls back to 0 would
+        // report a match at EVERY offset since 0 is inside [0, 100]. Real decoding
+        // must reject the filler and find only the planted 5-byte LE value 50.
+        let mut data = vec![0xFFu8; 64];
+        data[10..15].copy_from_slice(&[50, 0, 0, 0, 0]);
+        let results = search_numeric_range(&data, 0, 100, 5, false, false, 1, 1000);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![10]);
+    }
+
+    #[test]
+    fn test_search_numeric_range_unsigned_u64_large_values_not_falsely_matched() {
+        // A true u64 value above i64::MAX must not be lossily clamped into matching
+        // a range capped at i64::MAX; only the genuinely in-range value matches.
+        let mut data = vec![0u8; 32];
+        data[0..8].copy_from_slice(&5000u64.to_le_bytes());
+        data[8..16].copy_from_slice(&0xFFFF_FFFF_FFFF_FFFFu64.to_le_bytes());
+        let results = search_numeric_range(&data, 1000, i64::MAX, 8, false, false, 8, 100);
+        let found: Vec<usize> = results.iter().map(|r| r.offset).collect();
+        assert_eq!(found, vec![0]);
     }
 }

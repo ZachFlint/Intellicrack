@@ -59,7 +59,7 @@ if TYPE_CHECKING:
     from intellicrack.core.hexpat_compiler import HexPatCompiler, HexPatError
     from intellicrack.core.tools import ToolRegistry
     from intellicrack.core.transform_pipeline import TransformPipeline
-    from intellicrack.core.types import HexDocumentFull
+    from intellicrack.core.types import BookmarkLike, HexDocumentFull
     from intellicrack.core.yara_scanner import YaraScanner
 
 
@@ -339,6 +339,41 @@ _CRC32_WIDTH: Final[int] = 32
 _CRC32_POLY: Final[int] = 0x04C11DB7
 _CRC32_INIT: Final[int] = 0xFFFFFFFF
 _CRC32_XOROUT: Final[int] = 0xFFFFFFFF
+
+_ANALYSIS_DOUBLE: Final[str] = "<d"
+"""How the engine packs one entropy value into its buffer accessors."""
+
+_ANALYSIS_COUNT: Final[str] = "<Q"
+"""How the engine packs one frequency count into its buffer accessors."""
+
+
+def _unpack_analysis_buffer(payload: bytes, item_format: str, accessor: str) -> tuple[Any, ...]:
+    """Decode one of the engine's packed little-endian analysis buffers.
+
+    The ``*_bytes`` accessors hand back the same numbers as their list-returning
+    counterparts without PyO3 building a Python object per element, which for
+    the digram matrix is sixty-five thousand of them. The width is checked
+    rather than assumed: a payload that is not a whole number of items means the
+    engine packed something other than what was asked for, and decoding it
+    anyway would produce plausible numbers that are silently wrong.
+
+    Args:
+        payload: Raw buffer as the engine returned it.
+        item_format: Struct format of a single element, little-endian.
+        accessor: Name of the accessor that produced the payload, for the error.
+
+    Returns:
+        tuple[Any, ...]: The decoded elements, in the order they were packed.
+
+    Raises:
+        ValueError: If the payload is not a whole number of elements wide.
+    """
+    width = struct.calcsize(item_format)
+    count, remainder = divmod(len(payload), width)
+    if remainder:
+        msg = f"{accessor} returned {len(payload)} bytes, which is not a whole number of {width}-byte elements"
+        raise ValueError(msg)
+    return struct.unpack(f"<{count}{item_format[1:]}", payload)
 
 
 def _collect_import_entries(entry: object) -> list[dict[str, Any]]:
@@ -1868,11 +1903,11 @@ class _HexEditorBridgeBase(ToolBridgeBase):
         """
         if self.document is None:
             return
-        all_bookmarks = self.document.list_bookmarks()
-        sorted_bookmarks = sorted(all_bookmarks, key=lambda b: int(b[0]))
+        all_bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
+        sorted_bookmarks = sorted(all_bookmarks, key=lambda b: b.offset)
         truncated = len(sorted_bookmarks) > bookmark_limit
         visible = sorted_bookmarks[:bookmark_limit]
-        context["bookmarks"] = [{"offset": b[0], "length": b[1], "label": b[2]} for b in visible]
+        context["bookmarks"] = [{"offset": b.offset, "length": b.length, "label": b.label} for b in visible]
         context["bookmark_count_total"] = len(all_bookmarks)
         context["bookmark_truncated"] = truncated
         if truncated:
@@ -6512,9 +6547,12 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
     async def get_entropy_map(self, block_size: int = 4096) -> list[float]:
         """Get per-block entropy values across the document.
 
-        Falls back to a Python computation that streams the document
-        block-by-block when the Rust ``entropy_map`` accessor is not
-        exposed by the backend.
+        Prefers the packed ``entropy_map_bytes`` accessor, which returns
+        the same numbers as little-endian doubles instead of as a list
+        of Python floats. Falls back to the list-returning
+        ``entropy_map``, and then to a Python computation that streams
+        the document block-by-block, so the contract holds across
+        hexcore versions that expose neither.
 
         Args:
             block_size: Block size in bytes for entropy calculation.
@@ -6524,7 +6562,9 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
 
         Raises:
             RuntimeError: If no document is open.
-            ValueError: If ``block_size`` is not positive.
+            ValueError: If ``block_size`` is not positive, or the packed
+                accessor returned a payload that is not a whole number
+                of doubles.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
@@ -6534,6 +6574,11 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
         if block_size <= 0:
             msg = f"block_size must be positive, got {block_size}"
             raise ValueError(msg)
+
+        if hasattr(self.document, "entropy_map_bytes"):
+            packed = _unpack_analysis_buffer(self.document.entropy_map_bytes(block_size), _ANALYSIS_DOUBLE, "entropy_map_bytes")
+            _logger.debug("entropy_map_computed_buffer", blocks=len(packed), block_size=block_size)
+            return [float(v) for v in packed]
 
         if hasattr(self.document, "entropy_map"):
             result = self.document.entropy_map(block_size)
@@ -6558,9 +6603,13 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
     async def get_byte_distribution(self) -> list[int]:
         """Get the 256-element byte frequency distribution.
 
-        Falls back to a Python streaming computation when the Rust
-        ``byte_distribution_full`` accessor is not exposed by the
-        backend so the contract holds across hexcore versions.
+        Prefers the packed ``byte_distribution_bytes`` accessor, which
+        returns the same counts as little-endian unsigned 64-bit
+        integers. Falls back to the list-returning
+        ``byte_distribution_full``, and then to a Python streaming
+        computation, so the contract holds across hexcore versions that
+        expose neither. Propagates ``ValueError`` when the packed
+        accessor returns a payload that is not a whole number of counts.
 
         Returns:
             list[int]: List of 256 integer counts, one per byte value.
@@ -6572,6 +6621,11 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             _logger.error("operation_failed_no_document_open")
             msg = _ERR_NO_DOCUMENT
             raise RuntimeError(msg)
+
+        if hasattr(self.document, "byte_distribution_bytes"):
+            packed = _unpack_analysis_buffer(self.document.byte_distribution_bytes(), _ANALYSIS_COUNT, "byte_distribution_bytes")
+            _logger.debug("byte_distribution_computed_buffer")
+            return [int(v) for v in packed]
 
         if hasattr(self.document, "byte_distribution_full"):
             result = self.document.byte_distribution_full()
@@ -6657,8 +6711,12 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
         (the default) the full ``matrix`` list is included so existing
         callers that consume the row-major form still work.
 
-        Falls back to a Python streaming computation when the Rust
-        ``digram_matrix`` accessor is not exposed by the backend.
+        Prefers the packed ``digram_matrix_bytes`` accessor, which is
+        where this operation gains most: the list form has PyO3 build
+        sixty-five thousand integer objects, the packed form is one
+        512 KiB buffer of little-endian unsigned 64-bit counts. Falls
+        back to the list-returning ``digram_matrix``, and then to a
+        Python streaming computation.
 
         Args:
             top_k: When positive, return only the top ``top_k``
@@ -6675,7 +6733,9 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
 
         Raises:
             RuntimeError: If no document is open.
-            ValueError: If ``top_k`` is negative.
+            ValueError: If ``top_k`` is negative, or the packed
+                accessor returned a payload that is not a whole number
+                of counts.
         """
         if self.document is None:
             _logger.error("operation_failed_no_document_open")
@@ -6686,11 +6746,17 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             msg = f"top_k must be non-negative, got {top_k}"
             raise ValueError(msg)
 
-        if hasattr(self.document, "digram_matrix"):
+        if hasattr(self.document, "digram_matrix_bytes"):
+            packed = _unpack_analysis_buffer(self.document.digram_matrix_bytes(), _ANALYSIS_COUNT, "digram_matrix_bytes")
+            raw_matrix = [int(v) for v in packed]
+            source = "buffer"
+        elif hasattr(self.document, "digram_matrix"):
             raw_matrix = [int(v) for v in self.document.digram_matrix()]
+            source = "list"
         else:
             _logger.warning("digram_matrix_native_unavailable_using_python_fallback")
             raw_matrix = self._compute_digram_matrix_python()
+            source = "python"
 
         total_pairs = sum(raw_matrix)
         unique_pairs = sum(v > 0 for v in raw_matrix)
@@ -6709,6 +6775,7 @@ class HexEditorAnalysisMixin(HexEditorSearchMixin):
             top_k=top_k,
             total_pairs=total_pairs,
             unique_pairs=unique_pairs,
+            source=source,
         )
         return result
 
@@ -7578,9 +7645,9 @@ class HexEditorBookmarkMixin(HexEditorPatternMixin):
         if self.document is None:
             return []
 
-        bookmarks = self.document.list_bookmarks()
+        bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
         _logger.debug("bookmarks_listed", count=len(bookmarks))
-        return [{"offset": b[0], "length": b[1], "label": b[2], "color": b[3]} for b in bookmarks]
+        return [{"offset": b.offset, "length": b.length, "label": b.label, "color": b.color} for b in bookmarks]
 
     async def add_highlight_rule(
         self,
@@ -8429,14 +8496,15 @@ class HexEditorExportMixin(HexEditorVAMixin):
         start = max(0, start)
 
         data = self._read_doc_bytes(start, end - start)
+        doc_bookmarks: list[BookmarkLike] = self.document.get_bookmarks()
         bookmarks = [
             {
-                "offset": b[0],
-                "length": b[1],
-                "label": str(b[2]),
-                "color": self._sanitize_html_color(str(b[3])),
+                "offset": b.offset,
+                "length": b.length,
+                "label": str(b.label),
+                "color": self._sanitize_html_color(str(b.color)),
             }
-            for b in self.document.list_bookmarks()
+            for b in doc_bookmarks
         ]
         bookmark_map = self._build_bookmark_map(bookmarks, start, end)
 
@@ -8448,10 +8516,10 @@ class HexEditorExportMixin(HexEditorVAMixin):
             lines.append("<div class='legend'><strong>Bookmarks:</strong><br>")
             seen_labels: set[str] = set()
             for bm in bookmarks:
-                label = bm["label"]
+                label = str(bm["label"])
                 if label not in seen_labels:
                     seen_labels.add(label)
-                    safe_label = html.escape(str(label), quote=True)
+                    safe_label = html.escape(label, quote=True)
                     safe_color = self._sanitize_html_color(str(bm["color"]))
                     lines.append(
                         f"<span class='legend-item' style='background:{safe_color}40;color:{safe_color}'>"
@@ -8501,8 +8569,10 @@ class HexEditorExportMixin(HexEditorVAMixin):
         actual_start = max(0, start)
 
         data = self._read_doc_bytes(actual_start, actual_end - actual_start)
-        bookmarks_raw: list[tuple[int, int, str, str]] = self.document.list_bookmarks()
-        bookmarks: list[dict[str, object]] = [{"offset": b[0], "length": b[1], "label": b[2], "color": b[3]} for b in bookmarks_raw]
+        bookmarks_raw: list[BookmarkLike] = self.document.get_bookmarks()
+        bookmarks: list[dict[str, object]] = [
+            {"offset": b.offset, "length": b.length, "label": b.label, "color": b.color} for b in bookmarks_raw
+        ]
         bookmark_map = self._build_bookmark_map(bookmarks, actual_start, actual_end)
 
         result: str = await asyncio.to_thread(

@@ -1,4 +1,6 @@
-use super::{Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry};
+use super::{
+    ConditionOp, Endianness, FieldDefinition, FieldType, StructTemplate, TemplateRegistry,
+};
 
 pub fn register_templates(registry: &mut TemplateRegistry) {
     registry.register(zip_local_file_header());
@@ -86,7 +88,10 @@ fn zip_central_directory() -> StructTemplate {
         version: None,
         author: None,
         category: Some("ZIP".to_string()),
-        magic_detection: None,
+        magic_detection: Some(super::MagicDetection {
+            offset: 0,
+            bytes: vec![0x50, 0x4B, 0x01, 0x02],
+        }),
         fields: vec![
             fd(
                 "signature",
@@ -161,7 +166,10 @@ fn zip_end_of_central_directory() -> StructTemplate {
         version: None,
         author: None,
         category: Some("ZIP".to_string()),
-        magic_detection: None,
+        magic_detection: Some(super::MagicDetection {
+            offset: 0,
+            bytes: vec![0x50, 0x4B, 0x05, 0x06],
+        }),
         fields: vec![
             fd(
                 "signature",
@@ -315,13 +323,14 @@ fn zip64_extra_field() -> StructTemplate {
     StructTemplate {
         name: "ZIP64_EXTRA_FIELD".to_string(),
         description: "ZIP64 Extended Information Extra Field (header ID 0x0001). \
-                      All fields little-endian. Fields are CONDITIONAL on the corresponding \
-                      value in the local-file or central-directory entry being the sentinel \
-                      0xFFFFFFFF (32-bit values) or 0xFFFF (16-bit disk_number_start). \
-                      This template represents the fully-populated form where all four \
-                      conditional fields are present (data_size = 28). The evaluator or \
-                      caller must interpret the presence of each field based on the entry's \
-                      sentinel values per APPNOTE.TXT section 4.5.3."
+                      All fields little-endian. Per APPNOTE.TXT section 4.5.3, the four \
+                      conditional fields are only present in order up to data_size bytes: \
+                      original_size requires data_size >= 8, compressed_size requires \
+                      data_size >= 16, relative_header_offset requires data_size >= 24, and \
+                      disk_start_number requires data_size >= 28. Each field is gated on the \
+                      declared data_size so a short block (e.g. data_size = 8, only \
+                      original_size present) does not read past its own boundary into \
+                      unrelated trailing bytes."
             .to_string(),
         default_endianness: Endianness::Little,
         version: None,
@@ -340,24 +349,60 @@ fn zip64_extra_field() -> StructTemplate {
                 "Size of this extra field block (excluding header_id and data_size)",
             ),
             fd(
-                "original_size",
-                FieldType::UInt64,
-                "Original uncompressed file size (present if entry uncompressed_size == 0xFFFFFFFF)",
+                "original_size_present",
+                FieldType::Conditional {
+                    condition_field: "data_size".to_string(),
+                    condition_value: 8,
+                    condition_op: ConditionOp::Ge,
+                    fields: vec![fd(
+                        "original_size",
+                        FieldType::UInt64,
+                        "Original uncompressed file size (present if entry uncompressed_size == 0xFFFFFFFF)",
+                    )],
+                },
+                "Present when data_size >= 8",
             ),
             fd(
-                "compressed_size",
-                FieldType::UInt64,
-                "Compressed file size (present if entry compressed_size == 0xFFFFFFFF)",
+                "compressed_size_present",
+                FieldType::Conditional {
+                    condition_field: "data_size".to_string(),
+                    condition_value: 16,
+                    condition_op: ConditionOp::Ge,
+                    fields: vec![fd(
+                        "compressed_size",
+                        FieldType::UInt64,
+                        "Compressed file size (present if entry compressed_size == 0xFFFFFFFF)",
+                    )],
+                },
+                "Present when data_size >= 16",
             ),
             fd(
-                "relative_header_offset",
-                FieldType::UInt64,
-                "Offset of local header record (present if entry local_header_offset == 0xFFFFFFFF)",
+                "relative_header_offset_present",
+                FieldType::Conditional {
+                    condition_field: "data_size".to_string(),
+                    condition_value: 24,
+                    condition_op: ConditionOp::Ge,
+                    fields: vec![fd(
+                        "relative_header_offset",
+                        FieldType::UInt64,
+                        "Offset of local header record (present if entry local_header_offset == 0xFFFFFFFF)",
+                    )],
+                },
+                "Present when data_size >= 24",
             ),
             fd(
-                "disk_start_number",
-                FieldType::UInt32,
-                "Number of the disk on which this file starts (present if entry disk_number_start == 0xFFFF)",
+                "disk_start_number_present",
+                FieldType::Conditional {
+                    condition_field: "data_size".to_string(),
+                    condition_value: 28,
+                    condition_op: ConditionOp::Ge,
+                    fields: vec![fd(
+                        "disk_start_number",
+                        FieldType::UInt32,
+                        "Number of the disk on which this file starts (present if entry disk_number_start == 0xFFFF)",
+                    )],
+                },
+                "Present when data_size >= 28",
             ),
         ],
     }
@@ -458,6 +503,35 @@ mod tests {
         assert!(list.iter().any(|(name, _)| name == "ZIP64_EXTRA_FIELD"));
         assert!(list.iter().any(|(name, _)| name == "ZIP_DATA_DESCRIPTOR"));
         assert!(list.iter().any(|(name, _)| name == "ZIP64_DATA_DESCRIPTOR"));
+    }
+
+    /// Gate for finding #55: `ZIP_CENTRAL_DIRECTORY` and
+    /// `ZIP_END_OF_CENTRAL_DIRECTORY` each have a genuine unique 4-byte
+    /// signature per APPNOTE.TXT and must declare `magic_detection` like
+    /// every other ZIP record type with a stable signature, so a
+    /// magic/signature scanner can locate them at an arbitrary offset.
+    ///
+    /// Mutation caught: reverting either `magic_detection` back to `None`
+    /// makes the corresponding `.unwrap()` panic.
+    #[test]
+    fn test_central_directory_and_eocd_have_magic_detection() {
+        let reg = TemplateRegistry::new();
+
+        let cd = reg.get("ZIP_CENTRAL_DIRECTORY").unwrap();
+        let cd_magic = cd
+            .magic_detection
+            .as_ref()
+            .expect("ZIP_CENTRAL_DIRECTORY must declare magic_detection");
+        assert_eq!(cd_magic.offset, 0);
+        assert_eq!(cd_magic.bytes, vec![0x50, 0x4B, 0x01, 0x02]);
+
+        let eocd = reg.get("ZIP_END_OF_CENTRAL_DIRECTORY").unwrap();
+        let eocd_magic = eocd
+            .magic_detection
+            .as_ref()
+            .expect("ZIP_END_OF_CENTRAL_DIRECTORY must declare magic_detection");
+        assert_eq!(eocd_magic.offset, 0);
+        assert_eq!(eocd_magic.bytes, vec![0x50, 0x4B, 0x05, 0x06]);
     }
 
     fn put_u16_le(buf: &mut Vec<u8>, v: u16) {
@@ -562,6 +636,61 @@ mod tests {
 
         let total_size: usize = fields.iter().map(|f| f.size).sum();
         assert_eq!(total_size, 32);
+    }
+
+    /// Gate for finding #56: when `data_size == 8` (only `original_size`
+    /// present, the common case for a local-file-header zip64 extra field),
+    /// the template must stop after `original_size` and must NOT read the
+    /// following unrelated bytes as `compressed_size`,
+    /// `relative_header_offset`, or `disk_start_number`.
+    ///
+    /// Mutation caught: reverting the four trailing fields from
+    /// `Conditional` back to unconditional `fd(...)` calls makes
+    /// `fields.len()` become 6 instead of 3, `total_size` become 32 instead
+    /// of 12, and `compressed_size` would be found with a fabricated value
+    /// derived from the poison/NTFS-header bytes rather than being absent.
+    #[test]
+    fn test_zip64_extra_field_partial_data_size_stops_at_boundary() {
+        let mut data = Vec::with_capacity(32);
+        put_u16_le(&mut data, 0x0001); // header_id
+        put_u16_le(&mut data, 8); // data_size = 8: only original_size present
+        put_u64_le(&mut data, 123_456_789); // original_size
+
+        // Poison bytes: an unrelated subsequent extra-field record (e.g. an
+        // NTFS extra field, header_id 0x000A) that must NOT be consumed or
+        // mislabeled as compressed_size/relative_header_offset/disk_start_number.
+        put_u16_le(&mut data, 0x000A);
+        put_u16_le(&mut data, 0xDEAD);
+        put_u64_le(&mut data, 0xFFFF_FFFF_FFFF_FFFF);
+        put_u32_le(&mut data, 0xBAAD_F00D);
+
+        assert_eq!(data.len(), 12 + 16);
+
+        let reg = TemplateRegistry::new();
+        let fields = reg.apply("ZIP64_EXTRA_FIELD", &data, 0).unwrap();
+
+        assert_eq!(
+            fields.len(),
+            3,
+            "only header_id, data_size, and original_size may be present when data_size == 8"
+        );
+        assert_eq!(fields[0].name, "header_id");
+        assert_eq!(fields[1].name, "data_size");
+        assert_eq!(fields[2].name, "original_size");
+        assert!(fields[2].display_value.starts_with("123456789 "));
+
+        assert!(
+            !fields.iter().any(|f| f.name == "compressed_size"),
+            "compressed_size must not be fabricated from bytes belonging to the next extra field"
+        );
+        assert!(!fields.iter().any(|f| f.name == "relative_header_offset"));
+        assert!(!fields.iter().any(|f| f.name == "disk_start_number"));
+
+        let total_size: usize = fields.iter().map(|f| f.size).sum();
+        assert_eq!(
+            total_size, 12,
+            "the template must consume exactly header_id + data_size + original_size (12 bytes)"
+        );
     }
 
     #[test]

@@ -947,9 +947,7 @@ class TestListHighlightsSeedsWidget:
 
         label_a = build_rule_label(rule_a, "byte_value", {"value": 0x10}, "#AABBCC")
         label_b = build_rule_label(rule_b, "byte_range", {"min": 0x20, "max": 0x30}, "#DDEEFF")
-        item_texts = {
-            item.text() for i in range(host.rules_list.count()) if (item := host.rules_list.item(i)) is not None
-        }
+        item_texts = {item.text() for i in range(host.rules_list.count()) if (item := host.rules_list.item(i)) is not None}
         assert label_a in item_texts, f"List widget must contain label for rule A.\n  expected: {label_a!r}\n  found: {item_texts!r}"
         assert label_b in item_texts, f"List widget must contain label for rule B.\n  expected: {label_b!r}\n  found: {item_texts!r}"
 
