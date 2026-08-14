@@ -551,10 +551,16 @@ class MainWindow(QMainWindow):
         self.model_combo.setCurrentIndex(self._config.preferred_model_index(provider, models))
 
     def wire_script_manager(self, manager: object, validator: object | None = None) -> None:
-        """Wire a script manager and validator into the UI.
+        """Wire a script manager and validator into the UI and the orchestrator.
 
-        Stores references and forwards to the tool panel for
-        deferred backend wiring.
+        The orchestrator is re-pointed at this manager, replacing the fallback
+        :meth:`_configure_orchestrator` built during construction. Without
+        that, the two halves of the scripting surface own separate managers
+        over separate directories: the Scripts panel reads and writes the one
+        wired here, while the orchestrator records every tool execution into
+        its own. A script the user authored is then absent from the
+        orchestrator's registry, so ``record_execution`` finds nothing to
+        record against and the run is dropped.
 
         Args:
             manager: ScriptManager instance.
@@ -562,6 +568,10 @@ class MainWindow(QMainWindow):
         """
         self._script_manager = manager
         self._script_validator = validator
+        if isinstance(manager, ScriptManager):
+            self._orchestrator.set_script_manager(manager)
+        else:
+            _logger.warning("script_manager_wired_unrecognised_type", manager_type=type(manager).__name__)
         self.tool_panel.wire_script_backend(manager, validator)
         _logger.debug("script_manager_wired")
 
