@@ -55,6 +55,7 @@ from intellicrack.core.types import (
     BinaryInfo,
     BridgeAnalysisSummary,
     ConfigurationError,
+    ConfirmationLevel,
     Message,
     ModelInfo,
     ProviderCredentials,
@@ -1290,6 +1291,34 @@ class MainWindow(QMainWindow):
 
         self._apply_restored_auto_approve()
 
+    def _effective_confirmation_level(self) -> ConfirmationLevel:
+        """Resolve the confirmation level the orchestrator should be running at.
+
+        The toolbar's auto-approve button is an override, not a second setting:
+        while it is on every call is approved, and while it is off the level is
+        whatever the user chose in Preferences. Hardcoding ``DESTRUCTIVE`` for
+        the off state discarded a persisted ``ALL`` or ``NONE`` choice every
+        time the button was toggled back.
+
+        Returns:
+            ConfirmationLevel: ``NONE`` while auto-approve is on, otherwise the
+            configured level.
+        """
+        if self._auto_approve_btn.isChecked():
+            return ConfirmationLevel.NONE
+        return self._config.confirmation_level
+
+    def _apply_confirmation_level(self, event: str) -> None:
+        """Push the effective confirmation level onto the orchestrator.
+
+        Args:
+            event: Structured-log event name describing what triggered the
+                update.
+        """
+        level = self._effective_confirmation_level()
+        self._orchestrator.set_confirmation_level(level)
+        _logger.info(event, confirmation_level=level.value, auto_approve=self._auto_approve_btn.isChecked())
+
     def _apply_restored_auto_approve(self) -> None:
         """Propagate the restored auto-approve toggle state to the orchestrator.
 
@@ -1297,12 +1326,7 @@ class MainWindow(QMainWindow):
         ``_on_auto_approve_toggled`` never fires during startup and the orchestrator keeps its default confirmation level. This applies the
         button's current state once the orchestrator exists so a restored "Auto-approve: ON" actually suppresses prompts.
         """
-        types_module = importlib.import_module("intellicrack.core.types")
-        if self._auto_approve_btn.isChecked():
-            self._orchestrator.set_confirmation_level(types_module.ConfirmationLevel.NONE)
-        else:
-            self._orchestrator.set_confirmation_level(types_module.ConfirmationLevel.DESTRUCTIVE)
-        _logger.info("auto_approve_restored", enabled=self._auto_approve_btn.isChecked())
+        self._apply_confirmation_level("auto_approve_restored")
 
     async def _refresh_tool_status(self) -> dict[str, ToolStatusEntry]:
         """Refresh tool installation status asynchronously.
@@ -3207,13 +3231,16 @@ class MainWindow(QMainWindow):
         dialog.settings_changed.connect(self._on_preferences_changed)
         if dialog.exec():
             self._config = dialog.get_config()
+            self._apply_confirmation_level("preferences_confirmation_level_applied")
             self.status_update.emit("Preferences saved")
 
     def _on_preferences_changed(self, new_config: Config) -> None:
         """Handle preferences applied without dialog acceptance.
 
         Re-applies the selected UI theme so changing it in the Preferences
-        dialog takes effect immediately, then refreshes model state.
+        dialog takes effect immediately, pushes the chosen confirmation level
+        onto the orchestrator (the dialog only persists it; without this the
+        setting has no runtime effect), then refreshes model state.
 
         Args:
             new_config: The freshly built :class:`Config` emitted by the dialog
@@ -3224,6 +3251,7 @@ class MainWindow(QMainWindow):
         if theme_changed:
             _logger.info("preferences_theme_changed", theme=new_config.ui.theme)
             self._theme_manager.apply_theme(new_config.ui.theme)
+        self._apply_confirmation_level("preferences_confirmation_level_applied")
         self._initialize_model_cache()
         _logger.info("preferences_applied")
         self.status_update.emit("Preferences applied")
@@ -4024,16 +4052,16 @@ class MainWindow(QMainWindow):
             checked: Whether auto-approve is enabled.
         """
         _logger.debug("auto_approve_button_toggled", checked=checked)
-        types_module = importlib.import_module("intellicrack.core.types")
 
         self._auto_approve_btn.setText(f"Auto-approve: {'ON' if checked else 'OFF'}")
+        self._apply_confirmation_level("auto_approve_toggled")
 
         if checked:
-            self._orchestrator.set_confirmation_level(types_module.ConfirmationLevel.NONE)
             self.status_update.emit("Auto-approve enabled - all tool calls will be approved automatically")
         else:
-            self._orchestrator.set_confirmation_level(types_module.ConfirmationLevel.DESTRUCTIVE)
-            self.status_update.emit("Auto-approve disabled - destructive operations require confirmation")
+            self.status_update.emit(
+                f"Auto-approve disabled - confirmation level: {self._config.confirmation_level.value}",
+            )
 
         QSettings("Intellicrack", "MainWindow").setValue("auto_approve", checked)
 
