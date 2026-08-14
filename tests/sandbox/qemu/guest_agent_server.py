@@ -1024,6 +1024,16 @@ class IntellicrackAgentServer(_LoopbackServer):
     poll slices on a request that is going to succeed - which is the only way
     to observe what those slices cost a caller, or a log.
 
+    ``serve_delay`` models the agent's own service cadence, which is not the
+    same thing. ``agent.ps1`` is single-threaded: every iteration of its main
+    loop runs a full process and socket sweep and a one-second sleep before it
+    looks at its listener again, so a connection is established by the guest's
+    kernel - and by the SLIRP hostfwd in front of it - long before the agent
+    reads a byte of it. Nothing about that connection is unhealthy; it is
+    simply not answered yet. A host that treats its own per-attempt patience as
+    the agent's deadline abandons such a connection while the agent is still
+    working towards it, which is what S18-D04 was.
+
     ``drop_requests`` models the harder half of that failure: the request
     crossed the channel and the agent took delivery of it, and the connection
     died before any reply could come back. The command is recorded in
@@ -1061,6 +1071,7 @@ class IntellicrackAgentServer(_LoopbackServer):
         close_after_replies: int = 0,
         drop_requests: int = 0,
         reply_delay: float = 0.0,
+        serve_delay: float = 0.0,
     ) -> None:
         """Initialise the server with an empty request log.
 
@@ -1089,10 +1100,17 @@ class IntellicrackAgentServer(_LoopbackServer):
                 per connection, so a later connection answers normally.
             reply_delay: Seconds the agent spends running each command before
                 its reply is written, modelling work that takes real time in
-                the guest. The readiness handshake is never delayed, because a
-                guest agent answers it without running anything.
+                the guest. The readiness handshake is never delayed by this
+                knob, because a guest agent answers it without running anything.
+            serve_delay: Seconds an established connection waits before the
+                agent reads a byte of it, modelling the monitoring sweep its
+                single-threaded main loop finishes before it services its
+                listener again. Everything on that connection is held back,
+                the readiness handshake included, because the agent has not
+                looked at the socket yet.
         """
         super().__init__(listen_delay=listen_delay, port=port)
+        self._serve_delay = serve_delay
         self.requests = []
         self.dropped_requests = []
         self.accepted = 0
@@ -1119,6 +1137,9 @@ class IntellicrackAgentServer(_LoopbackServer):
         if self._dead_connections > 0:
             self._dead_connections -= 1
             return
+
+        if self._serve_delay > 0.0:
+            await asyncio.sleep(self._serve_delay)
 
         replies = 0
         while True:
