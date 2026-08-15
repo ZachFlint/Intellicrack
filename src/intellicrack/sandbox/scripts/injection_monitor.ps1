@@ -536,7 +536,13 @@ try {
     }
 
     $dynamicParser.add_All($threatIntelHandler)
-    $source.UnhandledEvents.add_All($threatIntelHandler)
+    # UnhandledEvents is a .NET *event* on TraceEventDispatcher, not a parser
+    # property. PowerShell surfaces events only as add_/remove_ methods, so
+    # reading $source.UnhandledEvents always yielded $null and the .add_All()
+    # on it threw with every provider enabled and every kernel handler already
+    # registered, one statement short of Process() - the Injections tab was
+    # empty on every run (S18-D08). The event accessor takes the delegate.
+    $source.add_UnhandledEvents($threatIntelHandler)
 
     $script:CurrentInjectionSource = $source
     $script:StopWatchTimer = New-Object System.Timers.Timer
@@ -562,7 +568,12 @@ try {
         -SourceIdentifier $script:StopWatchSubscriberId -Action $stopWatchAction
     $script:StopWatchTimer.Start()
 
-    [void]$source.Process()
+    # Pumped through psbase: PowerShell's adapted-member binder refuses this one
+    # call ("result type 'System.Boolean' ... not compatible with ... 'System.Object'
+    # expected by the call site") on both PowerShell editions and both source
+    # types, while the Boolean EnableProvider above binds normally. psbase
+    # reaches the .NET object directly and events are delivered (S18-D08).
+    [void]$source.psbase.Process()
 } catch {
     $ts = Get-Date -Format 'o'
     $msg = ($_.Exception.Message -replace '\|', '_')

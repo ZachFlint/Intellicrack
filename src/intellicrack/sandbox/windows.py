@@ -52,6 +52,7 @@ from intellicrack.sandbox.log_helpers import (
     scannable_output_files,
 )
 from intellicrack.sandbox.log_parsers import (
+    collect_collector_outages,
     parse_api_trace_log,
     parse_clipboard_log,
     parse_dll_log,
@@ -2104,6 +2105,7 @@ class WindowsSandbox(SandboxBase):
         report.resource_samples = await parse_resource_log(shared)
         report.clipboard_events = await parse_clipboard_log(shared)
         report.api_calls = await parse_api_trace_log(shared)
+        report.collector_outages = await collect_collector_outages(shared)
 
     async def copy_to_sandbox(self, source: Path, dest: str) -> None:
         """Copy a file into the sandbox.

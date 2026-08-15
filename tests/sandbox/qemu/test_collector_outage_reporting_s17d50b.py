@@ -37,7 +37,7 @@ import pytest
 
 from intellicrack.core.subprocess_compat import PIPE, Popen, TimeoutExpired
 from intellicrack.sandbox.base import SandboxConfig
-from intellicrack.sandbox.log_parsers import parse_collector_lifecycle
+from intellicrack.sandbox.log_parsers import LIFECYCLE_LOG_MIN_PARTS, parse_api_trace_collector_errors, parse_collector_lifecycle
 from intellicrack.sandbox.qemu import GuestOS, QEMUConfig, QEMUSandbox
 
 
@@ -56,6 +56,16 @@ _LOGS_DIR_NAME: Final[str] = "logs"
 _COLLECTED_DIR_NAME: Final[str] = "collected"
 _API_TRACE_SCRIPT_NAME: Final[str] = "api_trace.ps1"
 _INJECTION_MONITOR_SCRIPT_NAME: Final[str] = "injection_monitor.ps1"
+
+_SCRIPT_SUFFIX: Final[str] = ".ps1"
+_LIFECYCLE_SUFFIX: Final[str] = ".lifecycle.log"
+_LIFECYCLE_STARTED: Final[str] = "started"
+_LIFECYCLE_STOPPED: Final[str] = "stopped"
+
+# The stage api_trace.ps1's outermost catch reports under. Every failure it can
+# suffer because of the machine it runs on is caught nearer the statement and
+# named for that step, so this stage means the script itself faulted.
+_UNGUARDED_STAGE: Final[str] = "session"
 
 _POLL_S: Final[float] = 0.5
 _PROCESS_EXIT_WAIT_S: Final[float] = 30.0
@@ -370,10 +380,21 @@ class TestARealDeadRecorderIsReportedAsAnOutageNotARecord:
         assert "never reported starting" in by_collector["injection_monitor"]["reason"]
         assert by_collector["injection_monitor"]["exit_code"] is None
 
+        # S18-D09 moved this row rather than dropping it. api_trace.ps1 writes
+        # its own failure into its data log for lack of any other channel, and
+        # reading that back as an API call reported a collector which captured
+        # nothing at all as having observed API activity. The row must not reach
+        # the tab, and its text must still reach the report - on the outage.
         api_calls = await read_sandbox.collect_api_calls()
-        assert any(call["api_name"] == "ERROR" for call in api_calls), (
+        assert all(call["api_name"] != "ERROR" for call in api_calls), (
+            f"the collector's own failure row was read back as an API call: {api_calls!r}"
+        )
+        assert "unavailable" in by_collector["api_trace"]["reason"], (
             "the fabricated ERROR row api_trace.ps1 wrote to its data log for lack of any other channel "
-            f"should still be readable alongside the new outage signal, not silently dropped: {api_calls!r}"
+            f"was dropped instead of being carried on the outage: {by_collector['api_trace']!r}"
+        )
+        assert "TraceEvent" in by_collector["api_trace"]["reason"], (
+            f"the collector's own failure text was lost: {by_collector['api_trace']!r}"
         )
 
 
@@ -391,28 +412,68 @@ class _FullyStagedWindowsAgentSandbox(QEMUSandbox):
         await self._create_guest_agent_script()
 
 
+def _lifecycle_states(logs_dir: Path, collectors: tuple[str, ...]) -> dict[str, tuple[bool, str | None]]:
+    """Read back what each collector itself recorded about its own life.
+
+    This is the ground truth the report has to agree with, taken from the
+    lines the real scripts wrote rather than from any expectation about
+    which of them survives a given machine.
+
+    Args:
+        logs_dir: Directory the collectors were pointed at with ``-LogDir``.
+        collectors: Collector names whose lifecycle logs to read.
+
+    Returns:
+        dict[str, tuple[bool, str | None]]: Per collector, whether it ever
+        reported starting and the detail of the last stop it reported, or
+        ``None`` if it reported none.
+    """
+    states: dict[str, tuple[bool, str | None]] = {}
+    for collector in collectors:
+        log_path = logs_dir / f"{collector}{_LIFECYCLE_SUFFIX}"
+        started = False
+        stop_detail: str | None = None
+        if log_path.is_file():
+            for line in log_path.read_text(encoding="utf-8-sig").splitlines():
+                parts = line.split("|", LIFECYCLE_LOG_MIN_PARTS - 1)
+                if len(parts) < LIFECYCLE_LOG_MIN_PARTS or parts[1] != collector:
+                    continue
+                if parts[2] == _LIFECYCLE_STARTED:
+                    started = True
+                elif parts[2] == _LIFECYCLE_STOPPED:
+                    stop_detail = parts[3]
+        states[collector] = (started, stop_detail)
+    return states
+
+
 @pytest.mark.asyncio
-class TestARealDeadRecorderIsReportedAsAnOutageEvenWithAssembliesStaged:
+class TestTheOutageReportMatchesTheRealStagedBundlesLifecycle:
     """The S17-D50(b) outage guarantee must hold against today's real, fully-staged agent bundle.
 
     S17-D50(a) fixes assembly *discovery* and *load*: with every vendored
     assembly staged, both scripts' dependency resolver (see
     ``test_traceevent_provisioning_s17d50a.py::TestAddTypeLoadsTheVendoredAssemblyUnderTheDesktopCLR``)
-    lets ``Add-Type`` succeed, so each real ETW-based collector now reaches
-    the point of creating an actual kernel/session-based ETW trace inside
-    this container - and that step itself still fails there (a real ETW
-    session needs privilege this sandboxed environment does not grant), so
-    both collectors still end up reported as outages, just past a later
-    stage than before the load fix. This is the strongest gate for
-    S17-D50(b): it proves the outage guarantee holds against production's
-    actual current behaviour - the real
+    lets ``Add-Type`` succeed, so each real ETW-based collector reaches the
+    point of creating an actual ETW trace. Whether that step then succeeds
+    is a property of the machine - it needs privilege some environments
+    grant and others do not - so this gate never assumes an outcome for
+    either collector. It asserts the guarantee itself, in both directions:
+    every collector that recorded stopping, or never recorded starting, is
+    reported as an outage, and every collector still watching is not. The
+    old form of this test asserted that both collectors *died*, which was
+    only ever true because ``api_trace.ps1`` crashed unconditionally on a
+    null receiver (S18-D08); with that crash fixed, demanding a dead
+    recorder would be demanding the defect back.
+
+    This is the strongest gate for S17-D50(b): it proves the outage report
+    agrees with production's actual current behaviour - the real
     :meth:`QEMUSandbox._create_guest_agent_script` staging everything it
-    stages today - not only against the deliberately DLL-less staging
-    variant above, which isolates outage detection from whatever
-    S17-D50(a) does or does not fully resolve.
+    stages today - not only with the deliberately DLL-less staging variant
+    above, which isolates outage detection from whatever S17-D50(a) does or
+    does not fully resolve.
     """
 
-    async def test_fully_staged_recorders_still_surface_as_outages_not_records(self, tmp_path: Path) -> None:
+    async def test_the_report_agrees_with_what_the_staged_recorders_recorded(self, tmp_path: Path) -> None:
         """Run both real recorders against the real, fully-staged bundle and read the report back.
 
         Args:
@@ -429,15 +490,18 @@ class TestARealDeadRecorderIsReportedAsAnOutageEvenWithAssembliesStaged:
         logs_dir = tmp_path / _COLLECTED_DIR_NAME / _LOGS_DIR_NAME
         logs_dir.mkdir(parents=True, exist_ok=True)
 
-        api_trace_stdout, api_trace_stderr = await _run_to_completion(
-            powershell,
-            share / _MONITOR_DIR_NAME / _API_TRACE_SCRIPT_NAME,
-            logs_dir,
-        )
-        injection_stdout, injection_stderr = await _run_to_completion(
-            powershell,
-            share / _MONITOR_DIR_NAME / _INJECTION_MONITOR_SCRIPT_NAME,
-            logs_dir,
+        monitor_dir = share / _MONITOR_DIR_NAME
+        outputs: dict[str, tuple[str, str]] = {}
+        for script_name in (_API_TRACE_SCRIPT_NAME, _INJECTION_MONITOR_SCRIPT_NAME):
+            outputs[script_name] = await _run_to_completion(powershell, monitor_dir / script_name, logs_dir)
+
+        collectors = tuple(name.removesuffix(_SCRIPT_SUFFIX) for name in outputs)
+        states = _lifecycle_states(logs_dir, collectors)
+
+        never_started = [collector for collector, (started, _) in states.items() if not started]
+        assert not never_started, (
+            f"the fully-staged bundle did not get {never_started} as far as their own first line, so this run "
+            f"proves nothing about outage reporting; outputs={outputs!r}"
         )
 
         read_sandbox = _ReportReadingSandbox(config=SandboxConfig(), qemu_config=QEMUConfig(guest_os=GuestOS.WINDOWS))
@@ -445,19 +509,34 @@ class TestARealDeadRecorderIsReportedAsAnOutageEvenWithAssembliesStaged:
         outages = await read_sandbox.collect_outages()
         by_collector = {outage["collector"]: outage for outage in outages}
 
-        assert "api_trace" in by_collector, (
-            f"api_trace.ps1's early exit against the real staged bundle was not surfaced as a collector outage; "
-            f"outages={outages!r} stdout={api_trace_stdout!r} stderr={api_trace_stderr!r}"
-        )
-        assert by_collector["api_trace"]["exit_code"] not in {None, 0}, (
-            f"a live api_trace failure must carry a non-zero exit code, not be reported as healthy: {by_collector['api_trace']!r}"
-        )
+        for collector, (_, stop_detail) in states.items():
+            assert (collector in by_collector) is (stop_detail is not None), (
+                f"{collector} recorded stop_detail={stop_detail!r} but the report "
+                f"{'omitted' if stop_detail is not None else 'invented'} an outage for it; outages={outages!r}"
+            )
+            if stop_detail is not None:
+                assert stop_detail in by_collector[collector]["reason"], (
+                    f"{collector}'s outage dropped the detail it recorded for its own death: "
+                    f"{by_collector[collector]!r} does not carry {stop_detail!r}"
+                )
 
-        assert "injection_monitor" in by_collector, (
-            f"injection_monitor.ps1's failure to ever start against the real staged bundle was not surfaced as a "
-            f"collector outage; outages={outages!r} stdout={injection_stdout!r} stderr={injection_stderr!r}"
+        # S18-D08: every step of api_trace.ps1 that can fail because of the
+        # machine is guarded and names its own stage, so the outer catch-all
+        # only ever fires for a fault in the script itself - it is how the
+        # null-receiver crash that emptied the API Calls tab on every run
+        # reached the log. An environment that cannot host an ETW session
+        # fails at a named stage instead, which is why this holds anywhere.
+        api_trace_script = (monitor_dir / _API_TRACE_SCRIPT_NAME).read_text(encoding="utf-8")
+        assert f"-Stage '{_UNGUARDED_STAGE}'" in api_trace_script, (
+            f"api_trace.ps1 no longer reports its unguarded failures under stage {_UNGUARDED_STAGE!r}, "
+            "so this assertion can no longer observe one"
         )
-        assert by_collector["injection_monitor"]["exit_code"] is None
+        failures = await parse_api_trace_collector_errors(tmp_path / _COLLECTED_DIR_NAME)
+        unguarded = [failure for failure in failures if failure.startswith(f"{_UNGUARDED_STAGE}:")]
+        assert not unguarded, (
+            f"api_trace.ps1 failed somewhere it does not guard, which is a fault in the script rather than a "
+            f"limitation of this machine: {unguarded!r}"
+        )
 
 
 @pytest.mark.asyncio
