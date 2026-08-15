@@ -85,6 +85,7 @@ from intellicrack.sandbox.log_parsers import (
     parse_resource_log,
     parse_service_log,
 )
+from intellicrack.sandbox.telemetry_blocking import build_windows_blocking_command, parse_blocking_result
 
 
 if TYPE_CHECKING:
@@ -165,6 +166,7 @@ COLLECTOR_DIAGNOSTIC_LOG_NAMES: Final[tuple[str, ...]] = (
     "dll_monitor.diag.log",
     "kernel_object_monitor.lifecycle.log",
     "kernel_object_monitor.errors.log",
+    "monitor_launcher.log",
     "agent_errors.log",
 )
 _LOGS_STABLE_POLL_DELAY_S: Final[float] = 0.25
@@ -512,6 +514,22 @@ _LINUX_SHELL_COMMAND_FLAG: Final[str] = "-c"
 _USB_CONTROLLER_ID: Final[str] = "icusb"
 
 _SHARED_MOUNT_TAG: Final[str] = "shared"
+# Mount tag and fsdev id prefixes of the folders chosen in Sandbox Settings.
+# They are different volumes from the per-instance work share above and must
+# never collide with it, nor - once more than one folder is configured - with
+# each other, so each is suffixed with its index.
+_CONFIGURED_SHARE_MOUNT_TAG: Final[str] = "icshared"
+_CONFIGURED_SHARE_FSDEV_ID: Final[str] = "fsdev"
+# The directory inside the guest's work area whose contents are mirrored back
+# into the configured folder, and the subdirectory of that folder they land in.
+# Naming the destination keeps the analyst's own files distinguishable from
+# whatever the sample wrote.
+_GUEST_OUTPUT_DIR_NAME: Final[str] = "output"
+_MIRRORED_OUTPUT_DIR_NAME: Final[str] = "intellicrack-output"
+# Seconds allowed for the in-guest telemetry blocking pass, and how much of a
+# failed pass's stderr is carried into the log line.
+_TELEMETRY_BLOCK_TIMEOUT: Final[float] = 180.0
+_TELEMETRY_ERROR_EXCERPT: Final[int] = 500
 _GUEST_VFAT_FS_TYPE: Final[str] = "vfat"
 _GUEST_9P_FS_TYPE: Final[str] = "9p"
 _GUEST_VFAT_MOUNT_OPTIONS: Final[str] = "ro"
@@ -3125,6 +3143,10 @@ class QEMUSandbox(SandboxBase):
             drive letter the guest really assigned.
         GUEST_SHARED_PATH_LINUX: Default shared-volume mount point on a Linux
             guest.
+        GUEST_OUTPUT_DIR_NAME: Directory inside the guest's work area whose
+            contents are brought back to the host after a run.
+        MIRRORED_OUTPUT_DIR_NAME: Subdirectory of the folder chosen in Sandbox
+            Settings that guest output is mirrored into.
     """
 
     QEMU_EXE: Final[str] = "qemu-system-x86_64"
@@ -3132,6 +3154,8 @@ class QEMUSandbox(SandboxBase):
     TOOLS_PATH: Final[Path] = get_project_root() / "tools" / "qemu"
     GUEST_SHARED_PATH_WINDOWS: Final[str] = _GUEST_SHARED_ROOT_WINDOWS
     GUEST_SHARED_PATH_LINUX: Final[str] = _GUEST_SHARED_ROOT_LINUX
+    GUEST_OUTPUT_DIR_NAME: Final[str] = _GUEST_OUTPUT_DIR_NAME
+    MIRRORED_OUTPUT_DIR_NAME: Final[str] = _MIRRORED_OUTPUT_DIR_NAME
 
     _reserved_host_ports: ClassVar[set[int]] = set()
     _port_reservation_lock: ClassVar[threading.Lock] = threading.Lock()
@@ -3156,6 +3180,12 @@ class QEMUSandbox(SandboxBase):
         self._agent: GuestAgentClient | None = None
         self._temp_dir: Path | None = None
         self._shared_folder: Path | None = None
+        # The folder chosen in Sandbox Settings, captured before anything can
+        # overwrite it. build_qemu_config puts it on QEMUConfig.shared_folder,
+        # but _build_qemu_command reassigns that field to the per-instance work
+        # share on every launch, so the field itself is not a durable record of
+        # what the user asked for.
+        self._settings_shared_folder: Path | None = self._qemu_config.shared_folder
         self._accelerator: AcceleratorType = AcceleratorType.TCG
         self._qemu_path: Path | None = None
         self._pidfile_path: Path | None = None
@@ -5110,6 +5140,103 @@ class QEMUSandbox(SandboxBase):
             f"virtio-9p-pci,fsdev=fsdev0,mount_tag={_SHARED_MOUNT_TAG}",
         ]
 
+    def _configured_shares(self) -> list[tuple[Path, bool]]:
+        r"""Return the host folders chosen in Sandbox Settings.
+
+        The dialog's "Shared folder" and the "Read only" box beside it arrive
+        as :attr:`SandboxConfig.shared_folders` entries. The in-guest path each
+        entry names cannot be honoured on the FAT transport - QEMU's vvfat
+        volume takes whatever drive letter the guest assigns it, which is why
+        the work share's letter is probed rather than assumed - so only the
+        host path and the read-only flag are carried through here.
+
+        The same setting also reaches this backend by a second route:
+        ``build_qemu_config`` reads it into ``QEMUConfig.shared_folder``, which
+        callers that construct a backend directly use instead of the generic
+        list. That value is taken from :attr:`_settings_shared_folder`, which
+        holds it from construction, rather than from the config field
+        :meth:`_build_qemu_command` overwrites with the work share on every
+        launch.
+
+        Returns:
+            list[tuple[Path, bool]]: Each configured host directory that exists
+            on this host, paired with whether it was marked read-only. A
+            directory that arrives by both routes keeps the flag the generic
+            list carried, since only that route has one.
+        """
+        candidates: list[tuple[Path, bool]] = [(host_path, read_only) for host_path, _guest_path, read_only in self._config.shared_folders]
+        if self._settings_shared_folder is not None:
+            candidates.append((self._settings_shared_folder, False))
+
+        resolved: list[tuple[Path, bool]] = []
+        seen: set[Path] = set()
+        for host_path, read_only in candidates:
+            if host_path in seen:
+                continue
+            seen.add(host_path)
+            if not host_path.is_dir():
+                _logger.warning("configured_share_not_a_directory", shared_folder=str(host_path))
+                continue
+            resolved.append((host_path, read_only))
+        return resolved
+
+    def _configured_share_args(self) -> list[str]:
+        r"""Build the argv exposing the folders chosen in Sandbox Settings.
+
+        These are not the per-instance work share :meth:`_shared_folder_args`
+        attaches. That one carries ``input``/``output``/``logs``/``monitor``,
+        is rebuilt for every run and is an implementation detail; these are the
+        analyst's own directories, and a sample staged with supporting files
+        beside it can only reach them if they are mounted.
+
+        Each is attached read-only on both transports. On FAT that is forced -
+        vvfat's write-back path aborts the whole virtual machine when a guest
+        commits a directory change, which is why the work share is read-only
+        too - and matching that on 9p keeps one behaviour across guests rather
+        than two. Writes travel the other way instead:
+        :meth:`_mirror_output_to_configured_folder` copies whatever the guest
+        left in its own ``output`` directory into a folder that was not marked
+        read-only.
+
+        Returns:
+            list[str]: The ``-drive`` or ``-fsdev``/``-device`` arguments, empty
+            when nothing is configured or no configured path is a directory on
+            this host.
+        """
+        args: list[str] = []
+        fat = self._uses_fat_shared_transport()
+        for index, (configured, _read_only) in enumerate(self._configured_shares()):
+            if fat:
+                args.extend(["-drive", f"file=fat:{configured},format=raw,if=virtio,readonly=on"])
+                continue
+            # Offset by one: fsdev0 belongs to the work share above.
+            fsdev_id = f"{_CONFIGURED_SHARE_FSDEV_ID}{index + 1}"
+            args.extend([
+                "-fsdev",
+                f"local,id={fsdev_id},path={configured},security_model=mapped-xattr,readonly=on",
+                "-device",
+                f"virtio-9p-pci,fsdev={fsdev_id},mount_tag={_CONFIGURED_SHARE_MOUNT_TAG}{index}",
+            ])
+        return args
+
+    def _mirror_destination(self) -> Path | None:
+        r"""Return the configured folder guest output is copied back into.
+
+        The mount is read-only whichever way the dialog's "Read only" box is
+        set, because a writable vvfat volume aborts QEMU. That box is honoured
+        here instead, on the direction that can carry writes safely: a folder
+        marked read-only is left exactly as the analyst left it, and one that
+        is not receives whatever the guest produced.
+
+        Returns:
+            Path | None: The first configured folder not marked read-only, or
+            ``None`` when there is no such folder.
+        """
+        for configured, read_only in self._configured_shares():
+            if not read_only:
+                return configured
+        return None
+
     @staticmethod
     def _anti_evasion_smbios_entries(profile: str) -> list[dict[str, str]]:
         """Return SMBIOS entries for the selected anti-evasion profile.
@@ -5286,6 +5413,7 @@ class QEMUSandbox(SandboxBase):
 
         if self._shared_folder is not None:
             cmd.extend(self._shared_folder_args())
+        cmd.extend(self._configured_share_args())
 
         # The tablet is what makes the VM Display usable. RFB PointerEvent
         # carries absolute framebuffer coordinates, but a guest whose only
@@ -5586,6 +5714,51 @@ class QEMUSandbox(SandboxBase):
             self._qemu_config.agent_connect_timeout,
         )
 
+    async def _apply_telemetry_blocking(self) -> None:
+        """Silence the guest's own operating-system telemetry when configured.
+
+        Only Windows guests have Microsoft telemetry to silence, so a Linux
+        guest is left alone. Failure is logged and does not abort the start:
+        the sandbox is still usable without it - the analyst loses a quieter
+        capture, not the run - and refusing to start a working guest over it
+        would be worse than the noise.
+        """
+        if not self._config.block_telemetry:
+            _logger.debug("telemetry_blocking_not_requested", sandbox_type="qemu")
+            return
+        if self._qemu_config.guest_os != GuestOS.WINDOWS:
+            _logger.debug("telemetry_blocking_not_applicable", guest_os=self._qemu_config.guest_os.value)
+            return
+
+        try:
+            status = await self._guest_run(
+                "powershell.exe",
+                build_windows_blocking_command(),
+                time_limit=_TELEMETRY_BLOCK_TIMEOUT,
+            )
+        except SandboxError as error:
+            _logger.warning("telemetry_blocking_failed", sandbox_type="qemu", error=str(error))
+            return
+
+        summary = parse_blocking_result(status.stdout)
+        if status.exit_code != 0 or summary is None:
+            _logger.warning(
+                "telemetry_blocking_incomplete",
+                sandbox_type="qemu",
+                exit_code=status.exit_code,
+                stderr=status.stderr[:_TELEMETRY_ERROR_EXCERPT],
+            )
+            return
+
+        _logger.info(
+            "telemetry_blocking_applied",
+            sandbox_type="qemu",
+            hosts_entries=summary.get("hosts_entries"),
+            firewall_rules=summary.get("firewall_rules"),
+            firewall_backend=summary.get("firewall_backend"),
+            problems=summary.get("problems"),
+        )
+
     async def _start_impl(self) -> None:
         """Execute the full QEMU sandbox start sequence."""
         await self._prepare_qemu_shared_folders()
@@ -5595,6 +5768,7 @@ class QEMUSandbox(SandboxBase):
         qemu_pid = await self._resolve_qemu_pid()
         await self._register_qemu_pid(qemu_pid)
         await self._attach_qemu_agents()
+        await self._apply_telemetry_blocking()
 
         self.state.status = "running"
         self.state.started_at = datetime.now(UTC)
@@ -5792,6 +5966,8 @@ class QEMUSandbox(SandboxBase):
         if self._output_recorder is not None:
             await self._output_recorder.aclose()
             self._output_recorder = None
+
+        await self._mirror_output_to_configured_folder()
 
         await self._cleanup()
 
@@ -6325,14 +6501,33 @@ $monitorScripts = @(
     'resource_monitor.ps1',
     'service_monitor.ps1'
 )
+$launcherLog = Join-Path $logDir 'monitor_launcher.log'
+function Write-LauncherEvent {
+    param([string]$Name, [string]$State, [string]$Detail)
+    $ts = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
+    "$ts|monitor_launcher|$Name|$State|$Detail" | Out-File -Append -FilePath $launcherLog -Encoding utf8
+}
+Write-LauncherEvent 'monitor_launcher' 'launch_started' ([string]$monitorScripts.Count)
 foreach ($scriptName in $monitorScripts) {
     $scriptPath = Join-Path $monitorDir $scriptName
-    if (Test-Path $scriptPath) {
-        Start-Process -FilePath 'powershell.exe' `
+    if (-not (Test-Path $scriptPath)) {
+        Write-LauncherEvent $scriptName 'missing' $scriptPath
+        continue
+    }
+    try {
+        $child = Start-Process -FilePath 'powershell.exe' `
             -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',$scriptPath,'-LogDir',$logDir) `
-            -WindowStyle Hidden
+            -WindowStyle Hidden -PassThru
+        if ($null -eq $child) {
+            Write-LauncherEvent $scriptName 'launch_failed' 'Start-Process returned no process'
+        } else {
+            Write-LauncherEvent $scriptName 'launched' ([string]$child.Id)
+        }
+    } catch {
+        Write-LauncherEvent $scriptName 'launch_failed' $_.Exception.Message
     }
 }
+Write-LauncherEvent 'monitor_launcher' 'launch_finished' ([string]$monitorScripts.Count)
 
 $watcher = New-Object System.IO.FileSystemWatcher
 $watcher.Path = ($systemDrive + '\')
@@ -7955,6 +8150,8 @@ if __name__ == "__main__":
             exit_code = -1
         duration = time.time() - start_time
 
+        await self._collect_guest_output()
+
         logs = _MonitoringLogs()
         if monitor:
             await self._wait_for_logs_stable()
@@ -8032,6 +8229,83 @@ if __name__ == "__main__":
                 continue
             await asyncio.to_thread((logs_dir / name).write_bytes, payload)
             _logger.debug("guest_log_collected", name=name, size_bytes=len(payload))
+
+    async def _collect_guest_output(self) -> int:
+        """Copy the guest's own ``output`` directory onto the host.
+
+        Only worth doing when a folder is configured to mirror it into, since
+        this is what :meth:`_mirror_output_to_configured_folder` later copies
+        out. It lands under the instance's collection root rather than in the
+        configured folder directly: that folder backs a live vvfat volume while
+        the machine is running, and writing into a directory vvfat has already
+        built its FAT over is the failure class the read-only share exists to
+        avoid.
+
+        Returns:
+            int: Number of files brought across, zero when there is nothing
+            configured to mirror into or no guest agent to read with.
+        """
+        collected = self._collected_root()
+        if self._mirror_destination() is None or collected is None:
+            return 0
+        if self._qga is None or not self._qga.connected:
+            return 0
+
+        destination = collected / _GUEST_OUTPUT_DIR_NAME
+        await asyncio.to_thread(destination.mkdir, parents=True, exist_ok=True)
+        pulled = await self._pull_guest_directory(self._guest_work_path(_GUEST_OUTPUT_DIR_NAME), destination)
+        _logger.debug("guest_output_collected", destination=str(destination), files=pulled)
+        return pulled
+
+    async def _mirror_output_to_configured_folder(self) -> int:
+        """Copy the guest's collected output into the folder chosen in settings.
+
+        The configured folder is mounted read-only, so this is the write
+        direction of that share: what the guest left in its own ``output``
+        directory is placed under one subdirectory of the analyst's folder,
+        named so it cannot be mistaken for their own files. A folder the
+        analyst marked read-only is not a destination at all - see
+        :meth:`_mirror_destination`.
+
+        Deliberately called only once QEMU has exited. While the machine runs,
+        that host directory is the backing store of a live vvfat volume.
+
+        Returns:
+            int: Number of files copied into the configured folder.
+        """
+        configured = self._mirror_destination()
+        collected = self._collected_root()
+        if configured is None or collected is None:
+            return 0
+        source = collected / _GUEST_OUTPUT_DIR_NAME
+        if not await asyncio.to_thread(source.is_dir):
+            return 0
+
+        destination = configured / _MIRRORED_OUTPUT_DIR_NAME
+
+        def _copy_tree() -> int:
+            """Copy every collected output file into the configured folder.
+
+            Returns:
+                int: Number of files copied.
+            """
+            copied = 0
+            for src in source.rglob("*"):
+                if not src.is_file():
+                    continue
+                target = destination / src.relative_to(source)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, target)
+                copied += 1
+            return copied
+
+        try:
+            copied = await asyncio.to_thread(_copy_tree)
+        except OSError:
+            _logger.warning("configured_share_mirror_failed", destination=str(destination), exc_info=True)
+            return 0
+        _logger.info("configured_share_output_mirrored", destination=str(destination), files=copied)
+        return copied
 
     async def _collect_monitoring_logs(self) -> _MonitoringLogs:
         """Parse every monitor log file into a :class:`_MonitoringLogs` aggregate.
