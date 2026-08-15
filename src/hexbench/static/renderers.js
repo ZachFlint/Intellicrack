@@ -14,6 +14,7 @@
 
 import { callOpRaw, isTaggedBytes, readWindow, taggedBytes, toHex } from './api.js';
 import { DIFF_TOKENS, byteTypeChart, classificationChart, diffMinimapChart, digramChart, entropyMapChart, histogramChart } from './charts.js';
+import { decorativeGlyph, iconButton } from './dom.js';
 import { asciiFor, element, hexOf, humanSize } from './forms.js';
 import { compactScalar } from './scalar.js';
 import { describeProtection, describeState, isSnapshotable, protectionTone, stateTone } from './win32.js';
@@ -75,7 +76,7 @@ function offsetText(value) {
 function banner(kind, title, detail) {
   const node = element('div', `hb-banner is-${kind}`);
   const glyph = { error: '!', warning: '△', success: '✓', info: 'i' }[kind] ?? 'i';
-  node.appendChild(element('span', 'hb-banner-glyph', glyph));
+  node.appendChild(decorativeGlyph(glyph, 'hb-banner-glyph'));
   const body = element('div', 'hb-banner-body');
   body.appendChild(element('div', 'hb-banner-title', title));
   if (detail) {
@@ -109,7 +110,7 @@ export function renderError(error) {
  */
 export function emptyState(title, hint, glyph = '□') {
   const node = element('div', 'hb-empty');
-  node.appendChild(element('div', 'hb-empty-icon', glyph));
+  node.appendChild(decorativeGlyph(glyph, 'hb-empty-icon'));
   node.appendChild(element('div', 'hb-empty-title', title));
   node.appendChild(element('div', 'hb-empty-hint', hint));
   return node;
@@ -120,7 +121,7 @@ function table(headings) {
   const head = document.createElement('thead');
   const row = document.createElement('tr');
   for (const heading of headings) {
-    const cell = element('th', heading.className, heading.label);
+    const cell = element('th', heading.className, heading.label, { scope: 'col' });
     row.appendChild(cell);
     heading.node = cell;
   }
@@ -135,13 +136,7 @@ function cell(text, className) {
 }
 
 function actionButton(label, title, onClick, variant = 'hb-btn is-sm') {
-  const node = element('button', variant, label);
-  node.type = 'button';
-  if (title) {
-    node.title = title;
-  }
-  node.addEventListener('click', onClick);
-  return node;
+  return iconButton(label, title, onClick, variant);
 }
 
 /**
@@ -200,7 +195,7 @@ function jsonTree(value, key, depth, into) {
 
   const bytes = isTaggedBytes(value);
   const branch = !bytes && value !== null && typeof value === 'object';
-  const toggle = element('span', branch ? 'hb-json-toggle' : 'hb-json-toggle is-leaf');
+  const toggle = decorativeGlyph('', branch ? 'hb-json-toggle' : 'hb-json-toggle is-leaf');
   row.appendChild(toggle);
   if (key !== null) {
     row.append(element('span', 'hb-json-key', key), element('span', 'hb-json-punct', ':'));
@@ -243,7 +238,7 @@ function jsonTree(value, key, depth, into) {
   if (entries.length > JSON_CHILD_LIMIT) {
     const more = element('div', 'hb-json-row');
     more.style.setProperty('--hb-json-depth', String(depth + 1));
-    more.append(element('span', 'hb-json-toggle is-leaf'), element('span', 'hb-json-count', `${entries.length - JSON_CHILD_LIMIT} more not shown`));
+    more.append(decorativeGlyph('', 'hb-json-toggle is-leaf'), element('span', 'hb-json-count', `${entries.length - JSON_CHILD_LIMIT} more not shown`));
     children.appendChild(more);
   }
   container.appendChild(children);
@@ -433,10 +428,10 @@ function templateNode(field, depth, ctx, budget) {
 
   const node = element('div', 'hb-tree-node');
   node.style.setProperty('--hb-tree-depth', String(depth));
-  node.appendChild(element('span', 'hb-tree-indent'));
+  node.appendChild(decorativeGlyph('', 'hb-tree-indent'));
 
   const children = Array.isArray(field.children) ? field.children : [];
-  const twisty = element('span', children.length > 0 ? 'hb-tree-twisty is-open' : 'hb-tree-twisty is-leaf');
+  const twisty = decorativeGlyph('', children.length > 0 ? 'hb-tree-twisty is-open' : 'hb-tree-twisty is-leaf');
   node.appendChild(twisty);
 
   const mark = element('span', 'hb-tree-mark');
@@ -775,7 +770,7 @@ function renderPatches(name, result, ctx) {
 
   const toggle = actionButton('show merged view', 'Overlay the entries in order and coalesce the runs', () => {
     showMerged = !showMerged;
-    toggle.textContent = showMerged ? 'show raw entries' : 'show merged view';
+    toggle.replaceChildren(decorativeGlyph(showMerged ? 'show raw entries' : 'show merged view'));
     toggle.classList.toggle('is-primary', showMerged);
     paint();
   });
@@ -1011,7 +1006,7 @@ function renderDiff(name, result, ctx) {
   const legend = element('div', 'hb-legend');
   for (const [kind, description] of Object.entries(ctx.reference?.diff_types ?? {})) {
     const item = element('span', 'hb-legend-item');
-    const swatch = element('span', 'hb-legend-swatch');
+    const swatch = decorativeGlyph('', 'hb-legend-swatch');
     swatch.style.background = `var(${DIFF_TOKENS.get(kind) ?? '--hb-class-0'})`;
     item.append(swatch, element('span', 'hb-legend-label', kind));
     item.title = description;
@@ -1112,7 +1107,7 @@ function sortableTable(headings, rows, ctx, useAction) {
     });
   });
   if (useAction) {
-    head.appendChild(element('th', '', ''));
+    head.appendChild(element('th', '', '', { scope: 'col' }));
   }
   paint();
   return built.node;

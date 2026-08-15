@@ -15,6 +15,8 @@
    from what the engine will actually accept. */
 
 import { callOp, fromHex, readWindow, toHex } from './api.js';
+import { tokenHex } from './charts.js';
+import { decorativeGlyph, element, iconButton, nextId, trapFocus } from './dom.js';
 
 
 const HEX_RADIX = 16;
@@ -29,12 +31,14 @@ const DEFAULT_CHUNK_HINT = 65536;
 const DEFAULT_BUDGET_HINT = 268435456;
 const DEFAULT_SNAPSHOT_SIZE = 65536;
 const DEFAULT_LENGTH = 16;
-const DEFAULT_COLOR = '#6d28d9';
+const BOOKMARK_COLOR_TOKEN = '--hb-bookmark';
 const ASCII_PRINT_LOW = 0x20;
 const ASCII_PRINT_HIGH = 0x7e;
 const CRC32_POLY = 0x04c11db7;
 const CRC32_INIT = 0xffffffff;
 const CRC32_WIDTH = 32;
+
+const NAMEABLE_LABEL = /[\p{L}\p{N}]/u;
 
 const CARET_PARAMETERS = new Set(['offset', 'src_offset', 'dst_offset', 'offset_a', 'offset_b', 'file_offset', 'start', 'address']);
 const SELECTION_LENGTH_PARAMETERS = new Set(['length', 'len_a', 'len_b']);
@@ -81,24 +85,7 @@ export class FormError extends Error {
 
 /* ------------------------------------------------------------- primitives */
 
-/**
- * Create an element, optionally with a class and text content.
- *
- * @param {string} tag Tag name.
- * @param {string} [className] Class attribute.
- * @param {string} [text] Text content.
- * @returns {HTMLElement} The new element.
- */
-export function element(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) {
-    node.className = className;
-  }
-  if (text !== undefined) {
-    node.textContent = text;
-  }
-  return node;
-}
+export { element };
 
 /**
  * Uppercase hexadecimal, zero padded.
@@ -194,8 +181,21 @@ function normaliseHex(text, name) {
   return compact.toLowerCase();
 }
 
-function button(label, title, onClick) {
-  const node = element('button', 'hb-btn is-sm is-ghost', label);
+function nextControlId(name) {
+  return nextId(`hb-control-${String(name).replace(/[^A-Za-z0-9]+/g, '-')}`);
+}
+
+function fieldLabel(text, forId, className) {
+  const node = element('label', className, text);
+  node.htmlFor = forId;
+  return node;
+}
+
+function button(label, title, onClick, className = 'hb-btn is-sm is-ghost') {
+  if (!NAMEABLE_LABEL.test(label)) {
+    return iconButton(label, title, onClick, className);
+  }
+  const node = element('button', className, label);
   node.type = 'button';
   if (title) {
     node.title = title;
@@ -204,19 +204,25 @@ function button(label, title, onClick) {
   return node;
 }
 
-function textInput(value, mono = true) {
+function textInput(value, mono = true, id) {
   const input = document.createElement('input');
   input.type = 'text';
   input.className = mono ? 'hb-input is-mono' : 'hb-input';
   input.spellcheck = false;
   input.autocomplete = 'off';
   input.value = value;
+  if (id) {
+    input.id = id;
+  }
   return input;
 }
 
-function selectInput(options, value) {
+function selectInput(options, value, id) {
   const select = document.createElement('select');
   select.className = 'hb-select';
+  if (id) {
+    select.id = id;
+  }
   for (const option of options) {
     const node = document.createElement('option');
     node.value = option.value;
@@ -232,12 +238,16 @@ function selectInput(options, value) {
   return select;
 }
 
-function checkbox(label, checked) {
+function checkbox(label, checked, id) {
   const wrapper = element('label', checked ? 'hb-check is-checked' : 'hb-check');
   const box = document.createElement('input');
   box.type = 'checkbox';
   box.className = 'hb-check-box';
   box.checked = checked;
+  if (id) {
+    box.id = id;
+    wrapper.htmlFor = id;
+  }
   box.addEventListener('change', () => wrapper.classList.toggle('is-checked', box.checked));
   wrapper.append(box, element('span', undefined, label));
   return { wrapper, box };
@@ -379,7 +389,8 @@ function defaultFor(operation, parameter, context) {
 
 function intEditor(operation, parameter, context, initial) {
   const row = element('div', 'hb-field-row');
-  const input = textInput(String(initial));
+  const id = nextControlId(parameter.name);
+  const input = textInput(String(initial), true, id);
   const echo = element('span', 'hb-dim hb-mono hb-nowrap');
   const refresh = () => {
     try {
@@ -414,19 +425,22 @@ function intEditor(operation, parameter, context, initial) {
   if (operation.name === CUSTOM_CRC_OPERATION && parameter.name === 'width') {
     const widths = (context.reference?.custom_crc_widths ?? [8, 16, 32, 64]).map((width) => ({ value: String(width), label: `${width} bit` }));
     const select = selectInput(widths, String(initial));
+    select.setAttribute('aria-label', `${parameter.name} presets`);
     select.addEventListener('change', () => {
       input.value = select.value;
       refresh();
     });
     row.appendChild(select);
   }
-  return { node: row, read: () => parseInteger(input.value, parameter.name), focus: () => input.focus() };
+  return { node: row, controlId: id, read: () => parseInteger(input.value, parameter.name), focus: () => input.focus() };
 }
 
 function floatEditor(parameter, initial) {
-  const input = textInput(String(initial));
+  const id = nextControlId(parameter.name);
+  const input = textInput(String(initial), true, id);
   return {
     node: input,
+    controlId: id,
     read: () => {
       const value = Number.parseFloat(input.value);
       if (!Number.isFinite(value)) {
@@ -439,13 +453,16 @@ function floatEditor(parameter, initial) {
 }
 
 function boolEditor(parameter, initial) {
-  const { wrapper, box } = checkbox(parameter.name, Boolean(initial));
-  return { node: wrapper, read: () => box.checked, focus: () => box.focus() };
+  const id = nextControlId(parameter.name);
+  const { wrapper, box } = checkbox(parameter.name, Boolean(initial), id);
+  return { node: wrapper, controlId: id, read: () => box.checked, focus: () => box.focus() };
 }
 
 function enumeratedTextEditor(operation, parameter, context, initial) {
+  const id = nextControlId(parameter.name);
   const select = document.createElement('select');
   select.className = 'hb-select';
+  select.id = id;
   if (parameter.name === ENCODING_PARAMETER) {
     fillSelectLater(select, () => listEncodings().then((rows) => rows.map(([value, label]) => ({ value, label: `${value} — ${label}` }))), initial || 'utf-8');
   } else if (parameter.name === ALGORITHM_PARAMETER) {
@@ -466,6 +483,7 @@ function enumeratedTextEditor(operation, parameter, context, initial) {
   }
   return {
     node: select,
+    controlId: id,
     read: () => {
       if (select.value === '') {
         throw new FormError(`${parameter.name}: no option is selected`, parameter.name);
@@ -495,25 +513,29 @@ function textEditor(operation, parameter, context, initial) {
   if (isEnumerated(operation, parameter)) {
     return enumeratedTextEditor(operation, parameter, context, initial);
   }
+  const id = nextControlId(parameter.name);
   const multiline = parameter.name === 'json_str';
-  const input = multiline ? document.createElement('textarea') : textInput(String(initial), false);
+  const input = multiline ? document.createElement('textarea') : textInput(String(initial), false, id);
   if (multiline) {
     input.className = 'hb-textarea is-mono';
     input.spellcheck = false;
     input.value = String(initial);
+    input.id = id;
   }
   if (parameter.name === 'path' || parameter.name.endsWith('_path')) {
     input.placeholder = 'D:\\samples\\target.exe';
     input.className = 'hb-input is-mono';
   }
-  return { node: input, read: () => input.value, focus: () => input.focus() };
+  return { node: input, controlId: id, read: () => input.value, focus: () => input.focus() };
 }
 
 function bytesEditor(parameter, context, initial) {
   const stack = element('div', 'hb-stack');
+  const id = nextControlId(parameter.name);
   const area = document.createElement('textarea');
   area.className = 'hb-textarea is-mono';
   area.spellcheck = false;
+  area.id = id;
   area.value = String(initial ?? '');
   let canonicalHex;
   try {
@@ -524,6 +546,7 @@ function bytesEditor(parameter, context, initial) {
 
   const controls = element('div', 'hb-field-row');
   const mode = selectInput([{ value: 'hex', label: 'hexadecimal' }, { value: 'ascii', label: 'text (utf-8)' }], 'hex');
+  mode.setAttribute('aria-label', `${parameter.name} notation`);
   const count = element('span', 'hb-dim hb-mono hb-nowrap');
 
   const refresh = () => {
@@ -576,6 +599,7 @@ function bytesEditor(parameter, context, initial) {
       sources.map((info) => ({ value: info.handle, label: `${info.label} (${humanSize(info.length)})` })),
       context.handle ?? sources[0].handle,
     );
+    picker.setAttribute('aria-label', `Document whose bytes fill ${parameter.name}`);
     controls.append(picker, button('load document', 'Read this document\u2019s bytes into the field', () => {
       const info = sources.find((entry) => entry.handle === picker.value);
       if (!info) {
@@ -602,6 +626,7 @@ function bytesEditor(parameter, context, initial) {
   stack.append(area, controls);
   return {
     node: stack,
+    controlId: id,
     read: () => (mode.value === 'hex' ? normaliseHex(area.value, parameter.name) : canonicalHex),
     focus: () => area.focus(),
   };
@@ -611,7 +636,9 @@ function intPairEditor(parameter, context, initial) {
   const row = element('div', 'hb-field-row');
   const first = textInput(String(initial[0]));
   const second = textInput(String(initial[1]));
-  row.append(first, element('span', 'hb-dim', '…'), second);
+  first.setAttribute('aria-label', `${parameter.name}[0]`);
+  second.setAttribute('aria-label', `${parameter.name}[1]`);
+  row.append(first, decorativeGlyph('…', 'hb-dim'), second);
   if (parameter.name === 'byte_range') {
     row.appendChild(button('selection', 'Use the selected range', () => {
       if (context.selectionStart !== null && context.selectionStart !== undefined) {
@@ -633,25 +660,30 @@ function intPairEditor(parameter, context, initial) {
 
 function boolPairEditor(parameter, initial) {
   const row = element('div', 'hb-field-row');
-  const input = checkbox('input', Boolean(initial[0]));
-  const output = checkbox('output', Boolean(initial[1]));
+  const input = checkbox('input', Boolean(initial[0]), nextControlId(`${parameter.name}-input`));
+  const output = checkbox('output', Boolean(initial[1]), nextControlId(`${parameter.name}-output`));
   row.append(input.wrapper, output.wrapper);
   return { node: row, read: () => [input.box.checked, output.box.checked], focus: () => input.box.focus() };
 }
 
 function bookmarkEditor(parameter, context, initial) {
   const grid = element('div', 'hb-stack');
-  const offset = textInput(String(initial.offset ?? context.caret ?? 0));
-  const length = textInput(String(initial.length ?? (context.selection > 0 ? context.selection : 1)));
-  const label = textInput(String(initial.label ?? ''), false);
+  const offsetId = nextControlId(`${parameter.name}-offset`);
+  const lengthId = nextControlId(`${parameter.name}-length`);
+  const labelId = nextControlId(`${parameter.name}-label`);
+  const colourId = nextControlId(`${parameter.name}-color`);
+  const offset = textInput(String(initial.offset ?? context.caret ?? 0), true, offsetId);
+  const length = textInput(String(initial.length ?? (context.selection > 0 ? context.selection : 1)), true, lengthId);
+  const label = textInput(String(initial.label ?? ''), false, labelId);
   const colour = document.createElement('input');
   colour.type = 'color';
   colour.className = 'hb-input';
-  colour.value = initial.color ?? DEFAULT_COLOR;
+  colour.id = colourId;
+  colour.value = initial.color ?? tokenHex(BOOKMARK_COLOR_TOKEN);
 
-  const line = (name, control, extra) => {
+  const line = (name, forId, control, extra) => {
     const row = element('div', 'hb-field-row');
-    row.appendChild(element('span', 'hb-arg-name hb-nowrap', name));
+    row.appendChild(fieldLabel(name, forId, 'hb-arg-name hb-nowrap'));
     row.appendChild(control);
     if (extra) {
       row.appendChild(extra);
@@ -660,14 +692,14 @@ function bookmarkEditor(parameter, context, initial) {
   };
 
   grid.append(
-    line('offset', offset, button('caret', 'Use the caret offset', () => {
+    line('offset', offsetId, offset, button('caret', 'Use the caret offset', () => {
       offset.value = String(context.caret ?? 0);
     })),
-    line('length', length, button('selection', 'Use the selection length', () => {
+    line('length', lengthId, length, button('selection', 'Use the selection length', () => {
       length.value = String(context.selection > 0 ? context.selection : 1);
     })),
-    line('label', label),
-    line('color', colour),
+    line('label', labelId, label),
+    line('color', colourId, colour),
   );
 
   return {
@@ -686,17 +718,18 @@ function bookmarkEditor(parameter, context, initial) {
 
 function transformParameterRow(spec) {
   const row = element('div', 'hb-map-row');
-  row.appendChild(element('span', 'hb-arg-name hb-truncate', spec.key));
+  const id = nextControlId(`params-${spec.key}`);
+  row.appendChild(fieldLabel(spec.key, id, 'hb-arg-name hb-truncate'));
 
   let control;
   let read;
   if (spec.choices.length > 0) {
-    const select = selectInput(spec.choices.map((choice) => ({ value: choice, label: choice })), spec.choices[0]);
+    const select = selectInput(spec.choices.map((choice) => ({ value: choice, label: choice })), spec.choices[0], id);
     control = select;
     read = () => asciiToHex(select.value);
   } else {
     const initial = spec.default_hex ?? '';
-    const input = textInput(initial);
+    const input = textInput(initial, true, id);
     input.placeholder = spec.byte_widths.length > 0 ? `${spec.byte_widths.join(' or ')} bytes, hexadecimal` : 'hexadecimal';
     control = input;
     read = () => {
@@ -720,6 +753,7 @@ function transformParameterRow(spec) {
   include.title = spec.required
     ? 'This entry is required'
     : 'Send this optional entry rather than letting the engine apply its own default';
+  include.setAttribute('aria-label', `Send params.${spec.key}`);
   row.appendChild(include);
 
   if (!spec.required) {
@@ -743,15 +777,15 @@ function bytesMapEditor(operation, parameter, context) {
     const row = element('div', 'hb-map-row');
     const keyInput = textInput(key, false);
     keyInput.placeholder = 'entry name';
+    keyInput.setAttribute('aria-label', 'Name of this hand-written entry');
     const valueInput = textInput(value);
     valueInput.placeholder = 'hexadecimal';
-    const remove = element('button', 'hb-map-remove', '✕');
-    remove.type = 'button';
+    valueInput.setAttribute('aria-label', 'Value of this hand-written entry, hexadecimal');
     const entry = { row, keyInput, valueInput };
-    remove.addEventListener('click', () => {
+    const remove = button('✕', 'Remove this entry', () => {
       custom = custom.filter((item) => item !== entry);
       row.remove();
-    });
+    }, 'hb-map-remove');
     row.append(keyInput, valueInput, remove);
     custom.push(entry);
     host.insertBefore(row, host.lastElementChild);
@@ -874,10 +908,17 @@ export function buildForm(operation, reference, context) {
 
   for (const parameter of operation.parameters) {
     const wrapper = element('div', 'hb-arg');
-    const label = element('label', 'hb-arg-label');
-    label.append(element('span', 'hb-arg-name', parameter.name), element('span', 'hb-arg-type', parameter.annotation));
-    const control = element('div', 'hb-arg-control');
     const editor = editorFor(operation, parameter, scope);
+    const label = element(editor.controlId ? 'label' : 'div', 'hb-arg-label');
+    label.append(element('span', 'hb-arg-name', parameter.name), element('span', 'hb-arg-type', parameter.annotation));
+    if (editor.controlId) {
+      label.htmlFor = editor.controlId;
+    } else {
+      label.id = nextControlId(`${parameter.name}-group`);
+      editor.node.setAttribute('role', 'group');
+      editor.node.setAttribute('aria-labelledby', label.id);
+    }
+    const control = element('div', 'hb-arg-control');
     control.appendChild(editor.node);
     wrapper.append(label, control);
     root.appendChild(wrapper);
@@ -941,17 +982,19 @@ export function buildForm(operation, reference, context) {
 export async function openArgumentDialog(operation, reference, context) {
   await primeSuggestions(operation, context).catch(() => undefined);
   return new Promise((resolve) => {
-    const overlay = element('div', 'hbx-overlay');
+    const titleId = nextControlId('dialog-title');
+    const overlay = element('div', 'hbx-overlay', undefined, { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId });
     const scrim = element('div', 'hb-scrim');
     const dialog = element('div', 'hb-dialog hbx-dialog-wide');
 
     const header = element('div', 'hb-dialog-header');
-    header.appendChild(element('span', 'hb-dialog-title', operation.name));
+    const title = element('span', 'hb-dialog-title', operation.name);
+    title.id = titleId;
+    header.appendChild(title);
     if (operation.mutating) {
       header.appendChild(element('span', 'hb-badge is-warning', 'mutates'));
     }
-    const close = element('button', 'hb-dialog-close', '✕');
-    close.type = 'button';
+    const close = button('✕', `Close the ${operation.name} dialog`, () => finish(null), 'hb-dialog-close');
     header.appendChild(close);
 
     const body = element('div', 'hb-dialog-body');
@@ -970,8 +1013,10 @@ export async function openArgumentDialog(operation, reference, context) {
     dialog.append(header, body, footer);
     overlay.append(scrim, dialog);
     document.getElementById('overlays')?.appendChild(overlay);
+    const trap = trapFocus(overlay);
 
     const finish = (values) => {
+      trap.release();
       overlay.remove();
       resolve(values);
     };
@@ -985,7 +1030,6 @@ export async function openArgumentDialog(operation, reference, context) {
 
     scrim.addEventListener('mousedown', () => finish(null));
     cancel.addEventListener('click', () => finish(null));
-    close.addEventListener('click', () => finish(null));
     confirm.addEventListener('click', submit);
     overlay.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {

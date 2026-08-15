@@ -6,6 +6,9 @@
    covers every operation the engine exposes and gains new ones the moment the
    Rust crate grows them. There is no list of commands in this file. */
 
+import { trapFocus } from './dom.js';
+
+
 const CONSECUTIVE_BONUS = 6;
 const BOUNDARY_BONUS = 4;
 const LEADING_PENALTY = 0.4;
@@ -109,6 +112,7 @@ export class CommandPalette {
   #input;
   #results;
   #count;
+  #trap = null;
 
   constructor(host, handlers = {}) {
     this.#host = host;
@@ -139,6 +143,9 @@ export class CommandPalette {
     this.#overlay = document.createElement('div');
     this.#overlay.className = 'hbx-overlay';
     this.#overlay.hidden = true;
+    this.#overlay.setAttribute('role', 'dialog');
+    this.#overlay.setAttribute('aria-modal', 'true');
+    this.#overlay.setAttribute('aria-label', 'Command palette');
 
     const scrim = document.createElement('div');
     scrim.className = 'hb-scrim';
@@ -152,6 +159,7 @@ export class CommandPalette {
     const glyph = document.createElement('span');
     glyph.className = 'hb-palette-glyph';
     glyph.textContent = '›';
+    glyph.setAttribute('aria-hidden', 'true');
     this.#input = document.createElement('input');
     this.#input.className = 'hb-palette-input';
     this.#input.type = 'text';
@@ -203,6 +211,7 @@ export class CommandPalette {
     this.#overlay.hidden = false;
     this.#input.value = initialQuery;
     this.#refresh();
+    this.#trap = trapFocus(this.#overlay);
     this.#input.focus();
     this.#input.select();
   }
@@ -214,6 +223,10 @@ export class CommandPalette {
     }
     this.#open = false;
     this.#overlay.hidden = true;
+    if (this.#trap !== null) {
+      this.#trap.release();
+      this.#trap = null;
+    }
   }
 
   #onKeyDown(event) {

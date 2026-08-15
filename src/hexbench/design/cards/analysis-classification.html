@@ -125,7 +125,6 @@ svg {
   --hb-tracking-caps: 0.08em;
 
   /* -- Spacing --------------------------------------------------- */
-  --hb-space-0: 0px;
   --hb-space-1: 2px;
   --hb-space-2: 4px;
   --hb-space-3: 6px;
@@ -153,7 +152,6 @@ svg {
   --hb-dur-slow: 260ms;
   --hb-ease: cubic-bezier(0.2, 0, 0.2, 1);
   --hb-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --hb-ease-in: cubic-bezier(0.4, 0, 1, 1);
   --hb-transition-colors: background-color var(--hb-dur-fast) var(--hb-ease), border-color var(--hb-dur-fast) var(--hb-ease),
     color var(--hb-dur-fast) var(--hb-ease), box-shadow var(--hb-dur-fast) var(--hb-ease);
   --hb-transition-transform: transform var(--hb-dur-med) var(--hb-ease-out);
@@ -281,7 +279,6 @@ svg {
   --hb-chart-axis: #6a7686;
   --hb-chart-fill: rgb(15 108 214 / 22%);
   --hb-chart-line: #0f6cd6;
-  --hb-chart-ink: #10151d;
 
   /* -- Elevation -------------------------------------------------- */
   --hb-shadow-0: none;
@@ -390,7 +387,6 @@ svg {
     --hb-chart-axis: #7a8695;
     --hb-chart-fill: rgb(76 157 240 / 24%);
     --hb-chart-line: #6bb2f7;
-    --hb-chart-ink: #dfe4ec;
 
     --hb-shadow-0: none;
     --hb-shadow-1: 0 1px 2px rgb(0 0 0 / 45%);
@@ -498,7 +494,6 @@ svg {
   --hb-chart-axis: #7a8695;
   --hb-chart-fill: rgb(76 157 240 / 24%);
   --hb-chart-line: #6bb2f7;
-  --hb-chart-ink: #dfe4ec;
 
   --hb-shadow-0: none;
   --hb-shadow-1: 0 1px 2px rgb(0 0 0 / 45%);
@@ -603,7 +598,6 @@ svg {
   --hb-chart-axis: #6a7686;
   --hb-chart-fill: rgb(15 108 214 / 22%);
   --hb-chart-line: #0f6cd6;
-  --hb-chart-ink: #10151d;
 
   --hb-shadow-0: none;
   --hb-shadow-1: 0 1px 2px rgb(16 24 40 / 8%);
@@ -1600,6 +1594,95 @@ pre {
   color: var(--hb-text-muted);
   letter-spacing: var(--hb-tracking-wide);
   text-transform: uppercase;
+}
+
+/* -- No document open -- */
+
+.hb-blank {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--hb-space-10);
+  max-width: 720px;
+  margin: auto;
+  padding: var(--hb-space-11) var(--hb-space-8);
+}
+
+.hb-blank-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-5);
+}
+
+.hb-blank-title {
+  font-size: var(--hb-fs-3xl);
+  font-weight: var(--hb-fw-semibold);
+  letter-spacing: var(--hb-tracking-tight);
+  line-height: var(--hb-lh-tight);
+  color: var(--hb-text-primary);
+}
+
+.hb-blank-lede {
+  max-width: 56ch;
+  font-size: var(--hb-fs-lg);
+  line-height: var(--hb-lh-loose);
+  color: var(--hb-text-secondary);
+}
+
+.hb-blank-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--hb-space-5);
+}
+
+.hb-blank-action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-4);
+  padding: var(--hb-space-6);
+  border: 1px solid var(--hb-border);
+  border-radius: var(--hb-radius-md);
+  background: var(--hb-surface-1);
+  text-align: left;
+  transition: var(--hb-transition-colors);
+}
+
+.hb-blank-action:hover {
+  background: var(--hb-surface-hover);
+  border-color: var(--hb-accent);
+}
+
+.hb-blank-action-glyph {
+  font-size: var(--hb-fs-lg);
+  color: var(--hb-accent);
+}
+
+.hb-blank-action-title {
+  font-size: var(--hb-fs-md);
+  font-weight: var(--hb-fw-semibold);
+  color: var(--hb-text-primary);
+}
+
+.hb-blank-action-note {
+  font-family: var(--hb-font-mono);
+  font-size: var(--hb-fs-xs);
+  color: var(--hb-text-muted);
+}
+
+.hb-blank-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hb-space-8);
+  padding-top: var(--hb-space-7);
+  border-top: 1px solid var(--hb-border-subtle);
+  font-family: var(--hb-font-mono);
+  font-size: var(--hb-fs-xs);
+  color: var(--hb-text-faint);
+}
+
+.hb-blank-key {
+  color: var(--hb-text-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2961,71 +3044,6 @@ pre {
 
 /* -- Strips -- */
 
-.hb-strip {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hb-space-2);
-}
-
-.hb-strip-track {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  height: 34px;
-  border: 1px solid var(--hb-border);
-  border-radius: var(--hb-radius-sm);
-  background: var(--hb-surface-inset);
-  overflow: hidden;
-}
-
-.hb-strip-marker {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--hb-marker-start, 0%);
-  width: var(--hb-marker-width, 0%);
-  min-width: 2px;
-  background: var(--hb-sel-bg);
-  border-left: 1px solid var(--hb-sel-border);
-  border-right: 1px solid var(--hb-sel-border);
-  pointer-events: none;
-}
-
-.hb-strip-track.is-tall {
-  height: 56px;
-}
-
-.hb-strip-cell {
-  flex: 1 1 0;
-  min-width: 0;
-  background: var(--hb-class-0);
-  transition: filter var(--hb-dur-fast) var(--hb-ease);
-}
-
-.hb-strip-cell:hover {
-  filter: brightness(1.25);
-}
-
-.hb-strip-cell.cls-0 {
-  background: var(--hb-class-0);
-}
-
-.hb-strip-cell.cls-1 {
-  background: var(--hb-class-1);
-}
-
-.hb-strip-cell.cls-2 {
-  background: var(--hb-class-2);
-}
-
-.hb-strip-cell.cls-3 {
-  background: var(--hb-class-3);
-}
-
-.hb-strip-cell.cls-4 {
-  background: var(--hb-class-4);
-}
-
 .hb-strip-axis {
   display: flex;
   justify-content: space-between;
@@ -3179,68 +3197,6 @@ pre {
 
 .hb-segbar-seg.bc-high {
   background: var(--hb-byte-high);
-}
-
-/* -- Diff mini-map -- */
-
-.hb-minimap {
-  position: relative;
-  height: 46px;
-  border: 1px solid var(--hb-border);
-  border-radius: var(--hb-radius-sm);
-  background: var(--hb-surface-inset);
-  background-image: repeating-linear-gradient(90deg, var(--hb-chart-grid) 0 1px, transparent 1px 40px);
-  overflow: hidden;
-}
-
-.hb-minimap-band {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--hb-band-start, 0) * 1%);
-  width: calc(var(--hb-band-width, 1) * 1%);
-  min-width: 2px;
-}
-
-.hb-minimap-band.is-match {
-  background: var(--hb-class-0);
-  opacity: 0.45;
-}
-
-.hb-minimap-band.is-modified {
-  background: var(--hb-diff-modified-bg);
-  box-shadow: inset 0 0 0 1px var(--hb-warning-border);
-}
-
-.hb-minimap-band.is-inserted-a {
-  background: var(--hb-diff-removed-bg);
-  box-shadow: inset 0 0 0 1px var(--hb-error-border);
-}
-
-.hb-minimap-band.is-inserted-b {
-  background: var(--hb-diff-added-bg);
-  box-shadow: inset 0 0 0 1px var(--hb-success-border);
-}
-
-.hb-minimap-band::after {
-  content: attr(data-glyph);
-  position: absolute;
-  inset: auto 0 2px 0;
-  text-align: center;
-  font-family: var(--hb-font-mono);
-  font-size: var(--hb-fs-2xs);
-  font-weight: var(--hb-fw-bold);
-  color: var(--hb-text-secondary);
-}
-
-.hb-minimap-cursor {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--hb-cursor, 0) * 1%);
-  width: 2px;
-  background: var(--hb-caret);
-  box-shadow: 0 0 0 1px var(--hb-caret-contrast);
 }
 
 /* ============================================================ 11. OVERLAYS */
@@ -3806,6 +3762,6 @@ pre {
 <div class="ds-eyebrow">Analysis</div>
 <h1 class="ds-title">Content classification</h1>
 </header>
-<main class="ds-main"><section class="ds-section"><header><h2 class="ds-section-title">Content classification</h2><p class="ds-section-note"><code>content_classification(256)</code> returns one code per block, and all five codes occur in this buffer. Every legend entry carries its numeric code as well as its colour, so the strip stays readable without colour discrimination and survives greyscale printing.</p></header><div class="ds-section-body"><div class="hb-strip"><div class="hb-strip-track is-tall"><div class="hb-strip-cell cls-2" title="0x00000000 class 2"></div><div class="hb-strip-cell cls-2" title="0x00000100 class 2"></div><div class="hb-strip-cell cls-1" title="0x00000200 class 1"></div><div class="hb-strip-cell cls-0" title="0x00000300 class 0"></div><div class="hb-strip-cell cls-4" title="0x00000400 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000500 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000600 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000700 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000800 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000900 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000A00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000B00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000C00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000D00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000E00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000F00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001000 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001100 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001200 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001300 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001400 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001500 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001600 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001700 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001800 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001900 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001A00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001B00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001C00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001D00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001E00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001F00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002000 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002100 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002200 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002300 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002400 class 4"></div><div class="hb-strip-cell cls-1" title="0x00002500 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002600 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002700 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002800 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002900 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002A00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002B00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002C00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002D00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002E00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002F00 class 1"></div><div class="hb-strip-cell cls-0" title="0x00003000 class 0"></div><div class="hb-strip-cell cls-0" title="0x00003100 class 0"></div><div class="hb-strip-cell cls-0" title="0x00003200 class 0"></div><div class="hb-strip-cell cls-0" title="0x00003300 class 0"></div><div class="hb-strip-cell cls-3" title="0x00003400 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003500 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003600 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003700 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003800 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003900 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003A00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003B00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003C00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003D00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003E00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003F00 class 3"></div></div><div class="hb-strip-axis"><span>0x00000000</span><span>block size 256 B</span><span>0x00003FFF</span></div></div><div class="hb-legend"><span class="hb-legend-item"><span class="hb-legend-code">0</span><span class="hb-legend-swatch" style="background: var(--hb-class-0)"></span><span class="hb-legend-label">Zero filled</span><span class="hb-legend-note">every byte 0x00</span></span><span class="hb-legend-item"><span class="hb-legend-code">1</span><span class="hb-legend-swatch" style="background: var(--hb-class-1)"></span><span class="hb-legend-label">Plaintext-like</span><span class="hb-legend-note">printable, low entropy</span></span><span class="hb-legend-item"><span class="hb-legend-code">2</span><span class="hb-legend-swatch" style="background: var(--hb-class-2)"></span><span class="hb-legend-label">Moderate</span><span class="hb-legend-note">structured binary</span></span><span class="hb-legend-item"><span class="hb-legend-code">3</span><span class="hb-legend-swatch" style="background: var(--hb-class-3)"></span><span class="hb-legend-label">High entropy</span><span class="hb-legend-note">H &gt; 7.0, packed or encrypted</span></span><span class="hb-legend-item"><span class="hb-legend-code">4</span><span class="hb-legend-swatch" style="background: var(--hb-class-4)"></span><span class="hb-legend-label">Mixed</span><span class="hb-legend-note">H 4.5 to 7.0, code or tables</span></span></div></div></section><section class="ds-section"><header><h2 class="ds-section-title">Selection marker</h2><p class="ds-section-note">The strip is the link back to the editor rather than a separate report: whatever is selected in the document is drawn over it with <code>hb-strip-marker</code>, so the 3072 bytes under the caret can be located in the whole buffer at a glance. The marker uses the same selection fill and border as the editor, and never occludes the classes beneath it.</p></header><div class="ds-section-body"><div class="hb-strip"><div class="hb-strip-track is-tall"><div class="hb-strip-cell cls-2" title="0x00000000 class 2"></div><div class="hb-strip-cell cls-2" title="0x00000100 class 2"></div><div class="hb-strip-cell cls-1" title="0x00000200 class 1"></div><div class="hb-strip-cell cls-0" title="0x00000300 class 0"></div><div class="hb-strip-cell cls-4" title="0x00000400 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000500 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000600 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000700 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000800 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000900 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000A00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000B00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000C00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000D00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000E00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00000F00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001000 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001100 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001200 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001300 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001400 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001500 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001600 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001700 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001800 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001900 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001A00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001B00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001C00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001D00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001E00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00001F00 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002000 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002100 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002200 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002300 class 4"></div><div class="hb-strip-cell cls-4" title="0x00002400 class 4"></div><div class="hb-strip-cell cls-1" title="0x00002500 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002600 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002700 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002800 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002900 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002A00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002B00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002C00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002D00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002E00 class 1"></div><div class="hb-strip-cell cls-1" title="0x00002F00 class 1"></div><div class="hb-strip-cell cls-0" title="0x00003000 class 0"></div><div class="hb-strip-cell cls-0" title="0x00003100 class 0"></div><div class="hb-strip-cell cls-0" title="0x00003200 class 0"></div><div class="hb-strip-cell cls-0" title="0x00003300 class 0"></div><div class="hb-strip-cell cls-3" title="0x00003400 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003500 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003600 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003700 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003800 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003900 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003A00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003B00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003C00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003D00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003E00 class 3"></div><div class="hb-strip-cell cls-3" title="0x00003F00 class 3"></div><div class="hb-strip-marker" style="--hb-marker-start: 62.500%; --hb-marker-width: 18.750%"></div></div><div class="hb-strip-axis"><span>0x00000000</span><span>selection 0x00002800 to 0x000033FF</span><span>0x00003FFF</span></div></div></div></section></main>
+<main class="ds-main"><section class="ds-section"><header><h2 class="ds-section-title">Content classification</h2><p class="ds-section-note"><code>content_classification(256)</code> returns one code per block, and all five codes occur in this buffer. Every legend entry carries its numeric code as well as its colour, so the strip stays readable without colour discrimination and survives greyscale printing.</p></header><div class="ds-section-body"><div class="hb-canvasframe"><div class="hb-canvasframe-header">Classification<span class="hb-canvasframe-meta">block 256 B &middot; 64 blocks &middot; 5 classes</span></div><div class="hb-canvasframe-body is-plain"><svg viewBox="0 0 256 64" preserveAspectRatio="none" style="width: 100%; height: 56px" role="img" aria-label="Content class of every 256 byte block"><rect x="0.0" y="0" width="4.0" height="64" fill="var(--hb-class-2)"><title>0x00000000 class 2</title></rect><rect x="4.0" y="0" width="4.0" height="64" fill="var(--hb-class-2)"><title>0x00000100 class 2</title></rect><rect x="8.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00000200 class 1</title></rect><rect x="12.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00000300 class 0</title></rect><rect x="16.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000400 class 4</title></rect><rect x="20.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000500 class 4</title></rect><rect x="24.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000600 class 4</title></rect><rect x="28.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000700 class 4</title></rect><rect x="32.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000800 class 4</title></rect><rect x="36.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000900 class 4</title></rect><rect x="40.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000A00 class 4</title></rect><rect x="44.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000B00 class 4</title></rect><rect x="48.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000C00 class 4</title></rect><rect x="52.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000D00 class 4</title></rect><rect x="56.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000E00 class 4</title></rect><rect x="60.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000F00 class 4</title></rect><rect x="64.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001000 class 4</title></rect><rect x="68.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001100 class 4</title></rect><rect x="72.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001200 class 4</title></rect><rect x="76.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001300 class 4</title></rect><rect x="80.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001400 class 4</title></rect><rect x="84.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001500 class 4</title></rect><rect x="88.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001600 class 4</title></rect><rect x="92.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001700 class 4</title></rect><rect x="96.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001800 class 4</title></rect><rect x="100.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001900 class 4</title></rect><rect x="104.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001A00 class 4</title></rect><rect x="108.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001B00 class 4</title></rect><rect x="112.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001C00 class 4</title></rect><rect x="116.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001D00 class 4</title></rect><rect x="120.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001E00 class 4</title></rect><rect x="124.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001F00 class 4</title></rect><rect x="128.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002000 class 4</title></rect><rect x="132.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002100 class 4</title></rect><rect x="136.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002200 class 4</title></rect><rect x="140.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002300 class 4</title></rect><rect x="144.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002400 class 4</title></rect><rect x="148.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002500 class 1</title></rect><rect x="152.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002600 class 1</title></rect><rect x="156.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002700 class 1</title></rect><rect x="160.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002800 class 1</title></rect><rect x="164.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002900 class 1</title></rect><rect x="168.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002A00 class 1</title></rect><rect x="172.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002B00 class 1</title></rect><rect x="176.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002C00 class 1</title></rect><rect x="180.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002D00 class 1</title></rect><rect x="184.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002E00 class 1</title></rect><rect x="188.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002F00 class 1</title></rect><rect x="192.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00003000 class 0</title></rect><rect x="196.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00003100 class 0</title></rect><rect x="200.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00003200 class 0</title></rect><rect x="204.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00003300 class 0</title></rect><rect x="208.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003400 class 3</title></rect><rect x="212.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003500 class 3</title></rect><rect x="216.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003600 class 3</title></rect><rect x="220.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003700 class 3</title></rect><rect x="224.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003800 class 3</title></rect><rect x="228.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003900 class 3</title></rect><rect x="232.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003A00 class 3</title></rect><rect x="236.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003B00 class 3</title></rect><rect x="240.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003C00 class 3</title></rect><rect x="244.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003D00 class 3</title></rect><rect x="248.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003E00 class 3</title></rect><rect x="252.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003F00 class 3</title></rect></svg></div><div class="hb-canvasframe-caption">0x00000000 to 0x00003FFF &middot; one column per block</div></div><div class="hb-strip-axis"><span>0x00000000</span><span>block size 256 B</span><span>0x00003FFF</span></div><div class="hb-legend"><span class="hb-legend-item"><span class="hb-legend-code">0</span><span class="hb-legend-swatch" style="background: var(--hb-class-0)"></span><span class="hb-legend-label">Zero filled</span><span class="hb-legend-note">every byte 0x00</span></span><span class="hb-legend-item"><span class="hb-legend-code">1</span><span class="hb-legend-swatch" style="background: var(--hb-class-1)"></span><span class="hb-legend-label">Plaintext-like</span><span class="hb-legend-note">printable, low entropy</span></span><span class="hb-legend-item"><span class="hb-legend-code">2</span><span class="hb-legend-swatch" style="background: var(--hb-class-2)"></span><span class="hb-legend-label">Moderate</span><span class="hb-legend-note">structured binary</span></span><span class="hb-legend-item"><span class="hb-legend-code">3</span><span class="hb-legend-swatch" style="background: var(--hb-class-3)"></span><span class="hb-legend-label">High entropy</span><span class="hb-legend-note">H &gt; 7.0, packed or encrypted</span></span><span class="hb-legend-item"><span class="hb-legend-code">4</span><span class="hb-legend-swatch" style="background: var(--hb-class-4)"></span><span class="hb-legend-label">Mixed</span><span class="hb-legend-note">H 4.5 to 7.0, code or tables</span></span></div></div></section><section class="ds-section"><header><h2 class="ds-section-title">Selection marker</h2><p class="ds-section-note">The strip is the link back to the editor rather than a separate report: whatever is selected in the document is drawn over it as a translucent overlay, so the 3072 bytes under the caret can be located in the whole buffer at a glance. The overlay uses the same selection fill and border as the editor, and never occludes the classes beneath it.</p></header><div class="ds-section-body"><div class="hb-canvasframe"><div class="hb-canvasframe-header">Selection<span class="hb-canvasframe-meta">0x00002800 &middot; 3072 B</span></div><div class="hb-canvasframe-body is-plain"><svg viewBox="0 0 256 64" preserveAspectRatio="none" style="width: 100%; height: 56px" role="img" aria-label="Content class of every 256 byte block"><rect x="0.0" y="0" width="4.0" height="64" fill="var(--hb-class-2)"><title>0x00000000 class 2</title></rect><rect x="4.0" y="0" width="4.0" height="64" fill="var(--hb-class-2)"><title>0x00000100 class 2</title></rect><rect x="8.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00000200 class 1</title></rect><rect x="12.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00000300 class 0</title></rect><rect x="16.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000400 class 4</title></rect><rect x="20.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000500 class 4</title></rect><rect x="24.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000600 class 4</title></rect><rect x="28.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000700 class 4</title></rect><rect x="32.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000800 class 4</title></rect><rect x="36.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000900 class 4</title></rect><rect x="40.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000A00 class 4</title></rect><rect x="44.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000B00 class 4</title></rect><rect x="48.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000C00 class 4</title></rect><rect x="52.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000D00 class 4</title></rect><rect x="56.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000E00 class 4</title></rect><rect x="60.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00000F00 class 4</title></rect><rect x="64.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001000 class 4</title></rect><rect x="68.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001100 class 4</title></rect><rect x="72.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001200 class 4</title></rect><rect x="76.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001300 class 4</title></rect><rect x="80.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001400 class 4</title></rect><rect x="84.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001500 class 4</title></rect><rect x="88.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001600 class 4</title></rect><rect x="92.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001700 class 4</title></rect><rect x="96.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001800 class 4</title></rect><rect x="100.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001900 class 4</title></rect><rect x="104.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001A00 class 4</title></rect><rect x="108.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001B00 class 4</title></rect><rect x="112.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001C00 class 4</title></rect><rect x="116.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001D00 class 4</title></rect><rect x="120.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001E00 class 4</title></rect><rect x="124.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00001F00 class 4</title></rect><rect x="128.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002000 class 4</title></rect><rect x="132.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002100 class 4</title></rect><rect x="136.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002200 class 4</title></rect><rect x="140.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002300 class 4</title></rect><rect x="144.0" y="0" width="4.0" height="64" fill="var(--hb-class-4)"><title>0x00002400 class 4</title></rect><rect x="148.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002500 class 1</title></rect><rect x="152.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002600 class 1</title></rect><rect x="156.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002700 class 1</title></rect><rect x="160.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002800 class 1</title></rect><rect x="164.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002900 class 1</title></rect><rect x="168.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002A00 class 1</title></rect><rect x="172.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002B00 class 1</title></rect><rect x="176.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002C00 class 1</title></rect><rect x="180.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002D00 class 1</title></rect><rect x="184.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002E00 class 1</title></rect><rect x="188.0" y="0" width="4.0" height="64" fill="var(--hb-class-1)"><title>0x00002F00 class 1</title></rect><rect x="192.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00003000 class 0</title></rect><rect x="196.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00003100 class 0</title></rect><rect x="200.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00003200 class 0</title></rect><rect x="204.0" y="0" width="4.0" height="64" fill="var(--hb-class-0)"><title>0x00003300 class 0</title></rect><rect x="208.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003400 class 3</title></rect><rect x="212.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003500 class 3</title></rect><rect x="216.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003600 class 3</title></rect><rect x="220.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003700 class 3</title></rect><rect x="224.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003800 class 3</title></rect><rect x="228.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003900 class 3</title></rect><rect x="232.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003A00 class 3</title></rect><rect x="236.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003B00 class 3</title></rect><rect x="240.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003C00 class 3</title></rect><rect x="244.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003D00 class 3</title></rect><rect x="248.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003E00 class 3</title></rect><rect x="252.0" y="0" width="4.0" height="64" fill="var(--hb-class-3)"><title>0x00003F00 class 3</title></rect><rect x="160.00" y="0" width="48.00" height="64" fill="var(--hb-sel-bg)"/><line x1="160.00" y1="0" x2="160.00" y2="64" stroke="var(--hb-sel-border)" stroke-width="1" vector-effect="non-scaling-stroke"/><line x1="208.00" y1="0" x2="208.00" y2="64" stroke="var(--hb-sel-border)" stroke-width="1" vector-effect="non-scaling-stroke"/></svg></div><div class="hb-canvasframe-caption">the overlay carries the editor selection fill and border &middot; the classes stay visible beneath it</div></div><div class="hb-strip-axis"><span>0x00000000</span><span>selection 0x00002800 to 0x000033FF</span><span>0x00003FFF</span></div></div></section></main>
 </body>
 </html>

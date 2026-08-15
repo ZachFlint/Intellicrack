@@ -13,7 +13,9 @@
    for a repeated id. */
 
 import { callOp, getReference, listJobs, readWindow, toHex } from './api.js';
+import { tokenHex } from './charts.js';
 import { createOperationConsole } from './console.js';
+import { iconButton, nextId, trapFocus } from './dom.js';
 import { clearSuggestionCache, element, hexOf, humanSize, openArgumentDialog } from './forms.js';
 import { actionButton, banner, emptyState, fetchRaw, renderError, renderResult } from './renderers.js';
 
@@ -64,11 +66,7 @@ function panelHeader(title, subtitleText) {
 }
 
 function panelAction(glyph, title, onClick) {
-  const node = element('button', 'hb-panel-action', glyph);
-  node.type = 'button';
-  node.title = title;
-  node.addEventListener('click', onClick);
-  return node;
+  return iconButton(glyph, title, onClick, 'hb-panel-action');
 }
 
 function busy(host, message) {
@@ -184,15 +182,17 @@ function createEnvironment(bench) {
 }
 
 function showResultModal(env, name, result, args, handle) {
-  const overlay = element('div', 'hbx-overlay');
+  const titleId = nextId('hb-dialog-title');
+  const overlay = element('div', 'hbx-overlay', undefined, { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId });
   const scrim = element('div', 'hb-scrim');
   const dialog = element('div', 'hb-dialog hbx-dialog-wide');
 
   const header = element('div', 'hb-dialog-header');
-  header.appendChild(element('span', 'hb-dialog-title', name));
+  const title = element('span', 'hb-dialog-title', name);
+  title.id = titleId;
+  header.appendChild(title);
   header.appendChild(element('span', 'hb-badge is-mono', `${result.duration_ms.toFixed(2)} ms`));
-  const close = element('button', 'hb-dialog-close', '✕');
-  close.type = 'button';
+  const close = iconButton('✕', 'Close', null, 'hb-dialog-close');
   header.appendChild(close);
 
   const body = element('div', 'hb-dialog-body');
@@ -208,8 +208,12 @@ function showResultModal(env, name, result, args, handle) {
   dialog.append(header, body, footer);
   overlay.append(scrim, dialog);
   document.getElementById('overlays')?.appendChild(overlay);
+  const trap = trapFocus(overlay);
 
-  const dismiss = () => overlay.remove();
+  const dismiss = () => {
+    trap.release();
+    overlay.remove();
+  };
   scrim.addEventListener('mousedown', dismiss);
   close.addEventListener('click', dismiss);
   done.addEventListener('click', dismiss);
@@ -390,7 +394,7 @@ function bookmarksPanel(env) {
           offset: context.caret,
           length: Math.max(1, context.selection),
           label: `mark at ${offsetText(context.caret)}`,
-          color: '#6d28d9',
+          color: tokenHex('--hb-bookmark'),
         }).then(reload);
       }));
       built.actions.appendChild(panelAction('⊞', 'Add through the Bookmark object', () => {
@@ -1018,7 +1022,7 @@ function runLogPanel(env) {
       const head = document.createElement('thead');
       const headRow = document.createElement('tr');
       for (const heading of ['operation', 'state', 'handle', 'submitted']) {
-        headRow.appendChild(element('th', heading === 'operation' ? 'is-mono' : '', heading));
+        headRow.appendChild(element('th', heading === 'operation' ? 'is-mono' : '', heading, { scope: 'col' }));
       }
       head.appendChild(headRow);
       const tbody = document.createElement('tbody');
@@ -1044,7 +1048,7 @@ function runLogPanel(env) {
       const head = document.createElement('thead');
       const headRow = document.createElement('tr');
       for (const heading of ['operation', 'duration', 'document', 'at']) {
-        headRow.appendChild(element('th', heading === 'operation' ? 'is-mono' : '', heading));
+        headRow.appendChild(element('th', heading === 'operation' ? 'is-mono' : '', heading, { scope: 'col' }));
       }
       head.appendChild(headRow);
       const tbody = document.createElement('tbody');

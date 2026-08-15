@@ -12,6 +12,8 @@
    plug in without this file knowing what they are. */
 
 import { callOp, closeDocument, createDocument, DispatchError, getReference, listDocuments, listJobs, shutdown, taggedBytes, toHex } from './api.js';
+import { tokenHex } from './charts.js';
+import { announce, decorativeGlyph, element, iconButton, nextId, trapFocus } from './dom.js';
 import { BYTES_PER_ROW, HexGrid } from './grid.js';
 
 
@@ -34,6 +36,10 @@ const SIZE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
 const ENTROPY_DIGITS = 3;
 const PREVIEW_BYTES = 4096;
 const CLASSIFICATION_BLOCK = 4096;
+const BOOKMARK_COLOR_TOKEN = '--hb-bookmark';
+const LIVE_REGION_ID = 'live';
+const SPLITTER_STEP_PX = 16;
+const SPLITTER_PAGE_PX = 64;
 
 const HEX_PATTERN = /^[0-9a-fA-F\s_,:-]*$/;
 const HEX_SEARCH_PATTERN = /^[0-9a-fA-F?\s_,:-]*$/;
@@ -105,17 +111,6 @@ function perPixelSize(bytes) {
   return `${bytes < 10 ? bytes.toFixed(1) : String(Math.round(bytes))} B`;
 }
 
-function element(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) {
-    node.className = className;
-  }
-  if (text !== undefined) {
-    node.textContent = text;
-  }
-  return node;
-}
-
 /** Offsets are always hexadecimal, with or without an 0x prefix. */
 function parseOffset(text) {
   const trimmed = String(text).trim().replace(/^0x/i, '').replace(/[\s_]/g, '');
@@ -124,6 +119,24 @@ function parseOffset(text) {
   }
   const value = Number.parseInt(trimmed, HEX_RADIX);
   return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+
+/**
+ * The one polite live region the page speaks through, created if the document did not declare it.
+ *
+ * `announce` is deliberately tolerant of a missing region, which means a page
+ * that never declares one stays silent without ever failing. Building it here
+ * rather than relying on the markup keeps that from being the normal case.
+ */
+function liveRegion() {
+  const existing = document.getElementById(LIVE_REGION_ID);
+  if (existing !== null) {
+    return existing;
+  }
+  const region = element('div', 'hb-sr-only', undefined, { id: LIVE_REGION_ID, 'aria-live': 'polite' });
+  document.body.appendChild(region);
+  return region;
 }
 
 /* ------------------------------------------------------------------ toasts */
@@ -137,18 +150,17 @@ class ToastStack {
 
   show(kind, title, detail) {
     const toast = element('div', `hb-toast is-${kind}`);
-    const glyph = element('span', 'hb-toast-glyph', kind === 'error' ? '!' : kind === 'warning' ? '△' : kind === 'success' ? '✓' : 'i');
+    const glyph = decorativeGlyph(kind === 'error' ? '!' : kind === 'warning' ? '△' : kind === 'success' ? '✓' : 'i', 'hb-toast-glyph');
     const body = element('div', 'hb-toast-body');
     body.appendChild(element('div', 'hb-toast-title', title));
     if (detail) {
       body.appendChild(element('div', 'hb-toast-detail', detail));
     }
-    const close = element('button', 'hb-toast-close', '✕');
-    close.type = 'button';
-    close.addEventListener('click', () => toast.remove());
+    const close = iconButton('✕', 'Dismiss notification', () => toast.remove(), 'hb-toast-close');
     toast.append(glyph, body, close);
     this.#host.appendChild(toast);
     window.setTimeout(() => toast.remove(), TOAST_MS);
+    announce(detail ? `${title}. ${detail}` : title);
   }
 }
 
@@ -232,7 +244,7 @@ const ARGUMENT_DEFAULTS = new Map([
   ['int_pair', [0, 0]],
   ['bool_pair', [false, false]],
   ['bytes_map', {}],
-  ['bookmark', { offset: 0, length: 1, label: '', color: '#4c8dff' }],
+  ['bookmark', () => ({ offset: 0, length: 1, label: '', color: tokenHex(BOOKMARK_COLOR_TOKEN) })],
 ]);
 
 /** Cache key for a panel keyed on the caret: the document's handle and generation, not merely the offset. */
@@ -242,6 +254,9 @@ export function inspectorCacheKey(doc, offset) {
 
 function defaultArgument(kind) {
   const value = ARGUMENT_DEFAULTS.get(kind);
+  if (typeof value === 'function') {
+    return value();
+  }
   return Array.isArray(value) ? [...value] : (value !== null && typeof value === 'object' ? { ...value } : value);
 }
 
@@ -250,6 +265,7 @@ function defaultArgument(kind) {
 class DialogHost {
   #host;
   #overlay = null;
+  #trap = null;
 
   constructor(host) {
     this.#host = host;
@@ -259,7 +275,16 @@ class DialogHost {
     return this.#overlay !== null;
   }
 
+  /**
+   * Take the current overlay down.
+   *
+   * Every way out of either dialog - the scrim, the close button, the footer
+   * button, Escape, and one dialog opening over another - lands here, which is
+   * what makes this the one place the focus trap has to be released.
+   */
   close() {
+    this.#trap?.release();
+    this.#trap = null;
     this.#overlay?.remove();
     this.#overlay = null;
   }
@@ -268,14 +293,16 @@ class DialogHost {
   form(spec) {
     return new Promise((resolve) => {
       this.close();
-      const overlay = element('div', 'hbx-overlay');
+      const titleId = nextId('hb-dialog-title');
+      const overlay = element('div', 'hbx-overlay', undefined, { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId });
       const scrim = element('div', 'hb-scrim');
       const dialog = element('div', 'hb-dialog');
 
       const header = element('div', 'hb-dialog-header');
-      header.appendChild(element('span', 'hb-dialog-title', spec.title));
-      const closeButton = element('button', 'hb-dialog-close', '✕');
-      closeButton.type = 'button';
+      const title = element('span', 'hb-dialog-title', spec.title);
+      title.id = titleId;
+      header.appendChild(title);
+      const closeButton = iconButton('✕', `Close the ${spec.title} dialog`, undefined, 'hb-dialog-close');
       header.appendChild(closeButton);
 
       const body = element('div', 'hb-dialog-body');
@@ -298,6 +325,7 @@ class DialogHost {
       overlay.append(scrim, dialog);
       this.#host.appendChild(overlay);
       this.#overlay = overlay;
+      this.#trap = trapFocus(overlay);
 
       const finish = (values) => {
         this.close();
@@ -390,14 +418,16 @@ class DialogHost {
   /** Show a read-only result, rendered as a JSON tree. */
   result(title, meta, value) {
     this.close();
-    const overlay = element('div', 'hbx-overlay');
+    const titleId = nextId('hb-dialog-title');
+    const overlay = element('div', 'hbx-overlay', undefined, { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId });
     const scrim = element('div', 'hb-scrim');
     const dialog = element('div', 'hb-dialog hbx-dialog-wide');
 
     const header = element('div', 'hb-dialog-header');
-    header.appendChild(element('span', 'hb-dialog-title', title));
-    const closeButton = element('button', 'hb-dialog-close', '✕');
-    closeButton.type = 'button';
+    const heading = element('span', 'hb-dialog-title', title);
+    heading.id = titleId;
+    header.appendChild(heading);
+    const closeButton = iconButton('✕', `Close the ${title} dialog`, undefined, 'hb-dialog-close');
     header.appendChild(closeButton);
 
     const body = element('div', 'hb-dialog-body');
@@ -421,6 +451,7 @@ class DialogHost {
     overlay.append(scrim, dialog);
     this.#host.appendChild(overlay);
     this.#overlay = overlay;
+    this.#trap = trapFocus(overlay);
 
     const dismiss = () => this.close();
     scrim.addEventListener('mousedown', dismiss);
@@ -554,11 +585,11 @@ class Dock {
 const MENUS = [
   {
     id: 'file',
-    items: ['file.new', 'file.open', 'file.openBytes', '-', 'file.save', 'file.saveAs', '-', 'file.close', 'file.exit'],
+    items: ['file.new', 'file.open', 'file.openBytes', 'file.attach', '-', 'file.save', 'file.saveAs', '-', 'file.close', 'file.exit'],
   },
   {
     id: 'edit',
-    items: ['edit.undo', 'edit.redo', '-', 'edit.selectAll', 'edit.copyHex', '-', 'edit.fill', 'edit.insert', 'edit.delete', '-', 'edit.toggleInsert'],
+    items: ['edit.undo', 'edit.redo', '-', 'edit.selectAll', 'edit.copyHex', 'edit.paste', '-', 'edit.fill', 'edit.insert', 'edit.delete', '-', 'edit.toggleInsert'],
   },
   {
     id: 'view',
@@ -642,6 +673,95 @@ function comboOf(event) {
   return parts.join('+');
 }
 
+/* ------------------------------------------------------------ blank screen */
+
+const BLANK_TITLE = 'Nothing open.';
+
+const BLANK_LEDE = 'Open a file, attach to a running process, or drop bytes straight in. Everything else in the window stays disabled until one of those happens.';
+
+const BLANK_DROP_HINT = 'drop a file anywhere in this window';
+
+const BLANK_PALETTE_KEY = 'Ctrl+Shift+P';
+
+const BLANK_PALETTE_HINT = ' command palette';
+
+const BLANK_ACTIONS = [
+  { glyph: '▤', title: 'Open a path', note: 'Ctrl+O', command: 'file.open' },
+  { glyph: '◎', title: 'Attach to a process', note: 'read or write live memory', command: 'file.attach' },
+  { glyph: '⌸', title: 'Paste bytes', note: 'hex, base64 or raw', command: 'edit.paste' },
+];
+
+const PASTE_FORMATS = [
+  { value: 'hex', label: 'hex' },
+  { value: 'base64', label: 'base64' },
+  { value: 'raw', label: 'raw' },
+];
+
+const DECIMAL_PATTERN = /^[0-9]+$/;
+const HEX_DIGIT_PATTERN = /^[0-9a-fA-F]*$/;
+const DECIMAL_RADIX = 10;
+const NIBBLES_PER_BYTE = 2;
+
+/**
+ * Hexadecimal for text pasted in one of the three formats the paste dialog offers.
+ *
+ * The conversion happens here rather than in the engine because `open_bytes`
+ * takes hexadecimal and nothing else, so base64 and raw text have to become hex
+ * on this side of the wire either way. Malformed input is reported rather than
+ * repaired: half a byte of hex is as likely to be a truncated paste as a typo,
+ * and silently dropping the odd nibble would open a document the user did not
+ * copy.
+ *
+ * @param {string} text What the user typed or pasted.
+ * @param {string} format One of `hex`, `base64` or `raw`.
+ * @returns {{ok: true, hex: string}|{ok: false, reason: string}} The hexadecimal, or why the text is not usable.
+ */
+export function hexFromPastedText(text, format) {
+  if (format === 'raw') {
+    return { ok: true, hex: toHex(new TextEncoder().encode(text)) };
+  }
+  if (format === 'base64') {
+    const compact = text.replace(/\s/g, '');
+    let binary;
+    try {
+      binary = atob(compact);
+    } catch {
+      return { ok: false, reason: 'That is not base64: it holds characters outside the alphabet, or its length is not a whole number of quanta.' };
+    }
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) {
+      bytes[index] = binary.charCodeAt(index) & BYTE_MASK;
+    }
+    return { ok: true, hex: toHex(bytes) };
+  }
+  const compact = text.replace(/0x/gi, '').replace(/[\s_,:-]/g, '');
+  if (!HEX_DIGIT_PATTERN.test(compact)) {
+    return { ok: false, reason: 'A hex paste takes pairs of hex digits and separators, and nothing else.' };
+  }
+  if (compact.length % NIBBLES_PER_BYTE !== 0) {
+    return { ok: false, reason: `A hex paste needs whole bytes; ${compact.length} digits leaves the last one half written.` };
+  }
+  return { ok: true, hex: compact.toUpperCase() };
+}
+
+/**
+ * True when a drag is carrying files rather than a selection being moved about.
+ *
+ * The window-wide handlers cancel the browser's default, which for a file is
+ * navigating away from the application entirely. Cancelling every drag instead
+ * would also take away dragging text inside an input, so the type list decides.
+ *
+ * @param {DataTransfer|null} transfer The drag's payload description.
+ * @returns {boolean} Whether at least one file is being dragged.
+ */
+export function carriesFiles(transfer) {
+  if (!transfer) {
+    return false;
+  }
+  const types = transfer.types;
+  return types ? [...types].includes('Files') : false;
+}
+
 /* ------------------------------------------------------------------- shell */
 
 /** The whole application outside the grid. */
@@ -672,8 +792,11 @@ export class Shell {
   #workspaceObserver = null;
   #busyCount = 0;
   #panels = new Map();
+  #blank = null;
+  #editorFrame = null;
 
   constructor(nodes) {
+    liveRegion();
     this.#nodes = nodes;
     this.#toasts = new ToastStack(nodes.toasts);
     this.#dialogs = new DialogHost(nodes.overlays);
@@ -686,14 +809,17 @@ export class Shell {
       onDocument: (info) => this.#onDocumentChanged(info),
       onError: (error) => this.reportError(error),
     });
+    this.#editorFrame = nodes.editorHost.querySelector('.hb-editor');
     this.#defineCommands();
     this.#buildMenus();
     this.#bindToolbar();
     this.#bindTabs();
     this.#bindSplitters();
     this.#bindKeyboard();
+    this.#bindFileDrop();
     this.#registerBuiltinPanels();
     this.#applyDockLayout();
+    this.#showBlank(true);
     this.#renderStatus();
   }
 
@@ -906,11 +1032,7 @@ export class Shell {
         subtitle = element('span', 'hb-panel-subtitle', 'no runs yet');
         header.appendChild(subtitle);
         const actions = element('div', 'hb-panel-actions');
-        const reload = element('button', 'hb-panel-action', '⟳');
-        reload.type = 'button';
-        reload.title = 'Refresh';
-        reload.addEventListener('click', refresh);
-        actions.appendChild(reload);
+        actions.appendChild(iconButton('⟳', 'Refresh', refresh, 'hb-panel-action'));
         header.appendChild(actions);
         body = element('div', 'hb-panel-body');
         host.append(header, body);
@@ -937,6 +1059,7 @@ export class Shell {
     this.#define('file.new', 'New document', 'Ctrl+N', () => this.newDocument());
     this.#define('file.open', 'Open path…', 'Ctrl+O', () => this.openPath());
     this.#define('file.openBytes', 'Open file contents…', '', () => this.openLocalBytes());
+    this.#define('file.attach', 'Attach to a process…', '', () => this.attachProcess());
     this.#define('file.save', 'Save', 'Ctrl+S', () => this.save(false), hasDocument);
     this.#define('file.saveAs', 'Save as…', 'Ctrl+Shift+S', () => this.save(true), hasDocument);
     this.#define('file.close', 'Close document', 'Ctrl+W', () => this.closeActive(), hasDocument);
@@ -946,6 +1069,7 @@ export class Shell {
     this.#define('edit.redo', 'Redo', 'Ctrl+Y', () => this.runOnDocument('redo', {}), () => Boolean(this.#active?.can_redo));
     this.#define('edit.selectAll', 'Select all', 'Ctrl+A', () => this.#grid.select(0, this.#active?.length ?? 0), hasDocument);
     this.#define('edit.copyHex', 'Copy selection as hex', 'Ctrl+C', () => this.copySelection(), hasSelection);
+    this.#define('edit.paste', 'Paste bytes…', '', () => this.pasteBytes());
     this.#define('edit.fill', 'Fill selection…', '', () => this.fillSelection(), hasSelection);
     this.#define('edit.insert', 'Insert bytes…', '', () => this.insertBytes(), hasDocument);
     this.#define('edit.delete', 'Delete selection', 'Del', () => this.deleteSelection(), hasSelection);
@@ -1009,13 +1133,17 @@ export class Shell {
   /* ----------------------------------------------------------------- menus */
 
   #buildMenus() {
+    this.#nodes.menubar.setAttribute('role', 'menubar');
     for (const menu of MENUS) {
       const holder = this.#nodes.menubar.querySelector(`[data-menu="${menu.id}"]`);
       if (!holder) {
         continue;
       }
       const button = holder.querySelector('.hb-menu-item');
-      const popup = element('div', 'hb-menu-popup');
+      button.setAttribute('role', 'menuitem');
+      button.setAttribute('aria-haspopup', 'true');
+      button.setAttribute('aria-expanded', 'false');
+      const popup = element('div', 'hb-menu-popup', undefined, { role: 'menu', 'aria-label': button.textContent });
       popup.hidden = true;
       holder.appendChild(popup);
       button.addEventListener('click', (event) => {
@@ -1028,7 +1156,7 @@ export class Shell {
         }
       });
     }
-    document.addEventListener('click', () => this.#closeMenu());
+    document.addEventListener('click', () => this.#closeMenu(false));
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         this.#closeMenu();
@@ -1038,7 +1166,7 @@ export class Shell {
 
   #toggleMenu(id, holder, button, popup, force = false) {
     const alreadyOpen = this.#openMenu !== null && this.#openMenu.id === id;
-    this.#closeMenu();
+    this.#closeMenu(false);
     if (alreadyOpen && !force) {
       return;
     }
@@ -1046,7 +1174,7 @@ export class Shell {
     popup.replaceChildren();
     for (const entry of spec.items) {
       if (entry === '-') {
-        popup.appendChild(element('div', 'hb-menu-sep'));
+        popup.appendChild(element('div', 'hb-menu-sep', undefined, { role: 'separator' }));
         continue;
       }
       const command = this.#commands.get(entry);
@@ -1054,8 +1182,7 @@ export class Shell {
         continue;
       }
       const enabled = command.enabled();
-      const item = element('button', enabled ? 'hb-menu-entry' : 'hb-menu-entry is-disabled');
-      item.type = 'button';
+      const item = element('button', enabled ? 'hb-menu-entry' : 'hb-menu-entry is-disabled', undefined, { type: 'button', role: 'menuitem' });
       item.appendChild(element('span', 'hb-menu-entry-label', command.label));
       item.appendChild(element('span', 'hb-menu-shortcut', command.shortcut));
       if (enabled) {
@@ -1064,21 +1191,37 @@ export class Shell {
           this.#closeMenu();
           this.run(command.id);
         });
+      } else {
+        item.setAttribute('aria-disabled', 'true');
       }
       popup.appendChild(item);
     }
     popup.hidden = false;
     button.classList.add('is-open');
+    button.setAttribute('aria-expanded', 'true');
     this.#openMenu = { id, button, popup };
   }
 
-  #closeMenu() {
+  /**
+   * Shut whichever menu is open.
+   *
+   * Focus goes back to the trigger by default, because the keyboard has nowhere
+   * else to be once the popup it was standing in disappears. The two paths that
+   * pass `false` are the ones where something else has already claimed focus:
+   * a click somewhere in the page, and one menu opening as another closes.
+   */
+  #closeMenu(returnFocus = true) {
     if (this.#openMenu === null) {
       return;
     }
-    this.#openMenu.popup.hidden = true;
-    this.#openMenu.button.classList.remove('is-open');
+    const { button, popup } = this.#openMenu;
+    popup.hidden = true;
+    button.classList.remove('is-open');
+    button.setAttribute('aria-expanded', 'false');
     this.#openMenu = null;
+    if (returnFocus && button.isConnected) {
+      button.focus();
+    }
   }
 
   /* --------------------------------------------------------------- toolbar */
@@ -1122,6 +1265,7 @@ export class Shell {
   /* ------------------------------------------------------------------ tabs */
 
   #bindTabs() {
+    this.#nodes.tabstrip.setAttribute('role', 'tablist');
     this.#nodes.tabstrip.addEventListener('click', (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) {
@@ -1152,24 +1296,41 @@ export class Shell {
         this.close(tab.dataset.handle);
       }
     });
+    this.#nodes.tabstrip.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') {
+        return;
+      }
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || target.closest('.hb-tab-close')) {
+        return;
+      }
+      const tab = target.closest('.hb-tab');
+      if (tab) {
+        event.preventDefault();
+        this.activate(tab.dataset.handle);
+      }
+    });
   }
 
   #renderTabs() {
     this.#nodes.tabstrip.replaceChildren();
     for (const info of this.#documents) {
       const active = this.#active !== null && info.handle === this.#active.handle;
-      const tab = element('div', active ? 'hb-tab is-active' : 'hb-tab');
+      const tab = element('div', active ? 'hb-tab is-active' : 'hb-tab', undefined, {
+        role: 'tab',
+        tabindex: '0',
+        'aria-selected': String(active),
+        'aria-label': info.label,
+      });
       tab.dataset.handle = info.handle;
       tab.title = info.path ?? `${info.origin} · ${humanSize(info.length)}`;
-      tab.appendChild(element('span', 'hb-tab-icon', info.path ? '▤' : '◇'));
+      tab.appendChild(decorativeGlyph(info.path ? '▤' : '◇', 'hb-tab-icon'));
       tab.appendChild(element('span', 'hb-tab-title', info.label));
       if (info.modified) {
         tab.appendChild(element('span', 'hb-tab-dirty'));
       }
-      const close = element('button', 'hb-tab-close', '✕');
-      close.type = 'button';
+      const close = iconButton('✕', `Close ${info.label}`, undefined, 'hb-tab-close');
       close.dataset.handle = info.handle;
-      close.title = 'Close';
       tab.appendChild(close);
       this.#nodes.tabstrip.appendChild(tab);
     }
@@ -1190,8 +1351,52 @@ export class Shell {
       this.#dockRequest.bottom = rect.bottom - event.clientY;
       this.#clampDocks();
     });
+    this.#splitterKeys(this.#nodes.splitterV, 'right');
+    this.#splitterKeys(this.#nodes.splitterH, 'bottom');
     this.#workspaceObserver = new ResizeObserver(() => this.#clampDocks());
     this.#workspaceObserver.observe(this.#nodes.workspace);
+    this.#clampDocks();
+  }
+
+  /**
+   * Make one splitter operable from the keyboard.
+   *
+   * The step starts from the size actually in force rather than from the
+   * remembered request, so a dock whose stored size the window is currently too
+   * small to honour moves by one step from where it is instead of jumping back
+   * out to a size it cannot have.
+   */
+  #splitterKeys(handle, side) {
+    handle.tabIndex = 0;
+    handle.addEventListener('keydown', (event) => {
+      const rect = this.#nodes.workspace.getBoundingClientRect();
+      const extent = side === 'bottom' ? rect.height : rect.width;
+      if (extent <= 0) {
+        return;
+      }
+      const grow = side === 'bottom' ? 'ArrowUp' : 'ArrowLeft';
+      const shrink = side === 'bottom' ? 'ArrowDown' : 'ArrowRight';
+      const current = this.#fitDock(this.#dockRequest[side], extent);
+      let next;
+      if (event.key === grow) {
+        next = current + SPLITTER_STEP_PX;
+      } else if (event.key === shrink) {
+        next = current - SPLITTER_STEP_PX;
+      } else if (event.key === 'PageUp') {
+        next = current + SPLITTER_PAGE_PX;
+      } else if (event.key === 'PageDown') {
+        next = current - SPLITTER_PAGE_PX;
+      } else if (event.key === 'Home') {
+        next = this.#fitDock(0, extent);
+      } else if (event.key === 'End') {
+        next = this.#fitDock(Number.POSITIVE_INFINITY, extent);
+      } else {
+        return;
+      }
+      event.preventDefault();
+      this.#dockRequest[side] = next;
+      this.#clampDocks();
+    });
   }
 
   #readDockDefaults() {
@@ -1227,11 +1432,29 @@ export class Shell {
       }
     };
     if (rect.width > 0) {
-      write('--hb-dock-right-w', this.#fitDock(this.#dockRequest.right, rect.width));
+      const right = this.#fitDock(this.#dockRequest.right, rect.width);
+      write('--hb-dock-right-w', right);
+      this.#describeSplitter(this.#nodes.splitterV, right, rect.width);
     }
     if (rect.height > 0) {
-      write('--hb-dock-bottom-h', this.#fitDock(this.#dockRequest.bottom, rect.height));
+      const bottom = this.#fitDock(this.#dockRequest.bottom, rect.height);
+      write('--hb-dock-bottom-h', bottom);
+      this.#describeSplitter(this.#nodes.splitterH, bottom, rect.height);
     }
+  }
+
+  /**
+   * Publish what a splitter can currently be dragged to.
+   *
+   * The two ends come out of `#fitDock` itself rather than out of the constants
+   * it is built from, so the range assistive technology reads is the same range
+   * the drag and the arrow keys are held to, whatever the workspace happens to
+   * allow right now.
+   */
+  #describeSplitter(handle, value, extent) {
+    handle.setAttribute('aria-valuenow', String(Math.round(value)));
+    handle.setAttribute('aria-valuemin', String(Math.round(this.#fitDock(0, extent))));
+    handle.setAttribute('aria-valuemax', String(Math.round(this.#fitDock(Number.POSITIVE_INFINITY, extent))));
   }
 
   #drag(handle, apply) {
@@ -1303,6 +1526,116 @@ export class Shell {
     });
   }
 
+  /* ------------------------------------------------------------- file drop */
+
+  /**
+   * Let a file dropped anywhere in the window open as a document.
+   *
+   * Both halves are needed and neither is optional: without the `dragover`
+   * handler the drop never fires at all, and without the `drop` handler the
+   * browser navigates the window to the dropped file and the application is
+   * gone. The listeners sit on the window rather than on the editor so the
+   * gesture works over the docks and the status bar too, which is what the
+   * blank screen promises.
+   */
+  #bindFileDrop() {
+    window.addEventListener('dragover', (event) => {
+      if (!carriesFiles(event.dataTransfer)) {
+        return;
+      }
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+    });
+    window.addEventListener('drop', (event) => {
+      if (!carriesFiles(event.dataTransfer)) {
+        return;
+      }
+      event.preventDefault();
+      const file = event.dataTransfer.files?.[0];
+      if (!file) {
+        return;
+      }
+      this.openFile(file).catch((error) => this.reportError(error));
+    });
+  }
+
+  /* ----------------------------------------------------------- blank screen */
+
+  /**
+   * Put the blank screen up in place of the grid, or take it back down.
+   *
+   * The grid stays built and mounted throughout; only its visibility moves.
+   * Tearing it down and rebuilding it would throw away the window cache and the
+   * measured row height, and the height cannot be re-measured while the editor
+   * is hidden, so a rebuilt grid would come back not knowing how tall a row is.
+   * The display is set inline because `.hb-editor` declares `display: flex`,
+   * which the `hidden` attribute alone does not outrank.
+   *
+   * @param {boolean} visible Whether there is no document to show.
+   * @returns {void}
+   */
+  #showBlank(visible) {
+    if (this.#editorFrame !== null) {
+      this.#editorFrame.style.display = visible ? 'none' : '';
+    }
+    if (!visible) {
+      this.#blank?.remove();
+      return;
+    }
+    this.#blank ??= this.#buildBlank();
+    if (this.#blank.isConnected) {
+      return;
+    }
+    this.#nodes.editorHost.appendChild(this.#blank);
+    this.#focusBlank();
+  }
+
+  /**
+   * Hand the keyboard to the blank screen's first action.
+   *
+   * Only when nothing else has claimed it: whatever hid the grid also stranded
+   * focus on the body or inside the element that just went away, and leaving it
+   * there would open the application with no keyboard position at all. A focus
+   * the user has already put somewhere reachable is left where it is.
+   */
+  #focusBlank() {
+    const active = document.activeElement;
+    const stranded = active === null
+      || active === document.body
+      || (this.#editorFrame !== null && this.#editorFrame.contains(active));
+    if (stranded) {
+      this.#blank.querySelector('.hb-blank-action')?.focus();
+    }
+  }
+
+  #buildBlank() {
+    const root = element('div', 'hb-blank');
+
+    const head = element('div', 'hb-blank-head');
+    head.append(element('h1', 'hb-blank-title', BLANK_TITLE), element('p', 'hb-blank-lede', BLANK_LEDE));
+
+    const actions = element('div', 'hb-blank-actions');
+    for (const action of BLANK_ACTIONS) {
+      const button = element('button', 'hb-blank-action', undefined, { type: 'button' });
+      button.append(
+        decorativeGlyph(action.glyph, 'hb-blank-action-glyph'),
+        element('span', 'hb-blank-action-title', action.title),
+        element('span', 'hb-blank-action-note', action.note),
+      );
+      button.addEventListener('click', () => this.run(action.command));
+      actions.appendChild(button);
+    }
+
+    const hints = element('div', 'hb-blank-hints');
+    hints.appendChild(element('span', undefined, BLANK_DROP_HINT));
+    const palette = element('span');
+    palette.append(element('span', 'hb-blank-key', BLANK_PALETTE_KEY), document.createTextNode(BLANK_PALETTE_HINT));
+    hints.appendChild(palette);
+
+    root.append(head, actions, hints);
+    return root;
+  }
+
   /* ------------------------------------------------------------- documents */
 
   /** Read the open document list back from the server and repaint the tabs. */
@@ -1316,6 +1649,7 @@ export class Shell {
   #setActive(info) {
     const changed = info?.handle !== this.#active?.handle;
     this.#active = info;
+    this.#showBlank(!info);
     this.#grid.setDocument(info);
     if (changed) {
       this.clearHits();
@@ -1379,13 +1713,61 @@ export class Shell {
       if (!file) {
         return;
       }
-      file.arrayBuffer()
-        .then((buffer) => callOp('open_bytes', { arguments: { data: toHex(new Uint8Array(buffer)) } }))
-        .then((result) => this.reload(result.created_handle))
-        .then(() => this.#toasts.show('success', 'Opened', `${file.name} (${humanSize(file.size)})`))
-        .catch((error) => this.reportError(error));
+      this.openFile(file).catch((error) => this.reportError(error));
     });
     picker.click();
+  }
+
+  /**
+   * Hand one browser `File` to the engine, whichever gesture produced it.
+   *
+   * The file picker and the window-wide drop both arrive here, so a dropped
+   * file and a chosen one open by the same call and report the same thing.
+   *
+   * @param {File} file The file to read.
+   * @returns {Promise<void>} Settles once the document is open and announced.
+   */
+  async openFile(file) {
+    const buffer = await file.arrayBuffer();
+    const result = await callOp('open_bytes', { arguments: { data: toHex(new Uint8Array(buffer)) } });
+    await this.reload(result.created_handle);
+    this.#toasts.show('success', 'Opened', `${file.name} (${humanSize(file.size)})`);
+  }
+
+  /**
+   * Ask for a process and list what its address space is made of.
+   *
+   * The listing is where an attach actually starts: each readable region the
+   * result carries offers to snapshot itself into a document, which is the only
+   * way bytes come out of another process. Nothing is copied by listing.
+   *
+   * @returns {Promise<void>} Settles once the regions have been shown, or the dialog dismissed.
+   */
+  async attachProcess() {
+    const values = await this.#dialogs.form({
+      title: 'Attach to a process',
+      confirmLabel: 'List regions',
+      note: 'The process is opened by the server process, so it must be one this machine will let it read.',
+      fields: [{ name: 'pid', label: 'pid', hintType: 'int', mono: true, placeholder: '8124' }],
+    });
+    if (values === null || values.pid.trim() === '') {
+      return;
+    }
+    const text = values.pid.trim();
+    if (!DECIMAL_PATTERN.test(text)) {
+      this.#toasts.show('warning', 'Not a process id', `"${text}" is not a decimal process id.`);
+      return;
+    }
+    const pid = Number.parseInt(text, DECIMAL_RADIX);
+    this.#setBusy(true);
+    let result;
+    try {
+      result = await callOp('list_process_memory_regions', { arguments: { pid } });
+    } finally {
+      this.#setBusy(false);
+    }
+    this.emit('operation', { name: 'list_process_memory_regions', result });
+    this.#dialogs.result('list_process_memory_regions', `pid ${pid} · ${result.duration_ms.toFixed(2)} ms`, result.value);
   }
 
   async save(forcePath) {
@@ -1789,6 +2171,50 @@ export class Shell {
     this.#toasts.show(toast.kind, toast.title, toast.detail);
   }
 
+  /**
+   * Open whatever is on the clipboard, or whatever the user types, as a document.
+   *
+   * The clipboard read is a courtesy and not a requirement: a browser that has
+   * not been given clipboard permission rejects it, which is the ordinary case
+   * rather than a failure, so the dialog simply opens empty and the user pastes
+   * into it by hand.
+   *
+   * @returns {Promise<void>} Settles once the document is open, or the dialog dismissed.
+   */
+  async pasteBytes() {
+    let clipboard = '';
+    try {
+      clipboard = await navigator.clipboard.readText();
+    } catch {
+      clipboard = '';
+    }
+    const values = await this.#dialogs.form({
+      title: 'Paste bytes',
+      confirmLabel: 'Open',
+      note: 'The text becomes a new in-memory document. It is never written anywhere until you save it.',
+      fields: [
+        { name: 'text', label: 'bytes', type: 'textarea', mono: true, value: clipboard },
+        { name: 'format', label: 'format', type: 'select', value: 'hex', options: PASTE_FORMATS },
+      ],
+    });
+    if (values === null || values.text.trim() === '') {
+      return;
+    }
+    const converted = hexFromPastedText(values.text, values.format);
+    if (!converted.ok) {
+      this.#toasts.show('warning', `Not ${values.format}`, converted.reason);
+      return;
+    }
+    if (converted.hex === '') {
+      this.#toasts.show('warning', 'Nothing to open', `Read as ${values.format}, that text carries no bytes.`);
+      return;
+    }
+    const result = await callOp('open_bytes', { arguments: { data: converted.hex } });
+    await this.reload(result.created_handle);
+    const length = converted.hex.length / NIBBLES_PER_BYTE;
+    this.#toasts.show('success', 'Pasted', `${length} byte${length === 1 ? '' : 's'} from ${values.format}.`);
+  }
+
   async extractStrings() {
     await this.showResult('extract_strings', {
       min_length: DEFAULT_MIN_STRING,
@@ -1904,8 +2330,12 @@ export class Shell {
   }
 
   #setBusy(busy) {
-    this.#busyCount += busy ? 1 : -1;
-    this.#busyCount = Math.max(0, this.#busyCount);
+    const wasBusy = this.#busyCount > 0;
+    this.#busyCount = Math.max(0, this.#busyCount + (busy ? 1 : -1));
+    const isBusy = this.#busyCount > 0;
+    if (isBusy !== wasBusy) {
+      announce(isBusy ? 'Working' : 'Ready');
+    }
     this.#renderStatus();
   }
 

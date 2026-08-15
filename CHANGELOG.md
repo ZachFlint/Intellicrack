@@ -1042,6 +1042,66 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 ### Fixed
 
+- **qemu:** Outwait the Windows guest agent's serve cadence (S18-D04) (`83aac72`)
+No Windows QEMU run could reach the report tabs: start spent its whole
+300s budget on guest_agent_connect_retry and failed with "guest agent
+failed to connect" against a guest that was healthy. Confirmed live on
+the -clean image with exclusive qemu-guest-agent access: the guest held
+10.0.2.15 and :4445 was LISTENING, while the monitor channel reported
+the agent unreachable.
+agent.ps1 is single-threaded, and one pass of its main loop runs a full
+Get-Process / Get-NetTCPConnection / Get-NetUDPEndpoint sweep plus a
+one-second sleep before it looks at its listener again - under WHPX,
+longer than the 2s connect() allows one attempt. SLIRP accepts
+unconditionally and the guest kernel backlogs the connection, so every
+attempt got a real socket, wrote its readiness ping, and was discarded
+two seconds later; the agent then answered a host that had already gone.
+Widen the per-attempt budget the start path hands connect to 15s, and
+handle the two consequences of doing so:
+- clamp both the attempt and the backoff to what is left of time_limit,
+so a wider interval cannot overrun a caller's deadline by a whole
+retry;
+- stop retry_interval doubling as the wait between attempts. A new
+backoff_interval (default None -> retry_interval, so existing callers
+are unchanged) pairs the 15s attempt budget with a 2s backoff. Before
+the agent binds its port is refused outright and an attempt costs
+nothing, so the backoff alone decides how quickly the sandbox notices
+it come up; tying the two would cut a 30s budget from ~15 chances
+to 2.
+Gated by 4 tests against a real loopback agent, given a new serve_delay
+knob modelling the sweep. Reverting each part reddens exactly its own
+gate: the constant -> "failed to connect within 25.0s"; the clamp ->
+"given 3.0s and took 30.01s"; the backoff wiring -> "bound at 6.0s and
+the start path only reached it at 17.09s". tests/sandbox/qemu: 408
+passed, 1 skipped.
+
+- **x64dbg:** Quote annotation writes and poll the async patch verify (`877bacb`)
+Re-driving the never-exercised 6F items headless against a real x64dbg
+process and a real notepad.exe debuggee surfaced two defects.
+set_label / set_comment handed the annotation text to the lblset / cmtset
+console commands unquoted; x64dbg's tokenizer strips all internal
+whitespace from an unquoted argument, so "IC audit comment" was stored as
+"ICauditcomment" and the bridge's own read-back verification raised.
+Double-quoting the argument round-trips embedded spaces intact.
+patch_instruction read memory back exactly once, immediately after the
+assemble RPC returned. That RPC only queues an asynchronous
+DbgCmdExec("asm ..."), so the single read raced the write and could
+observe the pre-patch bytes even when the patch succeeded. The new
+_await_memory_change helper polls up to VERIFY_TIMEOUT until the bytes
+differ from the original, mirroring the existing _await_debuggee_pid
+idiom; a genuinely unchanged region still raises.
+
+- **hex-editor:** Align binary diff panel with engine schema (`db0b6bf`)
+Fix diff result rendering where mismatched dictionary keys caused rows
+to display zero offsets and unknown types. Exclude identical match runs
+from the results tree and include input buffer sizes in the comparison
+payload.
+* Expose `size_a` and `size_b` from native diff results and bridge
+* Add `diff_region_rows` to format offset spans and filter match runs
+* Store raw navigate offset in item user data to prevent text re-parsing
+* Update comparison E2E tests and add UI diff rendering unit tests
+* Fix pipeline ordering test by setting `in_place=False`
+
 - **ui:** Share one ScriptManager between the Scripts panel and orchestrator (`50f8b45`)
 MainWindow._configure_orchestrator built a ScriptManager rooted at
 <project>/.intellicrack/scripts and handed it to the orchestrator, which
@@ -5197,15 +5257,14 @@ Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
 
-- **hex-editor:** Align binary diff panel with engine schema (``)
-Fix diff result rendering where mismatched dictionary keys caused rows
-to display zero offsets and unknown types. Exclude identical match runs
-from the results tree and include input buffer sizes in the comparison
-payload.
-* Expose `size_a` and `size_b` from native diff results and bridge
-* Add `diff_region_rows` to format offset spans and filter match runs
-* Store raw navigate offset in item user data to prevent text re-parsing
-* Update comparison E2E tests and add UI diff rendering unit tests
-* Fix pipeline ordering test by setting `in_place=False`
+- **hexbench,sandbox:** Handle QEMU GA exec timeouts and improve UI accessibility (``)
+Tighten QEMU guest agent synchronization to prevent desynchronization on slow commands, update timeout budgeting, and refine Hexbench frontend accessibility and design card generation.
+* Prevent guest agent response offset by maintaining channel resync state and adapting sync attempt slices
+* Increase `QEMU_GA_EXEC_TIMEOUT` to 45s and `guest_agent_ready_timeout` default to 300s to support cold guest boots
+* Add multi-resolution Hexbench application icon and PyInstaller packaging specification
+* Render histogram chart and design card components with standard DOM elements and inline SVGs instead of canvas
+* Implement focus trapping, live region announcements, and explicit ARIA labels across modals and controls
+* Add blank workspace screen with drag-and-drop file opening and process attach actions
+* Expand test coverage for design card freshness, token usage, accessibility contracts, and guest agent desync recovery
 
 

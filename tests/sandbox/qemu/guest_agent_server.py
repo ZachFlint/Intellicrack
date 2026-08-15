@@ -538,6 +538,9 @@ class GuestAgentProtocolServer(_LoopbackServer):
             the end of a file is observable too.
         shutdown_modes: ``mode`` argument of every ``guest-shutdown``.
         shutdown_requested: Set when the first ``guest-shutdown`` arrives.
+        exec_answered: Set once a ``guest-exec`` reply has been produced, which
+            is the only observable a test has for an agent coming out of a
+            stall - the client that gave up waiting for it sees nothing.
         resident_commands: Executables whose process outlives the request that
             started it, so this guest never reaps it.
     """
@@ -553,6 +556,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
     file_reads: list[tuple[str, int]]
     shutdown_modes: list[str]
     shutdown_requested: asyncio.Event
+    exec_answered: asyncio.Event
     resident_commands: frozenset[str]
 
     def __init__(
@@ -565,6 +569,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
         stall_seconds: float = 0.0,
         status_polls_before_exit: int = 0,
         unsupported_commands: frozenset[str] = frozenset(),
+        silent_commands: frozenset[str] = frozenset(),
         resident_commands: frozenset[str] = frozenset(),
     ) -> None:
         """Initialise the server with empty recording buffers.
@@ -590,6 +595,11 @@ class GuestAgentProtocolServer(_LoopbackServer):
                 and answers with ``CommandNotFound``. Agent builds differ in
                 which commands they carry - the sync pair and the file commands
                 both vary - so a client cannot assume the one it prefers exists.
+            silent_commands: Commands this agent accepts and never answers,
+                without holding up anything else on the connection. A refusal
+                costs a client nothing and a silence costs it a whole deadline,
+                so a client that budgets as though every command it sends will
+                be answered one way or the other is only caught by this.
             resident_commands: Executables whose process outlives the request
                 that started it. A live agent never reaps such a child, so it
                 answers ``{"exited": false}`` for its pid for as long as the
@@ -597,6 +607,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
         """
         super().__init__(listen_delay=listen_delay)
         self.unsupported_commands = unsupported_commands
+        self.silent_commands = silent_commands
         self.received = bytearray()
         self.commands = []
         self.sync_ids = []
@@ -608,6 +619,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
         self.file_reads = []
         self.shutdown_modes = []
         self.shutdown_requested = asyncio.Event()
+        self.exec_answered = asyncio.Event()
         self._open_files: dict[int, str] = {}
         self._read_offsets: dict[int, int] = {}
         self._next_file_handle: int = _FIRST_GUEST_FILE_HANDLE
@@ -739,6 +751,13 @@ class GuestAgentProtocolServer(_LoopbackServer):
         # branch of it.
         if name in self.unsupported_commands:
             return [self._frame(command_not_found(name))]
+
+        # Silence is not refusal. An agent build can carry a command, accept it,
+        # and never produce the reply - and unlike a refusal that costs the
+        # client nothing, silence costs it whatever deadline it set. Answering
+        # nothing without blocking the connection is what separates the two.
+        if name in self.silent_commands:
+            return []
 
         if name in SYNC_COMMANDS:
             sync_id = int(args_map.get("id", 0))
@@ -877,6 +896,7 @@ class GuestAgentProtocolServer(_LoopbackServer):
         self.exec_records.append(record)
         self._records_by_pid[pid] = record
         self._results[pid] = GuestCommandResult() if self._responder is None else self._responder(path, args)
+        self.exec_answered.set()
         return pid
 
     def _exec_status(self, pid: int) -> dict[str, Any]:

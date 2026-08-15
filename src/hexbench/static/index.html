@@ -73,31 +73,31 @@
     <div class="hb-menu" data-menu="help"><button type="button" class="hb-menu-item">Help</button></div>
   </div>
 
-  <div class="hb-toolbar" id="toolbar">
+  <div class="hb-toolbar" id="toolbar" role="toolbar">
     <div class="hb-tool-group">
-      <button type="button" class="hb-tool-btn" data-command="file.open" title="Open a path (Ctrl+O)">
-        <span class="hb-tool-icon">▤</span><span>Open</span>
+      <button type="button" class="hb-tool-btn" data-command="file.open" title="Open a path (Ctrl+O)" aria-label="Open a path (Ctrl+O)">
+        <span class="hb-tool-icon" aria-hidden="true">▤</span><span>Open</span>
       </button>
-      <button type="button" class="hb-tool-btn" data-command="file.save" title="Save (Ctrl+S)">
-        <span class="hb-tool-icon">⤓</span><span>Save</span>
+      <button type="button" class="hb-tool-btn" data-command="file.save" title="Save (Ctrl+S)" aria-label="Save (Ctrl+S)">
+        <span class="hb-tool-icon" aria-hidden="true">⤓</span><span>Save</span>
       </button>
     </div>
     <div class="hb-tool-sep"></div>
     <div class="hb-tool-group">
-      <button type="button" class="hb-tool-btn" data-command="edit.undo" title="Undo (Ctrl+Z)"><span class="hb-tool-icon">↶</span></button>
-      <button type="button" class="hb-tool-btn" data-command="edit.redo" title="Redo (Ctrl+Y)"><span class="hb-tool-icon">↷</span></button>
+      <button type="button" class="hb-tool-btn" data-command="edit.undo" title="Undo (Ctrl+Z)" aria-label="Undo (Ctrl+Z)"><span class="hb-tool-icon" aria-hidden="true">↶</span></button>
+      <button type="button" class="hb-tool-btn" data-command="edit.redo" title="Redo (Ctrl+Y)" aria-label="Redo (Ctrl+Y)"><span class="hb-tool-icon" aria-hidden="true">↷</span></button>
     </div>
     <div class="hb-tool-sep"></div>
     <div class="hb-tool-group">
-      <button type="button" class="hb-tool-btn" data-command="search.find" title="Find (Ctrl+F)"><span class="hb-tool-icon">⌕</span><span>Find</span></button>
-      <button type="button" class="hb-tool-btn" data-command="search.findNext" title="Find next (F3)"><span class="hb-tool-icon">›</span></button>
-      <button type="button" class="hb-tool-btn" data-command="search.replace" title="Replace (Ctrl+H)"><span class="hb-tool-icon">⇄</span></button>
+      <button type="button" class="hb-tool-btn" data-command="search.find" title="Find (Ctrl+F)" aria-label="Find (Ctrl+F)"><span class="hb-tool-icon" aria-hidden="true">⌕</span><span>Find</span></button>
+      <button type="button" class="hb-tool-btn" data-command="search.findNext" title="Find next (F3)" aria-label="Find next (F3)"><span class="hb-tool-icon" aria-hidden="true">›</span></button>
+      <button type="button" class="hb-tool-btn" data-command="search.replace" title="Replace (Ctrl+H)" aria-label="Replace (Ctrl+H)"><span class="hb-tool-icon" aria-hidden="true">⇄</span></button>
     </div>
     <div class="hb-tool-sep"></div>
     <div class="hb-tool-group">
-      <button type="button" class="hb-tool-btn" data-command="edit.toggleInsert" title="Insert or overwrite (Ins)"><span class="hb-tool-icon">⌶</span><span>Insert</span></button>
-      <button type="button" class="hb-tool-btn" data-command="analyze.strings" title="Extract strings"><span class="hb-tool-icon">≡</span></button>
-      <button type="button" class="hb-tool-btn" data-command="tools.palette" title="Command palette (Ctrl+Shift+P)"><span class="hb-tool-icon">⌘</span></button>
+      <button type="button" class="hb-tool-btn" data-command="edit.toggleInsert" title="Insert or overwrite (Ins)" aria-label="Insert or overwrite (Ins)"><span class="hb-tool-icon" aria-hidden="true">⌶</span><span>Insert</span></button>
+      <button type="button" class="hb-tool-btn" data-command="analyze.strings" title="Extract strings" aria-label="Extract strings"><span class="hb-tool-icon" aria-hidden="true">≡</span></button>
+      <button type="button" class="hb-tool-btn" data-command="tools.palette" title="Command palette (Ctrl+Shift+P)" aria-label="Command palette (Ctrl+Shift+P)"><span class="hb-tool-icon" aria-hidden="true">⌘</span></button>
     </div>
     <div class="hb-tool-spacer"></div>
     <span class="hb-tool-label">Go to</span>
@@ -106,7 +106,7 @@
       <input class="hb-input is-mono is-narrow" id="toolbar-goto" type="text" spellcheck="false" autocomplete="off" placeholder="0000A0">
     </label>
     <div class="hb-tool-sep"></div>
-    <button type="button" class="hb-tool-btn" data-command="view.theme" title="Toggle theme"><span class="hb-tool-icon">◐</span></button>
+    <button type="button" class="hb-tool-btn" data-command="view.theme" title="Toggle theme" aria-label="Toggle theme"><span class="hb-tool-icon" aria-hidden="true">◐</span></button>
   </div>
 
   <div class="hb-tabstrip" id="tabstrip"></div>
