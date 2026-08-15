@@ -97,6 +97,10 @@ _WM_CLOSE = 0x0010
 _RETURNCODE_SUCCESS = 0
 _RETURNCODE_FAILURE = -1
 _RETURNCODE_UNKNOWN = -2
+
+# U+FEFF. Windows PowerShell's ``-Encoding utf8`` is UTF-8 with a BOM, and
+# ``str.strip()`` leaves it alone because it is not whitespace.
+_UTF8_BOM = "﻿"
 _MS_PER_SECOND = 1000
 
 _XCOPY_NO_FILES = 2
@@ -2957,14 +2961,19 @@ async def _read_dispatcher_result(paths: _DispatcherPaths) -> tuple[int, str, st
     try:
         code_raw = await asyncio.to_thread(
             paths.result.read_text,
-            encoding="utf-8",
+            encoding="utf-8-sig",
             errors="ignore",
         )
     except OSError as err:
         _logger.debug("result_read_failed", error=str(err), result_path=str(paths.result), exc_info=True)
         return None
 
-    code_str = code_raw.strip()
+    # The dispatcher writes this file with Windows PowerShell's ``-Encoding
+    # utf8``, which is UTF-8 *with* a BOM. ``utf-8-sig`` removes a leading one,
+    # and the explicit strip covers a BOM that arrived anywhere else, because
+    # ``str.strip()`` does not treat U+FEFF as whitespace: an exit code read as
+    # "﻿0" is not a digit, and every run then reports _RETURNCODE_UNKNOWN.
+    code_str = code_raw.strip().strip(_UTF8_BOM).strip()
     exit_code = int(code_str) if code_str.lstrip("-").isdigit() else _RETURNCODE_UNKNOWN
 
     stdout = ""
