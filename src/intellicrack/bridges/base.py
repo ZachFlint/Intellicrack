@@ -110,6 +110,7 @@ TOOL_CAPABILITY_MAP: dict[str, str] = {
     "trace_stop": "debugging",
     "trace_into": "debugging",
     "trace_over": "debugging",
+    "set_trace_record": "debugging",
     "get_trace_record": "debugging",
     "animate_start": "debugging",
     "animate_stop": "debugging",
@@ -170,6 +171,7 @@ name's capability. It raises ``ToolError`` when a bridge is asked to execute a t
 mapping lives in ``bridges.base`` so that bridge implementations and the registry share a single source of truth, and
 ``intellicrack.core.tools`` imports it from here.
 """
+
 
 @dataclass
 class DisassemblyLine:

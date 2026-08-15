@@ -101,6 +101,89 @@ bool extract_json_string(const std::string& json, const char* key, std::string& 
     return true;
 }
 
+// Read an unsigned decimal value for `key` from `json`. Accepts the value
+// either bare or quoted, so a caller that JSON-encodes small integers as
+// strings is handled the same way. `out` is left untouched when the key is
+// absent or carries no digits.
+bool extract_json_uint(const std::string& json, const char* key, uint64_t& out) {
+    std::string search = "\"" + std::string(key) + "\"";
+    size_t key_pos = json.find(search);
+    if (key_pos == std::string::npos) {
+        return false;
+    }
+
+    size_t colon = json.find(':', key_pos + search.size());
+    if (colon == std::string::npos) {
+        return false;
+    }
+
+    size_t pos = colon + 1;
+    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t' || json[pos] == '"')) {
+        pos++;
+    }
+
+    size_t start = pos;
+    uint64_t value = 0;
+    while (pos < json.size() && isdigit(static_cast<unsigned char>(json[pos]))) {
+        value = value * 10 + static_cast<uint64_t>(json[pos] - '0');
+        pos++;
+    }
+    if (pos == start) {
+        return false;
+    }
+
+    out = value;
+    return true;
+}
+
+// x64dbg keeps trace-record state per 4 KiB page: SetTraceRecordType and
+// GetTraceRecordType both key on the page an address falls in, and
+// GetTraceRecordHitCount reads the counter out of that page's buffer. Masking
+// here lets a caller pass any address inside a page and learn which page was
+// actually armed.
+const uint64_t TRACE_RECORD_PAGE_SIZE = 4096;
+
+// A read spanning more bytes than a single page cannot say anything a caller
+// could not get from separate queries, and bounds the response size.
+const uint64_t TRACE_RECORD_MAX_SIZE = TRACE_RECORD_PAGE_SIZE;
+
+bool parse_trace_record_type(const std::string& name, TRACERECORDTYPE& out) {
+    if (name == "none") {
+        out = TraceRecordNone;
+        return true;
+    }
+    if (name == "bit") {
+        out = TraceRecordBitExec;
+        return true;
+    }
+    if (name == "byte") {
+        out = TraceRecordByteWithExecTypeAndCounter;
+        return true;
+    }
+    if (name == "word") {
+        out = TraceRecordWordWithExecTypeAndCounter;
+        return true;
+    }
+    return false;
+}
+
+const char* trace_record_type_name(TRACERECORDTYPE type) {
+    switch (type) {
+        case TraceRecordBitExec: return "bit";
+        case TraceRecordByteWithExecTypeAndCounter: return "byte";
+        case TraceRecordWordWithExecTypeAndCounter: return "word";
+        case TraceRecordNone:
+        default: return "none";
+    }
+}
+
+std::string to_lower(const std::string& text) {
+    std::string lowered(text);
+    std::transform(lowered.begin(), lowered.end(), lowered.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return lowered;
+}
+
 }  // namespace
 
 CommandHandler g_command_handler;
@@ -165,6 +248,7 @@ void CommandHandler::register_commands() {
     m_commands["watch_remove"] = [](const PipeMessage& m) { return cmd_watch_remove(m); };
     m_commands["watch_list"] = [](const PipeMessage& m) { return cmd_watch_list(m); };
     m_commands["trace_record"] = [](const PipeMessage& m) { return cmd_trace_record(m); };
+    m_commands["trace_record_set"] = [](const PipeMessage& m) { return cmd_trace_record_set(m); };
     m_commands["plugin_list"] = [](const PipeMessage& m) { return cmd_plugin_list(m); };
     m_commands["thread_detail"] = [](const PipeMessage& m) { return cmd_thread_detail(m); };
 }
@@ -1841,14 +1925,87 @@ PipeResponse CommandHandler::cmd_trace_record(const PipeMessage& msg) {
     std::string addr_str = msg.params.substr(start, end - start);
     uint64_t address = parse_address(addr_str);
 
-    duint hit_count = DbgFunctions()->GetTraceRecordHitCount(static_cast<duint>(address));
+    uint64_t size = 1;
+    if (!extract_json_uint(msg.params, "size", size) || size == 0) {
+        size = 1;
+    }
+    if (size > TRACE_RECORD_MAX_SIZE) {
+        size = TRACE_RECORD_MAX_SIZE;
+    }
 
+    uint64_t page = address & ~(TRACE_RECORD_PAGE_SIZE - 1);
+    unsigned int hit_count = DbgFunctions()->GetTraceRecordHitCount(static_cast<duint>(address));
+    TRACERECORDTYPE type = DbgFunctions()->GetTraceRecordType(static_cast<duint>(page));
+
+    // Reported alongside the count so a caller can tell "this byte never ran"
+    // from "this page was never armed": with TraceRecordNone x64dbg allocates
+    // no counter for the page and every hit count reads back as zero.
     std::ostringstream ss;
     ss << "{\"address\":\"" << format_address(address) << "\","
-       << "\"hitCount\":" << hit_count << "}";
+       << "\"page\":\"" << format_address(page) << "\","
+       << "\"type\":\"" << trace_record_type_name(type) << "\","
+       << "\"size\":" << size << ","
+       << "\"hitCount\":" << hit_count << ","
+       << "\"hits\":[";
+    for (uint64_t offset = 0; offset < size; offset++) {
+        if (offset > 0) ss << ",";
+        ss << DbgFunctions()->GetTraceRecordHitCount(static_cast<duint>(address + offset));
+    }
+    ss << "]}";
 
     response.success = true;
     response.result = ss.str();
+    return response;
+}
+
+PipeResponse CommandHandler::cmd_trace_record_set(const PipeMessage& msg) {
+    PipeResponse response;
+    response.id = msg.id;
+
+    std::string addr_str;
+    if (!extract_json_string(msg.params, "address", addr_str)) {
+        response.success = false;
+        response.error = "Missing or invalid 'address' parameter";
+        return response;
+    }
+
+    std::string type_name;
+    if (!extract_json_string(msg.params, "type", type_name)) {
+        response.success = false;
+        response.error = "Missing or invalid 'type' parameter";
+        return response;
+    }
+
+    TRACERECORDTYPE requested = TraceRecordNone;
+    if (!parse_trace_record_type(to_lower(type_name), requested)) {
+        response.success = false;
+        response.error = "Invalid 'type' parameter '" + type_name + "': expected none, bit, byte or word";
+        return response;
+    }
+
+    uint64_t address = parse_address(addr_str);
+    uint64_t page = address & ~(TRACE_RECORD_PAGE_SIZE - 1);
+
+    bool applied = DbgFunctions()->SetTraceRecordType(static_cast<duint>(page), requested);
+    // Reported so the caller can verify the arming actually took rather than
+    // trusting the setter's own return: x64dbg allocates the page's counter
+    // buffer here, and a failed allocation is how arming silently does not.
+    TRACERECORDTYPE observed = DbgFunctions()->GetTraceRecordType(static_cast<duint>(page));
+
+    std::ostringstream ss;
+    ss << "{\"address\":\"" << format_address(address) << "\","
+       << "\"page\":\"" << format_address(page) << "\","
+       << "\"requested\":\"" << trace_record_type_name(requested) << "\","
+       << "\"type\":\"" << trace_record_type_name(observed) << "\","
+       << "\"applied\":" << (applied ? "true" : "false") << "}";
+
+    response.success = applied;
+    response.result = ss.str();
+    if (!applied) {
+        response.error = std::string("SetTraceRecordType('") + trace_record_type_name(requested) +
+                         "') was rejected for page " + format_address(page) + " (page reports '" +
+                         trace_record_type_name(observed) + "')";
+    }
     return response;
 }
 

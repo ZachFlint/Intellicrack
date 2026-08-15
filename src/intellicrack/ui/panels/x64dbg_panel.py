@@ -39,6 +39,12 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from intellicrack.bridges.x64dbg import (
+    TRACE_RECORD_DEFAULT_TYPE,
+    TRACE_RECORD_PAGE_SIZE,
+    TRACE_RECORD_TYPE_NONE,
+    TRACE_RECORD_TYPES,
+)
 from intellicrack.core.logging import get_logger
 from intellicrack.core.win32_desktop_process import get_desktop_handle_for_pid
 from intellicrack.ui._hex_format import format_hex_dump
@@ -1070,6 +1076,21 @@ class X64DbgPanel(AnalysisPanelBase):
         self._trace_record_btn.setObjectName("tool_button")
         self._trace_record_btn.clicked.connect(self._on_get_trace_record)
         trace_record_toolbar.addWidget(self._trace_record_btn)
+        trace_record_type_label = QLabel(self.tr("Record:"))
+        trace_record_type_label.setFont(fm.get_ui_font(9))
+        trace_record_toolbar.addWidget(trace_record_type_label)
+        self._trace_record_type_combo = QComboBox()
+        for record_type in TRACE_RECORD_TYPES:
+            self._trace_record_type_combo.addItem(record_type)
+        self._trace_record_type_combo.setCurrentText(TRACE_RECORD_DEFAULT_TYPE)
+        trace_record_toolbar.addWidget(self._trace_record_type_combo)
+        self._trace_record_arm_btn = QPushButton(self.tr("Enable Recording"))
+        self._trace_record_arm_btn.setObjectName("tool_button")
+        self._trace_record_arm_btn.setToolTip(
+            self.tr("x64dbg only counts executions on pages a record type has been set on"),
+        )
+        self._trace_record_arm_btn.clicked.connect(self._on_set_trace_record)
+        trace_record_toolbar.addWidget(self._trace_record_arm_btn)
         trace_record_toolbar.addStretch()
         trace_layout.addWidget(self._make_control_row(trace_record_toolbar))
         self._trace_output = QPlainTextEdit()
@@ -3076,14 +3097,65 @@ class X64DbgPanel(AnalysisPanelBase):
 
         Args:
             address: The queried address.
-            result: Result dict from the bridge, containing ``hitCount``.
+            result: Result dict from the bridge, containing ``hitCount``
+                and the ``type`` x64dbg holds for the address' page.
         """
         hit_count = 0
+        record_type = TRACE_RECORD_TYPE_NONE
         if isinstance(result, dict):
             r = cast("dict[str, object]", result)
             hit_count = int(cast("int", r.get("hitCount", 0)))
-        self._trace_output.appendPlainText(f"[+] Trace record 0x{address:X}: hitCount={hit_count}")
+            record_type = str(r.get("type", TRACE_RECORD_TYPE_NONE))
+        line = f"[+] Trace record 0x{address:X}: hitCount={hit_count} (record={record_type})"
+        if record_type == TRACE_RECORD_TYPE_NONE:
+            line += " - this page records nothing until Enable Recording is used on it"
+        self._trace_output.appendPlainText(line)
         self._trace_record_btn.setEnabled(True)
+
+    def _on_set_trace_record(self) -> None:
+        """Arm trace-record collection on the page holding the query address."""
+        if self._bridge is None:
+            return
+
+        addr_text = self._trace_record_addr_input.text().strip()
+        if not addr_text:
+            return
+
+        try:
+            address = int(addr_text, 16) if addr_text.startswith("0x") else int(addr_text, 0)
+        except ValueError:
+            _logger.warning("invalid_trace_record_address", input_text=addr_text)
+            self._trace_output.appendPlainText(f"[!] Invalid address: {addr_text}")
+            return
+
+        record_type = self._trace_record_type_combo.currentText()
+        self._trace_record_arm_btn.setEnabled(False)
+        run_bridge_coroutine_logged(
+            self._bridge.set_trace_record(address, record_type),
+            on_success=lambda r: self._on_set_trace_record_success(address, record_type, r),
+            on_error=lambda e: self._on_generic_error("Enable Recording", e, self._trace_record_arm_btn),
+            parent=self,
+            event="x64dbg_set_trace_record",
+            logger=_logger,
+            level="info",
+            address=hex(address),
+            record_type=record_type,
+        )
+
+    def _on_set_trace_record_success(self, address: int, record_type: str, result: object) -> None:
+        """Handle a successful trace-record arming.
+
+        Args:
+            address: The address whose page was armed.
+            record_type: The record type that was requested.
+            result: Result dict from the bridge, containing the armed ``page``.
+        """
+        page = hex(address & ~(TRACE_RECORD_PAGE_SIZE - 1))
+        if isinstance(result, dict):
+            r = cast("dict[str, object]", result)
+            page = str(r.get("page", page))
+        self._trace_output.appendPlainText(f"[+] Trace record '{record_type}' enabled on page {page}")
+        self._trace_record_arm_btn.setEnabled(True)
 
     def _on_set_label(self) -> None:
         """Set a label at the specified address."""
