@@ -223,9 +223,34 @@ function Write-TraceFatal {
     param(
         [Parameter(Mandatory = $true)][int]$Code,
         [Parameter(Mandatory = $true)][string]$Stage,
-        [Parameter(Mandatory = $true)][string]$Message
+        [Parameter(Mandatory = $true)][string]$Message,
+        [Parameter(Mandatory = $false)][AllowNull()][System.Management.Automation.ErrorRecord]$ErrorRecord
     )
-    Write-TraceError -Stage $Stage -Message $Message
+    # The catch-all around Invoke-ApiTrace reports every unguarded failure under
+    # the single stage 'session', and $_.Exception.Message names neither the
+    # statement nor the line. A null-receiver failure therefore surfaced as a
+    # bare "You cannot call a method on a null-valued expression" with nothing
+    # to locate it by, which is what left S18-D08 undiagnosable across runs.
+    # InvocationInfo is not enough on its own: once an error crosses a function
+    # boundary it describes the *call site*, so it named the Invoke-ApiTrace
+    # call rather than the statement that failed. ScriptStackTrace's first
+    # frame is the innermost one and carries the real function, file and line.
+    $located = $Message
+    if ($null -ne $ErrorRecord) {
+        $frames = @()
+        if ($ErrorRecord.ScriptStackTrace) {
+            $frames = @($ErrorRecord.ScriptStackTrace -split "`r?`n" | Where-Object { $_.Trim() })
+        }
+        if ($frames.Count -gt 0) {
+            $located = '{0} [{1}]' -f $Message, $frames[0].Trim()
+        } elseif ($null -ne $ErrorRecord.InvocationInfo) {
+            $info = $ErrorRecord.InvocationInfo
+            $statement = ([string]$info.Line).Trim()
+            $scriptLeaf = if ($info.ScriptName) { Split-Path -Leaf -Path $info.ScriptName } else { 'api_trace.ps1' }
+            $located = '{0} [at {1}: line {2}: {3}]' -f $Message, $scriptLeaf, $info.ScriptLineNumber, $statement
+        }
+    }
+    Write-TraceError -Stage $Stage -Message $located
     $script:ExitCode = $Code
 }
 
@@ -251,7 +276,7 @@ function Invoke-ApiTrace {
     try {
         Add-Type -LiteralPath $traceEventDll -ErrorAction Stop
     } catch {
-        Write-TraceFatal -Code 3 -Stage 'load_failed' -Message "TraceEvent assembly load failed: $($_.Exception.Message)"
+        Write-TraceFatal -Code 3 -Stage 'load_failed' -Message "TraceEvent assembly load failed: $($_.Exception.Message)" -ErrorRecord $_
         return
     }
 
@@ -277,7 +302,7 @@ function Invoke-ApiTrace {
         $script:Session = $sessionType::new($sessionName, [Microsoft.Diagnostics.Tracing.Session.TraceEventSessionOptions]::Create)
         $script:Session.StopOnDispose = $true
     } catch {
-        Write-TraceFatal -Code 4 -Stage 'session_create' -Message "TraceEventSession constructor failed: $($_.Exception.Message)"
+        Write-TraceFatal -Code 4 -Stage 'session_create' -Message "TraceEventSession constructor failed: $($_.Exception.Message)" -ErrorRecord $_
         return
     }
 
@@ -286,7 +311,7 @@ function Invoke-ApiTrace {
         $allKeywords = [uint64]::MaxValue
         $script:Session.EnableProvider($auditApiProviderGuid, $verbose, $allKeywords) | Out-Null
     } catch {
-        Write-TraceFatal -Code 4 -Stage 'enable_provider' -Message "EnableProvider failed: $($_.Exception.Message)"
+        Write-TraceFatal -Code 4 -Stage 'enable_provider' -Message "EnableProvider failed: $($_.Exception.Message)" -ErrorRecord $_
         return
     }
 
@@ -354,7 +379,14 @@ function Invoke-ApiTrace {
 
     $boundHandler = $handler.GetNewClosure()
     $source.Dynamic.add_All($boundHandler)
-    $source.UnhandledEvents.add_All($boundHandler)
+    # UnhandledEvents is a .NET *event* on TraceEventDispatcher, not a parser
+    # property like Dynamic. PowerShell surfaces events only as add_/remove_
+    # methods, so reading $source.UnhandledEvents always yielded $null and the
+    # .add_All() on it threw before Process() was ever reached - every run of
+    # this collector died here with the providers already enabled and the
+    # handlers already wired, so the API Calls tab was empty on every run
+    # (S18-D08). The event's own accessor takes the Action<TraceEvent> directly.
+    $source.add_UnhandledEvents($boundHandler)
 
     $tsStart = Get-Date -Format 'o'
     Write-TraceLine -Line "$tsStart|tracer|0|START|$sessionName|provider=$auditApiProviderGuid;pid_filter=$FilterPid;duration=$DurationSeconds|0"
@@ -403,9 +435,18 @@ function Invoke-ApiTrace {
     $script:StopWatchTimer.Start()
 
     try {
-        $source.Process() | Out-Null
+        # Pumped through psbase deliberately. PowerShell's adapted-member binder
+        # refuses this one call - "the result type 'System.Boolean' of the
+        # dynamic binding produced by binder 'PSInvokeMember: Process' is not
+        # compatible with the result type 'System.Object' expected by the call
+        # site" - on both Windows PowerShell and PowerShell 7, against both
+        # ETWTraceEventSource and EventPipeEventSource, with or without any
+        # handler registered. It is specific to the member name: the Boolean
+        # EnableProvider above binds normally. psbase reaches the .NET object
+        # directly and the same source then delivers its events (S18-D08).
+        $source.psbase.Process() | Out-Null
     } catch {
-        Write-TraceFatal -Code 5 -Stage 'process' -Message $_.Exception.Message
+        Write-TraceFatal -Code 5 -Stage 'process' -Message $_.Exception.Message -ErrorRecord $_
     }
 }
 
@@ -415,7 +456,7 @@ Write-TraceLifecycle -State 'started' -Detail "pid_filter=$TargetPid duration=$D
 try {
     Invoke-ApiTrace -FilterPid $TargetPid -DurationSeconds $DurationSeconds
 } catch {
-    Write-TraceFatal -Code 5 -Stage 'session' -Message $_.Exception.Message
+    Write-TraceFatal -Code 5 -Stage 'session' -Message $_.Exception.Message -ErrorRecord $_
 } finally {
     if ($null -ne $script:Timer) {
         try { $script:Timer.Stop() } catch { Write-TraceError -Stage 'timer_stop' -Message $_.Exception.Message }

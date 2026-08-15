@@ -412,7 +412,14 @@ function Invoke-RealtimeDllMonitor {
         $script:StopMonitorSubscriberId = $stopActionSubscriberId
         $stopMonitor.Start()
 
-        $source.Process() | Out-Null
+        # Pumped through psbase: PowerShell's adapted-member binder refuses this
+        # one call ("result type 'System.Boolean' ... not compatible with ...
+        # 'System.Object' expected by the call site") on both PowerShell editions
+        # and both source types, while the Boolean EnableProvider above binds
+        # normally. Until this was fixed the realtime trace never ran and every
+        # record in dll_monitor.log came from the WMI fallback instead, which is
+        # why the base address and event id of each one was zero (S18-D08).
+        $source.psbase.Process() | Out-Null
     } finally {
         if ($null -ne $script:StopMonitorTimer) {
             try { $script:StopMonitorTimer.Stop() } catch { $null = $_ }

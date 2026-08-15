@@ -72,9 +72,9 @@ from intellicrack.sandbox.log_helpers import (
     scannable_output_files,
 )
 from intellicrack.sandbox.log_parsers import (
+    collect_collector_outages,
     parse_api_trace_log,
     parse_clipboard_log,
-    parse_collector_lifecycle,
     parse_dll_log,
     parse_file_log,
     parse_injection_log,
@@ -8037,13 +8037,7 @@ if __name__ == "__main__":
         shared = self._collected_root()
         collector_outages: list[CollectorOutage] = []
         if self._qemu_config.guest_os == GuestOS.WINDOWS:
-            for collector, lifecycle_log in (
-                ("api_trace", "api_trace.lifecycle.log"),
-                ("injection_monitor", "injection_monitor.lifecycle.log"),
-            ):
-                outage = await parse_collector_lifecycle(shared, collector, lifecycle_log)
-                if outage is not None:
-                    collector_outages.append(outage)
+            collector_outages = await collect_collector_outages(shared)
         return _MonitoringLogs(
             file_changes=await parse_file_log(shared, "file_changes.log"),
             registry_changes=await parse_registry_log(shared, "registry_monitor.log"),

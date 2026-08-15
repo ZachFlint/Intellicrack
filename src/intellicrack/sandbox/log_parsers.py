@@ -100,6 +100,31 @@ _ERR_COLLECTOR_NEVER_STARTED: Final[str] = "never reported starting"
 _INJECTION_TYPE_COLLECTOR_ERROR: Final[str] = "ERROR"
 _INJECTION_LOG_TYPE_IDX: Final[int] = 5
 
+# ``api_trace.ps1`` is in exactly the position the injection monitor is above:
+# its own data log is the only channel it has, so it writes its start marker,
+# its stop marker and every fatal into ``api_trace.log`` as records. They carry
+# the collector's marker in the process-name field and one of these names in
+# the API-name field, and none of them is an API call. Read as data they turn a
+# collector that captured nothing at all into a tab reporting API activity -
+# live, a session that died before processing a single event still presented
+# two "API calls" named ERROR and STOP. The outage is not lost by skipping them
+# here; it is reported through :func:`parse_collector_lifecycle`.
+_API_TRACE_COLLECTOR_MARKER: Final[str] = "tracer"
+_API_TRACE_COLLECTOR_ERROR: Final[str] = "ERROR"
+_API_TRACE_COLLECTOR_RECORDS: Final[frozenset[str]] = frozenset({"START", "STOP", _API_TRACE_COLLECTOR_ERROR})
+_API_LOG_PROCESS_IDX: Final[int] = 1
+_API_LOG_NAME_IDX: Final[int] = 3
+_API_LOG_STAGE_IDX: Final[int] = 4
+_API_LOG_DETAIL_IDX: Final[int] = 5
+
+# The two collectors the Windows agent stages that can fail silently: both
+# report their own lifecycle, and both are absent on a Linux guest.
+_API_TRACE_COLLECTOR: Final[str] = "api_trace"
+_ETW_COLLECTORS: Final[tuple[tuple[str, str], ...]] = (
+    (_API_TRACE_COLLECTOR, "api_trace.lifecycle.log"),
+    ("injection_monitor", "injection_monitor.lifecycle.log"),
+)
+
 _FILE_LOG_OLD_PATH_IDX = 3
 _FILE_LOG_SIZE_IDX = 4
 _REGISTRY_LOG_VALUE_NAME_IDX = 3
@@ -555,6 +580,9 @@ async def parse_api_trace_log(
     ``timestamp|process_name|pid|api_name|module|arguments|return_value``.
     The ``arguments`` field is a semicolon-separated list of stringified args.
 
+    The collector's own lifecycle and failure rows are skipped: they are
+    telemetry about the collector, not observations of the sample.
+
     Args:
         shared_folder: Sandbox shared folder root.
         log_name: Log file name under ``<shared_folder>/logs/``.
@@ -566,6 +594,8 @@ async def parse_api_trace_log(
     for line in await read_log_lines(shared_folder, log_name):
         parts = line.split("|")
         if len(parts) < API_LOG_MIN_PARTS:
+            continue
+        if parts[_API_LOG_PROCESS_IDX] == _API_TRACE_COLLECTOR_MARKER and parts[_API_LOG_NAME_IDX] in _API_TRACE_COLLECTOR_RECORDS:
             continue
         arguments = [a for a in parts[5].split(";") if a] if parts[5] else []
         out.append(
@@ -579,6 +609,73 @@ async def parse_api_trace_log(
                 return_value=parts[6],
             ),
         )
+    return out
+
+
+async def collect_collector_outages(shared_folder: Path | None) -> list[CollectorOutage]:
+    """Report every ETW collector that did not observe for the whole run.
+
+    Only the Windows agent stages ``api_trace`` and ``injection_monitor``,
+    so this returns nothing for a guest that ran neither.
+
+    The API tracer's outage carries the collector's own failure text as
+    well as its lifecycle detail. That text is written into the tracer's
+    data log for want of any other channel and
+    :func:`parse_api_trace_log` skips it, since a dead collector's
+    complaint is not an API call; folding it in here is what keeps it
+    from being lost with the row.
+
+    Args:
+        shared_folder: Sandbox shared folder root.
+
+    Returns:
+        list[CollectorOutage]: One entry per collector that never
+        reported starting or reported stopping before the run finished.
+    """
+    outages: list[CollectorOutage] = []
+    for collector, lifecycle_log in _ETW_COLLECTORS:
+        outage = await parse_collector_lifecycle(shared_folder, collector, lifecycle_log)
+        if outage is None:
+            continue
+        if collector == _API_TRACE_COLLECTOR:
+            details = await parse_api_trace_collector_errors(shared_folder)
+            if details:
+                outage["reason"] = f"{outage['reason']}; it reported {'; '.join(details)}"
+        outages.append(outage)
+    return outages
+
+
+async def parse_api_trace_collector_errors(
+    shared_folder: Path | None,
+    log_name: str = "api_trace.log",
+) -> list[str]:
+    """Extract the API tracer's own failure reports from its data log.
+
+    ``api_trace.ps1`` has no channel but its own data log in which to
+    report that it failed, so it writes an ``ERROR`` record naming the
+    stage and carrying the message. :func:`parse_api_trace_log` skips
+    those rows because they are not API calls; this reads them back out
+    so the failure can be carried on the collector's outage instead of
+    being lost with the row.
+
+    Args:
+        shared_folder: Sandbox shared folder root.
+        log_name: Log file name under ``<shared_folder>/logs/``.
+
+    Returns:
+        list[str]: One ``"<stage>: <detail>"`` string per failure the
+        collector reported, in the order it reported them.
+    """
+    out: list[str] = []
+    for line in await read_log_lines(shared_folder, log_name):
+        parts = line.split("|")
+        if len(parts) < API_LOG_MIN_PARTS:
+            continue
+        if parts[_API_LOG_PROCESS_IDX] != _API_TRACE_COLLECTOR_MARKER:
+            continue
+        if parts[_API_LOG_NAME_IDX] != _API_TRACE_COLLECTOR_ERROR:
+            continue
+        out.append(f"{parts[_API_LOG_STAGE_IDX]}: {parts[_API_LOG_DETAIL_IDX]}")
     return out
 
 
