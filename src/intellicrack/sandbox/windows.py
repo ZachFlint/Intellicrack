@@ -87,8 +87,32 @@ _PROCESS_WAIT_TIMEOUT = 10
 _GRACEFUL_CLOSE_TIMEOUT = 30
 _TASKKILL_TIMEOUT = 30
 _MONITOR_START_TIMEOUT = 30
-_MONITOR_WAIT_SECONDS = 3
 _RESULT_POLL_INTERVAL = 0.25
+# How long to let the collector fleet finish appearing before the tabs are read.
+# Measured on a real Windows Sandbox run: the ten surviving collectors' logs
+# reached the host across a 21-second spread after the target finished
+# (dll/file at +0s, kernel_object/process at +1s, resource/service at +2s,
+# registry at +5s, network at +21s). The previous three-second budget expired
+# before the last four had written anything, which is exactly why the Registry
+# Changes tab came back empty for a run that had made registry changes.
+_MONITOR_QUIESCENCE_CEILING_S: Final[float] = 60.0
+# A collector with nothing to report never creates its log at all, so the fleet
+# is also considered settled once no further log has appeared for this long.
+# It has to exceed the largest gap between two arrivals in that measurement
+# (registry at +5s to network at +21s, so 16 seconds).
+_MONITOR_QUIESCENCE_SETTLE_S: Final[float] = 20.0
+# Once every surviving collector has a log there is nothing left to wait for,
+# so only a brief pause covers a file seen between its creation and its first
+# record.
+_MONITOR_QUIESCENCE_COMPLETE_SETTLE_S: Final[float] = 1.0
+# Written by start_monitors.cmd, rewritten by its readiness gate to hold only
+# the monitors that survived startup. It is the single source of truth for
+# which collectors are expected to report.
+_MONITOR_PID_FILE_NAME: Final[str] = "monitors.pids"
+# Present in that file but not a collector: it serves commands, it has no tab.
+_DISPATCHER_SCRIPT_STEM: Final[str] = "sandbox_dispatcher"
+# Each line of that file is "<pid> <script file name>".
+_MONITOR_PID_LINE_FIELDS: Final[int] = 2
 _MINIDUMP_WITH_FULL_MEMORY = 0x00000002
 _ERROR_ACCESS_DENIED = 5
 _PROCESS_QUERY_INFORMATION = 0x0400
@@ -2112,31 +2136,111 @@ class WindowsSandbox(SandboxBase):
                     error=str(err),
                 )
 
-    async def _wait_for_monitor_quiescence(self) -> None:
-        """Wait until monitor logs stop growing or the maximum wait elapses.
+    def _surviving_collectors(self) -> set[str]:
+        """Return the collectors the launcher confirmed were still alive.
 
-        Polls the host-side logs folder at ``_RESULT_POLL_INTERVAL`` intervals. Returns as soon as the aggregate log size has been stable
-        for one full poll cycle, or after ``_MONITOR_WAIT_SECONDS`` seconds have elapsed.
+        ``start_monitors.cmd`` records one line per spawned monitor and its
+        readiness gate rewrites the file with only the survivors, so this is
+        the fleet that can be expected to report. The dispatcher appears there
+        too and is excluded: it serves commands rather than filling a tab.
+
+        Returns:
+            set[str]: Script stems of the surviving collectors, empty when the
+            launcher left no record to read.
+        """
+        if self._shared_folder is None:
+            return set()
+        pid_file = self._shared_folder / "logs" / _MONITOR_PID_FILE_NAME
+        try:
+            recorded = pid_file.read_text(encoding="utf-8", errors="replace")
+        except OSError as err:
+            _logger.warning("monitor_pid_file_unreadable", path=str(pid_file), error=str(err))
+            return set()
+
+        stems: set[str] = set()
+        for line in recorded.splitlines():
+            parts = line.split(maxsplit=1)
+            if len(parts) < _MONITOR_PID_LINE_FIELDS:
+                continue
+            stem = Path(parts[1].strip()).stem
+            if stem and stem != _DISPATCHER_SCRIPT_STEM:
+                stems.add(stem)
+        return stems
+
+    def _collectors_reporting(self, expected: set[str]) -> set[str]:
+        """Return which expected collectors have produced a log on the host.
+
+        Args:
+            expected: Script stems of the collectors that survived startup.
+
+        Returns:
+            set[str]: The subset whose log file exists.
+        """
+        if self._shared_folder is None:
+            return set()
+        logs_folder = self._shared_folder / "logs"
+        return {stem for stem in expected if (logs_folder / f"{stem}.log").is_file()}
+
+    async def _wait_for_monitor_quiescence(self) -> None:
+        r"""Wait until the collector fleet has finished reporting.
+
+        What the tabs are read from is the host side of a folder the guest
+        writes into, and a collector's first record can arrive long after the
+        target has exited: it has to notice the change on its own sampling
+        cycle, write it, and have that write reach the host. Measured on a real
+        run, the ten survivors' logs appeared across a 21-second spread.
+
+        The size of those logs is not the signal. Most of these monitors sample
+        continuously, so their logs never stop growing while the sandbox lives -
+        and a collector that has not written yet has no file at all, which
+        contributes zero bytes and reads as perfectly stable. Waiting for the
+        aggregate to hold still therefore returned almost immediately, before
+        four of the collectors had written a single byte, and their tabs came
+        back empty for a run that had genuinely made those changes.
+
+        What is waited on instead is the set of collectors that have produced a
+        log. It stops as soon as every survivor the launcher recorded has one,
+        because there is then nothing left to arrive; failing that, it stops
+        once no further log has appeared for a settle window, which is how a
+        collector with genuinely nothing to report is accommodated without
+        waiting for a file that is never coming. The ceiling bounds both.
         """
         if self._shared_folder is None:
             return
 
-        logs_folder = self._shared_folder / "logs"
-        deadline = time.monotonic() + _MONITOR_WAIT_SECONDS
-        prev_size = -1
+        expected = await asyncio.to_thread(self._surviving_collectors)
+        if not expected:
+            _logger.warning("monitor_quiescence_no_fleet_recorded")
+            await asyncio.sleep(_MONITOR_QUIESCENCE_SETTLE_S)
+            return
+
+        deadline = time.monotonic() + _MONITOR_QUIESCENCE_CEILING_S
+        reporting: set[str] = set()
+        last_arrival = time.monotonic()
 
         while time.monotonic() < deadline:
-            await asyncio.sleep(_RESULT_POLL_INTERVAL)
-            try:
-                total = await asyncio.to_thread(
-                    lambda: sum(f.stat().st_size for f in logs_folder.glob("*.log") if f.is_file()),
-                )
-            except OSError:
-                _logger.warning("monitor_quiescence_stat_failed")
-                break
-            if total == prev_size:
+            present = await asyncio.to_thread(self._collectors_reporting, expected)
+            if present != reporting:
+                reporting = present
+                last_arrival = time.monotonic()
+            if reporting == expected:
+                _logger.debug("monitor_quiescence_complete", collectors=len(reporting))
+                await asyncio.sleep(_MONITOR_QUIESCENCE_COMPLETE_SETTLE_S)
                 return
-            prev_size = total
+            if time.monotonic() - last_arrival >= _MONITOR_QUIESCENCE_SETTLE_S:
+                _logger.info(
+                    "monitor_quiescence_settled_with_silent_collectors",
+                    silent=sorted(expected - reporting),
+                    reporting=len(reporting),
+                )
+                return
+            await asyncio.sleep(_RESULT_POLL_INTERVAL)
+
+        _logger.warning(
+            "monitor_quiescence_ceiling_reached",
+            silent=sorted(expected - reporting),
+            waited=_MONITOR_QUIESCENCE_CEILING_S,
+        )
 
     async def _attach_all_logs(self, report: ExecutionReport) -> None:
         """Populate every activity field on the report from guest log files.
