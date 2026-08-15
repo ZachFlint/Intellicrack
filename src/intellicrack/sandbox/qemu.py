@@ -59,6 +59,7 @@ from intellicrack.sandbox.base import (
     SandboxBase,
     SandboxConfig,
     SandboxError,
+    SandboxStatus,
     SandboxTimeoutError,
     ServiceChange,
 )
@@ -209,6 +210,13 @@ _ERR_NO_IMAGE_MISSING = "Configured QEMU disk image does not exist"
 _ERR_QEMU_NA = "QEMU not available"
 _ERR_QMP_CONNECT = "QMP connect failed"
 _ERR_NOT_RUNNING = "not running"
+# Statuses in which the guest is still up and can answer a command. "stopping"
+# has to be one of them: the stop sequence reads the guest's own output before
+# it asks the guest to power off, so at that point the machine is untouched and
+# answering, and that read is the last chance to fetch anything from it. Whether
+# QEMU is actually alive is a separate, stronger question, and the termination
+# check that follows this one is what asks it.
+_GUEST_REACHABLE_STATUSES: Final[frozenset[SandboxStatus]] = frozenset({"running", "stopping"})
 _ERR_NO_SHARED_FOLDER = "shared folder not init"
 _ERR_QMP_NOT_CONNECTED = "QMP not connected"
 _ERR_QEMU_START = "QEMU start failed"
@@ -7856,7 +7864,7 @@ if __name__ == "__main__":
             SandboxError: If execution fails.
         """
         _logger.info("qemu_run_command_started", command=command, time_limit=time_limit, working_directory=working_directory)
-        if self.state.status != "running":
+        if self.state.status not in _GUEST_REACHABLE_STATUSES:
             raise SandboxError(_ERR_NOT_RUNNING)
 
         termination = self.qemu_termination()

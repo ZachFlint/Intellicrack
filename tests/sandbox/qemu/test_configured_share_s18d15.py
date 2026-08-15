@@ -42,13 +42,15 @@ from typing import TYPE_CHECKING, Final
 
 import pytest
 
-from intellicrack.sandbox.base import SandboxConfig
+from intellicrack.sandbox.base import SandboxConfig, SandboxError
 from intellicrack.sandbox.qemu import AcceleratorType, GuestOS, QEMUConfig, QEMUSandbox
 
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from pathlib import Path
+
+    from intellicrack.sandbox.base import SandboxStatus
 
 
 _DRIVE_FLAG: Final[str] = "-drive"
@@ -575,6 +577,96 @@ class TestGuestOutputIsFetchedWhileTheGuestIsStillThere:
         assert sandbox.steps == ["collect", "shutdown", "cleanup"], (
             f"the stop sequence did not fetch the guest's output while the guest was still running: {sandbox.steps}"
         )
+
+
+class TestTheGuestIsStillReachableWhileTheSandboxIsStopping:
+    """Fetching the guest's output during a stop only works if commands are allowed then.
+
+    The ordering gate above records the seams the stop sequence reaches, which
+    is what it is for - but the seam it records is the one whose *precondition*
+    was broken, so it could not see this. Live, the fetch was the first thing
+    ``_stop_impl`` did and it raised ``not running`` immediately: ``stop`` sets
+    the status to ``stopping`` before calling it, and the guest command path
+    admitted only ``running``. That exception aborted the whole stop, so the
+    shutdown never ran, the mirror never ran, and ``destroy`` reported
+    ``sandbox stop failed`` - a fix that left the backend worse than the defect
+    it was for. These drive the real command path against the real status
+    machine, with no seam in between.
+    """
+
+    @staticmethod
+    def _refuse_reason(sandbox: _ShareSandbox, status: SandboxStatus) -> str:
+        """Return the error the real guest command path gives in a status.
+
+        Args:
+            sandbox: Sandbox whose production ``run_command`` is driven.
+            status: Status the sandbox is put into first.
+
+        Returns:
+            str: Text of the ``SandboxError`` the command raised.
+        """
+        sandbox.state.status = status
+        with pytest.raises(SandboxError) as raised:
+            asyncio.run(sandbox.run_command("cmd /c echo probe", time_limit=1))
+        return str(raised.value)
+
+    def test_a_command_is_not_refused_merely_because_the_sandbox_is_stopping(self, tmp_path: Path) -> None:
+        """The machine is untouched at that point, so the guest can still answer.
+
+        The refusal this must not produce is taken from the sandbox itself, by
+        asking a status that has to refuse. Nothing here restates a message the
+        backend owns, so renaming it cannot quietly turn this green.
+
+        Args:
+            tmp_path: Per-test temporary directory.
+        """
+        configured = tmp_path / "analyst-folder"
+        configured.mkdir()
+        sandbox = _make_sandbox(tmp_path, configured)
+
+        refusal = self._refuse_reason(sandbox, "stopped")
+        while_stopping = self._refuse_reason(sandbox, "stopping")
+
+        assert while_stopping != refusal, (
+            f"the stop sequence cannot read the guest it is about to power off, so every stop raises {refusal!r} instead"
+        )
+
+    def test_it_reaches_the_guest_the_same_way_a_running_sandbox_does(self, tmp_path: Path) -> None:
+        """``stopping`` is not a special case; it is the running guest's own path.
+
+        Without this the previous test would also pass on a sandbox that merely
+        failed differently, rather than one that got as far as the guest agent.
+
+        Args:
+            tmp_path: Per-test temporary directory.
+        """
+        configured = tmp_path / "analyst-folder"
+        configured.mkdir()
+        sandbox = _make_sandbox(tmp_path, configured)
+
+        while_running = self._refuse_reason(sandbox, "running")
+        while_stopping = self._refuse_reason(sandbox, "stopping")
+
+        assert while_stopping == while_running, (
+            f"a stopping sandbox reaches the guest by a different route than a running one: {while_stopping!r} vs {while_running!r}"
+        )
+
+    @pytest.mark.parametrize("status", ["starting", "error"])
+    def test_a_sandbox_that_is_not_up_still_refuses_commands(self, tmp_path: Path, status: SandboxStatus) -> None:
+        """The guard still guards; only the one status the stop needs was added.
+
+        Args:
+            tmp_path: Per-test temporary directory.
+            status: Status in which no guest can be reachable.
+        """
+        configured = tmp_path / "analyst-folder"
+        configured.mkdir()
+        sandbox = _make_sandbox(tmp_path, configured)
+
+        refusal = self._refuse_reason(sandbox, "stopped")
+        reason = self._refuse_reason(sandbox, status)
+
+        assert reason == refusal, f"a sandbox that is {status!r} was allowed to reach the guest: {reason!r}"
 
 
 class TestTheMirrorReadsWhatTheGuestActuallyWrites:
