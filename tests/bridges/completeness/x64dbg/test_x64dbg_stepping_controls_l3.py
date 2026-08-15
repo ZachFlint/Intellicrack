@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from PyQt6.QtGui import QAction
-from PyQt6.QtWidgets import QLineEdit, QPlainTextEdit, QPushButton
+from PyQt6.QtWidgets import QComboBox, QLineEdit, QPlainTextEdit, QPushButton
 
 from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.ui.panels.x64dbg_panel import X64DbgPanel
@@ -383,5 +383,78 @@ class TestGetTraceRecordButtonDrivesTraceRecordRpc:
 
             assert fake.sent == []
             assert "Invalid address" in trace_output.toPlainText()
+        finally:
+            panel.deleteLater()
+
+
+class TestEnableRecordingButtonArmsThePage:
+    """The panel must be able to arm the page it then queries (S18-D03).
+
+    ``get_trace_record`` reads a counter x64dbg only keeps for pages a
+    trace record type has been set on, so a Trace tab offering the query
+    and no way to arm the page could only ever print ``hitCount=0``.
+    """
+
+    @staticmethod
+    def test_enable_recording_click_arms_the_queried_address_with_the_chosen_type(
+        wired_panel: tuple[X64DbgPanel, X64DbgBridge],
+        qapp: QApplication,
+    ) -> None:
+        """Clicking Enable Recording must drive ``set_trace_record`` for that address.
+
+        Falsifiable: if the handler read a different widget, dropped the
+        combo's selection, or never dispatched, the recorded
+        ``trace_record_set`` params would not carry this address and this
+        record type, and the armed page would not be echoed to the trace
+        output. Broken production line:
+        ``self._bridge.set_trace_record(address, record_type)`` in
+        ``_on_set_trace_record`` and ``await self._send_pipe_command(
+        "trace_record_set", ...)`` in ``X64DbgBridge.set_trace_record``.
+
+        Args:
+            wired_panel: Panel/bridge pair fixture.
+            qapp: Session QApplication fixture.
+        """
+        panel, bridge = wired_panel
+        address = 0x404050
+        page = 0x404000
+        record_type = "byte"
+
+        def responder(command: str, params: dict[str, Any] | None) -> dict[str, Any]:
+            if command == "trace_record_set":
+                assert params == {"address": hex(address), "type": record_type}
+                return ok(
+                    {
+                        "address": hex(address),
+                        "page": hex(page),
+                        "requested": record_type,
+                        "type": record_type,
+                        "applied": True,
+                    },
+                )
+            if command == "status":
+                return ok({"paused": True, "debugging": True})
+            if command in _RESIDUAL_REFRESH_RPCS:
+                return ok({})
+            msg = f"unexpected command: {command}"
+            raise AssertionError(msg)
+
+        fake = install_fake_pipe(bridge, responder)
+        getattr(panel, "_update_controls_state")()
+        trace_record_addr_input = priv(panel, "_trace_record_addr_input", QLineEdit)
+        trace_record_type_combo = priv(panel, "_trace_record_type_combo", QComboBox)
+        trace_record_arm_btn = priv(panel, "_trace_record_arm_btn", QPushButton)
+        trace_output = priv(panel, "_trace_output", QPlainTextEdit)
+
+        try:
+            trace_record_addr_input.setText(hex(address))
+            trace_record_type_combo.setCurrentText(record_type)
+            trace_record_arm_btn.click()
+            pump_until(qapp, lambda: hex(page) in trace_output.toPlainText())
+
+            arm_calls = [p for c, p in fake.sent if c == "trace_record_set"]
+            assert arm_calls == [{"address": hex(address), "type": record_type}]
+            assert f"'{record_type}' enabled on page {hex(page)}" in trace_output.toPlainText()
+            assert trace_record_arm_btn.isEnabled()
         finally:
             panel.deleteLater()

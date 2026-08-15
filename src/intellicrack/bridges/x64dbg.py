@@ -19,7 +19,7 @@ import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypeGuard, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, TypeGuard, cast
 
 from intellicrack.bridges.base import (
     BridgeCapabilities,
@@ -325,6 +325,7 @@ _X64DBG_ERR_TIMEOUT = "timeout"
 _X64DBG_ERR_UNKNOWN_COMMAND = "unknown_command"
 _X64DBG_ERR_REMOTE = "remote_error"
 _X64DBG_ERR_PROTOCOL_VIOLATION = "protocol_violation"
+_X64DBG_ERR_INVALID_PARAMETER = "invalid_parameter"
 
 # Environment variable the bridge exports when spawning x64dbg so the
 # deployed Intellicrack plugin runs the debugger as an embedded, windowless
@@ -348,6 +349,24 @@ _RECOVERABLE_RPC_MISSING_CODES = frozenset({_X64DBG_ERR_UNKNOWN_COMMAND})
 
 BreakpointType = Literal["software", "hardware", "memory"]
 MemoryProtection = Literal["read", "write", "execute"]
+
+# x64dbg keeps execution counters per 4 KiB page, and only for pages a trace
+# record type has been set on. ``word`` counts to 16383 executions per byte,
+# ``byte`` to 63, ``bit`` records only whether a byte ever ran, and ``none``
+# releases the page's counter buffer.
+TraceRecordType = Literal["none", "bit", "byte", "word"]
+TRACE_RECORD_TYPES: Final[tuple[str, ...]] = ("none", "bit", "byte", "word")
+TRACE_RECORD_TYPE_NONE: Final[str] = "none"
+TRACE_RECORD_DEFAULT_TYPE: Final[str] = "word"
+
+# The page granularity x64dbg's trace-record bookkeeping uses; the plugin masks
+# with the same value when it reports which page it armed or read.
+TRACE_RECORD_PAGE_SIZE: Final[int] = 4096
+
+# Reported by ``get_trace_record`` when the plugin could not be reached at all,
+# so an unreachable plugin is never mistaken for a page x64dbg holds no trace
+# record for.
+TRACE_RECORD_TYPE_UNKNOWN: Final[str] = "unknown"
 PipeCommandResult = str | int | float | bool | dict[str, object] | list[object] | None
 
 
@@ -1859,13 +1878,28 @@ class _X64DbgBridgeBase(DebuggerBridge):
                     returns="Dict with success status",
                 ),
                 ToolFunction(
+                    name="x64dbg.set_trace_record",
+                    description="Arm trace-record collection on the page holding an address (required before hit counts are recorded)",
+                    parameters=[
+                        ToolParameter(name="address", type="integer", description="Any address inside the page to arm", required=True),
+                        ToolParameter(
+                            name="record_type",
+                            type="string",
+                            description="Record type: 'none' (release), 'bit', 'byte' or 'word'",
+                            required=False,
+                            enum=["none", "bit", "byte", "word"],
+                        ),
+                    ],
+                    returns="Dict with success, address, page, requested, and the type the page reports",
+                ),
+                ToolFunction(
                     name="x64dbg.get_trace_record",
-                    description="Get trace record hit count at an address",
+                    description="Get trace record hit counts at an address (returns zeros until set_trace_record arms the page)",
                     parameters=[
                         ToolParameter(name="address", type="integer", description="Address to query", required=True),
                         ToolParameter(name="size", type="integer", description="Number of bytes to check", required=False),
                     ],
-                    returns="Dict with address and hitCount",
+                    returns="Dict with address, page, type, size, hitCount and per-byte hits",
                 ),
                 ToolFunction(
                     name="x64dbg.step_count",
@@ -7959,15 +7993,96 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
             )
         return {"success": True, "max_steps": max_steps, "verified": True}
 
+    async def set_trace_record(self, address: int, record_type: str = "word") -> dict[str, Any]:
+        """Arm x64dbg's trace-record collection on the page holding an address.
+
+        x64dbg allocates a page's per-byte execution counters only once a
+        trace record type has been set for that page. Until then
+        ``GetTraceRecordHitCount`` has no buffer to read and answers zero
+        for every address in it, which is why :meth:`get_trace_record`
+        could not return a non-zero count on its own (S18-D03).
+
+        The plugin reads the page's type back after applying it, and this
+        wrapper refuses to report success unless the read-back matches
+        what was asked for - so a page whose counter buffer x64dbg
+        declined to allocate raises instead of quietly reading zero
+        forever.
+
+        Args:
+            address: Any address inside the page to arm.
+            record_type: One of ``none``, ``bit``, ``byte`` or ``word``.
+                ``word`` counts up to 16383 executions per byte, ``byte``
+                up to 63, ``bit`` records only whether a byte ever ran,
+                and ``none`` releases the page's counters.
+
+        Returns:
+            dict[str, Any]: Dict with ``success``, ``address``, ``page``,
+            ``requested`` and the ``type`` the page reports afterwards.
+
+        Raises:
+            ToolError: If ``record_type`` is not a recognised trace record
+                type, the plugin returns a malformed payload, or the page
+                does not report the requested type once armed.
+        """
+        normalized = record_type.strip().lower()
+        if normalized not in TRACE_RECORD_TYPES:
+            msg = f"invalid trace record type {record_type!r}: expected one of {', '.join(TRACE_RECORD_TYPES)}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_INVALID_PARAMETER,
+                    "address": hex(address),
+                    "record_type": record_type,
+                },
+            )
+
+        _logger.debug("trace_record_arming", address=hex(address), record_type=normalized)
+        result = await self._send_pipe_command("trace_record_set", {"address": hex(address), "type": normalized})
+        if not _is_str_obj_dict(result):
+            msg = f"trace_record_set returned a non-dict payload for {hex(address)}: {result!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={"x64dbg_error_code": _X64DBG_ERR_PROTOCOL_VIOLATION, "address": hex(address)},
+            )
+
+        payload = dict(result)
+        observed = str(payload.get("type", ""))
+        if observed != normalized:
+            msg = f"trace record type {normalized!r} did not take on the page holding {hex(address)}: page reports {observed!r}"
+            raise ToolError(
+                msg,
+                tool_name="x64dbg",
+                details={
+                    "x64dbg_error_code": _X64DBG_ERR_REMOTE,
+                    "address": hex(address),
+                    "requested": normalized,
+                    "observed": observed,
+                },
+            )
+
+        payload["success"] = True
+        return payload
+
     async def get_trace_record(self, address: int, size: int = 1) -> dict[str, Any]:
-        """Get trace record hit count at an address.
+        """Get trace record hit counts at an address.
+
+        The reply carries the record ``type`` x64dbg holds for the
+        address' page alongside the counts, so a zero ``hitCount`` can be
+        told apart from a page :meth:`set_trace_record` never armed: with
+        type ``none`` x64dbg keeps no counters and every byte on the page
+        reads back as zero (S18-D03).
 
         Args:
             address: Address to query.
-            size: Number of bytes to check.
+            size: Number of bytes to check. ``hits`` carries one count per
+                byte from ``address`` onwards.
 
         Returns:
-            dict[str, Any]: Dict with address and hitCount.
+            dict[str, Any]: Dict with ``address``, ``page``, ``type``,
+            ``size``, ``hitCount`` (the count at ``address``) and ``hits``.
+            ``type`` is ``unknown`` when the plugin could not be reached.
 
         Raises:
             ToolError: If the plugin reports a non-recoverable error.
@@ -7979,10 +8094,32 @@ class _X64DbgTraceMixin(_X64DbgAnalysisMixin):
             if not self._is_recoverable_pipe_error(exc):
                 raise
             _logger.warning("trace_record_pipe_unavailable", error=str(exc))
-            return {"address": hex(address), "hitCount": 0}
+            return self._unarmed_trace_record(address, size)
         if _is_str_obj_dict(result):
             return dict(result)
-        return {"address": hex(address), "hitCount": 0}
+        return self._unarmed_trace_record(address, size)
+
+    @staticmethod
+    def _unarmed_trace_record(address: int, size: int) -> dict[str, Any]:
+        """Build the reply used when no trace record could be read at all.
+
+        Args:
+            address: The queried address.
+            size: The queried byte count.
+
+        Returns:
+            dict[str, Any]: A zero-count reply whose ``type`` is
+            ``unknown``, distinguishing an unreachable plugin from a page
+            x64dbg genuinely holds no trace record for.
+        """
+        return {
+            "address": hex(address),
+            "page": hex(address & ~(TRACE_RECORD_PAGE_SIZE - 1)),
+            "type": TRACE_RECORD_TYPE_UNKNOWN,
+            "size": size,
+            "hitCount": 0,
+            "hits": [],
+        }
 
     async def step_count(self, count: int, step_type: str = "into") -> dict[str, Any]:
         """Execute ``count`` steps and verify the debugger pauses again afterwards.
