@@ -117,7 +117,6 @@ svg {
   --hb-tracking-caps: 0.08em;
 
   /* -- Spacing --------------------------------------------------- */
-  --hb-space-0: 0px;
   --hb-space-1: 2px;
   --hb-space-2: 4px;
   --hb-space-3: 6px;
@@ -145,7 +144,6 @@ svg {
   --hb-dur-slow: 260ms;
   --hb-ease: cubic-bezier(0.2, 0, 0.2, 1);
   --hb-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --hb-ease-in: cubic-bezier(0.4, 0, 1, 1);
   --hb-transition-colors: background-color var(--hb-dur-fast) var(--hb-ease), border-color var(--hb-dur-fast) var(--hb-ease),
     color var(--hb-dur-fast) var(--hb-ease), box-shadow var(--hb-dur-fast) var(--hb-ease);
   --hb-transition-transform: transform var(--hb-dur-med) var(--hb-ease-out);
@@ -273,7 +271,6 @@ svg {
   --hb-chart-axis: #6a7686;
   --hb-chart-fill: rgb(15 108 214 / 22%);
   --hb-chart-line: #0f6cd6;
-  --hb-chart-ink: #10151d;
 
   /* -- Elevation -------------------------------------------------- */
   --hb-shadow-0: none;
@@ -382,7 +379,6 @@ svg {
     --hb-chart-axis: #7a8695;
     --hb-chart-fill: rgb(76 157 240 / 24%);
     --hb-chart-line: #6bb2f7;
-    --hb-chart-ink: #dfe4ec;
 
     --hb-shadow-0: none;
     --hb-shadow-1: 0 1px 2px rgb(0 0 0 / 45%);
@@ -490,7 +486,6 @@ svg {
   --hb-chart-axis: #7a8695;
   --hb-chart-fill: rgb(76 157 240 / 24%);
   --hb-chart-line: #6bb2f7;
-  --hb-chart-ink: #dfe4ec;
 
   --hb-shadow-0: none;
   --hb-shadow-1: 0 1px 2px rgb(0 0 0 / 45%);
@@ -595,7 +590,6 @@ svg {
   --hb-chart-axis: #6a7686;
   --hb-chart-fill: rgb(15 108 214 / 22%);
   --hb-chart-line: #0f6cd6;
-  --hb-chart-ink: #10151d;
 
   --hb-shadow-0: none;
   --hb-shadow-1: 0 1px 2px rgb(16 24 40 / 8%);
@@ -1592,6 +1586,95 @@ pre {
   color: var(--hb-text-muted);
   letter-spacing: var(--hb-tracking-wide);
   text-transform: uppercase;
+}
+
+/* -- No document open -- */
+
+.hb-blank {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--hb-space-10);
+  max-width: 720px;
+  margin: auto;
+  padding: var(--hb-space-11) var(--hb-space-8);
+}
+
+.hb-blank-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-5);
+}
+
+.hb-blank-title {
+  font-size: var(--hb-fs-3xl);
+  font-weight: var(--hb-fw-semibold);
+  letter-spacing: var(--hb-tracking-tight);
+  line-height: var(--hb-lh-tight);
+  color: var(--hb-text-primary);
+}
+
+.hb-blank-lede {
+  max-width: 56ch;
+  font-size: var(--hb-fs-lg);
+  line-height: var(--hb-lh-loose);
+  color: var(--hb-text-secondary);
+}
+
+.hb-blank-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--hb-space-5);
+}
+
+.hb-blank-action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-4);
+  padding: var(--hb-space-6);
+  border: 1px solid var(--hb-border);
+  border-radius: var(--hb-radius-md);
+  background: var(--hb-surface-1);
+  text-align: left;
+  transition: var(--hb-transition-colors);
+}
+
+.hb-blank-action:hover {
+  background: var(--hb-surface-hover);
+  border-color: var(--hb-accent);
+}
+
+.hb-blank-action-glyph {
+  font-size: var(--hb-fs-lg);
+  color: var(--hb-accent);
+}
+
+.hb-blank-action-title {
+  font-size: var(--hb-fs-md);
+  font-weight: var(--hb-fw-semibold);
+  color: var(--hb-text-primary);
+}
+
+.hb-blank-action-note {
+  font-family: var(--hb-font-mono);
+  font-size: var(--hb-fs-xs);
+  color: var(--hb-text-muted);
+}
+
+.hb-blank-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hb-space-8);
+  padding-top: var(--hb-space-7);
+  border-top: 1px solid var(--hb-border-subtle);
+  font-family: var(--hb-font-mono);
+  font-size: var(--hb-fs-xs);
+  color: var(--hb-text-faint);
+}
+
+.hb-blank-key {
+  color: var(--hb-text-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2953,71 +3036,6 @@ pre {
 
 /* -- Strips -- */
 
-.hb-strip {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hb-space-2);
-}
-
-.hb-strip-track {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  height: 34px;
-  border: 1px solid var(--hb-border);
-  border-radius: var(--hb-radius-sm);
-  background: var(--hb-surface-inset);
-  overflow: hidden;
-}
-
-.hb-strip-marker {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--hb-marker-start, 0%);
-  width: var(--hb-marker-width, 0%);
-  min-width: 2px;
-  background: var(--hb-sel-bg);
-  border-left: 1px solid var(--hb-sel-border);
-  border-right: 1px solid var(--hb-sel-border);
-  pointer-events: none;
-}
-
-.hb-strip-track.is-tall {
-  height: 56px;
-}
-
-.hb-strip-cell {
-  flex: 1 1 0;
-  min-width: 0;
-  background: var(--hb-class-0);
-  transition: filter var(--hb-dur-fast) var(--hb-ease);
-}
-
-.hb-strip-cell:hover {
-  filter: brightness(1.25);
-}
-
-.hb-strip-cell.cls-0 {
-  background: var(--hb-class-0);
-}
-
-.hb-strip-cell.cls-1 {
-  background: var(--hb-class-1);
-}
-
-.hb-strip-cell.cls-2 {
-  background: var(--hb-class-2);
-}
-
-.hb-strip-cell.cls-3 {
-  background: var(--hb-class-3);
-}
-
-.hb-strip-cell.cls-4 {
-  background: var(--hb-class-4);
-}
-
 .hb-strip-axis {
   display: flex;
   justify-content: space-between;
@@ -3171,68 +3189,6 @@ pre {
 
 .hb-segbar-seg.bc-high {
   background: var(--hb-byte-high);
-}
-
-/* -- Diff mini-map -- */
-
-.hb-minimap {
-  position: relative;
-  height: 46px;
-  border: 1px solid var(--hb-border);
-  border-radius: var(--hb-radius-sm);
-  background: var(--hb-surface-inset);
-  background-image: repeating-linear-gradient(90deg, var(--hb-chart-grid) 0 1px, transparent 1px 40px);
-  overflow: hidden;
-}
-
-.hb-minimap-band {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--hb-band-start, 0) * 1%);
-  width: calc(var(--hb-band-width, 1) * 1%);
-  min-width: 2px;
-}
-
-.hb-minimap-band.is-match {
-  background: var(--hb-class-0);
-  opacity: 0.45;
-}
-
-.hb-minimap-band.is-modified {
-  background: var(--hb-diff-modified-bg);
-  box-shadow: inset 0 0 0 1px var(--hb-warning-border);
-}
-
-.hb-minimap-band.is-inserted-a {
-  background: var(--hb-diff-removed-bg);
-  box-shadow: inset 0 0 0 1px var(--hb-error-border);
-}
-
-.hb-minimap-band.is-inserted-b {
-  background: var(--hb-diff-added-bg);
-  box-shadow: inset 0 0 0 1px var(--hb-success-border);
-}
-
-.hb-minimap-band::after {
-  content: attr(data-glyph);
-  position: absolute;
-  inset: auto 0 2px 0;
-  text-align: center;
-  font-family: var(--hb-font-mono);
-  font-size: var(--hb-fs-2xs);
-  font-weight: var(--hb-fw-bold);
-  color: var(--hb-text-secondary);
-}
-
-.hb-minimap-cursor {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--hb-cursor, 0) * 1%);
-  width: 2px;
-  background: var(--hb-caret);
-  box-shadow: 0 0 0 1px var(--hb-caret-contrast);
 }
 
 /* ============================================================ 11. OVERLAYS */

@@ -6,7 +6,8 @@
 .DESCRIPTION
     Locates the repository root relative to this script, then runs the
     formatter check, the linter, the type checker, both docstring checkers and
-    the unit tests against src/hexbench only. Each gate is reported
+    the unit tests against src/hexbench only, then regenerates the design cards
+    and fails if that left the working tree dirty. Each gate is reported
     individually and the script exits non-zero if any of them failed.
 
     This is a PowerShell script rather than a Python one precisely so it can
@@ -51,6 +52,42 @@ function Invoke-Gate {
     catch {
         Write-Host "    $($_.Exception.Message)" -ForegroundColor Red
         $code = 1
+    }
+
+    $status = if ($code -eq 0) { 'PASS' } else { 'FAIL' }
+    Write-Host "    $status ($Name, exit $code)" -ForegroundColor $(if ($code -eq 0) { 'Green' } else { 'Red' })
+    $results.Add([pscustomobject]@{ Gate = $Name; Status = $status; ExitCode = $code })
+}
+
+function Invoke-ChainedGate {
+    param(
+        [Parameter(Mandatory)][string] $Name,
+        [Parameter(Mandatory)][string[][]] $CommandLines
+    )
+
+    Write-Host ''
+    Write-Host "--- $Name ---" -ForegroundColor Cyan
+
+    $code = 0
+    foreach ($commandLine in $CommandLines) {
+        $full = if ($usePixi) { @('pixi', 'run') + $commandLine } else { $commandLine }
+        $exe = $full[0]
+        $rest = @(if ($full.Count -gt 1) { $full[1..($full.Count - 1)] } else { @() })
+
+        Write-Host "    $($full -join ' ')" -ForegroundColor DarkGray
+
+        try {
+            & $exe @rest
+            $code = $LASTEXITCODE
+        }
+        catch {
+            Write-Host "    $($_.Exception.Message)" -ForegroundColor Red
+            $code = 1
+        }
+
+        if ($code -ne 0) {
+            break
+        }
     }
 
     $status = if ($code -eq 0) { 'PASS' } else { 'FAIL' }
@@ -109,6 +146,11 @@ try {
         Write-Host '    A gate cannot pass by having nothing to run.' -ForegroundColor Red
         $results.Add([pscustomobject]@{ Gate = 'unittest'; Status = 'FAIL'; ExitCode = 1 })
     }
+
+    Invoke-ChainedGate -Name 'cards' -CommandLines @(
+        @('python', "$target/design/build_cards.py"),
+        @('git', '--no-pager', 'diff', '--exit-code', '--', "$target/design/cards")
+    )
 }
 finally {
     Pop-Location

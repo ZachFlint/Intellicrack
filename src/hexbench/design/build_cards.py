@@ -57,12 +57,20 @@ _DIGRAM_SIDE: Final = 256
 _HISTOGRAM_BINS: Final = 256
 _STRIP_HEIGHT: Final = 64.0
 _STRIP_STEP: Final = 4.0
+_STRIP_PIXELS: Final = 56
 _PERCENT: Final = 100.0
 _PAYLOAD_ROWS: Final = 8
 _MARKER_START: Final = 0x2800
 _MARKER_LENGTH: Final = 0x0C00
 _MIN_OPACITY: Final = 0.25
 _OPACITY_RANGE: Final = 0.75
+
+_MINIMAP_WIDTH: Final = 1000.0
+_MINIMAP_HEIGHT: Final = 70.0
+_MINIMAP_GRID_LINES: Final = 16
+_MINIMAP_GLYPH_SIZE: Final = 15
+_MINIMAP_GLYPH_BASELINE: Final = 64.0
+_MINIMAP_CURSOR: Final = 31.0
 
 _PAD_AFTER_HEADER: Final = 384
 _CODE_LENGTH: Final = 8192
@@ -193,6 +201,13 @@ _DIFF_BANDS: Final[tuple[tuple[float, float, str, str], ...]] = (
     (79.0, 21.0, "is-match", "="),
 )
 
+_DIFF_BAND_PAINT: Final[dict[str, tuple[str, str, float]]] = {
+    "is-match": ("--hb-class-0", "", 0.45),
+    "is-modified": ("--hb-diff-modified-bg", "--hb-warning-border", 1.0),
+    "is-inserted-a": ("--hb-diff-removed-bg", "--hb-error-border", 1.0),
+    "is-inserted-b": ("--hb-diff-added-bg", "--hb-success-border", 1.0),
+}
+
 _DIFF_LEGEND: Final[tuple[tuple[str, str, str], ...]] = (
     ("=", "--hb-class-0", "match"),
     ("~", "--hb-diff-modified-bg", "modified"),
@@ -263,7 +278,7 @@ _COLOUR_TOKENS: Final[tuple[tuple[str, tuple[str, ...]], ...]] = (
         ),
     ),
     ("Classification", ("--hb-class-0", "--hb-class-1", "--hb-class-2", "--hb-class-3", "--hb-class-4")),
-    ("Chart", ("--hb-chart-grid", "--hb-chart-axis", "--hb-chart-fill", "--hb-chart-line", "--hb-chart-ink")),
+    ("Chart", ("--hb-chart-grid", "--hb-chart-axis", "--hb-chart-fill", "--hb-chart-line")),
 )
 
 _TYPE_SCALE: Final[tuple[tuple[str, str, str], ...]] = (
@@ -2179,43 +2194,89 @@ def _card_entropy() -> str:
     )
 
 
+def _classification_codes() -> tuple[int, ...]:
+    """Classify every fixed size block of the sample buffer.
+
+    Returns:
+        tuple[int, ...]: One class code per block of ``_CLASS_BLOCK`` bytes.
+    """
+    return tuple(_classify(_ANALYSIS[start : start + _CLASS_BLOCK]) for start in range(0, len(_ANALYSIS), _CLASS_BLOCK))
+
+
+def _classification_svg(codes: tuple[int, ...], *, marker: bool) -> str:
+    """Render the block classification strip as an inline SVG figure.
+
+    Args:
+        codes: One class code per block, in buffer order.
+        marker: Whether to draw the selection overlay across the strip.
+
+    Returns:
+        str: SVG markup for the classification strip.
+    """
+    width = len(codes) * _STRIP_STEP
+    cells = "".join(
+        f'<rect x="{index * _STRIP_STEP:.1f}" y="0" width="{_STRIP_STEP:.1f}" height="{_STRIP_HEIGHT:.0f}" '
+        f'fill="var(--hb-class-{code})"><title>0x{index * _CLASS_BLOCK:08X} class {code}</title></rect>'
+        for index, code in enumerate(codes)
+    )
+    overlay = ""
+    if marker:
+        start = width * _MARKER_START / len(_ANALYSIS)
+        span = width * _MARKER_LENGTH / len(_ANALYSIS)
+        edges = "".join(
+            f'<line x1="{edge:.2f}" y1="0" x2="{edge:.2f}" y2="{_STRIP_HEIGHT:.0f}" stroke="var(--hb-sel-border)" '
+            'stroke-width="1" vector-effect="non-scaling-stroke"/>'
+            for edge in (start, start + span)
+        )
+        overlay = f'<rect x="{start:.2f}" y="0" width="{span:.2f}" height="{_STRIP_HEIGHT:.0f}" fill="var(--hb-sel-bg)"/>{edges}'
+    return (
+        f'<svg viewBox="0 0 {width:.0f} {_STRIP_HEIGHT:.0f}" preserveAspectRatio="none" '
+        f'style="width: 100%; height: {_STRIP_PIXELS}px" role="img" '
+        f'aria-label="Content class of every {_CLASS_BLOCK} byte block">{cells}{overlay}</svg>'
+    )
+
+
 def _card_classification() -> str:
     """Build the content classification analysis card.
 
     Returns:
         str: Card body HTML.
     """
-    cells = "".join(
-        f'<div class="hb-strip-cell cls-{_classify(_ANALYSIS[start : start + _CLASS_BLOCK])}" '
-        f'title="0x{start:08X} class {_classify(_ANALYSIS[start : start + _CLASS_BLOCK])}"></div>'
-        for start in range(0, len(_ANALYSIS), _CLASS_BLOCK)
-    )
+    codes = _classification_codes()
     legend = "".join(
         f'<span class="hb-legend-item"><span class="hb-legend-code">{code}</span>'
         f'<span class="hb-legend-swatch" style="background: var(--hb-class-{code})"></span>'
         f'<span class="hb-legend-label">{escape(name)}</span><span class="hb-legend-note">{note}</span></span>'
         for code, name, note in _CLASS_LEGEND
     )
-    start_pct = _PERCENT * _MARKER_START / len(_ANALYSIS)
-    width_pct = _PERCENT * _MARKER_LENGTH / len(_ANALYSIS)
-    marker = f'<div class="hb-strip-marker" style="--hb-marker-start: {start_pct:.3f}%; --hb-marker-width: {width_pct:.3f}%"></div>'
+    frame = (
+        '<div class="hb-canvasframe"><div class="hb-canvasframe-header">Classification'
+        f'<span class="hb-canvasframe-meta">block {_CLASS_BLOCK} B &middot; {len(codes)} blocks &middot; '
+        f"{len(set(codes))} classes</span></div>"
+        f'<div class="hb-canvasframe-body is-plain">{_classification_svg(codes, marker=False)}</div>'
+        '<div class="hb-canvasframe-caption">0x00000000 to 0x00003FFF &middot; one column per block</div></div>'
+    )
+    marked = (
+        '<div class="hb-canvasframe"><div class="hb-canvasframe-header">Selection'
+        f'<span class="hb-canvasframe-meta">0x{_MARKER_START:08X} &middot; {_MARKER_LENGTH} B</span></div>'
+        f'<div class="hb-canvasframe-body is-plain">{_classification_svg(codes, marker=True)}</div>'
+        '<div class="hb-canvasframe-caption">the overlay carries the editor selection fill and border &middot; '
+        "the classes stay visible beneath it</div></div>"
+    )
     return _section(
         "Content classification",
         f"<code>content_classification({_CLASS_BLOCK})</code> returns one code per block, and all five codes occur in this "
         "buffer. Every legend entry carries its numeric code as well as its colour, so the strip stays readable without colour "
         "discrimination and survives greyscale printing.",
-        f'<div class="hb-strip"><div class="hb-strip-track is-tall">{cells}</div>'
-        '<div class="hb-strip-axis"><span>0x00000000</span><span>block size 256 B</span><span>0x00003FFF</span></div></div>'
+        frame + '<div class="hb-strip-axis"><span>0x00000000</span><span>block size 256 B</span><span>0x00003FFF</span></div>'
         f'<div class="hb-legend">{legend}</div>',
     ) + _section(
         "Selection marker",
         "The strip is the link back to the editor rather than a separate report: whatever is selected in the document is drawn "
-        f"over it with <code>hb-strip-marker</code>, so the {_MARKER_LENGTH} bytes under the caret can be located in the whole "
-        "buffer at a glance. The marker uses the same selection fill and border as the editor, and never occludes the classes "
-        "beneath it.",
-        f'<div class="hb-strip"><div class="hb-strip-track is-tall">{cells}{marker}</div>'
-        f'<div class="hb-strip-axis"><span>0x00000000</span><span>selection 0x{_MARKER_START:08X} to '
-        f"0x{_MARKER_START + _MARKER_LENGTH - 1:08X}</span><span>0x00003FFF</span></div></div>",
+        f"over it as a translucent overlay, so the {_MARKER_LENGTH} bytes under the caret can be located in the whole buffer at "
+        "a glance. The overlay uses the same selection fill and border as the editor, and never occludes the classes beneath it.",
+        marked + f'<div class="hb-strip-axis"><span>0x00000000</span><span>selection 0x{_MARKER_START:08X} to '
+        f"0x{_MARKER_START + _MARKER_LENGTH - 1:08X}</span><span>0x00003FFF</span></div>",
     )
 
 
@@ -2315,16 +2376,61 @@ def _card_segmented_bar() -> str:
     )
 
 
+def _minimap_band(start: float, width: float, kind: str, glyph: str) -> str:
+    """Render one diff region band of the mini-map.
+
+    Args:
+        start: Band start as a percentage of the compared length.
+        width: Band width as a percentage of the compared length.
+        kind: Band kind key naming the ``diff_type`` of the region.
+        glyph: Monospace glyph drawn beneath the band.
+
+    Returns:
+        str: SVG markup for one band and its glyph.
+    """
+    fill, stroke, opacity = _DIFF_BAND_PAINT[kind]
+    scale = _MINIMAP_WIDTH / _PERCENT
+    outline = f' stroke="var({stroke})" stroke-width="1" vector-effect="non-scaling-stroke"' if stroke else ""
+    return (
+        f'<rect x="{start * scale:.1f}" y="0" width="{width * scale:.1f}" height="{_MINIMAP_HEIGHT:.0f}" '
+        f'fill="var({fill})" fill-opacity="{opacity:.2f}"{outline}><title>{escape(kind)} at {start:.0f}%</title></rect>'
+        f'<text x="{(start + width / 2) * scale:.1f}" y="{_MINIMAP_GLYPH_BASELINE:.0f}" text-anchor="middle" '
+        f'font-family="var(--hb-font-mono)" font-size="{_MINIMAP_GLYPH_SIZE}" font-weight="var(--hb-fw-bold)" '
+        f'fill="var(--hb-text-secondary)">{escape(glyph)}</text>'
+    )
+
+
+def _minimap_svg() -> str:
+    """Render the diff region mini-map as an inline SVG figure.
+
+    Returns:
+        str: SVG markup for the diff mini-map.
+    """
+    step = _MINIMAP_WIDTH / _MINIMAP_GRID_LINES
+    grid = "".join(
+        f'<line x1="{index * step:.1f}" y1="0" x2="{index * step:.1f}" y2="{_MINIMAP_HEIGHT:.0f}" '
+        'stroke="var(--hb-chart-grid)" stroke-width="1" vector-effect="non-scaling-stroke"/>'
+        for index in range(1, _MINIMAP_GRID_LINES)
+    )
+    bands = "".join(starmap(_minimap_band, _DIFF_BANDS))
+    cursor_x = _MINIMAP_CURSOR * _MINIMAP_WIDTH / _PERCENT
+    cursor = (
+        f'<line x1="{cursor_x:.1f}" y1="0" x2="{cursor_x:.1f}" y2="{_MINIMAP_HEIGHT:.0f}" stroke="var(--hb-caret)" '
+        'stroke-width="2" vector-effect="non-scaling-stroke"/>'
+    )
+    return (
+        f'<svg viewBox="0 0 {_MINIMAP_WIDTH:.0f} {_MINIMAP_HEIGHT:.0f}" style="width: 100%; height: auto" role="img" '
+        f'aria-label="Diff regions across the compared files"><rect width="{_MINIMAP_WIDTH:.0f}" '
+        f'height="{_MINIMAP_HEIGHT:.0f}" fill="var(--hb-surface-inset)"/>{grid}{bands}{cursor}</svg>'
+    )
+
+
 def _card_diff_minimap() -> str:
     """Build the diff mini-map analysis card.
 
     Returns:
         str: Card body HTML.
     """
-    bands = "".join(
-        f'<div class="hb-minimap-band {kind}" style="--hb-band-start: {start}; --hb-band-width: {width}" data-glyph="{glyph}"></div>'
-        for start, width, kind, glyph in _DIFF_BANDS
-    )
     legend = "".join(
         f'<span class="hb-legend-item"><span class="hb-legend-code">{glyph}</span>'
         f'<span class="hb-legend-swatch" style="background: var({colour})"></span>'
@@ -2336,12 +2442,18 @@ def _card_diff_minimap() -> str:
         '<span class="hb-mono hb-secondary">total_differences = 4</span>'
         '<span class="hb-mono hb-dim">regions = 9</span></div>'
     )
+    frame = (
+        '<div class="hb-canvasframe"><div class="hb-canvasframe-header">Diff map'
+        f'<span class="hb-canvasframe-meta">{len(_DIFF_BANDS)} regions &middot; caret at {_MINIMAP_CURSOR:.0f}%</span></div>'
+        f'<div class="hb-canvasframe-body is-plain">{_minimap_svg()}</div>'
+        '<div class="hb-canvasframe-caption">left edge offset 0 &middot; right edge end of the longer file &middot; '
+        "width proportional to region length</div></div>"
+    )
     return _section(
         "Diff mini-map",
         "One band per region from <code>diff_files</code>. Each of the four <code>diff_type</code> values gets a colour and a "
         "glyph, so the map survives greyscale printing and colour blindness. The caret position is tracked by the vertical rule.",
-        f'<div class="hb-minimap">{bands}<div class="hb-minimap-cursor" style="--hb-cursor: 31"></div></div>'
-        f'<div class="hb-legend">{legend}</div>' + _frame("Summary", summary),
+        frame + f'<div class="hb-legend">{legend}</div>' + _frame("Summary", summary),
     )
 
 

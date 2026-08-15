@@ -8,6 +8,11 @@
  * extracted from actually call them. charts.js has no module-level DOM
  * access, so it loads under plain node without any stubbing.
  *
+ * The tokenHex section at the end needs a `getComputedStyle`, because that is
+ * how a design-system token reaches the function. It is installed there rather
+ * than here, well after the import above has already happened, so the bare-node
+ * load this suite exists to protect stays exactly as it is.
+ *
  * Run by gate.ps1. Exits non-zero on the first failed expectation.
  */
 
@@ -25,7 +30,7 @@ function check(label, condition, detail) {
 const staticDir = fileURLToPath(new URL('../static/', import.meta.url));
 const chartsSource = await readFile(`${staticDir}charts.js`, 'utf8');
 
-const { hoverIndex, histogramPeak, parseColor } = await import('../static/charts.js');
+const { hoverIndex, histogramPeak, parseColor, tokenHex } = await import('../static/charts.js');
 
 /* -------------------------------------------------------- #62/#63: hoverIndex */
 
@@ -104,6 +109,68 @@ check(
   `expected {r:1,g:2,b:3}, got ${JSON.stringify(parseColor('rgb(1, 2, 3)'))}`,
 );
 
+/* ------------------------------------------------------------------ tokenHex */
+
+/* A colour input and a canvas gradient stop both take `#rrggbb` and nothing
+ * else, so tokenHex's job is to turn whatever notation the stylesheet happened
+ * to write into that one form. The token text has to arrive through a computed
+ * style, so a node here *is* its own computed style and getComputedStyle hands
+ * the node it was given straight back. Nothing below asserts on that text: every
+ * expectation is on the normalisation tokenHex performed on it. */
+globalThis.getComputedStyle = (node) => node;
+
+function styleNode(properties) {
+  return { getPropertyValue: (name) => properties[name] ?? '' };
+}
+
+const themed = styleNode({
+  '--hb-accent': '#AB12CD',
+  '--hb-warning': 'rgb(1, 2, 3)',
+  '--hb-info': 'rgb(255 128 0 / 0.5)',
+  '--hb-error': '  #F00  ',
+});
+
+check(
+  'tokenHex passes a six-digit hex token straight through, lower cased',
+  tokenHex('--hb-accent', '#808080', themed) === '#ab12cd',
+  `a token the stylesheet wrote as #AB12CD must reach a colour input as #ab12cd, got ${tokenHex('--hb-accent', '#808080', themed)}`,
+);
+check(
+  'tokenHex normalises a comma-separated rgb() token to #rrggbb',
+  tokenHex('--hb-warning', '#808080', themed) === '#010203',
+  `rgb(1, 2, 3) must become #010203 or the control silently rejects it, got ${tokenHex('--hb-warning', '#808080', themed)}`,
+);
+check(
+  'tokenHex normalises the space-separated rgb() notation with an alpha too',
+  tokenHex('--hb-info', '#808080', themed) === '#ff8000',
+  `rgb(255 128 0 / 0.5) must become #ff8000, got ${tokenHex('--hb-info', '#808080', themed)}`,
+);
+check(
+  'tokenHex expands a shorthand hex token and trims its whitespace',
+  tokenHex('--hb-error', '#808080', themed) === '#ff0000',
+  `a token resolving to "  #F00  " must become #ff0000, got ${tokenHex('--hb-error', '#808080', themed)}`,
+);
+check(
+  'tokenHex falls back when the token resolves to nothing',
+  tokenHex('--hb-not-a-token', '#123456', themed) === '#123456',
+  `an undeclared token must yield the caller's fallback, got ${tokenHex('--hb-not-a-token', '#123456', themed)}`,
+);
+check(
+  'tokenHex normalises the fallback the same way it normalises a token',
+  tokenHex('--hb-not-a-token', 'rgb(9, 9, 9)', themed) === '#090909',
+  `a fallback is a colour like any other and must also reach the control as #rrggbb, got ${tokenHex('--hb-not-a-token', 'rgb(9, 9, 9)', themed)}`,
+);
+check(
+  'tokenHex has a fallback of its own',
+  tokenHex('--hb-not-a-token', undefined, themed) === '#808080',
+  `with no fallback given, an undeclared token must still produce a usable colour, got ${tokenHex('--hb-not-a-token', undefined, themed)}`,
+);
+check(
+  'tokenHex prefers a declared token over the fallback',
+  tokenHex('--hb-accent', '#123456', themed) !== '#123456',
+  'a declared token was ignored in favour of the fallback',
+);
+
 if (failures.length > 0) {
   process.stdout.write(`${failures.length} charts expectation(s) failed:\n`);
   for (const failure of failures) {
@@ -112,4 +179,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-process.stdout.write('charts empty-series and colour rules: all expectations held\n');
+process.stdout.write('charts empty-series, colour and token rules: all expectations held\n');

@@ -272,6 +272,10 @@ _ERR_QEMU_GA_SOCKET_UNREACHABLE = (
     "the QEMU chardev backing org.qemu.guest_agent.0 is not listening"
 )
 _ERR_QEMU_GA_SYNC_FAILED = "qemu-guest-agent echoed no sync id for any supported sync command; the channel could not be resynchronised"
+_ERR_QEMU_GA_DESYNCHRONISED = (
+    "qemu-guest-agent channel is still carrying the unread reply to a command that timed out; "
+    "no reply can be attributed to a new command until the stream is resynchronised"
+)
 _ERR_QEMU_GA_EXEC_STATUS_FAILED = "qemu-guest-agent guest-exec-status reply could not be read"
 _ERR_QEMU_GA_NOT_CONNECTED = "qemu-guest-agent channel not connected"
 _ERR_GUEST_FILE_OPEN_FAILED = "qemu-guest-agent could not open {path} inside the guest for writing: {error}"
@@ -329,8 +333,24 @@ _QEMU_GA_PING_INTERVAL = 1.0
 # Reply deadline for one guest-agent request. Public because it is the contract
 # a caller has to reason about: a guest that has not answered within it is a
 # guest whose command was lost, not a guest that failed.
-QEMU_GA_EXEC_TIMEOUT: Final[float] = 10.0
+#
+# Sized for the slowest reply the agent is asked for rather than the typical
+# one. The first guest-exec on a cold Windows guest has to reach a process
+# creation path whose image is still being faulted in off the qcow2 overlay,
+# and under WHPX that was measured past ten seconds on
+# windows11-intellicrack-v4. Such a command is slow, not lost, and abandoning
+# it is not free: the reply still arrives, and until it has been accounted for
+# every subsequent read is offset by one.
+QEMU_GA_EXEC_TIMEOUT: Final[float] = 45.0
 _QEMU_GA_CONNECT_TIMEOUT = 30.0
+# Default whole-handshake budget: opening the channel, syncing it, answering a
+# ping, and running one command to completion. It has to be a multiple of the
+# worst single attempt rather than a round number, because an attempt that is
+# abandoned costs its own reply deadline plus the resync that follows it
+# (QEMU_GA_EXEC_TIMEOUT + _QEMU_GA_RESYNC_TIMEOUT), and a budget that cannot
+# hold two of those has no retry left in it at all - which is how a guest that
+# was one slow command away from ready came to fail its whole start.
+_QEMU_GA_READY_TIMEOUT: Final[float] = 300.0
 _QEMU_GA_CONNECT_RETRY_INTERVAL: Final[float] = 1.0
 _QEMU_GA_EXEC_PROBE_INTERVAL: Final[float] = 2.0
 # Payload bytes per guest-file-write. The buffer travels base64-encoded inside
@@ -345,7 +365,13 @@ _QGA_FILE_READ_CHUNK: Final[int] = 65536
 # host that read it without limit would trade one hang for another.
 _QGA_FILE_READ_LIMIT: Final[int] = 64 * 1024 * 1024
 _QGA_FILE_COMMAND_TIMEOUT: Final[float] = 30.0
-_QEMU_GA_RESYNC_TIMEOUT: Final[float] = 5.0
+# Budget for the resync that follows a command timeout. This is the same
+# negotiation against the same agent that opening the connection performs, so it
+# is given the same budget rather than a shorter one of its own. A shorter one
+# made a slow guest permanently unusable: the budget ran out before the fallback
+# sync command had ever been sent, so the abandoned reply was never consumed and
+# every command after it read the previous command's answer.
+_QEMU_GA_RESYNC_TIMEOUT: Final[float] = _QEMU_GA_CONNECT_TIMEOUT
 
 # The guest-shutdown mode that powers the guest off rather than rebooting or
 # halting it. qemu-guest-agent sends no reply to this command, so the real
@@ -829,10 +855,10 @@ class QEMUConfig:
             failing the sandbox launch.
         guest_agent_ready_timeout: Total timeout in seconds allowed for
             qemu-guest-agent to become usable: opening the
-            ``org.qemu.guest_agent.0`` channel, resynchronising it, and getting
-            an answer to ``guest-ping``. The whole budget is available to a
-            guest that is still booting, because QEMU binds the channel socket
-            before the guest runs.
+            ``org.qemu.guest_agent.0`` channel, resynchronising it, getting an
+            answer to ``guest-ping``, and then getting a command to run. The
+            whole budget is available to a guest that is still booting, because
+            QEMU binds the channel socket before the guest runs.
         guest_shutdown_timeout: Total time in seconds ``stop()`` allows the
             guest to power itself off before QEMU is terminated outright. The
             budget is split evenly across the shutdown channels that are open,
@@ -864,7 +890,7 @@ class QEMUConfig:
     shared_folder: Path | None = None
     anti_evasion_profile: Literal["default", "workstation", "laptop"] = "default"
     agent_connect_timeout: float = 60.0
-    guest_agent_ready_timeout: float = _QEMU_GA_PING_TIMEOUT
+    guest_agent_ready_timeout: float = _QEMU_GA_READY_TIMEOUT
     guest_shutdown_timeout: float = 120.0
     snapshot_timeout: float = 600.0
     memory_dump_timeout: float = 1800.0
@@ -1039,6 +1065,7 @@ class QemuJsonProtocolClient:
         self._reader: asyncio.StreamReader | None = None
         self._writer: asyncio.StreamWriter | None = None
         self.connected = False
+        self._resync_pending = False
         self._lock = asyncio.Lock()
         _logger.debug(self._event("client_initialized"), host=host, port=port)
 
@@ -1098,6 +1125,7 @@ class QemuJsonProtocolClient:
         )
         await self._handshake(time_limit)
         self.connected = True
+        self._resync_pending = False
         _logger.info(self._event("connected"), host=self._host, port=self._port)
 
     @property
@@ -1163,6 +1191,7 @@ class QemuJsonProtocolClient:
         self._reader = None
         self._writer = None
         self.connected = False
+        self._resync_pending = False
 
     async def _send_command(
         self,
@@ -1171,18 +1200,26 @@ class QemuJsonProtocolClient:
     ) -> QMPResponse:
         """Send a command and get response.
 
+        A channel a previous timeout left offset is realigned before anything is
+        written to it, and refused outright when it cannot be: a reply read off
+        an offset stream belongs to the previous command, and returning it as
+        this command's answer is worse than reporting no answer at all.
+
         Args:
             command: Command dictionary with an ``execute`` key.
             time_limit: Response timeout in seconds.
 
         Returns:
-            QMPResponse: Decoded response.
+            QMPResponse: Decoded response, or a failure carrying
+            :data:`_ERR_QEMU_GA_DESYNCHRONISED` when the stream is still offset.
         """
         _logger.debug(self._event("command_send_called"), command=command.get("execute"))
         if self._reader is None or self._writer is None:
             return QMPResponse(success=False, error=_ERR_NOT_CONNECTED)
 
         async with self._lock:
+            if self._resync_pending and not await self._clear_pending_resync():
+                return QMPResponse(success=False, error=_ERR_QEMU_GA_DESYNCHRONISED)
             try:
                 return await self._exchange_command(command, time_limit)
             except TimeoutError:
@@ -1211,8 +1248,12 @@ class QemuJsonProtocolClient:
         unanswered resync is a different thing: the peer is still reachable and
         merely slow, and on a channel the peer hands out only once - see
         :attr:`_retain_socket_on_handshake_failure` - closing it would turn a
-        slow guest into a permanently unreachable one. Such a channel is kept
-        and the next command resynchronises again.
+        slow guest into a permanently unreachable one. Such a channel is kept,
+        but it is kept *marked*: the timed-out command's reply is still on its
+        way, so the stream is known to be offset by one until some later resync
+        consumes it. :meth:`_clear_pending_resync` is what retries that, and
+        :meth:`_send_command` refuses to attribute a reply to a new command
+        until it has succeeded.
         """
         try:
             await self._on_command_timeout()
@@ -1221,8 +1262,33 @@ class QemuJsonProtocolClient:
             await self.disconnect()
         except SandboxError as e:
             _logger.warning(self._event("command_timeout_resync_unanswered"), error=str(e), port=self._port)
-            if not self._retain_socket_on_handshake_failure:
+            if self._retain_socket_on_handshake_failure:
+                self._resync_pending = True
+            else:
                 await self.disconnect()
+        else:
+            self._resync_pending = False
+
+    async def _clear_pending_resync(self) -> bool:
+        """Retry the resync a previous command timeout could not complete.
+
+        Runs with the command lock already held, and reaches the peer only
+        through :meth:`_recover_from_command_timeout`, so a resync that fails
+        again re-arms the mark rather than escaping to the caller. Each attempt
+        gets the protocol's whole resync budget: the reason the first one failed
+        is that the guest was slower than the budget it was given, and a guest
+        that is still busy needs the full budget again, not the remainder of it.
+
+        Returns:
+            bool: True when the stream is framed again and a reply may be
+            attributed to a new command, False while it is still offset.
+        """
+        _logger.debug(self._event("resync_pending_retry"), port=self._port)
+        await self._recover_from_command_timeout()
+        if self._resync_pending:
+            _logger.warning(self._event("resync_pending_unresolved"), port=self._port)
+            return False
+        return self._reader is not None and self._writer is not None
 
     async def _on_command_timeout(self) -> None:
         """React to a command whose reply did not arrive in time.
@@ -1813,7 +1879,12 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
 
         Tries each command in :data:`_QGA_SYNC_COMMANDS` in turn. An agent that
         does not implement one answers ``CommandNotFound`` straight away, which
-        moves on to the next name rather than waiting out the deadline.
+        moves on to the next name rather than waiting out the deadline. An agent
+        that is merely slow does not answer at all, so the attempts are sized to
+        divide the budget rather than each claim a fixed share of it - see
+        :meth:`_sync_attempt_slice`, without which a budget no larger than one
+        attempt is spent entirely on the first command and the rest are never
+        sent.
 
         Args:
             time_limit: Deadline in seconds for the sync reply.
@@ -1836,7 +1907,7 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     break
-                outcome = await self._attempt_sync(command, min(_QGA_SYNC_ATTEMPT_TIMEOUT, remaining))
+                outcome = await self._attempt_sync(command, self._sync_attempt_slice(remaining, len(pending)))
                 if outcome.matched:
                     return
                 if outcome.unsupported:
@@ -1855,6 +1926,28 @@ class QemuGuestAgentClient(QemuJsonProtocolClient):
             port=self._port,
         )
         raise SandboxError(_ERR_QEMU_GA_SYNC_FAILED)
+
+    @staticmethod
+    def _sync_attempt_slice(remaining: float, pending_commands: int) -> float:
+        """Size one sync attempt so every command still pending gets a turn.
+
+        Trying the sync commands "in order" only holds if the budget outlives
+        the first of them. A fixed per-attempt share does not guarantee that:
+        once the budget is no larger than that share, the first command consumes
+        all of it and the fallback is never sent - which is how a resync against
+        a slow guest came to fail without ever trying the command that guest
+        answers. Dividing what is left keeps the ordering meaningful at any
+        budget, while the fixed share still caps an attempt when the budget is
+        generous enough to allow several rounds.
+
+        Args:
+            remaining: Seconds left in the whole sync budget.
+            pending_commands: Number of sync commands still to be tried.
+
+        Returns:
+            float: Deadline in seconds for the next single attempt.
+        """
+        return min(_QGA_SYNC_ATTEMPT_TIMEOUT, remaining / max(pending_commands, 1))
 
     async def _attempt_sync(self, command: str, time_limit: float) -> _SyncOutcome:
         """Send one sync command and wait a bounded slice for its reply.
@@ -3924,6 +4017,7 @@ class QEMUSandbox(SandboxBase):
         args: list[str],
         *,
         capture_output: bool = False,
+        reply_time_limit: float = QEMU_GA_EXEC_TIMEOUT,
     ) -> int:
         """Invoke ``guest-exec`` on the guest-agent channel and return the guest PID.
 
@@ -3933,6 +4027,11 @@ class QEMUSandbox(SandboxBase):
             capture_output: Whether qemu-guest-agent should buffer
                 stdout/stderr for later retrieval. The monitor bootstrap
                 does not need output capture.
+            reply_time_limit: Seconds to wait for the agent's reply to the
+                launch itself, as distinct from how long the launched process
+                may then run. A caller working to a deadline of its own passes
+                what is left of it, so abandoning one launch cannot consume the
+                budget that was meant to cover the retry.
 
         Returns:
             int: Guest-side process identifier returned by
@@ -3950,7 +4049,7 @@ class QEMUSandbox(SandboxBase):
             path,
             args,
             capture_output=capture_output,
-            time_limit=QEMU_GA_EXEC_TIMEOUT,
+            time_limit=reply_time_limit,
         )
         if not response.success:
             _logger.warning(
@@ -4059,7 +4158,12 @@ class QEMUSandbox(SandboxBase):
             if remaining <= 0:
                 break
             try:
-                status = await self._guest_run(path, args, time_limit=min(remaining, _GUEST_COMMAND_TIMEOUT))
+                status = await self._guest_run(
+                    path,
+                    args,
+                    time_limit=min(remaining, _GUEST_COMMAND_TIMEOUT),
+                    reply_time_limit=min(remaining, QEMU_GA_EXEC_TIMEOUT),
+                )
             except SandboxError as e:
                 reason = str(e)
                 _logger.debug("guest_exec_probe_retry", path=path, arg=list(args), error=reason)
@@ -4078,6 +4182,7 @@ class QEMUSandbox(SandboxBase):
         path: str,
         args: list[str],
         time_limit: float = _GUEST_COMMAND_TIMEOUT,
+        reply_time_limit: float = QEMU_GA_EXEC_TIMEOUT,
     ) -> GuestExecStatus:
         """Run a command inside the guest and wait for its exit status.
 
@@ -4086,6 +4191,10 @@ class QEMUSandbox(SandboxBase):
             args: Argument list passed to the executable.
             time_limit: Maximum time in seconds to wait for the guest-side
                 process to terminate.
+            reply_time_limit: Maximum time in seconds to wait for the agent to
+                acknowledge the launch. Separate from ``time_limit`` because a
+                command that runs for a minute and an agent that takes a minute
+                to answer are different conditions with different remedies.
 
         Returns:
             GuestExecStatus: Terminal status including captured output.
@@ -4098,7 +4207,12 @@ class QEMUSandbox(SandboxBase):
         if self._qga is None:
             raise SandboxError(_ERR_QEMU_GA_NOT_CONNECTED)
 
-        pid = await self._guest_agent_exec(path, args, capture_output=True)
+        pid = await self._guest_agent_exec(
+            path,
+            args,
+            capture_output=True,
+            reply_time_limit=reply_time_limit,
+        )
         deadline = time.monotonic() + time_limit
         while time.monotonic() < deadline:
             status = await self._qga.guest_exec_status(pid)

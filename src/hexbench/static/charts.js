@@ -6,12 +6,23 @@
    per block, one code byte per block, 65536 digram counts, 256 byte frequencies.
    Each of those becomes a picture here.
 
-   Two things every chart in this file gets right and a naive canvas gets wrong.
-   The backing store is sized in device pixels and the context is scaled by the
-   device pixel ratio, so a 175% display draws sharp rather than resampled. And
-   every colour is read from the design system's custom properties at draw time,
-   so a theme toggle repaints rather than leaving a light-theme chart stranded on
-   a dark page. */
+   Which of the two a shape gets is decided by one rule, stated at each of the
+   charts that follow it: DOM when the element count is bounded, canvas when it
+   is not. A byte histogram is always 256 bars and a byte split is always four
+   segments, so both are elements the stylesheet themes by itself; a diff can
+   report tens of thousands of regions and the digram plane is 65536 cells, so
+   both are pixels. The canvas charts pay for that with a text alternative, one
+   visually hidden sentence each plus a caption routed to the live region.
+
+   Two things every canvas chart in this file gets right and a naive one gets
+   wrong. The backing store is sized in device pixels and the context is scaled
+   by the device pixel ratio, so a 175% display draws sharp rather than
+   resampled. And every colour is read from the design system's custom properties
+   at draw time, so a theme toggle repaints rather than leaving a light-theme
+   chart stranded on a dark page. */
+
+import { announce, element } from './dom.js';
+
 
 const DPR_FALLBACK = 1;
 const MIN_CANVAS_PX = 8;
@@ -19,7 +30,6 @@ const DIGRAM_SIDE = 256;
 const HISTOGRAM_BUCKETS = 256;
 const ENTROPY_HEIGHT = 72;
 const CLASSIFICATION_HEIGHT = 44;
-const HISTOGRAM_HEIGHT = 148;
 const DIGRAM_MAX = 384;
 const AXIS_FONT = '10px ui-monospace, "Cascadia Mono", "Consolas", monospace';
 const AXIS_PAD = 16;
@@ -30,6 +40,8 @@ const RGB_MAX = 255;
 const SHORT_HEX = 4;
 const PERCENT = 100;
 const TWO = 2;
+const HEX_SIX = /^#[0-9a-f]{6}$/i;
+const HEX_PAIR = 2;
 
 const CLASSIFICATION_LEGEND = [
   { code: 0, token: '--hb-class-0', label: 'zero-filled' },
@@ -120,9 +132,39 @@ export function parseColor(text) {
   return { r: 0, g: 0, b: 0 };
 }
 
-function cssColor(node, token, fallback = '#808080') {
+/**
+ * Read one design-system custom property off an element's computed style.
+ *
+ * @param {HTMLElement} node Element whose computed style supplies the token.
+ * @param {string} token Custom property name.
+ * @param {string} [fallback] Returned when the property resolves to nothing.
+ * @returns {string} The colour text, in whatever notation the stylesheet wrote.
+ */
+export function cssColor(node, token, fallback = '#808080') {
   const raw = getComputedStyle(node).getPropertyValue(token).trim();
   return raw === '' ? fallback : raw;
+}
+
+/**
+ * One design-system colour token as a six-digit hexadecimal string.
+ *
+ * A colour input and a canvas gradient stop both need `#rrggbb` specifically,
+ * which is not what the stylesheet necessarily wrote: a token may resolve to
+ * `rgb(...)` or to a shorthand, and either reaches such a control as an empty
+ * value rather than as an error.
+ *
+ * @param {string} token Custom property name.
+ * @param {string} [fallback] Colour text used when the token resolves to nothing.
+ * @param {HTMLElement} [node] Element whose computed style supplies the token.
+ * @returns {string} The colour as `#rrggbb`, lower case.
+ */
+export function tokenHex(token, fallback = '#808080', node = null) {
+  const raw = cssColor(node ?? document.documentElement, token, fallback);
+  if (HEX_SIX.test(raw)) {
+    return raw.toLowerCase();
+  }
+  const { r, g, b } = parseColor(raw);
+  return `#${[r, g, b].map((channel) => channel.toString(HEX_BASE).padStart(HEX_PAIR, '0')).join('')}`;
 }
 
 function mix(first, second, ratio) {
@@ -155,17 +197,6 @@ export function buildRamp(node, tokens) {
 }
 
 /* ------------------------------------------------------------------ canvas */
-
-function element(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) {
-    node.className = className;
-  }
-  if (text !== undefined) {
-    node.textContent = text;
-  }
-  return node;
-}
 
 function hex(value, digits) {
   return value.toString(HEX_BASE).toUpperCase().padStart(digits, '0');
@@ -316,6 +347,32 @@ function mountChart(chart) {
   return chart;
 }
 
+/**
+ * Wrap a canvas chart's hover handler so the caption it writes is also spoken.
+ *
+ * A canvas says nothing to a screen reader, so the caption is the only reading
+ * of what the pointer is over; sending it through the page's one polite live
+ * region is what turns it from a sighted-only readout into the chart's running
+ * commentary. The announcement is made only when the text actually changed,
+ * because a pointer crossing a strip fires on every pixel and a live region
+ * rewritten with the text it already holds is read out again by some screen
+ * readers.
+ *
+ * @param {HTMLElement} node Caption element the handler writes into.
+ * @param {(point: object|null, chart: Chart) => void} handler The chart's own hover handler.
+ * @returns {(point: object|null, chart: Chart) => void} The same handler, now announcing.
+ */
+function announcing(node, handler) {
+  let spoken = node.textContent;
+  return (point, chart) => {
+    handler(point, chart);
+    if (node.textContent !== spoken) {
+      spoken = node.textContent;
+      announce(spoken);
+    }
+  };
+}
+
 /* ------------------------------------------------------------ entropy map */
 
 /**
@@ -329,6 +386,7 @@ export function entropyMapChart(values, options = {}) {
   const { blockSize = 0, onSeek = null } = options;
   const container = element('div', 'hb-stack');
   const hover = element('div', 'hb-canvasframe-caption hb-mono', 'hover a column for its entropy');
+  const summary = element('p', 'hb-sr-only', `Entropy map: one column per block across ${values.length} blocks of ${blockSize} bytes, each plotted from 0 to ${MAX_ENTROPY_BITS} bits per byte.`);
 
   const chart = new Chart({
     title: 'entropy map',
@@ -351,7 +409,7 @@ export function entropyMapChart(values, options = {}) {
       }
       context.stroke();
     },
-    onHover: (point) => {
+    onHover: announcing(hover, (point) => {
       if (point === null) {
         hover.textContent = 'hover a column for its entropy';
         return;
@@ -360,7 +418,7 @@ export function entropyMapChart(values, options = {}) {
       hover.textContent = index === null
         ? 'no blocks to map — the document is empty'
         : `block ${index} at 0x${hex(index * blockSize, 8)} — ${values[index].toFixed(3)} bits/byte`;
-    },
+    }),
     onClick: onSeek === null ? undefined : (point) => {
       const index = hoverIndex(values.length, point.x, point.width);
       if (index !== null) {
@@ -371,7 +429,7 @@ export function entropyMapChart(values, options = {}) {
 
   const scale = element('div', 'hb-strip-axis');
   scale.append(element('span', undefined, '0 bits'), element('span', undefined, '8 bits (random)'));
-  container.append(chart.element, scale, hover);
+  container.append(summary, chart.element, scale, hover);
   return { element: container, chart: mountChart(chart) };
 }
 
@@ -388,6 +446,7 @@ export function classificationChart(codes, options = {}) {
   const { blockSize = 0, onSeek = null } = options;
   const container = element('div', 'hb-stack');
   const hover = element('div', 'hb-canvasframe-caption hb-mono', 'hover a block for its class');
+  const summary = element('p', 'hb-sr-only', `Content classification: one column per block across ${codes.length} blocks of ${blockSize} bytes, each carrying a class code from 0 (${CLASSIFICATION_LEGEND[0].label}) to ${CLASSIFICATION_CODES - 1} (${CLASSIFICATION_LEGEND[CLASSIFICATION_CODES - 1].label}).`);
 
   const counts = new Array(CLASSIFICATION_CODES).fill(0);
   for (const code of codes) {
@@ -409,7 +468,7 @@ export function classificationChart(codes, options = {}) {
         context.fillRect(index * step, 0, Math.max(1, step + 1), height);
       }
     },
-    onHover: (point) => {
+    onHover: announcing(hover, (point) => {
       if (point === null) {
         hover.textContent = 'hover a block for its class';
         return;
@@ -421,7 +480,7 @@ export function classificationChart(codes, options = {}) {
       }
       const entry = CLASSIFICATION_LEGEND[codes[index]];
       hover.textContent = `block ${index} at 0x${hex(index * blockSize, 8)} — ${codes[index]} ${entry ? entry.label : 'unknown code'}`;
-    },
+    }),
     onClick: onSeek === null ? undefined : (point) => {
       const index = hoverIndex(codes.length, point.x, point.width);
       if (index !== null) {
@@ -440,7 +499,7 @@ export function classificationChart(codes, options = {}) {
     legend.appendChild(item);
   }
 
-  container.append(chart.element, legend, hover);
+  container.append(summary, chart.element, legend, hover);
   return { element: container, chart: mountChart(chart) };
 }
 
@@ -470,6 +529,7 @@ export function digramChart(counts) {
     }
   }
   const scale = Math.log1p(peak) || 1;
+  const summary = element('p', 'hb-sr-only', `Digram matrix: a ${DIGRAM_SIDE} by ${DIGRAM_SIDE} grid of byte-pair counts, ${nonZero} of ${DIGRAM_SIDE * DIGRAM_SIDE} pairs seen, log-scaled from 0 to ${peak} occurrences.`);
 
   const offscreen = document.createElement('canvas');
   offscreen.width = DIGRAM_SIDE;
@@ -513,7 +573,7 @@ export function digramChart(counts) {
       context.fillText('b1 →', left, side + AXIS_PAD - 4);
       context.fillText('↓ b0', Math.max(0, left - AXIS_PAD), AXIS_PAD - 4);
     },
-    onHover: (point) => {
+    onHover: announcing(hover, (point) => {
       if (point === null) {
         hover.textContent = 'hover for the pair under the pointer';
         return;
@@ -528,10 +588,10 @@ export function digramChart(counts) {
       }
       const count = counts[first * DIGRAM_SIDE + second] ?? 0;
       hover.textContent = `b0=0x${hex(first, 2)} b1=0x${hex(second, 2)} — ${count} occurrence${count === 1 ? '' : 's'}`;
-    },
+    }),
   });
 
-  container.append(chart.element, hover);
+  container.append(summary, chart.element, hover);
   return { element: container, chart: mountChart(chart) };
 }
 
@@ -549,6 +609,13 @@ function byteClassToken(value) {
   }
   return '--hb-byte-high';
 }
+
+const BYTE_CLASS_MODIFIERS = new Map([
+  ['--hb-byte-null', 'bc-null'],
+  ['--hb-class-1', 'bc-print'],
+  ['--hb-byte-control', 'bc-ctrl'],
+  ['--hb-byte-high', 'bc-high'],
+]);
 
 /**
  * The tallest bucket in a byte histogram, or null when every bucket is empty.
@@ -572,64 +639,80 @@ export function histogramPeak(counts) {
   return { peak, index: counts.indexOf(peak) };
 }
 
+const HISTOGRAM_IDLE = 'hover a bar for its byte value';
+
 /**
- * Draw the 256-bar frequency histogram, with a logarithmic toggle.
+ * Build the 256-bar frequency histogram as elements, with a logarithmic toggle.
+ *
+ * This one is DOM rather than canvas on purpose, by the rule the digram and the
+ * diff mini-map are canvas by: the bucket count is fixed at 256 whatever the
+ * document is, so the cost of one element per bar is bounded. What that buys is
+ * everything the canvas versions have to re-do by hand. Each bar carries its own
+ * title, so the reading of a bucket is not pointer-only. Each bar's colour is a
+ * class modifier the stylesheet already owns, so a theme change re-resolves it
+ * with no redraw and no theme subscription to unsubscribe from - which is why
+ * this returns an element and nothing else.
  *
  * A linear histogram of a text file is one spike and 255 invisible bars, so the
  * toggle is part of the chart rather than an afterthought.
  *
  * @param {number[]} counts Exactly 256 occurrence counts, indexed by byte value.
- * @param {object} options Title and an optional seek-to-first-occurrence hook.
- * @returns {{element: HTMLElement, chart: Chart}} The mounted chart.
+ * @param {object} options Title shown in the frame header.
+ * @returns {{element: HTMLElement}} The rendered histogram.
  */
 export function histogramChart(counts, options = {}) {
   const { title = 'byte frequency' } = options;
   const container = element('div', 'hb-stack');
-  const hover = element('div', 'hb-canvasframe-caption hb-mono', 'hover a bar for its byte value');
+  const hover = element('div', 'hb-canvasframe-caption hb-mono', HISTOGRAM_IDLE);
   let logarithmic = true;
 
   const total = counts.reduce((sum, value) => sum + value, 0);
   const peakInfo = histogramPeak(counts);
   const scalePeak = peakInfo === null ? 1 : peakInfo.peak;
 
-  const chart = new Chart({
-    title,
-    meta: `${total} bytes`,
-    height: HISTOGRAM_HEIGHT,
-    draw: (context, { width, height }) => {
-      const plot = height - AXIS_PAD;
-      const step = width / HISTOGRAM_BUCKETS;
-      const ceiling = logarithmic ? Math.log1p(scalePeak) : scalePeak;
-      for (let value = 0; value < HISTOGRAM_BUCKETS; value += 1) {
-        const count = counts[value] ?? 0;
-        const measured = logarithmic ? Math.log1p(count) : count;
-        const bar = ceiling === 0 ? 0 : (measured / ceiling) * plot;
-        context.fillStyle = cssColor(container, byteClassToken(value));
-        context.fillRect(value * step, plot - bar, Math.max(1, step - 0.4), Math.max(count > 0 ? 1 : 0, bar));
-      }
-      context.strokeStyle = cssColor(container, '--hb-chart-axis', '#808080');
-      context.beginPath();
-      context.moveTo(0, plot + 0.5);
-      context.lineTo(width, plot + 0.5);
-      context.stroke();
-      context.fillStyle = cssColor(container, '--hb-chart-axis', '#808080');
-      context.font = AXIS_FONT;
-      context.fillText('00', 0, height - 3);
-      context.fillText('7F', width / TWO - 8, height - 3);
-      context.fillText('FF', width - 14, height - 3);
-    },
-    onHover: (point) => {
-      if (point === null) {
-        hover.textContent = 'hover a bar for its byte value';
-        return;
-      }
-      const value = Math.max(0, Math.min(HISTOGRAM_BUCKETS - 1, Math.floor((point.x / point.width) * HISTOGRAM_BUCKETS)));
+  const describe = (value) => {
+    const count = counts[value] ?? 0;
+    const share = total === 0 ? 0 : (count / total) * PERCENT;
+    const glyph = value >= 0x20 && value < 0x7f ? ` '${String.fromCharCode(value)}'` : '';
+    return `0x${hex(value, 2)}${glyph} — ${count} (${share.toFixed(2)}%)`;
+  };
+
+  const frame = element('div', 'hb-canvasframe');
+  const header = element('div', 'hb-canvasframe-header');
+  const meta = element('span', 'hb-canvasframe-meta', `${total} bytes, log scale`);
+  header.append(element('span', undefined, title), meta);
+  const body = element('div', 'hb-canvasframe-body is-plain');
+  const plot = element('div', 'hb-histogram');
+
+  const bars = [];
+  for (let value = 0; value < HISTOGRAM_BUCKETS; value += 1) {
+    const bar = element('div', `hb-histogram-bar ${BYTE_CLASS_MODIFIERS.get(byteClassToken(value))}`);
+    bar.title = describe(value);
+    bar.addEventListener('pointerenter', () => {
+      hover.textContent = bar.title;
+    });
+    bar.addEventListener('pointerleave', () => {
+      hover.textContent = HISTOGRAM_IDLE;
+    });
+    bars.push(bar);
+    plot.appendChild(bar);
+  }
+  body.appendChild(plot);
+  frame.append(header, body);
+
+  const applyHeights = () => {
+    const ceiling = logarithmic ? Math.log1p(scalePeak) : scalePeak;
+    bars.forEach((bar, value) => {
       const count = counts[value] ?? 0;
-      const share = total === 0 ? 0 : (count / total) * PERCENT;
-      const glyph = value >= 0x20 && value < 0x7f ? ` '${String.fromCharCode(value)}'` : '';
-      hover.textContent = `0x${hex(value, 2)}${glyph} — ${count} (${share.toFixed(2)}%)`;
-    },
-  });
+      const measured = logarithmic ? Math.log1p(count) : count;
+      const share = ceiling === 0 ? 0 : (measured / ceiling) * PERCENT;
+      bar.style.setProperty('--hb-bar', share.toFixed(3));
+    });
+  };
+  applyHeights();
+
+  const axis = element('div', 'hb-axis');
+  axis.append(element('span', undefined, '00'), element('span', undefined, '7F'), element('span', undefined, 'FF'));
 
   const controls = element('div', 'hb-row-flex');
   const toggle = element('button', 'hb-btn is-sm', 'linear scale');
@@ -637,16 +720,15 @@ export function histogramChart(counts, options = {}) {
   toggle.addEventListener('click', () => {
     logarithmic = !logarithmic;
     toggle.textContent = logarithmic ? 'linear scale' : 'logarithmic scale';
-    chart.setMeta(`${total} bytes, ${logarithmic ? 'log' : 'linear'} scale`);
-    chart.render();
+    meta.textContent = `${total} bytes, ${logarithmic ? 'log' : 'linear'} scale`;
+    applyHeights();
   });
   controls.append(toggle, element('span', 'hb-dim', peakInfo === null
     ? 'no peak — the document is empty'
     : `peak ${peakInfo.peak} at 0x${hex(peakInfo.index, 2)}`));
 
-  chart.setMeta(`${total} bytes, log scale`);
-  container.append(chart.element, controls, hover);
-  return { element: container, chart: mountChart(chart) };
+  container.append(frame, axis, controls, hover);
+  return { element: container };
 }
 
 /* -------------------------------------------------- byte type distribution */
@@ -745,6 +827,7 @@ export function diffMinimapChart(regions, side, options = {}) {
   const span = regionSpan(ordered, key);
   const container = element('div', 'hb-stack');
   const hover = element('div', 'hb-canvasframe-caption hb-mono', 'hover the strip for the region under the pointer');
+  const summary = element('p', 'hb-sr-only', `Difference mini-map for ${title}: ${ordered.length} alignment regions laid out from offset 0 to ${span} bytes, each coloured by its difference kind.`);
 
   const positionOf = (point) => Math.max(0, Math.min(span, (point.x / point.width) * span));
 
@@ -770,7 +853,7 @@ export function diffMinimapChart(regions, side, options = {}) {
         context.fillRect(start, 0, size, height);
       }
     },
-    onHover: (point) => {
+    onHover: announcing(hover, (point) => {
       if (point === null || span === 0) {
         hover.textContent = 'hover the strip for the region under the pointer';
         return;
@@ -779,7 +862,7 @@ export function diffMinimapChart(regions, side, options = {}) {
       hover.textContent = region === null
         ? 'no region covers that position'
         : `${region.diff_type} — ${region.length} B at 0x${hex(Number(region[key] ?? 0), 8)}`;
-    },
+    }),
     onClick: onPick === null ? undefined : (point) => {
       if (span === 0) {
         return;
@@ -791,6 +874,6 @@ export function diffMinimapChart(regions, side, options = {}) {
     },
   });
 
-  container.append(chart.element, hover);
+  container.append(summary, chart.element, hover);
   return { element: container, chart: mountChart(chart) };
 }

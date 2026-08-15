@@ -125,7 +125,6 @@ svg {
   --hb-tracking-caps: 0.08em;
 
   /* -- Spacing --------------------------------------------------- */
-  --hb-space-0: 0px;
   --hb-space-1: 2px;
   --hb-space-2: 4px;
   --hb-space-3: 6px;
@@ -153,7 +152,6 @@ svg {
   --hb-dur-slow: 260ms;
   --hb-ease: cubic-bezier(0.2, 0, 0.2, 1);
   --hb-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --hb-ease-in: cubic-bezier(0.4, 0, 1, 1);
   --hb-transition-colors: background-color var(--hb-dur-fast) var(--hb-ease), border-color var(--hb-dur-fast) var(--hb-ease),
     color var(--hb-dur-fast) var(--hb-ease), box-shadow var(--hb-dur-fast) var(--hb-ease);
   --hb-transition-transform: transform var(--hb-dur-med) var(--hb-ease-out);
@@ -281,7 +279,6 @@ svg {
   --hb-chart-axis: #6a7686;
   --hb-chart-fill: rgb(15 108 214 / 22%);
   --hb-chart-line: #0f6cd6;
-  --hb-chart-ink: #10151d;
 
   /* -- Elevation -------------------------------------------------- */
   --hb-shadow-0: none;
@@ -390,7 +387,6 @@ svg {
     --hb-chart-axis: #7a8695;
     --hb-chart-fill: rgb(76 157 240 / 24%);
     --hb-chart-line: #6bb2f7;
-    --hb-chart-ink: #dfe4ec;
 
     --hb-shadow-0: none;
     --hb-shadow-1: 0 1px 2px rgb(0 0 0 / 45%);
@@ -498,7 +494,6 @@ svg {
   --hb-chart-axis: #7a8695;
   --hb-chart-fill: rgb(76 157 240 / 24%);
   --hb-chart-line: #6bb2f7;
-  --hb-chart-ink: #dfe4ec;
 
   --hb-shadow-0: none;
   --hb-shadow-1: 0 1px 2px rgb(0 0 0 / 45%);
@@ -603,7 +598,6 @@ svg {
   --hb-chart-axis: #6a7686;
   --hb-chart-fill: rgb(15 108 214 / 22%);
   --hb-chart-line: #0f6cd6;
-  --hb-chart-ink: #10151d;
 
   --hb-shadow-0: none;
   --hb-shadow-1: 0 1px 2px rgb(16 24 40 / 8%);
@@ -1600,6 +1594,95 @@ pre {
   color: var(--hb-text-muted);
   letter-spacing: var(--hb-tracking-wide);
   text-transform: uppercase;
+}
+
+/* -- No document open -- */
+
+.hb-blank {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--hb-space-10);
+  max-width: 720px;
+  margin: auto;
+  padding: var(--hb-space-11) var(--hb-space-8);
+}
+
+.hb-blank-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-5);
+}
+
+.hb-blank-title {
+  font-size: var(--hb-fs-3xl);
+  font-weight: var(--hb-fw-semibold);
+  letter-spacing: var(--hb-tracking-tight);
+  line-height: var(--hb-lh-tight);
+  color: var(--hb-text-primary);
+}
+
+.hb-blank-lede {
+  max-width: 56ch;
+  font-size: var(--hb-fs-lg);
+  line-height: var(--hb-lh-loose);
+  color: var(--hb-text-secondary);
+}
+
+.hb-blank-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--hb-space-5);
+}
+
+.hb-blank-action {
+  display: flex;
+  flex-direction: column;
+  gap: var(--hb-space-4);
+  padding: var(--hb-space-6);
+  border: 1px solid var(--hb-border);
+  border-radius: var(--hb-radius-md);
+  background: var(--hb-surface-1);
+  text-align: left;
+  transition: var(--hb-transition-colors);
+}
+
+.hb-blank-action:hover {
+  background: var(--hb-surface-hover);
+  border-color: var(--hb-accent);
+}
+
+.hb-blank-action-glyph {
+  font-size: var(--hb-fs-lg);
+  color: var(--hb-accent);
+}
+
+.hb-blank-action-title {
+  font-size: var(--hb-fs-md);
+  font-weight: var(--hb-fw-semibold);
+  color: var(--hb-text-primary);
+}
+
+.hb-blank-action-note {
+  font-family: var(--hb-font-mono);
+  font-size: var(--hb-fs-xs);
+  color: var(--hb-text-muted);
+}
+
+.hb-blank-hints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hb-space-8);
+  padding-top: var(--hb-space-7);
+  border-top: 1px solid var(--hb-border-subtle);
+  font-family: var(--hb-font-mono);
+  font-size: var(--hb-fs-xs);
+  color: var(--hb-text-faint);
+}
+
+.hb-blank-key {
+  color: var(--hb-text-muted);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2961,71 +3044,6 @@ pre {
 
 /* -- Strips -- */
 
-.hb-strip {
-  display: flex;
-  flex-direction: column;
-  gap: var(--hb-space-2);
-}
-
-.hb-strip-track {
-  position: relative;
-  display: flex;
-  align-items: stretch;
-  height: 34px;
-  border: 1px solid var(--hb-border);
-  border-radius: var(--hb-radius-sm);
-  background: var(--hb-surface-inset);
-  overflow: hidden;
-}
-
-.hb-strip-marker {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--hb-marker-start, 0%);
-  width: var(--hb-marker-width, 0%);
-  min-width: 2px;
-  background: var(--hb-sel-bg);
-  border-left: 1px solid var(--hb-sel-border);
-  border-right: 1px solid var(--hb-sel-border);
-  pointer-events: none;
-}
-
-.hb-strip-track.is-tall {
-  height: 56px;
-}
-
-.hb-strip-cell {
-  flex: 1 1 0;
-  min-width: 0;
-  background: var(--hb-class-0);
-  transition: filter var(--hb-dur-fast) var(--hb-ease);
-}
-
-.hb-strip-cell:hover {
-  filter: brightness(1.25);
-}
-
-.hb-strip-cell.cls-0 {
-  background: var(--hb-class-0);
-}
-
-.hb-strip-cell.cls-1 {
-  background: var(--hb-class-1);
-}
-
-.hb-strip-cell.cls-2 {
-  background: var(--hb-class-2);
-}
-
-.hb-strip-cell.cls-3 {
-  background: var(--hb-class-3);
-}
-
-.hb-strip-cell.cls-4 {
-  background: var(--hb-class-4);
-}
-
 .hb-strip-axis {
   display: flex;
   justify-content: space-between;
@@ -3179,68 +3197,6 @@ pre {
 
 .hb-segbar-seg.bc-high {
   background: var(--hb-byte-high);
-}
-
-/* -- Diff mini-map -- */
-
-.hb-minimap {
-  position: relative;
-  height: 46px;
-  border: 1px solid var(--hb-border);
-  border-radius: var(--hb-radius-sm);
-  background: var(--hb-surface-inset);
-  background-image: repeating-linear-gradient(90deg, var(--hb-chart-grid) 0 1px, transparent 1px 40px);
-  overflow: hidden;
-}
-
-.hb-minimap-band {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--hb-band-start, 0) * 1%);
-  width: calc(var(--hb-band-width, 1) * 1%);
-  min-width: 2px;
-}
-
-.hb-minimap-band.is-match {
-  background: var(--hb-class-0);
-  opacity: 0.45;
-}
-
-.hb-minimap-band.is-modified {
-  background: var(--hb-diff-modified-bg);
-  box-shadow: inset 0 0 0 1px var(--hb-warning-border);
-}
-
-.hb-minimap-band.is-inserted-a {
-  background: var(--hb-diff-removed-bg);
-  box-shadow: inset 0 0 0 1px var(--hb-error-border);
-}
-
-.hb-minimap-band.is-inserted-b {
-  background: var(--hb-diff-added-bg);
-  box-shadow: inset 0 0 0 1px var(--hb-success-border);
-}
-
-.hb-minimap-band::after {
-  content: attr(data-glyph);
-  position: absolute;
-  inset: auto 0 2px 0;
-  text-align: center;
-  font-family: var(--hb-font-mono);
-  font-size: var(--hb-fs-2xs);
-  font-weight: var(--hb-fw-bold);
-  color: var(--hb-text-secondary);
-}
-
-.hb-minimap-cursor {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--hb-cursor, 0) * 1%);
-  width: 2px;
-  background: var(--hb-caret);
-  box-shadow: 0 0 0 1px var(--hb-caret-contrast);
 }
 
 /* ============================================================ 11. OVERLAYS */
@@ -3806,6 +3762,6 @@ pre {
 <div class="ds-eyebrow">Foundations</div>
 <h1 class="ds-title">Colour tokens</h1>
 </header>
-<main class="ds-main"><section class="ds-section"><header><h2 class="ds-section-title">Colour system</h2><p class="ds-section-note">Both themes are authored independently. Dark is the working default for long analysis sessions; light is tuned for print and projection rather than derived by inverting the dark ramp. Every component reads only from these names, so a theme change is a token swap and nothing else.</p></header><div class="ds-section-body"><div class="ds-pair"><div class="ds-themecol" data-theme="light"><div class="ds-themecol-title">light theme</div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Surface</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-0)"></span></span><span class="ds-token-name">--hb-surface-0</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-1)"></span></span><span class="ds-token-name">--hb-surface-1</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-2)"></span></span><span class="ds-token-name">--hb-surface-2</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-3)"></span></span><span class="ds-token-name">--hb-surface-3</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-inset)"></span></span><span class="ds-token-name">--hb-surface-inset</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-hover)"></span></span><span class="ds-token-name">--hb-surface-hover</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-active)"></span></span><span class="ds-token-name">--hb-surface-active</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-code)"></span></span><span class="ds-token-name">--hb-surface-code</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Border</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-subtle)"></span></span><span class="ds-token-name">--hb-border-subtle</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border)"></span></span><span class="ds-token-name">--hb-border</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-strong)"></span></span><span class="ds-token-name">--hb-border-strong</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-focus)"></span></span><span class="ds-token-name">--hb-border-focus</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Text</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-primary)"></span></span><span class="ds-token-name">--hb-text-primary</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-secondary)"></span></span><span class="ds-token-name">--hb-text-secondary</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-muted)"></span></span><span class="ds-token-name">--hb-text-muted</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-faint)"></span></span><span class="ds-token-name">--hb-text-faint</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-accent)"></span></span><span class="ds-token-name">--hb-text-accent</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-link)"></span></span><span class="ds-token-name">--hb-text-link</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-inverse)"></span></span><span class="ds-token-name">--hb-text-inverse</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Accent</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent)"></span></span><span class="ds-token-name">--hb-accent</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-hover)"></span></span><span class="ds-token-name">--hb-accent-hover</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-active)"></span></span><span class="ds-token-name">--hb-accent-active</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-subtle)"></span></span><span class="ds-token-name">--hb-accent-subtle</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-muted)"></span></span><span class="ds-token-name">--hb-accent-muted</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-on-accent)"></span></span><span class="ds-token-name">--hb-on-accent</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Semantic</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-success)"></span></span><span class="ds-token-name">--hb-success</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-warning)"></span></span><span class="ds-token-name">--hb-warning</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-error)"></span></span><span class="ds-token-name">--hb-error</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-info)"></span></span><span class="ds-token-name">--hb-info</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-neutral)"></span></span><span class="ds-token-name">--hb-neutral</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Semantic wash</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-success-bg)"></span></span><span class="ds-token-name">--hb-success-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-warning-bg)"></span></span><span class="ds-token-name">--hb-warning-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-error-bg)"></span></span><span class="ds-token-name">--hb-error-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-info-bg)"></span></span><span class="ds-token-name">--hb-info-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-neutral-bg)"></span></span><span class="ds-token-name">--hb-neutral-bg</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Byte class</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-null)"></span></span><span class="ds-token-name">--hb-byte-null</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-printable)"></span></span><span class="ds-token-name">--hb-byte-printable</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-control)"></span></span><span class="ds-token-name">--hb-byte-control</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-high)"></span></span><span class="ds-token-name">--hb-byte-high</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Editor state</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-sel-bg)"></span></span><span class="ds-token-name">--hb-sel-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-caret)"></span></span><span class="ds-token-name">--hb-caret</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-modified)"></span></span><span class="ds-token-name">--hb-modified</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-bookmark)"></span></span><span class="ds-token-name">--hb-bookmark</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-hit-bg)"></span></span><span class="ds-token-name">--hb-hit-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-field-bg)"></span></span><span class="ds-token-name">--hb-field-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-added-bg)"></span></span><span class="ds-token-name">--hb-diff-added-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-removed-bg)"></span></span><span class="ds-token-name">--hb-diff-removed-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-modified-bg)"></span></span><span class="ds-token-name">--hb-diff-modified-bg</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Classification</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-0)"></span></span><span class="ds-token-name">--hb-class-0</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-1)"></span></span><span class="ds-token-name">--hb-class-1</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-2)"></span></span><span class="ds-token-name">--hb-class-2</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-3)"></span></span><span class="ds-token-name">--hb-class-3</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-4)"></span></span><span class="ds-token-name">--hb-class-4</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Chart</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-grid)"></span></span><span class="ds-token-name">--hb-chart-grid</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-axis)"></span></span><span class="ds-token-name">--hb-chart-axis</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-fill)"></span></span><span class="ds-token-name">--hb-chart-fill</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-line)"></span></span><span class="ds-token-name">--hb-chart-line</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-ink)"></span></span><span class="ds-token-name">--hb-chart-ink</span></div></div></div><div class="ds-themecol" data-theme="dark"><div class="ds-themecol-title">dark theme</div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Surface</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-0)"></span></span><span class="ds-token-name">--hb-surface-0</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-1)"></span></span><span class="ds-token-name">--hb-surface-1</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-2)"></span></span><span class="ds-token-name">--hb-surface-2</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-3)"></span></span><span class="ds-token-name">--hb-surface-3</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-inset)"></span></span><span class="ds-token-name">--hb-surface-inset</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-hover)"></span></span><span class="ds-token-name">--hb-surface-hover</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-active)"></span></span><span class="ds-token-name">--hb-surface-active</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-code)"></span></span><span class="ds-token-name">--hb-surface-code</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Border</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-subtle)"></span></span><span class="ds-token-name">--hb-border-subtle</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border)"></span></span><span class="ds-token-name">--hb-border</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-strong)"></span></span><span class="ds-token-name">--hb-border-strong</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-focus)"></span></span><span class="ds-token-name">--hb-border-focus</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Text</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-primary)"></span></span><span class="ds-token-name">--hb-text-primary</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-secondary)"></span></span><span class="ds-token-name">--hb-text-secondary</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-muted)"></span></span><span class="ds-token-name">--hb-text-muted</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-faint)"></span></span><span class="ds-token-name">--hb-text-faint</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-accent)"></span></span><span class="ds-token-name">--hb-text-accent</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-link)"></span></span><span class="ds-token-name">--hb-text-link</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-inverse)"></span></span><span class="ds-token-name">--hb-text-inverse</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Accent</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent)"></span></span><span class="ds-token-name">--hb-accent</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-hover)"></span></span><span class="ds-token-name">--hb-accent-hover</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-active)"></span></span><span class="ds-token-name">--hb-accent-active</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-subtle)"></span></span><span class="ds-token-name">--hb-accent-subtle</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-muted)"></span></span><span class="ds-token-name">--hb-accent-muted</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-on-accent)"></span></span><span class="ds-token-name">--hb-on-accent</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Semantic</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-success)"></span></span><span class="ds-token-name">--hb-success</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-warning)"></span></span><span class="ds-token-name">--hb-warning</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-error)"></span></span><span class="ds-token-name">--hb-error</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-info)"></span></span><span class="ds-token-name">--hb-info</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-neutral)"></span></span><span class="ds-token-name">--hb-neutral</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Semantic wash</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-success-bg)"></span></span><span class="ds-token-name">--hb-success-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-warning-bg)"></span></span><span class="ds-token-name">--hb-warning-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-error-bg)"></span></span><span class="ds-token-name">--hb-error-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-info-bg)"></span></span><span class="ds-token-name">--hb-info-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-neutral-bg)"></span></span><span class="ds-token-name">--hb-neutral-bg</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Byte class</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-null)"></span></span><span class="ds-token-name">--hb-byte-null</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-printable)"></span></span><span class="ds-token-name">--hb-byte-printable</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-control)"></span></span><span class="ds-token-name">--hb-byte-control</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-high)"></span></span><span class="ds-token-name">--hb-byte-high</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Editor state</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-sel-bg)"></span></span><span class="ds-token-name">--hb-sel-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-caret)"></span></span><span class="ds-token-name">--hb-caret</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-modified)"></span></span><span class="ds-token-name">--hb-modified</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-bookmark)"></span></span><span class="ds-token-name">--hb-bookmark</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-hit-bg)"></span></span><span class="ds-token-name">--hb-hit-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-field-bg)"></span></span><span class="ds-token-name">--hb-field-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-added-bg)"></span></span><span class="ds-token-name">--hb-diff-added-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-removed-bg)"></span></span><span class="ds-token-name">--hb-diff-removed-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-modified-bg)"></span></span><span class="ds-token-name">--hb-diff-modified-bg</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Classification</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-0)"></span></span><span class="ds-token-name">--hb-class-0</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-1)"></span></span><span class="ds-token-name">--hb-class-1</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-2)"></span></span><span class="ds-token-name">--hb-class-2</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-3)"></span></span><span class="ds-token-name">--hb-class-3</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-4)"></span></span><span class="ds-token-name">--hb-class-4</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Chart</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-grid)"></span></span><span class="ds-token-name">--hb-chart-grid</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-axis)"></span></span><span class="ds-token-name">--hb-chart-axis</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-fill)"></span></span><span class="ds-token-name">--hb-chart-fill</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-line)"></span></span><span class="ds-token-name">--hb-chart-line</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-ink)"></span></span><span class="ds-token-name">--hb-chart-ink</span></div></div></div></div></div></section></main>
+<main class="ds-main"><section class="ds-section"><header><h2 class="ds-section-title">Colour system</h2><p class="ds-section-note">Both themes are authored independently. Dark is the working default for long analysis sessions; light is tuned for print and projection rather than derived by inverting the dark ramp. Every component reads only from these names, so a theme change is a token swap and nothing else.</p></header><div class="ds-section-body"><div class="ds-pair"><div class="ds-themecol" data-theme="light"><div class="ds-themecol-title">light theme</div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Surface</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-0)"></span></span><span class="ds-token-name">--hb-surface-0</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-1)"></span></span><span class="ds-token-name">--hb-surface-1</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-2)"></span></span><span class="ds-token-name">--hb-surface-2</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-3)"></span></span><span class="ds-token-name">--hb-surface-3</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-inset)"></span></span><span class="ds-token-name">--hb-surface-inset</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-hover)"></span></span><span class="ds-token-name">--hb-surface-hover</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-active)"></span></span><span class="ds-token-name">--hb-surface-active</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-code)"></span></span><span class="ds-token-name">--hb-surface-code</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Border</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-subtle)"></span></span><span class="ds-token-name">--hb-border-subtle</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border)"></span></span><span class="ds-token-name">--hb-border</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-strong)"></span></span><span class="ds-token-name">--hb-border-strong</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-focus)"></span></span><span class="ds-token-name">--hb-border-focus</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Text</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-primary)"></span></span><span class="ds-token-name">--hb-text-primary</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-secondary)"></span></span><span class="ds-token-name">--hb-text-secondary</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-muted)"></span></span><span class="ds-token-name">--hb-text-muted</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-faint)"></span></span><span class="ds-token-name">--hb-text-faint</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-accent)"></span></span><span class="ds-token-name">--hb-text-accent</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-link)"></span></span><span class="ds-token-name">--hb-text-link</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-inverse)"></span></span><span class="ds-token-name">--hb-text-inverse</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Accent</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent)"></span></span><span class="ds-token-name">--hb-accent</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-hover)"></span></span><span class="ds-token-name">--hb-accent-hover</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-active)"></span></span><span class="ds-token-name">--hb-accent-active</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-subtle)"></span></span><span class="ds-token-name">--hb-accent-subtle</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-muted)"></span></span><span class="ds-token-name">--hb-accent-muted</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-on-accent)"></span></span><span class="ds-token-name">--hb-on-accent</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Semantic</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-success)"></span></span><span class="ds-token-name">--hb-success</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-warning)"></span></span><span class="ds-token-name">--hb-warning</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-error)"></span></span><span class="ds-token-name">--hb-error</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-info)"></span></span><span class="ds-token-name">--hb-info</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-neutral)"></span></span><span class="ds-token-name">--hb-neutral</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Semantic wash</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-success-bg)"></span></span><span class="ds-token-name">--hb-success-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-warning-bg)"></span></span><span class="ds-token-name">--hb-warning-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-error-bg)"></span></span><span class="ds-token-name">--hb-error-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-info-bg)"></span></span><span class="ds-token-name">--hb-info-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-neutral-bg)"></span></span><span class="ds-token-name">--hb-neutral-bg</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Byte class</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-null)"></span></span><span class="ds-token-name">--hb-byte-null</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-printable)"></span></span><span class="ds-token-name">--hb-byte-printable</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-control)"></span></span><span class="ds-token-name">--hb-byte-control</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-high)"></span></span><span class="ds-token-name">--hb-byte-high</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Editor state</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-sel-bg)"></span></span><span class="ds-token-name">--hb-sel-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-caret)"></span></span><span class="ds-token-name">--hb-caret</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-modified)"></span></span><span class="ds-token-name">--hb-modified</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-bookmark)"></span></span><span class="ds-token-name">--hb-bookmark</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-hit-bg)"></span></span><span class="ds-token-name">--hb-hit-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-field-bg)"></span></span><span class="ds-token-name">--hb-field-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-added-bg)"></span></span><span class="ds-token-name">--hb-diff-added-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-removed-bg)"></span></span><span class="ds-token-name">--hb-diff-removed-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-modified-bg)"></span></span><span class="ds-token-name">--hb-diff-modified-bg</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Classification</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-0)"></span></span><span class="ds-token-name">--hb-class-0</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-1)"></span></span><span class="ds-token-name">--hb-class-1</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-2)"></span></span><span class="ds-token-name">--hb-class-2</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-3)"></span></span><span class="ds-token-name">--hb-class-3</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-4)"></span></span><span class="ds-token-name">--hb-class-4</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Chart</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-grid)"></span></span><span class="ds-token-name">--hb-chart-grid</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-axis)"></span></span><span class="ds-token-name">--hb-chart-axis</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-fill)"></span></span><span class="ds-token-name">--hb-chart-fill</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-line)"></span></span><span class="ds-token-name">--hb-chart-line</span></div></div></div><div class="ds-themecol" data-theme="dark"><div class="ds-themecol-title">dark theme</div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Surface</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-0)"></span></span><span class="ds-token-name">--hb-surface-0</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-1)"></span></span><span class="ds-token-name">--hb-surface-1</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-2)"></span></span><span class="ds-token-name">--hb-surface-2</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-3)"></span></span><span class="ds-token-name">--hb-surface-3</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-inset)"></span></span><span class="ds-token-name">--hb-surface-inset</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-hover)"></span></span><span class="ds-token-name">--hb-surface-hover</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-active)"></span></span><span class="ds-token-name">--hb-surface-active</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-surface-code)"></span></span><span class="ds-token-name">--hb-surface-code</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Border</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-subtle)"></span></span><span class="ds-token-name">--hb-border-subtle</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border)"></span></span><span class="ds-token-name">--hb-border</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-strong)"></span></span><span class="ds-token-name">--hb-border-strong</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-border-focus)"></span></span><span class="ds-token-name">--hb-border-focus</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Text</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-primary)"></span></span><span class="ds-token-name">--hb-text-primary</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-secondary)"></span></span><span class="ds-token-name">--hb-text-secondary</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-muted)"></span></span><span class="ds-token-name">--hb-text-muted</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-faint)"></span></span><span class="ds-token-name">--hb-text-faint</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-accent)"></span></span><span class="ds-token-name">--hb-text-accent</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-link)"></span></span><span class="ds-token-name">--hb-text-link</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-text-inverse)"></span></span><span class="ds-token-name">--hb-text-inverse</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Accent</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent)"></span></span><span class="ds-token-name">--hb-accent</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-hover)"></span></span><span class="ds-token-name">--hb-accent-hover</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-active)"></span></span><span class="ds-token-name">--hb-accent-active</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-subtle)"></span></span><span class="ds-token-name">--hb-accent-subtle</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-accent-muted)"></span></span><span class="ds-token-name">--hb-accent-muted</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-on-accent)"></span></span><span class="ds-token-name">--hb-on-accent</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Semantic</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-success)"></span></span><span class="ds-token-name">--hb-success</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-warning)"></span></span><span class="ds-token-name">--hb-warning</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-error)"></span></span><span class="ds-token-name">--hb-error</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-info)"></span></span><span class="ds-token-name">--hb-info</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-neutral)"></span></span><span class="ds-token-name">--hb-neutral</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Semantic wash</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-success-bg)"></span></span><span class="ds-token-name">--hb-success-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-warning-bg)"></span></span><span class="ds-token-name">--hb-warning-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-error-bg)"></span></span><span class="ds-token-name">--hb-error-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-info-bg)"></span></span><span class="ds-token-name">--hb-info-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-neutral-bg)"></span></span><span class="ds-token-name">--hb-neutral-bg</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Byte class</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-null)"></span></span><span class="ds-token-name">--hb-byte-null</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-printable)"></span></span><span class="ds-token-name">--hb-byte-printable</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-control)"></span></span><span class="ds-token-name">--hb-byte-control</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-byte-high)"></span></span><span class="ds-token-name">--hb-byte-high</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Editor state</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-sel-bg)"></span></span><span class="ds-token-name">--hb-sel-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-caret)"></span></span><span class="ds-token-name">--hb-caret</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-modified)"></span></span><span class="ds-token-name">--hb-modified</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-bookmark)"></span></span><span class="ds-token-name">--hb-bookmark</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-hit-bg)"></span></span><span class="ds-token-name">--hb-hit-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-field-bg)"></span></span><span class="ds-token-name">--hb-field-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-added-bg)"></span></span><span class="ds-token-name">--hb-diff-added-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-removed-bg)"></span></span><span class="ds-token-name">--hb-diff-removed-bg</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-diff-modified-bg)"></span></span><span class="ds-token-name">--hb-diff-modified-bg</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Classification</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-0)"></span></span><span class="ds-token-name">--hb-class-0</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-1)"></span></span><span class="ds-token-name">--hb-class-1</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-2)"></span></span><span class="ds-token-name">--hb-class-2</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-3)"></span></span><span class="ds-token-name">--hb-class-3</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-class-4)"></span></span><span class="ds-token-name">--hb-class-4</span></div></div><div class="ds-tokengroup"><div class="ds-tokengroup-title">Chart</div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-grid)"></span></span><span class="ds-token-name">--hb-chart-grid</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-axis)"></span></span><span class="ds-token-name">--hb-chart-axis</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-fill)"></span></span><span class="ds-token-name">--hb-chart-fill</span></div><div class="ds-token"><span class="ds-token-chip"><span style="background: var(--hb-chart-line)"></span></span><span class="ds-token-name">--hb-chart-line</span></div></div></div></div></div></section></main>
 </body>
 </html>
