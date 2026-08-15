@@ -5960,7 +5960,11 @@ class QEMUSandbox(SandboxBase):
         guest mounted, whose parent is the share root - because the host
         generates this file before the guest has assigned that drive a letter,
         (2) launches the eight bundled monitor scripts from its own directory
-        with ``-LogDir <share>\logs``, (3) listens on ``0.0.0.0:4445`` for
+        with ``-LogDir <share>\logs``, (3) listens on ``0.0.0.0:4445`` - opened
+        before (2) and served from a runspace of its own, because everything
+        else the script does is slow enough to make the channel unusable if it
+        shared a thread with them, and because a connection the host abandoned
+        must not be able to queue ahead of the live one - for
         argv-style command requests validated against a short allowlist
         (``powershell``, ``cmd``, any ``.exe`` under the share root,
         ``System32`` or ``SysWOW64``) and answers the host's
@@ -6023,6 +6027,279 @@ $Global:_IC_DropWatchedRoots = @(
     (Join-Path $systemDrive 'Users\Default\AppData\Local\Temp')
 )
 
+$allowedNames = @('powershell', 'powershell.exe', 'cmd', 'cmd.exe')
+$allowedRoots = @($shareRootPrefix, $workRootPrefix, ($systemRoot + '\System32\'), ($systemRoot + '\SysWOW64\'))
+$quoteChar = [char]34
+$agentErrorLog = Join-Path $logDir 'agent_errors.log'
+
+# The command channel is opened here - before the monitors are launched and
+# before the watcher below is registered - and then served on a thread of its
+# own, because everything after this point is slow and never stops being slow:
+# eight process launches, a recursive watcher over the whole system drive whose
+# event actions then compete for this runspace forever, and a telemetry sweep
+# that queries the process table and both socket tables once a second. Serving
+# the channel from that same loop meant the host's readiness handshake queued
+# behind a whole sweep, and behind every earlier connection the host had already
+# abandoned, since only one was accepted per pass. Measured against the real
+# Windows guest that cost 19s for a single ping, so the host's connect budget
+# expired with the agent listening the whole time and the sandbox failed to
+# start.
+$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, 4445)
+$listener.Start()
+
+$commandServer = {
+    param($listener, $allowedNames, $allowedRoots, $quoteChar, $agentErrorLog)
+
+    $Global:ErrorActionPreference = 'SilentlyContinue'
+
+    function Write-AgentError($stage, $detail) {
+        $ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+        "$ts|$stage|$detail" | Out-File -Append $agentErrorLog -Encoding utf8
+    }
+
+    function Test-AllowedCommand($cmdValue) {
+        if ([string]::IsNullOrEmpty($cmdValue)) { return $false }
+        $lower = $cmdValue.ToLower()
+        if ($allowedNames -contains $lower) { return $true }
+        if (-not $lower.EndsWith('.exe')) { return $false }
+        foreach ($root in $allowedRoots) {
+            if ($lower.StartsWith($root.ToLower())) { return $true }
+        }
+        return $false
+    }
+
+    # Which of the two renderings below an argument needs is decided by the callee,
+    # because the two parsers are genuinely different and neither escape survives
+    # the other. Everything reached here is a real executable, so only the command
+    # interpreter itself reads its tail by its own rules.
+    function Test-ShellParsedCallee($commandPath) {
+        if ([string]::IsNullOrEmpty($commandPath)) { return $false }
+        $leaf = [System.IO.Path]::GetFileName([string]$commandPath).ToLower()
+        return ($leaf -eq 'cmd' -or $leaf -eq 'cmd.exe')
+    }
+
+    # cmd.exe never sees an argv: it re-parses its own tail, where a backslash is an
+    # ordinary path character and only quotes group. Escaping for CommandLineToArgvW
+    # here would hand it 'cd /d \"C:\dir\"' and it would answer 'The filename,
+    # directory name, or volume label syntax is incorrect'. So an argument for the
+    # interpreter is held together and otherwise left exactly as the caller wrote
+    # it - a shell command line's internal quoting is the caller's own.
+    function ConvertTo-ShellCommandLineArgument($value) {
+        $text = [string]$value
+        if ($text.Length -gt 0 -and $text.IndexOfAny([char[]]@([char]32, [char]9)) -lt 0) { return $text }
+        return $quoteChar + $text + $quoteChar
+    }
+
+    # Every other callee splits this command line by CommandLineToArgvW's rules, so
+    # an argument only survives if it is escaped by them: a quote inside the
+    # argument has to be written as backslash-quote, and any run of backslashes
+    # immediately before a quote - including the closing one this adds - has to be
+    # doubled, or the last of them escapes that quote instead of standing for
+    # itself. Wrapping without either escape is what silently rewrote arguments
+    # before (S17-D73): a quoted value lost its quotes and split, and a path ending
+    # in a separator swallowed the argument after it.
+    function ConvertTo-CommandLineArgument($value) {
+        $backslashChar = [char]92
+        $text = [string]$value
+        if ($text.Length -gt 0 -and $text.IndexOfAny([char[]]@([char]32, [char]9, $quoteChar)) -lt 0) { return $text }
+        $builder = New-Object System.Text.StringBuilder
+        [void]$builder.Append($quoteChar)
+        $index = 0
+        while ($index -lt $text.Length) {
+            $slashes = 0
+            while ($index -lt $text.Length -and $text[$index] -eq $backslashChar) {
+                $slashes++
+                $index++
+            }
+            if ($index -eq $text.Length) {
+                [void]$builder.Append([string]::new($backslashChar, $slashes * 2))
+                break
+            }
+            if ($text[$index] -eq $quoteChar) {
+                [void]$builder.Append([string]::new($backslashChar, $slashes * 2 + 1))
+                [void]$builder.Append($quoteChar)
+            } else {
+                [void]$builder.Append([string]::new($backslashChar, $slashes))
+                [void]$builder.Append($text[$index])
+            }
+            $index++
+        }
+        [void]$builder.Append($quoteChar)
+        return $builder.ToString()
+    }
+
+    function Invoke-GuestCommand($commandPath, $commandArgs, $timeoutSeconds) {
+        $shellParsed = Test-ShellParsedCallee $commandPath
+        $rendered = @()
+        foreach ($item in $commandArgs) {
+            if ($shellParsed) { $rendered += (ConvertTo-ShellCommandLineArgument $item) }
+            else { $rendered += (ConvertTo-CommandLineArgument $item) }
+        }
+
+        $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $startInfo.FileName = $commandPath
+        $startInfo.Arguments = [string]::Join(' ', $rendered)
+        $startInfo.UseShellExecute = $false
+        $startInfo.RedirectStandardOutput = $true
+        $startInfo.RedirectStandardError = $true
+        $startInfo.CreateNoWindow = $true
+
+        $proc = New-Object System.Diagnostics.Process
+        $proc.StartInfo = $startInfo
+        [void]$proc.Start()
+
+        $outTask = $proc.StandardOutput.ReadToEndAsync()
+        $errTask = $proc.StandardError.ReadToEndAsync()
+
+        $limitMs = -1
+        if ($timeoutSeconds) { $limitMs = [int]([double]$timeoutSeconds * 1000) }
+        $timedOut = -not $proc.WaitForExit($limitMs)
+        if ($timedOut) {
+            try { $proc.Kill() } catch { }
+            [void]$proc.WaitForExit()
+        }
+
+        $outTask.Wait()
+        $errTask.Wait()
+
+        $capturedError = $errTask.Result
+        if ($timedOut) {
+            $capturedError = $capturedError + 'command did not exit within ' + $timeoutSeconds + 's and was terminated'
+        }
+        return @{
+            StandardOutput = $outTask.Result
+            StandardError = $capturedError
+            ExitCode = $proc.ExitCode
+        }
+    }
+
+    function Send-Message($stream, $data) {
+        $json = ConvertTo-Json $data -Compress
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
+        $stream.Write($bytes, 0, $bytes.Length)
+        $stream.Flush()
+    }
+
+    function Invoke-AgentRequest($stream, $line) {
+        $request = ConvertFrom-Json $line
+        if ($request.type -eq 'ping') {
+            Send-Message $stream @{
+                type = 'pong'
+                data = @{}
+            }
+        }
+        elseif ($request.type -eq 'execute') {
+            $cmd = [string]$request.command
+            $cmdArgs = @()
+            if ($request.args) { $cmdArgs = @($request.args) }
+            $output = ''
+            $errorOutput = ''
+            $exitCode = 0
+            if (-not (Test-AllowedCommand $cmd)) {
+                $errorOutput = "command not in allowlist: $cmd"
+                $exitCode = -1
+            } else {
+                try {
+                    $captured = Invoke-GuestCommand $cmd $cmdArgs $request.timeout
+                    $output = $captured.StandardOutput
+                    $errorOutput = $captured.StandardError
+                    $exitCode = $captured.ExitCode
+                    if ($null -eq $exitCode) { $exitCode = 0 }
+                } catch {
+                    $errorOutput = $_.Exception.Message
+                    $exitCode = 1
+                }
+            }
+            Send-Message $stream @{
+                type = 'result'
+                data = @{
+                    exit_code = $exitCode
+                    stdout = $output
+                    stderr = $errorOutput
+                }
+            }
+        }
+    }
+
+    $client = $null
+    $stream = $null
+    $decoder = $null
+    $pending = [System.Text.StringBuilder]::new()
+    $buffer = [byte[]]::new(8192)
+    $chars = [char[]]::new(8192)
+
+    while ($true) {
+        if ($listener.Pending()) {
+            $incoming = $listener.AcceptTcpClient()
+            # A host that gave up mid-handshake leaves its socket behind, and the
+            # host only ever wants one channel. So the newest connection is the
+            # live one and anything older is dropped here, rather than being
+            # drained one per pass while the live one waits behind it.
+            if ($null -ne $client) {
+                try { $client.Close() } catch { Write-AgentError 'supersede' $_.Exception.Message }
+            }
+            $client = $incoming
+            $client.NoDelay = $true
+            $stream = $client.GetStream()
+            $decoder = [System.Text.Encoding]::UTF8.GetDecoder()
+            [void]$pending.Clear()
+        }
+
+        if ($null -eq $client) {
+            Start-Sleep -Milliseconds 20
+            continue
+        }
+
+        if (-not $client.Client.Poll(20000, [System.Net.Sockets.SelectMode]::SelectRead)) { continue }
+
+        $received = 0
+        try { $received = $stream.Read($buffer, 0, $buffer.Length) } catch { $received = 0 }
+        if ($received -le 0) {
+            try { $client.Close() } catch { Write-AgentError 'close' $_.Exception.Message }
+            $client = $null
+            $stream = $null
+            continue
+        }
+
+        # A request is framed by a newline and can arrive split across reads, so
+        # the decoder is kept across them: a multi-byte character cut in half by
+        # a packet boundary is completed rather than replaced.
+        [void]$pending.Append($chars, 0, $decoder.GetChars($buffer, 0, $received, $chars, 0))
+        $text = $pending.ToString()
+        $terminator = $text.IndexOf([char]10)
+        while ($terminator -ge 0) {
+            $line = $text.Substring(0, $terminator).TrimEnd([char]13)
+            $text = $text.Substring($terminator + 1)
+            if ($line.Length -gt 0) {
+                try { Invoke-AgentRequest $stream $line } catch { Write-AgentError 'request' $_.Exception.Message }
+            }
+            $terminator = $text.IndexOf([char]10)
+        }
+        [void]$pending.Clear()
+        [void]$pending.Append($text)
+    }
+}
+
+# A runspace built from the default session state, because the server calls
+# ConvertTo-Json, ConvertFrom-Json and Start-Sleep: the session state a bare
+# [powershell]::Create() would build for itself carries Microsoft.PowerShell.Core
+# alone, and the agent would answer nothing at all.
+$serverRunspace = [System.Management.Automation.Runspaces.RunspaceFactory]::CreateRunspace(
+    [System.Management.Automation.Runspaces.InitialSessionState]::CreateDefault()
+)
+$serverRunspace.ThreadOptions = 'ReuseThread'
+$serverRunspace.Open()
+$serverShell = [System.Management.Automation.PowerShell]::Create()
+$serverShell.Runspace = $serverRunspace
+[void]$serverShell.AddScript($commandServer.ToString())
+[void]$serverShell.AddArgument($listener)
+[void]$serverShell.AddArgument($allowedNames)
+[void]$serverShell.AddArgument($allowedRoots)
+[void]$serverShell.AddArgument($quoteChar)
+[void]$serverShell.AddArgument($agentErrorLog)
+$Global:_IC_CommandServer = $serverShell
+$Global:_IC_CommandServerResult = $serverShell.BeginInvoke()
+
 $monitorScripts = @(
     'api_trace.ps1',
     'clipboard_monitor.ps1',
@@ -6079,194 +6356,11 @@ Register-ObjectEvent $watcher 'Deleted' -MessageData $fileLog -Action {
     "$ts|deleted|$($Event.SourceEventArgs.FullPath)" | Out-File -Append $Event.MessageData -Encoding utf8
 } | Out-Null
 
-$allowedNames = @('powershell', 'powershell.exe', 'cmd', 'cmd.exe')
-$allowedRoots = @($shareRootPrefix, $workRootPrefix, ($systemRoot + '\System32\'), ($systemRoot + '\SysWOW64\'))
-function Test-AllowedCommand($cmdValue) {
-    if ([string]::IsNullOrEmpty($cmdValue)) { return $false }
-    $lower = $cmdValue.ToLower()
-    if ($allowedNames -contains $lower) { return $true }
-    if (-not $lower.EndsWith('.exe')) { return $false }
-    foreach ($root in $allowedRoots) {
-        if ($lower.StartsWith($root.ToLower())) { return $true }
-    }
-    return $false
-}
-
-$quoteChar = [char]34
-
-# Which of the two renderings below an argument needs is decided by the callee,
-# because the two parsers are genuinely different and neither escape survives
-# the other. Everything reached here is a real executable, so only the command
-# interpreter itself reads its tail by its own rules.
-function Test-ShellParsedCallee($commandPath) {
-    if ([string]::IsNullOrEmpty($commandPath)) { return $false }
-    $leaf = [System.IO.Path]::GetFileName([string]$commandPath).ToLower()
-    return ($leaf -eq 'cmd' -or $leaf -eq 'cmd.exe')
-}
-
-# cmd.exe never sees an argv: it re-parses its own tail, where a backslash is an
-# ordinary path character and only quotes group. Escaping for CommandLineToArgvW
-# here would hand it 'cd /d \"C:\dir\"' and it would answer 'The filename,
-# directory name, or volume label syntax is incorrect'. So an argument for the
-# interpreter is held together and otherwise left exactly as the caller wrote
-# it - a shell command line's internal quoting is the caller's own.
-function ConvertTo-ShellCommandLineArgument($value) {
-    $text = [string]$value
-    if ($text.Length -gt 0 -and $text.IndexOfAny([char[]]@([char]32, [char]9)) -lt 0) { return $text }
-    return $quoteChar + $text + $quoteChar
-}
-
-# Every other callee splits this command line by CommandLineToArgvW's rules, so
-# an argument only survives if it is escaped by them: a quote inside the
-# argument has to be written as backslash-quote, and any run of backslashes
-# immediately before a quote - including the closing one this adds - has to be
-# doubled, or the last of them escapes that quote instead of standing for
-# itself. Wrapping without either escape is what silently rewrote arguments
-# before (S17-D73): a quoted value lost its quotes and split, and a path ending
-# in a separator swallowed the argument after it.
-function ConvertTo-CommandLineArgument($value) {
-    $backslashChar = [char]92
-    $text = [string]$value
-    if ($text.Length -gt 0 -and $text.IndexOfAny([char[]]@([char]32, [char]9, $quoteChar)) -lt 0) { return $text }
-    $builder = New-Object System.Text.StringBuilder
-    [void]$builder.Append($quoteChar)
-    $index = 0
-    while ($index -lt $text.Length) {
-        $slashes = 0
-        while ($index -lt $text.Length -and $text[$index] -eq $backslashChar) {
-            $slashes++
-            $index++
-        }
-        if ($index -eq $text.Length) {
-            [void]$builder.Append([string]::new($backslashChar, $slashes * 2))
-            break
-        }
-        if ($text[$index] -eq $quoteChar) {
-            [void]$builder.Append([string]::new($backslashChar, $slashes * 2 + 1))
-            [void]$builder.Append($quoteChar)
-        } else {
-            [void]$builder.Append([string]::new($backslashChar, $slashes))
-            [void]$builder.Append($text[$index])
-        }
-        $index++
-    }
-    [void]$builder.Append($quoteChar)
-    return $builder.ToString()
-}
-
-function Invoke-GuestCommand($commandPath, $commandArgs, $timeoutSeconds) {
-    $shellParsed = Test-ShellParsedCallee $commandPath
-    $rendered = @()
-    foreach ($item in $commandArgs) {
-        if ($shellParsed) { $rendered += (ConvertTo-ShellCommandLineArgument $item) }
-        else { $rendered += (ConvertTo-CommandLineArgument $item) }
-    }
-
-    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
-    $startInfo.FileName = $commandPath
-    $startInfo.Arguments = [string]::Join(' ', $rendered)
-    $startInfo.UseShellExecute = $false
-    $startInfo.RedirectStandardOutput = $true
-    $startInfo.RedirectStandardError = $true
-    $startInfo.CreateNoWindow = $true
-
-    $proc = New-Object System.Diagnostics.Process
-    $proc.StartInfo = $startInfo
-    [void]$proc.Start()
-
-    $outTask = $proc.StandardOutput.ReadToEndAsync()
-    $errTask = $proc.StandardError.ReadToEndAsync()
-
-    $limitMs = -1
-    if ($timeoutSeconds) { $limitMs = [int]([double]$timeoutSeconds * 1000) }
-    $timedOut = -not $proc.WaitForExit($limitMs)
-    if ($timedOut) {
-        try { $proc.Kill() } catch { }
-        [void]$proc.WaitForExit()
-    }
-
-    $outTask.Wait()
-    $errTask.Wait()
-
-    $capturedError = $errTask.Result
-    if ($timedOut) {
-        $capturedError = $capturedError + 'command did not exit within ' + $timeoutSeconds + 's and was terminated'
-    }
-    return @{
-        StandardOutput = $outTask.Result
-        StandardError = $capturedError
-        ExitCode = $proc.ExitCode
-    }
-}
-
-$listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, 4445)
-$listener.Start()
-
-function Send-Message($stream, $data) {
-    $json = ConvertTo-Json $data -Compress
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($json + "`n")
-    $stream.Write($bytes, 0, $bytes.Length)
-    $stream.Flush()
-}
-
 $knownProcs = @{}
 $prevConnKeys = @{}
 $prevConnKeyCap = 8192
 
 while ($true) {
-    if ($listener.Pending()) {
-        $client = $listener.AcceptTcpClient()
-        $stream = $client.GetStream()
-        $reader = New-Object System.IO.StreamReader($stream)
-        while ($client.Connected) {
-            try {
-                $line = $reader.ReadLine()
-                if ($null -eq $line) { break }
-                $request = ConvertFrom-Json $line
-                if ($request.type -eq 'ping') {
-                    Send-Message $stream @{
-                        type = 'pong'
-                        data = @{}
-                    }
-                }
-                elseif ($request.type -eq 'execute') {
-                    $cmd = [string]$request.command
-                    $cmdArgs = @()
-                    if ($request.args) { $cmdArgs = @($request.args) }
-                    $output = ''
-                    $errorOutput = ''
-                    $exitCode = 0
-                    if (-not (Test-AllowedCommand $cmd)) {
-                        $errorOutput = "command not in allowlist: $cmd"
-                        $exitCode = -1
-                    } else {
-                        try {
-                            $captured = Invoke-GuestCommand $cmd $cmdArgs $request.timeout
-                            $output = $captured.StandardOutput
-                            $errorOutput = $captured.StandardError
-                            $exitCode = $captured.ExitCode
-                            if ($null -eq $exitCode) { $exitCode = 0 }
-                        } catch {
-                            $errorOutput = $_.Exception.Message
-                            $exitCode = 1
-                        }
-                    }
-                    Send-Message $stream @{
-                        type = 'result'
-                        data = @{
-                            exit_code = $exitCode
-                            stdout = $output
-                            stderr = $errorOutput
-                        }
-                    }
-                }
-            } catch {
-                break
-            }
-        }
-        $client.Close()
-    }
-
     $currentProcs = Get-Process | Select-Object Id, Name, Path
     foreach ($proc in $currentProcs) {
         if (-not $knownProcs.ContainsKey($proc.Id)) {
