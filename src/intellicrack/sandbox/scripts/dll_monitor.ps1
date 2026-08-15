@@ -25,6 +25,10 @@ $script:StopMonitorTimer = $null
 $script:StopMonitorJob = $null
 $script:StopMonitorSubscriberId = $null
 $script:CurrentTraceSource = $null
+$script:LogWriterLock = [System.Object]::new()
+$script:LogWriteTimeoutMs = 3000
+$script:LogWriteRetryMs = 25
+$script:LogWriteDropped = 0
 
 $script:ImagePathFieldNames = [System.Collections.Generic.List[string]]::new()
 foreach ($name in @('ImageName', 'FileName', 'ImageFileName', 'ImagePath', 'OriginalFileName')) {
@@ -80,6 +84,54 @@ function Test-MonitorStopRequested {
     }
 }
 
+function Write-DllLine {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Line
+    )
+
+    # The host collects these logs off the guest while the run is still going,
+    # and qemu-guest-agent opens them for reading without sharing writes, so
+    # for as long as it holds a handle no writer can open the file at all.
+    # Add-Content simply lost the record when that happened. Holding a handle
+    # open instead is worse - it locks the collector out of the file for the
+    # whole run - so the file is opened for as short a time as possible and the
+    # collision is waited out rather than dropped. The lock keeps the ETW
+    # callback and the stop watcher from interleaving a line.
+    [System.Threading.Monitor]::Enter($script:LogWriterLock)
+    try {
+        $deadline = [System.DateTime]::UtcNow.AddMilliseconds($script:LogWriteTimeoutMs)
+        $lastError = $null
+        while ($true) {
+            try {
+                $stream = [System.IO.FileStream]::new(
+                    $Path,
+                    [System.IO.FileMode]::Append,
+                    [System.IO.FileAccess]::Write,
+                    [System.IO.FileShare]::ReadWrite)
+                try {
+                    $writer = [System.IO.StreamWriter]::new($stream, [System.Text.UTF8Encoding]::new($false))
+                    $writer.WriteLine($Line)
+                    $writer.Flush()
+                    $writer.Dispose()
+                } finally {
+                    $stream.Dispose()
+                }
+                return
+            } catch [System.IO.IOException] {
+                $lastError = $_
+                if ([System.DateTime]::UtcNow -ge $deadline) { break }
+                [System.Threading.Thread]::Sleep($script:LogWriteRetryMs)
+            }
+        }
+        $script:LogWriteDropped = $script:LogWriteDropped + 1
+        throw "log write to $Path failed for $($script:LogWriteTimeoutMs)ms: $($lastError.Exception.Message)"
+    } finally {
+        [System.Threading.Monitor]::Exit($script:LogWriterLock)
+    }
+}
+
 function Write-DllRecord {
     [CmdletBinding()]
     param(
@@ -101,7 +153,7 @@ function Write-DllRecord {
     $safeName = ($ProcessName -replace '\|', '_')
     $safeSchema = ($PayloadSchema -replace '\|', '_' -replace '[\r\n]+', ' ')
     $line = "$Timestamp|$ProcessId|$safeName|$safePath|$BaseAddress|$ImageSize|$EventId|$safeSchema"
-    Add-Content -LiteralPath $script:LogPath -Value $line -Encoding utf8
+    Write-DllLine -Path $script:LogPath -Line $line
 }
 
 function Write-DllDiagnostic {
@@ -114,7 +166,13 @@ function Write-DllDiagnostic {
 
     $safeDetail = ($Detail -replace '\|', '_' -replace '[\r\n]+', ' ')
     $line = "$Timestamp|$Category|$safeDetail"
-    Add-Content -LiteralPath $script:DiagPath -Value $line -Encoding utf8
+    # A diagnostic that cannot be written must never take the collector down
+    # with it; the record and lifecycle paths still surface their own failures.
+    try {
+        Write-DllLine -Path $script:DiagPath -Line $line
+    } catch {
+        $null = $_
+    }
 }
 
 function Write-DllLifecycle {
@@ -128,7 +186,7 @@ function Write-DllLifecycle {
     $safeDetail = ($Detail -replace '\|', '_' -replace '[\r\n]+', ' ')
     $line = "$ts|$script:MonitorName|$State|$safeDetail"
     try {
-        Add-Content -LiteralPath $script:LifecyclePath -Value $line -Encoding utf8
+        Write-DllLine -Path $script:LifecyclePath -Line $line
     } catch {
         $null = $_
     }
@@ -139,8 +197,90 @@ function Write-DllLifecycle {
     }
 }
 
+function Register-TraceEventDependencyResolver {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$AssemblyDir
+    )
+
+    Get-ChildItem -LiteralPath $AssemblyDir -Filter '*.dll' -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne 'Microsoft.Diagnostics.Tracing.TraceEvent.dll' } |
+        ForEach-Object {
+            $dependencyFile = $_
+            try {
+                [System.Reflection.Assembly]::LoadFrom($dependencyFile.FullName) | Out-Null
+            } catch {
+                $ts = Get-Date -Format 'o'
+                Write-DllDiagnostic -Timestamp $ts -Category 'traceevent_dependency_load_failed' `
+                    -Detail "$($dependencyFile.Name): $($_.Exception.Message)"
+            }
+        }
+
+    $resolver = [System.ResolveEventHandler] {
+        param($resolveSender, $resolveArgs)
+        $requestedName = ([System.Reflection.AssemblyName]$resolveArgs.Name).Name
+        foreach ($loaded in [System.AppDomain]::CurrentDomain.GetAssemblies()) {
+            if ($loaded.GetName().Name -eq $requestedName) { return $loaded }
+        }
+        return $null
+    }
+    [System.AppDomain]::CurrentDomain.add_AssemblyResolve($resolver)
+}
+
+function Import-TraceEventAssembly {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param()
+
+    $searchRoots = @()
+    if ($PSScriptRoot) { $searchRoots += $PSScriptRoot }
+    if ($env:TRACE_EVENT_DLL_DIR) { $searchRoots += $env:TRACE_EVENT_DLL_DIR }
+    $searchRoots += (Join-Path -Path $env:USERPROFILE -ChildPath '.nuget\packages\microsoft.diagnostics.tracing.traceevent')
+    $searchRoots += 'C:\Program Files\dotnet\shared'
+    $searchRoots += (Join-Path -Path ${env:ProgramFiles} -ChildPath 'Microsoft Visual Studio')
+
+    $assemblyPath = $null
+    foreach ($root in $searchRoots) {
+        if (-not $root) { continue }
+        if (-not (Test-Path -LiteralPath $root)) { continue }
+        $candidate = Get-ChildItem -Path $root -Filter 'Microsoft.Diagnostics.Tracing.TraceEvent.dll' -Recurse -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if ($candidate) {
+            $assemblyPath = $candidate.FullName
+            break
+        }
+    }
+
+    if (-not $assemblyPath) {
+        $ts = Get-Date -Format 'o'
+        Write-DllDiagnostic -Timestamp $ts -Category 'traceevent_dll_missing' `
+            -Detail "searched=$([string]::Join(';', $searchRoots))"
+        return $false
+    }
+
+    Register-TraceEventDependencyResolver -AssemblyDir (Split-Path -Parent $assemblyPath)
+
+    try {
+        Add-Type -Path $assemblyPath
+    } catch {
+        $ts = Get-Date -Format 'o'
+        Write-DllDiagnostic -Timestamp $ts -Category 'traceevent_dll_load_failed' -Detail $_.Exception.Message
+        return $false
+    }
+
+    $ts = Get-Date -Format 'o'
+    Write-DllDiagnostic -Timestamp $ts -Category 'traceevent_loaded' -Detail $assemblyPath
+    return $true
+}
+
 function Test-TraceEventAvailable {
     try {
+        # GetType only ever finds a type in an assembly that is already loaded,
+        # so probing before Import-TraceEventAssembly runs answers "no" in every
+        # fresh PowerShell - which is what silently pinned this collector to the
+        # WMI fallback and its base-0x0 records. The load is attempted first and
+        # its failure reason recorded, then the probe confirms the type resolved.
+        if (-not (Import-TraceEventAssembly)) { return $false }
         $type = [System.Type]::GetType('Microsoft.Diagnostics.Tracing.Session.TraceEventSession, Microsoft.Diagnostics.Tracing.TraceEvent', $false)
         return ($null -ne $type)
     } catch {
