@@ -68,8 +68,8 @@ SHELL_ARGUMENT_FUNCTION: Final = re.compile(r"function\s+ConvertTo-ShellCommandL
 ARGUMENT_FUNCTION: Final = re.compile(r"function\s+ConvertTo-CommandLineArgument\s*\([^)]*\)\s*\{")
 INVOKE_FUNCTION: Final = re.compile(r"function\s+Invoke-GuestCommand\s*\([^)]*\)\s*\{")
 
-_DECLARED_FUNCTION: Final = re.compile(r"^function\s+(?P<name>[A-Za-z]+-[A-Za-z]+)\s*\(", re.MULTILINE)
-_TOP_LEVEL_ASSIGNMENT: Final = re.compile(r"^\$(?P<name>\w+)\s*=", re.MULTILINE)
+_DECLARED_FUNCTION: Final = re.compile(r"^[ \t]*function\s+(?P<name>[A-Za-z]+-[A-Za-z]+)\s*\(", re.MULTILINE)
+_TOP_LEVEL_ASSIGNMENT: Final = re.compile(r"^[ \t]*\$(?P<name>\w+)\s*=", re.MULTILINE)
 _ERR_INCOMPLETE_LIFT: Final[str] = (
     "the peer lifts code that uses {kind} {name!r} without lifting its declaration; "
     "PowerShell resolves it late and the agent sets $ErrorActionPreference to SilentlyContinue, "
@@ -183,7 +183,10 @@ def verify_lift_is_complete(agent_script: str, peer_script: str) -> None:
 
     Only names the generated agent itself declares are considered, so this
     cannot mistake a harness statement or a PowerShell built-in for a missing
-    lift.
+    lift. Indentation is not part of what a declaration is: the agent serves its
+    command channel from a script block, so the functions and the variables this
+    peer lifts are nested inside it, and an anchor that demanded column zero
+    would quietly stop covering every one of them.
 
     Args:
         agent_script: Full text of the generated ``agent.ps1``.
