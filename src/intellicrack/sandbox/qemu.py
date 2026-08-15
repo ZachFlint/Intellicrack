@@ -381,6 +381,13 @@ _QGA_SHUTDOWN_MODE: Final[str] = "powerdown"
 # Seconds given to a QMP quit before the foreground child handle is reaped.
 _QEMU_QUIT_SETTLE_S: Final[float] = 2.0
 
+# Windows releases a dead process's file handles asynchronously, so QEMU's disk
+# overlay can stay open for a moment after the process itself is gone. These
+# bound how long removing an instance's temporary tree keeps retrying before the
+# failure is reported rather than discarded.
+_TEMP_TREE_REMOVE_ATTEMPTS: Final[int] = 5
+_TEMP_TREE_REMOVE_BACKOFF_S: Final[float] = 0.5
+
 # QEMU exposes the guest-agent virtio-serial chardev one port above the
 # Intellicrack agent's hostfwd port; see the -chardev argument built by
 # _build_qemu_command.
@@ -5861,8 +5868,69 @@ class QEMUSandbox(SandboxBase):
             self._vnc_port = None
         self._claimed_host_ports = set()
 
+    def _unregister_qemu_pid(self) -> None:
+        """Drop this sandbox's PID registration if it still holds one.
+
+        A start that fails after the VM was registered would otherwise leave the
+        process manager tracking a process this cleanup has just ended.
+        """
+        if self._qemu_pid is None:
+            return
+
+        ProcessManager.get_instance().unregister_external_pid(self._qemu_pid)
+        self._qemu_pid = None
+
+    @staticmethod
+    async def _remove_temp_tree(temp_dir: Path) -> None:
+        """Remove one instance's temporary tree, waiting out lingering handles.
+
+        Windows releases a dead process's file handles asynchronously, so the
+        disk overlay can still be open for a moment after QEMU exits and a
+        single attempt loses the race. Every failure is retried and the last one
+        is reported: the removal this replaced passed ``ignore_errors=True``,
+        which cannot fail and cannot log, and that is how 48 abandoned overlays
+        accumulated without one line about them anywhere.
+
+        Args:
+            temp_dir: The instance's temporary directory.
+        """
+        last_error: OSError | None = None
+        for attempt in range(1, _TEMP_TREE_REMOVE_ATTEMPTS + 1):
+            try:
+                await asyncio.to_thread(shutil.rmtree, temp_dir)
+            except FileNotFoundError:
+                return
+            except OSError as e:
+                last_error = e
+            else:
+                return
+            if attempt < _TEMP_TREE_REMOVE_ATTEMPTS:
+                await asyncio.sleep(_TEMP_TREE_REMOVE_BACKOFF_S * attempt)
+
+        _logger.warning(
+            "temp_dir_cleanup_failed",
+            path=str(temp_dir),
+            attempts=_TEMP_TREE_REMOVE_ATTEMPTS,
+            error=str(last_error),
+        )
+
     async def _cleanup(self) -> None:
-        """Clean up temporary files and resources."""
+        """Release this instance's process, port and filesystem state.
+
+        The QEMU child is ended before anything is removed. A failed ``start``
+        arrives here with the VM still running - the launch succeeded and a
+        later step did not - and on Windows nothing else would end it, because
+        QEMU implements neither ``-daemonize`` nor ``-pidfile`` there and the
+        PID-file branch below can never fire. A running QEMU also holds its disk
+        overlay open, which is precisely why the directories that survived a
+        failed start held that one file and nothing else: everything not locked
+        was removed, and the overlay could not be.
+
+        Every step is idempotent, because :meth:`_stop_impl` has already
+        performed each of them by the time it calls this.
+        """
+        await self._reap_foreground_qemu()
+        self._unregister_qemu_pid()
         self._release_claimed_host_ports()
 
         if self._temp_dir is not None:
@@ -5873,15 +5941,8 @@ class QEMUSandbox(SandboxBase):
                 except (OSError, ValueError) as e:
                     _logger.warning("cleanup_pid_check_failed", error=str(e))
 
-        if self._temp_dir is not None and await asyncio.to_thread(self._temp_dir.exists):
-            try:
-                await asyncio.to_thread(
-                    shutil.rmtree,
-                    self._temp_dir,
-                    ignore_errors=True,
-                )
-            except OSError as e:
-                _logger.warning("temp_dir_cleanup_failed", error=str(e))
+        if self._temp_dir is not None:
+            await self._remove_temp_tree(self._temp_dir)
 
         self._temp_dir = None
         self._shared_folder = None
