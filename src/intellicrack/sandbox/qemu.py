@@ -5276,6 +5276,13 @@ class QEMUSandbox(SandboxBase):
 
         netdev = f"user,id=net0,hostfwd=tcp::{ssh_port}-:22"
         netdev += f",hostfwd=tcp::{agent_port}-:4445"
+        if not self._config.network_enabled:
+            # The NIC itself has to stay: both control channels reach the guest
+            # over the hostfwd rules above, and QEMU documents restrict as not
+            # affecting explicitly set forwarding. What it does block is the
+            # guest reaching the host or being routed to anything beyond it,
+            # which is what an unchecked "Enable networking in sandbox" means.
+            netdev += ",restrict=on"
 
         if self._shared_folder is not None:
             cmd.extend(self._shared_folder_args())
