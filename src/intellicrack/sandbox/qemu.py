@@ -8039,8 +8039,8 @@ if __name__ == "__main__":
             corresponding parser in :mod:`intellicrack.sandbox.log_parsers`
             and defaults to an empty list when the matching log file is
             absent. ``collector_outages`` is only populated for a Windows
-            guest, since only the Windows agent stages the ETW-based
-            ``api_trace`` and ``injection_monitor`` collectors it reports on.
+            guest, since only the Windows agent stages the collectors it
+            reports on.
         """
         shared = self._collected_root()
         collector_outages: list[CollectorOutage] = []

@@ -117,12 +117,21 @@ _API_LOG_NAME_IDX: Final[int] = 3
 _API_LOG_STAGE_IDX: Final[int] = 4
 _API_LOG_DETAIL_IDX: Final[int] = 5
 
-# The two collectors the Windows agent stages that can fail silently: both
-# report their own lifecycle, and both are absent on a Linux guest.
+# Every collector the Windows agent stages that reports its own lifecycle, and
+# so is the only kind that can be told apart from a sample that did nothing.
+# All four are absent on a Linux guest, which is why the caller gates on the
+# guest OS rather than this list. Measured live: the guest's launcher does not
+# always get every monitor running - across six runs it started different
+# subsets, once none at all - and while only the first two were listed here, a
+# dll_monitor or kernel_object_monitor that never started produced an empty tab
+# with nothing anywhere in the report to distinguish it from a clean run.
 _API_TRACE_COLLECTOR: Final[str] = "api_trace"
-_ETW_COLLECTORS: Final[tuple[tuple[str, str], ...]] = (
-    (_API_TRACE_COLLECTOR, "api_trace.lifecycle.log"),
-    ("injection_monitor", "injection_monitor.lifecycle.log"),
+_LIFECYCLE_LOG_SUFFIX: Final[str] = ".lifecycle.log"
+_LIFECYCLE_COLLECTORS: Final[tuple[str, ...]] = (
+    _API_TRACE_COLLECTOR,
+    "injection_monitor",
+    "dll_monitor",
+    "kernel_object_monitor",
 )
 
 _FILE_LOG_OLD_PATH_IDX = 3
@@ -613,10 +622,11 @@ async def parse_api_trace_log(
 
 
 async def collect_collector_outages(shared_folder: Path | None) -> list[CollectorOutage]:
-    """Report every ETW collector that did not observe for the whole run.
+    """Report every collector that did not observe for the whole run.
 
-    Only the Windows agent stages ``api_trace`` and ``injection_monitor``,
-    so this returns nothing for a guest that ran neither.
+    Covers every collector that reports its own lifecycle, which the
+    Windows agent alone stages, so this returns nothing for a guest that
+    ran none of them.
 
     The API tracer's outage carries the collector's own failure text as
     well as its lifecycle detail. That text is written into the tracer's
@@ -633,8 +643,8 @@ async def collect_collector_outages(shared_folder: Path | None) -> list[Collecto
         reported starting or reported stopping before the run finished.
     """
     outages: list[CollectorOutage] = []
-    for collector, lifecycle_log in _ETW_COLLECTORS:
-        outage = await parse_collector_lifecycle(shared_folder, collector, lifecycle_log)
+    for collector in _LIFECYCLE_COLLECTORS:
+        outage = await parse_collector_lifecycle(shared_folder, collector, f"{collector}{_LIFECYCLE_LOG_SUFFIX}")
         if outage is None:
             continue
         if collector == _API_TRACE_COLLECTOR:
