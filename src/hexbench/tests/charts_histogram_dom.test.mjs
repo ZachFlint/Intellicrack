@@ -184,7 +184,7 @@ function extractBlock(source, headerPattern) {
 const staticDir = fileURLToPath(new URL('../static/', import.meta.url));
 const chartsSource = await readFile(`${staticDir}charts.js`, 'utf8');
 
-const { byteTypeChart, histogramChart } = await import('../static/charts.js');
+const { byteTypeChart, entropyMapChart, histogramChart } = await import('../static/charts.js');
 
 /* ------------------------------------------------- the histogram is elements */
 
@@ -462,6 +462,153 @@ for (const [name, pattern] of CANVAS_CHARTS) {
     `${name} writes its hover caption straight into the node without going through announcing(), so the running commentary is sighted-only`,
   );
 }
+
+/* ---------------------- the entropy chart paints the design system's fill */
+
+/* The entropy card fills the area under its curve with var(--hb-chart-fill),
+   and for a long time the running application painted no such area at all: it
+   drew ramp-coloured columns, so the token was documented by the gallery and
+   used by nothing the user ever saw. This exercises the real draw callback
+   through a recording context and insists the application paints the same
+   token the card does. Every token resolves to a distinct sentinel, so an
+   assertion cannot pass by accident on a shared colour or on a fallback. */
+
+const paintLog = [];
+let dashPattern = null;
+const recordingContext = {
+  fillStyle: null,
+  strokeStyle: null,
+  lineJoin: null,
+  setTransform: () => undefined,
+  clearRect: () => undefined,
+  fillRect: () => undefined,
+  beginPath: () => paintLog.push({ op: 'beginPath' }),
+  closePath: () => paintLog.push({ op: 'closePath' }),
+  moveTo: () => paintLog.push({ op: 'moveTo' }),
+  lineTo: () => paintLog.push({ op: 'lineTo' }),
+  fill: () => paintLog.push({ op: 'fill', colour: recordingContext.fillStyle }),
+  stroke: () => paintLog.push({ op: 'stroke', colour: recordingContext.strokeStyle, dash: dashPattern }),
+  save: () => undefined,
+  restore: () => { dashPattern = null; },
+  setLineDash: (pattern) => { dashPattern = [...pattern]; },
+  fillText: () => undefined,
+  drawImage: () => undefined,
+  putImageData: () => undefined,
+  createImageData: (width, height) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+};
+
+const SENTINELS = new Map([
+  ['--hb-chart-fill', 'rgb(1 2 3 / 25%)'],
+  ['--hb-chart-line', '#040506'],
+  ['--hb-chart-grid', '#070809'],
+  ['--hb-class-3', '#0a0b0c'],
+]);
+
+const previousGetComputedStyle = globalThis.getComputedStyle;
+const previousGetContext = FakeElement.prototype.getContext;
+globalThis.getComputedStyle = () => ({ getPropertyValue: (token) => SENTINELS.get(token) ?? '' });
+FakeElement.prototype.getContext = () => recordingContext;
+
+const entropySeries = [0.5, 2.5, 4.5, 6.5, 7.5, 7.9, 3.0, 1.0];
+const entropyBuilt = entropyMapChart(entropySeries, { blockSize: 256 });
+entropyBuilt.chart.render();
+
+globalThis.getComputedStyle = previousGetComputedStyle;
+FakeElement.prototype.getContext = previousGetContext;
+
+const fills = paintLog.filter((entry) => entry.op === 'fill');
+const strokes = paintLog.filter((entry) => entry.op === 'stroke');
+const areaFill = fills.find((entry) => entry.colour === SENTINELS.get('--hb-chart-fill'));
+const curveStroke = strokes.find((entry) => entry.colour === SENTINELS.get('--hb-chart-line'));
+const gridStroke = strokes.find((entry) => entry.colour === SENTINELS.get('--hb-chart-grid'));
+const thresholdStroke = strokes.find((entry) => entry.colour === SENTINELS.get('--hb-class-3'));
+
+check(
+  'the entropy chart actually reached its draw callback',
+  paintLog.length > 0,
+  'nothing was painted at all, so every expectation below would pass vacuously',
+);
+check(
+  'the entropy chart fills its area with --hb-chart-fill',
+  areaFill !== undefined,
+  `the application never painted var(--hb-chart-fill), so the entropy card documents a fill nothing renders; fills seen: ${JSON.stringify(fills.map((entry) => entry.colour))}`,
+);
+check(
+  'the entropy chart strokes its curve with --hb-chart-line',
+  curveStroke !== undefined,
+  `the filled area has no bounding curve; strokes seen: ${JSON.stringify(strokes.map((entry) => entry.colour))}`,
+);
+check(
+  'the entropy chart keeps its gridlines',
+  gridStroke !== undefined,
+  'the --hb-chart-grid rules were dropped, so the plot lost the scale a reader judges the curve against',
+);
+check(
+  'the entropy chart marks the high-entropy threshold',
+  thresholdStroke !== undefined,
+  'no --hb-class-3 rule was drawn, so nothing distinguishes compressed or encrypted regions from merely busy ones',
+);
+check(
+  'the high-entropy threshold is dashed, as the card draws it',
+  thresholdStroke !== undefined && Array.isArray(thresholdStroke.dash) && thresholdStroke.dash.length === 2,
+  `a solid threshold reads as data rather than as an annotation; dash was ${JSON.stringify(thresholdStroke?.dash)}`,
+);
+check(
+  'the gridlines and the curve are not dashed on a first draw',
+  gridStroke?.dash === null && curveStroke?.dash === null,
+  'a dash pattern reached the grid or the curve, so the threshold rule was set up before them rather than after',
+);
+
+/* A canvas keeps its dash pattern until something changes it, so a threshold
+   drawn without restoring the context leaves every later draw dashed. The
+   chart redraws on resize and on a theme change, and the leak only shows up on
+   that second pass -- a single render cannot see it. */
+const firstPassLog = paintLog.length;
+paintLog.length = 0;
+globalThis.getComputedStyle = () => ({ getPropertyValue: (token) => SENTINELS.get(token) ?? '' });
+FakeElement.prototype.getContext = () => recordingContext;
+entropyBuilt.chart.render();
+globalThis.getComputedStyle = previousGetComputedStyle;
+FakeElement.prototype.getContext = previousGetContext;
+
+const redrawStrokes = paintLog.filter((entry) => entry.op === 'stroke');
+const redrawGrid = redrawStrokes.find((entry) => entry.colour === SENTINELS.get('--hb-chart-grid'));
+const redrawCurve = redrawStrokes.find((entry) => entry.colour === SENTINELS.get('--hb-chart-line'));
+
+check(
+  'the chart redraws on a second render',
+  firstPassLog > 0 && paintLog.length > 0,
+  'the second render painted nothing, so the dash-leak expectations below would pass vacuously',
+);
+check(
+  'a redraw does not inherit the threshold dash',
+  redrawGrid !== undefined && redrawGrid.dash === null && redrawCurve !== undefined && redrawCurve.dash === null,
+  `the dash pattern survived into the next draw, so setLineDash was never restored and every resize leaves the whole plot dashed; grid dash ${JSON.stringify(redrawGrid?.dash)}, curve dash ${JSON.stringify(redrawCurve?.dash)}`,
+);
+check(
+  'the filled area is a closed path',
+  paintLog.some((entry) => entry.op === 'closePath'),
+  'the area path is never closed, so the fill depends on the canvas implicitly closing it',
+);
+check(
+  'the curve visits every block in the series',
+  paintLog.filter((entry) => entry.op === 'lineTo').length >= entropySeries.length * 2,
+  `expected at least ${entropySeries.length * 2} lineTo calls for an area plus its curve across ${entropySeries.length} blocks, got ${paintLog.filter((entry) => entry.op === 'lineTo').length}`,
+);
+
+const emptyLog = paintLog.length;
+paintLog.length = 0;
+globalThis.getComputedStyle = () => ({ getPropertyValue: (token) => SENTINELS.get(token) ?? '' });
+FakeElement.prototype.getContext = () => recordingContext;
+entropyMapChart([], { blockSize: 256 }).chart.render();
+globalThis.getComputedStyle = previousGetComputedStyle;
+FakeElement.prototype.getContext = previousGetContext;
+
+check(
+  'an empty series paints the grid but no area',
+  emptyLog > 0 && !paintLog.some((entry) => entry.op === 'fill'),
+  'an empty entropy map still filled an area, which means it plotted a curve through no data',
+);
 
 if (failures.length > 0) {
   process.stdout.write(`${failures.length} histogram/canvas expectation(s) failed:\n`);
