@@ -514,12 +514,13 @@ _LINUX_SHELL_COMMAND_FLAG: Final[str] = "-c"
 _USB_CONTROLLER_ID: Final[str] = "icusb"
 
 _SHARED_MOUNT_TAG: Final[str] = "shared"
-# Mount tag and fsdev id prefixes of the folders chosen in Sandbox Settings.
-# They are different volumes from the per-instance work share above and must
-# never collide with it, nor - once more than one folder is configured - with
-# each other, so each is suffixed with its index.
-_CONFIGURED_SHARE_MOUNT_TAG: Final[str] = "icshared"
-_CONFIGURED_SHARE_FSDEV_ID: Final[str] = "fsdev"
+# Where the folders chosen in Sandbox Settings are staged inside the work share.
+# They deliberately travel on the work share's own volume rather than on volumes
+# of their own: QEMU stamps every vvfat disk with one hardcoded MBR signature, so
+# a second such disk is a signature collision and Windows takes it offline.
+_CONFIGURED_SHARE_DIR_NAME: Final[str] = "configured"
+# Seconds allowed for the shell processor to create one directory junction.
+_JUNCTION_TIMEOUT_S: Final[float] = 30.0
 # The directory inside the guest's work area whose contents are mirrored back
 # into the configured folder, and the subdirectory of that folder they land in.
 # Naming the destination keeps the analyst's own files distinguishable from
@@ -3147,6 +3148,9 @@ class QEMUSandbox(SandboxBase):
             contents are brought back to the host after a run.
         MIRRORED_OUTPUT_DIR_NAME: Subdirectory of the folder chosen in Sandbox
             Settings that guest output is mirrored into.
+        CONFIGURED_SHARE_DIR_NAME: Directory inside the work share the folders
+            chosen in Sandbox Settings are staged under, and therefore the
+            directory they appear in on the guest's shared volume.
     """
 
     QEMU_EXE: Final[str] = "qemu-system-x86_64"
@@ -3156,6 +3160,7 @@ class QEMUSandbox(SandboxBase):
     GUEST_SHARED_PATH_LINUX: Final[str] = _GUEST_SHARED_ROOT_LINUX
     GUEST_OUTPUT_DIR_NAME: Final[str] = _GUEST_OUTPUT_DIR_NAME
     MIRRORED_OUTPUT_DIR_NAME: Final[str] = _MIRRORED_OUTPUT_DIR_NAME
+    CONFIGURED_SHARE_DIR_NAME: Final[str] = _CONFIGURED_SHARE_DIR_NAME
 
     _reserved_host_ports: ClassVar[set[int]] = set()
     _port_reservation_lock: ClassVar[threading.Lock] = threading.Lock()
@@ -5145,10 +5150,11 @@ class QEMUSandbox(SandboxBase):
 
         The dialog's "Shared folder" and the "Read only" box beside it arrive
         as :attr:`SandboxConfig.shared_folders` entries. The in-guest path each
-        entry names cannot be honoured on the FAT transport - QEMU's vvfat
-        volume takes whatever drive letter the guest assigns it, which is why
-        the work share's letter is probed rather than assumed - so only the
-        host path and the read-only flag are carried through here.
+        entry names cannot be honoured: the folder is staged inside the work
+        share (see :meth:`_stage_configured_shares`), and that volume takes
+        whatever drive letter the guest assigns it, which is why the work
+        share's letter is probed rather than assumed. Only the host path and
+        the read-only flag are carried through here.
 
         The same setting also reaches this backend by a second route:
         ``build_qemu_config`` reads it into ``QEMUConfig.shared_folder``, which
@@ -5180,44 +5186,147 @@ class QEMUSandbox(SandboxBase):
             resolved.append((host_path, read_only))
         return resolved
 
-    def _configured_share_args(self) -> list[str]:
-        r"""Build the argv exposing the folders chosen in Sandbox Settings.
+    @staticmethod
+    def _staged_share_name(configured: Path, taken: set[str]) -> str:
+        """Return the name a configured folder is staged under in the guest.
 
-        These are not the per-instance work share :meth:`_shared_folder_args`
-        attaches. That one carries ``input``/``output``/``logs``/``monitor``,
-        is rebuilt for every run and is an implementation detail; these are the
-        analyst's own directories, and a sample staged with supporting files
-        beside it can only reach them if they are mounted.
-
-        Each is attached read-only on both transports. On FAT that is forced -
-        vvfat's write-back path aborts the whole virtual machine when a guest
-        commits a directory change, which is why the work share is read-only
-        too - and matching that on 9p keeps one behaviour across guests rather
-        than two. Writes travel the other way instead:
-        :meth:`_mirror_output_to_configured_folder` copies whatever the guest
-        left in its own ``output`` directory into a folder that was not marked
-        read-only.
+        Args:
+            configured: Host directory chosen in Sandbox Settings.
+            taken: Names already used by earlier folders in this run, added to
+                as a side effect so two folders sharing a basename stay apart.
 
         Returns:
-            list[str]: The ``-drive`` or ``-fsdev``/``-device`` arguments, empty
-            when nothing is configured or no configured path is a directory on
-            this host.
+            str: A name unique within the staging directory.
         """
-        args: list[str] = []
-        fat = self._uses_fat_shared_transport()
-        for index, (configured, _read_only) in enumerate(self._configured_shares()):
-            if fat:
-                args.extend(["-drive", f"file=fat:{configured},format=raw,if=virtio,readonly=on"])
+        base = configured.name or _CONFIGURED_SHARE_DIR_NAME
+        name = base
+        suffix = 2
+        while name.lower() in taken:
+            name = f"{base}-{suffix}"
+            suffix += 1
+        taken.add(name.lower())
+        return name
+
+    async def _stage_configured_shares(self) -> list[Path]:
+        r"""Put the folders chosen in Sandbox Settings on the guest's volume.
+
+        These are not the per-instance work share. That one carries
+        ``input``/``output``/``logs``/``monitor``, is rebuilt for every run and
+        is an implementation detail; these are the analyst's own directories,
+        and a sample staged with supporting files beside it can only reach them
+        if they are on the volume.
+
+        They are staged *inside* the work share rather than attached as volumes
+        of their own, and that is not a simplification. QEMU stamps every vvfat
+        disk with one hardcoded MBR signature, so two of them are two disks
+        claiming the same identity: measured on a real Windows guest, the second
+        came up ``Offline`` with ``OfflineReason=Resource Exhaustion``, its
+        partition given no letter and its contents unreachable. One volume has
+        no such collision.
+
+        Nothing is lost by staging. vvfat builds its FAT when the machine
+        starts and never revisits the host directory, so a separately mounted
+        folder was already frozen at that moment - exactly as a junction made
+        just before launch is. A junction also costs nothing to create and no
+        disk: vvfat walks through it and indexes the files behind it. Hosts or
+        filesystems that refuse one fall back to copying.
+
+        The staged copy is readable but not writable from the guest, because the
+        whole volume is read-only - vvfat's write-back path aborts the virtual
+        machine when a guest commits a directory change. Writes travel the other
+        way: :meth:`_mirror_output_to_configured_folder` copies whatever the
+        guest left in its own ``output`` directory into a folder that was not
+        marked read-only.
+
+        Returns:
+            list[Path]: Host paths of the staged entries, in the order they were
+            staged, empty when nothing is configured.
+        """
+        shared = self._shared_folder
+        configured_shares = self._configured_shares()
+        if shared is None or not configured_shares:
+            return []
+
+        root = shared / _CONFIGURED_SHARE_DIR_NAME
+        await asyncio.to_thread(root.mkdir, parents=True, exist_ok=True)
+        staged: list[Path] = []
+        taken: set[str] = set()
+        for configured, _read_only in configured_shares:
+            destination = root / self._staged_share_name(configured, taken)
+            try:
+                await asyncio.to_thread(self._link_or_copy_tree, configured, destination)
+            except OSError as error:
+                _logger.warning("configured_share_not_staged", shared_folder=str(configured), error=str(error))
                 continue
-            # Offset by one: fsdev0 belongs to the work share above.
-            fsdev_id = f"{_CONFIGURED_SHARE_FSDEV_ID}{index + 1}"
-            args.extend([
-                "-fsdev",
-                f"local,id={fsdev_id},path={configured},security_model=mapped-xattr,readonly=on",
-                "-device",
-                f"virtio-9p-pci,fsdev={fsdev_id},mount_tag={_CONFIGURED_SHARE_MOUNT_TAG}{index}",
-            ])
-        return args
+            staged.append(destination)
+            _logger.info("configured_share_staged", shared_folder=str(configured), staged_as=destination.name)
+        return staged
+
+    @staticmethod
+    def _link_or_copy_tree(source: Path, destination: Path) -> None:
+        """Make ``source`` readable at ``destination`` without duplicating it.
+
+        A Windows directory junction needs no privilege and is traversed by
+        vvfat, so it is tried first and the contents are never copied. A host
+        that will not create one - a filesystem without reparse points, or a
+        non-Windows host, where the 9p export refuses to follow a link out of
+        its own tree - falls back to a copy, which produces the same guest-side
+        result at the cost of the disk and the time.
+
+        Args:
+            source: Host directory chosen in Sandbox Settings.
+            destination: Path inside the work share it is staged at.
+        """
+        # Links are removed as links. Handing a junction to rmtree would be
+        # asking to delete the analyst's own folder through it, and while
+        # rmtree declines to walk one, nothing here should depend on that.
+        if destination.is_symlink() or destination.is_junction():
+            destination.unlink(missing_ok=True)
+        elif destination.is_dir():
+            shutil.rmtree(destination, ignore_errors=True)
+        elif destination.exists():
+            destination.unlink(missing_ok=True)
+
+        if _IS_WINDOWS and QEMUSandbox._make_junction(source, destination):
+            return
+        shutil.copytree(source, destination, dirs_exist_ok=True)
+
+    @staticmethod
+    def _make_junction(source: Path, destination: Path) -> bool:
+        """Create a Windows directory junction from ``destination`` to ``source``.
+
+        ``mklink`` is a ``cmd.exe`` builtin rather than an executable, so it is
+        invoked through the shell processor. A junction, unlike a symbolic
+        link, needs no privilege and no developer mode, which is why this is
+        worth attempting before falling back to copying the tree.
+
+        Args:
+            source: Existing host directory the junction points at.
+            destination: Path the junction is created at.
+
+        Returns:
+            bool: True when the junction exists afterwards.
+        """
+        try:
+            completed = _subprocess_run(
+                ["cmd", "/d", "/c", "mklink", "/J", str(destination), str(source)],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=_JUNCTION_TIMEOUT_S,
+            )
+        except (OSError, _SubprocessTimeoutExpired) as error:
+            _logger.debug("configured_share_junction_failed", shared_folder=str(source), error=str(error))
+            return False
+        if completed.returncode != 0:
+            _logger.debug(
+                "configured_share_junction_failed",
+                shared_folder=str(source),
+                returncode=completed.returncode,
+                error=(completed.stdout or "").strip() or (completed.stderr or "").strip(),
+            )
+            return False
+        return destination.is_dir()
 
     def _mirror_destination(self) -> Path | None:
         r"""Return the configured folder guest output is copied back into.
@@ -5413,7 +5522,6 @@ class QEMUSandbox(SandboxBase):
 
         if self._shared_folder is not None:
             cmd.extend(self._shared_folder_args())
-        cmd.extend(self._configured_share_args())
 
         # The tablet is what makes the VM Display usable. RFB PointerEvent
         # carries absolute framebuffer coordinates, but a guest whose only
@@ -5555,7 +5663,12 @@ class QEMUSandbox(SandboxBase):
             raise SandboxError(error_message)
 
     async def _prepare_qemu_shared_folders(self) -> None:
-        """Create temp dir, shared folder, and the standard subdirectories."""
+        """Create temp dir, shared folder, and the standard subdirectories.
+
+        The folders chosen in Sandbox Settings are staged here as well, because
+        this runs before the volume is built and vvfat reads the directory only
+        at that moment - see :meth:`_stage_configured_shares`.
+        """
         self._temp_dir = Path(await asyncio.to_thread(tempfile.mkdtemp, prefix="intellicrack_qemu_"))
         self._shared_folder = self._temp_dir / "shared"
         await asyncio.to_thread(self._shared_folder.mkdir, parents=True, exist_ok=True)
@@ -5564,6 +5677,8 @@ class QEMUSandbox(SandboxBase):
         await asyncio.to_thread((self._shared_folder / "output").mkdir, exist_ok=True)
         await asyncio.to_thread((self._shared_folder / "logs").mkdir, exist_ok=True)
         await asyncio.to_thread((self._shared_folder / "monitor").mkdir, exist_ok=True)
+
+        await self._stage_configured_shares()
 
     async def _spawn_qemu_process(self) -> None:
         """Build the QEMU command line and launch the virtual machine.
@@ -5936,7 +6051,17 @@ class QEMUSandbox(SandboxBase):
         yank: whatever the in-guest monitors have not yet flushed to the shared
         volume is lost, and the guest filesystem is left dirty for the next
         boot. Only a guest that will not comply is cut off.
+
+        Whatever the guest left in its own output directory is fetched before
+        any of that. :meth:`run_binary` collects it too, but a session driven
+        through :meth:`execute_command` never goes near that path, and a guest
+        that wrote its results and was then stopped would have had them thrown
+        away with the machine. It has to happen here rather than after the
+        shutdown because the fetch runs over the guest agent, which is gone the
+        moment the guest is.
         """
+        await self._collect_guest_output()
+
         powered_off = await self._shut_down_guest()
 
         if self._agent is not None:
