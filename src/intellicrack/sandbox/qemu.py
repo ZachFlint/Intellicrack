@@ -152,12 +152,20 @@ _MONITORING_LOG_NAMES: Final[tuple[str, ...]] = (
     "resource_monitor.log",
     "clipboard_monitor.log",
 )
-# Written by the two ETW-based Windows collectors alongside their data logs and
-# read by parse_collector_lifecycle, so they are collected from the guest with
-# the rest rather than being the one set the host never fetches.
-_COLLECTOR_LIFECYCLE_LOG_NAMES: Final[tuple[str, ...]] = (
+# Every diagnostic file the Windows collectors write beside their data logs.
+# The lifecycle pair is what parse_collector_lifecycle reads; the rest is the
+# only record of why a collector that started produced no rows, which is
+# useless while it stays inside the guest. Collecting the whole set is what
+# separates "the collector saw nothing" from "the collector never pumped".
+COLLECTOR_DIAGNOSTIC_LOG_NAMES: Final[tuple[str, ...]] = (
     "api_trace.lifecycle.log",
     "injection_monitor.lifecycle.log",
+    "injection_monitor.diag.log",
+    "dll_monitor.lifecycle.log",
+    "dll_monitor.diag.log",
+    "kernel_object_monitor.lifecycle.log",
+    "kernel_object_monitor.errors.log",
+    "agent_errors.log",
 )
 _LOGS_STABLE_POLL_DELAY_S: Final[float] = 0.25
 _LOGS_STABLE_REQUIRED_POLLS: Final[int] = 4
@@ -8004,7 +8012,7 @@ if __name__ == "__main__":
 
         logs_dir = collected / "logs"
         await asyncio.to_thread(logs_dir.mkdir, parents=True, exist_ok=True)
-        names = (*_MONITORING_LOG_NAMES, *_COLLECTOR_LIFECYCLE_LOG_NAMES)
+        names = (*_MONITORING_LOG_NAMES, *COLLECTOR_DIAGNOSTIC_LOG_NAMES)
         for name in names:
             guest_path = self._guest_work_path(f"logs/{name}")
             try:
