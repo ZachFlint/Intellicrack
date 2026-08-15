@@ -34,6 +34,8 @@ const DIGRAM_MAX = 384;
 const AXIS_FONT = '10px ui-monospace, "Cascadia Mono", "Consolas", monospace';
 const AXIS_PAD = 16;
 const MAX_ENTROPY_BITS = 8;
+const HIGH_ENTROPY_BITS = 7;
+const ENTROPY_DASH = [4, 3];
 const CLASSIFICATION_CODES = 5;
 const HEX_BASE = 16;
 const RGB_MAX = 255;
@@ -386,7 +388,7 @@ export function entropyMapChart(values, options = {}) {
   const { blockSize = 0, onSeek = null } = options;
   const container = element('div', 'hb-stack');
   const hover = element('div', 'hb-canvasframe-caption hb-mono', 'hover a column for its entropy');
-  const summary = element('p', 'hb-sr-only', `Entropy map: one column per block across ${values.length} blocks of ${blockSize} bytes, each plotted from 0 to ${MAX_ENTROPY_BITS} bits per byte.`);
+  const summary = element('p', 'hb-sr-only', `Entropy profile: ${values.length} blocks of ${blockSize} bytes plotted from 0 to ${MAX_ENTROPY_BITS} bits per byte, with a dashed marker at the ${HIGH_ENTROPY_BITS} bit high-entropy threshold.`);
 
   const chart = new Chart({
     title: 'entropy map',
@@ -394,13 +396,6 @@ export function entropyMapChart(values, options = {}) {
     height: ENTROPY_HEIGHT,
     grid: false,
     draw: (context, { width, height }) => {
-      const ramp = buildRamp(container, ENTROPY_STOPS);
-      const step = width / Math.max(1, values.length);
-      for (let index = 0; index < values.length; index += 1) {
-        const level = Math.max(0, Math.min(1, values[index] / MAX_ENTROPY_BITS));
-        context.fillStyle = ramp(level);
-        context.fillRect(index * step, height - Math.max(2, height * level), Math.max(1, step + 1), Math.max(2, height * level));
-      }
       context.strokeStyle = cssColor(container, '--hb-chart-grid', 'rgba(128,128,128,0.2)');
       context.beginPath();
       for (const fraction of [0.25, 0.5, 0.75]) {
@@ -408,6 +403,44 @@ export function entropyMapChart(values, options = {}) {
         context.lineTo(width, height * fraction);
       }
       context.stroke();
+
+      if (values.length === 0) {
+        return;
+      }
+      const ordinate = (value) => height - Math.max(0, Math.min(1, value / MAX_ENTROPY_BITS)) * height;
+      const step = values.length === 1 ? width : width / (values.length - 1);
+      const points = values.length === 1
+        ? [{ x: 0, y: ordinate(values[0]) }, { x: width, y: ordinate(values[0]) }]
+        : values.map((value, index) => ({ x: index * step, y: ordinate(value) }));
+
+      context.beginPath();
+      context.moveTo(0, height);
+      for (const point of points) {
+        context.lineTo(point.x, point.y);
+      }
+      context.lineTo(width, height);
+      context.closePath();
+      context.fillStyle = cssColor(container, '--hb-chart-fill', 'rgba(76,157,240,0.24)');
+      context.fill();
+
+      context.beginPath();
+      context.moveTo(points[0].x, points[0].y);
+      for (let index = 1; index < points.length; index += 1) {
+        context.lineTo(points[index].x, points[index].y);
+      }
+      context.lineJoin = 'round';
+      context.strokeStyle = cssColor(container, '--hb-chart-line', '#4c9df0');
+      context.stroke();
+
+      const threshold = ordinate(HIGH_ENTROPY_BITS);
+      context.save();
+      context.setLineDash(ENTROPY_DASH);
+      context.strokeStyle = cssColor(container, '--hb-class-3', '#ef5f8c');
+      context.beginPath();
+      context.moveTo(0, threshold);
+      context.lineTo(width, threshold);
+      context.stroke();
+      context.restore();
     },
     onHover: announcing(hover, (point) => {
       if (point === null) {
