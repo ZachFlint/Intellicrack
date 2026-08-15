@@ -48,6 +48,7 @@ import time
 from typing import TYPE_CHECKING, Final, cast
 
 import pytest
+import pytest_asyncio
 
 from intellicrack.sandbox.qemu import (
     QEMU_GA_EXEC_TIMEOUT,
@@ -82,7 +83,10 @@ _ABANDON_AFTER_S: Final[float] = 1.0
 # which at the production budget would cost a minute of wall clock.
 _SHORT_RESYNC_S: Final[float] = 1.0
 # Long enough to outlast the abandoned command and both resyncs behind it, so
-# the client is genuinely still offset when the gate looks at it.
+# every attempt to realign the channel fails while the agent is still holding
+# the reply. That is what leaves the channel marked offset; the gates then wait
+# for the stall to clear, because the misattribution being tested can only
+# happen once the abandoned reply is actually readable.
 _STALL_S: Final[float] = 8.0
 _RECOVERY_MARGIN_S: Final[float] = 15.0
 _RESYNCS_INSIDE_THE_STALL: Final[int] = 2
@@ -107,6 +111,7 @@ _CONNECT_BUDGET_S: Final[float] = 15.0
 _MEASURE_BUDGET_S: Final[float] = 120.0
 _FIRST_GUEST_PID: Final[int] = DEFAULT_GUEST_EXEC_PID
 _SECOND_GUEST_PID: Final[int] = DEFAULT_GUEST_EXEC_PID + 1
+_THIRD_GUEST_PID: Final[int] = DEFAULT_GUEST_EXEC_PID + 2
 _NO_RESYNC: Final[int] = 0
 _ATTEMPTS_A_BUDGET_MUST_HOLD: Final[int] = 2
 
@@ -133,9 +138,7 @@ async def _abandon_a_command(client: QemuGuestAgentClient) -> None:
         client: A connected guest-agent client.
     """
     response = await client.guest_exec(_GUEST_PATH, _GUEST_ARGS, time_limit=_ABANDON_AFTER_S)
-    assert not response.success, (
-        f"the agent answered inside {_ABANDON_AFTER_S}s, so no reply was ever left in flight: {response.data!r}"
-    )
+    assert not response.success, f"the agent answered inside {_ABANDON_AFTER_S}s, so no reply was ever left in flight: {response.data!r}"
 
 
 async def _wait_for_stall_to_clear(server: GuestAgentProtocolServer, time_limit: float) -> None:
@@ -166,7 +169,7 @@ def _returned_pid(payload: object) -> object:
     return cast("dict[str, object]", payload).get("pid")
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def stalled_agent() -> AsyncIterator[GuestAgentProtocolServer]:
     """Run an agent that holds back the first ``guest-exec`` reply.
 
@@ -211,11 +214,18 @@ class TestAnOffsetChannelNeverAnswersTheWrongCommand:
     ) -> None:
         """The stalled ``guest-exec`` payload must never surface as a ping result.
 
-        This is the live failure in miniature. The agent is still holding the
-        ``guest-exec`` reply when the client gives up on it, and the resync
-        behind it goes unanswered too. On the real guest the very next command
-        read that reply and the backend acted on a pid it was never given, so
-        the only acceptable outcome here is that the ping is not answered.
+        This is the live failure in miniature, and the order of events is the
+        whole of it. The client gives up on ``guest-exec`` and the resync behind
+        it goes unanswered, so the channel is left offset; only then does the
+        agent come out of its stall and write the reply it was holding. That
+        reply is now the next thing readable on the socket, which is exactly
+        where the real guest was when the following command read it and the
+        backend acted on a process id it had never been given.
+
+        The gate waits for that reply to land before issuing the ping, because
+        a ping issued while the agent is still stalled is refused by its own
+        deadline no matter what the channel does - which proves nothing about
+        whether replies are attributed correctly.
 
         Args:
             stalled_agent: Agent holding back the first ``guest-exec`` reply.
@@ -223,16 +233,15 @@ class TestAnOffsetChannelNeverAnswersTheWrongCommand:
         client = await _connected_client(stalled_agent)
         try:
             await _abandon_a_command(client)
-            response = await client.ping(time_limit=_ABANDON_AFTER_S)
+            await _wait_for_stall_to_clear(stalled_agent, _RECOVERY_MARGIN_S)
+            response = await client.ping(time_limit=_RECOVERY_MARGIN_S)
         finally:
             await client.disconnect()
 
-        assert not response.success, (
-            f"guest-ping was answered on a channel still carrying the abandoned reply: {response.data!r}"
-        )
         assert _returned_pid(response.data) != _FIRST_GUEST_PID, (
-            "guest-ping came back carrying the abandoned command's process id"
+            f"guest-ping was answered with the abandoned command's process id: {response.data!r}"
         )
+        assert response.success, f"the channel never recovered far enough to answer a ping of its own: {response.error}"
 
     async def test_a_bare_sync_id_is_never_returned_as_a_guest_exec_result(
         self,
@@ -240,9 +249,17 @@ class TestAnOffsetChannelNeverAnswersTheWrongCommand:
     ) -> None:
         """No ``guest-exec`` may be answered with the shape of a sync reply.
 
-        ``qemu_ga_exec_no_pid ... response_payload=982749383`` is what this
-        looks like when it escapes: a bare 31-bit sync id returned as the answer
-        to a request for a process id.
+        An offset channel does not merely shift replies by one. Behind the
+        abandoned reply sit the answers to the resyncs that failed while the
+        agent was stalled, and a client reading blind reaches those next -
+        which is why the live symptom was not a wrong pid but no pid at all:
+        ``qemu_ga_exec_no_pid ... response_payload=982749383``, a bare 31-bit
+        sync id returned as the answer to a request for a process id.
+
+        Two commands are issued once the agent starts answering again because
+        that is how far into the stream the sync replies sit. Each must be
+        answered with the process id the guest allocated for it and nothing
+        else.
 
         Args:
             stalled_agent: Agent holding back the first ``guest-exec`` reply.
@@ -250,14 +267,24 @@ class TestAnOffsetChannelNeverAnswersTheWrongCommand:
         client = await _connected_client(stalled_agent)
         try:
             await _abandon_a_command(client)
-            response = await client.guest_exec(_GUEST_PATH, _GUEST_ARGS, time_limit=_ABANDON_AFTER_S)
+            await _wait_for_stall_to_clear(stalled_agent, _RECOVERY_MARGIN_S)
+            first = await client.guest_exec(_GUEST_PATH, _GUEST_ARGS, time_limit=_RECOVERY_MARGIN_S)
+            second = await client.guest_exec(_GUEST_PATH, _GUEST_ARGS, time_limit=_RECOVERY_MARGIN_S)
         finally:
             await client.disconnect()
 
-        assert not isinstance(response.data, int), (
-            f"a bare sync id was handed back as a guest-exec result: {response.data!r}"
+        for label, response in (("first", first), ("second", second)):
+            assert not isinstance(response.data, int), (
+                f"the {label} guest-exec after the agent recovered was answered with a bare sync id: {response.data!r}"
+            )
+        assert _returned_pid(first.data) == _SECOND_GUEST_PID, (
+            f"the first guest-exec after recovery was answered with pid {_returned_pid(first.data)!r}; "
+            f"{_FIRST_GUEST_PID} is the abandoned command's and {_SECOND_GUEST_PID} is this one's"
         )
-        assert not response.success, f"guest-exec succeeded on a channel that was still offset: {response.data!r}"
+        assert _returned_pid(second.data) == _THIRD_GUEST_PID, (
+            f"the second guest-exec after recovery was answered with pid {_returned_pid(second.data)!r} "
+            f"rather than its own {_THIRD_GUEST_PID}"
+        )
 
     async def test_the_channel_comes_back_once_the_agent_answers_again(
         self,
@@ -351,9 +378,7 @@ class TestTheSyncBudgetReachesEverySyncCommand:
             await server.stop()
 
         assert connected, "the channel never opened, so the resync under test never ran"
-        assert SYNC_DELIMITED_COMMAND in server.commands, (
-            "the silent command was never sent, so the budget was never put under pressure"
-        )
+        assert SYNC_DELIMITED_COMMAND in server.commands, "the silent command was never sent, so the budget was never put under pressure"
         assert _PLAIN_SYNC_COMMAND in server.commands, (
             f"the fallback sync command was never sent inside a {_TIGHT_SYNC_BUDGET_S:.0f}s budget, "
             f"so an agent build carrying only that command is unreachable: {server.commands}"
@@ -392,9 +417,7 @@ class TestTheResyncBudgetIsSizedForTheGuestItRunsAgainst:
             f"the resync gave up after {resync_budget:.1f}s; the guest that produced this defect "
             f"needed {_COLD_GUEST_SYNC_S:.0f}s to complete the very same handshake at connect time"
         )
-        assert set(SYNC_COMMANDS).issubset(server.commands), (
-            f"the resync did not try every sync command it advertises: {server.commands}"
-        )
+        assert set(SYNC_COMMANDS).issubset(server.commands), f"the resync did not try every sync command it advertises: {server.commands}"
 
     async def test_the_readiness_budget_holds_more_than_one_lost_command(self) -> None:
         """Readiness must survive a command being lost, not just one attempt.
