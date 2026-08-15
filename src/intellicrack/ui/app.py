@@ -3091,6 +3091,7 @@ class MainWindow(QMainWindow):
         timeout_seconds = MainWindow._coerce_int(settings.get("timeout_seconds"), defaults.timeout_seconds)
         memory_limit_mb = MainWindow._coerce_int(settings.get("memory_limit_mb"), defaults.memory_limit_mb)
         network_enabled = bool(settings.get("network_enabled", defaults.network_enabled))
+        block_telemetry = bool(settings.get("block_telemetry", defaults.block_telemetry))
 
         shared_folder_raw = settings.get("shared_folder", "")
         read_only_raw = settings.get("shared_folder_read_only", False)
@@ -3102,6 +3103,7 @@ class MainWindow(QMainWindow):
             timeout_seconds=timeout_seconds,
             memory_limit_mb=memory_limit_mb,
             network_enabled=network_enabled,
+            block_telemetry=block_telemetry,
             shared_folders=shared_folders,
         )
 
@@ -3144,6 +3146,7 @@ class MainWindow(QMainWindow):
             existing.timeout_seconds == incoming.timeout_seconds
             and existing.memory_limit_mb == incoming.memory_limit_mb
             and existing.network_enabled == incoming.network_enabled
+            and existing.block_telemetry == incoming.block_telemetry
             and list(existing.shared_folders) == list(incoming.shared_folders)
         )
 

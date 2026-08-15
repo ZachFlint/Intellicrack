@@ -134,6 +134,28 @@ _LIFECYCLE_COLLECTORS: Final[tuple[str, ...]] = (
     "kernel_object_monitor",
 )
 
+# The guest's monitor launcher records one line per collector it was asked to
+# start, in the same pipe-delimited shape the collectors themselves use. It is
+# the only account of why a collector never started: the collector cannot
+# report a failure that happened before its first line of execution ran, so
+# without this a launcher that skipped it and a collector that died at line one
+# are indistinguishable from the host.
+_LAUNCHER_LOG_NAME: Final[str] = "monitor_launcher.log"
+# ``timestamp|monitor_launcher|<script>|<state>|<detail>`` - one field wider
+# than a collector's own lifecycle line, because the launcher speaks about a
+# collector rather than for itself.
+_LAUNCHER_LOG_MIN_PARTS: Final[int] = 5
+_LAUNCHER_NAME_IDX: Final[int] = 2
+_LAUNCHER_STATE_IDX: Final[int] = 3
+_LAUNCHER_DETAIL_IDX: Final[int] = 4
+_LAUNCHER_SCRIPT_SUFFIX: Final[str] = ".ps1"
+_LAUNCHER_STATE_MISSING: Final[str] = "missing"
+_LAUNCHER_STATE_FAILED: Final[str] = "launch_failed"
+_LAUNCHER_FAILURE_REASONS: Final[dict[str, str]] = {
+    _LAUNCHER_STATE_MISSING: "the guest's monitor launcher found no script for it at",
+    _LAUNCHER_STATE_FAILED: "the guest's monitor launcher could not start it:",
+}
+
 _FILE_LOG_OLD_PATH_IDX = 3
 _FILE_LOG_SIZE_IDX = 4
 _REGISTRY_LOG_VALUE_NAME_IDX = 3
@@ -642,6 +664,7 @@ async def collect_collector_outages(shared_folder: Path | None) -> list[Collecto
         list[CollectorOutage]: One entry per collector that never
         reported starting or reported stopping before the run finished.
     """
+    launch_failures = await parse_monitor_launch_failures(shared_folder)
     outages: list[CollectorOutage] = []
     for collector in _LIFECYCLE_COLLECTORS:
         outage = await parse_collector_lifecycle(shared_folder, collector, f"{collector}{_LIFECYCLE_LOG_SUFFIX}")
@@ -651,8 +674,42 @@ async def collect_collector_outages(shared_folder: Path | None) -> list[Collecto
             details = await parse_api_trace_collector_errors(shared_folder)
             if details:
                 outage["reason"] = f"{outage['reason']}; it reported {'; '.join(details)}"
+        launch_failure = launch_failures.get(collector)
+        if launch_failure is not None:
+            outage["reason"] = f"{outage['reason']}; {launch_failure}"
         outages.append(outage)
     return outages
+
+
+async def parse_monitor_launch_failures(shared_folder: Path | None) -> dict[str, str]:
+    """Read why the guest's launcher did not start each collector.
+
+    A collector that never ran cannot report anything about itself, so
+    :func:`parse_collector_lifecycle` can only say that it never started.
+    The launcher writes the missing half - whether the script was not
+    there to launch, or launching it threw - and this reads it back so
+    the outage can carry the cause rather than only the symptom.
+
+    Args:
+        shared_folder: Sandbox shared folder root.
+
+    Returns:
+        dict[str, str]: Collector name mapped to a phrase explaining why
+        the launcher did not start it. Collectors the launcher started,
+        and every collector at all when the launcher wrote no log, are
+        absent.
+    """
+    failures: dict[str, str] = {}
+    for line in await read_log_lines(shared_folder, _LAUNCHER_LOG_NAME):
+        parts = line.split("|", _LAUNCHER_DETAIL_IDX)
+        if len(parts) < _LAUNCHER_LOG_MIN_PARTS:
+            continue
+        prefix = _LAUNCHER_FAILURE_REASONS.get(parts[_LAUNCHER_STATE_IDX])
+        if prefix is None:
+            continue
+        collector = parts[_LAUNCHER_NAME_IDX].removesuffix(_LAUNCHER_SCRIPT_SUFFIX)
+        failures[collector] = f"{prefix} {parts[_LAUNCHER_DETAIL_IDX]}".strip()
+    return failures
 
 
 async def parse_api_trace_collector_errors(

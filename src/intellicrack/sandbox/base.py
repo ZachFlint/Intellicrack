@@ -316,6 +316,11 @@ class SandboxConfig:
         timeout_seconds: Maximum execution time.
         memory_limit_mb: Memory limit in megabytes.
         network_enabled: Whether network access is allowed.
+        block_telemetry: Whether the guest's own operating-system telemetry is
+            blocked. Independent of ``network_enabled``: an analyst who wants
+            the sample to reach the internet rarely wants the guest reporting
+            to its vendor at the same time, since that traffic is
+            indistinguishable from the sample's in a capture.
         clipboard_enabled: Whether clipboard sharing is allowed.
         audio_enabled: Whether audio is enabled.
         video_enabled: Whether video/GPU is enabled.
@@ -328,6 +333,7 @@ class SandboxConfig:
     timeout_seconds: int = 300
     memory_limit_mb: int = 2048
     network_enabled: bool = False
+    block_telemetry: bool = True
     clipboard_enabled: bool = False
     audio_enabled: bool = False
     video_enabled: bool = False

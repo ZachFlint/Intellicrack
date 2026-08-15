@@ -28,7 +28,7 @@ else:
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any, NoReturn, cast
+from typing import IO, TYPE_CHECKING, Any, Final, NoReturn, cast
 
 from intellicrack.core._optional_imports import require_yara
 from intellicrack.core.logging import get_logger, log_sandbox_operation
@@ -65,6 +65,7 @@ from intellicrack.sandbox.log_parsers import (
     parse_resource_log,
     parse_service_log,
 )
+from intellicrack.sandbox.telemetry_blocking import build_windows_blocking_command, parse_blocking_result
 from intellicrack.sandbox.wsb import WsbMappedFolder, build_wsb_configuration, render_wsb_configuration
 
 
@@ -157,6 +158,13 @@ _ERR_LAUNCH_RPC_ENDPOINT = (
 _ERR_LAUNCH_SESSION_NOT_STARTED = (
     "The Windows Sandbox launcher exited successfully but no sandbox session process appeared. The sandbox did not start."
 )
+
+# Seconds allowed for the in-guest telemetry blocking pass. It rewrites one
+# file and creates a handful of firewall rules, but the guest is still settling
+# when it runs, so the budget is generous rather than tight.
+_TELEMETRY_BLOCK_TIMEOUT: Final[int] = 180
+# Characters of a failed pass's stderr carried into the log line.
+_TELEMETRY_ERROR_EXCERPT: Final[int] = 500
 
 _SANDBOX_SESSION_EXE = "WindowsSandboxRemoteSession.exe"
 _SANDBOX_DIALOG_CLASS = "#32770"
@@ -1000,11 +1008,50 @@ class WindowsSandbox(SandboxBase):
 
         _logger.info("windows_sandbox_started", pid=self.state.pid, session_pid=self._session_pid)
 
+    async def _apply_telemetry_blocking(self) -> None:
+        """Silence the guest's own operating-system telemetry when configured.
+
+        Failure here is logged and does not abort the start. The sandbox is
+        still usable without it - the analyst loses a quieter capture, not the
+        run - and refusing to start a working guest over it would be worse than
+        the noise.
+        """
+        if not self._config.block_telemetry:
+            _logger.debug("telemetry_blocking_not_requested", sandbox_type="windows")
+            return
+
+        command = "powershell.exe " + " ".join(build_windows_blocking_command())
+        try:
+            exit_code, stdout, stderr = await self.run_command(command, time_limit=_TELEMETRY_BLOCK_TIMEOUT)
+        except (SandboxError, SandboxTimeoutError) as error:
+            _logger.warning("telemetry_blocking_failed", sandbox_type="windows", error=str(error))
+            return
+
+        summary = parse_blocking_result(stdout)
+        if exit_code != 0 or summary is None:
+            _logger.warning(
+                "telemetry_blocking_incomplete",
+                sandbox_type="windows",
+                exit_code=exit_code,
+                stderr=stderr[:_TELEMETRY_ERROR_EXCERPT],
+            )
+            return
+
+        _logger.info(
+            "telemetry_blocking_applied",
+            sandbox_type="windows",
+            hosts_entries=summary.get("hosts_entries"),
+            firewall_rules=summary.get("firewall_rules"),
+            firewall_backend=summary.get("firewall_backend"),
+            problems=summary.get("problems"),
+        )
+
     async def _start_impl(self) -> None:
         """Execute the full Windows Sandbox start sequence."""
         await self._prepare_shared_folders()
         await self._launch_sandbox_process()
         await self._attach_sandbox_worker()
+        await self._apply_telemetry_blocking()
 
     async def start(self) -> None:
         """Start the Windows Sandbox environment.

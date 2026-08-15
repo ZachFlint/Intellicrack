@@ -1083,6 +1083,7 @@ class SandboxBridge(ToolBridgeBase):
         timeout_seconds: int = 300,
         *,
         network_enabled: bool = False,
+        block_telemetry: bool = True,
         memory_limit_mb: int = 2048,
         qemu_config: QEMUConfig | None = None,
     ) -> dict[str, Any]:
@@ -1103,6 +1104,10 @@ class SandboxBridge(ToolBridgeBase):
             sandbox_type: Type of sandbox (``"windows"`` or ``"qemu"``).
             timeout_seconds: Execution timeout in seconds.
             network_enabled: Whether to enable network access.
+            block_telemetry: Whether the guest's own operating-system telemetry
+                is silenced inside the guest at start. Defaults to on, matching
+                the dialog, so a caller that says nothing gets a capture in
+                which outbound traffic belongs to the sample.
             memory_limit_mb: Memory limit in megabytes.
             qemu_config: QEMU backend configuration forwarded to the manager.
                 Ignored for the ``"windows"`` sandbox type.
@@ -1123,6 +1128,7 @@ class SandboxBridge(ToolBridgeBase):
         config = SandboxConfig(
             timeout_seconds=timeout_seconds,
             network_enabled=network_enabled,
+            block_telemetry=block_telemetry,
             memory_limit_mb=memory_limit_mb,
         )
 
@@ -1209,6 +1215,7 @@ class SandboxBridge(ToolBridgeBase):
         timeout_seconds: int = 300,
         *,
         network_enabled: bool = False,
+        block_telemetry: bool = True,
         memory_limit_mb: int = 2048,
         qemu_config: QEMUConfig | None = None,
     ) -> dict[str, Any]:
@@ -1228,6 +1235,8 @@ class SandboxBridge(ToolBridgeBase):
             instance_id: ID of the instance to restart.
             timeout_seconds: Execution timeout in seconds for the replacement.
             network_enabled: Whether the replacement may access the network.
+            block_telemetry: Whether the replacement silences the guest's own
+                operating-system telemetry inside the guest at start.
             memory_limit_mb: Memory limit in megabytes for the replacement.
             qemu_config: QEMU backend configuration forwarded to the manager.
                 Ignored for the ``"windows"`` sandbox type.
@@ -1246,6 +1255,7 @@ class SandboxBridge(ToolBridgeBase):
         config = SandboxConfig(
             timeout_seconds=timeout_seconds,
             network_enabled=network_enabled,
+            block_telemetry=block_telemetry,
             memory_limit_mb=memory_limit_mb,
         )
 
