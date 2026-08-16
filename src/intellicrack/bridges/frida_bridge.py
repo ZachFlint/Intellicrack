@@ -161,6 +161,10 @@ _SCAN_CONTEXT_BYTES: int = 16
 _SCAN_CHUNK_BYTES: int = 4 * 1024 * 1024
 _SCAN_CHUNK_TIMEOUT: float = 5.0
 _ALREADY_UNLOADED_MARKERS: tuple[str, ...] = ("destroy", "detach")
+# Result key holding a ``send()`` payload that is not a JavaScript object
+# (a string, number, boolean, array or null), which cannot be merged into
+# the result mapping the way an object payload is.
+_SCALAR_PAYLOAD_KEY: str = "payload"
 _SCAN_AGENT_SCRIPT: str = """
 rpc.exports = {
     scanChunk: function (baseHex, size, hexPattern) {
@@ -2654,6 +2658,18 @@ class _FridaBridgeBase(InstrumentationBridge):
     async def execute_script(self, script: str) -> str:
         """Execute custom Frida JavaScript code.
 
+        The script is loaded, awaited until it answers with ``send()`` and
+        then unloaded. An object payload contributes its own keys to the
+        rendered result; any other payload (a bare string, number, boolean
+        or array) is rendered under the ``payload`` key rather than being
+        discarded.
+
+        A script that raises carries Frida's own description of the fault
+        (the JavaScript error and where it occurred). That description is
+        included in the raised error rather than being replaced with a bare
+        "script execution failed", which left a caller -- the Scripts panel
+        above all -- with no way to tell a typo from a missing export.
+
         Args:
             script: JavaScript code to execute.
 
@@ -2661,7 +2677,8 @@ class _FridaBridgeBase(InstrumentationBridge):
             str: Script execution result.
 
         Raises:
-            ToolError: If execution fails.
+            ToolError: If execution fails, carrying Frida's description of
+                the failure when one was reported.
         """
         if self._session is None:
             _logger.error("frida_not_attached", operation="execute_script")
@@ -2671,8 +2688,9 @@ class _FridaBridgeBase(InstrumentationBridge):
         result = await self._execute_script_and_wait(script)
 
         if "error" in result:
-            _logger.error("frida_script_failed", script_length=len(script))
-            raise ToolError(_ERR_SCRIPT_FAILED)
+            description = str(result["error"]).strip()
+            _logger.error("frida_script_failed", script_length=len(script), error=description)
+            raise ToolError(f"{_ERR_SCRIPT_FAILED}: {description}" if description else _ERR_SCRIPT_FAILED)
 
         result_str = str(result)
         _logger.debug("frida_execute_script_completed", script_length=len(script), result_size=len(result_str))
@@ -2890,6 +2908,14 @@ class _FridaBridgeBase(InstrumentationBridge):
             one-shot executions, then the callback returns without touching
             the completion event.
 
+            A payload that is not a JavaScript object -- ``send("text")``,
+            ``send(42)``, ``send([1, 2])``, all of which Frida delivers
+            verbatim -- cannot be merged into the result mapping, so it is
+            stored under :data:`_SCALAR_PAYLOAD_KEY` instead of being
+            dropped. Discarding it used to leave the waiter completing with
+            an empty mapping, which reached the Scripts panel as ``{}``
+            even though the script had answered.
+
             Args:
                 message: Message payload emitted by the Frida script.
                 data: Optional binary payload attached to the message.
@@ -2898,8 +2924,10 @@ class _FridaBridgeBase(InstrumentationBridge):
                 payload = message.get("payload", {})
                 if isinstance(payload, dict):
                     result.update(dict(cast("dict[str, object]", payload).items()))
-                    if data:
-                        result["__binary"] = list(data)
+                else:
+                    result[_SCALAR_PAYLOAD_KEY] = payload
+                if data:
+                    result["__binary"] = list(data)
             elif message["type"] == "error":
                 result["__error_description"] = message["description"]
                 result["error"] = message["description"]

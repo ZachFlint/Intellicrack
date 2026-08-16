@@ -391,6 +391,7 @@ _CODE_SPLIT_RIGHT: Final[int] = 100
 _SPLITTER_PANE_COUNT: Final[int] = 2
 _BRIDGE_SHUTDOWN_TIMEOUT_S: Final[float] = 5.0
 _PYTHON_SCRIPT_EXECUTION_TIMEOUT_S: Final[float] = 25.0
+_EMPTY_SCRIPT_RESULT: Final[str] = "(no output)"
 
 
 def _run_python_script(content: str) -> str:
@@ -438,7 +439,7 @@ def _run_python_script(content: str) -> str:
     if completed.returncode != 0:
         suffix = f"[exit code {completed.returncode}]"
         output = f"{output}\n{suffix}" if output else suffix
-    return output or "(no output)"
+    return output or _EMPTY_SCRIPT_RESULT
 
 
 OutputType = Literal[
@@ -2350,11 +2351,22 @@ class _ToolOutputPanelPanelsMixin(_ToolOutputPanelBase):
         def _on_success(result: object) -> None:
             """Forward the bridge's script result to the panel.
 
+            A bridge legitimately answers with nothing for commands that
+            only change state (a rizin ``s <addr>`` seek, for example),
+            and ``acknowledge_execution`` renders whatever it is given
+            verbatim. Forwarding that empty answer would replace the
+            "Executing ..." line with a blank result pane, which reads as
+            "nothing happened" rather than "ran, produced no output", so
+            an empty or whitespace-only result is reported as
+            :data:`_EMPTY_SCRIPT_RESULT` -- the same marker the
+            synchronous ``python`` path already uses.
+
             Args:
                 result: Value returned by the completed bridge coroutine.
             """
             if panel is not None:
-                panel.acknowledge_execution(name, str(result) if result is not None else "")
+                text = str(result) if result is not None else ""
+                panel.acknowledge_execution(name, text if text.strip() else _EMPTY_SCRIPT_RESULT)
 
         def _on_error(exc: object) -> None:
             """Forward the bridge's failure to the panel as an error message.
