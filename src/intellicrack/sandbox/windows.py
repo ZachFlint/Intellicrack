@@ -113,6 +113,11 @@ _MONITOR_PID_FILE_NAME: Final[str] = "monitors.pids"
 _DISPATCHER_SCRIPT_STEM: Final[str] = "sandbox_dispatcher"
 # Each line of that file is "<pid> <script file name>".
 _MONITOR_PID_LINE_FIELDS: Final[int] = 2
+# How long the Host Compute Service is given to unwind the compute system after
+# the session closes. Measured on a real stop, the worker outlives the session
+# it backs, so anything shorter forces a kill during the very teardown that
+# releases the VM.
+_VM_TEARDOWN_TIMEOUT: Final[float] = 30.0
 _MINIDUMP_WITH_FULL_MEMORY = 0x00000002
 _ERROR_ACCESS_DENIED = 5
 _PROCESS_QUERY_INFORMATION = 0x0400
@@ -1204,8 +1209,18 @@ class WindowsSandbox(SandboxBase):
         process_manager.unregister(session_pid)
         self._session_pid = None
 
-    def _terminate_sandbox_worker(self, process_manager: ProcessManager) -> None:
-        """Terminate the vmwp.exe worker registered for this sandbox.
+    async def _terminate_sandbox_worker(self, process_manager: ProcessManager) -> None:
+        """Retire the vmwp.exe worker backing this sandbox.
+
+        An orderly session close makes the Host Compute Service tear the
+        compute system down, and the worker exits when it does - taking
+        ``vmmemWindowsSandbox`` with it. That teardown is not instant, so the
+        worker is given time to go on its own before anything is forced. Doing
+        it the other way round is what leaked the VM: the worker was killed
+        while HCS was still unwinding, and a killed worker never completes the
+        teardown that releases the VM. It is also not a process this account
+        can kill - the attempt returns access denied - so forcing it first cost
+        the teardown and achieved nothing.
 
         Args:
             process_manager: Active :class:`ProcessManager` used to issue
@@ -1215,6 +1230,12 @@ class WindowsSandbox(SandboxBase):
             return
 
         worker_pid = self._worker_pid
+        if await self._await_pid_exit(worker_pid, _VM_TEARDOWN_TIMEOUT):
+            _logger.info("windows_sandbox_vm_torn_down", worker_pid=worker_pid)
+            self._worker_pid = None
+            return
+
+        _logger.warning("windows_sandbox_vm_still_resident", worker_pid=worker_pid)
         try:
             process_manager.terminate_external_pid(worker_pid, force=True)
         except (OSError, RuntimeError) as worker_err:
@@ -1230,7 +1251,7 @@ class WindowsSandbox(SandboxBase):
         process_manager = ProcessManager.get_instance()
         await self._terminate_sandbox_session(process_manager)
         await self._terminate_sandbox_client(process_manager)
-        self._terminate_sandbox_worker(process_manager)
+        await self._terminate_sandbox_worker(process_manager)
         await self._cleanup()
 
         self.state.status = "stopped"
@@ -1336,20 +1357,44 @@ class WindowsSandbox(SandboxBase):
             _logger.info("wm_close_no_top_level_window", pid=pid)
             return False
 
-        if self.process is None:
-            return True
-
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(self.process.wait),
-                timeout=_GRACEFUL_CLOSE_TIMEOUT,
-            )
-        except TimeoutError:
+        if not await self._await_pid_exit(pid, _GRACEFUL_CLOSE_TIMEOUT):
             _logger.warning("graceful_close_timeout", pid=pid)
             return False
-        else:
-            _logger.info("graceful_close_ok", pid=pid)
+
+        _logger.info("graceful_close_ok", pid=pid)
+        return True
+
+    async def _await_pid_exit(self, pid: int, budget_seconds: float) -> bool:
+        """Wait for one specific process to leave the system.
+
+        The process closed here is not always the one this instance spawned:
+        the session host owns the window that has to be closed, while
+        ``self.process`` is the launcher, which exits on its own the moment it
+        has handed the session off. Waiting on the launcher therefore says
+        nothing about the session and reports success while the session is
+        still up - which is what made the caller escalate to a force kill and
+        leave the VM resident.
+
+        Args:
+            pid: Process to watch.
+            budget_seconds: Seconds to wait before giving up on it.
+
+        Returns:
+            bool: True if that process was gone before the window expired.
+        """
+        if self.process is not None and pid == self.process.pid:
+            try:
+                await asyncio.wait_for(asyncio.to_thread(self.process.wait), timeout=budget_seconds)
+            except TimeoutError:
+                return False
             return True
+
+        deadline = time.monotonic() + budget_seconds
+        while time.monotonic() < deadline:
+            if not await asyncio.to_thread(pid_is_running, pid):
+                return True
+            await asyncio.sleep(_RESULT_POLL_INTERVAL)
+        return not await asyncio.to_thread(pid_is_running, pid)
 
     async def _force_kill_sandbox(self, client_pid: int) -> None:
         """Force-kill the sandbox client by PID.
