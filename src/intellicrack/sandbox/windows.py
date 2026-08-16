@@ -70,7 +70,7 @@ from intellicrack.sandbox.wsb import WsbMappedFolder, build_wsb_configuration, r
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Sequence
+    from collections.abc import Callable, Iterable, Sequence
 
 
 _logger = get_logger(__name__)
@@ -84,7 +84,17 @@ _DISPATCHER_POLL_INTERVAL = 0.5
 _WORKER_PID_POLL_INTERVAL = 1.0
 _WORKER_PID_POLL_TIMEOUT = 90
 _PROCESS_WAIT_TIMEOUT = 10
-_GRACEFUL_CLOSE_TIMEOUT = 30
+# Closing the sandbox shuts the guest down before the session host exits, and
+# the compute system is released as part of that same unwind. Measured live on
+# 26100: an idle guest that had just finished its logon command took 26.6s to
+# take the session and the VM down together, and a guest still busy with its
+# first boot took several minutes. The previous 30s budget therefore expired
+# mid-teardown even in the good case, and the force kill that followed is what
+# left the VM resident - a killed session never completes the unwind that
+# releases it. The budget is now long enough for the slow case, and costs
+# nothing when the close is quick because the wait ends as soon as the process
+# exits.
+_GRACEFUL_CLOSE_TIMEOUT = 300
 _TASKKILL_TIMEOUT = 30
 _MONITOR_START_TIMEOUT = 30
 _RESULT_POLL_INTERVAL = 0.25
@@ -212,6 +222,46 @@ _SANDBOX_FAILURE_MARKERS = (
 _GET_CLASS_NAME_BUFFER = 256
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent / "scripts"
+
+
+@dataclass(frozen=True, slots=True)
+class TopLevelWindow:
+    """One top-level window observed on the desktop.
+
+    Attributes:
+        handle: Native window handle.
+        owner_pid: PID of the process owning the window.
+        visible: Whether the window is visible on the desktop.
+    """
+
+    handle: int
+    owner_pid: int
+    visible: bool
+
+
+def select_close_targets(windows: Iterable[TopLevelWindow], target_pid: int) -> tuple[int, ...]:
+    """Choose the windows whose closure ends a sandbox session.
+
+    A sandbox session owns far more than the window a user would close. Seen
+    live on 26100, one session owned thirteen top-level windows: the single
+    visible ``Windows Sandbox`` shell plus twelve invisible helpers - IME and
+    ``MSCTFIME UI`` windows, the RDP sound and clipboard sinks, a timer window
+    and a GUID-named one. Closing is therefore restricted to visible windows.
+
+    Selecting them all was not merely untidy. The caller treats "a close was
+    posted" as "the sandbox was asked to close", and a post to any one of the
+    invisible helpers satisfied that test, so the caller could report having
+    asked a session to close when the shell window never received anything.
+
+    Args:
+        windows: Top-level windows to choose from, in any order.
+        target_pid: PID whose windows are eligible.
+
+    Returns:
+        tuple[int, ...]: Handles to close, empty when the process presents no
+        visible window.
+    """
+    return tuple(window.handle for window in windows if window.owner_pid == target_pid and window.visible)
 
 
 def find_sandbox_session_pid(wsb_name: str) -> int | None:
@@ -1283,19 +1333,23 @@ class WindowsSandbox(SandboxBase):
             raise SandboxError(_ERR_STOP_FAILED) from e
 
     async def _try_graceful_close(self, pid: int) -> bool:
-        """Send ``WM_CLOSE`` to the sandbox client and wait for it to exit.
+        """Close a sandbox process by its window and wait for it to exit.
+
+        Only the visible top-level windows are closed, per
+        :func:`select_close_targets`; the invisible helper windows a session
+        also owns are not a way to ask a sandbox to close.
 
         Args:
-            pid: Windows Sandbox client PID.
+            pid: PID of the sandbox process owning the window to close.
 
         Returns:
-            bool: True if the client closed gracefully within the timeout, False otherwise.
+            bool: True if the process closed gracefully within the timeout, False otherwise.
         """
         if sys.platform != "win32":
             return False
 
         def _post_wm_close() -> bool:
-            """Post ``WM_CLOSE`` to every top-level window owned by ``pid``.
+            """Post ``WM_CLOSE`` to the visible top-level windows owned by ``pid``.
 
             Returns:
                 bool: ``True`` when at least one ``WM_CLOSE`` was posted.
@@ -1316,6 +1370,8 @@ class WindowsSandbox(SandboxBase):
                 ctypes.POINTER(ctypes.c_ulong),
             ]
             user32.GetWindowThreadProcessId.restype = ctypes.c_ulong
+            user32.IsWindowVisible.argtypes = [ctypes.c_void_p]
+            user32.IsWindowVisible.restype = ctypes.c_bool
             user32.PostMessageW.argtypes = [
                 ctypes.c_void_p,
                 ctypes.c_uint,
@@ -1325,11 +1381,10 @@ class WindowsSandbox(SandboxBase):
             user32.PostMessageW.restype = ctypes.c_bool
             kernel32.GetLastError.restype = ctypes.c_ulong
 
-            target_pid = ctypes.c_ulong(pid)
-            posted = {"count": 0}
+            observed: list[TopLevelWindow] = []
 
             def _cb(hwnd: int, _lparam: int) -> bool:
-                """Post ``WM_CLOSE`` when the window belongs to the target PID.
+                """Record one enumerated window and its owner.
 
                 Args:
                     hwnd: Top-level window handle from ``EnumWindows``.
@@ -1340,12 +1395,22 @@ class WindowsSandbox(SandboxBase):
                 """
                 owner = ctypes.c_ulong(0)
                 user32.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
-                if owner.value == target_pid.value and user32.PostMessageW(hwnd, _WM_CLOSE, None, None):
-                    posted["count"] += 1
+                observed.append(
+                    TopLevelWindow(
+                        handle=int(hwnd),
+                        owner_pid=int(owner.value),
+                        visible=bool(user32.IsWindowVisible(hwnd)),
+                    ),
+                )
                 return True
 
             user32.EnumWindows(enum_windows_proc(_cb), None)
-            return posted["count"] > 0
+
+            delivered = 0
+            for handle in select_close_targets(observed, pid):
+                if user32.PostMessageW(ctypes.c_void_p(handle), _WM_CLOSE, None, None):
+                    delivered += 1
+            return delivered > 0
 
         try:
             posted = await asyncio.to_thread(_post_wm_close)
@@ -1354,7 +1419,7 @@ class WindowsSandbox(SandboxBase):
             return False
 
         if not posted:
-            _logger.info("wm_close_no_top_level_window", pid=pid)
+            _logger.info("wm_close_no_visible_top_level_window", pid=pid)
             return False
 
         if not await self._await_pid_exit(pid, _GRACEFUL_CLOSE_TIMEOUT):
