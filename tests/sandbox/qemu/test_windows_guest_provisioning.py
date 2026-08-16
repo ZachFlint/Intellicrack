@@ -40,6 +40,7 @@ from intellicrack.sandbox.qemu import AcceleratorType, GuestOS, QEMUConfig, QEMU
 from scripts.sandbox.provision_windows_guest import (
     DEFAULT_ADMIN_CREDENTIAL,
     DEFAULT_ADMIN_USER,
+    WINPE_DRIVER_STAGE_DIRECTORY,
     InstallCommandSpec,
     ProvisioningError,
     UnattendSettings,
@@ -500,7 +501,7 @@ def _settings() -> UnattendSettings:
         locale="en-US",
         timezone="UTC",
         driver_letters=("C", "D", "E", "F", "G", "H"),
-        driver_subpaths=("viostor\\w11\\amd64", "vioserial\\w11\\amd64", "NetKVM\\w11\\amd64"),
+        driver_directory=WINPE_DRIVER_STAGE_DIRECTORY,
         disable_guest_firewall=True,
         answer_script="scripts\\install-guest-agent.cmd",
     )
@@ -839,14 +840,21 @@ class TestAnswerFileGeneration:
         assert _texts(install_to, "PartitionID") == ["2"]
 
     def test_virtio_driver_paths_cover_every_winpe_letter(self) -> None:
-        """WinPE searches every plausible CD-ROM letter for the boot driver."""
+        """WinPE searches every plausible CD-ROM letter, and only those.
+
+        One entry per letter is the whole list: a real Windows 11 install
+        aborts outright when the answer file names many driver paths, so the
+        breadth lives in what is staged into the folder, not in the block.
+        """
         settings = _settings()
         pnp = _component(_answer_tree(), "windowsPE", "Microsoft-Windows-PnpCustomizationsWinPE")
         paths = _texts(pnp, "DriverPaths/PathAndCredentials/Path")
 
-        assert len(paths) == len(settings.driver_letters) * len(settings.driver_subpaths)
+        assert len(paths) == len(settings.driver_letters), (
+            f"the answer file emitted {len(paths)} driver paths for {len(settings.driver_letters)} candidate letters"
+        )
         for letter in settings.driver_letters:
-            assert f"{letter}:\\viostor\\w11\\amd64" in paths, f"no viostor path for drive {letter}"
+            assert f"{letter}:\\{settings.driver_directory}" in paths, f"no staged driver path for drive {letter}"
 
     def test_auto_logon_reaches_a_desktop_unattended(self) -> None:
         """A local administrator is created and logged on without a prompt."""
@@ -926,7 +934,7 @@ class TestAnswerFileGeneration:
                     locale=settings.locale,
                     timezone=settings.timezone,
                     driver_letters=settings.driver_letters,
-                    driver_subpaths=settings.driver_subpaths,
+                    driver_directory=settings.driver_directory,
                     disable_guest_firewall=False,
                     answer_script=settings.answer_script,
                 ),

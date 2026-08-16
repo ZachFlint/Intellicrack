@@ -97,7 +97,7 @@ def _settings(computer_name: str) -> UnattendSettings:
         locale="en-US",
         timezone="UTC",
         driver_letters=("D", "E"),
-        driver_subpaths=("viostor/w11/amd64",),
+        driver_directory="drivers",
         disable_guest_firewall=True,
         answer_script="install-agent.cmd",
     )

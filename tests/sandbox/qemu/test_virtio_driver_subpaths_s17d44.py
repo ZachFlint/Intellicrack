@@ -20,13 +20,33 @@ package directory the medium really carries for the guest's architecture, and
 it must name nothing else. The container class builds a real directory tree
 whose family and architecture combinations are the ones measured on the real
 0.1.285 medium - including families the old constant never mentioned and a
-family that has no ``amd64`` at all - and drives the real enumeration and the
-real answer file renderer over it. The host-native class does the same against
-the real ISO in ``tools/qemu/images``, which only a real Windows host can mount.
+family that has no ``amd64`` at all - and drives the real enumeration over it.
+The host-native class does the same against the real ISO in
+``tools/qemu/images``, which only a real Windows host can mount.
+
+What the answer file does with that enumeration is a separate matter, and the
+first real installation to exercise it falsified the original answer: naming
+every enumerated package made Setup abort. Measured on Windows 11 26100, three
+real installs of the same media differing only in this block:
+
+* 360 paths (60 packages across six candidate letters) - aborted.
+* 60 paths, every one an existing directory on the letter WinPE really
+  assigned - aborted, identically:
+  ``CDlpActionDriverInstallation::ExecuteUnattendDriverInstall ... 0xD000A000``
+  logged beside ``SetupManager: Drivers Path: []``, before any disk was
+  touched.
+* 4 paths - installed, and wrote 7.7 GB to the system disk.
+
+Every path in all three carried an INF and unreachable letters were tolerated,
+so what Setup will not accept is the number of entries. The provisioner
+therefore stages one package per driver into a folder on its own answer medium
+and names that folder once per candidate letter, and the answer file gates
+below hold it to that bound rather than to the breadth that broke it.
 """
 
 from __future__ import annotations
 
+import shutil
 from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
@@ -36,13 +56,17 @@ import defusedxml.ElementTree as DefusedET
 from intellicrack.core.config import get_project_root
 from scripts.sandbox.provision_windows_guest import (
     WINPE_DRIVER_DIRECTORIES,
+    WINPE_DRIVER_FAMILY_PREFERENCE,
     WINPE_DRIVER_LETTERS,
+    WINPE_DRIVER_STAGE_DIRECTORY,
     dismount_disk_image,
     enumerate_virtio_driver_subpaths,
     mount_disk_image,
     render_autounattend,
     require_virtio_media,
     resolve_virtio_medium,
+    select_winpe_driver_packages,
+    stage_winpe_drivers,
 )
 from tests.sandbox.qemu.virtio_installer_harness import answer_settings
 
@@ -141,6 +165,21 @@ _SCAN_BUDGET: Final[int] = 20_000
 
 _MINIMUM_REAL_VIOSTOR_FAMILIES: Final[int] = 5
 """Storage families the real medium is known to carry for amd64, less a margin."""
+
+_SETUP_REJECTED_PATH_COUNT: Final[int] = 60
+"""Driver paths a real Windows 11 26100 install refused, measured on this host.
+
+Sixty existing packages on the one drive letter WinPE really assigned aborted
+Setup at ``ExecuteUnattendDriverInstall`` with ``0xD000A000 - 0x40031`` before
+any disk was touched; four installed to completion. Every path in both runs
+held an INF, so the count is what Setup will not take.
+"""
+
+_BOOT_CRITICAL_DRIVER: Final[str] = "viostor"
+"""The storage driver without which Setup sees no ``if=virtio`` system disk."""
+
+_NEWEST_FAMILY: Final[str] = "w11"
+"""The family every driver in the measured layout carries for amd64."""
 
 
 def _staged_media_root() -> Path:
@@ -322,48 +361,91 @@ class TestTheEnumerationFollowsTheMedium:
         assert first == second, f"two enumerations of one medium disagreed: {first} then {second}"
 
 
-class TestTheAnswerFileNamesOnlyRealDirectories:
-    """The rendered ``autounattend.xml`` inherits the enumeration's honesty."""
+class TestTheAnswerFileStaysWithinWhatSetupAccepts:
+    """The rendered ``autounattend.xml`` names one staged folder per letter.
 
-    def test_every_emitted_driver_path_resolves_on_the_medium(self, tmp_path: Path) -> None:
-        """Each ``<Path>`` is a candidate letter plus a directory that exists.
+    Naming every enumerated package is what this file used to assert, and a
+    real installation measured it wrong: see the module docstring.
+    """
+
+    def test_it_emits_one_path_per_letter_and_no_more(self) -> None:
+        """The count is bounded by the letters, not by the medium's breadth."""
+        settings = replace(answer_settings(), driver_letters=WINPE_DRIVER_LETTERS)
+
+        paths = _driver_path_texts(render_autounattend(settings))
+
+        assert len(paths) == len(WINPE_DRIVER_LETTERS), (
+            f"the answer file emitted {len(paths)} driver paths for {len(WINPE_DRIVER_LETTERS)} candidate letters"
+        )
+        assert len(paths) < _SETUP_REJECTED_PATH_COUNT, (
+            f"{len(paths)} driver paths is at or above the {_SETUP_REJECTED_PATH_COUNT} a real Windows 11 install "
+            f"aborted on with 0xD000A000, before it touched a disk"
+        )
+        assert [path.partition(":\\")[0] for path in paths] == list(WINPE_DRIVER_LETTERS), (
+            f"the emitted paths {paths} are not one per candidate letter in order"
+        )
+        assert {path.partition(":\\")[2] for path in paths} == {WINPE_DRIVER_STAGE_DIRECTORY}, (
+            f"the emitted paths point somewhere other than the staged driver folder: {paths}"
+        )
+
+    def test_the_staged_folder_carries_the_boot_critical_driver(self, tmp_path: Path) -> None:
+        """What WinPE is pointed at must hold a loadable ``viostor`` package.
+
+        A bounded path list is worthless if the one folder it names is empty:
+        WinPE would load no storage driver and Setup would find no disk.
 
         Args:
             tmp_path: Per-test temporary directory.
         """
         medium = _build_medium(tmp_path / "virtio")
         subpaths = enumerate_virtio_driver_subpaths(medium, _GUEST_ARCHITECTURE)
-        settings = replace(answer_settings(), driver_letters=WINPE_DRIVER_LETTERS, driver_subpaths=subpaths)
 
-        paths = _driver_path_texts(render_autounattend(settings))
+        packages = select_winpe_driver_packages(subpaths)
 
-        assert len(paths) == len(WINPE_DRIVER_LETTERS) * len(subpaths), (
-            f"the answer file emitted {len(paths)} driver paths for {len(WINPE_DRIVER_LETTERS)} letters and {len(subpaths)} packages"
+        assert [package.split("\\")[0] for package in packages] == list(WINPE_DRIVER_DIRECTORIES), (
+            f"{packages} does not carry exactly one package per driver the sandbox builds devices for"
         )
-        for path in paths:
-            letter, _, subpath = path.partition(":\\")
-            assert letter in WINPE_DRIVER_LETTERS, f"{path} is not rooted at one of the searched letters {WINPE_DRIVER_LETTERS}"
-            package = medium / Path(subpath.replace("\\", "/"))
-            assert package.is_dir(), f"the answer file sends WinPE to {path}, which is no directory on the medium ({package})"
+        for package in packages:
+            directory = medium / Path(package.replace("\\", "/"))
+            infs = sorted(entry.name for entry in directory.iterdir() if entry.suffix.casefold() == ".inf")
+            assert infs, f"the selected package {package} carries no INF, so WinPE has nothing to load from it"
 
-    def test_the_answer_file_covers_more_than_one_family(self, tmp_path: Path) -> None:
-        """A single hardwired family is what left non-w11 guests diskless.
+    def test_it_selects_per_driver_rather_than_one_hardwired_family(self, tmp_path: Path) -> None:
+        """A driver missing the newest family falls back on its own.
+
+        The measured medium gives every driver a ``w11`` amd64 package, so a
+        hardwired ``w11`` would look correct against it. This removes that one
+        directory for a single driver and requires that driver alone to move,
+        which no hardwired family can do.
 
         Args:
             tmp_path: Per-test temporary directory.
         """
         medium = _build_medium(tmp_path / "virtio")
-        subpaths = enumerate_virtio_driver_subpaths(medium, _GUEST_ARCHITECTURE)
-        settings = replace(answer_settings(), driver_letters=WINPE_DRIVER_LETTERS, driver_subpaths=subpaths)
+        deprived = "NetKVM"
+        before = select_winpe_driver_packages(enumerate_virtio_driver_subpaths(medium, _GUEST_ARCHITECTURE))
+        shutil.rmtree(medium / deprived / _NEWEST_FAMILY / _GUEST_ARCHITECTURE)
 
-        paths = _driver_path_texts(render_autounattend(settings))
+        after = select_winpe_driver_packages(enumerate_virtio_driver_subpaths(medium, _GUEST_ARCHITECTURE))
 
-        families = {path.split("\\")[2] for path in paths if path.split("\\")[1] == "viostor"}
-        available = {family for family, architectures in _MEASURED_LAYOUT["viostor"].items() if _GUEST_ARCHITECTURE in architectures}
-        assert families == available, (
-            f"WinPE would search viostor families {sorted(families)} while the medium offers {sorted(available)}; "
-            "a guest from a missing family finds no system disk"
+        assert {package.split("\\")[1] for package in before} == {_NEWEST_FAMILY}, (
+            f"the untouched medium already resolved to {before}, so this run cannot detect a hardwired family"
         )
+        moved = {package.split("\\")[0]: package.split("\\")[1] for package in after}
+        assert moved[deprived] != _NEWEST_FAMILY, (
+            f"{deprived} still resolved to {_NEWEST_FAMILY} after that directory was removed, so selection is not reading the medium"
+        )
+        expected = [
+            family
+            for family, architectures in _MEASURED_LAYOUT[deprived].items()
+            if _GUEST_ARCHITECTURE in architectures and family != _NEWEST_FAMILY
+        ]
+        assert moved[deprived] == min(expected, key=WINPE_DRIVER_FAMILY_PREFERENCE.index), (
+            f"{deprived} fell back to {moved[deprived]} rather than the newest family still on the medium"
+        )
+        for driver, family in moved.items():
+            if driver != deprived:
+                assert family == _NEWEST_FAMILY, f"{driver} moved off {_NEWEST_FAMILY} although its package is untouched"
 
 
 class TestTheRealMediumEnumeratesOnlyRealDirectories:
@@ -398,21 +480,34 @@ class TestTheRealMediumEnumeratesOnlyRealDirectories:
         wrong = sorted(subpath for subpath in subpaths if not subpath.endswith(f"\\{_GUEST_ARCHITECTURE}"))
         assert not wrong, f"{iso} offered an {_GUEST_ARCHITECTURE} guest these foreign packages: {wrong}"
 
-    def test_the_real_answer_file_names_every_package_the_medium_has(self) -> None:
-        """The production resolver feeds the production renderer end to end."""
+    def test_the_real_medium_stages_a_bounded_loadable_driver_set(self, tmp_path: Path) -> None:
+        """The production staging runs against the real ISO, end to end.
+
+        What lands in the staged folder is what WinPE gets: the files are
+        copied off the real medium and read back off disk, and the answer
+        file that names that folder is rendered by the production renderer.
+
+        Args:
+            tmp_path: Per-test temporary directory.
+        """
         medium = resolve_virtio_medium(None, (_staged_media_root(),), _SCAN_DEPTH, _SCAN_BUDGET, _GUEST_ARCHITECTURE)
-        settings = replace(answer_settings(), driver_letters=WINPE_DRIVER_LETTERS, driver_subpaths=medium.driver_subpaths)
 
-        paths = _driver_path_texts(render_autounattend(settings))
+        staged = stage_winpe_drivers(medium.path, tmp_path, _GUEST_ARCHITECTURE)
+        landed = sorted(entry.name for entry in (tmp_path / WINPE_DRIVER_STAGE_DIRECTORY).iterdir() if entry.is_file())
 
-        assert len(paths) == len(WINPE_DRIVER_LETTERS) * len(medium.driver_subpaths), (
-            f"{medium.path} produced {len(medium.driver_subpaths)} packages but the answer file emitted {len(paths)} paths"
+        assert staged == tuple(landed), f"the staging reported {staged} but {landed} is what is on disk"
+        assert f"{_BOOT_CRITICAL_DRIVER}.inf" in landed, (
+            f"{medium.path} staged {landed}, which has no {_BOOT_CRITICAL_DRIVER}.inf; WinPE would load no storage "
+            f"driver and Setup would find no disk on the virtio-blk system disk"
         )
-        emitted = {path.partition(":\\")[2] for path in paths}
-        assert emitted == set(medium.driver_subpaths), (
-            f"the answer file named {sorted(emitted - set(medium.driver_subpaths))} that {medium.path} does not carry"
-        )
-        families = sorted({subpath.split("\\")[1] for subpath in medium.driver_subpaths if subpath.startswith("viostor\\")})
-        assert len(families) >= _MINIMUM_REAL_VIOSTOR_FAMILIES, (
-            f"the answer file would search only the viostor families {families} of {medium.path}"
+        assert f"{_BOOT_CRITICAL_DRIVER}.sys" in landed, f"{landed} names an INF with no driver binary beside it"
+        for driver in WINPE_DRIVER_DIRECTORIES:
+            assert any(name.casefold().startswith(driver.casefold()) for name in landed), (
+                f"{medium.path} staged nothing for {driver}, which the sandbox launcher builds a device for"
+            )
+
+        paths = _driver_path_texts(render_autounattend(replace(answer_settings(), driver_letters=WINPE_DRIVER_LETTERS)))
+        assert len(paths) < _SETUP_REJECTED_PATH_COUNT, (
+            f"the real medium produced {len(paths)} driver paths, at or above the {_SETUP_REJECTED_PATH_COUNT} that "
+            f"aborted a real installation"
         )

@@ -55,16 +55,18 @@ import argparse
 import importlib
 import importlib.util
 import json
+import secrets
 import shutil
 import socket
 import struct
 import subprocess
 import sys
 import tempfile
+import time
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Final
+from typing import IO, Final, cast
 
 from intellicrack.core.config import get_project_root
 from intellicrack.core.logging import get_logger
@@ -168,7 +170,8 @@ _DRIVER_SCRIPT_RELATIVE: Final[str] = "scripts\\install-virtio-drivers.ps1"
 _DRIVER_INSTALL_LOG: Final[str] = "C:\\ProgramData\\intellicrack\\virtio-drivers.log"
 _GUEST_DRIVE_LETTERS: Final[str] = "C D E F G H I J K L M N O P Q R S T U V W X Y Z"
 
-VIRTIO_MARKER_DIRECTORIES: Final[tuple[str, ...]] = ("viostor", "vioserial", "NetKVM")
+_BOOT_CRITICAL_DRIVER: Final[str] = "viostor"
+VIRTIO_MARKER_DIRECTORIES: Final[tuple[str, ...]] = (_BOOT_CRITICAL_DRIVER, "vioserial", "NetKVM")
 WINPE_DRIVER_DIRECTORIES: Final[tuple[str, ...]] = (*VIRTIO_MARKER_DIRECTORIES, "Balloon")
 """Driver directories whose packages the WinPE answer file points Setup at.
 
@@ -189,6 +192,43 @@ DRIVER_ALREADY_CURRENT_EXIT: Final[int] = 259
 _DRIVER_INF_SUFFIX: Final[str] = ".inf"
 WINPE_DRIVER_LETTERS: Final[tuple[str, ...]] = ("C", "D", "E", "F", "G", "H")
 """Drive letters the answer file searches, because WinPE assigns them itself."""
+
+WINPE_DRIVER_STAGE_DIRECTORY: Final[str] = "drivers"
+"""Folder on the answer medium the boot-critical driver files are staged into.
+
+Setup is given one search path per candidate drive letter and nothing else.
+Measured on Windows 11 26100 with the real installer: an answer file naming
+sixty existing driver directories on the one drive letter that really exists
+aborts the whole installation at ``ExecuteUnattendDriverInstall`` with
+``0xD000A000``, before any disk is touched, while four paths install cleanly.
+Every path in both runs held an INF and unreachable letters were tolerated, so
+what Setup will not accept is the number of entries.
+"""
+
+WINPE_DRIVER_FAMILY_PREFERENCE: Final[tuple[str, ...]] = (
+    "w11",
+    "w10",
+    "2k25",
+    "2k22",
+    "2k19",
+    "2k16",
+    "w8.1",
+    "w8",
+    "2k12R2",
+    "2k12",
+    "w7",
+    "2k8R2",
+    "2k8",
+    "2k3",
+    "xp",
+)
+"""Which family of a driver to stage, newest first, for a Windows 11 guest.
+
+The medium carries a genuinely different set of families per driver, so the
+choice is made per driver against what is really there rather than hardwired:
+whichever of these the medium has for the guest's architecture is taken, and
+anything unrecognised sorts after all of them.
+"""
 
 _VIRTIO_WIN_URL: Final[str] = "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
 _VIRTIO_WIN_APPROXIMATE_MB: Final[int] = 676
@@ -241,6 +281,21 @@ _VNC_PORT_MAX: Final[int] = 5999
 _DEFAULT_AGENT_PORT: Final[int] = 4445
 _QGA_CHANNEL_PORT_OFFSET: Final[int] = 1
 _USB_CONTROLLER_ID: Final[str] = "icusb"
+
+_BOOT_ARGUMENT: Final[str] = "-boot"
+_BOOT_ONCE_PREFIX: Final[str] = "once="
+_CHARDEV_ARGUMENT: Final[str] = "-chardev"
+_CHARDEV_PORT_PREFIX: Final[str] = "port="
+
+_DEFAULT_INSTALL_TIMEOUT_SECONDS: Final[float] = 5400.0
+_DEFAULT_INSTALL_RESTART_LIMIT: Final[int] = 8
+_INSTALL_POLL_SECONDS: Final[float] = 10.0
+_AGENT_PROBE_TIMEOUT_SECONDS: Final[float] = 4.0
+_AGENT_READ_SIZE: Final[int] = 4096
+_AGENT_SYNC_TOKEN_LIMIT: Final[int] = 2**31
+_QGA_SYNC_DELIMITER: Final[bytes] = b"\xff"
+_GUEST_SHUTDOWN_GRACE_SECONDS: Final[float] = 240.0
+_INSTALL_FAILURE_EXIT_CODE: Final[int] = 4
 
 _ISO_AUTHORING_TOOLS: Final[tuple[str, ...]] = ("oscdimg", "xorriso", "mkisofs", "genisoimage", "pycdlib")
 _PYCDLIB_TOOL: Final[str] = "pycdlib"
@@ -470,9 +525,10 @@ class UnattendSettings:
             the sandbox launcher passes no ``-rtc base=localtime``.
         driver_letters: Candidate WinPE drive letters searched for virtio
             drivers, because WinPE assigns CD-ROM letters unpredictably.
-        driver_subpaths: Driver package directories appended to each candidate
-            letter, enumerated off the virtio-win medium so every emitted path
-            resolves to a directory that is really there.
+        driver_directory: Folder on the answer medium holding the staged
+            driver files, appended to each candidate letter. One entry per
+            letter is all Setup is given, because it aborts the installation
+            outright when the answer file names many driver paths.
         disable_guest_firewall: Whether to turn the guest firewall off so the
             forwarded agent port is reachable from the host.
         answer_script: Path of the guest agent installer relative to the
@@ -487,7 +543,7 @@ class UnattendSettings:
     locale: str
     timezone: str
     driver_letters: tuple[str, ...]
-    driver_subpaths: tuple[str, ...]
+    driver_directory: str
     disable_guest_firewall: bool
     answer_script: str
 
@@ -522,6 +578,25 @@ class InstallCommandSpec:
     display: str
     vnc_port: int
     agent_port: int
+
+
+@dataclass(frozen=True)
+class InstallOutcome:
+    """Result of supervising an unattended install to completion.
+
+    Attributes:
+        completed: True when the guest agent answered on its channel, which
+            is the first moment the installed system is provably running.
+        restarts: Number of times QEMU was relaunched after the guest power
+            cycled. Windows Setup power cycles at least once.
+        elapsed_seconds: Wall clock time the supervised run took.
+        detail: Human-readable reason for the verdict.
+    """
+
+    completed: bool
+    restarts: int
+    elapsed_seconds: float
+    detail: str
 
 
 @dataclass(frozen=True)
@@ -1034,22 +1109,37 @@ def looks_like_virtio_media(root: Path) -> bool:
     return all((root / name).is_dir() for name in VIRTIO_MARKER_DIRECTORIES)
 
 
-def discover_virtio_media(roots: tuple[Path, ...], max_depth: int, budget: int) -> Path | None:
+def discover_virtio_media(
+    roots: tuple[Path, ...],
+    max_depth: int,
+    budget: int,
+    *,
+    priority_roots: tuple[Path, ...] = (),
+) -> Path | None:
     """Locate a virtio-win driver ISO on the host.
+
+    Priority roots are scanned first and on their own terms, exactly as
+    :func:`discover_install_media` does: the Intellicrack images directory
+    sits deeper than the breadth-limited scan of a drive root ever reaches,
+    so a medium staged there is invisible to the general scan.
 
     Args:
         roots: Filesystem roots to scan.
         max_depth: Maximum directory depth below each root.
         budget: Maximum number of directories to enumerate.
+        priority_roots: Directories searched before ``roots``.
 
     Returns:
         Path | None: First ISO whose name identifies it as virtio-win, or
         None when none is present.
     """
-    for candidate in iter_candidate_isos(roots, max_depth, budget):
-        if "virtio" in candidate.name.lower():
-            _LOGGER.info("virtio_media_found", path=str(candidate))
-            return candidate
+    for scan_roots in (priority_roots, roots):
+        if not scan_roots:
+            continue
+        for candidate in iter_candidate_isos(scan_roots, max_depth, budget):
+            if "virtio" in candidate.name.lower():
+                _LOGGER.info("virtio_media_found", path=str(candidate))
+                return candidate
     return None
 
 
@@ -1088,6 +1178,130 @@ def enumerate_virtio_driver_subpaths(medium_root: Path, architecture: str) -> tu
                 if package.is_dir() and package.name.casefold() == architecture.casefold() and _holds_driver_package(package)
             )
     return tuple(sorted(subpaths))
+
+
+def select_winpe_driver_packages(subpaths: tuple[str, ...], drivers: tuple[str, ...] = WINPE_DRIVER_DIRECTORIES) -> tuple[str, ...]:
+    r"""Pick the one package per driver that WinPE is given.
+
+    Setup rejects an answer file that names many driver paths, so breadth has
+    to be spent where it matters: the enumeration knows every family the
+    medium carries, and this reduces that to a single package per driver,
+    newest family first. A driver the medium has no package for is skipped
+    rather than guessed at.
+
+    Args:
+        subpaths: ``<driver>\\<family>\\<arch>`` directories enumerated off
+            the medium for the guest's architecture.
+        drivers: Driver directories to pick packages for.
+
+    Returns:
+        tuple[str, ...]: One subpath per driver that has a package, in the
+        order ``drivers`` declares.
+    """
+    selected: list[str] = []
+    for driver in drivers:
+        prefix = f"{driver}\\"
+        candidates = [subpath for subpath in subpaths if subpath.casefold().startswith(prefix.casefold())]
+        if not candidates:
+            continue
+        selected.append(min(candidates, key=_family_rank))
+    return tuple(selected)
+
+
+def _family_rank(subpath: str) -> tuple[int, str]:
+    r"""Order a ``<driver>\\<family>\\<arch>`` subpath by how new its family is.
+
+    Args:
+        subpath: Driver package subpath.
+
+    Returns:
+        tuple[int, str]: Sort key placing preferred families first and any
+        family the preference list does not name after all of them.
+    """
+    parts = subpath.split("\\")
+    family = parts[1] if len(parts) > 1 else ""
+    folded = [name.casefold() for name in WINPE_DRIVER_FAMILY_PREFERENCE]
+    position = folded.index(family.casefold()) if family.casefold() in folded else len(folded)
+    return (position, subpath.casefold())
+
+
+def require_boot_critical_package(packages: tuple[str, ...], source: str, architecture: str) -> None:
+    """Refuse a driver set WinPE could not boot the guest's system disk from.
+
+    Args:
+        packages: Packages selected for staging.
+        source: Medium the packages were selected from, for the message.
+        architecture: Architecture directory name the guest needs.
+
+    Raises:
+        ProvisioningError: If no boot-critical storage package is present.
+    """
+    if any(package.casefold().startswith(_BOOT_CRITICAL_DRIVER.casefold()) for package in packages):
+        return
+    message = (
+        f"{source} carries no {_BOOT_CRITICAL_DRIVER} package for {architecture}. Windows Setup installs onto a "
+        f"virtio-blk disk WinPE cannot see without it, so the install would find no disk at all."
+    )
+    raise ProvisioningError(message)
+
+
+def stage_winpe_drivers(
+    virtio_iso: Path,
+    staging: Path,
+    architecture: str,
+    directory: str = WINPE_DRIVER_STAGE_DIRECTORY,
+) -> tuple[str, ...]:
+    r"""Copy the boot-critical driver files onto the answer medium.
+
+    The files are laid down flat in one directory so Setup needs neither a
+    recursive search nor more than one path per drive letter, and so the
+    package set is the provisioner's own rather than whatever the virtio
+    medium happens to be mounted as in WinPE.
+
+    Args:
+        virtio_iso: virtio-win medium to copy from.
+        staging: Answer medium staging directory.
+        architecture: Architecture directory name the guest needs.
+        directory: Folder under ``staging`` to stage into, which must be the
+            one the answer file names.
+
+    Returns:
+        tuple[str, ...]: Names of the files staged, sorted.
+
+    Raises:
+        ProvisioningError: If the medium carries no ``viostor`` package for
+            the architecture, or two packages would overwrite each other.
+    """
+    destination = staging / directory
+    destination.mkdir(parents=True, exist_ok=True)
+
+    medium_root = mount_disk_image(virtio_iso)
+    try:
+        packages = select_winpe_driver_packages(enumerate_virtio_driver_subpaths(medium_root, architecture))
+        require_boot_critical_package(packages, str(virtio_iso), architecture)
+
+        origins: dict[str, str] = {}
+        for package in packages:
+            for source in sorted((medium_root / package).iterdir()):
+                if not source.is_file():
+                    continue
+                previous = origins.get(source.name.casefold())
+                if previous is not None:
+                    message = f"{package} and {previous} both carry {source.name}; staging one would hide the other"
+                    raise ProvisioningError(message)
+                origins[source.name.casefold()] = package
+                shutil.copy2(source, destination / source.name)
+    finally:
+        dismount_disk_image(virtio_iso)
+
+    staged = tuple(sorted(path.name for path in destination.iterdir() if path.is_file()))
+    _LOGGER.info(
+        "winpe_drivers_staged",
+        packages=list(packages),
+        files=len(staged),
+        directory=directory,
+    )
+    return staged
 
 
 def _holds_driver_package(directory: Path) -> bool:
@@ -1142,6 +1356,7 @@ def require_virtio_media(
     max_depth: int,
     budget: int,
     *,
+    priority_roots: tuple[Path, ...] = (),
     verify_contents: bool = False,
 ) -> Path:
     """Resolve the virtio-win medium or explain why provisioning cannot go on.
@@ -1156,6 +1371,7 @@ def require_virtio_media(
         roots: Filesystem roots to scan when searching.
         max_depth: Maximum directory depth below each root.
         budget: Maximum number of directories to enumerate.
+        priority_roots: Directories searched before ``roots``.
         verify_contents: Whether to mount the resolved medium and confirm it
             really carries the virtio driver directories.
 
@@ -1173,7 +1389,7 @@ def require_virtio_media(
             verify_virtio_contents(explicit)
         return explicit
 
-    found = discover_virtio_media(roots, max_depth, budget)
+    found = discover_virtio_media(roots, max_depth, budget, priority_roots=priority_roots)
     if found is not None:
         if verify_contents:
             verify_virtio_contents(found)
@@ -1195,6 +1411,8 @@ def resolve_virtio_medium(
     max_depth: int,
     budget: int,
     architecture: str,
+    *,
+    priority_roots: tuple[Path, ...] = (),
 ) -> VirtioMedium:
     """Locate the virtio-win medium and read its driver layout in one mount.
 
@@ -1208,11 +1426,19 @@ def resolve_virtio_medium(
         max_depth: Maximum directory depth below each root.
         budget: Maximum number of directories to enumerate.
         architecture: Architecture directory name the guest needs.
+        priority_roots: Directories searched before ``roots``.
 
     Returns:
         VirtioMedium: The located medium and the driver subpaths it carries.
     """
-    path = require_virtio_media(explicit, roots, max_depth, budget, verify_contents=False)
+    path = require_virtio_media(
+        explicit,
+        roots,
+        max_depth,
+        budget,
+        priority_roots=priority_roots,
+        verify_contents=False,
+    )
     return VirtioMedium(path=path, driver_subpaths=verify_virtio_contents(path, architecture))
 
 
@@ -1401,23 +1627,22 @@ def _disk_configuration(parent: Element) -> None:
 
 
 def _driver_paths(parent: Element, settings: UnattendSettings) -> None:
-    """Append the WinPE driver search paths for the virtio-win medium.
+    """Append the WinPE driver search paths for the staged driver folder.
 
     WinPE assigns CD-ROM drive letters in an order the answer file cannot
-    know, so every plausible letter is listed for every driver directory.
-    Paths that do not resolve are recorded in ``setuperr.log`` and skipped.
+    know, so one entry per plausible letter is emitted for the single folder
+    the drivers were staged into. Letters that do not resolve are recorded in
+    ``setuperr.log`` and skipped; more entries than this and Setup abandons
+    the installation instead.
 
     Args:
         parent: ``Microsoft-Windows-PnpCustomizationsWinPE`` element.
-        settings: Answer file settings supplying letters and subpaths.
+        settings: Answer file settings supplying letters and the folder.
     """
     paths = SubElement(parent, "DriverPaths")
-    key = 1
-    for letter in settings.driver_letters:
-        for subpath in settings.driver_subpaths:
-            entry = SubElement(paths, "PathAndCredentials", {"wcm:action": "add", "wcm:keyValue": str(key)})
-            _text_element(entry, "Path", f"{letter}:\\{subpath}")
-            key += 1
+    for key, letter in enumerate(settings.driver_letters, start=1):
+        entry = SubElement(paths, "PathAndCredentials", {"wcm:action": "add", "wcm:keyValue": str(key)})
+        _text_element(entry, "Path", f"{letter}:\\{settings.driver_directory}")
 
 
 def computer_name_enforcement_command(computer_name: str) -> str:
@@ -2115,14 +2340,18 @@ def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Pat
         settings: Answer file settings.
         qemu_agent: Bundled ``qemu-ga.exe`` to stage into the guest.
         tools_path: Directory holding the agent's runtime libraries.
-        virtio_iso: virtio-win medium carrying the GLib spawn helpers.
+        virtio_iso: virtio-win medium carrying the boot-critical drivers and
+            the GLib spawn helpers.
 
     Returns:
         str: The generated ``autounattend.xml`` text.
 
     Raises:
-        ProvisioningError: If a required guest agent library is missing.
+        ProvisioningError: If a required guest agent library is missing, or
+            the virtio medium carries no boot-critical driver package.
     """
+    stage_winpe_drivers(virtio_iso, staging, _COMPONENT_ARCHITECTURE, settings.driver_directory)
+
     autounattend = render_autounattend(settings)
     (staging / "autounattend.xml").write_bytes(autounattend.encode("utf-8"))
 
@@ -2260,11 +2489,11 @@ def build_install_command(spec: InstallCommandSpec) -> list[str]:
         *["-device", "ide-cd,drive=icanswer,bus=ide.1"],
         *["-drive", f"id=icvirtio,file={spec.virtio_iso},media=cdrom,if=none,format=raw,readonly=on"],
         *["-device", "ide-cd,drive=icvirtio,bus=ide.2"],
-        *["-boot", "order=c,once=d,menu=off"],
+        *[_BOOT_ARGUMENT, f"order=c,{_BOOT_ONCE_PREFIX}d,menu=off"],
         *["-netdev", "user,id=net0"],
         *["-device", "virtio-net-pci,netdev=net0"],
         *["-device", "virtio-serial-pci"],
-        *["-chardev", f"socket,id=agent,host=127.0.0.1,port={channel_port},server,nowait"],
+        *[_CHARDEV_ARGUMENT, f"socket,id=agent,host=127.0.0.1,{_CHARDEV_PORT_PREFIX}{channel_port},server,nowait"],
         *["-device", "virtserialport,chardev=agent,name=org.qemu.guest_agent.0"],
         *["-device", f"qemu-xhci,id={_USB_CONTROLLER_ID}"],
         *["-device", f"usb-tablet,bus={_USB_CONTROLLER_ID}.0"],
@@ -2276,6 +2505,245 @@ def build_install_command(spec: InstallCommandSpec) -> list[str]:
     else:
         command.extend(["-display", "none"])
     return command
+
+
+def build_resume_command(install_command: tuple[str, ...]) -> tuple[str, ...]:
+    r"""Derive the argv that resumes an install after the guest power cycles.
+
+    Windows Setup power cycles the guest at least once, and QEMU exits when it
+    does, so the install has to be relaunched to reach its later phases. The
+    install argv boots the installation medium once via the ``-boot``
+    ``once=`` element; replaying it verbatim would boot that medium again, and
+    a prompt-free installation medium restarts the whole installation rather
+    than continuing it. Dropping the element alone leaves every other device,
+    accelerator and channel argument exactly as the install used them, so the
+    resumed guest is the same machine.
+
+    Args:
+        install_command: Argv produced by :func:`build_install_command`.
+
+    Returns:
+        tuple[str, ...]: The same argv, booting only the system disk.
+    """
+    resumed = list(install_command)
+    for index, argument in enumerate(resumed[:-1]):
+        if argument != _BOOT_ARGUMENT:
+            continue
+        elements = [element for element in resumed[index + 1].split(",") if not element.startswith(_BOOT_ONCE_PREFIX)]
+        resumed[index + 1] = ",".join(elements)
+    return tuple(resumed)
+
+
+def agent_channel_port(install_command: tuple[str, ...]) -> int:
+    """Read the guest agent channel port out of an install argv.
+
+    Taken from the argv that is actually launched rather than recomputed, so
+    the port the supervisor waits on cannot drift from the port QEMU binds.
+
+    Args:
+        install_command: Argv produced by :func:`build_install_command`.
+
+    Returns:
+        int: TCP port the guest agent character device listens on.
+
+    Raises:
+        ProvisioningError: If the argv carries no such channel.
+    """
+    for index, argument in enumerate(install_command[:-1]):
+        if argument != _CHARDEV_ARGUMENT:
+            continue
+        for element in install_command[index + 1].split(","):
+            if element.startswith(_CHARDEV_PORT_PREFIX):
+                return int(element[len(_CHARDEV_PORT_PREFIX) :])
+    message = "the install command carries no guest agent channel"
+    raise ProvisioningError(message)
+
+
+def _carries_sync_token(buffer: bytes, token: int) -> bool:
+    """Report whether a guest agent reply stream echoes a synchronisation id.
+
+    Args:
+        buffer: Bytes read from the agent channel so far.
+        token: Identifier sent with ``guest-sync-delimited``.
+
+    Returns:
+        bool: True once the agent echoed that exact identifier.
+    """
+    for line in buffer.split(b"\n"):
+        text = line.strip(_QGA_SYNC_DELIMITER).strip()
+        if not text:
+            continue
+        try:
+            decoded: object = json.loads(text)
+        except ValueError:
+            continue
+        if isinstance(decoded, dict) and cast("dict[str, object]", decoded).get("return") == token:
+            return True
+    return False
+
+
+def guest_agent_responds(port: int, timeout: float = _AGENT_PROBE_TIMEOUT_SECONDS) -> bool:
+    """Probe whether a guest agent is serving the channel on a port.
+
+    A successful connection proves only that QEMU bound the socket, so this
+    requires a completed ``guest-sync-delimited`` round trip carrying an
+    identifier this call chose. That is the earliest point at which the
+    installed Windows system is provably running its own agent.
+
+    Args:
+        port: TCP port the agent character device listens on.
+        timeout: Seconds allowed for the connection and the reply.
+
+    Returns:
+        bool: True when the agent echoed the identifier.
+    """
+    token = secrets.randbelow(_AGENT_SYNC_TOKEN_LIMIT)
+    payload = json.dumps({"execute": "guest-sync-delimited", "arguments": {"id": token}}).encode("utf-8")
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=timeout) as channel:
+            channel.settimeout(timeout)
+            channel.sendall(_QGA_SYNC_DELIMITER + payload + b"\n")
+            return _awaits_sync_token(channel, token, timeout)
+    except OSError:
+        return False
+
+
+def _awaits_sync_token(channel: socket.socket, token: int, timeout: float) -> bool:
+    """Read an agent channel until it echoes an identifier or the time runs out.
+
+    Args:
+        channel: Connected agent channel.
+        token: Identifier sent with ``guest-sync-delimited``.
+        timeout: Seconds allowed for the reply.
+
+    Returns:
+        bool: True when the agent echoed the identifier.
+    """
+    buffer = b""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        chunk = channel.recv(_AGENT_READ_SIZE)
+        if not chunk:
+            return False
+        buffer += chunk
+        if _carries_sync_token(buffer, token):
+            return True
+    return False
+
+
+def _request_guest_shutdown(port: int) -> None:
+    """Ask a running guest agent to power its guest off.
+
+    The agent sends no reply to ``guest-shutdown``; QEMU exiting is the only
+    signal, which the caller waits for.
+
+    Args:
+        port: TCP port the agent character device listens on.
+    """
+    payload = json.dumps({"execute": "guest-shutdown", "arguments": {"mode": "powerdown"}}).encode("utf-8")
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=_AGENT_PROBE_TIMEOUT_SECONDS) as channel:
+            channel.sendall(_QGA_SYNC_DELIMITER + payload + b"\n")
+    except OSError as error:
+        _LOGGER.debug("guest_shutdown_unreachable", port=port, error=str(error))
+
+
+def _stop_guest(process: subprocess.Popen[bytes], port: int, grace_seconds: float) -> None:
+    """Bring a running guest down, preferring its own orderly shutdown.
+
+    Killing QEMU while a Windows guest has writes in flight leaves the qcow2
+    inconsistent, so the agent is asked first and the process is only
+    terminated if it outlives the grace period.
+
+    Args:
+        process: The QEMU process.
+        port: TCP port the agent character device listens on.
+        grace_seconds: Seconds to wait for the guest to power itself off.
+    """
+    if process.poll() is not None:
+        return
+    _request_guest_shutdown(port)
+    try:
+        process.wait(timeout=grace_seconds)
+    except subprocess.TimeoutExpired:
+        _LOGGER.warning("guest_shutdown_timed_out", grace_seconds=grace_seconds)
+        process.terminate()
+        try:
+            process.wait(timeout=_AGENT_PROBE_TIMEOUT_SECONDS)
+        except subprocess.TimeoutExpired:
+            process.kill()
+
+
+def run_unattended_install(
+    install_command: tuple[str, ...],
+    *,
+    timeout_seconds: float = _DEFAULT_INSTALL_TIMEOUT_SECONDS,
+    restart_limit: int = _DEFAULT_INSTALL_RESTART_LIMIT,
+    poll_seconds: float = _INSTALL_POLL_SECONDS,
+    shutdown_grace_seconds: float = _GUEST_SHUTDOWN_GRACE_SECONDS,
+) -> InstallOutcome:
+    """Run an unattended install through every guest power cycle it needs.
+
+    The install argv on its own cannot finish an installation: Windows Setup
+    power cycles the guest between its phases and QEMU exits when it does,
+    leaving the disk mid-install. This relaunches the guest off its system
+    disk each time that happens and waits for its agent to answer, which is
+    the first evidence that Setup finished and the installed system booted.
+    The guest is then powered off through its own agent so the qcow2 is left
+    consistent.
+
+    Args:
+        install_command: Argv produced by :func:`build_install_command`.
+        timeout_seconds: Total wall clock budget for the whole sequence.
+        restart_limit: Power cycles tolerated before the run is called failed.
+        poll_seconds: Interval between agent probes.
+        shutdown_grace_seconds: Seconds the guest is given to power itself off
+            before QEMU is terminated.
+
+    Returns:
+        InstallOutcome: Verdict, power cycle count and elapsed time.
+    """
+    channel_port = agent_channel_port(install_command)
+    resume_command = build_resume_command(install_command)
+    working_directory = str(Path(install_command[0]).parent)
+    started = time.monotonic()
+    restarts = 0
+
+    _LOGGER.info("install_started", channel_port=channel_port, timeout_seconds=timeout_seconds)
+    process = subprocess.Popen(list(install_command), cwd=working_directory)
+    try:
+        while time.monotonic() - started < timeout_seconds:
+            if process.poll() is not None:
+                restarts += 1
+                _LOGGER.info("install_power_cycle", exit_code=process.returncode, restarts=restarts)
+                if restarts > restart_limit:
+                    detail = f"the guest power cycled {restarts} times without its agent ever answering"
+                    _LOGGER.warning("install_restart_limit", restarts=restarts)
+                    return InstallOutcome(
+                        completed=False,
+                        restarts=restarts,
+                        elapsed_seconds=time.monotonic() - started,
+                        detail=detail,
+                    )
+                process = subprocess.Popen(list(resume_command), cwd=working_directory)
+                continue
+            if guest_agent_responds(channel_port):
+                elapsed = time.monotonic() - started
+                _LOGGER.info("install_completed", restarts=restarts, elapsed_seconds=round(elapsed))
+                return InstallOutcome(
+                    completed=True,
+                    restarts=restarts,
+                    elapsed_seconds=elapsed,
+                    detail="the installed guest answered on its agent channel",
+                )
+            time.sleep(poll_seconds)
+    finally:
+        _stop_guest(process, channel_port, shutdown_grace_seconds)
+
+    elapsed = time.monotonic() - started
+    detail = f"the agent never answered within {round(timeout_seconds)}s across {restarts} power cycles"
+    _LOGGER.warning("install_timed_out", restarts=restarts, elapsed_seconds=round(elapsed))
+    return InstallOutcome(completed=False, restarts=restarts, elapsed_seconds=elapsed, detail=detail)
 
 
 def select_install_media(explicit: Path | None, images_dir: Path, max_depth: int, budget: int) -> IsoStructure:
@@ -2360,13 +2828,13 @@ def stage_install_media(probe: IsoStructure, images_dir: Path) -> IsoStructure:
     return probe_iso_structure(destination)
 
 
-def build_unattend_settings(args: argparse.Namespace, driver_subpaths: tuple[str, ...]) -> UnattendSettings:
+def build_unattend_settings(args: argparse.Namespace, driver_directory: str = WINPE_DRIVER_STAGE_DIRECTORY) -> UnattendSettings:
     """Translate parsed arguments into answer file settings.
 
     Args:
         args: Parsed command line arguments.
-        driver_subpaths: Driver directories enumerated off the virtio-win
-            medium, which WinPE searches under every candidate drive letter.
+        driver_directory: Folder on the answer medium the boot-critical
+            drivers are staged into, searched under every candidate letter.
 
     Returns:
         UnattendSettings: Settings for :func:`render_autounattend`.
@@ -2380,7 +2848,7 @@ def build_unattend_settings(args: argparse.Namespace, driver_subpaths: tuple[str
         locale=args.locale,
         timezone=args.timezone,
         driver_letters=WINPE_DRIVER_LETTERS,
-        driver_subpaths=driver_subpaths,
+        driver_directory=driver_directory,
         disable_guest_firewall=not args.keep_guest_firewall,
         answer_script=_ANSWER_SCRIPT_RELATIVE,
     )
@@ -2465,6 +2933,7 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
         args.scan_depth,
         args.scan_budget,
         _COMPONENT_ARCHITECTURE,
+        priority_roots=(images_dir,) if images_dir.is_dir() else (),
     )
 
     disk_image = images_dir / args.disk_name
@@ -2472,7 +2941,7 @@ def provision(args: argparse.Namespace) -> ProvisionPlan:
 
     answer_iso = images_dir / args.answer_iso_name
     autounattend, tool_name = build_answer_medium(
-        build_unattend_settings(args, virtio.driver_subpaths),
+        build_unattend_settings(args),
         qemu_agent,
         tools_path,
         virtio.path,
@@ -2538,9 +3007,16 @@ def print_plan(plan: ProvisionPlan) -> None:
     print(f"  guest disk      : {plan.disk_image}")
     print(f"  answer iso      : {plan.answer_iso} (built with {plan.authoring_tool})")
     print()
-    print("Run this command to perform the unattended install:")
+    print("First boot of the unattended install:")
     print()
     print(format_command(plan.install_command))
+    print()
+    print(
+        "Windows Setup power cycles the guest between its phases and QEMU exits when it does, so that "
+        "command alone leaves the disk mid-install. Re-run this script with --install to supervise the "
+        "whole sequence, or relaunch QEMU without the boot 'once=' element after every exit until the "
+        f"guest agent answers on port {agent_channel_port(plan.install_command)}.",
+    )
     print()
 
 
@@ -2585,6 +3061,26 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--keep-guest-firewall", action="store_true", help="Leave the guest firewall enabled.")
+    parser.add_argument(
+        "--install",
+        action="store_true",
+        help=(
+            "Run the unattended install to completion, relaunching the guest across the power cycles "
+            "Windows Setup performs, and wait for its agent to answer."
+        ),
+    )
+    parser.add_argument(
+        "--install-timeout",
+        type=float,
+        default=_DEFAULT_INSTALL_TIMEOUT_SECONDS,
+        help="Wall clock budget in seconds for a supervised install.",
+    )
+    parser.add_argument(
+        "--install-restart-limit",
+        type=int,
+        default=_DEFAULT_INSTALL_RESTART_LIMIT,
+        help="Guest power cycles tolerated during a supervised install before it is called failed.",
+    )
     parser.add_argument("--json", action="store_true", help="Emit the plan as JSON instead of human-readable text.")
     parser.add_argument("--print-autounattend", action="store_true", help="Also print the generated answer file.")
     return parser
@@ -2597,8 +3093,9 @@ def main(raw_args: list[str] | None = None) -> int:
         raw_args: Argument list to parse, or None to read ``sys.argv``.
 
     Returns:
-        int: Process exit code; 0 on success, 3 on a provisioning failure,
-        130 on interruption.
+        int: Process exit code; 0 on success, 3 on a provisioning failure, 4
+        when a supervised install did not reach a running guest agent, 130 on
+        interruption.
     """
     args = _build_parser().parse_args(raw_args)
     try:
@@ -2617,7 +3114,23 @@ def main(raw_args: list[str] | None = None) -> int:
         print_plan(plan)
     if args.print_autounattend:
         print(plan.autounattend_xml)
-    return 0
+    if not args.install:
+        return 0
+
+    try:
+        outcome = run_unattended_install(
+            plan.install_command,
+            timeout_seconds=args.install_timeout,
+            restart_limit=args.install_restart_limit,
+        )
+    except KeyboardInterrupt:
+        _LOGGER.warning("install_interrupted")
+        return 130
+    print(
+        f"install {'completed' if outcome.completed else 'failed'} after {round(outcome.elapsed_seconds)}s "
+        f"and {outcome.restarts} guest power cycle(s): {outcome.detail}",
+    )
+    return 0 if outcome.completed else _INSTALL_FAILURE_EXIT_CODE
 
 
 if __name__ == "__main__":
