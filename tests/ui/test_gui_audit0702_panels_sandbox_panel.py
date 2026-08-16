@@ -271,11 +271,17 @@ def test_h26_delete_snapshot_removes_row_by_pending_id_not_by_selection(
     row was removed from the UI. Post-fix it looks up the row by
     ``self._pending_snapshot_id`` (the snapshot that was actually deleted).
 
+    The panel is activated on the QEMU backend first because the completion
+    handler restores its control through the capability gating: a delete can
+    only be in flight against a live QEMU sandbox in the first place.
+
     Args:
         qapp: Session QApplication fixture required for widget construction.
     """
     _ = qapp
     panel = SandboxPanel()
+    panel.sandbox_type_combo.setCurrentText("QEMU")
+    panel._set_sandbox_controls_active(active=True)
     tree = panel._snapshots_tree
     item_a = QTreeWidgetItem(["snap-a", "Snapshot A", "2026-07-01"])
     item_b = QTreeWidgetItem(["snap-b", "Snapshot B", "2026-07-02"])
@@ -292,7 +298,7 @@ def test_h26_delete_snapshot_removes_row_by_pending_id_not_by_selection(
 
     remaining = [tree.topLevelItem(i).text(0) for i in range(tree.topLevelItemCount())]
     assert remaining == ["snap-b"], f"expected only the deleted snap-a to be removed, got remaining rows {remaining}"
-    assert panel.delete_snap_btn.isEnabled()
+    assert panel.delete_snap_btn.isEnabled(), "the control must come back for the live QEMU sandbox the delete ran against"
 
 
 def test_m28_destroy_error_preserves_active_state_for_orphaned_sandbox(

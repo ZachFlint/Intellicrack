@@ -53,6 +53,8 @@ from intellicrack.ui.resources.font_manager import FontManager
 
 
 if TYPE_CHECKING:
+    from PyQt6.QtGui import QAction
+
     from intellicrack.sandbox.base import ExecutionReport, SandboxBase
     from intellicrack.sandbox.manager import SandboxManager, SandboxType
     from intellicrack.sandbox.qemu import QEMUConfig
@@ -876,7 +878,7 @@ class SandboxPanel(AnalysisPanelBase):
         ``cont``, ``get_pending_messages``, ``pcap_start``, ``screenshot``,
         ``anti_evasion``, ``extract_dropped_files`` and ``get_vnc_port``.
         """
-        qemu_active = self._controls_active and self._effective_sandbox_type() == "qemu"
+        qemu_active = self._qemu_controls_supported()
         self.snapshot_btn.setEnabled(qemu_active)
         self.restore_btn.setEnabled(qemu_active)
         self.delete_snap_btn.setEnabled(qemu_active)
@@ -889,6 +891,44 @@ class SandboxPanel(AnalysisPanelBase):
         self.extract_files_btn.setEnabled(qemu_active)
         self._anti_evasion_btn.setEnabled(qemu_active)
         self._set_vm_display_enabled(enabled=qemu_active)
+
+    def _qemu_controls_supported(self) -> bool:
+        """Report whether the QEMU-only controls may be enabled right now.
+
+        Returns:
+            bool: True when a sandbox is active and the backend that would
+            service the QEMU-only operations is QEMU.
+        """
+        return self._controls_active and self._effective_sandbox_type() == "qemu"
+
+    def _restore_shared_control(self, control: QAction | QPushButton) -> None:
+        """Re-enable a finished operation's control, unless the sandbox has gone.
+
+        Every operation disables its own control while the bridge call is in
+        flight and re-enables it when the call completes. That completion can
+        land *after* the sandbox it addressed was destroyed - the user only has
+        to press Destroy and then the operation before the destroy lands - and
+        re-enabling unconditionally then leaves a control live with no sandbox
+        behind it, where pressing it does nothing at all because the handler
+        returns at its own ``sandbox_id is None`` guard.
+
+        Args:
+            control: Toolbar control the finished operation had disabled.
+        """
+        control.setEnabled(self._controls_active)
+
+    def _restore_qemu_only_control(self, control: QAction | QPushButton) -> None:
+        """Re-enable a finished QEMU-only operation's control if it is still supported.
+
+        Same completion-ordering problem as :meth:`_restore_shared_control`,
+        with the additional requirement that the effective backend still be
+        QEMU: re-enabling unconditionally reinstates a control that
+        :meth:`_apply_backend_capability_gating` had deliberately gated out.
+
+        Args:
+            control: QEMU-only toolbar control the finished operation had disabled.
+        """
+        control.setEnabled(self._qemu_controls_supported())
 
     def _set_vm_display_enabled(self, *, enabled: bool) -> None:
         """Enable or disable the VM Display tab and the VNC view it hosts.
@@ -1139,7 +1179,7 @@ class SandboxPanel(AnalysisPanelBase):
             self._diff_instance_a_input.setText(self.sandbox_id)
         self._log("[+] Sandbox restarted")
         self._clear_report_tabs()
-        self.restart_btn.setEnabled(True)
+        self._restore_shared_control(self.restart_btn)
         _logger.info("sandbox_restarted", sandbox_id=self.sandbox_id)
 
         QTimer.singleShot(2000, self._connect_vnc_display)
@@ -1291,7 +1331,7 @@ class SandboxPanel(AnalysisPanelBase):
         """
         binary_name = self._pending_binary.name
         self._log("[+] Execution completed")
-        self._run_btn.setEnabled(True)
+        self._restore_shared_control(self._run_btn)
         self.execution_completed.emit(binary_name)
         _logger.info("sandbox_binary_executed", binary=binary_name)
 
@@ -1542,7 +1582,7 @@ class SandboxPanel(AnalysisPanelBase):
         """
         name_str = self._pending_binary.name if self._pending_binary.parts else "unknown"
         self._report_failure("Sandbox Execution Failed", "Execution failed", exc)
-        self._run_btn.setEnabled(True)
+        self._restore_shared_control(self._run_btn)
         _logger.warning("sandbox_binary_execution_failed", binary=name_str, error=str(exc))
 
     def _on_take_snapshot(self) -> None:
@@ -1598,7 +1638,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log(f"[+] Snapshot taken: {snapshot_id}")
         item = QTreeWidgetItem([snapshot_id, label, created_at])
         self._snapshots_tree.addTopLevelItem(item)
-        self.snapshot_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.snapshot_btn)
         self._pending_snapshot_label = None
         _logger.info("sandbox_snapshot_taken", snapshot_id=snapshot_id, label=label)
 
@@ -1609,7 +1649,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Snapshot Failed", "Snapshot failed", exc)
-        self.snapshot_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.snapshot_btn)
         self._pending_snapshot_label = None
         _logger.warning("sandbox_snapshot_failed", error=str(exc))
 
@@ -1647,7 +1687,7 @@ class SandboxPanel(AnalysisPanelBase):
         snapshot_id = getattr(self, "_pending_snapshot_id", "unknown")
         self._log(f"[+] Restored snapshot: {snapshot_id}")
         self._clear_report_tabs()
-        self.restore_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.restore_btn)
         _logger.info("sandbox_snapshot_restored", snapshot_id=snapshot_id)
 
     def _on_restore_snapshot_error(self, exc: object) -> None:
@@ -1658,7 +1698,7 @@ class SandboxPanel(AnalysisPanelBase):
         """
         snapshot_id = getattr(self, "_pending_snapshot_id", "unknown")
         self._report_failure("Snapshot Restore Failed", "Restore failed", exc)
-        self.restore_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.restore_btn)
         _logger.warning("sandbox_snapshot_restore_failed", snapshot_id=snapshot_id, error=str(exc))
 
     def _on_screenshot(self) -> None:
@@ -1688,7 +1728,7 @@ class SandboxPanel(AnalysisPanelBase):
             typed = cast("dict[str, object]", result)
             path = str(typed.get("screenshot_path", ""))
         self._log(f"[+] Screenshot saved: {path}")
-        self.screenshot_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.screenshot_btn)
 
     def _on_screenshot_error(self, exc: object) -> None:
         """Handle screenshot capture failure.
@@ -1697,7 +1737,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Screenshot Failed", "Screenshot failed", exc)
-        self.screenshot_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.screenshot_btn)
 
     def _on_pcap_toggle(self) -> None:
         """Toggle packet capture start/stop."""
@@ -1743,7 +1783,7 @@ class SandboxPanel(AnalysisPanelBase):
             self._pcap_capture_id = "active"
         self._log(f"[+] PCAP capture started: {self._pcap_capture_id}")
         self.pcap_btn.setText("PCAP Stop")
-        self.pcap_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.pcap_btn)
 
     def _on_pcap_start_error(self, exc: object) -> None:
         """Handle PCAP capture start failure.
@@ -1752,7 +1792,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("PCAP Start Failed", "PCAP start failed", exc)
-        self.pcap_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.pcap_btn)
 
     def _on_pcap_stop_success(self, result: object) -> None:
         """Handle successful PCAP capture stop.
@@ -1767,7 +1807,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._log(f"[+] PCAP capture stopped, saved: {pcap_path}")
         self._pcap_capture_id = None
         self.pcap_btn.setText("PCAP Start")
-        self.pcap_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.pcap_btn)
 
     def _on_pcap_stop_error(self, exc: object) -> None:
         """Handle PCAP capture stop failure.
@@ -1778,7 +1818,7 @@ class SandboxPanel(AnalysisPanelBase):
         self._report_failure("PCAP Stop Failed", "PCAP stop failed", exc)
         self._pcap_capture_id = None
         self.pcap_btn.setText("PCAP Start")
-        self.pcap_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.pcap_btn)
 
     def _on_memory_dump(self) -> None:
         """Dump guest memory from the sandbox."""
@@ -1807,7 +1847,7 @@ class SandboxPanel(AnalysisPanelBase):
             typed = cast("dict[str, object]", result)
             dump_path = str(typed.get("dump_path", ""))
         self._log(f"[+] Memory dump saved: {dump_path}")
-        self.memdump_btn.setEnabled(True)
+        self._restore_shared_control(self.memdump_btn)
 
     def _on_memory_dump_error(self, exc: object) -> None:
         """Handle memory dump failure.
@@ -1816,7 +1856,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Memory Dump Failed", "Memory dump failed", exc)
-        self.memdump_btn.setEnabled(True)
+        self._restore_shared_control(self.memdump_btn)
 
     def _on_extract_files(self) -> None:
         """Extract files dropped during sandbox execution."""
@@ -1845,7 +1885,7 @@ class SandboxPanel(AnalysisPanelBase):
             typed = cast("dict[str, object]", result)
             zip_path = str(typed.get("zip_path", ""))
         self._log(f"[+] Dropped files extracted: {zip_path}")
-        self.extract_files_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.extract_files_btn)
 
     def _on_extract_files_error(self, exc: object) -> None:
         """Handle file extraction failure.
@@ -1854,7 +1894,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("File Extraction Failed", "File extraction failed", exc)
-        self.extract_files_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.extract_files_btn)
 
     def _on_yara_scan(self) -> None:
         """Run YARA scan against sandbox artifacts."""
@@ -1892,7 +1932,7 @@ class SandboxPanel(AnalysisPanelBase):
                             f"[YARA] {m.get('rule', 'unknown')}: {m.get('strings', '')} in {m.get('file', '')}",
                         )
         self._log(f"[+] YARA scan complete: {match_count} matches")
-        self.yara_btn.setEnabled(True)
+        self._restore_shared_control(self.yara_btn)
 
     def _on_yara_scan_error(self, exc: object) -> None:
         """Handle YARA scan failure.
@@ -1901,7 +1941,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("YARA Scan Failed", "YARA scan failed", exc)
-        self.yara_btn.setEnabled(True)
+        self._restore_shared_control(self.yara_btn)
 
     def _on_extract_iocs(self) -> None:
         """Extract IOCs from the last execution report."""
@@ -1944,7 +1984,7 @@ class SandboxPanel(AnalysisPanelBase):
                         self._iocs_tree.addTopLevelItem(item)
                         ioc_count += 1
         self._log(f"[+] IOC extraction complete: {ioc_count} indicators")
-        self.iocs_btn.setEnabled(True)
+        self._restore_shared_control(self.iocs_btn)
 
     def _on_extract_iocs_error(self, exc: object) -> None:
         """Handle IOC extraction failure.
@@ -1953,7 +1993,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("IOC Extraction Failed", "IOC extraction failed", exc)
-        self.iocs_btn.setEnabled(True)
+        self._restore_shared_control(self.iocs_btn)
 
     def _on_timeline(self) -> None:
         """Generate an event timeline from the last execution report."""
@@ -1994,7 +2034,7 @@ class SandboxPanel(AnalysisPanelBase):
                         self._timeline_tree.addTopLevelItem(item)
                         event_count += 1
         self._log(f"[+] Timeline generated: {event_count} events")
-        self.timeline_btn.setEnabled(True)
+        self._restore_shared_control(self.timeline_btn)
 
     def _on_timeline_error(self, exc: object) -> None:
         """Handle timeline generation failure.
@@ -2003,7 +2043,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Timeline Generation Failed", "Timeline generation failed", exc)
-        self.timeline_btn.setEnabled(True)
+        self._restore_shared_control(self.timeline_btn)
 
     def _on_detect_behaviors(self) -> None:
         """Detect behavioral signatures from the last execution report."""
@@ -2047,7 +2087,7 @@ class SandboxPanel(AnalysisPanelBase):
                         self._behaviors_tree.addTopLevelItem(item)
                         match_count += 1
         self._log(f"[+] Behavior detection complete: {match_count} signatures matched")
-        self.behaviors_btn.setEnabled(True)
+        self._restore_shared_control(self.behaviors_btn)
 
     def _on_detect_behaviors_error(self, exc: object) -> None:
         """Handle behavior detection failure.
@@ -2056,7 +2096,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Behavior Detection Failed", "Behavior detection failed", exc)
-        self.behaviors_btn.setEnabled(True)
+        self._restore_shared_control(self.behaviors_btn)
 
     def _on_copy_in(self) -> None:
         """Copy a file into the sandbox."""
@@ -2103,7 +2143,7 @@ class SandboxPanel(AnalysisPanelBase):
             _result: Bridge call result (unused).
         """
         self._log(f"[+] Copied into sandbox: {self._pending_copy_in_source} -> {self._pending_copy_in_dest}")
-        self.copy_in_btn.setEnabled(True)
+        self._restore_shared_control(self.copy_in_btn)
 
     def _on_copy_in_error(self, exc: object) -> None:
         """Handle file copy into sandbox failure.
@@ -2112,7 +2152,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Copy Into Sandbox Failed", "Copy into sandbox failed", exc)
-        self.copy_in_btn.setEnabled(True)
+        self._restore_shared_control(self.copy_in_btn)
 
     def _on_copy_out(self) -> None:
         """Copy a file out of the sandbox."""
@@ -2159,7 +2199,7 @@ class SandboxPanel(AnalysisPanelBase):
             _result: Bridge call result (unused).
         """
         self._log(f"[+] Copied from sandbox: {self._pending_copy_out_source} -> {self._pending_copy_out_dest}")
-        self.copy_out_btn.setEnabled(True)
+        self._restore_shared_control(self.copy_out_btn)
 
     def _on_copy_out_error(self, exc: object) -> None:
         """Handle file copy from sandbox failure.
@@ -2168,7 +2208,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Copy From Sandbox Failed", "Copy from sandbox failed", exc)
-        self.copy_out_btn.setEnabled(True)
+        self._restore_shared_control(self.copy_out_btn)
 
     def _on_continue_vm(self) -> None:
         """Resume execution of a paused sandbox VM."""
@@ -2193,7 +2233,7 @@ class SandboxPanel(AnalysisPanelBase):
             _result: Bridge call result (unused).
         """
         self._log("[+] VM execution resumed")
-        self.continue_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.continue_btn)
 
     def _on_continue_vm_error(self, exc: object) -> None:
         """Handle VM resume failure.
@@ -2202,7 +2242,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("VM Continue Failed", "VM continue failed", exc)
-        self.continue_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.continue_btn)
 
     def _on_pause_vm(self) -> None:
         """Pause execution of a running sandbox VM."""
@@ -2227,7 +2267,7 @@ class SandboxPanel(AnalysisPanelBase):
             _result: Bridge call result (unused).
         """
         self._log("[+] VM execution paused")
-        self.pause_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.pause_btn)
 
     def _on_pause_vm_error(self, exc: object) -> None:
         """Handle VM pause failure.
@@ -2236,7 +2276,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("VM Pause Failed", "VM pause failed", exc)
-        self.pause_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.pause_btn)
 
     def _on_delete_snapshot(self) -> None:
         """Delete the selected snapshot from the sandbox."""
@@ -2276,7 +2316,7 @@ class SandboxPanel(AnalysisPanelBase):
             if item is not None and item.text(0) == snapshot_name:
                 self._snapshots_tree.takeTopLevelItem(idx)
                 break
-        self.delete_snap_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.delete_snap_btn)
 
     def _on_delete_snapshot_error(self, exc: object) -> None:
         """Handle snapshot deletion failure.
@@ -2285,7 +2325,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Snapshot Deletion Failed", "Snapshot deletion failed", exc)
-        self.delete_snap_btn.setEnabled(True)
+        self._restore_qemu_only_control(self.delete_snap_btn)
 
     def _on_execute_command(self) -> None:
         """Execute a command inside the sandbox."""
@@ -2329,7 +2369,7 @@ class SandboxPanel(AnalysisPanelBase):
                 self._console_output.appendPlainText(f"[stderr] {stderr}")
         else:
             self._log("[+] Command executed")
-        self._exec_cmd_btn.setEnabled(True)
+        self._restore_shared_control(self._exec_cmd_btn)
 
     def _on_execute_command_error(self, exc: object) -> None:
         """Handle command execution failure.
@@ -2338,7 +2378,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Command Execution Failed", "Command execution failed", exc)
-        self._exec_cmd_btn.setEnabled(True)
+        self._restore_shared_control(self._exec_cmd_btn)
 
     def _on_refresh_instances(self) -> None:
         """Refresh the Instances tab from the bridge instance list."""
@@ -2414,7 +2454,7 @@ class SandboxPanel(AnalysisPanelBase):
                     self._snapshots_tree.addTopLevelItem(QTreeWidgetItem([name, name, ""]))
                     count += 1
         self._log(f"[+] Snapshots refreshed: {count}")
-        self._refresh_snapshots_btn.setEnabled(True)
+        self._restore_qemu_only_control(self._refresh_snapshots_btn)
 
     def _on_refresh_snapshots_error(self, exc: object) -> None:
         """Handle snapshot list refresh failure.
@@ -2423,7 +2463,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Snapshot List Failed", "Snapshot list failed", exc)
-        self._refresh_snapshots_btn.setEnabled(True)
+        self._restore_qemu_only_control(self._refresh_snapshots_btn)
 
     def _on_pending_messages(self) -> None:
         """Retrieve pending guest-agent messages for the current QEMU sandbox."""
@@ -2464,7 +2504,7 @@ class SandboxPanel(AnalysisPanelBase):
                     else:
                         self._console_output.appendPlainText(f"[guest-agent] {raw_message}")
         self._log(f"[+] Pending messages retrieved: {count}")
-        self._pending_messages_btn.setEnabled(True)
+        self._restore_qemu_only_control(self._pending_messages_btn)
 
     def _on_pending_messages_error(self, exc: object) -> None:
         """Handle pending-messages retrieval failure.
@@ -2473,7 +2513,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Pending Messages Failed", "Pending messages retrieval failed", exc)
-        self._pending_messages_btn.setEnabled(True)
+        self._restore_qemu_only_control(self._pending_messages_btn)
 
     def _on_anti_evasion(self) -> None:
         """Apply anti-evasion hardening to the current QEMU sandbox instance."""
@@ -2509,7 +2549,7 @@ class SandboxPanel(AnalysisPanelBase):
             self._render_techniques(typed.get("techniques"))
         else:
             self._log("[+] Anti-evasion applied")
-        self._anti_evasion_btn.setEnabled(True)
+        self._restore_qemu_only_control(self._anti_evasion_btn)
 
     def _on_anti_evasion_error(self, exc: object) -> None:
         """Handle anti-evasion application failure.
@@ -2518,7 +2558,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Anti-Evasion Failed", "Anti-evasion failed", exc)
-        self._anti_evasion_btn.setEnabled(True)
+        self._restore_qemu_only_control(self._anti_evasion_btn)
 
     def _render_techniques(self, techniques: object) -> None:
         """Render applied anti-evasion techniques to the console output.
@@ -2573,7 +2613,7 @@ class SandboxPanel(AnalysisPanelBase):
                     else:
                         self._console_output.appendPlainText(f"[C2] {raw_pattern}")
         self._log(f"[+] C2 detection complete: {count} patterns")
-        self._detect_c2_btn.setEnabled(True)
+        self._restore_shared_control(self._detect_c2_btn)
 
     def _on_detect_c2_error(self, exc: object) -> None:
         """Handle C2 pattern detection failure.
@@ -2582,7 +2622,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("C2 Detection Failed", "C2 detection failed", exc)
-        self._detect_c2_btn.setEnabled(True)
+        self._restore_shared_control(self._detect_c2_btn)
 
     def _on_diff(self) -> None:
         """Compare two sandbox instances' execution reports."""
@@ -2626,7 +2666,7 @@ class SandboxPanel(AnalysisPanelBase):
                 self._render_diff(cast("dict[str, object]", diff_data))
         else:
             self._log("[+] Diff complete")
-        self._diff_btn.setEnabled(True)
+        self._restore_shared_control(self._diff_btn)
 
     def _render_diff(self, diff_data: dict[str, object]) -> None:
         """Render a per-field report comparison to the console output.
@@ -2649,7 +2689,7 @@ class SandboxPanel(AnalysisPanelBase):
             exc: The exception from the failed operation.
         """
         self._report_failure("Diff Failed", "Diff failed", exc)
-        self._diff_btn.setEnabled(True)
+        self._restore_shared_control(self._diff_btn)
 
     def _poll_status(self) -> None:
         """Poll the sandbox status periodically."""
