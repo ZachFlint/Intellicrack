@@ -3056,8 +3056,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--skip-content-verify",
         action="store_true",
         help=(
-            "Do not mount the Windows install medium to inspect its tree. The virtio-win medium is inspected "
-            "regardless, because the answer file's WinPE driver paths are enumerated from its real layout."
+            "Do not mount the Windows install medium to inspect its tree. The virtio-win medium is mounted "
+            "regardless, because the boot-critical driver files WinPE loads are copied off it onto the answer "
+            "medium this provisioner authors."
         ),
     )
     parser.add_argument("--keep-guest-firewall", action="store_true", help="Leave the guest firewall enabled.")
