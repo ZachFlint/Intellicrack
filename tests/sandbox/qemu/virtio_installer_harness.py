@@ -32,6 +32,7 @@ from scripts.sandbox.provision_windows_guest import (
     QEMU_GUEST_AGENT_LIBRARIES,
     QEMU_GUEST_AGENT_SPAWN_HELPERS,
     VIRTIO_MARKER_DIRECTORIES,
+    WINPE_DRIVER_STAGE_DIRECTORY,
     UnattendSettings,
     render_driver_installer,
 )
@@ -261,7 +262,7 @@ def answer_settings() -> UnattendSettings:
         locale="en-US",
         timezone="UTC",
         driver_letters=("C", "D", "E", "F", "G", "H"),
-        driver_subpaths=("viostor\\w11\\amd64", "vioserial\\w11\\amd64", "NetKVM\\w11\\amd64"),
+        driver_directory=WINPE_DRIVER_STAGE_DIRECTORY,
         disable_guest_firewall=True,
         answer_script="scripts\\install-guest-agent.cmd",
     )
