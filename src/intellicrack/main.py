@@ -353,6 +353,21 @@ def _import_credential_loader() -> type[CredentialLoader]:
     return cast("type[CredentialLoader]", mod.CredentialLoader)
 
 
+def _resolve_env_path() -> Path:
+    """Resolve the ``.env`` credential file path via the config module.
+
+    Delegates to :func:`intellicrack.core.config.get_env_file` so the path is
+    anchored to the deployment root (beside the executable in a frozen build,
+    the repository root in development) rather than the current working
+    directory.
+
+    Returns:
+        Path: Absolute path to the project-local ``.env`` file.
+    """
+    mod = importlib.import_module("intellicrack.core.config")
+    return cast("Callable[[], Path]", mod.get_env_file)()
+
+
 def _get_provider_registry() -> ProviderRegistry:
     """Get the global provider registry singleton instance.
 
@@ -1277,7 +1292,7 @@ async def _run_application(
     splash.set_progress(10, "Loading credentials...")
     app.processEvents()
 
-    credential_loader = _import_credential_loader()(Path(".env"))
+    credential_loader = _import_credential_loader()(_resolve_env_path())
 
     splash.set_progress(20, "Initializing providers...")
     app.processEvents()

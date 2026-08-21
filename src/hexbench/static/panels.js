@@ -12,12 +12,12 @@
    by re-registering their identifiers, which is what registerPanel already does
    for a repeated id. */
 
-import { callOp, getReference, listJobs, readWindow, toHex } from './api.js';
-import { tokenHex } from './charts.js';
+import { callOp, getReference, isTaggedBytes, listJobs, readWindow, taggedBytes, toHex } from './api.js';
+import { byteTypeChart, classificationChart, DIFF_HIGHLIGHT_TOKENS, diffTrackChart, digramChart, entropyStripChart, tokenHex } from './charts.js';
 import { createOperationConsole } from './console.js';
-import { iconButton, nextId, trapFocus } from './dom.js';
+import { decorativeGlyph, iconButton, nextId, trapFocus } from './dom.js';
 import { clearSuggestionCache, element, hexOf, humanSize, openArgumentDialog } from './forms.js';
-import { actionButton, banner, emptyState, fetchRaw, renderError, renderResult } from './renderers.js';
+import { actionButton, banner, cell, emptyState, errorKindLabel, fetchRaw, renderError, renderResult, table } from './renderers.js';
 
 
 const INSPECT_DEBOUNCE_MS = 90;
@@ -25,6 +25,37 @@ const OFFSET_DIGITS = 8;
 const DIFF_CAP = 1048576;
 const DEFAULT_MIN_STRING = 5;
 const DEFAULT_STRING_LIMIT = 2048;
+const RESULTS_LIMIT = 200;
+const SUMMARY_LIMIT = 56;
+const ENTROPY_STRIP_BLOCK = 256;
+const CLASSIFICATION_STRIP_BLOCK = 4096;
+const DIFF_BYTE_SNIPPET_CAP = 8;
+const DIFF_KIND_LABEL = new Map([
+  ['inserted_b', 'added'],
+  ['inserted_a', 'removed'],
+  ['modified', 'modified'],
+]);
+const DIFF_KIND_TONE = new Map([
+  ['inserted_b', 'is-success'],
+  ['inserted_a', 'is-error'],
+  ['modified', 'is-warning'],
+]);
+const DIFF_KIND_CLASS = new Map([
+  ['inserted_b', 'is-diff-added'],
+  ['inserted_a', 'is-diff-removed'],
+  ['modified', 'is-diff-modified'],
+]);
+
+/**
+ * The byte-grid overlay class `grid.highlight(ranges, className)` paints a
+ * diff region's kind with.
+ *
+ * @param {string} kind One of `diff_bytes`' `diff_type` values.
+ * @returns {string} `is-diff-added`, `is-diff-removed` or `is-diff-modified`.
+ */
+export function diffHighlightClass(kind) {
+  return DIFF_KIND_CLASS.get(kind) ?? 'is-diff-modified';
+}
 const SEARCH_OPERATIONS = new Set([
   'search_bytes',
   'search_hex',
@@ -53,6 +84,28 @@ const EXPORT_FORMATS = [
 
 function offsetText(value) {
   return `0x${hexOf(value, OFFSET_DIGITS)}`;
+}
+
+/**
+ * A short hexadecimal preview of a diff region's bytes, for the Diff panel's
+ * table.
+ *
+ * @param {Uint8Array|null} bytes The side's full read window, or null when
+ * that side was never fetched.
+ * @param {number} offset Byte offset the region starts at, in `bytes`.
+ * @param {number} length Number of bytes the region covers.
+ * @returns {string} Up to {@link DIFF_BYTE_SNIPPET_CAP} space-separated hex
+ * pairs, trailed with an ellipsis when the region runs longer.
+ */
+function shortDiffHex(bytes, offset, length) {
+  if (bytes === null || bytes === undefined) {
+    return '';
+  }
+  const start = Math.max(0, offset);
+  const shown = Math.min(length, DIFF_BYTE_SNIPPET_CAP);
+  const slice = bytes.subarray(start, start + shown);
+  const text = [...slice].map((value) => hexOf(value, 2)).join(' ');
+  return length > DIFF_BYTE_SNIPPET_CAP ? `${text} …` : text;
 }
 
 function panelHeader(title, subtitleText) {
@@ -133,18 +186,31 @@ function createEnvironment(bench) {
     };
   };
 
+  /* Both events carry the arguments the run was made with, which the result
+     itself does not: a panel recording what the session has done needs to be
+     able to offer the run again, and re-deriving the arguments from a form that
+     has since been rebuilt is not the same thing. The failed event is separate
+     rather than an `operation` with an error on it, because `operation` already
+     has subscribers that read `result` unconditionally. */
   const run = async (name, args, handle) => {
-    const result = await callOp(name, { handle, arguments: args });
-    if (result.created_handle) {
-      await bench.reload(result.created_handle);
-    } else if (result.document && (MUTATING_REFRESH.has(name) || result.document.generation !== bench.activeDocument()?.generation)) {
-      await bench.reload(result.document.handle);
+    const started = performance.now();
+    let result;
+    try {
+      result = await callOp(name, { handle, arguments: args });
+      if (result.created_handle) {
+        await bench.reload(result.created_handle);
+      } else if (result.document && (MUTATING_REFRESH.has(name) || result.document.generation !== bench.activeDocument()?.generation)) {
+        await bench.reload(result.document.handle);
+      }
+    } catch (error) {
+      bench.emit('operation-failed', { name, arguments: args, handle, error, duration_ms: performance.now() - started });
+      throw error;
     }
     if (MUTATING_REFRESH.has(name)) {
       clearSuggestionCache();
       bench.grid.invalidate();
     }
-    bench.emit('operation', { name, result });
+    bench.emit('operation', { name, result, arguments: args, handle });
     return result;
   };
 
@@ -421,10 +487,19 @@ function bookmarksPanel(env) {
 function templatesPanel(env) {
   let body = null;
   let subtitle = null;
+  let footerText = null;
   let filter = null;
   let templates = [];
   let resultHost = null;
   let lastHandle = '';
+  let appliedName = null;
+  let appliedCount = 0;
+
+  const updateSubtitle = () => {
+    subtitle.textContent = appliedName !== null
+      ? `${appliedName} · ${appliedCount} field${appliedCount === 1 ? '' : 's'}`
+      : `${templates.length} template${templates.length === 1 ? '' : 's'}`;
+  };
 
   const paint = () => {
     const needle = (filter?.value ?? '').trim().toLowerCase();
@@ -471,7 +546,13 @@ function templatesPanel(env) {
     const args = { name, offset: context.caret };
     busy(resultHost, `applying ${name} at ${offsetText(context.caret)}…`);
     env.run('apply_template', args, context.handle)
-      .then((result) => resultHost.replaceChildren(renderResult('apply_template', result, env.resultContext(args, context.handle))))
+      .then((result) => {
+        const fields = Array.isArray(result.value) ? result.value : [];
+        appliedName = name;
+        appliedCount = fields.length;
+        updateSubtitle();
+        resultHost.replaceChildren(renderResult('apply_template', result, env.resultContext(args, context.handle)));
+      })
       .catch((error) => resultHost.replaceChildren(renderError(error)));
   };
 
@@ -485,10 +566,17 @@ function templatesPanel(env) {
     callOp('list_templates_detailed', { handle: context.handle, arguments: {} })
       .then((result) => {
         templates = Array.isArray(result.value) ? result.value : [];
-        subtitle.textContent = `${templates.length} templates`;
+        updateSubtitle();
         paint();
       })
       .catch((error) => body.replaceChildren(renderError(error)));
+  };
+
+  /** Drop whatever template result and byte marking belonged to the document being left. */
+  const resetApplied = () => {
+    appliedName = null;
+    appliedCount = 0;
+    env.bench.highlight([], 'is-field');
   };
 
   return {
@@ -517,7 +605,10 @@ function templatesPanel(env) {
       built.actions.appendChild(panelAction('⟳', 'Re-read the registry', reload));
       body = element('div', 'hb-panel-body is-padded');
       resultHost = element('div', 'hb-stack');
-      host.append(built.header, body);
+      const footer = element('div', 'hb-panel-footer');
+      footerText = element('span', 'hb-mono hb-dim', 'selecting a field marks its bytes with is-field');
+      footer.appendChild(footerText);
+      host.append(built.header, body, footer);
       reload();
     },
     update: (context) => {
@@ -526,6 +617,7 @@ function templatesPanel(env) {
         return;
       }
       lastHandle = handle;
+      resetApplied();
       reload();
     },
   };
@@ -537,6 +629,7 @@ function vaMappingsPanel(env) {
   let body = null;
   let subtitle = null;
   let tableHost = null;
+  let selectedIndex = -1;
   let count = 0;
   let lastKey = '';
 
@@ -607,31 +700,73 @@ function vaMappingsPanel(env) {
     return stack;
   };
 
+  /**
+   * The panel's own table, built directly against `hb-table` rather than
+   * through `renderResult` - the spec's columns (File / VA / Size) drop the
+   * generic renderer's leading index and add a per-row remove control, and
+   * its body carries no padding, both of which the shared `list_va_mappings`
+   * view is not free to assume for every caller.
+   *
+   * @param {Array<[number, number, number]>} rows `(file_offset, virtual_address, length)` triples.
+   * @param {string} handle The document the mappings belong to.
+   * @returns {void}
+   */
+  const paintTable = (rows, handle) => {
+    if (rows.length === 0) {
+      tableHost.replaceChildren(emptyState('No mappings', 'Add one to translate between file offsets and virtual addresses.', '⇄'));
+      return;
+    }
+    const built = table([
+      { label: 'file', className: 'is-mono' },
+      { label: 'va', className: 'is-mono' },
+      { label: 'size', className: 'is-numeric' },
+      { label: '', className: '' },
+    ]);
+    rows.forEach(([offset, va, length], index) => {
+      const row = document.createElement('tr');
+      row.classList.toggle('is-selected', index === selectedIndex);
+      row.append(
+        cell(offsetText(offset), 'is-mono is-primary'),
+        cell(offsetText(va), 'is-mono'),
+        cell(humanSize(length), 'is-numeric'),
+      );
+      const actionCell = document.createElement('td');
+      actionCell.appendChild(actionButton('remove', `Remove mapping ${index}`, () => {
+        env.run('remove_va_mapping', { index }, handle)
+          .then(() => reload())
+          .catch((error) => env.toast('error', 'Remove failed', error.message));
+      }));
+      row.appendChild(actionCell);
+      row.addEventListener('click', () => {
+        selectedIndex = index;
+        for (const selected of built.body.querySelectorAll('tr.is-selected')) {
+          selected.classList.remove('is-selected');
+        }
+        row.classList.add('is-selected');
+        env.bench.select(offset, Math.max(1, length));
+      });
+      built.body.appendChild(row);
+    });
+    tableHost.replaceChildren(built.node);
+  };
+
   const reload = () => {
     const context = env.formContext();
     if (!context.handle) {
       count = 0;
-      body.replaceChildren(emptyState('No document', 'Mappings belong to an open document.', '⇄'));
+      selectedIndex = -1;
+      tableHost.replaceChildren(emptyState('No document', 'Mappings belong to an open document.', '⇄'));
       return;
     }
     callOp('list_va_mappings', { handle: context.handle, arguments: {} })
       .then((result) => {
         const rows = Array.isArray(result.value) ? result.value : [];
         count = rows.length;
-        subtitle.textContent = `${count} mapping${count === 1 ? '' : 's'}`;
-        tableHost.replaceChildren(renderResult('list_va_mappings', result, env.resultContext({}, context.handle)));
-        if (rows.length > 0) {
-          const remove = element('div', 'hb-row-flex');
-          remove.appendChild(element('span', 'hb-dim', 'remove'));
-          rows.forEach((_row, index) => {
-            remove.appendChild(actionButton(String(index), `Remove mapping ${index}`, () => {
-              env.run('remove_va_mapping', { index }, context.handle)
-                .then(() => reload())
-                .catch((error) => env.toast('error', 'Remove failed', error.message));
-            }));
-          });
-          tableHost.appendChild(remove);
+        if (selectedIndex >= rows.length) {
+          selectedIndex = -1;
         }
+        subtitle.textContent = `${count} mapping${count === 1 ? '' : 's'}`;
+        paintTable(rows, context.handle);
       })
       .catch((error) => tableHost.replaceChildren(renderError(error)));
   };
@@ -650,10 +785,12 @@ function vaMappingsPanel(env) {
         promptAndRun(env, 'add_va_mapping', { file_offset: env.formContext().caret }).then(reload);
       }));
       built.actions.appendChild(panelAction('⟳', 'Re-read the mapping list', reload));
-      body = element('div', 'hb-panel-body is-padded hb-stack');
-      tableHost = element('div', 'hb-stack');
-      body.append(tableHost, converter());
-      host.append(built.header, body);
+      body = element('div', 'hb-panel-body');
+      tableHost = element('div');
+      body.appendChild(tableHost);
+      const toolsBody = element('div', 'hb-panel-body is-padded');
+      toolsBody.appendChild(converter());
+      host.append(built.header, body, toolsBody);
       reload();
     },
     update: (context) => {
@@ -902,70 +1039,214 @@ function stringsPanel(env) {
 function diffPanel(env) {
   let body = null;
   let subtitle = null;
-  let resultHost = null;
-  let controlHost = null;
+  let mapHost = null;
+  let tableHost = null;
+  let footerText = null;
   let lastDocuments = '';
+  let lastActiveHandle = '';
+  let state = null;
+  let minimap = null;
 
   const documentOptions = () => env.bench.documents().map((info) => ({ value: info.handle, label: `${info.label} (${humanSize(info.length)})` }));
 
-  const select = (options) => {
-    const node = document.createElement('select');
-    node.className = 'hb-select';
-    for (const option of options) {
-      node.appendChild(new Option(option.label, option.value));
+  const teardownMinimap = () => {
+    if (minimap !== null) {
+      minimap.chart.destroy();
+      minimap = null;
     }
-    return node;
   };
 
-  const buildControls = () => {
-    const stack = element('div', 'hb-stack');
-
-    const documents = element('div', 'hb-stack');
-    documents.appendChild(element('div', 'hb-panel-title', 'diff_bytes — two open documents'));
-    const options = documentOptions();
-    const first = select(options);
-    const second = select(options);
-    if (options.length > 1) {
-      second.value = options[1].value;
+  const clearHighlights = () => {
+    for (const kind of DIFF_HIGHLIGHT_TOKENS.keys()) {
+      env.bench.highlight([], diffHighlightClass(kind));
     }
-    const documentsRow = element('div', 'hb-field-row');
-    documentsRow.append(first, element('span', 'hb-dim', 'vs'), second);
-    documentsRow.appendChild(actionButton('compare', 'Read both documents and compare their bytes', () => {
-      const left = env.bench.documents().find((info) => info.handle === first.value);
-      const right = env.bench.documents().find((info) => info.handle === second.value);
-      if (!left || !right) {
-        env.toast('warning', 'Pick two documents', 'diff_bytes needs two open documents.');
-        return;
+  };
+
+  const applyHighlights = () => {
+    const active = env.formContext().handle;
+    const key = state === null ? null : active === state.left.handle ? 'offset_a' : active === state.right.handle ? 'offset_b' : null;
+    for (const kind of DIFF_HIGHLIGHT_TOKENS.keys()) {
+      const className = diffHighlightClass(kind);
+      if (key === null) {
+        env.bench.highlight([], className);
+        continue;
       }
-      busy(resultHost, 'reading both documents…');
-      Promise.all([
-        readWindow(left.handle, 0, Math.min(left.length, DIFF_CAP)),
-        readWindow(right.handle, 0, Math.min(right.length, DIFF_CAP)),
-      ])
-        .then(([a, b]) => {
-          const args = { data_a: toHex(a.bytes).toLowerCase(), data_b: toHex(b.bytes).toLowerCase() };
-          const capped = left.length > DIFF_CAP || right.length > DIFF_CAP;
-          return env.run('diff_bytes', args, null).then((result) => {
-            subtitle.textContent = `${left.label} vs ${right.label}`;
-            resultHost.replaceChildren(renderResult('diff_bytes', result, env.resultContext(args, null)));
-            if (capped) {
-              resultHost.prepend(banner('warning', `Compared the first ${humanSize(DIFF_CAP)} of each`, 'A longer document is read through the window endpoint, which caps a single read at one mebibyte.'));
-            }
-          });
-        })
-        .catch((error) => resultHost.replaceChildren(renderError(error)));
-    }, 'hb-btn is-sm is-primary'));
-    documents.append(documentsRow, element('div', 'hb-arg-hint', 'Bytes are read out of the open documents, so an unsaved edit is compared as it stands.'));
-
-    const files = element('div', 'hb-stack');
-    files.appendChild(element('div', 'hb-panel-title', 'diff_files — two paths on this machine'));
-    const filesRow = element('div', 'hb-field-row');
-    filesRow.appendChild(actionButton('choose paths…', 'Open the diff_files form', () => promptAndRun(env, 'diff_files', {})));
-    files.append(filesRow, element('div', 'hb-arg-hint', 'The paths are resolved by the server process; a missing file is an OSError rather than an empty diff.'));
-
-    stack.append(documents, files);
-    return stack;
+      const ranges = state.changed
+        .filter((region) => String(region.diff_type) === kind)
+        .map((region) => ({ offset: Number(region[key] ?? 0), length: Number(region.length ?? 0) }));
+      env.bench.highlight(ranges, className);
+    }
   };
+
+  const regionOffset = (region) => {
+    const active = env.formContext().handle;
+    const key = active === state?.right.handle ? 'offset_b' : 'offset_a';
+    return { offset: Number(region[key] ?? 0), length: Math.max(1, Number(region.length ?? 0)) };
+  };
+
+  const navigateTo = (region) => {
+    if (state === null) {
+      return;
+    }
+    state.cursor = state.changed.indexOf(region);
+    const { offset, length } = regionOffset(region);
+    env.bench.select(offset, length);
+  };
+
+  const stepNext = () => {
+    if (state === null || state.changed.length === 0) {
+      env.toast('info', 'Nothing to step through', 'Compare two documents first.');
+      return;
+    }
+    state.cursor = (state.cursor + 1) % state.changed.length;
+    navigateTo(state.changed[state.cursor]);
+  };
+
+  const bytesCell = (region) => {
+    const kind = String(region.diff_type);
+    if (kind === 'modified') {
+      return `${shortDiffHex(state.leftBytes, region.offset_a, region.length)} → ${shortDiffHex(state.rightBytes, region.offset_b, region.length)}`;
+    }
+    if (kind === 'inserted_b') {
+      return shortDiffHex(state.rightBytes, region.offset_b, region.length);
+    }
+    if (kind === 'inserted_a') {
+      return shortDiffHex(state.leftBytes, region.offset_a, region.length);
+    }
+    return '';
+  };
+
+  const emptyDiff = () => {
+    const empty = emptyState('Nothing compared yet', 'Pick two open documents to see where they differ.', '⇔');
+    const row = element('div', 'hb-row-flex');
+    row.appendChild(actionButton('choose documents…', 'Pick two open documents to compare', chooseTarget));
+    empty.appendChild(row);
+    return empty;
+  };
+
+  const paintTable = () => {
+    const built = table([
+      { label: 'offset', className: 'is-mono' },
+      { label: 'len', className: 'is-numeric' },
+      { label: 'kind', className: '' },
+      { label: 'bytes', className: 'is-mono' },
+    ]);
+    for (const region of state.changed) {
+      const kind = String(region.diff_type);
+      const row = document.createElement('tr');
+      row.append(cell(offsetText(Number(region.offset_a ?? 0)), 'is-mono'), cell(String(region.length ?? 0), 'is-numeric'));
+      const kindCell = document.createElement('td');
+      kindCell.appendChild(element('span', `hb-badge ${DIFF_KIND_TONE.get(kind) ?? ''}`.trim(), DIFF_KIND_LABEL.get(kind) ?? kind));
+      row.appendChild(kindCell);
+      row.appendChild(cell(bytesCell(region), 'is-mono'));
+      row.addEventListener('click', () => navigateTo(region));
+      built.body.appendChild(row);
+    }
+    if (state.changed.length === 0) {
+      tableHost.replaceChildren(
+        banner('success', 'The two inputs are identical', `${state.regions.length} region${state.regions.length === 1 ? '' : 's'} in the alignment, all matching.`),
+        built.node,
+      );
+    } else {
+      tableHost.replaceChildren(built.node);
+    }
+  };
+
+  const syncCaret = (context) => {
+    if (minimap === null) {
+      return;
+    }
+    const activeHandle = context.document?.handle ?? null;
+    minimap.setCaret(state !== null && activeHandle === state.left.handle ? context.caret.offset : null);
+  };
+
+  const paintMinimap = () => {
+    teardownMinimap();
+    minimap = diffTrackChart(state.changed, { span: Math.max(state.left.length, state.right.length), onPick: navigateTo });
+    mapHost.replaceChildren(minimap.element);
+    syncCaret(env.bench.context());
+  };
+
+  const paintResult = () => {
+    subtitle.textContent = `${state.left.label} ↔ ${state.right.label}`;
+    footerText.textContent = `diff_bytes · ${humanSize(state.comparedBytes)} compared in ${state.durationMs.toFixed(2)} ms`;
+    paintMinimap();
+    paintTable();
+    applyHighlights();
+  };
+
+  const resetState = () => {
+    state = null;
+    teardownMinimap();
+    mapHost.replaceChildren();
+    clearHighlights();
+    subtitle.textContent = 'nothing compared';
+    footerText.textContent = '';
+    tableHost.replaceChildren(emptyDiff());
+  };
+
+  const compare = (leftHandle, rightHandle) => {
+    const left = env.bench.documents().find((info) => info.handle === leftHandle);
+    const right = env.bench.documents().find((info) => info.handle === rightHandle);
+    if (!left || !right) {
+      env.toast('warning', 'Pick two documents', 'diff_bytes needs two open documents.');
+      return;
+    }
+    teardownMinimap();
+    mapHost.replaceChildren();
+    busy(tableHost, 'reading both documents…');
+    Promise.all([
+      readWindow(left.handle, 0, Math.min(left.length, DIFF_CAP)),
+      readWindow(right.handle, 0, Math.min(right.length, DIFF_CAP)),
+    ])
+      .then(([a, b]) => {
+        const args = { data_a: toHex(a.bytes).toLowerCase(), data_b: toHex(b.bytes).toLowerCase() };
+        const capped = left.length > DIFF_CAP || right.length > DIFF_CAP;
+        return env.run('diff_bytes', args, null).then((result) => {
+          const regions = Array.isArray(result.value?.regions) ? result.value.regions : [];
+          state = {
+            left,
+            right,
+            leftBytes: a.bytes,
+            rightBytes: b.bytes,
+            regions,
+            changed: regions.filter((region) => DIFF_HIGHLIGHT_TOKENS.has(String(region.diff_type))),
+            comparedBytes: Math.max(a.bytes.length, b.bytes.length),
+            durationMs: result.duration_ms,
+            cursor: -1,
+          };
+          paintResult();
+          if (capped) {
+            tableHost.prepend(banner('warning', `Compared the first ${humanSize(DIFF_CAP)} of each`, 'A longer document is read through the window endpoint, which caps a single read at one mebibyte.'));
+          }
+        });
+      })
+      .catch((error) => tableHost.replaceChildren(renderError(error)));
+  };
+
+  async function chooseTarget() {
+    const options = documentOptions();
+    if (options.length < 2) {
+      env.toast('warning', 'Need two documents', 'Open a second document to compare against.');
+      return;
+    }
+    const values = await env.bench.dialog({
+      title: 'Compare documents',
+      confirmLabel: 'Compare',
+      fields: [
+        { name: 'left', label: 'first', type: 'select', value: state?.left.handle ?? options[0].value, options },
+        { name: 'right', label: 'second', type: 'select', value: state?.right.handle ?? options[Math.min(1, options.length - 1)].value, options },
+      ],
+    });
+    if (values === null) {
+      return;
+    }
+    if (values.left === values.right) {
+      env.toast('warning', 'Pick two different documents', 'Comparing a document against itself is always a match.');
+      return;
+    }
+    compare(values.left, values.right);
+  }
 
   return {
     id: 'panels.diff',
@@ -976,25 +1257,514 @@ function diffPanel(env) {
     mount: (host) => {
       const built = panelHeader('difference', 'nothing compared');
       subtitle = built.subtitle;
+      built.actions.appendChild(panelAction('⇄', 'Choose two documents to compare', chooseTarget));
+      built.actions.appendChild(panelAction('→', 'Jump to the next changed region', stepNext));
       body = element('div', 'hb-panel-body is-padded hb-stack');
-      resultHost = element('div', 'hb-stack');
-      controlHost = element('div');
-      controlHost.appendChild(buildControls());
+      mapHost = element('div');
+      tableHost = element('div', 'hb-stack');
+      tableHost.appendChild(emptyDiff());
+      body.append(mapHost, tableHost);
+      const footer = element('div', 'hb-panel-footer');
+      footerText = element('span', 'hb-mono hb-dim');
+      footer.appendChild(footerText);
       lastDocuments = env.bench.documents().map((info) => info.handle).join(',');
-      body.append(controlHost, resultHost);
-      host.append(built.header, body);
-      resultHost.replaceChildren(emptyState('Nothing compared yet', 'Pick two open documents, or two paths on this machine.', '⇔'));
+      host.append(built.header, body, footer);
     },
     update: (context) => {
-      if (controlHost === null) {
+      if (body === null) {
         return;
       }
       const handles = context.documents.map((info) => info.handle).join(',');
-      if (handles === lastDocuments) {
+      if (handles !== lastDocuments) {
+        lastDocuments = handles;
+        if (state !== null && (!context.documents.some((info) => info.handle === state.left.handle) || !context.documents.some((info) => info.handle === state.right.handle))) {
+          resetState();
+        }
+      }
+      const activeHandle = context.document?.handle ?? '';
+      if (activeHandle !== lastActiveHandle) {
+        lastActiveHandle = activeHandle;
+        if (state !== null) {
+          applyHighlights();
+        }
+      }
+      syncCaret(context);
+    },
+  };
+}
+
+/* ---------------------------------------------------------- panel: entropy */
+
+/**
+ * The Shannon-entropy dock panel: a live strip that marks the caret's
+ * position, rather than the one-shot modal `analyze.entropy` used to open.
+ *
+ * Pinning freezes the panel on whichever document was active when it was
+ * pinned - a document switch neither recomputes nor moves the caret marker
+ * until it is unpinned - so a reading stays put while the grid is used to
+ * look at something else.
+ *
+ * @param {object} env The panel environment built by {@link createEnvironment}.
+ * @returns {object} The panel descriptor.
+ */
+function entropyPanel(env) {
+  let body = null;
+  let chartHandle = null;
+  let pinned = false;
+  let pinGlyph = null;
+  let pinButton = null;
+  let trackedKey = '';
+
+  const teardown = () => {
+    if (chartHandle !== null) {
+      chartHandle.chart.destroy();
+      chartHandle = null;
+    }
+  };
+
+  const paintEmpty = (title, hint) => {
+    teardown();
+    body.replaceChildren(emptyState(title, hint, '≈'));
+  };
+
+  const load = (targetDocument) => {
+    if (!targetDocument?.handle) {
+      trackedKey = '';
+      paintEmpty('No document', 'Open a file to see its entropy plotted in 256-byte blocks.');
+      return;
+    }
+    trackedKey = documentKey(targetDocument);
+    busy(body, 'reading entropy…');
+    callOp('entropy_map', { handle: targetDocument.handle, arguments: { block_size: ENTROPY_STRIP_BLOCK } })
+      .then((result) => {
+        if (trackedKey !== documentKey(targetDocument)) {
+          return;
+        }
+        const values = Array.isArray(result.value) ? result.value.map(Number) : [];
+        if (values.length === 0) {
+          paintEmpty('No blocks to map', 'The document is shorter than one block.');
+          return;
+        }
+        teardown();
+        chartHandle = entropyStripChart(values, {
+          blockSize: ENTROPY_STRIP_BLOCK,
+          documentLength: targetDocument.length,
+          onSeek: (offset) => env.bench.seek(offset),
+        });
+        body.replaceChildren(chartHandle.element);
+      })
+      .catch((error) => {
+        if (trackedKey !== documentKey(targetDocument)) {
+          return;
+        }
+        teardown();
+        body.replaceChildren(renderError(error));
+      });
+  };
+
+  return {
+    id: 'panels.entropy',
+    title: 'Entropy',
+    dock: 'bottom',
+    side: 'bottom',
+    order: 40,
+    mount: (host) => {
+      const built = panelHeader('entropy', 'block 256 B · follows caret');
+      built.actions.appendChild(panelAction('⟳', 'Recompute the entropy map', () => load(env.formContext().document)));
+      pinButton = panelAction('○', 'Pin to this document', () => {
+        pinned = !pinned;
+        pinGlyph.textContent = pinned ? '●' : '○';
+        const label = pinned ? 'Unpin — follow the active document' : 'Pin to this document';
+        pinButton.title = label;
+        pinButton.setAttribute('aria-label', label);
+      });
+      pinGlyph = pinButton.firstChild;
+      built.actions.appendChild(pinButton);
+      body = element('div', 'hb-panel-body is-padded');
+      host.append(built.header, body);
+      load(env.formContext().document);
+    },
+    update: (context) => {
+      if (body === null) {
         return;
       }
-      lastDocuments = handles;
-      controlHost.replaceChildren(buildControls());
+      const activeKey = documentKey(context.document);
+      if (!pinned && trackedKey !== activeKey) {
+        load(context.document);
+        return;
+      }
+      if (chartHandle !== null) {
+        chartHandle.setCaret(trackedKey === activeKey ? context.caret.offset : null);
+      }
+    },
+  };
+}
+
+/* -------------------------------------------------------- panel: byte types */
+
+/**
+ * The byte-type distribution dock panel: null, printable, control and high
+ * bytes as one segmented bar, recomputed whenever the active document changes.
+ *
+ * @param {object} env The panel environment built by {@link createEnvironment}.
+ * @returns {object} The panel descriptor.
+ */
+function byteTypesPanel(env) {
+  let body = null;
+  let subtitle = null;
+  let lastKey = '';
+
+  const reload = (context) => {
+    lastKey = documentKey(context.document);
+    const handle = context.document?.handle ?? null;
+    if (handle === null) {
+      body.replaceChildren(emptyState('No document', 'Open a file to see its byte-type split.', '▥'));
+      return;
+    }
+    busy(body, 'reading…');
+    callOp('byte_type_distribution', { handle, arguments: {} })
+      .then((result) => {
+        if (lastKey !== documentKey(context.document)) {
+          return;
+        }
+        const counts = Array.isArray(result.value) ? result.value.map(Number) : [0, 0, 0, 0];
+        subtitle.textContent = 'whole document';
+        body.replaceChildren(byteTypeChart(counts).element);
+      })
+      .catch((error) => {
+        if (lastKey === documentKey(context.document)) {
+          body.replaceChildren(renderError(error));
+        }
+      });
+  };
+
+  return {
+    id: 'panels.byteTypes',
+    title: 'Byte types',
+    dock: 'bottom',
+    side: 'bottom',
+    order: 41,
+    mount: (host) => {
+      const built = panelHeader('byte types', 'no document');
+      subtitle = built.subtitle;
+      built.actions.appendChild(panelAction('⟳', 'Recompute the byte-type split', () => reload(env.bench.context())));
+      body = element('div', 'hb-panel-body is-padded');
+      host.append(built.header, body);
+      reload(env.bench.context());
+    },
+    update: (context) => {
+      if (body === null || documentKey(context.document) === lastKey) {
+        return;
+      }
+      reload(context);
+    },
+  };
+}
+
+/* ----------------------------------------------------- panel: classification */
+
+/**
+ * The content-classification dock panel: one colour-coded column per block,
+ * recomputed whenever the active document changes.
+ *
+ * @param {object} env The panel environment built by {@link createEnvironment}.
+ * @returns {object} The panel descriptor.
+ */
+function classificationPanel(env) {
+  let body = null;
+  let subtitle = null;
+  let lastKey = '';
+
+  const reload = (context) => {
+    lastKey = documentKey(context.document);
+    const handle = context.document?.handle ?? null;
+    if (handle === null) {
+      body.replaceChildren(emptyState('No document', 'Open a file to see its content classification.', '▤'));
+      return;
+    }
+    subtitle.textContent = `${humanSize(CLASSIFICATION_STRIP_BLOCK)} blocks`;
+    busy(body, 'reading…');
+    fetchRaw('content_classification', { block_size: CLASSIFICATION_STRIP_BLOCK }, handle)
+      .then((buffer) => {
+        if (lastKey !== documentKey(context.document)) {
+          return;
+        }
+        const codes = new Uint8Array(buffer);
+        body.replaceChildren(classificationChart(codes, { blockSize: CLASSIFICATION_STRIP_BLOCK, onSeek: (offset) => env.bench.seek(offset) }).element);
+      })
+      .catch((error) => {
+        if (lastKey === documentKey(context.document)) {
+          body.replaceChildren(renderError(error));
+        }
+      });
+  };
+
+  return {
+    id: 'panels.classification',
+    title: 'Classification',
+    dock: 'bottom',
+    side: 'bottom',
+    order: 42,
+    mount: (host) => {
+      const built = panelHeader('content classification', 'no document');
+      subtitle = built.subtitle;
+      built.actions.appendChild(panelAction('⟳', 'Recompute the classification map', () => reload(env.bench.context())));
+      body = element('div', 'hb-panel-body is-padded');
+      host.append(built.header, body);
+      reload(env.bench.context());
+    },
+    update: (context) => {
+      if (body === null || documentKey(context.document) === lastKey) {
+        return;
+      }
+      reload(context);
+    },
+  };
+}
+
+/* ------------------------------------------------------------ panel: digram */
+
+/**
+ * The digram-matrix dock panel: the 256 by 256 byte-pair plane, recomputed
+ * whenever the active document changes.
+ *
+ * @param {object} env The panel environment built by {@link createEnvironment}.
+ * @returns {object} The panel descriptor.
+ */
+function digramPanel(env) {
+  let body = null;
+  let subtitle = null;
+  let lastKey = '';
+
+  const reload = (context) => {
+    lastKey = documentKey(context.document);
+    const handle = context.document?.handle ?? null;
+    if (handle === null) {
+      body.replaceChildren(emptyState('No document', 'Open a file to see its digram matrix.', '▦'));
+      return;
+    }
+    busy(body, 'reading…');
+    callOp('digram_matrix', { handle, arguments: {} })
+      .then((result) => {
+        if (lastKey !== documentKey(context.document)) {
+          return;
+        }
+        const counts = Array.isArray(result.value) ? result.value : [];
+        if (counts.length === 0) {
+          subtitle.textContent = 'no digrams';
+          body.replaceChildren(emptyState('No digrams', 'The document has fewer than two bytes.', '▦'));
+          return;
+        }
+        subtitle.textContent = `${counts.length} pairs`;
+        body.replaceChildren(digramChart(counts).element);
+      })
+      .catch((error) => {
+        if (lastKey === documentKey(context.document)) {
+          body.replaceChildren(renderError(error));
+        }
+      });
+  };
+
+  return {
+    id: 'panels.digram',
+    title: 'Digram',
+    dock: 'bottom',
+    side: 'bottom',
+    order: 43,
+    mount: (host) => {
+      const built = panelHeader('digram matrix', 'no document');
+      subtitle = built.subtitle;
+      built.actions.appendChild(panelAction('⟳', 'Recompute the digram matrix', () => reload(env.bench.context())));
+      body = element('div', 'hb-panel-body is-padded');
+      host.append(built.header, body);
+      reload(env.bench.context());
+    },
+    update: (context) => {
+      if (body === null || documentKey(context.document) === lastKey) {
+        return;
+      }
+      reload(context);
+    },
+  };
+}
+
+/* ---------------------------------------------------------- panel: results */
+
+/**
+ * A one-line rendering of whatever an operation returned.
+ *
+ * @param {unknown} value The JSON-safe value from an invocation result.
+ * @returns {string} A summary short enough for a tree row.
+ */
+function valueSummary(value) {
+  if (value === null || value === undefined) {
+    return 'null';
+  }
+  if (isTaggedBytes(value)) {
+    return humanSize(taggedBytes(value).length);
+  }
+  if (Array.isArray(value)) {
+    return `${value.length} ${value.length === 1 ? 'entry' : 'entries'}`;
+  }
+  if (typeof value === 'object') {
+    const keys = Object.keys(value);
+    return `${keys.length} ${keys.length === 1 ? 'entry' : 'entries'}`;
+  }
+  const text = String(value).replace(/\s+/g, ' ').trim();
+  return text.length > SUMMARY_LIMIT ? `${text.slice(0, SUMMARY_LIMIT)}…` : text;
+}
+
+/**
+ * The type name shown against an argument.
+ *
+ * @param {unknown} value The argument as it was sent.
+ * @returns {string} A short type name.
+ */
+function argumentType(value) {
+  if (value === null || value === undefined) {
+    return 'null';
+  }
+  if (isTaggedBytes(value)) {
+    return 'bytes';
+  }
+  if (Array.isArray(value)) {
+    return 'list';
+  }
+  return typeof value;
+}
+
+/**
+ * The twisty's classes for a run, given whether it has arguments to show.
+ *
+ * @param {number} count Number of arguments the run was made with.
+ * @param {boolean} expanded Whether the run starts with its arguments showing.
+ * @returns {string} The class list for the twisty glyph.
+ */
+function twistyClass(count, expanded) {
+  if (count === 0) {
+    return 'hb-tree-twisty is-leaf';
+  }
+  return expanded ? 'hb-tree-twisty is-open' : 'hb-tree-twisty';
+}
+
+function resultsPanel(env) {
+  let body = null;
+  let footerText = null;
+  const runs = [];
+
+  const runNode = (entry, expanded) => {
+    const fragment = document.createDocumentFragment();
+    const args = entry.args === null ? [] : Object.entries(entry.args);
+
+    const node = element('div', 'hb-tree-node');
+    node.style.setProperty('--hb-tree-depth', '0');
+    node.appendChild(decorativeGlyph('', 'hb-tree-indent'));
+    const twisty = decorativeGlyph('', twistyClass(args.length, expanded));
+    node.appendChild(twisty);
+
+    const label = element('span', 'hb-tree-label', entry.name);
+    if (entry.error !== null) {
+      label.style.color = 'var(--hb-error)';
+    }
+    node.appendChild(label);
+    node.appendChild(element('span', 'hb-tree-type', entry.error === null ? entry.returns : 'error'));
+    const value = entry.error === null
+      ? valueSummary(entry.value)
+      : `${errorKindLabel(entry.error.kind ?? 'internal')} · ${entry.error.message}`;
+    node.appendChild(element('span', 'hb-tree-value', value));
+    node.appendChild(element('span', 'hb-tree-offset', `${entry.duration.toFixed(2)} ms`));
+    node.title = `${entry.name} · ${entry.at.toLocaleTimeString()}`;
+    node.addEventListener('click', () => {
+      for (const selected of body?.querySelectorAll('.hb-tree-node.is-selected') ?? []) {
+        selected.classList.remove('is-selected');
+      }
+      node.classList.add('is-selected');
+      env.bench.openOperation(entry.name, entry.args ?? undefined);
+    });
+    fragment.appendChild(node);
+
+    if (args.length === 0) {
+      return fragment;
+    }
+    const holder = element('div');
+    holder.hidden = !expanded;
+    for (const [name, argument] of args) {
+      const child = element('div', 'hb-tree-node');
+      child.style.setProperty('--hb-tree-depth', '1');
+      child.appendChild(decorativeGlyph('', 'hb-tree-indent'));
+      child.appendChild(decorativeGlyph('', 'hb-tree-twisty is-leaf'));
+      child.append(
+        element('span', 'hb-tree-label', name),
+        element('span', 'hb-tree-type', argumentType(argument)),
+        element('span', 'hb-tree-value', valueSummary(argument)),
+      );
+      holder.appendChild(child);
+    }
+    fragment.appendChild(holder);
+    twisty.addEventListener('click', (event) => {
+      event.stopPropagation();
+      holder.hidden = !twisty.classList.toggle('is-open');
+    });
+    return fragment;
+  };
+
+  const paint = () => {
+    if (body === null) {
+      return;
+    }
+    if (footerText !== null) {
+      footerText.textContent = `${runs.length} ${runs.length === 1 ? 'run' : 'runs'} · newest first`;
+    }
+    if (runs.length === 0) {
+      body.replaceChildren(emptyState('Nothing run yet', 'Every operation this session runs is kept here with its arguments, so two results can be read without running either again.', '▶'));
+      return;
+    }
+    const tree = element('div', 'hb-tree');
+    runs.forEach((entry, index) => tree.appendChild(runNode(entry, index === 0)));
+    body.replaceChildren(tree);
+  };
+
+  const record = (entry) => {
+    runs.unshift(entry);
+    runs.length = Math.min(runs.length, RESULTS_LIMIT);
+    paint();
+  };
+
+  env.bench.on('operation', ({ name, result, arguments: args }) => {
+    record({
+      name,
+      args: args ?? null,
+      at: new Date(),
+      duration: result.duration_ms,
+      returns: env.bench.operation(name)?.returns ?? typeof result.value,
+      value: result.value,
+      error: null,
+    });
+  });
+
+  env.bench.on('operation-failed', ({ name, arguments: args, error, duration_ms: duration }) => {
+    record({ name, args: args ?? null, at: new Date(), duration, returns: 'error', value: null, error });
+  });
+
+  return {
+    id: 'panels.results',
+    title: 'Results',
+    dock: 'bottom',
+    side: 'bottom',
+    order: 50,
+    count: () => (runs.length === 0 ? null : runs.length),
+    mount: (host) => {
+      const built = panelHeader('Results', 'this session');
+      built.actions.appendChild(panelAction('⌫', 'Clear the recorded runs', () => {
+        runs.length = 0;
+        paint();
+      }));
+      body = element('div', 'hb-panel-body');
+      const footer = element('div', 'hb-panel-footer');
+      footerText = element('span', 'hb-mono hb-dim');
+      footer.appendChild(footerText);
+      host.append(built.header, body, footer);
+      paint();
     },
   };
 }
@@ -1125,7 +1895,12 @@ export const PANEL_IDS = [
   'panels.search',
   'panels.strings',
   'panels.diff',
+  'panels.entropy',
+  'panels.byteTypes',
+  'panels.classification',
+  'panels.digram',
   'panels.console',
+  'panels.results',
   'shell.activity',
 ];
 
@@ -1160,7 +1935,12 @@ export async function installPanels(bench) {
     searchPanel(env),
     stringsPanel(env),
     diffPanel(env),
+    entropyPanel(env),
+    byteTypesPanel(env),
+    classificationPanel(env),
+    digramPanel(env),
     createOperationConsole(env),
+    resultsPanel(env),
     runLogPanel(env),
   ];
   for (const panel of panels) {

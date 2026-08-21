@@ -41,6 +41,11 @@ import psutil
 
 from intellicrack.core.logging import IntellicrackLogger, get_logger
 
+from .admission import (
+    CapacityPlan,
+    SlotGate,
+    plan_capacity,
+)
 from .reporting import (
     SummaryRecord,
     harvest_reports,
@@ -115,6 +120,11 @@ _HCS_VM_PROCESS_PREFIXES: tuple[str, ...] = (
 )
 _HCS_VM_WAIT_TIMEOUT_SECONDS = 900.0
 _HCS_VM_POLL_INTERVAL = 5.0
+
+# Directory under the shared reports root holding one reservation file per
+# in-flight run. The admission gate counts these to bound how many containers
+# run at once across every driver process on the host.
+_SLOTS_DIRNAME = ".sandbox_slots"
 
 _TIMESTAMP_FORMAT = "%m-%d-%Y_%H-%M"
 
@@ -484,6 +494,48 @@ def running_hcs_vm_processes() -> tuple[tuple[int, str], ...]:
     return tuple(found)
 
 
+def _alive_pids() -> frozenset[int]:
+    """Return the process ids currently alive on the host.
+
+    Fed to the admission gate so a reservation whose launching driver has died
+    is recognised as stale and its slot reclaimed.
+
+    Returns:
+        frozenset[int]: Every process id psutil currently reports.
+    """
+    return frozenset(psutil.pids())
+
+
+def _refuse_rebuild_with_live_siblings(*, rebuild: bool, running_containers: frozenset[str]) -> None:
+    """Reject a forced image rebuild while sibling containers are running.
+
+    The image tag ``intellicrack-sandbox:latest`` is global. A rebuild drops and
+    replaces that tag out from under every container already running against it,
+    which turns a sibling agent's cached-image run into a competing full Windows
+    image build. A rebuild is therefore only safe when no sandbox container is
+    live; the operator is told to retry once the host is clear rather than
+    silently corrupting a concurrent run.
+
+    Args:
+        rebuild: Whether a forced rebuild was requested.
+        running_containers: Names of sandbox-labeled containers Docker reports as
+            running.
+
+    Raises:
+        SandboxError: If a rebuild was requested while any sandbox container is
+            running.
+    """
+    if not rebuild or not running_containers:
+        return
+    detail = ", ".join(sorted(running_containers))
+    message = (
+        "--rebuild replaces the shared intellicrack-sandbox:latest image, which would break the "
+        f"{len(running_containers)} sandbox container(s) already running against it: {detail}. "
+        "Rebuild when no sandbox run is active."
+    )
+    raise SandboxError(message)
+
+
 def ensure_no_hcs_vm_running(*, timeout: float = _HCS_VM_WAIT_TIMEOUT_SECONDS) -> None:
     """Block until no Host Compute Service virtual machine is running.
 
@@ -704,6 +756,13 @@ def _build_docker_run_argv(
     vendor_dir = _PROJECT_ROOT / "vendor"
     if vendor_dir.is_dir():
         argv.extend(["--volume", f"{vendor_dir}:{_CONTAINER_WORKSPACE}\\vendor:ro"])
+    # Mount the installer packaging tree when present so tests under
+    # ``tests/packaging`` can target the live ``packaging`` sources (the Inno
+    # Setup script and the ML-split helper) instead of a copy baked into the
+    # image at build time.
+    packaging_dir = _PROJECT_ROOT / "packaging"
+    if packaging_dir.is_dir():
+        argv.extend(["--volume", f"{packaging_dir}:{_CONTAINER_WORKSPACE}\\packaging:ro"])
     argv.extend([
         "--workdir",
         _CONTAINER_WORKSPACE,
@@ -1080,6 +1139,7 @@ class DockerSandbox:
         network: Docker network attached to the container.
         rebuild: When ``True`` force an image rebuild.
         writable_workspace: When ``True`` mount the host workspace read-write.
+        slot_budget: Maximum number of containers permitted to run concurrently.
     """
 
     memory: str
@@ -1087,6 +1147,7 @@ class DockerSandbox:
     network: str
     rebuild: bool
     writable_workspace: bool
+    slot_budget: int
 
     def __init__(
         self,
@@ -1096,6 +1157,7 @@ class DockerSandbox:
         network: str = "none",
         rebuild: bool = False,
         writable_workspace: bool = False,
+        slot_budget: int = 1,
     ) -> None:
         """Initialize the sandbox driver with resource and build options.
 
@@ -1105,12 +1167,15 @@ class DockerSandbox:
             network: Docker network name (``none`` for offline runs).
             rebuild: Force an image rebuild even when a cached tag exists.
             writable_workspace: Mount the host workspace read-write.
+            slot_budget: Maximum number of sandbox containers permitted to run
+                concurrently across every driver process on this host.
         """
         self.memory = memory
         self.cpus = cpus
         self.network = network
         self.rebuild = rebuild
         self.writable_workspace = writable_workspace
+        self.slot_budget = slot_budget
 
     def ensure_image(self) -> str:
         """Ensure Docker is running and the sandbox image is available.
@@ -1123,8 +1188,25 @@ class DockerSandbox:
         ensure_no_hcs_vm_running()
         ensure_docker_running()
         _ensure_windows_engine()
+        # A forced rebuild replaces the shared image tag, so it may not proceed
+        # while another run is still using it.
+        _refuse_rebuild_with_live_siblings(rebuild=self.rebuild, running_containers=_container_names_by_status("running"))
         tag = _compute_image_tag()
         return build_image(tag, rebuild=self.rebuild)
+
+    def _slot_gate(self) -> SlotGate:
+        """Construct the admission gate that bounds concurrent container runs.
+
+        Returns:
+            SlotGate: A gate over the shared reservations directory wired to this
+                host's Docker and process-liveness state.
+        """
+        return SlotGate(
+            _REPORTS_ROOT / _SLOTS_DIRNAME,
+            self.slot_budget,
+            live_tokens=_live_run_tokens,
+            alive_pids=_alive_pids,
+        )
 
     def run(self, spec: TestRunSpec, *, interactive: bool = False) -> SummaryRecord:
         """Execute a run specification inside the sandbox container.
@@ -1167,15 +1249,23 @@ class DockerSandbox:
         )
         print(
             f"[sandbox] Running {spec.test_type.value} (ts={spec.timestamp}, run={spec.run_id}, "
-            f"net={self.network}, mem={self.memory}, cpus={self.cpus})",
+            f"net={self.network}, mem={self.memory}, cpus={self.cpus}, slots={self.slot_budget})",
             file=sys.stderr,
         )
+        # Hold a concurrency slot for the lifetime of the container only. The
+        # gate blocks here until fewer than ``slot_budget`` runs are in flight,
+        # so several drivers can queue safely instead of oversubscribing the
+        # Host Compute Service.
+        slot = self._slot_gate().acquire(run_token(spec))
         start = time.monotonic()
-        exit_code = _run_streamed(
-            argv,
-            timeout_seconds=spec.timeout_seconds,
-            container_name=container_name,
-        )
+        try:
+            exit_code = _run_streamed(
+                argv,
+                timeout_seconds=spec.timeout_seconds,
+                container_name=container_name,
+            )
+        finally:
+            slot.release()
         duration = time.monotonic() - start
         _LOGGER.info(
             "sandbox_container_finished",
@@ -1386,13 +1476,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--memory",
-        default="32g",
-        help="Memory quota for docker run (default: 32g).",
+        default=None,
+        help="Memory quota for docker run. Default: auto-sized from host RAM so several runs fit concurrently.",
     )
     parser.add_argument(
         "--cpus",
-        default="16",
-        help="CPU quota for docker run (default: 16).",
+        default=None,
+        help="CPU quota for docker run. Default: auto-sized from host CPU count so several runs fit concurrently.",
     )
     parser.add_argument(
         "--network",
@@ -1489,6 +1579,31 @@ def _default_network(test_type: TestType | None) -> str:
     return select_connected_network(_existing_networks(), test_type.value)
 
 
+def _resolve_capacity_plan(*, requested_memory: str | None, requested_cpus: str | None) -> CapacityPlan:
+    """Derive the concurrency budget and per-run resource share for this host.
+
+    Reads the host's total memory and logical CPU count and delegates the policy
+    to :func:`scripts.sandbox.admission.plan_capacity`. Operator-pinned
+    ``--memory`` / ``--cpus`` values are forwarded so an explicit request is
+    honoured and the budget shrinks to whatever number of such runs fits.
+
+    Args:
+        requested_memory: Operator-pinned ``--memory`` value, or ``None``.
+        requested_cpus: Operator-pinned ``--cpus`` value, or ``None``.
+
+    Returns:
+        CapacityPlan: The resolved slot budget and per-run memory/CPU share.
+    """
+    total_memory = psutil.virtual_memory().total
+    cpu_count = psutil.cpu_count(logical=True) or 1
+    return plan_capacity(
+        total_memory,
+        cpu_count,
+        requested_memory=requested_memory,
+        requested_cpus=requested_cpus,
+    )
+
+
 def _resolve_test_type(args: argparse.Namespace) -> TestType:
     """Pick the :class:`TestType` for the requested CLI invocation.
 
@@ -1555,6 +1670,7 @@ def main(raw_args: list[str] | None = None) -> int:
     )
     network = args.network or _default_network(test_type)
     writable = args.rw or test_type is TestType.INTERACTIVE_RW
+    plan = _resolve_capacity_plan(requested_memory=args.memory, requested_cpus=args.cpus)
 
     _LOGGER.info(
         "sandbox_invocation",
@@ -1568,14 +1684,23 @@ def main(raw_args: list[str] | None = None) -> int:
         build_only=args.build_only,
         module=args.module,
         extra_args=list(spec.extra_args),
+        slot_budget=plan.slots,
+        memory=plan.memory,
+        cpus=plan.cpus,
+    )
+    print(
+        f"[sandbox] Host capacity: up to {plan.slots} concurrent run(s), "
+        f"{plan.memory} / {plan.cpus} CPU(s) each.",
+        file=sys.stderr,
     )
 
     sandbox = DockerSandbox(
-        memory=args.memory,
-        cpus=args.cpus,
+        memory=plan.memory,
+        cpus=plan.cpus,
         network=network,
         rebuild=args.rebuild,
         writable_workspace=writable,
+        slot_budget=plan.slots,
     )
 
     try:

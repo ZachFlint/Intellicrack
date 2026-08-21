@@ -18,11 +18,17 @@ nothing, WinPE loaded no storage driver, and Setup found no disk to install to.
 These gates hold the enumeration to two properties at once: it must name every
 package directory the medium really carries for the guest's architecture, and
 it must name nothing else. The container class builds a real directory tree
-whose family and architecture combinations are the ones measured on the real
-0.1.285 medium - including families the old constant never mentioned and a
-family that has no ``amd64`` at all - and drives the real enumeration over it.
-The host-native class does the same against the real ISO in
-``tools/qemu/images``, which only a real Windows host can mount.
+whose driver, family and architecture combinations are the ones measured on
+the real 0.1.285 medium, files included - virtio-win names them after the
+driver rather than the device directory, so ``vioserial`` holds ``vioser.sys``
+- and drives the real enumeration over it. Conditions the real medium does not
+present, an INF-less package and a family with no ``amd64``, are made by each
+gate that needs one, so the model stays a description of the medium rather
+than a fiction that happens to suit a gate. The host-native class does the
+same against the real ISO in ``tools/qemu/images``, which only a real Windows
+host can mount, and resolves it the way the provisioner does: that directory
+is five levels below the drive root and the breadth-limited scanner never
+descends that far, so it has to be passed as a priority root.
 
 What the answer file does with that enumeration is a separate matter, and the
 first real installation to exercise it falsified the original answer: naming
@@ -53,12 +59,12 @@ from typing import TYPE_CHECKING, Final
 
 import defusedxml.ElementTree as DefusedET
 
-from intellicrack.core.config import get_project_root
 from scripts.sandbox.provision_windows_guest import (
     WINPE_DRIVER_DIRECTORIES,
     WINPE_DRIVER_FAMILY_PREFERENCE,
     WINPE_DRIVER_LETTERS,
     WINPE_DRIVER_STAGE_DIRECTORY,
+    available_drive_roots,
     dismount_disk_image,
     enumerate_virtio_driver_subpaths,
     mount_disk_image,
@@ -68,7 +74,7 @@ from scripts.sandbox.provision_windows_guest import (
     select_winpe_driver_packages,
     stage_winpe_drivers,
 )
-from tests.sandbox.qemu.virtio_installer_harness import answer_settings
+from tests.sandbox.qemu.virtio_installer_harness import answer_settings, staged_media_root
 
 
 if TYPE_CHECKING:
@@ -84,54 +90,86 @@ _FOREIGN_ARCHITECTURES: Final[tuple[str, ...]] = ("ARM64", "x86")
 _UNATTEND_NS: Final[str] = "urn:schemas-microsoft-com:unattend"
 """Namespace every element of a Windows answer file lives in."""
 
+_DRIVER_FILE_STEMS: Final[dict[str, str]] = {
+    "viostor": "viostor",
+    "vioserial": "vioser",
+    "NetKVM": "netkvm",
+    "Balloon": "balloon",
+    "qxldod": "qxldod",
+}
+r"""Device directory on the medium, mapped to the stem its files really carry.
+
+virtio-win names a package's files after the *driver*, which is not always the
+directory the device's packages live under: ``vioserial\\<family>\\amd64``
+holds ``vioser.inf``, ``vioser.sys`` and ``vioser.cat``. A gate that expects a
+staged file name to begin with the directory name therefore reports a driver
+missing on a medium that staged it correctly.
+"""
+
+_DEVICE_FAMILIES: Final[dict[str, tuple[str, ...]]] = {
+    "2k12": ("amd64",),
+    "2k12R2": ("amd64",),
+    "2k16": ("amd64",),
+    "2k19": ("amd64",),
+    "2k22": ("amd64",),
+    "2k25": ("ARM64", "amd64"),
+    "2k3": ("amd64", "x86"),
+    "2k8": ("amd64", "x86"),
+    "2k8R2": ("amd64",),
+    "w10": ("ARM64", "amd64", "x86"),
+    "w11": ("ARM64", "amd64"),
+    "w7": ("amd64", "x86"),
+    "w8": ("amd64", "x86"),
+    "w8.1": ("amd64", "x86"),
+    "xp": ("amd64", "x86"),
+}
+"""The fifteen families virtio-win 0.1.285 carries for every device it drives.
+
+Measured off ``tools/qemu/images/virtio-win-0.1.285.iso``: ``viostor``,
+``vioserial``, ``NetKVM`` and ``Balloon`` all carry this identical set, ``w11``
+has no ``x86`` at all, and the server families before 2k25 are ``amd64`` only.
+"""
+
 _MEASURED_LAYOUT: Final[dict[str, dict[str, tuple[str, ...]]]] = {
-    "viostor": {
+    "viostor": _DEVICE_FAMILIES,
+    "vioserial": _DEVICE_FAMILIES,
+    "NetKVM": _DEVICE_FAMILIES,
+    "Balloon": _DEVICE_FAMILIES,
+    "qxldod": {
         "2k12": ("amd64",),
         "2k12R2": ("amd64",),
         "2k16": ("amd64",),
         "2k19": ("amd64",),
-        "2k22": ("amd64",),
-        "2k25": ("amd64", "ARM64"),
-        "2k3": ("amd64", "x86"),
-        "2k8": ("amd64", "x86"),
-        "2k8R2": ("amd64",),
-        "w10": ("amd64", "ARM64", "x86"),
-        "w11": ("amd64", "ARM64"),
-        "w7": ("amd64", "x86"),
+        "w10": ("amd64", "x86"),
         "w8": ("amd64", "x86"),
         "w8.1": ("amd64", "x86"),
-        "xp": ("amd64", "x86"),
-    },
-    "vioserial": {
-        "2k12": ("amd64",),
-        "2k19": ("amd64",),
-        "w10": ("amd64", "x86"),
-        "w11": ("amd64", "ARM64"),
-    },
-    "NetKVM": {
-        "2k22": ("amd64",),
-        "2k25": ("ARM64",),
-        "w11": ("amd64", "ARM64"),
-    },
-    "Balloon": {
-        "w10": ("amd64", "x86"),
-        "w11": ("amd64",),
-    },
-    "qxldod": {
-        "w10": ("amd64", "x86"),
-        "w11": ("amd64",),
     },
 }
 """``<driver> -> <family> -> architectures`` as measured on virtio-win 0.1.285.
 
-``NetKVM\\2k25`` is ARM64 only and ``qxldod`` is a package the sandbox's guest
-never boots on, so neither may reach the WinPE search list.
+``qxldod`` is a display package the sandbox's guest never boots on and stops
+at ``w10``, so it may never reach the WinPE search list; it is modelled here
+precisely so a gate can prove the enumeration leaves it out.
 """
 
-_PACKAGES_WITHOUT_INF: Final[frozenset[tuple[str, str, str]]] = frozenset(
-    {("vioserial", "2k12", "amd64")},
-)
-"""Directories built with no INF, which give WinPE nothing to load."""
+_INF_LESS_DRIVER: Final[str] = "vioserial"
+"""Device whose package one gate strips of its INF, to gate that omission."""
+
+_INF_LESS_FAMILY: Final[str] = "2k12"
+"""Family of :data:`_INF_LESS_DRIVER` the same gate strips."""
+
+_ARCHITECTURE_SCOPED_FAMILY: Final[str] = "2k25"
+r"""Family one gate reduces to ``ARM64`` alone, to gate architecture scoping.
+
+Every family the real medium carries for these devices has an ``amd64``
+directory, so the condition cannot come from the model: the gate removes the
+directory itself and keeps the ``ARM64`` sibling, which leaves the family
+present but unusable - what an older medium looks like, and what a hardwired
+family list would still emit an ``amd64`` path for.
+"""
+
+_ARCHITECTURE_SCOPED_DRIVER: Final[str] = "NetKVM"
+"""Device the architecture-scoping gate deprives of its ``amd64`` package."""
 
 _INF_TEMPLATE: Final[str] = (
     "[Version]\r\n"
@@ -156,6 +194,18 @@ _INF_TEMPLATE: Final[str] = (
 
 _CATALOG_DER: Final[bytes] = bytes.fromhex("300b06092a864886f70d010702")
 """A DER ``ContentInfo`` announcing PKCS#7 ``signedData``, as a catalog does."""
+
+_PE_HEADER_OFFSET: Final[int] = 0x40
+"""Where the driver image below puts its PE signature, as a real image does."""
+
+_DRIVER_IMAGE: Final[bytes] = (
+    b"MZ" + bytes(0x3C - 2) + _PE_HEADER_OFFSET.to_bytes(4, "little") + b"PE\x00\x00"
+)
+"""An MS-DOS header whose ``e_lfanew`` reaches a PE signature, as a ``.sys`` has.
+
+Every package on the real medium carries a driver binary beside its INF, so
+the modelled packages carry one too rather than an INF with nothing to load.
+"""
 
 _SCAN_DEPTH: Final[int] = 4
 """Directory depth the host-native medium search is allowed to reach."""
@@ -182,17 +232,6 @@ _NEWEST_FAMILY: Final[str] = "w11"
 """The family every driver in the measured layout carries for amd64."""
 
 
-def _staged_media_root() -> Path:
-    """Locate the images directory the provisioner keeps its media in.
-
-    Returns:
-        Path: ``<project root>/tools/qemu/images``, the only root the
-        host-native gates search, so they judge the medium this repository
-        provisions from rather than any other copy on the host.
-    """
-    return get_project_root() / "tools" / "qemu" / "images"
-
-
 def _build_medium(root: Path) -> Path:
     """Materialise the measured virtio-win layout as real directories.
 
@@ -203,18 +242,17 @@ def _build_medium(root: Path) -> Path:
         Path: The medium root, with every package directory created.
     """
     for driver, families in _MEASURED_LAYOUT.items():
+        stem = _DRIVER_FILE_STEMS[driver]
         for family, architectures in families.items():
             for architecture in architectures:
                 package = root / driver / family / architecture
                 package.mkdir(parents=True)
-                if (driver, family, architecture) in _PACKAGES_WITHOUT_INF:
-                    (package / "readme.txt").write_text("no driver package here\r\n", encoding="ascii")
-                    continue
-                (package / f"{driver}.inf").write_text(
-                    _INF_TEMPLATE.format(driver=driver, class_name="System", architecture=architecture),
+                (package / f"{stem}.inf").write_text(
+                    _INF_TEMPLATE.format(driver=stem, class_name="System", architecture=architecture),
                     encoding="ascii",
                 )
-                (package / f"{driver}.cat").write_bytes(_CATALOG_DER)
+                (package / f"{stem}.cat").write_bytes(_CATALOG_DER)
+                (package / f"{stem}.sys").write_bytes(_DRIVER_IMAGE)
     return root
 
 
@@ -231,7 +269,7 @@ def _expected_subpaths() -> tuple[str, ...]:
             if driver in WINPE_DRIVER_DIRECTORIES
             for family, architectures in families.items()
             for architecture in architectures
-            if architecture == _GUEST_ARCHITECTURE and (driver, family, architecture) not in _PACKAGES_WITHOUT_INF
+            if architecture == _GUEST_ARCHITECTURE
         ),
     )
 
@@ -297,39 +335,62 @@ class TestTheEnumerationFollowsTheMedium:
             )
 
     def test_a_family_without_this_architecture_is_never_named(self, tmp_path: Path) -> None:
-        r"""``NetKVM\\2k25`` is ARM64 only, so no amd64 path may point into it.
+        r"""A family left without an ``amd64`` directory is skipped, not guessed.
+
+        The real medium gives every one of these families an ``amd64``
+        package, so the condition is made here: one family loses that
+        directory and keeps its ``ARM64`` sibling, which leaves the family on
+        the medium but unusable to this guest.
 
         Args:
             tmp_path: Per-test temporary directory.
         """
         medium = _build_medium(tmp_path / "virtio")
-        absent = medium / "NetKVM" / "2k25" / _GUEST_ARCHITECTURE
-        assert not absent.exists(), f"the medium under test was built wrong: {absent} exists, so it cannot gate the omission"
+        family = medium / _ARCHITECTURE_SCOPED_DRIVER / _ARCHITECTURE_SCOPED_FAMILY
+        shutil.rmtree(family / _GUEST_ARCHITECTURE)
+        surviving = sorted(entry.name for entry in family.iterdir() if entry.is_dir())
+        assert surviving, (
+            f"{family} lost every architecture, so the enumeration would skip the family outright and this run "
+            f"could not gate the architecture scoping"
+        )
+        assert _GUEST_ARCHITECTURE not in surviving, f"{family} still carries {_GUEST_ARCHITECTURE}, so it cannot gate the omission"
 
         subpaths = enumerate_virtio_driver_subpaths(medium, _GUEST_ARCHITECTURE)
 
-        assert f"NetKVM\\2k25\\{_GUEST_ARCHITECTURE}" not in subpaths, (
-            f"the enumeration named a family that has no {_GUEST_ARCHITECTURE} directory at all: {subpaths}"
+        deprived = f"{_ARCHITECTURE_SCOPED_DRIVER}\\{_ARCHITECTURE_SCOPED_FAMILY}\\{_GUEST_ARCHITECTURE}"
+        assert deprived not in subpaths, (
+            f"the enumeration named {deprived}, a family that carries only {surviving}: {subpaths}"
         )
         for foreign in _FOREIGN_ARCHITECTURES:
             named = [subpath for subpath in subpaths if subpath.endswith(f"\\{foreign}")]
             assert not named, f"an {_GUEST_ARCHITECTURE} guest was sent to {foreign} packages: {named}"
 
     def test_a_directory_without_a_driver_package_is_not_named(self, tmp_path: Path) -> None:
-        """A family directory carrying no INF gives WinPE nothing to load.
+        """A package directory carrying no INF gives WinPE nothing to load.
+
+        Every package on the real medium carries an INF, so the directory is
+        stripped of one here while the directory itself stays: that is what
+        the enumeration has to notice, and what a scan that only checks a
+        directory exists would send WinPE to.
 
         Args:
             tmp_path: Per-test temporary directory.
         """
         medium = _build_medium(tmp_path / "virtio")
-        driver, family, architecture = next(iter(_PACKAGES_WITHOUT_INF))
-        empty = medium / driver / family / architecture
-        assert empty.is_dir(), f"the medium under test was built wrong: {empty} is missing, so it cannot gate the omission"
+        stripped = medium / _INF_LESS_DRIVER / _INF_LESS_FAMILY / _GUEST_ARCHITECTURE
+        for entry in stripped.iterdir():
+            entry.unlink()
+        (stripped / "readme.txt").write_text("no driver package here\r\n", encoding="ascii")
+        remaining = sorted(entry.name for entry in stripped.iterdir())
+        assert stripped.is_dir(), f"{stripped} is gone, so the enumeration would skip it for existing rather than for holding no INF"
+        assert not any(name.endswith(".inf") for name in remaining), (
+            f"the directory under test was left holding {remaining}, so it cannot gate the omission"
+        )
 
         subpaths = enumerate_virtio_driver_subpaths(medium, _GUEST_ARCHITECTURE)
 
-        assert f"{driver}\\{family}\\{architecture}" not in subpaths, (
-            f"an INF-less directory reached the WinPE search list; it holds only {sorted(entry.name for entry in empty.iterdir())}"
+        assert f"{_INF_LESS_DRIVER}\\{_INF_LESS_FAMILY}\\{_GUEST_ARCHITECTURE}" not in subpaths, (
+            f"an INF-less directory reached the WinPE search list; it holds only {remaining}"
         )
 
     def test_a_driver_outside_the_winpe_set_is_not_named(self, tmp_path: Path) -> None:
@@ -453,7 +514,14 @@ class TestTheRealMediumEnumeratesOnlyRealDirectories:
 
     def test_every_enumerated_path_exists_on_the_real_medium(self) -> None:
         """The real medium's real layout, read through the real mount helper."""
-        iso = require_virtio_media(None, (_staged_media_root(),), _SCAN_DEPTH, _SCAN_BUDGET, verify_contents=False)
+        iso = require_virtio_media(
+            None,
+            available_drive_roots(),
+            _SCAN_DEPTH,
+            _SCAN_BUDGET,
+            priority_roots=(staged_media_root(),),
+            verify_contents=False,
+        )
         root = mount_disk_image(iso)
         try:
             subpaths = enumerate_virtio_driver_subpaths(root, _GUEST_ARCHITECTURE)
@@ -490,7 +558,14 @@ class TestTheRealMediumEnumeratesOnlyRealDirectories:
         Args:
             tmp_path: Per-test temporary directory.
         """
-        medium = resolve_virtio_medium(None, (_staged_media_root(),), _SCAN_DEPTH, _SCAN_BUDGET, _GUEST_ARCHITECTURE)
+        medium = resolve_virtio_medium(
+            None,
+            available_drive_roots(),
+            _SCAN_DEPTH,
+            _SCAN_BUDGET,
+            _GUEST_ARCHITECTURE,
+            priority_roots=(staged_media_root(),),
+        )
 
         staged = stage_winpe_drivers(medium.path, tmp_path, _GUEST_ARCHITECTURE)
         landed = sorted(entry.name for entry in (tmp_path / WINPE_DRIVER_STAGE_DIRECTORY).iterdir() if entry.is_file())
@@ -501,9 +576,13 @@ class TestTheRealMediumEnumeratesOnlyRealDirectories:
             f"driver and Setup would find no disk on the virtio-blk system disk"
         )
         assert f"{_BOOT_CRITICAL_DRIVER}.sys" in landed, f"{landed} names an INF with no driver binary beside it"
+        folded = {name.casefold() for name in landed}
         for driver in WINPE_DRIVER_DIRECTORIES:
-            assert any(name.casefold().startswith(driver.casefold()) for name in landed), (
-                f"{medium.path} staged nothing for {driver}, which the sandbox launcher builds a device for"
+            stem = _DRIVER_FILE_STEMS[driver]
+            missing = [name for name in (f"{stem}.inf", f"{stem}.sys") if name.casefold() not in folded]
+            assert not missing, (
+                f"{medium.path} staged {landed}, which is missing {missing}. The sandbox launcher builds a device "
+                f"for {driver} and virtio-win names that device's files {stem}.*, so WinPE would load nothing for it"
             )
 
         paths = _driver_path_texts(render_autounattend(replace(answer_settings(), driver_letters=WINPE_DRIVER_LETTERS)))

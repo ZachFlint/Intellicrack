@@ -70,19 +70,28 @@ _MS_PER_SECOND: Final = 1000.0
 
 
 class DispatchError(Exception):
-    """A failure that already knows how it should be reported to a client."""
+    """A failure that already knows how it should be reported to a client.
 
-    def __init__(self, message: str, *, kind: str, status: int) -> None:
+    The message says what went wrong; :attr:`detail` says what to do about it,
+    and only the failures that have a next step to offer carry one. The browser
+    renders the two as separate lines of one banner, so a detail is a sentence
+    naming the route or the fix rather than a second copy of the message.
+    """
+
+    def __init__(self, message: str, *, kind: str, status: int, detail: str | None = None) -> None:
         """Record a failure together with its machine-readable classification.
 
         Args:
             message: Human readable description of what went wrong.
             kind: Stable slug a client can branch on.
             status: HTTP status code that best expresses the failure.
+            detail: Actionable second line, or ``None`` when the message is the
+                whole story.
         """
         super().__init__(message)
         self.kind = kind
         self.status = status
+        self.detail = detail
 
 
 _EXCEPTION_RULES: Final[tuple[tuple[type[BaseException], str, int], ...]] = (
@@ -161,10 +170,12 @@ def operation_for(name: str) -> Operation:
     Raises:
         DispatchError: If the engine exposes no operation with that name.
     """
-    operation = _operation_index().get(name)
+    index = _operation_index()
+    operation = index.get(name)
     if operation is None:
         message = f"unknown operation {name!r}"
-        raise DispatchError(message, kind="unknown_operation", status=_STATUS_NOT_FOUND)
+        detail = f"this engine publishes {len(index)} operations; GET /api/catalog lists every one of them"
+        raise DispatchError(message, kind="unknown_operation", status=_STATUS_NOT_FOUND, detail=detail)
     return operation
 
 
@@ -339,7 +350,8 @@ def _call(target: object, name: str, arguments: Sequence[object]) -> object:
     member = getattr(target, name)
     if not callable(member):
         message = f"{name} is not callable on {type(target).__name__}; the catalogue and the engine have diverged"
-        raise DispatchError(message, kind="internal", status=_STATUS_INTERNAL)
+        detail = "rebuild intellicrack_hexcore against this checkout so the catalogue and the compiled engine agree"
+        raise DispatchError(message, kind="internal", status=_STATUS_INTERNAL, detail=detail)
     return member(*arguments)
 
 
@@ -359,7 +371,8 @@ def _receiver_slot(registry: Registry, handle: str | None, name: str) -> Documen
     """
     if handle is None:
         message = f"{name} acts on an open document but the request supplied no handle"
-        raise DispatchError(message, kind="missing_document", status=_STATUS_BAD_REQUEST)
+        detail = "open a document first; GET /api/documents lists the handles this session holds"
+        raise DispatchError(message, kind="missing_document", status=_STATUS_BAD_REQUEST, detail=detail)
     return registry.slot(handle)
 
 
@@ -397,7 +410,8 @@ def _register(registry: Registry, operation: Operation, arguments: Sequence[obje
     """
     if not isinstance(created, HexDocument):
         message = f"{operation.name} is catalogued as a factory but returned {type(created).__name__}"
-        raise DispatchError(message, kind="internal", status=_STATUS_INTERNAL)
+        detail = "rebuild intellicrack_hexcore against this checkout so the catalogue and the compiled engine agree"
+        raise DispatchError(message, kind="internal", status=_STATUS_INTERNAL, detail=detail)
     return registry.create(created, origin=operation.name, label=_factory_label(operation, arguments))
 
 

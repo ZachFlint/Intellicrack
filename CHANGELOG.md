@@ -9,6 +9,52 @@ and this project adheres to [Conventional Commits](https://www.conventionalcommi
 
 ### Added
 
+- **x64dbg:** Arm x64dbg's trace record so hit counts can be non-zero (`8810140`)
+get_trace_record could not return a non-zero hitCount for any address under
+any circumstances. x64dbg allocates a page's per-byte execution counters only
+once a trace record type has been set for that page, and nothing in the bridge
+or the plugin ever called SetTraceRecordType - so the GetTraceRecordHitCount
+the plugin read had no buffer behind it and answered zero forever. The Trace
+tab offered the query and no way to arm the page, so the button could only ever
+print hitCount=0.
+The plugin gains trace_record_set, which masks the address to its 4 KiB page,
+applies the requested type and reads the page's type back so the caller can
+tell whether the arming took. trace_record now reports that same type and
+honours the size parameter it had been ignoring, returning one count per byte,
+so a zero is diagnosable instead of indistinguishable from an unexecuted
+address. The bridge gains set_trace_record, which normalises and validates the
+type before touching the pipe and refuses to report success unless the page
+reports the type that was asked for - x64dbg allocates the counter buffer
+inside SetTraceRecordType, and a declined allocation is how arming silently
+does not take. get_trace_record's unreachable-plugin fallback now reports
+"unknown" rather than "none", so a plugin that cannot be reached is never
+mistaken for a page x64dbg holds no record for. The Trace tab gains the record
+type and an Enable Recording button beside the query it already had.
+Confirmed live against a real x64dbg driving notepad.exe: the entry point at
+0x7FFFEEB21194 read type=none hitCount=0 before arming, type=word hitCount=0
+after arming and before executing, and hitCount=1 after twelve single-steps,
+while the eleven stepped addresses that landed on a second, never-armed page
+stayed at zero throughout. Rebuilding the plugin with the trace_record_set
+registration removed - the pre-fix plugin exactly - reproduces the defect: the
+same stepping leaves every count at zero.
+The gates model that observed engine rather than the bridge's own logic. Each
+part of the bridge fix reverts to redden exactly its own tests.
+
+- **hexbench:** Paint the design system's chart fill in the entropy map (`3b5a36a`)
+The entropy card fills the area under its curve with var(--hb-chart-fill),
+but the running application painted no area at all: it drew ramp-coloured
+columns, so the token was documented by the gallery and rendered by nothing
+the user ever saw. The card was right and the app was missing the fill.
+entropyMapChart now matches the card - a filled area in --hb-chart-fill, the
+curve stroked in --hb-chart-line, the existing gridlines kept, and a dashed
+high-entropy threshold at 7 bits in --hb-class-3. The ramp is retired from
+this chart only; buildRamp and ENTROPY_STOPS still serve the digram chart.
+The gate drives the real draw callback through a recording context with a
+distinct sentinel per token, so no expectation can pass on a shared colour or
+on a fallback. The dash-leak check deliberately asserts across a second
+render: a canvas keeps its dash until something changes it, and a threshold
+drawn without restoring the context only shows up on the next redraw.
+
 - **hexbench:** Add hexbench web ui and harden hexcore concurrency (`2ac5a1a`)
 Introduce the Hexbench standalone browser-based hex editor UI alongside major concurrency, safety, and performance enhancements across the `intellicrack-hexcore` Rust engine and Intellicrack bridges. Hexbench provides a local web-based binary analysis and manipulation workspace featuring a virtualized hex grid, interactive visual analysis charts, command palette, and dynamically generated operation forms.
 To support high-throughput analysis and eliminate runtime borrowing exceptions in multi-threaded contexts, `HexDocument` in `intellicrack-hexcore` has been refactored from an exclusive PyO3 borrow model to a frozen class backed by `parking_lot::RwLock`. Zero-copy memory mapping via `mmap` is extended across document piece tables with automatic piece coalescing during byte insertions. Furthermore, bulk binary analysis methods now offer packed byte buffer accessors (`*_bytes`) to avoid per-element Python object conversion overhead.
@@ -420,6 +466,28 @@ Introduce a high-performance binary diffing engine in `hexcore` and integrate it
 
 - Implement Hex Editor advanced analysis and pattern engine (`cf8a736`)
 Introduces a comprehensive Hex Editor
+
+- **hexbench,core:** Enhance UI accessibility, packaging, and runtime bridges (``)
+Implement comprehensive accessibility overhauls across the Hexbench UI, enhance native integration and installer packaging, and expand tool discovery and sandbox orchestration. The web-based Hexbench interface now provides complete ARIA semantics, forced-colors high contrast support, full keyboard navigation across menubars and tab strips, dynamic row sizing, and analytical charts with fallback-safe token mappings. The backend and bridge layers receive structured error remediation, custom tool discovery paths, JDK version validation for Ghidra, and a single-instance mutex matching Inno Setup requirements.
+In the frontend, `shell.js`, `grid.js`, and `panels.js` introduce virtual address translation tracking, numeric and binary search parsing, context-menu operations for block and bit manipulations, and responsive row byte fitting. Design specimen cards and the card generator (`build_cards.py`) were synchronized with the central design tokens, control height standards, and `@media (forced-colors: active)` contrast rules. Canvas-based charting now safely falls back to theme-defined hex colors when CSS custom properties are missing.
+On the core application and packaging side, `admission.py` introduces concurrency gates and capacity planning for Docker Windows containers to prevent Host Compute Service (HCS) resource exhaustion. Single-instance Win32 mutex acquisition was added to prevent conflicting concurrent executions and integrate with Inno Setup's `AppMutex`. Configuration and credential loaders were updated to resolve configuration files beside the executable in frozen PyInstaller builds rather than inside temporary extraction directories.
+* Hexbench UI & Accessibility:
+- Add Windows High Contrast `@media (forced-colors: active)` support and standardized control sizing variables (`--hb-control-h`, `--hb-hit-min`) across `src/hexbench/static/app.css` and `src/hexbench/design/cards/*.html`.
+- Introduce `src/hexbench/design/index.html` component gallery and update `build_cards.py` to regenerate specimen cards with forced-color testing blocks.
+- Implement dynamic row sizing (`BYTES_PER_ROW_CHOICES`, `fitBytesPerRow`), active descendant sync, and debounced screen-reader caret announcements in `src/hexbench/static/grid.js`.
+- Add menubar keyboard bindings (`bindMenubarKeys`), tab strip role assignment (`applyTabStripRoles`), and status bar virtual address translation readouts in `src/hexbench/static/shell.js`.
+- Add numeric and decimal search pattern parsing (`parseSearchInt`, `NUMERIC_SEARCH_PATTERN`) and block/bit editing operations (`copyBlock`, `moveBlock`, `swapBlocks`, `toggleBitAt`) with grid context menus in `src/hexbench/static/shell.js`.
+- Integrate entropy strips, diff tracks, digram visualizations, classification panels, and operation result trees in `src/hexbench/static/panels.js` and `src/hexbench/static/charts.js`.
+* Core & Bridge Integrations:
+- Extend `DispatchError` in `src/hexbench/dispatch.py` to support actionable second-line `detail` remediation guidance.
+- Support custom external tool discovery from `.intellicrack/tools.json` via `_read_configured_tool_path` in `src/intellicrack/bridges/installer.py`.
+- Add `_read_jdk_major` and `_required_min_jdk` validation in `src/intellicrack/bridges/ghidra.py` to verify Java runtime versions prior to JVM startup.
+- Implement `acquire_instance_mutex` in `src/intellicrack/core/single_instance.py` using `Global\IntellicrackSingleInstance` to integrate with Inno Setup's `AppMutex`.
+- Update `src/intellicrack/core/config.py` and `src/intellicrack/credentials/env_loader.py` to resolve `.env` and configuration files from the executable directory during PyInstaller frozen executions.
+* Sandbox, Packaging & Tooling:
+- Add concurrency slot admission control in `scripts/sandbox/admission.py` and `docker_sandbox.py` to prevent HCS exhaustion during parallel Windows container execution.
+- Add `build-intellicrack` target in `justfile` and packaging scripts (`packaging/stage.ps1`, `packaging/intellicrack.iss`, `packaging/launcher/launcher.py`).
+- Introduce test suites verifying Inno Setup staging parity, icon frame formats, frozen path discovery, mutex isolation, Ghidra JDK validation, and Hexbench accessibility semantics.
 
 
 ### Changed
@@ -1041,6 +1109,403 @@ package. pydoclint and darglint remain clean. Ruff stays clean.
 
 
 ### Fixed
+
+- **sandbox:** Close a sandbox by its real window, and outlast the teardown (`0977e74`)
+S18-D24. Stopping a Windows Sandbox left the VM resident. The filed guess was
+that the close was aimed at the wrong process; a live run falsified it. On this
+build Windows Sandbox is an MSIX app whose process set is launcher + session +
+WindowsSandboxServer.exe, WindowsSandboxClient.exe does not exist, and the
+session host -- the pid already closed -- owns every window.
+Two defects were behind it instead:
+- The close was posted to every top-level window the session owns. A live
+session owned thirteen: one visible "Windows Sandbox" shell plus twelve
+invisible helpers (IME, MSCTFIME UI, RDP sound and clipboard sinks, a timer
+window, a GUID-classed one). Since success meant "at least one post
+succeeded", a post to a hidden helper satisfied it, so the backend could
+report having asked a session to close when the shell window got nothing.
+select_close_targets now closes visible windows only.
+- The graceful budget was 30s. A single WM_CLOSE to the shell window does work:
+measured clean, it took the session host and vmmemWindowsSandbox down
+together at 26.6s on an idle guest, and minutes on one still finishing its
+first boot. The budget expired mid-unwind and the force kill that followed is
+what stranded the VM, since a killed session never completes the unwind that
+releases it. Raised to 300s, which costs nothing when the close is quick
+because the wait ends on process exit.
+
+- **ui:** Re-enable sandbox controls to their backend-correct state after an op (`02339ad`)
+S17-D10b. After a sandbox operation completed, its success/error handler
+re-enabled every control unconditionally, so QEMU-only controls came back
+live under a backend that does not support them. Controls are now restored
+through `_restore_shared_control` / `_restore_qemu_only_control`, which
+consult `_qemu_controls_supported`, leaving unsupported controls disabled.
+
+- **ui:** Surface silent-but-successful and error script results in the Scripts panel (`5ed869c`)
+S15-D13. Running a script through the Scripts panel discarded three kinds
+of genuine bridge answer:
+- A command that succeeds with no stdout (a rizin `s <addr>` seek) rendered
+a blank result pane, reading as "nothing happened"; it now reports
+`(no output)`, the marker the synchronous python path already used.
+- A Frida `send()` payload that is not a JavaScript object (a bare string,
+number, boolean or array, all delivered verbatim by Frida) was dropped,
+so the waiter completed with an empty mapping that reached the panel as
+`{}`; it is now rendered under a `payload` key.
+- A script that raised carried Frida's own description of the fault, which
+was replaced with a bare "script execution failed"; the description is
+now included, so a caller can tell a typo from a missing export.
+
+- **sandbox:** Make the Windows guest provisioner able to actually install one (`b665cb0`)
+Three defects, all found by running it against real Windows 11 26100 media.
+The virtio medium bundled under tools/qemu/images was invisible to discovery.
+iter_candidate_isos is a breadth-limited scan and that directory sits deeper
+below D:\ than any budget reaches, so a run without an explicit --virtio-iso
+failed on media that was sitting right there. The images directory is now
+offered as a priority root, scanned first and on its own terms, exactly as the
+install-media discovery already did.
+The answer file named more driver paths than Setup accepts. S17-D44 had widened
+DriverPaths to every package the medium carries and had never been exercised by
+an install; every Windows 11 install aborted at
+CDlpActionDriverInstallation::ExecuteUnattendDriverInstall with 0xD000A000
+before touching a disk. Three runs differing only in that block: 360 paths
+aborted, 60 aborted identically, 4 installed. The provisioner now stages one
+package per driver - newest family per driver, off what the medium really
+carries - flat into a folder on the answer medium it authors, and names that
+one folder per candidate letter. Six entries, whatever the medium holds. A set
+with no viostor is refused outright rather than staged.
+The printed command could not finish an install. Windows Setup power cycles the
+guest between phases and QEMU exits when it does, leaving the disk mid-install;
+reproduced three times, on two command lines, one with no -boot once= at all.
+run_unattended_install now supervises the sequence, relaunching the guest off
+its system disk at each power cycle - dropping only the once= element, since a
+verbatim replay restarts the installation - and waits for a completed
+guest-sync-delimited round trip before powering the guest off through its own
+agent. Exposed as --install.
+Confirmed live end to end: given no --virtio-iso, the medium was found in two
+directory visits, 6 driver paths were emitted, Setup completed, the guest
+booted off the virtio system disk, and its agent answered.
+
+- **sandbox:** Let the Host Compute Service finish before killing the worker (`44a5cd6`)
+Stopping a Windows sandbox killed vmwp.exe while HCS was still unwinding the
+compute system, and a killed worker never completes the teardown that releases
+the VM, so vmmemWindowsSandbox stayed resident after every run. The kill could
+not have worked either: the worker is not a process this account may terminate,
+and the attempt returns access denied.
+The worker is now given a real window to exit on its own once the session is
+closed, and is only forced if it outlives it. The wait itself was also lying:
+it waited on self.process, which is the launcher, and the launcher exits the
+moment it has handed the session off - so it reported success while the session
+was still up, which is what made the caller escalate in the first place.
+_await_pid_exit now watches the pid it was actually given.
+
+- **sandbox:** Wait for the collectors to report before reading the tabs (`51ff67b`)
+The Windows Sandbox report was assembled three seconds after the target
+exited. Measured on a real run, the surviving collectors' logs reached the
+host across a 21-second spread after that point: registry at +5s, network
+at +21s. The Registry Changes and Clipboard tabs came back empty for a run
+that had genuinely made those changes.
+The old budget could not have detected this. It waited for the aggregate
+size of the log files to hold still, and a collector that has not written
+yet has no file at all, so it contributes zero bytes and reads as perfectly
+stable.
+The wait is now on the set of collectors that have produced a log. The
+expected set comes from logs/monitors.pids, which start_monitors.cmd's
+readiness gate rewrites to hold only the monitors that survived startup,
+with the command dispatcher excluded since it fills no tab. It returns once
+every survivor has reported, or once no further log has appeared for a
+settle window that exceeds the largest measured gap between two arrivals,
+under a ceiling.
+The gates run the real launcher over a scratch monitor folder, so the pid
+file under test is one production wrote, and hold one collector's first
+record until the test releases it.
+
+- **sandbox:** Let a stopping QEMU sandbox still reach its guest (`80a41ef`)
+stop() sets the status to "stopping" before calling _stop_impl, and the
+guest command guard admitted only "running". The output collection that
+_stop_impl does first therefore raised "not running" on every stop, and
+that exception propagated: the guest was never powered off, the output was
+never mirrored, the recorder was never closed, and destroy reported a
+failed stop.
+The guard was conflating whether the sandbox is in the running state with
+whether the machine is alive. The termination check on the next line asks
+the second question. During "stopping" the guest has not been touched yet,
+which is the entire premise of collecting there, so "stopping" now joins
+"running" in _GUEST_REACHABLE_STATUSES.
+The gate that missed this recorded which seams _stop_impl reaches by
+overriding _collect_guest_output, stubbing out the one call whose
+precondition was broken. Three new tests drive the real run_command against
+the real status machine and derive the refusal text from the sandbox rather
+than restating it.
+
+- **sandbox:** Stage the configured folder on the guest's own volume, and fetch its output before it dies (`618b6be`)
+Two vvfat disks cannot coexist. QEMU stamps every vvfat image with one
+hardcoded MBR signature, so attaching the analyst's folder as a disk of its
+own collided with the work share; the guest reported the second Offline with
+OfflineReason=Resource Exhaustion and its partition never got a letter. The
+folder is now junctioned into the work share under configured/ before launch,
+which loses nothing: vvfat freezes the host directory when the machine starts
+either way.
+Guest output was also only ever collected on the run_binary path, so a session
+driven through execute() wrote its results into a directory that went away with
+the machine. It is now collected at the top of _stop_impl too, while the guest
+agent that serves the fetch is still alive.
+The gate is re-aimed from the command line to the share the provisioner really
+builds - reading the analyst's bytes back through the volume was the one check
+that could have caught this, and asserting on argv was not.
+
+- **sandbox:** Honour the shared folder, the telemetry toggle and the monitors the launcher could not start (`c899c1e`)
+Three H-09 defects from the live pass, all in the path between a Sandbox
+Settings dialog and a running guest.
+
+- **sandbox:** Honour the networking toggle, and stop reporting every Windows run as failed (`9f463d9`)
+S18-D14 and S18-D17, both found by driving H-09 and H-01 live for the first time.
+S18-D14. The QEMU backend never read network_enabled. The dialog ships "Enable
+networking in sandbox" unchecked and warns that ticking it lets the sandbox reach
+external resources; SandboxBridge.create built that answer into SandboxConfig, and
+_build_qemu_command then emitted the same fully routed -netdev user for every run.
+Measured on a real Windows guest booted with networking configured off: the guest
+fetched msftconnecttest.com over HTTP, resolved v10.events.data.microsoft.com and
+completed a TCP connection to it on 443, and reached 8.8.8.8:53. A sample detonated
+with networking "off" could talk to its C2.
+The NIC stays and restrict=on is added instead, because both control channels reach
+the guest over hostfwd rules on that same netdev and QEMU documents restrict as not
+affecting explicitly set forwarding. Confirmed live rather than assumed: with the
+change in place the same guest booted, took its DHCP lease, connected its agent and
+ran the probe, and answered "The remote name could not be resolved" for both hosts
+with telemetry_tcp and dns_server_tcp false. A fix that had isolated the guest by
+removing its network would have taken the agent with it, and no sandbox would start.
+S18-D17. Every command dispatched to a Windows Sandbox reported exit code -2 and
+result=error whatever the target returned. Measured: a target that ran to completion
+and printed its final line came back as exit_code=-2, result=error over a clean
+stdout. The in-guest dispatcher publishes the code with Set-Content -Encoding utf8,
+which under Windows PowerShell 5.1 is UTF-8 *with* a BOM; the host decoded that file
+as plain utf-8, so the code arrived carrying a leading U+FEFF, str.strip() left it
+there because U+FEFF is not whitespace, isdigit() said no, and the reader fell
+through to _RETURNCODE_UNKNOWN. Same BOM class as S17-D52, one boundary further out:
+that fix hardened read_log_lines, and this is a separate reader. It is a permanent
+false red - a successful run is indistinguishable from a failing one, and any caller
+branching on the exit code branches wrongly.
+
+- **sandbox:** Read every lifecycle-reporting collector for outages, not half of them (`02d32bd`)
+S18-D13. S17-D50(b) built the collector-outage channel precisely so an empty tab
+could be told apart from a collector that never watched, but
+collect_collector_outages only ever walked api_trace and injection_monitor.
+dll_monitor.ps1 and kernel_object_monitor.ps1 write the same
+timestamp|collector|state|detail lifecycle log and were never read.
+Found live rather than by inspection. Across six headless re-drives against the
+real Windows guest the monitor launcher started different subsets of the eight
+monitors with no error reported for the ones it missed - run 3 started none, run
+5 was missing dll/service/resource, run 6 was missing only dll_monitor. Every one
+of those runs produced an empty DLL tab and carried nothing anywhere in the
+report to separate that from a sample that loaded no libraries. That is the exact
+failure S17-D50(b) exists to prevent, surviving in the collectors it was never
+extended to. It also meant the dll_monitor and kernel_object_monitor lifecycle
+logs S18-D10 had just started fetching were being pulled off the guest and then
+ignored.
+The covered set is names only now, with the log name derived as
+f"{collector}.lifecycle.log" - the convention all four already follow - so a
+collector and its log cannot drift apart. Safe on both edges: the Windows gate is
+at the call site, and _collect_monitoring_logs only runs when monitor=True, i.e.
+when all eight monitors were launched, so widening the set cannot manufacture an
+outage on a run that never asked for monitoring. kernel_object_monitor's extra
+first_sweep_complete state is ignored by parse_collector_lifecycle, which reads
+only started and stopped.
+The launcher flakiness itself is not fixed by this and stays open. What changes
+is that it can no longer happen invisibly: a monitor the launcher misses now
+reaches the report as a named outage instead of an empty tab.
+Gated by tests/sandbox/qemu/test_collector_outage_coverage_s18d13.py (5 tests).
+The coverage assertion never restates which collectors those are - it reads the
+lifecycle path out of every shipped .ps1 and requires the reporter to cover
+exactly that set, in both directions, so a monitor added later with a lifecycle
+log of its own cannot be quietly left out and a name no script writes cannot be
+reported as a phantom collector. A precondition assert fails if the regex matches
+nothing, so the expected set can never go vacuously empty.
+Falsifiability, each mutation reverted separately; baseline and restored green:
+| reverted                                  | reddened                        |
+| dll_monitor dropped from the set          | coverage + the never-started gate |
+| kernel_object_monitor dropped from the set| coverage + the stopped-detail gate|
+| a collector no script writes is reported  | the phantom gate                  |
+
+- **sandbox:** Load TraceEvent in the DLL monitor and stop losing its records (`1e161dd`)
+S18-D11. dll_monitor.ps1 probed for its ETW support with
+[System.Type]::GetType('...TraceEventSession...') before anything loaded the
+assembly. GetType only ever finds a type in an assembly that is already loaded,
+so in a fresh PowerShell the probe answered "no" every single time and the whole
+realtime ETW branch was unreachable. The collector fell through to its
+Win32_ModuleLoadTrace fallback on every run, which is why every DLL row carried
+base address 0x0, event id 0 and an empty payload schema - the WMI call site's
+defaults.
+The probe now loads first. Import-TraceEventAssembly searches the script's own
+directory, TRACE_EVENT_DLL_DIR, the NuGet package cache, the shared .NET
+framework directories and VS, and Register-TraceEventDependencyResolver stages
+the whole .NET Standard 2.0 support-pack closure beside it with an AssemblyResolve
+handler matching by simple name - TraceEvent 3.2.5 ships no net4x build, so
+loading the one DLL is not enough. Every outcome is written to the diagnostic log
+(traceevent_dll_missing / traceevent_dll_load_failed / traceevent_loaded).
+Confirmed live: traceevent_loaded|D:\monitor\Microsoft.Diagnostics.Tracing.TraceEvent.dll,
+and rows with real bases (0x7FFF9B500000) and event id 5 - 129 loads against the
+fallback's 22.
+S18-D12. Write-DllRecord appended with Add-Content, which opens the file afresh
+for every record. The host collects the monitor logs off the guest while the run
+is still going and qemu-guest-agent opens them for reading without sharing
+writes, so for as long as it holds a handle no writer can open the file at all
+and the record is lost. Measured live once S18-D10 made the diagnostic reachable:
+dll_event_handler_error|The process cannot access the file
+'C:\intellicrack\logs\dll_monitor.log' because it is being used by another process.
+Holding a handle open instead only reverses the victim - measured live, that
+locked the collector out of all three DLL logs for the whole run and they came
+back empty. The writer therefore opens for as short a time as it can and waits
+the collision out: a bounded retry under a lock that keeps the ETW callback and
+the stop watcher from interleaving a line. A diagnostic that cannot be written
+never takes the collector down with it.
+
+- **sandbox:** Fetch the guest collectors' diagnostic logs, not only their data (`9516d42`)
+S18-D10. Every Windows collector writes a diagnostic log beside its data log -
+the lifecycle pair the outage reader parses, plus the .diag/.errors logs that are
+the only record of why a collector that started produced no rows. The host
+fetched two of them and left the rest inside the guest, where the S18-D06 cleanup
+then deleted them with the instance tree.
+The cost was not theoretical. The Injections tab was empty on every run and there
+was no way to tell an empty tab from a broken collector. The first run after this
+change rescued 12 logs instead of 7 and the answer was in one of them:
+threat_intel_provider_unavailable|Exception calling "EnableProvider" ...
+"Access is denied. (E_ACCESSDENIED)"; falling back to narrowed Kernel-Process
+heuristic
+Microsoft-Windows-Threat-Intelligence requires a PPL/anti-malware signature, so
+the monitor's fallback was correct and the empty tab was correct - which is a
+conclusion the report could not previously reach.
+COLLECTOR_DIAGNOSTIC_LOG_NAMES is public for the same reason MONITOR_SCRIPT_NAMES
+is: the gate reads it.
+Gated by tests/sandbox/qemu/test_guest_diagnostic_logs_collected_s18d10.py (4).
+It derives the expected set from the producers - every log name the guest scripts
+themselves write - rather than restating it, so a new diagnostic log that is not
+fetched fails the gate, and a fetched name that no script writes fails it too.
+
+- **sandbox:** Let the Windows ETW collectors consume events, and keep the tracer out of its own tab (`0eabf5f`)
+S18-D08. Two defects one statement apart stopped every ETW collector in the
+Windows guest from consuming a single event.
+api_trace.ps1 and injection_monitor.ps1 wired their fallback handler with
+`$source.UnhandledEvents.add_All($handler)`. UnhandledEvents is a .NET event on
+TraceEventDispatcher, not a parser property like Dynamic - confirmed by
+reflection against the vendored TraceEvent 3.2.5, which exposes
+add_/remove_UnhandledEvents and no property. PowerShell surfaces events only
+through those accessors, so the member read yielded $null on every run and the
+.add_All() on it threw. The statement sits after every provider is enabled and
+every real handler is registered but before Process(), so both collectors died
+fully armed and having observed nothing.
+All three collectors - dll_monitor.ps1 too - then pumped with `$source.Process()`.
+PowerShell's adapted-member binder refuses that one call ("the result type
+'System.Boolean' ... is not compatible with the result type 'System.Object'
+expected by the call site") on Windows PowerShell 5.1 and PowerShell 7.6, against
+a real ETWTraceEventSource and a real EventPipeEventSource, with a handler
+registered and with none. It is specific to the member name: the equally Boolean
+EnableProvider on the same object binds normally. All three pumps go through
+psbase, which reaches the .NET object directly.
+dll_monitor is why this went unnoticed - its Win32_ModuleLoadTrace WMI fallback
+filled the tab anyway, with base address 0x0 and event id 0 on every row.
+Write-TraceFatal now folds the innermost ScriptStackTrace frame into the message.
+InvocationInfo alone was not enough: once an error crosses a function boundary it
+describes the call site, so it named the Invoke-ApiTrace call rather than the
+statement that failed, which is what left this undiagnosable across runs.
+S18-D09. api_trace.ps1 has no channel but its own data log in which to announce
+that it started, stopped or failed, so it writes all three there as records
+carrying `tracer` in the process-name field, and parse_api_trace_log handed them
+to the report. Live, a collector that had captured nothing at all presented an
+API Calls tab reporting two calls, named ERROR and STOP. Those rows are skipped
+now, and their text is folded onto the collector's outage instead of being lost
+with the row - a dead collector's complaint is telemetry about the collector, not
+an API call the sample made.
+
+- **qemu:** Serve the guest agent's command channel off its telemetry loop (`fb42363`)
+The generated in-guest agent answered the host's readiness handshake so
+slowly that QEMUSandbox.start() failed against a perfectly healthy guest.
+Measured on the real windows11-intellicrack-v4-clean guest under WHPX: the
+host's connect completed in 0.001s and the first pong arrived 19s later,
+after three attempts with a 30s budget each got no answer at all - while
+Get-NetTCPConnection inside that guest showed 0.0.0.0:4445 listening the
+whole time. The sandbox reported "guest agent failed to connect", which
+reads like a guest that never booted.
+agent.ps1 checked its listener once per pass of the loop that also
+enumerates the process table and both socket tables, accepted exactly one
+connection per pass, and then slept a second - all of it downstream of eight
+process launches and a recursive FileSystemWatcher over the whole system
+drive, whose event actions then compete for that runspace for as long as the
+agent runs. Every attempt the host abandoned stayed queued ahead of the next
+one, so the agent fell further behind the harder the host tried. S18-D04
+widened the host's per-attempt budget to 15s; this is the same failure on
+the guest side of the socket, where 15s is still not enough.
+Three parts:
+- the listener is opened before the monitors are launched and before the
+watcher is registered, so the port is up as soon as PowerShell is;
+- the channel is served from a runspace of its own, built from
+InitialSessionState::CreateDefault() because the request handler needs
+ConvertTo-Json, so neither the telemetry sweep nor PowerShell's event
+actions can delay a reply;
+- a new connection supersedes the held one rather than queueing behind it,
+and framing moved onto an explicit stateful UTF-8 decoder so a request
+split across reads is completed instead of corrupted.
+Gated by tests/sandbox/qemu/test_guest_agent_responsiveness_s18d07.py, which
+runs the real generated agent under a real powershell.exe. Each part was
+reverted separately and reddens exactly its own gates; restoring the whole
+committed script reddens three of the five.
+The peer harness's lift-completeness check anchored its declaration patterns
+at column zero, so nesting the agent's functions inside a script block would
+have silently stopped it covering any of them; it now tolerates indentation.
+
+- **qemu:** End the VM a failed start leaves running before removing its tree (`10b1c42`)
+A start that fails while attaching the guest agent - where S18-D04 and S18-D05
+both failed - has already launched the VM. _cleanup then ran with QEMU alive and
+holding disk-overlay.qcow2 open, and Windows will not delete a file whose holder
+did not pass FILE_SHARE_DELETE.
+Nothing there could have ended it. _cleanup's only termination branch reads a
+qemu.pid file, and Windows QEMU writes none: it implements neither -daemonize nor
+-pidfile, so the VM is known only by its child handle and that branch is dead
+code on Windows. A failed start therefore leaked the virtual machine, not just a
+directory.
+The failure could not even be reported. The removal passed ignore_errors=True,
+which suppresses every error and makes the except OSError beside it unreachable,
+so 48 abandoned overlays accumulated without one line in any log. The forensics
+are what identified this: the leaked directories from runs that reached a launch
+held exactly one file, the overlay, with the staged shared/ tree already gone.
+_cleanup now reaps the foreground child and unregisters the PID before touching
+the filesystem, reusing the reaper _stop_impl already calls, and _remove_temp_tree
+retries the removal - Windows releases a dead process's handles asynchronously,
+so the first attempt can still lose the race - and reports the last failure
+instead of discarding it. Every step is idempotent, since _stop_impl performs
+them first.
+Gated against a real child process holding a real file handle, with a
+precondition assert that the overlay genuinely cannot be unlinked first. Each of
+the three parts reverts to redden exactly its own gate.
+
+- **tests:** Register the S18-D05 async fixture and re-aim two vacuous gates (`602ae14`)
+The S18-D05 gates committed in 6e3d7910 had never been executed once. The
+stalled_agent fixture was declared with a plain @pytest.fixture on an async
+generator, which pytest-asyncio never registers under Mode.STRICT, so three of
+the seven gates ended in "fixture 'stalled_agent' not found" - 4 passed, 3
+errors. It now uses @pytest_asyncio.fixture, the convention already followed by
+96 fixtures across 35 files in this tree.
+With the fixture registered, the revert proof showed that two of those three
+gates could not fail. Both issued their follow-up command while the agent was
+still stalled, so it was refused by its own deadline whether or not the channel
+remembered it was offset; they asserted "not response.success" and stayed green
+with the _resync_pending guard removed.
+Both now wait for the abandoned reply to actually land before issuing the
+follow-up - the only state in which a reply can be misattributed - and assert
+on which reply came back rather than on the absence of one. The bare-sync-id
+gate issues two commands, because the failed resyncs' replies sit one further
+into the stream than the abandoned command's; that is what produced the live
+response_payload=982749383.
+Removing the guard now reddens all three gates instead of one, and each of the
+other four parts of the fix reddens exactly its own gate and nothing else.
+Restored: 7 passed.
+
+- **hexbench,sandbox:** Handle QEMU GA exec timeouts and improve UI accessibility (`6e3d791`)
+Tighten QEMU guest agent synchronization to prevent desynchronization on slow commands, update timeout budgeting, and refine Hexbench frontend accessibility and design card generation.
+* Prevent guest agent response offset by maintaining channel resync state and adapting sync attempt slices
+* Increase `QEMU_GA_EXEC_TIMEOUT` to 45s and `guest_agent_ready_timeout` default to 300s to support cold guest boots
+* Add multi-resolution Hexbench application icon and PyInstaller packaging specification
+* Render histogram chart and design card components with standard DOM elements and inline SVGs instead of canvas
+* Implement focus trapping, live region announcements, and explicit ARIA labels across modals and controls
+* Add blank workspace screen with drag-and-drop file opening and process attach actions
+* Expand test coverage for design card freshness, token usage, accessibility contracts, and guest agent desync recovery
 
 - **qemu:** Outwait the Windows guest agent's serve cadence (S18-D04) (`83aac72`)
 No Windows QEMU run could reach the report tabs: start spent its whole
@@ -5256,15 +5721,5 @@ Operation::Overwrite records, so undo/redo and is_modified() were wrong.
 Fresh UndoManager after BPS/UPS import had saved_index=Some(0), making
 is_modified() return false despite the document being altered. Add
 UndoManager::mark_unsaved() and call it after the import resets.
-
-- **hexbench,sandbox:** Handle QEMU GA exec timeouts and improve UI accessibility (``)
-Tighten QEMU guest agent synchronization to prevent desynchronization on slow commands, update timeout budgeting, and refine Hexbench frontend accessibility and design card generation.
-* Prevent guest agent response offset by maintaining channel resync state and adapting sync attempt slices
-* Increase `QEMU_GA_EXEC_TIMEOUT` to 45s and `guest_agent_ready_timeout` default to 300s to support cold guest boots
-* Add multi-resolution Hexbench application icon and PyInstaller packaging specification
-* Render histogram chart and design card components with standard DOM elements and inline SVGs instead of canvas
-* Implement focus trapping, live region announcements, and explicit ARIA labels across modals and controls
-* Add blank workspace screen with drag-and-drop file opening and process attach actions
-* Expand test coverage for design card freshness, token usage, accessibility contracts, and guest agent desync recovery
 
 

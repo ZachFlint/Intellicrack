@@ -25,6 +25,7 @@
     10. Analysis
     11. Overlays
     12. Utilities
+    13. Forced colors
 */
 
 /* ============================================================ 1. RESET */
@@ -109,6 +110,12 @@ svg {
   --hb-fs-2xl: 22px;
   --hb-fs-3xl: 28px;
 
+  /* --hb-fs-xl and --hb-fs-2xl are rungs no rule below has reached yet, as are
+     --hb-space-12, --hb-radius-xl and --hb-shadow-0. They stay declared for two
+     reasons: a scale with holes in it is no longer a scale, and the foundations
+     cards in design/build_cards.py publish each one with the use it is held for
+     - the palette query, the dialog heading, a flush in-flow surface. */
+
   --hb-lh-flat: 1;
   --hb-lh-tight: 1.25;
   --hb-lh-normal: 1.45;
@@ -169,6 +176,15 @@ svg {
   --hb-dock-right-w: 340px;
   --hb-dock-bottom-h: 240px;
 
+  /* -- Control sizes --------------------------------------------- */
+  /* The chrome heights above were tokenised; the controls sitting inside them
+     were not, so the same 26px was retyped in five rules. --hb-hit-min is the
+     separate constraint: WCAG 2.5.8 wants a 24px target, and the boxes grow to
+     meet it while the glyphs inside them stay the size they are. */
+  --hb-hit-min: 24px;
+  --hb-control-h: 26px;
+  --hb-control-h-sm: 20px;
+
   --hb-hex-fs: 12px;
   --hb-row-h: 20px;
   --hb-cell-w: 22px;
@@ -200,8 +216,14 @@ svg {
   /* -- Borders --------------------------------------------------- */
   --hb-border-subtle: #eaedf3;
   --hb-border: #d8dde6;
-  --hb-border-strong: #b7c0cd;
+  --hb-border-strong: #7f8998;
   --hb-border-focus: #0f6cd6;
+
+  /* A swatch shows a colour that owes the palette nothing, so its edge cannot
+     come from the border scale: the ring darkens a pale value against the
+     surface and the sheen lifts a dark one off it. */
+  --hb-swatch-ring: rgb(0 0 0 / 18%);
+  --hb-swatch-sheen: rgb(255 255 255 / 12%);
 
   /* -- Text ------------------------------------------------------ */
   --hb-text-primary: #10151d;
@@ -315,8 +337,10 @@ svg {
 
     --hb-border-subtle: #1a1f27;
     --hb-border: #262d38;
-    --hb-border-strong: #3a4453;
+    --hb-border-strong: #65728a;
     --hb-border-focus: #6bb2f7;
+    --hb-swatch-ring: rgb(255 255 255 / 22%);
+    --hb-swatch-sheen: rgb(0 0 0 / 22%);
 
     --hb-text-primary: #dfe4ec;
     --hb-text-secondary: #a3adbd;
@@ -406,6 +430,14 @@ svg {
 
 /* ============================================================ 4. THEME OVERRIDES */
 
+/* The dark palette is declared twice on purpose. Section 3 answers the system
+   setting and this block answers an explicit choice, and neither can be
+   expressed as the other without a preprocessor or a second stylesheet, which
+   this app does not have. What keeps the two copies honest is not discipline:
+   tests/stylesheet_tokens.test.mjs parses both blocks and fails on the first
+   token they disagree about, and holds the light attribute block to :root the
+   same way. */
+
 :root[data-theme="dark"],
 [data-theme="dark"] {
   color-scheme: dark;
@@ -422,8 +454,10 @@ svg {
 
   --hb-border-subtle: #1a1f27;
   --hb-border: #262d38;
-  --hb-border-strong: #3a4453;
+  --hb-border-strong: #65728a;
   --hb-border-focus: #6bb2f7;
+  --hb-swatch-ring: rgb(255 255 255 / 22%);
+  --hb-swatch-sheen: rgb(0 0 0 / 22%);
 
   --hb-text-primary: #dfe4ec;
   --hb-text-secondary: #a3adbd;
@@ -526,8 +560,10 @@ svg {
 
   --hb-border-subtle: #eaedf3;
   --hb-border: #d8dde6;
-  --hb-border-strong: #b7c0cd;
+  --hb-border-strong: #7f8998;
   --hb-border-focus: #0f6cd6;
+  --hb-swatch-ring: rgb(0 0 0 / 18%);
+  --hb-swatch-sheen: rgb(255 255 255 / 12%);
 
   --hb-text-primary: #10151d;
   --hb-text-secondary: #414b5a;
@@ -780,7 +816,7 @@ pre {
   align-items: center;
   gap: var(--hb-space-5);
   width: 100%;
-  height: 26px;
+  height: var(--hb-control-h);
   padding: 0 var(--hb-space-4);
   border-radius: var(--hb-radius-sm);
   font-size: var(--hb-fs-sm);
@@ -845,9 +881,9 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: var(--hb-space-3);
-  height: 26px;
+  height: var(--hb-control-h);
   padding: 0 var(--hb-space-4);
-  border: 1px solid transparent;
+  border: 1px solid var(--hb-border-strong);
   border-radius: var(--hb-radius-sm);
   font-size: var(--hb-fs-sm);
   color: var(--hb-text-secondary);
@@ -857,7 +893,6 @@ pre {
 
 .hb-tool-btn:hover:not(:disabled) {
   background: var(--hb-surface-hover);
-  border-color: var(--hb-border);
   color: var(--hb-text-primary);
 }
 
@@ -905,10 +940,10 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: var(--hb-space-3);
-  height: 26px;
+  height: var(--hb-control-h);
   padding: 0 var(--hb-space-4);
   background: var(--hb-surface-inset);
-  border: 1px solid var(--hb-border);
+  border: 1px solid var(--hb-border-strong);
   border-radius: var(--hb-radius-sm);
   font-family: var(--hb-font-mono);
   font-size: var(--hb-fs-sm);
@@ -987,8 +1022,8 @@ pre {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 18px;
-  height: 18px;
+  width: var(--hb-hit-min);
+  height: var(--hb-hit-min);
   border-radius: var(--hb-radius-sm);
   font-size: var(--hb-fs-sm);
   color: var(--hb-text-faint);
@@ -1081,17 +1116,18 @@ pre {
   color: var(--hb-text-secondary);
 }
 
+/* Document tabs keep the accent underline; a panel tab is filled instead, so
+   the two strips stay apart with no other context to tell them by. The side
+   rules connect the tab to the body it opens. */
 .hb-dock-tab.is-active {
+  background: var(--hb-surface-1);
   color: var(--hb-text-primary);
+  font-weight: var(--hb-fw-semibold);
+  box-shadow: inset 1px 0 0 0 var(--hb-border), inset -1px 0 0 0 var(--hb-border);
 }
 
 .hb-dock-tab.is-active::after {
-  content: "";
-  position: absolute;
-  inset: auto var(--hb-space-3) 0 var(--hb-space-3);
-  height: 2px;
-  border-radius: var(--hb-radius-pill) var(--hb-radius-pill) 0 0;
-  background: var(--hb-accent);
+  content: none;
 }
 
 .hb-dock-tab-count {
@@ -1307,6 +1343,9 @@ pre {
   contain: strict;
 }
 
+/* Written by design/build_cards.py, never by the app: a card renders the rows
+   as flat markup with no virtualiser above them, so the containment that makes
+   a scrolling view cheap has to come back off. */
 .hb-rows.is-static {
   contain: none;
   overflow: visible;
@@ -1368,6 +1407,9 @@ pre {
   --hb-cell-underline: transparent;
   --hb-cell-corner: transparent;
   --hb-cell-ring: 0 0 0 0 transparent;
+  --hb-cell-dash: 0;
+  --hb-cell-double: 0;
+  --hb-cell-strike: transparent;
 
   position: relative;
   isolation: isolate;
@@ -1395,7 +1437,13 @@ pre {
   z-index: -1;
   background:
     linear-gradient(225deg, var(--hb-cell-corner) 0 6px, transparent 6px) top right / 7px 7px no-repeat,
-    linear-gradient(var(--hb-cell-underline), var(--hb-cell-underline)) bottom left / 100% 2px no-repeat,
+    repeating-linear-gradient(90deg, var(--hb-cell-underline) 0 2px, transparent 2px 4px) bottom left / 100%
+      calc(2px * var(--hb-cell-dash)) no-repeat,
+    linear-gradient(var(--hb-cell-underline), var(--hb-cell-underline)) bottom left / 100%
+      calc(2px * (1 - var(--hb-cell-dash))) no-repeat,
+    linear-gradient(var(--hb-cell-underline), var(--hb-cell-underline)) left 0 bottom 3px / 100%
+      calc(2px * var(--hb-cell-double)) no-repeat,
+    linear-gradient(var(--hb-cell-strike), var(--hb-cell-strike)) left center / 100% 1px no-repeat,
     linear-gradient(var(--hb-cell-state), var(--hb-cell-state)) 0 0 / 100% 100% no-repeat,
     linear-gradient(var(--hb-cell-hit), var(--hb-cell-hit)) 0 0 / 100% 100% no-repeat,
     linear-gradient(var(--hb-cell-diff), var(--hb-cell-diff)) 0 0 / 100% 100% no-repeat,
@@ -1450,6 +1498,11 @@ pre {
   --hb-cell-field: var(--hb-field-bg);
 }
 
+/* The diff bands wait on their caller. grid.highlight(ranges, className) is
+   generic and is passed 'is-hit' today; BE-1's Diff panel is what will pass
+   these three, from diff_bytes / diff_files. Until then they are produced only
+   by design/build_cards.py, which is why the shape channel below already
+   carries a mark for each of them. */
 .hb-byte.is-diff-added,
 .hb-ascii.is-diff-added {
   --hb-cell-diff: var(--hb-diff-added-bg);
@@ -1521,6 +1574,51 @@ pre {
   --hb-cell-ring: inset 2px 0 0 0 var(--hb-hit-border);
 }
 
+/* -- Shape channel: byte class and diff state without colour -- */
+
+/* The four byte classes and the three diff states are told apart by hue alone,
+   which is nothing at all to a monochrome display or a red-green deficiency
+   (WCAG 1.4.1). Each therefore also owns a shape, drawn through the same cell
+   slots: null none, printable a solid underline, control a dotted one, high a
+   corner wedge; added a left bar, removed a strike, modified a double rule.
+   --hb-cell-dash and --hb-cell-double are flags rather than colours because the
+   underline is one background layer whose height they switch between two
+   spellings; 0 leaves the layer zero-high and so unpainted. Off by default:
+   View -> Byte marks writes data-marks on .hb-editor. */
+
+[data-marks="on"] .hb-byte.bc-print,
+[data-marks="on"] .hb-ascii.bc-print {
+  --hb-cell-underline: currentColor;
+}
+
+[data-marks="on"] .hb-byte.bc-ctrl,
+[data-marks="on"] .hb-ascii.bc-ctrl {
+  --hb-cell-underline: var(--hb-byte-control);
+  --hb-cell-dash: 1;
+}
+
+[data-marks="on"] .hb-byte.bc-high,
+[data-marks="on"] .hb-ascii.bc-high {
+  --hb-cell-corner: currentColor;
+}
+
+[data-marks="on"] .hb-byte.is-diff-added {
+  --hb-cell-ring: inset 3px 0 0 0 var(--hb-success);
+}
+
+[data-marks="on"] .hb-byte.is-diff-removed {
+  --hb-cell-strike: var(--hb-error);
+}
+
+[data-marks="on"] .hb-byte.is-diff-modified {
+  --hb-cell-underline: var(--hb-modified);
+  --hb-cell-double: 1;
+}
+
+[data-marks="on"] .hb-byte.is-selected {
+  --hb-cell-ring: inset 0 0 0 1px var(--hb-sel-border);
+}
+
 /* Caret sits above every other layer */
 
 .hb-byte.is-caret::after,
@@ -1555,7 +1653,10 @@ pre {
   box-shadow: inset 0 0 0 1px var(--hb-border-strong);
 }
 
-/* Busy hatch */
+/* Busy hatch. grid.js writes .hb-busy over a pane while a read is in flight;
+   .hb-hatch is the same fill without the animation, offered as a utility for
+   anything that has to show an unknown region, and drawn today only by
+   design/build_cards.py. */
 
 .hb-busy,
 .hb-hatch {
@@ -1708,6 +1809,10 @@ pre {
   background: var(--hb-surface-1);
 }
 
+/* A docked panel fills its dock and needs no frame; is-framed is for a panel
+   that floats inside another surface, which is what the Entropy and Diff panels
+   of UX-1 and BE-1 do inside the bottom dock. Rendered today by
+   design/build_cards.py. */
 .hb-panel.is-framed {
   border: 1px solid var(--hb-border);
   border-radius: var(--hb-radius-md);
@@ -1755,8 +1860,8 @@ pre {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
+  min-width: var(--hb-hit-min);
+  height: var(--hb-hit-min);
   padding: 0 var(--hb-space-2);
   border-radius: var(--hb-radius-sm);
   font-family: var(--hb-font-mono);
@@ -1785,11 +1890,14 @@ pre {
   padding: var(--hb-space-5);
 }
 
+/* No panel in the app carries a footer yet. Every one of the five dock panels
+   specified for UX-1, UX-6, BE-1, BE-2 and BE-5 does - run counts, diff timings,
+   the template hint - and panels.js is where they will be built. */
 .hb-panel-footer {
   display: flex;
   align-items: center;
   gap: var(--hb-space-4);
-  min-height: 26px;
+  min-height: var(--hb-control-h);
   padding: 0 var(--hb-space-5);
   background: var(--hb-surface-2);
   border-top: 1px solid var(--hb-border-subtle);
@@ -1941,8 +2049,8 @@ pre {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
+  width: var(--hb-hit-min);
+  height: var(--hb-hit-min);
   color: var(--hb-text-muted);
   font-size: var(--hb-fs-2xs);
   transition: var(--hb-transition-transform);
@@ -2028,6 +2136,9 @@ pre {
   word-break: break-all;
 }
 
+/* Superseded by the .hb-dim utility, which renderers.js uses for the same idea
+   and which needs no host class. Kept only because design/build_cards.py still
+   spells the inspector's absent values this way; it goes when the card does. */
 .hb-kv-value.is-dim {
   color: var(--hb-text-faint);
 }
@@ -2050,8 +2161,8 @@ pre {
   height: 12px;
   flex: 0 0 auto;
   border-radius: var(--hb-radius-xs);
-  border: 1px solid rgb(0 0 0 / 18%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 12%);
+  border: 1px solid var(--hb-swatch-ring);
+  box-shadow: inset 0 0 0 1px var(--hb-swatch-sheen);
   vertical-align: -2px;
 }
 
@@ -2065,7 +2176,7 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: var(--hb-space-2);
-  height: 17px;
+  height: var(--hb-control-h-sm);
   padding: 0 var(--hb-space-3);
   border: 1px solid var(--hb-neutral-border);
   border-radius: var(--hb-radius-sm);
@@ -2079,6 +2190,16 @@ pre {
   white-space: nowrap;
 }
 
+/* A badge is a label first, so it sits on the small control step. The 24px
+   target is owed only where the badge is something you can operate, which is
+   why the floor is keyed off the element being a control rather than off the
+   class: a count pill inside a table row must not grow the row. */
+.hb-badge:is(button, a[href], summary, [role="button"], [tabindex]) {
+  min-height: var(--hb-hit-min);
+}
+
+/* The rounded badge is the count form - the dock tab pill of A-4 and UX-9 is
+   the one that will ask for it. Drawn today by design/build_cards.py. */
 .hb-badge.is-pill {
   border-radius: var(--hb-radius-pill);
   padding: 0 var(--hb-space-4);
@@ -2314,10 +2435,10 @@ pre {
 .hb-textarea {
   width: 100%;
   min-width: 0;
-  height: 26px;
+  height: var(--hb-control-h);
   padding: 0 var(--hb-space-4);
   background: var(--hb-surface-inset);
-  border: 1px solid var(--hb-border);
+  border: 1px solid var(--hb-border-strong);
   border-radius: var(--hb-radius-sm);
   box-shadow: var(--hb-shadow-inset);
   color: var(--hb-text-primary);
@@ -2387,7 +2508,7 @@ pre {
   display: inline-flex;
   align-items: center;
   gap: var(--hb-space-3);
-  height: 26px;
+  height: var(--hb-control-h);
   font-size: var(--hb-fs-sm);
   color: var(--hb-text-secondary);
   cursor: pointer;
@@ -2480,7 +2601,7 @@ pre {
   gap: var(--hb-space-3);
   height: 28px;
   padding: 0 var(--hb-space-5);
-  border: 1px solid var(--hb-border);
+  border: 1px solid var(--hb-border-strong);
   border-radius: var(--hb-radius-sm);
   background: var(--hb-surface-1);
   color: var(--hb-text-primary);
@@ -2531,6 +2652,9 @@ pre {
   border-color: var(--hb-border);
 }
 
+/* Nothing destructive in the app is styled as destructive yet: shell.js builds
+   every confirm dialog with a plain primary button, so the delete and revert
+   confirmations are the callers this is waiting for. */
 .hb-btn.is-danger {
   border-color: var(--hb-error-border);
   background: var(--hb-error-bg);
@@ -2598,6 +2722,10 @@ pre {
   color: var(--hb-text-inverse);
 }
 
+/* The run button reports progress by state and label rather than by a spinner,
+   so forms.js has never built one; it stays for the long-running dock panels,
+   whose work is not tied to a button that can restyle itself. Drawn today by
+   design/build_cards.py. */
 .hb-spinner {
   width: 12px;
   height: 12px;
@@ -2832,6 +2960,9 @@ pre {
   word-break: break-word;
 }
 
+/* renderers.js builds banners that only state something; the slot is for the
+   banner that offers the fix beside it - retry a failed read, raise the
+   truncation limit - and is rendered today by design/build_cards.py. */
 .hb-banner-action {
   margin-left: auto;
   flex: 0 0 auto;
@@ -2855,6 +2986,9 @@ pre {
   color: var(--hb-success);
 }
 
+/* renderers.js composes `is-${kind}` for the four states; is-truncated is the
+   named case a truncated payload should carry instead of the generic warning,
+   and is spelt out by design/build_cards.py in the payload card. */
 .hb-banner.is-warning,
 .hb-banner.is-truncated {
   border-color: var(--hb-warning-border);
@@ -2910,6 +3044,9 @@ pre {
   word-break: break-word;
 }
 
+/* renderError prints the message and stops; the second line is what UX-5 adds,
+   from DispatchError.detail, and it is the line that says what to do about the
+   failure rather than what it was. */
 .hb-error-detail {
   grid-column: 2;
   font-family: var(--hb-font-mono);
@@ -2980,6 +3117,55 @@ pre {
 
 .hb-error-banner.err-internal .hb-error-kind {
   color: var(--hb-text-secondary);
+}
+
+/* The last three kinds do not come from the engine's exception table: dispatch
+   raises them for a request that names an operation or a document that is not
+   there, and api.js manufactures `transport` when a reply carries no error
+   envelope at all. They are toned by what the reader can do about them - fix
+   the request, open a document, try again - which is why two of them share a
+   family with a kind above rather than inventing a colour. The full list lives
+   in ERROR_KIND_LABELS in renderers.js; a kind with no rule here renders on the
+   bare banner. */
+
+.hb-error-banner.err-unknown_operation {
+  border-color: var(--hb-warning-border);
+  background: var(--hb-warning-bg);
+}
+
+.hb-error-banner.err-unknown_operation .hb-error-kind {
+  color: var(--hb-warning);
+}
+
+.hb-error-banner.err-missing_document {
+  border-color: var(--hb-info-border);
+  background: var(--hb-info-bg);
+}
+
+.hb-error-banner.err-missing_document .hb-error-kind {
+  color: var(--hb-info);
+}
+
+/* The registry raises this when the handle names a document that is not open,
+   which is the same story missing_document tells from the other end - one is an
+   absent argument, the other an argument naming nothing - so the two carry the
+   same informational tone rather than reading as different severities. */
+.hb-error-banner.err-no_such_document {
+  border-color: var(--hb-info-border);
+  background: var(--hb-info-bg);
+}
+
+.hb-error-banner.err-no_such_document .hb-error-kind {
+  color: var(--hb-info);
+}
+
+.hb-error-banner.err-transport {
+  border-color: var(--hb-neutral-border);
+  background: var(--hb-neutral-bg);
+}
+
+.hb-error-banner.err-transport .hb-error-kind {
+  color: var(--hb-neutral);
 }
 
 /* ============================================================ 10. ANALYSIS */
@@ -3075,7 +3261,7 @@ pre {
   height: 11px;
   flex: 0 0 auto;
   border-radius: var(--hb-radius-xs);
-  border: 1px solid rgb(0 0 0 / 18%);
+  border: 1px solid var(--hb-swatch-ring);
 }
 
 .hb-legend-code {
@@ -3209,6 +3395,9 @@ pre {
   backdrop-filter: blur(2px);
 }
 
+/* The app's scrim covers the viewport. A design card has to show the same
+   overlay inside its own frame, so design/build_cards.py - and nothing else -
+   pins it to the card instead. */
 .hb-scrim.is-embedded {
   position: absolute;
 }
@@ -3255,9 +3444,12 @@ pre {
   color: var(--hb-text-primary);
 }
 
+/* The shared focus ring is traded for an inset one rather than dropped: the
+   palette input is focused for as long as the palette is open, and the 4px halo
+   would bleed over the result list underneath it. */
 .hb-palette-input:focus {
   outline: none;
-  box-shadow: none;
+  box-shadow: inset 0 0 0 2px var(--hb-focus-ring);
 }
 
 .hb-palette-input::placeholder {
@@ -3464,6 +3656,8 @@ pre {
   width: min(360px, 90vw);
 }
 
+/* Same card-harness case as .hb-scrim.is-embedded above: only
+   design/build_cards.py takes the stack out of the fixed corner. */
 .hb-toast-stack.is-embedded {
   position: relative;
   right: auto;
@@ -3572,6 +3766,9 @@ pre {
   color: var(--hb-text-faint);
 }
 
+/* The counterpart to .hb-dim one step up the text scale. Only
+   design/build_cards.py asks for it so far; the app reaches for .hb-dim or for
+   a component rule instead. */
 .hb-secondary {
   color: var(--hb-text-secondary);
 }
@@ -3616,6 +3813,105 @@ pre {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/* ============================================================ 13. FORCED COLORS */
+
+/* Windows High Contrast replaces the palette outright and stops painting
+   box-shadow, so every state drawn as a shadow ring loses its only channel.
+   Backgrounds built from gradients still paint, which is what the shape channel
+   above is made of, and it is not optional here: a media query cannot write the
+   data-marks attribute the View toggle sets, so the four byte classes declare
+   their marks again. The diff states are left to data-marks because they are
+   also carried by the Diff panel's own listing. */
+
+@media (forced-colors: active) {
+  .hb-byte,
+  .hb-ascii {
+    color: CanvasText;
+  }
+
+  .hb-byte.bc-print,
+  .hb-ascii.bc-print {
+    --hb-cell-underline: currentColor;
+  }
+
+  .hb-byte.bc-ctrl,
+  .hb-ascii.bc-ctrl {
+    --hb-cell-underline: currentColor;
+    --hb-cell-dash: 1;
+  }
+
+  .hb-byte.bc-high,
+  .hb-ascii.bc-high {
+    --hb-cell-corner: currentColor;
+  }
+
+  .hb-byte.is-selected {
+    --hb-cell-state: transparent;
+
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  /* grid.js spells the hex caret as a nibble class and the ascii caret as
+     is-caret, so the bar has to be drawn for both; the ring they carry
+     otherwise is a box-shadow, which is exactly what is not painted here. */
+  .hb-byte.is-caret::after,
+  .hb-ascii.is-caret::after {
+    background: linear-gradient(CanvasText, CanvasText) bottom left / 100% 3px no-repeat;
+  }
+
+  .hb-byte.is-nibble-left::after {
+    background: linear-gradient(CanvasText, CanvasText) bottom left / 50% 3px no-repeat;
+  }
+
+  .hb-byte.is-nibble-right::after {
+    background: linear-gradient(CanvasText, CanvasText) bottom right / 50% 3px no-repeat;
+  }
+
+  .hb-byte.is-caret-inactive::after,
+  .hb-ascii.is-caret-inactive::after {
+    outline: 1px dotted CanvasText;
+    outline-offset: -1px;
+  }
+
+  .hb-byte.is-hit {
+    outline: 2px solid LinkText;
+    outline-offset: -2px;
+  }
+
+  .hb-byte.is-field {
+    outline: 1px dashed CanvasText;
+    outline-offset: -1px;
+  }
+
+  .hb-byte.is-bookmarked {
+    outline: 1px solid CanvasText;
+  }
+
+  .hb-tab.is-active,
+  .hb-dock-tab.is-active {
+    background: Highlight;
+    color: HighlightText;
+    forced-color-adjust: none;
+  }
+
+  .hb-status-dot {
+    border: 1px solid CanvasText;
+  }
+
+  .hb-error-banner {
+    border: 1px solid CanvasText;
+  }
+
+  /* A swatch is the value rather than a decoration of it, so it keeps its
+     literal colour and carries a text label beside it instead. */
+  .hb-swatch,
+  .hb-legend-swatch {
+    forced-color-adjust: none;
+    outline: 1px solid CanvasText;
+  }
 }
 
 

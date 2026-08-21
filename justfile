@@ -59,6 +59,14 @@ build-hexbench:
     @Write-Host "==> dist/hexbench/Hexbench.exe" -ForegroundColor Green
     @$exe = (Resolve-Path 'dist/hexbench/Hexbench.exe').ProviderPath; $link = Join-Path (Get-Location).ProviderPath 'Hexbench.lnk'; $shell = New-Object -ComObject WScript.Shell; $sc = $shell.CreateShortcut($link); $sc.TargetPath = $exe; $sc.WorkingDirectory = Split-Path -Parent $exe; $sc.IconLocation = "$exe,0"; $sc.Description = 'Hexbench standalone hex editor'; $sc.Save(); Write-Host "==> $link" -ForegroundColor Green
 
+# Set INTELLICRACK_ONEFILE=1 for a single self-extracting exe, or INTELLICRACK_LEAN=1 to drop torch/transformers.
+[doc('Build the full Intellicrack platform executable (PyInstaller, folder build by default)')]
+[group('build')]
+build-intellicrack:
+    @if (-not (Test-Path 'Intellicrack.spec')) { Write-Host 'Intellicrack.spec is missing, so Intellicrack cannot be built' -ForegroundColor Red; exit 1 }
+    {{ pixi }} pyinstaller --noconfirm --distpath dist/intellicrack --workpath build/intellicrack Intellicrack.spec
+    @$folder = 'dist/intellicrack/Intellicrack/Intellicrack.exe'; $single = 'dist/intellicrack/Intellicrack.exe'; $exe = if (Test-Path $folder) { $folder } elseif (Test-Path $single) { $single } else { Write-Host 'Build produced no Intellicrack.exe' -ForegroundColor Red; exit 1 }; Write-Host "==> $exe" -ForegroundColor Green
+
 [doc('Run the Hexbench quality gates (lint, types, docstrings, tests)')]
 [group('test')]
 test-hexbench:

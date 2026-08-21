@@ -23,6 +23,7 @@ from intellicrack.core.config import (
     UIConfig,
     get_config_dir,
     get_config_file,
+    get_env_file,
     get_project_root,
 )
 from intellicrack.core.logging import get_logger, setup_logging
@@ -153,6 +154,7 @@ __all__: list[str] = [
     "VariableInfo",
     "get_config_dir",
     "get_config_file",
+    "get_env_file",
     "get_logger",
     "get_project_root",
     "setup_logging",

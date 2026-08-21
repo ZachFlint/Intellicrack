@@ -408,6 +408,7 @@ backup/
 !src/intellicrack/assets/**/*.jpg
 !src/intellicrack/assets/**/*.jpeg
 !src/intellicrack/assets/**/*.gif
+!packaging/wizard/**/*.png
 
 # Root-level Screenshots directory (ad-hoc captures, shortcuts, not part of the project)
 /Screenshots/

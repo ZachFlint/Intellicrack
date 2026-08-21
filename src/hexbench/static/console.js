@@ -76,31 +76,30 @@ export function createOperationConsole(env) {
       .catch(() => undefined);
   };
 
-  const paintTab = (text) => {
-    const tab = document.querySelector(`.hb-dock-tab[data-panel="${PANEL_ID}"]`);
-    if (tab === null) {
-      return;
-    }
-    const existing = tab.querySelector('.hb-dock-tab-count');
-    if (existing === null) {
-      tab.appendChild(element('span', 'hb-dock-tab-count', text));
-      return;
-    }
-    existing.textContent = text;
+  /* The catalogue is the denominator once it has been read, and the cards are
+     what stands in for it until then. */
+  const total = () => operationCount || cards.size;
+
+  /* What the dock tab's count pill reads. The dock re-reads this on every
+     update and rebuilds the strip from it, so the number cannot be written
+     here as well: a tab painted directly would be dropped by the next render
+     and would fight the panel list for the same pill. */
+  const coverageCount = () => {
+    const known = total();
+    return known === 0 ? null : `${exercised.size}/${known}`;
   };
 
   const paintCoverage = () => {
     if (subtitle === null) {
       return;
     }
-    const total = operationCount || cards.size;
-    const share = total === 0 ? 0 : (exercised.size / total) * PERCENT;
-    subtitle.textContent = `${exercised.size} / ${total} exercised this session`;
-    paintTab(`${exercised.size}/${total}`);
+    const known = total();
+    const share = known === 0 ? 0 : (exercised.size / known) * PERCENT;
+    subtitle.textContent = `${exercised.size} / ${known} exercised this session`;
     if (meterFill !== null) {
       meterFill.style.setProperty('--hb-seg', share.toFixed(3));
       meterFill.textContent = share >= 8 ? `${share.toFixed(0)}%` : '';
-      meterText.textContent = `${total - exercised.size} still untouched`;
+      meterText.textContent = `${known - exercised.size} still untouched`;
     }
     for (const [name, card] of cards) {
       card.tick.hidden = !exercised.has(name);
@@ -305,7 +304,7 @@ export function createOperationConsole(env) {
     dock: 'bottom',
     side: 'bottom',
     order: 40,
-    count: () => (operationCount === 0 ? null : `${exercised.size}/${operationCount}`),
+    count: coverageCount,
     open,
     mount: (host) => {
       const header = element('div', 'hb-panel-header');

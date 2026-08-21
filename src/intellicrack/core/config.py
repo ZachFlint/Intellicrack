@@ -11,6 +11,7 @@ components.
 from __future__ import annotations
 
 import importlib
+import sys
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -26,11 +27,23 @@ _ERR_TOMLI_W_REQUIRED = "tomli_w is required for saving config"
 
 
 def get_project_root() -> Path:
-    """Compute the project root directory from this file's location.
+    """Compute the project root directory.
+
+    In a development checkout the root is the repository root (the parent of
+    ``src/``), derived from this file's location. When running as a PyInstaller
+    frozen application ``__file__`` points inside the temporary extraction
+    directory (``sys._MEIPASS``), which is read-only and discarded on exit, so
+    the writable configuration, tools, logs, and data directories must live
+    beside the executable instead. In that case the directory containing the
+    executable is returned.
 
     Returns:
-        Path: Path to the repository root (parent of ``src/``).
+        Path: Path to the deployment root directory. In development this is the
+        repository root; in a frozen build it is the directory containing the
+        executable.
     """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
     return Path(__file__).resolve().parents[3]
 
 
@@ -53,6 +66,20 @@ def get_config_file(filename: str) -> Path:
         Path: Path to ``<project_root>/.intellicrack/<filename>``.
     """
     return get_config_dir() / filename
+
+
+def get_env_file() -> Path:
+    """Return the path to the project-local ``.env`` credential file.
+
+    The file is resolved relative to :func:`get_project_root`, so it is found
+    beside the executable in a frozen build and at the repository root in a
+    development checkout, rather than depending on the current working
+    directory.
+
+    Returns:
+        Path: Path to ``<project_root>/.env``.
+    """
+    return get_project_root() / ".env"
 
 
 @dataclass

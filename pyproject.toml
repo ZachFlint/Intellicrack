@@ -1051,6 +1051,7 @@ lint.ignore = [
 ]
 lint.per-file-ignores.".claude/**" = ["S404"]
 lint.per-file-ignores."docker/**" = ["N999", "S404", "S603", "S607", "T201"]
+lint.per-file-ignores."packaging/**" = ["N999", "S404", "S603", "S607", "T201"]
 lint.per-file-ignores."scripts/**" = ["N999", "S404", "S603", "S607", "T201"]
 lint.per-file-ignores."src/intellicrack/bridges/win32_types.py" = ["N801"]
 lint.per-file-ignores."src/intellicrack/bridges/process.py" = ["N801"]

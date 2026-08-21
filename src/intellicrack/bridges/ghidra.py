@@ -93,6 +93,12 @@ _GHIDRA_ANALYZE_DEADLINE_SECONDS = 1800.0
 # Delay between successive analyze completion polls.
 _GHIDRA_ANALYZE_POLL_INTERVAL_SECONDS = 1.0
 
+# Fallback minimum JDK major version required to launch the Ghidra JVM when the
+# installation's ``application.properties`` does not declare one. Ghidra 11.4.x
+# requires JDK 21; a JDK below the required major is rejected by the JVM at
+# launch, so ``_discover_jdk`` gates candidates on this before returning them.
+_DEFAULT_MIN_JDK_MAJOR = 21
+
 _remote_call_counter: itertools.count[int] = itertools.count(1)
 
 _BRIDGE_SCRIPT_LOCK = threading.Lock()
@@ -1757,37 +1763,128 @@ class _GhidraBridgeBase(StaticAnalysisBridge):
         return env
 
     @staticmethod
-    def _discover_jdk(ghidra_path: Path) -> Path | None:
-        """Locate a JDK home for the PyGhidra JVM launch.
+    def _read_jdk_major(java_home: Path) -> int | None:
+        """Parse the major version of the JDK rooted at ``java_home``.
 
-        Prefers a valid ``JAVA_HOME`` already present in the environment, then
-        falls back to a JDK bundled inside the Ghidra installation
-        (``<install>/jdk-*``), selecting the highest-versioned entry that
-        contains a ``bin`` directory. PyGhidra starts the JVM through jpype,
-        which resolves the runtime from ``JAVA_HOME``; supplying the bundled
-        JDK keeps headless analysis working on hosts where ``JAVA_HOME`` is not
-        configured globally.
+        Reads the ``release`` file that every Temurin/OpenJDK build writes at
+        the JDK home root and extracts the ``JAVA_VERSION="X.Y.Z"`` entry. The
+        legacy ``1.8.0_x`` scheme reports the feature number in the second
+        component, while modern releases such as ``21.0.8`` report it in the
+        first; both are normalised to the feature (major) number.
+
+        Args:
+            java_home: Root directory of the JDK to inspect.
+
+        Returns:
+            int | None: The JDK major version (for example ``8`` or ``21``), or
+                ``None`` when the ``release`` file is absent, unreadable, or
+                does not contain a parseable ``JAVA_VERSION`` entry.
+        """
+        release_file = java_home / "release"
+        try:
+            text = release_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return None
+
+        match = re.search(r'^JAVA_VERSION="([^"]+)"', text, re.MULTILINE)
+        if match is None:
+            return None
+
+        components = match.group(1).split(".")
+        try:
+            first = int(components[0])
+        except (ValueError, IndexError):
+            return None
+
+        if first == 1:
+            try:
+                return int(components[1])
+            except (ValueError, IndexError):
+                return None
+        return first
+
+    @staticmethod
+    def _required_min_jdk(ghidra_path: Path) -> int:
+        """Resolve the minimum JDK major version the installation requires.
+
+        Reads ``application.java.min`` from the installation's
+        ``Ghidra/application.properties`` file, which declares the lowest JDK
+        feature version the release supports.
 
         Args:
             ghidra_path: Root directory of the Ghidra installation.
 
         Returns:
-            Path | None: Path to a usable JDK home, or ``None`` when none is
-                found, in which case PyGhidra falls back to its own JVM
+            int: The declared minimum JDK major version, or
+                :data:`_DEFAULT_MIN_JDK_MAJOR` when the properties file or the
+                ``application.java.min`` key is missing or unparseable.
+        """
+        properties_file = ghidra_path / "Ghidra" / "application.properties"
+        try:
+            text = properties_file.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return _DEFAULT_MIN_JDK_MAJOR
+
+        match = re.search(r"^application\.java\.min\s*=\s*(\d+)", text, re.MULTILINE)
+        if match is None:
+            return _DEFAULT_MIN_JDK_MAJOR
+        try:
+            return int(match.group(1))
+        except ValueError:
+            return _DEFAULT_MIN_JDK_MAJOR
+
+    @classmethod
+    def _discover_jdk(cls, ghidra_path: Path) -> Path | None:
+        """Locate a JDK home suitable for the PyGhidra JVM launch.
+
+        Prefers a valid ``JAVA_HOME`` already present in the environment, then
+        falls back to a JDK bundled inside the Ghidra installation
+        (``<install>/jdk-*``). A candidate qualifies only when it contains a
+        ``bin`` directory and its major version (from
+        :meth:`_read_jdk_major`) meets the minimum the installation requires
+        (from :meth:`_required_min_jdk`). This rejects a ``JAVA_HOME`` pointing
+        at an older runtime (for example a JRE 8) that the Ghidra JVM would
+        otherwise refuse at launch. Among qualifying bundled candidates the
+        highest major version wins, tie-broken by reverse name sort. PyGhidra
+        starts the JVM through jpype, which resolves the runtime from
+        ``JAVA_HOME``; supplying the bundled JDK keeps headless analysis working
+        on hosts where ``JAVA_HOME`` is not configured globally.
+
+        Args:
+            ghidra_path: Root directory of the Ghidra installation.
+
+        Returns:
+            Path | None: Path to a usable JDK home, or ``None`` when none
+                qualifies, in which case PyGhidra falls back to its own JVM
                 discovery.
         """
+        required_major = cls._required_min_jdk(ghidra_path)
+
         existing = os.environ.get("JAVA_HOME")
         if existing:
             existing_path = Path(existing)
             if (existing_path / "bin").is_dir():
-                return existing_path
+                existing_major = cls._read_jdk_major(existing_path)
+                if existing_major is not None and existing_major >= required_major:
+                    return existing_path
+                _logger.debug(
+                    "ghidra_java_home_below_minimum",
+                    java_home=str(existing_path),
+                    major=existing_major,
+                    required_major=required_major,
+                )
 
-        bundled = sorted(
-            (candidate for candidate in ghidra_path.glob("jdk-*") if (candidate / "bin").is_dir()),
-            reverse=True,
-        )
-        if bundled:
-            return bundled[0]
+        qualified: list[tuple[int, Path]] = []
+        for candidate in ghidra_path.glob("jdk-*"):
+            if not (candidate / "bin").is_dir():
+                continue
+            candidate_major = cls._read_jdk_major(candidate)
+            if candidate_major is not None and candidate_major >= required_major:
+                qualified.append((candidate_major, candidate))
+
+        if qualified:
+            qualified.sort(key=lambda item: (item[0], item[1].name), reverse=True)
+            return qualified[0][1]
         return None
 
     def _start_drain_threads(self, process: Popen[bytes]) -> None:

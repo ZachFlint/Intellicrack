@@ -13,7 +13,7 @@
 
 import { callOp, closeDocument, createDocument, DispatchError, getReference, listDocuments, listJobs, shutdown, taggedBytes, toHex } from './api.js';
 import { tokenHex } from './charts.js';
-import { announce, decorativeGlyph, element, iconButton, nextId, trapFocus } from './dom.js';
+import { announce, applyTabStripRoles, decorativeGlyph, element, iconButton, nextId, trapFocus, wireTabStrip } from './dom.js';
 import { BYTES_PER_ROW, HexGrid } from './grid.js';
 
 
@@ -29,17 +29,23 @@ const HEX_RADIX = 16;
 const DEFAULT_MAX_RESULTS = 4096;
 const DEFAULT_MIN_STRING = 5;
 const DEFAULT_STRING_LIMIT = 512;
+const DEFAULT_NUMERIC_WIDTH = 4;
+const VA_DEBOUNCE_MS = 90;
+const NUMERIC_SEARCH_RADIX = 16;
+const BINARY_SEARCH_RADIX = 2;
+const DECIMAL_SEARCH_RADIX = 10;
 const JSON_INDENT_LIMIT = 400;
 const BYTE_MASK = 0xff;
 const KIBIBYTE = 1024;
 const SIZE_UNITS = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
 const ENTROPY_DIGITS = 3;
 const PREVIEW_BYTES = 4096;
-const CLASSIFICATION_BLOCK = 4096;
 const BOOKMARK_COLOR_TOKEN = '--hb-bookmark';
 const LIVE_REGION_ID = 'live';
 const SPLITTER_STEP_PX = 16;
 const SPLITTER_PAGE_PX = 64;
+const MAX_BIT_INDEX = 7;
+const CONTEXT_MENU_MARGIN = 4;
 
 const HEX_PATTERN = /^[0-9a-fA-F\s_,:-]*$/;
 const HEX_SEARCH_PATTERN = /^[0-9a-fA-F?\s_,:-]*$/;
@@ -111,6 +117,88 @@ function perPixelSize(bytes) {
   return `${bytes < 10 ? bytes.toFixed(1) : String(Math.round(bytes))} B`;
 }
 
+/**
+ * What every status item should read, or null for an item with nothing to say.
+ *
+ * The bar is three tiers: where the caret is, what has been measured, and the
+ * document's condition on the right. Null here means hide the item, never print
+ * a placeholder - a bar of em dashes reads as ten broken readouts rather than as
+ * a session that has not measured anything yet, and the dashes crowd out the
+ * three or four values that do mean something.
+ *
+ * @param {Object} state Everything the bar reads.
+ * @param {Object|null} state.document The active document, or null when nothing is open.
+ * @param {{offset: number, pane: string, nibble: number}} state.caret Where the caret sits.
+ * @param {{start: number, length: number}|null} state.selection The grid selection, or null.
+ * @param {number|null} state.entropy The last entropy reading, or null when there is none.
+ * @param {number|null} [state.va] The virtual address a mapping resolves the caret to, or null
+ * when no mapping covers it (BE-2). Defaults to null so callers that predate VA mapping still work.
+ * @param {number} state.hits How many search hits are held.
+ * @param {number} state.hitIndex Which hit is current, zero-based.
+ * @param {boolean} state.insertMode Whether the grid inserts rather than overwrites.
+ * @param {boolean} state.busy Whether an operation is in flight.
+ * @param {{scaled: boolean, bytesPerPixel: number}} state.metrics What one scrollbar pixel covers.
+ * @returns {Object<string, string|null>} One entry per status value, null where the item must be hidden.
+ */
+export function statusReadout(state) {
+  const { document: active, caret, selection, entropy, va = null, hits, hitIndex, insertMode, busy, metrics } = state;
+  return {
+    offset: active ? `0x${hex(caret.offset, 8)} · ${caret.offset}` : null,
+    va: va === null ? null : `0x${hex(va, 8)} · ${va}`,
+    pane: active ? `${caret.pane}${caret.pane === 'hex' ? (caret.nibble === 0 ? ' hi' : ' lo') : ''}` : null,
+    selection: selection === null ? null : `${selection.length} B @ 0x${hex(selection.start, 8)}`,
+    size: active ? `${humanSize(active.length)} · ${active.length}` : null,
+    entropy: entropy === null ? null : entropy.toFixed(ENTROPY_DIGITS),
+    hits: hits === 0 ? null : `${hitIndex + 1}/${hits}`,
+    scale: metrics.scaled ? `1 px ≈ ${perPixelSize(metrics.bytesPerPixel)}` : null,
+    modified: active && active.modified ? 'modified' : null,
+    mode: active ? (insertMode ? 'INS' : 'OVR') : null,
+    state: busy ? 'working' : 'ready',
+  };
+}
+
+/**
+ * What `#va` should become after one debounced VA-mapping lookup settles.
+ *
+ * Mirrors {@link nextEntropyState}: a reply is stale once the active document
+ * has moved on to a different handle or generation, or the caret has moved
+ * since the lookup was issued, and a stale reply must be dropped rather than
+ * overwriting whatever a newer lookup already produced. A failure (or "no
+ * mapping covers this offset", which the engine reports as `null` rather than
+ * as an error) resets the value instead of leaving a stale reading on screen.
+ *
+ * @param {{ok: boolean, value?: number|null}} outcome The lookup's outcome.
+ * @param {{handle: string, generation: number, offset: number}} request What the lookup was issued for.
+ * @param {{handle: string, generation: number}|null} active The document that is active now.
+ * @param {number} caretOffset Where the caret is now.
+ * @returns {{changed: boolean, value: number|null}} Whether `#va` should change, and to what.
+ */
+export function nextVaState(outcome, request, active, caretOffset) {
+  const stale = !active || active.handle !== request.handle || active.generation !== request.generation || caretOffset !== request.offset;
+  if (stale) {
+    return { changed: false, value: null };
+  }
+  return { changed: true, value: outcome.ok && outcome.value !== null && outcome.value !== undefined ? Number(outcome.value) : null };
+}
+
+/**
+ * Take one element of the status bar out of the bar, or put it back.
+ *
+ * The attribute alone is not enough here. `.hb-status-item` declares a display
+ * of its own, and an author declaration outranks the attribute's, so an item
+ * the shell believes it has hidden would keep its place in the row and print an
+ * empty key. The attribute is still set, because that is what keeps the item
+ * out of the accessibility tree as well as out of the layout.
+ *
+ * @param {HTMLElement} node Item or separator to show or hide.
+ * @param {boolean} hidden Whether it should be gone.
+ * @returns {void}
+ */
+function hideStatusNode(node, hidden) {
+  node.hidden = hidden;
+  node.style.display = hidden ? 'none' : '';
+}
+
 /** Offsets are always hexadecimal, with or without an 0x prefix. */
 function parseOffset(text) {
   const trimmed = String(text).trim().replace(/^0x/i, '').replace(/[\s_]/g, '');
@@ -119,6 +207,37 @@ function parseOffset(text) {
   }
   const value = Number.parseInt(trimmed, HEX_RADIX);
   return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+const NUMERIC_SEARCH_PATTERN = /^-?(0x[0-9a-f]+|0b[01]+|\d+)$/i;
+
+/**
+ * Parse a numeric search field: decimal, `0x` hexadecimal or `0b` binary, with
+ * an optional leading minus for a signed search.
+ *
+ * @param {string} text Field text.
+ * @returns {number|null} The parsed integer, or null when the text is not one
+ * of the three accepted forms.
+ */
+export function parseSearchInt(text) {
+  const trimmed = String(text).trim().replace(/[\s_]/g, '');
+  if (!NUMERIC_SEARCH_PATTERN.test(trimmed)) {
+    return null;
+  }
+  const negative = trimmed.startsWith('-');
+  const body = negative ? trimmed.slice(1) : trimmed;
+  let value;
+  if (/^0x/i.test(body)) {
+    value = Number.parseInt(body.slice(2), NUMERIC_SEARCH_RADIX);
+  } else if (/^0b/i.test(body)) {
+    value = Number.parseInt(body.slice(2), BINARY_SEARCH_RADIX);
+  } else {
+    value = Number.parseInt(body, DECIMAL_SEARCH_RADIX);
+  }
+  if (!Number.isSafeInteger(value)) {
+    return null;
+  }
+  return negative ? -value : value;
 }
 
 
@@ -473,12 +592,14 @@ class Dock {
   #root;
   #tabs;
   #body;
+  #label;
   #panels = [];
   #active = '';
   #mounted = new Map();
 
-  constructor(root) {
+  constructor(root, label) {
     this.#root = root;
+    this.#label = label;
     this.#tabs = root.querySelector('.hb-dock-tabs');
     this.#body = root.querySelector('.hb-dock-body');
     this.#tabs.addEventListener('click', (event) => {
@@ -491,6 +612,7 @@ class Dock {
         this.activate(tab.dataset.panel);
       }
     });
+    wireTabStrip(this.#tabs, { keyAttribute: 'panel', onActivate: (id) => this.activate(id) });
   }
 
   get activeId() {
@@ -536,10 +658,18 @@ class Dock {
       tab.appendChild(document.createTextNode(panel.title));
       const count = typeof panel.count === 'function' ? panel.count() : null;
       if (count !== null && count !== undefined) {
-        tab.appendChild(element('span', 'hb-dock-tab-count', String(count)));
+        tab.appendChild(element('span', 'hb-dock-tab-count', String(count), {
+          'aria-label': `${count} ${panel.title.toLowerCase()}`,
+        }));
       }
       this.#tabs.appendChild(tab);
     }
+    applyTabStripRoles(this.#tabs, {
+      keyAttribute: 'panel',
+      activeKey: this.#active === '' ? null : this.#active,
+      panel: this.#body,
+      label: this.#label,
+    });
   }
 
   renderBody() {
@@ -589,7 +719,11 @@ const MENUS = [
   },
   {
     id: 'edit',
-    items: ['edit.undo', 'edit.redo', '-', 'edit.selectAll', 'edit.copyHex', 'edit.paste', '-', 'edit.fill', 'edit.insert', 'edit.delete', '-', 'edit.toggleInsert'],
+    items: [
+      'edit.undo', 'edit.redo', '-', 'edit.selectAll', 'edit.copyHex', 'edit.paste', '-',
+      'edit.fill', 'edit.copyBlock', 'edit.moveBlock', 'edit.swapBlocks', 'edit.insert', 'edit.delete', '-',
+      'edit.toggleInsert',
+    ],
   },
   {
     id: 'view',
@@ -601,21 +735,58 @@ const MENUS = [
   },
   {
     id: 'analyze',
-    items: ['analyze.entropy', 'analyze.byteTypes', 'analyze.classification', 'analyze.digram', '-', 'analyze.strings', 'analyze.hash', '-', 'analyze.pe', 'analyze.inspect'],
+    items: [
+      'analyze.entropy', 'analyze.byteTypes', 'analyze.classification', 'analyze.digram', '-',
+      'analyze.strings', 'analyze.hash', '-', 'analyze.pe', 'analyze.inspect', '-',
+      'analyze.templates', 'analyze.applyTemplate', 'analyze.registerTemplate', 'analyze.removeTemplate', 'analyze.exportTemplate',
+    ],
   },
   {
     id: 'patch',
-    items: ['patch.list', 'patch.exportJson', 'patch.exportIps', '-', 'patch.import', '-', 'patch.repairPe'],
+    items: ['patch.list', 'patch.export', '-', 'patch.import', '-', 'patch.repairPe'],
   },
   {
     id: 'tools',
-    items: ['tools.palette', 'tools.operation', 'tools.jobs', 'tools.reference'],
+    items: [
+      'tools.palette', 'tools.operation', 'tools.jobs', 'tools.reference', '-',
+      'tools.transforms', 'tools.applyTransform', '-',
+      'tools.encodings', 'tools.decodeText',
+    ],
   },
   {
     id: 'help',
     items: ['help.keys', 'help.about'],
   },
 ];
+
+/**
+ * The grid's context menu: the block operations that already need a selection
+ * (mirroring the Edit menu's own subset), plus the bit toggles, which act on
+ * the caret rather than the selection and so have no home in that subset.
+ */
+const GRID_CONTEXT_MENU_ITEMS = [
+  'edit.fill', 'edit.copyBlock', 'edit.moveBlock', 'edit.swapBlocks', '-',
+  'edit.getBit', 'edit.setBit', 'edit.toggleBit',
+];
+
+const PATCH_PATH_SUFFIX = '_from_path';
+
+/**
+ * A human label for one export/import patch operation, derived from its own
+ * name rather than a hand-written table - which is what lets the Patch menu's
+ * format select track the engine instead of a list somebody typed out.
+ *
+ * @param {string} name Catalogued operation name, e.g. `export_patches_bps_from_path`.
+ * @param {string} prefix The `export_patches_` or `import_patches_` prefix to strip.
+ * @returns {string} A short, uppercase label for the format select.
+ */
+export function patchFormatLabel(name, prefix) {
+  const suffix = name.slice(prefix.length);
+  if (suffix.endsWith(PATCH_PATH_SUFFIX)) {
+    return `${suffix.slice(0, -PATCH_PATH_SUFFIX.length).toUpperCase()} (from a source path)`;
+  }
+  return suffix.toUpperCase();
+}
 
 const SHORTCUTS = [
   { combo: 'ctrl+shift+p', command: 'tools.palette' },
@@ -632,24 +803,58 @@ const SHORTCUTS = [
   { combo: 'ctrl+n', command: 'file.new' },
   { combo: 'ctrl+w', command: 'file.close' },
   { combo: 'ctrl+c', command: 'edit.copyHex' },
+  { combo: 'ctrl+v', command: 'edit.paste' },
 ];
+
+/**
+ * Commands whose key the hex view handles inside its own keydown, and only there.
+ *
+ * Each of these is a different operation depending on where the caret is, so the
+ * grid keeps them rather than the window: Delete removes the byte in front of
+ * the caret, Ctrl+A selects the whole document being viewed, Insert flips the
+ * grid's own typing mode. The menu and Help print them with the pane they work
+ * in rather than as window-wide keys, which is what they would otherwise read
+ * as from a dock panel where pressing them does nothing.
+ */
+const EDITOR_SCOPED_SHORTCUTS = new Set(['edit.selectAll', 'edit.delete', 'edit.toggleInsert']);
+
+const EDITOR_SCOPE_SUFFIX = ' · editor';
+
+/** Operations that change which VA mappings cover the caret, so the status-bar reading needs a fresh lookup. */
+const VA_MAPPING_MUTATIONS = new Set(['add_va_mapping', 'remove_va_mapping']);
+
+/**
+ * How a command's shortcut is advertised in the menus.
+ *
+ * @param {{id: string, shortcut: string}} command The command being rendered.
+ * @returns {string} The shortcut text, marked with its scope when the grid owns the key.
+ */
+export function shortcutText(command) {
+  if (command.shortcut === '') {
+    return '';
+  }
+  return EDITOR_SCOPED_SHORTCUTS.has(command.id) ? `${command.shortcut}${EDITOR_SCOPE_SUFFIX}` : command.shortcut;
+}
 
 /**
  * Whether a bound shortcut should run given what currently has focus.
  *
  * `typing` alone still lets any ctrl-combo through, so Ctrl+S/Ctrl+F keep
- * working while a field has focus. But a clipboard combo typed into a field
- * that has its own non-collapsed text selection must defer to the field's
- * native handling instead of preempting it for whatever the hex grid has
- * selected.
+ * working while a field has focus. The two clipboard combos are the exception,
+ * and they are not the same exception: a paste always belongs to the field the
+ * caret is in, while a copy only has to stand aside when that field has a
+ * selection of its own to copy - with nothing selected there, copying what the
+ * hex grid has selected is the only reading left.
  */
 export function shouldRunShortcut(combo, context) {
   const { typing, hasTextSelection, gridSelection } = context;
   if (typing && !combo.startsWith('ctrl+')) {
     return false;
   }
-  const nativeClipboardCombo = combo === 'ctrl+c' || combo === 'ctrl+x' || combo === 'ctrl+v';
-  if (typing && nativeClipboardCombo && hasTextSelection) {
+  if (typing && combo === 'ctrl+v') {
+    return false;
+  }
+  if (typing && combo === 'ctrl+c' && hasTextSelection) {
     return false;
   }
   if (combo === 'ctrl+c' && gridSelection === null) {
@@ -671,6 +876,237 @@ function comboOf(event) {
   }
   parts.push(event.key.toLowerCase());
   return parts.join('+');
+}
+
+/* ------------------------------------------------------------ menubar keys */
+
+/** The entries of a popup: its own children carrying the menuitem role, so separators are left out. */
+function menuEntriesOf(popup) {
+  return [...popup.children].filter((node) => node.getAttribute('role') === 'menuitem');
+}
+
+/** A disabled entry is skipped by every movement below rather than focused, which is what `aria-disabled` promises. */
+function menuEntryIsEnabled(entry) {
+  return entry.getAttribute('aria-disabled') !== 'true';
+}
+
+/** The label an entry is announced and typed to, which is its own text without the shortcut beside it. */
+function menuEntryLabel(entry) {
+  const label = entry.querySelector('.hb-menu-entry-label');
+  return (label === null ? entry.textContent : label.textContent) ?? '';
+}
+
+/** The entry `step` places from `from` that can hold focus, wrapping; -1 when the menu has no enabled entry at all. */
+function nextMenuEntry(entries, from, step) {
+  const count = entries.length;
+  for (let move = 1; move <= count; move += 1) {
+    const index = (((from + (step * move)) % count) + count) % count;
+    if (menuEntryIsEnabled(entries[index])) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+/** The next enabled entry after `from` whose label starts with `character`, wrapping; -1 when none does. */
+function menuTypeaheadEntry(entries, character, from) {
+  const wanted = character.toLowerCase();
+  for (let move = 1; move <= entries.length; move += 1) {
+    const index = (from + move) % entries.length;
+    const entry = entries[index];
+    if (menuEntryIsEnabled(entry) && menuEntryLabel(entry).trim().toLowerCase().startsWith(wanted)) {
+      return index;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Give the menu bar the keyboard the menubar role has been promising.
+ *
+ * One listener on the bar rather than one per control: the popups are built
+ * inside the bar, so the same handler sees a key pressed on a closed menu's
+ * button and one pressed on an entry of the open menu, and the two halves of
+ * the contract stay next to each other.
+ *
+ * Enter and Space on an entry are deliberately left alone. An entry is a real
+ * button carrying its own click listener, so the browser already activates it;
+ * claiming the key here would run the command twice. On a menu *button* they
+ * are claimed, because there the browser's click would toggle the menu shut
+ * again the moment this opened it.
+ *
+ * @param {HTMLElement} menubar Element carrying `role="menubar"`.
+ * @param {Object} controller How the bar's owner opens, closes and finds its menus.
+ * @param {() => HTMLElement[]} controller.buttons The menu buttons, in visual order.
+ * @param {() => number} controller.openIndex Index of the open menu, or -1 when none is open.
+ * @param {() => HTMLElement|null} controller.popup The open menu's popup, or null.
+ * @param {(index: number) => void} controller.open Opens the menu at `index`, building its entries.
+ * @param {(returnFocus: boolean) => void} controller.close Shuts whichever menu is open.
+ * @returns {void}
+ */
+export function bindMenubarKeys(menubar, controller) {
+  const setRoving = (index) => {
+    const buttons = controller.buttons();
+    for (const [at, button] of buttons.entries()) {
+      button.setAttribute('tabindex', at === index ? '0' : '-1');
+    }
+    return buttons[index] ?? null;
+  };
+
+  const focusButton = (index) => {
+    setRoving(index)?.focus();
+  };
+
+  const openAt = (index, edge) => {
+    setRoving(index);
+    controller.open(index);
+    const popup = controller.popup();
+    if (popup === null) {
+      return;
+    }
+    const entries = menuEntriesOf(popup);
+    const target = edge === 'last' ? nextMenuEntry(entries, 0, -1) : nextMenuEntry(entries, -1, 1);
+    if (target !== -1) {
+      entries[target].focus();
+    }
+  };
+
+  const stepMenu = (index, step, isOpen) => {
+    const count = controller.buttons().length;
+    if (count === 0) {
+      return;
+    }
+    const next = (((index + step) % count) + count) % count;
+    if (isOpen) {
+      openAt(next, 'first');
+    } else {
+      focusButton(next);
+    }
+  };
+
+  const onButtonKey = (event, index) => {
+    const isOpen = controller.openIndex() !== -1;
+    const last = controller.buttons().length - 1;
+    switch (event.key) {
+      case 'ArrowRight':
+        event.preventDefault();
+        stepMenu(index, 1, isOpen);
+        return;
+      case 'ArrowLeft':
+        event.preventDefault();
+        stepMenu(index, -1, isOpen);
+        return;
+      case 'Home':
+        event.preventDefault();
+        if (isOpen) {
+          openAt(0, 'first');
+        } else {
+          focusButton(0);
+        }
+        return;
+      case 'End':
+        event.preventDefault();
+        if (isOpen) {
+          openAt(last, 'first');
+        } else {
+          focusButton(last);
+        }
+        return;
+      case 'ArrowDown':
+      case 'Enter':
+      case ' ':
+        event.preventDefault();
+        openAt(index, 'first');
+        return;
+      case 'ArrowUp':
+        event.preventDefault();
+        openAt(index, 'last');
+        return;
+      case 'Escape':
+        if (isOpen) {
+          event.preventDefault();
+          controller.close(true);
+        }
+        return;
+      default:
+        break;
+    }
+  };
+
+  const onEntryKey = (event, entries, index) => {
+    const move = (target) => {
+      event.preventDefault();
+      if (target !== -1) {
+        entries[target].focus();
+      }
+    };
+    switch (event.key) {
+      case 'ArrowDown':
+        move(nextMenuEntry(entries, index, 1));
+        return;
+      case 'ArrowUp':
+        move(nextMenuEntry(entries, index, -1));
+        return;
+      case 'Home':
+        move(nextMenuEntry(entries, -1, 1));
+        return;
+      case 'End':
+        move(nextMenuEntry(entries, 0, -1));
+        return;
+      case 'ArrowRight':
+        event.preventDefault();
+        stepMenu(controller.openIndex(), 1, true);
+        return;
+      case 'ArrowLeft':
+        event.preventDefault();
+        stepMenu(controller.openIndex(), -1, true);
+        return;
+      case 'Escape':
+        event.preventDefault();
+        controller.close(true);
+        return;
+      case 'Enter':
+      case ' ':
+        return;
+      default:
+        break;
+    }
+    if (event.key.length === 1 && !event.ctrlKey && !event.altKey && !event.metaKey) {
+      const found = menuTypeaheadEntry(entries, event.key, index);
+      if (found !== -1) {
+        event.preventDefault();
+        entries[found].focus();
+      }
+    }
+  };
+
+  menubar.addEventListener('focusin', (event) => {
+    const index = controller.buttons().indexOf(event.target);
+    if (index !== -1) {
+      setRoving(index);
+    }
+  });
+
+  menubar.addEventListener('keydown', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const index = controller.buttons().indexOf(target);
+    if (index !== -1) {
+      onButtonKey(event, index);
+      return;
+    }
+    const popup = controller.popup();
+    if (popup === null || !popup.contains(target)) {
+      return;
+    }
+    const entries = menuEntriesOf(popup);
+    const at = entries.findIndex((entry) => entry === target || entry.contains(target));
+    if (at !== -1) {
+      onEntryKey(event, entries, at);
+    }
+  });
 }
 
 /* ------------------------------------------------------------ blank screen */
@@ -777,7 +1213,9 @@ export class Shell {
   #documents = [];
   #active = null;
   #commands = new Map();
+  #menus = [];
   #openMenu = null;
+  #contextMenu = null;
   #listeners = new Map();
 
   #hits = [];
@@ -785,6 +1223,8 @@ export class Shell {
   #lastSearch = null;
   #entropyTimer = 0;
   #entropy = null;
+  #vaTimer = 0;
+  #va = null;
   #catalog = null;
   #operationIndex = new Map();
   #metrics = { scaled: false, bytesPerPixel: 1 };
@@ -794,14 +1234,15 @@ export class Shell {
   #panels = new Map();
   #blank = null;
   #editorFrame = null;
+  #gotoField = null;
 
   constructor(nodes) {
     liveRegion();
     this.#nodes = nodes;
     this.#toasts = new ToastStack(nodes.toasts);
     this.#dialogs = new DialogHost(nodes.overlays);
-    this.#dockRight = new Dock(nodes.dockRight);
-    this.#dockBottom = new Dock(nodes.dockBottom);
+    this.#dockRight = new Dock(nodes.dockRight, 'Right dock panels');
+    this.#dockBottom = new Dock(nodes.dockBottom, 'Bottom dock panels');
     this.#grid = new HexGrid(nodes.editorHost, {
       onSelect: (selection) => this.#onSelection(selection),
       onCaret: (caret) => this.#onCaret(caret),
@@ -817,10 +1258,16 @@ export class Shell {
     this.#bindSplitters();
     this.#bindKeyboard();
     this.#bindFileDrop();
+    this.#bindGridContextMenu();
     this.#registerBuiltinPanels();
     this.#applyDockLayout();
     this.#showBlank(true);
     this.#renderStatus();
+    this.on('operation', ({ name }) => {
+      if (VA_MAPPING_MUTATIONS.has(name)) {
+        this.#scheduleVa();
+      }
+    });
   }
 
   get grid() {
@@ -1069,10 +1516,16 @@ export class Shell {
     this.#define('edit.redo', 'Redo', 'Ctrl+Y', () => this.runOnDocument('redo', {}), () => Boolean(this.#active?.can_redo));
     this.#define('edit.selectAll', 'Select all', 'Ctrl+A', () => this.#grid.select(0, this.#active?.length ?? 0), hasDocument);
     this.#define('edit.copyHex', 'Copy selection as hex', 'Ctrl+C', () => this.copySelection(), hasSelection);
-    this.#define('edit.paste', 'Paste bytes…', '', () => this.pasteBytes());
+    this.#define('edit.paste', 'Paste bytes…', 'Ctrl+V', () => this.pasteBytes());
     this.#define('edit.fill', 'Fill selection…', '', () => this.fillSelection(), hasSelection);
+    this.#define('edit.copyBlock', 'Copy block…', '', () => this.copyBlock(), hasSelection);
+    this.#define('edit.moveBlock', 'Move block…', '', () => this.moveBlock(), hasSelection);
+    this.#define('edit.swapBlocks', 'Swap blocks…', '', () => this.swapBlocks(), hasSelection);
     this.#define('edit.insert', 'Insert bytes…', '', () => this.insertBytes(), hasDocument);
     this.#define('edit.delete', 'Delete selection', 'Del', () => this.deleteSelection(), hasSelection);
+    this.#define('edit.getBit', 'Get bit…', '', () => this.getBitAt(), hasDocument);
+    this.#define('edit.setBit', 'Set bit…', '', () => this.setBitAt(), hasDocument);
+    this.#define('edit.toggleBit', 'Toggle bit…', '', () => this.toggleBitAt(), hasDocument);
     this.#define('edit.toggleInsert', 'Insert / overwrite', 'Ins', () => {
       this.#grid.insertMode = !this.#grid.insertMode;
       this.#renderStatus();
@@ -1090,19 +1543,24 @@ export class Shell {
     this.#define('search.replace', 'Replace…', 'Ctrl+H', () => this.replace(), hasDocument);
     this.#define('search.clear', 'Clear results', '', () => this.clearHits(), () => this.#hits.length > 0);
 
-    this.#define('analyze.entropy', 'Shannon entropy', '', () => this.showResult('entropy', {}), hasDocument);
-    this.#define('analyze.byteTypes', 'Byte type distribution', '', () => this.showResult('byte_type_distribution', {}), hasDocument);
-    this.#define('analyze.classification', 'Content classification', '', () => this.showResult('content_classification', { block_size: CLASSIFICATION_BLOCK }), hasDocument);
-    this.#define('analyze.digram', 'Digram matrix', '', () => this.showResult('digram_matrix', {}), hasDocument);
+    this.#define('analyze.entropy', 'Shannon entropy', '', () => this.#focusBottomPanel('panels.entropy'), hasDocument);
+    this.#define('analyze.byteTypes', 'Byte type distribution', '', () => this.#focusBottomPanel('panels.byteTypes'), hasDocument);
+    this.#define('analyze.classification', 'Content classification', '', () => this.#focusBottomPanel('panels.classification'), hasDocument);
+    this.#define('analyze.digram', 'Digram matrix', '', () => this.#focusBottomPanel('panels.digram'), hasDocument);
     this.#define('analyze.strings', 'Extract strings', '', () => this.extractStrings(), hasDocument);
     this.#define('analyze.hash', 'Compute hash…', '', () => this.computeHash(), hasDocument);
     this.#define('analyze.pe', 'Verify PE checksum', '', () => this.showResult('verify_pe_checksum', {}), hasDocument);
     this.#define('analyze.inspect', 'Inspect at caret', '', () => this.showResult('inspect_at', { offset: this.#grid.caret.offset }), hasDocument);
 
+    this.#define('analyze.templates', 'Templates', '', () => this.#focusRightPanel('panels.templates'), hasDocument);
+    this.#define('analyze.applyTemplate', 'Apply template…', '', () => this.openOperation('apply_template'), hasDocument);
+    this.#define('analyze.registerTemplate', 'Register template (JSON)…', '', () => this.openOperation('register_json_template'), hasDocument);
+    this.#define('analyze.removeTemplate', 'Remove template…', '', () => this.openOperation('remove_template'), hasDocument);
+    this.#define('analyze.exportTemplate', 'Export template (JSON)…', '', () => this.openOperation('export_template_json'), hasDocument);
+
     this.#define('patch.list', 'List patches', '', () => this.showResult('get_patches', {}), hasDocument);
-    this.#define('patch.exportJson', 'Export patches as JSON', '', () => this.showResult('export_patches_json', {}), hasDocument);
-    this.#define('patch.exportIps', 'Export patches as IPS', '', () => this.showResult('export_patches_ips', {}), hasDocument);
-    this.#define('patch.import', 'Import patches…', '', () => this.openOperation('import_patches_ips'), hasDocument);
+    this.#define('patch.export', 'Export patches…', '', () => this.#transferPatches('export'), hasDocument);
+    this.#define('patch.import', 'Import patches…', '', () => this.#transferPatches('import'), hasDocument);
     this.#define('patch.repairPe', 'Repair PE checksum', '', () => this.runOnDocument('repair_pe_checksum', {}), hasDocument);
 
     this.#define('tools.palette', 'Command palette', 'Ctrl+Shift+P', () => this.#palette?.open(''));
@@ -1113,6 +1571,11 @@ export class Shell {
       this.#applyDockLayout();
     });
     this.#define('tools.reference', 'Engine reference', '', () => this.showReference());
+
+    this.#define('tools.transforms', 'List transforms', '', () => this.openOperation('list_transforms'));
+    this.#define('tools.applyTransform', 'Transform data…', '', () => this.openOperation('transform_data'), hasDocument);
+    this.#define('tools.encodings', 'List encodings', '', () => this.openOperation('list_encodings'));
+    this.#define('tools.decodeText', 'Decode text…', '', () => this.openOperation('decode_text'), hasDocument);
 
     this.#define('help.keys', 'Keyboard shortcuts', '', () => this.showShortcuts());
     this.#define('help.about', 'About Hexbench', '', () => this.showAbout());
@@ -1143,9 +1606,11 @@ export class Shell {
       button.setAttribute('role', 'menuitem');
       button.setAttribute('aria-haspopup', 'true');
       button.setAttribute('aria-expanded', 'false');
+      button.setAttribute('tabindex', this.#menus.length === 0 ? '0' : '-1');
       const popup = element('div', 'hb-menu-popup', undefined, { role: 'menu', 'aria-label': button.textContent });
       popup.hidden = true;
       holder.appendChild(popup);
+      this.#menus.push({ id: menu.id, holder, button, popup });
       button.addEventListener('click', (event) => {
         event.stopPropagation();
         this.#toggleMenu(menu.id, holder, button, popup);
@@ -1156,12 +1621,31 @@ export class Shell {
         }
       });
     }
-    document.addEventListener('click', () => this.#closeMenu(false));
+    bindMenubarKeys(this.#nodes.menubar, {
+      buttons: () => this.#menus.map((menu) => menu.button),
+      openIndex: () => this.#menus.findIndex((menu) => menu.id === this.#openMenu?.id),
+      popup: () => this.#openMenu?.popup ?? null,
+      open: (index) => this.#openMenuAt(index),
+      close: (returnFocus) => this.#closeMenu(returnFocus),
+    });
+    document.addEventListener('click', () => {
+      this.#closeMenu(false);
+      this.#closeContextMenu(false);
+    });
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
         this.#closeMenu();
+        this.#closeContextMenu();
       }
     });
+  }
+
+  /** Open the menu at `index` whatever is open now, which is what every keyboard route into a menu wants. */
+  #openMenuAt(index) {
+    const menu = this.#menus[index];
+    if (menu) {
+      this.#toggleMenu(menu.id, menu.holder, menu.button, menu.popup, true);
+    }
   }
 
   #toggleMenu(id, holder, button, popup, force = false) {
@@ -1171,8 +1655,29 @@ export class Shell {
       return;
     }
     const spec = MENUS.find((menu) => menu.id === id);
+    this.#populateMenuEntries(popup, spec.items, () => this.#closeMenu());
+    popup.hidden = false;
+    button.classList.add('is-open');
+    button.setAttribute('aria-expanded', 'true');
+    this.#openMenu = { id, button, popup };
+  }
+
+  /**
+   * Fill a menu popup with the entries `items` names, each wired to close `close`
+   * before running its command.
+   *
+   * Shared by the menubar's own popups and the grid's context menu, so the
+   * entry markup - the role, the disabled marking, the label element and the
+   * shortcut text - can never drift between the two surfaces.
+   *
+   * @param {HTMLElement} popup Popup element to fill, carrying `role="menu"`.
+   * @param {string[]} items Command identifiers in display order; `'-'` renders a separator.
+   * @param {() => void} close Closes whichever popup owns these entries, called before the command runs.
+   * @returns {void}
+   */
+  #populateMenuEntries(popup, items, close) {
     popup.replaceChildren();
-    for (const entry of spec.items) {
+    for (const entry of items) {
       if (entry === '-') {
         popup.appendChild(element('div', 'hb-menu-sep', undefined, { role: 'separator' }));
         continue;
@@ -1182,13 +1687,13 @@ export class Shell {
         continue;
       }
       const enabled = command.enabled();
-      const item = element('button', enabled ? 'hb-menu-entry' : 'hb-menu-entry is-disabled', undefined, { type: 'button', role: 'menuitem' });
+      const item = element('button', enabled ? 'hb-menu-entry' : 'hb-menu-entry is-disabled', undefined, { type: 'button', role: 'menuitem', tabindex: '-1' });
       item.appendChild(element('span', 'hb-menu-entry-label', command.label));
-      item.appendChild(element('span', 'hb-menu-shortcut', command.shortcut));
+      item.appendChild(element('span', 'hb-menu-shortcut', shortcutText(command)));
       if (enabled) {
         item.addEventListener('click', (event) => {
           event.stopPropagation();
-          this.#closeMenu();
+          close();
           this.run(command.id);
         });
       } else {
@@ -1196,10 +1701,6 @@ export class Shell {
       }
       popup.appendChild(item);
     }
-    popup.hidden = false;
-    button.classList.add('is-open');
-    button.setAttribute('aria-expanded', 'true');
-    this.#openMenu = { id, button, popup };
   }
 
   /**
@@ -1224,6 +1725,90 @@ export class Shell {
     }
   }
 
+  /* --------------------------------------------------------- context menu */
+
+  /**
+   * Give the grid a context menu.
+   *
+   * The browser already turns a right-click, the ContextMenu key and
+   * Shift+F10 into one `contextmenu` event fired at whatever holds focus, so
+   * one listener on the editor frame answers all three routes into the menu
+   * without grid.js knowing this exists.
+   *
+   * @returns {void}
+   */
+  #bindGridContextMenu() {
+    this.#editorFrame?.addEventListener('contextmenu', (event) => {
+      if (this.#active === null) {
+        return;
+      }
+      event.preventDefault();
+      this.#openGridContextMenu(Math.max(0, event.clientX), Math.max(0, event.clientY));
+    });
+  }
+
+  /**
+   * Open the grid's context menu, anchored near a viewport position.
+   *
+   * The entries are populated by the same {@link Shell#populateMenuEntries}
+   * loop the menubar's own popups use, so label, shortcut and enabled state
+   * can never disagree between the two surfaces. Keyboard movement inside it
+   * is A-3's own `bindMenubarKeys`, given a controller with no buttons of its
+   * own: every key that would normally route through a menu button falls
+   * straight through to the entry-navigation half of that contract instead of
+   * a second implementation of the same rules.
+   *
+   * @param {number} clientX Viewport X to anchor the popup near.
+   * @param {number} clientY Viewport Y to anchor the popup near.
+   * @returns {void}
+   */
+  #openGridContextMenu(clientX, clientY) {
+    this.#closeMenu(false);
+    this.#closeContextMenu(false);
+    const popup = element('div', 'hb-menu-popup', undefined, { role: 'menu', 'aria-label': 'Selection actions', tabindex: '-1' });
+    this.#populateMenuEntries(popup, GRID_CONTEXT_MENU_ITEMS, () => this.#closeContextMenu());
+    popup.style.visibility = 'hidden';
+    popup.style.position = 'fixed';
+    popup.style.left = '0px';
+    popup.style.top = '0px';
+    this.#nodes.overlays.appendChild(popup);
+    this.#contextMenu = { popup };
+    const rect = popup.getBoundingClientRect();
+    const left = Math.max(CONTEXT_MENU_MARGIN, Math.min(clientX, window.innerWidth - rect.width - CONTEXT_MENU_MARGIN));
+    const top = Math.max(CONTEXT_MENU_MARGIN, Math.min(clientY, window.innerHeight - rect.height - CONTEXT_MENU_MARGIN));
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+    popup.style.visibility = '';
+    bindMenubarKeys(popup, {
+      buttons: () => [],
+      openIndex: () => -1,
+      popup: () => popup,
+      open: () => {},
+      close: (returnFocus) => this.#closeContextMenu(returnFocus),
+    });
+    const entries = [...popup.children].filter((node) => node.getAttribute('role') === 'menuitem');
+    const first = entries.find((entry) => entry.getAttribute('aria-disabled') !== 'true');
+    (first ?? popup).focus();
+  }
+
+  /**
+   * Shut the grid's context menu, the way {@link Shell#closeMenu} shuts the menubar's.
+   *
+   * @param {boolean} [returnFocus] Whether to send focus back to the grid.
+   * @returns {void}
+   */
+  #closeContextMenu(returnFocus = true) {
+    if (this.#contextMenu === null) {
+      return;
+    }
+    const { popup } = this.#contextMenu;
+    popup.remove();
+    this.#contextMenu = null;
+    if (returnFocus) {
+      this.#grid.focus();
+    }
+  }
+
   /* --------------------------------------------------------------- toolbar */
 
   #bindToolbar() {
@@ -1237,20 +1822,37 @@ export class Shell {
         this.run(button.dataset.command);
       }
     });
-    const jump = this.#nodes.toolbar.querySelector('#toolbar-goto');
-    jump.addEventListener('keydown', (event) => {
+    this.#gotoField = this.#nodes.toolbar.querySelector('#toolbar-goto');
+    this.#gotoField.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter') {
         return;
       }
       event.preventDefault();
-      const offset = parseOffset(jump.value);
+      const offset = parseOffset(this.#gotoField.value);
       if (offset === null) {
-        this.#toasts.show('warning', 'Not an offset', `"${jump.value}" is not a hexadecimal offset.`);
+        this.#toasts.show('warning', 'Not an offset', `"${this.#gotoField.value}" is not a hexadecimal offset.`);
         return;
       }
-      this.#grid.seek(offset);
-      this.#grid.focus();
+      this.#jumpTo(offset);
     });
+  }
+
+  /**
+   * Take the caret to `offset` and leave the toolbar field saying so.
+   *
+   * The field and the Go to dialog answer the same question, so whichever one
+   * was used, both end up showing the offset the view is actually at rather
+   * than one of them still showing the last thing typed into it.
+   *
+   * @param {number} offset Where to put the caret.
+   * @returns {void}
+   */
+  #jumpTo(offset) {
+    if (this.#gotoField !== null) {
+      this.#gotoField.value = hex(offset, 8);
+    }
+    this.#grid.seek(offset);
+    this.#grid.focus();
   }
 
   #syncToolbar() {
@@ -1265,7 +1867,6 @@ export class Shell {
   /* ------------------------------------------------------------------ tabs */
 
   #bindTabs() {
-    this.#nodes.tabstrip.setAttribute('role', 'tablist');
     this.#nodes.tabstrip.addEventListener('click', (event) => {
       const target = event.target;
       if (!(target instanceof HTMLElement)) {
@@ -1296,19 +1897,11 @@ export class Shell {
         this.close(tab.dataset.handle);
       }
     });
-    this.#nodes.tabstrip.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter' && event.key !== ' ') {
-        return;
-      }
-      const target = event.target;
-      if (!(target instanceof HTMLElement) || target.closest('.hb-tab-close')) {
-        return;
-      }
-      const tab = target.closest('.hb-tab');
-      if (tab) {
-        event.preventDefault();
-        this.activate(tab.dataset.handle);
-      }
+    wireTabStrip(this.#nodes.tabstrip, {
+      keyAttribute: 'handle',
+      onActivate: (handle) => this.activate(handle),
+      onClose: (handle) => this.close(handle),
+      ignoreSelector: '.hb-tab-close',
     });
   }
 
@@ -1317,9 +1910,6 @@ export class Shell {
     for (const info of this.#documents) {
       const active = this.#active !== null && info.handle === this.#active.handle;
       const tab = element('div', active ? 'hb-tab is-active' : 'hb-tab', undefined, {
-        role: 'tab',
-        tabindex: '0',
-        'aria-selected': String(active),
         'aria-label': info.label,
       });
       tab.dataset.handle = info.handle;
@@ -1331,12 +1921,22 @@ export class Shell {
       }
       const close = iconButton('✕', `Close ${info.label}`, undefined, 'hb-tab-close');
       close.dataset.handle = info.handle;
+      /* Out of the tab order on purpose: the strip is one tab stop, and a close
+         button per document would make it a dozen. Delete closes the focused
+         tab instead, which is what the strip's keyboard contract routes there. */
+      close.tabIndex = -1;
       tab.appendChild(close);
       this.#nodes.tabstrip.appendChild(tab);
     }
     if (this.#documents.length === 0) {
       this.#nodes.tabstrip.appendChild(element('span', 'hb-tabstrip-overflow', 'no documents open'));
     }
+    applyTabStripRoles(this.#nodes.tabstrip, {
+      keyAttribute: 'handle',
+      activeKey: this.#active?.handle ?? null,
+      panel: this.#nodes.editorHost,
+      label: 'Open documents',
+    });
   }
 
   /* ------------------------------------------------------------- splitters */
@@ -1490,6 +2090,30 @@ export class Shell {
     workspace.style.gridTemplateRows = this.#dockBottom.visible
       ? 'minmax(0, 1fr) var(--hb-splitter-size) var(--hb-dock-bottom-h)'
       : 'minmax(0, 1fr) 0 0';
+  }
+
+  /**
+   * Reveal the bottom dock and switch it to one of its panels, by id.
+   *
+   * The four spatial analyses route here instead of into a modal: each is a
+   * view of the bytes on screen, so the panel that already exists for it -
+   * registered by `panels.js` before this command can ever run - is what
+   * should be in front, not a fresh dump of the same call's return value.
+   *
+   * @param {string} id A panel identifier registered with the bottom dock.
+   * @returns {void}
+   */
+  #focusBottomPanel(id) {
+    this.#dockBottom.setVisible(true);
+    this.#dockBottom.activate(id);
+    this.#applyDockLayout();
+  }
+
+  /** The right-dock counterpart of {@link Shell#focusBottomPanel}, for the menu entries BE-5 gives Templates. */
+  #focusRightPanel(id) {
+    this.#dockRight.setVisible(true);
+    this.#dockRight.activate(id);
+    this.#applyDockLayout();
   }
 
   /* -------------------------------------------------------------- keyboard */
@@ -1654,9 +2278,11 @@ export class Shell {
     if (changed) {
       this.clearHits();
       this.#entropy = null;
+      this.#va = null;
     }
     this.#renderTabs();
     this.#scheduleEntropy();
+    this.#scheduleVa();
     this.#renderStatus();
     this.#updateDocks();
     this.emit('document', info);
@@ -1835,6 +2461,7 @@ export class Shell {
       this.#active = info;
       this.#grid.setDocument(info);
       this.#scheduleEntropy();
+      this.#scheduleVa();
     }
     this.#renderTabs();
     this.#renderStatus();
@@ -1957,6 +2584,48 @@ export class Shell {
     this.#dialogs.result('engine reference', 'static facts', reference);
   }
 
+  /* ----------------------------------------------------------------- patches */
+
+  /**
+   * Offer every export or import patch format the engine currently
+   * publishes, then hand the chosen one to {@link Shell#openOperation}.
+   *
+   * The format list comes from the catalogue rather than a written-out pair,
+   * so a format the engine adds - or drops - is reachable the moment the
+   * catalogue reports it. The generic argument dialog that `openOperation`
+   * opens next reads that same operation's real parameter list, which is
+   * exactly what makes the source-file argument appear only for the formats
+   * that declare one (`export_patches_bps`'s `source_data`, `_from_path`'s
+   * `source_path`) and stay absent for the formats that take none.
+   *
+   * @param {'export'|'import'} direction Which half of the Patch menu asked.
+   * @returns {Promise<void>} Resolves once the format is chosen and handed on, or the picker is dismissed.
+   */
+  async #transferPatches(direction) {
+    const prefix = direction === 'export' ? 'export_patches_' : 'import_patches_';
+    const operations = (this.#catalog?.operations ?? []).filter((operation) => operation.name.startsWith(prefix));
+    if (operations.length === 0) {
+      this.#toasts.show('warning', 'No patch formats', `The engine publishes no ${direction} operations for patches.`);
+      return;
+    }
+    const values = await this.#dialogs.form({
+      title: direction === 'export' ? 'Export patches' : 'Import patches',
+      confirmLabel: 'Next',
+      note: 'Every format the engine currently publishes for this direction.',
+      fields: [{
+        name: 'format',
+        label: 'format',
+        type: 'select',
+        value: operations[0].name,
+        options: operations.map((operation) => ({ value: operation.name, label: patchFormatLabel(operation.name, prefix) })),
+      }],
+    });
+    if (values === null) {
+      return;
+    }
+    this.openOperation(values.format);
+  }
+
   /* ---------------------------------------------------------------- search */
 
   async find() {
@@ -1973,9 +2642,19 @@ export class Shell {
             { value: 'hex', label: 'Hex bytes' },
             { value: 'text', label: 'Text' },
             { value: 'regex', label: 'Regular expression' },
+            { value: 'numeric', label: 'Numeric integer' },
+            { value: 'numeric_float', label: 'Numeric float' },
+            { value: 'numeric_range', label: 'Numeric range' },
           ],
         },
-        { name: 'needle', label: 'pattern', mono: true, value: this.#lastSearch?.needle ?? '' },
+        {
+          name: 'needle',
+          label: 'pattern',
+          mono: true,
+          value: this.#lastSearch?.needle ?? '',
+          hint: 'Also the numeric value to match, or the lower bound for a range search.',
+        },
+        { name: 'rangeEnd', label: 'range end', mono: true, value: '', hint: 'Upper bound of the range. Used by numeric range search only.' },
         {
           name: 'encoding',
           label: 'encoding',
@@ -1991,6 +2670,18 @@ export class Shell {
           hint: 'Used by the text search only.',
         },
         { name: 'sensitive', label: 'case sensitive', type: 'check', value: true },
+        {
+          name: 'size',
+          label: 'width',
+          type: 'select',
+          value: String(DEFAULT_NUMERIC_WIDTH),
+          options: [1, 2, 4, 8].map((width) => ({ value: String(width), label: `${width} byte${width === 1 ? '' : 's'}` })),
+          hint: 'Used by numeric search only.',
+        },
+        { name: 'signed', label: 'signed', type: 'check', value: true, hint: 'Used by numeric integer and range search only.' },
+        { name: 'bigEndian', label: 'big-endian', type: 'check', value: false, hint: 'Used by numeric search only; unchecked is little-endian.' },
+        { name: 'tolerance', label: 'tolerance', mono: true, value: '0', hint: 'Used by numeric float search only, as the maximum allowed difference.' },
+        { name: 'alignment', label: 'alignment', mono: true, value: '1', hint: 'Used by numeric search only; a match must start on a multiple of this.' },
         { name: 'limit', label: 'max results', mono: true, value: String(DEFAULT_MAX_RESULTS) },
       ],
     });
@@ -2008,6 +2699,41 @@ export class Shell {
       result = await this.runOnDocument('search_hex', { pattern: values.needle, max_results: limit });
     } else if (values.mode === 'regex') {
       result = await this.runOnDocument('search_regex', { pattern: values.needle, max_results: limit });
+    } else if (values.mode === 'numeric' || values.mode === 'numeric_range') {
+      const size = Number.parseInt(values.size, 10) || DEFAULT_NUMERIC_WIDTH;
+      const alignment = Number.parseInt(values.alignment, 10) || 1;
+      const low = parseSearchInt(values.needle);
+      if (low === null) {
+        this.#toasts.show('warning', 'Not an integer', 'A numeric search takes a decimal, 0x or 0b integer.');
+        return;
+      }
+      if (values.mode === 'numeric') {
+        result = await this.runOnDocument('search_numeric', { value: low, size, signed: values.signed, big_endian: values.bigEndian, alignment, max_results: limit });
+      } else {
+        const high = parseSearchInt(values.rangeEnd);
+        if (high === null) {
+          this.#toasts.show('warning', 'Not an integer', 'A numeric range search takes a decimal, 0x or 0b integer as its upper bound.');
+          return;
+        }
+        result = await this.runOnDocument('search_numeric_range', { value_range: [low, high], size, signed: values.signed, big_endian: values.bigEndian, alignment, max_results: limit });
+      }
+    } else if (values.mode === 'numeric_float') {
+      const size = Number.parseInt(values.size, 10) || DEFAULT_NUMERIC_WIDTH;
+      const alignment = Number.parseInt(values.alignment, 10) || 1;
+      const value = Number.parseFloat(values.needle);
+      if (!Number.isFinite(value)) {
+        this.#toasts.show('warning', 'Not a number', 'A numeric float search takes a finite decimal number.');
+        return;
+      }
+      const tolerance = Number.parseFloat(values.tolerance);
+      result = await this.runOnDocument('search_numeric_float', {
+        value,
+        size,
+        big_endian: values.bigEndian,
+        tolerance: Number.isFinite(tolerance) ? tolerance : 0,
+        alignment,
+        max_results: limit,
+      });
     } else {
       result = await this.runOnDocument('search_text', {
         text: values.needle,
@@ -2089,11 +2815,12 @@ export class Shell {
   /* ----------------------------------------------------------------- edits */
 
   async gotoOffset() {
+    const typed = this.#gotoField === null ? null : parseOffset(this.#gotoField.value);
     const values = await this.#dialogs.form({
       title: 'Go to offset',
       confirmLabel: 'Go',
       note: 'Offsets are hexadecimal.',
-      fields: [{ name: 'offset', label: 'offset', mono: true, value: hex(this.#grid.caret.offset, 8) }],
+      fields: [{ name: 'offset', label: 'offset', mono: true, value: hex(typed ?? this.#grid.caret.offset, 8) }],
     });
     if (values === null) {
       return;
@@ -2103,8 +2830,7 @@ export class Shell {
       this.#toasts.show('warning', 'Not an offset', `"${values.offset}" is not a hexadecimal offset.`);
       return;
     }
-    this.#grid.seek(offset);
-    this.#grid.focus();
+    this.#jumpTo(offset);
   }
 
   async fillSelection() {
@@ -2127,6 +2853,161 @@ export class Shell {
       pattern: values.pattern.replace(/[\s_,:-]/g, ''),
     });
     this.#grid.markModified(selection.start, selection.length);
+    this.#grid.invalidate();
+  }
+
+  /** Overwrite the destination with the selection's bytes, prefilled from it the way {@link Shell#fillSelection} is. */
+  async copyBlock() {
+    const selection = this.#grid.selection;
+    if (selection === null) {
+      return;
+    }
+    const values = await this.#dialogs.form({
+      title: 'Copy block',
+      confirmLabel: 'Copy',
+      note: `${selection.length} bytes at 0x${hex(selection.start, 8)} will be copied to the destination offset below, overwriting what is there.`,
+      fields: [{ name: 'dstOffset', label: 'destination offset', mono: true, value: hex(this.#grid.caret.offset, 8) }],
+    });
+    if (values === null) {
+      return;
+    }
+    const dstOffset = parseOffset(values.dstOffset);
+    if (dstOffset === null) {
+      this.#toasts.show('warning', 'Not an offset', `"${values.dstOffset}" is not a hexadecimal offset.`);
+      return;
+    }
+    await this.runOnDocument('copy_block', { src_offset: selection.start, length: selection.length, dst_offset: dstOffset });
+    this.#grid.markModified(dstOffset, selection.length);
+    this.#grid.invalidate();
+  }
+
+  /** Move the selection to the destination, prefilled from it the way {@link Shell#fillSelection} is. */
+  async moveBlock() {
+    const selection = this.#grid.selection;
+    if (selection === null) {
+      return;
+    }
+    const values = await this.#dialogs.form({
+      title: 'Move block',
+      confirmLabel: 'Move',
+      note: `${selection.length} bytes at 0x${hex(selection.start, 8)} will be moved to the destination offset below.`,
+      fields: [{ name: 'dstOffset', label: 'destination offset', mono: true, value: hex(this.#grid.caret.offset, 8) }],
+    });
+    if (values === null) {
+      return;
+    }
+    const dstOffset = parseOffset(values.dstOffset);
+    if (dstOffset === null) {
+      this.#toasts.show('warning', 'Not an offset', `"${values.dstOffset}" is not a hexadecimal offset.`);
+      return;
+    }
+    await this.runOnDocument('move_block', { src_offset: selection.start, length: selection.length, dst_offset: dstOffset });
+    this.#grid.invalidate();
+  }
+
+  /**
+   * Swap the selection with another block of the same length, prefilled from
+   * it the way {@link Shell#fillSelection} is.
+   *
+   * The engine requires the two blocks to be the same length, so block B's
+   * length is not asked for; it is always the selection's.
+   */
+  async swapBlocks() {
+    const selection = this.#grid.selection;
+    if (selection === null) {
+      return;
+    }
+    const values = await this.#dialogs.form({
+      title: 'Swap blocks',
+      confirmLabel: 'Swap',
+      note: `Block A is ${selection.length} bytes at 0x${hex(selection.start, 8)}. Block B below must be the same length.`,
+      fields: [{ name: 'offsetB', label: 'block B offset', mono: true, value: hex(this.#grid.caret.offset, 8) }],
+    });
+    if (values === null) {
+      return;
+    }
+    const offsetB = parseOffset(values.offsetB);
+    if (offsetB === null) {
+      this.#toasts.show('warning', 'Not an offset', `"${values.offsetB}" is not a hexadecimal offset.`);
+      return;
+    }
+    await this.runOnDocument('swap_blocks', { offset_a: selection.start, len_a: selection.length, offset_b: offsetB, len_b: selection.length });
+    this.#grid.invalidate();
+  }
+
+  /** Validate a bit-editing offset/index pair, toasting and returning null when either is malformed. */
+  #readBitTarget(values) {
+    const offset = parseOffset(values.offset);
+    const bitIndex = Number.parseInt(values.bitIndex, 10);
+    if (offset === null || !Number.isInteger(bitIndex) || bitIndex < 0 || bitIndex > MAX_BIT_INDEX) {
+      this.#toasts.show('warning', 'Invalid bit', 'The offset must be hexadecimal and the bit index 0-7.');
+      return null;
+    }
+    return { offset, bitIndex };
+  }
+
+  /** Read one bit and show it, prefilled from the caret. */
+  async getBitAt() {
+    const values = await this.#dialogs.form({
+      title: 'Get bit',
+      confirmLabel: 'Read',
+      fields: [
+        { name: 'offset', label: 'offset', mono: true, value: hex(this.#grid.caret.offset, 8) },
+        { name: 'bitIndex', label: 'bit index (0-7)', mono: true, value: '0' },
+      ],
+    });
+    if (values === null) {
+      return;
+    }
+    const target = this.#readBitTarget(values);
+    if (target === null) {
+      return;
+    }
+    await this.showResult('get_bit', { offset: target.offset, bit_index: target.bitIndex });
+  }
+
+  /** Set or clear one bit, prefilled from the caret. */
+  async setBitAt() {
+    const values = await this.#dialogs.form({
+      title: 'Set bit',
+      confirmLabel: 'Set',
+      fields: [
+        { name: 'offset', label: 'offset', mono: true, value: hex(this.#grid.caret.offset, 8) },
+        { name: 'bitIndex', label: 'bit index (0-7)', mono: true, value: '0' },
+        { name: 'value', label: 'value (checked sets, unchecked clears)', type: 'check', value: true },
+      ],
+    });
+    if (values === null) {
+      return;
+    }
+    const target = this.#readBitTarget(values);
+    if (target === null) {
+      return;
+    }
+    await this.runOnDocument('set_bit', { offset: target.offset, bit_index: target.bitIndex, value: values.value });
+    this.#grid.markModified(target.offset, 1);
+    this.#grid.invalidate();
+  }
+
+  /** Flip one bit and show its new value, prefilled from the caret. */
+  async toggleBitAt() {
+    const values = await this.#dialogs.form({
+      title: 'Toggle bit',
+      confirmLabel: 'Toggle',
+      fields: [
+        { name: 'offset', label: 'offset', mono: true, value: hex(this.#grid.caret.offset, 8) },
+        { name: 'bitIndex', label: 'bit index (0-7)', mono: true, value: '0' },
+      ],
+    });
+    if (values === null) {
+      return;
+    }
+    const target = this.#readBitTarget(values);
+    if (target === null) {
+      return;
+    }
+    await this.showResult('toggle_bit', { offset: target.offset, bit_index: target.bitIndex });
+    this.#grid.markModified(target.offset, 1);
     this.#grid.invalidate();
   }
 
@@ -2247,15 +3128,21 @@ export class Shell {
 
   showShortcuts() {
     const rows = SHORTCUTS.map((entry) => [entry.combo, this.#commands.get(entry.command)?.label ?? entry.command]);
+    for (const id of EDITOR_SCOPED_SHORTCUTS) {
+      const command = this.#commands.get(id);
+      if (command) {
+        rows.push([`${command.shortcut.toLowerCase()} (editor)`, command.label]);
+      }
+    }
     rows.push(
       ['arrows', 'Move the caret'],
       ['shift+arrows', 'Extend the selection'],
       ['page up / page down', 'Move a screen'],
       ['home / end', 'Start and end of the row'],
       ['ctrl+home / ctrl+end', 'Start and end of the document'],
-      ['tab', 'Move between the hex and ASCII panes'],
-      ['ins', 'Insert or overwrite'],
-      ['backspace / delete', 'Remove bytes'],
+      ['f6 / ctrl+tab', 'Move between the hex and ASCII panes'],
+      ['tab / shift+tab', 'Leave the editor for the rest of the window'],
+      ['backspace', 'Remove the byte before the caret'],
       ['0-9 a-f', 'Edit a nibble in the hex pane'],
     );
     this.#dialogs.result('keyboard', `${rows.length} bindings`, Object.fromEntries(rows));
@@ -2289,6 +3176,7 @@ export class Shell {
   #onCaret(caret) {
     this.#renderStatus();
     this.#updateDocks();
+    this.#scheduleVa();
     this.emit('caret', caret);
   }
 
@@ -2329,6 +3217,39 @@ export class Shell {
     }, ENTROPY_DEBOUNCE_MS);
   }
 
+  /**
+   * Debounce a `file_offset_to_va` lookup for the caret's current offset.
+   *
+   * A mapping without any coverage is not an error - the engine reports it as
+   * `null` - so BE-2's status-bar item follows UX-3's rule for an unmeasured
+   * value: hidden rather than printed as a placeholder, via {@link nextVaState}
+   * resetting `#va` to null on both "no mapping" and an outright failure.
+   */
+  #scheduleVa() {
+    window.clearTimeout(this.#vaTimer);
+    if (!this.#active) {
+      if (this.#va !== null) {
+        this.#va = null;
+        this.#renderStatus();
+      }
+      return;
+    }
+    const request = { handle: this.#active.handle, generation: this.#active.generation, offset: this.#grid.caret.offset };
+    const applyOutcome = (outcome) => {
+      const active = this.#active ? { handle: this.#active.handle, generation: this.#active.generation } : null;
+      const next = nextVaState(outcome, request, active, this.#grid.caret.offset);
+      if (next.changed) {
+        this.#va = next.value;
+        this.#renderStatus();
+      }
+    };
+    this.#vaTimer = window.setTimeout(() => {
+      callOp('file_offset_to_va', { handle: request.handle, arguments: { offset: request.offset } })
+        .then((result) => applyOutcome({ ok: true, value: result.value }))
+        .catch(() => applyOutcome({ ok: false }));
+    }, VA_DEBOUNCE_MS);
+  }
+
   #setBusy(busy) {
     const wasBusy = this.#busyCount > 0;
     this.#busyCount = Math.max(0, this.#busyCount + (busy ? 1 : -1));
@@ -2341,36 +3262,68 @@ export class Shell {
 
   #renderStatus() {
     const nodes = this.#nodes.status;
-    const caret = this.#grid.caret;
-    const selection = this.#grid.selection;
+    const readout = statusReadout({
+      document: this.#active,
+      caret: this.#grid.caret,
+      selection: this.#grid.selection,
+      entropy: this.#entropy,
+      va: this.#va,
+      hits: this.#hits.length,
+      hitIndex: this.#hitIndex,
+      insertMode: this.#grid.insertMode,
+      busy: this.#busyCount > 0,
+      metrics: this.#metrics,
+    });
 
-    nodes.offset.textContent = this.#active ? `0x${hex(caret.offset, 8)} · ${caret.offset}` : '—';
-    nodes.pane.textContent = `${caret.pane}${caret.pane === 'hex' ? (caret.nibble === 0 ? ' hi' : ' lo') : ''}`;
-    nodes.selection.textContent = selection === null
-      ? 'none'
-      : `${selection.length} B @ 0x${hex(selection.start, 8)}`;
-    nodes.size.textContent = this.#active ? `${humanSize(this.#active.length)} · ${this.#active.length}` : '—';
-    nodes.mode.textContent = this.#grid.insertMode ? 'INS' : 'OVR';
-    nodes.entropy.textContent = this.#entropy === null ? '—' : this.#entropy.toFixed(ENTROPY_DIGITS);
-    nodes.hits.textContent = this.#hits.length === 0
-      ? '—'
-      : `${this.#hitIndex + 1}/${this.#hits.length}`;
-
-    const modified = Boolean(this.#active?.modified);
-    nodes.modifiedItem.classList.toggle('is-warning', modified);
-    nodes.modified.textContent = modified ? 'modified' : 'clean';
-
-    if (this.#metrics.scaled) {
-      nodes.scaleItem.hidden = false;
-      nodes.scale.textContent = `1 px ≈ ${perPixelSize(this.#metrics.bytesPerPixel)}`;
-    } else {
-      nodes.scaleItem.hidden = true;
+    for (const [name, value] of Object.entries(readout)) {
+      const node = nodes[name];
+      hideStatusNode(node.closest('.hb-status-item'), value === null);
+      if (value !== null) {
+        node.textContent = value;
+      }
     }
+    this.#trimStatusSeparators();
 
+    nodes.modifiedItem.classList.toggle('is-warning', readout.modified !== null);
     nodes.dot.className = this.#busyCount > 0 ? 'hb-status-dot is-busy' : 'hb-status-dot is-ready';
-    nodes.state.textContent = this.#busyCount > 0 ? 'working' : 'ready';
 
     this.#syncToolbar();
+  }
+
+  /**
+   * Hide the separators the hidden items leave stranded.
+   *
+   * Whole tiers empty out in an ordinary session, and a rule that hid only the
+   * items would leave the bar starting on a bare hairline or printing two of
+   * them side by side. A separator earns its place only when it has a visible
+   * item on both sides of it, where "side" ends at the next separator or at the
+   * spacer that pushes the right-hand tier away - which is why the spacer counts
+   * as a boundary and not as a gap the scan can look across.
+   */
+  #trimStatusSeparators() {
+    const bar = this.#nodes.status.offset.closest('.hb-statusbar');
+    if (bar === null) {
+      return;
+    }
+    const children = [...bar.children];
+    const isSeparator = (node) => node.classList.contains('hb-status-sep');
+    const isBoundary = (node) => isSeparator(node) || node.classList.contains('hb-status-grow');
+    const itemBeside = (from, step) => {
+      for (let index = from; index >= 0 && index < children.length; index += step) {
+        if (isBoundary(children[index])) {
+          return false;
+        }
+        if (!children[index].hidden) {
+          return true;
+        }
+      }
+      return false;
+    };
+    for (const [index, child] of children.entries()) {
+      if (isSeparator(child)) {
+        hideStatusNode(child, !(itemBeside(index - 1, -1) && itemBeside(index + 1, 1)));
+      }
+    }
   }
 
   /** Surface a failure to the user without losing its classification. */

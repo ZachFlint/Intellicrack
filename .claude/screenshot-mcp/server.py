@@ -19,14 +19,14 @@ import time
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
 
 if platform.system() != "Windows":
     sys.stderr.write("This MCP server only runs on Windows.\n")
     sys.exit(1)
 
-mcp = FastMCP("Screenshot")
+mcp = MCPServer("Screenshot")
 
 _SW_RESTORE = 9
 _SW_MINIMIZE = 6

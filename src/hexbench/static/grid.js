@@ -17,24 +17,42 @@
    recycled, each cell's text and class list written only when it actually
    changes, and the bytes behind them come from a small cache of windows keyed by
    document generation, so a mutation invalidates exactly the stale windows and
-   nothing else. */
+   nothing else.
+
+   The third is that the row width is a view setting rather than a constant, and
+   the two things derived from it pull in opposite directions. The rendered DOM
+   does depend on it, so changing it discards the row pool and the ruler columns
+   and builds them again at the new width - the one moment this file is allowed
+   to rebuild. The byte cache does not: a window holds the document's bytes, not
+   a picture of them, so it stays keyed by generation alone and keeps answering
+   after a width change. Only the quantum that chooses the next window's start
+   offset moves with the width, which costs at most one extra read. */
 
 import { callOp, isAborted, isBusy, readWindow, toHex } from './api.js';
+import { announce, nextId } from './dom.js';
 
 export const BYTES_PER_ROW = 16;
+
+/** The fixed row widths offered beside fit-to-width. */
+export const BYTES_PER_ROW_CHOICES = Object.freeze([8, 16, 24, 32]);
+
+/** The row-width setting that measures the pane instead of naming a number. */
+export const FIT_TO_WIDTH = 'fit';
 
 const GROUP_SIZE = 8;
 const MAX_SCROLLER_PX = 30_000_000;
 const LAYOUT_UNIT_MAX_PX = 33_554_432;
 const OVERSCAN_ROWS = 64;
 const WINDOW_PAD_ROWS = 128;
-const WINDOW_QUANTUM = OVERSCAN_ROWS * BYTES_PER_ROW;
 const CACHE_LIMIT = 32;
 const SPARE_ROWS = 2;
 const FALLBACK_ROW_HEIGHT = 20;
 const BUSY_RETRY_MS = 220;
 const WHEEL_LINE_PX = 16;
 const WHEEL_PAGE_ROWS = 24;
+const FIT_MIN_BLOCKS = 1;
+const FIT_MAX_BLOCKS = 8;
+const CARET_SPEAK_MS = 140;
 
 const PRINTABLE_LOW = 0x20;
 const PRINTABLE_HIGH = 0x7e;
@@ -68,6 +86,98 @@ function clamp(value, low, high) {
     return low;
   }
   return value > high ? high : value;
+}
+
+/**
+ * The row-relative caret keys, resolved as arithmetic on the current row width.
+ *
+ * Every one of these used to read a module constant, which is what fixed the
+ * view at sixteen bytes. Taking the width as an argument is what makes the row
+ * width a setting; keeping the whole calculation out of the class is what makes
+ * it directly executable by the suite that gates it. The result is unclamped -
+ * the caller owns the document bounds - and a key that does not move by rows
+ * leaves the caret where it is.
+ *
+ * @param {string} key `event.key` of the keystroke.
+ * @param {number} offset Byte offset the caret is on now.
+ * @param {number} bytesPerRow Bytes rendered per row.
+ * @param {number} fullRows Rows a page step covers.
+ * @returns {number} Byte offset the key asks for, before clamping.
+ */
+export function caretRowTarget(key, offset, bytesPerRow, fullRows) {
+  const column = offset % bytesPerRow;
+  switch (key) {
+    case 'ArrowUp':
+      return offset - bytesPerRow;
+    case 'ArrowDown':
+      return offset + bytesPerRow;
+    case 'PageUp':
+      return offset - fullRows * bytesPerRow;
+    case 'PageDown':
+      return offset + fullRows * bytesPerRow;
+    case 'Home':
+      return offset - column;
+    case 'End':
+      return offset - column + bytesPerRow - 1;
+    default:
+      return offset;
+  }
+}
+
+/**
+ * The widest row of whole byte groups that fits in `availableWidth`.
+ *
+ * A row's width is linear in groups of eight but not in single bytes, because
+ * every group but the last carries a gap: measuring one eight-byte row and one
+ * sixteen-byte row therefore gives both the cost of a group and, by subtraction,
+ * everything that is not a group - the offset gutter, the pane padding and the
+ * gap the final group does not pay. That is why the fit is derived from two
+ * probes rather than from a per-cell width read out of the stylesheet.
+ *
+ * @param {number} availableWidth Width the row has to fit into, in CSS pixels.
+ * @param {number} narrowWidth Measured width of a row of `GROUP_SIZE` bytes.
+ * @param {number} wideWidth Measured width of a row of `GROUP_SIZE * 2` bytes.
+ * @returns {number} Bytes per row, a multiple of eight, or the default when the probes are unusable.
+ */
+export function fitBytesPerRow(availableWidth, narrowWidth, wideWidth) {
+  const block = wideWidth - narrowWidth;
+  if (!(block > 0) || !(availableWidth > 0)) {
+    return BYTES_PER_ROW;
+  }
+  const fixed = narrowWidth - block;
+  const blocks = Math.floor((availableWidth - fixed) / block);
+  return clamp(blocks, FIT_MIN_BLOCKS, FIT_MAX_BLOCKS) * GROUP_SIZE;
+}
+
+/**
+ * The stored row-width setting a value stands for.
+ *
+ * @param {number|string} value Setting to interpret.
+ * @returns {number|string} One of `BYTES_PER_ROW_CHOICES`, `FIT_TO_WIDTH`, or the default width.
+ */
+export function normalizeBytesPerRow(value) {
+  if (value === FIT_TO_WIDTH) {
+    return FIT_TO_WIDTH;
+  }
+  const width = Number(value);
+  return BYTES_PER_ROW_CHOICES.includes(width) ? width : BYTES_PER_ROW;
+}
+
+/* The single decision point for "does this key event move the caret between the
+   hex and ASCII panes". It is a plain function of the event rather than a case
+   in the keydown switch because Tab used to hold this job, which made the
+   editor a keyboard trap: both Tab and Shift+Tab were swallowed, so a user who
+   arrived here without a pointer could not reach the docks, the tab strip or
+   the status bar again. Tab now belongs to the browser, and the pane switch
+   answers to F6 and Ctrl+Tab. */
+function switchesPane(event) {
+  if (event.altKey || event.metaKey) {
+    return false;
+  }
+  if (event.key === 'F6') {
+    return !event.ctrlKey;
+  }
+  return event.key === 'Tab' && event.ctrlKey;
 }
 
 function normalizeRange(entry) {
@@ -255,6 +365,12 @@ function setClass(element, className) {
   }
 }
 
+function setAttribute(element, name, value) {
+  if (element.getAttribute(name) !== value) {
+    element.setAttribute(name, value);
+  }
+}
+
 /** The virtualized, editable hex view. */
 export class HexGrid {
   #root;
@@ -265,6 +381,7 @@ export class HexGrid {
   #onError;
 
   #editor;
+  #rulerHost;
   #rulerColumns = [];
   #scroller;
   #spacer;
@@ -275,6 +392,11 @@ export class HexGrid {
   #rows = [];
   #rowHeight = 0;
   #rowWidth = 0;
+  #bytesPerRow = BYTES_PER_ROW;
+  #bytesPerRowSetting = BYTES_PER_ROW;
+  #bytesPerRowByDocument = new Map();
+  #fitNarrowPx = 0;
+  #fitWidePx = 0;
 
   #document = null;
   #anchorRow = 0;
@@ -309,6 +431,9 @@ export class HexGrid {
   #busyTimer = 0;
   #editChain = Promise.resolve();
 
+  #cellIdPrefix = nextId('hbcell');
+  #speakTimer = 0;
+
   constructor(root, handlers = {}) {
     this.#root = root;
     this.#onSelect = handlers.onSelect ?? (() => undefined);
@@ -335,13 +460,8 @@ export class HexGrid {
     gutter.textContent = 'OFFSET';
     const columns = document.createElement('span');
     columns.className = 'hb-ruler-cols';
-    for (let column = 0; column < BYTES_PER_ROW; column += 1) {
-      const cell = document.createElement('span');
-      cell.className = column % GROUP_SIZE === GROUP_SIZE - 1 && column !== BYTES_PER_ROW - 1 ? 'hb-ruler-col is-group-end' : 'hb-ruler-col';
-      cell.textContent = column.toString(HEX_RADIX).toUpperCase().padStart(2, '0');
-      columns.appendChild(cell);
-      this.#rulerColumns.push(cell);
-    }
+    this.#rulerHost = columns;
+    this.#renderRuler();
     const rulerAscii = document.createElement('span');
     rulerAscii.className = 'hb-ruler-ascii';
     rulerAscii.textContent = 'ASCII';
@@ -352,12 +472,19 @@ export class HexGrid {
     this.#scroller.tabIndex = 0;
     this.#scroller.setAttribute('role', 'grid');
     this.#scroller.setAttribute('aria-label', 'Hex view');
+    this.#scroller.setAttribute('aria-colcount', String(this.#columnCount()));
 
     this.#spacer = document.createElement('div');
     this.#spacer.className = 'hbx-spacer';
+    this.#spacer.setAttribute('aria-hidden', 'true');
 
+    /* The scroller carries role="grid", so the element between it and the rows
+       has to be something a grid may own or the rows stop being the grid's.
+       Same reason the two panes inside a row are presentational: a gridcell has
+       to be a child of its row in the accessibility tree, not a grandchild. */
     this.#viewport = document.createElement('div');
     this.#viewport.className = 'hbx-viewport';
+    this.#viewport.setAttribute('role', 'rowgroup');
 
     this.#busy = document.createElement('div');
     this.#busy.className = 'hbx-busy hb-busy';
@@ -372,7 +499,32 @@ export class HexGrid {
     this.#root.appendChild(this.#editor);
   }
 
-  #measure() {
+  #isGroupEnd(column) {
+    return column % GROUP_SIZE === GROUP_SIZE - 1 && column !== this.#bytesPerRow - 1;
+  }
+
+  /** Columns the grid claims: the offset header plus one per byte in each pane. */
+  #columnCount() {
+    return 1 + this.#bytesPerRow * 2;
+  }
+
+  #renderRuler() {
+    while (this.#rulerColumns.length > this.#bytesPerRow) {
+      this.#rulerColumns.pop().remove();
+    }
+    while (this.#rulerColumns.length < this.#bytesPerRow) {
+      const cell = document.createElement('span');
+      this.#rulerHost.appendChild(cell);
+      this.#rulerColumns.push(cell);
+    }
+    for (let column = 0; column < this.#rulerColumns.length; column += 1) {
+      setClass(this.#rulerColumns[column], this.#isGroupEnd(column) ? 'hb-ruler-col is-group-end' : 'hb-ruler-col');
+      setText(this.#rulerColumns[column], column.toString(HEX_RADIX).toUpperCase().padStart(2, '0'));
+    }
+  }
+
+  /** The size a real row of `columns` bytes takes, measured off the live stylesheet. */
+  #measureRow(columns) {
     const probe = document.createElement('div');
     probe.className = 'hb-row';
     probe.style.position = 'absolute';
@@ -388,9 +540,9 @@ export class HexGrid {
     hexPane.className = 'hb-hexpane';
     const asciiPane = document.createElement('span');
     asciiPane.className = 'hb-asciipane';
-    for (let column = 0; column < BYTES_PER_ROW; column += 1) {
+    for (let column = 0; column < columns; column += 1) {
       const cell = document.createElement('span');
-      cell.className = column % GROUP_SIZE === GROUP_SIZE - 1 && column !== BYTES_PER_ROW - 1 ? 'hb-byte is-group-end' : 'hb-byte';
+      cell.className = column % GROUP_SIZE === GROUP_SIZE - 1 && column !== columns - 1 ? 'hb-byte is-group-end' : 'hb-byte';
       cell.textContent = 'M0';
       hexPane.appendChild(cell);
       const glyph = document.createElement('span');
@@ -402,30 +554,50 @@ export class HexGrid {
     this.#editor.appendChild(probe);
     const rect = probe.getBoundingClientRect();
     probe.remove();
+    return rect;
+  }
 
+  #measure() {
+    const rect = this.#measureRow(this.#bytesPerRow);
     if (rect.height > 0) {
       this.#rowHeight = rect.height;
       this.#rowWidth = rect.width;
     }
   }
 
+  /** Bytes per row the pane is currently wide enough for. */
+  #measureFit() {
+    if (this.#fitWidePx <= this.#fitNarrowPx) {
+      this.#fitNarrowPx = this.#measureRow(GROUP_SIZE).width;
+      this.#fitWidePx = this.#measureRow(GROUP_SIZE * 2).width;
+    }
+    return fitBytesPerRow(this.#scroller.clientWidth, this.#fitNarrowPx, this.#fitWidePx);
+  }
+
   #buildRow() {
     const element = document.createElement('div');
     element.className = 'hb-row';
+    element.setAttribute('role', 'row');
     const offset = document.createElement('span');
     offset.className = 'hb-offset';
+    offset.setAttribute('role', 'rowheader');
+    offset.setAttribute('aria-colindex', '1');
     const hexPane = document.createElement('span');
     hexPane.className = 'hb-hexpane';
+    hexPane.setAttribute('role', 'presentation');
     const asciiPane = document.createElement('span');
     asciiPane.className = 'hb-asciipane';
+    asciiPane.setAttribute('role', 'presentation');
 
     const hexCells = [];
     const asciiCells = [];
-    for (let column = 0; column < BYTES_PER_ROW; column += 1) {
+    for (let column = 0; column < this.#bytesPerRow; column += 1) {
       const cell = document.createElement('span');
       cell.className = 'hb-byte';
       cell.dataset.pane = PANE_HEX;
       cell.dataset.column = String(column);
+      cell.setAttribute('role', 'gridcell');
+      cell.setAttribute('aria-colindex', String(column + 2));
       hexPane.appendChild(cell);
       hexCells.push(cell);
 
@@ -433,6 +605,8 @@ export class HexGrid {
       glyph.className = 'hb-ascii';
       glyph.dataset.pane = PANE_ASCII;
       glyph.dataset.column = String(column);
+      glyph.setAttribute('role', 'gridcell');
+      glyph.setAttribute('aria-colindex', String(this.#bytesPerRow + column + 2));
       asciiPane.appendChild(glyph);
       asciiCells.push(glyph);
     }
@@ -513,7 +687,7 @@ export class HexGrid {
   }
 
   #totalRows() {
-    return Math.max(1, Math.ceil(this.#documentLength / BYTES_PER_ROW));
+    return Math.max(1, Math.ceil(this.#documentLength / this.#bytesPerRow));
   }
 
   #maxAnchorRow() {
@@ -570,7 +744,7 @@ export class HexGrid {
   }
 
   #ensureVisible(offset) {
-    const row = Math.floor(offset / BYTES_PER_ROW);
+    const row = Math.floor(offset / this.#bytesPerRow);
     const last = this.#anchorRow + this.#fullRows - 1;
     if (row < this.#anchorRow) {
       this.#anchorRow = row;
@@ -598,6 +772,7 @@ export class HexGrid {
     }
     const changedDocument = !previous || previous.handle !== info.handle;
     if (changedDocument) {
+      this.#applySetting(this.#bytesPerRowByDocument.get(info.handle) ?? BYTES_PER_ROW);
       this.#cache.reset(`${info.handle}:${info.generation}`);
       this.#modifiedRanges = [];
       this.#modified.set([]);
@@ -641,6 +816,63 @@ export class HexGrid {
   set insertMode(value) {
     this.#insertMode = Boolean(value);
     this.#emitCaret();
+  }
+
+  /** Bytes the view is actually rendering per row, fit-to-width already resolved. */
+  get bytesPerRow() {
+    return this.#bytesPerRow;
+  }
+
+  /** The chosen row width: one of `BYTES_PER_ROW_CHOICES`, or `FIT_TO_WIDTH`. */
+  get bytesPerRowSetting() {
+    return this.#bytesPerRowSetting;
+  }
+
+  /**
+   * Choose the row width, for this document, until it is chosen again.
+   *
+   * The choice is remembered against the document rather than against the view,
+   * because it is a property of what is being read - a 24-byte record is 24
+   * bytes wide in every session - and switching tabs would otherwise carry one
+   * document's layout onto the next.
+   */
+  set bytesPerRowSetting(value) {
+    this.#applySetting(value);
+    this.#schedule();
+  }
+
+  #applySetting(value) {
+    const setting = normalizeBytesPerRow(value);
+    this.#bytesPerRowSetting = setting;
+    if (this.#document) {
+      this.#bytesPerRowByDocument.set(this.#document.handle, setting);
+    }
+    this.#applyWidth(setting === FIT_TO_WIDTH ? this.#measureFit() : setting);
+  }
+
+  /**
+   * Move the view to `width` bytes per row.
+   *
+   * This is the one place the grid throws its DOM away: every row in the pool
+   * holds a fixed number of cells, so a new width means new rows. The byte cache
+   * survives untouched - the bytes did not change, only how many of them sit on
+   * a line - and the top of the view is held by byte offset rather than by row
+   * index so the reader stays where they were looking.
+   */
+  #applyWidth(width) {
+    if (width === this.#bytesPerRow) {
+      return;
+    }
+    const topByte = this.#anchorRow * this.#bytesPerRow;
+    this.#bytesPerRow = width;
+    this.#anchorRow = Math.floor(topByte / width);
+    this.#renderRuler();
+    this.#rows = [];
+    this.#viewport.replaceChildren();
+    for (const className of this.#layerFlags.keys()) {
+      this.#layerFlags.set(className, new Uint8Array(width));
+    }
+    this.#scroller.setAttribute('aria-colcount', String(this.#columnCount()));
   }
 
   /** Scroll rows so `offset` is on screen and put the caret on it. */
@@ -689,7 +921,7 @@ export class HexGrid {
       const set = this.#layers.get(className) ?? new RangeSet();
       set.set(ranges);
       this.#layers.set(className, set);
-      this.#layerFlags.set(className, new Uint8Array(BYTES_PER_ROW));
+      this.#layerFlags.set(className, new Uint8Array(this.#bytesPerRow));
     }
     this.#schedule();
   }
@@ -745,7 +977,87 @@ export class HexGrid {
   }
 
   #emitCaret() {
+    this.#syncActiveDescendant();
+    this.#speakCaret();
     this.#onCaret({ ...this.caret, insertMode: this.#insertMode });
+  }
+
+  /** The id the caret's cell carries while it is rendered, in the pane that owns the caret. */
+  #caretCellId() {
+    return this.#cellId(this.#caretPane, this.#caretOffset);
+  }
+
+  #cellId(pane, offset) {
+    return `${this.#cellIdPrefix}-${pane}-${offset}`;
+  }
+
+  /** The rendered element under the caret, or null while the caret is scrolled out of the pool. */
+  #caretCell() {
+    const column = this.#caretOffset % this.#bytesPerRow;
+    const rowStart = this.#caretOffset - column;
+    for (const row of this.#rows) {
+      if (row.start === rowStart && !row.element.hidden) {
+        return this.#caretPane === PANE_ASCII ? row.asciiCells[column] : row.hexCells[column];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Point the grid at the cell the caret is on.
+   *
+   * The attribute has to name an element that exists, so it is dropped rather
+   * than left pointing into the pool whenever the caret's row is not currently
+   * rendered - which happens for the frame between a seek and the paint that
+   * catches up with it. #paint calls this again once the row is really there.
+   */
+  #syncActiveDescendant() {
+    const cell = this.#caretCell();
+    if (cell === null) {
+      this.#scroller.removeAttribute('aria-activedescendant');
+      return;
+    }
+    const id = this.#caretCellId();
+    if (this.#scroller.getAttribute('aria-activedescendant') !== id) {
+      this.#scroller.setAttribute('aria-activedescendant', id);
+    }
+  }
+
+  /**
+   * Say where the caret is, once the caret has stopped moving.
+   *
+   * Held back deliberately: arrowing across a row fires this on every keystroke
+   * and a live region that restarts mid-word says nothing useful. Only the caret
+   * is spoken here - the selection and the hit count are announced by the status
+   * bar, and saying them twice is worse than saying them once.
+   */
+  #speakCaret() {
+    if (this.#speakTimer !== 0) {
+      window.clearTimeout(this.#speakTimer);
+    }
+    this.#speakTimer = window.setTimeout(() => {
+      this.#speakTimer = 0;
+      announce(this.#caretDescription());
+    }, CARET_SPEAK_MS);
+  }
+
+  #caretDescription() {
+    const offset = this.#caretOffset;
+    const parts = [`offset 0x${offsetLabel(offset)}`];
+    const value = offset < this.#documentLength ? this.#cache.byteAt(offset) : -1;
+    if (value >= 0) {
+      parts.push(`byte ${toHex(Uint8Array.of(value))}`);
+      if (value >= PRINTABLE_LOW && value <= PRINTABLE_HIGH) {
+        parts.push(`character ${asciiGlyph(value)}`);
+      }
+    } else if (offset >= this.#documentLength) {
+      parts.push('end of document');
+    }
+    parts.push(`${this.#caretPane} pane`);
+    if (this.#insertMode) {
+      parts.push('insert');
+    }
+    return parts.join(', ');
   }
 
   /* ---------------------------------------------------------------- input */
@@ -824,6 +1136,11 @@ export class HexGrid {
   }
 
   #onKeyDown(event) {
+    if (switchesPane(event)) {
+      event.preventDefault();
+      this.togglePane();
+      return;
+    }
     if (event.ctrlKey || event.altKey || event.metaKey) {
       this.#onModifiedKey(event);
       return;
@@ -843,32 +1160,13 @@ export class HexGrid {
         return;
       }
       case 'ArrowUp':
-        event.preventDefault();
-        this.#moveCaret(this.#caretOffset - BYTES_PER_ROW, extend);
-        return;
       case 'ArrowDown':
-        event.preventDefault();
-        this.#moveCaret(this.#caretOffset + BYTES_PER_ROW, extend);
-        return;
       case 'PageUp':
-        event.preventDefault();
-        this.#moveCaret(this.#caretOffset - this.#pageBytes(), extend);
-        return;
       case 'PageDown':
-        event.preventDefault();
-        this.#moveCaret(this.#caretOffset + this.#pageBytes(), extend);
-        return;
       case 'Home':
-        event.preventDefault();
-        this.#moveCaret(this.#caretOffset - (this.#caretOffset % BYTES_PER_ROW), extend);
-        return;
       case 'End':
         event.preventDefault();
-        this.#moveCaret(this.#caretOffset - (this.#caretOffset % BYTES_PER_ROW) + BYTES_PER_ROW - 1, extend);
-        return;
-      case 'Tab':
-        event.preventDefault();
-        this.togglePane();
+        this.#moveCaret(this.#rowTarget(event.key), extend);
         return;
       case 'Insert':
         event.preventDefault();
@@ -910,8 +1208,8 @@ export class HexGrid {
     }
   }
 
-  #pageBytes() {
-    return this.#fullRows * BYTES_PER_ROW;
+  #rowTarget(key) {
+    return caretRowTarget(key, this.#caretOffset, this.#bytesPerRow, this.#fullRows);
   }
 
   #stepLeft() {
@@ -1190,12 +1488,18 @@ export class HexGrid {
     if (this.#rowHeight === 0) {
       this.#measure();
     }
+    if (this.#bytesPerRowSetting === FIT_TO_WIDTH) {
+      this.#applyWidth(this.#measureFit());
+    }
     const height = this.#rowHeightOrFallback();
     const viewHeight = this.#scroller.clientHeight;
     this.#visibleRows = Math.max(1, Math.ceil(viewHeight / height) + 1);
     this.#fullRows = Math.max(1, Math.floor(viewHeight / height));
 
     const totalRows = this.#totalRows();
+    if (this.#scroller.getAttribute('aria-rowcount') !== String(totalRows)) {
+      this.#scroller.setAttribute('aria-rowcount', String(totalRows));
+    }
     const realPx = totalRows * height;
     const scrollerPx = this.#sizeScroller(realPx, viewHeight);
     this.#scrollerPx = scrollerPx;
@@ -1234,31 +1538,33 @@ export class HexGrid {
     const total = this.#documentLength;
     const totalRows = this.#totalRows();
     const selection = this.selection;
-    const caretRow = Math.floor(this.#caretOffset / BYTES_PER_ROW);
-    const caretColumn = this.#caretOffset % BYTES_PER_ROW;
+    const caretRow = Math.floor(this.#caretOffset / this.#bytesPerRow);
+    const caretColumn = this.#caretOffset % this.#bytesPerRow;
 
     for (let index = 0; index < this.#rulerColumns.length; index += 1) {
-      const base = index % GROUP_SIZE === GROUP_SIZE - 1 && index !== BYTES_PER_ROW - 1 ? 'hb-ruler-col is-group-end' : 'hb-ruler-col';
+      const base = this.#isGroupEnd(index) ? 'hb-ruler-col is-group-end' : 'hb-ruler-col';
       setClass(this.#rulerColumns[index], index === caretColumn ? `${base} is-current` : base);
     }
 
-    const selectionFlags = new Uint8Array(BYTES_PER_ROW);
-    const modifiedFlags = new Uint8Array(BYTES_PER_ROW);
+    const selectionFlags = new Uint8Array(this.#bytesPerRow);
+    const modifiedFlags = new Uint8Array(this.#bytesPerRow);
     const bookmarks = this.#layers.get('is-bookmarked') ?? null;
 
     for (let slot = 0; slot < this.#rows.length; slot += 1) {
       const row = this.#rows[slot];
       const rowIndex = this.#anchorRow + slot;
-      const rowStart = rowIndex * BYTES_PER_ROW;
+      const rowStart = rowIndex * this.#bytesPerRow;
       const useless = slot >= wanted || (rowIndex >= totalRows && total > 0);
       if (row.element.hidden !== useless) {
         row.element.hidden = useless;
       }
       if (useless) {
+        this.#retireRow(row);
         continue;
       }
       row.element.dataset.start = String(rowStart);
       row.start = rowStart;
+      setAttribute(row.element, 'aria-rowindex', String(rowIndex + 1));
 
       setText(row.offset, offsetLabel(rowStart));
       const marked = bookmarks !== null && !bookmarks.empty && this.#rowHasBookmark(bookmarks, rowStart);
@@ -1271,7 +1577,7 @@ export class HexGrid {
         set.fill(rowStart, this.#layerFlags.get(className));
       }
 
-      for (let column = 0; column < BYTES_PER_ROW; column += 1) {
+      for (let column = 0; column < this.#bytesPerRow; column += 1) {
         const offset = rowStart + column;
         const beyond = offset >= total;
         const value = beyond ? -1 : this.#cache.byteAt(offset);
@@ -1283,12 +1589,34 @@ export class HexGrid {
         setText(asciiCell, value >= 0 ? asciiGlyph(value) : beyond ? '' : DOT);
         setClass(hexCell, this.#hexClass(column, offset, value, beyond, shared));
         setClass(asciiCell, this.#asciiClass(offset, value, beyond, shared));
+        setAttribute(hexCell, 'id', this.#cellId(PANE_HEX, offset));
+        setAttribute(asciiCell, 'id', this.#cellId(PANE_ASCII, offset));
       }
+    }
+    this.#syncActiveDescendant();
+  }
+
+  /**
+   * Take a row out of service, ids and all.
+   *
+   * A cell's id names the offset it is showing, so a hidden row that keeps the
+   * ids it had last time is a second element claiming offsets a visible row now
+   * owns - and `aria-activedescendant` would be free to resolve to the hidden
+   * one.
+   */
+  #retireRow(row) {
+    if (row.start === -1) {
+      return;
+    }
+    row.start = -1;
+    for (let column = 0; column < row.hexCells.length; column += 1) {
+      row.hexCells[column].removeAttribute('id');
+      row.asciiCells[column].removeAttribute('id');
     }
   }
 
   #rowHasBookmark(bookmarks, rowStart) {
-    for (let column = 0; column < BYTES_PER_ROW; column += 1) {
+    for (let column = 0; column < this.#bytesPerRow; column += 1) {
       if (bookmarks.contains(rowStart + column)) {
         return true;
       }
@@ -1333,7 +1661,7 @@ export class HexGrid {
 
   #hexClass(column, offset, value, beyond, shared) {
     let classes = 'hb-byte';
-    if (column % GROUP_SIZE === GROUP_SIZE - 1 && column !== BYTES_PER_ROW - 1) {
+    if (this.#isGroupEnd(column)) {
       classes += ' is-group-end';
     }
     classes += shared;
@@ -1369,9 +1697,10 @@ export class HexGrid {
       this.#setBusy(false);
       return;
     }
-    const spec = (this.#anchorRow - OVERSCAN_ROWS) * BYTES_PER_ROW;
-    const quantized = Math.max(0, Math.floor(spec / WINDOW_QUANTUM) * WINDOW_QUANTUM);
-    const length = (this.#visibleRows + WINDOW_PAD_ROWS) * BYTES_PER_ROW;
+    const quantum = OVERSCAN_ROWS * this.#bytesPerRow;
+    const spec = (this.#anchorRow - OVERSCAN_ROWS) * this.#bytesPerRow;
+    const quantized = Math.max(0, Math.floor(spec / quantum) * quantum);
+    const length = (this.#visibleRows + WINDOW_PAD_ROWS) * this.#bytesPerRow;
     const key = `${this.#document.handle}:${this.#document.generation}:${quantized}`;
 
     if (this.#cache.has(quantized) || key === this.#fetchKey) {
@@ -1428,12 +1757,14 @@ export class HexGrid {
     }
   }
 
-  /** What the scroller currently is: scale, the top row, and how coarse a pixel has become. */
+  /** What the scroller currently is: scale, the top row, the row width, and how coarse a pixel has become. */
   get metrics() {
     return {
       scale: this.#scale,
       scaled: this.#scale > 1,
-      bytesPerPixel: (this.#scale * BYTES_PER_ROW) / this.#rowHeightOrFallback(),
+      bytesPerPixel: (this.#scale * this.#bytesPerRow) / this.#rowHeightOrFallback(),
+      bytesPerRow: this.#bytesPerRow,
+      bytesPerRowSetting: this.#bytesPerRowSetting,
       topRow: this.#anchorRow,
       visibleRows: this.#visibleRows,
       fullRows: this.#fullRows,

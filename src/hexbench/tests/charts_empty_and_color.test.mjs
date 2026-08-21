@@ -30,7 +30,7 @@ function check(label, condition, detail) {
 const staticDir = fileURLToPath(new URL('../static/', import.meta.url));
 const chartsSource = await readFile(`${staticDir}charts.js`, 'utf8');
 
-const { hoverIndex, histogramPeak, parseColor, tokenHex } = await import('../static/charts.js');
+const { CHART_TOKEN_FALLBACKS, hoverIndex, histogramPeak, parseColor, tokenHex } = await import('../static/charts.js');
 
 /* -------------------------------------------------------- #62/#63: hoverIndex */
 
@@ -116,7 +116,13 @@ check(
  * to write into that one form. The token text has to arrive through a computed
  * style, so a node here *is* its own computed style and getComputedStyle hands
  * the node it was given straight back. Nothing below asserts on that text: every
- * expectation is on the normalisation tokenHex performed on it. */
+ * expectation is on the normalisation tokenHex performed on it.
+ *
+ * The stub declares four of the twenty tokens the charts read, which is also
+ * what makes it the fixture for the empty-token path: the other sixteen are the
+ * "renamed in the stylesheet, silent everywhere" case DS-4 is about. The warning
+ * that path emits is captured rather than printed, so a run that says nothing is
+ * a run where the audit stayed quiet, and that is itself an expectation. */
 globalThis.getComputedStyle = (node) => node;
 
 function styleNode(properties) {
@@ -130,46 +136,70 @@ const themed = styleNode({
   '--hb-error': '  #F00  ',
 });
 
+const warnings = [];
+const previousWarn = console.warn;
+console.warn = (message) => warnings.push(String(message));
+
 check(
   'tokenHex passes a six-digit hex token straight through, lower cased',
-  tokenHex('--hb-accent', '#808080', themed) === '#ab12cd',
-  `a token the stylesheet wrote as #AB12CD must reach a colour input as #ab12cd, got ${tokenHex('--hb-accent', '#808080', themed)}`,
+  tokenHex('--hb-accent', themed) === '#ab12cd',
+  `a token the stylesheet wrote as #AB12CD must reach a colour input as #ab12cd, got ${tokenHex('--hb-accent', themed)}`,
 );
 check(
   'tokenHex normalises a comma-separated rgb() token to #rrggbb',
-  tokenHex('--hb-warning', '#808080', themed) === '#010203',
-  `rgb(1, 2, 3) must become #010203 or the control silently rejects it, got ${tokenHex('--hb-warning', '#808080', themed)}`,
+  tokenHex('--hb-warning', themed) === '#010203',
+  `rgb(1, 2, 3) must become #010203 or the control silently rejects it, got ${tokenHex('--hb-warning', themed)}`,
 );
 check(
   'tokenHex normalises the space-separated rgb() notation with an alpha too',
-  tokenHex('--hb-info', '#808080', themed) === '#ff8000',
-  `rgb(255 128 0 / 0.5) must become #ff8000, got ${tokenHex('--hb-info', '#808080', themed)}`,
+  tokenHex('--hb-info', themed) === '#ff8000',
+  `rgb(255 128 0 / 0.5) must become #ff8000, got ${tokenHex('--hb-info', themed)}`,
 );
 check(
   'tokenHex expands a shorthand hex token and trims its whitespace',
-  tokenHex('--hb-error', '#808080', themed) === '#ff0000',
-  `a token resolving to "  #F00  " must become #ff0000, got ${tokenHex('--hb-error', '#808080', themed)}`,
+  tokenHex('--hb-error', themed) === '#ff0000',
+  `a token resolving to "  #F00  " must become #ff0000, got ${tokenHex('--hb-error', themed)}`,
 );
 check(
-  'tokenHex falls back when the token resolves to nothing',
-  tokenHex('--hb-not-a-token', '#123456', themed) === '#123456',
-  `an undeclared token must yield the caller's fallback, got ${tokenHex('--hb-not-a-token', '#123456', themed)}`,
+  'a token that resolves to nothing falls back to the light palette, not to an off-palette grey (the defect)',
+  tokenHex('--hb-class-2', themed) === '#1a8ba0',
+  `an undeclared token must yield the light theme's own --hb-class-2, got ${tokenHex('--hb-class-2', themed)}`,
 );
 check(
-  'tokenHex normalises the fallback the same way it normalises a token',
-  tokenHex('--hb-not-a-token', 'rgb(9, 9, 9)', themed) === '#090909',
-  `a fallback is a colour like any other and must also reach the control as #rrggbb, got ${tokenHex('--hb-not-a-token', 'rgb(9, 9, 9)', themed)}`,
-);
-check(
-  'tokenHex has a fallback of its own',
-  tokenHex('--hb-not-a-token', undefined, themed) === '#808080',
-  `with no fallback given, an undeclared token must still produce a usable colour, got ${tokenHex('--hb-not-a-token', undefined, themed)}`,
+  'the fallback is normalised the same way a declared token is',
+  tokenHex('--hb-chart-grid', themed) === '#10151d',
+  `the light --hb-chart-grid is written as rgb(16 21 29 / 8%) and must reach a control as #10151d, got ${tokenHex('--hb-chart-grid', themed)}`,
 );
 check(
   'tokenHex prefers a declared token over the fallback',
-  tokenHex('--hb-accent', '#123456', themed) !== '#123456',
-  'a declared token was ignored in favour of the fallback',
+  tokenHex('--hb-accent', themed) !== CHART_TOKEN_FALLBACKS.get('--hb-accent'),
+  'a declared token was ignored in favour of the light-palette value',
 );
+
+let unknownTokenThrew = null;
+try {
+  tokenHex('--hb-not-a-token', themed);
+} catch (error) {
+  unknownTokenThrew = error;
+}
+check(
+  'a token with no palette entry throws rather than inventing a colour',
+  unknownTokenThrew !== null && /--hb-not-a-token/.test(unknownTokenThrew.message),
+  `asking for a token this module declares no value for must fail loudly; got ${unknownTokenThrew === null ? 'no error at all' : unknownTokenThrew.message}`,
+);
+
+check(
+  'the palette is audited once and names every token that resolved to nothing',
+  warnings.length === 1 && warnings[0].includes('--hb-class-2') && warnings[0].includes('--hb-chart-grid'),
+  `expected exactly one audit warning naming the missing tokens, got ${JSON.stringify(warnings)}`,
+);
+check(
+  'the audit does not accuse a token the stylesheet does carry',
+  warnings.length === 1 && !warnings[0].includes('--hb-accent'),
+  `--hb-accent resolved to #AB12CD and must not be reported as missing: ${JSON.stringify(warnings)}`,
+);
+
+console.warn = previousWarn;
 
 if (failures.length > 0) {
   process.stdout.write(`${failures.length} charts expectation(s) failed:\n`);
