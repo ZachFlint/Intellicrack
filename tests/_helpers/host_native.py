@@ -7,8 +7,10 @@ The Intellicrack suite runs inside a hardware-less, network-isolated, elevated
 Windows Docker container. A subset of tests depends on capabilities that only a
 real host provides — an Intel XPU, a running local Ollama daemon, Microsoft
 debug symbols, raw physical disks, loopback TCP capture, an un-jobbed process,
-or a non-elevated shell. Those tests skip in the container and are executed by
-the host-native pass (:mod:`scripts.host_native_tests`).
+a non-elevated shell, or a path outside the container's mounted subtree (the
+sandbox mounts only ``tests``/``src``/``docker``/``scripts``/``vendor`` — the
+``tools`` tree is absent). Those tests skip in the container and are executed
+by the host-native pass (:mod:`scripts.host_native_tests`).
 
 This module is the single source of truth for that set. It is data-driven
 rather than decorator-based so the ~100 entries stay in one auditable place and
@@ -75,6 +77,7 @@ _QMP_EVENT_DEMUX: Final[str] = "tests/sandbox/qemu/test_qmp_event_demux_s17d63.p
 _MEMORY_DUMP_OUTCOME: Final[str] = "tests/sandbox/qemu/test_memory_dump_outcome_s17d61.py"
 _GUEST_COMPUTER_NAME: Final[str] = "tests/sandbox/qemu/test_guest_computer_name_s17d46.py"
 _LINUX_AGENT_BOOTSTRAP: Final[str] = "tests/sandbox/qemu/test_linux_agent_bootstrap_s17d82.py"
+_APP_ICON_FRAMES: Final[str] = "tests/ui/test_app_icon_frames.py"
 
 # Whole test classes whose every method requires a host capability.
 HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
@@ -99,6 +102,7 @@ HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
         (_WHPX_CPU_MODEL, "TestTheWhpxCpuModelStartsAWindowsKernel"),
         (_WHPX_IRQCHIP, "TestTheWhpxInterruptChipReachesAWindowsGuest"),
         (_ABSOLUTE_POINTER, "TestTheGuestGetsAnAbsolutePointingDevice"),
+        (_SPAWN_HELPER, "TestTheAnswerMediumCarriesTheSpawnHelpers"),
         (_SPAWN_HELPER, "TestTheRealVirtioMediumYieldsTheSpawnHelpers"),
         (_VIRTIO_SUBPATHS, "TestTheRealMediumEnumeratesOnlyRealDirectories"),
         (_DISK_OVERLAY, "TestTwoSandboxesNeverOpenTheSameWritableDisk"),
@@ -188,6 +192,7 @@ HOST_NATIVE_FUNCTIONS: Final[frozenset[tuple[str, str]]] = frozenset(
         (_X64DBG_EMBED, "test_get_desktop_handle_for_pid_cleared_after_close"),
         (_SEH_X64_PDATA, "test_seh_chain_x64_target_returns_nonempty_pdata_handlers"),
         (_SEH_X64_PDATA, "test_seh_chain_x64_addresses_resolve_within_loaded_modules"),
+        (_APP_ICON_FRAMES, "test_rebranded_tool_icon_matches_app_icon"),
     },
 )
 

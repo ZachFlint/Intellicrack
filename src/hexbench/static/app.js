@@ -36,6 +36,7 @@ function collectNodes() {
       dot: byId('status-dot'),
       state: byId('status-state'),
       offset: byId('status-offset'),
+      va: byId('status-va'),
       pane: byId('status-pane'),
       selection: byId('status-selection'),
       hits: byId('status-hits'),

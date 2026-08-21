@@ -42,7 +42,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from intellicrack.core.config import get_config_file
+from intellicrack.core.config import get_config_file, get_env_file
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import AuthenticationError, ProviderCredentials, ProviderError, ProviderName
 from intellicrack.credentials.env_loader import (
@@ -307,7 +307,7 @@ class CredentialSourceDetector:
         """Load variable names present in .env file."""
         env_paths = [
             Path.cwd() / ".env",
-            Path(__file__).resolve().parents[3] / ".env",
+            get_env_file(),
             Path.home() / ".env",
         ]
 
@@ -1889,9 +1889,10 @@ class ProviderConfigDialog(QDialog):
         Never truncates an existing `.env`: pre-existing content is backed up to a timestamped ``.env.<timestamp>.bak`` file and only
         template variables missing from the file are appended, so any real credential already saved there is preserved.
         """
-        _logger.info("env_template_creation_starting", path=".env")
+        env_file = get_env_file()
+        _logger.info("env_template_creation_starting", path=str(env_file))
         try:
-            result = create_env_template(Path(".env"))
+            result = create_env_template(env_file)
         except OSError as exc:
             _logger.warning("env_template_creation_failed", error=str(exc))
             show_error(self, "Write .env Template", f"Failed to write .env template: {exc}")

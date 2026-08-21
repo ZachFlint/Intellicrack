@@ -56,6 +56,15 @@ const CLASSIFICATION_LEGEND = [
 const ENTROPY_STOPS = ['--hb-accent', '--hb-info', '--hb-class-2', '--hb-class-4', '--hb-class-3'];
 
 const MINIMAP_HEIGHT = 26;
+const ENTROPY_STRIP_HEIGHT = 92;
+const ENTROPY_STRIP_META = '0.00 – 8.00 bits';
+const CARET_LABEL_OFFSET_X = 6;
+const CARET_LABEL_Y = 9;
+const CARET_MARKER_HALF_WIDTH = 4;
+const CARET_MARKER_HEIGHT = 6;
+const DIFF_TRACK_HEIGHT = 34;
+const DIFF_TRACK_OVERHANG = 2;
+const DIFF_ADDED_BAR_PX = 3;
 
 /** Design-system colour token for each alignment region kind. */
 export const DIFF_TOKENS = new Map([
@@ -134,17 +143,106 @@ export function parseColor(text) {
   return { r: 0, g: 0, b: 0 };
 }
 
+/* Every design-system token these charts read, with the value the light theme
+   declares for it in app.css.
+
+   A canvas cannot read a custom property, so each colour has to arrive through
+   getComputedStyle - and a property that is not declared arrives as an empty
+   string rather than as an error. Written as a literal at each call site, that
+   silence painted a mid grey, a blue and a pink belonging to no palette in
+   either theme, with a renamed token producing no complaint anywhere. Here the
+   fallback is at least the light theme's own value for the token being asked
+   for, the only case that produces one is the chart suites' bare-node DOM, and
+   the map doubles as the list this file's tokens are audited against on first
+   use.
+
+   A token missing from this map is a mistake in this file, not a deployment
+   condition, so resolving one throws rather than inventing a colour. */
+export const CHART_TOKEN_FALLBACKS = new Map([
+  ['--hb-accent', '#0f6cd6'],
+  ['--hb-info', '#0d6b8f'],
+  ['--hb-success', '#17864f'],
+  ['--hb-warning', '#8f6205'],
+  ['--hb-error', '#c0272f'],
+  ['--hb-bookmark', '#6d28d9'],
+  ['--hb-surface-2', '#f5f7fa'],
+  ['--hb-surface-inset', '#f8fafc'],
+  ['--hb-byte-null', '#6a7484'],
+  ['--hb-byte-control', '#a3560c'],
+  ['--hb-byte-high', '#6534bd'],
+  ['--hb-class-0', '#c2cad5'],
+  ['--hb-class-1', '#17864f'],
+  ['--hb-class-2', '#1a8ba0'],
+  ['--hb-class-3', '#c2306a'],
+  ['--hb-class-4', '#b8790f'],
+  ['--hb-diff-added-bg', 'rgb(23 134 79 / 18%)'],
+  ['--hb-diff-removed-bg', 'rgb(192 39 47 / 16%)'],
+  ['--hb-diff-modified-bg', 'rgb(214 158 20 / 22%)'],
+  ['--hb-chart-grid', 'rgb(16 21 29 / 8%)'],
+  ['--hb-chart-axis', '#6a7686'],
+  ['--hb-chart-fill', 'rgb(15 108 214 / 22%)'],
+  ['--hb-chart-line', '#0f6cd6'],
+]);
+
+const warnedTokens = new Set();
+let paletteAudited = false;
+
+function reportEmptyTokens(tokens) {
+  const listed = [...tokens].sort().join(', ');
+  console.warn(`hexbench charts: ${listed} resolve to nothing, so the charts are drawing them from the light palette instead`);
+}
+
 /**
- * Read one design-system custom property off an element's computed style.
+ * Resolve the whole palette once, the first time a chart asks for any of it.
+ *
+ * A token is renamed in the stylesheet far more often than it is deleted, and
+ * the chart that reads it may not be the one on screen, so waiting for each
+ * call site to discover its own gap reports the same fault piecemeal or not at
+ * all. Reading the list in one pass says everything that is missing, once.
+ *
+ * @param {HTMLElement} node Element whose computed style supplies the tokens.
+ * @returns {void}
+ */
+function auditPalette(node) {
+  if (paletteAudited) {
+    return;
+  }
+  paletteAudited = true;
+  const style = getComputedStyle(node);
+  const empty = [...CHART_TOKEN_FALLBACKS.keys()].filter((token) => style.getPropertyValue(token).trim() === '');
+  for (const token of empty) {
+    warnedTokens.add(token);
+  }
+  if (empty.length > 0) {
+    reportEmptyTokens(empty);
+  }
+}
+
+/**
+ * Read one design-system colour token off an element's computed style.
  *
  * @param {HTMLElement} node Element whose computed style supplies the token.
- * @param {string} token Custom property name.
- * @param {string} [fallback] Returned when the property resolves to nothing.
- * @returns {string} The colour text, in whatever notation the stylesheet wrote.
+ * @param {string} token Custom property name, which must be one this module
+ *   declares a light-palette value for.
+ * @returns {string} The colour text, in whatever notation the stylesheet wrote,
+ *   or the light-palette value when the token resolves to nothing.
+ * @throws {Error} If the token has no entry in `CHART_TOKEN_FALLBACKS`.
  */
-export function cssColor(node, token, fallback = '#808080') {
+export function cssColor(node, token) {
+  const declared = CHART_TOKEN_FALLBACKS.get(token);
+  if (declared === undefined) {
+    throw new Error(`${token} is read by charts.js but has no light-palette value in CHART_TOKEN_FALLBACKS`);
+  }
+  auditPalette(node);
   const raw = getComputedStyle(node).getPropertyValue(token).trim();
-  return raw === '' ? fallback : raw;
+  if (raw !== '') {
+    return raw;
+  }
+  if (!warnedTokens.has(token)) {
+    warnedTokens.add(token);
+    reportEmptyTokens([token]);
+  }
+  return declared;
 }
 
 /**
@@ -155,13 +253,14 @@ export function cssColor(node, token, fallback = '#808080') {
  * `rgb(...)` or to a shorthand, and either reaches such a control as an empty
  * value rather than as an error.
  *
- * @param {string} token Custom property name.
- * @param {string} [fallback] Colour text used when the token resolves to nothing.
+ * @param {string} token Custom property name, which must be one this module
+ *   declares a light-palette value for.
  * @param {HTMLElement} [node] Element whose computed style supplies the token.
  * @returns {string} The colour as `#rrggbb`, lower case.
+ * @throws {Error} If the token has no entry in `CHART_TOKEN_FALLBACKS`.
  */
-export function tokenHex(token, fallback = '#808080', node = null) {
-  const raw = cssColor(node ?? document.documentElement, token, fallback);
+export function tokenHex(token, node = null) {
+  const raw = cssColor(node ?? document.documentElement, token);
   if (HEX_SIX.test(raw)) {
     return raw.toLowerCase();
   }
@@ -396,7 +495,7 @@ export function entropyMapChart(values, options = {}) {
     height: ENTROPY_HEIGHT,
     grid: false,
     draw: (context, { width, height }) => {
-      context.strokeStyle = cssColor(container, '--hb-chart-grid', 'rgba(128,128,128,0.2)');
+      context.strokeStyle = cssColor(container, '--hb-chart-grid');
       context.beginPath();
       for (const fraction of [0.25, 0.5, 0.75]) {
         context.moveTo(0, height * fraction);
@@ -420,7 +519,7 @@ export function entropyMapChart(values, options = {}) {
       }
       context.lineTo(width, height);
       context.closePath();
-      context.fillStyle = cssColor(container, '--hb-chart-fill', 'rgba(76,157,240,0.24)');
+      context.fillStyle = cssColor(container, '--hb-chart-fill');
       context.fill();
 
       context.beginPath();
@@ -429,13 +528,13 @@ export function entropyMapChart(values, options = {}) {
         context.lineTo(points[index].x, points[index].y);
       }
       context.lineJoin = 'round';
-      context.strokeStyle = cssColor(container, '--hb-chart-line', '#4c9df0');
+      context.strokeStyle = cssColor(container, '--hb-chart-line');
       context.stroke();
 
       const threshold = ordinate(HIGH_ENTROPY_BITS);
       context.save();
       context.setLineDash(ENTROPY_DASH);
-      context.strokeStyle = cssColor(container, '--hb-class-3', '#ef5f8c');
+      context.strokeStyle = cssColor(container, '--hb-class-3');
       context.beginPath();
       context.moveTo(0, threshold);
       context.lineTo(width, threshold);
@@ -464,6 +563,166 @@ export function entropyMapChart(values, options = {}) {
   scale.append(element('span', undefined, '0 bits'), element('span', undefined, '8 bits (random)'));
   container.append(summary, chart.element, scale, hover);
   return { element: container, chart: mountChart(chart) };
+}
+
+/**
+ * Stats used by the live entropy strip's caption: where the curve peaks and
+ * what it averages.
+ *
+ * @param {number[]} values Shannon entropy per block, in bits per byte.
+ * @returns {{peak: number, peakIndex: number, mean: number}|null} The reading,
+ * or null when there are no blocks to describe.
+ */
+function entropyStats(values) {
+  if (values.length === 0) {
+    return null;
+  }
+  let peak = values[0];
+  let peakIndex = 0;
+  let sum = 0;
+  values.forEach((value, index) => {
+    sum += value;
+    if (value > peak) {
+      peak = value;
+      peakIndex = index;
+    }
+  });
+  return { peak, peakIndex, mean: sum / values.length };
+}
+
+function entropyStripCaption(values, blockSize) {
+  const stats = entropyStats(values);
+  if (stats === null) {
+    return 'no blocks to map — the document is empty';
+  }
+  return `peak ${stats.peak.toFixed(2)} at 0x${hex(stats.peakIndex * blockSize, 8)} · mean ${stats.mean.toFixed(2)} · click the strip to jump`;
+}
+
+/**
+ * Draw the live per-caret entropy strip the bottom-dock Entropy panel shows.
+ *
+ * Unlike {@link entropyMapChart}, this strip carries a persistent caret marker
+ * rather than a hover caption: the panel it lives in stays mounted while the
+ * caret moves, so the reading a sighted user wants is "where am I", not "what
+ * is under the pointer right now". The curve and its peak/mean caption are
+ * fixed once drawn - only the caret marker moves, through {@link setCaret},
+ * so an arrow key does not pay for a canvas teardown and rebuild.
+ *
+ * @param {number[]} values Shannon entropy per block, in bits per byte.
+ * @param {object} options Block size, the caret's byte offset, the document's
+ * length for the axis below the strip, and a seek callback.
+ * @returns {{element: HTMLElement, chart: Chart, setCaret: (offset: number|null) => void}}
+ * The mounted chart, plus the caret-marker updater.
+ */
+export function entropyStripChart(values, options = {}) {
+  const { blockSize = 0, onSeek = null } = options;
+  const documentLength = options.documentLength ?? values.length * blockSize;
+  let caret = options.caretOffset ?? null;
+  const container = element('div', 'hb-stack');
+  const summary = element('p', 'hb-sr-only', `Live entropy strip: ${values.length} blocks of ${blockSize} bytes plotted from 0 to ${MAX_ENTROPY_BITS} bits per byte, with the caret marked at its current position.`);
+
+  const xOf = (index, width) => (values.length <= 1 ? width / 2 : (index / (values.length - 1)) * width);
+
+  const chart = new Chart({
+    title: 'Shannon entropy',
+    meta: ENTROPY_STRIP_META,
+    height: ENTROPY_STRIP_HEIGHT,
+    grid: false,
+    caption: entropyStripCaption(values, blockSize),
+    draw: (context, { width, height }) => {
+      context.strokeStyle = cssColor(container, '--hb-chart-grid');
+      context.beginPath();
+      for (const fraction of [0.25, 0.5, 0.75]) {
+        context.moveTo(0, height * fraction);
+        context.lineTo(width, height * fraction);
+      }
+      context.stroke();
+
+      if (values.length > 0) {
+        const ordinate = (value) => height - Math.max(0, Math.min(1, value / MAX_ENTROPY_BITS)) * height;
+        const points = values.map((value, index) => ({ x: xOf(index, width), y: ordinate(value) }));
+
+        context.beginPath();
+        context.moveTo(0, height);
+        for (const point of points) {
+          context.lineTo(point.x, point.y);
+        }
+        context.lineTo(width, height);
+        context.closePath();
+        context.fillStyle = cssColor(container, '--hb-chart-fill');
+        context.fill();
+
+        context.beginPath();
+        context.moveTo(points[0].x, points[0].y);
+        for (let index = 1; index < points.length; index += 1) {
+          context.lineTo(points[index].x, points[index].y);
+        }
+        context.lineJoin = 'round';
+        context.strokeStyle = cssColor(container, '--hb-chart-line');
+        context.stroke();
+
+        const threshold = ordinate(HIGH_ENTROPY_BITS);
+        context.save();
+        context.setLineDash(ENTROPY_DASH);
+        context.strokeStyle = cssColor(container, '--hb-class-3');
+        context.beginPath();
+        context.moveTo(0, threshold);
+        context.lineTo(width, threshold);
+        context.stroke();
+        context.restore();
+      }
+
+      if (caret !== null && blockSize > 0 && values.length > 0) {
+        const index = Math.max(0, Math.min(values.length - 1, Math.floor(caret / blockSize)));
+        const x = xOf(index, width);
+        const accent = cssColor(container, '--hb-accent');
+
+        context.strokeStyle = accent;
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(x + 0.5, 0);
+        context.lineTo(x + 0.5, height);
+        context.stroke();
+
+        context.fillStyle = accent;
+        context.beginPath();
+        context.moveTo(x - CARET_MARKER_HALF_WIDTH, 0);
+        context.lineTo(x + CARET_MARKER_HALF_WIDTH, 0);
+        context.lineTo(x, CARET_MARKER_HEIGHT);
+        context.closePath();
+        context.fill();
+
+        context.font = AXIS_FONT;
+        const label = 'caret';
+        const labelWidth = context.measureText(label).width;
+        context.fillText(label, Math.max(0, Math.min(width - labelWidth, x + CARET_LABEL_OFFSET_X)), CARET_LABEL_Y);
+      }
+    },
+    onClick: onSeek === null ? undefined : (point) => {
+      const index = hoverIndex(values.length, point.x, point.width);
+      if (index !== null) {
+        onSeek(index * blockSize);
+      }
+    },
+  });
+
+  const axis = element('div', 'hb-axis');
+  const middle = Math.floor(documentLength / 2);
+  axis.append(
+    element('span', undefined, `0x${hex(0, 8)}`),
+    element('span', undefined, `0x${hex(middle, 8)}`),
+    element('span', undefined, `0x${hex(documentLength, 8)}`),
+  );
+
+  container.append(summary, chart.element, axis);
+  return {
+    element: container,
+    chart: mountChart(chart),
+    setCaret: (offset) => {
+      caret = offset;
+      chart.render();
+    },
+  };
 }
 
 /* -------------------------------------------------- content classification */
@@ -579,7 +838,7 @@ export function digramChart(counts) {
         return;
       }
       const ramp = buildRamp(container, ENTROPY_STOPS);
-      const background = parseColor(cssColor(container, '--hb-surface-inset', '#101010'));
+      const background = parseColor(cssColor(container, '--hb-surface-inset'));
       const image = offscreenContext.createImageData(DIGRAM_SIDE, DIGRAM_SIDE);
       for (let index = 0; index < DIGRAM_SIDE * DIGRAM_SIDE; index += 1) {
         const count = counts[index] ?? 0;
@@ -601,7 +860,7 @@ export function digramChart(counts) {
       const left = (width - side) / TWO;
       context.imageSmoothingEnabled = false;
       context.drawImage(offscreen, left, 0, side, side);
-      context.fillStyle = cssColor(container, '--hb-chart-axis', '#808080');
+      context.fillStyle = cssColor(container, '--hb-chart-axis');
       context.font = AXIS_FONT;
       context.fillText('b1 →', left, side + AXIS_PAD - 4);
       context.fillText('↓ b0', Math.max(0, left - AXIS_PAD), AXIS_PAD - 4);
@@ -874,7 +1133,7 @@ export function diffMinimapChart(regions, side, options = {}) {
       for (const [kind, token] of DIFF_TOKENS) {
         colours.set(kind, cssColor(container, token));
       }
-      context.fillStyle = cssColor(container, '--hb-surface-2', '#202020');
+      context.fillStyle = cssColor(container, '--hb-surface-2');
       context.fillRect(0, 0, width, height);
       if (span === 0) {
         return;
@@ -909,4 +1168,119 @@ export function diffMinimapChart(regions, side, options = {}) {
 
   container.append(summary, chart.element, hover);
   return { element: container, chart: mountChart(chart) };
+}
+
+/** Design-system class each diff region kind marks the byte grid with, and the
+ * background token its band fills with in the mini-map. `match` carries
+ * neither: it is the absence of a mark, not a fourth kind. */
+export const DIFF_HIGHLIGHT_TOKENS = new Map([
+  ['inserted_b', '--hb-diff-added-bg'],
+  ['inserted_a', '--hb-diff-removed-bg'],
+  ['modified', '--hb-diff-modified-bg'],
+]);
+
+/**
+ * Draw the Diff panel's mini-map: one band per changed region against a
+ * single offset axis, with the caret overhanging the strip by
+ * {@link DIFF_TRACK_OVERHANG} pixels top and bottom.
+ *
+ * Each band carries the A-8 shape mark for its kind on top of its colour, so
+ * the map is not colour-only: a left bar for an addition, a strike through
+ * the middle for a removal, a double line along the bottom for a
+ * modification - the same vocabulary the byte grid itself uses.
+ *
+ * @param {object[]} regions Changed alignment regions (no `match` entries),
+ * carrying `diff_type`, `offset_a` and `length`.
+ * @param {object} options `span` (the compared span in bytes; falls back to
+ * the furthest region's end), the caret's byte offset in the reference
+ * document's space, and a callback given the region under a click.
+ * @returns {{element: HTMLElement, chart: Chart, setCaret: (offset: number|null) => void}}
+ * The mounted chart, plus the caret-marker updater.
+ */
+export function diffTrackChart(regions, options = {}) {
+  const { onPick = null } = options;
+  let caret = options.caretOffset ?? null;
+  const marked = regions.filter((region) => DIFF_HIGHLIGHT_TOKENS.has(String(region.diff_type)));
+  const ordered = [...marked].sort((left, right) => Number(left.offset_a ?? 0) - Number(right.offset_a ?? 0));
+  const span = options.span ?? regionSpan(ordered, 'offset_a');
+  const container = element('div', 'hb-stack');
+  const summary = element('p', 'hb-sr-only', `Diff mini-map: ${ordered.length} changed region${ordered.length === 1 ? '' : 's'} across ${span} bytes.`);
+
+  const totalHeight = DIFF_TRACK_HEIGHT + DIFF_TRACK_OVERHANG * 2;
+  const positionOf = (point) => (span === 0 ? 0 : Math.max(0, Math.min(span, (point.x / point.width) * span)));
+
+  const chart = new Chart({
+    title: 'diff map',
+    meta: `${ordered.length} region${ordered.length === 1 ? '' : 's'}`,
+    height: totalHeight,
+    grid: false,
+    draw: (context, { width, height }) => {
+      context.fillStyle = cssColor(container, '--hb-surface-inset');
+      context.fillRect(0, 0, width, height);
+
+      const bandTop = DIFF_TRACK_OVERHANG;
+      const bandHeight = DIFF_TRACK_HEIGHT;
+      if (span > 0) {
+        for (const region of ordered) {
+          const kind = String(region.diff_type);
+          const token = DIFF_HIGHLIGHT_TOKENS.get(kind);
+          const start = (Number(region.offset_a ?? 0) / span) * width;
+          const size = Math.max(1, (Number(region.length ?? 0) / span) * width);
+          context.fillStyle = cssColor(container, token);
+          context.fillRect(start, bandTop, size, bandHeight);
+
+          if (kind === 'inserted_b') {
+            context.fillStyle = cssColor(container, '--hb-success');
+            context.fillRect(start, bandTop, Math.min(DIFF_ADDED_BAR_PX, size), bandHeight);
+          } else if (kind === 'inserted_a') {
+            context.strokeStyle = cssColor(container, '--hb-error');
+            context.lineWidth = 1;
+            const midY = bandTop + bandHeight / 2;
+            context.beginPath();
+            context.moveTo(start, midY);
+            context.lineTo(start + size, midY);
+            context.stroke();
+          } else if (kind === 'modified') {
+            context.strokeStyle = cssColor(container, '--hb-warning');
+            context.lineWidth = 1;
+            context.beginPath();
+            context.moveTo(start, bandTop + bandHeight - 4);
+            context.lineTo(start + size, bandTop + bandHeight - 4);
+            context.moveTo(start, bandTop + bandHeight - 1);
+            context.lineTo(start + size, bandTop + bandHeight - 1);
+            context.stroke();
+          }
+        }
+      }
+
+      if (caret !== null && span > 0) {
+        const x = (Math.max(0, Math.min(span, caret)) / span) * width;
+        context.strokeStyle = cssColor(container, '--hb-accent');
+        context.lineWidth = DIFF_TRACK_OVERHANG;
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x, height);
+        context.stroke();
+      }
+    },
+    onClick: onPick === null ? undefined : (point) => {
+      if (span === 0) {
+        return;
+      }
+      const region = regionAt(ordered, 'offset_a', positionOf(point));
+      if (region !== null) {
+        onPick(region);
+      }
+    },
+  });
+
+  container.append(summary, chart.element);
+  return {
+    element: container,
+    chart: mountChart(chart),
+    setCaret: (offset) => {
+      caret = offset;
+      chart.render();
+    },
+  };
 }

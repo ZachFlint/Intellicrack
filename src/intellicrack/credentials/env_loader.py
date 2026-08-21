@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import ClassVar, Final
 
+from intellicrack.core.config import get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.types import ProviderCredentials, ProviderName
 
@@ -227,7 +228,7 @@ def _find_env_file() -> Path:
     Returns:
         Path: Path to the found .env file or default location.
     """
-    project_root = Path(__file__).resolve().parents[3]
+    project_root = get_project_root()
     search_paths = [
         Path.cwd() / ".env",
         project_root / ".env",

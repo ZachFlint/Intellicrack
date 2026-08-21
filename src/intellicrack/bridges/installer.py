@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import ctypes
+import json
 import os
 import platform
 import re
@@ -25,7 +26,7 @@ from typing import TYPE_CHECKING, Any, Literal, cast
 
 import httpx
 
-from intellicrack.core.config import get_project_root
+from intellicrack.core.config import get_config_file, get_project_root
 from intellicrack.core.logging import get_logger
 from intellicrack.core.process_manager import ProcessManager
 from intellicrack.core.subprocess_compat import (
@@ -542,6 +543,59 @@ def _extract_pe_version_string(pe: pefile.PE, exe_path: Path) -> str | None:
     return None
 
 
+def _read_configured_tool_path(tool: ToolName) -> Path | None:
+    """Read the user-configured install path for a tool from ``tools.json``.
+
+    The Tool Settings GUI writes a per-tool entry into
+    ``.intellicrack/tools.json`` (resolved via
+    :func:`intellicrack.core.config.get_config_file`) whose ``"path"`` field
+    holds the directory the user selected with the "Browse..." button. This
+    reader returns that directory so tool discovery can honour the override
+    before falling back to the built-in search locations. Loading is lazy and
+    every failure mode - missing file, unreadable file, malformed JSON, absent
+    or blank entry - resolves to ``None`` so discovery degrades gracefully to
+    its default behaviour.
+
+    Args:
+        tool: The tool whose configured install directory should be read.
+
+    Returns:
+        Path | None: The configured installation directory when the
+        ``tools.json`` entry supplies a non-empty ``"path"``; otherwise
+        ``None``.
+    """
+    config_file = get_config_file("tools.json")
+    if not config_file.exists():
+        _logger.debug("configured_tool_path_no_config", tool=tool.value, path=str(config_file))
+        return None
+
+    try:
+        with config_file.open(encoding="utf-8") as handle:
+            data: Any = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        _logger.debug(
+            "configured_tool_path_read_failed",
+            tool=tool.value,
+            path=str(config_file),
+            error=str(exc),
+        )
+        return None
+
+    if not isinstance(data, dict):
+        _logger.debug("configured_tool_path_malformed_root", tool=tool.value, path=str(config_file))
+        return None
+
+    entry: Any = cast("dict[str, Any]", data).get(tool.value)
+    if not isinstance(entry, dict):
+        return None
+
+    raw_path: Any = cast("dict[str, Any]", entry).get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return None
+
+    return Path(raw_path.strip())
+
+
 class ToolInstaller:
     """Handles automatic tool detection and installation.
 
@@ -627,18 +681,33 @@ class ToolInstaller:
                 return None
             return FoundTool(kind="python_package", version=version)
 
+        configured_path = await asyncio.to_thread(_read_configured_tool_path, tool)
+        if configured_path is not None:
+            matched_exe = await self._dir_has_executable(configured_path, tool_info)
+            if matched_exe is not None:
+                _logger.info(
+                    "tool_found_configured_path",
+                    tool=tool_info.display_name,
+                    path=str(matched_exe),
+                )
+                return FoundTool(kind="filesystem", path=configured_path)
+            _logger.info(
+                "configured_tool_path_missing_executable",
+                tool=tool_info.display_name,
+                path=str(configured_path),
+            )
+
         for common_path in tool_info.common_paths:
             if not await asyncio.to_thread(common_path.exists):
                 continue
-            for exe in tool_info.executables:
-                exe_path = common_path / exe
-                if await asyncio.to_thread(exe_path.exists):
-                    _logger.info(
-                        "tool_found",
-                        tool=tool_info.display_name,
-                        path=str(exe_path),
-                    )
-                    return FoundTool(kind="filesystem", path=common_path)
+            matched_exe = await self._dir_has_executable(common_path, tool_info)
+            if matched_exe is not None:
+                _logger.info(
+                    "tool_found",
+                    tool=tool_info.display_name,
+                    path=str(matched_exe),
+                )
+                return FoundTool(kind="filesystem", path=common_path)
 
         for exe in tool_info.executables:
             found = await asyncio.to_thread(shutil.which, exe)
@@ -657,6 +726,29 @@ class ToolInstaller:
             return FoundTool(kind="filesystem", path=nested)
 
         _logger.debug("tool_not_found", tool=tool_info.display_name)
+        return None
+
+    @staticmethod
+    async def _dir_has_executable(base: Path, tool_info: ToolInfo) -> Path | None:
+        """Return the first registered executable that exists directly under ``base``.
+
+        Centralises the "does this directory hold one of the tool's
+        executables" probe shared by the configured-path override, the
+        common-path scan, and the tools-directory scan so the existence check
+        lives in exactly one place.
+
+        Args:
+            base: Directory to test for the tool's executables.
+            tool_info: Registry entry providing the tool's relative executable paths.
+
+        Returns:
+            Path | None: The full path to the first executable found under
+            ``base``, or ``None`` when none of them exist.
+        """
+        for exe in tool_info.executables:
+            exe_path = base / exe
+            if await asyncio.to_thread(exe_path.exists):
+                return exe_path
         return None
 
     @staticmethod
@@ -679,15 +771,13 @@ class ToolInstaller:
         if not await asyncio.to_thread(tool_dir.exists):
             return None
 
-        for exe in tool_info.executables:
-            exe_path = tool_dir / exe
-            if await asyncio.to_thread(exe_path.exists):
-                _logger.info(
-                    "tool_found_in_tools_dir",
-                    tool=tool_info.display_name,
-                    path=str(tool_dir),
-                )
-                return tool_dir
+        if await ToolInstaller._dir_has_executable(tool_dir, tool_info) is not None:
+            _logger.info(
+                "tool_found_in_tools_dir",
+                tool=tool_info.display_name,
+                path=str(tool_dir),
+            )
+            return tool_dir
 
         directories: list[Path] = [tool_dir]
         for _level in range(_GHIDRA_NESTING_DEPTH):
@@ -1530,7 +1620,6 @@ class ToolInstaller:
             temp_path: Destination path on disk for the downloaded bytes.
             filename: Display name used in progress and completion logs.
         """
-
         async with client.stream("GET", url) as response:
             response.raise_for_status()
             total = int(response.headers.get("content-length", 0))

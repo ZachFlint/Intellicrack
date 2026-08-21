@@ -26,6 +26,7 @@ from typing import Final
 
 import pytest
 
+from intellicrack.core.config import get_project_root
 from scripts.sandbox.provision_windows_guest import (
     DEFAULT_ADMIN_CREDENTIAL,
     DEFAULT_ADMIN_USER,
@@ -245,6 +246,20 @@ def build_medium(root: Path, pairs: tuple[tuple[str, str], ...], catalog: Path |
             (package / f"{driver}.inf").write_text("this is not a valid inf\r\n", encoding="ascii")
             (package / f"{driver}.cat").write_bytes(payload)
     return root
+
+
+def staged_media_root() -> Path:
+    """Locate the images directory the provisioner keeps its media in.
+
+    Returns:
+        Path: ``<project root>/tools/qemu/images``. The provisioner hands this
+        directory to its media search as a *priority* root rather than relying
+        on the general scan, because it sits five directories below the drive
+        root and the breadth-limited scanner stops descending before it. A
+        gate that searches drive roots alone therefore cannot find the medium
+        this repository provisions from, however large its directory budget.
+    """
+    return get_project_root() / "tools" / "qemu" / "images"
 
 
 def answer_settings() -> UnattendSettings:

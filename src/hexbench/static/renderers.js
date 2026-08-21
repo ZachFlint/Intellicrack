@@ -67,6 +67,50 @@ const DIFF_TONES = new Map([
   ['inserted_b', 'is-success'],
 ]);
 
+/* ------------------------------------------------------------ error kinds */
+
+/* Every kind that can reach renderError, and the short tag each is shown as.
+   The list is the union of two producers: dispatch.py classifies eight through
+   `_EXCEPTION_RULES` - decode, no_such_document, busy, io, index, value,
+   runtime and memory - and raises `unknown_operation`, `missing_document` and
+   `internal` itself, `internal` also being what an unclassified exception falls
+   through to; api.js manufactures `transport` when a response carries no error
+   envelope at all, and `internal` when one carries no kind. It lives here, in
+   one place, because the stylesheet needs the same list to carry an `err-*`
+   rule for each and a slug that reaches the banner without a rule renders
+   unstyled.
+
+   The labels exist because the slug is not the display value: `unknown_operation`
+   overflows the chip it is printed in, and `io` wants its conventional casing. */
+export const ERROR_KIND_LABELS = new Map([
+  ['decode', 'DECODE'],
+  ['value', 'VALUE'],
+  ['index', 'INDEX'],
+  ['io', 'I/O'],
+  ['busy', 'BUSY'],
+  ['runtime', 'RUNTIME'],
+  ['memory', 'MEMORY'],
+  ['internal', 'INTERNAL'],
+  ['unknown_operation', 'UNKNOWN OP'],
+  ['missing_document', 'NO DOCUMENT'],
+  ['no_such_document', 'NO SUCH DOC'],
+  ['transport', 'TRANSPORT'],
+]);
+
+/**
+ * The short tag a failure kind is displayed as.
+ *
+ * An unrecognised kind is uppercased rather than rejected: a slug from a newer
+ * server should still read as a tag, and the enumeration test is what keeps the
+ * known list honest.
+ *
+ * @param {string} kind Failure kind slug, as carried by DispatchError.
+ * @returns {string} The display tag.
+ */
+export function errorKindLabel(kind) {
+  return ERROR_KIND_LABELS.get(kind) ?? String(kind).replace(/_/g, ' ').toUpperCase();
+}
+
 /* ------------------------------------------------------------- primitives */
 
 function offsetText(value) {
@@ -89,14 +133,21 @@ function banner(kind, title, detail) {
 /**
  * A framed message for an operation that failed.
  *
+ * The chip carries the display tag rather than the slug; the slug stays on the
+ * banner as `err-<kind>`, which is what the stylesheet and any test read.
+ *
  * @param {Error} error The failure, ideally a DispatchError carrying a kind.
  * @returns {HTMLElement} The rendered banner.
  */
 export function renderError(error) {
   const kind = error && typeof error.kind === 'string' ? error.kind : 'internal';
   const node = element('div', `hb-error-banner err-${kind}`);
-  node.appendChild(element('span', 'hb-error-kind', kind));
+  node.appendChild(element('span', 'hb-error-kind', errorKindLabel(kind)));
   node.appendChild(element('div', 'hb-error-message', String(error && error.message ? error.message : error)));
+  const detail = error && typeof error.detail === 'string' ? error.detail.trim() : '';
+  if (detail !== '') {
+    node.appendChild(element('div', 'hb-error-detail', detail));
+  }
   return node;
 }
 
@@ -466,7 +517,10 @@ function templateNode(field, depth, ctx, budget) {
       selected.classList.remove('is-selected');
     }
     node.classList.add('is-selected');
-    ctx.select(field.offset ?? 0, Math.max(1, field.size ?? 1));
+    const offset = field.offset ?? 0;
+    const size = Math.max(1, field.size ?? 1);
+    ctx.select(offset, size);
+    ctx.highlight([{ offset, length: size }], 'is-field');
   });
   fragment.appendChild(node);
 

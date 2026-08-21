@@ -41,8 +41,26 @@ if TYPE_CHECKING:
 _discover_jdk = cast("Callable[[Path], Path | None]", getattr(GhidraBridge, "_discover_jdk"))
 
 
+def _write_jdk_release(java_home: Path, java_version: str) -> None:
+    """Write a Temurin-style ``release`` file into a JDK home.
+
+    Args:
+        java_home: The JDK home directory to populate.
+        java_version: Value written for the ``JAVA_VERSION`` release key, for
+            example ``"25.0.3"``.
+    """
+    (java_home / "release").write_text(
+        f'JAVA_VERSION="{java_version}"\n',
+        encoding="utf-8",
+    )
+
+
 def _make_jdk(root: Path, name: str, *, with_bin: bool) -> Path:
     """Create a fake bundled JDK directory inside a Ghidra tree.
+
+    The directory name (``jdk-<version>``) determines the ``JAVA_VERSION`` value
+    written into a ``release`` file, so the discovery version gate resolves a
+    real major version for the JDK.
 
     Args:
         root: The Ghidra installation root to create the JDK under.
@@ -55,6 +73,7 @@ def _make_jdk(root: Path, name: str, *, with_bin: bool) -> Path:
     """
     jdk = root / name
     jdk.mkdir(parents=True, exist_ok=True)
+    _write_jdk_release(jdk, name.removeprefix("jdk-"))
     if with_bin:
         (jdk / "bin").mkdir(exist_ok=True)
     return jdk
@@ -75,6 +94,7 @@ def test_discover_jdk_prefers_valid_java_home(
     """
     java_home = tmp_path / "system_jdk"
     (java_home / "bin").mkdir(parents=True)
+    _write_jdk_release(java_home, "21.0.8")
 
     ghidra_root = tmp_path / "ghidra"
     _make_jdk(ghidra_root, "jdk-25.0.3", with_bin=True)
@@ -127,8 +147,8 @@ def test_discover_jdk_selects_highest_bundled_with_bin(
     monkeypatch.delenv("JAVA_HOME", raising=False)
 
     ghidra_root = tmp_path / "ghidra"
-    _make_jdk(ghidra_root, "jdk-11.0.2", with_bin=True)
-    _make_jdk(ghidra_root, "jdk-17.0.9", with_bin=True)
+    _make_jdk(ghidra_root, "jdk-21.0.2", with_bin=True)
+    _make_jdk(ghidra_root, "jdk-23.0.9", with_bin=True)
     complete_high = _make_jdk(ghidra_root, "jdk-25.0.3", with_bin=True)
     _make_jdk(ghidra_root, "jdk-99.0.0", with_bin=False)
 

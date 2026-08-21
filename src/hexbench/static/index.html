@@ -103,6 +103,7 @@
     <span class="hb-tool-label">Go to</span>
     <label class="hb-tool-field">
       <span class="hb-sr-only">Go to offset</span>
+      <span aria-hidden="true">0x</span>
       <input class="hb-input is-mono is-narrow" id="toolbar-goto" type="text" spellcheck="false" autocomplete="off" placeholder="0000A0">
     </label>
     <div class="hb-tool-sep"></div>
@@ -125,23 +126,25 @@
     </div>
   </div>
 
+  <!-- Three tiers: where the caret is, what has been measured, and the document's
+       condition on the right. An item with no value is hidden by #renderStatus
+       rather than filled with a dash, so every item below starts out empty. -->
   <div class="hb-statusbar" id="statusbar">
-    <span class="hb-status-dot is-ready" id="status-dot"></span>
-    <span class="hb-status-item"><span class="hb-status-value" id="status-state">ready</span></span>
-    <span class="hb-status-sep"></span>
-    <span class="hb-status-item"><span class="hb-status-key">caret</span><span class="hb-status-value" id="status-offset">—</span></span>
-    <span class="hb-status-item"><span class="hb-status-key">pane</span><span class="hb-status-value" id="status-pane">hex hi</span></span>
-    <span class="hb-status-sep"></span>
-    <span class="hb-status-item"><span class="hb-status-key">sel</span><span class="hb-status-value" id="status-selection">none</span></span>
-    <span class="hb-status-item"><span class="hb-status-key">hits</span><span class="hb-status-value" id="status-hits">—</span></span>
-    <span class="hb-status-sep"></span>
-    <span class="hb-status-item"><span class="hb-status-key">size</span><span class="hb-status-value" id="status-size">—</span></span>
-    <span class="hb-status-item is-accent"><span class="hb-status-key">entropy</span><span class="hb-status-value" id="status-entropy">—</span></span>
-    <span class="hb-status-item" id="status-scale-item" hidden><span class="hb-status-key">scale</span><span class="hb-status-value" id="status-scale">—</span></span>
+    <span class="hb-status-item" hidden><span class="hb-status-key">off</span><span class="hb-status-value" id="status-offset"></span></span>
+    <span class="hb-status-item" hidden><span class="hb-status-key">va</span><span class="hb-status-value" id="status-va"></span></span>
+    <span class="hb-status-item" hidden><span class="hb-status-value" id="status-pane"></span></span>
+    <span class="hb-status-item" hidden><span class="hb-status-key">sel</span><span class="hb-status-value" id="status-selection"></span></span>
+    <span class="hb-status-sep" hidden></span>
+    <span class="hb-status-item" hidden><span class="hb-status-key">size</span><span class="hb-status-value" id="status-size"></span></span>
+    <span class="hb-status-item" hidden><span class="hb-status-key">entropy</span><span class="hb-status-value" id="status-entropy"></span></span>
+    <span class="hb-status-item" hidden><span class="hb-status-key">hits</span><span class="hb-status-value" id="status-hits"></span></span>
+    <span class="hb-status-item" id="status-scale-item" hidden><span class="hb-status-key">scale</span><span class="hb-status-value" id="status-scale"></span></span>
     <span class="hb-status-grow"></span>
-    <span class="hb-status-item" id="status-modified-item"><span class="hb-status-value" id="status-modified">clean</span></span>
-    <span class="hb-status-sep"></span>
-    <span class="hb-status-item"><span class="hb-status-value" id="status-mode">OVR</span></span>
+    <span class="hb-status-item" id="status-modified-item" hidden><span class="hb-status-value" id="status-modified"></span></span>
+    <span class="hb-status-sep" hidden></span>
+    <span class="hb-status-item" hidden><span class="hb-status-value" id="status-mode"></span></span>
+    <span class="hb-status-sep" hidden></span>
+    <span class="hb-status-item"><span class="hb-status-dot is-ready" id="status-dot"></span><span class="hb-status-value" id="status-state">ready</span></span>
   </div>
 
 </div>

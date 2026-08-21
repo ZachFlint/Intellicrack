@@ -132,6 +132,13 @@ globalThis.window = {
   matchMedia: () => ({ addEventListener: () => undefined }),
 };
 globalThis.getComputedStyle = () => ({ getPropertyValue: () => '' });
+/* No stylesheet reaches this document, so every design token resolves to
+   nothing and charts.js audits the palette out loud the first time one is read.
+   The warning is captured rather than printed - a suite that shouts about its
+   own fixture teaches a reader to ignore the shouting - and the capture is
+   asserted on at the end, so silence there is a failure rather than a relief. */
+const paletteWarnings = [];
+console.warn = (message) => paletteWarnings.push(String(message));
 globalThis.MutationObserver = FakeObserver;
 globalThis.ResizeObserver = FakeObserver;
 globalThis.requestAnimationFrame = () => 0;
@@ -608,6 +615,22 @@ check(
   'an empty series paints the grid but no area',
   emptyLog > 0 && !paintLog.some((entry) => entry.op === 'fill'),
   'an empty entropy map still filled an area, which means it plotted a curve through no data',
+);
+
+/* The palette audit runs on the first token any chart reads, which here is the
+   entropy render above: the four tokens that render declares as sentinels
+   resolve, and the sixteen the fixture never declares do not. Both halves are
+   asserted, because a report that named everything would be as useless as one
+   that named nothing. */
+check(
+  'the tokens a document does not carry are reported once, by name',
+  paletteWarnings.length === 1 && paletteWarnings[0].includes('--hb-chart-axis') && paletteWarnings[0].includes('--hb-class-0'),
+  `charts.js drew colours from a fallback and said nothing, or said it more than once: ${JSON.stringify(paletteWarnings)}`,
+);
+check(
+  'the audit does not accuse a token that did resolve',
+  paletteWarnings.length === 1 && !paletteWarnings[0].includes('--hb-chart-line'),
+  `--hb-chart-line resolved to a sentinel and must not be listed as missing: ${JSON.stringify(paletteWarnings)}`,
 );
 
 if (failures.length > 0) {

@@ -22,9 +22,16 @@ medium's guest agent package, which the provisioner already locates and mounts.
 
 These gates therefore judge the staged tree the way GLib does - by what sits
 beside the library that performs the lookup - rather than by the presence of a
-file name somewhere. The container gates work on real directory trees; the
-host-native class unpacks the real package off the real medium and validates
-that the files it produced are genuine executables.
+file name somewhere.
+
+Staging an answer tree is now a Windows-host operation end to end:
+:func:`stage_answer_tree` stages the boot-critical WinPE drivers first, which
+mounts the virtio-win medium, so the gates that drive it run against the real
+ISO in ``tools/qemu/images`` and are host-native. That directory is outside
+the container's mounted subtree and ``Mount-DiskImage`` is Windows-only, so
+neither half of the work is available to the container pass. The gates that
+need no medium - package selection, and the search depth an unpacked package
+nests its files at - stay container gates on real directory trees.
 """
 
 from __future__ import annotations
@@ -47,7 +54,7 @@ from scripts.sandbox.provision_windows_guest import (
     stage_answer_tree,
     stage_spawn_helpers,
 )
-from tests.sandbox.qemu.virtio_installer_harness import answer_settings, build_bundled_tools, bundled_payload
+from tests.sandbox.qemu.virtio_installer_harness import answer_settings, build_bundled_tools, bundled_payload, staged_media_root
 
 
 _GLIB_LIBRARY: Final[str] = "libglib-2.0-0.dll"
@@ -82,6 +89,28 @@ _SCAN_DEPTH: Final[int] = 4
 
 _SCAN_BUDGET: Final[int] = 20_000
 """Directories the host-native medium search may enumerate."""
+
+
+def _real_virtio_medium() -> Path:
+    """Resolve the bundled virtio-win medium the way the provisioner does.
+
+    Drive roots plus the images directory as a *priority* root, exactly as
+    :func:`provision` passes them. A drive-root scan alone cannot reach the
+    bundled medium: it stops descending at ``max_depth`` and the ISO sits one
+    directory deeper, so it would report the prerequisite missing on a host
+    that has it.
+
+    Returns:
+        Path: The located virtio-win ISO.
+    """
+    return require_virtio_media(
+        None,
+        available_drive_roots(),
+        _SCAN_DEPTH,
+        _SCAN_BUDGET,
+        priority_roots=(staged_media_root(),),
+        verify_contents=False,
+    )
 
 
 def _staged_agent_directory(staging: Path) -> Path:
@@ -140,7 +169,16 @@ def _is_executable(path: Path) -> bool:
 
 
 class TestTheAnswerMediumCarriesTheSpawnHelpers:
-    """A staged answer tree has to give the guest a runnable agent."""
+    """A staged answer tree has to give the guest a runnable agent.
+
+    These drive the real :func:`stage_answer_tree` against the real virtio-win
+    medium, because that is what it now needs: its first act is to stage the
+    boot-critical WinPE drivers off the medium, which mounts it. The bundled
+    tools tree carries the spawn helpers, so the helpers under test here are
+    the ones staged from that tree rather than unpacked from the medium -
+    which is the path a host with a complete QEMU build takes, and the one
+    :class:`TestTheRealVirtioMediumYieldsTheSpawnHelpers` does not cover.
+    """
 
     def test_the_staged_agent_directory_carries_both_helpers(self, tmp_path: Path) -> None:
         """Both helpers are copied onto the medium, byte for byte.
@@ -152,7 +190,7 @@ class TestTheAnswerMediumCarriesTheSpawnHelpers:
         staging.mkdir()
         tools = build_bundled_tools(tmp_path / "tools")
 
-        stage_answer_tree(staging, answer_settings(), tools / "qemu-ga.exe", tools, tmp_path / "virtio-win.iso")
+        stage_answer_tree(staging, answer_settings(), tools / "qemu-ga.exe", tools, _real_virtio_medium())
 
         agent_dir = _staged_agent_directory(staging)
         missing = [name for name in QEMU_GUEST_AGENT_SPAWN_HELPERS if not (agent_dir / name).is_file()]
@@ -176,7 +214,7 @@ class TestTheAnswerMediumCarriesTheSpawnHelpers:
         staging.mkdir()
         tools = build_bundled_tools(tmp_path / "tools")
 
-        stage_answer_tree(staging, answer_settings(), tools / "qemu-ga.exe", tools, tmp_path / "virtio-win.iso")
+        stage_answer_tree(staging, answer_settings(), tools / "qemu-ga.exe", tools, _real_virtio_medium())
 
         library = next(path for path in staging.rglob(_GLIB_LIBRARY) if path.is_file())
         for name in QEMU_GUEST_AGENT_SPAWN_HELPERS:
@@ -200,7 +238,7 @@ class TestTheAnswerMediumCarriesTheSpawnHelpers:
         staging = tmp_path / "staging"
         staging.mkdir()
         tools = build_bundled_tools(tmp_path / "tools")
-        stage_answer_tree(staging, answer_settings(), tools / "qemu-ga.exe", tools, tmp_path / "virtio-win.iso")
+        stage_answer_tree(staging, answer_settings(), tools / "qemu-ga.exe", tools, _real_virtio_medium())
         script = next(path for path in staging.rglob("install-guest-agent.cmd") if path.is_file())
 
         pattern = Path(
@@ -215,7 +253,9 @@ class TestTheAnswerMediumCarriesTheSpawnHelpers:
 
         assert copied, f"the installer's copy pattern {pattern!r} matches nothing in the staged tree, so the guest receives no agent at all"
         for name in QEMU_GUEST_AGENT_SPAWN_HELPERS:
-            staged = next(path for path in staging.rglob(name) if path.is_file())
+            found = [path for path in staging.rglob(name) if path.is_file()]
+            assert found, f"{name} is nowhere on the answer medium, so the copy pattern has nothing to pick up (S17-D47)"
+            staged = found[0]
             assert os.path.normcase(os.path.realpath(staged)) in copied, (
                 f"the guest-side installer copies {sorted(copied)} and never picks up {staged}, so the helper is staged "
                 "on the medium but never reaches the guest (S17-D47)"
@@ -296,7 +336,7 @@ class TestTheRealVirtioMediumYieldsTheSpawnHelpers:
         Args:
             tmp_path: Per-test temporary directory.
         """
-        virtio_iso = require_virtio_media(None, available_drive_roots(), _SCAN_DEPTH, _SCAN_BUDGET, verify_contents=False)
+        virtio_iso = _real_virtio_medium()
         empty_tools = tmp_path / "tools"
         empty_tools.mkdir()
         destination = tmp_path / "agent"

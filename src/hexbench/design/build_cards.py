@@ -3,13 +3,22 @@
 #
 # This file is part of Intellicrack. See LICENSE for details.
 
-"""Generator for the hexbench design-system preview cards.
+"""Generator for the hexbench design-system preview cards and their gallery.
 
-Running this module writes one self-contained HTML file per component specimen
-into ``design/cards``. Every card inlines ``static/app.css`` so it renders under
-a strict content security policy without a single external request, and carries
-a ``@dsCard`` marker on its first line so a gallery can group the files without
-parsing them.
+Running this module writes two things. The first is one self-contained HTML file
+per component specimen in ``design/cards``: every card inlines ``static/app.css``
+so it renders under a strict content security policy without a single external
+request, and carries a ``@dsCard`` marker on its first line so a gallery can
+group the files without parsing them. The second is ``design/index.html``, the
+gallery those cards were always missing.
+
+The gallery holds every specimen on one page and **links** the stylesheet rather
+than inlining it, which is the whole point of it: a card is a frozen copy of the
+design system at the moment it was generated, while the gallery renders whatever
+``static/app.css`` says right now, so editing a token and reloading the page
+shows the change with no rebuild. Its left nav is grouped by the stylesheet's own
+numbered sections, read out of the stylesheet rather than restated here, and a
+single switch in that nav swaps both palettes.
 
 The cards are static, and their sample data is computed at build time rather
 than invented: the editor cards render a real 640 byte 64-bit PE image header,
@@ -21,6 +30,7 @@ classification range.
 from __future__ import annotations
 
 import math
+import re
 import struct
 import sys
 import uuid
@@ -33,13 +43,29 @@ from pathlib import Path
 from typing import Final
 
 
-__all__ = ["build_cards", "main", "sample_bytes"]
+__all__ = ["build_cards", "main", "render_gallery_index", "sample_bytes"]
 
 type _Json = str | int | float | bool | dict[str, _Json] | list[_Json] | None
 
 _HERE: Final = Path(__file__).resolve().parent
 _CARDS_DIR: Final = _HERE / "cards"
 _CSS_PATH: Final = _HERE.parent / "static" / "app.css"
+_INDEX_NAME: Final = "index.html"
+_INDEX_PATH: Final = _HERE / _INDEX_NAME
+
+_STYLESHEET_HREF: Final = "../static/app.css"
+"""Where the gallery reaches the canonical stylesheet from ``design/index.html``."""
+
+_CARD_HREF: Final = "cards"
+"""Directory the gallery links each specimen's standalone card file in."""
+
+_SECTION_HEADER: Final = re.compile(r"^/\* =+ (\d+)\. (.+?) \*/$")
+"""The banner ``app.css`` writes above each of its numbered sections."""
+
+_FIRST_SECTION: Final = 1
+"""Number the stylesheet's first section banner carries."""
+
+_THEME_STORAGE_KEY: Final = "hexbench-gallery-theme"
 
 _ROW_WIDTH: Final = 16
 _GROUP_SIZE: Final = 8
@@ -752,6 +778,227 @@ _CHROME_CSS: Final = """
 .ds-stack { display: flex; flex-direction: column; gap: var(--hb-space-4); }
 """
 
+_GALLERY_CSS: Final = """
+.ds-gallery {
+  padding: 0;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 262px minmax(0, 1fr);
+  background: var(--hb-surface-0);
+}
+.ds-nav {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding: var(--hb-space-6) var(--hb-space-4) var(--hb-space-9);
+  border-right: 1px solid var(--hb-border);
+  background: var(--hb-surface-1);
+}
+.ds-nav-head {
+  display: flex;
+  align-items: center;
+  gap: var(--hb-space-4);
+  padding: 0 var(--hb-space-3) var(--hb-space-5);
+  border-bottom: 1px solid var(--hb-border-subtle);
+}
+.ds-nav-brand {
+  flex: 1 1 auto;
+  font-size: var(--hb-fs-2xs);
+  font-weight: var(--hb-fw-semibold);
+  letter-spacing: var(--hb-tracking-caps);
+  text-transform: uppercase;
+  color: var(--hb-text-secondary);
+}
+.ds-nav-group { margin-top: var(--hb-space-5); }
+.ds-nav-section {
+  display: block;
+  padding: var(--hb-space-2) var(--hb-space-3);
+  border-radius: var(--hb-radius-sm);
+  font-size: var(--hb-fs-2xs);
+  font-weight: var(--hb-fw-semibold);
+  letter-spacing: var(--hb-tracking-caps);
+  text-transform: uppercase;
+  color: var(--hb-text-muted);
+  text-decoration: none;
+}
+.ds-nav-link {
+  display: block;
+  padding: var(--hb-space-1) var(--hb-space-3) var(--hb-space-1) var(--hb-space-6);
+  border-radius: var(--hb-radius-sm);
+  font-size: var(--hb-fs-sm);
+  color: var(--hb-text-secondary);
+  text-decoration: none;
+}
+.ds-nav-section:hover,
+.ds-nav-link:hover { background: var(--hb-surface-hover); color: var(--hb-text-primary); }
+.ds-nav-empty {
+  display: block;
+  padding: var(--hb-space-1) var(--hb-space-3) var(--hb-space-1) var(--hb-space-6);
+  font-size: var(--hb-fs-xs);
+  font-style: italic;
+  color: var(--hb-text-faint);
+}
+.ds-content { min-width: 0; padding: var(--hb-space-8) var(--hb-space-9) var(--hb-space-11); }
+.ds-lede {
+  margin-top: var(--hb-space-4);
+  max-width: 82ch;
+  font-size: var(--hb-fs-sm);
+  line-height: var(--hb-lh-normal);
+  color: var(--hb-text-secondary);
+}
+.ds-lede code {
+  padding: 0 3px;
+  border-radius: var(--hb-radius-xs);
+  background: var(--hb-surface-code);
+  color: var(--hb-text-primary);
+}
+.ds-group { display: flex; flex-direction: column; gap: var(--hb-space-8); }
+.ds-group-head {
+  padding-bottom: var(--hb-space-4);
+  border-bottom: 2px solid var(--hb-border);
+  scroll-margin-top: var(--hb-space-5);
+}
+.ds-group-title {
+  font-size: var(--hb-fs-lg);
+  font-weight: var(--hb-fw-semibold);
+  letter-spacing: var(--hb-tracking-tight);
+  color: var(--hb-text-primary);
+}
+.ds-group-meta {
+  margin-top: var(--hb-space-2);
+  font-family: var(--hb-font-mono);
+  font-size: var(--hb-fs-xs);
+  color: var(--hb-text-faint);
+}
+.ds-group-note {
+  margin-top: var(--hb-space-2);
+  max-width: 82ch;
+  font-size: var(--hb-fs-sm);
+  line-height: var(--hb-lh-normal);
+  color: var(--hb-text-muted);
+}
+.ds-card { scroll-margin-top: var(--hb-space-5); }
+.ds-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--hb-space-4);
+  margin-bottom: var(--hb-space-6);
+}
+.ds-card-title { font-size: var(--hb-fs-md); font-weight: var(--hb-fw-semibold); color: var(--hb-text-primary); }
+.ds-card-file { font-family: var(--hb-font-mono); font-size: var(--hb-fs-xs); color: var(--hb-text-link); }
+@media (max-width: 900px) {
+  .ds-gallery { grid-template-columns: minmax(0, 1fr); }
+  .ds-nav { position: static; max-height: none; border-right: 0; border-bottom: 1px solid var(--hb-border); }
+  .ds-content { padding: var(--hb-space-6) var(--hb-space-5) var(--hb-space-9); }
+}
+"""
+
+_HEAD_SCRIPT: Final = f"""
+(() => {{
+  const stored = (() => {{
+    try {{
+      return window.localStorage.getItem('{_THEME_STORAGE_KEY}');
+    }} catch {{
+      return null;
+    }}
+  }})();
+  const dark = stored === 'dark' || stored === 'light'
+    ? stored === 'dark'
+    : window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+}})();
+"""
+"""Resolves the theme before the body parses.
+
+Stamping the attribute here rather than beside the switch is what stops a reload
+flashing the other palette whenever the stored choice disagrees with the
+operating system, which is every reload for anyone who has touched the switch.
+"""
+
+_BODY_SCRIPT: Final = f"""
+(() => {{
+  const root = document.documentElement;
+  const button = document.getElementById('ds-theme');
+  const current = () => (root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+  const show = (theme) => {{
+    root.setAttribute('data-theme', theme);
+    button.setAttribute('aria-pressed', String(theme === 'dark'));
+    button.textContent = theme === 'dark' ? 'Dark theme' : 'Light theme';
+  }};
+  show(current());
+  button.addEventListener('click', () => {{
+    const next = current() === 'dark' ? 'light' : 'dark';
+    show(next);
+    try {{
+      window.localStorage.setItem('{_THEME_STORAGE_KEY}', next);
+    }} catch {{
+      // A page opened over file:// in a privacy mode has no storage. The switch
+      // still works; the choice just does not survive the reload.
+    }}
+  }});
+}})();
+"""
+"""Wires the switch to the attribute the head script already stamped.
+
+Only an explicit click is persisted. Recording the resolved theme on load would
+pin the gallery to whatever the operating system said the first time it was
+opened, and it would never follow a later change.
+"""
+
+_SECTION_NOTES: Final[dict[int, str]] = {
+    1: "Normalisation only. It carries no specimen because every specimen below is already standing on it.",
+    2: "The light palette and every non-colour scale: type, weight, spacing, radius, elevation and the two font stacks. "
+    "The five foundation specimens read from here.",
+    3: "The dark palette, applied when the operating system asks for it. Colour tokens above renders it beside the light "
+    "one, and the switch in the nav swaps the whole page between them.",
+    4: "The same dark values applied by attribute rather than by media query, which is what the switch and the paired "
+    "theme columns inside several specimens select.",
+    5: "Document defaults: scrollbars, focus rings, selection colours and the base type. Visible in every specimen and "
+    "the subject of none.",
+    6: "The chrome around the editor, from the menu bar down to the status bar.",
+    7: "The hex view itself: the ruler, the offset gutter, the row, and the composable state slots on a single byte cell.",
+    8: "The dock panel frame and everything that fills one: tables, trees, key/value readings and empty states.",
+    9: "The operation surface: argument controls, the run button, results, and the banners that report them.",
+    10: "The analysis figures. The application paints these into a canvas; the specimens draw the same geometry as SVG so "
+    "the gallery stays static.",
+    11: "Everything drawn above the workspace on its own scrim.",
+    12: "Layout and typographic helpers. They have no specimen of their own because they appear inside almost every one above.",
+    13: "What the design system becomes when the operating system takes the palette away. Colour is replaced by the system's own "
+    "keywords and every state that was carried by hue alone falls back to the shape channel the byte cells already compose.",
+}
+"""One sentence per stylesheet section, including the five that carry no specimen.
+
+A section with nothing under it is stated rather than omitted: the nav is a map
+of the stylesheet, and a silently missing entry would read as a gap in the map
+instead of a gap in the gallery.
+"""
+
+_GALLERY_LEDE: Final = (
+    "Every specimen the generator writes, on one page. This gallery <em>links</em> <code>../static/app.css</code> "
+    "instead of inlining it, so editing a token and reloading shows the change with no rebuild. The standalone card "
+    "beside each specimen is the opposite trade: it inlines the stylesheet, so it is a frozen copy that renders "
+    "anywhere on its own. Sections are the stylesheet's own twelve, read out of it at build time."
+)
+
+
+@dataclass(frozen=True, slots=True)
+class _Section:
+    """One numbered section of the canonical stylesheet.
+
+    Attributes:
+        number: Section number, as the stylesheet writes it.
+        name: Section name, as the stylesheet writes it.
+        first_line: Line the section banner sits on, counting from one.
+        last_line: Last line the section covers, counting from one.
+    """
+
+    number: int
+    name: str
+    first_line: int
+    last_line: int
+
 
 @dataclass(frozen=True, slots=True)
 class _Card:
@@ -761,12 +1008,15 @@ class _Card:
         filename: File name written into the cards directory.
         group: Gallery group recorded in the ``@dsCard`` marker.
         title: Human readable card title.
+        section: Number of the ``app.css`` section whose rules this card
+            specimens, which is what the gallery groups it under.
         body: Rendered HTML for the card body.
     """
 
     filename: str
     group: str
     title: str
+    section: int
     body: str
 
 
@@ -2903,6 +3153,197 @@ def _css() -> str:
     return _CSS_PATH.read_text(encoding="utf-8")
 
 
+def _sections(stylesheet: str) -> tuple[_Section, ...]:
+    """Read the numbered section banners the stylesheet organises itself with.
+
+    The gallery groups its specimens by these rather than by a list kept here,
+    so a section renamed in ``app.css`` is renamed in the nav, and a section
+    holding no specimen is stated instead of silently missing.
+
+    How many sections there are is the stylesheet's business, not this module's:
+    the forced-colours block arrived as a thirteenth, and a generator that pinned
+    the count would need editing every time the stylesheet grew a heading it was
+    already free to grow. What is still checked is that the banners run
+    consecutively from one, which catches a duplicated or misnumbered heading,
+    and that each has a note to render beneath it.
+
+    Args:
+        stylesheet: Full contents of the canonical stylesheet.
+
+    Returns:
+        tuple[_Section, ...]: Every numbered section, in the order declared,
+        each carrying the span of lines it covers.
+
+    Raises:
+        ValueError: If the banners do not run consecutively from one, or if one
+            of them has no note to render beneath it.
+    """
+    lines = stylesheet.splitlines()
+    banners: list[tuple[int, str, int]] = []
+    for number, line in enumerate(lines, start=1):
+        found = _SECTION_HEADER.match(line)
+        if found is not None:
+            banners.append((int(found.group(1)), found.group(2).strip(), number))
+    numbered = tuple(section for section, _name, _line in banners)
+    expected = tuple(range(_FIRST_SECTION, _FIRST_SECTION + len(numbered)))
+    if not numbered or numbered != expected:
+        message = f"{_CSS_PATH.name} declares sections {numbered}, which do not run consecutively from {_FIRST_SECTION} as {expected}"
+        raise ValueError(message)
+    unnoted = tuple(section for section in numbered if section not in _SECTION_NOTES)
+    if unnoted:
+        message = f"no gallery note is written for {_CSS_PATH.name} section(s) {unnoted}"
+        raise ValueError(message)
+    ends = [start - 1 for _section, _name, start in banners[1:]] + [len(lines)]
+    return tuple(
+        _Section(number=section, name=name, first_line=start, last_line=end)
+        for (section, name, start), end in zip(banners, ends, strict=True)
+    )
+
+
+def _card_slug(card: _Card) -> str:
+    """Derive a card's anchor name from the file it is also written to.
+
+    Args:
+        card: Card to name.
+
+    Returns:
+        str: The card's file name without its extension.
+    """
+    return card.filename.removesuffix(".html")
+
+
+def _specimen_count(count: int) -> str:
+    """Word the number of specimens a stylesheet section carries.
+
+    Args:
+        count: How many cards sit under the section.
+
+    Returns:
+        str: ``no specimen``, ``1 specimen`` or ``N specimens``.
+    """
+    if count == 0:
+        return "no specimen"
+    if count == 1:
+        return "1 specimen"
+    return f"{count} specimens"
+
+
+def _nav(sections: tuple[_Section, ...], cards: tuple[_Card, ...]) -> str:
+    """Render the gallery's left navigation.
+
+    Args:
+        sections: Stylesheet sections, in declaration order.
+        cards: Every card the gallery holds.
+
+    Returns:
+        str: HTML for the ``nav`` element, including the theme switch.
+    """
+    groups = ""
+    for section in sections:
+        held = tuple(card for card in cards if card.section == section.number)
+        links = (
+            "".join(f'<a class="ds-nav-link" href="#ds-card-{_card_slug(card)}">{escape(card.title)}</a>' for card in held)
+            or '<span class="ds-nav-empty">no specimen</span>'
+        )
+        groups += (
+            f'<div class="ds-nav-group">'
+            f'<a class="ds-nav-section" href="#ds-section-{section.number}">{section.number}. {escape(section.name)}</a>'
+            f"{links}</div>"
+        )
+    return (
+        '<nav class="ds-nav" aria-label="Stylesheet sections">'
+        '<div class="ds-nav-head"><span class="ds-nav-brand">hexbench design system</span>'
+        '<button type="button" class="hb-btn is-sm" id="ds-theme" aria-pressed="false">Light theme</button></div>'
+        f"{groups}</nav>"
+    )
+
+
+def _gallery_card(card: _Card) -> str:
+    """Render one specimen inside the gallery.
+
+    Args:
+        card: Card to render.
+
+    Returns:
+        str: HTML for one ``ds-card`` article.
+    """
+    return (
+        f'<article class="ds-card" id="ds-card-{_card_slug(card)}">'
+        f'<div class="ds-card-head"><h3 class="ds-card-title">{escape(card.title)}</h3>'
+        f'<a class="ds-card-file" href="{_CARD_HREF}/{card.filename}">{_CARD_HREF}/{escape(card.filename)}</a></div>'
+        f"{card.body}</article>"
+    )
+
+
+def _gallery_group(section: _Section, cards: tuple[_Card, ...]) -> str:
+    """Render one stylesheet section and every specimen filed under it.
+
+    Args:
+        section: The stylesheet section being rendered.
+        cards: Every card the gallery holds, in gallery order.
+
+    Returns:
+        str: HTML for one ``ds-group`` section.
+    """
+    held = tuple(card for card in cards if card.section == section.number)
+    specimens = "".join(_gallery_card(card) for card in held)
+    return (
+        f'<section class="ds-group" id="ds-section-{section.number}">'
+        f'<header class="ds-group-head"><h2 class="ds-group-title">{section.number}. {escape(section.name)}</h2>'
+        f'<p class="ds-group-meta">app.css lines {section.first_line}&ndash;{section.last_line} &middot; '
+        f"{_specimen_count(len(held))}</p>"
+        f'<p class="ds-group-note">{escape(_SECTION_NOTES[section.number])}</p></header>'
+        f"{specimens}</section>"
+    )
+
+
+def render_gallery_index() -> str:
+    """Render the gallery page that links the stylesheet instead of inlining it.
+
+    Reads ``static/app.css`` for its section structure only. The rendered page
+    references the stylesheet by href, so what it shows is whatever the file says
+    when a browser loads it rather than what it said when this ran. Propagates
+    the :class:`ValueError` :func:`_sections` raises when the stylesheet no
+    longer declares the twelve sections the gallery groups its specimens by.
+
+    Returns:
+        str: Full HTML document for ``design/index.html``.
+    """
+    cards = _all_cards()
+    sections = _sections(_css())
+    groups = "".join(_gallery_group(section, cards) for section in sections)
+    return "\n".join((
+        "<!-- @dsGallery generated by design/build_cards.py -->",
+        "<!doctype html>",
+        '<html lang="en">',
+        "<head>",
+        '<meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        "<title>hexbench &middot; design system</title>",
+        f'<link rel="stylesheet" href="{_STYLESHEET_HREF}">',
+        "<style>",
+        _CHROME_CSS,
+        _GALLERY_CSS,
+        "</style>",
+        f"<script>{_HEAD_SCRIPT}</script>",
+        "</head>",
+        '<body class="ds-body ds-gallery">',
+        _nav(sections, cards),
+        '<div class="ds-content">',
+        '<header class="ds-head">',
+        '<div class="ds-eyebrow">Design system</div>',
+        '<h1 class="ds-title">Component gallery</h1>',
+        f'<p class="ds-lede">{_GALLERY_LEDE}</p>',
+        "</header>",
+        f'<main class="ds-main">{groups}</main>',
+        "</div>",
+        f"<script>{_BODY_SCRIPT}</script>",
+        "</body>",
+        "</html>",
+        "",
+    ))
+
+
 def _render(card: _Card, stylesheet: str) -> str:
     """Assemble one complete standalone card document.
 
@@ -2945,73 +3386,77 @@ def _all_cards() -> tuple[_Card, ...]:
         tuple[_Card, ...]: Cards in the order they are written.
     """
     return (
-        _Card("foundations-colour.html", "Foundations", "Colour tokens", _card_colour_tokens()),
-        _Card("foundations-type.html", "Foundations", "Type scale", _card_type_scale()),
-        _Card("foundations-spacing.html", "Foundations", "Spacing and radius", _card_spacing()),
-        _Card("foundations-elevation.html", "Foundations", "Elevation", _card_elevation()),
-        _Card("foundations-monospace.html", "Foundations", "Monospace stack", _card_mono_specimen()),
-        _Card("editor-byte-states.html", "Editor", "Byte cell states", _card_byte_states()),
-        _Card("editor-row-and-ruler.html", "Editor", "Row, gutter and ruler", _card_row_and_ruler()),
-        _Card("editor-sample-view.html", "Editor", "Sample view", _card_sample_view()),
-        _Card("editor-busy.html", "Editor", "Busy hatch", _card_busy()),
-        _Card("chrome-app-shell.html", "Chrome", "Application shell", _card_app_shell()),
-        _Card("chrome-menubar.html", "Chrome", "Menu bar", _card_menubar()),
-        _Card("chrome-toolbar.html", "Chrome", "Toolbar", _card_toolbar()),
-        _Card("chrome-document-tabs.html", "Chrome", "Document tabs", _card_document_tabs()),
-        _Card("chrome-dock-tabs.html", "Chrome", "Dock tabs and splitters", _card_dock_tabs()),
-        _Card("chrome-statusbar.html", "Chrome", "Status bar", _card_statusbar()),
-        _Card("chrome-command-palette.html", "Chrome", "Command palette", _card_palette()),
-        _Card("panels-frame.html", "Panels", "Panel frame and table", _card_panel_frame()),
-        _Card("panels-inspector.html", "Panels", "Inspector", _card_inspector()),
-        _Card("panels-template-tree.html", "Panels", "Template tree", _card_template_tree()),
-        _Card("panels-strings.html", "Panels", "Strings", _card_strings()),
-        _Card("panels-search-results.html", "Panels", "Search results", _card_search_results()),
-        _Card("panels-patches.html", "Panels", "Patches", _card_patches()),
-        _Card("panels-va-mapping.html", "Panels", "Virtual address mapping", _card_va_mapping()),
-        _Card("panels-empty-state.html", "Panels", "Empty states", _card_empty_state()),
-        _Card("analysis-entropy.html", "Analysis", "Entropy strip", _card_entropy()),
-        _Card("analysis-classification.html", "Analysis", "Content classification", _card_classification()),
-        _Card("analysis-digram.html", "Analysis", "Digram matrix", _card_digram()),
-        _Card("analysis-histogram.html", "Analysis", "Byte histogram", _card_histogram()),
-        _Card("analysis-segmented-bar.html", "Analysis", "Byte type distribution", _card_segmented_bar()),
-        _Card("analysis-diff-minimap.html", "Analysis", "Diff mini-map", _card_diff_minimap()),
-        _Card("operations-card.html", "Operations", "Operation card", _card_operation_card()),
-        _Card("operations-arguments.html", "Operations", "Argument rows", _card_argument_rows()),
-        _Card("operations-run-states.html", "Operations", "Run states and buttons", _card_run_states()),
-        _Card("operations-result.html", "Operations", "Result panel", _card_result_panel()),
-        _Card("operations-json-tree.html", "Operations", "JSON tree", _card_json_tree()),
-        _Card("operations-payload.html", "Operations", "Byte payload", _card_payload()),
-        _Card("operations-errors.html", "Operations", "Errors, toasts and dialog", _card_errors()),
+        _Card("foundations-colour.html", "Foundations", "Colour tokens", 2, _card_colour_tokens()),
+        _Card("foundations-type.html", "Foundations", "Type scale", 2, _card_type_scale()),
+        _Card("foundations-spacing.html", "Foundations", "Spacing and radius", 2, _card_spacing()),
+        _Card("foundations-elevation.html", "Foundations", "Elevation", 2, _card_elevation()),
+        _Card("foundations-monospace.html", "Foundations", "Monospace stack", 2, _card_mono_specimen()),
+        _Card("editor-byte-states.html", "Editor", "Byte cell states", 7, _card_byte_states()),
+        _Card("editor-row-and-ruler.html", "Editor", "Row, gutter and ruler", 7, _card_row_and_ruler()),
+        _Card("editor-sample-view.html", "Editor", "Sample view", 7, _card_sample_view()),
+        _Card("editor-busy.html", "Editor", "Busy hatch", 7, _card_busy()),
+        _Card("chrome-app-shell.html", "Chrome", "Application shell", 6, _card_app_shell()),
+        _Card("chrome-menubar.html", "Chrome", "Menu bar", 6, _card_menubar()),
+        _Card("chrome-toolbar.html", "Chrome", "Toolbar", 6, _card_toolbar()),
+        _Card("chrome-document-tabs.html", "Chrome", "Document tabs", 6, _card_document_tabs()),
+        _Card("chrome-dock-tabs.html", "Chrome", "Dock tabs and splitters", 6, _card_dock_tabs()),
+        _Card("chrome-statusbar.html", "Chrome", "Status bar", 6, _card_statusbar()),
+        _Card("chrome-command-palette.html", "Chrome", "Command palette", 11, _card_palette()),
+        _Card("panels-frame.html", "Panels", "Panel frame and table", 8, _card_panel_frame()),
+        _Card("panels-inspector.html", "Panels", "Inspector", 8, _card_inspector()),
+        _Card("panels-template-tree.html", "Panels", "Template tree", 8, _card_template_tree()),
+        _Card("panels-strings.html", "Panels", "Strings", 8, _card_strings()),
+        _Card("panels-search-results.html", "Panels", "Search results", 8, _card_search_results()),
+        _Card("panels-patches.html", "Panels", "Patches", 8, _card_patches()),
+        _Card("panels-va-mapping.html", "Panels", "Virtual address mapping", 8, _card_va_mapping()),
+        _Card("panels-empty-state.html", "Panels", "Empty states", 8, _card_empty_state()),
+        _Card("analysis-entropy.html", "Analysis", "Entropy strip", 10, _card_entropy()),
+        _Card("analysis-classification.html", "Analysis", "Content classification", 10, _card_classification()),
+        _Card("analysis-digram.html", "Analysis", "Digram matrix", 10, _card_digram()),
+        _Card("analysis-histogram.html", "Analysis", "Byte histogram", 10, _card_histogram()),
+        _Card("analysis-segmented-bar.html", "Analysis", "Byte type distribution", 10, _card_segmented_bar()),
+        _Card("analysis-diff-minimap.html", "Analysis", "Diff mini-map", 10, _card_diff_minimap()),
+        _Card("operations-card.html", "Operations", "Operation card", 9, _card_operation_card()),
+        _Card("operations-arguments.html", "Operations", "Argument rows", 9, _card_argument_rows()),
+        _Card("operations-run-states.html", "Operations", "Run states and buttons", 9, _card_run_states()),
+        _Card("operations-result.html", "Operations", "Result panel", 9, _card_result_panel()),
+        _Card("operations-json-tree.html", "Operations", "JSON tree", 9, _card_json_tree()),
+        _Card("operations-payload.html", "Operations", "Byte payload", 9, _card_payload()),
+        _Card("operations-errors.html", "Operations", "Errors, toasts and dialog", 9, _card_errors()),
     )
 
 
 def build_cards() -> tuple[str, ...]:
-    """Write every preview card into the cards directory.
+    """Write every preview card, then the gallery that indexes them.
 
     Existing files are overwritten, so repeated runs converge on byte-identical
     output. Propagates :class:`OSError` when the stylesheet cannot be read or
-    the cards directory cannot be written.
+    the cards directory cannot be written, and :class:`ValueError` when the
+    stylesheet no longer carries the sections the gallery groups by.
 
     Returns:
-        tuple[str, ...]: File names written, in gallery order.
+        tuple[str, ...]: Card file names in gallery order, followed by the path
+        of the gallery index relative to the design directory.
     """
     _CARDS_DIR.mkdir(parents=True, exist_ok=True)
     stylesheet = _css()
     cards = _all_cards()
     for card in cards:
         (_CARDS_DIR / card.filename).write_text(_render(card, stylesheet), encoding="utf-8", newline="\r\n")
-    return tuple(card.filename for card in cards)
+    _INDEX_PATH.write_text(render_gallery_index(), encoding="utf-8", newline="\r\n")
+    return (*(card.filename for card in cards), _INDEX_NAME)
 
 
 def main() -> int:
-    """Generate the cards and report what was written.
+    """Generate the cards and the gallery, and report what was written.
 
     Returns:
         int: Process exit status, zero on success.
     """
     written = build_cards()
-    sys.stdout.write(f"{len(written)} cards written to {_CARDS_DIR}\n")
-    sys.stdout.writelines(f"  {name}\n" for name in written)
+    sys.stdout.write(f"{len(written) - 1} cards written to {_CARDS_DIR}\n")
+    sys.stdout.writelines(f"  {name}\n" for name in written[:-1])
+    sys.stdout.write(f"gallery written to {_INDEX_PATH}\n")
     return 0
 
 
