@@ -102,7 +102,7 @@ def _query_token_elevation_independently() -> bool:
         raise OSError(ctypes.get_last_error(), "OpenProcessToken failed")
 
     try:
-        if ok := get_token_information(
+        if get_token_information(
             token,
             _TOKEN_ELEVATION,
             ctypes.byref(elevation_flag),
@@ -110,8 +110,7 @@ def _query_token_elevation_independently() -> bool:
             ctypes.byref(return_length),
         ):
             return bool(elevation_flag.value)
-        else:
-            raise OSError(ctypes.get_last_error(), "GetTokenInformation failed")
+        raise OSError(ctypes.get_last_error(), "GetTokenInformation failed")
     finally:
         kernel32.CloseHandle(token)
 

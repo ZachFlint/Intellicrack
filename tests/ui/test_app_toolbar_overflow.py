@@ -51,7 +51,7 @@ def narrow_window(
         monkeypatch: Pytest monkeypatch fixture.
 
     Yields:
-        Generator[MainWindow]: A shown MainWindow resized to clip its toolbar.
+        MainWindow: A shown MainWindow resized to clip its toolbar.
     """
     monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
     window = MainWindow(real_config, real_orchestrator)

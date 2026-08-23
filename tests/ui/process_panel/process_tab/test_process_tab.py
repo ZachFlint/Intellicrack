@@ -187,7 +187,7 @@ def tab(qapp: QApplication, bridge: ProcessBridge) -> Generator[_TestProcessTab]
         bridge: ProcessBridge fixture.
 
     Yields:
-        Generator[_TestProcessTab]: The tab instance.
+        _TestProcessTab: The tab instance.
     """
     del qapp
     t = _TestProcessTab()

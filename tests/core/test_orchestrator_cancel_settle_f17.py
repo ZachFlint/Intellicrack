@@ -67,6 +67,10 @@ class _BlockingProvider(LLMProviderBase):
         chat_call_count: Number of times ``chat`` ran to completion.
     """
 
+    entered: asyncio.Event
+    release: asyncio.Event
+    chat_call_count: int
+
     def __init__(self) -> None:
         """Initialise the provider connected, with entry/release events."""
         super().__init__()

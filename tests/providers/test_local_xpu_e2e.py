@@ -556,7 +556,7 @@ async def xpu_provider(
         has_xpu_available: Whether XPU hardware is available.
 
     Yields:
-        AsyncGenerator[LocalTransformersProvider]: A connected provider using XPU.
+        LocalTransformersProvider: A connected provider using XPU.
     """
     if not has_xpu_available:
         pytest.skip("XPU not available")
@@ -572,7 +572,7 @@ async def cpu_provider() -> AsyncGenerator[LocalTransformersProvider]:
     """Create a connected CPU-only provider instance.
 
     Yields:
-        AsyncGenerator[LocalTransformersProvider]: A connected provider using CPU.
+        LocalTransformersProvider: A connected provider using CPU.
     """
     provider = LocalTransformersProvider(prefer_xpu=False)
     await provider.connect(ProviderCredentials())
@@ -584,7 +584,7 @@ async def cpu_provider() -> AsyncGenerator[LocalTransformersProvider]:
 async def loaded_xpu_provider(
     xpu_provider: LocalTransformersProvider,
     tinyllama_model_id: str,
-) -> AsyncGenerator[LocalTransformersProvider]:
+) -> LocalTransformersProvider:
     """Get an XPU provider with TinyLlama already loaded.
 
     Forces a model load by issuing a minimal chat call.
@@ -593,19 +593,19 @@ async def loaded_xpu_provider(
         xpu_provider: The session-scoped XPU provider.
         tinyllama_model_id: The TinyLlama model identifier.
 
-    Yields:
-        AsyncGenerator[LocalTransformersProvider]: XPU provider with model loaded.
+    Returns:
+        LocalTransformersProvider: XPU provider with model loaded.
     """
     messages = _make_messages("Hello")
     await xpu_provider.chat(messages=messages, model=tinyllama_model_id, max_tokens=1)
-    yield xpu_provider
+    return xpu_provider
 
 
 @pytest_asyncio.fixture(scope="session")
 async def loaded_cpu_provider(
     cpu_provider: LocalTransformersProvider,
     tinyllama_model_id: str,
-) -> AsyncGenerator[LocalTransformersProvider]:
+) -> LocalTransformersProvider:
     """Get a CPU provider with TinyLlama already loaded.
 
     Forces a model load by issuing a minimal chat call.
@@ -614,12 +614,12 @@ async def loaded_cpu_provider(
         cpu_provider: The session-scoped CPU provider.
         tinyllama_model_id: The TinyLlama model identifier.
 
-    Yields:
-        AsyncGenerator[LocalTransformersProvider]: CPU provider with model loaded.
+    Returns:
+        LocalTransformersProvider: CPU provider with model loaded.
     """
     messages = _make_messages("Hello")
     await cpu_provider.chat(messages=messages, model=tinyllama_model_id, max_tokens=1)
-    yield cpu_provider
+    return cpu_provider
 
 
 @pytest.fixture

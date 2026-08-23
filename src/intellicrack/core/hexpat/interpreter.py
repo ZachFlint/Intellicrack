@@ -85,7 +85,7 @@ class HexPatInterpreter:
 
     @property
     def last_type_registry(self) -> TypeRegistry | None:
-        """Return the :class:`TypeRegistry` produced by the most recent successful execution.
+        """The :class:`TypeRegistry` produced by the most recent successful execution.
 
         The registry exposes user-declared struct, union, enum, bitfield,
         and alias names via :meth:`TypeRegistry.user_type_names`, allowing

@@ -219,7 +219,7 @@ class HuggingFaceProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """The provider's name.
 
         Returns:
             ProviderName: The provider name enum value.
@@ -464,14 +464,8 @@ class HuggingFaceProvider(LLMProviderBase):
         if not self.connected or self._api_token is None:
             raise ProviderError(_ERR_NOT_CONNECTED)
 
-        base_url = (self._api_base or self.ROUTER_BASE_URL).rstrip("/")
-        headers = {"Authorization": f"Bearer {self._api_token}"}
-
         try:
-            async with httpx.AsyncClient(timeout=self._timeout) as router_client:
-                response = await router_client.get(f"{base_url}/v1/models", headers=headers)
-                response.raise_for_status()
-                payload = cast("object", response.json())
+            return await fetch_router_served_model_ids(self._api_token, self._timeout, self._api_base)
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
             self._logger.warning(
@@ -486,8 +480,6 @@ class HuggingFaceProvider(LLMProviderBase):
                 error_type=type(exc).__name__,
             )
             raise ProviderError(_ERR_SERVED_MODELS_FAILED % exc) from exc
-
-        return self._parse_served_model_ids(payload)
 
     @staticmethod
     def _parse_served_model_ids(payload: object) -> set[str]:
@@ -505,21 +497,7 @@ class HuggingFaceProvider(LLMProviderBase):
             entry should not block the well-formed remainder of the
             catalog.
         """
-        if not isinstance(payload, dict):
-            return set()
-        payload_dict = cast("dict[str, Any]", payload)
-        entries = payload_dict.get("data")
-        if not isinstance(entries, list):
-            return set()
-        served: set[str] = set()
-        for entry in cast("list[object]", entries):
-            if not isinstance(entry, dict):
-                continue
-            entry_dict = cast("dict[str, Any]", entry)
-            model_id = entry_dict.get("id")
-            if isinstance(model_id, str) and model_id:
-                served.add(model_id)
-        return served
+        return parse_served_model_ids(payload)
 
     def _validate_model_served(self, model: str) -> None:
         """Raise an actionable error when ``model`` is known not to be served.
@@ -1076,6 +1054,88 @@ class HuggingFaceProvider(LLMProviderBase):
         return hf_tools
 
 
+def parse_served_model_ids(payload: object) -> set[str]:
+    """Extract model IDs from a router ``GET /v1/models`` response body.
+
+    Shared parsing implementation for the HuggingFace Inference Providers
+    router's served-model catalog, used by both
+    :meth:`HuggingFaceProvider._parse_served_model_ids` and
+    :func:`fetch_router_served_model_ids`, so both call sites share one
+    definition of the response schema.
+
+    Args:
+        payload: The decoded JSON response body, expected to be a
+            dict with a ``data`` list of ``{"id": ...}`` entries
+            following the OpenAI ``/v1/models`` schema.
+
+    Returns:
+        set[str]: The non-empty string ``id`` of every well-formed
+        entry in ``payload["data"]``. Malformed or missing entries
+        are skipped rather than raised, since a partially-typed
+        entry should not block the well-formed remainder of the
+        catalog.
+    """
+    if not isinstance(payload, dict):
+        return set()
+    payload_dict = cast("dict[str, Any]", payload)
+    entries = payload_dict.get("data")
+    if not isinstance(entries, list):
+        return set()
+    served: set[str] = set()
+    for entry in cast("list[object]", entries):
+        if not isinstance(entry, dict):
+            continue
+        entry_dict = cast("dict[str, Any]", entry)
+        model_id = entry_dict.get("id")
+        if isinstance(model_id, str) and model_id:
+            served.add(model_id)
+    return served
+
+
+async def fetch_router_served_model_ids(
+    api_token: str,
+    request_timeout: float | httpx.Timeout,
+    base_url: str | None = None,
+) -> set[str]:
+    """Fetch the set of model IDs currently served by the Inference Providers router.
+
+    Issues a ``GET {base_url}/v1/models`` request against the
+    HuggingFace Inference Providers router's OpenAI-compatible
+    model-listing endpoint and parses the response with
+    :func:`parse_served_model_ids`. This is the single implementation of
+    the served-model query, shared by
+    :meth:`HuggingFaceProvider._fetch_served_model_ids` and the
+    provider-config dialog's disconnected-provider fallback
+    (``intellicrack.ui.provider_config.ModelRefreshWorker._fetch_huggingface_models``),
+    so both call sites intersect the Hub catalog against the identical
+    router-served set instead of separately re-implementing the query.
+    Callers are responsible for translating any raised exception into
+    their own error-handling contract; this function performs no
+    error translation of its own.
+
+    Args:
+        api_token: HuggingFace API token used to authenticate the router request.
+        request_timeout: Request timeout, either as a plain number of
+            seconds or a pre-built ``httpx.Timeout``.
+        base_url: Router base URL to query. Defaults to
+            :attr:`HuggingFaceProvider.ROUTER_BASE_URL` when ``None``.
+
+    Returns:
+        set[str]: Model IDs (``owner/name``) currently served by at least
+        one Inference Provider for the conversational task. Any
+        ``httpx.HTTPStatusError`` raised by ``response.raise_for_status()``
+        or ``httpx.HTTPError`` raised at the transport level propagates
+        to the caller unchanged.
+    """
+    resolved_base = (base_url or HuggingFaceProvider.ROUTER_BASE_URL).rstrip("/")
+    headers = {"Authorization": f"Bearer {api_token}"}
+    async with httpx.AsyncClient(timeout=request_timeout) as router_client:
+        response = await router_client.get(f"{resolved_base}/v1/models", headers=headers)
+        response.raise_for_status()
+        payload = cast("object", response.json())
+    return parse_served_model_ids(payload)
+
+
 def _convert_tool_choice(
     tool_choice: ToolChoice,
 ) -> ChatCompletionInputToolChoiceClass | Literal["auto", "none", "required"]:
@@ -1160,4 +1220,6 @@ def _extract_stream_delta(
 __all__ = [
     "HuggingFaceProvider",
     "UsageInfo",
+    "fetch_router_served_model_ids",
+    "parse_served_model_ids",
 ]

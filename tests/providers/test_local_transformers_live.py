@@ -116,7 +116,7 @@ async def test_chat_stream_yields_text_and_usage(
     ]
 
     full_text = "".join(chunks).strip()
-    assert full_text != ""
+    assert full_text
 
     usage = live_provider.get_pending_usage()
     assert usage is not None

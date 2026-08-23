@@ -251,7 +251,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """The provider's name.
 
         Returns:
             ProviderName: ProviderName.LOCAL_TRANSFORMERS
@@ -260,7 +260,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @property
     def device_type(self) -> str:
-        """Get the current device type.
+        """The current device type.
 
         Returns:
             str: "cuda", "xpu", or "cpu" depending on what's being used.
@@ -296,7 +296,7 @@ class LocalTransformersProvider(LLMProviderBase):
 
     @property
     def current_model_id(self) -> str | None:
-        """Get the currently loaded model ID.
+        """The currently loaded model ID.
 
         Returns:
             str | None: Model ID or None if no model is loaded.

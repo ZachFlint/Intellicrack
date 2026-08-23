@@ -111,7 +111,8 @@ for ($i = 0; $i -lt 2400; $i++) {
     Start-Sleep -Milliseconds 50
 }
 New-Item -ItemType File -Path (Join-Path $LogDir ($name + '@STOPPED@')) -Force | Out-Null
-""".replace("@STOP@", _STOP_FLAG_NAME)
+"""
+    .replace("@STOP@", _STOP_FLAG_NAME)
     .replace("@STARTED@", _STARTED_SUFFIX)
     .replace("@STOPPED@", _STOPPED_SUFFIX)
 )

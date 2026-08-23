@@ -70,7 +70,7 @@ async def initialized_registry(tmp_path: Path) -> AsyncGenerator[ToolRegistry]:
         tmp_path: Pytest temporary directory used as the tools directory.
 
     Yields:
-        AsyncGenerator[ToolRegistry]: A registry whose bridges have been
+        ToolRegistry: A registry whose bridges have been
         instantiated and the locally-initializable ones (including the hex
         editor) initialized.
     """

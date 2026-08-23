@@ -66,6 +66,7 @@ _WHPX_CPU_MODEL: Final[str] = "tests/sandbox/qemu/test_whpx_cpu_model_s17d36.py"
 _WHPX_IRQCHIP: Final[str] = "tests/sandbox/qemu/test_whpx_irqchip_s17d37.py"
 _ABSOLUTE_POINTER: Final[str] = "tests/sandbox/qemu/test_absolute_pointer_s17d41.py"
 _SPAWN_HELPER: Final[str] = "tests/sandbox/qemu/test_guest_agent_spawn_helper_s17d47.py"
+_DRIVER_SCOPE: Final[str] = "tests/sandbox/qemu/test_virtio_driver_scope_s17d42.py"
 _VIRTIO_SUBPATHS: Final[str] = "tests/sandbox/qemu/test_virtio_driver_subpaths_s17d44.py"
 _DISK_OVERLAY: Final[str] = "tests/sandbox/qemu/test_disk_overlay_isolation_s17d58.py"
 _SNAPSHOT_OUTCOME: Final[str] = "tests/sandbox/qemu/test_snapshot_outcome_s17d59.py"
@@ -104,6 +105,7 @@ HOST_NATIVE_CLASSES: Final[frozenset[tuple[str, str]]] = frozenset(
         (_ABSOLUTE_POINTER, "TestTheGuestGetsAnAbsolutePointingDevice"),
         (_SPAWN_HELPER, "TestTheAnswerMediumCarriesTheSpawnHelpers"),
         (_SPAWN_HELPER, "TestTheRealVirtioMediumYieldsTheSpawnHelpers"),
+        (_DRIVER_SCOPE, "TestTheAnswerMediumRunsTheDriverInstaller"),
         (_VIRTIO_SUBPATHS, "TestTheRealMediumEnumeratesOnlyRealDirectories"),
         (_DISK_OVERLAY, "TestTwoSandboxesNeverOpenTheSameWritableDisk"),
         (_SNAPSHOT_OUTCOME, "TestSnapshotOperationsReportTheRealOutcome"),

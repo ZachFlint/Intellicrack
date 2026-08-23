@@ -133,7 +133,7 @@ def process_manager() -> Generator[ProcessManager]:
     """Provide a fresh ProcessManager instance for each test.
 
     Yields:
-        Generator[ProcessManager]: A fresh singleton ProcessManager.
+        ProcessManager: A fresh singleton ProcessManager.
     """
     ProcessManager.reset_instance()
     pm = ProcessManager.get_instance()

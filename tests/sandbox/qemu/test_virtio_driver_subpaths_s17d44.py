@@ -198,9 +198,7 @@ _CATALOG_DER: Final[bytes] = bytes.fromhex("300b06092a864886f70d010702")
 _PE_HEADER_OFFSET: Final[int] = 0x40
 """Where the driver image below puts its PE signature, as a real image does."""
 
-_DRIVER_IMAGE: Final[bytes] = (
-    b"MZ" + bytes(0x3C - 2) + _PE_HEADER_OFFSET.to_bytes(4, "little") + b"PE\x00\x00"
-)
+_DRIVER_IMAGE: Final[bytes] = b"MZ" + bytes(0x3C - 2) + _PE_HEADER_OFFSET.to_bytes(4, "little") + b"PE\x00\x00"
 """An MS-DOS header whose ``e_lfanew`` reaches a PE signature, as a ``.sys`` has.
 
 Every package on the real medium carries a driver binary beside its INF, so
@@ -358,9 +356,7 @@ class TestTheEnumerationFollowsTheMedium:
         subpaths = enumerate_virtio_driver_subpaths(medium, _GUEST_ARCHITECTURE)
 
         deprived = f"{_ARCHITECTURE_SCOPED_DRIVER}\\{_ARCHITECTURE_SCOPED_FAMILY}\\{_GUEST_ARCHITECTURE}"
-        assert deprived not in subpaths, (
-            f"the enumeration named {deprived}, a family that carries only {surviving}: {subpaths}"
-        )
+        assert deprived not in subpaths, f"the enumeration named {deprived}, a family that carries only {surviving}: {subpaths}"
         for foreign in _FOREIGN_ARCHITECTURES:
             named = [subpath for subpath in subpaths if subpath.endswith(f"\\{foreign}")]
             assert not named, f"an {_GUEST_ARCHITECTURE} guest was sent to {foreign} packages: {named}"

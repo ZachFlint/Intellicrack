@@ -201,7 +201,7 @@ class TestAllProvidersModelCount:
                 )
                 if has_openai_key
                 else "NOT CONFIGURED"
-            )
+            ),
         }
 
         if has_google_key:

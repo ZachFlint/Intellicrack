@@ -25,6 +25,7 @@ Invoke via ``pixi run python -m scripts.sandbox.docker_sandbox --help``.
 from __future__ import annotations
 
 import argparse
+import enum
 import json
 import os
 import shlex
@@ -101,6 +102,15 @@ _DOCKER_DAEMON_TIMEOUT_SECONDS = 180
 _DOCKER_DAEMON_POLL_INTERVAL = 3.0
 _DOCKER_PROBE_TIMEOUT_SECONDS = 20.0
 _NETWORK_QUERY_TIMEOUT_SECONDS = 20.0
+
+# ``docker image inspect`` reports a genuinely missing image as exit 1 with
+# "No such image: <tag>" on stderr. Every other failure -- a probe timeout, a
+# busy or restarting daemon, an invalid reference -- also exits non-zero, so the
+# exit code alone cannot distinguish "absent" from "could not tell". Only this
+# marker is treated as proof of absence; see :func:`_probe_image_presence`.
+_IMAGE_ABSENT_MARKER = "no such image"
+_IMAGE_PROBE_ATTEMPTS = 3
+_IMAGE_PROBE_RETRY_DELAY = 2.0
 
 # The built-in connected network carries a different name per engine: the
 # Windows container engine creates "nat", the Linux engine creates "bridge".
@@ -613,21 +623,79 @@ def _compute_image_tag() -> str:
     return f"{_IMAGE_NAME}:latest"
 
 
-def _image_exists(tag: str) -> bool:
-    """Report whether a locally cached image exists for ``tag``.
+class ImagePresence(enum.Enum):
+    """Outcome of probing the local Docker image cache for a tag."""
+
+    PRESENT = "present"
+    ABSENT = "absent"
+    UNKNOWN = "unknown"
+
+
+def _classify_image_probe(proc: subprocess.CompletedProcess[str]) -> ImagePresence:
+    """Classify one ``docker image inspect`` result.
+
+    Absence is only concluded from Docker's explicit "No such image" response.
+    A timeout (exit 124), a busy or restarting daemon, and an invalid reference
+    all exit non-zero as well, and must not be mistaken for a missing image:
+    doing so discards a valid multi-gigabyte image and triggers a rebuild that
+    costs roughly half an hour.
+
+    Args:
+        proc: Completed ``docker image inspect`` invocation.
+
+    Returns:
+        ImagePresence: ``PRESENT`` on exit 0, ``ABSENT`` when Docker explicitly
+            reported no such image, ``UNKNOWN`` for every other failure.
+    """
+    if proc.returncode == 0:
+        return ImagePresence.PRESENT
+    combined = f"{proc.stderr}\n{proc.stdout}".lower()
+    if _IMAGE_ABSENT_MARKER in combined:
+        return ImagePresence.ABSENT
+    return ImagePresence.UNKNOWN
+
+
+def _probe_image_presence(
+    tag: str,
+    *,
+    attempts: int = _IMAGE_PROBE_ATTEMPTS,
+    retry_delay: float = _IMAGE_PROBE_RETRY_DELAY,
+) -> ImagePresence:
+    """Determine whether a locally cached image exists for ``tag``.
+
+    An inconclusive probe is retried, because the common causes (a daemon still
+    warming up, a probe timing out while the engine is saturated by a sibling
+    run) are transient. Only a definitive answer short-circuits the loop.
 
     Args:
         tag: Image reference to probe.
+        attempts: Maximum number of probes before giving up as ``UNKNOWN``.
+        retry_delay: Seconds to wait between inconclusive probes.
 
     Returns:
-        bool: ``True`` when ``docker image inspect`` exits 0.
+        ImagePresence: The resolved presence of ``tag`` in the local cache.
     """
-    proc = _run_docker(
-        ["image", "inspect", tag],
-        check=False,
-        timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
-    )
-    return proc.returncode == 0
+    presence = ImagePresence.UNKNOWN
+    for attempt in range(1, attempts + 1):
+        proc = _run_docker(
+            ["image", "inspect", tag],
+            check=False,
+            timeout=_DOCKER_PROBE_TIMEOUT_SECONDS,
+        )
+        presence = _classify_image_probe(proc)
+        if presence is not ImagePresence.UNKNOWN:
+            return presence
+        _LOGGER.warning(
+            "sandbox_image_probe_inconclusive",
+            tag=tag,
+            attempt=attempt,
+            attempts=attempts,
+            exit_code=proc.returncode,
+            detail=proc.stderr.strip()[:200],
+        )
+        if attempt < attempts:
+            time.sleep(retry_delay)
+    return presence
 
 
 def build_image(tag: str, *, rebuild: bool = False) -> str:
@@ -641,15 +709,27 @@ def build_image(tag: str, *, rebuild: bool = False) -> str:
         str: The image tag that was built or already present.
 
     Raises:
-        SandboxError: When the Dockerfile is missing or ``docker build`` fails.
+        SandboxError: When the Dockerfile is missing, when the local image cache
+            could not be probed conclusively, or when ``docker build`` fails.
     """
     if not _DOCKERFILE.exists():
         message = f"Dockerfile not found: {_DOCKERFILE}"
         raise SandboxError(message)
 
-    if _image_exists(tag) and not rebuild:
-        _LOGGER.info("sandbox_image_cached", tag=tag)
-        return tag
+    if not rebuild:
+        presence = _probe_image_presence(tag)
+        if presence is ImagePresence.PRESENT:
+            _LOGGER.info("sandbox_image_cached", tag=tag)
+            return tag
+        if presence is ImagePresence.UNKNOWN:
+            _LOGGER.error("sandbox_image_probe_failed", tag=tag)
+            message = (
+                f"unable to determine whether image {tag} exists after {_IMAGE_PROBE_ATTEMPTS} probes. "
+                f"Refusing to rebuild, because rebuilding on an inconclusive probe would discard a "
+                f"working image and cost a full rebuild. Check that Docker is responsive "
+                f"('docker image inspect {tag}') and retry, or pass --rebuild to force a rebuild."
+            )
+            raise SandboxError(message)
 
     docker = _docker_binary()
     pixi_version = _pixi_version()

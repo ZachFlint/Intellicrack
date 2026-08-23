@@ -59,6 +59,7 @@ from intellicrack.credentials.oauth import (
 )
 from intellicrack.credentials.store import CredentialStore, get_credential_store
 from intellicrack.providers.display_names import NO_API_KEY_PROVIDER_IDS, provider_display_name
+from intellicrack.providers.huggingface import fetch_router_served_model_ids
 from intellicrack.ui.dialogs_helpers import show_error, show_info, show_warning
 from intellicrack.ui.panels.async_bridge import run_bridge_coroutine, run_bridge_coroutine_async
 from intellicrack.ui.resources import IconManager
@@ -1217,7 +1218,20 @@ class ModelRefreshWorker(QThread):
         self,
         timeout: httpx.Timeout,
     ) -> tuple[bool, list[str], str]:
-        """Fetch HuggingFace text-generation models from Hub API.
+        """Fetch HuggingFace text-generation models actually served by an Inference Provider.
+
+        Fetches the Hub's text-generation catalog, then intersects it
+        against the HuggingFace Inference Providers router's served-model
+        set -- fetched through the shared
+        :func:`~intellicrack.providers.huggingface.fetch_router_served_model_ids`
+        helper -- so this disconnected-provider fallback honors the same
+        served-models contract as
+        :meth:`~intellicrack.providers.huggingface.HuggingFaceProvider.list_models`
+        instead of listing every Hub-tagged model regardless of whether any
+        configured Inference Provider currently serves it for chat
+        completion. When the router request fails the refresh reports
+        failure with an explanatory message rather than falling back to
+        the unfiltered (and potentially unservable) Hub catalog.
 
         Args:
             timeout: HTTP timeout configuration.
@@ -1250,7 +1264,15 @@ class ModelRefreshWorker(QThread):
             )
             return False, [], f"API error: {response.status_code}"
 
-        models = [m["id"] for m in data if m.get("pipeline_tag") in {"text-generation", "conversational"}]
+        catalog_ids = [m["id"] for m in data if m.get("pipeline_tag") in {"text-generation", "conversational"}]
+
+        try:
+            served_ids = asyncio.run(fetch_router_served_model_ids(self._api_key, timeout, self._api_base))
+        except (httpx.HTTPError, OSError, ValueError) as e:
+            _logger.warning("huggingface_served_models_fetch_failed", error=str(e))
+            return False, [], f"Failed to fetch HuggingFace Inference Providers served-model catalog: {e}"
+
+        models = [model_id for model_id in catalog_ids if model_id in served_ids]
         _logger.info(
             "model_fetch_succeeded",
             provider="huggingface",

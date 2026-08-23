@@ -47,8 +47,13 @@ satisfy it.
 Running the script needs a PowerShell interpreter, which the Windows test
 container provides; :func:`~tests.sandbox.qemu.virtio_installer_harness.resolve_powershell`
 skips loudly rather than silently passing if one is ever absent.
-:class:`TestTheAnswerMediumRunsTheDriverInstaller` is pure file and string work
-and runs anywhere.
+
+:class:`TestTheAnswerMediumRunsTheDriverInstaller` is host-native instead. It
+drives the real :func:`~scripts.sandbox.provision_windows_guest.stage_answer_tree`,
+whose first act is to stage the boot-critical WinPE drivers off the virtio-win
+medium - which mounts it. ``Mount-DiskImage`` needs the Windows storage stack
+the container does not have, and the bundled ISO sits outside the container's
+mounted subtree, so both halves of that work are available only on the host.
 
 The chain-trust half of the same generated script is gated separately, in
 :mod:`tests.sandbox.qemu.test_virtio_chain_trust_s17d45`.
@@ -76,6 +81,7 @@ from tests.sandbox.qemu.virtio_installer_harness import (
     combinations,
     dump_syntax_tree,
     guest_combination,
+    real_virtio_medium,
     resolve_powershell,
     run_installer,
     selected_packages,
@@ -357,7 +363,7 @@ class TestTheAnswerMediumRunsTheDriverInstaller:
         staging.mkdir()
         tools = build_bundled_tools(tmp_path / "tools")
 
-        stage_answer_tree(staging, answer_settings(), tools / "qemu-ga.exe", tools, tmp_path / "virtio-win.iso")
+        stage_answer_tree(staging, answer_settings(), tools / "qemu-ga.exe", tools, real_virtio_medium())
 
         expected = render_driver_installer().encode("ascii")
         staged = [path for path in staging.rglob("*") if path.is_file() and path.read_bytes() == expected]
@@ -379,7 +385,7 @@ class TestTheAnswerMediumRunsTheDriverInstaller:
         staging.mkdir()
         tools = build_bundled_tools(tmp_path / "tools")
         settings = answer_settings()
-        stage_answer_tree(staging, settings, tools / "qemu-ga.exe", tools, tmp_path / "virtio-win.iso")
+        stage_answer_tree(staging, settings, tools / "qemu-ga.exe", tools, real_virtio_medium())
         expected = render_driver_installer().encode("ascii")
         staged = next(path for path in staging.rglob("*") if path.is_file() and path.read_bytes() == expected)
         relative = str(staged.relative_to(staging)).replace("/", "\\")

@@ -56,7 +56,7 @@ async def process_bridge() -> AsyncGenerator[ProcessBridge]:
     """Initialize a ProcessBridge and yield it for the module.
 
     Yields:
-        AsyncGenerator[ProcessBridge]: Initialized ProcessBridge instance.
+        ProcessBridge: Initialized ProcessBridge instance.
     """
     bridge = ProcessBridge()
     await bridge.initialize()
@@ -72,7 +72,7 @@ async def attached_bridge(process_bridge: ProcessBridge) -> AsyncGenerator[Proce
         process_bridge: Module-scoped initialized bridge.
 
     Yields:
-        AsyncGenerator[ProcessBridge]: Bridge attached to the current process.
+        ProcessBridge: Bridge attached to the current process.
     """
     await process_bridge.open_process(os.getpid(), "all")
     yield process_bridge

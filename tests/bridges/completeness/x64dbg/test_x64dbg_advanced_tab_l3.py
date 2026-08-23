@@ -40,7 +40,8 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 
 import pytest
-from PyQt6.QtWidgets import QComboBox, QLabel, QLineEdit, QPushButton, QTableWidget
+from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QApplication, QComboBox, QLabel, QLineEdit, QMessageBox, QPushButton, QTableWidget
 
 from intellicrack.bridges.x64dbg import X64DbgBridge
 from intellicrack.ui.panels import x64dbg_advanced_tab as _advanced_mod
@@ -52,10 +53,59 @@ from .conftest import FakePipeClient, install_fake_pipe, ok, priv, pump_until
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from PyQt6.QtWidgets import QApplication
-
 
 pytestmark = pytest.mark.skipif(sys.platform != "win32", reason="x64dbg is a Windows-only debugger bridge")
+
+_MODAL_WATCHDOG_INTERVAL_MS: int = 5
+
+
+def _dismiss_stray_modal() -> None:
+    """Close any real, active ``QMessageBox`` modal without asserting on it.
+
+    ``tests/bridges/completeness/conftest.py`` installs a tree-wide autouse
+    ``guard_modal_dialogs`` fixture that monkeypatches ``QMessageBox.warning``
+    to a non-blocking stand-in for the whole test tree, and every Advanced-tab
+    input-validation handler exercised by this module (``_on_read_teb``,
+    ``_bpcfg_address``, ``_xref_address``, ``_on_set_logging_breakpoint``,
+    ``_on_close_handle``) relies on exactly that guard to stay non-blocking.
+    This sandbox's pytest invocation collects every test node twice in the
+    same process (a known, out-of-scope harness quirk); on a test's second,
+    duplicate occurrence that guard has been observed to not be re-applied,
+    letting the real, blocking ``QMessageBox.warning`` construct a genuine
+    modal that never returns under the headless offscreen Qt platform --
+    hanging the test, and, when the stray dialog is instead delivered via a
+    queued cross-thread signal after a later test's guard has torn down,
+    corrupting the heap (Windows fatal exception 0xc0000374) deep inside
+    pytest-qt's own event pump. This watchdog is a second, independent line
+    of defense: if a real modal ever appears despite the guard, it is closed
+    immediately instead of blocking the run.
+    """
+    widget = QApplication.activeModalWidget()
+    if isinstance(widget, QMessageBox):
+        widget.done(int(QMessageBox.StandardButton.Ok))
+
+
+@pytest.fixture(autouse=True)
+def modal_watchdog(qapp: QApplication) -> Iterator[None]:
+    """Run a background watchdog that dismisses any stray real modal dialog.
+
+    Args:
+        qapp: Session ``QApplication`` fixture; ensures the application
+            instance exists before the watchdog timer is created.
+
+    Yields:
+        None: Control returns to the test body while the watchdog runs.
+    """
+    del qapp
+    timer = QTimer()
+    timer.setInterval(_MODAL_WATCHDOG_INTERVAL_MS)
+    timer.timeout.connect(_dismiss_stray_modal)
+    timer.start()
+    try:
+        yield
+    finally:
+        timer.stop()
+        timer.timeout.disconnect(_dismiss_stray_modal)
 
 
 @pytest.fixture
@@ -1051,6 +1101,7 @@ class TestHandlesDispatch:
     def test_close_button_dispatches_handleclose_script(
         wired_tab: tuple[X64DbgAdvancedTab, X64DbgBridge],
         qapp: QApplication,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """The Close Handle button must issue the ``handleclose`` console script.
 
@@ -1058,9 +1109,29 @@ class TestHandlesDispatch:
         in ``X64DbgBridge.close_handle`` (or the value parse in
         ``_on_close_handle``) removes the recorded ``exec`` script.
 
+        A successful close makes ``_on_handle_closed`` immediately re-invoke
+        ``_on_refresh_handles``, which issues a REAL, unmocked
+        ``self._bridge.get_handles()`` call (this handler is not gated behind
+        the pipe responder). Against a ``wired_tab`` bridge that was never
+        attached to a process, that call fails on the background bridge-worker
+        thread and its error callback -- delivered later via a queued
+        cross-thread Qt signal -- calls ``QMessageBox.warning`` from
+        ``_on_handles_error``. Left unobserved, that queued callback can still
+        be in flight when this test returns; its warning call would then fire
+        during a LATER test, after this test's package-root
+        ``guard_modal_dialogs`` autouse patch (see
+        ``tests/bridges/completeness/conftest.py``) has already been torn
+        down, hitting the real, blocking ``QMessageBox.warning`` instead of
+        the guard's no-op stand-in. The test therefore overrides the guard
+        locally (the package conftest's own documented precedence rule) with
+        a spy and pumps the loop until that spy fires, so the whole chain
+        provably settles -- and the guard is provably still active -- before
+        the test (and the ``wired_tab`` fixture's ``deleteLater``) returns.
+
         Args:
             wired_tab: Advanced-tab/bridge pair fixture.
             qapp: Session QApplication fixture.
+            monkeypatch: pytest monkeypatch fixture.
         """
         tab, bridge = wired_tab
 
@@ -1073,10 +1144,22 @@ class TestHandlesDispatch:
         fake = install_fake_pipe(bridge, responder)
         priv(tab, "_handles_close_input", QLineEdit).setText("0x1a4")
 
+        refresh_error_messages: list[str] = []
+
+        def _spy_warning(*args: object, **_kwargs: object) -> object:
+            del _kwargs
+            refresh_error_messages.append(str(args[2]) if len(args) > 2 else "")
+            return QMessageBox.StandardButton.Ok
+
+        monkeypatch.setattr(QMessageBox, "warning", _spy_warning)
+
         priv(tab, "_handles_close_btn", QPushButton).click()
         pump_until(qapp, lambda: "handleclose 0x1a4" in _exec_commands(fake))
 
         assert ("exec", {"command": "handleclose 0x1a4"}) in fake.sent
+
+        pump_until(qapp, lambda: bool(refresh_error_messages))
+        assert "not attached" in refresh_error_messages[0].lower()
 
     @staticmethod
     def test_close_button_invalid_value_does_not_dispatch(

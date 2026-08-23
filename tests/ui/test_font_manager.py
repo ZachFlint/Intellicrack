@@ -52,7 +52,7 @@ def font_manager(
         qapp: Qt application fixture.
 
     Yields:
-        Generator[FontManager]: A fresh FontManager instance with singleton state reset.
+        FontManager: A fresh FontManager instance with singleton state reset.
     """
     del qapp
     FontManager.reset_instance()

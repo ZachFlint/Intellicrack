@@ -109,7 +109,7 @@ class ToolConfirmationDialog(QDialog):
 
     @property
     def approved(self) -> bool:
-        """Get whether the call was approved.
+        """Whether the call was approved.
 
         Returns:
             bool: True if user approved, False otherwise.
@@ -118,7 +118,7 @@ class ToolConfirmationDialog(QDialog):
 
     @property
     def remember_similar(self) -> bool:
-        """Get whether to remember choice for similar operations.
+        """Whether to remember the choice for similar operations.
 
         Returns:
             bool: True if user wants to remember choice.

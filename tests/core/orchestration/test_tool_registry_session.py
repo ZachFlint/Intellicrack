@@ -46,7 +46,7 @@ class _CountingBridge(ToolBridgeBase):
 
     @property
     def name(self) -> ToolName:
-        """Return the bridge's tool identity.
+        """The bridge's tool identity.
 
         Returns:
             ToolName: Tool identity for this bridge.
@@ -55,7 +55,7 @@ class _CountingBridge(ToolBridgeBase):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Return a minimal tool definition.
+        """A minimal tool definition.
 
         Returns:
             ToolDefinition: Definition with no functions.

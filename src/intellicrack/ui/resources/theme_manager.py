@@ -15,7 +15,7 @@ from typing import ClassVar, Final
 
 from PyQt6.QtCore import QObject, Qt, pyqtBoundSignal, pyqtSignal
 from PyQt6.QtGui import QColor, QGuiApplication
-from PyQt6.QtWidgets import QApplication, QMenuBar, QToolBar
+from PyQt6.QtWidgets import QAbstractScrollArea, QApplication, QFrame, QMenuBar, QToolBar
 
 from intellicrack.core.logging import get_logger
 from intellicrack.ui.resources.resource_helper import get_assets_path, get_style_path
@@ -1551,30 +1551,50 @@ class ThemeManager:
 
     @staticmethod
     def _repolish_chrome(app_instance: QApplication) -> None:
-        """Force menu bars and toolbars to repaint after a live stylesheet change.
+        """Force chrome and content viewports to repaint after a live stylesheet change.
 
         ``QApplication.setStyleSheet`` reliably restyles ordinary widgets on
         a live theme change, but on Windows a :class:`~PyQt6.QtWidgets.QMenuBar`
         or :class:`~PyQt6.QtWidgets.QToolBar` that has already been painted once
         keeps rendering with the background it was first polished with: only
         newly constructed instances pick up the new stylesheet automatically.
-        Explicitly unpolishing and repolishing every live instance forces Qt to
-        recompute their style from the new stylesheet immediately, instead of
-        leaving the main menu bar and toolbar visually stuck on the previous
-        theme until the next resize or window recreation.
+        The same staleness affects content viewports built on
+        :class:`~PyQt6.QtWidgets.QAbstractScrollArea` -- the hex grid's table,
+        the disassembly table, the chat scroll area, and the markdown text
+        browsers inside chat message bubbles -- along with the role-propertied
+        :class:`~PyQt6.QtWidgets.QFrame` widgets (e.g. chat message bubbles
+        styled via a ``role`` dynamic property selector) that never subscribe
+        to :attr:`theme_changed` and instead depend entirely on the global
+        stylesheet restyling an already-polished widget. Explicitly
+        unpolishing and repolishing every live instance -- and, for scroll
+        areas, their viewport widget as well, since the viewport is what
+        actually paints the content background -- forces Qt to recompute
+        style from the new stylesheet immediately, instead of leaving them
+        visually stuck on the previous theme until the next resize or window
+        recreation.
 
         Args:
-            app_instance: The active QApplication instance whose menu bars and
-                toolbars are repolished.
+            app_instance: The active QApplication instance whose chrome and
+                content-viewport widgets are repolished.
         """
         style = app_instance.style()
         if style is None:
             return
         for widget in app_instance.allWidgets():
-            if isinstance(widget, (QMenuBar, QToolBar)):
-                style.unpolish(widget)
-                style.polish(widget)
-                widget.update()
+            needs_repolish = isinstance(widget, (QMenuBar, QToolBar, QAbstractScrollArea)) or (
+                isinstance(widget, QFrame) and widget.property("role") is not None
+            )
+            if not needs_repolish:
+                continue
+            style.unpolish(widget)
+            style.polish(widget)
+            widget.update()
+            if isinstance(widget, QAbstractScrollArea):
+                viewport = widget.viewport()
+                if viewport is not None:
+                    style.unpolish(viewport)
+                    style.polish(viewport)
+                    viewport.update()
 
     def _update_system_watch(self) -> None:
         """Connect or disconnect live OS color-scheme tracking.

@@ -24,7 +24,7 @@ def qapp() -> Generator[QApplication]:
     creates one for the entire session and yields it.
 
     Yields:
-        Generator[QApplication]: The application instance.
+        QApplication: The application instance.
     """
     existing = QApplication.instance()
     if existing is not None and isinstance(existing, QApplication):

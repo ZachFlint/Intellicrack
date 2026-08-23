@@ -53,7 +53,7 @@ def window(
         monkeypatch: Pytest monkeypatch fixture.
 
     Yields:
-        Generator[MainWindow]: A shown MainWindow.
+        MainWindow: A shown MainWindow.
     """
     monkeypatch.setattr("intellicrack.ui.app.SandboxManager", NoOpSandboxManager)
     win = MainWindow(real_config, real_orchestrator)

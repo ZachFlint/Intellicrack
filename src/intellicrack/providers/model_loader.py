@@ -128,7 +128,7 @@ class ModelCache:
 
     @property
     def max_memory_bytes(self) -> int:
-        """Get the maximum memory limit.
+        """The maximum memory limit.
 
         Returns:
             int: Maximum memory in bytes allowed for cached models.

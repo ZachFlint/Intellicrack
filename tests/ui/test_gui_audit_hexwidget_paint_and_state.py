@@ -289,9 +289,6 @@ class _HugeDoc:
 
     A real 4 GiB document cannot be allocated in a test, so this stand-in
     exercises the pure offset-width layout math with a genuine byte reader.
-
-    Attributes:
-        _length: Reported document length in bytes.
     """
 
     def __init__(self, length: int) -> None:

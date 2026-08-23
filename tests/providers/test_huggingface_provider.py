@@ -62,7 +62,7 @@ async def huggingface_provider(
         has_huggingface_key: Whether HuggingFace token is configured.
 
     Yields:
-        AsyncGenerator[HuggingFaceProvider]: A connected HuggingFaceProvider instance.
+        HuggingFaceProvider: A connected HuggingFaceProvider instance.
     """
     if not has_huggingface_key:
         pytest.skip("HUGGINGFACE_API_TOKEN not configured in .env")

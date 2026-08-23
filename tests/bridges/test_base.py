@@ -56,7 +56,7 @@ class _MinimalBridge(ToolBridgeBase):
 
     @property
     def name(self) -> ToolName:
-        """Get the tool name.
+        """The tool name.
 
         Returns:
             ToolName: The tool name enum value.
@@ -65,7 +65,7 @@ class _MinimalBridge(ToolBridgeBase):
 
     @property
     def tool_definition(self) -> ToolDefinition:
-        """Get a minimal tool definition for unit tests.
+        """A minimal tool definition for unit tests.
 
         Returns:
             ToolDefinition: Minimal ToolDefinition with no functions.

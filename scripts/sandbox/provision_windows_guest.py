@@ -222,12 +222,39 @@ WINPE_DRIVER_FAMILY_PREFERENCE: Final[tuple[str, ...]] = (
     "2k3",
     "xp",
 )
-"""Which family of a driver to stage, newest first, for a Windows 11 guest.
+"""Which family of a driver to stage, newest first, when the guest edition
+cannot be resolved to one of its own.
 
 The medium carries a genuinely different set of families per driver, so the
 choice is made per driver against what is really there rather than hardwired:
 whichever of these the medium has for the guest's architecture is taken, and
-anything unrecognised sorts after all of them.
+anything unrecognised sorts after all of them. This tuple itself is only the
+Windows 11 fallback order: :func:`driver_family_preference` reorders it per
+guest edition so a Windows 10, Server, or other non-Windows-11 guest prefers
+its own family first, the way this order alone never could.
+"""
+
+_IMAGE_NAME_FAMILY_MARKERS: Final[tuple[tuple[str, str], ...]] = (
+    ("server 2025", "2k25"),
+    ("server 2022", "2k22"),
+    ("server 2019", "2k19"),
+    ("server 2016", "2k16"),
+    ("server 2012 r2", "2k12R2"),
+    ("server 2012", "2k12"),
+    ("server 2008 r2", "2k8R2"),
+    ("server 2008", "2k8"),
+    ("server 2003", "2k3"),
+    ("windows 11", "w11"),
+    ("windows 10", "w10"),
+    ("windows 8.1", "w8.1"),
+    ("windows 8", "w8"),
+    ("windows 7", "w7"),
+    ("windows xp", "xp"),
+)
+"""Substrings of an ``--image-name`` edition that identify its virtio-win
+family, checked in this order so a more specific marker such as
+``windows 8.1`` or ``server 2012 r2`` is never shadowed by the shorter
+``windows 8`` or ``server 2012`` that would otherwise match first.
 """
 
 _VIRTIO_WIN_URL: Final[str] = "https://fedorapeople.org/groups/virt/virtio-win/direct-downloads/stable-virtio/virtio-win.iso"
@@ -1180,19 +1207,27 @@ def enumerate_virtio_driver_subpaths(medium_root: Path, architecture: str) -> tu
     return tuple(sorted(subpaths))
 
 
-def select_winpe_driver_packages(subpaths: tuple[str, ...], drivers: tuple[str, ...] = WINPE_DRIVER_DIRECTORIES) -> tuple[str, ...]:
+def select_winpe_driver_packages(
+    subpaths: tuple[str, ...],
+    drivers: tuple[str, ...] = WINPE_DRIVER_DIRECTORIES,
+    preference: tuple[str, ...] = WINPE_DRIVER_FAMILY_PREFERENCE,
+) -> tuple[str, ...]:
     r"""Pick the one package per driver that WinPE is given.
 
     Setup rejects an answer file that names many driver paths, so breadth has
     to be spent where it matters: the enumeration knows every family the
     medium carries, and this reduces that to a single package per driver,
-    newest family first. A driver the medium has no package for is skipped
-    rather than guessed at.
+    most preferred family first. A driver the medium has no package for is
+    skipped rather than guessed at.
 
     Args:
         subpaths: ``<driver>\\<family>\\<arch>`` directories enumerated off
             the medium for the guest's architecture.
         drivers: Driver directories to pick packages for.
+        preference: Family names in preference order, most preferred first.
+            Defaults to the Windows 11 fallback order; pass the result of
+            :func:`driver_family_preference` to prefer the guest's own
+            edition instead.
 
     Returns:
         tuple[str, ...]: One subpath per driver that has a package, in the
@@ -1204,25 +1239,88 @@ def select_winpe_driver_packages(subpaths: tuple[str, ...], drivers: tuple[str, 
         candidates = [subpath for subpath in subpaths if subpath.casefold().startswith(prefix.casefold())]
         if not candidates:
             continue
-        selected.append(min(candidates, key=_family_rank))
+        selected.append(min(candidates, key=lambda subpath: _family_rank(subpath, preference)))
     return tuple(selected)
 
 
-def _family_rank(subpath: str) -> tuple[int, str]:
+def _family_rank(subpath: str, preference: tuple[str, ...] = WINPE_DRIVER_FAMILY_PREFERENCE) -> tuple[int, str]:
     r"""Order a ``<driver>\\<family>\\<arch>`` subpath by how new its family is.
 
     Args:
         subpath: Driver package subpath.
+        preference: Family names in preference order, most preferred first.
 
     Returns:
         tuple[int, str]: Sort key placing preferred families first and any
-        family the preference list does not name after all of them.
+        family ``preference`` does not name after all of them.
     """
     parts = subpath.split("\\")
     family = parts[1] if len(parts) > 1 else ""
-    folded = [name.casefold() for name in WINPE_DRIVER_FAMILY_PREFERENCE]
+    folded = [name.casefold() for name in preference]
     position = folded.index(family.casefold()) if family.casefold() in folded else len(folded)
     return (position, subpath.casefold())
+
+
+def _detect_driver_family(image_name: str) -> str:
+    """Map a Windows edition name to its virtio-win driver family.
+
+    Runs off the edition name the provisioner is given rather than anything
+    read from the guest, because WinPE has to be told a driver path before
+    Windows Setup can even see the virtio-blk system disk, and the guest does
+    not exist yet at that point.
+
+    Args:
+        image_name: Windows edition name selected for the install, for
+            example ``Windows 10 Pro`` or ``Windows Server 2022 Datacenter``.
+
+    Returns:
+        str: The virtio-win family directory name that matches the edition,
+        or the Windows 11 family (the first entry of
+        :data:`WINPE_DRIVER_FAMILY_PREFERENCE`) when the edition cannot be
+        recognised.
+    """
+    folded = image_name.casefold()
+    for marker, family in _IMAGE_NAME_FAMILY_MARKERS:
+        if marker in folded:
+            return family
+    return WINPE_DRIVER_FAMILY_PREFERENCE[0]
+
+
+def resolve_guest_driver_family(image_name: str, architecture: str = _COMPONENT_ARCHITECTURE) -> str:
+    r"""Derive the ``<family>\\<arch>`` virtio-win driver subdirectory for a guest.
+
+    Args:
+        image_name: Windows edition name selected for the install.
+        architecture: Architecture directory name the guest needs, for
+            example ``amd64`` or ``ARM64``.
+
+    Returns:
+        str: The ``<family>\\<arch>`` subdirectory to prefer on the virtio-win
+        medium for this guest.
+    """
+    return f"{_detect_driver_family(image_name)}\\{architecture}"
+
+
+def driver_family_preference(image_name: str) -> tuple[str, ...]:
+    r"""Order virtio-win families newest-compatible-first for a guest edition.
+
+    :data:`WINPE_DRIVER_FAMILY_PREFERENCE` alone always prefers Windows 11,
+    which is wrong for every other edition this provisioner can install: a
+    Windows 10 guest handed a ``w11`` package when the medium carries both
+    gets a driver built for the wrong OS. This keeps the same fallback order
+    but moves the edition's own family to the front, so the guest's own
+    family is tried before Windows 11's when the medium carries it too.
+
+    Args:
+        image_name: Windows edition name selected for the install.
+
+    Returns:
+        tuple[str, ...]: :data:`WINPE_DRIVER_FAMILY_PREFERENCE`, reordered so
+        the guest's own family is tried first.
+    """
+    preferred = _detect_driver_family(image_name)
+    rest = tuple(family for family in WINPE_DRIVER_FAMILY_PREFERENCE if family != preferred)
+    return (preferred, *rest)
 
 
 def require_boot_critical_package(packages: tuple[str, ...], source: str, architecture: str) -> None:
@@ -1250,6 +1348,8 @@ def stage_winpe_drivers(
     staging: Path,
     architecture: str,
     directory: str = WINPE_DRIVER_STAGE_DIRECTORY,
+    *,
+    image_name: str = _DEFAULT_IMAGE_NAME,
 ) -> tuple[str, ...]:
     r"""Copy the boot-critical driver files onto the answer medium.
 
@@ -1264,6 +1364,9 @@ def stage_winpe_drivers(
         architecture: Architecture directory name the guest needs.
         directory: Folder under ``staging`` to stage into, which must be the
             one the answer file names.
+        image_name: Windows edition name selected for the install, used to
+            prefer that edition's own virtio-win family over the Windows 11
+            fallback when the medium carries both.
 
     Returns:
         tuple[str, ...]: Names of the files staged, sorted.
@@ -1277,7 +1380,8 @@ def stage_winpe_drivers(
 
     medium_root = mount_disk_image(virtio_iso)
     try:
-        packages = select_winpe_driver_packages(enumerate_virtio_driver_subpaths(medium_root, architecture))
+        subpaths = enumerate_virtio_driver_subpaths(medium_root, architecture)
+        packages = select_winpe_driver_packages(subpaths, preference=driver_family_preference(image_name))
         require_boot_critical_package(packages, str(virtio_iso), architecture)
 
         origins: dict[str, str] = {}
@@ -2350,7 +2454,7 @@ def stage_answer_tree(staging: Path, settings: UnattendSettings, qemu_agent: Pat
         ProvisioningError: If a required guest agent library is missing, or
             the virtio medium carries no boot-critical driver package.
     """
-    stage_winpe_drivers(virtio_iso, staging, _COMPONENT_ARCHITECTURE, settings.driver_directory)
+    stage_winpe_drivers(virtio_iso, staging, _COMPONENT_ARCHITECTURE, settings.driver_directory, image_name=settings.image_name)
 
     autounattend = render_autounattend(settings)
     (staging / "autounattend.xml").write_bytes(autounattend.encode("utf-8"))

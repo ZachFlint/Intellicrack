@@ -5,12 +5,14 @@
 
 """Falsifiable gates for the sandbox CPU/memory defaults and job forwarding.
 
-These tests pin the operator-facing contract changed for full-suite coverage
-runs: every ``docker run`` defaults to 16 CPUs and 32 GB of memory (still
-overridable by ``--cpus`` / ``--memory``), and the ``COVERAGE_JOBS`` host
-environment variable is forwarded into the container so coverage group
-parallelism can be tuned. Each assertion fails loudly if a default regresses to
-its previous value or the forwarding is removed.
+These tests pin the operator-facing contract for sandbox resource sizing: the
+per-run CPU and memory share is left unpinned by default so the admission
+governor can size it from the host (letting several runs fit concurrently),
+an explicitly pinned ``--cpus`` / ``--memory`` is honoured verbatim, and the
+``COVERAGE_JOBS`` host environment variable is forwarded into the container so
+coverage group parallelism can be tuned. Each assertion fails loudly if sizing
+regresses to a fixed constant, if a pinned value is silently rewritten, or if
+the forwarding is removed.
 """
 
 from __future__ import annotations
@@ -27,9 +29,12 @@ if TYPE_CHECKING:
 
     import pytest
 
+    from scripts.sandbox.admission import CapacityPlan
+
 _MODULE_MEMBERS = vars(docker_sandbox)
 _build_parser = cast("Callable[[], argparse.ArgumentParser]", _MODULE_MEMBERS["_build_parser"])
 _build_docker_run_argv = cast("Callable[..., list[str]]", _MODULE_MEMBERS["_build_docker_run_argv"])
+_resolve_capacity_plan = cast("Callable[..., CapacityPlan]", _MODULE_MEMBERS["_resolve_capacity_plan"])
 
 
 def _flag_value(argv: list[str], flag: str) -> str:
@@ -71,16 +76,44 @@ def _coverage_argv(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     )
 
 
-def test_cpu_default_is_sixteen() -> None:
-    """The CLI parser defaults ``--cpus`` to 16."""
+def test_cpu_and_memory_are_unpinned_by_default() -> None:
+    """Omitting the flags must leave the per-run size for the governor to pick.
+
+    A non-``None`` parser default would pin every run to one fixed size, which
+    is what the admission governor replaced: sizing is derived from the host so
+    several runs fit concurrently.
+    """
     args = _build_parser().parse_args(["coverage"])
-    assert args.cpus == "16"
+    assert args.cpus is None, f"--cpus must default to auto-sizing; got {args.cpus!r}"
+    assert args.memory is None, f"--memory must default to auto-sizing; got {args.memory!r}"
 
 
-def test_memory_default_is_thirty_two_gigabytes() -> None:
-    """The CLI parser defaults ``--memory`` to 32g."""
-    args = _build_parser().parse_args(["coverage"])
-    assert args.memory == "32g"
+def test_unpinned_defaults_resolve_to_a_host_derived_plan() -> None:
+    """An unpinned run must still receive a concrete, host-derived quota.
+
+    Auto-sizing must produce real ``docker run`` values rather than leaving the
+    quota empty; a plan with no memory or CPU share would launch containers
+    without limits and let concurrent runs exhaust the host.
+    """
+    plan = _resolve_capacity_plan(requested_memory=None, requested_cpus=None)
+
+    assert plan.slots >= 1, f"the governor must allow at least one run; got {plan.slots}"
+    assert plan.memory.endswith("g"), f"memory share is not a docker size: {plan.memory!r}"
+    assert int(plan.memory.removesuffix("g")) > 0, f"memory share must be positive: {plan.memory!r}"
+    assert int(plan.cpus) > 0, f"cpu share must be positive: {plan.cpus!r}"
+
+
+def test_pinned_resources_are_honoured_verbatim() -> None:
+    """An operator-pinned quota must survive the governor unchanged.
+
+    The governor may shrink the slot budget around a pinned size, but must not
+    rewrite the size itself; silently resizing an explicit request would defeat
+    the override that :func:`test_cpu_flag_overrides_default` relies on.
+    """
+    plan = _resolve_capacity_plan(requested_memory="8g", requested_cpus="4")
+
+    assert plan.memory == "8g", f"pinned memory was rewritten to {plan.memory!r}"
+    assert plan.cpus == "4", f"pinned cpus was rewritten to {plan.cpus!r}"
 
 
 def test_cpu_flag_overrides_default() -> None:
@@ -95,8 +128,13 @@ def test_memory_flag_overrides_default() -> None:
     assert args.memory == "8g"
 
 
-def test_sandbox_config_defaults_match_cli() -> None:
-    """The programmatic ``DockerSandbox`` defaults match the CLI defaults."""
+def test_sandbox_config_carries_programmatic_fallback_sizes() -> None:
+    """``DockerSandbox`` keeps concrete fallback sizes for programmatic callers.
+
+    The CLI always passes governor-derived values, so these attribute defaults
+    apply only when the class is constructed directly without a plan; they must
+    stay concrete so such a caller still gets a bounded container.
+    """
     sandbox = docker_sandbox.DockerSandbox()
     assert sandbox.cpus == "16"
     assert sandbox.memory == "32g"

@@ -88,7 +88,7 @@ async def openrouter_provider(
         has_openrouter_key: Whether an OpenRouter API key is configured.
 
     Yields:
-        AsyncGenerator[OpenRouterProvider]: A connected OpenRouterProvider instance.
+        OpenRouterProvider: A connected OpenRouterProvider instance.
 
     Raises:
         ProviderError: Re-raised when the connection failure is not due to network

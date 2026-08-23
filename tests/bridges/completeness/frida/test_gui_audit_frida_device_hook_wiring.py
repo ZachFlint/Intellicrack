@@ -245,7 +245,7 @@ def draining_dispatch(monkeypatch: pytest.MonkeyPatch) -> Generator[list[Corouti
         monkeypatch: Pytest monkeypatch fixture.
 
     Yields:
-        Generator[list[Coroutine[object, object, object]]]: Records every
+        list[Coroutine[object, object, object]]: Records every
         dispatched coroutine, in dispatch order.
     """
     captured: list[Coroutine[object, object, object]] = []

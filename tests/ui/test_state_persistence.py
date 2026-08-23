@@ -36,7 +36,7 @@ def clean_settings() -> Generator[QSettings]:
     """Provide a QSettings instance and clear it on teardown.
 
     Yields:
-        Generator[QSettings]: Temporary settings store for testing.
+        QSettings: Temporary settings store for testing.
     """
     settings = QSettings(_SETTINGS_ORG, _SETTINGS_APP)
     yield settings

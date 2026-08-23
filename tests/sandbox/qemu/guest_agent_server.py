@@ -226,10 +226,14 @@ class _LoopbackServer:
         port: TCP port the server is bound to, or 0 before ``start``.
         faults: Exceptions raised by connection handlers, re-raised by
             :meth:`stop`.
+        accepted: Number of connections accepted since ``start``, counted for
+            every server so a test can tell a channel that was closed and
+            replaced from one that was merely kept open.
     """
 
     port: int
     faults: list[BaseException]
+    accepted: int
 
     def __init__(self, listen_delay: float = 0.0, port: int = 0) -> None:
         """Initialise the server without binding it.
@@ -243,6 +247,7 @@ class _LoopbackServer:
         """
         self.port = port
         self.faults = []
+        self.accepted = 0
         self._listen_delay = listen_delay
         self._socket: socket.socket | None = None
         self._server: asyncio.Server | None = None
@@ -341,6 +346,7 @@ class _LoopbackServer:
             Exception: Re-raised after being recorded, so the failure is also
                 visible on the event loop.
         """
+        self.accepted += 1
         try:
             await self._serve(reader, writer)
         except ConnectionError:
@@ -958,12 +964,9 @@ class OneShotGuestAgentChannelServer(GuestAgentProtocolServer):
     virtio-serial port yet.
 
     Attributes:
-        accepted: Number of connections accepted since ``start``. A second one
-            is impossible by construction, so this is 0 or 1.
         refused_syncs: Number of resync requests deliberately left unanswered.
     """
 
-    accepted: int
     refused_syncs: int
 
     def __init__(self, silent_syncs: int = 0) -> None:
@@ -974,7 +977,6 @@ class OneShotGuestAgentChannelServer(GuestAgentProtocolServer):
                 guest's agent starts replying.
         """
         super().__init__()
-        self.accepted = 0
         self.refused_syncs = 0
         self._silent_syncs = silent_syncs
 
@@ -993,7 +995,6 @@ class OneShotGuestAgentChannelServer(GuestAgentProtocolServer):
             reader: Stream reader for the accepted connection.
             writer: Stream writer for the accepted connection.
         """
-        self.accepted += 1
         if self._server is not None:
             self._server.close()
         await super()._serve(reader, writer)
@@ -1068,8 +1069,6 @@ class IntellicrackAgentServer(_LoopbackServer):
             whether or not a reply was ever written for it.
         dropped_requests: The subset of ``requests`` the agent took delivery of
             and then never answered because the connection went down.
-        accepted: Number of connections accepted since ``start``, including
-            the ones closed straight away.
         handshakes: Number of readiness probes answered since ``start``. A
             handshake is not a command, so it never lands in ``requests`` and
             never counts towards ``close_after_replies``.
@@ -1077,7 +1076,6 @@ class IntellicrackAgentServer(_LoopbackServer):
 
     requests: list[tuple[str, tuple[str, ...]]]
     dropped_requests: list[tuple[str, tuple[str, ...]]]
-    accepted: int
     handshakes: int
 
     def __init__(
@@ -1133,7 +1131,6 @@ class IntellicrackAgentServer(_LoopbackServer):
         self._serve_delay = serve_delay
         self.requests = []
         self.dropped_requests = []
-        self.accepted = 0
         self.handshakes = 0
         self._responder = responder
         self._undecodable_lines = undecodable_lines
@@ -1153,7 +1150,6 @@ class IntellicrackAgentServer(_LoopbackServer):
             reader: Stream reader for the accepted connection.
             writer: Stream writer for the accepted connection.
         """
-        self.accepted += 1
         if self._dead_connections > 0:
             self._dead_connections -= 1
             return
@@ -1239,21 +1235,18 @@ class SilentGuestAgentServer(_LoopbackServer):
     the ``guest-sync-delimited`` reply never arrives.
 
     Attributes:
-        accepted: Number of connections accepted since ``start``.
         open_connections: Number of accepted connections the client has not
             closed yet.
         all_closed: Set whenever no accepted connection is open, so a test can
             wait for the client to hang up instead of polling.
     """
 
-    accepted: int
     open_connections: int
     all_closed: asyncio.Event
 
     def __init__(self) -> None:
         """Initialise the server with empty connection counters."""
         super().__init__()
-        self.accepted = 0
         self.open_connections = 0
         self.all_closed = asyncio.Event()
         self.all_closed.set()
@@ -1270,7 +1263,6 @@ class SilentGuestAgentServer(_LoopbackServer):
             writer: Stream writer for the accepted connection.
         """
         del writer
-        self.accepted += 1
         self.open_connections += 1
         self.all_closed.clear()
         try:

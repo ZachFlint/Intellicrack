@@ -134,7 +134,7 @@ async def bridge_audit7() -> AsyncGenerator[ProcessBridge]:
     """Create and initialize a fresh ProcessBridge for each test.
 
     Yields:
-        AsyncGenerator[ProcessBridge]: Initialized bridge that will be
+        ProcessBridge: Initialized bridge that will be
         shut down on teardown.
     """
     bridge = ProcessBridge()
@@ -153,7 +153,7 @@ async def attached_bridge_audit7(
         bridge_audit7: Fresh initialized ProcessBridge fixture.
 
     Yields:
-        AsyncGenerator[ProcessBridge]: Bridge with an open handle on the
+        ProcessBridge: Bridge with an open handle on the
         current Python process.
     """
     await bridge_audit7.open_process(os.getpid(), "all")

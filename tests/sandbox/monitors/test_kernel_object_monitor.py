@@ -533,7 +533,7 @@ def test_script_captures_transient_mutex(tmp_path: Path) -> None:
     matching_lines: list[str] = []
     try:
         helper_proc, helper_pid, helper_out, helper_err, matching_lines = _run_mutex_helper_and_collect(
-            pwsh, mutex_name, lifecycle_log, log_path
+            pwsh, mutex_name, lifecycle_log, log_path,
         )
         if helper_proc is None:
             pytest.fail(

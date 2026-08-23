@@ -86,7 +86,7 @@ async def bridge() -> AsyncGenerator[ProcessBridge]:
     """Create and initialize a ProcessBridge for the module.
 
     Yields:
-        AsyncGenerator[ProcessBridge]: Initialized bridge that will be
+        ProcessBridge: Initialized bridge that will be
             shut down on teardown.
     """
     instance = ProcessBridge()

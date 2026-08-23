@@ -89,7 +89,7 @@ def qapp() -> Generator[QApplication]:
     (or conflicting on) the singleton application instance.
 
     Yields:
-        Generator[QApplication]: The application instance.
+        QApplication: The application instance.
     """
     existing = QApplication.instance()
     if existing is not None and isinstance(existing, QApplication):

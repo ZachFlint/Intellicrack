@@ -4421,12 +4421,14 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
             bool: ``True`` on success.
 
         Raises:
-            ToolError: If advapi32 is unavailable, the privilege LUID
-                cannot be resolved, or the adjustment reports
+            ToolError: If advapi32/kernel32 is unavailable, the privilege
+                LUID cannot be resolved, or the adjustment reports
                 ``ERROR_NOT_ALL_ASSIGNED``.
         """
         if self._advapi32 is None:
             raise ToolError(_ERR_ADVAPI32_NA)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
         luid = LUID()
         if not self._advapi32.LookupPrivilegeValueW(None, privilege_name, ctypes.byref(luid)):
             msg = _ERR_PRIV_LOOKUP + privilege_name
@@ -4437,7 +4439,60 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
         tp.Privileges[0].Luid = luid
         tp.Privileges[0].Attributes = SE_PRIVILEGE_ENABLED if enable else 0
 
-        disable_all = False
+        last_error = self._call_adjust_token_privileges(token_handle, tp, disable_all=False)
+        if last_error == ERROR_NOT_ALL_ASSIGNED:
+            msg = _ERR_PRIV_NOT_HELD + privilege_name
+            raise ToolError(msg)
+
+        _logger.info("privilege_adjusted", privilege=privilege_name, enabled=enable)
+        self._notify_privileges_changed()
+        return True
+
+    def _call_adjust_token_privileges(
+        self,
+        token_handle: wintypes.HANDLE,
+        tp: TOKEN_PRIVILEGES,
+        *,
+        disable_all: bool,
+    ) -> int:
+        """Call ``AdjustTokenPrivileges`` and return the real Win32 last error.
+
+        ``self._advapi32`` is loaded without ``use_last_error=True`` (see
+        :func:`intellicrack.bridges.win32_types.get_advapi32`), so
+        ``ctypes.get_last_error()`` only reflects whichever *other*
+        ``use_last_error=True`` call last ran on this thread (for example the
+        ``SeDebugPrivilege`` bootstrap in :meth:`_elevate_debug_privilege_impl`)
+        rather than the outcome of this call. Reading the genuine OS
+        last-error via ``kernel32.GetLastError`` after resetting it with
+        ``SetLastError(0)`` avoids that stale-value defect: ``ERROR_SUCCESS``
+        (0) means every requested privilege was assigned, while
+        ``ERROR_NOT_ALL_ASSIGNED`` means at least one was not held by the
+        token, exactly as ``AdjustTokenPrivileges`` documents.
+
+        Args:
+            token_handle: Open token handle with
+                ``TOKEN_ADJUST_PRIVILEGES`` access.
+            tp: Populated ``TOKEN_PRIVILEGES`` request.
+            disable_all: ``True`` to disable all privileges and ignore
+                ``tp``; ``False`` to apply ``tp``.
+
+        Returns:
+            int: The real Win32 last-error code set by
+                ``AdjustTokenPrivileges``.
+
+        Raises:
+            ToolError: If advapi32/kernel32 is unavailable.
+        """
+        if self._advapi32 is None:
+            raise ToolError(_ERR_ADVAPI32_NA)
+        if self._kernel32 is None:
+            raise ToolError(_ERR_KERNEL32_NA)
+        self._kernel32.SetLastError.argtypes = [wintypes.DWORD]
+        self._kernel32.SetLastError.restype = None
+        self._kernel32.GetLastError.argtypes = []
+        self._kernel32.GetLastError.restype = wintypes.DWORD
+
+        self._kernel32.SetLastError(0)
         self._advapi32.AdjustTokenPrivileges(
             token_handle,
             disable_all,
@@ -4446,15 +4501,7 @@ class _ProcessBridgePrivilegesMixin(_ProcessBridgeListMixin):
             None,
             None,
         )
-
-        last_error = ctypes.get_last_error()
-        if last_error == ERROR_NOT_ALL_ASSIGNED:
-            msg = _ERR_PRIV_NOT_HELD + privilege_name
-            raise ToolError(msg)
-
-        _logger.info("privilege_adjusted", privilege=privilege_name, enabled=enable)
-        self._notify_privileges_changed()
-        return True
+        return int(self._kernel32.GetLastError())
 
     # ------------------------------------------------------------------
     # Handle enumeration
@@ -7536,6 +7583,8 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         """
         if self._advapi32 is None:
             return False
+        if self._kernel32 is None:
+            return False
         luid = LUID()
         if not self._advapi32.LookupPrivilegeValueW(None, privilege_name, ctypes.byref(luid)):
             _logger.warning("remove_privilege_lookup_failed", pid=pid, privilege_name=privilege_name)
@@ -7546,17 +7595,7 @@ class _ProcessBridgeEnumMixin(_ProcessBridgeStateMixin):
         tp.Privileges[0].Luid = luid
         tp.Privileges[0].Attributes = SE_PRIVILEGE_REMOVED
 
-        disable_all = wintypes.BOOL(0)
-        self._advapi32.AdjustTokenPrivileges(
-            token_handle,
-            disable_all,
-            ctypes.byref(tp),
-            ctypes.sizeof(TOKEN_PRIVILEGES),
-            None,
-            None,
-        )
-
-        last_error: int = ctypes.get_last_error()
+        last_error = self._call_adjust_token_privileges(token_handle, tp, disable_all=False)
         success = last_error != ERROR_NOT_ALL_ASSIGNED
         _logger.info(
             "remove_privilege_completed",

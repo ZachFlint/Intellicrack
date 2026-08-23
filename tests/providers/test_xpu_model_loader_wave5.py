@@ -435,7 +435,7 @@ def _make_fake_torch(
 
         @staticmethod
         def zeros(n: int, device: object = None) -> object:
-            del device
+            del n, device
             if zeros_exc is not None:
                 raise zeros_exc
             return 0

@@ -1075,12 +1075,15 @@ class TestRepliesLargerThanTheDefaultStreamLimit:
             await ga_server.stop()
 
     @pytest.mark.asyncio
-    async def test_overlong_reply_fails_the_command_and_closes_the_channel(self) -> None:
+    async def test_overlong_reply_fails_the_command_and_replaces_the_channel(self) -> None:
         """A frame past the channel limit must not escape as a ``ValueError``.
 
         The overrun leaves the rest of the frame unread, so the stream can no
-        longer be framed; the command has to fail as a command and the channel
-        has to be closed, not raise an exception its callers never handle.
+        longer be framed; the command has to fail as a command and the socket
+        it arrived on has to be abandoned, not raise an exception its callers
+        never handle. Abandoning it means opening another against a peer that
+        still accepts one, so the channel this test is left holding is a second
+        connection and not the unframeable first.
         """
         ga_server = GuestAgentProtocolServer(_large_output_guest)
         await ga_server.start()
@@ -1095,7 +1098,10 @@ class TestRepliesLargerThanTheDefaultStreamLimit:
             with pytest.raises(SandboxError, match="guest-exec-status reply could not be read"):
                 await client.guest_exec_status(int(pid_payload["pid"]), time_limit=5.0)
 
-            assert client.connected is False, "a channel that can no longer be framed must be closed"
+            assert ga_server.accepted == _CHANNEL_REPLACED_CONNECTIONS, (
+                f"a channel that can no longer be framed must be closed and replaced, not kept; ga_server.accepted={ga_server.accepted}"
+            )
+            assert client.connected is True, "the replacement channel this peer accepted must be the one the client is left holding"
         finally:
             await client.disconnect()
             await ga_server.stop()
@@ -1208,12 +1214,14 @@ class TestTimeoutRecoveryIsContained:
 
     @pytest.mark.asyncio
     async def test_reset_during_resync_surfaces_as_a_failed_command(self) -> None:
-        """The command reports a timeout and the channel is closed.
+        """The command reports a timeout and the reset channel is replaced.
 
         The resync runs inside ``_send_command``'s ``except TimeoutError``
         handler; anything it raises other than the failure the handler already
         expects would travel out through ``guest_exec_status``, ``_guest_run``,
-        ``_mount_guest_shared_volume`` and ``start``.
+        ``_mount_guest_shared_volume`` and ``start``. The reset it reports is a
+        hard socket failure, so the connection it happened on is finished and
+        has to be abandoned for a fresh one rather than kept and read from.
         """
         ga_server = GuestAgentProtocolServer(stall_command="guest-ping", stall_seconds=_AGENT_STALL_S)
         await ga_server.start()
@@ -1225,7 +1233,10 @@ class TestTimeoutRecoveryIsContained:
 
             assert response.success is False
             assert response.error == _COMMAND_TIMED_OUT
-            assert client.connected is False, "a channel whose recovery failed must be closed for the next call to reopen"
+            assert ga_server.accepted == _CHANNEL_REPLACED_CONNECTIONS, (
+                f"a channel whose recovery hit a reset must be closed and replaced, not kept; ga_server.accepted={ga_server.accepted}"
+            )
+            assert client.connected is True, "the replacement channel this peer accepted must be the one the client is left holding"
         finally:
             await client.disconnect()
             await ga_server.stop()

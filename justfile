@@ -246,7 +246,7 @@ flake8 *FLAGS:
 # Run wemake-python-styleguide (strictest linter) and output sorted findings
 [group('lint')]
 wemake *FLAGS:
-    @& scripts/run-lint-tool.ps1 -ToolName wemake -DisplayName "Wemake Styleguide" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src }} --select=WPS,C9 --max-complexity 30" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} flake8"
+    @& scripts/run-lint-tool.ps1 -ToolName wemake -DisplayName "Wemake Styleguide" -Command "{{ pixi }} flake8 {{ FLAGS }} {{ src }} --select=WPS,C9 --max-complexity 30 --jobs=1" -TextMode -Pixi "{{ pixi }}" -Flags "{{ FLAGS }}" -PassthruExe "{{ pixi }} flake8"
 
 # Run mccabe complexity checker and output sorted findings
 [group('lint')]

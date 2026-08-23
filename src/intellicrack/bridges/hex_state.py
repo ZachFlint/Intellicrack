@@ -36,6 +36,7 @@ Re-entrant emissions triggered from inside a callback are queued and dispatched 
 ordering across observers).  The cap aborts genuinely runaway callback chains while still allowing legitimate downstream events to flow.
 """
 
+
 class HexDocumentEvent(enum.Enum):
     """Event types emitted by HexDocumentState.
 
@@ -132,7 +133,7 @@ class HexDocumentState:
 
     @property
     def document(self) -> HexDocumentFull | None:
-        """Get the active HexDocument instance.
+        """The active HexDocument instance.
 
         Acquires the internal lock so concurrent writers cannot publish a
         torn reference observed by this getter.
@@ -145,7 +146,7 @@ class HexDocumentState:
 
     @property
     def file_path(self) -> Path | None:
-        """Get the path to the currently loaded file.
+        """The path to the currently loaded file.
 
         Acquires the internal lock so concurrent writers cannot publish a
         torn reference observed by this getter.
@@ -158,7 +159,7 @@ class HexDocumentState:
 
     @property
     def cursor_offset(self) -> int:
-        """Get the current cursor offset.
+        """The current cursor offset.
 
         Acquires the internal lock so concurrent writers cannot publish a
         partially-updated value observed by this getter.
@@ -171,7 +172,7 @@ class HexDocumentState:
 
     @property
     def selection(self) -> tuple[int, int] | None:
-        """Get the current selection range.
+        """The current selection range.
 
         Acquires the internal lock so concurrent writers cannot publish a
         torn reference observed by this getter.

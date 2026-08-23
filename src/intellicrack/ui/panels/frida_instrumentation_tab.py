@@ -21,6 +21,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Final, cast
 
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont, QFontMetrics
 from PyQt6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
@@ -50,6 +52,11 @@ _logger = get_logger(__name__)
 _PANEL_MARGIN: Final[int] = 0
 _PANEL_SPACING: Final[int] = 2
 _ADDR_INPUT_MAX_WIDTH: Final[int] = 160
+_RESULT_GROUP_SPACING: Final[int] = 12
+_RESULT_LABEL_PADDING: Final[int] = 8
+_RESULT_VALUE_SAMPLE: Final[str] = "0xFFFFFFFFFFFFFFFF"
+_RESULT_ERRNO_SAMPLE: Final[str] = "-2147483648"
+_RESULT_LAST_ERROR_SAMPLE: Final[str] = "4294967295"
 _NATIVE_TYPES: Final[list[str]] = ["pointer", "int", "uint", "void", "float", "double", "int32", "uint32", "int64", "uint64"]
 _CALLING_CONVENTIONS: Final[list[str]] = ["default", "sysv", "stdcall", "thiscall", "fastcall", "mscdecl", "win64"]
 _STRING_ENCODINGS: Final[list[str]] = ["utf8", "ansi", "utf16"]
@@ -95,6 +102,49 @@ def _format_symbol_source(sym: object) -> str:
             return f"{file_name}:{line_number}"
         return file_name
     return ""
+
+
+def _reserved_result_label_width(font: QFont, sample_text: str) -> int:
+    """Compute a reserved minimum pixel width for a dynamic result label.
+
+    ``make_control_row`` snapshots its host row's natural width once, at
+    construction time, from whatever content the row holds at that moment.
+    A result label constructed with empty text freezes that snapshot far
+    narrower than the label will need once real call results arrive, so the
+    label is left to be compressed below a readable size by the row's later
+    layout passes. Reserving width for a representative worst-case value up
+    front keeps the frozen snapshot honest.
+
+    Args:
+        font: The font the label will render its text in.
+        sample_text: A representative worst-case string for the label's eventual content.
+
+    Returns:
+        int: The sample text's rendered width plus a small padding allowance.
+    """
+    return QFontMetrics(font).horizontalAdvance(sample_text) + _RESULT_LABEL_PADDING
+
+
+def _set_elided_result_text(label: QLabel, text: str) -> None:
+    """Set a result label's text with a full-text tooltip and right elision.
+
+    The full value is always preserved as the label's tooltip so a long
+    64-bit pointer value remains discoverable, while the displayed text is
+    right-elided to the label's current width so a value that still exceeds
+    its reserved minimum width degrades to an ellipsis instead of clipping
+    mid-character directly against the next caption.
+
+    Args:
+        label: The result label to update.
+        text: Full text value to display and expose as the tooltip.
+    """
+    label.setToolTip(text)
+    width = label.width()
+    if width > 0:
+        metrics = QFontMetrics(label.font())
+        label.setText(metrics.elidedText(text, Qt.TextElideMode.ElideRight, width))
+    else:
+        label.setText(text)
 
 
 class InterceptorLifecycleControls(QWidget):
@@ -824,10 +874,12 @@ class SystemFunctionCallControls(QWidget):
         self._syscall_addr_input = QLineEdit()
         self._syscall_addr_input.setPlaceholderText("0x401000")
         row1.addWidget(self._syscall_addr_input)
+        row1.addSpacing(_RESULT_GROUP_SPACING)
         row1.addWidget(QLabel("Args:"))
         self._syscall_args_input = QLineEdit()
         self._syscall_args_input.setPlaceholderText("0, 1, 2")
         row1.addWidget(self._syscall_args_input)
+        row1.addSpacing(_RESULT_GROUP_SPACING)
         self._syscall_call_btn = QPushButton("Call (capture errno)")
         self._syscall_call_btn.setObjectName("tool_button")
         self._syscall_call_btn.clicked.connect(self._on_call_system_function)
@@ -839,10 +891,12 @@ class SystemFunctionCallControls(QWidget):
         self._syscall_ret_type = QComboBox()
         self._syscall_ret_type.addItems(_NATIVE_TYPES)
         row2.addWidget(self._syscall_ret_type)
+        row2.addSpacing(_RESULT_GROUP_SPACING)
         row2.addWidget(QLabel("Arg types:"))
         self._syscall_arg_types_input = QLineEdit()
         self._syscall_arg_types_input.setPlaceholderText("pointer, int, int")
         row2.addWidget(self._syscall_arg_types_input)
+        row2.addSpacing(_RESULT_GROUP_SPACING)
         row2.addWidget(QLabel("Convention:"))
         self._syscall_cc = QComboBox()
         self._syscall_cc.addItems(_CALLING_CONVENTIONS)
@@ -853,12 +907,23 @@ class SystemFunctionCallControls(QWidget):
         result_row = QHBoxLayout()
         result_row.addWidget(QLabel("Value:"))
         self._syscall_value_label = QLabel("")
+        self._syscall_value_label.setMinimumWidth(
+            _reserved_result_label_width(self._syscall_value_label.font(), _RESULT_VALUE_SAMPLE),
+        )
         result_row.addWidget(self._syscall_value_label)
+        result_row.addSpacing(_RESULT_GROUP_SPACING)
         result_row.addWidget(QLabel("errno:"))
         self._syscall_errno_label = QLabel("")
+        self._syscall_errno_label.setMinimumWidth(
+            _reserved_result_label_width(self._syscall_errno_label.font(), _RESULT_ERRNO_SAMPLE),
+        )
         result_row.addWidget(self._syscall_errno_label)
+        result_row.addSpacing(_RESULT_GROUP_SPACING)
         result_row.addWidget(QLabel("GetLastError:"))
         self._syscall_last_error_label = QLabel("")
+        self._syscall_last_error_label.setMinimumWidth(
+            _reserved_result_label_width(self._syscall_last_error_label.font(), _RESULT_LAST_ERROR_SAMPLE),
+        )
         result_row.addWidget(self._syscall_last_error_label)
         result_row.addStretch()
         layout.addWidget(make_control_row(result_row))
@@ -924,9 +989,10 @@ class SystemFunctionCallControls(QWidget):
         value = getattr(result, "value", None)
         errno = getattr(result, "errno", None)
         last_error = getattr(result, "last_error", None)
-        self._syscall_value_label.setText(f"0x{value:X}" if isinstance(value, int) else str(value))
-        self._syscall_errno_label.setText(str(errno))
-        self._syscall_last_error_label.setText(str(last_error))
+        value_text = f"0x{value:X}" if isinstance(value, int) else str(value)
+        _set_elided_result_text(self._syscall_value_label, value_text)
+        _set_elided_result_text(self._syscall_errno_label, str(errno))
+        _set_elided_result_text(self._syscall_last_error_label, str(last_error))
         self._status_label.setText("Call succeeded")
         _logger.info("frida_call_system_function_completed_via_gui", value=value, errno=errno, last_error=last_error)
 

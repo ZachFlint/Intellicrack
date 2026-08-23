@@ -186,7 +186,7 @@ def counting_tab(qapp: QApplication) -> Generator[_CountingThreadsTab]:
         qapp: Session-scoped QApplication fixture.
 
     Yields:
-        Generator[_CountingThreadsTab]: A ready-to-use tab instance.
+        _CountingThreadsTab: A ready-to-use tab instance.
     """
     del qapp
     tab = _CountingThreadsTab()

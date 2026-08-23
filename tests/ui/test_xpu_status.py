@@ -92,7 +92,7 @@ def xpu_dialog(qapp: QApplication) -> Generator[XPUStatusDialog]:
         qapp: QApplication session fixture.
 
     Yields:
-        Generator[XPUStatusDialog]: A live dialog instance with active refresh timer.
+        XPUStatusDialog: A live dialog instance with active refresh timer.
     """
     _ = qapp
     dialog = XPUStatusDialog()
@@ -108,7 +108,7 @@ def provider_widget(qapp: QApplication) -> Generator[ProviderSettingsWidget]:
         qapp: QApplication session fixture.
 
     Yields:
-        Generator[ProviderSettingsWidget]: Widget configured for local_transformers.
+        ProviderSettingsWidget: Widget configured for local_transformers.
     """
     _ = qapp
     widget = ProviderSettingsWidget(provider_id="local_transformers")
@@ -213,7 +213,7 @@ class TestXPUStatusDialogConstruction:
         refresh_cache = getattr(xpu_dialog, "_refresh_cache")
         refresh_cache()
         label_text = xpu_dialog.cache_usage_label.text()
-        if is_mb_value := label_text.endswith(" MB") and label_text[:-3].replace(".", "", 1).isdigit():
+        if label_text.endswith(" MB") and label_text[:-3].replace(".", "", 1).isdigit():
             actual_mb = float(label_text[:-3])
             assert abs(actual_mb - expected_mb) <= 0.5, (
                 f"cache_usage_label must show {expected_mb:.1f} MB from global cache, got {label_text!r}"

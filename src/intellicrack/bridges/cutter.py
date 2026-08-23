@@ -1822,7 +1822,6 @@ class _CutterBridgeBase(StaticAnalysisBridge):
         Returns:
             BinaryInfo: Populated descriptor of the loaded binary.
         """
-
         async with self._r2_lock:
             await self._close_existing_r2()
 

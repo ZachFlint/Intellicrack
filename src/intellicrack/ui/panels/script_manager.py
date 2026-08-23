@@ -207,7 +207,7 @@ public class LicenseAnalyzer extends GhidraScript {
             "display": "x64dbg",
             "extension": ".txt",
             "language": "x64dbg",
-            "template":\
+            "template":
                         """// x64dbg script for license bypass
 // Target: {target}
 
@@ -229,7 +229,7 @@ run
             "display": "Python",
             "extension": ".py",
             "language": "python",
-            "template":\
+            "template":
                         '''"""
 Python analysis script for license examination.
 Target: {target}
@@ -549,6 +549,10 @@ class ScriptManagerPanel(QWidget):
         self._execution_timer.setSingleShot(True)
         self._execution_timer.setInterval(_EXECUTION_TIMEOUT_MS)
         self._execution_timer.timeout.connect(self._on_execution_timeout)
+        self._status_reset_timer: QTimer = QTimer(self)
+        self._status_reset_timer.setSingleShot(True)
+        self._status_reset_timer.setInterval(_STATUS_RESET_MS)
+        self._status_reset_timer.timeout.connect(self._on_status_reset_timeout)
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -941,11 +945,7 @@ class ScriptManagerPanel(QWidget):
                 self._status_bar.showMessage(f"Validation failed: {error_text}")
                 self._set_status_style("error")
 
-        def reset_status() -> None:
-            """Restore the status bar style after the validation feedback delay."""
-            self._set_status_style("info")
-
-        QTimer.singleShot(_STATUS_RESET_MS, reset_status)
+        self._status_reset_timer.start()
 
     def _on_execute(self) -> None:
         """Handle execute button.
@@ -1002,6 +1002,10 @@ class ScriptManagerPanel(QWidget):
         self._execute_btn.setEnabled(True)
         self._execution_timer.stop()
 
+    def _on_status_reset_timeout(self) -> None:
+        """Restore the status bar style after the feedback delay elapses."""
+        self._set_status_style("info")
+
     def _on_execution_timeout(self) -> None:
         """Handle execution timeout by clearing the busy state with a warning."""
         if not self._execution_in_progress:
@@ -1029,11 +1033,7 @@ class ScriptManagerPanel(QWidget):
         self._set_status_style("success")
         _logger.info("script_execute_acknowledged", script_name=name, result_length=len(result))
 
-        def reset_status() -> None:
-            """Restore the status bar style after the execution feedback delay."""
-            self._set_status_style("info")
-
-        QTimer.singleShot(_STATUS_RESET_MS, reset_status)
+        self._status_reset_timer.start()
         self.script_execution_completed.emit(name, result)
 
     def set_backend(

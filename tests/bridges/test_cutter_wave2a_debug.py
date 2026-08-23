@@ -802,7 +802,7 @@ class TestSetRegister:
         recorder = _CommandRecorder()
         bridge = _make_attached_bridge(recorder)
         asyncio.run(bridge.set_register("rax", 0xDEAD_BEEF))
-        assert f"dr rax=3735928559" in recorder.commands
+        assert "dr rax=3735928559" in recorder.commands
 
     def test_set_register_returns_true(self) -> None:
         """set_register returns True on success.
@@ -938,7 +938,7 @@ class TestGetMemoryRegions:
                 "state": "commit",
                 "type": "private",
                 "name": "foo.dll",
-            }
+            },
         ])
         recorder = _CommandRecorder({"dmj": region_json})
         bridge = _make_attached_bridge(recorder)
@@ -966,7 +966,7 @@ class TestGetMemoryRegions:
                 "perm": "rwx",
                 "state": "commit",
                 "type": "image",
-            }
+            },
         ])
         recorder = _CommandRecorder({"dmj": region_json})
         bridge = _make_attached_bridge(recorder)
@@ -987,7 +987,7 @@ class TestGetMemoryRegions:
                 "perm": "r--",
                 "state": "commit",
                 "type": "private",
-            }
+            },
         ])
         recorder = _CommandRecorder({"dmj": region_json})
         bridge = _make_attached_bridge(recorder)
@@ -1023,7 +1023,7 @@ class TestGetThreads:
                 "start": 4096,
                 "pc": 8192,
                 "status": "running",
-            }
+            },
         ])
         recorder = _CommandRecorder({"dptj": thread_json})
         bridge = _make_attached_bridge(recorder)
@@ -1048,7 +1048,7 @@ class TestGetThreads:
                 "start": 4096,
                 "pc": 8192,
                 "status": "running",
-            }
+            },
         ])
         recorder = _CommandRecorder({"dptj": thread_json})
         bridge = _make_attached_bridge(recorder)
@@ -1086,7 +1086,7 @@ class TestGetModules:
                 "size": 0,
                 "addr_end": 65536,
                 "entry": 4097,
-            }
+            },
         ])
         recorder = _CommandRecorder({"dmIj": module_json})
         bridge = _make_attached_bridge(recorder)
@@ -1112,7 +1112,7 @@ class TestGetModules:
                 "size": 0,
                 "addr_end": 65536,
                 "entry": 4097,
-            }
+            },
         ])
         recorder = _CommandRecorder({"dmIj": module_json})
         bridge = _make_attached_bridge(recorder)
@@ -1134,7 +1134,7 @@ class TestGetModules:
                 "size": 4096,
                 "addr_end": 8192,
                 "entry": 0,
-            }
+            },
         ])
         recorder = _CommandRecorder({"dmIj": module_json})
         bridge = _make_attached_bridge(recorder)

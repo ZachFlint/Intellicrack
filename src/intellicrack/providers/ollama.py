@@ -16,6 +16,7 @@ import os
 import re
 import threading
 import time
+from contextlib import AsyncExitStack
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, TypedDict, cast, override
 
@@ -230,7 +231,7 @@ class OllamaProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """The provider's name.
 
         Returns:
             ProviderName: ProviderName.OLLAMA
@@ -1534,11 +1535,15 @@ class OllamaProvider(LLMProviderBase):
             provider="ollama",
             endpoint=endpoint,
         )
-        async with client.stream(
-            "POST",
-            f"{base_url}{endpoint}",
-            json=request_body,
-        ) as response:
+        stack = AsyncExitStack()
+        response = await stack.enter_async_context(
+            client.stream(
+                "POST",
+                f"{base_url}{endpoint}",
+                json=request_body,
+            ),
+        )
+        try:
             self._raise_for_status(response)
             async for line in response.aiter_lines():
                 if self._cancel_requested:
@@ -1559,6 +1564,8 @@ class OllamaProvider(LLMProviderBase):
                         accumulated_tool_calls,
                         tool_call_order,
                     )
+        finally:
+            await stack.aclose()
 
     @staticmethod
     def _accumulate_native_tool_call_deltas(
@@ -1716,12 +1723,15 @@ class OllamaProvider(LLMProviderBase):
         Yields:
             str: Content chunks as they arrive.
         """
-
-        async with client.stream(
-            "POST",
-            f"{base_url}{endpoint}",
-            json=request_body,
-        ) as response:
+        stack = AsyncExitStack()
+        response = await stack.enter_async_context(
+            client.stream(
+                "POST",
+                f"{base_url}{endpoint}",
+                json=request_body,
+            ),
+        )
+        try:
             self._raise_for_status(response)
             async for line in response.aiter_lines():
                 if self._cancel_requested:
@@ -1750,6 +1760,8 @@ class OllamaProvider(LLMProviderBase):
                         cast("list[dict[str, Any]]", tc_deltas),
                         accumulated_tool_calls,
                     )
+        finally:
+            await stack.aclose()
 
     @staticmethod
     def _accumulate_openai_tool_call_deltas(
@@ -1934,11 +1946,15 @@ class OllamaProvider(LLMProviderBase):
             provider="ollama",
             model=actual_model,
         )
-        async with client.stream(
-            "POST",
-            f"{self._local_url}/api/pull",
-            json={"name": actual_model},
-        ) as response:
+        stack = AsyncExitStack()
+        response = await stack.enter_async_context(
+            client.stream(
+                "POST",
+                f"{self._local_url}/api/pull",
+                json={"name": actual_model},
+            ),
+        )
+        try:
             self._raise_for_status(response)
             async for line in response.aiter_lines():
                 if line:
@@ -1949,3 +1965,5 @@ class OllamaProvider(LLMProviderBase):
                         continue
                     if status := data.get("status", ""):
                         yield status
+        finally:
+            await stack.aclose()

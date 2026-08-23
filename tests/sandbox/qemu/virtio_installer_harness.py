@@ -35,7 +35,9 @@ from scripts.sandbox.provision_windows_guest import (
     VIRTIO_MARKER_DIRECTORIES,
     WINPE_DRIVER_STAGE_DIRECTORY,
     UnattendSettings,
+    available_drive_roots,
     render_driver_installer,
+    require_virtio_media,
 )
 
 
@@ -56,6 +58,12 @@ PNPUTIL_COMMAND: Final[str] = "pnputil"
 
 INSTALLER_TIMEOUT_SECONDS: Final[float] = 300.0
 """Ceiling for one interpreter run; a real run finishes in seconds."""
+
+_MEDIA_SCAN_DEPTH: Final[int] = 4
+"""Directory depth the host-native medium search is allowed to reach."""
+
+_MEDIA_SCAN_BUDGET: Final[int] = 20_000
+"""Directories the host-native medium search may enumerate."""
 
 AST_DUMPER: Final[str] = """\
 param([Parameter(Mandatory=$true)][string]$Path)
@@ -260,6 +268,28 @@ def staged_media_root() -> Path:
         this repository provisions from, however large its directory budget.
     """
     return get_project_root() / "tools" / "qemu" / "images"
+
+
+def real_virtio_medium() -> Path:
+    """Resolve the bundled virtio-win medium the way the provisioner does.
+
+    Drive roots plus the images directory as a *priority* root, exactly as
+    :func:`~scripts.sandbox.provision_windows_guest.provision` passes them. A
+    drive-root scan alone cannot reach the bundled medium: it stops descending
+    at ``max_depth`` and the ISO sits one directory deeper, so it would report
+    the prerequisite missing on a host that has it.
+
+    Returns:
+        Path: The located virtio-win ISO.
+    """
+    return require_virtio_media(
+        None,
+        available_drive_roots(),
+        _MEDIA_SCAN_DEPTH,
+        _MEDIA_SCAN_BUDGET,
+        priority_roots=(staged_media_root(),),
+        verify_contents=False,
+    )
 
 
 def answer_settings() -> UnattendSettings:

@@ -28,6 +28,29 @@ _CONTAINER_WORKSPACE = PurePosixPath("C:/app")
 _CONTAINER_REPORTS = _CONTAINER_WORKSPACE / "reports" / "tests"
 _RUN_ID_ENTROPY_BYTES = 3
 
+_TEST_ROOT_PACKAGE = "tests"
+_PYARGS_FLAG = "--pyargs"
+_PYTHON_SUFFIX = ".py"
+_NODEID_SEPARATOR = "::"
+
+# Options whose value is a separate token. A ``tests/...`` token following one
+# of these is that option's value (``--ignore tests/slow``) rather than a
+# collection target, and must keep its filesystem form.
+_VALUE_OPTIONS = frozenset({
+    "-c",
+    "-k",
+    "-m",
+    "-n",
+    "-o",
+    "-p",
+    "--basetemp",
+    "--confcutdir",
+    "--deselect",
+    "--ignore",
+    "--ignore-glob",
+    "--rootdir",
+})
+
 
 def new_run_id() -> str:
     """Return a fresh identity component unique to a single sandbox run.
@@ -177,13 +200,82 @@ def _module_target(module: str) -> str:
     return f"tests/test_{normalized}"
 
 
+def to_pyargs_target(target: str) -> str:
+    """Convert a filesystem test target into an importable dotted target.
+
+    Any ``::`` node selector is preserved verbatim, so a single test or class
+    can still be addressed. The conversion is pure string manipulation and
+    touches no filesystem, keeping this module's output identical on the host
+    and inside the container.
+
+    Args:
+        target: Test target such as ``tests/core/test_x.py::TestC::test_m``.
+
+    Returns:
+        str: Dotted target such as ``tests.core.test_x::TestC::test_m``.
+    """
+    path_part, separator, node_part = target.partition(_NODEID_SEPARATOR)
+    normalized = path_part.replace("\\", "/").strip("/").removesuffix(_PYTHON_SUFFIX)
+    return f"{normalized.replace('/', '.')}{separator}{node_part}"
+
+
+def _is_collection_target(token: str) -> bool:
+    """Report whether a token addresses tests by filesystem path.
+
+    Args:
+        token: A single pytest argument.
+
+    Returns:
+        bool: ``True`` when the token is a path under the ``tests`` tree.
+    """
+    normalized = token.replace("\\", "/").strip("/")
+    return normalized == _TEST_ROOT_PACKAGE or normalized.startswith(f"{_TEST_ROOT_PACKAGE}/")
+
+
+def to_pyargs_argv(args: list[str]) -> list[str]:
+    """Rewrite filesystem collection targets to importable ``--pyargs`` targets.
+
+    Inside the Windows container, addressing tests by filesystem path makes
+    pytest build the target's package chain twice, so every test is collected
+    under a duplicate node: run counts double, and in a package whose fixtures
+    live in a sibling ``conftest.py`` one of the two copies fails to resolve
+    them. Addressing the same tests by import path collects each exactly once.
+
+    Only bare positional targets are rewritten. Tokens beginning with ``-`` and
+    values belonging to :data:`_VALUE_OPTIONS` keep their filesystem form, so
+    ``--ignore tests/slow`` and ``-k tests`` are left intact.
+
+    Args:
+        args: The assembled pytest argument vector.
+
+    Returns:
+        list[str]: The vector with targets rewritten and ``--pyargs`` present
+            when at least one target was rewritten.
+    """
+    converted: list[str] = []
+    rewritten = False
+    previous = ""
+    for token in args:
+        eligible = previous not in _VALUE_OPTIONS and not token.startswith("-") and _is_collection_target(token)
+        if eligible:
+            converted.append(to_pyargs_target(token))
+            rewritten = True
+        else:
+            converted.append(token)
+        previous = token
+    if rewritten and _PYARGS_FLAG not in converted:
+        converted.insert(0, _PYARGS_FLAG)
+    return converted
+
+
 def build_pytest_args(spec: TestRunSpec) -> list[str]:
     """Build the concrete pytest argument vector for a run specification.
 
     The returned list is the complete tail passed to ``pytest`` after the
     interpreter, excluding the ``pytest`` executable itself. Arguments are
     deterministic and are produced identically on host and inside the
-    container.
+    container. Collection targets are emitted as importable ``--pyargs``
+    targets rather than filesystem paths; see :func:`to_pyargs_argv`.
 
     Args:
         spec: The active run specification.
@@ -307,7 +399,7 @@ def build_pytest_args(spec: TestRunSpec) -> list[str]:
             raise ValueError(message)
 
     args.extend(spec.extra_args)
-    return args
+    return to_pyargs_argv(args)
 
 
 def spec_to_dict(spec: TestRunSpec) -> dict[str, object]:

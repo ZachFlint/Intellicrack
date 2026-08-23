@@ -18,6 +18,7 @@ decision forks listed at the bottom. Then follow the mandatory verification pass
 ====================================================================
 ANTI-HALLUCINATION RULE (non-negotiable)
 ====================================================================
+
 Every package, file path, executable name, version, tool location, entry point,
 and build command that appears in your installer or staging script MUST be
 confirmed to exist by reading the actual project or querying the live pixi
@@ -31,6 +32,7 @@ broken installer, so treat unverified claims as defects.
 ====================================================================
 STARTING MAP — VERIFIED IN A PRIOR AUDIT, BUT RE-VERIFY EVERYTHING
 ====================================================================
+
 The following was observed live in this project. Treat it as a lead sheet to
 check, not as truth to copy. Re-run each check yourself and correct any drift.
 
@@ -44,11 +46,11 @@ check, not as truth to copy. Re-run each check yourself and correct any drift.
   anthropic, openai, google.genai, mcp, ollama, torch, transformers, etc.).
 - Native components (already built on this machine; end users must NOT need
   compilers):
-    * intellicrack_hexcore — Rust/PyO3, built via `just build-hexcore`
+  - intellicrack_hexcore — Rust/PyO3, built via `just build-hexcore`
       (maturin develop --release). It installs into the env's site-packages; it
       is NOT a declared pixi package. Confirm how it lands and capture it in the
       staged runtime.
-    * x64dbg plugin — C++ built via `just install-x64dbg-plugin`
+  - x64dbg plugin — C++ built via `just install-x64dbg-plugin`
       (cmake+ninja from pixi + system MSVC on the BUILD machine only). Prebuilt
       artifacts observed at tools\x64dbg\release\x64\plugins\intellicrack_bridge_x64.dp64
       and ...\x32\plugins\intellicrack_bridge_x32.dp32 — ship these prebuilt.
@@ -84,6 +86,7 @@ check, not as truth to copy. Re-run each check yourself and correct any drift.
 ====================================================================
 MANDATORY VERIFICATION PASS (do this BEFORE designing the .iss)
 ====================================================================
+
 Produce a written dependency/asset manifest, each row backed by a check:
 
 1. Python graph: read pyproject.toml [project] + [tool.pixi] fully. Run
@@ -97,7 +100,7 @@ Produce a written dependency/asset manifest, each row backed by a check:
 3. External tools: inventory tools\ with fd/ls. For EACH bridge in
    src\intellicrack\bridges\*.py (ghidra, cutter, x64dbg, frida_bridge, process,
    sandbox_bridge, hex_editor, installer) grep the resolution logic
-   (is_available / _resolve* / _discover* / shutil.which / env vars / DEFAULT
+   (is_available / _resolve*/_discover* / shutil.which / env vars / DEFAULT
    paths) and derive the exact executable + directory each one requires. Confirm
    r2pipe's radare2 binary and rzpipe's rizin binary locations. Cross-check
    git check-ignore so you know nothing comes from clone.
@@ -117,6 +120,7 @@ Produce a written dependency/asset manifest, each row backed by a check:
 ====================================================================
 DELIVERABLES
 ====================================================================
+
 Put packaging assets under packaging\ (or scripts\ per project convention — check
 what exists). Deliver:
 
@@ -147,6 +151,7 @@ E. A falsifiable staging-verification test: after staging, assert that every
 ====================================================================
 CONSTRAINTS
 ====================================================================
+
 - Follow D:\Intellicrack standards: CRLF line endings, no # noqa / type:ignore /
   any suppression anywhere (fix root causes), Google-style docstrings + full type
   hints on all new Python, ruff/basedpyright/pydoclint/pydocstyle clean. The .iss
@@ -162,6 +167,7 @@ CONSTRAINTS
 ====================================================================
 DECISION FORKS — ask these via AskUserQuestion FIRST
 ====================================================================
+
 1. Runtime bundling: embed a pruned pixi RUNTIME environment (robust, larger, is
    exactly what's tested) vs PyInstaller onedir (leaner, more packaging work;
    already used for hexbench).

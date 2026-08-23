@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from contextlib import AsyncExitStack
 from typing import TYPE_CHECKING, Any, cast, override
 
 import anthropic
@@ -81,7 +82,7 @@ class AnthropicProvider(LLMProviderBase):
 
     @property
     def name(self) -> ProviderName:
-        """Get the provider's name.
+        """The provider's name.
 
         Returns:
             ProviderName: ProviderName.ANTHROPIC
@@ -732,8 +733,9 @@ class AnthropicProvider(LLMProviderBase):
                 model=api_kwargs.get("model"),
             )
             raise ProviderError(_MSG_NOT_CONNECTED)
-        stream_context = self._client.messages.stream(**api_kwargs)
-        async with stream_context as stream:
+        stack = AsyncExitStack()
+        stream = await stack.enter_async_context(self._client.messages.stream(**api_kwargs))
+        try:
             async for text in stream.text_stream:
                 if self._cancel_requested:
                     break
@@ -741,6 +743,8 @@ class AnthropicProvider(LLMProviderBase):
 
             if not self._cancel_requested:
                 await self._finalize_anthropic_stream(stream)
+        finally:
+            await stack.aclose()
 
     async def _finalize_anthropic_stream(self, stream: AsyncMessageStream) -> None:
         """Capture tool calls, thinking, and usage from the final message.

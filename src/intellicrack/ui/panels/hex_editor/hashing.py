@@ -45,6 +45,7 @@ GUI thread's event loop happens to process the worker's queued completion signal
 continue asynchronously exactly as before.
 """
 
+
 def _format_hash_result(document: object, algo: str) -> str:
     """Compute the document hash and format it for display.
 

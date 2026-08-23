@@ -428,6 +428,7 @@ class ChatPanel(QFrame):
         """
         super().__init__(parent)
         self._messages: list[Message] = []
+        self._streaming_message: Message | None = None
         self._setup_ui()
 
     def _setup_ui(self) -> None:
@@ -526,6 +527,12 @@ class ChatPanel(QFrame):
     def add_streaming_message(self) -> Callable[[str], None]:
         """Create a streaming message and return the append function.
 
+        The created :class:`Message` is tracked as the panel's active
+        streaming message until :meth:`finalize_streaming_message` folds the
+        orchestrator's completed response into it, so a turn that streams its
+        text never gets a second, duplicate bubble for the same content
+        (S16 duplicate-assistant-bubble fix).
+
         Returns:
             Callable[[str], None]: Function to call with each text chunk.
         """
@@ -536,6 +543,7 @@ class ChatPanel(QFrame):
             timestamp=datetime.now(tz=UTC),
         )
         self._messages.append(message)
+        self._streaming_message = message
 
         bubble = MessageBubble(message)
         self._messages_layout.insertWidget(
@@ -557,6 +565,40 @@ class ChatPanel(QFrame):
             self._scroll_to_bottom()
 
         return append_chunk
+
+    def finalize_streaming_message(self, message: Message) -> None:
+        """Fold a completed assistant message into the active streaming bubble.
+
+        A turn's streamed text already reached the panel chunk-by-chunk via
+        the append function :meth:`add_streaming_message` returned, so
+        ``message.content`` is not applied here -- the tracked message's
+        content, built incrementally, is already authoritative. This only
+        merges the metadata the streaming path could not carry: tool calls,
+        tool results, and any thinking content the provider reported.
+
+        Calling this with no active streaming message (``add_streaming_message``
+        was never invoked for the current turn) falls back to
+        :meth:`add_message` so the completed message is still rendered.
+
+        Args:
+            message: The orchestrator's completed message for this turn.
+        """
+        if self._streaming_message is None:
+            self.add_message(message)
+            return
+
+        if message.tool_calls:
+            self._streaming_message.tool_calls = message.tool_calls
+        if message.tool_results:
+            self._streaming_message.tool_results = message.tool_results
+        if message.thinking_content:
+            self._streaming_message.thinking_content = message.thinking_content
+
+        _logger.debug(
+            "streaming_message_finalized",
+            content_length=len(self._streaming_message.content),
+            has_tool_calls=self._streaming_message.tool_calls is not None,
+        )
 
     def clear_messages(self) -> None:
         """Clear all messages from the chat."""

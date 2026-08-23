@@ -739,7 +739,7 @@ class TestWorkerReceivesCorrectBytes:
 
         results = execute_signature_scan_from_source(None, doc, "die", str(db_path))
 
-        assert any(r.get("name") == "MZExecutable" for r in results), f"Expected MZExecutable match in results but got: {repr(results)}"
+        assert any(r.get("name") == "MZExecutable" for r in results), f"Expected MZExecutable match in results but got: {results!r}"
 
     @staticmethod
     def test_execute_signature_scan_direct(tmp_path: Path) -> None:

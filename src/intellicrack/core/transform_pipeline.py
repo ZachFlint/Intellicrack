@@ -881,7 +881,7 @@ class TransformPipeline:
 
     @property
     def steps(self) -> list[PipelineStep]:
-        """Return a shallow copy of the current step list.
+        """A shallow copy of the current step list.
 
         Returns:
             list[PipelineStep]: Copy of all pipeline steps in order.

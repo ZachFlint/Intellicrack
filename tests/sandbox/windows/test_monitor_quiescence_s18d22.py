@@ -145,7 +145,8 @@ def _fill(template: str, *, delay: int = 0) -> str:
         str: The fragment with every placeholder resolved.
     """
     return (
-        template.replace("__STOP__", _STOP_FLAG_NAME)
+        template
+        .replace("__STOP__", _STOP_FLAG_NAME)
         .replace("__TRIGGER__", _TRIGGER_NAME)
         .replace("__LIFETIME__", str(_MONITOR_LIFETIME_S))
         .replace("__DELAY__", str(delay))

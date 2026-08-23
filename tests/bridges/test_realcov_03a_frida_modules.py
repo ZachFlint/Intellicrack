@@ -79,7 +79,7 @@ def notepad_process() -> Generator[Popen[bytes]]:
     """Spawn a real notepad.exe for Frida to attach to.
 
     Yields:
-        Generator[Popen[bytes]]: The running notepad process.
+        Popen[bytes]: The running notepad process.
     """
     notepad_path = shutil.which("notepad.exe") or str(
         Path(os.environ.get("WINDIR", r"C:\Windows")) / "System32" / "notepad.exe",
@@ -99,7 +99,7 @@ def frida_bridge(notepad_process: Popen[bytes]) -> Generator[FridaBridge]:
         notepad_process: The running notepad process fixture.
 
     Yields:
-        Generator[FridaBridge]: An initialized and attached FridaBridge instance.
+        FridaBridge: An initialized and attached FridaBridge instance.
     """
     bridge = FridaBridge()
     _run_async(bridge.initialize())

@@ -254,8 +254,8 @@ def _preserved_sys_modules(names: Sequence[str]) -> Iterator[None]:
         names: Fully qualified module names to snapshot and restore.
 
     Yields:
-        Control to the ``with`` body; the snapshotted state is restored on
-        exit regardless of how the body terminates.
+        None: Control to the ``with`` body; the snapshotted state is restored
+        on exit regardless of how the body terminates.
     """
     saved_modules: dict[str, ModuleType] = {name: sys.modules[name] for name in names if name in sys.modules}
     saved_attrs: dict[str, tuple[ModuleType, str, bool, object]] = {}

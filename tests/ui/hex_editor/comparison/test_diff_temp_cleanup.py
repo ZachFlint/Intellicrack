@@ -41,7 +41,7 @@ def qapp() -> Generator[QApplication]:
     """Provide a process-wide ``QApplication`` for Qt widget construction.
 
     Yields:
-        Generator[QApplication]: Qt application instance shared by all tests in the module.
+        QApplication: Qt application instance shared by all tests in the module.
     """
     existing = QApplication.instance()
     if existing is not None and isinstance(existing, QApplication):

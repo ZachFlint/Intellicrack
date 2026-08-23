@@ -167,7 +167,7 @@ async def _exercise_ollama_stream(
         collected.append(chunk)
 
     streamed_content = "".join(collected)
-    assert streamed_content.strip() != ""
+    assert streamed_content.strip()
 
     stream_usage = provider.get_pending_usage()
     assert stream_usage is not None

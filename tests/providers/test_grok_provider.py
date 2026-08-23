@@ -58,7 +58,7 @@ async def grok_provider(
         has_grok_key: Whether a Grok (X.AI) API key is configured.
 
     Yields:
-        AsyncGenerator[GrokProvider]: A connected GrokProvider instance.
+        GrokProvider: A connected GrokProvider instance.
     """
     if not has_grok_key:
         pytest.skip("XAI_API_KEY not configured in .env")
